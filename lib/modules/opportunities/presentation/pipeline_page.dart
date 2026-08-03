@@ -28,7 +28,67 @@ class PipelinePage extends ConsumerWidget {
     final scheme = Theme.of(context).colorScheme;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Cơ hội'), titleSpacing: OmniSpacing.lg),
+      backgroundColor: scheme.surface,
+      appBar: AppBar(
+        backgroundColor: scheme.surface,
+        title: const Text('Cơ hội'),
+        titleSpacing: OmniSpacing.lg,
+        toolbarHeight: 56,
+        // The headline number lives in the bar. It used to be one of two big
+        // stat tiles in a band of its own, above a two-line tab strip that
+        // already carried every stage's count and value — roughly 150px of
+        // summary before a single opportunity appeared, most of it saying the
+        // same thing twice.
+        actions: [
+          Padding(
+            padding: const EdgeInsets.only(right: OmniSpacing.lg),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Text(
+                  Formatters.vndCompact(summary.valueOrNull?.openValue ?? 0),
+                  style: OmniType.body.copyWith(
+                    fontSize: 16,
+                    height: 1.1,
+                    color: scheme.onSurface,
+                    fontWeight: FontWeight.w700,
+                    fontFeatures: OmniType.tabular,
+                  ),
+                ),
+                Text(
+                  'đang mở',
+                  style: OmniChatType.meta.copyWith(
+                    color: scheme.onSurfaceVariant,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(49),
+          child: Column(
+            children: [
+              _StageTabs(
+                selected: stage,
+                summary: summary.valueOrNull,
+                onSelected: (next) =>
+                    ref.read(selectedStageProvider.notifier).state = next,
+              ),
+              Divider(
+                height: 1,
+                thickness: 1,
+                color: OmniColors.chat(
+                  context,
+                  OmniColors.chatDivider,
+                  OmniColors.chatDividerDark,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
       floatingActionButton: access.canCreate
           ? FloatingActionButton.extended(
               onPressed: () => context.pushNamed(OpportunitiesModule.create),
@@ -38,14 +98,6 @@ class PipelinePage extends ConsumerWidget {
           : null,
       body: Column(
         children: [
-          _SummaryStrip(summary: summary.valueOrNull),
-          _StageTabs(
-            selected: stage,
-            summary: summary.valueOrNull,
-            onSelected: (next) =>
-                ref.read(selectedStageProvider.notifier).state = next,
-          ),
-          Divider(height: 1, color: scheme.outline),
           Expanded(
             child: RefreshIndicator(
               onRefresh: () async {
@@ -92,47 +144,6 @@ class PipelinePage extends ConsumerWidget {
   }
 }
 
-class _SummaryStrip extends StatelessWidget {
-  const _SummaryStrip({this.summary});
-
-  final PipelineSummary? summary;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(
-        OmniSpacing.lg,
-        0,
-        OmniSpacing.lg,
-        OmniSpacing.md,
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: OmniStatTile(
-              label: 'Pipeline đang mở',
-              value: Formatters.vndCompact(summary?.openValue ?? 0),
-              caption: '${summary?.openCount ?? 0} cơ hội',
-            ),
-          ),
-          const SizedBox(width: OmniSpacing.sm),
-          Expanded(
-            child: OmniStatTile(
-              label: 'Đã thắng',
-              value: Formatters.vndCompact(
-                summary?.totalFor(PipelineStage.won).value ?? 0,
-              ),
-              tone: OmniColors.success,
-              caption:
-                  '${summary?.totalFor(PipelineStage.won).count ?? 0} cơ hội',
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
 class _StageTabs extends StatelessWidget {
   const _StageTabs({
     required this.selected,
@@ -148,11 +159,15 @@ class _StageTabs extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
 
+    // One line of pills, matching the inbox filter row. Two stacked lines per
+    // tab meant every stage permanently showed a value nobody was looking at —
+    // a rep reads the money for the stage they are IN. So the value appears
+    // only on the selected pill, which costs no extra height at all.
     return SizedBox(
-      height: 62,
+      height: 48,
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: OmniSpacing.lg),
+        padding: const EdgeInsets.symmetric(horizontal: 16),
         itemCount: PipelineStage.board.length,
         separatorBuilder: (_, _) => const SizedBox(width: OmniSpacing.sm),
         itemBuilder: (context, index) {
@@ -160,52 +175,56 @@ class _StageTabs extends StatelessWidget {
           final total = summary?.totalFor(stage);
           final isSelected = stage == selected;
 
-          return GestureDetector(
-            onTap: () => onSelected(stage),
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: OmniSpacing.md),
-              decoration: BoxDecoration(
-                border: Border(
-                  bottom: BorderSide(
-                    color: isSelected ? scheme.primary : Colors.transparent,
-                    width: 2.5,
+          return Center(
+            child: Material(
+              color: isSelected ? OmniColors.chatPrimary : Colors.transparent,
+              borderRadius: OmniRadius.pillAll,
+              clipBehavior: Clip.antiAlias,
+              child: InkWell(
+                onTap: () => onSelected(stage),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 7,
                   ),
-                ),
-              ),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
                     children: [
                       Text(
                         stage.label,
                         style: OmniType.caption.copyWith(
-                          color: isSelected ? scheme.primary : scheme.onSurface,
-                          fontWeight: FontWeight.w700,
+                          fontSize: 13.5,
+                          height: 1.1,
+                          color: isSelected
+                              ? Colors.white
+                              : scheme.onSurfaceVariant,
+                          fontWeight: isSelected
+                              ? FontWeight.w700
+                              : FontWeight.w500,
                         ),
                       ),
-                      if (total != null) ...[
+                      if (total != null && total.count > 0) ...[
                         const SizedBox(width: 5),
                         Text(
-                          '${total.count}',
-                          style: OmniType.micro.copyWith(
-                            color: scheme.onSurfaceVariant,
+                          isSelected
+                              ? '${total.count} · ${Formatters.vndCompact(total.value)}'
+                              : '${total.count}',
+                          style: OmniType.caption.copyWith(
+                            fontSize: 13.5,
+                            height: 1.1,
+                            color:
+                                (isSelected
+                                        ? Colors.white
+                                        : scheme.onSurfaceVariant)
+                                    .withValues(alpha: 0.7),
+                            fontWeight: FontWeight.w600,
                             fontFeatures: OmniType.tabular,
                           ),
                         ),
                       ],
                     ],
                   ),
-                  const SizedBox(height: 2),
-                  Text(
-                    Formatters.vndCompact(total?.value ?? 0),
-                    style: OmniType.micro.copyWith(
-                      color: scheme.onSurfaceVariant,
-                      fontFeatures: OmniType.tabular,
-                    ),
-                  ),
-                ],
+                ),
               ),
             ),
           );
