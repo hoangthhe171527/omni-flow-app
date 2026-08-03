@@ -42,10 +42,22 @@ class InboxFilterBar extends ConsumerWidget {
             OmniSpacing.lg,
             OmniSpacing.md,
           ),
-          child: OmniSearchField(
-            hint: 'Tìm kiếm hội thoại...',
-            initialValue: filter.search,
-            onChanged: controller.setSearch,
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              borderRadius: OmniRadius.xlAll,
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.025),
+                  blurRadius: 14,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: OmniSearchField(
+              hint: 'Tìm kiếm hội thoại...',
+              initialValue: filter.search,
+              onChanged: controller.setSearch,
+            ),
           ),
         ),
         SizedBox(
@@ -147,7 +159,10 @@ class _ChannelChip extends StatelessWidget {
                 Container(
                   width: 7,
                   height: 7,
-                  decoration: BoxDecoration(color: tint, shape: BoxShape.circle),
+                  decoration: BoxDecoration(
+                    color: tint,
+                    shape: BoxShape.circle,
+                  ),
                 ),
                 const SizedBox(width: 6),
               ],

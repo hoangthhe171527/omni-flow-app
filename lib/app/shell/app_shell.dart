@@ -34,9 +34,7 @@ class AppShell extends ConsumerWidget {
     final currentBranch = navigationShell.currentIndex;
     final selected = currentBranch == moreBranchIndex
         ? tabs.length
-        : tabs.indexWhere(
-            (tab) => declared.indexOf(tab) == currentBranch,
-          );
+        : tabs.indexWhere((tab) => declared.indexOf(tab) == currentBranch);
 
     return Scaffold(
       body: navigationShell,
@@ -44,8 +42,9 @@ class AppShell extends ConsumerWidget {
         tabs: tabs,
         selectedIndex: selected < 0 ? tabs.length : selected,
         onSelected: (index) {
-          final branch =
-              index >= tabs.length ? moreBranchIndex : declared.indexOf(tabs[index]);
+          final branch = index >= tabs.length
+              ? moreBranchIndex
+              : declared.indexOf(tabs[index]);
           navigationShell.goBranch(
             branch,
             // Tapping the active tab pops that tab back to its root — the
@@ -76,12 +75,21 @@ class _ShellNavBar extends StatelessWidget {
     return Container(
       decoration: BoxDecoration(
         color: scheme.surface,
-        border: Border(top: BorderSide(color: scheme.outline)),
+        border: Border(
+          top: BorderSide(color: scheme.outline.withValues(alpha: 0.7)),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.035),
+            blurRadius: 18,
+            offset: const Offset(0, -4),
+          ),
+        ],
       ),
       child: SafeArea(
         top: false,
         child: SizedBox(
-          height: 60,
+          height: 64,
           child: Row(
             children: [
               for (var i = 0; i < tabs.length; i++)
@@ -111,15 +119,15 @@ class _ShellNavItem extends ConsumerWidget {
     required this.destination,
     required this.selected,
     required this.onTap,
-  })  : label = null,
-        icon = null,
-        selectedIcon = null;
+  }) : label = null,
+       icon = null,
+       selectedIcon = null;
 
   const _ShellNavItem.more({required this.selected, required this.onTap})
-      : destination = null,
-        label = 'Thêm',
-        icon = Icons.more_horiz_rounded,
-        selectedIcon = Icons.more_horiz_rounded;
+    : destination = null,
+      label = 'Thêm',
+      icon = Icons.more_horiz_rounded,
+      selectedIcon = Icons.more_horiz_rounded;
 
   final ModuleDestination? destination;
   final String? label;
@@ -140,23 +148,32 @@ class _ShellNavItem extends ConsumerWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Stack(
-            clipBehavior: Clip.none,
-            children: [
-              Icon(
-                selected
-                    ? (destination?.selectedIcon ?? selectedIcon!)
-                    : (destination?.icon ?? icon!),
-                size: 23,
-                color: color,
-              ),
-              if (count > 0)
-                Positioned(
-                  right: -10,
-                  top: -6,
-                  child: OmniCountBadge(count: count, color: scheme.error),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 4),
+            decoration: BoxDecoration(
+              color: selected
+                  ? scheme.primary.withValues(alpha: 0.11)
+                  : Colors.transparent,
+              borderRadius: OmniRadius.pillAll,
+            ),
+            child: Stack(
+              clipBehavior: Clip.none,
+              children: [
+                Icon(
+                  selected
+                      ? (destination?.selectedIcon ?? selectedIcon!)
+                      : (destination?.icon ?? icon!),
+                  size: 23,
+                  color: color,
                 ),
-            ],
+                if (count > 0)
+                  Positioned(
+                    right: -10,
+                    top: -6,
+                    child: OmniCountBadge(count: count, color: scheme.error),
+                  ),
+              ],
+            ),
           ),
           const SizedBox(height: 3),
           Text(

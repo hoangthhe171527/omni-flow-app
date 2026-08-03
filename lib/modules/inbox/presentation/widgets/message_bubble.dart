@@ -30,25 +30,40 @@ class MessageBubble extends StatelessWidget {
     final outbound = message.isOutbound;
     final failed = message.status == DeliveryStatus.failed;
 
+    // Zalo's bubble: pale blue outgoing, white incoming, DARK text on both.
+    // The old one was a purple gradient with white text — striking in isolation,
+    // but nothing like the app reps sit next to all day, and white-on-saturated
+    // is tiring to read down a long thread. Text colour no longer depends on the
+    // side, so contrast is the same either way.
+    final onBubble = failed ? scheme.onErrorContainer : scheme.onSurface;
+
     final bubble = Container(
       constraints: BoxConstraints(
-        maxWidth: MediaQuery.sizeOf(context).width * 0.74,
+        maxWidth: MediaQuery.sizeOf(context).width * 0.76,
       ),
-      padding: const EdgeInsets.symmetric(
-        horizontal: OmniSpacing.md,
-        vertical: OmniSpacing.sm + 2,
-      ),
+      padding: const EdgeInsets.fromLTRB(12, 8, 12, 6),
       decoration: BoxDecoration(
-        color: outbound
-            ? (failed ? scheme.error : scheme.primary)
-            : scheme.surface,
+        color: failed
+            ? scheme.errorContainer
+            : (outbound ? OmniColors.chatOutbound : OmniColors.chatInbound),
+        // Zalo rounds all four corners evenly and squares only the corner
+        // nearest its own side, which is what makes a run of messages read as
+        // one column instead of separate cards.
         borderRadius: BorderRadius.only(
-          topLeft: const Radius.circular(OmniRadius.lg),
-          topRight: const Radius.circular(OmniRadius.lg),
-          bottomLeft: Radius.circular(outbound ? OmniRadius.lg : OmniRadius.xs),
-          bottomRight: Radius.circular(outbound ? OmniRadius.xs : OmniRadius.lg),
+          topLeft: const Radius.circular(14),
+          topRight: const Radius.circular(14),
+          bottomLeft: Radius.circular(outbound ? 14 : 4),
+          bottomRight: Radius.circular(outbound ? 4 : 14),
         ),
-        border: outbound ? null : Border.all(color: scheme.outline),
+        // A single soft shadow lifts the bubble off the canvas; the old pair of
+        // heavy shadows plus a border made every message look like a card.
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x14000000),
+            blurRadius: 2,
+            offset: Offset(0, 1),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -61,28 +76,53 @@ class MessageBubble extends StatelessWidget {
             Text(
               'Tin nhắn đã được thu hồi',
               style: OmniType.caption.copyWith(
-                color: outbound
-                    ? scheme.onPrimary.withValues(alpha: 0.8)
-                    : scheme.onSurfaceVariant,
+                color: OmniColors.chatMeta,
                 fontStyle: FontStyle.italic,
               ),
             )
           else if (message.text.isNotEmpty)
             Text(
               message.text,
-              style: OmniType.body.copyWith(
-                color: outbound ? scheme.onPrimary : scheme.onSurface,
-              ),
+              style: OmniType.body.copyWith(fontSize: 15, height: 1.35, color: onBubble),
             ),
+          // Time and delivery tick inside the bubble, bottom-right — Zalo's
+          // placement. They sat on their own line underneath before, which cost
+          // a whole row of vertical space per message and stretched even a short
+          // thread down the screen.
+          const SizedBox(height: 2),
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              Text(
+                Formatters.time(message.sentAt),
+                style: OmniType.micro.copyWith(
+                  fontSize: 11,
+                  color: OmniColors.chatMeta,
+                ),
+              ),
+              if (outbound) ...[
+                const SizedBox(width: 3),
+                Icon(
+                  _statusIcon(message.status),
+                  size: 13,
+                  color: message.status == DeliveryStatus.read
+                      ? OmniColors.chatPrimary
+                      : OmniColors.chatMeta,
+                ),
+              ],
+            ],
+          ),
         ],
       ),
     );
 
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 3),
+      padding: const EdgeInsets.symmetric(vertical: 4),
       child: Column(
-        crossAxisAlignment:
-            outbound ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+        crossAxisAlignment: outbound
+            ? CrossAxisAlignment.end
+            : CrossAxisAlignment.start,
         children: [
           if (showSender && message.senderName != null)
             Padding(
@@ -98,7 +138,9 @@ class MessageBubble extends StatelessWidget {
                   const SizedBox(width: 5),
                   Text(
                     message.senderName!,
-                    style: OmniType.micro.copyWith(color: scheme.onSurfaceVariant),
+                    style: OmniType.micro.copyWith(
+                      color: scheme.onSurfaceVariant,
+                    ),
                   ),
                 ],
               ),
@@ -128,11 +170,7 @@ class MessageBubble extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 4),
-          _MetaLine(
-            message: message,
-            onRetry: onRetry,
-            onDiscard: onDiscard,
-          ),
+          _MetaLine(message: message, onRetry: onRetry, onDiscard: onDiscard),
         ],
       ),
     );
@@ -188,38 +226,19 @@ class _MetaLine extends StatelessWidget {
       );
     }
 
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Text(
-          Formatters.time(message.sentAt),
-          style: OmniType.micro.copyWith(
-            color: scheme.onSurfaceVariant,
-            fontSize: 10,
-          ),
-        ),
-        if (message.isOutbound) ...[
-          const SizedBox(width: 4),
-          Icon(
-            _statusIcon(message.status),
-            size: 13,
-            color: message.status == DeliveryStatus.read
-                ? scheme.primary
-                : scheme.onSurfaceVariant,
-          ),
-        ],
-      ],
-    );
+    // Time and tick now live inside the bubble, so a delivered message needs
+    // nothing here at all — this line exists only to explain a failure.
+    return const SizedBox.shrink();
   }
-
-  IconData _statusIcon(DeliveryStatus status) => switch (status) {
-        DeliveryStatus.queued => Icons.schedule_rounded,
-        DeliveryStatus.sent => Icons.check_rounded,
-        DeliveryStatus.delivered => Icons.done_all_rounded,
-        DeliveryStatus.read => Icons.done_all_rounded,
-        _ => Icons.check_rounded,
-      };
 }
+
+IconData _statusIcon(DeliveryStatus status) => switch (status) {
+  DeliveryStatus.queued => Icons.schedule_rounded,
+  DeliveryStatus.sent => Icons.check_rounded,
+  DeliveryStatus.delivered => Icons.done_all_rounded,
+  DeliveryStatus.read => Icons.done_all_rounded,
+  _ => Icons.check_rounded,
+};
 
 /// Internal note. Deliberately unlike a message bubble — full width, amber,
 /// labelled — so it can never be mistaken for something the customer saw.
@@ -247,7 +266,11 @@ class _NoteBubble extends StatelessWidget {
           children: [
             Row(
               children: [
-                const Icon(Icons.sticky_note_2_outlined, size: 14, color: amber),
+                const Icon(
+                  Icons.sticky_note_2_outlined,
+                  size: 14,
+                  color: amber,
+                ),
                 const SizedBox(width: 5),
                 Text(
                   'GHI CHÚ NỘI BỘ',

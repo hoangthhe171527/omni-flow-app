@@ -60,19 +60,26 @@ class _InboxPageState extends ConsumerState<InboxPage> {
       appBar: AppBar(
         title: const Text('Hộp thư'),
         titleSpacing: OmniSpacing.lg,
+        toolbarHeight: 60,
         actions: [
           IconButton(
             tooltip: 'Chọn nhiều',
             onPressed: access.canLabel
                 ? () => setState(() {
-                      final items = list.valueOrNull?.items ?? const [];
-                      if (_selected.isEmpty && items.isNotEmpty) {
-                        _selected.add(items.first.id);
-                      } else {
-                        _selected.clear();
-                      }
-                    })
+                    final items = list.valueOrNull?.items ?? const [];
+                    if (_selected.isEmpty && items.isNotEmpty) {
+                      _selected.add(items.first.id);
+                    } else {
+                      _selected.clear();
+                    }
+                  })
                 : null,
+            style: IconButton.styleFrom(
+              backgroundColor: selecting
+                  ? scheme.primaryContainer
+                  : scheme.surfaceContainerHighest,
+              foregroundColor: selecting ? scheme.primary : scheme.onSurface,
+            ),
             icon: Icon(
               selecting ? Icons.close_rounded : Icons.checklist_rounded,
             ),
@@ -112,10 +119,20 @@ class _InboxPageState extends ConsumerState<InboxPage> {
                 empty: _empty(),
                 data: (state) => ListView.separated(
                   controller: _scrollController,
-                  padding: const EdgeInsets.only(bottom: OmniSpacing.bottomSafe),
+                  padding: const EdgeInsets.only(
+                    bottom: OmniSpacing.bottomSafe,
+                  ),
                   itemCount: state.items.length + (state.hasMore ? 1 : 0),
-                  separatorBuilder: (_, _) =>
-                      Divider(height: 1, color: scheme.outline),
+                  // Zalo separates rows with a hairline indented past the
+                  // avatar, not a gap. Gaps between bordered cards were what
+                  // made the list read as a table of records.
+                  separatorBuilder: (_, _) => const Divider(
+                    height: 1,
+                    thickness: 1,
+                    indent: 80,
+                    endIndent: 0,
+                    color: OmniColors.chatDivider,
+                  ),
                   itemBuilder: (context, index) {
                     if (index >= state.items.length) {
                       return const Padding(
@@ -131,22 +148,22 @@ class _InboxPageState extends ConsumerState<InboxPage> {
                     }
                     final conversation = state.items[index];
                     return ConversationRow(
-                      conversation: conversation,
-                      selectionMode: selecting,
-                      selected: _selected.contains(conversation.id),
-                      onLongPress: access.canLabel
-                          ? () => _toggleSelection(conversation.id)
-                          : null,
-                      onTap: () {
-                        if (selecting) {
-                          _toggleSelection(conversation.id);
-                          return;
-                        }
-                        context.pushNamed(
-                          InboxModule.thread,
-                          pathParameters: {'id': conversation.id},
-                        );
-                      },
+                        conversation: conversation,
+                        selectionMode: selecting,
+                        selected: _selected.contains(conversation.id),
+                        onLongPress: access.canLabel
+                            ? () => _toggleSelection(conversation.id)
+                            : null,
+                        onTap: () {
+                          if (selecting) {
+                            _toggleSelection(conversation.id);
+                            return;
+                          }
+                          context.pushNamed(
+                            InboxModule.thread,
+                            pathParameters: {'id': conversation.id},
+                          );
+                        },
                     );
                   },
                 ),
@@ -165,7 +182,8 @@ class _InboxPageState extends ConsumerState<InboxPage> {
 
   Widget _empty() {
     final filter = ref.read(inboxFilterProvider);
-    final filtered = filter.quick != InboxQuickFilter.all ||
+    final filtered =
+        filter.quick != InboxQuickFilter.all ||
         filter.search.isNotEmpty ||
         filter.channel != null ||
         filter.label != null;

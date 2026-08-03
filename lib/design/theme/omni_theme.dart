@@ -5,26 +5,26 @@ import '../tokens/tokens.dart';
 
 abstract final class OmniTheme {
   static ThemeData get light => _build(
-        brightness: Brightness.light,
-        background: OmniColors.background,
-        surface: OmniColors.card,
-        surfaceMuted: OmniColors.muted,
-        border: OmniColors.border,
-        onSurface: OmniColors.foreground,
-        onSurfaceMuted: OmniColors.mutedForeground,
-        primary: OmniColors.primary,
-      );
+    brightness: Brightness.light,
+    background: OmniColors.background,
+    surface: OmniColors.card,
+    surfaceMuted: OmniColors.muted,
+    border: OmniColors.border,
+    onSurface: OmniColors.foreground,
+    onSurfaceMuted: OmniColors.mutedForeground,
+    primary: OmniColors.primary,
+  );
 
   static ThemeData get dark => _build(
-        brightness: Brightness.dark,
-        background: OmniColors.darkBackground,
-        surface: OmniColors.darkCard,
-        surfaceMuted: OmniColors.darkMuted,
-        border: OmniColors.darkBorder,
-        onSurface: OmniColors.darkForeground,
-        onSurfaceMuted: OmniColors.darkMutedForeground,
-        primary: OmniColors.darkPrimary,
-      );
+    brightness: Brightness.dark,
+    background: OmniColors.darkBackground,
+    surface: OmniColors.darkCard,
+    surfaceMuted: OmniColors.darkMuted,
+    border: OmniColors.darkBorder,
+    onSurface: OmniColors.darkForeground,
+    onSurfaceMuted: OmniColors.darkMutedForeground,
+    primary: OmniColors.darkPrimary,
+  );
 
   static ThemeData _build({
     required Brightness brightness,
@@ -82,7 +82,7 @@ abstract final class OmniTheme {
         elevation: 0,
         margin: EdgeInsets.zero,
         shape: RoundedRectangleBorder(
-          borderRadius: OmniRadius.lgAll,
+          borderRadius: OmniRadius.xlAll,
           side: BorderSide(color: border),
         ),
       ),
@@ -115,11 +115,13 @@ abstract final class OmniTheme {
         backgroundColor: primary,
         foregroundColor: OmniColors.primaryForeground,
         elevation: 2,
-        shape: const RoundedRectangleBorder(borderRadius: OmniRadius.lgAll),
+        shape: const RoundedRectangleBorder(borderRadius: OmniRadius.xlAll),
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: brightness == Brightness.light ? OmniColors.background : surfaceMuted,
+        fillColor: brightness == Brightness.light
+            ? OmniColors.background
+            : surfaceMuted,
         contentPadding: const EdgeInsets.symmetric(
           horizontal: OmniSpacing.lg,
           vertical: OmniSpacing.lg,
@@ -158,12 +160,14 @@ abstract final class OmniTheme {
         backgroundColor: surface,
         surfaceTintColor: Colors.transparent,
         elevation: 0,
-        height: 64,
-        indicatorColor: Colors.transparent,
+        height: 68,
+        indicatorColor: primary.withValues(alpha: 0.11),
         labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
         labelTextStyle: WidgetStateProperty.resolveWith(
           (states) => OmniType.micro.copyWith(
-            color: states.contains(WidgetState.selected) ? primary : onSurfaceMuted,
+            color: states.contains(WidgetState.selected)
+                ? primary
+                : onSurfaceMuted,
           ),
         ),
       ),

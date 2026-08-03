@@ -60,7 +60,16 @@ class _MessageComposerState extends State<MessageComposer> {
     return Container(
       decoration: BoxDecoration(
         color: scheme.surface,
-        border: Border(top: BorderSide(color: scheme.outline)),
+        borderRadius: const BorderRadius.vertical(
+          top: Radius.circular(OmniRadius.xxl),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.06),
+            blurRadius: 18,
+            offset: const Offset(0, -5),
+          ),
+        ],
       ),
       child: SafeArea(
         top: false,
@@ -77,7 +86,8 @@ class _MessageComposerState extends State<MessageComposer> {
                     vertical: OmniSpacing.xs,
                   ),
                   itemCount: widget.suggestions.length,
-                  separatorBuilder: (_, _) => const SizedBox(width: OmniSpacing.sm),
+                  separatorBuilder: (_, _) =>
+                      const SizedBox(width: OmniSpacing.sm),
                   itemBuilder: (context, index) {
                     final suggestion = widget.suggestions[index];
                     return ActionChip(
@@ -127,9 +137,14 @@ class _MessageComposerState extends State<MessageComposer> {
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
                   IconButton(
-                    onPressed: isNote || !widget.enabled ? null : widget.onAttach,
-                    icon: const Icon(Icons.add_circle_outline_rounded),
-                    color: scheme.onSurfaceVariant,
+                    onPressed: isNote || !widget.enabled
+                        ? null
+                        : widget.onAttach,
+                    style: IconButton.styleFrom(
+                      backgroundColor: scheme.surfaceContainerHighest,
+                      foregroundColor: scheme.onSurfaceVariant,
+                    ),
+                    icon: const Icon(Icons.add_rounded),
                   ),
                   Expanded(
                     child: TextField(
@@ -145,23 +160,30 @@ class _MessageComposerState extends State<MessageComposer> {
                             : 'Nhập nội dung...',
                         isDense: true,
                         fillColor: isNote
-                            ? OmniColors.warning.withValues(alpha: 0.07)
+                            ? OmniColors.warning.withValues(alpha: 0.08)
                             : scheme.surfaceContainerHighest,
                         contentPadding: const EdgeInsets.symmetric(
                           horizontal: OmniSpacing.lg,
                           vertical: OmniSpacing.md,
                         ),
-                        border: const OutlineInputBorder(
+                        border: OutlineInputBorder(
                           borderRadius: OmniRadius.pillAll,
-                          borderSide: BorderSide.none,
+                          borderSide: BorderSide(
+                            color: scheme.outline.withValues(alpha: 0.55),
+                          ),
                         ),
-                        enabledBorder: const OutlineInputBorder(
+                        enabledBorder: OutlineInputBorder(
                           borderRadius: OmniRadius.pillAll,
-                          borderSide: BorderSide.none,
+                          borderSide: BorderSide(
+                            color: scheme.outline.withValues(alpha: 0.55),
+                          ),
                         ),
-                        focusedBorder: const OutlineInputBorder(
+                        focusedBorder: OutlineInputBorder(
                           borderRadius: OmniRadius.pillAll,
-                          borderSide: BorderSide.none,
+                          borderSide: BorderSide(
+                            color: isNote ? OmniColors.warning : scheme.primary,
+                            width: 1.4,
+                          ),
                         ),
                       ),
                       onSubmitted: (_) => _send(),
@@ -176,8 +198,9 @@ class _MessageComposerState extends State<MessageComposer> {
                       style: FilledButton.styleFrom(
                         padding: EdgeInsets.zero,
                         minimumSize: Size.zero,
-                        backgroundColor:
-                            isNote ? OmniColors.warning : scheme.primary,
+                        backgroundColor: isNote
+                            ? OmniColors.warning
+                            : scheme.primary,
                         shape: const CircleBorder(),
                       ),
                       child: _sending
@@ -238,7 +261,11 @@ class _ModeButton extends StatelessWidget {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(icon, size: 14, color: selected ? tint : scheme.onSurfaceVariant),
+              Icon(
+                icon,
+                size: 14,
+                color: selected ? tint : scheme.onSurfaceVariant,
+              ),
               const SizedBox(width: 5),
               Text(
                 label,

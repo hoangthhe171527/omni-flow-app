@@ -64,6 +64,11 @@ class _ThreadPageState extends ConsumerState<ThreadPage> {
     final access = ref.watch(inboxAccessProvider);
 
     return Scaffold(
+      // Bubbles can only read as raised against a tinted canvas. On white the
+      // incoming (white) bubbles vanished into the page and the thread looked
+      // like a flat document — the single biggest reason it did not feel like a
+      // chat app.
+      backgroundColor: OmniColors.chatCanvas,
       appBar: _ThreadAppBar(
         conversation: conversation.valueOrNull,
         onAssign: access.canAssign ? _assign : null,
@@ -72,25 +77,33 @@ class _ThreadPageState extends ConsumerState<ThreadPage> {
       body: Column(
         children: [
           Expanded(
-            child: OmniAsyncView(
-              value: thread,
-              onRetry: () => ref.invalidate(threadProvider(widget.conversationId)),
-              isEmpty: (state) => state.messages.isEmpty,
-              empty: const OmniEmptyState(
-                icon: Icons.chat_bubble_outline_rounded,
-                title: 'Chưa có tin nhắn',
-                message: 'Gửi tin đầu tiên để bắt đầu cuộc trò chuyện.',
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                color: Theme.of(
+                  context,
+                ).colorScheme.surfaceContainerHighest.withValues(alpha: 0.48),
               ),
-              data: (state) => _MessageList(
-                state: state,
-                controller: _scrollController,
-                isGroup: conversation.valueOrNull?.isGroup ?? false,
-                onRetry: (message) => ref
-                    .read(threadProvider(widget.conversationId).notifier)
-                    .send(message.text, attachments: message.attachments),
-                onDiscard: (message) => ref
-                    .read(threadProvider(widget.conversationId).notifier)
-                    .discard(message.id),
+              child: OmniAsyncView(
+                value: thread,
+                onRetry: () =>
+                    ref.invalidate(threadProvider(widget.conversationId)),
+                isEmpty: (state) => state.messages.isEmpty,
+                empty: const OmniEmptyState(
+                  icon: Icons.chat_bubble_outline_rounded,
+                  title: 'Chưa có tin nhắn',
+                  message: 'Gửi tin đầu tiên để bắt đầu cuộc trò chuyện.',
+                ),
+                data: (state) => _MessageList(
+                  state: state,
+                  controller: _scrollController,
+                  isGroup: conversation.valueOrNull?.isGroup ?? false,
+                  onRetry: (message) => ref
+                      .read(threadProvider(widget.conversationId).notifier)
+                      .send(message.text, attachments: message.attachments),
+                  onDiscard: (message) => ref
+                      .read(threadProvider(widget.conversationId).notifier)
+                      .discard(message.id),
+                ),
               ),
             ),
           ),
@@ -100,8 +113,9 @@ class _ThreadPageState extends ConsumerState<ThreadPage> {
               suggestions: _suggestions(conversation.valueOrNull),
               onAttach: _attach,
               onSend: (text, mode) async {
-                final controller =
-                    ref.read(threadProvider(widget.conversationId).notifier);
+                final controller = ref.read(
+                  threadProvider(widget.conversationId).notifier,
+                );
                 if (mode == ComposeMode.note) {
                   await controller.addNote(text);
                 } else {
@@ -144,8 +158,9 @@ class _ThreadPageState extends ConsumerState<ThreadPage> {
     if (picked == null) return;
 
     try {
-      final attachment =
-          await ref.read(inboxApiProvider).uploadMedia(picked.path, filename: picked.name);
+      final attachment = await ref
+          .read(inboxApiProvider)
+          .uploadMedia(picked.path, filename: picked.name);
       await ref
           .read(threadProvider(widget.conversationId).notifier)
           .send('', attachments: [attachment]);
@@ -156,7 +171,9 @@ class _ThreadPageState extends ConsumerState<ThreadPage> {
   }
 
   Future<void> _assign() async {
-    final conversation = ref.read(conversationProvider(widget.conversationId)).valueOrNull;
+    final conversation = ref
+        .read(conversationProvider(widget.conversationId))
+        .valueOrNull;
     final result = await showOmniSheet<AssignResult>(
       context: context,
       expand: true,
@@ -180,13 +197,16 @@ class _ThreadPageState extends ConsumerState<ThreadPage> {
     showOmniSheet(
       context: context,
       expand: true,
-      builder: (_) => ConversationContextSheet(conversationId: widget.conversationId),
+      builder: (_) =>
+          ConversationContextSheet(conversationId: widget.conversationId),
     );
   }
 
   void _toast(String message) {
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
   }
 }
 
@@ -202,16 +222,19 @@ class _ThreadAppBar extends StatelessWidget implements PreferredSizeWidget {
   final VoidCallback? onAssign;
 
   @override
-  Size get preferredSize => const Size.fromHeight(kToolbarHeight);
+  Size get preferredSize => const Size.fromHeight(64);
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
 
     return AppBar(
+      toolbarHeight: 64,
       titleSpacing: 0,
       backgroundColor: scheme.surface,
-      shape: Border(bottom: BorderSide(color: scheme.outline)),
+      shape: Border(
+        bottom: BorderSide(color: scheme.outline.withValues(alpha: 0.72)),
+      ),
       title: conversation == null
           ? const SizedBox.shrink()
           : Row(
@@ -238,7 +261,9 @@ class _ThreadAppBar extends StatelessWidget implements PreferredSizeWidget {
                         conversation!.title,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: OmniType.bodyStrong.copyWith(color: scheme.onSurface),
+                        style: OmniType.bodyStrong.copyWith(
+                          color: scheme.onSurface,
+                        ),
                       ),
                       Row(
                         children: [
@@ -270,11 +295,19 @@ class _ThreadAppBar extends StatelessWidget implements PreferredSizeWidget {
           IconButton(
             tooltip: 'Gán nhân viên',
             onPressed: onAssign,
+            style: IconButton.styleFrom(
+              backgroundColor: scheme.surfaceContainerHighest,
+              foregroundColor: scheme.onSurface,
+            ),
             icon: const Icon(Icons.person_add_alt_outlined, size: 21),
           ),
         IconButton(
           tooltip: 'Thông tin khách hàng',
           onPressed: onInfo,
+          style: IconButton.styleFrom(
+            backgroundColor: scheme.surfaceContainerHighest,
+            foregroundColor: scheme.onSurface,
+          ),
           icon: const Icon(Icons.info_outline_rounded, size: 21),
         ),
         const SizedBox(width: OmniSpacing.xs),
@@ -307,9 +340,11 @@ class _MessageList extends StatelessWidget {
     return ListView.builder(
       controller: controller,
       reverse: true,
-      padding: const EdgeInsets.symmetric(
-        horizontal: OmniSpacing.lg,
-        vertical: OmniSpacing.md,
+      padding: const EdgeInsets.fromLTRB(
+        OmniSpacing.lg,
+        OmniSpacing.lg,
+        OmniSpacing.lg,
+        OmniSpacing.md,
       ),
       itemCount: items.length + (state.hasMore ? 1 : 0),
       itemBuilder: (context, index) {
@@ -329,7 +364,8 @@ class _MessageList extends StatelessWidget {
         final message = items[index];
         // `items` runs newest→oldest, so the *next* index is the earlier message.
         final earlier = index + 1 < items.length ? items[index + 1] : null;
-        final needsDayHeader = message.sentAt != null &&
+        final needsDayHeader =
+            message.sentAt != null &&
             (earlier?.sentAt == null ||
                 !_sameDay(message.sentAt!, earlier!.sentAt!));
 
@@ -367,22 +403,26 @@ class _DaySeparator extends StatelessWidget {
 
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: OmniSpacing.lg),
-      child: Row(
-        children: [
-          Expanded(child: Divider(color: scheme.outline)),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: OmniSpacing.md),
-            child: Text(
-              Formatters.dayHeader(date),
-              style: OmniType.micro.copyWith(
-                color: scheme.onSurfaceVariant,
-                fontSize: 10,
-                letterSpacing: 0.5,
-              ),
+      child: Center(
+        child: Container(
+          padding: const EdgeInsets.symmetric(
+            horizontal: OmniSpacing.md,
+            vertical: 5,
+          ),
+          decoration: BoxDecoration(
+            color: scheme.surface.withValues(alpha: 0.92),
+            borderRadius: OmniRadius.pillAll,
+            border: Border.all(color: scheme.outline.withValues(alpha: 0.78)),
+          ),
+          child: Text(
+            Formatters.dayHeader(date),
+            style: OmniType.micro.copyWith(
+              color: scheme.onSurfaceVariant,
+              fontSize: 10,
+              letterSpacing: 0.25,
             ),
           ),
-          Expanded(child: Divider(color: scheme.outline)),
-        ],
+        ),
       ),
     );
   }
@@ -407,7 +447,11 @@ class _ReadOnlyBar extends StatelessWidget {
       ),
       child: Row(
         children: [
-          Icon(Icons.lock_outline_rounded, size: 16, color: scheme.onSurfaceVariant),
+          Icon(
+            Icons.lock_outline_rounded,
+            size: 16,
+            color: scheme.onSurfaceVariant,
+          ),
           const SizedBox(width: OmniSpacing.sm),
           Expanded(
             child: Text(
