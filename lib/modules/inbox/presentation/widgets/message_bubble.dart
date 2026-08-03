@@ -30,12 +30,33 @@ class MessageBubble extends StatelessWidget {
     final outbound = message.isOutbound;
     final failed = message.status == DeliveryStatus.failed;
 
-    // Zalo's bubble: pale blue outgoing, white incoming, DARK text on both.
-    // The old one was a purple gradient with white text — striking in isolation,
-    // but nothing like the app reps sit next to all day, and white-on-saturated
-    // is tiring to read down a long thread. Text colour no longer depends on the
-    // side, so contrast is the same either way.
-    final onBubble = failed ? scheme.onErrorContainer : scheme.onSurface;
+    // Measured against Zalo itself rather than from memory: the outgoing bubble
+    // is a MUTED blue-grey, not a saturated blue — a bright bubble is exhausting
+    // to read a long thread on. Corners are evenly rounded on all four, with no
+    // sharp tail, which is what lets a run of messages read as one calm column.
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    final bubbleColor = failed
+        ? scheme.errorContainer
+        : outbound
+        ? OmniColors.chat(
+            context,
+            OmniColors.chatOutbound,
+            OmniColors.chatOutboundDark,
+          )
+        : OmniColors.chat(
+            context,
+            OmniColors.chatInbound,
+            OmniColors.chatInboundDark,
+          );
+    // Dark mode carries white text on both sides; light mode is dark-on-pale.
+    final onBubble = failed
+        ? scheme.onErrorContainer
+        : dark
+        ? Colors.white
+        : scheme.onSurface;
+    final metaColor = dark
+        ? Colors.white.withValues(alpha: 0.55)
+        : OmniColors.chatMeta;
 
     final bubble = Container(
       constraints: BoxConstraints(
@@ -43,27 +64,19 @@ class MessageBubble extends StatelessWidget {
       ),
       padding: const EdgeInsets.fromLTRB(12, 8, 12, 6),
       decoration: BoxDecoration(
-        color: failed
-            ? scheme.errorContainer
-            : (outbound ? OmniColors.chatOutbound : OmniColors.chatInbound),
-        // Zalo rounds all four corners evenly and squares only the corner
-        // nearest its own side, which is what makes a run of messages read as
-        // one column instead of separate cards.
-        borderRadius: BorderRadius.only(
-          topLeft: const Radius.circular(14),
-          topRight: const Radius.circular(14),
-          bottomLeft: Radius.circular(outbound ? 14 : 4),
-          bottomRight: Radius.circular(outbound ? 4 : 14),
-        ),
-        // A single soft shadow lifts the bubble off the canvas; the old pair of
-        // heavy shadows plus a border made every message look like a card.
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x14000000),
-            blurRadius: 2,
-            offset: Offset(0, 1),
-          ),
-        ],
+        color: bubbleColor,
+        borderRadius: BorderRadius.circular(18),
+        // No shadow in dark mode — on a black canvas it only muddies the edge;
+        // the bubble already separates by luminance.
+        boxShadow: dark
+            ? null
+            : const [
+                BoxShadow(
+                  color: Color(0x14000000),
+                  blurRadius: 2,
+                  offset: Offset(0, 1),
+                ),
+              ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -76,30 +89,30 @@ class MessageBubble extends StatelessWidget {
             Text(
               'Tin nhắn đã được thu hồi',
               style: OmniType.caption.copyWith(
-                color: OmniColors.chatMeta,
+                color: metaColor,
                 fontStyle: FontStyle.italic,
               ),
             )
           else if (message.text.isNotEmpty)
             Text(
               message.text,
-              style: OmniType.body.copyWith(fontSize: 15, height: 1.35, color: onBubble),
+              style: OmniType.body.copyWith(
+                fontSize: 15,
+                height: 1.35,
+                color: onBubble,
+              ),
             ),
-          // Time and delivery tick inside the bubble, bottom-right — Zalo's
-          // placement. They sat on their own line underneath before, which cost
-          // a whole row of vertical space per message and stretched even a short
-          // thread down the screen.
+          // Time and tick inside the bubble, bottom-LEFT. Zalo puts them there
+          // on both sides — checked against the real app, not from memory — and
+          // they used to sit on their own line underneath, costing a full row of
+          // vertical space per message.
           const SizedBox(height: 2),
           Row(
             mainAxisSize: MainAxisSize.min,
-            mainAxisAlignment: MainAxisAlignment.end,
             children: [
               Text(
                 Formatters.time(message.sentAt),
-                style: OmniType.micro.copyWith(
-                  fontSize: 11,
-                  color: OmniColors.chatMeta,
-                ),
+                style: OmniType.micro.copyWith(fontSize: 11, color: metaColor),
               ),
               if (outbound) ...[
                 const SizedBox(width: 3),
@@ -108,7 +121,7 @@ class MessageBubble extends StatelessWidget {
                   size: 13,
                   color: message.status == DeliveryStatus.read
                       ? OmniColors.chatPrimary
-                      : OmniColors.chatMeta,
+                      : metaColor,
                 ),
               ],
             ],
@@ -117,60 +130,90 @@ class MessageBubble extends StatelessWidget {
       ),
     );
 
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Column(
-        crossAxisAlignment: outbound
-            ? CrossAxisAlignment.end
-            : CrossAxisAlignment.start,
-        children: [
-          if (showSender && message.senderName != null)
-            Padding(
-              padding: const EdgeInsets.only(left: 4, bottom: 3),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  OmniAvatar(
-                    name: message.senderName!,
-                    imageUrl: message.senderAvatar,
-                    size: 16,
-                  ),
-                  const SizedBox(width: 5),
-                  Text(
-                    message.senderName!,
-                    style: OmniType.micro.copyWith(
-                      color: scheme.onSurfaceVariant,
-                    ),
-                  ),
-                ],
-              ),
+    // Incoming messages sit beside the sender's avatar — Zalo shows one on
+    // every incoming message, 1-1 threads included, and it is what anchors the
+    // left column visually. Outgoing has none, so the right side stays clean.
+    final avatarGutter = outbound
+        ? const SizedBox(width: 8)
+        : Padding(
+            padding: const EdgeInsets.only(right: 6),
+            child: OmniAvatar(
+              name: message.senderName ?? '?',
+              imageUrl: message.senderAvatar,
+              size: 32,
             ),
-          Stack(
-            clipBehavior: Clip.none,
-            children: [
-              bubble,
-              if (message.reaction != null && message.reaction!.isNotEmpty)
-                Positioned(
-                  right: outbound ? null : -6,
-                  left: outbound ? -6 : null,
-                  bottom: -8,
-                  child: Container(
-                    padding: const EdgeInsets.all(3),
-                    decoration: BoxDecoration(
-                      color: scheme.surface,
-                      shape: BoxShape.circle,
-                      border: Border.all(color: scheme.outline),
-                    ),
-                    child: Text(
-                      message.reaction!,
-                      style: const TextStyle(fontSize: 11),
+          );
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 3),
+      child: Row(
+        mainAxisAlignment: outbound
+            ? MainAxisAlignment.end
+            : MainAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          if (!outbound) avatarGutter,
+          Flexible(
+            child: Column(
+              crossAxisAlignment: outbound
+                  ? CrossAxisAlignment.end
+                  : CrossAxisAlignment.start,
+              children: [
+                if (showSender && message.senderName != null)
+                  Padding(
+                    padding: const EdgeInsets.only(left: 4, bottom: 3),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        OmniAvatar(
+                          name: message.senderName!,
+                          imageUrl: message.senderAvatar,
+                          size: 16,
+                        ),
+                        const SizedBox(width: 5),
+                        Text(
+                          message.senderName!,
+                          style: OmniType.micro.copyWith(
+                            color: scheme.onSurfaceVariant,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
+                Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    bubble,
+                    if (message.reaction != null &&
+                        message.reaction!.isNotEmpty)
+                      Positioned(
+                        right: outbound ? null : -6,
+                        left: outbound ? -6 : null,
+                        bottom: -8,
+                        child: Container(
+                          padding: const EdgeInsets.all(3),
+                          decoration: BoxDecoration(
+                            color: scheme.surface,
+                            shape: BoxShape.circle,
+                            border: Border.all(color: scheme.outline),
+                          ),
+                          child: Text(
+                            message.reaction!,
+                            style: const TextStyle(fontSize: 11),
+                          ),
+                        ),
+                      ),
+                  ],
                 ),
-            ],
+                _MetaLine(
+                  message: message,
+                  onRetry: onRetry,
+                  onDiscard: onDiscard,
+                ),
+              ],
+            ),
           ),
-          const SizedBox(height: 4),
-          _MetaLine(message: message, onRetry: onRetry, onDiscard: onDiscard),
+          if (outbound) avatarGutter,
         ],
       ),
     );

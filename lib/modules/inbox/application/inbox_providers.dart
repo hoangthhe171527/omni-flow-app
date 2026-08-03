@@ -12,7 +12,9 @@ final inboxAccessProvider = Provider<InboxAccess>((ref) {
 });
 
 final inboxFilterProvider =
-    NotifierProvider<InboxFilterController, InboxFilter>(InboxFilterController.new);
+    NotifierProvider<InboxFilterController, InboxFilter>(
+      InboxFilterController.new,
+    );
 
 class InboxFilterController extends Notifier<InboxFilter> {
   @override
@@ -23,10 +25,10 @@ class InboxFilterController extends Notifier<InboxFilter> {
   void setSearch(String search) => state = state.copyWith(search: search);
 
   void setChannel(Object? channel) => state = state.copyWith(
-        channel: channel,
-        // A specific account only makes sense within its own platform.
-        connectionId: null,
-      );
+    channel: channel,
+    // A specific account only makes sense within its own platform.
+    connectionId: null,
+  );
 
   void setConnection(String? connectionId) =>
       state = state.copyWith(connectionId: connectionId);
@@ -44,7 +46,9 @@ final _inboxQueryProvider = Provider<Map<String, dynamic>>((ref) {
   return filter.toQuery(currentUserId: userId);
 });
 
-final inboxFacetsProvider = FutureProvider.autoDispose<InboxFacets>((ref) async {
+final inboxFacetsProvider = FutureProvider.autoDispose<InboxFacets>((
+  ref,
+) async {
   // Keep the counts alive briefly across tab switches so the pills don't blink.
   ref.keepAlive();
   return ref.watch(inboxApiProvider).facets(ref.watch(_inboxQueryProvider));
@@ -76,12 +80,16 @@ class ConversationListState {
 
 /// The conversation list. Rebuilds whenever the filter changes; exposes
 /// `loadMore` for infinite scroll and `refresh` for pull-to-refresh.
-class InboxListController extends AutoDisposeAsyncNotifier<ConversationListState> {
+class InboxListController
+    extends AutoDisposeAsyncNotifier<ConversationListState> {
   @override
   Future<ConversationListState> build() async {
     final query = ref.watch(_inboxQueryProvider);
     final page = await ref.watch(inboxApiProvider).list(query: query);
-    return ConversationListState(items: page.items, pagination: page.pagination);
+    return ConversationListState(
+      items: page.items,
+      pagination: page.pagination,
+    );
   }
 
   Future<void> refresh() async {
@@ -102,7 +110,9 @@ class InboxListController extends AutoDisposeAsyncNotifier<ConversationListState
     );
 
     try {
-      final next = await ref.read(inboxApiProvider).list(
+      final next = await ref
+          .read(inboxApiProvider)
+          .list(
             query: ref.read(_inboxQueryProvider),
             page: current.pagination.nextPage,
           );
@@ -140,15 +150,18 @@ class InboxListController extends AutoDisposeAsyncNotifier<ConversationListState
   }
 }
 
-final inboxListProvider = AutoDisposeAsyncNotifierProvider<InboxListController,
-    ConversationListState>(InboxListController.new);
+final inboxListProvider =
+    AutoDisposeAsyncNotifierProvider<
+      InboxListController,
+      ConversationListState
+    >(InboxListController.new);
 
-final conversationProvider =
-    FutureProvider.autoDispose.family<Conversation, String>((ref, id) {
-  return ref.watch(inboxApiProvider).get(id);
-});
+final conversationProvider = FutureProvider.autoDispose
+    .family<Conversation, String>((ref, id) {
+      return ref.watch(inboxApiProvider).get(id);
+    });
 
-final conversationContextProvider =
-    FutureProvider.autoDispose.family<ConversationContext, String>((ref, id) {
-  return ref.watch(inboxApiProvider).context(id);
-});
+final conversationContextProvider = FutureProvider.autoDispose
+    .family<ConversationContext, String>((ref, id) {
+      return ref.watch(inboxApiProvider).context(id);
+    });

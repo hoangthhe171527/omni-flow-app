@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 
 import '../core/config/app_config.dart';
+import '../core/theme/theme_mode_controller.dart';
 import '../design/theme/omni_theme.dart';
 import 'router/app_router.dart';
 
@@ -15,7 +16,9 @@ class OmniApp extends ConsumerWidget {
       title: AppConfig.appName,
       theme: OmniTheme.light,
       darkTheme: OmniTheme.dark,
-      themeMode: ThemeMode.light,
+      // Was pinned to light, so a phone in dark mode got one glaring white app
+      // — worst of all on the messaging screens, which sit next to Zalo.
+      themeMode: ref.watch(themeModeProvider),
       routerConfig: ref.watch(routerProvider),
       debugShowCheckedModeBanner: false,
       locale: const Locale('vi'),
@@ -30,10 +33,9 @@ class OmniApp extends ConsumerWidget {
         // pill, a preview and a time into one line, and it breaks apart past
         // ~1.3x. Clamping keeps large-font accessibility usable rather than
         // ignoring it.
-        final scale = MediaQuery.textScalerOf(context).clamp(
-          minScaleFactor: 0.9,
-          maxScaleFactor: 1.3,
-        );
+        final scale = MediaQuery.textScalerOf(
+          context,
+        ).clamp(minScaleFactor: 0.9, maxScaleFactor: 1.3);
         return MediaQuery(
           data: MediaQuery.of(context).copyWith(textScaler: scale),
           child: child ?? const SizedBox.shrink(),

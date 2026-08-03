@@ -116,8 +116,9 @@ class InboxBulkBar extends ConsumerWidget {
     if (label == null || label.isEmpty) return;
 
     try {
-      final updated =
-          await ref.read(inboxApiProvider).setLabels(selectedIds, [label]);
+      final updated = await ref.read(inboxApiProvider).setLabels(selectedIds, [
+        label,
+      ]);
       onDone();
       await ref.read(inboxListProvider.notifier).refresh();
       messenger.showSnackBar(

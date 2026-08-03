@@ -28,22 +28,20 @@ abstract final class InboxPermissions {
 }
 
 class InboxAccess extends ResourceAccess {
-  InboxAccess._({
-    required super.readScope,
-    required bool canWrite,
-  }) : super(
-          canCreate: canWrite,
-          canUpdate: canWrite,
-          canDelete: canWrite,
-          capabilities: canWrite
-              ? const {'send', 'note', 'assign', 'convert', 'label'}
-              : const {},
-        );
+  InboxAccess._({required super.readScope, required bool canWrite})
+    : super(
+        canCreate: canWrite,
+        canUpdate: canWrite,
+        canDelete: canWrite,
+        capabilities: canWrite
+            ? const {'send', 'note', 'assign', 'convert', 'label'}
+            : const {},
+      );
 
   factory InboxAccess.of(AccessPolicy policy) => InboxAccess._(
-        readScope: policy.scopeOf(InboxPermissions.read),
-        canWrite: policy.can(InboxPermissions.write),
-      );
+    readScope: policy.scopeOf(InboxPermissions.read),
+    canWrite: policy.can(InboxPermissions.write),
+  );
 
   bool get canSend => can('send');
   bool get canNote => can('note');

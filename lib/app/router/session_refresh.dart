@@ -9,12 +9,9 @@ import '../../security/session/session_controller.dart';
 /// login → home → login on every auth transition.
 class SessionRefresh extends ChangeNotifier {
   SessionRefresh(Ref ref) {
-    _subscription = ref.listen<Session>(
-      sessionProvider,
-      (previous, next) {
-        if (previous?.status != next.status) notifyListeners();
-      },
-    );
+    _subscription = ref.listen<Session>(sessionProvider, (previous, next) {
+      if (previous?.status != next.status) notifyListeners();
+    });
   }
 
   late final ProviderSubscription<Session> _subscription;

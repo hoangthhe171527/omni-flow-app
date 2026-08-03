@@ -98,10 +98,7 @@ class OmniEmptyState extends StatelessWidget {
             ],
             if (actionLabel != null) ...[
               const SizedBox(height: OmniSpacing.xl),
-              FilledButton(
-                onPressed: onAction,
-                child: Text(actionLabel!),
-              ),
+              FilledButton(onPressed: onAction, child: Text(actionLabel!)),
             ],
           ],
         ),
@@ -150,7 +147,12 @@ class OmniErrorView extends StatelessWidget {
       );
     }
     if (error is RequestBlockedException) {
-      return (Icons.workspaces_outline, 'Chưa chọn workspace', error.message, false);
+      return (
+        Icons.workspaces_outline,
+        'Chưa chọn workspace',
+        error.message,
+        false,
+      );
     }
     if (error is AppException) {
       return (Icons.error_outline_rounded, 'Đã có lỗi', error.message, true);

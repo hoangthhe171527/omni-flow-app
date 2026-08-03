@@ -135,7 +135,10 @@ class OmniTag extends StatelessWidget {
     final color = tone ?? scheme.onSurfaceVariant;
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: OmniSpacing.sm, vertical: 3),
+      padding: const EdgeInsets.symmetric(
+        horizontal: OmniSpacing.sm,
+        vertical: 3,
+      ),
       decoration: BoxDecoration(
         color: tone == null
             ? scheme.surfaceContainerHighest
@@ -151,7 +154,10 @@ class OmniTag extends StatelessWidget {
           ],
           Text(
             label,
-            style: OmniType.micro.copyWith(color: color, fontWeight: FontWeight.w600),
+            style: OmniType.micro.copyWith(
+              color: color,
+              fontWeight: FontWeight.w600,
+            ),
           ),
         ],
       ),
@@ -176,7 +182,10 @@ class OmniCountBadge extends StatelessWidget {
       constraints: const BoxConstraints(minWidth: 20),
       height: 20,
       padding: const EdgeInsets.symmetric(horizontal: 6),
-      decoration: BoxDecoration(color: background, borderRadius: OmniRadius.pillAll),
+      decoration: BoxDecoration(
+        color: background,
+        borderRadius: OmniRadius.pillAll,
+      ),
       alignment: Alignment.center,
       child: Text(
         count > 99 ? '99+' : '$count',
@@ -193,12 +202,12 @@ enum OmniTone { neutral, info, success, warning, danger }
 
 extension OmniToneColor on OmniTone {
   Color get color => switch (this) {
-        OmniTone.neutral => OmniColors.mutedForeground,
-        OmniTone.info => OmniColors.info,
-        OmniTone.success => OmniColors.success,
-        OmniTone.warning => OmniColors.warning,
-        OmniTone.danger => OmniColors.destructive,
-      };
+    OmniTone.neutral => OmniColors.mutedForeground,
+    OmniTone.info => OmniColors.info,
+    OmniTone.success => OmniColors.success,
+    OmniTone.warning => OmniColors.warning,
+    OmniTone.danger => OmniColors.destructive,
+  };
 }
 
 class OmniStatusChip extends StatelessWidget {
@@ -216,7 +225,10 @@ class OmniStatusChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: OmniSpacing.md, vertical: 5),
+      padding: const EdgeInsets.symmetric(
+        horizontal: OmniSpacing.md,
+        vertical: 5,
+      ),
       decoration: BoxDecoration(
         color: tone.color.withValues(alpha: 0.12),
         borderRadius: OmniRadius.pillAll,
@@ -230,7 +242,10 @@ class OmniStatusChip extends StatelessWidget {
           ],
           Text(
             label,
-            style: OmniType.micro.copyWith(color: tone.color, fontWeight: FontWeight.w700),
+            style: OmniType.micro.copyWith(
+              color: tone.color,
+              fontWeight: FontWeight.w700,
+            ),
           ),
         ],
       ),

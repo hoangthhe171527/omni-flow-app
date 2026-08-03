@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../core/module/module_registry.dart';
 import '../../design/components/components.dart';
 import '../../design/tokens/tokens.dart';
+import '../../core/theme/theme_mode_controller.dart';
 import '../../security/session/session_controller.dart';
 
 /// The "Thêm" tab: the profile block, plus every module entry that didn't earn
@@ -20,7 +21,10 @@ class MorePage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final session = ref.watch(sessionProvider);
     final groups = ref.watch(visibleMenuEntriesProvider);
-    final overflowTabs = ref.watch(visibleDestinationsProvider).skip(4).toList();
+    final overflowTabs = ref
+        .watch(visibleDestinationsProvider)
+        .skip(4)
+        .toList();
     final scheme = Theme.of(context).colorScheme;
 
     return Scaffold(
@@ -48,12 +52,16 @@ class MorePage extends ConsumerWidget {
                     children: [
                       Text(
                         session.displayName,
-                        style: OmniType.bodyStrong.copyWith(color: scheme.onSurface),
+                        style: OmniType.bodyStrong.copyWith(
+                          color: scheme.onSurface,
+                        ),
                       ),
                       const SizedBox(height: 2),
                       Text(
                         session.roleLabel,
-                        style: OmniType.caption.copyWith(color: scheme.onSurfaceVariant),
+                        style: OmniType.caption.copyWith(
+                          color: scheme.onSurfaceVariant,
+                        ),
                       ),
                     ],
                   ),
@@ -77,7 +85,9 @@ class MorePage extends ConsumerWidget {
                     children: [
                       Text(
                         'Không gian làm việc',
-                        style: OmniType.micro.copyWith(color: scheme.onSurfaceVariant),
+                        style: OmniType.micro.copyWith(
+                          color: scheme.onSurfaceVariant,
+                        ),
                       ),
                       Text(
                         session.tenant?.name ?? '—',
@@ -93,15 +103,22 @@ class MorePage extends ConsumerWidget {
             ),
           ),
 
+          const OmniSectionHeader(title: 'Hiển thị', padding: _headerPadding),
+          OmniCard(padding: EdgeInsets.zero, child: const _ThemeTile()),
+
           // Tabs that didn't fit in the bottom bar still need a way in.
           if (overflowTabs.isNotEmpty) ...[
-            const OmniSectionHeader(title: 'Khu vực khác', padding: _headerPadding),
+            const OmniSectionHeader(
+              title: 'Khu vực khác',
+              padding: _headerPadding,
+            ),
             OmniCard(
               padding: EdgeInsets.zero,
               child: Column(
                 children: [
                   for (var i = 0; i < overflowTabs.length; i++) ...[
-                    if (i > 0) const Divider(height: 1, indent: OmniSpacing.section),
+                    if (i > 0)
+                      const Divider(height: 1, indent: OmniSpacing.section),
                     _MenuTile(
                       icon: overflowTabs[i].icon,
                       label: overflowTabs[i].label,
@@ -120,7 +137,8 @@ class MorePage extends ConsumerWidget {
               child: Column(
                 children: [
                   for (var i = 0; i < entry.value.length; i++) ...[
-                    if (i > 0) const Divider(height: 1, indent: OmniSpacing.section),
+                    if (i > 0)
+                      const Divider(height: 1, indent: OmniSpacing.section),
                     _MenuTile(
                       icon: entry.value[i].icon,
                       label: entry.value[i].label,
@@ -216,7 +234,88 @@ class _MenuTile extends StatelessWidget {
               subtitle!,
               style: OmniType.micro.copyWith(color: scheme.onSurfaceVariant),
             ),
-      trailing: Icon(Icons.chevron_right_rounded, color: scheme.onSurfaceVariant),
+      trailing: Icon(
+        Icons.chevron_right_rounded,
+        color: scheme.onSurfaceVariant,
+      ),
+    );
+  }
+}
+
+/// Light / dark / follow-the-system, matching what the web app offers.
+///
+/// A segmented control rather than a switch: "follow the system" is a real third
+/// choice, and a two-state switch cannot express it — which is how apps end up
+/// silently overriding the phone's own setting.
+class _ThemeTile extends ConsumerWidget {
+  const _ThemeTile();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final scheme = Theme.of(context).colorScheme;
+    final mode = ref.watch(themeModeProvider);
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+        OmniSpacing.lg,
+        OmniSpacing.md,
+        OmniSpacing.lg,
+        OmniSpacing.md,
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 34,
+            height: 34,
+            decoration: BoxDecoration(
+              color: scheme.primaryContainer,
+              borderRadius: OmniRadius.smAll,
+            ),
+            child: Icon(
+              themeModeDisplay(mode).icon,
+              size: 18,
+              color: scheme.primary,
+            ),
+          ),
+          const SizedBox(width: OmniSpacing.md),
+          Expanded(
+            child: Text(
+              'Giao diện',
+              style: OmniType.caption.copyWith(
+                color: scheme.onSurface,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+          SegmentedButton<ThemeMode>(
+            showSelectedIcon: false,
+            style: SegmentedButton.styleFrom(
+              visualDensity: VisualDensity.compact,
+              textStyle: OmniType.micro,
+            ),
+            segments: const [
+              ButtonSegment(
+                value: ThemeMode.system,
+                icon: Icon(Icons.brightness_auto_rounded, size: 16),
+                tooltip: 'Theo hệ thống',
+              ),
+              ButtonSegment(
+                value: ThemeMode.light,
+                icon: Icon(Icons.light_mode_rounded, size: 16),
+                tooltip: 'Sáng',
+              ),
+              ButtonSegment(
+                value: ThemeMode.dark,
+                icon: Icon(Icons.dark_mode_rounded, size: 16),
+                tooltip: 'Tối',
+              ),
+            ],
+            selected: {mode},
+            onSelectionChanged: (s) =>
+                ref.read(themeModeProvider.notifier).set(s.first),
+          ),
+        ],
+      ),
     );
   }
 }

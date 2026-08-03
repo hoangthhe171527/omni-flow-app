@@ -74,6 +74,21 @@ abstract final class OmniColors {
   /// Unread count pill.
   static const chatUnread = Color(0xFFFF3B30);
 
+  // ---- Chat, dark ---------------------------------------------------------
+  /// Zalo's dark mode is near-black, not the navy the CRM dark theme uses, and
+  /// its outgoing bubble is a MUTED blue-grey rather than a saturated blue —
+  /// a bright bubble is exhausting to read a long thread on a black canvas.
+  static const chatCanvasDark = Color(0xFF000000);
+  static const chatOutboundDark = Color(0xFF3A4A5C);
+  static const chatInboundDark = Color(0xFF2A2A2C);
+  static const chatMetaDark = Color(0xFF8E8E93);
+  static const chatDividerDark = Color(0xFF1C1C1E);
+
+  /// Resolve a chat colour for the active brightness. Every chat surface goes
+  /// through here so light and dark can never drift apart.
+  static Color chat(BuildContext context, Color light, Color dark) =>
+      Theme.of(context).brightness == Brightness.dark ? dark : light;
+
   /// Deterministic avatar tint from a name, so the same person keeps the same
   /// colour on every screen.
   static const avatarPalette = <Color>[

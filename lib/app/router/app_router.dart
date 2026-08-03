@@ -26,8 +26,9 @@ final routerProvider = Provider<GoRouter>((ref) {
     for (final route in moduleRoutes)
       if (tabRouteNames.contains(route.name)) route.name: route,
   };
-  final overlayRoutes =
-      moduleRoutes.where((route) => !tabRouteNames.contains(route.name));
+  final overlayRoutes = moduleRoutes.where(
+    (route) => !tabRouteNames.contains(route.name),
+  );
 
   return GoRouter(
     navigatorKey: rootKey,
@@ -96,9 +97,9 @@ String? _redirect(Ref ref, GoRouterState state) {
   return switch (session.status) {
     SessionStatus.restoring => isSplash ? null : ShellRoutes.splashPath,
     SessionStatus.unauthenticated ||
-    SessionStatus.expired =>
-      isLogin ? null : AuthModule.loginPath,
-    SessionStatus.tenantPending => isWorkspace ? null : AuthModule.workspacePath,
+    SessionStatus.expired => isLogin ? null : AuthModule.loginPath,
+    SessionStatus.tenantPending =>
+      isWorkspace ? null : AuthModule.workspacePath,
     SessionStatus.authenticated =>
       (isLogin || isWorkspace || isSplash) ? _homePath(ref) : null,
   };

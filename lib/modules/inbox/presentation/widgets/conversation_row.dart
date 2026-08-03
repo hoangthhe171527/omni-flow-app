@@ -78,6 +78,12 @@ class ConversationRow extends StatelessWidget {
   Widget _body(BuildContext context, bool unread) {
     final scheme = Theme.of(context).colorScheme;
     final overdue = conversation.breachesSla;
+    // Secondary text follows the theme; a fixed grey goes invisible on black.
+    final meta = OmniColors.chat(
+      context,
+      OmniColors.chatMeta,
+      OmniColors.chatMetaDark,
+    );
 
     return Column(
       mainAxisSize: MainAxisSize.min,
@@ -104,7 +110,7 @@ class ConversationRow extends StatelessWidget {
               Formatters.relative(conversation.lastMessageAt),
               style: OmniType.micro.copyWith(
                 fontSize: 12,
-                color: overdue ? scheme.error : OmniColors.chatMeta,
+                color: overdue ? scheme.error : meta,
                 fontWeight: unread ? FontWeight.w600 : FontWeight.w400,
               ),
             ),
@@ -141,7 +147,7 @@ class ConversationRow extends StatelessWidget {
                 style: OmniType.caption.copyWith(
                   fontSize: 14,
                   height: 1.25,
-                  color: unread ? scheme.onSurface : OmniColors.chatMeta,
+                  color: unread ? scheme.onSurface : meta,
                   fontWeight: unread ? FontWeight.w500 : FontWeight.w400,
                 ),
               ),
@@ -154,10 +160,7 @@ class ConversationRow extends StatelessWidget {
               // Not a warning, just a fact — the row must not shout about it.
               Text(
                 'Chưa gán',
-                style: OmniType.micro.copyWith(
-                  fontSize: 11,
-                  color: OmniColors.chatMeta,
-                ),
+                style: OmniType.micro.copyWith(fontSize: 11, color: meta),
               ),
             ],
           ],

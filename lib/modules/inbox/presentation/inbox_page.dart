@@ -86,8 +86,10 @@ class _InboxPageState extends ConsumerState<InboxPage> {
           ),
           const SizedBox(width: OmniSpacing.sm),
         ],
+        // Was 112 for three stacked filter bands; the header is now a search
+        // line plus one pill row, and the stale number left a dead white gap.
         bottom: const PreferredSize(
-          preferredSize: Size.fromHeight(112),
+          preferredSize: Size.fromHeight(88),
           child: InboxFilterBar(),
         ),
       ),
@@ -126,12 +128,16 @@ class _InboxPageState extends ConsumerState<InboxPage> {
                   // Zalo separates rows with a hairline indented past the
                   // avatar, not a gap. Gaps between bordered cards were what
                   // made the list read as a table of records.
-                  separatorBuilder: (_, _) => const Divider(
+                  separatorBuilder: (_, _) => Divider(
                     height: 1,
                     thickness: 1,
                     indent: 80,
                     endIndent: 0,
-                    color: OmniColors.chatDivider,
+                    color: OmniColors.chat(
+                      context,
+                      OmniColors.chatDivider,
+                      OmniColors.chatDividerDark,
+                    ),
                   ),
                   itemBuilder: (context, index) {
                     if (index >= state.items.length) {
@@ -148,22 +154,22 @@ class _InboxPageState extends ConsumerState<InboxPage> {
                     }
                     final conversation = state.items[index];
                     return ConversationRow(
-                        conversation: conversation,
-                        selectionMode: selecting,
-                        selected: _selected.contains(conversation.id),
-                        onLongPress: access.canLabel
-                            ? () => _toggleSelection(conversation.id)
-                            : null,
-                        onTap: () {
-                          if (selecting) {
-                            _toggleSelection(conversation.id);
-                            return;
-                          }
-                          context.pushNamed(
-                            InboxModule.thread,
-                            pathParameters: {'id': conversation.id},
-                          );
-                        },
+                      conversation: conversation,
+                      selectionMode: selecting,
+                      selected: _selected.contains(conversation.id),
+                      onLongPress: access.canLabel
+                          ? () => _toggleSelection(conversation.id)
+                          : null,
+                      onTap: () {
+                        if (selecting) {
+                          _toggleSelection(conversation.id);
+                          return;
+                        }
+                        context.pushNamed(
+                          InboxModule.thread,
+                          pathParameters: {'id': conversation.id},
+                        );
+                      },
                     );
                   },
                 ),

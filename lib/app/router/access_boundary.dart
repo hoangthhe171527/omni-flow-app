@@ -33,7 +33,8 @@ class AccessBoundary extends ConsumerWidget {
       body: OmniEmptyState(
         icon: Icons.lock_outline_rounded,
         title: 'Bạn không có quyền xem mục này',
-        message: 'Cần quyền: ${requirement.permissions.join(", ")}.\n'
+        message:
+            'Cần quyền: ${requirement.permissions.join(", ")}.\n'
             'Liên hệ quản trị viên để được cấp quyền.',
         actionLabel: Navigator.of(context).canPop() ? 'Quay lại' : null,
         onAction: () => Navigator.of(context).maybePop(),

@@ -8,28 +8,28 @@ enum ConversationStatus {
   closed;
 
   static ConversationStatus parse(String? value) => switch (value) {
-        'pending' => ConversationStatus.pending,
-        'closed' => ConversationStatus.closed,
-        _ => ConversationStatus.open,
-      };
+    'pending' => ConversationStatus.pending,
+    'closed' => ConversationStatus.closed,
+    _ => ConversationStatus.open,
+  };
 
   String get slug => name;
 
   String get label => switch (this) {
-        ConversationStatus.open => 'Đang mở',
-        ConversationStatus.pending => 'Chờ xử lý',
-        ConversationStatus.closed => 'Đã đóng',
-      };
+    ConversationStatus.open => 'Đang mở',
+    ConversationStatus.pending => 'Chờ xử lý',
+    ConversationStatus.closed => 'Đã đóng',
+  };
 }
 
 class GroupMember {
   const GroupMember({required this.id, this.name, this.avatar});
 
   factory GroupMember.fromJson(Map<String, dynamic> json) => GroupMember(
-        id: json.strOr('id', ''),
-        name: json.str('name'),
-        avatar: json.str('avatar'),
-      );
+    id: json.strOr('id', ''),
+    name: json.str('name'),
+    avatar: json.str('avatar'),
+  );
 
   final String id;
   final String? name;
@@ -72,7 +72,8 @@ class Conversation {
       customerName: json.str('customer_name'),
       customerAvatar: json.str('customer_avatar'),
       lastMessage: json.strOr('last_message', ''),
-      lastMessageAt: DateUtilsX.parse(json['last_time']) ??
+      lastMessageAt:
+          DateUtilsX.parse(json['last_time']) ??
           DateUtilsX.parse(json['updated_at']),
       unread: json.intOr('unread'),
       urgent: json.str('priority') == 'urgent',
@@ -83,8 +84,10 @@ class Conversation {
       sourceName: json.str('source_name'),
       isGroup: json.flag('is_group'),
       groupName: json.str('group_name'),
-      groupMembers:
-          json.mapList('group_members').map(GroupMember.fromJson).toList(),
+      groupMembers: json
+          .mapList('group_members')
+          .map(GroupMember.fromJson)
+          .toList(),
     );
   }
 
@@ -114,8 +117,7 @@ class Conversation {
 
   bool get isUnassigned => assigneeId == null || assigneeId!.isEmpty;
   bool get isUnread => unread > 0;
-  bool get isLinkedToCustomer =>
-      customerId != null && customerId!.isNotEmpty;
+  bool get isLinkedToCustomer => customerId != null && customerId!.isNotEmpty;
 
   String get title {
     if (isGroup) return groupName ?? 'Nhóm chat';

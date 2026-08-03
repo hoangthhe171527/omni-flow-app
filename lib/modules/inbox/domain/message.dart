@@ -49,7 +49,8 @@ class Message {
       id: json.strOr('id', ''),
       author: _author(from, direction),
       text: json.strOr('text', ''),
-      sentAt: DateUtilsX.parse(json['sent_at']) ??
+      sentAt:
+          DateUtilsX.parse(json['sent_at']) ??
           DateUtilsX.parse(json['created_at']),
       status: _status(json.str('status')),
       error: json.str('error'),
@@ -58,8 +59,10 @@ class Message {
       agentName: json.str('agent_name'),
       senderName: json.str('sender_name'),
       senderAvatar: json.str('sender_avatar'),
-      attachments:
-          json.mapList('attachments').map(MessageAttachment.fromJson).toList(),
+      attachments: json
+          .mapList('attachments')
+          .map(MessageAttachment.fromJson)
+          .toList(),
     );
   }
 
@@ -91,14 +94,14 @@ class Message {
   }
 
   static DeliveryStatus _status(String? value) => switch (value) {
-        'queued' => DeliveryStatus.queued,
-        'sent' => DeliveryStatus.sent,
-        'delivered' => DeliveryStatus.delivered,
-        'read' => DeliveryStatus.read,
-        'received' => DeliveryStatus.received,
-        'failed' => DeliveryStatus.failed,
-        _ => DeliveryStatus.none,
-      };
+    'queued' => DeliveryStatus.queued,
+    'sent' => DeliveryStatus.sent,
+    'delivered' => DeliveryStatus.delivered,
+    'read' => DeliveryStatus.read,
+    'received' => DeliveryStatus.received,
+    'failed' => DeliveryStatus.failed,
+    _ => DeliveryStatus.none,
+  };
 
   /// Optimistic local echo, shown the instant the rep hits send.
   static Message optimistic({

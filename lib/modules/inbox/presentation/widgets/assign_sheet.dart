@@ -69,15 +69,18 @@ class _AssignSheetState extends ConsumerState<AssignSheet> {
               onRetry: () => ref.invalidate(teamMembersProvider),
               data: (list) {
                 final filtered = list
-                    .where((member) =>
-                        _search.isEmpty ||
-                        member.name.toLowerCase().contains(_search))
+                    .where(
+                      (member) =>
+                          _search.isEmpty ||
+                          member.name.toLowerCase().contains(_search),
+                    )
                     .toList();
 
                 return ListView.separated(
                   shrinkWrap: true,
                   itemCount: filtered.length + 1,
-                  separatorBuilder: (_, _) => const SizedBox(height: OmniSpacing.xs),
+                  separatorBuilder: (_, _) =>
+                      const SizedBox(height: OmniSpacing.xs),
                   itemBuilder: (context, index) {
                     if (index == 0) {
                       return ListTile(
@@ -123,14 +126,22 @@ class _AssignSheetState extends ConsumerState<AssignSheet> {
                       ),
                       subtitle: Text(
                         member.roleLabel,
-                        style: OmniType.micro.copyWith(color: scheme.onSurfaceVariant),
+                        style: OmniType.micro.copyWith(
+                          color: scheme.onSurfaceVariant,
+                        ),
                       ),
                       trailing: current
-                          ? Icon(Icons.check_circle_rounded, color: scheme.primary)
+                          ? Icon(
+                              Icons.check_circle_rounded,
+                              color: scheme.primary,
+                            )
                           : null,
                       onTap: () => Navigator.pop(
                         context,
-                        AssignResult(assigneeId: member.userId, note: _noteText),
+                        AssignResult(
+                          assigneeId: member.userId,
+                          note: _noteText,
+                        ),
                       ),
                     );
                   },

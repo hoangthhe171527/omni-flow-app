@@ -28,35 +28,35 @@ class InboxModule extends OmniModule {
 
   @override
   List<ModuleRoute> routes() => [
-        ModuleRoute(
-          path: '/inbox',
-          name: list,
-          access: const AccessRequirement.any(InboxPermissions.anyRead),
-          builder: (_, _) => const InboxPage(),
-        ),
-        ModuleRoute(
-          path: '/inbox/:id',
-          name: thread,
-          // Full-screen over the shell: a chat wants the whole viewport, and a
-          // notification tap should land here without a tab bar underneath.
-          rootNavigator: true,
-          access: const AccessRequirement.any(InboxPermissions.anyRead),
-          builder: (_, state) =>
-              ThreadPage(conversationId: state.pathParameters['id']!),
-        ),
-      ];
+    ModuleRoute(
+      path: '/inbox',
+      name: list,
+      access: const AccessRequirement.any(InboxPermissions.anyRead),
+      builder: (_, _) => const InboxPage(),
+    ),
+    ModuleRoute(
+      path: '/inbox/:id',
+      name: thread,
+      // Full-screen over the shell: a chat wants the whole viewport, and a
+      // notification tap should land here without a tab bar underneath.
+      rootNavigator: true,
+      access: const AccessRequirement.any(InboxPermissions.anyRead),
+      builder: (_, state) =>
+          ThreadPage(conversationId: state.pathParameters['id']!),
+    ),
+  ];
 
   @override
   List<ModuleDestination> destinations() => [
-        ModuleDestination(
-          moduleId: id,
-          label: 'Hộp thư',
-          icon: Icons.forum_outlined,
-          selectedIcon: Icons.forum_rounded,
-          routeName: list,
-          order: 10,
-          access: const AccessRequirement.any(InboxPermissions.anyRead),
-          badge: inboxUnreadBadgeProvider,
-        ),
-      ];
+    ModuleDestination(
+      moduleId: id,
+      label: 'Hộp thư',
+      icon: Icons.forum_outlined,
+      selectedIcon: Icons.forum_rounded,
+      routeName: list,
+      order: 10,
+      access: const AccessRequirement.any(InboxPermissions.anyRead),
+      badge: inboxUnreadBadgeProvider,
+    ),
+  ];
 }

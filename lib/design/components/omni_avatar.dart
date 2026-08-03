@@ -82,8 +82,7 @@ class OmniAvatar extends StatelessWidget {
                 ),
               ),
             ),
-          if (badge != null)
-            Positioned(right: -2, bottom: -2, child: badge!),
+          if (badge != null) Positioned(right: -2, bottom: -2, child: badge!),
         ],
       ),
     );
@@ -92,11 +91,7 @@ class OmniAvatar extends StatelessWidget {
 
 /// Two overlapping avatars — how a group thread reads at a glance in the list.
 class OmniGroupAvatar extends StatelessWidget {
-  const OmniGroupAvatar({
-    super.key,
-    required this.names,
-    this.size = 44,
-  });
+  const OmniGroupAvatar({super.key, required this.names, this.size = 44});
 
   final List<String> names;
   final double size;

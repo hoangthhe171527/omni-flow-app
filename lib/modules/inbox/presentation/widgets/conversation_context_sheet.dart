@@ -97,7 +97,8 @@ class ConversationContextSheet extends ConsumerWidget {
                     context.pushNamed(
                       OpportunitiesModule.create,
                       queryParameters: {
-                        if (thread.customerId != null) 'customer': thread.customerId!,
+                        if (thread.customerId != null)
+                          'customer': thread.customerId!,
                       },
                     );
                   },
@@ -115,7 +116,9 @@ class ConversationContextSheet extends ConsumerWidget {
               if (thread.tags.isEmpty)
                 Text(
                   'Chưa có nhãn',
-                  style: OmniType.caption.copyWith(color: scheme.onSurfaceVariant),
+                  style: OmniType.caption.copyWith(
+                    color: scheme.onSurfaceVariant,
+                  ),
                 ),
             ],
           ),
@@ -232,12 +235,12 @@ class ConversationContextSheet extends ConsumerWidget {
   }
 
   IconData _timelineIcon(String kind) => switch (kind) {
-        'call' => Icons.call_outlined,
-        'message' || 'chat' => Icons.chat_bubble_outline_rounded,
-        'email' => Icons.mail_outline_rounded,
-        'stage' => Icons.timeline_rounded,
-        _ => Icons.sticky_note_2_outlined,
-      };
+    'call' => Icons.call_outlined,
+    'message' || 'chat' => Icons.chat_bubble_outline_rounded,
+    'email' => Icons.mail_outline_rounded,
+    'stage' => Icons.timeline_rounded,
+    _ => Icons.sticky_note_2_outlined,
+  };
 
   Future<void> _convert(BuildContext context, WidgetRef ref) async {
     try {
@@ -255,8 +258,9 @@ class ConversationContextSheet extends ConsumerWidget {
       );
     } on AppException catch (error) {
       if (!context.mounted) return;
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text(error.message)));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(error.message)));
     }
   }
 }
@@ -283,10 +287,7 @@ class _QuickAction extends StatelessWidget {
         children: [
           Icon(icon, size: 20, color: scheme.primary),
           const SizedBox(height: 5),
-          Text(
-            label,
-            style: OmniType.micro.copyWith(color: scheme.onSurface),
-          ),
+          Text(label, style: OmniType.micro.copyWith(color: scheme.onSurface)),
         ],
       ),
     );

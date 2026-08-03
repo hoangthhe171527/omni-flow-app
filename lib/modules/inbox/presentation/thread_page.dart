@@ -68,7 +68,11 @@ class _ThreadPageState extends ConsumerState<ThreadPage> {
       // incoming (white) bubbles vanished into the page and the thread looked
       // like a flat document — the single biggest reason it did not feel like a
       // chat app.
-      backgroundColor: OmniColors.chatCanvas,
+      backgroundColor: OmniColors.chat(
+        context,
+        OmniColors.chatCanvas,
+        OmniColors.chatCanvasDark,
+      ),
       appBar: _ThreadAppBar(
         conversation: conversation.valueOrNull,
         onAssign: access.canAssign ? _assign : null,
@@ -77,33 +81,28 @@ class _ThreadPageState extends ConsumerState<ThreadPage> {
       body: Column(
         children: [
           Expanded(
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                color: Theme.of(
-                  context,
-                ).colorScheme.surfaceContainerHighest.withValues(alpha: 0.48),
+            // No tint layer over the canvas: it fought the chat background and
+            // washed the bubbles back down into the page.
+            child: OmniAsyncView(
+              value: thread,
+              onRetry: () =>
+                  ref.invalidate(threadProvider(widget.conversationId)),
+              isEmpty: (state) => state.messages.isEmpty,
+              empty: const OmniEmptyState(
+                icon: Icons.chat_bubble_outline_rounded,
+                title: 'Chưa có tin nhắn',
+                message: 'Gửi tin đầu tiên để bắt đầu cuộc trò chuyện.',
               ),
-              child: OmniAsyncView(
-                value: thread,
-                onRetry: () =>
-                    ref.invalidate(threadProvider(widget.conversationId)),
-                isEmpty: (state) => state.messages.isEmpty,
-                empty: const OmniEmptyState(
-                  icon: Icons.chat_bubble_outline_rounded,
-                  title: 'Chưa có tin nhắn',
-                  message: 'Gửi tin đầu tiên để bắt đầu cuộc trò chuyện.',
-                ),
-                data: (state) => _MessageList(
-                  state: state,
-                  controller: _scrollController,
-                  isGroup: conversation.valueOrNull?.isGroup ?? false,
-                  onRetry: (message) => ref
-                      .read(threadProvider(widget.conversationId).notifier)
-                      .send(message.text, attachments: message.attachments),
-                  onDiscard: (message) => ref
-                      .read(threadProvider(widget.conversationId).notifier)
-                      .discard(message.id),
-                ),
+              data: (state) => _MessageList(
+                state: state,
+                controller: _scrollController,
+                isGroup: conversation.valueOrNull?.isGroup ?? false,
+                onRetry: (message) => ref
+                    .read(threadProvider(widget.conversationId).notifier)
+                    .send(message.text, attachments: message.attachments),
+                onDiscard: (message) => ref
+                    .read(threadProvider(widget.conversationId).notifier)
+                    .discard(message.id),
               ),
             ),
           ),
@@ -340,12 +339,9 @@ class _MessageList extends StatelessWidget {
     return ListView.builder(
       controller: controller,
       reverse: true,
-      padding: const EdgeInsets.fromLTRB(
-        OmniSpacing.lg,
-        OmniSpacing.lg,
-        OmniSpacing.lg,
-        OmniSpacing.md,
-      ),
+      // Tight gutters: Zalo lets bubbles run close to both edges, which is what
+      // makes the left/right split read at a glance.
+      padding: const EdgeInsets.fromLTRB(8, OmniSpacing.lg, 8, OmniSpacing.md),
       itemCount: items.length + (state.hasMore ? 1 : 0),
       itemBuilder: (context, index) {
         if (index >= items.length) {
@@ -370,6 +366,10 @@ class _MessageList extends StatelessWidget {
                 !_sameDay(message.sentAt!, earlier!.sentAt!));
 
         return Column(
+          // Without this the Column defaults to centre, which collapsed to the
+          // bubble's own width and parked every message in the middle of the
+          // screen — the side a message is on is the whole point of a thread.
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             if (needsDayHeader) _DaySeparator(date: message.sentAt!),
             MessageBubble(

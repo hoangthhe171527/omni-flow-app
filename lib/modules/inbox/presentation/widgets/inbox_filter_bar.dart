@@ -33,88 +33,186 @@ class InboxFilterBar extends ConsumerWidget {
       InboxQuickFilter.closed,
     ];
 
+    final scheme = Theme.of(context).colorScheme;
+    final meta = OmniColors.chat(
+      context,
+      OmniColors.chatMeta,
+      OmniColors.chatMetaDark,
+    );
+
     return Column(
       children: [
+        // Zalo's header is ONE flat line — a magnifier, a hint, and two icon
+        // buttons. Ours was three stacked bands (a shadowed search card, quick
+        // pills, then a channel row) that ate ~140px before a single
+        // conversation appeared. The platform row moved into the filter sheet;
+        // it is a setting a rep changes occasionally, not something worth a
+        // permanent row.
         Padding(
-          padding: const EdgeInsets.fromLTRB(
-            OmniSpacing.lg,
-            0,
-            OmniSpacing.lg,
-            OmniSpacing.md,
-          ),
-          child: DecoratedBox(
-            decoration: BoxDecoration(
-              borderRadius: OmniRadius.xlAll,
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.025),
-                  blurRadius: 14,
-                  offset: const Offset(0, 4),
+          padding: const EdgeInsets.fromLTRB(16, 4, 8, 4),
+          child: Row(
+            children: [
+              Icon(Icons.search_rounded, size: 22, color: meta),
+              const SizedBox(width: 12),
+              Expanded(
+                child: TextField(
+                  controller: TextEditingController(text: filter.search)
+                    ..selection = TextSelection.collapsed(
+                      offset: filter.search.length,
+                    ),
+                  onChanged: controller.setSearch,
+                  textInputAction: TextInputAction.search,
+                  style: OmniType.body.copyWith(
+                    fontSize: 16,
+                    color: scheme.onSurface,
+                  ),
+                  decoration: InputDecoration(
+                    isDense: true,
+                    border: InputBorder.none,
+                    enabledBorder: InputBorder.none,
+                    focusedBorder: InputBorder.none,
+                    contentPadding: EdgeInsets.zero,
+                    hintText: 'Tìm kiếm',
+                    hintStyle: OmniType.body.copyWith(
+                      fontSize: 16,
+                      color: meta,
+                    ),
+                  ),
                 ),
-              ],
-            ),
-            child: OmniSearchField(
-              hint: 'Tìm kiếm hội thoại...',
-              initialValue: filter.search,
-              onChanged: controller.setSearch,
-            ),
+              ),
+              _FilterButton(
+                active: filter.channel != null || filter.label != null,
+                onTap: () => _openFilterSheet(context, ref),
+              ),
+            ],
           ),
         ),
+        // The one filter row worth keeping visible: triage state is what a rep
+        // switches between all day.
         SizedBox(
-          height: 38,
+          height: 40,
           child: ListView.separated(
             scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(horizontal: OmniSpacing.lg),
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 0),
             itemCount: quickFilters.length,
             separatorBuilder: (_, _) => const SizedBox(width: OmniSpacing.sm),
             itemBuilder: (context, index) {
               final quick = quickFilters[index];
-              return OmniFilterPill(
-                label: quick.label,
-                selected: filter.quick == quick,
-                count: facets?.countFor(quick, currentUserId: userId),
-                onTap: () => controller.setQuick(quick),
-              );
-            },
-          ),
-        ),
-        const SizedBox(height: OmniSpacing.md),
-        SizedBox(
-          height: 34,
-          child: ListView.separated(
-            scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(horizontal: OmniSpacing.lg),
-            itemCount: inboxChannelOrder.length + 1,
-            separatorBuilder: (_, _) => const SizedBox(width: OmniSpacing.sm),
-            itemBuilder: (context, index) {
-              if (index == 0) {
-                return _ChannelChip(
-                  label: 'Tất cả kênh',
-                  selected: filter.channel == null,
-                  onTap: () => controller.setChannel(null),
-                );
-              }
-              final channel = inboxChannelOrder[index - 1];
-              final count = facets?.channels[channel.slug];
-              // Hide platforms this tenant has never received a message on —
-              // an eight-chip row of empty channels is noise.
-              if (count == null && filter.channel != channel) {
-                return const SizedBox.shrink();
-              }
-              return _ChannelChip(
-                label: channel.meta.short,
-                color: channel.meta.color,
-                count: count,
-                selected: filter.channel == channel,
-                onTap: () => controller.setChannel(
-                  filter.channel == channel ? null : channel,
+              return Center(
+                child: OmniFilterPill(
+                  label: quick.label,
+                  selected: filter.quick == quick,
+                  count: facets?.countFor(quick, currentUserId: userId),
+                  onTap: () => controller.setQuick(quick),
                 ),
               );
             },
           ),
         ),
-        const SizedBox(height: OmniSpacing.md),
+        const SizedBox(height: 4),
       ],
+    );
+  }
+
+  Future<void> _openFilterSheet(BuildContext context, WidgetRef ref) {
+    return showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      builder: (context) => Consumer(
+        builder: (context, ref, _) {
+          final filter = ref.watch(inboxFilterProvider);
+          final controller = ref.read(inboxFilterProvider.notifier);
+          final facets = ref.watch(inboxFacetsProvider).valueOrNull;
+
+          return SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(
+                OmniSpacing.lg,
+                0,
+                OmniSpacing.lg,
+                OmniSpacing.lg,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Kênh', style: OmniType.bodyStrong),
+                  const SizedBox(height: OmniSpacing.md),
+                  Wrap(
+                    spacing: OmniSpacing.sm,
+                    runSpacing: OmniSpacing.sm,
+                    children: [
+                      _ChannelChip(
+                        label: 'Tất cả kênh',
+                        selected: filter.channel == null,
+                        onTap: () => controller.setChannel(null),
+                      ),
+                      for (final channel in inboxChannelOrder)
+                        if (facets?.channels[channel.slug] != null ||
+                            filter.channel == channel)
+                          _ChannelChip(
+                            label: channel.meta.short,
+                            color: channel.meta.color,
+                            count: facets?.channels[channel.slug],
+                            selected: filter.channel == channel,
+                            onTap: () => controller.setChannel(
+                              filter.channel == channel ? null : channel,
+                            ),
+                          ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+}
+
+/// Filter entry point, with a dot when something is narrowing the list.
+///
+/// Without the dot a filtered inbox is indistinguishable from an empty one, and
+/// "where did my conversations go" is the most expensive confusion this screen
+/// can cause.
+class _FilterButton extends StatelessWidget {
+  const _FilterButton({required this.active, required this.onTap});
+
+  final bool active;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+
+    return IconButton(
+      onPressed: onTap,
+      tooltip: 'Lọc theo kênh',
+      icon: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          Icon(
+            Icons.tune_rounded,
+            size: 22,
+            color: active ? OmniColors.chatPrimary : scheme.onSurfaceVariant,
+          ),
+          if (active)
+            Positioned(
+              right: -2,
+              top: -2,
+              child: Container(
+                width: 8,
+                height: 8,
+                decoration: BoxDecoration(
+                  color: OmniColors.chatPrimary,
+                  shape: BoxShape.circle,
+                  border: Border.all(color: scheme.surface, width: 1.5),
+                ),
+              ),
+            ),
+        ],
+      ),
     );
   }
 }

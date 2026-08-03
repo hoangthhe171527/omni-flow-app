@@ -202,7 +202,9 @@ class OmniDetailRow extends StatelessWidget {
               width: 104,
               child: Text(
                 label,
-                style: OmniType.caption.copyWith(color: scheme.onSurfaceVariant),
+                style: OmniType.caption.copyWith(
+                  color: scheme.onSurfaceVariant,
+                ),
               ),
             ),
             Expanded(
@@ -215,7 +217,11 @@ class OmniDetailRow extends StatelessWidget {
               ),
             ),
             if (onTap != null)
-              Icon(Icons.chevron_right_rounded, size: 18, color: scheme.onSurfaceVariant),
+              Icon(
+                Icons.chevron_right_rounded,
+                size: 18,
+                color: scheme.onSurfaceVariant,
+              ),
           ],
         ),
       ),

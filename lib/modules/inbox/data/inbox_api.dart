@@ -55,11 +55,11 @@ class TimelineEntry {
   });
 
   factory TimelineEntry.fromJson(Map<String, dynamic> json) => TimelineEntry(
-        kind: json.strOr('kind', 'note'),
-        type: json.strOr('type', ''),
-        text: json.strOr('text', ''),
-        at: DateUtilsX.parse(json['at']),
-      );
+    kind: json.strOr('kind', 'note'),
+    type: json.strOr('type', ''),
+    text: json.strOr('text', ''),
+    at: DateUtilsX.parse(json['at']),
+  );
 
   final String kind;
   final String type;
@@ -154,13 +154,20 @@ class InboxApi {
 
   /// Internal note — stored on the thread, never delivered to the platform.
   Future<Message> addNote(String id, String text) async {
-    final response = await _client.post('$_base/$id/notes', body: {'text': text});
+    final response = await _client.post(
+      '$_base/$id/notes',
+      body: {'text': text},
+    );
     return Message.fromJson(response.object);
   }
 
   Future<void> markRead(String id) => _client.post('$_base/$id/read');
 
-  Future<Conversation> assign(String id, String? assigneeId, {String? note}) async {
+  Future<Conversation> assign(
+    String id,
+    String? assigneeId, {
+    String? note,
+  }) async {
     final response = await _client.post(
       '$_base/$id/assign',
       body: {'assignee_id': assigneeId, 'note': ?note},
@@ -207,8 +214,10 @@ class InboxApi {
     final response = await _client.get('$_base/$id/context');
     final json = response.object;
     return ConversationContext(
-      opportunities:
-          json.mapList('opportunities').map(ContextOpportunity.fromJson).toList(),
+      opportunities: json
+          .mapList('opportunities')
+          .map(ContextOpportunity.fromJson)
+          .toList(),
       timeline: json.mapList('timeline').map(TimelineEntry.fromJson).toList(),
     );
   }
@@ -216,7 +225,10 @@ class InboxApi {
   /// Uploads an attachment and returns a URL the platform can fetch.
   /// Note the path: `/inbox/media`, not under `/inbox/conversations` — the
   /// latter would be captured by the `{id}` route.
-  Future<MessageAttachment> uploadMedia(String filePath, {String? filename}) async {
+  Future<MessageAttachment> uploadMedia(
+    String filePath, {
+    String? filename,
+  }) async {
     final response = await _client.upload(
       '/inbox/media',
       field: 'file',

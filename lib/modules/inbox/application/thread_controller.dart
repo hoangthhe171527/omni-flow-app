@@ -38,7 +38,8 @@ class ThreadState {
 /// Sends are optimistic — the bubble appears immediately as `queued`, then
 /// resolves to the server's message or flips to `failed` with the reason the
 /// platform gave. A rep must never be left wondering whether a message went out.
-class ThreadController extends AutoDisposeFamilyAsyncNotifier<ThreadState, String> {
+class ThreadController
+    extends AutoDisposeFamilyAsyncNotifier<ThreadState, String> {
   int _localSequence = 0;
 
   @override
@@ -63,10 +64,9 @@ class ThreadController extends AutoDisposeFamilyAsyncNotifier<ThreadState, Strin
 
     state = AsyncData(current.copyWith(loadingOlder: true));
     try {
-      final page = await ref.read(inboxApiProvider).messages(
-            arg,
-            before: current.nextBefore,
-          );
+      final page = await ref
+          .read(inboxApiProvider)
+          .messages(arg, before: current.nextBefore);
       state = AsyncData(
         ThreadState(
           messages: [...page.messages.reversed, ...current.messages],
@@ -79,18 +79,19 @@ class ThreadController extends AutoDisposeFamilyAsyncNotifier<ThreadState, Strin
     }
   }
 
-  Future<void> send(String text, {List<MessageAttachment> attachments = const []}) {
+  Future<void> send(
+    String text, {
+    List<MessageAttachment> attachments = const [],
+  }) {
     return _append(
       draft: Message.optimistic(
         localId: _nextLocalId(),
         text: text,
         attachments: attachments,
       ),
-      call: () => ref.read(inboxApiProvider).send(
-            arg,
-            text: text,
-            attachments: attachments,
-          ),
+      call: () => ref
+          .read(inboxApiProvider)
+          .send(arg, text: text, attachments: attachments),
     );
   }
 
@@ -110,9 +111,7 @@ class ThreadController extends AutoDisposeFamilyAsyncNotifier<ThreadState, Strin
     required Future<Message> Function() call,
   }) async {
     final current = state.valueOrNull ?? const ThreadState();
-    state = AsyncData(
-      current.copyWith(messages: [...current.messages, draft]),
-    );
+    state = AsyncData(current.copyWith(messages: [...current.messages, draft]));
 
     try {
       final saved = await call();
@@ -144,8 +143,9 @@ class ThreadController extends AutoDisposeFamilyAsyncNotifier<ThreadState, Strin
     if (current == null) return;
     state = AsyncData(
       current.copyWith(
-        messages:
-            current.messages.where((message) => message.id != messageId).toList(),
+        messages: current.messages
+            .where((message) => message.id != messageId)
+            .toList(),
       ),
     );
   }
@@ -153,5 +153,9 @@ class ThreadController extends AutoDisposeFamilyAsyncNotifier<ThreadState, Strin
   String _nextLocalId() => 'local-${_localSequence++}';
 }
 
-final threadProvider = AutoDisposeAsyncNotifierProvider.family<ThreadController,
-    ThreadState, String>(ThreadController.new);
+final threadProvider =
+    AutoDisposeAsyncNotifierProvider.family<
+      ThreadController,
+      ThreadState,
+      String
+    >(ThreadController.new);

@@ -27,8 +27,9 @@ class OmniSearchField extends StatefulWidget {
 }
 
 class _OmniSearchFieldState extends State<OmniSearchField> {
-  late final TextEditingController _controller =
-      TextEditingController(text: widget.initialValue);
+  late final TextEditingController _controller = TextEditingController(
+    text: widget.initialValue,
+  );
   Timer? _timer;
 
   @override
@@ -55,11 +56,19 @@ class _OmniSearchFieldState extends State<OmniSearchField> {
       style: OmniType.body.copyWith(color: scheme.onSurface),
       decoration: InputDecoration(
         hintText: widget.hint,
-        prefixIcon: Icon(Icons.search_rounded, color: scheme.onSurfaceVariant, size: 20),
+        prefixIcon: Icon(
+          Icons.search_rounded,
+          color: scheme.onSurfaceVariant,
+          size: 20,
+        ),
         suffixIcon: _controller.text.isEmpty
             ? widget.trailing
             : IconButton(
-                icon: Icon(Icons.close_rounded, size: 18, color: scheme.onSurfaceVariant),
+                icon: Icon(
+                  Icons.close_rounded,
+                  size: 18,
+                  color: scheme.onSurfaceVariant,
+                ),
                 onPressed: () {
                   _controller.clear();
                   _onChanged('');
@@ -163,7 +172,10 @@ class OmniActionBar extends StatelessWidget {
         children: [
           for (var i = 0; i < children.length; i++) ...[
             if (i > 0) const SizedBox(width: OmniSpacing.md),
-            Expanded(flex: i == children.length - 1 ? 2 : 1, child: children[i]),
+            Expanded(
+              flex: i == children.length - 1 ? 2 : 1,
+              child: children[i],
+            ),
           ],
         ],
       ),

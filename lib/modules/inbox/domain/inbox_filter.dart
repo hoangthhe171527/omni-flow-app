@@ -11,13 +11,13 @@ enum InboxQuickFilter {
   closed;
 
   String get label => switch (this) {
-        InboxQuickFilter.all => 'Tất cả',
-        InboxQuickFilter.unread => 'Chưa đọc',
-        InboxQuickFilter.mine => 'Của tôi',
-        InboxQuickFilter.unassigned => 'Chưa gán',
-        InboxQuickFilter.urgent => 'Khẩn',
-        InboxQuickFilter.closed => 'Đã đóng',
-      };
+    InboxQuickFilter.all => 'Tất cả',
+    InboxQuickFilter.unread => 'Chưa đọc',
+    InboxQuickFilter.mine => 'Của tôi',
+    InboxQuickFilter.unassigned => 'Chưa gán',
+    InboxQuickFilter.urgent => 'Khẩn',
+    InboxQuickFilter.closed => 'Đã đóng',
+  };
 }
 
 class InboxFilter {
@@ -49,8 +49,9 @@ class InboxFilter {
       quick: quick ?? this.quick,
       search: search ?? this.search,
       channel: channel == _unset ? this.channel : channel as Channel?,
-      connectionId:
-          connectionId == _unset ? this.connectionId : connectionId as String?,
+      connectionId: connectionId == _unset
+          ? this.connectionId
+          : connectionId as String?,
       label: label == _unset ? this.label : label as String?,
     );
   }
@@ -69,8 +70,14 @@ class InboxFilter {
         InboxQuickFilter.all => const {'status': 'open'},
         InboxQuickFilter.unread => const {'status': 'open', 'unread': 1},
         InboxQuickFilter.mine => {'status': 'open', 'assignee': currentUserId},
-        InboxQuickFilter.unassigned => const {'status': 'open', 'assignee': 'none'},
-        InboxQuickFilter.urgent => const {'status': 'open', 'priority': 'urgent'},
+        InboxQuickFilter.unassigned => const {
+          'status': 'open',
+          'assignee': 'none',
+        },
+        InboxQuickFilter.urgent => const {
+          'status': 'open',
+          'priority': 'urgent',
+        },
         InboxQuickFilter.closed => const {'status': 'closed'},
       },
     };
