@@ -97,7 +97,8 @@ class _InboxPageState extends ConsumerState<InboxPage> {
         // Was 112 for three stacked filter bands; the header is now a search
         // line plus one pill row, and the stale number left a dead white gap.
         bottom: const PreferredSize(
-          preferredSize: Size.fromHeight(88),
+          // Search line + pill row + the rule under them.
+          preferredSize: Size.fromHeight(89),
           child: InboxFilterBar(),
         ),
       ),

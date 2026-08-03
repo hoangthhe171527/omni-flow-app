@@ -68,6 +68,11 @@ class InboxFilterBar extends ConsumerWidget {
                   ),
                   decoration: InputDecoration(
                     isDense: true,
+                    // The app-wide inputDecorationTheme sets `filled: true`, and
+                    // that inherited fill was the dim box sitting behind the
+                    // search text. Zalo has no box here at all — just the icon,
+                    // the word, and a rule under the whole header.
+                    filled: false,
                     border: InputBorder.none,
                     enabledBorder: InputBorder.none,
                     focusedBorder: InputBorder.none,
@@ -110,6 +115,16 @@ class InboxFilterBar extends ConsumerWidget {
           ),
         ),
         const SizedBox(height: 4),
+        // One rule under the whole header — the only edge the search area needs.
+        Divider(
+          height: 1,
+          thickness: 1,
+          color: OmniColors.chat(
+            context,
+            OmniColors.chatDivider,
+            OmniColors.chatDividerDark,
+          ),
+        ),
       ],
     );
   }
