@@ -23,21 +23,19 @@ class OmniFilterPill extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     final dark = Theme.of(context).brightness == Brightness.dark;
 
-    // Flat and light. It used to be an outlined 38-tall box with the count in a
-    // SECOND pill nested inside it — a chip within a chip, which is what made
-    // the filter row look cluttered and heavy above an otherwise calm list.
-    // Now: no border, a soft fill when idle, solid blue when chosen, and the
-    // count as plain dimmed text rather than its own container.
-    final background = selected
-        ? OmniColors.chatPrimary
-        : dark
-        ? Colors.white.withValues(alpha: 0.08)
-        : scheme.surfaceContainerHighest;
+    // Only the CHOSEN one is a pill. The rest are plain text.
+    //
+    // Six filled capsules in a row was the heaviest thing on the screen, and
+    // filling all of them spends the same ink on the five a rep is not using as
+    // on the one they are. Emptying the others lets the selection carry the
+    // whole signal, and the row turns into a line of words above the list
+    // instead of a tray of buttons.
+    final background = selected ? OmniColors.chatPrimary : Colors.transparent;
     final foreground = selected
         ? Colors.white
         : dark
-        ? Colors.white.withValues(alpha: 0.85)
-        : scheme.onSurface;
+        ? Colors.white.withValues(alpha: 0.6)
+        : scheme.onSurfaceVariant;
 
     return Material(
       color: background,

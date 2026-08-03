@@ -57,10 +57,16 @@ class _InboxPageState extends ConsumerState<InboxPage> {
     final selecting = _selected.isNotEmpty;
 
     return Scaffold(
+      // Header and list on ONE plane. The AppBar was painted with `background`
+      // (#F8F8FC) while the rows use `surface` (white), so the whole search area
+      // read as a tinted panel framing itself — the "khung mờ" around the search
+      // field was that seam, not a border on the field.
+      backgroundColor: scheme.surface,
       appBar: AppBar(
+        backgroundColor: scheme.surface,
         title: const Text('Hộp thư'),
         titleSpacing: OmniSpacing.lg,
-        toolbarHeight: 60,
+        toolbarHeight: 56,
         actions: [
           IconButton(
             tooltip: 'Chọn nhiều',
@@ -74,11 +80,13 @@ class _InboxPageState extends ConsumerState<InboxPage> {
                     }
                   })
                 : null,
+            // A bare icon. The filled circle behind it was a button drawn twice
+            // — the icon already reads as tappable, and the disc only added a
+            // grey blob to the corner of an otherwise clean bar.
             style: IconButton.styleFrom(
-              backgroundColor: selecting
-                  ? scheme.primaryContainer
-                  : scheme.surfaceContainerHighest,
-              foregroundColor: selecting ? scheme.primary : scheme.onSurface,
+              foregroundColor: selecting
+                  ? OmniColors.chatPrimary
+                  : scheme.onSurfaceVariant,
             ),
             icon: Icon(
               selecting ? Icons.close_rounded : Icons.checklist_rounded,
@@ -99,16 +107,14 @@ class _InboxPageState extends ConsumerState<InboxPage> {
           // them — not the unassigned pool. Saying so up front stops "hộp thư
           // trống" being read as a sync failure.
           if (access.readScope == AccessScope.own)
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.symmetric(
-                horizontal: OmniSpacing.lg,
-                vertical: OmniSpacing.sm,
-              ),
-              color: scheme.primaryContainer,
+            // A quiet line, not a coloured banner. It is a standing fact about
+            // this rep's scope, not an alert — a filled strip gave it the weight
+            // of a warning every single time the screen opened.
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 2, 16, 8),
               child: Text(
                 'Bạn đang xem các hội thoại được gán cho mình.',
-                style: OmniType.micro.copyWith(color: scheme.primary),
+                style: OmniType.micro.copyWith(color: scheme.onSurfaceVariant),
               ),
             ),
           Expanded(

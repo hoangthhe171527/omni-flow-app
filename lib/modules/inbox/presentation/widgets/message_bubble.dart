@@ -66,17 +66,10 @@ class MessageBubble extends StatelessWidget {
       decoration: BoxDecoration(
         color: bubbleColor,
         borderRadius: BorderRadius.circular(18),
-        // No shadow in dark mode — on a black canvas it only muddies the edge;
-        // the bubble already separates by luminance.
-        boxShadow: dark
-            ? null
-            : const [
-                BoxShadow(
-                  color: Color(0x14000000),
-                  blurRadius: 2,
-                  offset: Offset(0, 1),
-                ),
-              ],
+        // No shadow at all. The tinted canvas already separates the bubbles by
+        // value, so the drop shadow was doing no work — it only fuzzed every
+        // edge in the thread, which is what reads as cheap at this scale.
+        boxShadow: null,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
