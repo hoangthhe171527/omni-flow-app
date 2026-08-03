@@ -180,23 +180,49 @@ class OmniCountBadge extends StatelessWidget {
     if (count <= 0) return const SizedBox.shrink();
     final background = color ?? Theme.of(context).colorScheme.primary;
 
-    return Container(
-      constraints: const BoxConstraints(minWidth: 20),
-      height: 20,
-      padding: const EdgeInsets.symmetric(horizontal: 6),
-      decoration: BoxDecoration(
-        color: background,
-        borderRadius: OmniRadius.pillAll,
-      ),
-      alignment: Alignment.center,
-      child: Text(
-        count > 99 ? '99+' : '$count',
-        style: OmniType.micro.copyWith(
-          color: Colors.white,
-          // Bold: this is the one number on the row that must be read from a
-          // glance, and the regular weight let it sink into the pill.
-          fontWeight: FontWeight.w700,
-          fontFeatures: OmniType.tabular,
+    // The badge glows, not the text.
+    //
+    // A halo around the NAME is what gets asked for, but no messaging app does
+    // it — and it is actively wrong for Vietnamese, where diacritics stack above
+    // and below the x-height (ế, ộ, ữ) and a glow bleeds straight into the marks
+    // that carry the meaning. Putting the light on the badge gets the same "this
+    // one is live" read with none of that cost: it is a solid shape, so a halo
+    // only makes it rounder.
+    //
+    // It also scales in, so a count that arrives while the rep is looking at the
+    // list announces itself instead of appearing between two blinks.
+    return TweenAnimationBuilder<double>(
+      key: ValueKey(count),
+      tween: Tween(begin: 0.6, end: 1),
+      duration: const Duration(milliseconds: 220),
+      curve: Curves.easeOutBack,
+      builder: (context, scale, child) =>
+          Transform.scale(scale: scale, child: child),
+      child: Container(
+        constraints: const BoxConstraints(minWidth: 20),
+        height: 20,
+        padding: const EdgeInsets.symmetric(horizontal: 6),
+        decoration: BoxDecoration(
+          color: background,
+          borderRadius: OmniRadius.pillAll,
+          boxShadow: [
+            BoxShadow(
+              color: background.withValues(alpha: 0.45),
+              blurRadius: 8,
+              spreadRadius: 0.5,
+            ),
+          ],
+        ),
+        alignment: Alignment.center,
+        child: Text(
+          count > 99 ? '99+' : '$count',
+          style: OmniType.micro.copyWith(
+            color: Colors.white,
+            // Bold: this is the one number on the row that must be read from a
+            // glance, and the regular weight let it sink into the pill.
+            fontWeight: FontWeight.w700,
+            fontFeatures: OmniType.tabular,
+          ),
         ),
       ),
     );
