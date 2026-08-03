@@ -1,0 +1,78 @@
+import 'package:flutter/material.dart';
+
+import '../../core/module/module_route.dart';
+import '../../core/module/nav_destination.dart';
+import '../../core/module/omni_module.dart';
+import '../../security/guard/access_requirement.dart';
+import 'domain/opportunity_permissions.dart';
+import 'presentation/opportunity_detail_page.dart';
+import 'presentation/opportunity_form_page.dart';
+import 'presentation/pipeline_page.dart';
+
+class OpportunitiesModule extends OmniModule {
+  const OpportunitiesModule();
+
+  static const pipeline = 'opportunities.pipeline';
+  static const detail = 'opportunities.detail';
+  static const create = 'opportunities.create';
+  static const edit = 'opportunities.edit';
+
+  @override
+  String get id => 'opportunities';
+
+  @override
+  String get title => 'Cơ hội';
+
+  @override
+  List<String> get permissions => OpportunityPermissions.all;
+
+  @override
+  List<ModuleRoute> routes() => [
+        ModuleRoute(
+          path: '/opportunities',
+          name: pipeline,
+          access: const AccessRequirement.any(OpportunityPermissions.anyRead),
+          builder: (_, _) => const PipelinePage(),
+        ),
+        ModuleRoute(
+          path: '/opportunities/new',
+          name: create,
+          rootNavigator: true,
+          access: const AccessRequirement.any([OpportunityPermissions.create]),
+          // `?customer=<id>` pre-selects the customer when the form is opened
+          // from a profile or a chat thread.
+          builder: (_, state) => OpportunityFormPage(
+            customerId: state.uri.queryParameters['customer'],
+          ),
+        ),
+        ModuleRoute(
+          path: '/opportunities/:id',
+          name: detail,
+          rootNavigator: true,
+          access: const AccessRequirement.any(OpportunityPermissions.anyRead),
+          builder: (_, state) =>
+              OpportunityDetailPage(opportunityId: state.pathParameters['id']!),
+        ),
+        ModuleRoute(
+          path: '/opportunities/:id/edit',
+          name: edit,
+          rootNavigator: true,
+          access: const AccessRequirement.any([OpportunityPermissions.update]),
+          builder: (_, state) =>
+              OpportunityFormPage(opportunityId: state.pathParameters['id']!),
+        ),
+      ];
+
+  @override
+  List<ModuleDestination> destinations() => const [
+        ModuleDestination(
+          moduleId: 'opportunities',
+          label: 'Cơ hội',
+          icon: Icons.trending_up_outlined,
+          selectedIcon: Icons.trending_up_rounded,
+          routeName: pipeline,
+          order: 30,
+          access: AccessRequirement.any(OpportunityPermissions.anyRead),
+        ),
+      ];
+}

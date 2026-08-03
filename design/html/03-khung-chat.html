@@ -1,0 +1,519 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>KhungChat</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@100;200;300;400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@100;200;300;400;500;600;700;800;900&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700;800;900&display=swap"
+      rel="stylesheet"
+    />
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <script src="https://code.iconify.design/iconify-icon/3.0.0/iconify-icon.min.js"></script>
+    <style type="text/tailwindcss">
+      @theme inline {
+        --color-background: var(--background);
+        --color-foreground: var(--foreground);
+        --color-primary: var(--primary);
+        --color-primary-foreground: var(--primary-foreground);
+        --color-secondary: var(--secondary);
+        --color-secondary-foreground: var(--secondary-foreground);
+        --color-muted: var(--muted);
+        --color-muted-foreground: var(--muted-foreground);
+        --color-accent: var(--accent);
+        --color-accent-foreground: var(--accent-foreground);
+        --color-destructive: var(--destructive);
+        --color-card: var(--card);
+        --color-card-foreground: var(--card-foreground);
+        --color-popover: var(--popover);
+        --color-popover-foreground: var(--popover-foreground);
+        --color-border: var(--border);
+        --color-input: var(--input);
+        --color-ring: var(--ring);
+        --color-chart-1: var(--chart-1);
+        --color-chart-2: var(--chart-2);
+        --color-chart-3: var(--chart-3);
+        --color-chart-4: var(--chart-4);
+        --color-chart-5: var(--chart-5);
+
+        --font-font-sans: var(--font-sans);
+        --font-font-heading: var(--font-heading);
+        --font-font-serif: var(--font-serif);
+        --font-font-mono: var(--font-mono);
+      }
+
+      @theme {
+        --radius-xs: calc(var(--radius) - 8px);
+        --radius-sm: calc(var(--radius) - 4px);
+        --radius-md: calc(var(--radius) - 2px);
+        --radius-lg: var(--radius);
+        --radius-xl: calc(var(--radius) + 4px);
+        --radius-2xl: calc(var(--radius) + 8px);
+        --radius-3xl: calc(var(--radius) + 16px);
+        --radius-4xl: calc(var(--radius) + 24px);
+      }
+
+      * {
+        corner-shape: var(--shape, round);
+      }
+
+      .rounded-full,
+      .rounded-none,
+      .rounded-t-full,
+      .rounded-t-none,
+      .rounded-r-full,
+      .rounded-r-none,
+      .rounded-b-full,
+      .rounded-b-none,
+      .rounded-l-full,
+      .rounded-l-none,
+      .rounded-s-full,
+      .rounded-s-none,
+      .rounded-e-full,
+      .rounded-e-none,
+      .rounded-tl-full,
+      .rounded-tl-none,
+      .rounded-tr-full,
+      .rounded-tr-none,
+      .rounded-bl-full,
+      .rounded-bl-none,
+      .rounded-br-full,
+      .rounded-br-none,
+      .rounded-ss-full,
+      .rounded-ss-none,
+      .rounded-se-full,
+      .rounded-se-none,
+      .rounded-es-full,
+      .rounded-es-none,
+      .rounded-ee-full,
+      .rounded-ee-none {
+        corner-shape: round;
+      }
+
+      @utility rounded-* {
+        border-radius: calc(
+          --value(--radius-*, [length], [percentage]) * var(--shape-multiplier, 1)
+        );
+      }
+      @utility rounded-t-* {
+        border-top-left-radius: calc(
+          --value(--radius-*, [length], [percentage]) * var(--shape-multiplier, 1)
+        );
+        border-top-right-radius: calc(
+          --value(--radius-*, [length], [percentage]) * var(--shape-multiplier, 1)
+        );
+      }
+      @utility rounded-r-* {
+        border-top-right-radius: calc(
+          --value(--radius-*, [length], [percentage]) * var(--shape-multiplier, 1)
+        );
+        border-bottom-right-radius: calc(
+          --value(--radius-*, [length], [percentage]) * var(--shape-multiplier, 1)
+        );
+      }
+      @utility rounded-b-* {
+        border-bottom-right-radius: calc(
+          --value(--radius-*, [length], [percentage]) * var(--shape-multiplier, 1)
+        );
+        border-bottom-left-radius: calc(
+          --value(--radius-*, [length], [percentage]) * var(--shape-multiplier, 1)
+        );
+      }
+      @utility rounded-l-* {
+        border-top-left-radius: calc(
+          --value(--radius-*, [length], [percentage]) * var(--shape-multiplier, 1)
+        );
+        border-bottom-left-radius: calc(
+          --value(--radius-*, [length], [percentage]) * var(--shape-multiplier, 1)
+        );
+      }
+      @utility rounded-tl-* {
+        border-top-left-radius: calc(
+          --value(--radius-*, [length], [percentage]) * var(--shape-multiplier, 1)
+        );
+      }
+      @utility rounded-tr-* {
+        border-top-right-radius: calc(
+          --value(--radius-*, [length], [percentage]) * var(--shape-multiplier, 1)
+        );
+      }
+      @utility rounded-bl-* {
+        border-bottom-left-radius: calc(
+          --value(--radius-*, [length], [percentage]) * var(--shape-multiplier, 1)
+        );
+      }
+      @utility rounded-br-* {
+        border-bottom-right-radius: calc(
+          --value(--radius-*, [length], [percentage]) * var(--shape-multiplier, 1)
+        );
+      }
+      @utility rounded-s-* {
+        border-start-start-radius: calc(
+          --value(--radius-*, [length], [percentage]) * var(--shape-multiplier, 1)
+        );
+        border-end-start-radius: calc(
+          --value(--radius-*, [length], [percentage]) * var(--shape-multiplier, 1)
+        );
+      }
+      @utility rounded-e-* {
+        border-start-end-radius: calc(
+          --value(--radius-*, [length], [percentage]) * var(--shape-multiplier, 1)
+        );
+        border-end-end-radius: calc(
+          --value(--radius-*, [length], [percentage]) * var(--shape-multiplier, 1)
+        );
+      }
+      @utility rounded-ss-* {
+        border-start-start-radius: calc(
+          --value(--radius-*, [length], [percentage]) * var(--shape-multiplier, 1)
+        );
+      }
+      @utility rounded-se-* {
+        border-start-end-radius: calc(
+          --value(--radius-*, [length], [percentage]) * var(--shape-multiplier, 1)
+        );
+      }
+      @utility rounded-es-* {
+        border-end-start-radius: calc(
+          --value(--radius-*, [length], [percentage]) * var(--shape-multiplier, 1)
+        );
+      }
+      @utility rounded-ee-* {
+        border-end-end-radius: calc(
+          --value(--radius-*, [length], [percentage]) * var(--shape-multiplier, 1)
+        );
+      }
+
+      :root {
+        --shape: squircle;
+        --shape-multiplier: 1;
+
+        --background: #f8f9fb;
+        --foreground: #0f172a;
+        --primary: #4338ca;
+        --primary-foreground: #ffffff;
+        --secondary: #e2e8f0;
+        --secondary-foreground: #1e293b;
+        --muted: #f1f5f9;
+        --muted-foreground: #64748b;
+        --accent: #eef2ff;
+        --accent-foreground: #4338ca;
+        --destructive: #ef4444;
+        --card: #ffffff;
+        --card-foreground: #0f172a;
+        --popover: #ffffff;
+        --popover-foreground: #0f172a;
+        --border: #e2e8f0;
+        --input: #f8f9fb;
+        --ring: #4338ca;
+        --chart-1: #0ea5e9;
+        --chart-2: #1877f2;
+        --chart-3: #10b981;
+        --chart-4: #ec4899;
+        --chart-5: #0f172a;
+
+        --font-sans: "Inter";
+        --font-heading: "Inter";
+        --font-serif: "Playfair Display";
+        --font-mono: "JetBrains Mono";
+
+        --radius: 1rem;
+      }
+
+      @supports (corner-shape: squircle) {
+        :root {
+          --shape-multiplier: 2.5;
+        }
+      }
+
+      /* Prevent layout shift for icons without explicit dimensions */
+      iconify-icon:not([width]):not([height]) {
+        display: inline-block;
+        width: 1em;
+        height: 1em;
+      }
+
+      /* Hide scrollbars */
+      *,
+      *::before,
+      *::after {
+        scrollbar-width: none;
+        -ms-overflow-style: none;
+      }
+      *::-webkit-scrollbar {
+        display: none;
+      }
+    </style>
+  </head>
+  <body>
+    <div
+      class="flex flex-col h-screen bg-background text-foreground font-sans selection:bg-primary/10"
+    >
+      <div
+        class="sticky top-0 z-30 bg-card/95 backdrop-blur-md border-b border-border/40 px-3 py-2.5 flex items-center justify-between shadow-sm"
+      >
+        <div class="flex items-center gap-3 min-w-0">
+          <button type="button" class="size-8 flex items-center justify-center -ml-1">
+            <iconify-icon icon="solar:alt-arrow-left-linear" width="24" height="24"></iconify-icon>
+          </button>
+          <div class="flex items-center gap-3 min-w-0">
+            <div class="relative shrink-0">
+              <img
+                alt="User"
+                src="https://randomuser.me/api/portraits/women/44.jpg"
+                class="size-10 rounded-full object-cover border border-border/50"
+              />
+              <div class="absolute -bottom-0.5 -right-0.5 size-3.5 rounded-full bg-card p-0.5">
+                <div class="size-full rounded-full bg-green-500 border border-white"></div>
+              </div>
+            </div>
+            <div class="min-w-0">
+              <h2 class="text-[15px] font-bold tracking-tight truncate leading-tight">
+                Nguyễn Thu Hà
+              </h2>
+              <div class="flex items-center gap-1.5">
+                <span class="text-[10px] text-[#0EA5E9] font-bold">ZALO CA NHAN</span
+                ><span class="size-1 rounded-full bg-muted-foreground/30"></span
+                ><span class="text-[10px] text-muted-foreground font-medium animate-pulse"
+                  >Đang nhập...</span
+                >
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="flex items-center gap-1">
+          <button
+            type="button"
+            class="size-9 rounded-full flex items-center justify-center hover:bg-muted transition-colors text-primary"
+          >
+            <iconify-icon
+              icon="solar:phone-calling-linear"
+              width="20"
+              height="20"
+            ></iconify-icon></button
+          ><button
+            type="button"
+            class="size-9 rounded-full flex items-center justify-center hover:bg-muted transition-colors"
+          >
+            <iconify-icon
+              icon="solar:user-plus-linear"
+              width="20"
+              height="20"
+            ></iconify-icon></button
+          ><button
+            type="button"
+            class="size-9 rounded-full flex items-center justify-center hover:bg-muted transition-colors"
+          >
+            <iconify-icon icon="solar:info-circle-linear" width="20" height="20"></iconify-icon>
+          </button>
+        </div>
+      </div>
+      <div class="flex-1 overflow-y-auto px-4 py-4 space-y-6">
+        <div class="flex items-center justify-center">
+          <div class="h-px flex-1 bg-border/40"></div>
+          <span class="px-3 text-[10px] font-bold text-muted-foreground uppercase tracking-wider"
+            >Hôm qua, 14 Th05</span
+          >
+          <div class="h-px flex-1 bg-border/40"></div>
+        </div>
+        <div class="flex items-start gap-2.5 max-w-[85%]">
+          <img
+            alt="User"
+            src="https://randomuser.me/api/portraits/women/44.jpg"
+            class="size-8 rounded-full object-cover shrink-0 mt-0.5"
+          />
+          <div class="space-y-1">
+            <div
+              class="bg-white border border-border/60 p-3 rounded-2xl rounded-tl-none shadow-sm relative group"
+            >
+              <p class="text-sm leading-relaxed">
+                Chào shop, mình muốn hỏi về chính sách bảo hành của máy này. Nếu bị lỗi do nhà sản
+                xuất thì đổi mới trong bao lâu vậy ạ?
+              </p>
+              <div class="absolute -bottom-2 -right-1 flex gap-0.5">
+                <div
+                  class="bg-card border border-border rounded-full px-1.5 py-0.5 shadow-sm flex items-center text-[10px]"
+                >
+                  <span>❤️</span>
+                </div>
+              </div>
+            </div>
+            <span class="text-[10px] font-medium text-muted-foreground ml-1">14:20</span>
+          </div>
+        </div>
+        <div class="flex items-end justify-end gap-2 text-right">
+          <div class="space-y-1 max-w-[85%]">
+            <div
+              class="bg-primary text-primary-foreground p-3 rounded-2xl rounded-tr-none shadow-md shadow-primary/10"
+            >
+              <p class="text-sm leading-relaxed">
+                Dạ chào chị Hà ạ, cảm ơn chị đã quan tâm! Sản phẩm này bên em bảo hành 12 tháng, lỗi
+                1 đổi 1 trong vòng 30 ngày đầu tiên nếu có lỗi kỹ thuật chị nhé.
+              </p>
+            </div>
+            <div class="flex items-center justify-end gap-1.5 ml-1">
+              <span class="text-[10px] font-medium text-muted-foreground">14:22</span
+              ><iconify-icon
+                icon="solar:check-read-linear"
+                class="text-primary"
+                width="12"
+                height="12"
+              ></iconify-icon>
+            </div>
+          </div>
+        </div>
+        <div class="flex justify-center">
+          <div class="bg-amber-50 border border-amber-100 rounded-xl p-3 max-w-[90%] space-y-2">
+            <div class="flex items-center gap-2 border-b border-amber-200/50 pb-1.5">
+              <iconify-icon
+                icon="solar:notes-bold"
+                class="text-amber-600"
+                width="16"
+                height="16"
+              ></iconify-icon
+              ><span class="text-[10px] font-bold text-amber-800 uppercase tracking-tight"
+                >Ghi chú nội bộ</span
+              >
+            </div>
+            <p class="text-xs text-amber-900 leading-relaxed">
+              Khách này đang quan tâm dòng Pro Max, đã tư vấn bảo hành nhưng còn phân vân về giá.
+              Rep sau lưu ý tặng thêm voucher 200k nếu cần chốt nhanh.
+            </p>
+            <div class="flex items-center justify-between pt-0.5">
+              <span class="text-[9px] font-medium text-amber-700/60">Bởi: Kiệt Nguyễn · 14:25</span
+              ><img
+                alt="Me"
+                src="https://randomuser.me/api/portraits/men/32.jpg"
+                class="size-4 rounded-full"
+              />
+            </div>
+          </div>
+        </div>
+        <div class="flex items-end justify-end gap-2">
+          <div class="space-y-1 max-w-[70%]">
+            <div class="bg-white p-1 rounded-2xl border border-border overflow-hidden shadow-sm">
+              <img
+                alt="Attachment"
+                src="https://ggrhecslgdflloszjkwl.supabase.co/storage/v1/object/public/generation-assets/placeholder/landscape.png"
+                class="w-full h-40 object-cover rounded-xl"
+              />
+            </div>
+            <div class="flex items-center justify-end gap-1.5">
+              <span class="text-[10px] font-medium text-muted-foreground">14:26</span
+              ><iconify-icon
+                icon="solar:check-read-linear"
+                class="text-primary"
+                width="12"
+                height="12"
+              ></iconify-icon>
+            </div>
+          </div>
+        </div>
+        <div class="flex items-end justify-end gap-2">
+          <div class="space-y-1 max-w-[85%] text-right">
+            <div
+              class="bg-muted text-muted-foreground p-3 rounded-2xl rounded-tr-none border border-border"
+            >
+              <p class="text-sm leading-relaxed">
+                Chị có thể tham khảo thêm link này ạ: bit.ly/product-catalogue
+              </p>
+            </div>
+            <div class="flex items-center justify-end gap-1.5">
+              <span class="text-[10px] font-medium text-destructive">Gửi lỗi: Mất kết nối API</span
+              ><iconify-icon
+                icon="solar:danger-bold"
+                class="text-destructive"
+                width="14"
+                height="14"
+              ></iconify-icon
+              ><button class="text-[10px] font-bold text-primary underline">Thử lại</button>
+            </div>
+          </div>
+        </div>
+        <div class="flex items-start gap-2.5 max-w-[85%]">
+          <div class="size-8 shrink-0"></div>
+          <div
+            class="bg-muted/30 border border-border/40 px-3 py-2 rounded-2xl rounded-tl-none italic text-muted-foreground text-[13px]"
+          >
+            Tin nhắn đã được thu hồi
+          </div>
+        </div>
+      </div>
+      <div class="bg-card border-t border-border px-3 pt-2 pb-6 space-y-3">
+        <div class="flex overflow-x-auto no-scrollbar gap-2 -mx-3 px-3">
+          <button
+            class="whitespace-nowrap bg-muted hover:bg-secondary px-3 py-1.5 rounded-full text-xs font-medium text-foreground transition-colors border border-border/60 shrink-0"
+          >
+            Cho mình xem mẫu?</button
+          ><button
+            class="whitespace-nowrap bg-muted hover:bg-secondary px-3 py-1.5 rounded-full text-xs font-medium text-foreground transition-colors border border-border/60 shrink-0"
+          >
+            Cảm ơn chị đã quan tâm</button
+          ><button
+            class="whitespace-nowrap bg-muted hover:bg-secondary px-3 py-1.5 rounded-full text-xs font-medium text-foreground transition-colors border border-border/60 shrink-0"
+          >
+            Shop đang có khuyến mãi...
+          </button>
+        </div>
+        <div class="flex flex-col bg-muted/50 rounded-[1.25rem] border border-border p-1.5">
+          <div class="flex gap-1 mb-1.5">
+            <button
+              class="flex-1 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider bg-white shadow-sm text-primary flex items-center justify-center gap-1.5"
+            >
+              <iconify-icon icon="solar:chat-round-linear" width="14" height="14"></iconify-icon>Trả
+              lời khách</button
+            ><button
+              class="flex-1 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider text-muted-foreground hover:bg-white/50 transition-colors flex items-center justify-center gap-1.5"
+            >
+              <iconify-icon icon="solar:notes-linear" width="14" height="14"></iconify-icon>Ghi chú
+              nội bộ
+            </button>
+          </div>
+          <div class="flex items-end gap-2 px-2 pb-1.5">
+            <button
+              class="size-9 rounded-full flex items-center justify-center text-muted-foreground hover:bg-muted transition-colors shrink-0"
+            >
+              <iconify-icon
+                icon="solar:add-circle-linear"
+                width="24"
+                height="24"
+              ></iconify-icon></button
+            ><textarea
+              rows="1"
+              class="flex-1 bg-transparent border-none py-2 text-sm outline-none resize-none max-h-32"
+              placeholder="Nhập nội dung..."
+            ></textarea
+            ><button
+              class="size-9 rounded-full flex items-center justify-center text-muted-foreground hover:bg-muted transition-colors shrink-0"
+            >
+              <iconify-icon
+                icon="solar:smile-circle-linear"
+                width="24"
+                height="24"
+              ></iconify-icon></button
+            ><button
+              class="size-9 rounded-full bg-primary text-white flex items-center justify-center shrink-0 shadow-md shadow-primary/20"
+            >
+              <iconify-icon
+                icon="solar:plain-bold"
+                class="rotate-45"
+                width="20"
+                height="20"
+              ></iconify-icon>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>

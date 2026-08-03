@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ĐăngNhập</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@100;200;300;400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@100;200;300;400;500;600;700;800;900&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700;800;900&display=swap"
+      rel="stylesheet"
+    />
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <script src="https://code.iconify.design/iconify-icon/3.0.0/iconify-icon.min.js"></script>
+    <style type="text/tailwindcss">
+      @theme inline {
+        --color-background: var(--background);
+        --color-foreground: var(--foreground);
+        --color-primary: var(--primary);
+        --color-primary-foreground: var(--primary-foreground);
+        --color-secondary: var(--secondary);
+        --color-secondary-foreground: var(--secondary-foreground);
+        --color-muted: var(--muted);
+        --color-muted-foreground: var(--muted-foreground);
+        --color-accent: var(--accent);
+        --color-accent-foreground: var(--accent-foreground);
+        --color-destructive: var(--destructive);
+        --color-card: var(--card);
+        --color-card-foreground: var(--card-foreground);
+        --color-popover: var(--popover);
+        --color-popover-foreground: var(--popover-foreground);
+        --color-border: var(--border);
+        --color-input: var(--input);
+        --color-ring: var(--ring);
+        --color-chart-1: var(--chart-1);
+        --color-chart-2: var(--chart-2);
+        --color-chart-3: var(--chart-3);
+        --color-chart-4: var(--chart-4);
+        --color-chart-5: var(--chart-5);
+
+        --font-font-sans: var(--font-sans);
+        --font-font-heading: var(--font-heading);
+        --font-font-serif: var(--font-serif);
+        --font-font-mono: var(--font-mono);
+      }
+
+      @theme {
+        --radius-xs: calc(var(--radius) - 8px);
+        --radius-sm: calc(var(--radius) - 4px);
+        --radius-md: calc(var(--radius) - 2px);
+        --radius-lg: var(--radius);
+        --radius-xl: calc(var(--radius) + 4px);
+        --radius-2xl: calc(var(--radius) + 8px);
+        --radius-3xl: calc(var(--radius) + 16px);
+        --radius-4xl: calc(var(--radius) + 24px);
+      }
+
+      * {
+        corner-shape: var(--shape, round);
+      }
+
+      .rounded-full,
+      .rounded-none,
+      .rounded-t-full,
+      .rounded-t-none,
+      .rounded-r-full,
+      .rounded-r-none,
+      .rounded-b-full,
+      .rounded-b-none,
+      .rounded-l-full,
+      .rounded-l-none,
+      .rounded-s-full,
+      .rounded-s-none,
+      .rounded-e-full,
+      .rounded-e-none,
+      .rounded-tl-full,
+      .rounded-tl-none,
+      .rounded-tr-full,
+      .rounded-tr-none,
+      .rounded-bl-full,
+      .rounded-bl-none,
+      .rounded-br-full,
+      .rounded-br-none,
+      .rounded-ss-full,
+      .rounded-ss-none,
+      .rounded-se-full,
+      .rounded-se-none,
+      .rounded-es-full,
+      .rounded-es-none,
+      .rounded-ee-full,
+      .rounded-ee-none {
+        corner-shape: round;
+      }
+
+      @utility rounded-* {
+        border-radius: calc(
+          --value(--radius-*, [length], [percentage]) * var(--shape-multiplier, 1)
+        );
+      }
+      @utility rounded-t-* {
+        border-top-left-radius: calc(
+          --value(--radius-*, [length], [percentage]) * var(--shape-multiplier, 1)
+        );
+        border-top-right-radius: calc(
+          --value(--radius-*, [length], [percentage]) * var(--shape-multiplier, 1)
+        );
+      }
+      @utility rounded-r-* {
+        border-top-right-radius: calc(
+          --value(--radius-*, [length], [percentage]) * var(--shape-multiplier, 1)
+        );
+        border-bottom-right-radius: calc(
+          --value(--radius-*, [length], [percentage]) * var(--shape-multiplier, 1)
+        );
+      }
+      @utility rounded-b-* {
+        border-bottom-right-radius: calc(
+          --value(--radius-*, [length], [percentage]) * var(--shape-multiplier, 1)
+        );
+        border-bottom-left-radius: calc(
+          --value(--radius-*, [length], [percentage]) * var(--shape-multiplier, 1)
+        );
+      }
+      @utility rounded-l-* {
+        border-top-left-radius: calc(
+          --value(--radius-*, [length], [percentage]) * var(--shape-multiplier, 1)
+        );
+        border-bottom-left-radius: calc(
+          --value(--radius-*, [length], [percentage]) * var(--shape-multiplier, 1)
+        );
+      }
+      @utility rounded-tl-* {
+        border-top-left-radius: calc(
+          --value(--radius-*, [length], [percentage]) * var(--shape-multiplier, 1)
+        );
+      }
+      @utility rounded-tr-* {
+        border-top-right-radius: calc(
+          --value(--radius-*, [length], [percentage]) * var(--shape-multiplier, 1)
+        );
+      }
+      @utility rounded-bl-* {
+        border-bottom-left-radius: calc(
+          --value(--radius-*, [length], [percentage]) * var(--shape-multiplier, 1)
+        );
+      }
+      @utility rounded-br-* {
+        border-bottom-right-radius: calc(
+          --value(--radius-*, [length], [percentage]) * var(--shape-multiplier, 1)
+        );
+      }
+      @utility rounded-s-* {
+        border-start-start-radius: calc(
+          --value(--radius-*, [length], [percentage]) * var(--shape-multiplier, 1)
+        );
+        border-end-start-radius: calc(
+          --value(--radius-*, [length], [percentage]) * var(--shape-multiplier, 1)
+        );
+      }
+      @utility rounded-e-* {
+        border-start-end-radius: calc(
+          --value(--radius-*, [length], [percentage]) * var(--shape-multiplier, 1)
+        );
+        border-end-end-radius: calc(
+          --value(--radius-*, [length], [percentage]) * var(--shape-multiplier, 1)
+        );
+      }
+      @utility rounded-ss-* {
+        border-start-start-radius: calc(
+          --value(--radius-*, [length], [percentage]) * var(--shape-multiplier, 1)
+        );
+      }
+      @utility rounded-se-* {
+        border-start-end-radius: calc(
+          --value(--radius-*, [length], [percentage]) * var(--shape-multiplier, 1)
+        );
+      }
+      @utility rounded-es-* {
+        border-end-start-radius: calc(
+          --value(--radius-*, [length], [percentage]) * var(--shape-multiplier, 1)
+        );
+      }
+      @utility rounded-ee-* {
+        border-end-end-radius: calc(
+          --value(--radius-*, [length], [percentage]) * var(--shape-multiplier, 1)
+        );
+      }
+
+      :root {
+        --shape: squircle;
+        --shape-multiplier: 1;
+
+        --background: #f8f9fb;
+        --foreground: #0f172a;
+        --primary: #4338ca;
+        --primary-foreground: #ffffff;
+        --secondary: #e2e8f0;
+        --secondary-foreground: #1e293b;
+        --muted: #f1f5f9;
+        --muted-foreground: #64748b;
+        --accent: #eef2ff;
+        --accent-foreground: #4338ca;
+        --destructive: #ef4444;
+        --card: #ffffff;
+        --card-foreground: #0f172a;
+        --popover: #ffffff;
+        --popover-foreground: #0f172a;
+        --border: #e2e8f0;
+        --input: #f8f9fb;
+        --ring: #4338ca;
+        --chart-1: #0ea5e9;
+        --chart-2: #1877f2;
+        --chart-3: #10b981;
+        --chart-4: #ec4899;
+        --chart-5: #0f172a;
+
+        --font-sans: "Inter";
+        --font-heading: "Inter";
+        --font-serif: "Playfair Display";
+        --font-mono: "JetBrains Mono";
+
+        --radius: 1rem;
+      }
+
+      @supports (corner-shape: squircle) {
+        :root {
+          --shape-multiplier: 2.5;
+        }
+      }
+
+      /* Prevent layout shift for icons without explicit dimensions */
+      iconify-icon:not([width]):not([height]) {
+        display: inline-block;
+        width: 1em;
+        height: 1em;
+      }
+
+      /* Hide scrollbars */
+      *,
+      *::before,
+      *::after {
+        scrollbar-width: none;
+        -ms-overflow-style: none;
+      }
+      *::-webkit-scrollbar {
+        display: none;
+      }
+    </style>
+  </head>
+  <body>
+    <div
+      class="flex flex-col min-h-screen bg-background text-foreground font-sans relative overflow-hidden"
+    >
+      <div
+        class="absolute top-0 inset-x-0 h-[45vh] bg-gradient-to-b from-primary/10 to-transparent pointer-events-none"
+      ></div>
+      <div class="flex-1 flex flex-col justify-center px-4 relative z-10 pb-10">
+        <div class="w-full max-w-md mx-auto space-y-8">
+          <div class="space-y-4">
+            <div
+              class="size-12 rounded-squircle bg-gradient-to-tr from-primary to-[#6366F1] flex items-center justify-center text-primary-foreground shadow-md shadow-primary/20"
+            >
+              <iconify-icon
+                icon="solar:layers-minimalistic-bold"
+                width="24"
+                height="24"
+              ></iconify-icon>
+            </div>
+            <div class="space-y-1.5">
+              <h1 class="text-2xl font-semibold tracking-tight font-heading text-foreground">
+                Chào mừng trở lại
+              </h1>
+              <p class="text-sm text-muted-foreground leading-relaxed">
+                Nhập thông tin để tiếp tục xử lý công việc và hỗ trợ khách hàng.
+              </p>
+            </div>
+          </div>
+          <div
+            class="bg-card border border-border/60 shadow-[0_2px_10px_-4px_rgba(0,0,0,0.05)] rounded-squircle p-5 space-y-6 relative overflow-hidden"
+          >
+            <div class="space-y-4">
+              <div class="space-y-2">
+                <label class="text-sm font-medium text-foreground ml-1">Email làm việc</label>
+                <div class="relative group">
+                  <span
+                    class="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground group-focus-within:text-primary transition-colors flex items-center"
+                    ><iconify-icon
+                      icon="solar:letter-linear"
+                      width="20"
+                      height="20"
+                    ></iconify-icon></span
+                  ><input
+                    type="email"
+                    class="w-full bg-input border border-border rounded-squircle py-3 pl-11 pr-4 text-sm font-medium text-foreground outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
+                    placeholder="hoang.nguyen@congty.vn"
+                    value="hoang.nguyen@congty.vn"
+                  />
+                </div>
+              </div>
+              <div class="space-y-2">
+                <div class="flex items-center justify-between ml-1">
+                  <label class="text-sm font-medium text-foreground">Mật khẩu</label
+                  ><a
+                    href="#"
+                    class="text-xs font-medium text-primary hover:text-primary/80 transition-colors"
+                    >Quên mật khẩu?</a
+                  >
+                </div>
+                <div class="relative group">
+                  <span
+                    class="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground group-focus-within:text-primary transition-colors flex items-center"
+                    ><iconify-icon
+                      icon="solar:lock-password-linear"
+                      width="20"
+                      height="20"
+                    ></iconify-icon></span
+                  ><input
+                    type="password"
+                    class="w-full bg-input border border-border rounded-squircle py-3 pl-11 pr-11 text-sm font-medium text-foreground outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
+                    value="••••••••"
+                  /><button
+                    type="button"
+                    class="absolute right-3.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors flex items-center"
+                  >
+                    <iconify-icon icon="solar:eye-linear" width="20" height="20"></iconify-icon>
+                  </button>
+                </div>
+              </div>
+            </div>
+            <button
+              type="button"
+              class="w-full bg-gradient-to-r from-primary to-[#5b54e5] hover:opacity-90 active:scale-[0.98] transition-all text-primary-foreground font-medium py-3.5 rounded-squircle shadow-md shadow-primary/20 flex items-center justify-center gap-2"
+            >
+              <span>Đăng nhập</span
+              ><iconify-icon icon="solar:arrow-right-linear" width="20" height="20"></iconify-icon>
+            </button>
+          </div>
+        </div>
+      </div>
+      <div class="fixed inset-0 z-50 flex flex-col justify-end">
+        <div class="absolute inset-0 bg-foreground/20 backdrop-blur-[2px]"></div>
+        <div
+          class="relative w-full bg-card rounded-t-[1.5rem] shadow-2xl border-t border-border px-4 pb-8 pt-3 flex flex-col max-h-[85vh]"
+        >
+          <div class="w-10 h-1.5 bg-muted-foreground/20 rounded-full mx-auto mb-6"></div>
+          <div class="space-y-1.5 px-1 mb-6">
+            <h2 class="text-xl font-semibold font-heading tracking-tight text-foreground">
+              Chọn không gian làm việc
+            </h2>
+            <p class="text-sm text-muted-foreground">
+              Tài khoản của bạn đang tham gia nhiều không gian.
+            </p>
+          </div>
+          <div class="space-y-3 overflow-y-auto pb-4">
+            <button
+              type="button"
+              class="w-full flex items-center gap-4 p-4 rounded-squircle border border-primary/30 bg-primary/5 hover:bg-primary/10 transition-colors group text-left relative overflow-hidden"
+            >
+              <div class="absolute left-0 top-0 bottom-0 w-1 bg-primary rounded-r-full"></div>
+              <div
+                class="size-12 rounded-squircle bg-white border border-border/50 flex items-center justify-center shrink-0 shadow-sm"
+              >
+                <span class="text-lg font-bold text-primary font-heading">TNP</span>
+              </div>
+              <div class="flex-1 min-w-0">
+                <h3 class="text-base font-semibold text-foreground truncate">Công ty TNHH TNP</h3>
+                <p class="text-xs text-muted-foreground truncate mt-0.5">
+                  32 nhân viên · Gói Doanh nghiệp
+                </p>
+              </div>
+              <iconify-icon
+                icon="solar:check-circle-bold"
+                class="text-primary shrink-0"
+                width="24"
+                height="24"
+              ></iconify-icon></button
+            ><button
+              type="button"
+              class="w-full flex items-center gap-4 p-4 rounded-squircle border border-border bg-card hover:bg-muted/50 transition-colors group text-left"
+            >
+              <div
+                class="size-12 rounded-squircle bg-muted flex items-center justify-center shrink-0 border border-border/50"
+              >
+                <span class="text-lg font-bold text-muted-foreground font-heading">V</span>
+              </div>
+              <div class="flex-1 min-w-0">
+                <h3 class="text-base font-medium text-foreground truncate">Vinhomes Sales</h3>
+                <p class="text-xs text-muted-foreground truncate mt-0.5">Dự án Q9</p>
+              </div>
+              <iconify-icon
+                icon="solar:alt-arrow-right-linear"
+                class="text-muted-foreground group-hover:text-foreground shrink-0 transition-colors"
+                width="20"
+                height="20"
+              ></iconify-icon>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>

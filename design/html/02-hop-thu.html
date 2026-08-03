@@ -1,0 +1,624 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>HộpThư</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@100;200;300;400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@100;200;300;400;500;600;700;800;900&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700;800;900&display=swap"
+      rel="stylesheet"
+    />
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <script src="https://code.iconify.design/iconify-icon/3.0.0/iconify-icon.min.js"></script>
+    <style type="text/tailwindcss">
+      @theme inline {
+        --color-background: var(--background);
+        --color-foreground: var(--foreground);
+        --color-primary: var(--primary);
+        --color-primary-foreground: var(--primary-foreground);
+        --color-secondary: var(--secondary);
+        --color-secondary-foreground: var(--secondary-foreground);
+        --color-muted: var(--muted);
+        --color-muted-foreground: var(--muted-foreground);
+        --color-accent: var(--accent);
+        --color-accent-foreground: var(--accent-foreground);
+        --color-destructive: var(--destructive);
+        --color-card: var(--card);
+        --color-card-foreground: var(--card-foreground);
+        --color-popover: var(--popover);
+        --color-popover-foreground: var(--popover-foreground);
+        --color-border: var(--border);
+        --color-input: var(--input);
+        --color-ring: var(--ring);
+        --color-chart-1: var(--chart-1);
+        --color-chart-2: var(--chart-2);
+        --color-chart-3: var(--chart-3);
+        --color-chart-4: var(--chart-4);
+        --color-chart-5: var(--chart-5);
+
+        --font-font-sans: var(--font-sans);
+        --font-font-heading: var(--font-heading);
+        --font-font-serif: var(--font-serif);
+        --font-font-mono: var(--font-mono);
+      }
+
+      @theme {
+        --radius-xs: calc(var(--radius) - 8px);
+        --radius-sm: calc(var(--radius) - 4px);
+        --radius-md: calc(var(--radius) - 2px);
+        --radius-lg: var(--radius);
+        --radius-xl: calc(var(--radius) + 4px);
+        --radius-2xl: calc(var(--radius) + 8px);
+        --radius-3xl: calc(var(--radius) + 16px);
+        --radius-4xl: calc(var(--radius) + 24px);
+      }
+
+      * {
+        corner-shape: var(--shape, round);
+      }
+
+      .rounded-full,
+      .rounded-none,
+      .rounded-t-full,
+      .rounded-t-none,
+      .rounded-r-full,
+      .rounded-r-none,
+      .rounded-b-full,
+      .rounded-b-none,
+      .rounded-l-full,
+      .rounded-l-none,
+      .rounded-s-full,
+      .rounded-s-none,
+      .rounded-e-full,
+      .rounded-e-none,
+      .rounded-tl-full,
+      .rounded-tl-none,
+      .rounded-tr-full,
+      .rounded-tr-none,
+      .rounded-bl-full,
+      .rounded-bl-none,
+      .rounded-br-full,
+      .rounded-br-none,
+      .rounded-ss-full,
+      .rounded-ss-none,
+      .rounded-se-full,
+      .rounded-se-none,
+      .rounded-es-full,
+      .rounded-es-none,
+      .rounded-ee-full,
+      .rounded-ee-none {
+        corner-shape: round;
+      }
+
+      @utility rounded-* {
+        border-radius: calc(
+          --value(--radius-*, [length], [percentage]) * var(--shape-multiplier, 1)
+        );
+      }
+      @utility rounded-t-* {
+        border-top-left-radius: calc(
+          --value(--radius-*, [length], [percentage]) * var(--shape-multiplier, 1)
+        );
+        border-top-right-radius: calc(
+          --value(--radius-*, [length], [percentage]) * var(--shape-multiplier, 1)
+        );
+      }
+      @utility rounded-r-* {
+        border-top-right-radius: calc(
+          --value(--radius-*, [length], [percentage]) * var(--shape-multiplier, 1)
+        );
+        border-bottom-right-radius: calc(
+          --value(--radius-*, [length], [percentage]) * var(--shape-multiplier, 1)
+        );
+      }
+      @utility rounded-b-* {
+        border-bottom-right-radius: calc(
+          --value(--radius-*, [length], [percentage]) * var(--shape-multiplier, 1)
+        );
+        border-bottom-left-radius: calc(
+          --value(--radius-*, [length], [percentage]) * var(--shape-multiplier, 1)
+        );
+      }
+      @utility rounded-l-* {
+        border-top-left-radius: calc(
+          --value(--radius-*, [length], [percentage]) * var(--shape-multiplier, 1)
+        );
+        border-bottom-left-radius: calc(
+          --value(--radius-*, [length], [percentage]) * var(--shape-multiplier, 1)
+        );
+      }
+      @utility rounded-tl-* {
+        border-top-left-radius: calc(
+          --value(--radius-*, [length], [percentage]) * var(--shape-multiplier, 1)
+        );
+      }
+      @utility rounded-tr-* {
+        border-top-right-radius: calc(
+          --value(--radius-*, [length], [percentage]) * var(--shape-multiplier, 1)
+        );
+      }
+      @utility rounded-bl-* {
+        border-bottom-left-radius: calc(
+          --value(--radius-*, [length], [percentage]) * var(--shape-multiplier, 1)
+        );
+      }
+      @utility rounded-br-* {
+        border-bottom-right-radius: calc(
+          --value(--radius-*, [length], [percentage]) * var(--shape-multiplier, 1)
+        );
+      }
+      @utility rounded-s-* {
+        border-start-start-radius: calc(
+          --value(--radius-*, [length], [percentage]) * var(--shape-multiplier, 1)
+        );
+        border-end-start-radius: calc(
+          --value(--radius-*, [length], [percentage]) * var(--shape-multiplier, 1)
+        );
+      }
+      @utility rounded-e-* {
+        border-start-end-radius: calc(
+          --value(--radius-*, [length], [percentage]) * var(--shape-multiplier, 1)
+        );
+        border-end-end-radius: calc(
+          --value(--radius-*, [length], [percentage]) * var(--shape-multiplier, 1)
+        );
+      }
+      @utility rounded-ss-* {
+        border-start-start-radius: calc(
+          --value(--radius-*, [length], [percentage]) * var(--shape-multiplier, 1)
+        );
+      }
+      @utility rounded-se-* {
+        border-start-end-radius: calc(
+          --value(--radius-*, [length], [percentage]) * var(--shape-multiplier, 1)
+        );
+      }
+      @utility rounded-es-* {
+        border-end-start-radius: calc(
+          --value(--radius-*, [length], [percentage]) * var(--shape-multiplier, 1)
+        );
+      }
+      @utility rounded-ee-* {
+        border-end-end-radius: calc(
+          --value(--radius-*, [length], [percentage]) * var(--shape-multiplier, 1)
+        );
+      }
+
+      :root {
+        --shape: squircle;
+        --shape-multiplier: 1;
+
+        --background: #f8f9fb;
+        --foreground: #0f172a;
+        --primary: #4338ca;
+        --primary-foreground: #ffffff;
+        --secondary: #e2e8f0;
+        --secondary-foreground: #1e293b;
+        --muted: #f1f5f9;
+        --muted-foreground: #64748b;
+        --accent: #eef2ff;
+        --accent-foreground: #4338ca;
+        --destructive: #ef4444;
+        --card: #ffffff;
+        --card-foreground: #0f172a;
+        --popover: #ffffff;
+        --popover-foreground: #0f172a;
+        --border: #e2e8f0;
+        --input: #f8f9fb;
+        --ring: #4338ca;
+        --chart-1: #0ea5e9;
+        --chart-2: #1877f2;
+        --chart-3: #10b981;
+        --chart-4: #ec4899;
+        --chart-5: #0f172a;
+
+        --font-sans: "Inter";
+        --font-heading: "Inter";
+        --font-serif: "Playfair Display";
+        --font-mono: "JetBrains Mono";
+
+        --radius: 1rem;
+      }
+
+      @supports (corner-shape: squircle) {
+        :root {
+          --shape-multiplier: 2.5;
+        }
+      }
+
+      /* Prevent layout shift for icons without explicit dimensions */
+      iconify-icon:not([width]):not([height]) {
+        display: inline-block;
+        width: 1em;
+        height: 1em;
+      }
+
+      /* Hide scrollbars */
+      *,
+      *::before,
+      *::after {
+        scrollbar-width: none;
+        -ms-overflow-style: none;
+      }
+      *::-webkit-scrollbar {
+        display: none;
+      }
+    </style>
+  </head>
+  <body>
+    <div
+      class="flex flex-col min-h-screen bg-background text-foreground font-sans selection:bg-primary/10"
+    >
+      <div
+        class="sticky top-0 z-30 bg-background/80 backdrop-blur-md border-b border-border/40 px-4 pt-3 pb-2 space-y-3"
+      >
+        <div class="flex items-center justify-between">
+          <h1 class="text-xl font-bold tracking-tight font-heading">Hộp thư</h1>
+          <div class="flex items-center gap-3">
+            <button
+              type="button"
+              class="size-9 rounded-full flex items-center justify-center bg-muted hover:bg-secondary transition-colors"
+            >
+              <iconify-icon
+                icon="solar:checklist-minimalistic-linear"
+                width="20"
+                height="20"
+              ></iconify-icon></button
+            ><button type="button" class="size-9 rounded-full overflow-hidden border border-border">
+              <img
+                alt="Me"
+                src="https://randomuser.me/api/portraits/men/32.jpg"
+                class="size-full object-cover"
+              />
+            </button>
+          </div>
+        </div>
+        <div class="relative group">
+          <span
+            class="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground group-focus-within:text-primary transition-colors"
+            ><iconify-icon icon="solar:magnifer-linear" width="20" height="20"></iconify-icon></span
+          ><input
+            type="text"
+            class="w-full bg-muted/60 border-none rounded-squircle py-2.5 pl-10 pr-4 text-sm focus:ring-2 focus:ring-primary/10 outline-none transition-all"
+            placeholder="Tìm kiếm hội thoại..."
+          />
+        </div>
+      </div>
+      <div class="bg-background z-20">
+        <div class="flex overflow-x-auto no-scrollbar py-3 px-4 gap-2">
+          <button
+            type="button"
+            class="whitespace-nowrap px-4 py-1.5 rounded-full bg-primary text-primary-foreground text-sm font-semibold flex items-center gap-1.5 shadow-sm shadow-primary/20"
+          >
+            <span>Tất cả</span
+            ><span
+              class="bg-primary-foreground/20 px-1.5 py-0.5 rounded-full text-[10px] tabular-nums"
+              >128</span
+            ></button
+          ><button
+            type="button"
+            class="whitespace-nowrap px-4 py-1.5 rounded-full bg-white border border-border text-foreground text-sm font-medium flex items-center gap-1.5 hover:bg-muted/50 transition-colors"
+          >
+            <span>Chưa đọc</span
+            ><span
+              class="bg-destructive text-white px-1.5 py-0.5 rounded-full text-[10px] tabular-nums"
+              >12</span
+            ></button
+          ><button
+            type="button"
+            class="whitespace-nowrap px-4 py-1.5 rounded-full bg-white border border-border text-foreground text-sm font-medium flex items-center gap-1.5 hover:bg-muted/50 transition-colors"
+          >
+            <span>Của tôi</span
+            ><span
+              class="bg-muted-foreground/20 text-muted-foreground px-1.5 py-0.5 rounded-full text-[10px] tabular-nums"
+              >45</span
+            ></button
+          ><button
+            type="button"
+            class="whitespace-nowrap px-4 py-1.5 rounded-full bg-white border border-border text-foreground text-sm font-medium flex items-center gap-1.5 hover:bg-muted/50 transition-colors"
+          >
+            <span>Chưa gán</span
+            ><span
+              class="bg-muted-foreground/20 text-muted-foreground px-1.5 py-0.5 rounded-full text-[10px] tabular-nums"
+              >8</span
+            ></button
+          ><button
+            type="button"
+            class="whitespace-nowrap px-4 py-1.5 rounded-full bg-white border border-border text-foreground text-sm font-medium flex items-center gap-1.5 hover:bg-muted/50 transition-colors"
+          >
+            <span>Khẩn</span
+            ><span
+              class="bg-amber-500/10 text-amber-600 px-1.5 py-0.5 rounded-full text-[10px] tabular-nums"
+              >3</span
+            >
+          </button>
+        </div>
+        <div class="flex overflow-x-auto no-scrollbar pb-3 px-4 gap-4 border-b border-border/40">
+          <button type="button" class="flex flex-col items-center gap-1 min-w-fit group">
+            <div
+              class="size-10 rounded-squircle bg-muted flex items-center justify-center group-hover:bg-secondary transition-colors border border-border/40"
+            >
+              <iconify-icon icon="solar:globus-linear" width="20" height="20"></iconify-icon>
+            </div>
+            <span class="text-[10px] font-medium text-muted-foreground">Tất cả</span></button
+          ><button type="button" class="flex flex-col items-center gap-1 min-w-fit group">
+            <div
+              class="size-10 rounded-squircle bg-[#0EA5E9]/10 flex items-center justify-center border border-[#0EA5E9]/20"
+            >
+              <iconify-icon
+                icon="simple-icons:zalo"
+                class="text-[#0EA5E9]"
+                width="20"
+                height="20"
+              ></iconify-icon>
+            </div>
+            <span class="text-[10px] font-medium text-foreground">Zalo</span></button
+          ><button type="button" class="flex flex-col items-center gap-1 min-w-fit group">
+            <div
+              class="size-10 rounded-squircle bg-[#1877F2]/10 flex items-center justify-center border border-[#1877F2]/20"
+            >
+              <iconify-icon
+                icon="mdi:facebook"
+                class="text-[#1877F2]"
+                width="20"
+                height="20"
+              ></iconify-icon>
+            </div>
+            <span class="text-[10px] font-medium text-muted-foreground">Facebook</span></button
+          ><button type="button" class="flex flex-col items-center gap-1 min-w-fit group">
+            <div
+              class="size-10 rounded-squircle bg-[#10B981]/10 flex items-center justify-center border border-[#10B981]/20"
+            >
+              <iconify-icon
+                icon="solar:chat-round-dots-linear"
+                class="text-[#10B981]"
+                width="20"
+                height="20"
+              ></iconify-icon>
+            </div>
+            <span class="text-[10px] font-medium text-muted-foreground">Website</span></button
+          ><button type="button" class="flex flex-col items-center gap-1 min-w-fit group">
+            <div
+              class="size-10 rounded-squircle bg-black/5 flex items-center justify-center border border-black/10"
+            >
+              <iconify-icon
+                icon="line-md:tiktok"
+                class="text-black"
+                width="20"
+                height="20"
+              ></iconify-icon>
+            </div>
+            <span class="text-[10px] font-medium text-muted-foreground">TikTok</span>
+          </button>
+        </div>
+      </div>
+      <div class="flex-1 pb-32">
+        <div
+          class="group relative flex gap-3 px-4 py-4 bg-card border-b border-border/40 active:bg-muted/30 transition-colors"
+        >
+          <div class="absolute left-0 top-0 bottom-0 w-[3px] bg-[#0EA5E9]"></div>
+          <div class="relative shrink-0">
+            <img
+              alt="User"
+              src="https://randomuser.me/api/portraits/women/44.jpg"
+              class="size-12 rounded-full object-cover shadow-sm"
+            />
+            <div class="absolute -bottom-0.5 -right-0.5 size-4 rounded-full bg-card p-0.5">
+              <div class="size-full rounded-full bg-green-500 border border-white"></div>
+            </div>
+          </div>
+          <div class="flex-1 min-w-0 space-y-1">
+            <div class="flex items-center justify-between gap-2">
+              <div class="flex items-center gap-1.5 min-w-0">
+                <h3 class="text-[15px] font-semibold text-foreground truncate">Nguyễn Thu Hà</h3>
+                <span
+                  class="bg-[#0EA5E9]/10 text-[#0EA5E9] text-[9px] font-bold px-1.5 py-0.5 rounded-full uppercase tracking-wider shrink-0"
+                  >Zalo Cá nhân · Kiệt</span
+                >
+              </div>
+              <span
+                class="text-[11px] font-medium text-muted-foreground tabular-nums whitespace-nowrap"
+                >5 phút</span
+              >
+            </div>
+            <p class="text-sm text-foreground/80 truncate font-medium">
+              Chào shop, mình muốn hỏi về chính sách bảo hành của máy...
+            </p>
+            <div class="flex items-center justify-between gap-2 pt-1">
+              <div class="flex items-center gap-1.5 overflow-x-hidden">
+                <span
+                  class="bg-muted px-2 py-0.5 rounded text-[10px] font-medium text-muted-foreground border border-border/50"
+                  >VIP</span
+                ><span
+                  class="bg-muted px-2 py-0.5 rounded text-[10px] font-medium text-muted-foreground border border-border/50"
+                  >Gia đình</span
+                >
+                <div
+                  class="flex items-center gap-1 text-[10px] font-medium text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200"
+                >
+                  <iconify-icon
+                    icon="solar:clock-circle-linear"
+                    width="12"
+                    height="12"
+                  ></iconify-icon
+                  ><span>12p</span>
+                </div>
+              </div>
+              <div class="flex items-center gap-1.5 shrink-0">
+                <img
+                  alt="Assignee"
+                  src="https://randomuser.me/api/portraits/men/32.jpg"
+                  class="size-4.5 rounded-full border border-white shadow-sm"
+                />
+                <div
+                  class="bg-primary text-white text-[10px] font-bold px-2 py-0.5 rounded-full tabular-nums"
+                >
+                  3
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div
+          class="group relative flex gap-3 px-4 py-4 bg-amber-50/30 border-b border-border/40 active:bg-muted/30 transition-colors"
+        >
+          <div class="absolute left-0 top-0 bottom-0 w-[3px] bg-[#1877F2]"></div>
+          <div class="relative shrink-0">
+            <div
+              class="size-12 rounded-full bg-gradient-to-br from-indigo-100 to-indigo-200 flex items-center justify-center shadow-sm"
+            >
+              <span class="text-sm font-bold text-indigo-700 font-heading">TP</span>
+            </div>
+            <iconify-icon
+              icon="solar:fire-bold"
+              class="absolute -top-1 -left-1 text-destructive"
+              width="20"
+              height="20"
+            ></iconify-icon>
+          </div>
+          <div class="flex-1 min-w-0 space-y-1">
+            <div class="flex items-center justify-between gap-2">
+              <div class="flex items-center gap-1.5 min-w-0">
+                <h3 class="text-[15px] font-semibold text-foreground truncate">Trần Duy Phong</h3>
+                <span
+                  class="bg-[#1877F2]/10 text-[#1877F2] text-[9px] font-bold px-1.5 py-0.5 rounded-full uppercase tracking-wider shrink-0"
+                  >FB Page · OA TNP</span
+                >
+              </div>
+              <span class="text-[11px] font-medium text-destructive tabular-nums whitespace-nowrap"
+                >Hôm qua</span
+              >
+            </div>
+            <p class="text-sm text-muted-foreground truncate leading-relaxed">
+              Shop ơi đơn hàng #12934 của mình vẫn chưa thấy giao tới...
+            </p>
+            <div class="flex items-center justify-between gap-2 pt-1">
+              <div class="flex items-center gap-1.5">
+                <span
+                  class="bg-destructive/10 text-destructive text-[10px] font-bold px-2 py-0.5 rounded border border-destructive/20"
+                  >Khẩn</span
+                >
+              </div>
+              <div class="flex items-center gap-1.5">
+                <span class="text-[10px] text-muted-foreground">Chưa gán</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div
+          class="group relative flex gap-3 px-4 py-4 bg-card border-b border-border/40 active:bg-muted/30 transition-colors"
+        >
+          <div class="absolute left-0 top-0 bottom-0 w-[3px] bg-[#0EA5E9]"></div>
+          <div class="shrink-0 relative">
+            <div class="size-12 relative">
+              <img
+                alt="G1"
+                src="https://randomuser.me/api/portraits/men/1.jpg"
+                class="absolute top-0 right-0 size-8 rounded-full border-2 border-white object-cover"
+              /><img
+                alt="G2"
+                src="https://randomuser.me/api/portraits/women/2.jpg"
+                class="absolute bottom-0 left-0 size-8 rounded-full border-2 border-white object-cover shadow-sm"
+              />
+            </div>
+          </div>
+          <div class="flex-1 min-w-0 space-y-1">
+            <div class="flex items-center justify-between gap-2">
+              <div class="flex items-center gap-1.5 min-w-0">
+                <h3 class="text-[15px] font-semibold text-foreground truncate">
+                  Group: Dự án Opal
+                </h3>
+                <span
+                  class="bg-[#0EA5E9]/10 text-[#0EA5E9] text-[9px] font-bold px-1.5 py-0.5 rounded-full uppercase tracking-wider shrink-0"
+                  >Zalo Group</span
+                >
+              </div>
+              <span
+                class="text-[11px] font-medium text-muted-foreground tabular-nums whitespace-nowrap"
+                >2 giờ</span
+              >
+            </div>
+            <p class="text-sm text-muted-foreground truncate leading-relaxed">
+              <span class="font-medium text-foreground">Hùng:</span> Gửi mọi người báo giá mới
+              nhất...
+            </p>
+          </div>
+        </div>
+        <div class="px-4 py-4 space-y-4 opacity-40 select-none pointer-events-none">
+          <div class="flex gap-3">
+            <div class="size-12 rounded-full bg-muted animate-pulse"></div>
+            <div class="flex-1 space-y-2 py-1">
+              <div class="flex justify-between items-center">
+                <div class="h-4 w-1/3 bg-muted rounded animate-pulse"></div>
+                <div class="h-3 w-12 bg-muted rounded animate-pulse"></div>
+              </div>
+              <div class="h-4 w-full bg-muted rounded animate-pulse"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div
+        class="fixed bottom-0 inset-x-0 z-40 bg-card/95 backdrop-blur-md border-t border-border flex items-center justify-around px-2 pb-6 pt-2"
+      >
+        <button type="button" class="flex-1 flex flex-col items-center gap-1 relative">
+          <div class="relative">
+            <iconify-icon
+              icon="solar:chat-round-dots-bold"
+              class="text-primary"
+              width="24"
+              height="24"
+            ></iconify-icon
+            ><span
+              class="absolute -top-1.5 -right-2 bg-destructive text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full border-2 border-white tabular-nums"
+              >12</span
+            >
+          </div>
+          <span class="text-[10px] font-bold text-primary">Hộp thư</span>
+          <div class="absolute -top-2 w-8 h-1 bg-primary rounded-full"></div></button
+        ><button
+          type="button"
+          class="flex-1 flex flex-col items-center gap-1 text-muted-foreground hover:text-foreground transition-colors"
+        >
+          <iconify-icon
+            icon="solar:users-group-rounded-linear"
+            width="24"
+            height="24"
+          ></iconify-icon
+          ><span class="text-[10px] font-medium">Khách hàng</span></button
+        ><button
+          type="button"
+          class="flex-1 flex flex-col items-center gap-1 text-muted-foreground hover:text-foreground transition-colors"
+        >
+          <iconify-icon icon="solar:chart-square-linear" width="24" height="24"></iconify-icon
+          ><span class="text-[10px] font-medium">Cơ hội</span></button
+        ><button
+          type="button"
+          class="flex-1 flex flex-col items-center gap-1 text-muted-foreground hover:text-foreground transition-colors"
+        >
+          <iconify-icon
+            icon="solar:calendar-minimalistic-linear"
+            width="24"
+            height="24"
+          ></iconify-icon
+          ><span class="text-[10px] font-medium">Công việc</span></button
+        ><button
+          type="button"
+          class="flex-1 flex flex-col items-center gap-1 text-muted-foreground hover:text-foreground transition-colors"
+        >
+          <iconify-icon icon="solar:menu-dots-linear" width="24" height="24"></iconify-icon
+          ><span class="text-[10px] font-medium">Thêm</span>
+        </button>
+      </div>
+    </div>
+  </body>
+</html>
