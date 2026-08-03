@@ -21,52 +21,56 @@ class OmniFilterPill extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final foreground = selected ? scheme.onPrimary : scheme.onSurface;
+    final dark = Theme.of(context).brightness == Brightness.dark;
+
+    // Flat and light. It used to be an outlined 38-tall box with the count in a
+    // SECOND pill nested inside it — a chip within a chip, which is what made
+    // the filter row look cluttered and heavy above an otherwise calm list.
+    // Now: no border, a soft fill when idle, solid blue when chosen, and the
+    // count as plain dimmed text rather than its own container.
+    final background = selected
+        ? OmniColors.chatPrimary
+        : dark
+        ? Colors.white.withValues(alpha: 0.08)
+        : scheme.surfaceContainerHighest;
+    final foreground = selected
+        ? Colors.white
+        : dark
+        ? Colors.white.withValues(alpha: 0.85)
+        : scheme.onSurface;
 
     return Material(
-      color: selected ? scheme.primary : scheme.surface,
+      color: background,
       borderRadius: OmniRadius.pillAll,
+      clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: onTap,
-        borderRadius: OmniRadius.pillAll,
-        child: Container(
-          height: 38,
-          padding: const EdgeInsets.symmetric(horizontal: OmniSpacing.lg),
-          decoration: BoxDecoration(
-            borderRadius: OmniRadius.pillAll,
-            border: Border.all(
-              color: selected ? Colors.transparent : scheme.outline,
-            ),
-          ),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
               Text(
                 label,
                 style: OmniType.caption.copyWith(
+                  fontSize: 13.5,
+                  height: 1.1,
                   color: foreground,
-                  fontWeight: FontWeight.w600,
+                  fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
                 ),
               ),
-              if (count != null) ...[
-                const SizedBox(width: OmniSpacing.sm),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 7,
-                    vertical: 1,
-                  ),
-                  decoration: BoxDecoration(
-                    color: selected
-                        ? scheme.onPrimary.withValues(alpha: 0.22)
-                        : scheme.surfaceContainerHighest,
-                    borderRadius: OmniRadius.pillAll,
-                  ),
-                  child: Text(
-                    '$count',
-                    style: OmniType.micro.copyWith(
-                      color: foreground,
-                      fontFeatures: OmniType.tabular,
-                    ),
+              if (count != null && count! > 0) ...[
+                const SizedBox(width: 5),
+                Text(
+                  '$count',
+                  style: OmniType.caption.copyWith(
+                    fontSize: 13.5,
+                    height: 1.1,
+                    // Dimmed rather than boxed: the count qualifies the label, it
+                    // is not a second thing to look at.
+                    color: foreground.withValues(alpha: 0.6),
+                    fontWeight: FontWeight.w600,
+                    fontFeatures: OmniType.tabular,
                   ),
                 ),
               ],

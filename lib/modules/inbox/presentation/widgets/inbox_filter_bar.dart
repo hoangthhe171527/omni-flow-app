@@ -237,19 +237,23 @@ class _ChannelChip extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     final tint = color ?? scheme.onSurfaceVariant;
 
+    final dark = Theme.of(context).brightness == Brightness.dark;
+
     return Material(
-      color: selected ? tint.withValues(alpha: 0.12) : scheme.surface,
+      // Matches the quick pills: filled, borderless, one visual language for
+      // both filter rows instead of an outlined chip beside a solid one.
+      color: selected
+          ? tint.withValues(alpha: dark ? 0.28 : 0.14)
+          : dark
+          ? Colors.white.withValues(alpha: 0.08)
+          : scheme.surfaceContainerHighest,
       borderRadius: OmniRadius.pillAll,
+      clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: onTap,
-        borderRadius: OmniRadius.pillAll,
         child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: OmniSpacing.md),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
           alignment: Alignment.center,
-          decoration: BoxDecoration(
-            borderRadius: OmniRadius.pillAll,
-            border: Border.all(color: selected ? tint : scheme.outline),
-          ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -266,16 +270,24 @@ class _ChannelChip extends StatelessWidget {
               ],
               Text(
                 label,
-                style: OmniType.micro.copyWith(
+                style: OmniType.caption.copyWith(
+                  fontSize: 13.5,
+                  height: 1.1,
                   color: selected ? tint : scheme.onSurface,
+                  fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
                 ),
               ),
-              if (count != null) ...[
+              if (count != null && count! > 0) ...[
                 const SizedBox(width: 5),
                 Text(
                   '$count',
-                  style: OmniType.micro.copyWith(
-                    color: scheme.onSurfaceVariant,
+                  style: OmniType.caption.copyWith(
+                    fontSize: 13.5,
+                    height: 1.1,
+                    color: (selected ? tint : scheme.onSurface).withValues(
+                      alpha: 0.6,
+                    ),
+                    fontWeight: FontWeight.w600,
                     fontFeatures: OmniType.tabular,
                   ),
                 ),
