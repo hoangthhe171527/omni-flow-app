@@ -34,29 +34,47 @@ class InboxBulkBar extends ConsumerWidget {
       ),
       decoration: BoxDecoration(
         color: scheme.surface,
-        border: Border(top: BorderSide(color: scheme.outline)),
-        boxShadow: OmniShadows.sheet,
+        // A hairline, and no shadow. OmniShadows.sheet threw a dark halo that
+        // does nothing on a dark canvas except muddy the edge, and the bar is
+        // already separated by the rule and by sitting against the list.
+        border: Border(
+          top: BorderSide(color: scheme.outline.withValues(alpha: 0.5)),
+        ),
       ),
       child: Row(
         children: [
           Text(
             'Đã chọn ${selectedIds.length}',
             style: OmniType.caption.copyWith(
+              fontSize: 14,
               color: scheme.onSurface,
-              fontWeight: FontWeight.w700,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(width: OmniSpacing.md),
+          // Leaving the selection was only possible from the app bar, which is
+          // the far end of the screen from the thumb that is selecting.
+          GestureDetector(
+            onTap: onDone,
+            child: Text(
+              'Bỏ chọn',
+              style: OmniType.caption.copyWith(
+                fontSize: 13,
+                color: scheme.onSurfaceVariant,
+              ),
             ),
           ),
           const Spacer(),
-          TextButton.icon(
-            onPressed: () => _assign(context, ref),
-            icon: const Icon(Icons.person_add_alt_rounded, size: 18),
-            label: const Text('Gán'),
+          _BulkAction(
+            icon: Icons.person_add_alt_rounded,
+            label: 'Gán',
+            onTap: () => _assign(context, ref),
           ),
-          const SizedBox(width: OmniSpacing.sm),
-          TextButton.icon(
-            onPressed: () => _label(context, ref),
-            icon: const Icon(Icons.sell_outlined, size: 18),
-            label: const Text('Gắn nhãn'),
+          const SizedBox(width: OmniSpacing.xs),
+          _BulkAction(
+            icon: Icons.sell_outlined,
+            label: 'Gắn nhãn',
+            onTap: () => _label(context, ref),
           ),
         ],
       ),
@@ -127,5 +145,34 @@ class InboxBulkBar extends ConsumerWidget {
     } on AppException catch (error) {
       messenger.showSnackBar(SnackBar(content: Text(error.message)));
     }
+  }
+}
+
+/// One bulk action. Uses the inbox accent rather than the CRM indigo the
+/// default TextButton inherited, so the bar belongs to the screen it sits on.
+class _BulkAction extends StatelessWidget {
+  const _BulkAction({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return TextButton.icon(
+      onPressed: onTap,
+      icon: Icon(icon, size: 18),
+      label: Text(label, style: OmniType.caption.copyWith(fontSize: 13.5)),
+      style: TextButton.styleFrom(
+        foregroundColor: OmniColors.chatPrimary,
+        padding: const EdgeInsets.symmetric(horizontal: 10),
+        minimumSize: const Size(0, 40),
+        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+      ),
+    );
   }
 }

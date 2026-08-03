@@ -45,7 +45,16 @@ class ConversationRow extends StatelessWidget {
     final unread = conversation.isUnread;
 
     return Material(
-      color: selected ? OmniColors.accent : scheme.surface,
+      // A wash of the accent, resolved per theme. The fixed light-indigo
+      // OmniColors.accent (#F0F0FF) turned a selected row into a glaring white
+      // band in dark mode.
+      color: selected
+          ? OmniColors.chatPrimary.withValues(
+              alpha: Theme.of(context).brightness == Brightness.dark
+                  ? 0.22
+                  : 0.09,
+            )
+          : scheme.surface,
       child: InkWell(
         onTap: onTap,
         onLongPress: onLongPress,
