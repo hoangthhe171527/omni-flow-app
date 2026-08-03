@@ -1,26 +1,40 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../../../../design/tokens/tokens.dart';
 
 enum ComposeMode { reply, note }
 
-/// Reply box with an explicit reply / internal-note switch.
+/// Reply box shaped like Zalo's: one flat line of emoji, input, more, image.
 ///
-/// The mode is a visible, sticky toggle rather than a hidden gesture: sending an
-/// internal note to a customer by accident is the one mistake in this screen
-/// that cannot be undone.
+/// It used to be a raised rounded card carrying a permanent two-button
+/// reply/note switch and a row of suggestion chips — three bands of chrome under
+/// every conversation. Zalo spends one line, and everything that is not typing
+/// lives behind an icon.
+///
+/// The note mode survived that move, because sending an internal note to a
+/// customer is the one mistake on this screen that cannot be undone. It is now
+/// chosen in the "more" sheet, and while it is on the composer turns amber and
+/// says so — a state you cannot miss beats a toggle you must remember to read.
 class MessageComposer extends StatefulWidget {
   const MessageComposer({
     super.key,
     required this.onSend,
     required this.onAttach,
+    this.onCamera,
     this.suggestions = const [],
     this.canNote = true,
     this.enabled = true,
   });
 
   final Future<void> Function(String text, ComposeMode mode) onSend;
+
+  /// Pick an image from the gallery.
   final VoidCallback onAttach;
+
+  /// Take a photo. Null hides the entry rather than offering a dead button.
+  final VoidCallback? onCamera;
+
   final List<String> suggestions;
   final bool canNote;
   final bool enabled;
@@ -36,7 +50,17 @@ class _MessageComposerState extends State<MessageComposer> {
   bool _sending = false;
 
   @override
+  void initState() {
+    super.initState();
+    // Drives the image↔send swap, so the button reflects what typing did.
+    _controller.addListener(_onTextChanged);
+  }
+
+  void _onTextChanged() => setState(() {});
+
+  @override
   void dispose() {
+    _controller.removeListener(_onTextChanged);
     _controller.dispose();
     _focus.dispose();
     super.dispose();
@@ -52,169 +76,178 @@ class _MessageComposerState extends State<MessageComposer> {
     if (mounted) setState(() => _sending = false);
   }
 
+  /// Insert at the caret rather than appending: an emoji picked mid-sentence
+  /// belongs where the caret is, and appending silently moved it to the end.
+  void _insert(String text) {
+    final value = _controller.value;
+    final selection = value.selection.isValid
+        ? value.selection
+        : TextSelection.collapsed(offset: value.text.length);
+    final next = value.text.replaceRange(selection.start, selection.end, text);
+
+    _controller.value = TextEditingValue(
+      text: next,
+      selection: TextSelection.collapsed(offset: selection.start + text.length),
+    );
+    _focus.requestFocus();
+  }
+
+  Future<void> _openEmoji() async {
+    final picked = await showModalBottomSheet<String>(
+      context: context,
+      showDragHandle: true,
+      builder: (_) => const _EmojiSheet(),
+    );
+    if (picked != null) _insert(picked);
+  }
+
+  Future<void> _openMore() async {
+    final action = await showModalBottomSheet<_MoreAction>(
+      context: context,
+      showDragHandle: true,
+      builder: (_) => _MoreSheet(
+        mode: _mode,
+        canNote: widget.canNote,
+        canCamera: widget.onCamera != null,
+        suggestions: widget.suggestions,
+      ),
+    );
+    if (action == null || !mounted) return;
+
+    switch (action) {
+      case _ModeAction(:final mode):
+        setState(() => _mode = mode);
+        _focus.requestFocus();
+      case _CameraAction():
+        widget.onCamera?.call();
+      case _SuggestionAction(:final text):
+        _insert(text);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final isNote = _mode == ComposeMode.note;
+    final hasText = _controller.text.trim().isNotEmpty;
+    final tint = isNote ? OmniColors.warning : OmniColors.chatPrimary;
 
     return Container(
       decoration: BoxDecoration(
         color: scheme.surface,
-        borderRadius: const BorderRadius.vertical(
-          top: Radius.circular(OmniRadius.xxl),
+        border: Border(
+          top: BorderSide(color: scheme.outline.withValues(alpha: 0.5)),
         ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.06),
-            blurRadius: 18,
-            offset: const Offset(0, -5),
-          ),
-        ],
       ),
       child: SafeArea(
         top: false,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            if (widget.suggestions.isNotEmpty && !isNote)
-              SizedBox(
-                height: 40,
-                child: ListView.separated(
-                  scrollDirection: Axis.horizontal,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: OmniSpacing.md,
-                    vertical: OmniSpacing.xs,
-                  ),
-                  itemCount: widget.suggestions.length,
-                  separatorBuilder: (_, _) =>
-                      const SizedBox(width: OmniSpacing.sm),
-                  itemBuilder: (context, index) {
-                    final suggestion = widget.suggestions[index];
-                    return ActionChip(
-                      label: Text(suggestion, style: OmniType.micro),
-                      onPressed: () {
-                        _controller.text = suggestion;
-                        _focus.requestFocus();
-                      },
-                    );
-                  },
-                ),
-              ),
-            if (widget.canNote)
-              Padding(
-                padding: const EdgeInsets.fromLTRB(
-                  OmniSpacing.md,
-                  OmniSpacing.sm,
-                  OmniSpacing.md,
-                  0,
+            // Note mode is a state you cannot miss: a labelled amber strip, not
+            // a toggle you have to remember to look at.
+            if (isNote)
+              Container(
+                width: double.infinity,
+                color: OmniColors.warning.withValues(alpha: 0.12),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 6,
                 ),
                 child: Row(
                   children: [
+                    Icon(
+                      Icons.sticky_note_2_outlined,
+                      size: 14,
+                      color: OmniColors.warning,
+                    ),
+                    const SizedBox(width: 6),
                     Expanded(
-                      child: _ModeButton(
-                        label: 'Trả lời khách',
-                        icon: Icons.chat_bubble_outline_rounded,
-                        selected: !isNote,
-                        onTap: () => setState(() => _mode = ComposeMode.reply),
+                      child: Text(
+                        'Ghi chú nội bộ — khách KHÔNG nhìn thấy',
+                        style: OmniType.micro.copyWith(
+                          color: OmniColors.warning,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
                     ),
-                    const SizedBox(width: OmniSpacing.sm),
-                    Expanded(
-                      child: _ModeButton(
-                        label: 'Ghi chú nội bộ',
-                        icon: Icons.sticky_note_2_outlined,
-                        selected: isNote,
-                        color: OmniColors.warning,
-                        onTap: () => setState(() => _mode = ComposeMode.note),
+                    GestureDetector(
+                      onTap: () => setState(() => _mode = ComposeMode.reply),
+                      child: Text(
+                        'Bỏ',
+                        style: OmniType.micro.copyWith(
+                          color: OmniColors.warning,
+                          fontWeight: FontWeight.w700,
+                        ),
                       ),
                     ),
                   ],
                 ),
               ),
             Padding(
-              padding: const EdgeInsets.all(OmniSpacing.md),
+              padding: const EdgeInsets.fromLTRB(4, 6, 4, 6),
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
-                  IconButton(
-                    onPressed: isNote || !widget.enabled
-                        ? null
-                        : widget.onAttach,
-                    style: IconButton.styleFrom(
-                      backgroundColor: scheme.surfaceContainerHighest,
-                      foregroundColor: scheme.onSurfaceVariant,
-                    ),
-                    icon: const Icon(Icons.add_rounded),
+                  _ComposerIcon(
+                    icon: Icons.emoji_emotions_outlined,
+                    tooltip: 'Biểu tượng cảm xúc',
+                    onTap: widget.enabled ? _openEmoji : null,
                   ),
                   Expanded(
-                    child: TextField(
-                      controller: _controller,
-                      focusNode: _focus,
-                      enabled: widget.enabled,
-                      minLines: 1,
-                      maxLines: 5,
-                      textCapitalization: TextCapitalization.sentences,
-                      decoration: InputDecoration(
-                        hintText: isNote
-                            ? 'Ghi chú cho đồng nghiệp...'
-                            : 'Nhập nội dung...',
-                        isDense: true,
-                        fillColor: isNote
-                            ? OmniColors.warning.withValues(alpha: 0.08)
-                            : scheme.surfaceContainerHighest,
-                        contentPadding: const EdgeInsets.symmetric(
-                          horizontal: OmniSpacing.lg,
-                          vertical: OmniSpacing.md,
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxHeight: 120),
+                      child: TextField(
+                        controller: _controller,
+                        focusNode: _focus,
+                        enabled: widget.enabled,
+                        minLines: 1,
+                        maxLines: null,
+                        textCapitalization: TextCapitalization.sentences,
+                        style: OmniType.body.copyWith(
+                          fontSize: 15,
+                          color: scheme.onSurface,
                         ),
-                        border: OutlineInputBorder(
-                          borderRadius: OmniRadius.pillAll,
-                          borderSide: BorderSide(
-                            color: scheme.outline.withValues(alpha: 0.55),
+                        decoration: InputDecoration(
+                          hintText: isNote ? 'Ghi chú nội bộ…' : 'Tin nhắn',
+                          hintStyle: OmniType.body.copyWith(
+                            fontSize: 15,
+                            color: scheme.onSurfaceVariant,
+                          ),
+                          isDense: true,
+                          filled: false,
+                          border: InputBorder.none,
+                          enabledBorder: InputBorder.none,
+                          focusedBorder: InputBorder.none,
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 6,
+                            vertical: 10,
                           ),
                         ),
-                        enabledBorder: OutlineInputBorder(
-                          borderRadius: OmniRadius.pillAll,
-                          borderSide: BorderSide(
-                            color: scheme.outline.withValues(alpha: 0.55),
-                          ),
-                        ),
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius: OmniRadius.pillAll,
-                          borderSide: BorderSide(
-                            color: isNote ? OmniColors.warning : scheme.primary,
-                            width: 1.4,
-                          ),
-                        ),
+                        onSubmitted: (_) => _send(),
                       ),
-                      onSubmitted: (_) => _send(),
                     ),
                   ),
-                  const SizedBox(width: OmniSpacing.sm),
-                  SizedBox(
-                    width: 44,
-                    height: 44,
-                    child: FilledButton(
-                      onPressed: widget.enabled ? _send : null,
-                      style: FilledButton.styleFrom(
-                        padding: EdgeInsets.zero,
-                        minimumSize: Size.zero,
-                        backgroundColor: isNote
-                            ? OmniColors.warning
-                            : scheme.primary,
-                        shape: const CircleBorder(),
-                      ),
-                      child: _sending
-                          ? const SizedBox(
-                              width: 16,
-                              height: 16,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                color: Colors.white,
-                              ),
-                            )
-                          : const Icon(Icons.send_rounded, size: 18),
-                    ),
+                  _ComposerIcon(
+                    icon: Icons.more_horiz_rounded,
+                    tooltip: 'Thêm',
+                    onTap: widget.enabled ? _openMore : null,
                   ),
+                  // Zalo swaps the trailing icon for send the moment there is
+                  // something to send, so the primary action is never a second
+                  // button competing for the same corner.
+                  if (hasText || _sending)
+                    _SendButton(
+                      sending: _sending,
+                      tint: tint,
+                      onTap: widget.enabled ? _send : null,
+                    )
+                  else
+                    _ComposerIcon(
+                      icon: Icons.image_outlined,
+                      tooltip: 'Gửi ảnh',
+                      onTap: widget.enabled && !isNote ? widget.onAttach : null,
+                    ),
                 ],
               ),
             ),
@@ -225,56 +258,272 @@ class _MessageComposerState extends State<MessageComposer> {
   }
 }
 
-class _ModeButton extends StatelessWidget {
-  const _ModeButton({
-    required this.label,
+class _ComposerIcon extends StatelessWidget {
+  const _ComposerIcon({
     required this.icon,
-    required this.selected,
+    required this.tooltip,
     required this.onTap,
-    this.color,
   });
 
-  final String label;
   final IconData icon;
-  final bool selected;
-  final VoidCallback onTap;
-  final Color? color;
+  final String tooltip;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final tint = color ?? scheme.primary;
 
-    return Material(
-      color: selected ? tint.withValues(alpha: 0.1) : Colors.transparent,
-      borderRadius: OmniRadius.smAll,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: OmniRadius.smAll,
-        child: Container(
-          height: 36,
-          alignment: Alignment.center,
-          decoration: BoxDecoration(
-            borderRadius: OmniRadius.smAll,
-            border: Border.all(color: selected ? tint : scheme.outline),
+    return IconButton(
+      onPressed: onTap,
+      tooltip: tooltip,
+      // 44 keeps every icon past the touch minimum even though it reads small.
+      constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
+      icon: Icon(icon, size: 24, color: scheme.onSurfaceVariant),
+    );
+  }
+}
+
+class _SendButton extends StatelessWidget {
+  const _SendButton({
+    required this.sending,
+    required this.tint,
+    required this.onTap,
+  });
+
+  final bool sending;
+  final Color tint;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(left: 2, bottom: 2),
+      child: SizedBox(
+        width: 40,
+        height: 40,
+        child: FilledButton(
+          onPressed: sending ? null : onTap,
+          style: FilledButton.styleFrom(
+            padding: EdgeInsets.zero,
+            minimumSize: Size.zero,
+            backgroundColor: tint,
+            shape: const CircleBorder(),
           ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(
-                icon,
-                size: 14,
-                color: selected ? tint : scheme.onSurfaceVariant,
+          child: sending
+              ? const SizedBox(
+                  width: 16,
+                  height: 16,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: Colors.white,
+                  ),
+                )
+              : const Icon(Icons.send_rounded, size: 18, color: Colors.white),
+        ),
+      ),
+    );
+  }
+}
+
+/// Emoji grid.
+///
+/// A hand-picked set rather than a dependency: these are the ones a sales rep
+/// actually sends, they render from the system font on every platform, and the
+/// sheet stays instant with nothing to download or index.
+class _EmojiSheet extends StatelessWidget {
+  const _EmojiSheet();
+
+  static const _emojis = <String>[
+    '😀',
+    '😁',
+    '😂',
+    '🤣',
+    '😊',
+    '😍',
+    '🥰',
+    '😘',
+    '😉',
+    '😌',
+    '😎',
+    '🤗',
+    '🤔',
+    '😅',
+    '😇',
+    '🙂',
+    '😢',
+    '😭',
+    '😤',
+    '😱',
+    '😴',
+    '🥳',
+    '😋',
+    '🤝',
+    '👍',
+    '👎',
+    '👏',
+    '🙏',
+    '💪',
+    '✌️',
+    '👌',
+    '🤞',
+    '❤️',
+    '💛',
+    '💚',
+    '💙',
+    '💜',
+    '🔥',
+    '✨',
+    '⭐',
+    '🎉',
+    '🎁',
+    '💰',
+    '💳',
+    '🛒',
+    '📦',
+    '🚚',
+    '📞',
+    '✅',
+    '❌',
+    '⚠️',
+    '❓',
+    '❗',
+    '⏰',
+    '📅',
+    '📝',
+    '🎹',
+    '🎵',
+    '🎶',
+    '🏠',
+    '🚗',
+    '☕',
+    '🌸',
+    '🌟',
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(
+          OmniSpacing.md,
+          0,
+          OmniSpacing.md,
+          OmniSpacing.md,
+        ),
+        child: GridView.builder(
+          shrinkWrap: true,
+          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: 8,
+          ),
+          itemCount: _emojis.length,
+          itemBuilder: (context, index) => InkWell(
+            onTap: () {
+              HapticFeedback.selectionClick();
+              Navigator.pop(context, _emojis[index]);
+            },
+            borderRadius: OmniRadius.smAll,
+            child: Center(
+              child: Text(_emojis[index], style: const TextStyle(fontSize: 26)),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+sealed class _MoreAction {
+  const _MoreAction();
+}
+
+class _ModeAction extends _MoreAction {
+  const _ModeAction(this.mode);
+  final ComposeMode mode;
+}
+
+class _CameraAction extends _MoreAction {
+  const _CameraAction();
+}
+
+class _SuggestionAction extends _MoreAction {
+  const _SuggestionAction(this.text);
+  final String text;
+}
+
+/// Everything the composer no longer keeps on screen permanently.
+class _MoreSheet extends StatelessWidget {
+  const _MoreSheet({
+    required this.mode,
+    required this.canNote,
+    required this.canCamera,
+    required this.suggestions,
+  });
+
+  final ComposeMode mode;
+  final bool canNote;
+  final bool canCamera;
+  final List<String> suggestions;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final isNote = mode == ComposeMode.note;
+
+    return SafeArea(
+      child: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (canCamera)
+              ListTile(
+                leading: const Icon(Icons.photo_camera_outlined),
+                title: const Text('Chụp ảnh'),
+                onTap: () => Navigator.pop(context, const _CameraAction()),
               ),
-              const SizedBox(width: 5),
-              Text(
-                label,
-                style: OmniType.micro.copyWith(
-                  color: selected ? tint : scheme.onSurfaceVariant,
+            if (canNote)
+              ListTile(
+                leading: Icon(
+                  Icons.sticky_note_2_outlined,
+                  color: isNote ? OmniColors.warning : null,
+                ),
+                title: Text(
+                  isNote ? 'Chuyển về trả lời khách' : 'Ghi chú nội bộ',
+                ),
+                subtitle: Text(
+                  isNote
+                      ? 'Tin sẽ được gửi cho khách'
+                      : 'Chỉ đồng nghiệp nhìn thấy, khách không',
+                  style: OmniType.micro.copyWith(
+                    color: scheme.onSurfaceVariant,
+                  ),
+                ),
+                onTap: () => Navigator.pop(
+                  context,
+                  _ModeAction(isNote ? ComposeMode.reply : ComposeMode.note),
                 ),
               ),
+            if (suggestions.isNotEmpty) ...[
+              const Divider(height: 1),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(
+                  OmniSpacing.lg,
+                  OmniSpacing.md,
+                  OmniSpacing.lg,
+                  OmniSpacing.sm,
+                ),
+                child: Text('Câu trả lời nhanh', style: OmniType.bodyStrong),
+              ),
+              for (final suggestion in suggestions)
+                ListTile(
+                  dense: true,
+                  title: Text(suggestion, style: OmniType.caption),
+                  onTap: () =>
+                      Navigator.pop(context, _SuggestionAction(suggestion)),
+                ),
             ],
-          ),
+            const SizedBox(height: OmniSpacing.md),
+          ],
         ),
       ),
     );

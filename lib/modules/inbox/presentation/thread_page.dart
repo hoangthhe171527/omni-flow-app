@@ -111,6 +111,7 @@ class _ThreadPageState extends ConsumerState<ThreadPage> {
               canNote: access.canNote,
               suggestions: _suggestions(conversation.valueOrNull),
               onAttach: _attach,
+              onCamera: () => _attach(source: ImageSource.camera),
               onSend: (text, mode) async {
                 final controller = ref.read(
                   threadProvider(widget.conversationId).notifier,
@@ -152,8 +153,8 @@ class _ThreadPageState extends ConsumerState<ThreadPage> {
     );
   }
 
-  Future<void> _attach() async {
-    final picked = await ImagePicker().pickImage(source: ImageSource.gallery);
+  Future<void> _attach({ImageSource source = ImageSource.gallery}) async {
+    final picked = await ImagePicker().pickImage(source: source);
     if (picked == null) return;
 
     try {

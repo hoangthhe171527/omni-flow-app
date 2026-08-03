@@ -66,5 +66,13 @@
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
+	<!-- image_picker needs both. iOS does not merely deny access without a usage
+	     string — it terminates the app the moment the picker opens, so the
+	     composer's photo and camera buttons would have crashed rather than
+	     failed. -->
+	<key>NSCameraUsageDescription</key>
+	<string>Dùng camera để chụp ảnh gửi cho khách trong hộp thư.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Chọn ảnh từ thư viện để gửi cho khách trong hộp thư.</string>
 </dict>
 </plist>
