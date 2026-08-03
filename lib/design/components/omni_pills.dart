@@ -191,6 +191,9 @@ class OmniCountBadge extends StatelessWidget {
         count > 99 ? '99+' : '$count',
         style: OmniType.micro.copyWith(
           color: Colors.white,
+          // Bold: this is the one number on the row that must be read from a
+          // glance, and the regular weight let it sink into the pill.
+          fontWeight: FontWeight.w700,
           fontFeatures: OmniType.tabular,
         ),
       ),

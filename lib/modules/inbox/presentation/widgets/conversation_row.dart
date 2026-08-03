@@ -100,8 +100,10 @@ class ConversationRow extends StatelessWidget {
                   fontSize: 16,
                   height: 1.2,
                   color: scheme.onSurface,
-                  // Zalo bolds an unread name and leaves a read one regular.
-                  fontWeight: unread ? FontWeight.w600 : FontWeight.w400,
+                  // Bold vs regular is the difference a rep scans the list by,
+                  // so it has to be a real jump. w600/w400 was too close to read
+                  // at a glance down a long list.
+                  fontWeight: unread ? FontWeight.w700 : FontWeight.w400,
                 ),
               ),
             ),
@@ -147,14 +149,22 @@ class ConversationRow extends StatelessWidget {
                 style: OmniType.caption.copyWith(
                   fontSize: 14,
                   height: 1.25,
+                  // An unread preview is full-strength text; a read one drops to
+                  // the muted tone, so the two are separable by weight AND by
+                  // contrast rather than by weight alone.
                   color: unread ? scheme.onSurface : meta,
-                  fontWeight: unread ? FontWeight.w500 : FontWeight.w400,
+                  fontWeight: unread ? FontWeight.w600 : FontWeight.w400,
                 ),
               ),
             ),
             if (unread) ...[
               const SizedBox(width: 8),
-              OmniCountBadge(count: conversation.unread),
+              // Red, not the CRM indigo the badge defaulted to — an indigo pill
+              // beside indigo chrome read as decoration, not as "unread".
+              OmniCountBadge(
+                count: conversation.unread,
+                color: OmniColors.chatUnread,
+              ),
             ] else if (conversation.isUnassigned) ...[
               const SizedBox(width: 8),
               // Not a warning, just a fact — the row must not shout about it.
