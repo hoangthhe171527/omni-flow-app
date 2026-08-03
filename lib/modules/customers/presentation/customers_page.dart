@@ -42,45 +42,95 @@ class _CustomersPageState extends ConsumerState<CustomersPage> {
     final access = ref.watch(customerAccessProvider);
     final controller = ref.read(customerFilterProvider.notifier);
 
+    final scheme = Theme.of(context).colorScheme;
+    final meta = OmniColors.chat(
+      context,
+      OmniColors.chatMeta,
+      OmniColors.chatMetaDark,
+    );
+
     return Scaffold(
+      // Header and list on one plane — the AppBar's `background` against the
+      // rows' `surface` is what draws a phantom frame around the search area.
+      backgroundColor: scheme.surface,
       appBar: AppBar(
+        backgroundColor: scheme.surface,
         title: const Text('Khách hàng'),
         titleSpacing: OmniSpacing.lg,
+        toolbarHeight: 56,
         bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(104),
+          preferredSize: const Size.fromHeight(89),
           child: Column(
             children: [
+              // Same flat search line as the inbox: icon, word, no box. The
+              // shared OmniSearchField carries the global `filled: true`, which
+              // is the dim panel this screen had behind its search text.
               Padding(
-                padding: const EdgeInsets.fromLTRB(
-                  OmniSpacing.lg,
-                  0,
-                  OmniSpacing.lg,
-                  OmniSpacing.md,
-                ),
-                child: OmniSearchField(
-                  hint: 'Tìm tên, số điện thoại...',
-                  initialValue: filter.search,
-                  onChanged: controller.setSearch,
+                padding: const EdgeInsets.fromLTRB(16, 4, 16, 4),
+                child: Row(
+                  children: [
+                    Icon(Icons.search_rounded, size: 22, color: meta),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: TextField(
+                        controller: TextEditingController(text: filter.search)
+                          ..selection = TextSelection.collapsed(
+                            offset: filter.search.length,
+                          ),
+                        onChanged: controller.setSearch,
+                        textInputAction: TextInputAction.search,
+                        style: OmniType.body.copyWith(
+                          fontSize: 16,
+                          color: scheme.onSurface,
+                        ),
+                        decoration: InputDecoration(
+                          isDense: true,
+                          filled: false,
+                          border: InputBorder.none,
+                          enabledBorder: InputBorder.none,
+                          focusedBorder: InputBorder.none,
+                          contentPadding: EdgeInsets.zero,
+                          hintText: 'Tìm tên, số điện thoại',
+                          hintStyle: OmniType.body.copyWith(
+                            fontSize: 16,
+                            color: meta,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
               SizedBox(
-                height: 38,
+                height: 40,
                 child: ListView.separated(
                   scrollDirection: Axis.horizontal,
-                  padding: const EdgeInsets.symmetric(horizontal: OmniSpacing.lg),
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
                   itemCount: CustomerQuickFilter.values.length,
-                  separatorBuilder: (_, _) => const SizedBox(width: OmniSpacing.sm),
+                  separatorBuilder: (_, _) =>
+                      const SizedBox(width: OmniSpacing.sm),
                   itemBuilder: (context, index) {
                     final quick = CustomerQuickFilter.values[index];
-                    return OmniFilterPill(
-                      label: quick.label,
-                      selected: filter.quick == quick,
-                      onTap: () => controller.setQuick(quick),
+                    return Center(
+                      child: OmniFilterPill(
+                        label: quick.label,
+                        selected: filter.quick == quick,
+                        onTap: () => controller.setQuick(quick),
+                      ),
                     );
                   },
                 ),
               ),
-              const SizedBox(height: OmniSpacing.md),
+              const SizedBox(height: 4),
+              Divider(
+                height: 1,
+                thickness: 1,
+                color: OmniColors.chat(
+                  context,
+                  OmniColors.chatDivider,
+                  OmniColors.chatDividerDark,
+                ),
+              ),
             ],
           ),
         ),
@@ -111,14 +161,19 @@ class _CustomersPageState extends ConsumerState<CustomersPage> {
           ),
           data: (state) => ListView.separated(
             controller: _scrollController,
-            padding: const EdgeInsets.fromLTRB(
-              OmniSpacing.lg,
-              OmniSpacing.md,
-              OmniSpacing.lg,
-              OmniSpacing.bottomSafe,
-            ),
+            padding: const EdgeInsets.only(bottom: OmniSpacing.bottomSafe),
             itemCount: state.items.length + (state.hasMore ? 1 : 0),
-            separatorBuilder: (_, _) => const SizedBox(height: OmniSpacing.sm),
+            // Hairline indented past the avatar, not a gap between cards.
+            separatorBuilder: (_, _) => Divider(
+              height: 1,
+              thickness: 1,
+              indent: 76,
+              color: OmniColors.chat(
+                context,
+                OmniColors.chatDivider,
+                OmniColors.chatDividerDark,
+              ),
+            ),
             itemBuilder: (context, index) {
               if (index >= state.items.length) {
                 return const Padding(
@@ -150,74 +205,94 @@ class CustomerCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
 
-    return OmniCard(
-      padding: const EdgeInsets.all(OmniSpacing.md),
-      onTap: () => context.pushNamed(
-        CustomersModule.detail,
-        pathParameters: {'id': customer.id},
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          OmniAvatar(name: customer.name),
-          const SizedBox(width: OmniSpacing.md),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
+    // Two lines and a hairline, like the inbox. It was a bordered card with a
+    // THIRD line carrying a source pill, two tags, an owner avatar and a
+    // relative time — six competing objects per customer, and 200 of them made
+    // a wall. Source, tags and owner all live on the detail page, which is where
+    // a rep acts on them; the list only has to answer "who, and are they warm".
+    return Material(
+      color: scheme.surface,
+      child: InkWell(
+        onTap: () => context.pushNamed(
+          CustomersModule.detail,
+          pathParameters: {'id': customer.id},
+        ),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+          child: Row(
+            children: [
+              OmniAvatar(name: customer.name, size: 48),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Expanded(
-                      child: Text(
-                        customer.name,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: OmniType.bodyStrong.copyWith(color: scheme.onSurface),
-                      ),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            customer.name,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: OmniType.body.copyWith(
+                              fontSize: 16,
+                              height: 1.2,
+                              color: scheme.onSurface,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          Formatters.relative(customer.lastInteractionAt),
+                          style: OmniChatType.meta.copyWith(
+                            color: scheme.onSurfaceVariant,
+                          ),
+                        ),
+                      ],
                     ),
-                    Text(
-                      Formatters.vndCompact(customer.lifetimeValue),
-                      style: OmniType.caption.copyWith(
-                        color: scheme.onSurface,
-                        fontWeight: FontWeight.w700,
-                        fontFeatures: OmniType.tabular,
-                      ),
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            [
+                              if (customer.phone.isNotEmpty) customer.phone,
+                              if (customer.city.isNotEmpty) customer.city,
+                            ].join(' · '),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: OmniType.caption.copyWith(
+                              fontSize: 14,
+                              height: 1.25,
+                              color: scheme.onSurfaceVariant,
+                            ),
+                          ),
+                        ),
+                        // Lifetime value is the one number worth scanning a
+                        // customer list for, so it keeps its place — right
+                        // aligned and tabular so the column reads straight down.
+                        if (customer.lifetimeValue > 0) ...[
+                          const SizedBox(width: 8),
+                          Text(
+                            Formatters.vndCompact(customer.lifetimeValue),
+                            style: OmniType.caption.copyWith(
+                              fontSize: 14,
+                              color: scheme.onSurface,
+                              fontWeight: FontWeight.w600,
+                              fontFeatures: OmniType.tabular,
+                            ),
+                          ),
+                        ],
+                      ],
                     ),
                   ],
                 ),
-                const SizedBox(height: 2),
-                Text(
-                  [
-                    if (customer.phone.isNotEmpty) customer.phone,
-                    if (customer.city.isNotEmpty) customer.city,
-                  ].join(' · '),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: OmniType.caption.copyWith(color: scheme.onSurfaceVariant),
-                ),
-                const SizedBox(height: OmniSpacing.sm),
-                Row(
-                  children: [
-                    OmniSourcePill(channel: customer.source, compact: true),
-                    const SizedBox(width: OmniSpacing.xs),
-                    for (final tag in customer.tags.take(2)) ...[
-                      OmniTag(label: tag),
-                      const SizedBox(width: OmniSpacing.xs),
-                    ],
-                    const Spacer(),
-                    if (customer.ownerName != null)
-                      OmniAvatar(name: customer.ownerName!, size: 20),
-                    const SizedBox(width: OmniSpacing.sm),
-                    Text(
-                      Formatters.relative(customer.lastInteractionAt),
-                      style: OmniType.micro.copyWith(color: scheme.onSurfaceVariant),
-                    ),
-                  ],
-                ),
-              ],
-            ),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }

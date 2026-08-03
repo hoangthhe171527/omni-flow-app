@@ -28,10 +28,7 @@ class PipelinePage extends ConsumerWidget {
     final scheme = Theme.of(context).colorScheme;
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Cơ hội'),
-        titleSpacing: OmniSpacing.lg,
-      ),
+      appBar: AppBar(title: const Text('Cơ hội'), titleSpacing: OmniSpacing.lg),
       floatingActionButton: access.canCreate
           ? FloatingActionButton.extended(
               onPressed: () => context.pushNamed(OpportunitiesModule.create),
@@ -57,7 +54,8 @@ class PipelinePage extends ConsumerWidget {
               },
               child: OmniAsyncView(
                 value: opportunities,
-                onRetry: () => ref.invalidate(stageOpportunitiesProvider(stage)),
+                onRetry: () =>
+                    ref.invalidate(stageOpportunitiesProvider(stage)),
                 isEmpty: (list) => list.isEmpty,
                 empty: OmniEmptyState(
                   icon: Icons.trending_up_rounded,
@@ -65,14 +63,21 @@ class PipelinePage extends ConsumerWidget {
                   message: 'Cơ hội chuyển sang giai đoạn này sẽ hiện ở đây.',
                 ),
                 data: (list) => ListView.separated(
-                  padding: const EdgeInsets.fromLTRB(
-                    OmniSpacing.lg,
-                    OmniSpacing.md,
-                    OmniSpacing.lg,
-                    OmniSpacing.bottomSafe,
+                  padding: const EdgeInsets.only(
+                    bottom: OmniSpacing.bottomSafe,
                   ),
                   itemCount: list.length,
-                  separatorBuilder: (_, _) => const SizedBox(height: OmniSpacing.sm),
+                  separatorBuilder: (_, _) => Divider(
+                    height: 1,
+                    thickness: 1,
+                    indent: 16,
+                    endIndent: 16,
+                    color: OmniColors.chat(
+                      context,
+                      OmniColors.chatDivider,
+                      OmniColors.chatDividerDark,
+                    ),
+                  ),
                   itemBuilder: (context, index) => OpportunityCard(
                     opportunity: list[index],
                     canMove: access.canUpdate,
@@ -118,7 +123,8 @@ class _SummaryStrip extends StatelessWidget {
                 summary?.totalFor(PipelineStage.won).value ?? 0,
               ),
               tone: OmniColors.success,
-              caption: '${summary?.totalFor(PipelineStage.won).count ?? 0} cơ hội',
+              caption:
+                  '${summary?.totalFor(PipelineStage.won).count ?? 0} cơ hội',
             ),
           ),
         ],

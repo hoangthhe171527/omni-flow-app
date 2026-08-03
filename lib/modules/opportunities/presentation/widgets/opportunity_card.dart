@@ -25,81 +25,91 @@ class OpportunityCard extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final scheme = Theme.of(context).colorScheme;
 
-    return OmniCard(
-      onTap: () => context.pushNamed(
-        OpportunitiesModule.detail,
-        pathParameters: {'id': opportunity.id},
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
+    // A row, not a card. The card stacked four bands: title+value, then a
+    // probability bar with a date tag, a source pill and an owner avatar, then a
+    // divider, then an "Đổi giai đoạn" button — so ten opportunities filled the
+    // screen three times over.
+    //
+    // The probability bar went entirely: the LIST IS ALREADY FILTERED BY STAGE,
+    // so drawing the stage again inside every row is the same fact twice. Source
+    // and owner live on the detail page. Changing stage is a long-press away
+    // instead of a button on every row.
+    final overdue = opportunity.isOverdue;
+
+    return Material(
+      color: scheme.surface,
+      child: InkWell(
+        onTap: () => context.pushNamed(
+          OpportunitiesModule.detail,
+          pathParameters: {'id': opportunity.id},
+        ),
+        onLongPress: canMove ? () => _moveStage(context, ref) : null,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
+              Row(
+                children: [
+                  if (overdue)
+                    Container(
+                      width: 6,
+                      height: 6,
+                      margin: const EdgeInsets.only(right: 6),
+                      decoration: const BoxDecoration(
+                        color: OmniColors.destructive,
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                  Expanded(
+                    child: Text(
                       opportunity.title,
-                      maxLines: 2,
+                      maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: OmniType.bodyStrong.copyWith(color: scheme.onSurface),
+                      style: OmniType.body.copyWith(
+                        fontSize: 16,
+                        height: 1.2,
+                        color: scheme.onSurface,
+                        fontWeight: FontWeight.w500,
+                      ),
                     ),
-                    const SizedBox(height: 2),
-                    Text(
-                      opportunity.customerName ?? 'Chưa gắn khách hàng',
-                      style: OmniType.caption.copyWith(color: scheme.onSurfaceVariant),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: OmniSpacing.sm),
-              Text(
-                Formatters.vnd(opportunity.value),
-                style: OmniType.money.copyWith(color: scheme.onSurface),
-              ),
-            ],
-          ),
-          const SizedBox(height: OmniSpacing.md),
-          Row(
-            children: [
-              _ProbabilityBar(value: opportunity.effectiveProbability),
-              const SizedBox(width: OmniSpacing.md),
-              if (opportunity.expectedCloseAt != null)
-                OmniTag(
-                  label: Formatters.date(opportunity.expectedCloseAt),
-                  icon: Icons.event_outlined,
-                  tone: opportunity.isOverdue ? OmniColors.destructive : null,
-                ),
-              const Spacer(),
-              OmniSourcePill(channel: opportunity.source, compact: true),
-              if (opportunity.ownerName != null) ...[
-                const SizedBox(width: OmniSpacing.sm),
-                OmniAvatar(name: opportunity.ownerName!, size: 22),
-              ],
-            ],
-          ),
-          if (canMove) ...[
-            const SizedBox(height: OmniSpacing.md),
-            Divider(height: 1, color: scheme.outline),
-            const SizedBox(height: OmniSpacing.sm),
-            Row(
-              children: [
-                TextButton.icon(
-                  onPressed: () => _moveStage(context, ref),
-                  icon: const Icon(Icons.swap_horiz_rounded, size: 17),
-                  label: const Text('Đổi giai đoạn'),
-                  style: TextButton.styleFrom(
-                    minimumSize: Size.zero,
-                    padding: const EdgeInsets.symmetric(horizontal: OmniSpacing.sm),
-                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                   ),
+                  const SizedBox(width: 10),
+                  // The number is what a pipeline is scanned for: right
+                  // aligned, tabular, so the column reads straight down.
+                  Text(
+                    Formatters.vndCompact(opportunity.value),
+                    style: OmniType.body.copyWith(
+                      fontSize: 16,
+                      height: 1.2,
+                      color: scheme.onSurface,
+                      fontWeight: FontWeight.w600,
+                      fontFeatures: OmniType.tabular,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 4),
+              Text(
+                [
+                  opportunity.customerName ?? 'Chưa gắn khách hàng',
+                  if (opportunity.expectedCloseAt != null)
+                    Formatters.date(opportunity.expectedCloseAt),
+                ].join(' · '),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: OmniType.caption.copyWith(
+                  fontSize: 14,
+                  height: 1.25,
+                  color: overdue
+                      ? OmniColors.destructive
+                      : scheme.onSurfaceVariant,
                 ),
-              ],
-            ),
-          ],
-        ],
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -119,47 +129,9 @@ class OpportunityCard extends ConsumerWidget {
       );
     } on AppException catch (error) {
       if (!context.mounted) return;
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text(error.message)));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(error.message)));
     }
-  }
-}
-
-class _ProbabilityBar extends StatelessWidget {
-  const _ProbabilityBar({required this.value});
-
-  final int value;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        SizedBox(
-          width: 46,
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(3),
-            child: LinearProgressIndicator(
-              value: value / 100,
-              minHeight: 5,
-              backgroundColor: scheme.surfaceContainerHighest,
-              color: value >= 70
-                  ? OmniColors.success
-                  : (value >= 40 ? OmniColors.info : OmniColors.warning),
-            ),
-          ),
-        ),
-        const SizedBox(width: 5),
-        Text(
-          '$value%',
-          style: OmniType.micro.copyWith(
-            color: scheme.onSurfaceVariant,
-            fontFeatures: OmniType.tabular,
-          ),
-        ),
-      ],
-    );
   }
 }
