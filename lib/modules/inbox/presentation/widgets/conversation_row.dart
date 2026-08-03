@@ -44,16 +44,21 @@ class ConversationRow extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     final unread = conversation.isUnread;
 
+    final dark = Theme.of(context).brightness == Brightness.dark;
+
     return Material(
-      // A wash of the accent, resolved per theme. The fixed light-indigo
-      // OmniColors.accent (#F0F0FF) turned a selected row into a glaring white
-      // band in dark mode.
+      // Unread rows carry a faint wash of the accent. Weight alone was not
+      // enough to separate them while scanning — the eye picks up a change of
+      // BLOCK colour far faster than a change of font weight, and this is the
+      // one question the list has to answer at a glance.
+      //
+      // The selected wash is stronger and wins, so multi-select stays readable.
+      // (Its old fixed OmniColors.accent, a light indigo, turned a selected row
+      // into a glaring white band in dark mode.)
       color: selected
-          ? OmniColors.chatPrimary.withValues(
-              alpha: Theme.of(context).brightness == Brightness.dark
-                  ? 0.22
-                  : 0.09,
-            )
+          ? OmniColors.chatPrimary.withValues(alpha: dark ? 0.22 : 0.09)
+          : unread
+          ? OmniColors.chatPrimary.withValues(alpha: dark ? 0.09 : 0.035)
           : scheme.surface,
       child: InkWell(
         onTap: onTap,
@@ -108,10 +113,13 @@ class ConversationRow extends StatelessWidget {
                 style: OmniType.body.copyWith(
                   fontSize: 16,
                   height: 1.2,
-                  color: scheme.onSurface,
-                  // Bold vs regular is the difference a rep scans the list by,
-                  // so it has to be a real jump. w600/w400 was too close to read
-                  // at a glance down a long list.
+                  // A read name also steps BACK in contrast, not just in
+                  // weight. Two axes of difference are what make the two states
+                  // separable without staring — and it keeps them apart for
+                  // anyone who cannot rely on the accent wash.
+                  color: unread
+                      ? scheme.onSurface
+                      : scheme.onSurface.withValues(alpha: 0.75),
                   fontWeight: unread ? FontWeight.w700 : FontWeight.w400,
                 ),
               ),

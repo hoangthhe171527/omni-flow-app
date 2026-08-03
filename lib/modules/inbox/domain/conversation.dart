@@ -63,6 +63,33 @@ class Conversation {
     this.groupMembers = const [],
   });
 
+  /// The same thread with its unread counter cleared.
+  ///
+  /// Opening a thread marks it read on the server, but the list held the old
+  /// count until the next full refetch — so a rep came back from a conversation
+  /// they had just read and it was still bold with a red badge. Nothing on the
+  /// screen could tell them what they had and had not read.
+  Conversation asRead() => Conversation(
+    id: id,
+    channel: channel,
+    status: status,
+    customerId: customerId,
+    customerName: customerName,
+    customerAvatar: customerAvatar,
+    lastMessage: lastMessage,
+    lastMessageAt: lastMessageAt,
+    unread: 0,
+    urgent: urgent,
+    assigneeId: assigneeId,
+    assigneeName: assigneeName,
+    tags: tags,
+    connectionId: connectionId,
+    sourceName: sourceName,
+    isGroup: isGroup,
+    groupName: groupName,
+    groupMembers: groupMembers,
+  );
+
   factory Conversation.fromJson(Map<String, dynamic> json) {
     return Conversation(
       id: json.strOr('id', ''),

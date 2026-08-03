@@ -36,6 +36,16 @@ class _ThreadPageState extends ConsumerState<ThreadPage> {
     Future.microtask(() async {
       try {
         await ref.read(inboxApiProvider).markRead(widget.conversationId);
+        // Patch the ROW too, not just the filter counts. patch()'s own
+        // docstring says it exists for "assign, mark-read and labelling", but
+        // mark-read never called it — so returning from a thread you had just
+        // read left it bold with a red badge until the next full refetch.
+        final current = ref
+            .read(conversationProvider(widget.conversationId))
+            .valueOrNull;
+        if (current != null) {
+          ref.read(inboxListProvider.notifier).patch(current.asRead());
+        }
         ref.invalidate(inboxFacetsProvider);
       } on AppException {
         // Non-critical: the badge stays until the next refresh.
