@@ -99,10 +99,19 @@ class Conversation {
       customerName: json.str('customer_name'),
       customerAvatar: json.str('customer_avatar'),
       lastMessage: json.strOr('last_message', ''),
+      // `last_message_at` is the canonical name the API writes and the web
+      // reads; `last_time` is a legacy alias written alongside it. Falling all
+      // the way through to `updated_at` would sort the list by when a row was
+      // last WRITTEN, not when the customer last spoke.
       lastMessageAt:
+          DateUtilsX.parse(json['last_message_at']) ??
           DateUtilsX.parse(json['last_time']) ??
           DateUtilsX.parse(json['updated_at']),
-      unread: json.intOr('unread'),
+      // The API writes `unread_count`; only some payloads carry `unread`. This
+      // read only the latter, so EVERY conversation parsed as read — no badge,
+      // no bold, no highlight, on a screen whose whole job is showing which
+      // threads are waiting. The web mapper already handled both.
+      unread: json.intOfAny(const ['unread_count', 'unread']),
       urgent: json.str('priority') == 'urgent',
       assigneeId: json.str('assignee'),
       assigneeName: json.str('assignee_name'),

@@ -17,6 +17,19 @@ extension JsonMap on Map<String, dynamic> {
     return int.tryParse('$value') ?? fallback;
   }
 
+  /// First of [keys] that is actually present, else [fallback].
+  ///
+  /// The API is a schema-less Mongo document and the same fact appears under
+  /// more than one name — `unread_count` on a conversation, `unread` on some
+  /// payloads. Reading only one of them returns 0 forever and every row looks
+  /// read, which is indistinguishable from "the styling is broken".
+  int intOfAny(List<String> keys, [int fallback = 0]) {
+    for (final key in keys) {
+      if (this[key] != null) return intOr(key, fallback);
+    }
+    return fallback;
+  }
+
   double? dbl(String key) {
     final value = this[key];
     if (value is num) return value.toDouble();
@@ -43,7 +56,10 @@ extension JsonMap on Map<String, dynamic> {
   List<Map<String, dynamic>> mapList(String key) {
     final value = this[key];
     if (value is! List) return const [];
-    return value.whereType<Map>().map((e) => e.cast<String, dynamic>()).toList();
+    return value
+        .whereType<Map>()
+        .map((e) => e.cast<String, dynamic>())
+        .toList();
   }
 
   Map<String, dynamic> child(String key) {
