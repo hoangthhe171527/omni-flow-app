@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/domain/channel.dart';
 import '../../../../design/components/components.dart';
 import '../../../../design/tokens/tokens.dart';
 import '../../../../security/session/session_controller.dart';
@@ -87,7 +88,7 @@ class InboxFilterBar extends ConsumerWidget {
               ),
               _FilterButton(
                 active: filter.channel != null || filter.label != null,
-                onTap: () => _openFilterSheet(context, ref),
+                onTap: () => _openChannelMenu(context, ref),
               ),
             ],
           ),
@@ -129,58 +130,127 @@ class InboxFilterBar extends ConsumerWidget {
     );
   }
 
-  Future<void> _openFilterSheet(BuildContext context, WidgetRef ref) {
-    return showModalBottomSheet<void>(
-      context: context,
-      showDragHandle: true,
-      builder: (context) => Consumer(
-        builder: (context, ref, _) {
-          final filter = ref.watch(inboxFilterProvider);
-          final controller = ref.read(inboxFilterProvider.notifier);
-          final facets = ref.watch(inboxFacetsProvider).valueOrNull;
+  /// Channel picker as a MENU anchored to the button, not a bottom sheet.
+  ///
+  /// A full sheet to choose one value spent a drag handle, a heading and a
+  /// wrapped chip grid on a list of at most eight short words — most of what it
+  /// put on screen was empty. A menu is the size of its contents, appears where
+  /// the finger already is, and dismisses on the choice.
+  Future<void> _openChannelMenu(BuildContext context, WidgetRef ref) async {
+    final filter = ref.read(inboxFilterProvider);
+    final controller = ref.read(inboxFilterProvider.notifier);
+    final facets = ref.read(inboxFacetsProvider).valueOrNull;
+    final scheme = Theme.of(context).colorScheme;
 
-          return SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(
-                OmniSpacing.lg,
-                0,
-                OmniSpacing.lg,
-                OmniSpacing.lg,
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('Kênh', style: OmniType.bodyStrong),
-                  const SizedBox(height: OmniSpacing.md),
-                  Wrap(
-                    spacing: OmniSpacing.sm,
-                    runSpacing: OmniSpacing.sm,
-                    children: [
-                      _ChannelChip(
-                        label: 'Tất cả kênh',
-                        selected: filter.channel == null,
-                        onTap: () => controller.setChannel(null),
-                      ),
-                      for (final channel in inboxChannelOrder)
-                        if (facets?.channels[channel.slug] != null ||
-                            filter.channel == channel)
-                          _ChannelChip(
-                            label: channel.meta.short,
-                            color: channel.meta.color,
-                            count: facets?.channels[channel.slug],
-                            selected: filter.channel == channel,
-                            onTap: () => controller.setChannel(
-                              filter.channel == channel ? null : channel,
-                            ),
-                          ),
-                    ],
-                  ),
-                ],
+    final button = context.findRenderObject() as RenderBox?;
+    final overlay =
+        Overlay.of(context).context.findRenderObject() as RenderBox?;
+    if (button == null || overlay == null) return;
+
+    final origin = button.localToGlobal(Offset.zero, ancestor: overlay);
+    final position = RelativeRect.fromLTRB(
+      origin.dx,
+      origin.dy + button.size.height,
+      overlay.size.width - origin.dx - button.size.width,
+      0,
+    );
+
+    // Only platforms this tenant has actually received on: an eight-row menu of
+    // channels that have never carried a message is the same padding problem in
+    // a different shape.
+    final available = [
+      for (final channel in inboxChannelOrder)
+        if (facets?.channels[channel.slug] != null || filter.channel == channel)
+          channel,
+    ];
+
+    final picked = await showMenu<_ChannelChoice>(
+      context: context,
+      position: position,
+      // A hairline instead of a heavy popup shadow, matching the header rule.
+      elevation: 3,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(14),
+        side: BorderSide(color: scheme.outline.withValues(alpha: 0.4)),
+      ),
+      items: [
+        _channelItem(
+          context,
+          value: const _ChannelChoice(null),
+          label: 'Tất cả kênh',
+          selected: filter.channel == null,
+        ),
+        for (final channel in available)
+          _channelItem(
+            context,
+            value: _ChannelChoice(channel),
+            label: channel.meta.short,
+            color: channel.meta.color,
+            count: facets?.channels[channel.slug],
+            selected: filter.channel == channel,
+          ),
+      ],
+    );
+
+    // The choice is WRAPPED so that "chose Tất cả kênh" (a real pick of null)
+    // stays distinguishable from a dismissal — a tap outside must not silently
+    // clear the filter.
+    if (picked != null) controller.setChannel(picked.channel);
+  }
+
+  PopupMenuItem<_ChannelChoice> _channelItem(
+    BuildContext context, {
+    required _ChannelChoice value,
+    required String label,
+    required bool selected,
+    Color? color,
+    int? count,
+  }) {
+    final scheme = Theme.of(context).colorScheme;
+
+    return PopupMenuItem<_ChannelChoice>(
+      value: value,
+      height: 40,
+      child: Row(
+        children: [
+          if (color != null)
+            Container(
+              width: 8,
+              height: 8,
+              margin: const EdgeInsets.only(right: 10),
+              decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+            )
+          else
+            const SizedBox(width: 18),
+          Expanded(
+            child: Text(
+              label,
+              style: OmniType.caption.copyWith(
+                fontSize: 14,
+                color: scheme.onSurface,
+                fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
               ),
             ),
-          );
-        },
+          ),
+          if (count != null && count > 0)
+            Text(
+              '$count',
+              style: OmniType.caption.copyWith(
+                fontSize: 13,
+                color: scheme.onSurfaceVariant,
+                fontFeatures: OmniType.tabular,
+              ),
+            ),
+          if (selected)
+            Padding(
+              padding: const EdgeInsets.only(left: 8),
+              child: Icon(
+                Icons.check_rounded,
+                size: 17,
+                color: OmniColors.chatPrimary,
+              ),
+            ),
+        ],
       ),
     );
   }
@@ -232,85 +302,10 @@ class _FilterButton extends StatelessWidget {
   }
 }
 
-class _ChannelChip extends StatelessWidget {
-  const _ChannelChip({
-    required this.label,
-    required this.selected,
-    required this.onTap,
-    this.color,
-    this.count,
-  });
+/// Wraps the picked channel so that "Tất cả kênh" — a genuine choice of null —
+/// is not indistinguishable from dismissing the menu.
+class _ChannelChoice {
+  const _ChannelChoice(this.channel);
 
-  final String label;
-  final bool selected;
-  final VoidCallback onTap;
-  final Color? color;
-  final int? count;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final tint = color ?? scheme.onSurfaceVariant;
-
-    final dark = Theme.of(context).brightness == Brightness.dark;
-
-    return Material(
-      // Matches the quick pills: filled, borderless, one visual language for
-      // both filter rows instead of an outlined chip beside a solid one.
-      color: selected
-          ? tint.withValues(alpha: dark ? 0.28 : 0.14)
-          : dark
-          ? Colors.white.withValues(alpha: 0.08)
-          : scheme.surfaceContainerHighest,
-      borderRadius: OmniRadius.pillAll,
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: onTap,
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-          alignment: Alignment.center,
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              if (color != null) ...[
-                Container(
-                  width: 7,
-                  height: 7,
-                  decoration: BoxDecoration(
-                    color: tint,
-                    shape: BoxShape.circle,
-                  ),
-                ),
-                const SizedBox(width: 6),
-              ],
-              Text(
-                label,
-                style: OmniType.caption.copyWith(
-                  fontSize: 13.5,
-                  height: 1.1,
-                  color: selected ? tint : scheme.onSurface,
-                  fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
-                ),
-              ),
-              if (count != null && count! > 0) ...[
-                const SizedBox(width: 5),
-                Text(
-                  '$count',
-                  style: OmniType.caption.copyWith(
-                    fontSize: 13.5,
-                    height: 1.1,
-                    color: (selected ? tint : scheme.onSurface).withValues(
-                      alpha: 0.6,
-                    ),
-                    fontWeight: FontWeight.w600,
-                    fontFeatures: OmniType.tabular,
-                  ),
-                ),
-              ],
-            ],
-          ),
-        ),
-      ),
-    );
-  }
+  final Channel? channel;
 }
