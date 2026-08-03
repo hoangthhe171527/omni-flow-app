@@ -10,6 +10,8 @@ class MessageBubble extends StatelessWidget {
     super.key,
     required this.message,
     this.showSender = false,
+    this.groupedWithPrevious = false,
+    this.isLastInGroup = true,
     this.onRetry,
     this.onDiscard,
   });
@@ -18,6 +20,15 @@ class MessageBubble extends StatelessWidget {
 
   /// Group threads: the member who sent it, above the bubble.
   final bool showSender;
+
+  /// The message directly above came from the same side. Consecutive messages
+  /// used to sit the same distance apart as a change of speaker, so the thread
+  /// had no rhythm — a run of five replies looked like five unrelated events.
+  final bool groupedWithPrevious;
+
+  /// Last of a run from the same side. Only this one wears the avatar, the way
+  /// Zalo does; the others reserve the space so the column stays aligned.
+  final bool isLastInGroup;
 
   final VoidCallback? onRetry;
   final VoidCallback? onDiscard;
@@ -62,7 +73,9 @@ class MessageBubble extends StatelessWidget {
       constraints: BoxConstraints(
         maxWidth: MediaQuery.sizeOf(context).width * 0.76,
       ),
-      padding: const EdgeInsets.fromLTRB(12, 8, 12, 6),
+      // Symmetric vertical padding. The 6 at the bottom against 8 at the top
+      // made every bubble sit slightly high in its own box.
+      padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
       decoration: BoxDecoration(
         color: bubbleColor,
         borderRadius: BorderRadius.circular(18),
@@ -89,23 +102,19 @@ class MessageBubble extends StatelessWidget {
           else if (message.text.isNotEmpty)
             Text(
               message.text,
-              style: OmniType.body.copyWith(
-                fontSize: 15,
-                height: 1.35,
-                color: onBubble,
-              ),
+              style: OmniChatType.message.copyWith(color: onBubble),
             ),
           // Time and tick inside the bubble, bottom-LEFT. Zalo puts them there
           // on both sides — checked against the real app, not from memory — and
           // they used to sit on their own line underneath, costing a full row of
           // vertical space per message.
-          const SizedBox(height: 2),
+          const SizedBox(height: 4),
           Row(
             mainAxisSize: MainAxisSize.min,
             children: [
               Text(
                 Formatters.time(message.sentAt),
-                style: OmniType.micro.copyWith(fontSize: 11, color: metaColor),
+                style: OmniChatType.meta.copyWith(color: metaColor),
               ),
               if (outbound) ...[
                 const SizedBox(width: 3),
@@ -130,15 +139,20 @@ class MessageBubble extends StatelessWidget {
         ? const SizedBox(width: 8)
         : Padding(
             padding: const EdgeInsets.only(right: 6),
-            child: OmniAvatar(
-              name: message.senderName ?? '?',
-              imageUrl: message.senderAvatar,
-              size: 32,
-            ),
+            child: isLastInGroup
+                ? OmniAvatar(
+                    name: message.senderName ?? '?',
+                    imageUrl: message.senderAvatar,
+                    size: 32,
+                  )
+                // Reserve the width so bubbles above stay in the same column.
+                : const SizedBox(width: 32),
           );
 
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 3),
+      // 2 within a run, 10 when the speaker changes: the gap is what tells the
+      // eye where one person stopped and the other started.
+      padding: EdgeInsets.only(top: groupedWithPrevious ? 2 : 10),
       child: Row(
         mainAxisAlignment: outbound
             ? MainAxisAlignment.end
@@ -310,20 +324,22 @@ class _NoteBubble extends StatelessWidget {
                 const SizedBox(width: 5),
                 Text(
                   'GHI CHÚ NỘI BỘ',
-                  style: OmniType.micro.copyWith(
+                  style: OmniChatType.meta.copyWith(
                     color: amber,
-                    fontSize: 10,
+                    // The one place bold is right: this label is the guard
+                    // against a note being mistaken for a customer message.
+                    fontWeight: FontWeight.w700,
                     letterSpacing: 0.6,
                   ),
                 ),
               ],
             ),
             const SizedBox(height: OmniSpacing.sm),
-            Text(message.text, style: OmniType.body),
+            Text(message.text, style: OmniChatType.message),
             const SizedBox(height: OmniSpacing.sm),
             Text(
               'Bởi ${message.agentName ?? "bạn"} · ${Formatters.time(message.sentAt)}',
-              style: OmniType.micro.copyWith(
+              style: OmniChatType.meta.copyWith(
                 color: Theme.of(context).colorScheme.onSurfaceVariant,
               ),
             ),

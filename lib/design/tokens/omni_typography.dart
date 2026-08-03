@@ -105,6 +105,44 @@ abstract final class OmniType {
   }
 }
 
+/// The messaging screens speak THREE type sizes and no more.
+///
+/// Before this the thread used four different sizes below 12 (10, 10, 10, 11)
+/// for the same class of information, and `micro` — the style all of them went
+/// through — is w600, so every scrap of metadata was tiny AND bold. Meta is
+/// supposed to recede; small bold text reads as noise, not as hierarchy.
+///
+/// Sizes are deliberately a little larger than a Latin-only app would use, and
+/// the body line-height is 1.45 rather than the usual 1.3–1.35: Vietnamese
+/// stacks diacritics both above and below the x-height (ế, ộ, ữ, ằ), and tighter
+/// leading makes consecutive lines collide.
+abstract final class OmniChatType {
+  /// The message itself — the only thing on the screen meant to be read.
+  static const TextStyle message = TextStyle(
+    fontFamily: OmniType.family,
+    fontSize: 15.5,
+    fontWeight: FontWeight.w400,
+    height: 1.45,
+  );
+
+  /// The person you are talking to, in the app bar.
+  static const TextStyle peer = TextStyle(
+    fontFamily: OmniType.family,
+    fontSize: 17,
+    fontWeight: FontWeight.w600,
+    height: 1.25,
+  );
+
+  /// EVERY piece of metadata: timestamps, the day separator, the app bar
+  /// subtitle, delivery state. One size, one weight, deliberately not bold.
+  static const TextStyle meta = TextStyle(
+    fontFamily: OmniType.family,
+    fontSize: 11.5,
+    fontWeight: FontWeight.w500,
+    height: 1.3,
+  );
+}
+
 abstract final class OmniGradients {
   static const LinearGradient brand = LinearGradient(
     begin: Alignment.topLeft,

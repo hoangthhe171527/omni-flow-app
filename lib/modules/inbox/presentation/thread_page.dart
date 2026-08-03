@@ -261,7 +261,9 @@ class _ThreadAppBar extends StatelessWidget implements PreferredSizeWidget {
                         conversation!.title,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: OmniType.bodyStrong.copyWith(
+                        // 15 was smaller than the message text it sits above.
+                        // The person you are talking to is the screen's title.
+                        style: OmniChatType.peer.copyWith(
                           color: scheme.onSurface,
                         ),
                       ),
@@ -275,9 +277,8 @@ class _ThreadAppBar extends StatelessWidget implements PreferredSizeWidget {
                             const SizedBox(width: 5),
                             Text(
                               Formatters.relative(conversation!.lastMessageAt),
-                              style: OmniType.micro.copyWith(
+                              style: OmniChatType.meta.copyWith(
                                 color: scheme.onSurfaceVariant,
-                                fontSize: 10,
                               ),
                             ),
                           ],
@@ -295,20 +296,18 @@ class _ThreadAppBar extends StatelessWidget implements PreferredSizeWidget {
           IconButton(
             tooltip: 'Gán nhân viên',
             onPressed: onAssign,
+            // Bare icons, matching the inbox bar. Grey discs behind app-bar
+            // icons are the button drawn twice.
             style: IconButton.styleFrom(
-              backgroundColor: scheme.surfaceContainerHighest,
-              foregroundColor: scheme.onSurface,
+              foregroundColor: scheme.onSurfaceVariant,
             ),
-            icon: const Icon(Icons.person_add_alt_outlined, size: 21),
+            icon: const Icon(Icons.person_add_alt_outlined, size: 22),
           ),
         IconButton(
           tooltip: 'Thông tin khách hàng',
           onPressed: onInfo,
-          style: IconButton.styleFrom(
-            backgroundColor: scheme.surfaceContainerHighest,
-            foregroundColor: scheme.onSurface,
-          ),
-          icon: const Icon(Icons.info_outline_rounded, size: 21),
+          style: IconButton.styleFrom(foregroundColor: scheme.onSurfaceVariant),
+          icon: const Icon(Icons.info_outline_rounded, size: 22),
         ),
         const SizedBox(width: OmniSpacing.xs),
       ],
@@ -361,10 +360,24 @@ class _MessageList extends StatelessWidget {
         final message = items[index];
         // `items` runs newest→oldest, so the *next* index is the earlier message.
         final earlier = index + 1 < items.length ? items[index + 1] : null;
+        final later = index > 0 ? items[index - 1] : null;
         final needsDayHeader =
             message.sentAt != null &&
             (earlier?.sentAt == null ||
                 !_sameDay(message.sentAt!, earlier!.sentAt!));
+
+        // A run is consecutive messages from the same side with no day break
+        // between them. Only the LAST of a run carries the avatar.
+        final grouped =
+            !needsDayHeader &&
+            earlier != null &&
+            earlier.isOutbound == message.isOutbound &&
+            !earlier.isNote &&
+            !message.isNote;
+        final isLastInGroup =
+            later == null ||
+            later.isOutbound != message.isOutbound ||
+            later.isNote;
 
         return Column(
           // Without this the Column defaults to centre, which collapsed to the
@@ -375,7 +388,9 @@ class _MessageList extends StatelessWidget {
             if (needsDayHeader) _DaySeparator(date: message.sentAt!),
             MessageBubble(
               message: message,
-              showSender: isGroup && !message.isOutbound,
+              showSender: isGroup && !message.isOutbound && !grouped,
+              groupedWithPrevious: grouped,
+              isLastInGroup: isLastInGroup,
               onRetry: message.status == DeliveryStatus.failed
                   ? () => onRetry(message)
                   : null,
@@ -402,26 +417,20 @@ class _DaySeparator extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
 
+    // Bare centred text, like Zalo. The bordered pill was a third framed object
+    // in a thread that had just had its frames removed, and at fontSize 10 the
+    // label inside it was below every platform's readable floor.
+    //
+    // 20 above, 12 below: the gap belongs to the day that is STARTING, so the
+    // separator sits closer to what it introduces than to what it closes.
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: OmniSpacing.lg),
+      padding: const EdgeInsets.only(top: 20, bottom: 12),
       child: Center(
-        child: Container(
-          padding: const EdgeInsets.symmetric(
-            horizontal: OmniSpacing.md,
-            vertical: 5,
-          ),
-          decoration: BoxDecoration(
-            color: scheme.surface.withValues(alpha: 0.92),
-            borderRadius: OmniRadius.pillAll,
-            border: Border.all(color: scheme.outline.withValues(alpha: 0.78)),
-          ),
-          child: Text(
-            Formatters.dayHeader(date),
-            style: OmniType.micro.copyWith(
-              color: scheme.onSurfaceVariant,
-              fontSize: 10,
-              letterSpacing: 0.25,
-            ),
+        child: Text(
+          Formatters.dayHeader(date),
+          style: OmniChatType.meta.copyWith(
+            color: scheme.onSurfaceVariant,
+            letterSpacing: 0.2,
           ),
         ),
       ),
