@@ -91,10 +91,19 @@ Ranh giới: `presentation` không biết Dio, `application` không biết Widge
 `domain` không biết cả hai. `channels_api.dart` là chỗ duy nhất viết đường dẫn
 `/channels/...`.
 
-`Channel` enum và bộ trạng thái `connected/error/disconnected` đã có ở
-`lib/core/domain/channel.dart` — dùng lại, không định nghĩa trùng. Phần core
-chưa có là *khả năng kết nối* của mỗi kênh (OAuth hay QR); nằm ở
-`connectable_channel.dart`.
+`lib/core/domain/channel.dart` đã có `Channel` enum (kèm `parse`/`slug`) và
+`ChannelMeta` mang sẵn tên hiển thị, nhãn ngắn, màu, tint, icon và
+`ChannelKind.official/personal` cho từng nền tảng — dùng lại toàn bộ, không
+định nghĩa trùng tên hay màu ở module này.
+
+Core **chưa có** hai thứ, nên module tự định nghĩa:
+
+- `ChannelStatus` (`connected`/`error`/`disconnected`/`pending`) — trạng thái
+  của một *kết nối*, khác với `Channel` là *nền tảng*. Giá trị lạ đọc thành
+  `disconnected`.
+- `ConnectMethod` (`oauth`/`pair`/`none`) — kênh này nối bằng cách nào. Đây là
+  toàn bộ nội dung của `connectable_channel.dart`; mọi thứ khác lấy từ
+  `ChannelMeta`.
 
 Vị trí trong app: mục "Kết nối kênh" trong màn "Thêm", nhóm `Quản trị`, order 20,
 đứng cạnh "Nhân viên". Không chiếm tab dưới — đây là màn kết nối một lần, không
