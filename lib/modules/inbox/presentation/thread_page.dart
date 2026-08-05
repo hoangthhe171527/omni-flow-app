@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
@@ -25,13 +27,17 @@ class ThreadPage extends ConsumerStatefulWidget {
   ConsumerState<ThreadPage> createState() => _ThreadPageState();
 }
 
-class _ThreadPageState extends ConsumerState<ThreadPage> {
+class _ThreadPageState extends ConsumerState<ThreadPage>
+    with WidgetsBindingObserver {
   final _scrollController = ScrollController();
+  Timer? _syncTimer;
 
   @override
   void initState() {
     super.initState();
     _scrollController.addListener(_onScroll);
+    WidgetsBinding.instance.addObserver(this);
+    _startRealtimeFallback();
     // Opening a thread is the act of reading it.
     Future.microtask(() async {
       try {
@@ -57,7 +63,32 @@ class _ThreadPageState extends ConsumerState<ThreadPage> {
   void dispose() {
     _scrollController.removeListener(_onScroll);
     _scrollController.dispose();
+    WidgetsBinding.instance.removeObserver(this);
+    _syncTimer?.cancel();
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _refreshThread();
+      _startRealtimeFallback();
+    } else {
+      _syncTimer?.cancel();
+      _syncTimer = null;
+    }
+  }
+
+  void _startRealtimeFallback() {
+    _syncTimer ??= Timer.periodic(const Duration(seconds: 5), (_) {
+      if (mounted) _refreshThread();
+    });
+  }
+
+  void _refreshThread() {
+    ref.invalidate(threadProvider(widget.conversationId));
+    ref.invalidate(conversationProvider(widget.conversationId));
+    ref.invalidate(inboxFacetsProvider);
   }
 
   void _onScroll() {

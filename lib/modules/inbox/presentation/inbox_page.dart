@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -20,21 +22,44 @@ class InboxPage extends ConsumerStatefulWidget {
   ConsumerState<InboxPage> createState() => _InboxPageState();
 }
 
-class _InboxPageState extends ConsumerState<InboxPage> {
+class _InboxPageState extends ConsumerState<InboxPage>
+    with WidgetsBindingObserver {
   final _scrollController = ScrollController();
   final Set<String> _selected = {};
+  Timer? _syncTimer;
 
   @override
   void initState() {
     super.initState();
     _scrollController.addListener(_onScroll);
+    WidgetsBinding.instance.addObserver(this);
+    _startRealtimeFallback();
   }
 
   @override
   void dispose() {
     _scrollController.removeListener(_onScroll);
     _scrollController.dispose();
+    WidgetsBinding.instance.removeObserver(this);
+    _syncTimer?.cancel();
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      ref.read(inboxListProvider.notifier).refresh();
+      _startRealtimeFallback();
+    } else {
+      _syncTimer?.cancel();
+      _syncTimer = null;
+    }
+  }
+
+  void _startRealtimeFallback() {
+    _syncTimer ??= Timer.periodic(const Duration(seconds: 8), (_) {
+      if (mounted) ref.read(inboxListProvider.notifier).refresh();
+    });
   }
 
   void _onScroll() {

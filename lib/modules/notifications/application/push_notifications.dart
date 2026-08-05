@@ -8,6 +8,7 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/error/app_exception.dart';
+import '../../inbox/application/inbox_providers.dart';
 import '../data/push_api.dart';
 
 const _androidChannel = AndroidNotificationChannel(
@@ -65,7 +66,9 @@ class PushNotifications {
       _token = await FirebaseMessaging.instance.getToken();
       if (_token != null) await _register(_token!);
 
-      _tokenRefresh = FirebaseMessaging.instance.onTokenRefresh.listen(_register);
+      _tokenRefresh = FirebaseMessaging.instance.onTokenRefresh.listen(
+        _register,
+      );
       _foregroundMessages = FirebaseMessaging.onMessage.listen(_showForeground);
       _openedMessages = FirebaseMessaging.onMessageOpenedApp.listen(_open);
       final initial = await FirebaseMessaging.instance.getInitialMessage();
@@ -106,7 +109,9 @@ class PushNotifications {
         try {
           final data = jsonDecode(payload) as Map<String, dynamic>;
           final intent = PushIntent.fromData(data);
-          if (intent != null) _ref.read(pushIntentProvider.notifier).state = intent;
+          if (intent != null) {
+            _ref.read(pushIntentProvider.notifier).state = intent;
+          }
         } catch (_) {}
       },
     );
@@ -127,6 +132,10 @@ class PushNotifications {
   }
 
   Future<void> _showForeground(RemoteMessage message) async {
+    if (PushIntent.fromData(message.data) != null) {
+      final signal = _ref.read(inboxRealtimeSignalProvider.notifier);
+      signal.state = signal.state + 1;
+    }
     final notification = message.notification;
     await _local.show(
       message.messageId?.hashCode ?? DateTime.now().microsecondsSinceEpoch,
@@ -150,7 +159,8 @@ class PushNotifications {
     if (intent != null) _ref.read(pushIntentProvider.notifier).state = intent;
   }
 
-  bool get _isAndroid => !kIsWeb && defaultTargetPlatform == TargetPlatform.android;
+  bool get _isAndroid =>
+      !kIsWeb && defaultTargetPlatform == TargetPlatform.android;
 }
 
 final pushNotificationsProvider = Provider<PushNotifications>((ref) {
