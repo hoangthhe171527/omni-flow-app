@@ -151,16 +151,28 @@ class _ThreadPageState extends ConsumerState<ThreadPage>
             MessageComposer(
               canNote: access.canNote,
               suggestions: _suggestions(conversation.valueOrNull),
-              onAttach: _attach,
-              onCamera: () => _attach(source: ImageSource.camera),
-              onSend: (text, mode) async {
+              onPickImages: _pickImages,
+              onTakePhoto: _takePhoto,
+              onSend: (text, mode, images) async {
                 final controller = ref.read(
                   threadProvider(widget.conversationId).notifier,
                 );
                 if (mode == ComposeMode.note) {
                   await controller.addNote(text);
                 } else {
-                  await controller.send(text);
+                  try {
+                    final attachments = await Future.wait(
+                      images.map(
+                        (image) => ref
+                            .read(inboxApiProvider)
+                            .uploadMedia(image.path, filename: image.name),
+                      ),
+                    );
+                    await controller.send(text, attachments: attachments);
+                  } on AppException catch (error) {
+                    _toast(error.message);
+                    rethrow;
+                  }
                 }
                 _scrollToBottom();
               },
@@ -194,22 +206,11 @@ class _ThreadPageState extends ConsumerState<ThreadPage>
     );
   }
 
-  Future<void> _attach({ImageSource source = ImageSource.gallery}) async {
-    final picked = await ImagePicker().pickImage(source: source);
-    if (picked == null) return;
+  Future<List<XFile>> _pickImages() =>
+      ImagePicker().pickMultiImage(imageQuality: 85);
 
-    try {
-      final attachment = await ref
-          .read(inboxApiProvider)
-          .uploadMedia(picked.path, filename: picked.name);
-      await ref
-          .read(threadProvider(widget.conversationId).notifier)
-          .send('', attachments: [attachment]);
-      _scrollToBottom();
-    } on AppException catch (error) {
-      _toast(error.message);
-    }
-  }
+  Future<XFile?> _takePhoto() =>
+      ImagePicker().pickImage(source: ImageSource.camera, imageQuality: 85);
 
   Future<void> _assign() async {
     final conversation = ref
