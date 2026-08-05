@@ -7,6 +7,13 @@ plugins {
     id("dev.flutter.flutter-gradle-plugin")
 }
 
+// CI and a fresh clone intentionally build without Firebase credentials. Once
+// google-services.json is added locally/at deployment, this plugin generates
+// the Android resources Firebase uses at runtime.
+if (file("google-services.json").exists()) {
+    apply(plugin = "com.google.gms.google-services")
+}
+
 // Signing credentials live in android/key.properties, which is gitignored and
 // points at a keystore kept outside the repo. Absent (fresh clone, CI without
 // secrets) the release build falls back to the debug key so it still builds —
@@ -25,6 +32,7 @@ android {
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
+        isCoreLibraryDesugaringEnabled = true
     }
 
     kotlinOptions {
@@ -62,6 +70,10 @@ android {
             }
         }
     }
+}
+
+dependencies {
+    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.5")
 }
 
 flutter {
