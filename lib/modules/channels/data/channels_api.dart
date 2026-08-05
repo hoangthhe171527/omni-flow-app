@@ -41,12 +41,22 @@ class ChannelsApi {
   Future<PairingStart> pairStart(
     Channel channel, {
     bool forceRelogin = false,
+    required String deviceId,
   }) async {
     final response = await _client.post(
       '/channels/pair/start',
-      body: {'channel_id': channel.slug, 'force_relogin': forceRelogin},
+      body: {
+        'channel_id': channel.slug,
+        'force_relogin': forceRelogin,
+        'device_id': deviceId,
+      },
     );
     return PairingStart.fromJson(response.object);
+  }
+
+  Future<List<AgentDevice>> devices() async {
+    final response = await _client.get('/agent/devices');
+    return response.list.map(AgentDevice.fromJson).toList();
   }
 
   Future<PairingStatus> pairStatus(String connectionId) async {
@@ -57,3 +67,17 @@ class ChannelsApi {
 
 final channelsApiProvider =
     Provider<ChannelsApi>((ref) => ChannelsApi(ref.watch(apiClientProvider)));
+
+class AgentDevice {
+  const AgentDevice({required this.id, required this.name, this.lastSeenAt});
+
+  factory AgentDevice.fromJson(Map<String, dynamic> json) => AgentDevice(
+        id: json.strOr('id', ''),
+        name: json.strOr('name', 'Omni Agent'),
+        lastSeenAt: json.str('last_seen_at'),
+      );
+
+  final String id;
+  final String name;
+  final String? lastSeenAt;
+}

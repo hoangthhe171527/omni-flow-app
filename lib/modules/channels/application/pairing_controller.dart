@@ -45,7 +45,7 @@ class PairingController extends AutoDisposeFamilyNotifier<PairingState, Channel>
     return const PairingState(snapshot: PairingSnapshot(view: PairingView.preparing));
   }
 
-  Future<void> start({bool forceRelogin = false}) async {
+  Future<void> start({bool forceRelogin = false, required String deviceId}) async {
     _stop();
     _ticks = 0;
     _sawQr = false;
@@ -54,6 +54,7 @@ class PairingController extends AutoDisposeFamilyNotifier<PairingState, Channel>
       final started = await ref.read(channelsApiProvider).pairStart(
         arg,
         forceRelogin: forceRelogin,
+        deviceId: deviceId,
       );
       state = PairingState(
         snapshot: const PairingSnapshot(view: PairingView.waiting, stage: 'queued'),
