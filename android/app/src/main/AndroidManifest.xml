@@ -6,6 +6,9 @@
          as DioExceptionType.connectionError, which the app reports as
          "Không có kết nối mạng." Login was simply the first request to hit it. -->
     <uses-permission android:name="android.permission.INTERNET"/>
+    <!-- Required on Android 9 and older; Android 10+ uses MediaStore. -->
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"
+        android:maxSdkVersion="28" />
 
     <application
         android:label="OmniCRM"

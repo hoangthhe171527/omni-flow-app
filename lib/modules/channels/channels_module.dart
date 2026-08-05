@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 
+import '../../core/domain/channel.dart';
 import '../../core/module/module_route.dart';
 import '../../core/module/nav_destination.dart';
 import '../../core/module/omni_module.dart';
 import '../../security/guard/access_requirement.dart';
 import 'domain/channel_permissions.dart';
 import 'presentation/channels_page.dart';
+import 'presentation/pair_page.dart';
 
 /// Nối tài khoản nhắn tin vào hộp thư.
 ///
@@ -34,6 +36,15 @@ class ChannelsModule extends OmniModule {
           rootNavigator: true,
           access: const AccessRequirement.any(ChannelPermissions.anyRead),
           builder: (_, _) => const ChannelsPage(),
+        ),
+        ModuleRoute(
+          path: '/channels/pair/:channelId',
+          name: pair,
+          rootNavigator: true,
+          access: const AccessRequirement.any([ChannelPermissions.write]),
+          builder: (_, state) => PairPage(
+            channel: Channel.parse(state.pathParameters['channelId']),
+          ),
         ),
       ];
 

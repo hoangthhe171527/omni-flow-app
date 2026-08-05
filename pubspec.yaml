@@ -34,6 +34,8 @@ dependencies:
   # Media / external actions
   image_picker: ^1.0.7
   url_launcher: ^6.3.0
+  # Lưu ảnh QR vào thư viện để quét lại bằng Zalo trên chính máy đó.
+  gal: ^2.3.0
 
 dev_dependencies:
   flutter_test:
