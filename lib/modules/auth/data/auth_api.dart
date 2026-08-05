@@ -27,19 +27,22 @@ class AuthApi implements AuthGateway {
   @override
   Future<List<TenantOption>> tenants() async {
     final response = await _client.get('/auth/tenants');
-    return response.list.map((row) {
-      final tenant = row.child('tenant');
-      final membership = row.child('membership');
-      return TenantOption(
-        id: tenant.strOr('id', ''),
-        name: tenant.strOr('name', 'Không gian làm việc'),
-        code: tenant.str('code'),
-        memberCount: membership['member_count'] is num
-            ? (membership['member_count'] as num).toInt()
-            : null,
-        planLabel: tenant.child('settings').str('plan_label'),
-      );
-    }).where((option) => option.id.isNotEmpty).toList();
+    return response.list
+        .map((row) {
+          final tenant = row.child('tenant');
+          final membership = row.child('membership');
+          return TenantOption(
+            id: tenant.strOr('id', ''),
+            name: tenant.strOr('name', 'Không gian làm việc'),
+            code: tenant.str('code'),
+            memberCount: membership['member_count'] is num
+                ? (membership['member_count'] as num).toInt()
+                : null,
+            planLabel: tenant.child('settings').str('plan_label'),
+          );
+        })
+        .where((option) => option.id.isNotEmpty)
+        .toList();
   }
 
   @override
@@ -47,6 +50,15 @@ class AuthApi implements AuthGateway {
     final response = await _client.post(
       '/auth/switch-tenant',
       body: {'tenant_id': tenantId},
+    );
+    return _tokens(response.object);
+  }
+
+  @override
+  Future<AuthTokens> refresh(String refreshToken) async {
+    final response = await _client.post(
+      '/auth/refresh',
+      body: {'refresh_token': refreshToken},
     );
     return _tokens(response.object);
   }
@@ -71,7 +83,10 @@ class AuthApi implements AuthGateway {
       status: SessionStatus.authenticated,
       user: SessionUser(
         id: userJson.strOr('id', ''),
-        fullName: userJson.strOr('full_name', userJson.strOr('email', 'Người dùng')),
+        fullName: userJson.strOr(
+          'full_name',
+          userJson.strOr('email', 'Người dùng'),
+        ),
         email: userJson.strOr('email', ''),
         phone: userJson.str('phone'),
         avatarUrl: userJson.str('avatar'),
@@ -100,12 +115,12 @@ class AuthApi implements AuthGateway {
   }
 
   AuthTokens _tokens(Map<String, dynamic> json) => AuthTokens(
-        accessToken: json.strOr('access_token', ''),
-        refreshToken: json.str('refresh_token'),
-        expiresIn: json['expires_in'] is num
-            ? (json['expires_in'] as num).toInt()
-            : null,
-      );
+    accessToken: json.strOr('access_token', ''),
+    refreshToken: json.str('refresh_token'),
+    expiresIn: json['expires_in'] is num
+        ? (json['expires_in'] as num).toInt()
+        : null,
+  );
 }
 
 final authApiProvider = Provider<AuthApi>((ref) {

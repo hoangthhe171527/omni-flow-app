@@ -46,6 +46,24 @@ class SessionController extends Notifier<Session> {
     }
 
     ref.read(activeTenantIdProvider.notifier).state = tenantId;
+    final refreshToken = await _tokens.readRefreshToken();
+    if (refreshToken != null && refreshToken.isNotEmpty) {
+      try {
+        // Rotate at launch so regularly-used installs retain their rolling
+        // server session without asking for credentials again.
+        final tokens = await _gateway.refresh(refreshToken);
+        await _tokens.save(
+          accessToken: tokens.accessToken,
+          refreshToken: tokens.refreshToken,
+        );
+      } on UnauthorizedException {
+        await _clearCredentials();
+        state = const Session.expired();
+        return;
+      } on AppException {
+        // A temporary offline/server failure must not erase local credentials.
+      }
+    }
     await _loadContext();
   }
 
@@ -115,8 +133,9 @@ class SessionController extends Notifier<Session> {
   }
 }
 
-final sessionControllerProvider =
-    NotifierProvider<SessionController, Session>(SessionController.new);
+final sessionControllerProvider = NotifierProvider<SessionController, Session>(
+  SessionController.new,
+);
 
 /// Read this — not the controller — anywhere you only need to *look at* the
 /// session. Keeps rebuild scope tight.
