@@ -8,7 +8,6 @@ import '../../../core/domain/channel.dart';
 import '../../../design/tokens/tokens.dart';
 import '../application/channels_providers.dart';
 import '../application/pairing_controller.dart';
-import '../data/channels_api.dart';
 import '../domain/pairing.dart';
 import 'widgets/qr_saver.dart';
 
@@ -22,41 +21,13 @@ class PairPage extends ConsumerStatefulWidget {
 }
 
 class _PairPageState extends ConsumerState<PairPage> with WidgetsBindingObserver {
-  List<AgentDevice> _devices = const [];
-  AgentDevice? _device;
-  bool _loadingDevices = true;
-  bool _started = false;
-  String? _deviceError;
-
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    WidgetsBinding.instance.addPostFrameCallback((_) => _loadDevices());
-  }
-
-  Future<void> _loadDevices() async {
-    setState(() { _loadingDevices = true; _deviceError = null; _started = false; });
-    try {
-      final devices = await ref.read(channelsApiProvider).devices();
-      if (!mounted) return;
-      setState(() { _devices = devices; _device = devices.isNotEmpty ? devices.first : null; });
-    } catch (error) {
-      if (!mounted) return;
-      setState(() => _deviceError = '$error');
-    } finally {
-      if (mounted) setState(() => _loadingDevices = false);
-    }
-  }
-
-  void _start({bool forceRelogin = false}) {
-    final device = _device;
-    if (device == null) return;
-    setState(() => _started = true);
-    ref.read(pairingControllerProvider(widget.channel).notifier).start(
-      forceRelogin: forceRelogin,
-      deviceId: device.id,
-    );
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(pairingControllerProvider(widget.channel).notifier).start();
+    });
   }
 
   @override
@@ -97,48 +68,6 @@ class _PairPageState extends ConsumerState<PairPage> with WidgetsBindingObserver
       });
     });
 
-    if (_loadingDevices) {
-      return Scaffold(appBar: AppBar(title: Text('Ghép nối ${meta.name}')), body: const Center(child: CircularProgressIndicator()));
-    }
-    if (_device == null) {
-      return Scaffold(
-        appBar: AppBar(title: Text('Ghép nối ${meta.name}')),
-        body: Padding(
-          padding: const EdgeInsets.all(OmniSpacing.lg),
-          child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-            const Icon(Icons.laptop_windows_outlined, size: 48),
-            const SizedBox(height: OmniSpacing.md),
-            Text(_deviceError ?? 'Chưa có máy nào chạy Omni Agent.', textAlign: TextAlign.center, style: OmniType.bodyStrong),
-            const SizedBox(height: OmniSpacing.sm),
-            const Text('Mở Omni Agent trên máy tính trực 24/7, đăng ký thiết bị rồi quay lại đây.', textAlign: TextAlign.center),
-            const SizedBox(height: OmniSpacing.lg),
-            FilledButton(onPressed: _loadDevices, child: const Text('Kiểm tra lại')),
-          ]),
-        ),
-      );
-    }
-    if (!_started) {
-      return Scaffold(
-        appBar: AppBar(title: Text('Ghép nối ${meta.name}')),
-        body: Padding(
-          padding: const EdgeInsets.all(OmniSpacing.lg),
-          child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-            Text('Chọn máy đang chạy Omni Agent', style: OmniType.bodyStrong),
-            const SizedBox(height: OmniSpacing.sm),
-            Text('Mã đăng nhập sẽ xuất hiện trên đúng máy này.', style: OmniType.micro),
-            const SizedBox(height: OmniSpacing.lg),
-            DropdownButtonFormField<AgentDevice>(
-              initialValue: _device,
-              items: _devices.map((device) => DropdownMenuItem(value: device, child: Text(device.name))).toList(),
-              onChanged: (device) => setState(() => _device = device),
-              decoration: const InputDecoration(labelText: 'Máy Omni Agent'),
-            ),
-            const SizedBox(height: OmniSpacing.lg),
-            FilledButton(onPressed: _start, child: const Text('Tiếp tục')),
-          ]),
-        ),
-      );
-    }
     return Scaffold(
       appBar: AppBar(title: Text('Ghép nối ${meta.name}')),
       body: SafeArea(
@@ -151,7 +80,7 @@ class _PairPageState extends ConsumerState<PairPage> with WidgetsBindingObserver
               const SizedBox(height: OmniSpacing.xl),
               if (_canSwitchAccount(state.snapshot.view))
                 TextButton(
-                  onPressed: () => _start(forceRelogin: true),
+                  onPressed: () => controller.start(forceRelogin: true),
                   child: const Text('Đăng nhập tài khoản khác'),
                 ),
             ],
@@ -242,7 +171,7 @@ class _PairPageState extends ConsumerState<PairPage> with WidgetsBindingObserver
     const SizedBox(height: OmniSpacing.md),
     Text(message, textAlign: TextAlign.center, style: OmniType.body),
     const SizedBox(height: OmniSpacing.lg),
-    FilledButton(onPressed: _start, child: const Text('Thử lại')),
+    FilledButton(onPressed: () => controller.start(), child: const Text('Thử lại')),
   ]);
 
   String _waitingMessage(String? stage) => switch (stage) {
