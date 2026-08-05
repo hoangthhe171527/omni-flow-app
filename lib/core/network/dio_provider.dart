@@ -20,6 +20,52 @@ final dioProvider = Provider<Dio>((ref) {
     ),
   );
 
+  // Concurrent 401s share one refresh. Otherwise an inbox screen can rotate
+  // the same refresh token multiple times and invalidate its own session.
+  Future<void>? refreshInFlight;
+
+  Future<void> refreshAccessToken() {
+    final active = refreshInFlight;
+    if (active != null) return active;
+
+    final refresh = () async {
+      final tokenStore = ref.read(tokenStoreProvider);
+      final refreshToken = await tokenStore.readRefreshToken();
+      if (refreshToken == null || refreshToken.isEmpty) {
+        throw DioException(
+          requestOptions: RequestOptions(path: '/auth/refresh'),
+          response: Response(
+            requestOptions: RequestOptions(path: '/auth/refresh'),
+            statusCode: 401,
+          ),
+          type: DioExceptionType.badResponse,
+        );
+      }
+
+      final response = await dio.post<Map<String, dynamic>>(
+        '${AppConfig.apiPrefix}/auth/refresh',
+        data: {'refresh_token': refreshToken},
+        options: Options(extra: const {'skipSessionRefresh': true}),
+      );
+      final payload = response.data?['data'];
+      if (payload is! Map || payload['access_token'] is! String) {
+        throw DioException(
+          requestOptions: response.requestOptions,
+          response: response,
+          type: DioExceptionType.badResponse,
+          error: 'Refresh response is missing an access token.',
+        );
+      }
+      await tokenStore.save(
+        accessToken: payload['access_token'] as String,
+        refreshToken: payload['refresh_token'] as String?,
+      );
+    }();
+
+    refreshInFlight = refresh;
+    return refresh.whenComplete(() => refreshInFlight = null);
+  }
+
   dio.interceptors.add(
     InterceptorsWrapper(
       onRequest: (options, handler) async {
@@ -28,7 +74,8 @@ final dioProvider = Provider<Dio>((ref) {
           options.headers['Authorization'] = 'Bearer $token';
         }
 
-        final tenantId = ref.read(activeTenantIdProvider) ??
+        final tenantId =
+            ref.read(activeTenantIdProvider) ??
             ref.read(preferencesStoreProvider).getString(StorageKeys.tenantId);
         final hasTenant = tenantId != null && tenantId.isNotEmpty;
         if (hasTenant) {
@@ -39,7 +86,10 @@ final dioProvider = Provider<Dio>((ref) {
         // tenant header; a business request sent without one would come back
         // unscoped. Auth endpoints run before a tenant exists, so they're exempt.
         final isAuthEndpoint = options.path.contains('/auth/');
-        if (token != null && token.isNotEmpty && !hasTenant && !isAuthEndpoint) {
+        if (token != null &&
+            token.isNotEmpty &&
+            !hasTenant &&
+            !isAuthEndpoint) {
           handler.reject(
             DioException(
               requestOptions: options,
@@ -52,16 +102,31 @@ final dioProvider = Provider<Dio>((ref) {
 
         handler.next(options);
       },
-      onError: (error, handler) {
-        // A 401 outside the auth endpoints means the token died mid-session.
-        // Signal it; the session controller ends the session and the router
-        // sends the user to login. A 401 ON an auth endpoint is a failed login
-        // and is handled inline by the caller.
+      onError: (error, handler) async {
+        // A business request with an expired access token is recoverable:
+        // rotate its refresh token and replay the original request once.
         final status = error.response?.statusCode;
         final isAuthEndpoint = error.requestOptions.path.contains('/auth/');
-        if (status == 401 && !isAuthEndpoint) {
-          final signal = ref.read(unauthorizedSignalProvider.notifier);
-          signal.state = signal.state + 1;
+        final hasRetried = error.requestOptions.extra['sessionRetried'] == true;
+        final skipRefresh =
+            error.requestOptions.extra['skipSessionRefresh'] == true;
+        if (status == 401 && !isAuthEndpoint && !hasRetried && !skipRefresh) {
+          try {
+            await refreshAccessToken();
+            error.requestOptions.extra['sessionRetried'] = true;
+            final response = await dio.fetch<Map<String, dynamic>>(
+              error.requestOptions,
+            );
+            handler.resolve(response);
+            return;
+          } on DioException catch (refreshError) {
+            if (refreshError.response?.statusCode == 401) {
+              final signal = ref.read(unauthorizedSignalProvider.notifier);
+              signal.state = signal.state + 1;
+            }
+            // A network/server error while refreshing is transient: leave the
+            // secure storage intact so a later request can recover.
+          }
         }
         handler.next(error);
       },

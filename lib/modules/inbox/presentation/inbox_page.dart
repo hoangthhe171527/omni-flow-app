@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -5,7 +7,10 @@ import 'package:go_router/go_router.dart';
 import '../../../core/domain/channel.dart';
 import '../../../design/components/components.dart';
 import '../../../design/tokens/tokens.dart';
+import '../../../security/session/session_controller.dart';
 import '../../../security/permissions/access_scope.dart';
+import '../../channels/channels_module.dart';
+import '../../channels/domain/channel_permissions.dart';
 import '../application/inbox_providers.dart';
 import '../domain/inbox_filter.dart';
 import '../inbox_module.dart';
@@ -20,21 +25,44 @@ class InboxPage extends ConsumerStatefulWidget {
   ConsumerState<InboxPage> createState() => _InboxPageState();
 }
 
-class _InboxPageState extends ConsumerState<InboxPage> {
+class _InboxPageState extends ConsumerState<InboxPage>
+    with WidgetsBindingObserver {
   final _scrollController = ScrollController();
   final Set<String> _selected = {};
+  Timer? _syncTimer;
 
   @override
   void initState() {
     super.initState();
     _scrollController.addListener(_onScroll);
+    WidgetsBinding.instance.addObserver(this);
+    _startRealtimeFallback();
   }
 
   @override
   void dispose() {
     _scrollController.removeListener(_onScroll);
     _scrollController.dispose();
+    WidgetsBinding.instance.removeObserver(this);
+    _syncTimer?.cancel();
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      ref.read(inboxListProvider.notifier).refresh();
+      _startRealtimeFallback();
+    } else {
+      _syncTimer?.cancel();
+      _syncTimer = null;
+    }
+  }
+
+  void _startRealtimeFallback() {
+    _syncTimer ??= Timer.periodic(const Duration(seconds: 8), (_) {
+      if (mounted) ref.read(inboxListProvider.notifier).refresh();
+    });
   }
 
   void _onScroll() {
@@ -55,6 +83,9 @@ class _InboxPageState extends ConsumerState<InboxPage> {
     final list = ref.watch(inboxListProvider);
     final scheme = Theme.of(context).colorScheme;
     final selecting = _selected.isNotEmpty;
+    final canConnectChannels = ref
+        .watch(accessProvider)
+        .can(ChannelPermissions.write);
 
     return Scaffold(
       // Header and list on ONE plane. The AppBar was painted with `background`
@@ -68,6 +99,15 @@ class _InboxPageState extends ConsumerState<InboxPage> {
         titleSpacing: OmniSpacing.lg,
         toolbarHeight: 56,
         actions: [
+          if (canConnectChannels)
+            IconButton(
+              tooltip: 'Kết nối kênh',
+              onPressed: () => context.pushNamed(ChannelsModule.list),
+              style: IconButton.styleFrom(
+                foregroundColor: scheme.onSurfaceVariant,
+              ),
+              icon: const Icon(Icons.hub_outlined),
+            ),
           IconButton(
             tooltip: 'Chọn nhiều',
             onPressed: access.canLabel

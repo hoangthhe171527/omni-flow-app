@@ -1,7 +1,7 @@
 name: omni_app
 description: "OmniCRM — omnichannel inbox and CRM for mobile."
 publish_to: 'none'
-version: 0.1.0+1
+version: 0.1.0+3
 
 environment:
   sdk: ^3.11.5
@@ -34,6 +34,13 @@ dependencies:
   # Media / external actions
   image_picker: ^1.0.7
   url_launcher: ^6.3.0
+  # Lưu ảnh QR vào thư viện để quét lại bằng Zalo trên chính máy đó.
+  gal: ^2.3.0
+  # Android system push: FCM wakes a background/killed app; local notifications
+  # render the same alert while the inbox is open in the foreground.
+  firebase_core: ^3.12.1
+  firebase_messaging: ^15.2.4
+  flutter_local_notifications: ^18.0.1
 
 dev_dependencies:
   flutter_test:

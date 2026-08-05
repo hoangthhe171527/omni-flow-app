@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
@@ -25,13 +27,17 @@ class ThreadPage extends ConsumerStatefulWidget {
   ConsumerState<ThreadPage> createState() => _ThreadPageState();
 }
 
-class _ThreadPageState extends ConsumerState<ThreadPage> {
+class _ThreadPageState extends ConsumerState<ThreadPage>
+    with WidgetsBindingObserver {
   final _scrollController = ScrollController();
+  Timer? _syncTimer;
 
   @override
   void initState() {
     super.initState();
     _scrollController.addListener(_onScroll);
+    WidgetsBinding.instance.addObserver(this);
+    _startRealtimeFallback();
     // Opening a thread is the act of reading it.
     Future.microtask(() async {
       try {
@@ -57,7 +63,32 @@ class _ThreadPageState extends ConsumerState<ThreadPage> {
   void dispose() {
     _scrollController.removeListener(_onScroll);
     _scrollController.dispose();
+    WidgetsBinding.instance.removeObserver(this);
+    _syncTimer?.cancel();
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _refreshThread();
+      _startRealtimeFallback();
+    } else {
+      _syncTimer?.cancel();
+      _syncTimer = null;
+    }
+  }
+
+  void _startRealtimeFallback() {
+    _syncTimer ??= Timer.periodic(const Duration(seconds: 5), (_) {
+      if (mounted) _refreshThread();
+    });
+  }
+
+  void _refreshThread() {
+    ref.invalidate(threadProvider(widget.conversationId));
+    ref.invalidate(conversationProvider(widget.conversationId));
+    ref.invalidate(inboxFacetsProvider);
   }
 
   void _onScroll() {
@@ -120,16 +151,28 @@ class _ThreadPageState extends ConsumerState<ThreadPage> {
             MessageComposer(
               canNote: access.canNote,
               suggestions: _suggestions(conversation.valueOrNull),
-              onAttach: _attach,
-              onCamera: () => _attach(source: ImageSource.camera),
-              onSend: (text, mode) async {
+              onPickImages: _pickImages,
+              onTakePhoto: _takePhoto,
+              onSend: (text, mode, images) async {
                 final controller = ref.read(
                   threadProvider(widget.conversationId).notifier,
                 );
                 if (mode == ComposeMode.note) {
                   await controller.addNote(text);
                 } else {
-                  await controller.send(text);
+                  try {
+                    final attachments = await Future.wait(
+                      images.map(
+                        (image) => ref
+                            .read(inboxApiProvider)
+                            .uploadMedia(image.path, filename: image.name),
+                      ),
+                    );
+                    await controller.send(text, attachments: attachments);
+                  } on AppException catch (error) {
+                    _toast(error.message);
+                    rethrow;
+                  }
                 }
                 _scrollToBottom();
               },
@@ -163,22 +206,11 @@ class _ThreadPageState extends ConsumerState<ThreadPage> {
     );
   }
 
-  Future<void> _attach({ImageSource source = ImageSource.gallery}) async {
-    final picked = await ImagePicker().pickImage(source: source);
-    if (picked == null) return;
+  Future<List<XFile>> _pickImages() =>
+      ImagePicker().pickMultiImage(imageQuality: 85);
 
-    try {
-      final attachment = await ref
-          .read(inboxApiProvider)
-          .uploadMedia(picked.path, filename: picked.name);
-      await ref
-          .read(threadProvider(widget.conversationId).notifier)
-          .send('', attachments: [attachment]);
-      _scrollToBottom();
-    } on AppException catch (error) {
-      _toast(error.message);
-    }
-  }
+  Future<XFile?> _takePhoto() =>
+      ImagePicker().pickImage(source: ImageSource.camera, imageQuality: 85);
 
   Future<void> _assign() async {
     final conversation = ref

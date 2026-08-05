@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
@@ -5,13 +7,48 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import '../core/config/app_config.dart';
 import '../core/theme/theme_mode_controller.dart';
 import '../design/theme/omni_theme.dart';
+import '../modules/inbox/inbox_module.dart';
+import '../modules/notifications/application/push_notifications.dart';
+import '../security/session/session_controller.dart';
+import '../security/session/session.dart';
 import 'router/app_router.dart';
 
-class OmniApp extends ConsumerWidget {
+class OmniApp extends ConsumerStatefulWidget {
   const OmniApp({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<OmniApp> createState() => _OmniAppState();
+}
+
+class _OmniAppState extends ConsumerState<OmniApp> {
+  late final ProviderSubscription<Session> _sessionListener;
+
+  @override
+  void initState() {
+    super.initState();
+    _sessionListener = ref.listenManual<Session>(sessionProvider, (_, session) {
+      final push = ref.read(pushNotificationsProvider);
+      if (session.isAuthenticated) {
+        unawaited(push.start());
+        _openPushIntent(ref.read(pushIntentProvider));
+      } else {
+        unawaited(push.stop());
+      }
+    }, fireImmediately: true);
+  }
+
+  @override
+  void dispose() {
+    _sessionListener.close();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    ref.listen<PushIntent?>(pushIntentProvider, (_, intent) {
+      _openPushIntent(intent);
+    });
+
     return MaterialApp.router(
       title: AppConfig.appName,
       theme: OmniTheme.light,
@@ -42,5 +79,17 @@ class OmniApp extends ConsumerWidget {
         );
       },
     );
+  }
+
+  void _openPushIntent(PushIntent? intent) {
+    if (intent == null || !ref.read(sessionProvider).isAuthenticated) return;
+    ref.read(pushIntentProvider.notifier).state = null;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      ref.read(routerProvider).pushNamed(
+        InboxModule.thread,
+        pathParameters: {'id': intent.conversationId},
+      );
+    });
   }
 }

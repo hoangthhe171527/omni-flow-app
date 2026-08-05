@@ -60,6 +60,10 @@ final inboxUnreadBadgeProvider = Provider<int>((ref) {
   return ref.watch(inboxFacetsProvider).valueOrNull?.unread ?? 0;
 });
 
+/// Bumped by a foreground FCM notification. Screens that are open immediately
+/// reload their inbox data instead of waiting for a pull-to-refresh gesture.
+final inboxRealtimeSignalProvider = StateProvider<int>((ref) => 0);
+
 final inboxLabelsProvider = FutureProvider.autoDispose<List<String>>((ref) {
   return ref.watch(inboxApiProvider).labels();
 });
@@ -84,6 +88,7 @@ class InboxListController
     extends AutoDisposeAsyncNotifier<ConversationListState> {
   @override
   Future<ConversationListState> build() async {
+    ref.watch(inboxRealtimeSignalProvider);
     final query = ref.watch(_inboxQueryProvider);
     final page = await ref.watch(inboxApiProvider).list(query: query);
     return ConversationListState(

@@ -1,5 +1,8 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:image_picker/image_picker.dart';
 
 import '../../../../design/tokens/tokens.dart';
 
@@ -20,20 +23,22 @@ class MessageComposer extends StatefulWidget {
   const MessageComposer({
     super.key,
     required this.onSend,
-    required this.onAttach,
-    this.onCamera,
+    required this.onPickImages,
+    this.onTakePhoto,
     this.suggestions = const [],
     this.canNote = true,
     this.enabled = true,
   });
 
-  final Future<void> Function(String text, ComposeMode mode) onSend;
+  final Future<void> Function(String text, ComposeMode mode, List<XFile> images)
+  onSend;
 
-  /// Pick an image from the gallery.
-  final VoidCallback onAttach;
+  /// Picks every image selected from the gallery. Keeping selection in the
+  /// composer lets a rep add a caption, remove a mistake, then send one batch.
+  final Future<List<XFile>> Function() onPickImages;
 
   /// Take a photo. Null hides the entry rather than offering a dead button.
-  final VoidCallback? onCamera;
+  final Future<XFile?> Function()? onTakePhoto;
 
   final List<String> suggestions;
   final bool canNote;
@@ -48,6 +53,7 @@ class _MessageComposerState extends State<MessageComposer> {
   final _focus = FocusNode();
   ComposeMode _mode = ComposeMode.reply;
   bool _sending = false;
+  final List<XFile> _pendingImages = [];
 
   @override
   void initState() {
@@ -68,12 +74,34 @@ class _MessageComposerState extends State<MessageComposer> {
 
   Future<void> _send() async {
     final text = _controller.text.trim();
-    if (text.isEmpty || _sending) return;
+    if ((text.isEmpty && _pendingImages.isEmpty) || _sending) return;
 
     setState(() => _sending = true);
-    _controller.clear();
-    await widget.onSend(text, _mode);
-    if (mounted) setState(() => _sending = false);
+    try {
+      await widget.onSend(text, _mode, _pendingImages);
+      if (!mounted) return;
+      setState(() {
+        _controller.clear();
+        _pendingImages.clear();
+      });
+    } catch (_) {
+      // The upload error is shown by the thread. Keep the caption and tray so
+      // the rep can retry instead of selecting every image again.
+    } finally {
+      if (mounted) setState(() => _sending = false);
+    }
+  }
+
+  Future<void> _pickImages() async {
+    final images = await widget.onPickImages();
+    if (!mounted || images.isEmpty) return;
+    setState(() => _pendingImages.addAll(images));
+  }
+
+  Future<void> _takePhoto() async {
+    final image = await widget.onTakePhoto?.call();
+    if (!mounted || image == null) return;
+    setState(() => _pendingImages.add(image));
   }
 
   /// Insert at the caret rather than appending: an emoji picked mid-sentence
@@ -108,7 +136,7 @@ class _MessageComposerState extends State<MessageComposer> {
       builder: (_) => _MoreSheet(
         mode: _mode,
         canNote: widget.canNote,
-        canCamera: widget.onCamera != null,
+        canCamera: widget.onTakePhoto != null,
         suggestions: widget.suggestions,
       ),
     );
@@ -116,10 +144,18 @@ class _MessageComposerState extends State<MessageComposer> {
 
     switch (action) {
       case _ModeAction(:final mode):
+        if (mode == ComposeMode.note && _pendingImages.isNotEmpty) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Gửi hoặc bỏ ảnh trước khi tạo ghi chú nội bộ.'),
+            ),
+          );
+          return;
+        }
         setState(() => _mode = mode);
         _focus.requestFocus();
       case _CameraAction():
-        widget.onCamera?.call();
+        _takePhoto();
       case _SuggestionAction(:final text):
         _insert(text);
     }
@@ -129,7 +165,8 @@ class _MessageComposerState extends State<MessageComposer> {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final isNote = _mode == ComposeMode.note;
-    final hasText = _controller.text.trim().isNotEmpty;
+    final canSend =
+        _controller.text.trim().isNotEmpty || _pendingImages.isNotEmpty;
     final tint = isNote ? OmniColors.warning : OmniColors.chatPrimary;
 
     return Container(
@@ -184,6 +221,12 @@ class _MessageComposerState extends State<MessageComposer> {
                   ],
                 ),
               ),
+            if (_pendingImages.isNotEmpty)
+              _ImageTray(
+                images: _pendingImages,
+                onRemove: (image) =>
+                    setState(() => _pendingImages.remove(image)),
+              ),
             Padding(
               padding: const EdgeInsets.fromLTRB(4, 6, 4, 6),
               child: Row(
@@ -228,6 +271,12 @@ class _MessageComposerState extends State<MessageComposer> {
                       ),
                     ),
                   ),
+                  if (!isNote)
+                    _ComposerIcon(
+                      icon: Icons.image_outlined,
+                      tooltip: 'Thêm ảnh',
+                      onTap: widget.enabled && !_sending ? _pickImages : null,
+                    ),
                   _ComposerIcon(
                     icon: Icons.more_horiz_rounded,
                     tooltip: 'Thêm',
@@ -236,17 +285,11 @@ class _MessageComposerState extends State<MessageComposer> {
                   // Zalo swaps the trailing icon for send the moment there is
                   // something to send, so the primary action is never a second
                   // button competing for the same corner.
-                  if (hasText || _sending)
+                  if (canSend || _sending)
                     _SendButton(
                       sending: _sending,
                       tint: tint,
                       onTap: widget.enabled ? _send : null,
-                    )
-                  else
-                    _ComposerIcon(
-                      icon: Icons.image_outlined,
-                      tooltip: 'Gửi ảnh',
-                      onTap: widget.enabled && !isNote ? widget.onAttach : null,
                     ),
                 ],
               ),
@@ -279,6 +322,83 @@ class _ComposerIcon extends StatelessWidget {
       // 44 keeps every icon past the touch minimum even though it reads small.
       constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
       icon: Icon(icon, size: 24, color: scheme.onSurfaceVariant),
+    );
+  }
+}
+
+class _ImageTray extends StatelessWidget {
+  const _ImageTray({required this.images, required this.onRemove});
+
+  final List<XFile> images;
+  final ValueChanged<XFile> onRemove;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+
+    return Container(
+      height: 86,
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(10, 8, 10, 6),
+      decoration: BoxDecoration(
+        color: scheme.surfaceContainerLowest,
+        border: Border(
+          bottom: BorderSide(color: scheme.outline.withValues(alpha: 0.42)),
+        ),
+      ),
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        itemCount: images.length,
+        separatorBuilder: (_, _) => const SizedBox(width: 8),
+        itemBuilder: (context, index) {
+          final image = images[index];
+          return Stack(
+            clipBehavior: Clip.none,
+            children: [
+              ClipRRect(
+                borderRadius: OmniRadius.smAll,
+                child: Image.file(
+                  File(image.path),
+                  width: 68,
+                  height: 68,
+                  fit: BoxFit.cover,
+                  errorBuilder: (_, _, _) => Container(
+                    width: 68,
+                    height: 68,
+                    color: scheme.surfaceContainerHighest,
+                    alignment: Alignment.center,
+                    child: Icon(
+                      Icons.broken_image_outlined,
+                      color: scheme.onSurfaceVariant,
+                    ),
+                  ),
+                ),
+              ),
+              Positioned(
+                top: -6,
+                right: -6,
+                child: Material(
+                  color: scheme.inverseSurface,
+                  shape: const CircleBorder(),
+                  child: InkWell(
+                    onTap: () => onRemove(image),
+                    customBorder: const CircleBorder(),
+                    child: SizedBox(
+                      width: 24,
+                      height: 24,
+                      child: Icon(
+                        Icons.close_rounded,
+                        size: 15,
+                        color: scheme.onInverseSurface,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          );
+        },
+      ),
     );
   }
 }

@@ -32,6 +32,8 @@ abstract interface class AuthGateway {
   /// Exchanges the current token for one scoped to [tenantId].
   Future<AuthTokens> switchTenant(String tenantId);
 
+  Future<AuthTokens> refresh(String refreshToken);
+
   /// Loads `/auth/context` — user, tenant, membership, roles, permissions.
   Future<Session> loadContext();
 

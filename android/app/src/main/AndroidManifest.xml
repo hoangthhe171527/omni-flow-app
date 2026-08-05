@@ -6,11 +6,18 @@
          as DioExceptionType.connectionError, which the app reports as
          "Không có kết nối mạng." Login was simply the first request to hit it. -->
     <uses-permission android:name="android.permission.INTERNET"/>
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <!-- Required on Android 9 and older; Android 10+ uses MediaStore. -->
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"
+        android:maxSdkVersion="28" />
 
     <application
         android:label="OmniCRM"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_channel_id"
+            android:value="inbox_messages_v2" />
         <activity
             android:name=".MainActivity"
             android:exported="true"
