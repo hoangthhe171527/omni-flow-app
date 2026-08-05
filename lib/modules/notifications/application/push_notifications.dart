@@ -11,11 +11,15 @@ import '../../../core/error/app_exception.dart';
 import '../../inbox/application/inbox_providers.dart';
 import '../data/push_api.dart';
 
+const _androidChannelId = 'inbox_messages_v2';
+
 const _androidChannel = AndroidNotificationChannel(
-  'inbox_messages',
+  _androidChannelId,
   'Tin nhắn khách hàng',
   description: 'Thông báo khi khách hàng gửi tin nhắn mới.',
   importance: Importance.max,
+  playSound: true,
+  enableVibration: true,
 );
 
 /// A deliberately small, routing-only payload. Notification text is for the
@@ -143,11 +147,13 @@ class PushNotifications {
       notification?.body ?? 'Khách hàng vừa gửi tin nhắn.',
       const NotificationDetails(
         android: AndroidNotificationDetails(
-          'inbox_messages',
+          _androidChannelId,
           'Tin nhắn khách hàng',
           channelDescription: 'Thông báo khi khách hàng gửi tin nhắn mới.',
           importance: Importance.max,
-          priority: Priority.high,
+          priority: Priority.max,
+          playSound: true,
+          enableVibration: true,
         ),
       ),
       payload: jsonEncode(message.data),
