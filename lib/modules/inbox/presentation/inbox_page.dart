@@ -7,7 +7,10 @@ import 'package:go_router/go_router.dart';
 import '../../../core/domain/channel.dart';
 import '../../../design/components/components.dart';
 import '../../../design/tokens/tokens.dart';
+import '../../../security/session/session_controller.dart';
 import '../../../security/permissions/access_scope.dart';
+import '../../channels/channels_module.dart';
+import '../../channels/domain/channel_permissions.dart';
 import '../application/inbox_providers.dart';
 import '../domain/inbox_filter.dart';
 import '../inbox_module.dart';
@@ -80,6 +83,9 @@ class _InboxPageState extends ConsumerState<InboxPage>
     final list = ref.watch(inboxListProvider);
     final scheme = Theme.of(context).colorScheme;
     final selecting = _selected.isNotEmpty;
+    final canConnectChannels = ref
+        .watch(accessProvider)
+        .can(ChannelPermissions.write);
 
     return Scaffold(
       // Header and list on ONE plane. The AppBar was painted with `background`
@@ -93,6 +99,15 @@ class _InboxPageState extends ConsumerState<InboxPage>
         titleSpacing: OmniSpacing.lg,
         toolbarHeight: 56,
         actions: [
+          if (canConnectChannels)
+            IconButton(
+              tooltip: 'Kết nối kênh',
+              onPressed: () => context.pushNamed(ChannelsModule.list),
+              style: IconButton.styleFrom(
+                foregroundColor: scheme.onSurfaceVariant,
+              ),
+              icon: const Icon(Icons.hub_outlined),
+            ),
           IconButton(
             tooltip: 'Chọn nhiều',
             onPressed: access.canLabel

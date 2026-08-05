@@ -30,35 +30,34 @@ class ChannelsModule extends OmniModule {
 
   @override
   List<ModuleRoute> routes() => [
-        ModuleRoute(
-          path: '/channels',
-          name: list,
-          rootNavigator: true,
-          access: const AccessRequirement.any(ChannelPermissions.anyRead),
-          builder: (_, _) => const ChannelsPage(),
-        ),
-        ModuleRoute(
-          path: '/channels/pair/:channelId',
-          name: pair,
-          rootNavigator: true,
-          access: const AccessRequirement.any([ChannelPermissions.write]),
-          builder: (_, state) => PairPage(
-            channel: Channel.parse(state.pathParameters['channelId']),
-          ),
-        ),
-      ];
+    ModuleRoute(
+      path: '/channels',
+      name: list,
+      rootNavigator: true,
+      access: const AccessRequirement.any(ChannelPermissions.anyRead),
+      builder: (_, _) => const ChannelsPage(),
+    ),
+    ModuleRoute(
+      path: '/channels/pair/:channelId',
+      name: pair,
+      rootNavigator: true,
+      access: const AccessRequirement.any([ChannelPermissions.write]),
+      builder: (_, state) =>
+          PairPage(channel: Channel.parse(state.pathParameters['channelId'])),
+    ),
+  ];
 
   @override
   List<ModuleMenuEntry> menuEntries() => const [
-        ModuleMenuEntry(
-          moduleId: 'channels',
-          label: 'Kết nối kênh',
-          subtitle: 'Nối Zalo, Facebook, TikTok vào hộp thư',
-          icon: Icons.hub_outlined,
-          routeName: list,
-          group: 'Quản trị',
-          order: 20,
-          access: AccessRequirement.any(ChannelPermissions.anyRead),
-        ),
-      ];
+    ModuleMenuEntry(
+      moduleId: 'channels',
+      label: 'Kết nối kênh',
+      subtitle: 'Nối Zalo, Facebook, TikTok vào hộp thư',
+      icon: Icons.hub_outlined,
+      routeName: list,
+      group: 'Hộp thư',
+      order: 5,
+      access: AccessRequirement.any(ChannelPermissions.anyRead),
+    ),
+  ];
 }

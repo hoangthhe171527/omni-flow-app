@@ -54,20 +54,21 @@ void main() {
     expect(_menuLabels(container), isNot(contains('Kết nối kênh')));
   });
 
-  test('mục này nằm trong nhóm Quản trị', () {
+  test('mục này nằm trong nhóm Hộp thư để dễ tìm từ mobile', () {
     final container = _containerFor({ChannelPermissions.read});
     addTearDown(container.dispose);
 
-    final admin = container.read(visibleMenuEntriesProvider)['Quản trị'] ?? [];
-    expect(admin.map((e) => e.label), contains('Kết nối kênh'));
+    final inbox = container.read(visibleMenuEntriesProvider)['Hộp thư'] ?? [];
+    expect(inbox.map((e) => e.label), contains('Kết nối kênh'));
   });
 
   test('kênh không chiếm tab dưới', () {
     final container = _containerFor(ChannelPermissions.all.toSet());
     addTearDown(container.dispose);
 
-    final labels =
-        container.read(visibleDestinationsProvider).map((d) => d.label);
+    final labels = container
+        .read(visibleDestinationsProvider)
+        .map((d) => d.label);
     expect(labels, isNot(contains('Kết nối kênh')));
   });
 }
