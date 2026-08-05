@@ -10,6 +10,7 @@ import 'core/module/omni_module.dart';
 import 'core/storage/preferences_store.dart';
 import 'modules/auth/auth_module.dart';
 import 'modules/auth/data/auth_api.dart';
+import 'modules/channels/channels_module.dart';
 import 'modules/customers/customers_module.dart';
 import 'modules/inbox/inbox_module.dart';
 import 'modules/opportunities/opportunities_module.dart';
@@ -28,6 +29,7 @@ const List<OmniModule> appModules = [
   CustomersModule(),
   OpportunitiesModule(),
   TeamModule(),
+  ChannelsModule(),
   SettingsModule(),
 ];
 
