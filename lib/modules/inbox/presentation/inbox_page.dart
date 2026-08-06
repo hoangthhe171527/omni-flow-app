@@ -12,6 +12,7 @@ import '../../../security/permissions/access_scope.dart';
 import '../../channels/channels_module.dart';
 import '../../channels/domain/channel_permissions.dart';
 import '../application/inbox_providers.dart';
+import '../data/inbox_api.dart';
 import '../domain/inbox_filter.dart';
 import '../inbox_module.dart';
 import 'widgets/conversation_row.dart';
@@ -30,6 +31,8 @@ class _InboxPageState extends ConsumerState<InboxPage>
   final _scrollController = ScrollController();
   final Set<String> _selected = {};
   Timer? _syncTimer;
+  String? _syncCursor;
+  bool _syncing = false;
 
   @override
   void initState() {
@@ -60,9 +63,28 @@ class _InboxPageState extends ConsumerState<InboxPage>
   }
 
   void _startRealtimeFallback() {
-    _syncTimer ??= Timer.periodic(const Duration(seconds: 8), (_) {
-      if (mounted) ref.read(inboxListProvider.notifier).refresh();
+    _syncTimer ??= Timer.periodic(const Duration(seconds: 5), (_) {
+      _catchUpChanges();
     });
+  }
+
+  Future<void> _catchUpChanges() async {
+    if (!mounted || _syncing) return;
+    _syncing = true;
+    try {
+      final changes = await ref.read(inboxApiProvider).changes(_syncCursor);
+      if (!mounted) return;
+      _syncCursor = changes.cursor.isEmpty ? _syncCursor : changes.cursor;
+      if (changes.count > 0) {
+        await ref.read(inboxListProvider.notifier).refresh();
+        ref.invalidate(inboxFacetsProvider);
+      }
+    } catch (_) {
+      // The next interval retries; a temporary network failure must not blank
+      // the cached inbox or make the app look disconnected.
+    } finally {
+      _syncing = false;
+    }
   }
 
   void _onScroll() {

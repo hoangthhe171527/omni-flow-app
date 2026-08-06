@@ -74,6 +74,21 @@ class MessagePage {
   final CursorPage cursor;
 }
 
+/// A compact server-side catch-up response. It contains no message body because
+/// the visible providers remain the source of rendering; its only job is to tell
+/// a sleeping/offline client exactly when it must refresh.
+class InboxChanges {
+  const InboxChanges({required this.cursor, required this.count});
+
+  final String cursor;
+  final int count;
+
+  factory InboxChanges.fromJson(
+    Map<String, dynamic> json,
+    List<dynamic> data,
+  ) => InboxChanges(cursor: json.strOr('cursor', ''), count: data.length);
+}
+
 class InboxApi {
   InboxApi(this._client);
 
@@ -99,6 +114,17 @@ class InboxApi {
   Future<InboxFacets> facets(Map<String, dynamic> query) async {
     final response = await _client.get('$_base/facets', query: query);
     return InboxFacets.fromJson(response.object);
+  }
+
+  /// Fetches only changes since the last cursor. On first use the API returns a
+  /// cursor and no historical payload, because the normal list fetch is already
+  /// the authoritative initial snapshot.
+  Future<InboxChanges> changes(String? after) async {
+    final response = await _client.get(
+      '/inbox/changes',
+      query: {'after': after},
+    );
+    return InboxChanges.fromJson(response.object, response.list);
   }
 
   Future<List<String>> labels() async {
