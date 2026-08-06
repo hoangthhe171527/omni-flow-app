@@ -101,6 +101,14 @@ class _InboxPageState extends ConsumerState<InboxPage>
 
   @override
   Widget build(BuildContext context) {
+    // Foreground FCM used to show an OS banner but leave the visible inbox
+    // stale until the user refreshed. Make the push signal update the list and
+    // its unread facets immediately, just like a native chat app.
+    ref.listen<int>(inboxRealtimeSignalProvider, (previous, next) {
+      if (previous == next || !mounted) return;
+      unawaited(ref.read(inboxListProvider.notifier).refresh());
+      ref.invalidate(inboxFacetsProvider);
+    });
     final access = ref.watch(inboxAccessProvider);
     final list = ref.watch(inboxListProvider);
     final scheme = Theme.of(context).colorScheme;
