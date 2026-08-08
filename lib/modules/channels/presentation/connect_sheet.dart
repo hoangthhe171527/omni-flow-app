@@ -35,7 +35,7 @@ Future<Channel?> showConnectSheet(BuildContext context) {
             const SizedBox(height: OmniSpacing.lg),
             Text('Tài khoản cá nhân', style: OmniType.bodyStrong),
             Text(
-              'Tài khoản riêng của nhân viên. Cần máy tính đang chạy omni-agent để quét mã đăng nhập.',
+              'Tài khoản riêng của nhân viên. Facebook đăng nhập ngay trên điện thoại; agent chỉ cần chạy nền để đồng bộ tin.',
               style: OmniType.micro.copyWith(
                 color: Theme.of(sheetContext).colorScheme.onSurfaceVariant,
               ),
@@ -63,7 +63,10 @@ class _ChannelOption extends StatelessWidget {
       leading: Container(
         width: 40,
         height: 40,
-        decoration: BoxDecoration(color: meta.tint, borderRadius: OmniRadius.smAll),
+        decoration: BoxDecoration(
+          color: meta.tint,
+          borderRadius: OmniRadius.smAll,
+        ),
         child: Icon(meta.icon, size: 20, color: meta.color),
       ),
       title: Text(meta.name),

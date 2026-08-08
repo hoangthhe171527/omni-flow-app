@@ -29,7 +29,9 @@ class ChannelsApi {
   /// URL trang đồng ý của nền tảng. Mở bằng trình duyệt ngoài — Facebook và
   /// Google chặn webview nhúng cho đăng nhập.
   Future<String> oauthUrl(Channel channel) async {
-    final response = await _client.get('/channels/${channel.slug}/oauth/redirect');
+    final response = await _client.get(
+      '/channels/${channel.slug}/oauth/redirect',
+    );
     return response.object.strOr('authorization_url', '');
   }
 
@@ -44,10 +46,25 @@ class ChannelsApi {
   }) async {
     final response = await _client.post(
       '/channels/pair/start',
-      body: {'channel_id': channel.slug, 'force_relogin': forceRelogin},
+      body: {
+        'channel_id': channel.slug,
+        'force_relogin': forceRelogin,
+        if (channel == Channel.facebookPersonal) 'login_mode': 'mobile',
+      },
     );
     return PairingStart.fromJson(response.object);
   }
+
+  /// Transfers the short-lived Facebook browser session from this phone to the
+  /// registered background agent. The API encrypts it at rest and removes it as
+  /// soon as pairing completes.
+  Future<void> submitFacebookSession(
+    String connectionId,
+    List<Map<String, dynamic>> appState,
+  ) => _client.post(
+    '/channels/pair/$connectionId/facebook-session',
+    body: {'app_state': appState},
+  );
 
   Future<PairingStatus> pairStatus(String connectionId) async {
     final response = await _client.get('/channels/pair/$connectionId/status');
@@ -55,5 +72,6 @@ class ChannelsApi {
   }
 }
 
-final channelsApiProvider =
-    Provider<ChannelsApi>((ref) => ChannelsApi(ref.watch(apiClientProvider)));
+final channelsApiProvider = Provider<ChannelsApi>(
+  (ref) => ChannelsApi(ref.watch(apiClientProvider)),
+);

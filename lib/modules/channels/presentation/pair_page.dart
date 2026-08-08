@@ -9,6 +9,7 @@ import '../../../design/tokens/tokens.dart';
 import '../application/channels_providers.dart';
 import '../application/pairing_controller.dart';
 import '../domain/pairing.dart';
+import 'facebook_login_page.dart';
 import 'widgets/qr_saver.dart';
 
 class PairPage extends ConsumerStatefulWidget {
@@ -20,13 +21,14 @@ class PairPage extends ConsumerStatefulWidget {
   ConsumerState<PairPage> createState() => _PairPageState();
 }
 
-class _PairPageState extends ConsumerState<PairPage> with WidgetsBindingObserver {
+class _PairPageState extends ConsumerState<PairPage>
+    with WidgetsBindingObserver {
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      ref.read(pairingControllerProvider(widget.channel).notifier).start();
+      _startPairing();
     });
   }
 
@@ -38,7 +40,9 @@ class _PairPageState extends ConsumerState<PairPage> with WidgetsBindingObserver
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState appState) {
-    final controller = ref.read(pairingControllerProvider(widget.channel).notifier);
+    final controller = ref.read(
+      pairingControllerProvider(widget.channel).notifier,
+    );
     switch (appState) {
       case AppLifecycleState.resumed:
         controller.resume();
@@ -53,7 +57,9 @@ class _PairPageState extends ConsumerState<PairPage> with WidgetsBindingObserver
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(pairingControllerProvider(widget.channel));
-    final controller = ref.read(pairingControllerProvider(widget.channel).notifier);
+    final controller = ref.read(
+      pairingControllerProvider(widget.channel).notifier,
+    );
     final meta = widget.channel.meta;
     final navigator = Navigator.of(context);
 
@@ -80,7 +86,7 @@ class _PairPageState extends ConsumerState<PairPage> with WidgetsBindingObserver
               const SizedBox(height: OmniSpacing.xl),
               if (_canSwitchAccount(state.snapshot.view))
                 TextButton(
-                  onPressed: () => controller.start(forceRelogin: true),
+                  onPressed: () => _startPairing(forceRelogin: true),
                   child: const Text('Đăng nhập tài khoản khác'),
                 ),
             ],
@@ -95,90 +101,170 @@ class _PairPageState extends ConsumerState<PairPage> with WidgetsBindingObserver
     _ => false,
   };
 
-  Widget _body(BuildContext context, PairingState state, PairingController controller) {
+  Widget _body(
+    BuildContext context,
+    PairingState state,
+    PairingController controller,
+  ) {
     final scheme = Theme.of(context).colorScheme;
     switch (state.snapshot.view) {
       case PairingView.preparing:
       case PairingView.waiting:
-        return Column(children: [
-          const SizedBox(height: OmniSpacing.xl),
-          const CircularProgressIndicator(),
-          const SizedBox(height: OmniSpacing.lg),
-          Text(_waitingMessage(state.snapshot.stage), style: OmniType.body),
-          if (state.showAgentHint) ...[
+        return Column(
+          children: [
+            const SizedBox(height: OmniSpacing.xl),
+            const CircularProgressIndicator(),
+            const SizedBox(height: OmniSpacing.lg),
+            Text(_waitingMessage(state.snapshot.stage), style: OmniType.body),
+            if (widget.channel == Channel.facebookPersonal &&
+                state.connectionId != null) ...[
+              const SizedBox(height: OmniSpacing.lg),
+              FilledButton.icon(
+                onPressed: () => _openFacebookLogin(state.connectionId!),
+                icon: const Icon(Icons.login_rounded),
+                label: const Text('Mở đăng nhập Facebook'),
+              ),
+            ],
+            if (state.showAgentHint) ...[
+              const SizedBox(height: OmniSpacing.md),
+              Text(
+                'Hình như chưa có máy tính nào đang chạy omni-agent. Mở agent trên máy trực 24/7 rồi thử lại.',
+                textAlign: TextAlign.center,
+                style: OmniType.micro.copyWith(color: OmniColors.warning),
+              ),
+            ],
+          ],
+        );
+      case PairingView.qr:
+        return Column(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(OmniSpacing.md),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: OmniRadius.mdAll,
+                border: Border.all(color: scheme.outlineVariant),
+              ),
+              child: Image.memory(
+                _decodeQr(state.snapshot.qr!),
+                width: 280,
+                height: 280,
+                gaplessPlayback: true,
+              ),
+            ),
+            const SizedBox(height: OmniSpacing.lg),
+            FilledButton.icon(
+              onPressed: () => _saveQr(state.snapshot.qr!),
+              icon: const Icon(Icons.download_rounded),
+              label: const Text('Lưu ảnh QR'),
+            ),
             const SizedBox(height: OmniSpacing.md),
             Text(
-              'Hình như chưa có máy tính nào đang chạy omni-agent. Mở agent trên máy trực 24/7 rồi thử lại.',
+              'Lưu ảnh → mở ${widget.channel.meta.short} → Quét mã QR → chọn ảnh vừa lưu trong thư viện.',
+              textAlign: TextAlign.center,
+              style: OmniType.micro.copyWith(color: scheme.onSurfaceVariant),
+            ),
+            const SizedBox(height: OmniSpacing.sm),
+            Text(
+              'Mã đổi sau khoảng 100 giây — lưu xong quét luôn.',
               textAlign: TextAlign.center,
               style: OmniType.micro.copyWith(color: OmniColors.warning),
             ),
           ],
-        ]);
-      case PairingView.qr:
-        return Column(children: [
-          Container(
-            padding: const EdgeInsets.all(OmniSpacing.md),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: OmniRadius.mdAll,
-              border: Border.all(color: scheme.outlineVariant),
-            ),
-            child: Image.memory(_decodeQr(state.snapshot.qr!), width: 280, height: 280, gaplessPlayback: true),
-          ),
-          const SizedBox(height: OmniSpacing.lg),
-          FilledButton.icon(
-            onPressed: () => _saveQr(state.snapshot.qr!),
-            icon: const Icon(Icons.download_rounded),
-            label: const Text('Lưu ảnh QR'),
-          ),
-          const SizedBox(height: OmniSpacing.md),
-          Text(
-            'Lưu ảnh → mở ${widget.channel.meta.short} → Quét mã QR → chọn ảnh vừa lưu trong thư viện.',
-            textAlign: TextAlign.center,
-            style: OmniType.micro.copyWith(color: scheme.onSurfaceVariant),
-          ),
-          const SizedBox(height: OmniSpacing.sm),
-          Text(
-            'Mã đổi sau khoảng 100 giây — lưu xong quét luôn.',
-            textAlign: TextAlign.center,
-            style: OmniType.micro.copyWith(color: OmniColors.warning),
-          ),
-        ]);
+        );
       case PairingView.scanned:
-        return Column(children: [
-          const SizedBox(height: OmniSpacing.xl),
-          const CircularProgressIndicator(),
-          const SizedBox(height: OmniSpacing.lg),
-          Text('Đã quét. Mở app và bấm Đồng ý.', style: OmniType.bodyStrong),
-        ]);
+        return Column(
+          children: [
+            const SizedBox(height: OmniSpacing.xl),
+            const CircularProgressIndicator(),
+            const SizedBox(height: OmniSpacing.lg),
+            Text('Đã quét. Mở app và bấm Đồng ý.', style: OmniType.bodyStrong),
+          ],
+        );
       case PairingView.connected:
-        return Column(children: [
-          const SizedBox(height: OmniSpacing.xl),
-          const Icon(Icons.check_circle_rounded, size: 48, color: OmniColors.success),
-          const SizedBox(height: OmniSpacing.md),
-          Text('Đã kết nối!', style: OmniType.bodyStrong),
-        ]);
+        return Column(
+          children: [
+            const SizedBox(height: OmniSpacing.xl),
+            const Icon(
+              Icons.check_circle_rounded,
+              size: 48,
+              color: OmniColors.success,
+            ),
+            const SizedBox(height: OmniSpacing.md),
+            Text('Đã kết nối!', style: OmniType.bodyStrong),
+          ],
+        );
       case PairingView.expired:
         return _problem(context, 'Mã ghép nối đã hết hạn.', controller);
       case PairingView.failed:
-        return _problem(context, state.snapshot.note ?? state.errorMessage ?? 'Không kết nối được.', controller);
+        return _problem(
+          context,
+          state.snapshot.note ?? state.errorMessage ?? 'Không kết nối được.',
+          controller,
+        );
     }
   }
 
-  Widget _problem(BuildContext context, String message, PairingController controller) => Column(children: [
-    const SizedBox(height: OmniSpacing.xl),
-    const Icon(Icons.error_outline_rounded, size: 40, color: OmniColors.destructive),
-    const SizedBox(height: OmniSpacing.md),
-    Text(message, textAlign: TextAlign.center, style: OmniType.body),
-    const SizedBox(height: OmniSpacing.lg),
-    FilledButton(onPressed: () => controller.start(), child: const Text('Thử lại')),
-  ]);
+  Widget _problem(
+    BuildContext context,
+    String message,
+    PairingController controller,
+  ) => Column(
+    children: [
+      const SizedBox(height: OmniSpacing.xl),
+      const Icon(
+        Icons.error_outline_rounded,
+        size: 40,
+        color: OmniColors.destructive,
+      ),
+      const SizedBox(height: OmniSpacing.md),
+      Text(message, textAlign: TextAlign.center, style: OmniType.body),
+      const SizedBox(height: OmniSpacing.lg),
+      FilledButton(onPressed: _startPairing, child: const Text('Thử lại')),
+    ],
+  );
 
   String _waitingMessage(String? stage) => switch (stage) {
-    'logging_in' => 'Đang đăng nhập trên máy chạy agent…',
+    'logging_in' =>
+      widget.channel == Channel.facebookPersonal
+          ? 'Đang kiểm tra phiên đăng nhập Facebook…'
+          : 'Đang đăng nhập trên máy chạy agent…',
+    'session_ready' => 'Đã đăng nhập. Agent đang kết nối Facebook…',
     'tunnel_pending' => 'Đang mở đường kết nối ra ngoài…',
-    _ => 'Đang chuẩn bị mã QR…',
+    _ =>
+      widget.channel == Channel.facebookPersonal
+          ? 'Đăng nhập Facebook ngay trên điện thoại để kết nối.'
+          : 'Đang chuẩn bị mã QR…',
   };
+
+  Future<void> _startPairing({bool forceRelogin = false}) async {
+    final started = await ref
+        .read(pairingControllerProvider(widget.channel).notifier)
+        .start(forceRelogin: forceRelogin);
+    if (!mounted ||
+        started == null ||
+        widget.channel != Channel.facebookPersonal) {
+      return;
+    }
+    await _openFacebookLogin(started.connectionId, freshSession: forceRelogin);
+  }
+
+  Future<void> _openFacebookLogin(
+    String connectionId, {
+    bool freshSession = false,
+  }) async {
+    await Navigator.of(context).push<bool>(
+      MaterialPageRoute(
+        fullscreenDialog: true,
+        builder: (_) => FacebookLoginPage(
+          connectionId: connectionId,
+          freshSession: freshSession,
+        ),
+      ),
+    );
+    if (!mounted) return;
+    ref.read(pairingControllerProvider(widget.channel).notifier).resume();
+  }
 
   Uint8List _decodeQr(String dataUrl) {
     final payload = dataUrl.contains(',') ? dataUrl.split(',').last : dataUrl;
@@ -189,13 +275,19 @@ class _PairPageState extends ConsumerState<PairPage> with WidgetsBindingObserver
     try {
       await saveQrToGallery(dataUrl);
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-        content: Text('Đã lưu vào thư viện. Quét ngay — mã đổi sau khoảng 100 giây.'),
-        duration: Duration(seconds: 6),
-      ));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Đã lưu vào thư viện. Quét ngay — mã đổi sau khoảng 100 giây.',
+          ),
+          duration: Duration(seconds: 6),
+        ),
+      );
     } catch (error) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$error')));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('$error')));
     }
   }
 }

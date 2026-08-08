@@ -34,7 +34,8 @@ class PairingState {
 
 /// Vòng đời một phiên ghép nối QR. Poll dừng khi app xuống nền và được gọi lại
 /// ngay khi app trở lại, vì người dùng thường rời app để mở Zalo quét mã.
-class PairingController extends AutoDisposeFamilyNotifier<PairingState, Channel> {
+class PairingController
+    extends AutoDisposeFamilyNotifier<PairingState, Channel> {
   Timer? _timer;
   int _ticks = 0;
   bool _sawQr = false;
@@ -42,29 +43,37 @@ class PairingController extends AutoDisposeFamilyNotifier<PairingState, Channel>
   @override
   PairingState build(Channel arg) {
     ref.onDispose(_stop);
-    return const PairingState(snapshot: PairingSnapshot(view: PairingView.preparing));
+    return const PairingState(
+      snapshot: PairingSnapshot(view: PairingView.preparing),
+    );
   }
 
-  Future<void> start({bool forceRelogin = false}) async {
+  Future<PairingStart?> start({bool forceRelogin = false}) async {
     _stop();
     _ticks = 0;
     _sawQr = false;
-    state = const PairingState(snapshot: PairingSnapshot(view: PairingView.preparing));
+    state = const PairingState(
+      snapshot: PairingSnapshot(view: PairingView.preparing),
+    );
     try {
-      final started = await ref.read(channelsApiProvider).pairStart(
-        arg,
-        forceRelogin: forceRelogin,
-      );
+      final started = await ref
+          .read(channelsApiProvider)
+          .pairStart(arg, forceRelogin: forceRelogin);
       state = PairingState(
-        snapshot: const PairingSnapshot(view: PairingView.waiting, stage: 'queued'),
+        snapshot: const PairingSnapshot(
+          view: PairingView.waiting,
+          stage: 'queued',
+        ),
         connectionId: started.connectionId,
       );
       _startPolling();
+      return started;
     } catch (error) {
       state = PairingState(
         snapshot: const PairingSnapshot(view: PairingView.failed),
         errorMessage: '$error',
       );
+      return null;
     }
   }
 

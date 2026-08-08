@@ -17,10 +17,10 @@ class PairingStart {
   });
 
   factory PairingStart.fromJson(Map<String, dynamic> json) => PairingStart(
-        connectionId: json.strOr('connection_id', ''),
-        pairingCode: json.strOr('pairing_code', ''),
-        expiresAt: json.strOr('expires_at', ''),
-      );
+    connectionId: json.strOr('connection_id', ''),
+    pairingCode: json.strOr('pairing_code', ''),
+    expiresAt: json.strOr('expires_at', ''),
+  );
 
   final String connectionId;
   final String pairingCode;
@@ -32,11 +32,11 @@ class PairingStatus {
   const PairingStatus({required this.status, this.qr, this.stage, this.note});
 
   factory PairingStatus.fromJson(Map<String, dynamic> json) => PairingStatus(
-        status: json.strOr('status', 'pending'),
-        qr: json.str('qr'),
-        stage: json.str('stage'),
-        note: json.str('note'),
-      );
+    status: json.strOr('status', 'pending'),
+    qr: json.str('qr'),
+    stage: json.str('stage'),
+    note: json.str('note'),
+  );
 
   /// `pending` | `connected` | `expired` | `error` | `disconnected`.
   final String status;
@@ -44,7 +44,8 @@ class PairingStatus {
   /// Ảnh QR dạng data URL, do agent đẩy lên. Sống khoảng 100 giây.
   final String? qr;
 
-  /// `queued` | `logging_in` | `qr` | `scanned` | `tunnel_pending` | `error`.
+  /// `queued` | `logging_in` | `session_ready` | `qr` | `scanned` |
+  /// `tunnel_pending` | `error`.
   final String? stage;
 
   /// Lời của chính agent khi nó hỏng. Nó biết chuyện gì xảy ra, app thì không.
