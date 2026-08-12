@@ -6,6 +6,7 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../core/error/app_exception.dart';
 import '../../inbox/application/inbox_providers.dart';
@@ -15,9 +16,9 @@ import '../data/push_api.dart';
 // creates a fresh channel so existing installs receive the clearer bundled
 // chime instead of retaining the quiet system default from v2.
 const _androidChannelId = 'inbox_messages_v3';
-const _androidSound = RawResourceAndroidNotificationSound(
-  'omni_message_alert',
-);
+const _tokenRefreshGenerationKey = 'fcm_token_refresh_generation';
+const _tokenRefreshGeneration = 1;
+const _androidSound = RawResourceAndroidNotificationSound('omni_message_alert');
 
 const _androidChannel = AndroidNotificationChannel(
   _androidChannelId,
@@ -114,7 +115,7 @@ class PushNotifications {
       );
 
       await FirebaseMessaging.instance.requestPermission();
-      _token = await FirebaseMessaging.instance.getToken();
+      _token = await _refreshStaleTokenOnce();
       if (_token != null) await _register(_token!);
       _registrationHeartbeat?.cancel();
       _registrationHeartbeat = Timer.periodic(
@@ -221,6 +222,40 @@ class PushNotifications {
     } finally {
       _registering = false;
     }
+  }
+
+  /// Repairs registrations created before background push was enabled.
+  ///
+  /// FCM may keep accepting an obsolete token for a short period after an app
+  /// update even though that installation no longer receives messages. Rotate
+  /// it once for this migration, unregister the old value, then let the normal
+  /// refresh listener maintain it from that point forward.
+  Future<String?> _refreshStaleTokenOnce() async {
+    final preferences = await SharedPreferences.getInstance();
+    if ((preferences.getInt(_tokenRefreshGenerationKey) ?? 0) >=
+        _tokenRefreshGeneration) {
+      return FirebaseMessaging.instance.getToken();
+    }
+
+    final previous = await FirebaseMessaging.instance.getToken();
+    if (previous != null && previous.isNotEmpty) {
+      try {
+        await _ref.read(pushApiProvider).unregister(previous);
+      } on AppException {
+        // A stale server row is removed automatically when FCM rejects it.
+      }
+    }
+
+    await FirebaseMessaging.instance.deleteToken();
+    final replacement = await FirebaseMessaging.instance.getToken();
+    if (replacement == null || replacement.isEmpty) {
+      throw StateError('FCM did not issue a replacement token.');
+    }
+    await preferences.setInt(
+      _tokenRefreshGenerationKey,
+      _tokenRefreshGeneration,
+    );
+    return replacement;
   }
 
   void _scheduleRegistrationRetry() {
