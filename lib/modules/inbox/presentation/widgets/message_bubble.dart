@@ -93,13 +93,11 @@ class MessageBubble extends StatelessWidget {
           style: OmniChatType.meta.copyWith(color: color),
         ),
         if (outbound) ...[
-          const SizedBox(width: 3),
-          Icon(
-            _statusIcon(message.status),
-            size: 13,
-            color: message.status == DeliveryStatus.read
-                ? OmniColors.chatPrimary
-                : color,
+          const SizedBox(width: 5),
+          _DeliveryReceipt(
+            status: message.status,
+            fallbackColor: color,
+            showLabel: isLastInGroup,
           ),
         ],
       ],
@@ -320,13 +318,75 @@ class _MetaLine extends StatelessWidget {
   }
 }
 
-IconData _statusIcon(DeliveryStatus status) => switch (status) {
-  DeliveryStatus.queued => Icons.schedule_rounded,
-  DeliveryStatus.sent => Icons.check_rounded,
-  DeliveryStatus.delivered => Icons.done_all_rounded,
-  DeliveryStatus.read => Icons.done_all_rounded,
-  _ => Icons.check_rounded,
-};
+class _DeliveryReceipt extends StatelessWidget {
+  const _DeliveryReceipt({
+    required this.status,
+    required this.fallbackColor,
+    required this.showLabel,
+  });
+
+  final DeliveryStatus status;
+  final Color fallbackColor;
+  final bool showLabel;
+
+  @override
+  Widget build(BuildContext context) {
+    final read = status == DeliveryStatus.read;
+    final failed = status == DeliveryStatus.failed;
+    final color = read
+        ? OmniColors.chatPrimary
+        : failed
+        ? Theme.of(context).colorScheme.error
+        : fallbackColor;
+    final label = switch (status) {
+      DeliveryStatus.queued => 'Đang gửi',
+      DeliveryStatus.sent => 'Đã gửi',
+      DeliveryStatus.delivered => 'Đã nhận',
+      DeliveryStatus.read => 'Đã xem',
+      DeliveryStatus.failed => 'Gửi lỗi',
+      _ => 'Đã gửi',
+    };
+    final icon = switch (status) {
+      DeliveryStatus.queued => Icons.schedule_rounded,
+      DeliveryStatus.sent => Icons.check_rounded,
+      DeliveryStatus.delivered || DeliveryStatus.read => Icons.done_all_rounded,
+      DeliveryStatus.failed => Icons.error_outline_rounded,
+      _ => Icons.check_rounded,
+    };
+
+    return Semantics(
+      label: label,
+      child: AnimatedSwitcher(
+        duration: const Duration(milliseconds: 220),
+        reverseDuration: const Duration(milliseconds: 140),
+        switchInCurve: Curves.easeOutBack,
+        switchOutCurve: Curves.easeIn,
+        transitionBuilder: (child, animation) => FadeTransition(
+          opacity: animation,
+          child: ScaleTransition(scale: animation, child: child),
+        ),
+        child: Row(
+          key: ValueKey('delivery-receipt-${status.name}'),
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 16, color: color),
+            if (showLabel) ...[
+              const SizedBox(width: 3),
+              Text(
+                label,
+                style: OmniChatType.meta.copyWith(
+                  color: color,
+                  fontSize: 10.5,
+                  fontWeight: read ? FontWeight.w600 : FontWeight.w500,
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
 
 /// Internal note. Deliberately unlike a message bubble — full width, amber,
 /// labelled — so it can never be mistaken for something the customer saw.
