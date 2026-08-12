@@ -37,6 +37,10 @@ void main() {
     final inlinePages = find.byKey(
       const ValueKey('message-image-inline-page-view'),
     );
+    final pageView = tester.widget<PageView>(inlinePages);
+    expect(pageView.controller?.viewportFraction, 0.88);
+    expect(find.byKey(const ValueKey('message-image-card-1')), findsOneWidget);
+
     await tester.drag(inlinePages, const Offset(-220, 0));
     await tester.pumpAndSettle();
     expect(find.text('2 / 5'), findsOneWidget);

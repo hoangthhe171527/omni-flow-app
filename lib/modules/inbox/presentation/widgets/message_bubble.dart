@@ -516,13 +516,15 @@ class _StackedImageCarousel extends StatefulWidget {
 }
 
 class _StackedImageCarouselState extends State<_StackedImageCarousel> {
+  static const _viewportFraction = 0.88;
+
   late final PageController _controller;
   int _index = 0;
 
   @override
   void initState() {
     super.initState();
-    _controller = PageController();
+    _controller = PageController(viewportFraction: _viewportFraction);
   }
 
   @override
@@ -533,109 +535,120 @@ class _StackedImageCarouselState extends State<_StackedImageCarousel> {
 
   @override
   Widget build(BuildContext context) {
-    final frontWidth = widget.width - 18;
-    final cardHeight = frontWidth * 0.78;
-    final previewIndices = _previewIndices();
+    final cardWidth = widget.width * _viewportFraction;
+    final cardHeight = cardWidth * 0.78;
+    final scheme = Theme.of(context).colorScheme;
 
     return Semantics(
       label: '${widget.images.length} ảnh, vuốt ngang để xem',
       child: SizedBox(
         key: const ValueKey('message-image-gallery'),
         width: widget.width,
-        height: cardHeight + 14,
+        height: cardHeight + 20,
         child: Stack(
           clipBehavior: Clip.none,
           children: [
-            for (var depth = previewIndices.length; depth >= 1; depth--)
-              Positioned(
-                left: depth * 8,
-                top: depth * 6,
-                width: frontWidth,
-                height: cardHeight,
-                child: Opacity(
-                  opacity: depth == 1 ? 0.78 : 0.5,
-                  child: Transform.scale(
-                    alignment: Alignment.topLeft,
-                    scale: 1 - (depth * 0.018),
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(16),
-                      child: _NetworkMediaImage(
-                        url: widget.images[previewIndices[depth - 1]].url,
-                        fit: BoxFit.cover,
-                      ),
+            PageView.builder(
+              key: const ValueKey('message-image-inline-page-view'),
+              controller: _controller,
+              clipBehavior: Clip.none,
+              padEnds: false,
+              itemCount: widget.images.length,
+              onPageChanged: (index) => setState(() => _index = index),
+              itemBuilder: (context, index) => AnimatedBuilder(
+                animation: _controller,
+                child: Padding(
+                  padding: const EdgeInsets.only(right: 10, top: 7, bottom: 7),
+                  child: DecoratedBox(
+                    key: ValueKey('message-image-card-$index'),
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(18),
+                      boxShadow: [
+                        BoxShadow(
+                          color: scheme.shadow.withValues(alpha: 0.18),
+                          blurRadius: 16,
+                          offset: const Offset(0, 7),
+                        ),
+                        BoxShadow(
+                          color: scheme.surface.withValues(alpha: 0.22),
+                          blurRadius: 0,
+                          spreadRadius: 1,
+                        ),
+                      ],
                     ),
-                  ),
-                ),
-              ),
-            Positioned(
-              left: 0,
-              top: 0,
-              width: frontWidth,
-              height: cardHeight,
-              child: Stack(
-                children: [
-                  PageView.builder(
-                    key: const ValueKey('message-image-inline-page-view'),
-                    controller: _controller,
-                    itemCount: widget.images.length,
-                    onPageChanged: (index) => setState(() => _index = index),
-                    itemBuilder: (context, index) => _GalleryTile(
+                    child: _GalleryTile(
                       key: ValueKey('message-image-tile-$index'),
                       image: widget.images[index],
                       heroTag: widget.heroTagFor(index),
                       onTap: () => widget.onOpen(index),
                     ),
                   ),
-                  Positioned(
-                    right: 8,
-                    bottom: 8,
-                    child: IgnorePointer(
-                      child: DecoratedBox(
-                        decoration: BoxDecoration(
-                          color: Colors.black.withValues(alpha: 0.5),
-                          borderRadius: BorderRadius.circular(999),
-                        ),
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 9,
-                            vertical: 5,
-                          ),
-                          child: Text(
-                            '${_index + 1} / ${widget.images.length}',
-                            key: const ValueKey('message-image-inline-counter'),
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 12,
-                              height: 1,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ),
+                ),
+                builder: (context, child) {
+                  final page = _controller.hasClients
+                      ? (_controller.page ?? _index.toDouble())
+                      : _index.toDouble();
+                  final delta = (index - page).clamp(-1.0, 1.0);
+                  final distance = delta.abs();
+
+                  // The next photograph stays visibly tucked under the current
+                  // one. A tiny tilt + lower baseline makes the stack feel like
+                  // loose prints, while the real PageView preserves the native
+                  // horizontal swipe instead of faking it with decoration.
+                  return Transform.translate(
+                    offset: Offset(
+                      delta > 0 ? -5 * distance : 3 * distance,
+                      7 * distance,
+                    ),
+                    child: Transform.rotate(
+                      angle: delta * 0.022,
+                      child: Transform.scale(
+                        alignment: delta >= 0
+                            ? Alignment.centerLeft
+                            : Alignment.centerRight,
+                        scale: 1 - (distance * 0.045),
+                        child: child,
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+            Positioned(
+              right: (widget.width * (1 - _viewportFraction)) + 14,
+              bottom: 16,
+              child: IgnorePointer(
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    color: Colors.black.withValues(alpha: 0.56),
+                    borderRadius: BorderRadius.circular(999),
+                    border: Border.all(
+                      color: Colors.white.withValues(alpha: 0.2),
+                    ),
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 9,
+                      vertical: 5,
+                    ),
+                    child: Text(
+                      '${_index + 1} / ${widget.images.length}',
+                      key: const ValueKey('message-image-inline-counter'),
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 12,
+                        height: 1,
+                        fontWeight: FontWeight.w600,
                       ),
                     ),
                   ),
-                ],
+                ),
               ),
             ),
           ],
         ),
       ),
     );
-  }
-
-  List<int> _previewIndices() {
-    final result = <int>[];
-    for (var offset = 1; offset <= 2; offset++) {
-      final next = _index + offset;
-      if (next < widget.images.length) result.add(next);
-    }
-    if (result.isNotEmpty) return result;
-
-    for (var offset = 1; offset <= 2; offset++) {
-      final previous = _index - offset;
-      if (previous >= 0) result.add(previous);
-    }
-    return result;
   }
 }
 
