@@ -11,7 +11,13 @@ import '../../../core/error/app_exception.dart';
 import '../../inbox/application/inbox_providers.dart';
 import '../data/push_api.dart';
 
-const _androidChannelId = 'inbox_messages_v2';
+// Android freezes a channel's sound after first creation. v3 intentionally
+// creates a fresh channel so existing installs receive the clearer bundled
+// chime instead of retaining the quiet system default from v2.
+const _androidChannelId = 'inbox_messages_v3';
+const _androidSound = RawResourceAndroidNotificationSound(
+  'omni_message_alert',
+);
 
 const _androidChannel = AndroidNotificationChannel(
   _androidChannelId,
@@ -19,7 +25,9 @@ const _androidChannel = AndroidNotificationChannel(
   description: 'Thông báo khi khách hàng gửi tin nhắn mới.',
   importance: Importance.max,
   playSound: true,
+  sound: _androidSound,
   enableVibration: true,
+  audioAttributesUsage: AudioAttributesUsage.notificationEvent,
 );
 
 bool _pushRuntimeInitialized = false;
@@ -99,7 +107,11 @@ class PushNotifications {
         _register,
       );
       _foregroundMessages = FirebaseMessaging.onMessage.listen(_showForeground);
-      _openedMessages = FirebaseMessaging.onMessageOpenedApp.listen(_open);
+      // This stream fires only after the user taps an OS notification. Receiving
+      // a push by itself must never navigate or bring a conversation forward.
+      _openedMessages = FirebaseMessaging.onMessageOpenedApp.listen(
+        _openFromNotificationTap,
+      );
 
       await FirebaseMessaging.instance.requestPermission();
       _token = await FirebaseMessaging.instance.getToken();
@@ -110,7 +122,7 @@ class PushNotifications {
         (_) => unawaited(ensureRegistered()),
       );
       final initial = await FirebaseMessaging.instance.getInitialMessage();
-      if (initial != null) _open(initial);
+      if (initial != null) _openFromNotificationTap(initial);
     } catch (error, stackTrace) {
       // The inbox remains usable if Firebase or the network is temporarily down,
       // but push must heal in the SAME login session instead of waiting for the
@@ -242,14 +254,18 @@ class PushNotifications {
           importance: Importance.max,
           priority: Priority.max,
           playSound: true,
+          sound: _androidSound,
           enableVibration: true,
+          audioAttributesUsage: AudioAttributesUsage.notificationEvent,
+          category: AndroidNotificationCategory.message,
+          fullScreenIntent: false,
         ),
       ),
       payload: jsonEncode(message.data),
     );
   }
 
-  void _open(RemoteMessage message) {
+  void _openFromNotificationTap(RemoteMessage message) {
     final intent = PushIntent.fromData(message.data);
     if (intent != null) _ref.read(pushIntentProvider.notifier).state = intent;
   }
