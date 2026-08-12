@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../core/utils/avatar_url.dart';
 import '../../core/utils/formatters.dart';
 import '../tokens/tokens.dart';
 
@@ -29,31 +30,36 @@ class OmniAvatar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final color = OmniColors.avatarFor(name);
+    final resolvedImageUrl = resolveAvatarUrl(imageUrl);
+    final fallback = Text(
+      Formatters.initials(name),
+      style: OmniType.micro.copyWith(
+        color: color,
+        fontSize: size * 0.34,
+        fontWeight: FontWeight.w700,
+      ),
+    );
     final avatar = Container(
       width: size,
       height: size,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
         color: color.withValues(alpha: 0.14),
-        image: (imageUrl != null && imageUrl!.isNotEmpty)
-            ? DecorationImage(
-                image: NetworkImage(imageUrl!),
-                fit: BoxFit.cover,
-                onError: (_, _) {},
-              )
-            : null,
       ),
       alignment: Alignment.center,
-      child: (imageUrl != null && imageUrl!.isNotEmpty)
-          ? null
-          : Text(
-              Formatters.initials(name),
-              style: OmniType.micro.copyWith(
-                color: color,
-                fontSize: size * 0.34,
-                fontWeight: FontWeight.w700,
+      child: resolvedImageUrl != null
+          ? ClipOval(
+              child: Image.network(
+                resolvedImageUrl,
+                width: size,
+                height: size,
+                fit: BoxFit.cover,
+                // Android can reject an expired platform URL or an unavailable
+                // mirror. Never leave a blank circle when that happens.
+                errorBuilder: (_, _, _) => fallback,
               ),
-            ),
+            )
+          : fallback,
     );
 
     if (!online && badge == null) return avatar;
