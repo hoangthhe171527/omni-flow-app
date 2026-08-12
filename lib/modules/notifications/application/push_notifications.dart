@@ -76,6 +76,7 @@ class PushNotifications {
   StreamSubscription<RemoteMessage>? _openedMessages;
   Timer? _startupRetry;
   Timer? _registrationRetry;
+  Timer? _registrationHeartbeat;
   bool _started = false;
   bool _firebaseReady = false;
   bool _registering = false;
@@ -91,15 +92,23 @@ class PushNotifications {
       await initializePushRuntime();
       _firebaseReady = true;
       await _initializeLocalNotifications();
-      await FirebaseMessaging.instance.requestPermission();
-      _token = await FirebaseMessaging.instance.getToken();
-      if (_token != null) await _register(_token!);
 
+      // Install the listener before any registration network request. A slow
+      // OmniCRM API must never leave a running app deaf to an FCM event.
       _tokenRefresh = FirebaseMessaging.instance.onTokenRefresh.listen(
         _register,
       );
       _foregroundMessages = FirebaseMessaging.onMessage.listen(_showForeground);
       _openedMessages = FirebaseMessaging.onMessageOpenedApp.listen(_open);
+
+      await FirebaseMessaging.instance.requestPermission();
+      _token = await FirebaseMessaging.instance.getToken();
+      if (_token != null) await _register(_token!);
+      _registrationHeartbeat?.cancel();
+      _registrationHeartbeat = Timer.periodic(
+        const Duration(minutes: 15),
+        (_) => unawaited(ensureRegistered()),
+      );
       final initial = await FirebaseMessaging.instance.getInitialMessage();
       if (initial != null) _open(initial);
     } catch (error, stackTrace) {
@@ -117,8 +126,10 @@ class PushNotifications {
   Future<void> stop() async {
     _startupRetry?.cancel();
     _registrationRetry?.cancel();
+    _registrationHeartbeat?.cancel();
     _startupRetry = null;
     _registrationRetry = null;
+    _registrationHeartbeat = null;
     await _tokenRefresh?.cancel();
     await _foregroundMessages?.cancel();
     await _openedMessages?.cancel();
@@ -136,6 +147,25 @@ class PushNotifications {
     _token = null;
     _registrationAttempts = 0;
     _started = false;
+  }
+
+  /// Rebind the current installation whenever Android brings the app back.
+  /// This repairs a missing server row without requiring logout/reinstall.
+  Future<void> ensureRegistered() async {
+    if (!_isAndroid) return;
+    if (!_started) {
+      await start();
+      return;
+    }
+    if (!_firebaseReady) return;
+
+    try {
+      final token = await FirebaseMessaging.instance.getToken();
+      if (token != null && token.isNotEmpty) await _register(token);
+    } catch (error, stackTrace) {
+      debugPrint('Push registration refresh failed: $error\n$stackTrace');
+      _scheduleRegistrationRetry();
+    }
   }
 
   Future<void> _initializeLocalNotifications() async {
