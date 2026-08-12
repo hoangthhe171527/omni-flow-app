@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 
 import '../../../../core/utils/formatters.dart';
@@ -69,6 +71,40 @@ class MessageBubble extends StatelessWidget {
         ? Colors.white.withValues(alpha: 0.55)
         : OmniColors.chatMeta;
 
+    final images = message.recalled
+        ? const <MessageAttachment>[]
+        : message.attachments
+              .where((attachment) => attachment.isImage)
+              .toList();
+    final files = message.attachments
+        .where((attachment) => !attachment.isImage)
+        .toList();
+    final hasBubbleContent =
+        message.recalled || message.text.isNotEmpty || files.isNotEmpty;
+    final mediaHeroPrefix = message.id.isNotEmpty
+        ? message.id
+        : 'local-${identityHashCode(message)}';
+
+    Widget messageMeta(Color color) => Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          Formatters.time(message.sentAt),
+          style: OmniChatType.meta.copyWith(color: color),
+        ),
+        if (outbound) ...[
+          const SizedBox(width: 3),
+          Icon(
+            _statusIcon(message.status),
+            size: 13,
+            color: message.status == DeliveryStatus.read
+                ? OmniColors.chatPrimary
+                : color,
+          ),
+        ],
+      ],
+    );
+
     final bubble = Container(
       constraints: BoxConstraints(
         maxWidth: MediaQuery.sizeOf(context).width * 0.76,
@@ -87,8 +123,8 @@ class MessageBubble extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          if (message.hasAttachments) ...[
-            _Attachments(attachments: message.attachments),
+          if (files.isNotEmpty) ...[
+            _FileAttachments(attachments: files),
             if (message.text.isNotEmpty) const SizedBox(height: OmniSpacing.sm),
           ],
           if (message.recalled)
@@ -109,27 +145,29 @@ class MessageBubble extends StatelessWidget {
           // they used to sit on their own line underneath, costing a full row of
           // vertical space per message.
           const SizedBox(height: 4),
-          Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                Formatters.time(message.sentAt),
-                style: OmniChatType.meta.copyWith(color: metaColor),
-              ),
-              if (outbound) ...[
-                const SizedBox(width: 3),
-                Icon(
-                  _statusIcon(message.status),
-                  size: 13,
-                  color: message.status == DeliveryStatus.read
-                      ? OmniColors.chatPrimary
-                      : metaColor,
-                ),
-              ],
-            ],
-          ),
+          messageMeta(metaColor),
         ],
       ),
+    );
+
+    final content = Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: outbound
+          ? CrossAxisAlignment.end
+          : CrossAxisAlignment.start,
+      children: [
+        if (images.isNotEmpty)
+          _ImageGallery(images: images, heroPrefix: mediaHeroPrefix),
+        if (images.isNotEmpty && !hasBubbleContent)
+          Padding(
+            padding: const EdgeInsets.only(top: 4, left: 4, right: 4),
+            child: messageMeta(metaColor),
+          ),
+        if (hasBubbleContent) ...[
+          if (images.isNotEmpty) const SizedBox(height: 4),
+          bubble,
+        ],
+      ],
     );
 
     // Incoming messages sit beside the sender's avatar — Zalo shows one on
@@ -190,7 +228,7 @@ class MessageBubble extends StatelessWidget {
                 Stack(
                   clipBehavior: Clip.none,
                   children: [
-                    bubble,
+                    content,
                     if (message.reaction != null &&
                         message.reaction!.isNotEmpty)
                       Positioned(
@@ -350,8 +388,367 @@ class _NoteBubble extends StatelessWidget {
   }
 }
 
-class _Attachments extends StatelessWidget {
-  const _Attachments({required this.attachments});
+class _ImageGallery extends StatelessWidget {
+  const _ImageGallery({required this.images, required this.heroPrefix});
+
+  final List<MessageAttachment> images;
+  final String heroPrefix;
+
+  @override
+  Widget build(BuildContext context) {
+    final availableWidth = MediaQuery.sizeOf(context).width;
+    final width = math.min(availableWidth * 0.72, 292.0);
+
+    if (images.length == 1) {
+      return _SingleImage(
+        image: images.first,
+        width: width,
+        heroTag: _heroTag(0),
+        onTap: () => _openViewer(context, 0),
+      );
+    }
+
+    final height = images.length == 2 ? width * 0.72 : width * 0.82;
+    final visibleImages = images.take(4).toList();
+
+    Widget tile(int index) => _GalleryTile(
+      key: ValueKey('message-image-tile-$index'),
+      image: visibleImages[index],
+      heroTag: _heroTag(index),
+      onTap: () => _openViewer(context, index),
+      overflowCount: index == 3 && images.length > 4 ? images.length - 4 : 0,
+    );
+
+    final gallery = switch (visibleImages.length) {
+      2 => Row(
+        children: [
+          Expanded(child: tile(0)),
+          const SizedBox(width: 2),
+          Expanded(child: tile(1)),
+        ],
+      ),
+      3 => Row(
+        children: [
+          Expanded(child: tile(0)),
+          const SizedBox(width: 2),
+          Expanded(
+            child: Column(
+              children: [
+                Expanded(child: tile(1)),
+                const SizedBox(height: 2),
+                Expanded(child: tile(2)),
+              ],
+            ),
+          ),
+        ],
+      ),
+      _ => Column(
+        children: [
+          Expanded(
+            child: Row(
+              children: [
+                Expanded(child: tile(0)),
+                const SizedBox(width: 2),
+                Expanded(child: tile(1)),
+              ],
+            ),
+          ),
+          const SizedBox(height: 2),
+          Expanded(
+            child: Row(
+              children: [
+                Expanded(child: tile(2)),
+                const SizedBox(width: 2),
+                Expanded(child: tile(3)),
+              ],
+            ),
+          ),
+        ],
+      ),
+    };
+
+    return Semantics(
+      button: true,
+      label: '${images.length} ảnh đính kèm',
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(16),
+        child: SizedBox(
+          key: const ValueKey('message-image-gallery'),
+          width: width,
+          height: height,
+          child: gallery,
+        ),
+      ),
+    );
+  }
+
+  String _heroTag(int index) => '$heroPrefix-image-$index';
+
+  void _openViewer(BuildContext context, int index) {
+    Navigator.of(context).push(
+      PageRouteBuilder<void>(
+        opaque: true,
+        barrierColor: Colors.black,
+        transitionDuration: const Duration(milliseconds: 220),
+        reverseTransitionDuration: const Duration(milliseconds: 180),
+        pageBuilder: (_, animation, _) => FadeTransition(
+          opacity: CurvedAnimation(parent: animation, curve: Curves.easeOut),
+          child: _ImageViewer(
+            images: images,
+            initialIndex: index,
+            heroPrefix: heroPrefix,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _SingleImage extends StatelessWidget {
+  const _SingleImage({
+    required this.image,
+    required this.width,
+    required this.heroTag,
+    required this.onTap,
+  });
+
+  final MessageAttachment image;
+  final double width;
+  final String heroTag;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      button: true,
+      label: 'Mở ảnh',
+      child: GestureDetector(
+        onTap: onTap,
+        child: Hero(
+          tag: heroTag,
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(16),
+            child: ConstrainedBox(
+              constraints: BoxConstraints(
+                minWidth: width,
+                maxWidth: width,
+                minHeight: 150,
+                maxHeight: 360,
+              ),
+              child: _NetworkMediaImage(url: image.url, fit: BoxFit.cover),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _GalleryTile extends StatelessWidget {
+  const _GalleryTile({
+    super.key,
+    required this.image,
+    required this.heroTag,
+    required this.onTap,
+    this.overflowCount = 0,
+  });
+
+  final MessageAttachment image;
+  final String heroTag;
+  final VoidCallback onTap;
+  final int overflowCount;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: onTap,
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          Hero(
+            tag: heroTag,
+            child: _NetworkMediaImage(url: image.url, fit: BoxFit.cover),
+          ),
+          if (overflowCount > 0)
+            ColoredBox(
+              color: Colors.black.withValues(alpha: 0.54),
+              child: Center(
+                child: Text(
+                  '+$overflowCount',
+                  key: const ValueKey('message-image-overflow'),
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 24,
+                    height: 1,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _NetworkMediaImage extends StatelessWidget {
+  const _NetworkMediaImage({required this.url, required this.fit});
+
+  final String url;
+  final BoxFit fit;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+
+    return Image.network(
+      url,
+      fit: fit,
+      loadingBuilder: (context, child, progress) {
+        if (progress == null) return child;
+        return ColoredBox(
+          color: scheme.surfaceContainerHighest,
+          child: Center(
+            child: SizedBox.square(
+              dimension: 20,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                color: scheme.onSurfaceVariant.withValues(alpha: 0.45),
+              ),
+            ),
+          ),
+        );
+      },
+      errorBuilder: (_, _, _) => ColoredBox(
+        color: scheme.surfaceContainerHighest,
+        child: Center(
+          child: Icon(
+            Icons.broken_image_outlined,
+            color: scheme.onSurfaceVariant,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ImageViewer extends StatefulWidget {
+  const _ImageViewer({
+    required this.images,
+    required this.initialIndex,
+    required this.heroPrefix,
+  });
+
+  final List<MessageAttachment> images;
+  final int initialIndex;
+  final String heroPrefix;
+
+  @override
+  State<_ImageViewer> createState() => _ImageViewerState();
+}
+
+class _ImageViewerState extends State<_ImageViewer> {
+  late final PageController _controller;
+  late int _index;
+
+  @override
+  void initState() {
+    super.initState();
+    _index = widget.initialIndex;
+    _controller = PageController(initialPage: widget.initialIndex);
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      key: const ValueKey('message-image-viewer'),
+      backgroundColor: Colors.black,
+      body: Stack(
+        children: [
+          PageView.builder(
+            controller: _controller,
+            itemCount: widget.images.length,
+            onPageChanged: (index) => setState(() => _index = index),
+            itemBuilder: (context, index) => Center(
+              child: Hero(
+                tag: '${widget.heroPrefix}-image-$index',
+                child: InteractiveViewer(
+                  // Let PageView own one-finger horizontal drags so moving
+                  // between photos stays as effortless as Messenger/Zalo.
+                  // Pinch-to-zoom remains available without stealing swipes.
+                  panEnabled: false,
+                  minScale: 1,
+                  maxScale: 4,
+                  child: Image.network(
+                    widget.images[index].url,
+                    fit: BoxFit.contain,
+                    width: double.infinity,
+                    errorBuilder: (_, _, _) => const Center(
+                      child: Icon(
+                        Icons.broken_image_outlined,
+                        color: Colors.white54,
+                        size: 38,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+          SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(8, 6, 8, 0),
+              child: Row(
+                children: [
+                  IconButton(
+                    tooltip: 'Đóng',
+                    onPressed: () => Navigator.of(context).pop(),
+                    icon: const Icon(Icons.close_rounded),
+                    color: Colors.white,
+                    style: IconButton.styleFrom(
+                      backgroundColor: Colors.black.withValues(alpha: 0.34),
+                    ),
+                  ),
+                  const Spacer(),
+                  DecoratedBox(
+                    decoration: BoxDecoration(
+                      color: Colors.black.withValues(alpha: 0.42),
+                      borderRadius: BorderRadius.circular(999),
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 11,
+                        vertical: 7,
+                      ),
+                      child: Text(
+                        '${_index + 1} / ${widget.images.length}',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _FileAttachments extends StatelessWidget {
+  const _FileAttachments({required this.attachments});
 
   final List<MessageAttachment> attachments;
 
@@ -365,43 +762,24 @@ class _Attachments extends StatelessWidget {
         for (final attachment in attachments)
           Padding(
             padding: const EdgeInsets.only(bottom: 4),
-            child: attachment.isImage
-                ? ClipRRect(
-                    borderRadius: OmniRadius.smAll,
-                    child: Image.network(
-                      attachment.url,
-                      width: 210,
-                      fit: BoxFit.cover,
-                      errorBuilder: (_, _, _) => Container(
-                        width: 210,
-                        height: 130,
-                        color: scheme.surfaceContainerHighest,
-                        alignment: Alignment.center,
-                        child: Icon(
-                          Icons.broken_image_outlined,
-                          color: scheme.onSurfaceVariant,
-                        ),
-                      ),
-                    ),
-                  )
-                : Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        Icons.attach_file_rounded,
-                        size: 15,
-                        color: scheme.onSurfaceVariant,
-                      ),
-                      const SizedBox(width: 5),
-                      Flexible(
-                        child: Text(
-                          attachment.name ?? 'Tệp đính kèm',
-                          overflow: TextOverflow.ellipsis,
-                          style: OmniType.caption,
-                        ),
-                      ),
-                    ],
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  Icons.attach_file_rounded,
+                  size: 15,
+                  color: scheme.onSurfaceVariant,
+                ),
+                const SizedBox(width: 5),
+                Flexible(
+                  child: Text(
+                    attachment.name ?? 'Tệp đính kèm',
+                    overflow: TextOverflow.ellipsis,
+                    style: OmniType.caption,
                   ),
+                ),
+              ],
+            ),
           ),
       ],
     );
