@@ -277,11 +277,39 @@ class PushNotifications {
       signal.state = signal.state + 1;
     }
     final notification = message.notification;
+    final title = notification?.title ?? 'Tin nhắn mới';
+    final body = notification?.body ?? 'Khách hàng vừa gửi tin nhắn.';
+    final senderName = message.data['sender_name']?.toString().trim() ?? '';
+    final sourceLabel = message.data['source_label']?.toString().trim() ?? '';
+    final conversationId =
+        message.data['conversation_id']?.toString().trim() ?? '';
+    final isGroup = message.data['is_group']?.toString() == '1';
+    final messagingStyle = senderName.isEmpty
+        ? null
+        : MessagingStyleInformation(
+            const Person(name: 'OmniCRM', key: 'omnicrm'),
+            conversationTitle: sourceLabel.isNotEmpty ? sourceLabel : title,
+            groupConversation: isGroup,
+            messages: [
+              Message(
+                body,
+                message.sentTime ?? DateTime.now(),
+                Person(
+                  name: senderName,
+                  key: 'customer-${senderName.hashCode}',
+                  important: true,
+                ),
+              ),
+            ],
+          );
     await _local.show(
-      message.messageId?.hashCode ?? DateTime.now().microsecondsSinceEpoch,
-      notification?.title ?? 'Tin nhắn mới',
-      notification?.body ?? 'Khách hàng vừa gửi tin nhắn.',
-      const NotificationDetails(
+      conversationId.isNotEmpty
+          ? conversationId.hashCode & 0x7fffffff
+          : message.messageId?.hashCode ??
+                DateTime.now().microsecondsSinceEpoch,
+      title,
+      body,
+      NotificationDetails(
         android: AndroidNotificationDetails(
           _androidChannelId,
           'Tin nhắn khách hàng',
@@ -294,6 +322,7 @@ class PushNotifications {
           audioAttributesUsage: AudioAttributesUsage.notificationEvent,
           category: AndroidNotificationCategory.message,
           fullScreenIntent: false,
+          styleInformation: messagingStyle,
         ),
       ),
       payload: jsonEncode(message.data),
