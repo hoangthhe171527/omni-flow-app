@@ -1,5 +1,6 @@
 import 'dart:math' as math;
 
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 
 import '../../../../core/utils/formatters.dart';
@@ -720,40 +721,66 @@ class _GalleryTile extends StatelessWidget {
   }
 }
 
-class _NetworkMediaImage extends StatelessWidget {
+class _NetworkMediaImage extends StatefulWidget {
   const _NetworkMediaImage({required this.url, required this.fit});
 
   final String url;
   final BoxFit fit;
 
   @override
+  State<_NetworkMediaImage> createState() => _NetworkMediaImageState();
+}
+
+class _NetworkMediaImageState extends State<_NetworkMediaImage> {
+  int _attempt = 0;
+
+  Future<void> _retry() async {
+    // A failed CDN response must not poison the next attempt in either Flutter's
+    // memory cache or the persistent cache manager.
+    await CachedNetworkImage.evictFromCache(widget.url);
+    if (!mounted) return;
+    setState(() => _attempt++);
+  }
+
+  @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final logicalWidth = MediaQuery.sizeOf(context).width;
+    final pixelRatio = MediaQuery.devicePixelRatioOf(context);
+    final decodeWidth = math.min((logicalWidth * pixelRatio).round(), 1440);
 
-    return Image.network(
-      url,
-      fit: fit,
-      loadingBuilder: (context, child, progress) {
-        if (progress == null) return child;
-        return ColoredBox(
-          color: scheme.surfaceContainerHighest,
-          child: Center(
-            child: SizedBox.square(
-              dimension: 20,
-              child: CircularProgressIndicator(
-                strokeWidth: 2,
-                color: scheme.onSurfaceVariant.withValues(alpha: 0.45),
-              ),
-            ),
-          ),
-        );
-      },
-      errorBuilder: (_, _, _) => ColoredBox(
+    return CachedNetworkImage(
+      key: ValueKey('${widget.url}#$_attempt'),
+      imageUrl: widget.url,
+      fit: widget.fit,
+      fadeInDuration: const Duration(milliseconds: 140),
+      fadeOutDuration: const Duration(milliseconds: 80),
+      useOldImageOnUrlChange: true,
+      memCacheWidth: decodeWidth,
+      maxWidthDiskCache: 1440,
+      progressIndicatorBuilder: (_, _, progress) => ColoredBox(
         color: scheme.surfaceContainerHighest,
         child: Center(
-          child: Icon(
-            Icons.broken_image_outlined,
-            color: scheme.onSurfaceVariant,
+          child: SizedBox.square(
+            dimension: 20,
+            child: CircularProgressIndicator(
+              // Some CDNs omit Content-Length. Keep that state determinate so
+              // an off-screen loading tile does not schedule animation frames
+              // forever; PageView already builds/caches the next tile ahead.
+              value: progress.progress ?? 0,
+              strokeWidth: 2,
+              color: scheme.onSurfaceVariant.withValues(alpha: 0.45),
+            ),
+          ),
+        ),
+      ),
+      errorWidget: (_, _, _) => ColoredBox(
+        color: scheme.surfaceContainerHighest,
+        child: Center(
+          child: IconButton(
+            tooltip: 'Táº£i láº¡i áº£nh',
+            onPressed: _retry,
+            icon: Icon(Icons.refresh_rounded, color: scheme.onSurfaceVariant),
           ),
         ),
       ),
@@ -814,16 +841,12 @@ class _ImageViewerState extends State<_ImageViewer> {
                   panEnabled: false,
                   minScale: 1,
                   maxScale: 4,
-                  child: Image.network(
-                    widget.images[index].url,
-                    fit: BoxFit.contain,
+                  child: SizedBox(
                     width: double.infinity,
-                    errorBuilder: (_, _, _) => const Center(
-                      child: Icon(
-                        Icons.broken_image_outlined,
-                        color: Colors.white54,
-                        size: 38,
-                      ),
+                    height: MediaQuery.sizeOf(context).height,
+                    child: _NetworkMediaImage(
+                      url: widget.images[index].url,
+                      fit: BoxFit.contain,
                     ),
                   ),
                 ),

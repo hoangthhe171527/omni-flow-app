@@ -1,7 +1,7 @@
 name: omni_app
 description: "OmniCRM — omnichannel inbox and CRM for mobile."
 publish_to: 'none'
-version: 0.1.0+8
+version: 0.1.0+9
 
 environment:
   sdk: ^3.11.5
@@ -20,6 +20,10 @@ dependencies:
 
   # Networking
   dio: ^5.4.0
+  # Message photos need a persistent disk cache. Image.network only keeps an
+  # in-memory decode cache, so revisiting a thread re-downloads platform CDN
+  # originals and exposes every intermittent Zalo CDN timeout again.
+  cached_network_image: ^3.4.1
 
   # Navigation
   go_router: ^14.2.0
