@@ -408,77 +408,11 @@ class _ImageGallery extends StatelessWidget {
       );
     }
 
-    final height = images.length == 2 ? width * 0.72 : width * 0.82;
-    final visibleImages = images.take(4).toList();
-
-    Widget tile(int index) => _GalleryTile(
-      key: ValueKey('message-image-tile-$index'),
-      image: visibleImages[index],
-      heroTag: _heroTag(index),
-      onTap: () => _openViewer(context, index),
-      overflowCount: index == 3 && images.length > 4 ? images.length - 4 : 0,
-    );
-
-    final gallery = switch (visibleImages.length) {
-      2 => Row(
-        children: [
-          Expanded(child: tile(0)),
-          const SizedBox(width: 2),
-          Expanded(child: tile(1)),
-        ],
-      ),
-      3 => Row(
-        children: [
-          Expanded(child: tile(0)),
-          const SizedBox(width: 2),
-          Expanded(
-            child: Column(
-              children: [
-                Expanded(child: tile(1)),
-                const SizedBox(height: 2),
-                Expanded(child: tile(2)),
-              ],
-            ),
-          ),
-        ],
-      ),
-      _ => Column(
-        children: [
-          Expanded(
-            child: Row(
-              children: [
-                Expanded(child: tile(0)),
-                const SizedBox(width: 2),
-                Expanded(child: tile(1)),
-              ],
-            ),
-          ),
-          const SizedBox(height: 2),
-          Expanded(
-            child: Row(
-              children: [
-                Expanded(child: tile(2)),
-                const SizedBox(width: 2),
-                Expanded(child: tile(3)),
-              ],
-            ),
-          ),
-        ],
-      ),
-    };
-
-    return Semantics(
-      button: true,
-      label: '${images.length} ảnh đính kèm',
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(16),
-        child: SizedBox(
-          key: const ValueKey('message-image-gallery'),
-          width: width,
-          height: height,
-          child: gallery,
-        ),
-      ),
+    return _StackedImageCarousel(
+      images: images,
+      width: width,
+      heroTagFor: _heroTag,
+      onOpen: (index) => _openViewer(context, index),
     );
   }
 
@@ -501,6 +435,147 @@ class _ImageGallery extends StatelessWidget {
         ),
       ),
     );
+  }
+}
+
+class _StackedImageCarousel extends StatefulWidget {
+  const _StackedImageCarousel({
+    required this.images,
+    required this.width,
+    required this.heroTagFor,
+    required this.onOpen,
+  });
+
+  final List<MessageAttachment> images;
+  final double width;
+  final String Function(int index) heroTagFor;
+  final ValueChanged<int> onOpen;
+
+  @override
+  State<_StackedImageCarousel> createState() => _StackedImageCarouselState();
+}
+
+class _StackedImageCarouselState extends State<_StackedImageCarousel> {
+  late final PageController _controller;
+  int _index = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = PageController();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final frontWidth = widget.width - 18;
+    final cardHeight = frontWidth * 0.78;
+    final previewIndices = _previewIndices();
+
+    return Semantics(
+      label: '${widget.images.length} ảnh, vuốt ngang để xem',
+      child: SizedBox(
+        key: const ValueKey('message-image-gallery'),
+        width: widget.width,
+        height: cardHeight + 14,
+        child: Stack(
+          clipBehavior: Clip.none,
+          children: [
+            for (var depth = previewIndices.length; depth >= 1; depth--)
+              Positioned(
+                left: depth * 8,
+                top: depth * 6,
+                width: frontWidth,
+                height: cardHeight,
+                child: Opacity(
+                  opacity: depth == 1 ? 0.78 : 0.5,
+                  child: Transform.scale(
+                    alignment: Alignment.topLeft,
+                    scale: 1 - (depth * 0.018),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(16),
+                      child: _NetworkMediaImage(
+                        url: widget.images[previewIndices[depth - 1]].url,
+                        fit: BoxFit.cover,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            Positioned(
+              left: 0,
+              top: 0,
+              width: frontWidth,
+              height: cardHeight,
+              child: Stack(
+                children: [
+                  PageView.builder(
+                    key: const ValueKey('message-image-inline-page-view'),
+                    controller: _controller,
+                    itemCount: widget.images.length,
+                    onPageChanged: (index) => setState(() => _index = index),
+                    itemBuilder: (context, index) => _GalleryTile(
+                      key: ValueKey('message-image-tile-$index'),
+                      image: widget.images[index],
+                      heroTag: widget.heroTagFor(index),
+                      onTap: () => widget.onOpen(index),
+                    ),
+                  ),
+                  Positioned(
+                    right: 8,
+                    bottom: 8,
+                    child: IgnorePointer(
+                      child: DecoratedBox(
+                        decoration: BoxDecoration(
+                          color: Colors.black.withValues(alpha: 0.5),
+                          borderRadius: BorderRadius.circular(999),
+                        ),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 9,
+                            vertical: 5,
+                          ),
+                          child: Text(
+                            '${_index + 1} / ${widget.images.length}',
+                            key: const ValueKey('message-image-inline-counter'),
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 12,
+                              height: 1,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  List<int> _previewIndices() {
+    final result = <int>[];
+    for (var offset = 1; offset <= 2; offset++) {
+      final next = _index + offset;
+      if (next < widget.images.length) result.add(next);
+    }
+    if (result.isNotEmpty) return result;
+
+    for (var offset = 1; offset <= 2; offset++) {
+      final previous = _index - offset;
+      if (previous >= 0) result.add(previous);
+    }
+    return result;
   }
 }
 
@@ -550,43 +625,23 @@ class _GalleryTile extends StatelessWidget {
     required this.image,
     required this.heroTag,
     required this.onTap,
-    this.overflowCount = 0,
   });
 
   final MessageAttachment image;
   final String heroTag;
   final VoidCallback onTap;
-  final int overflowCount;
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
       onTap: onTap,
-      child: Stack(
-        fit: StackFit.expand,
-        children: [
-          Hero(
-            tag: heroTag,
-            child: _NetworkMediaImage(url: image.url, fit: BoxFit.cover),
-          ),
-          if (overflowCount > 0)
-            ColoredBox(
-              color: Colors.black.withValues(alpha: 0.54),
-              child: Center(
-                child: Text(
-                  '+$overflowCount',
-                  key: const ValueKey('message-image-overflow'),
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 24,
-                    height: 1,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-            ),
-        ],
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(16),
+        child: Hero(
+          tag: heroTag,
+          child: _NetworkMediaImage(url: image.url, fit: BoxFit.cover),
+        ),
       ),
     );
   }

@@ -4,7 +4,9 @@ import 'package:omni_app/modules/inbox/domain/message.dart';
 import 'package:omni_app/modules/inbox/presentation/widgets/message_bubble.dart';
 
 void main() {
-  testWidgets('groups images and opens a swipeable viewer', (tester) async {
+  testWidgets('stacks images and swipes inline before opening the viewer', (
+    tester,
+  ) async {
     final attachments = List.generate(
       5,
       (index) => MessageAttachment(
@@ -30,17 +32,31 @@ void main() {
     );
 
     expect(find.byKey(const ValueKey('message-image-gallery')), findsOneWidget);
-    expect(find.text('+1'), findsOneWidget);
+    expect(find.text('1 / 5'), findsOneWidget);
 
-    await tester.tap(find.byKey(const ValueKey('message-image-tile-3')));
+    final inlinePages = find.byKey(
+      const ValueKey('message-image-inline-page-view'),
+    );
+    await tester.drag(inlinePages, const Offset(-220, 0));
+    await tester.pumpAndSettle();
+    expect(find.text('2 / 5'), findsOneWidget);
+
+    await tester.drag(inlinePages, const Offset(220, 0));
+    await tester.pumpAndSettle();
+    expect(find.text('1 / 5'), findsOneWidget);
+
+    await tester.drag(inlinePages, const Offset(-220, 0));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const ValueKey('message-image-tile-1')));
     await tester.pumpAndSettle();
 
     expect(find.byKey(const ValueKey('message-image-viewer')), findsOneWidget);
-    expect(find.text('4 / 5'), findsOneWidget);
+    expect(find.text('2 / 5'), findsOneWidget);
 
     await tester.fling(find.byType(PageView), const Offset(-700, 0), 1000);
     await tester.pumpAndSettle();
 
-    expect(find.text('5 / 5'), findsOneWidget);
+    expect(find.text('3 / 5'), findsOneWidget);
   });
 }
