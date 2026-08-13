@@ -15,10 +15,14 @@ class InboxBulkBar extends ConsumerWidget {
   const InboxBulkBar({
     super.key,
     required this.selectedIds,
+    required this.allIds,
+    required this.onSelectAll,
     required this.onDone,
   });
 
   final List<String> selectedIds;
+  final List<String> allIds;
+  final ValueChanged<List<String>> onSelectAll;
   final VoidCallback onDone;
 
   @override
@@ -41,40 +45,72 @@ class InboxBulkBar extends ConsumerWidget {
           top: BorderSide(color: scheme.outline.withValues(alpha: 0.5)),
         ),
       ),
-      child: Row(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text(
-            'Đã chọn ${selectedIds.length}',
-            style: OmniType.caption.copyWith(
-              fontSize: 14,
-              color: scheme.onSurface,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          const SizedBox(width: OmniSpacing.md),
-          // Leaving the selection was only possible from the app bar, which is
-          // the far end of the screen from the thumb that is selecting.
-          GestureDetector(
-            onTap: onDone,
-            child: Text(
-              'Bỏ chọn',
-              style: OmniType.caption.copyWith(
-                fontSize: 13,
-                color: scheme.onSurfaceVariant,
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  'Đã chọn ${selectedIds.length}',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: OmniType.caption.copyWith(
+                    fontSize: 14,
+                    color: scheme.onSurface,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
               ),
-            ),
+              TextButton(
+                onPressed: onDone,
+                style: TextButton.styleFrom(
+                  minimumSize: const Size(48, 40),
+                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                ),
+                child: const Text('Bỏ chọn'),
+              ),
+            ],
           ),
-          const Spacer(),
-          _BulkAction(
-            icon: Icons.person_add_alt_rounded,
-            label: 'Gán',
-            onTap: () => _assign(context, ref),
-          ),
-          const SizedBox(width: OmniSpacing.xs),
-          _BulkAction(
-            icon: Icons.sell_outlined,
-            label: 'Gắn nhãn',
-            onTap: () => _label(context, ref),
+          const SizedBox(height: 4),
+          // Actions are allowed to move to a second line. A fixed Row here
+          // made the selection footer overflow on narrow Android screens.
+          Wrap(
+            alignment: WrapAlignment.end,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            spacing: 4,
+            runSpacing: 4,
+            children: [
+              TextButton(
+                onPressed: allIds.isEmpty
+                    ? null
+                    : () => onSelectAll(
+                        selectedIds.length == allIds.length ? const [] : allIds,
+                      ),
+                style: TextButton.styleFrom(
+                  minimumSize: const Size(48, 40),
+                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                ),
+                child: Text(
+                  selectedIds.length == allIds.length
+                      ? 'Bỏ tất cả'
+                      : 'Chọn tất cả',
+                ),
+              ),
+              _BulkAction(
+                icon: Icons.person_add_alt_rounded,
+                label: 'Gán',
+                onTap: () => _assign(context, ref),
+              ),
+              _BulkAction(
+                icon: Icons.sell_outlined,
+                label: 'Gắn nhãn',
+                onTap: () => _label(context, ref),
+              ),
+            ],
           ),
         ],
       ),

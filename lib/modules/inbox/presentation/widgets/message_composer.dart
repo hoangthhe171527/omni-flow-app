@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../../../../design/tokens/tokens.dart';
+import '../../domain/message.dart';
 
 enum ComposeMode { reply, note }
 
@@ -28,9 +29,16 @@ class MessageComposer extends StatefulWidget {
     this.suggestions = const [],
     this.canNote = true,
     this.enabled = true,
+    this.replyTo,
+    this.onCancelReply,
   });
 
-  final Future<void> Function(String text, ComposeMode mode, List<XFile> images)
+  final Future<void> Function(
+    String text,
+    ComposeMode mode,
+    List<XFile> images,
+    Message? replyTo,
+  )
   onSend;
 
   /// Picks every image selected from the gallery. Keeping selection in the
@@ -43,6 +51,8 @@ class MessageComposer extends StatefulWidget {
   final List<String> suggestions;
   final bool canNote;
   final bool enabled;
+  final Message? replyTo;
+  final VoidCallback? onCancelReply;
 
   @override
   State<MessageComposer> createState() => _MessageComposerState();
@@ -78,7 +88,7 @@ class _MessageComposerState extends State<MessageComposer> {
 
     setState(() => _sending = true);
     try {
-      await widget.onSend(text, _mode, _pendingImages);
+      await widget.onSend(text, _mode, _pendingImages, widget.replyTo);
       if (!mounted) return;
       setState(() {
         _controller.clear();
@@ -181,6 +191,11 @@ class _MessageComposerState extends State<MessageComposer> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
+            if (widget.replyTo != null)
+              _ReplyPreview(
+                message: widget.replyTo!,
+                onClose: widget.onCancelReply,
+              ),
             // Note mode is a state you cannot miss: a labelled amber strip, not
             // a toggle you have to remember to look at.
             if (isNote)
@@ -296,6 +311,71 @@ class _MessageComposerState extends State<MessageComposer> {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _ReplyPreview extends StatelessWidget {
+  const _ReplyPreview({required this.message, this.onClose});
+
+  final Message message;
+  final VoidCallback? onClose;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final author = message.isOutbound
+        ? 'Bạn'
+        : (message.senderName ?? 'Khách hàng');
+    final preview = message.text.trim().isEmpty
+        ? (message.hasAttachments ? 'Tệp đính kèm' : 'Tin nhắn')
+        : message.text.trim();
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(14, 8, 8, 8),
+      decoration: BoxDecoration(
+        color: scheme.surfaceContainerLowest,
+        border: Border(
+          left: BorderSide(color: OmniColors.chatPrimary, width: 3),
+          bottom: BorderSide(color: scheme.outline.withValues(alpha: 0.4)),
+        ),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Đang trả lời $author',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: OmniType.micro.copyWith(
+                    color: OmniColors.chatPrimary,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  preview,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: OmniType.caption.copyWith(
+                    color: scheme.onSurfaceVariant,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          IconButton(
+            tooltip: 'Hủy trả lời',
+            onPressed: onClose,
+            icon: const Icon(Icons.close_rounded, size: 20),
+            visualDensity: VisualDensity.compact,
+          ),
+        ],
       ),
     );
   }

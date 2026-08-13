@@ -67,9 +67,14 @@ class ThreadController
       final page = await ref
           .read(inboxApiProvider)
           .messages(arg, before: current.nextBefore);
+      final byId = <String, Message>{
+        for (final message in [...page.messages.reversed, ...current.messages])
+          message.id: message,
+      };
       state = AsyncData(
         ThreadState(
-          messages: [...page.messages.reversed, ...current.messages],
+          messages: byId.values.toList()
+            ..sort(_compareMessages),
           hasMore: page.cursor.hasMore,
           nextBefore: page.cursor.nextBefore,
         ),
@@ -82,16 +87,46 @@ class ThreadController
   Future<void> send(
     String text, {
     List<MessageAttachment> attachments = const [],
+    Message? replyTo,
   }) {
     return _append(
       draft: Message.optimistic(
         localId: _nextLocalId(),
         text: text,
         attachments: attachments,
+        replyTo: replyTo,
       ),
       call: () => ref
           .read(inboxApiProvider)
-          .send(arg, text: text, attachments: attachments),
+          .send(
+            arg,
+            text: text,
+            attachments: attachments,
+            replyToMessageId: replyTo?.id,
+          ),
+    );
+  }
+
+  /// Shows the outgoing bubble immediately while large attachments upload.
+  /// The resolved server message replaces the temporary bubble once the upload
+  /// URLs are ready, so the composer never feels frozen behind network I/O.
+  Future<void> sendAfterUpload(
+    String text, {
+    required Future<List<MessageAttachment>> attachments,
+    Message? replyTo,
+  }) {
+    return _append(
+      draft: Message.optimistic(
+        localId: _nextLocalId(),
+        text: text,
+        replyTo: replyTo,
+      ),
+      call: () async => ref.read(inboxApiProvider).send(
+        arg,
+        text: text,
+        attachments: await attachments,
+        replyToMessageId: replyTo?.id,
+      ),
     );
   }
 
@@ -104,6 +139,45 @@ class ThreadController
       ),
       call: () => ref.read(inboxApiProvider).addNote(arg, text),
     );
+  }
+
+  Future<bool> togglePin(String messageId) async {
+    final current = state.valueOrNull;
+    final message = current?.messages.firstWhere(
+      (item) => item.id == messageId,
+      orElse: () => throw StateError('Message not found'),
+    );
+    if (message == null) return false;
+
+    final pinned = await ref.read(inboxApiProvider).togglePin(arg, messageId);
+    final latest = state.valueOrNull;
+    if (latest != null) {
+      state = AsyncData(
+        latest.copyWith(
+          messages: [
+            for (final item in latest.messages)
+              item.id == messageId ? item.copyWith(pinned: pinned) : item,
+          ],
+        ),
+      );
+    }
+    return pinned;
+  }
+
+  void mergeMessages(List<Message> found) {
+    final current = state.valueOrNull;
+    if (current == null || found.isEmpty) return;
+    final byId = <String, Message>{
+      for (final message in [...current.messages, ...found]) message.id: message,
+    };
+    final merged = byId.values.toList()..sort(_compareMessages);
+    state = AsyncData(current.copyWith(messages: merged));
+  }
+
+  static int _compareMessages(Message a, Message b) {
+    final left = a.sentAt ?? DateTime.fromMillisecondsSinceEpoch(0);
+    final right = b.sentAt ?? DateTime.fromMillisecondsSinceEpoch(0);
+    return left.compareTo(right);
   }
 
   Future<void> _append({
@@ -127,11 +201,22 @@ class ThreadController
   void _replace(String localId, Message resolved) {
     final current = state.valueOrNull;
     if (current == null) return;
+    final draft = current.messages.cast<Message?>().firstWhere(
+      (message) => message?.id == localId,
+      orElse: () => null,
+    );
+    final saved = draft != null && resolved.replyToMessageId == null
+        ? resolved.copyWith(
+            replyToMessageId: draft.replyToMessageId,
+            replyToText: draft.replyToText,
+            replyToAuthorName: draft.replyToAuthorName,
+          )
+        : resolved;
     state = AsyncData(
       current.copyWith(
         messages: [
           for (final message in current.messages)
-            if (message.id == localId) resolved else message,
+            if (message.id == localId) saved else message,
         ],
       ),
     );

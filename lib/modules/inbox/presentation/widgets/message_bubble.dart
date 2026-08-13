@@ -1,7 +1,12 @@
 import 'dart:math' as math;
 
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter/gestures.dart';
+import 'package:url_launcher/url_launcher.dart';
+import 'package:video_player/video_player.dart';
 
 import '../../../../core/utils/formatters.dart';
 import '../../../../design/components/components.dart';
@@ -17,6 +22,8 @@ class MessageBubble extends StatelessWidget {
     this.isLastInGroup = true,
     this.onRetry,
     this.onDiscard,
+    this.onReply,
+    this.onPin,
   });
 
   final Message message;
@@ -35,6 +42,8 @@ class MessageBubble extends StatelessWidget {
 
   final VoidCallback? onRetry;
   final VoidCallback? onDiscard;
+  final VoidCallback? onReply;
+  final VoidCallback? onPin;
 
   @override
   Widget build(BuildContext context) {
@@ -77,11 +86,19 @@ class MessageBubble extends StatelessWidget {
         : message.attachments
               .where((attachment) => attachment.isImage)
               .toList();
+    final videos = message.recalled
+        ? const <MessageAttachment>[]
+        : message.attachments
+              .where((attachment) => attachment.isVideo)
+              .toList();
     final files = message.attachments
-        .where((attachment) => !attachment.isImage)
+        .where((attachment) => !attachment.isImage && !attachment.isVideo)
         .toList();
     final hasBubbleContent =
-        message.recalled || message.text.isNotEmpty || files.isNotEmpty;
+        message.recalled ||
+        message.text.isNotEmpty ||
+        files.isNotEmpty ||
+        videos.isNotEmpty;
     final mediaHeroPrefix = message.id.isNotEmpty
         ? message.id
         : 'local-${identityHashCode(message)}';
@@ -100,6 +117,10 @@ class MessageBubble extends StatelessWidget {
             fallbackColor: color,
             showLabel: isLastInGroup,
           ),
+        ],
+        if (message.pinned) ...[
+          const SizedBox(width: 5),
+          Icon(Icons.push_pin_rounded, size: 13, color: color),
         ],
       ],
     );
@@ -122,6 +143,8 @@ class MessageBubble extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          if (message.replyToMessageId != null)
+            _QuotedMessage(message: message),
           if (files.isNotEmpty) ...[
             _FileAttachments(attachments: files),
             if (message.text.isNotEmpty) const SizedBox(height: OmniSpacing.sm),
@@ -135,9 +158,10 @@ class MessageBubble extends StatelessWidget {
               ),
             )
           else if (message.text.isNotEmpty)
-            Text(
-              message.text,
-              style: OmniChatType.message.copyWith(color: onBubble),
+            _MessageText(text: message.text, color: onBubble),
+          if (message.text.isNotEmpty && _urlPattern.hasMatch(message.text))
+            _LinkPreviewCard(
+              url: _urlPattern.firstMatch(message.text)!.group(0)!,
             ),
           // Time and tick inside the bubble, bottom-LEFT. Zalo puts them there
           // on both sides — checked against the real app, not from memory — and
@@ -157,6 +181,7 @@ class MessageBubble extends StatelessWidget {
       children: [
         if (images.isNotEmpty)
           _ImageGallery(images: images, heroPrefix: mediaHeroPrefix),
+        if (videos.isNotEmpty) _VideoAttachments(attachments: videos),
         if (images.isNotEmpty && !hasBubbleContent)
           Padding(
             padding: const EdgeInsets.only(top: 4, left: 4, right: 4),
@@ -186,78 +211,565 @@ class MessageBubble extends StatelessWidget {
                 : const SizedBox(width: 32),
           );
 
-    return Padding(
-      // 2 within a run, 10 when the speaker changes: the gap is what tells the
-      // eye where one person stopped and the other started.
-      padding: EdgeInsets.only(top: groupedWithPrevious ? 2 : 10),
-      child: Row(
-        mainAxisAlignment: outbound
-            ? MainAxisAlignment.end
-            : MainAxisAlignment.start,
-        crossAxisAlignment: CrossAxisAlignment.end,
-        children: [
-          if (!outbound) avatarGutter,
-          Flexible(
-            child: Column(
-              crossAxisAlignment: outbound
-                  ? CrossAxisAlignment.end
-                  : CrossAxisAlignment.start,
-              children: [
-                if (showSender && message.senderName != null)
-                  Padding(
-                    padding: const EdgeInsets.only(left: 4, bottom: 3),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        OmniAvatar(
-                          name: message.senderName!,
-                          imageUrl: message.senderAvatar,
-                          size: 16,
+    return _ReplySwipe(
+      enabled: onReply != null,
+      outbound: outbound,
+      onReply: onReply,
+      onPin: onPin,
+      child: Padding(
+        // 2 within a run, 10 when the speaker changes: the gap is what tells the
+        // eye where one person stopped and the other started.
+        padding: EdgeInsets.only(top: groupedWithPrevious ? 2 : 10),
+        child: Row(
+          mainAxisAlignment: outbound
+              ? MainAxisAlignment.end
+              : MainAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            if (!outbound) avatarGutter,
+            Flexible(
+              child: Column(
+                crossAxisAlignment: outbound
+                    ? CrossAxisAlignment.end
+                    : CrossAxisAlignment.start,
+                children: [
+                  if (showSender && message.senderName != null)
+                    Padding(
+                      padding: const EdgeInsets.only(left: 4, bottom: 3),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          OmniAvatar(
+                            name: message.senderName!,
+                            imageUrl: message.senderAvatar,
+                            size: 16,
+                          ),
+                          const SizedBox(width: 5),
+                          Text(
+                            message.senderName!,
+                            style: OmniType.micro.copyWith(
+                              color: scheme.onSurfaceVariant,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  Stack(
+                    clipBehavior: Clip.none,
+                    children: [
+                      content,
+                      if (message.reaction != null &&
+                          message.reaction!.isNotEmpty)
+                        Positioned(
+                          right: outbound ? null : -6,
+                          left: outbound ? -6 : null,
+                          bottom: -8,
+                          child: Container(
+                            padding: const EdgeInsets.all(3),
+                            decoration: BoxDecoration(
+                              color: scheme.surface,
+                              shape: BoxShape.circle,
+                              border: Border.all(color: scheme.outline),
+                            ),
+                            child: Text(
+                              message.reaction!,
+                              style: const TextStyle(fontSize: 11),
+                            ),
+                          ),
                         ),
-                        const SizedBox(width: 5),
+                    ],
+                  ),
+                  _MetaLine(
+                    message: message,
+                    onRetry: onRetry,
+                    onDiscard: onDiscard,
+                  ),
+                ],
+              ),
+            ),
+            if (outbound) avatarGutter,
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+final _urlPattern = RegExp(
+  r'(?:(?:https?://|www\.)[a-zA-Z0-9][^\s<>()]+|(?:[a-zA-Z0-9-]+\.)+(?:vn|com|net|org|io)(?:/[^\s<>()]*)?)',
+  caseSensitive: false,
+);
+
+class _MessageText extends StatefulWidget {
+  const _MessageText({required this.text, required this.color});
+
+  final String text;
+  final Color color;
+
+  @override
+  State<_MessageText> createState() => _MessageTextState();
+}
+
+class _MessageTextState extends State<_MessageText> {
+  final _recognizers = <TapGestureRecognizer>[];
+
+  @override
+  void dispose() {
+    for (final recognizer in _recognizers) {
+      recognizer.dispose();
+    }
+    super.dispose();
+  }
+
+  Future<void> _open(String value) async {
+    final normalized = value.toLowerCase().startsWith('http')
+        ? value
+        : 'https://$value';
+    await launchUrl(
+      Uri.parse(normalized),
+      mode: LaunchMode.externalApplication,
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    for (final recognizer in _recognizers) {
+      recognizer.dispose();
+    }
+    _recognizers.clear();
+
+    final spans = <TextSpan>[];
+    var cursor = 0;
+    for (final match in _urlPattern.allMatches(widget.text)) {
+      if (match.start > cursor) {
+        spans.add(TextSpan(text: widget.text.substring(cursor, match.start)));
+      }
+      final url = match.group(0)!;
+      final recognizer = TapGestureRecognizer()..onTap = () => _open(url);
+      _recognizers.add(recognizer);
+      spans.add(
+        TextSpan(
+          text: url,
+          recognizer: recognizer,
+          style: TextStyle(
+            color: OmniColors.chatPrimary,
+            decoration: TextDecoration.underline,
+            decorationColor: OmniColors.chatPrimary,
+          ),
+        ),
+      );
+      cursor = match.end;
+    }
+    if (cursor < widget.text.length) {
+      spans.add(TextSpan(text: widget.text.substring(cursor)));
+    }
+
+    return Text.rich(
+      TextSpan(
+        style: OmniChatType.message.copyWith(color: widget.color),
+        children: spans,
+      ),
+    );
+  }
+}
+
+class _LinkPreviewCard extends StatefulWidget {
+  const _LinkPreviewCard({required this.url});
+
+  final String url;
+
+  @override
+  State<_LinkPreviewCard> createState() => _LinkPreviewCardState();
+}
+
+class _LinkPreviewCardState extends State<_LinkPreviewCard> {
+  static final Map<String, Future<_LinkMetadata>> _metadataCache = {};
+  static final Dio _previewClient = Dio(
+    BaseOptions(
+      connectTimeout: Duration(seconds: 4),
+      receiveTimeout: Duration(seconds: 4),
+      sendTimeout: Duration(seconds: 4),
+      responseType: ResponseType.plain,
+      headers: {'User-Agent': 'OmniCRM Link Preview'},
+    ),
+  );
+  late final Future<_LinkMetadata> _metadata = _cachedMetadata(widget.url);
+
+  Future<_LinkMetadata> _cachedMetadata(String url) {
+    final existing = _metadataCache[url];
+    if (existing != null) return existing;
+    final future = _fetchMetadata(url);
+    // Bound the in-memory cache so a long inbox session cannot retain an
+    // unbounded number of one-off links.
+    if (_metadataCache.length >= 40) {
+      _metadataCache.remove(_metadataCache.keys.first);
+    }
+    _metadataCache[url] = future;
+    return future;
+  }
+
+  Future<_LinkMetadata> _fetchMetadata(String rawUrl) async {
+    final normalized = rawUrl.toLowerCase().startsWith('http')
+        ? rawUrl
+        : 'https://$rawUrl';
+    final uri = Uri.tryParse(normalized);
+    if (uri == null || !_isPreviewSafe(uri)) {
+      final host = uri?.host;
+      return _LinkMetadata(
+        domain: host != null && host.isNotEmpty ? host : rawUrl,
+      );
+    }
+
+    try {
+      final response = await _previewClient.get<String>(normalized);
+      // Metadata is near the head of normal pages. Avoid retaining/parsing a
+      // multi-megabyte response when a server returns a large document.
+      final rawHtml = response.data ?? '';
+      final html = rawHtml.substring(
+        0,
+        rawHtml.length > 512 * 1024 ? 512 * 1024 : rawHtml.length,
+      );
+      String readMeta(String property) {
+        final pattern = RegExp(
+          "<meta[^>]+(?:property|name)=[\\\"']$property[\\\"'][^>]+content=[\\\"']([^\\\"']+)",
+          caseSensitive: false,
+        );
+        return pattern.firstMatch(html)?.group(1) ?? '';
+      }
+
+      final title = readMeta('og:title');
+      final description = readMeta('og:description');
+      final image = readMeta('og:image');
+      return _LinkMetadata(
+        domain: uri.host,
+        title: title.isNotEmpty ? title : uri.host,
+        description: description,
+        imageUrl: image,
+      );
+    } catch (_) {
+      return _LinkMetadata(domain: uri.host, title: uri.host);
+    }
+  }
+
+  static bool _isPreviewSafe(Uri uri) {
+    if (uri.scheme != 'http' && uri.scheme != 'https') return false;
+    final host = uri.host.toLowerCase();
+    if (host.isEmpty || host == 'localhost' || host.endsWith('.local')) {
+      return false;
+    }
+    final ipv4 = RegExp(r'^\d{1,3}(?:\.\d{1,3}){3}$');
+    if (!ipv4.hasMatch(host)) return true;
+    final parts = host.split('.').map(int.parse).toList();
+    return parts[0] != 10 &&
+        !(parts[0] == 172 && parts[1] >= 16 && parts[1] <= 31) &&
+        !(parts[0] == 192 && parts[1] == 168) &&
+        parts[0] != 127 &&
+        !(parts[0] == 169 && parts[1] == 254);
+  }
+
+  Future<void> _open() async {
+    final raw = widget.url.toLowerCase().startsWith('http')
+        ? widget.url
+        : 'https://${widget.url}';
+    await launchUrl(Uri.parse(raw), mode: LaunchMode.externalApplication);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return FutureBuilder<_LinkMetadata>(
+      future: _metadata,
+      builder: (context, snapshot) {
+        final meta = snapshot.data ?? _LinkMetadata(domain: widget.url);
+        return Padding(
+          padding: const EdgeInsets.only(top: 8),
+          child: Material(
+            color: scheme.surfaceContainerHighest.withValues(alpha: 0.72),
+            borderRadius: BorderRadius.circular(12),
+            clipBehavior: Clip.antiAlias,
+            child: InkWell(
+              onTap: _open,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (meta.imageUrl != null && meta.imageUrl!.isNotEmpty)
+                    AspectRatio(
+                      aspectRatio: 1.9,
+                      child: CachedNetworkImage(
+                        imageUrl: meta.imageUrl!,
+                        fit: BoxFit.cover,
+                        errorWidget: (_, _, _) => const SizedBox.shrink(),
+                      ),
+                    ),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(12, 9, 12, 10),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
                         Text(
-                          message.senderName!,
-                          style: OmniType.micro.copyWith(
+                          meta.title ?? meta.domain,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: OmniType.bodyStrong,
+                        ),
+                        if (meta.description != null &&
+                            meta.description!.isNotEmpty) ...[
+                          const SizedBox(height: 3),
+                          Text(
+                            meta.description!,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: OmniType.caption.copyWith(
+                              color: scheme.onSurfaceVariant,
+                            ),
+                          ),
+                        ],
+                        const SizedBox(height: 3),
+                        Text(
+                          meta.domain,
+                          style: OmniType.caption.copyWith(
                             color: scheme.onSurfaceVariant,
                           ),
                         ),
                       ],
                     ),
                   ),
-                Stack(
-                  clipBehavior: Clip.none,
-                  children: [
-                    content,
-                    if (message.reaction != null &&
-                        message.reaction!.isNotEmpty)
-                      Positioned(
-                        right: outbound ? null : -6,
-                        left: outbound ? -6 : null,
-                        bottom: -8,
-                        child: Container(
-                          padding: const EdgeInsets.all(3),
-                          decoration: BoxDecoration(
-                            color: scheme.surface,
-                            shape: BoxShape.circle,
-                            border: Border.all(color: scheme.outline),
-                          ),
-                          child: Text(
-                            message.reaction!,
-                            style: const TextStyle(fontSize: 11),
-                          ),
-                        ),
-                      ),
-                  ],
-                ),
-                _MetaLine(
-                  message: message,
-                  onRetry: onRetry,
-                  onDiscard: onDiscard,
-                ),
-              ],
+                ],
+              ),
             ),
           ),
-          if (outbound) avatarGutter,
+        );
+      },
+    );
+  }
+}
+
+class _LinkMetadata {
+  const _LinkMetadata({
+    required this.domain,
+    this.title,
+    this.description,
+    this.imageUrl,
+  });
+
+  final String domain;
+  final String? title;
+  final String? description;
+  final String? imageUrl;
+}
+
+class _ReplySwipe extends StatefulWidget {
+  const _ReplySwipe({
+    required this.child,
+    required this.outbound,
+    required this.enabled,
+    this.onReply,
+    this.onPin,
+  });
+
+  final Widget child;
+  final bool outbound;
+  final bool enabled;
+  final VoidCallback? onReply;
+  final VoidCallback? onPin;
+
+  @override
+  State<_ReplySwipe> createState() => _ReplySwipeState();
+}
+
+class _ReplySwipeState extends State<_ReplySwipe>
+    with SingleTickerProviderStateMixin {
+  static const _triggerDistance = 64.0;
+  static const _maxDistance = 88.0;
+
+  AnimationController? _controller;
+  double _distance = 0;
+  double _drag = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 180),
+    );
+  }
+
+  @override
+  void dispose() {
+    _controller?.dispose();
+    super.dispose();
+  }
+
+  void _reset() {
+    _controller?.forward(from: 0).then((_) {
+      if (mounted) setState(() => _distance = 0);
+    });
+  }
+
+  void _onDragUpdate(DragUpdateDetails details) {
+    _drag += details.delta.dx;
+    final towardCenter = widget.outbound ? -_drag : _drag;
+    setState(() {
+      _distance = towardCenter.clamp(0, _maxDistance);
+    });
+  }
+
+  void _onDragEnd(DragEndDetails details) {
+    if (_distance >= _triggerDistance) {
+      HapticFeedback.selectionClick();
+      widget.onReply?.call();
+    }
+    _drag = 0;
+    _reset();
+  }
+
+  Future<void> _showActions() async {
+    final action = await showModalBottomSheet<String>(
+      context: context,
+      showDragHandle: true,
+      isScrollControlled: true,
+      useSafeArea: true,
+      constraints: const BoxConstraints(maxWidth: 520),
+      builder: (context) => SafeArea(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxHeight: 220),
+          child: ListView(
+            shrinkWrap: true,
+            padding: const EdgeInsets.only(bottom: 8),
+            children: [
+              const Padding(
+                padding: EdgeInsets.fromLTRB(20, 4, 20, 8),
+                child: Text(
+                  'Thao tác tin nhắn',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(fontWeight: FontWeight.w700),
+                ),
+              ),
+              if (widget.onReply != null)
+                ListTile(
+                  dense: true,
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 16),
+                  leading: const Icon(Icons.reply_rounded),
+                  title: const Text(
+                    'Trả lời',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  onTap: () => Navigator.pop(context, 'reply'),
+                ),
+              if (widget.onPin != null)
+                ListTile(
+                  dense: true,
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 16),
+                  leading: const Icon(Icons.push_pin_outlined),
+                  title: const Text(
+                    'Ghim hoặc bỏ ghim',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  onTap: () => Navigator.pop(context, 'pin'),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+    if (!mounted) return;
+    if (action == 'reply') widget.onReply?.call();
+    if (action == 'pin') widget.onPin?.call();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (!widget.enabled) return widget.child;
+
+    final direction = widget.outbound ? -1.0 : 1.0;
+    final progress = (_distance / _triggerDistance).clamp(0.0, 1.0);
+
+    return GestureDetector(
+      behavior: HitTestBehavior.translucent,
+      onLongPress: _showActions,
+      onHorizontalDragUpdate: _onDragUpdate,
+      onHorizontalDragEnd: _onDragEnd,
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          Positioned.fill(
+            child: Align(
+              alignment: widget.outbound
+                  ? Alignment.centerRight
+                  : Alignment.centerLeft,
+              child: Padding(
+                padding: EdgeInsets.only(
+                  left: widget.outbound ? 0 : 14,
+                  right: widget.outbound ? 14 : 0,
+                ),
+                child: Opacity(
+                  opacity: progress,
+                  child: Icon(
+                    Icons.reply_rounded,
+                    size: 22,
+                    color: OmniColors.chatPrimary,
+                  ),
+                ),
+              ),
+            ),
+          ),
+          Transform.translate(
+            offset: Offset(direction * _distance, 0),
+            child: widget.child,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _QuotedMessage extends StatelessWidget {
+  const _QuotedMessage({required this.message});
+
+  final Message message;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final author = message.replyToAuthorName ?? 'Tin nhắn trước đó';
+    final text = message.replyToText?.trim();
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.only(bottom: 7),
+      padding: const EdgeInsets.fromLTRB(8, 5, 8, 5),
+      decoration: BoxDecoration(
+        color: scheme.onSurface.withValues(alpha: 0.06),
+        borderRadius: BorderRadius.circular(8),
+        border: Border(
+          left: BorderSide(
+            color: OmniColors.chatPrimary.withValues(alpha: 0.85),
+            width: 3,
+          ),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            author,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: OmniChatType.meta.copyWith(
+              color: OmniColors.chatPrimary,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            text == null || text.isEmpty ? 'Tin nhắn được trích dẫn' : text,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: OmniChatType.meta.copyWith(color: scheme.onSurfaceVariant),
+          ),
         ],
       ),
     );
@@ -277,37 +789,51 @@ class _MetaLine extends StatelessWidget {
     final failed = message.status == DeliveryStatus.failed;
 
     if (failed) {
-      return Row(
-        mainAxisSize: MainAxisSize.min,
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Icon(Icons.error_outline_rounded, size: 13, color: scheme.error),
-          const SizedBox(width: 4),
-          Flexible(
-            child: Text(
-              message.error ?? 'Gửi lỗi',
-              style: OmniType.micro.copyWith(color: scheme.error),
-            ),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(Icons.error_outline_rounded, size: 15, color: scheme.error),
+              const SizedBox(width: 5),
+              Expanded(
+                child: Text(
+                  message.error ?? 'Gửi lỗi',
+                  style: OmniType.micro.copyWith(color: scheme.error),
+                ),
+              ),
+            ],
           ),
-          if (onRetry != null)
-            TextButton(
-              onPressed: onRetry,
-              style: TextButton.styleFrom(
-                minimumSize: Size.zero,
-                padding: const EdgeInsets.symmetric(horizontal: 6),
-                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+          if (onRetry != null || onDiscard != null)
+            Align(
+              alignment: AlignmentDirectional.centerEnd,
+              child: Wrap(
+                spacing: 2,
+                children: [
+                  if (onRetry != null)
+                    TextButton(
+                      onPressed: onRetry,
+                      style: TextButton.styleFrom(
+                        minimumSize: const Size(48, 40),
+                        padding: const EdgeInsets.symmetric(horizontal: 8),
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      ),
+                      child: const Text('Gửi lại'),
+                    ),
+                  if (onDiscard != null)
+                    TextButton(
+                      onPressed: onDiscard,
+                      style: TextButton.styleFrom(
+                        minimumSize: const Size(48, 40),
+                        padding: const EdgeInsets.symmetric(horizontal: 8),
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        foregroundColor: scheme.onSurfaceVariant,
+                      ),
+                      child: const Text('Bỏ'),
+                    ),
+                ],
               ),
-              child: const Text('Gửi lại'),
-            ),
-          if (onDiscard != null)
-            TextButton(
-              onPressed: onDiscard,
-              style: TextButton.styleFrom(
-                minimumSize: Size.zero,
-                padding: const EdgeInsets.symmetric(horizontal: 6),
-                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                foregroundColor: scheme.onSurfaceVariant,
-              ),
-              child: const Text('Bỏ'),
             ),
         ],
       );
@@ -903,6 +1429,12 @@ class _FileAttachments extends StatelessWidget {
 
   final List<MessageAttachment> attachments;
 
+  Future<void> _open(String url) async {
+    final uri = Uri.tryParse(url);
+    if (uri == null) return;
+    await launchUrl(uri, mode: LaunchMode.externalApplication);
+  }
+
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
@@ -913,26 +1445,146 @@ class _FileAttachments extends StatelessWidget {
         for (final attachment in attachments)
           Padding(
             padding: const EdgeInsets.only(bottom: 4),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(
-                  Icons.attach_file_rounded,
-                  size: 15,
-                  color: scheme.onSurfaceVariant,
-                ),
-                const SizedBox(width: 5),
-                Flexible(
-                  child: Text(
-                    attachment.name ?? 'Tệp đính kèm',
-                    overflow: TextOverflow.ellipsis,
-                    style: OmniType.caption,
+            child: Material(
+              color: scheme.onSurface.withValues(alpha: 0.06),
+              borderRadius: BorderRadius.circular(9),
+              child: InkWell(
+                onTap: () => _open(attachment.url),
+                borderRadius: BorderRadius.circular(9),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 7,
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.insert_drive_file_outlined,
+                        size: 18,
+                        color: OmniColors.chatPrimary,
+                      ),
+                      const SizedBox(width: 6),
+                      Flexible(
+                        child: Text(
+                          attachment.name ?? 'Tệp đính kèm',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: OmniType.caption.copyWith(
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 7),
+                      Icon(
+                        Icons.download_rounded,
+                        size: 17,
+                        color: scheme.onSurfaceVariant,
+                      ),
+                    ],
                   ),
                 ),
-              ],
+              ),
             ),
           ),
       ],
+    );
+  }
+}
+
+class _VideoAttachments extends StatelessWidget {
+  const _VideoAttachments({required this.attachments});
+
+  final List<MessageAttachment> attachments;
+
+  @override
+  Widget build(BuildContext context) => Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      for (final attachment in attachments)
+        Padding(
+          padding: const EdgeInsets.only(bottom: 6),
+          child: _InlineVideo(url: attachment.url, name: attachment.name),
+        ),
+    ],
+  );
+}
+
+class _InlineVideo extends StatefulWidget {
+  const _InlineVideo({required this.url, this.name});
+
+  final String url;
+  final String? name;
+
+  @override
+  State<_InlineVideo> createState() => _InlineVideoState();
+}
+
+class _InlineVideoState extends State<_InlineVideo> {
+  late final VideoPlayerController _controller =
+      VideoPlayerController.networkUrl(Uri.parse(widget.url));
+
+  @override
+  void initState() {
+    super.initState();
+    _controller.initialize().then((_) {
+      if (mounted) setState(() {});
+    });
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    if (!_controller.value.isInitialized) {
+      return AspectRatio(
+        aspectRatio: 16 / 9,
+        child: ColoredBox(
+          color: scheme.onSurface.withValues(alpha: 0.08),
+          child: const Center(child: CircularProgressIndicator(strokeWidth: 2)),
+        ),
+      );
+    }
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(14),
+      child: Stack(
+        alignment: Alignment.bottomCenter,
+        children: [
+          AspectRatio(
+            aspectRatio: _controller.value.aspectRatio,
+            child: VideoPlayer(_controller),
+          ),
+          VideoProgressIndicator(
+            _controller,
+            allowScrubbing: true,
+            colors: VideoProgressColors(
+              playedColor: OmniColors.chatPrimary,
+              bufferedColor: Colors.white54,
+              backgroundColor: Colors.black38,
+            ),
+          ),
+          Center(
+            child: IconButton.filled(
+              tooltip: _controller.value.isPlaying ? 'Tạm dừng' : 'Phát video',
+              onPressed: () => setState(() {
+                _controller.value.isPlaying
+                    ? _controller.pause()
+                    : _controller.play();
+              }),
+              icon: Icon(
+                _controller.value.isPlaying
+                    ? Icons.pause_rounded
+                    : Icons.play_arrow_rounded,
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

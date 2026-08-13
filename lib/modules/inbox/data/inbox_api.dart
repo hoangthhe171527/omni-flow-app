@@ -74,6 +74,37 @@ class MessagePage {
   final CursorPage cursor;
 }
 
+class ConversationAssets {
+  const ConversationAssets({
+    this.media = const [],
+    this.files = const [],
+    this.links = const [],
+    this.cursor = const CursorPage.empty(),
+  });
+
+  factory ConversationAssets.fromJson(Map<String, dynamic> json) {
+    List<MessageAttachment> attachments(String key) =>
+        (json[key] is List ? json[key] as List : const [])
+            .whereType<Map>()
+            .map((item) => MessageAttachment.fromJson(item.cast<String, dynamic>()))
+            .toList();
+    final rawLinks = json['links'];
+    return ConversationAssets(
+      media: attachments('media'),
+      files: attachments('files'),
+      links: rawLinks is List ? rawLinks.map((item) => '$item').toList() : const [],
+      cursor: json['pagination'] is Map
+          ? CursorPage.fromJson((json['pagination'] as Map).cast<String, dynamic>())
+          : const CursorPage.empty(),
+    );
+  }
+
+  final List<MessageAttachment> media;
+  final List<MessageAttachment> files;
+  final List<String> links;
+  final CursorPage cursor;
+}
+
 /// A compact server-side catch-up response. It contains no message body because
 /// the visible providers remain the source of rendering; its only job is to tell
 /// a sleeping/offline client exactly when it must refresh.
@@ -119,10 +150,14 @@ class InboxApi {
   /// Fetches only changes since the last cursor. On first use the API returns a
   /// cursor and no historical payload, because the normal list fetch is already
   /// the authoritative initial snapshot.
-  Future<InboxChanges> changes(String? after) async {
+  Future<InboxChanges> changes(String? after, {String? conversationId}) async {
     final response = await _client.get(
       '/inbox/changes',
-      query: {'after': after},
+      query: {
+        'after': after,
+        if (conversationId != null && conversationId.isNotEmpty)
+          'conversation_id': conversationId,
+      },
     );
     return InboxChanges.fromJson(response.object, response.list);
   }
@@ -155,10 +190,38 @@ class InboxApi {
     );
   }
 
+  Future<ConversationAssets> assets(
+    String id, {
+    String? before,
+    int perPage = 80,
+  }) async {
+    final response = await _client.get(
+      '$_base/$id/assets',
+      query: {'before': before, 'per_page': perPage},
+    );
+    return ConversationAssets.fromJson(response.object);
+  }
+
+  Future<List<Message>> searchMessages(String id, String query) async {
+    final response = await _client.get(
+      '$_base/$id/messages/search',
+      query: {'q': query.trim(), 'limit': 50},
+    );
+    return response.list.map(Message.fromJson).toList();
+  }
+
+  Future<bool> togglePin(String conversationId, String messageId) async {
+    final response = await _client.post(
+      '$_base/$conversationId/messages/$messageId/pin',
+    );
+    return response.object['pinned'] == true;
+  }
+
   Future<Message> send(
     String id, {
     String? text,
     List<MessageAttachment> attachments = const [],
+    String? replyToMessageId,
   }) async {
     final response = await _client.post(
       '$_base/$id/messages',
@@ -173,6 +236,8 @@ class InboxApi {
                 'name': ?attachment.name,
               },
           ],
+        if (replyToMessageId != null && replyToMessageId.isNotEmpty)
+          'reply_to_message_id': replyToMessageId,
       },
     );
     return Message.fromJson(response.object);

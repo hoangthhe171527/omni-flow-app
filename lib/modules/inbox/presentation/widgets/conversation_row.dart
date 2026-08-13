@@ -156,6 +156,8 @@ class ConversationRow extends StatelessWidget {
                 ),
               ),
             ],
+            _SourceLabel(conversation: conversation),
+            const SizedBox(width: 7),
             Expanded(
               child: Text(
                 conversation.lastMessage.isEmpty
@@ -193,6 +195,48 @@ class ConversationRow extends StatelessWidget {
           ],
         ),
       ],
+    );
+  }
+}
+
+/// Compact source marker for scanning mixed-channel inboxes. The avatar keeps
+/// the visual mark, while this label makes the source unambiguous without
+/// spending a third row or turning the conversation list into a table.
+class _SourceLabel extends StatelessWidget {
+  const _SourceLabel({required this.conversation});
+
+  final Conversation conversation;
+
+  @override
+  Widget build(BuildContext context) {
+    final meta = conversation.channel.meta;
+    final account = conversation.accountName;
+    final label = account == null || account.isEmpty
+        ? meta.short
+        : '${meta.short} · $account';
+
+    return ConstrainedBox(
+      constraints: const BoxConstraints(maxWidth: 132),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(meta.icon, size: 13, color: meta.color),
+          const SizedBox(width: 4),
+          Flexible(
+            child: Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: OmniType.micro.copyWith(
+                fontSize: 10.5,
+                height: 1.15,
+                color: meta.color,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

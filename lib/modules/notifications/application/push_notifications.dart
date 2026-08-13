@@ -17,7 +17,9 @@ import '../data/push_api.dart';
 // chime instead of retaining the quiet system default from v2.
 const _androidChannelId = 'inbox_messages_v3';
 const _tokenRefreshGenerationKey = 'fcm_token_refresh_generation';
-const _tokenRefreshGeneration = 1;
+// Bump when a release must rebind the installation. This repairs devices that
+// kept an FCM token locally while its server-side row was removed/invalidated.
+const _tokenRefreshGeneration = 3;
 const _androidSound = RawResourceAndroidNotificationSound('omni_message_alert');
 
 const _androidChannel = AndroidNotificationChannel(
@@ -100,6 +102,10 @@ class PushNotifications {
     try {
       await initializePushRuntime();
       _firebaseReady = true;
+      // Keep Firebase's registration sync enabled explicitly. This repairs
+      // installations restored or upgraded across Firebase SDK generations,
+      // where a cached token can still be accepted by FCM but receive nothing.
+      await FirebaseMessaging.instance.setAutoInitEnabled(true);
       await _initializeLocalNotifications();
 
       // Install the listener before any registration network request. A slow
@@ -114,7 +120,13 @@ class PushNotifications {
         _openFromNotificationTap,
       );
 
-      await FirebaseMessaging.instance.requestPermission();
+      final settings = await FirebaseMessaging.instance.requestPermission(
+        alert: true,
+        badge: true,
+        sound: true,
+        provisional: false,
+      );
+      debugPrint('Push authorization: ${settings.authorizationStatus}');
       _token = await _refreshStaleTokenOnce();
       if (_token != null) await _register(_token!);
       _registrationHeartbeat?.cancel();

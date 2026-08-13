@@ -1,5 +1,6 @@
 import '../../../core/utils/formatters.dart';
 import '../../../core/utils/json.dart';
+import '../../../core/utils/media_url.dart';
 
 enum MessageAuthor { customer, agent, note }
 
@@ -12,7 +13,7 @@ class MessageAttachment {
 
   factory MessageAttachment.fromJson(Map<String, dynamic> json) =>
       MessageAttachment(
-        url: json.strOr('url', ''),
+        url: resolveMediaUrl(json.strOr('url', '')),
         type: json.strOr('type', 'file'),
         name: json.str('name'),
       );
@@ -21,8 +22,8 @@ class MessageAttachment {
   final String type;
   final String? name;
 
-  bool get isImage => type.startsWith('image');
-  bool get isVideo => type.startsWith('video');
+  bool get isImage => type.toLowerCase().startsWith('image');
+  bool get isVideo => type.toLowerCase().startsWith('video');
   bool get isAudio => type.startsWith('audio');
 }
 
@@ -35,10 +36,14 @@ class Message {
     this.status = DeliveryStatus.none,
     this.error,
     this.recalled = false,
+    this.pinned = false,
     this.reaction,
     this.agentName,
     this.senderName,
     this.senderAvatar,
+    this.replyToMessageId,
+    this.replyToText,
+    this.replyToAuthorName,
     this.attachments = const [],
   });
 
@@ -55,10 +60,16 @@ class Message {
       status: _status(json.str('status')),
       error: json.str('error'),
       recalled: json.flag('recalled'),
+      pinned: json.flag('pinned'),
       reaction: json.str('reaction'),
       agentName: json.str('agent_name'),
       senderName: json.str('sender_name'),
       senderAvatar: json.str('sender_avatar'),
+      replyToMessageId:
+          json.str('reply_to_message_id') ?? json.str('reply_to_id'),
+      replyToText: json.str('reply_to_text') ?? json.str('quoted_text'),
+      replyToAuthorName:
+          json.str('reply_to_author_name') ?? json.str('quoted_author'),
       attachments: json
           .mapList('attachments')
           .map(MessageAttachment.fromJson)
@@ -73,12 +84,19 @@ class Message {
   final DeliveryStatus status;
   final String? error;
   final bool recalled;
+  final bool pinned;
   final String? reaction;
   final String? agentName;
 
   /// Group threads only: which member sent this message.
   final String? senderName;
   final String? senderAvatar;
+
+  /// The message this message is replying to, when the channel/API supports
+  /// native quoted replies.
+  final String? replyToMessageId;
+  final String? replyToText;
+  final String? replyToAuthorName;
 
   final List<MessageAttachment> attachments;
 
@@ -109,6 +127,7 @@ class Message {
     required String text,
     List<MessageAttachment> attachments = const [],
     bool asNote = false,
+    Message? replyTo,
   }) {
     return Message(
       id: localId,
@@ -116,11 +135,22 @@ class Message {
       text: text,
       sentAt: DateTime.now(),
       status: asNote ? DeliveryStatus.none : DeliveryStatus.queued,
+      replyToMessageId: replyTo?.id,
+      replyToText: replyTo?.text,
+      replyToAuthorName: replyTo?.senderName,
       attachments: attachments,
     );
   }
 
-  Message copyWith({DeliveryStatus? status, String? error, String? id}) {
+  Message copyWith({
+    DeliveryStatus? status,
+    String? error,
+    String? id,
+    String? replyToMessageId,
+    String? replyToText,
+    String? replyToAuthorName,
+    bool? pinned,
+  }) {
     return Message(
       id: id ?? this.id,
       author: author,
@@ -129,10 +159,14 @@ class Message {
       status: status ?? this.status,
       error: error ?? this.error,
       recalled: recalled,
+      pinned: pinned ?? this.pinned,
       reaction: reaction,
       agentName: agentName,
       senderName: senderName,
       senderAvatar: senderAvatar,
+      replyToMessageId: replyToMessageId ?? this.replyToMessageId,
+      replyToText: replyToText ?? this.replyToText,
+      replyToAuthorName: replyToAuthorName ?? this.replyToAuthorName,
       attachments: attachments,
     );
   }

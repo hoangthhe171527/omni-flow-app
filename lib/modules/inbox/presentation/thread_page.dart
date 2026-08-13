@@ -30,7 +30,16 @@ class ThreadPage extends ConsumerStatefulWidget {
 class _ThreadPageState extends ConsumerState<ThreadPage>
     with WidgetsBindingObserver {
   final _scrollController = ScrollController();
+  final _searchController = TextEditingController();
+  final _searchFocusNode = FocusNode();
   Timer? _syncTimer;
+  String? _syncCursor;
+  bool _syncing = false;
+  Timer? _searchDebounce;
+  Message? _replyingTo;
+  bool _searchMode = false;
+  List<Message> _searchResults = const [];
+  int _searchIndex = 0;
 
   @override
   void initState() {
@@ -63,6 +72,9 @@ class _ThreadPageState extends ConsumerState<ThreadPage>
   void dispose() {
     _scrollController.removeListener(_onScroll);
     _scrollController.dispose();
+    _searchController.dispose();
+    _searchFocusNode.dispose();
+    _searchDebounce?.cancel();
     WidgetsBinding.instance.removeObserver(this);
     _syncTimer?.cancel();
     super.dispose();
@@ -80,9 +92,29 @@ class _ThreadPageState extends ConsumerState<ThreadPage>
   }
 
   void _startRealtimeFallback() {
-    _syncTimer ??= Timer.periodic(const Duration(seconds: 5), (_) {
-      if (mounted) _refreshThread();
+    _syncTimer ??= Timer.periodic(const Duration(seconds: 8), (_) {
+      _catchUpChanges();
     });
+  }
+
+  Future<void> _catchUpChanges() async {
+    if (!mounted || _syncing) return;
+    _syncing = true;
+    try {
+      final changes = await ref.read(inboxApiProvider).changes(
+        _syncCursor,
+        conversationId: widget.conversationId,
+      );
+      if (!mounted) return;
+      _syncCursor = changes.cursor.isEmpty ? _syncCursor : changes.cursor;
+      if (changes.count > 0) {
+        _refreshThread();
+      }
+    } catch (_) {
+      // The next cursor poll retries without clearing the visible thread.
+    } finally {
+      _syncing = false;
+    }
   }
 
   void _refreshThread() {
@@ -100,6 +132,15 @@ class _ThreadPageState extends ConsumerState<ThreadPage>
 
   @override
   Widget build(BuildContext context) {
+    // The inbox list already listens to the foreground push signal, but an
+    // open thread must invalidate its own message provider too. Without this,
+    // FCM shows the notification while the conversation remains stale until a
+    // manual reload or the next fallback poll.
+    ref.listen<int>(inboxRealtimeSignalProvider, (previous, next) {
+      if (previous == next) return;
+      _refreshThread();
+    });
+
     final conversation = ref.watch(conversationProvider(widget.conversationId));
     final thread = ref.watch(threadProvider(widget.conversationId));
     final access = ref.watch(inboxAccessProvider);
@@ -118,6 +159,16 @@ class _ThreadPageState extends ConsumerState<ThreadPage>
         conversation: conversation.valueOrNull,
         onAssign: access.canAssign ? _assign : null,
         onInfo: _showContext,
+        searchMode: _searchMode,
+        searchController: _searchController,
+        searchFocusNode: _searchFocusNode,
+        searchResultCount: _searchResults.length,
+        searchResultIndex: _searchResults.isEmpty ? 0 : _searchIndex,
+        onSearch: _openSearch,
+        onSearchChanged: _search,
+        onSearchPrevious: () => _moveSearch(-1),
+        onSearchNext: () => _moveSearch(1),
+        onCloseSearch: _closeSearch,
       ),
       body: Column(
         children: [
@@ -144,6 +195,9 @@ class _ThreadPageState extends ConsumerState<ThreadPage>
                 onDiscard: (message) => ref
                     .read(threadProvider(widget.conversationId).notifier)
                     .discard(message.id),
+                onReply: (message) => setState(() => _replyingTo = message),
+                onPin: _togglePin,
+                keyForMessage: _keyForMessage,
               ),
             ),
           ),
@@ -151,9 +205,11 @@ class _ThreadPageState extends ConsumerState<ThreadPage>
             MessageComposer(
               canNote: access.canNote,
               suggestions: _suggestions(conversation.valueOrNull),
+              replyTo: _replyingTo,
+              onCancelReply: () => setState(() => _replyingTo = null),
               onPickImages: _pickImages,
               onTakePhoto: _takePhoto,
-              onSend: (text, mode, images) async {
+              onSend: (text, mode, images, replyTo) async {
                 final controller = ref.read(
                   threadProvider(widget.conversationId).notifier,
                 );
@@ -161,19 +217,24 @@ class _ThreadPageState extends ConsumerState<ThreadPage>
                   await controller.addNote(text);
                 } else {
                   try {
-                    final attachments = await Future.wait(
+                    final upload = Future.wait(
                       images.map(
                         (image) => ref
                             .read(inboxApiProvider)
                             .uploadMedia(image.path, filename: image.name),
                       ),
                     );
-                    await controller.send(text, attachments: attachments);
+                    await controller.sendAfterUpload(
+                      text,
+                      attachments: upload,
+                      replyTo: replyTo,
+                    );
                   } on AppException catch (error) {
                     _toast(error.message);
                     rethrow;
                   }
                 }
+                if (mounted) setState(() => _replyingTo = null);
                 _scrollToBottom();
               },
             )
@@ -182,6 +243,84 @@ class _ThreadPageState extends ConsumerState<ThreadPage>
         ],
       ),
     );
+  }
+
+  final Map<String, GlobalKey> _messageKeys = {};
+
+  GlobalKey _keyForMessage(String id) =>
+      _messageKeys.putIfAbsent(id, GlobalKey.new);
+
+  void _openSearch() {
+    setState(() => _searchMode = true);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _searchFocusNode.requestFocus();
+    });
+  }
+
+  void _closeSearch() {
+    _searchDebounce?.cancel();
+    _searchController.clear();
+    _searchFocusNode.unfocus();
+    setState(() {
+      _searchMode = false;
+      _searchResults = const [];
+      _searchIndex = 0;
+    });
+  }
+
+  void _search(String value) {
+    _searchDebounce?.cancel();
+    final query = value.trim();
+    if (query.length < 2) {
+      setState(() {
+        _searchResults = const [];
+        _searchIndex = 0;
+      });
+      return;
+    }
+    _searchDebounce = Timer(const Duration(milliseconds: 280), () async {
+      try {
+        final found = await ref.read(inboxApiProvider).searchMessages(
+          widget.conversationId,
+          query,
+        );
+        if (!mounted || _searchController.text.trim() != query) return;
+        ref.read(threadProvider(widget.conversationId).notifier).mergeMessages(found);
+        setState(() {
+          _searchResults = found;
+          _searchIndex = 0;
+        });
+        _ensureSearchVisible();
+      } on AppException catch (error) {
+        if (mounted) _toast(error.message);
+      }
+    });
+  }
+
+  void _moveSearch(int delta) {
+    if (_searchResults.isEmpty) return;
+    setState(() {
+      _searchIndex = (_searchIndex + delta) % _searchResults.length;
+      if (_searchIndex < 0) _searchIndex = _searchResults.length - 1;
+    });
+    _ensureSearchVisible();
+  }
+
+  void _ensureSearchVisible() {
+    if (_searchResults.isEmpty) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final key = _messageKeys[_searchResults[_searchIndex].id];
+      final target = key?.currentContext;
+      if (target != null) {
+        Scrollable.ensureVisible(
+          target,
+          duration: const Duration(milliseconds: 220),
+          curve: Curves.easeOut,
+          alignment: 0.35,
+        );
+      }
+    });
   }
 
   /// Rule-based, not generated: openers a rep would type anyway, offered as one
@@ -204,6 +343,19 @@ class _ThreadPageState extends ConsumerState<ThreadPage>
       duration: const Duration(milliseconds: 240),
       curve: Curves.easeOut,
     );
+  }
+
+  Future<void> _togglePin(Message message) async {
+    try {
+      final pinned = await ref
+          .read(threadProvider(widget.conversationId).notifier)
+          .togglePin(message.id);
+      if (mounted) {
+        _toast(pinned ? 'Đã ghim tin nhắn.' : 'Đã bỏ ghim tin nhắn.');
+      }
+    } on AppException catch (error) {
+      _toast(error.message);
+    }
   }
 
   Future<List<XFile>> _pickImages() =>
@@ -256,44 +408,84 @@ class _ThreadAppBar extends StatelessWidget implements PreferredSizeWidget {
   const _ThreadAppBar({
     required this.conversation,
     required this.onInfo,
+    required this.searchMode,
+    required this.searchController,
+    required this.searchFocusNode,
+    required this.searchResultCount,
+    required this.searchResultIndex,
+    required this.onSearch,
+    required this.onSearchChanged,
+    required this.onSearchPrevious,
+    required this.onSearchNext,
+    required this.onCloseSearch,
     this.onAssign,
   });
 
   final Conversation? conversation;
   final VoidCallback onInfo;
+  final bool searchMode;
+  final TextEditingController searchController;
+  final FocusNode searchFocusNode;
+  final int searchResultCount;
+  final int searchResultIndex;
+  final VoidCallback onSearch;
+  final ValueChanged<String> onSearchChanged;
+  final VoidCallback onSearchPrevious;
+  final VoidCallback onSearchNext;
+  final VoidCallback onCloseSearch;
   final VoidCallback? onAssign;
 
   @override
-  Size get preferredSize => const Size.fromHeight(64);
+  Size get preferredSize => const Size.fromHeight(72);
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
 
     return AppBar(
-      toolbarHeight: 64,
+      toolbarHeight: 72,
+      leadingWidth: 52,
       titleSpacing: 0,
       backgroundColor: scheme.surface,
+      surfaceTintColor: Colors.transparent,
+      elevation: 0,
       shape: Border(
         bottom: BorderSide(color: scheme.outline.withValues(alpha: 0.72)),
       ),
-      title: conversation == null
+      title: searchMode
+          ? TextField(
+              controller: searchController,
+              focusNode: searchFocusNode,
+              autofocus: true,
+              onChanged: onSearchChanged,
+              textInputAction: TextInputAction.search,
+              decoration: InputDecoration(
+                hintText: 'Tìm trong hội thoại',
+                border: InputBorder.none,
+                isDense: true,
+                suffixText: searchResultCount == 0
+                    ? null
+                    : '${searchResultIndex + 1}/$searchResultCount',
+              ),
+            )
+          : conversation == null
           ? const SizedBox.shrink()
           : Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 conversation!.isGroup
                     ? OmniGroupAvatar(
                         names: conversation!.groupMembers
                             .map((m) => m.name ?? '?')
                             .toList(),
-                        size: 36,
+                        size: 40,
                       )
                     : OmniAvatar(
                         name: conversation!.title,
                         imageUrl: conversation!.customerAvatar,
-                        size: 36,
+                        size: 40,
                       ),
-                const SizedBox(width: OmniSpacing.sm),
+                const SizedBox(width: 10),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -303,24 +495,35 @@ class _ThreadAppBar extends StatelessWidget implements PreferredSizeWidget {
                         conversation!.title,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        // 15 was smaller than the message text it sits above.
-                        // The person you are talking to is the screen's title.
                         style: OmniChatType.peer.copyWith(
+                          fontSize: 16,
                           color: scheme.onSurface,
                         ),
                       ),
+                      const SizedBox(height: 4),
                       Row(
                         children: [
-                          OmniSourcePill(
-                            channel: conversation!.channel,
-                            accountName: conversation!.accountName,
+                          Flexible(
+                            child: Align(
+                              alignment: Alignment.centerLeft,
+                              child: OmniSourcePill(
+                                channel: conversation!.channel,
+                                accountName: conversation!.accountName,
+                              ),
+                            ),
                           ),
                           if (conversation!.lastMessageAt != null) ...[
-                            const SizedBox(width: 5),
-                            Text(
-                              Formatters.relative(conversation!.lastMessageAt),
-                              style: OmniChatType.meta.copyWith(
-                                color: scheme.onSurfaceVariant,
+                            const SizedBox(width: 8),
+                            Flexible(
+                              child: Text(
+                                Formatters.relative(
+                                  conversation!.lastMessageAt,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: OmniChatType.meta.copyWith(
+                                  color: scheme.onSurfaceVariant,
+                                ),
                               ),
                             ),
                           ],
@@ -332,26 +535,65 @@ class _ThreadAppBar extends StatelessWidget implements PreferredSizeWidget {
               ],
             ),
       actions: [
+        if (searchMode) ...[
+          IconButton(
+            tooltip: 'Kết quả trước',
+            onPressed: searchResultCount == 0 ? null : onSearchPrevious,
+            icon: const Icon(Icons.keyboard_arrow_up_rounded, size: 22),
+          ),
+          IconButton(
+            tooltip: 'Kết quả sau',
+            onPressed: searchResultCount == 0 ? null : onSearchNext,
+            icon: const Icon(Icons.keyboard_arrow_down_rounded, size: 22),
+          ),
+          IconButton(
+            tooltip: 'Đóng tìm kiếm',
+            onPressed: onCloseSearch,
+            icon: const Icon(Icons.close_rounded, size: 21),
+          ),
+          const SizedBox(width: 8),
+        ] else ...[
+        IconButton(
+          tooltip: 'Tìm trong hội thoại',
+          onPressed: onSearch,
+          style: IconButton.styleFrom(
+            foregroundColor: scheme.onSurfaceVariant,
+            minimumSize: const Size(40, 40),
+            maximumSize: const Size(40, 40),
+            padding: EdgeInsets.zero,
+            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+          ),
+          icon: const Icon(Icons.search_rounded, size: 21),
+        ),
         // The phone number lives on the customer record, not the thread, so
         // "gọi" is offered in the context sheet where that data is loaded.
         if (onAssign != null)
           IconButton(
             tooltip: 'Gán nhân viên',
             onPressed: onAssign,
-            // Bare icons, matching the inbox bar. Grey discs behind app-bar
-            // icons are the button drawn twice.
             style: IconButton.styleFrom(
               foregroundColor: scheme.onSurfaceVariant,
+              minimumSize: const Size(40, 40),
+              maximumSize: const Size(40, 40),
+              padding: EdgeInsets.zero,
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
             ),
-            icon: const Icon(Icons.person_add_alt_outlined, size: 22),
+            icon: const Icon(Icons.person_add_alt_outlined, size: 21),
           ),
         IconButton(
           tooltip: 'Thông tin khách hàng',
           onPressed: onInfo,
-          style: IconButton.styleFrom(foregroundColor: scheme.onSurfaceVariant),
-          icon: const Icon(Icons.info_outline_rounded, size: 22),
+          style: IconButton.styleFrom(
+            foregroundColor: scheme.onSurfaceVariant,
+            minimumSize: const Size(40, 40),
+            maximumSize: const Size(40, 40),
+            padding: EdgeInsets.zero,
+            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+          ),
+          icon: const Icon(Icons.info_outline_rounded, size: 21),
         ),
-        const SizedBox(width: OmniSpacing.xs),
+        const SizedBox(width: 8),
+        ],
       ],
     );
   }
@@ -364,6 +606,9 @@ class _MessageList extends StatelessWidget {
     required this.isGroup,
     required this.onRetry,
     required this.onDiscard,
+    required this.onReply,
+    required this.onPin,
+    required this.keyForMessage,
   });
 
   final ThreadState state;
@@ -371,6 +616,9 @@ class _MessageList extends StatelessWidget {
   final bool isGroup;
   final void Function(Message message) onRetry;
   final void Function(Message message) onDiscard;
+  final void Function(Message message) onReply;
+  final void Function(Message message) onPin;
+  final GlobalKey Function(String id) keyForMessage;
 
   @override
   Widget build(BuildContext context) {
@@ -421,7 +669,9 @@ class _MessageList extends StatelessWidget {
             later.isOutbound != message.isOutbound ||
             later.isNote;
 
-        return Column(
+        return KeyedSubtree(
+          key: keyForMessage(message.id),
+          child: Column(
           // Without this the Column defaults to centre, which collapsed to the
           // bubble's own width and parked every message in the middle of the
           // screen — the side a message is on is the whole point of a thread.
@@ -439,8 +689,11 @@ class _MessageList extends StatelessWidget {
               onDiscard: message.status == DeliveryStatus.failed
                   ? () => onDiscard(message)
                   : null,
+              onReply: () => onReply(message),
+              onPin: () => onPin(message),
             ),
           ],
+          ),
         );
       },
     );

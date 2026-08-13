@@ -68,6 +68,11 @@ final inboxLabelsProvider = FutureProvider.autoDispose<List<String>>((ref) {
   return ref.watch(inboxApiProvider).labels();
 });
 
+final conversationAssetsProvider =
+    FutureProvider.autoDispose.family<ConversationAssets, String>((ref, id) {
+      return ref.watch(inboxApiProvider).assets(id);
+    });
+
 class ConversationListState {
   const ConversationListState({
     this.items = const [],

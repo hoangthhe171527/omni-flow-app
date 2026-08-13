@@ -30,6 +30,7 @@ class _InboxPageState extends ConsumerState<InboxPage>
     with WidgetsBindingObserver {
   final _scrollController = ScrollController();
   final Set<String> _selected = {};
+  bool _selectionMode = false;
   Timer? _syncTimer;
   String? _syncCursor;
   bool _syncing = false;
@@ -95,7 +96,15 @@ class _InboxPageState extends ConsumerState<InboxPage>
 
   void _toggleSelection(String id) {
     setState(() {
+      _selectionMode = true;
       if (!_selected.remove(id)) _selected.add(id);
+    });
+  }
+
+  void _clearSelection() {
+    setState(() {
+      _selected.clear();
+      _selectionMode = false;
     });
   }
 
@@ -112,7 +121,7 @@ class _InboxPageState extends ConsumerState<InboxPage>
     final access = ref.watch(inboxAccessProvider);
     final list = ref.watch(inboxListProvider);
     final scheme = Theme.of(context).colorScheme;
-    final selecting = _selected.isNotEmpty;
+    final selecting = _selectionMode;
     final canConnectChannels = ref
         .watch(accessProvider)
         .can(ChannelPermissions.write);
@@ -142,12 +151,8 @@ class _InboxPageState extends ConsumerState<InboxPage>
             tooltip: 'Chọn nhiều',
             onPressed: access.canLabel
                 ? () => setState(() {
-                    final items = list.valueOrNull?.items ?? const [];
-                    if (_selected.isEmpty && items.isNotEmpty) {
-                      _selected.add(items.first.id);
-                    } else {
-                      _selected.clear();
-                    }
+                    _selectionMode = !_selectionMode;
+                    if (!_selectionMode) _selected.clear();
                   })
                 : null,
             // A bare icon. The filled circle behind it was a button drawn twice
@@ -256,7 +261,15 @@ class _InboxPageState extends ConsumerState<InboxPage>
           if (selecting)
             InboxBulkBar(
               selectedIds: _selected.toList(),
-              onDone: () => setState(_selected.clear),
+              allIds:
+                  list.valueOrNull?.items.map((item) => item.id).toList() ??
+                  const [],
+              onSelectAll: (ids) => setState(() {
+                _selected
+                  ..clear()
+                  ..addAll(ids);
+              }),
+              onDone: _clearSelection,
             ),
         ],
       ),
