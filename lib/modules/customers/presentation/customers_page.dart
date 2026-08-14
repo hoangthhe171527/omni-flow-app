@@ -159,36 +159,38 @@ class _CustomersPageState extends ConsumerState<CustomersPage> {
             actionLabel: access.canCreate ? 'Thêm khách hàng' : null,
             onAction: () => context.pushNamed(CustomersModule.create),
           ),
-          data: (state) => ListView.separated(
-            controller: _scrollController,
-            padding: const EdgeInsets.only(bottom: OmniSpacing.bottomSafe),
-            itemCount: state.items.length + (state.hasMore ? 1 : 0),
-            // Hairline indented past the avatar, not a gap between cards.
-            separatorBuilder: (_, _) => Divider(
-              height: 1,
-              thickness: 1,
-              indent: 76,
-              color: OmniColors.chat(
-                context,
-                OmniColors.chatDivider,
-                OmniColors.chatDividerDark,
+          data: (state) => OmniDesktopFrame(
+            child: ListView.separated(
+              controller: _scrollController,
+              padding: const EdgeInsets.only(bottom: OmniSpacing.bottomSafe),
+              itemCount: state.items.length + (state.hasMore ? 1 : 0),
+              // Hairline indented past the avatar, not a gap between cards.
+              separatorBuilder: (_, _) => Divider(
+                height: 1,
+                thickness: 1,
+                indent: 76,
+                color: OmniColors.chat(
+                  context,
+                  OmniColors.chatDivider,
+                  OmniColors.chatDividerDark,
+                ),
               ),
-            ),
-            itemBuilder: (context, index) {
-              if (index >= state.items.length) {
-                return const Padding(
-                  padding: EdgeInsets.all(OmniSpacing.lg),
-                  child: Center(
-                    child: SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(strokeWidth: 2),
+              itemBuilder: (context, index) {
+                if (index >= state.items.length) {
+                  return const Padding(
+                    padding: EdgeInsets.all(OmniSpacing.lg),
+                    child: Center(
+                      child: SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      ),
                     ),
-                  ),
-                );
-              }
-              return CustomerCard(customer: state.items[index]);
-            },
+                  );
+                }
+                return CustomerCard(customer: state.items[index]);
+              },
+            ),
           ),
         ),
       ),

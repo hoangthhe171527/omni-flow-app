@@ -96,44 +96,155 @@ class PipelinePage extends ConsumerWidget {
               label: const Text('Cơ hội mới'),
             )
           : null,
-      body: Column(
-        children: [
-          Expanded(
-            child: RefreshIndicator(
-              onRefresh: () async {
-                ref.invalidate(pipelineSummaryProvider);
-                ref.invalidate(stageOpportunitiesProvider(stage));
-              },
-              child: OmniAsyncView(
-                value: opportunities,
-                onRetry: () =>
-                    ref.invalidate(stageOpportunitiesProvider(stage)),
-                isEmpty: (list) => list.isEmpty,
-                empty: OmniEmptyState(
-                  icon: Icons.trending_up_rounded,
-                  title: 'Chưa có cơ hội ở "${stage.label}"',
-                  message: 'Cơ hội chuyển sang giai đoạn này sẽ hiện ở đây.',
-                ),
-                data: (list) => ListView.separated(
-                  padding: const EdgeInsets.only(
-                    bottom: OmniSpacing.bottomSafe,
-                  ),
-                  itemCount: list.length,
-                  separatorBuilder: (_, _) => Divider(
-                    height: 1,
-                    thickness: 1,
-                    indent: 16,
-                    endIndent: 16,
-                    color: OmniColors.chat(
-                      context,
-                      OmniColors.chatDivider,
-                      OmniColors.chatDividerDark,
+      body: LayoutBuilder(
+        builder: (context, constraints) {
+          if (constraints.maxWidth >= 1100) {
+            return _DesktopPipeline(canMove: access.canUpdate);
+          }
+          return Column(
+            children: [
+              Expanded(
+                child: RefreshIndicator(
+                  onRefresh: () async {
+                    ref.invalidate(pipelineSummaryProvider);
+                    ref.invalidate(stageOpportunitiesProvider(stage));
+                  },
+                  child: OmniAsyncView(
+                    value: opportunities,
+                    onRetry: () =>
+                        ref.invalidate(stageOpportunitiesProvider(stage)),
+                    isEmpty: (list) => list.isEmpty,
+                    empty: OmniEmptyState(
+                      icon: Icons.trending_up_rounded,
+                      title: 'Chưa có cơ hội ở "${stage.label}"',
+                      message:
+                          'Cơ hội chuyển sang giai đoạn này sẽ hiện ở đây.',
+                    ),
+                    data: (list) => ListView.separated(
+                      padding: const EdgeInsets.only(
+                        bottom: OmniSpacing.bottomSafe,
+                      ),
+                      itemCount: list.length,
+                      separatorBuilder: (_, _) => Divider(
+                        height: 1,
+                        thickness: 1,
+                        indent: 16,
+                        endIndent: 16,
+                        color: OmniColors.chat(
+                          context,
+                          OmniColors.chatDivider,
+                          OmniColors.chatDividerDark,
+                        ),
+                      ),
+                      itemBuilder: (context, index) => OpportunityCard(
+                        opportunity: list[index],
+                        canMove: access.canUpdate,
+                      ),
                     ),
                   ),
-                  itemBuilder: (context, index) => OpportunityCard(
-                    opportunity: list[index],
-                    canMove: access.canUpdate,
+                ),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _DesktopPipeline extends ConsumerWidget {
+  const _DesktopPipeline({required this.canMove});
+
+  final bool canMove;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return OmniDesktopFrame(
+      maxWidth: 1680,
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          for (final stage in PipelineStage.board) ...[
+            Expanded(
+              child: _DesktopStage(stage: stage, canMove: canMove),
+            ),
+            if (stage != PipelineStage.board.last) const SizedBox(width: 14),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _DesktopStage extends ConsumerWidget {
+  const _DesktopStage({required this.stage, required this.canMove});
+
+  final PipelineStage stage;
+  final bool canMove;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final scheme = Theme.of(context).colorScheme;
+    final opportunities = ref.watch(stageOpportunitiesProvider(stage));
+    return Container(
+      constraints: const BoxConstraints(minHeight: 420),
+      decoration: BoxDecoration(
+        color: scheme.surfaceContainerHighest.withValues(alpha: .38),
+        borderRadius: OmniRadius.lgAll,
+      ),
+      padding: const EdgeInsets.fromLTRB(10, 12, 10, 14),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 5),
+            child: Row(
+              children: [
+                Expanded(child: Text(stage.label, style: OmniType.bodyStrong)),
+                opportunities.when(
+                  data: (items) => Text(
+                    '${items.length}',
+                    style: OmniType.micro.copyWith(
+                      color: scheme.onSurfaceVariant,
+                    ),
                   ),
+                  loading: () => const SizedBox(
+                    width: 12,
+                    height: 12,
+                    child: CircularProgressIndicator(strokeWidth: 1.5),
+                  ),
+                  error: (_, _) => const Icon(Icons.error_outline, size: 14),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 12),
+          Expanded(
+            child: opportunities.when(
+              data: (items) => items.isEmpty
+                  ? Center(
+                      child: Text(
+                        'Chưa có cơ hội',
+                        style: OmniType.micro.copyWith(
+                          color: scheme.onSurfaceVariant,
+                        ),
+                      ),
+                    )
+                  : ListView.separated(
+                      itemCount: items.length,
+                      separatorBuilder: (_, _) => const SizedBox(height: 8),
+                      itemBuilder: (context, index) => OpportunityCard(
+                        opportunity: items[index],
+                        canMove: canMove,
+                      ),
+                    ),
+              loading: () => const Center(
+                child: CircularProgressIndicator(strokeWidth: 2),
+              ),
+              error: (error, _) => Center(
+                child: Icon(
+                  Icons.cloud_off_outlined,
+                  color: scheme.onSurfaceVariant,
                 ),
               ),
             ),

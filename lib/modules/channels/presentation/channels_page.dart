@@ -42,10 +42,18 @@ class _ChannelsPageState extends ConsumerState<ChannelsPage> {
       context: context,
       builder: (dialogContext) => AlertDialog(
         title: const Text('Ngắt kết nối?'),
-        content: Text('${connection.label} sẽ ngừng nhận tin về hộp thư. Nối lại được bất cứ lúc nào.'),
+        content: Text(
+          '${connection.label} sẽ ngừng nhận tin về hộp thư. Nối lại được bất cứ lúc nào.',
+        ),
         actions: [
-          TextButton(onPressed: () => Navigator.of(dialogContext).pop(false), child: const Text('Huỷ')),
-          FilledButton(onPressed: () => Navigator.of(dialogContext).pop(true), child: const Text('Ngắt kết nối')),
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('Huỷ'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: const Text('Ngắt kết nối'),
+          ),
         ],
       ),
     );
@@ -54,10 +62,14 @@ class _ChannelsPageState extends ConsumerState<ChannelsPage> {
       await ref.read(channelsApiProvider).disconnect(connection.id);
       ref.invalidate(channelsProvider);
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Đã ngắt ${connection.label}')));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Đã ngắt ${connection.label}')));
     } on AppException catch (error) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error.message)));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(error.message)));
     }
   }
 
@@ -88,20 +100,29 @@ class _ChannelsPageState extends ConsumerState<ChannelsPage> {
       final url = await ref.read(channelsApiProvider).oauthUrl(channel);
       if (url.isEmpty) throw Exception('Nền tảng chưa cấu hình OAuth.');
       final before = {
-        for (final connection in ref.read(channelsProvider).valueOrNull ?? const <ChannelConnection>[])
+        for (final connection
+            in ref.read(channelsProvider).valueOrNull ??
+                const <ChannelConnection>[])
           connection.id,
       };
-      final opened = await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
+      final opened = await launchUrl(
+        Uri.parse(url),
+        mode: LaunchMode.externalApplication,
+      );
       if (!opened) throw Exception('Không mở được trình duyệt.');
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-        content: Text('Đăng nhập xong thì quay lại đây, app tự nhận.'),
-        duration: Duration(seconds: 6),
-      ));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Đăng nhập xong thì quay lại đây, app tự nhận.'),
+          duration: Duration(seconds: 6),
+        ),
+      );
       _watchForConnection(before);
     } catch (error) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$error')));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('$error')));
     } finally {
       if (mounted) setState(() => _connecting = false);
     }
@@ -121,7 +142,9 @@ class _ChannelsPageState extends ConsumerState<ChannelsPage> {
         timer.cancel();
         ref.invalidate(channelsProvider);
         if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Đã nối kênh mới.')));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Đã nối kênh mới.')));
       } catch (_) {
         // Do not terminate a successful OAuth wait due to one failed request.
       }
@@ -148,42 +171,60 @@ class _ChannelsPageState extends ConsumerState<ChannelsPage> {
           empty: const OmniEmptyState(
             icon: Icons.hub_outlined,
             title: 'Chưa nối kênh nào',
-            message: 'Nối Zalo, Facebook hoặc TikTok để tin nhắn khách đổ về hộp thư.',
+            message:
+                'Nối Zalo, Facebook hoặc TikTok để tin nhắn khách đổ về hộp thư.',
           ),
           data: (list) {
-            final official = list.where((connection) => !connection.isPersonal).toList();
-            final personal = list.where((connection) => connection.isPersonal).toList();
-            return ListView(
-              padding: const EdgeInsets.fromLTRB(OmniSpacing.lg, OmniSpacing.lg, OmniSpacing.lg, OmniSpacing.xxl),
-              children: [
-                if (official.isNotEmpty) ...[
-                  const OmniSectionHeader(title: 'Kênh chính thức', padding: EdgeInsets.only(bottom: OmniSpacing.sm)),
-                  const SizedBox(height: OmniSpacing.sm),
-                  for (final connection in official) ...[
-                    ChannelTile(
-                      connection: connection,
-                      canWrite: canWrite,
-                      onReconnect: () => _startOauth(connection.channel),
-                      onDisconnect: () => _disconnect(connection),
+            final official = list
+                .where((connection) => !connection.isPersonal)
+                .toList();
+            final personal = list
+                .where((connection) => connection.isPersonal)
+                .toList();
+            return OmniDesktopFrame(
+              child: ListView(
+                padding: const EdgeInsets.fromLTRB(
+                  OmniSpacing.lg,
+                  OmniSpacing.lg,
+                  OmniSpacing.lg,
+                  OmniSpacing.xxl,
+                ),
+                children: [
+                  if (official.isNotEmpty) ...[
+                    const OmniSectionHeader(
+                      title: 'Kênh chính thức',
+                      padding: EdgeInsets.only(bottom: OmniSpacing.sm),
                     ),
                     const SizedBox(height: OmniSpacing.sm),
+                    for (final connection in official) ...[
+                      ChannelTile(
+                        connection: connection,
+                        canWrite: canWrite,
+                        onReconnect: () => _startOauth(connection.channel),
+                        onDisconnect: () => _disconnect(connection),
+                      ),
+                      const SizedBox(height: OmniSpacing.sm),
+                    ],
                   ],
-                ],
-                if (personal.isNotEmpty) ...[
-                  const SizedBox(height: OmniSpacing.md),
-                  const OmniSectionHeader(title: 'Tài khoản cá nhân', padding: EdgeInsets.only(bottom: OmniSpacing.sm)),
-                  const SizedBox(height: OmniSpacing.sm),
-                  for (final connection in personal) ...[
-                    ChannelTile(
-                      connection: connection,
-                      canWrite: canWrite,
-                      onReconnect: () => _openPair(connection.channel),
-                      onDisconnect: () => _disconnect(connection),
+                  if (personal.isNotEmpty) ...[
+                    const SizedBox(height: OmniSpacing.md),
+                    const OmniSectionHeader(
+                      title: 'Tài khoản cá nhân',
+                      padding: EdgeInsets.only(bottom: OmniSpacing.sm),
                     ),
                     const SizedBox(height: OmniSpacing.sm),
+                    for (final connection in personal) ...[
+                      ChannelTile(
+                        connection: connection,
+                        canWrite: canWrite,
+                        onReconnect: () => _openPair(connection.channel),
+                        onDisconnect: () => _disconnect(connection),
+                      ),
+                      const SizedBox(height: OmniSpacing.sm),
+                    ],
                   ],
                 ],
-              ],
+              ),
             );
           },
         ),

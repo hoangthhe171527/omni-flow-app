@@ -112,6 +112,43 @@ class OmniSectionHeader extends StatelessWidget {
   }
 }
 
+/// Desktop content frame. Mobile keeps edge-to-edge lists; desktop gets a
+/// calm reading width so CRM screens do not become stretched spreadsheets on
+/// large monitors.
+class OmniDesktopFrame extends StatelessWidget {
+  const OmniDesktopFrame({
+    super.key,
+    required this.child,
+    this.maxWidth = 1440,
+  });
+
+  final Widget child;
+  final double maxWidth;
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final desktop = constraints.maxWidth >= 960;
+        return Align(
+          alignment: Alignment.topCenter,
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              maxWidth: desktop ? maxWidth : double.infinity,
+            ),
+            child: Padding(
+              padding: desktop
+                  ? const EdgeInsets.fromLTRB(28, 24, 28, 32)
+                  : EdgeInsets.zero,
+              child: child,
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
 /// One KPI tile — pipeline value, open opportunities, conversation count.
 class OmniStatTile extends StatelessWidget {
   const OmniStatTile({
