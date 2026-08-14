@@ -12,19 +12,6 @@ abstract final class OmniColors {
   /// The brand gradient's far end — used only inside [OmniGradients].
   static const primaryGlow = Color(0xFF8789F5);
 
-  // Web direction: quiet luxury operations. Graphite and ivory with one warm
-  // wood accent feels closer to a premium showroom than a generic SaaS UI.
-  static const webPrimary = Color(0xFF0F625E);
-  static const webPrimaryForeground = Color(0xFFF8FFFE);
-  static const webAccent = Color(0xFFE4F0EE);
-  static const webAccentForeground = Color(0xFF0B514E);
-  static const webBackground = Color(0xFFF6F8F7);
-  static const webCard = Color(0xFFFFFFFF);
-  static const webMuted = Color(0xFFE9EFED);
-  static const webBorder = Color(0xFFD8E2DF);
-  static const webForeground = Color(0xFF172321);
-  static const webMutedForeground = Color(0xFF687874);
-
   /// Very light indigo wash behind selected/quiet-emphasis surfaces.
   static const accent = Color(0xFFF0F0FF);
   static const accentForeground = Color(0xFF4B4CC9);

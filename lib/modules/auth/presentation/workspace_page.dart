@@ -23,15 +23,12 @@ class _WorkspacePageState extends ConsumerState<WorkspacePage> {
   Future<void> _enter(TenantOption tenant) async {
     setState(() => _entering = tenant.id);
     try {
-      await ref
-          .read(sessionControllerProvider.notifier)
-          .selectTenant(tenant.id);
+      await ref.read(sessionControllerProvider.notifier).selectTenant(tenant.id);
     } on AppException catch (error) {
       if (!mounted) return;
       setState(() => _entering = null);
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(error.message)));
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(error.message)));
     }
   }
 
@@ -45,8 +42,7 @@ class _WorkspacePageState extends ConsumerState<WorkspacePage> {
         title: const Text('Chọn không gian làm việc'),
         actions: [
           TextButton(
-            onPressed: () =>
-                ref.read(sessionControllerProvider.notifier).logout(),
+            onPressed: () => ref.read(sessionControllerProvider.notifier).logout(),
             child: const Text('Đăng xuất'),
           ),
         ],
@@ -104,12 +100,9 @@ class _WorkspacePageState extends ConsumerState<WorkspacePage> {
                       children: [
                         Text(
                           tenant.name,
-                          style: OmniType.bodyStrong.copyWith(
-                            color: scheme.onSurface,
-                          ),
+                          style: OmniType.bodyStrong.copyWith(color: scheme.onSurface),
                         ),
-                        if (tenant.memberCount != null ||
-                            tenant.planLabel != null)
+                        if (tenant.memberCount != null || tenant.planLabel != null)
                           Text(
                             [
                               if (tenant.memberCount != null)
@@ -130,10 +123,7 @@ class _WorkspacePageState extends ConsumerState<WorkspacePage> {
                       child: CircularProgressIndicator(strokeWidth: 2),
                     )
                   else
-                    Icon(
-                      Icons.chevron_right_rounded,
-                      color: scheme.onSurfaceVariant,
-                    ),
+                    Icon(Icons.chevron_right_rounded, color: scheme.onSurfaceVariant),
                 ],
               ),
             );
