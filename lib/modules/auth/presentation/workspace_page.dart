@@ -42,7 +42,7 @@ class _WorkspacePageState extends ConsumerState<WorkspacePage> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Chọn workspace'),
+        title: const Text('Chọn không gian làm việc'),
         actions: [
           TextButton(
             onPressed: () =>
@@ -69,7 +69,7 @@ class _WorkspacePageState extends ConsumerState<WorkspacePage> {
               return Padding(
                 padding: const EdgeInsets.only(bottom: OmniSpacing.sm),
                 child: Text(
-                  'Chọn workspace để bắt đầu phiên làm việc.',
+                  'Tài khoản của bạn đang tham gia nhiều không gian.',
                   style: OmniType.body.copyWith(color: scheme.onSurfaceVariant),
                 ),
               );

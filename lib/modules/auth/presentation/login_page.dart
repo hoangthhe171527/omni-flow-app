@@ -60,7 +60,18 @@ class _LoginPageState extends ConsumerState<LoginPage> {
             return SafeArea(
               child: SingleChildScrollView(
                 padding: const EdgeInsets.fromLTRB(24, 40, 24, 24),
-                child: form,
+                child: _MobileLoginForm(
+                  formKey: _formKey,
+                  email: _email,
+                  password: _password,
+                  obscure: _obscure,
+                  submitting: state.submitting,
+                  error: state.error,
+                  emailError: state.errorFor('email'),
+                  passwordError: state.errorFor('password'),
+                  onTogglePassword: () => setState(() => _obscure = !_obscure),
+                  onSubmit: _submit,
+                ),
               ),
             );
           }
@@ -83,6 +94,168 @@ class _LoginPageState extends ConsumerState<LoginPage> {
             ],
           );
         },
+      ),
+    );
+  }
+}
+
+/// The mobile login intentionally remains the compact, single-column screen
+/// that was already tuned for thumb reach. Desktop gets the expanded brand
+/// panel above; mobile does not inherit that marketing treatment.
+class _MobileLoginForm extends StatelessWidget {
+  const _MobileLoginForm({
+    required this.formKey,
+    required this.email,
+    required this.password,
+    required this.obscure,
+    required this.submitting,
+    required this.error,
+    required this.emailError,
+    required this.passwordError,
+    required this.onTogglePassword,
+    required this.onSubmit,
+  });
+
+  final GlobalKey<FormState> formKey;
+  final TextEditingController email;
+  final TextEditingController password;
+  final bool obscure;
+  final bool submitting;
+  final String? error;
+  final String? emailError;
+  final String? passwordError;
+  final VoidCallback onTogglePassword;
+  final VoidCallback onSubmit;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Form(
+      key: formKey,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 52,
+            height: 52,
+            decoration: const BoxDecoration(
+              gradient: OmniGradients.brand,
+              borderRadius: OmniRadius.mdAll,
+            ),
+            child: const Icon(
+              Icons.layers_rounded,
+              color: Colors.white,
+              size: 26,
+            ),
+          ),
+          const SizedBox(height: OmniSpacing.xxl),
+          Text(
+            'Chào mừng trở lại',
+            style: OmniType.displayLg.copyWith(color: scheme.onSurface),
+          ),
+          const SizedBox(height: OmniSpacing.sm),
+          Text(
+            'Nhập thông tin để tiếp tục xử lý công việc và hỗ trợ khách hàng.',
+            style: OmniType.body.copyWith(color: scheme.onSurfaceVariant),
+          ),
+          const SizedBox(height: OmniSpacing.section),
+          OmniField(
+            label: 'Email làm việc',
+            error: emailError,
+            child: TextFormField(
+              controller: email,
+              keyboardType: TextInputType.emailAddress,
+              autocorrect: false,
+              textInputAction: TextInputAction.next,
+              decoration: const InputDecoration(
+                hintText: 'ten@congty.vn',
+                prefixIcon: Icon(Icons.mail_outline_rounded, size: 20),
+              ),
+              validator: (value) {
+                final text = value?.trim() ?? '';
+                if (text.isEmpty) return 'Vui lòng nhập email';
+                if (!text.contains('@')) return 'Email chưa hợp lệ';
+                return null;
+              },
+            ),
+          ),
+          const SizedBox(height: OmniSpacing.lg),
+          OmniField(
+            label: 'Mật khẩu',
+            error: passwordError,
+            child: TextFormField(
+              controller: password,
+              obscureText: obscure,
+              textInputAction: TextInputAction.done,
+              onFieldSubmitted: (_) => onSubmit(),
+              decoration: InputDecoration(
+                hintText: 'Nhập mật khẩu',
+                prefixIcon: const Icon(Icons.lock_outline_rounded, size: 20),
+                suffixIcon: IconButton(
+                  icon: Icon(
+                    obscure
+                        ? Icons.visibility_outlined
+                        : Icons.visibility_off_outlined,
+                    size: 20,
+                  ),
+                  onPressed: onTogglePassword,
+                ),
+              ),
+              validator: (value) =>
+                  (value ?? '').isEmpty ? 'Vui lòng nhập mật khẩu' : null,
+            ),
+          ),
+          if (error != null) ...[
+            const SizedBox(height: OmniSpacing.lg),
+            Container(
+              padding: const EdgeInsets.all(OmniSpacing.md),
+              decoration: BoxDecoration(
+                color: scheme.error.withValues(alpha: .08),
+                borderRadius: OmniRadius.mdAll,
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.error_outline_rounded,
+                    size: 18,
+                    color: scheme.error,
+                  ),
+                  const SizedBox(width: OmniSpacing.sm),
+                  Expanded(
+                    child: Text(
+                      error!,
+                      style: OmniType.caption.copyWith(color: scheme.error),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+          const SizedBox(height: OmniSpacing.xxl),
+          SizedBox(
+            width: double.infinity,
+            child: FilledButton(
+              onPressed: submitting ? null : onSubmit,
+              child: submitting
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
+                    )
+                  : const Text('Đăng nhập'),
+            ),
+          ),
+          const SizedBox(height: OmniSpacing.xxl),
+          Center(
+            child: Text(
+              '${AppConfig.appName} · ${Uri.parse(AppConfig.apiBaseUrl).host}',
+              style: OmniType.micro.copyWith(color: scheme.onSurfaceVariant),
+            ),
+          ),
+        ],
       ),
     );
   }
