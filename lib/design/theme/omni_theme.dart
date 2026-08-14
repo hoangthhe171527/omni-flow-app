@@ -4,6 +4,20 @@ import 'package:flutter/services.dart';
 import '../tokens/tokens.dart';
 
 abstract final class OmniTheme {
+  static ThemeData get webLight => _build(
+    brightness: Brightness.light,
+    background: OmniColors.webBackground,
+    surface: OmniColors.webCard,
+    surfaceMuted: OmniColors.webMuted,
+    border: OmniColors.webBorder,
+    onSurface: OmniColors.webForeground,
+    onSurfaceMuted: OmniColors.webMutedForeground,
+    primary: OmniColors.webPrimary,
+    primaryForeground: OmniColors.webPrimaryForeground,
+    accent: OmniColors.webAccent,
+    accentForeground: OmniColors.webAccentForeground,
+  );
+
   static ThemeData get light => _build(
     brightness: Brightness.light,
     background: OmniColors.background,
@@ -35,13 +49,16 @@ abstract final class OmniTheme {
     required Color onSurface,
     required Color onSurfaceMuted,
     required Color primary,
+    Color? primaryForeground,
+    Color? accent,
+    Color? accentForeground,
   }) {
     final scheme = ColorScheme(
       brightness: brightness,
       primary: primary,
-      onPrimary: OmniColors.primaryForeground,
-      primaryContainer: OmniColors.accent,
-      onPrimaryContainer: OmniColors.accentForeground,
+      onPrimary: primaryForeground ?? OmniColors.primaryForeground,
+      primaryContainer: accent ?? OmniColors.accent,
+      onPrimaryContainer: accentForeground ?? OmniColors.accentForeground,
       secondary: OmniColors.info,
       onSecondary: Colors.white,
       error: OmniColors.destructive,
@@ -90,7 +107,7 @@ abstract final class OmniTheme {
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
           backgroundColor: primary,
-          foregroundColor: OmniColors.primaryForeground,
+          foregroundColor: primaryForeground ?? OmniColors.primaryForeground,
           minimumSize: const Size.fromHeight(52),
           textStyle: OmniType.bodyStrong,
           shape: const RoundedRectangleBorder(borderRadius: OmniRadius.mdAll),

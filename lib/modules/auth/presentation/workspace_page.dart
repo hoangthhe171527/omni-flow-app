@@ -23,12 +23,15 @@ class _WorkspacePageState extends ConsumerState<WorkspacePage> {
   Future<void> _enter(TenantOption tenant) async {
     setState(() => _entering = tenant.id);
     try {
-      await ref.read(sessionControllerProvider.notifier).selectTenant(tenant.id);
+      await ref
+          .read(sessionControllerProvider.notifier)
+          .selectTenant(tenant.id);
     } on AppException catch (error) {
       if (!mounted) return;
       setState(() => _entering = null);
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text(error.message)));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(error.message)));
     }
   }
 
@@ -39,10 +42,11 @@ class _WorkspacePageState extends ConsumerState<WorkspacePage> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Chọn không gian làm việc'),
+        title: const Text('Chọn workspace'),
         actions: [
           TextButton(
-            onPressed: () => ref.read(sessionControllerProvider.notifier).logout(),
+            onPressed: () =>
+                ref.read(sessionControllerProvider.notifier).logout(),
             child: const Text('Đăng xuất'),
           ),
         ],
@@ -65,7 +69,7 @@ class _WorkspacePageState extends ConsumerState<WorkspacePage> {
               return Padding(
                 padding: const EdgeInsets.only(bottom: OmniSpacing.sm),
                 child: Text(
-                  'Tài khoản của bạn đang tham gia nhiều không gian.',
+                  'Chọn workspace để bắt đầu phiên làm việc.',
                   style: OmniType.body.copyWith(color: scheme.onSurfaceVariant),
                 ),
               );
@@ -100,9 +104,12 @@ class _WorkspacePageState extends ConsumerState<WorkspacePage> {
                       children: [
                         Text(
                           tenant.name,
-                          style: OmniType.bodyStrong.copyWith(color: scheme.onSurface),
+                          style: OmniType.bodyStrong.copyWith(
+                            color: scheme.onSurface,
+                          ),
                         ),
-                        if (tenant.memberCount != null || tenant.planLabel != null)
+                        if (tenant.memberCount != null ||
+                            tenant.planLabel != null)
                           Text(
                             [
                               if (tenant.memberCount != null)
@@ -123,7 +130,10 @@ class _WorkspacePageState extends ConsumerState<WorkspacePage> {
                       child: CircularProgressIndicator(strokeWidth: 2),
                     )
                   else
-                    Icon(Icons.chevron_right_rounded, color: scheme.onSurfaceVariant),
+                    Icon(
+                      Icons.chevron_right_rounded,
+                      color: scheme.onSurfaceVariant,
+                    ),
                 ],
               ),
             );

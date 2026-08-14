@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
@@ -20,8 +21,7 @@ class OmniApp extends ConsumerStatefulWidget {
   ConsumerState<OmniApp> createState() => _OmniAppState();
 }
 
-class _OmniAppState extends ConsumerState<OmniApp>
-    with WidgetsBindingObserver {
+class _OmniAppState extends ConsumerState<OmniApp> with WidgetsBindingObserver {
   late final ProviderSubscription<Session> _sessionListener;
 
   @override
@@ -63,7 +63,7 @@ class _OmniAppState extends ConsumerState<OmniApp>
 
     return MaterialApp.router(
       title: AppConfig.appName,
-      theme: OmniTheme.light,
+      theme: kIsWeb ? OmniTheme.webLight : OmniTheme.light,
       darkTheme: OmniTheme.dark,
       // Was pinned to light, so a phone in dark mode got one glaring white app
       // — worst of all on the messaging screens, which sit next to Zalo.
@@ -98,10 +98,12 @@ class _OmniAppState extends ConsumerState<OmniApp>
     ref.read(pushIntentProvider.notifier).state = null;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      ref.read(routerProvider).pushNamed(
-        InboxModule.thread,
-        pathParameters: {'id': intent.conversationId},
-      );
+      ref
+          .read(routerProvider)
+          .pushNamed(
+            InboxModule.thread,
+            pathParameters: {'id': intent.conversationId},
+          );
     });
   }
 }
