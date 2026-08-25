@@ -12,10 +12,10 @@ import '../../../core/error/app_exception.dart';
 import '../../inbox/application/inbox_providers.dart';
 import '../data/push_api.dart';
 
-// Android freezes a channel's sound after first creation. v3 intentionally
-// creates a fresh channel so existing installs receive the clearer bundled
-// chime instead of retaining the quiet system default from v2.
-const _androidChannelId = 'inbox_messages_v3';
+// Android freezes a channel's sound after first creation. v4 intentionally
+// creates a fresh channel so installs that received a silent v3 channel get
+// the bundled alert sound.
+const _androidChannelId = 'inbox_messages_v4';
 const _tokenRefreshGenerationKey = 'fcm_token_refresh_generation';
 // Bump when a release must rebind the installation. This repairs devices that
 // kept an FCM token locally while its server-side row was removed/invalidated.

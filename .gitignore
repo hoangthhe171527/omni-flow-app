@@ -51,3 +51,9 @@ app.*.map.json
 /android/app/release
 android/app/google-services.json
 .firebase/
+
+# Local QA/debug artifacts
+.playwright-mcp/
+firebase-release/
+/*.png
+/*.xml
