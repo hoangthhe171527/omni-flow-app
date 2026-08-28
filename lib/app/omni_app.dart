@@ -23,13 +23,17 @@ class OmniApp extends ConsumerStatefulWidget {
 class _OmniAppState extends ConsumerState<OmniApp>
     with WidgetsBindingObserver {
   late final ProviderSubscription<Session> _sessionListener;
+  late final void Function() _unregisterPreLogout;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    final push = ref.read(pushNotificationsProvider);
+    _unregisterPreLogout = ref
+        .read(sessionPreLogoutProvider)
+        .register(push.stop);
     _sessionListener = ref.listenManual<Session>(sessionProvider, (_, session) {
-      final push = ref.read(pushNotificationsProvider);
       if (session.isAuthenticated) {
         unawaited(push.start());
         _openPushIntent(ref.read(pushIntentProvider));
@@ -42,6 +46,7 @@ class _OmniAppState extends ConsumerState<OmniApp>
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    _unregisterPreLogout();
     _sessionListener.close();
     super.dispose();
   }

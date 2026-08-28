@@ -7,7 +7,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>
-	<string>Omni App</string>
+	<string>Viomni</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -15,7 +15,7 @@
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
 	<key>CFBundleName</key>
-	<string>omni_app</string>
+	<string>Viomni</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
@@ -24,8 +24,14 @@
 	<string>????</string>
 	<key>CFBundleVersion</key>
 	<string>$(FLUTTER_BUILD_NUMBER)</string>
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<key>NSCameraUsageDescription</key>
+	<string>Dùng camera để chụp ảnh gửi cho khách trong hộp thư.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Chọn ảnh từ thư viện để gửi cho khách trong hộp thư.</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>
@@ -47,6 +53,10 @@
 			</array>
 		</dict>
 	</dict>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>remote-notification</string>
+	</array>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
 	<key>UILaunchStoryboardName</key>
@@ -66,13 +76,5 @@
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
-	<!-- image_picker needs both. iOS does not merely deny access without a usage
-	     string — it terminates the app the moment the picker opens, so the
-	     composer's photo and camera buttons would have crashed rather than
-	     failed. -->
-	<key>NSCameraUsageDescription</key>
-	<string>Dùng camera để chụp ảnh gửi cho khách trong hộp thư.</string>
-	<key>NSPhotoLibraryUsageDescription</key>
-	<string>Chọn ảnh từ thư viện để gửi cho khách trong hộp thư.</string>
 </dict>
 </plist>

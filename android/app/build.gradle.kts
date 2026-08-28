@@ -7,11 +7,32 @@ plugins {
     id("dev.flutter.flutter-gradle-plugin")
 }
 
-// CI and a fresh clone intentionally build without Firebase credentials. Once
-// google-services.json is added locally/at deployment, this plugin generates
-// the Android resources Firebase uses at runtime.
-if (file("google-services.json").exists()) {
+val googleServicesFile = layout.projectDirectory.file("google-services.json")
+
+// Debug builds remain usable in a fresh clone without Firebase credentials.
+// Release builds are guarded below so an artifact without generated Firebase
+// resources can never be produced accidentally.
+if (googleServicesFile.asFile.isFile) {
     apply(plugin = "com.google.gms.google-services")
+}
+
+val verifyReleaseGoogleServices by tasks.registering {
+    group = "verification"
+    description = "Verifies that the release build has an app-specific Firebase config."
+
+    doLast {
+        if (!googleServicesFile.asFile.isFile) {
+            throw GradleException(
+                "Missing android/app/google-services.json. " +
+                    "Release builds require Firebase config for " +
+                    "vn.app.sunriseieco.viomni.",
+            )
+        }
+    }
+}
+
+tasks.matching { it.name == "preReleaseBuild" }.configureEach {
+    dependsOn(verifyReleaseGoogleServices)
 }
 
 // Signing credentials live in android/key.properties, which is gitignored and
@@ -25,7 +46,7 @@ val keystoreProperties = Properties().apply {
 val hasSigningConfig = keystoreProperties.containsKey("storeFile")
 
 android {
-    namespace = "vn.evovi.omni_app"
+    namespace = "vn.app.sunriseieco.viomni"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
@@ -41,7 +62,7 @@ android {
 
     defaultConfig {
         // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
-        applicationId = "vn.evovi.omni_app"
+        applicationId = "vn.app.sunriseieco.viomni"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = flutter.minSdkVersion

@@ -1,7 +1,7 @@
 name: omni_app
 description: "OmniCRM — omnichannel inbox and CRM for mobile."
 publish_to: 'none'
-version: 0.1.0+17
+version: 0.1.0+18
 
 environment:
   sdk: ^3.11.5
@@ -54,6 +54,9 @@ dev_dependencies:
   flutter_lints: ^6.0.0
 
 flutter:
+  config:
+    enable-swift-package-manager: false
+
   uses-material-design: true
 
   assets:

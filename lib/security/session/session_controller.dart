@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/error/app_exception.dart';
@@ -7,6 +8,33 @@ import '../../core/storage/storage_keys.dart';
 import '../../core/storage/token_store.dart';
 import 'auth_gateway.dart';
 import 'session.dart';
+
+typedef PreLogoutCallback = Future<void> Function();
+
+/// A feature-neutral boundary for work that needs the current auth and tenant
+/// context immediately before an explicit logout.
+///
+/// Session owns the ordering, while the app shell binds feature cleanup without
+/// making security import notifications (which would create a dependency
+/// cycle through inbox providers).
+class SessionPreLogout {
+  PreLogoutCallback? _callback;
+
+  void Function() register(PreLogoutCallback callback) {
+    _callback = callback;
+    return () {
+      if (identical(_callback, callback)) _callback = null;
+    };
+  }
+
+  Future<void> run() async {
+    await _callback?.call();
+  }
+}
+
+final sessionPreLogoutProvider = Provider<SessionPreLogout>(
+  (ref) => SessionPreLogout(),
+);
 
 /// Owns the session for the whole app: restore on launch, log in, pick a
 /// tenant, log out, and end the session when the API says the token is dead.
@@ -30,6 +58,7 @@ class SessionController extends Notifier<Session> {
   TokenStore get _tokens => ref.read(tokenStoreProvider);
   PreferencesStore get _prefs => ref.read(preferencesStoreProvider);
   AuthGateway get _gateway => ref.read(authGatewayProvider);
+  SessionPreLogout get _preLogout => ref.read(sessionPreLogoutProvider);
 
   /// Launch path: token in secure storage + tenant in prefs → rebuild context.
   Future<void> restore() async {
@@ -105,6 +134,14 @@ class SessionController extends Notifier<Session> {
   Future<void> refreshContext() => _loadContext();
 
   Future<void> logout() async {
+    try {
+      // Push unregister must run before /auth/logout and before local
+      // credentials/tenant are cleared so Dio can authenticate the DELETE.
+      await _preLogout.run();
+    } catch (error, stackTrace) {
+      // Feature cleanup is best-effort and must never trap a user in session.
+      debugPrint('Pre-logout cleanup failed: $error\n$stackTrace');
+    }
     try {
       await _gateway.logout();
     } on AppException {
