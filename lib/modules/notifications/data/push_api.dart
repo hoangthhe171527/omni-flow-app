@@ -9,10 +9,18 @@ class PushApi {
 
   final ApiClient _client;
 
-  Future<void> registerAndroid(String token) => _client.post(
-    '/devices/push-tokens',
-    body: {'token': token, 'platform': 'android'},
-  );
+  Future<void> register(String token, String platform, {String? deviceName}) {
+    final normalizedDeviceName = deviceName?.trim();
+    return _client.post(
+      '/devices/push-tokens',
+      body: {
+        'token': token,
+        'platform': platform,
+        if (normalizedDeviceName != null && normalizedDeviceName.isNotEmpty)
+          'device_name': normalizedDeviceName,
+      },
+    );
+  }
 
   Future<void> unregister(String token) =>
       _client.delete('/devices/push-tokens', body: {'token': token});
