@@ -22,9 +22,9 @@
 |----|---------|------|-----------------|---------------|------|-------------|
 | F1 | Push backend isolation and delivery | Developer | Run focused API tests for registration, tenant isolation, Android/APNs payloads, retry and invalid-token handling | All tests pass; no cross-tenant token selection; transient errors retry without deleting valid tokens | automated | PASS — focused suites 17 tests / 78 assertions |
 | F2 | Mobile push lifecycle | Developer | Run Flutter tests for Android/iOS initialization, APNs wait, token refresh, foreground/tap handling and logout cleanup | Analyze and all tests pass; unregister runs before credentials are cleared | automated | PASS — `flutter analyze` clean; 80/80 tests pass |
-| F3 | Android release artifact | Developer | Build signed release with production Firebase config and inspect merged manifest/resources | Package is `vn.app.sunriseieco.viomni`; Firebase app matches; notification channel/sound/permission are present | live | PENDING |
-| F4 | iOS archive integrity | Developer | Archive/export build 18 and inspect signature, entitlements, embedded profile, plist and icons | Bundle/version/build match; `aps-environment=production`; Firebase plist is bundled; icons are valid | live | PENDING |
-| F5 | Production backend readiness | Developer | Deploy API branch; inspect worker queue/config/logs and registered token count | Mongo queue worker is healthy; FCM HTTP v1 config loads; no Redis NOAUTH; no credentials in logs | live | PARTIAL — queue and FCM service account verified; API code not deployed |
+| F3 | Android release artifact | Developer | Build signed release with production Firebase config and inspect merged manifest/resources | Package is `vn.app.sunriseieco.viomni`; Firebase app matches; notification channel/sound/permission are present | live | PASS — AAB/APK built; package `vn.app.sunriseieco.viomni`, version `0.1.0 (18)`, POST_NOTIFICATIONS and FCM receiver present |
+| F4 | iOS archive integrity | Developer | Archive/export build 18 and inspect signature, entitlements, embedded profile, plist and icons | Bundle/version/build match; `aps-environment=production`; Firebase plist is bundled; icons are valid | live | PASS — archive/export succeeded; bundle `vn.app.sunriseieco.viomni`, `0.1.0 (18)`, signed APNs production, Firebase plist and icon resources present |
+| F5 | Production backend readiness | Developer | Deploy API branch; inspect worker queue/config/logs and registered token count | Mongo queue worker is healthy; FCM HTTP v1 config loads; no Redis NOAUTH; no credentials in logs | live | PASS — backend merged/deployed; API and Mongo worker healthy; JWT/FCM materialized without fatal startup or Redis auth errors |
 | F6 | TestFlight upload and processing | Account Holder | Upload build 18; inspect Build Uploads and TestFlight processing | Upload is Complete and build `0.1.0 (18)` is selectable | live | PENDING |
 | F7 | Internal tester availability | Account Holder | Attach build 18 to internal group and inspect tester eligibility | Accepted internal tester can install without Beta App Review | live | PENDING |
 | F8 | External tester availability | Account Holder | Attach build 18 to external group, submit beta review if required and inspect tester rows | Approved build is available and testers are notified; blocker is explicitly shown otherwise | live | PENDING |
@@ -61,7 +61,8 @@
 - Build 17 has no `aps-environment` entitlement and cannot be used to validate iPhone push. Build 18 is mandatory.
 - External TestFlight builds may require Beta App Review; internal App Store Connect testers do not require that review after processing.
 - Production currently has zero registered device tokens. C19–C21 require an actual iPhone and Android installation, login, and notification permission.
-- The Firebase Android/iOS app records now match `vn.app.sunriseieco.viomni`; APNs key upload is pending explicit credential-transmission confirmation.
+- The Firebase Android/iOS app records match `vn.app.sunriseieco.viomni`; the APNs authentication key is configured for both development and production.
+- The local Android release uses the debug signing certificate fallback. It is suitable for artifact/push verification but must not be uploaded to Google Play until a production Android keystore is configured.
 - A single tenant/user currently retains one token per platform. Testing two devices on the same platform for the same user is outside this release scope.
 
 ## Repeatable scripts
