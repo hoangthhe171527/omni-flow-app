@@ -1,4 +1,4 @@
-package vn.evovi.omni_app
+package vn.app.sunriseieco.viomni
 
 import io.flutter.embedding.android.FlutterActivity
 
