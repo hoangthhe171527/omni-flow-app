@@ -77,6 +77,50 @@ void main() {
       expect(harness.activeTenantId, isNull);
     },
   );
+
+  test(
+    'temporary restore failure keeps credentials for automatic retry',
+    () async {
+      SharedPreferences.setMockInitialValues({
+        StorageKeys.tenantId: 'tenant-1',
+      });
+      final sharedPreferences = await SharedPreferences.getInstance();
+      final events = <String>[];
+      final tokens = _RecordingTokenStore(
+        events,
+        refreshToken: 'refresh-token',
+      );
+      final container = ProviderContainer(
+        overrides: [
+          tokenStoreProvider.overrideWithValue(tokens),
+          preferencesStoreProvider.overrideWithValue(
+            _RecordingPreferencesStore(sharedPreferences, events),
+          ),
+          authGatewayProvider.overrideWithValue(
+            _RecordingAuthGateway(
+              events,
+              logoutFails: false,
+              restoreFailure: const NetworkException('offline'),
+            ),
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      container.read(sessionControllerProvider);
+      for (var attempt = 0; attempt < 20; attempt++) {
+        await Future<void>.delayed(Duration.zero);
+      }
+
+      expect(
+        container.read(sessionControllerProvider).status,
+        SessionStatus.restoring,
+      );
+      expect(tokens.hasCredentials, isTrue);
+      expect(sharedPreferences.getString(StorageKeys.tenantId), 'tenant-1');
+      expect(events, isNot(contains('credentials.clear')));
+    },
+  );
 }
 
 class _SessionHarness {
@@ -155,9 +199,11 @@ class _SessionHarness {
 }
 
 class _RecordingTokenStore extends TokenStore {
-  _RecordingTokenStore(this.events) : super(const FlutterSecureStorage());
+  _RecordingTokenStore(this.events, {this.refreshToken})
+    : super(const FlutterSecureStorage());
 
   final List<String> events;
+  final String? refreshToken;
   bool hasCredentials = true;
 
   @override
@@ -165,7 +211,7 @@ class _RecordingTokenStore extends TokenStore {
       hasCredentials ? 'access-token' : null;
 
   @override
-  Future<String?> readRefreshToken() async => null;
+  Future<String?> readRefreshToken() async => refreshToken;
 
   @override
   Future<void> clear() async {
@@ -189,14 +235,21 @@ class _RecordingPreferencesStore extends PreferencesStore {
 }
 
 class _RecordingAuthGateway implements AuthGateway {
-  _RecordingAuthGateway(this.events, {required this.logoutFails});
+  _RecordingAuthGateway(
+    this.events, {
+    required this.logoutFails,
+    this.restoreFailure,
+  });
 
   final List<String> events;
   final bool logoutFails;
+  final AppException? restoreFailure;
 
   @override
-  Future<Session> loadContext() async =>
-      const Session(status: SessionStatus.authenticated);
+  Future<Session> loadContext() async {
+    if (restoreFailure case final failure?) throw failure;
+    return const Session(status: SessionStatus.authenticated);
+  }
 
   @override
   Future<void> logout() async {
@@ -209,7 +262,13 @@ class _RecordingAuthGateway implements AuthGateway {
       throw UnimplementedError();
 
   @override
-  Future<AuthTokens> refresh(String refreshToken) => throw UnimplementedError();
+  Future<AuthTokens> refresh(String refreshToken) async {
+    if (restoreFailure case final failure?) throw failure;
+    return const AuthTokens(
+      accessToken: 'access-refreshed',
+      refreshToken: 'refresh-rotated',
+    );
+  }
 
   @override
   Future<AuthTokens> switchTenant(String tenantId) =>

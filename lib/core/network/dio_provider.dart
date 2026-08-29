@@ -123,9 +123,15 @@ final dioProvider = Provider<Dio>((ref) {
             if (refreshError.response?.statusCode == 401) {
               final signal = ref.read(unauthorizedSignalProvider.notifier);
               signal.state = signal.state + 1;
+            } else {
+              // Preserve the refresh failure (offline/timeout/5xx). Returning
+              // the original access-token 401 would falsely expire a valid
+              // rolling session while the server is temporarily unavailable.
+              handler.next(refreshError);
+              return;
             }
-            // A network/server error while refreshing is transient: leave the
-            // secure storage intact so a later request can recover.
+            // A rejected refresh token is authoritative; forward the original
+            // business 401 so session state can expire it.
           }
         }
         handler.next(error);

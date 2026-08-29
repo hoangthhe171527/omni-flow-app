@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -39,6 +41,8 @@ final sessionPreLogoutProvider = Provider<SessionPreLogout>(
 /// Owns the session for the whole app: restore on launch, log in, pick a
 /// tenant, log out, and end the session when the API says the token is dead.
 class SessionController extends Notifier<Session> {
+  Timer? _restoreRetryTimer;
+
   @override
   Session build() {
     // A 401 on any business endpoint ends the session. Listening here (rather
@@ -51,6 +55,8 @@ class SessionController extends Notifier<Session> {
       }
     });
 
+    ref.onDispose(() => _restoreRetryTimer?.cancel());
+
     Future.microtask(restore);
     return const Session.restoring();
   }
@@ -62,21 +68,19 @@ class SessionController extends Notifier<Session> {
 
   /// Launch path: token in secure storage + tenant in prefs → rebuild context.
   Future<void> restore() async {
-    final token = await _tokens.readAccessToken();
-    if (token == null || token.isEmpty) {
+    _restoreRetryTimer?.cancel();
+    _restoreRetryTimer = null;
+
+    final accessToken = await _tokens.readAccessToken();
+    final refreshToken = await _tokens.readRefreshToken();
+    final hasAccessToken = accessToken != null && accessToken.isNotEmpty;
+    final hasRefreshToken = refreshToken != null && refreshToken.isNotEmpty;
+    if (!hasAccessToken && !hasRefreshToken) {
       state = const Session.unauthenticated();
       return;
     }
 
-    final tenantId = _prefs.getString(StorageKeys.tenantId);
-    if (tenantId == null || tenantId.isEmpty) {
-      state = const Session(status: SessionStatus.tenantPending);
-      return;
-    }
-
-    ref.read(activeTenantIdProvider.notifier).state = tenantId;
-    final refreshToken = await _tokens.readRefreshToken();
-    if (refreshToken != null && refreshToken.isNotEmpty) {
+    if (hasRefreshToken) {
       try {
         // Rotate at launch so regularly-used installs retain their rolling
         // server session without asking for credentials again.
@@ -93,7 +97,15 @@ class SessionController extends Notifier<Session> {
         // A temporary offline/server failure must not erase local credentials.
       }
     }
-    await _loadContext();
+
+    final tenantId = _prefs.getString(StorageKeys.tenantId);
+    if (tenantId == null || tenantId.isEmpty) {
+      state = const Session(status: SessionStatus.tenantPending);
+      return;
+    }
+
+    ref.read(activeTenantIdProvider.notifier).state = tenantId;
+    await _loadContext(retryOnTransientFailure: true);
   }
 
   Future<void> login({required String email, required String password}) async {
@@ -128,7 +140,7 @@ class SessionController extends Notifier<Session> {
     );
     await _prefs.setString(StorageKeys.tenantId, tenantId);
     ref.read(activeTenantIdProvider.notifier).state = tenantId;
-    await _loadContext();
+    await _loadContext(retryOnTransientFailure: true);
   }
 
   Future<void> refreshContext() => _loadContext();
@@ -151,16 +163,29 @@ class SessionController extends Notifier<Session> {
     state = const Session.unauthenticated();
   }
 
-  Future<void> _loadContext() async {
+  Future<void> _loadContext({bool retryOnTransientFailure = false}) async {
+    final previous = state;
     try {
       state = await _gateway.loadContext();
     } on UnauthorizedException {
       await _clearCredentials();
       state = const Session.expired();
     } on AppException {
-      await _clearCredentials();
-      state = const Session.unauthenticated();
+      // Offline periods, timeouts and server errors do not revoke a session.
+      // Keep secure credentials and retry startup automatically.
+      if (retryOnTransientFailure) {
+        state = const Session.restoring();
+        _scheduleRestoreRetry();
+      } else {
+        state = previous;
+        rethrow;
+      }
     }
+  }
+
+  void _scheduleRestoreRetry() {
+    if (_restoreRetryTimer?.isActive ?? false) return;
+    _restoreRetryTimer = Timer(const Duration(seconds: 5), restore);
   }
 
   Future<void> _clearCredentials() async {
