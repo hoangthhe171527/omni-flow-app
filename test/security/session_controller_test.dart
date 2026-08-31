@@ -79,6 +79,27 @@ void main() {
   );
 
   test(
+    'account deletion clears the local session after server acceptance',
+    () async {
+      final harness = await _SessionHarness.create();
+      addTearDown(harness.dispose);
+
+      final receipt = await harness.controller.requestAccountDeletion(
+        password: 'DeleteMe123!',
+      );
+
+      expect(receipt.scheduledFor, DateTime.utc(2026, 9, 7));
+      expect(harness.events, [
+        'account.delete',
+        'credentials.clear',
+        'tenant.clear',
+      ]);
+      expect(harness.session.status, SessionStatus.unauthenticated);
+      expect(harness.activeTenantId, isNull);
+    },
+  );
+
+  test(
     'temporary restore failure keeps credentials for automatic retry',
     () async {
       SharedPreferences.setMockInitialValues({
@@ -255,6 +276,14 @@ class _RecordingAuthGateway implements AuthGateway {
   Future<void> logout() async {
     events.add('server.logout');
     if (logoutFails) throw const NetworkException('offline');
+  }
+
+  @override
+  Future<AccountDeletionReceipt> requestAccountDeletion({
+    required String password,
+  }) async {
+    events.add('account.delete');
+    return AccountDeletionReceipt(scheduledFor: DateTime.utc(2026, 9, 7));
   }
 
   @override

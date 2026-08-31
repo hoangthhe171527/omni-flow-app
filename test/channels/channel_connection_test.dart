@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:flutter/foundation.dart';
 import 'package:omni_app/core/domain/channel.dart';
 import 'package:omni_app/modules/channels/domain/channel_connection.dart';
 import 'package:omni_app/modules/channels/domain/connectable_channel.dart';
@@ -43,7 +44,10 @@ void main() {
     });
 
     test('thiếu cả hai thì lùi về tên nền tảng, không ra chuỗi rỗng', () {
-      final c = ChannelConnection.fromJson({'id': 'c3', 'channel_id': 'tiktok'});
+      final c = ChannelConnection.fromJson({
+        'id': 'c3',
+        'channel_id': 'tiktok',
+      });
 
       expect(c.label, Channel.tiktok.meta.name);
     });
@@ -77,25 +81,55 @@ void main() {
 
   group('ConnectableChannels', () {
     test('kênh chính thức đi OAuth', () {
-      expect(ConnectableChannels.methodFor(Channel.facebook), ConnectMethod.oauth);
+      expect(
+        ConnectableChannels.methodFor(Channel.facebook),
+        ConnectMethod.oauth,
+      );
       expect(ConnectableChannels.methodFor(Channel.zalo), ConnectMethod.oauth);
-      expect(ConnectableChannels.methodFor(Channel.tiktok), ConnectMethod.oauth);
+      expect(
+        ConnectableChannels.methodFor(Channel.tiktok),
+        ConnectMethod.oauth,
+      );
     });
 
-    test('tài khoản cá nhân đi ghép nối QR', () {
+    test('chỉ Zalo cá nhân đi ghép nối QR', () {
       expect(
-        ConnectableChannels.methodFor(Channel.zaloPersonal),
+        ConnectableChannels.methodFor(
+          Channel.zaloPersonal,
+          platform: TargetPlatform.android,
+        ),
         ConnectMethod.pair,
       );
       expect(
         ConnectableChannels.methodFor(Channel.facebookPersonal),
-        ConnectMethod.pair,
+        ConnectMethod.none,
+      );
+    });
+
+    test('iOS chỉ cho kết nối kênh chính thức', () {
+      expect(ConnectableChannels.pairFor(TargetPlatform.iOS), isEmpty);
+      expect(
+        ConnectableChannels.methodFor(
+          Channel.zaloPersonal,
+          platform: TargetPlatform.iOS,
+        ),
+        ConnectMethod.none,
+      );
+      expect(
+        ConnectableChannels.methodFor(
+          Channel.zalo,
+          platform: TargetPlatform.iOS,
+        ),
+        ConnectMethod.oauth,
       );
     });
 
     test('kênh không nối được từ app trả về none', () {
       expect(ConnectableChannels.methodFor(Channel.web), ConnectMethod.none);
-      expect(ConnectableChannels.methodFor(Channel.unknown), ConnectMethod.none);
+      expect(
+        ConnectableChannels.methodFor(Channel.unknown),
+        ConnectMethod.none,
+      );
     });
   });
 }

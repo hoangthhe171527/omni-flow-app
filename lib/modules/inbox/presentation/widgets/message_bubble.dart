@@ -127,7 +127,7 @@ class MessageBubble extends StatelessWidget {
 
     final bubble = Container(
       constraints: BoxConstraints(
-        maxWidth: MediaQuery.sizeOf(context).width * 0.76,
+        maxWidth: math.min(MediaQuery.sizeOf(context).width * 0.76, 560),
       ),
       // Symmetric vertical padding. The 6 at the bottom against 8 at the top
       // made every bubble sit slightly high in its own box.
@@ -390,7 +390,7 @@ class _LinkPreviewCardState extends State<_LinkPreviewCard> {
       receiveTimeout: Duration(seconds: 4),
       sendTimeout: Duration(seconds: 4),
       responseType: ResponseType.plain,
-      headers: {'User-Agent': 'OmniCRM Link Preview'},
+      headers: {'User-Agent': 'Viomni Link Preview'},
     ),
   );
   late final Future<_LinkMetadata> _metadata = _cachedMetadata(widget.url);

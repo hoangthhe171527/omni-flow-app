@@ -1,4 +1,4 @@
-# OmniCRM Mobile — kiến trúc
+# Viomni Mobile — kiến trúc
 
 Flutter + Riverpod + go_router + Dio, gọi thẳng `omnicrm-pro-api` (`/api/v1`).
 
@@ -312,5 +312,5 @@ flutter test
 
 ```
 API_BASE_URL=https://omni-api.test.evovi.vn
-APP_NAME=OmniCRM
+APP_NAME=Viomni
 ```

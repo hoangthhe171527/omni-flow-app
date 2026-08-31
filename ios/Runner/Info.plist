@@ -32,6 +32,8 @@
 	<string>Dùng camera để chụp ảnh gửi cho khách trong hộp thư.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>Chọn ảnh từ thư viện để gửi cho khách trong hộp thư.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>Lưu ảnh mã QR kết nối kênh vào thư viện để bạn có thể quét lại.</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>

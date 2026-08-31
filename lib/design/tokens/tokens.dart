@@ -1,4 +1,4 @@
-/// Barrel for the OmniCRM design tokens.
+/// Barrel for the Viomni design tokens.
 library;
 
 export 'omni_colors.dart';
