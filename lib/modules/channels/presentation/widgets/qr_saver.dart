@@ -14,7 +14,7 @@ Future<void> saveQrToGallery(String dataUrl) async {
   }
 
   try {
-    await Gal.putImageBytes(bytes, name: 'omnicrm-qr');
+    await Gal.putImageBytes(bytes, name: 'viomni-qr');
   } on GalException catch (error) {
     throw Exception(switch (error.type) {
       GalExceptionType.accessDenied =>

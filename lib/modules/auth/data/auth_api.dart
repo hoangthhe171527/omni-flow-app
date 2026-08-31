@@ -114,6 +114,21 @@ class AuthApi implements AuthGateway {
     await _client.post('/auth/logout');
   }
 
+  @override
+  Future<AccountDeletionReceipt> requestAccountDeletion({
+    required String password,
+  }) async {
+    final response = await _client.delete(
+      '/auth/account',
+      body: {'password': password, 'confirmation': 'DELETE'},
+    );
+    return AccountDeletionReceipt(
+      scheduledFor: DateTime.tryParse(
+        response.object.strOr('scheduled_for', ''),
+      ),
+    );
+  }
+
   AuthTokens _tokens(Map<String, dynamic> json) => AuthTokens(
     accessToken: json.strOr('access_token', ''),
     refreshToken: json.str('refresh_token'),

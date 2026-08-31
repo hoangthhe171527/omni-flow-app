@@ -38,6 +38,12 @@ abstract interface class AuthGateway {
   Future<Session> loadContext();
 
   Future<void> logout();
+
+  /// Schedules permanent deletion, disables the account immediately and
+  /// revokes every active session on the server.
+  Future<AccountDeletionReceipt> requestAccountDeletion({
+    required String password,
+  });
 }
 
 class AuthTokens {
@@ -50,6 +56,12 @@ class AuthTokens {
   final String accessToken;
   final String? refreshToken;
   final int? expiresIn;
+}
+
+class AccountDeletionReceipt {
+  const AccountDeletionReceipt({required this.scheduledFor});
+
+  final DateTime? scheduledFor;
 }
 
 /// Bound in `bootstrap.dart` to the auth module's implementation.

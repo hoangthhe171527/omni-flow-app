@@ -36,23 +36,137 @@ class AppShell extends ConsumerWidget {
         ? tabs.length
         : tabs.indexWhere((tab) => declared.indexOf(tab) == currentBranch);
 
-    return Scaffold(
-      body: navigationShell,
-      bottomNavigationBar: _ShellNavBar(
-        tabs: tabs,
-        selectedIndex: selected < 0 ? tabs.length : selected,
-        onSelected: (index) {
-          final branch = index >= tabs.length
-              ? moreBranchIndex
-              : declared.indexOf(tabs[index]);
-          navigationShell.goBranch(
-            branch,
-            // Tapping the active tab pops that tab back to its root — the
-            // behaviour every messaging app has trained users to expect.
-            initialLocation: branch == navigationShell.currentIndex,
+    final selectedIndex = selected < 0 ? tabs.length : selected;
+
+    void select(int index) {
+      final branch = index >= tabs.length
+          ? moreBranchIndex
+          : declared.indexOf(tabs[index]);
+      navigationShell.goBranch(
+        branch,
+        // Tapping the active tab pops that tab back to its root — the
+        // behaviour every messaging app has trained users to expect.
+        initialLocation: branch == navigationShell.currentIndex,
+      );
+    }
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final useRail = constraints.maxWidth >= 900;
+        if (useRail) {
+          return Scaffold(
+            body: Row(
+              children: [
+                _ShellNavigationRail(
+                  tabs: tabs,
+                  selectedIndex: selectedIndex,
+                  onSelected: select,
+                ),
+                VerticalDivider(
+                  width: 1,
+                  thickness: 1,
+                  color: Theme.of(context).colorScheme.outline,
+                ),
+                Expanded(child: navigationShell),
+              ],
+            ),
           );
-        },
+        }
+
+        return Scaffold(
+          body: navigationShell,
+          bottomNavigationBar: _ShellNavBar(
+            tabs: tabs,
+            selectedIndex: selectedIndex,
+            onSelected: select,
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _ShellNavigationRail extends ConsumerWidget {
+  const _ShellNavigationRail({
+    required this.tabs,
+    required this.selectedIndex,
+    required this.onSelected,
+  });
+
+  final List<ModuleDestination> tabs;
+  final int selectedIndex;
+  final ValueChanged<int> onSelected;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final scheme = Theme.of(context).colorScheme;
+
+    Widget iconFor(ModuleDestination destination, {required bool selected}) {
+      final badgeProvider = destination.badge;
+      final count = badgeProvider == null ? 0 : ref.watch(badgeProvider);
+      return Stack(
+        clipBehavior: Clip.none,
+        children: [
+          Icon(selected ? destination.selectedIcon : destination.icon),
+          if (count > 0)
+            Positioned(
+              right: -10,
+              top: -7,
+              child: OmniCountBadge(count: count, color: scheme.error),
+            ),
+        ],
+      );
+    }
+
+    return NavigationRail(
+      selectedIndex: selectedIndex,
+      onDestinationSelected: onSelected,
+      labelType: NavigationRailLabelType.all,
+      groupAlignment: -0.75,
+      backgroundColor: scheme.surface,
+      indicatorColor: scheme.primary.withValues(alpha: 0.11),
+      selectedIconTheme: IconThemeData(color: scheme.primary, size: 24),
+      unselectedIconTheme: IconThemeData(
+        color: scheme.onSurfaceVariant,
+        size: 23,
       ),
+      selectedLabelTextStyle: OmniType.micro.copyWith(
+        color: scheme.primary,
+        fontWeight: FontWeight.w700,
+      ),
+      unselectedLabelTextStyle: OmniType.micro.copyWith(
+        color: scheme.onSurfaceVariant,
+        fontWeight: FontWeight.w500,
+      ),
+      leading: Padding(
+        padding: const EdgeInsets.only(top: OmniSpacing.lg),
+        child: Container(
+          width: 44,
+          height: 44,
+          decoration: const BoxDecoration(
+            gradient: OmniGradients.brand,
+            borderRadius: OmniRadius.mdAll,
+          ),
+          child: const Icon(
+            Icons.layers_rounded,
+            color: Colors.white,
+            size: 23,
+          ),
+        ),
+      ),
+      destinations: [
+        for (final destination in tabs)
+          NavigationRailDestination(
+            icon: iconFor(destination, selected: false),
+            selectedIcon: iconFor(destination, selected: true),
+            label: Text(destination.label),
+          ),
+        const NavigationRailDestination(
+          icon: Icon(Icons.more_horiz_rounded),
+          selectedIcon: Icon(Icons.more_horiz_rounded),
+          label: Text('Thêm'),
+        ),
+      ],
     );
   }
 }

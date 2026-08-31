@@ -6,7 +6,7 @@
 - base_url: https://appstoreconnect.apple.com/apps/6805800851/testflight
 - api_url: https://app.sunriseieco.vn
 - max_parallel_servers: auto
-- target_release: `0.1.0 (18)`
+- target_release: `0.1.0 (19)`
 
 ## Roles
 
@@ -29,6 +29,8 @@
 | F7 | Internal tester availability | Account Holder | Attach build 18 to internal group and inspect tester eligibility | Accepted internal tester can install without Beta App Review | live | PASS — `Omni Internal` contains build 18 with status Testing |
 | F8 | External tester availability | Account Holder | Attach build 18 to external group, submit beta review if required and inspect tester rows | Approved build is available and testers are notified; blocker is explicitly shown otherwise | live | PASS — build 18 submitted with automatic notification and now shows Testing in `Omni Beta Testers`; pending users remain Invited rather than No Builds Available |
 | F9 | Physical-device message push | Tester | Login on one iPhone and one Android device, allow notifications, background app, receive a new inbox message, tap alert | One timely alert per message; correct conversation opens; token remains registered after resume; logout removes token | live | BLOCKED — requires build 18 installed on physical devices |
+| F10 | App Review metadata | Account Holder | Select build 19, replace iPhone/iPad screenshots, complete privacy, age rating and review information | All screenshots are final Simulator captures with fictional data; build 19 and demo credentials are selected | live | PENDING |
+| F11 | App Review privacy controls | Developer | Verify legal links, account deletion, Photos purpose strings and privacy manifest | Privacy/Support work before login and in More; deletion requires password and schedules removal; plist/manifest are valid | automated/live | PASS — mobile analyze and 83 tests pass; API flow 13 assertions pass |
 
 ## Cases
 
@@ -55,15 +57,21 @@
 | C19 | iPhone delivery | External tester | Build 18 installed; permission allowed; logged in | Background app and receive customer message | One audible alert arrives and tap opens correct thread | P0 | F9 |
 | C20 | Android delivery | External tester | Build 18 installed; permission allowed; logged in | Background app and receive customer message | One audible alert arrives and tap opens correct thread | P0 | F9 |
 | C21 | Logout revocation | External tester | Device completed C19/C20 | Logout, then send another customer message | Logged-out device receives no further alert | P0 | F9 |
+| C22 | iPhone App Store screenshots | Reviewer demo user | Build 19 and fictional demo workspace | Capture Inbox, thread, customer, pipeline and opportunity at 1320×2868 | Every image shows the actual app in use; no login, prompt, mockup or real customer data | P0 | F10 |
+| C23 | iPad App Store screenshots | Reviewer demo user | Build 19 and fictional demo workspace | Capture the same core flows at 2064×2752 | Every image shows the actual iPad app in use without stretching errors or overlays | P0 | F10 |
+| C24 | Legal links | Signed-out and signed-in user | Public website available | Open Privacy and Support from login and More | Correct HTTPS pages open and include current contact/deletion information | P0 | F11 |
+| C25 | Account deletion | Authenticated owner | Current password known | Confirm deletion from More → Account | API returns 202; account, sessions and push delivery are disabled immediately; scheduled date is within 7 days | P0 | F11 |
+| C26 | App Store-only channels | iOS user with channel write permission | Open connection sheet | Inspect available channels | Only official OAuth/API channels are offered; personal cookie/agent pairing is absent | P0 | F11 |
 
 ## Known issues / data prerequisites
 
-- Build 17 has no `aps-environment` entitlement and cannot be used to validate iPhone push. Build 18 is mandatory.
+- Build 17 has no `aps-environment` entitlement and cannot be used. App Review must use build 19 after the metadata/privacy fixes.
 - External TestFlight builds may require Beta App Review; internal App Store Connect testers do not require that review after processing.
 - Production currently has zero registered device tokens. C19–C21 require an actual iPhone and Android installation, login, and notification permission.
 - The Firebase Android/iOS app records match `vn.app.sunriseieco.viomni`; the APNs authentication key is configured for both development and production.
 - The local Android release uses the debug signing certificate fallback. It is suitable for artifact/push verification but must not be uploaded to Google Play until a production Android keystore is configured.
 - A single tenant/user currently retains one token per platform. Testing two devices on the same platform for the same user is outside this release scope.
+- Final App Store screenshots require a dedicated `Apple Review Demo` workspace containing only fictional data.
 
 ## Repeatable scripts
 

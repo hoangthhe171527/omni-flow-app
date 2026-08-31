@@ -1,3 +1,5 @@
+import 'package:flutter/foundation.dart';
+
 import '../../../core/domain/channel.dart';
 
 /// Nối kênh này bằng cách nào.
@@ -22,11 +24,22 @@ abstract final class ConnectableChannels {
   static const oauth = [Channel.facebook, Channel.zalo, Channel.tiktok];
 
   /// Cùng bộ với `PERSONAL_CHANNELS` trong `ChannelPairingController`.
-  static const pair = [Channel.zaloPersonal, Channel.facebookPersonal];
+  // Personal-channel pairing relies on an external agent. It is unavailable in
+  // the App Store build; iOS exposes only official OAuth/API integrations.
+  // Android keeps Zalo pairing for existing enterprise deployments.
+  static List<Channel> get pair => pairFor(defaultTargetPlatform);
 
-  static ConnectMethod methodFor(Channel channel) {
+  static List<Channel> pairFor(TargetPlatform platform) =>
+      platform == TargetPlatform.iOS ? const [] : const [Channel.zaloPersonal];
+
+  // Facebook Personal previously copied the user's Facebook session cookies
+  // to the backend so an agent could remain signed in. Keep it unavailable on
+  // every platform until an official OAuth/API integration replaces it.
+  static ConnectMethod methodFor(Channel channel, {TargetPlatform? platform}) {
     if (oauth.contains(channel)) return ConnectMethod.oauth;
-    if (pair.contains(channel)) return ConnectMethod.pair;
+    if (pairFor(platform ?? defaultTargetPlatform).contains(channel)) {
+      return ConnectMethod.pair;
+    }
     return ConnectMethod.none;
   }
 }

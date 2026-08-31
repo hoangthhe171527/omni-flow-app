@@ -162,7 +162,7 @@ class _FacebookLoginPageState extends ConsumerState<FacebookLoginPage> {
               child: Text(
                 _submitting
                     ? 'Đã đăng nhập. Đang chuyển phiên an toàn sang agent…'
-                    : 'Đăng nhập và hoàn tất xác minh Facebook ngay tại đây. OmniCRM không nhận mật khẩu của bạn.',
+                    : 'Đăng nhập và hoàn tất xác minh Facebook ngay tại đây. Viomni không nhận mật khẩu của bạn.',
                 textAlign: TextAlign.center,
                 style: OmniType.micro.copyWith(
                   color: Theme.of(context).colorScheme.onSurfaceVariant,

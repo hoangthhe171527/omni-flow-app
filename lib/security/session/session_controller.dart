@@ -163,6 +163,18 @@ class SessionController extends Notifier<Session> {
     state = const Session.unauthenticated();
   }
 
+  Future<AccountDeletionReceipt> requestAccountDeletion({
+    required String password,
+  }) async {
+    final receipt = await _gateway.requestAccountDeletion(password: password);
+    // The server disables the account, revokes every session and removes push
+    // tokens before returning 202. Clear the local copy only after that succeeds
+    // so a transient network error cannot strand the user without feedback.
+    await _clearCredentials();
+    state = const Session.unauthenticated();
+    return receipt;
+  }
+
   Future<void> _loadContext({bool retryOnTransientFailure = false}) async {
     final previous = state;
     try {

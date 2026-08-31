@@ -157,7 +157,7 @@ class PushNotifications {
       if (!_isActive(generation)) return;
 
       // Install the listener before any registration network request. A slow
-      // OmniCRM API must never leave a running app deaf to an FCM event.
+      // Viomni API must never leave a running app deaf to an FCM event.
       _tokenRefresh = FirebaseMessaging.instance.onTokenRefresh.listen(
         _register,
       );
@@ -298,7 +298,7 @@ class PushNotifications {
       _registrationAttempts = 0;
       _registrationRetry?.cancel();
       _registrationRetry = null;
-      debugPrint('Push token registered with OmniCRM [$platform].');
+      debugPrint('Push token registered with Viomni [$platform].');
     } catch (error, stackTrace) {
       // Token refresh must never break the authenticated session. Retry with a
       // capped backoff: this covers an API deploy/restart and flaky mobile data.
@@ -397,7 +397,7 @@ class PushNotifications {
     final messagingStyle = senderName.isEmpty
         ? null
         : MessagingStyleInformation(
-            const Person(name: 'OmniCRM', key: 'omnicrm'),
+            const Person(name: 'Viomni', key: 'viomni'),
             conversationTitle: sourceLabel.isNotEmpty ? sourceLabel : title,
             groupConversation: isGroup,
             messages: [

@@ -8,12 +8,12 @@ abstract final class Env {
   static const defaultApiBaseUrl = 'https://omni-api.app.sunriseieco.vn';
 
   static String get apiBaseUrl => _normalizeBaseUrl(
-        _read(const String.fromEnvironment('API_BASE_URL'), 'API_BASE_URL') ??
-            defaultApiBaseUrl,
-      );
+    _read(const String.fromEnvironment('API_BASE_URL'), 'API_BASE_URL') ??
+        defaultApiBaseUrl,
+  );
 
   static String get appName =>
-      _read(const String.fromEnvironment('APP_NAME'), 'APP_NAME') ?? 'OmniCRM';
+      _read(const String.fromEnvironment('APP_NAME'), 'APP_NAME') ?? 'Viomni';
 
   /// Realtime (Reverb / Pusher protocol). Empty disables realtime entirely —
   /// the app then falls back to pull-to-refresh + polling on the inbox.

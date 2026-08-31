@@ -32,17 +32,19 @@ Future<Channel?> showConnectSheet(BuildContext context) {
             const SizedBox(height: OmniSpacing.sm),
             for (final channel in ConnectableChannels.oauth)
               _ChannelOption(channel: channel),
-            const SizedBox(height: OmniSpacing.lg),
-            Text('Tài khoản cá nhân', style: OmniType.bodyStrong),
-            Text(
-              'Tài khoản riêng của nhân viên. Facebook đăng nhập ngay trên điện thoại; agent chỉ cần chạy nền để đồng bộ tin.',
-              style: OmniType.micro.copyWith(
-                color: Theme.of(sheetContext).colorScheme.onSurfaceVariant,
+            if (ConnectableChannels.pair.isNotEmpty) ...[
+              const SizedBox(height: OmniSpacing.lg),
+              Text('Tài khoản cá nhân', style: OmniType.bodyStrong),
+              Text(
+                'Tài khoản riêng của nhân viên. Ghép nối bằng mã QR với máy đang chạy agent.',
+                style: OmniType.micro.copyWith(
+                  color: Theme.of(sheetContext).colorScheme.onSurfaceVariant,
+                ),
               ),
-            ),
-            const SizedBox(height: OmniSpacing.sm),
-            for (final channel in ConnectableChannels.pair)
-              _ChannelOption(channel: channel),
+              const SizedBox(height: OmniSpacing.sm),
+              for (final channel in ConnectableChannels.pair)
+                _ChannelOption(channel: channel),
+            ],
           ],
         ),
       ),

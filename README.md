@@ -1,4 +1,4 @@
-# OmniCRM Mobile
+# Viomni Mobile
 
 App di động cho hộp thư đa kênh (Zalo OA/cá nhân, Facebook Page/cá nhân, TikTok,
 Instagram, WhatsApp, website chat) và CRM, chạy trên `omnicrm-pro-api`.
