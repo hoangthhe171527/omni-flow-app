@@ -118,7 +118,20 @@ class _ThreadPageState extends ConsumerState<ThreadPage>
   }
 
   void _refreshThread() {
-    ref.invalidate(threadProvider(widget.conversationId));
+    // refresh(), not invalidate(). Invalidating rebuilt the thread from the
+    // server every few seconds, which erased everything the server does not know
+    // about: a failed send waiting to be retried (gone before the rep could act
+    // on it), every older page they had scrolled back through, and the notifier
+    // an in-flight send was about to write its result to.
+    unawaited(
+      ref
+          .read(threadProvider(widget.conversationId).notifier)
+          .refresh()
+          .catchError((_) {
+            // A refresh that fails leaves what is on screen; the next poll
+            // retries. Nothing here should surface as an error to the rep.
+          }),
+    );
     ref.invalidate(conversationProvider(widget.conversationId));
     ref.invalidate(inboxFacetsProvider);
   }
@@ -179,7 +192,7 @@ class _ThreadPageState extends ConsumerState<ThreadPage>
               value: thread,
               onRetry: () =>
                   ref.invalidate(threadProvider(widget.conversationId)),
-              isEmpty: (state) => state.messages.isEmpty,
+              isEmpty: (state) => state.isEmpty,
               empty: const OmniEmptyState(
                 icon: Icons.chat_bubble_outline_rounded,
                 title: 'Chưa có tin nhắn',
@@ -629,7 +642,9 @@ class _MessageList extends StatelessWidget {
   Widget build(BuildContext context) {
     // Rendered bottom-up so new messages land where the eye already is and
     // loading history never shifts the viewport.
-    final items = state.messages.reversed.toList();
+    // `visible` is history plus this device's outbox — a queued or failed
+    // send is not in `messages` and would otherwise never render.
+    final items = state.visible.reversed.toList();
 
     return ListView.builder(
       controller: controller,
