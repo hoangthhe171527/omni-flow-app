@@ -189,9 +189,14 @@ class _ThreadPageState extends ConsumerState<ThreadPage>
                 state: state,
                 controller: _scrollController,
                 isGroup: conversation.valueOrNull?.isGroup ?? false,
+                // retry(), not send(): a fresh send would drop the reply the
+                // rep was answering, leave the failed bubble sitting below the
+                // new one, and — because it would carry a new idempotency key —
+                // deliver a second copy whenever the first attempt had in fact
+                // reached the server.
                 onRetry: (message) => ref
                     .read(threadProvider(widget.conversationId).notifier)
-                    .send(message.text, attachments: message.attachments),
+                    .retry(message),
                 onDiscard: (message) => ref
                     .read(threadProvider(widget.conversationId).notifier)
                     .discard(message.id),

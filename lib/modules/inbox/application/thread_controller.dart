@@ -40,8 +40,6 @@ class ThreadState {
 /// platform gave. A rep must never be left wondering whether a message went out.
 class ThreadController
     extends AutoDisposeFamilyAsyncNotifier<ThreadState, String> {
-  int _localSequence = 0;
-
   @override
   Future<ThreadState> build(String conversationId) async {
     final page = await ref.watch(inboxApiProvider).messages(conversationId);
@@ -89,13 +87,13 @@ class ThreadController
     List<MessageAttachment> attachments = const [],
     Message? replyTo,
   }) {
-    return _append(
-      draft: Message.optimistic(
-        localId: _nextLocalId(),
-        text: text,
-        attachments: attachments,
-        replyTo: replyTo,
-      ),
+    final draft = Message.optimistic(
+      text: text,
+      attachments: attachments,
+      replyTo: replyTo,
+    );
+    return _dispatch(
+      draft: draft,
       call: () => ref
           .read(inboxApiProvider)
           .send(
@@ -103,6 +101,40 @@ class ThreadController
             text: text,
             attachments: attachments,
             replyToMessageId: replyTo?.id,
+            clientMessageId: draft.clientId,
+          ),
+    );
+  }
+
+  /// Sends a failed bubble again.
+  ///
+  /// The retried bubble replaces the failed one in place rather than being
+  /// appended: two bubbles for one message is exactly the confusion a rep
+  /// cannot afford, and the old one carried a failure reason that no longer
+  /// applies. [Message.requeued] decides whether the original idempotency key is
+  /// reused — see it for why that is not unconditional.
+  Future<void> retry(Message failed) {
+    final draft = failed.requeued();
+    if (draft.isNote) {
+      return _dispatch(
+        draft: draft,
+        replacing: failed.id,
+        call: () => ref
+            .read(inboxApiProvider)
+            .addNote(arg, draft.text, clientMessageId: draft.clientId),
+      );
+    }
+    return _dispatch(
+      draft: draft,
+      replacing: failed.id,
+      call: () => ref
+          .read(inboxApiProvider)
+          .send(
+            arg,
+            text: draft.text,
+            attachments: draft.attachments,
+            replyToMessageId: draft.replyToMessageId,
+            clientMessageId: draft.clientId,
           ),
     );
   }
@@ -115,29 +147,26 @@ class ThreadController
     required Future<List<MessageAttachment>> attachments,
     Message? replyTo,
   }) {
-    return _append(
-      draft: Message.optimistic(
-        localId: _nextLocalId(),
-        text: text,
-        replyTo: replyTo,
-      ),
+    final draft = Message.optimistic(text: text, replyTo: replyTo);
+    return _dispatch(
+      draft: draft,
       call: () async => ref.read(inboxApiProvider).send(
         arg,
         text: text,
         attachments: await attachments,
         replyToMessageId: replyTo?.id,
+        clientMessageId: draft.clientId,
       ),
     );
   }
 
   Future<void> addNote(String text) {
-    return _append(
-      draft: Message.optimistic(
-        localId: _nextLocalId(),
-        text: text,
-        asNote: true,
-      ),
-      call: () => ref.read(inboxApiProvider).addNote(arg, text),
+    final draft = Message.optimistic(text: text, asNote: true);
+    return _dispatch(
+      draft: draft,
+      call: () => ref
+          .read(inboxApiProvider)
+          .addNote(arg, text, clientMessageId: draft.clientId),
     );
   }
 
@@ -180,12 +209,23 @@ class ThreadController
     return left.compareTo(right);
   }
 
-  Future<void> _append({
+  /// Shows [draft] immediately, then swaps in whatever the server answers.
+  ///
+  /// [replacing] is the id of a bubble this attempt supersedes (a failed one
+  /// being retried); leave it null to append.
+  Future<void> _dispatch({
     required Message draft,
     required Future<Message> Function() call,
+    String? replacing,
   }) async {
     final current = state.valueOrNull ?? const ThreadState();
-    state = AsyncData(current.copyWith(messages: [...current.messages, draft]));
+    final superseded = replacing ?? draft.id;
+    final messages = [
+      for (final message in current.messages)
+        if (message.id != superseded) message,
+      draft,
+    ];
+    state = AsyncData(current.copyWith(messages: messages));
 
     try {
       final saved = await call();
@@ -234,8 +274,6 @@ class ThreadController
       ),
     );
   }
-
-  String _nextLocalId() => 'local-${_localSequence++}';
 }
 
 final threadProvider =

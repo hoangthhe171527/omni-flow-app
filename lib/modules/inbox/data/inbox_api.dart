@@ -217,16 +217,22 @@ class InboxApi {
     return response.object['pinned'] == true;
   }
 
+  /// [clientMessageId] is the send's idempotency key. A retry MUST reuse the key
+  /// of the attempt it is retrying: the API then resolves it to the message
+  /// already queued instead of delivering a second copy to the customer.
   Future<Message> send(
     String id, {
     String? text,
     List<MessageAttachment> attachments = const [],
     String? replyToMessageId,
+    String? clientMessageId,
   }) async {
     final response = await _client.post(
       '$_base/$id/messages',
       body: {
         if (text != null && text.isNotEmpty) 'text': text,
+        if (clientMessageId != null && clientMessageId.isNotEmpty)
+          'client_message_id': clientMessageId,
         if (attachments.isNotEmpty)
           'attachments': [
             for (final attachment in attachments)
@@ -244,10 +250,19 @@ class InboxApi {
   }
 
   /// Internal note — stored on the thread, never delivered to the platform.
-  Future<Message> addNote(String id, String text) async {
+  /// Idempotent on [clientMessageId], same contract as [send].
+  Future<Message> addNote(
+    String id,
+    String text, {
+    String? clientMessageId,
+  }) async {
     final response = await _client.post(
       '$_base/$id/notes',
-      body: {'text': text},
+      body: {
+        'text': text,
+        if (clientMessageId != null && clientMessageId.isNotEmpty)
+          'client_message_id': clientMessageId,
+      },
     );
     return Message.fromJson(response.object);
   }
