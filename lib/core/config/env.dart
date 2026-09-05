@@ -24,6 +24,26 @@ abstract final class Env {
       _read(const String.fromEnvironment('REALTIME_HOST'), 'REALTIME_HOST') ??
       '';
 
+  /// `https` in production (Reverb behind TLS), `http` for a local server.
+  static String get realtimeScheme =>
+      _read(
+        const String.fromEnvironment('REALTIME_SCHEME'),
+        'REALTIME_SCHEME',
+      ) ??
+      'https';
+
+  static bool get realtimeUseTls => realtimeScheme.toLowerCase() == 'https';
+
+  /// Defaults to the scheme's own port, which is what a Reverb behind a reverse
+  /// proxy uses. A directly-exposed Reverb wants its own (8080 by default).
+  static int get realtimePort {
+    final raw = _read(
+      const String.fromEnvironment('REALTIME_PORT'),
+      'REALTIME_PORT',
+    );
+    return int.tryParse(raw ?? '') ?? (realtimeUseTls ? 443 : 80);
+  }
+
   static bool get isRealtimeEnabled =>
       realtimeKey.isNotEmpty && realtimeHost.isNotEmpty;
 

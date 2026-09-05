@@ -25,10 +25,8 @@ class UnauthorizedException extends AppException {
 /// The server refused on permissions. [requiredPermissions] is echoed by the
 /// API so the UI can name what is missing instead of a blank "no access".
 class ForbiddenException extends AppException {
-  const ForbiddenException(
-    super.message, {
-    this.requiredPermissions = const [],
-  }) : super(code: '403');
+  const ForbiddenException(super.message, {this.requiredPermissions = const []})
+    : super(code: '403');
 
   final List<String> requiredPermissions;
 }
@@ -40,7 +38,7 @@ class NotFoundException extends AppException {
 /// 422 — field-level validation errors keyed by field name.
 class ValidationException extends AppException {
   const ValidationException(super.message, {this.errors = const {}})
-      : super(code: '422');
+    : super(code: '422');
 
   final Map<String, List<String>> errors;
 

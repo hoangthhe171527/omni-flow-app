@@ -75,7 +75,10 @@ class CustomerDetailPage extends ConsumerWidget {
                 ),
               ],
             ),
-            const OmniSectionHeader(title: 'Thông tin liên hệ', padding: _headerPadding),
+            const OmniSectionHeader(
+              title: 'Thông tin liên hệ',
+              padding: _headerPadding,
+            ),
             OmniCard(
               child: Column(
                 children: [
@@ -128,7 +131,10 @@ class CustomerDetailPage extends ConsumerWidget {
               ),
             ],
             if (data.note != null && data.note!.isNotEmpty) ...[
-              const OmniSectionHeader(title: 'Ghi chú', padding: _headerPadding),
+              const OmniSectionHeader(
+                title: 'Ghi chú',
+                padding: _headerPadding,
+              ),
               OmniCard(child: Text(data.note!, style: OmniType.body)),
             ],
           ],
@@ -180,7 +186,9 @@ class _Header extends StatelessWidget {
                     const SizedBox(width: OmniSpacing.sm),
                     Text(
                       customer.code,
-                      style: OmniType.micro.copyWith(color: scheme.onSurfaceVariant),
+                      style: OmniType.micro.copyWith(
+                        color: scheme.onSurfaceVariant,
+                      ),
                     ),
                   ],
                 ],

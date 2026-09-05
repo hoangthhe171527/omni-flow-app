@@ -9,63 +9,72 @@ import 'package:omni_app/modules/channels/domain/pairing.dart';
 void main() {
   group('resolvePairing', () {
     test('connected thắng tất cả', () {
-      final s = resolvePairing(const PairingStatus(
-        status: 'connected',
-        stage: 'qr',
-        qr: 'data:image/png;base64,AAAA',
-      ));
+      final s = resolvePairing(
+        const PairingStatus(
+          status: 'connected',
+          stage: 'qr',
+          qr: 'data:image/png;base64,AAAA',
+        ),
+      );
 
       expect(s.view, PairingView.connected);
     });
 
     test('expired thắng mọi stage — server đã bỏ mã, chờ thêm là vô ích', () {
-      final s = resolvePairing(const PairingStatus(
-        status: 'expired',
-        stage: 'qr',
-        qr: 'data:image/png;base64,AAAA',
-      ));
+      final s = resolvePairing(
+        const PairingStatus(
+          status: 'expired',
+          stage: 'qr',
+          qr: 'data:image/png;base64,AAAA',
+        ),
+      );
 
       expect(s.view, PairingView.expired);
     });
 
     test('stage error dừng lại và mang theo lời của agent', () {
-      final s = resolvePairing(const PairingStatus(
-        status: 'pending',
-        stage: 'error',
-        note: 'Facebook chặn đăng nhập từ máy này',
-      ));
+      final s = resolvePairing(
+        const PairingStatus(
+          status: 'pending',
+          stage: 'error',
+          note: 'Facebook chặn đăng nhập từ máy này',
+        ),
+      );
 
       expect(s.view, PairingView.failed);
       expect(s.note, 'Facebook chặn đăng nhập từ máy này');
     });
 
     test('scanned ẩn QR dù server vẫn trả về ảnh', () {
-      final s = resolvePairing(const PairingStatus(
-        status: 'pending',
-        stage: 'scanned',
-        qr: 'data:image/png;base64,AAAA',
-      ));
+      final s = resolvePairing(
+        const PairingStatus(
+          status: 'pending',
+          stage: 'scanned',
+          qr: 'data:image/png;base64,AAAA',
+        ),
+      );
 
       expect(s.view, PairingView.scanned);
       expect(s.qr, isNull);
     });
 
     test('có QR và chưa quét thì hiện QR', () {
-      final s = resolvePairing(const PairingStatus(
-        status: 'pending',
-        stage: 'qr',
-        qr: 'data:image/png;base64,AAAA',
-      ));
+      final s = resolvePairing(
+        const PairingStatus(
+          status: 'pending',
+          stage: 'qr',
+          qr: 'data:image/png;base64,AAAA',
+        ),
+      );
 
       expect(s.view, PairingView.qr);
       expect(s.qr, 'data:image/png;base64,AAAA');
     });
 
     test('chưa có gì thì là đang chờ, giữ stage để hiện đúng câu mô tả', () {
-      final s = resolvePairing(const PairingStatus(
-        status: 'pending',
-        stage: 'tunnel_pending',
-      ));
+      final s = resolvePairing(
+        const PairingStatus(status: 'pending', stage: 'tunnel_pending'),
+      );
 
       expect(s.view, PairingView.waiting);
       expect(s.stage, 'tunnel_pending');

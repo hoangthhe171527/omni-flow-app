@@ -19,7 +19,10 @@ class ApiEnvelope {
   List<Map<String, dynamic>> get list {
     final value = raw['data'];
     if (value is! List) return const [];
-    return value.whereType<Map>().map((e) => e.cast<String, dynamic>()).toList();
+    return value
+        .whereType<Map>()
+        .map((e) => e.cast<String, dynamic>())
+        .toList();
   }
 
   ApiPagination? get pagination {
@@ -56,10 +59,10 @@ class ApiPagination {
   }
 
   const ApiPagination.empty()
-      : currentPage = 1,
-        lastPage = 1,
-        perPage = 0,
-        total = 0;
+    : currentPage = 1,
+      lastPage = 1,
+      perPage = 0,
+      total = 0;
 
   final int currentPage;
   final int lastPage;
@@ -78,15 +81,12 @@ class CursorPage {
   });
 
   factory CursorPage.fromJson(Map<String, dynamic> json) => CursorPage(
-        perPage: (json['per_page'] as num?)?.toInt() ?? 0,
-        hasMore: json['has_more'] == true,
-        nextBefore: json['next_before'] as String?,
-      );
+    perPage: (json['per_page'] as num?)?.toInt() ?? 0,
+    hasMore: json['has_more'] == true,
+    nextBefore: json['next_before'] as String?,
+  );
 
-  const CursorPage.empty()
-      : perPage = 0,
-        hasMore = false,
-        nextBefore = null;
+  const CursorPage.empty() : perPage = 0, hasMore = false, nextBefore = null;
 
   final int perPage;
   final bool hasMore;
@@ -98,8 +98,8 @@ class Paged<T> {
   const Paged({required this.items, required this.pagination});
 
   const Paged.empty()
-      : items = const [],
-        pagination = const ApiPagination.empty();
+    : items = const [],
+      pagination = const ApiPagination.empty();
 
   final List<T> items;
   final ApiPagination pagination;

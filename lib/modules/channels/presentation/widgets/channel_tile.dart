@@ -71,8 +71,9 @@ class ChannelTile extends StatelessWidget {
                     const SizedBox(width: OmniSpacing.sm),
                     Text(
                       '${connection.today} tin hôm nay',
-                      style: OmniType.micro
-                          .copyWith(color: scheme.onSurfaceVariant),
+                      style: OmniType.micro.copyWith(
+                        color: scheme.onSurfaceVariant,
+                      ),
                     ),
                   ],
                 ),

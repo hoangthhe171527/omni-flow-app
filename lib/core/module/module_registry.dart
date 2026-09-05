@@ -44,16 +44,17 @@ final declaredMenuEntriesProvider = Provider<List<ModuleMenuEntry>>((ref) {
 });
 
 /// Entries for the "Thêm" screen, grouped by section.
-final visibleMenuEntriesProvider =
-    Provider<Map<String, List<ModuleMenuEntry>>>((ref) {
-  final policy = ref.watch(accessProvider);
-  final grouped = <String, List<ModuleMenuEntry>>{};
-  for (final entry in ref.watch(declaredMenuEntriesProvider)) {
-    if (!entry.access.isSatisfiedBy(policy)) continue;
-    grouped.putIfAbsent(entry.group, () => []).add(entry);
-  }
-  return grouped;
-});
+final visibleMenuEntriesProvider = Provider<Map<String, List<ModuleMenuEntry>>>(
+  (ref) {
+    final policy = ref.watch(accessProvider);
+    final grouped = <String, List<ModuleMenuEntry>>{};
+    for (final entry in ref.watch(declaredMenuEntriesProvider)) {
+      if (!entry.access.isSatisfiedBy(policy)) continue;
+      grouped.putIfAbsent(entry.group, () => []).add(entry);
+    }
+    return grouped;
+  },
+);
 
 /// Every permission slug the app knows about, by module. Powers the
 /// "Quyền của tôi" diagnostics screen.

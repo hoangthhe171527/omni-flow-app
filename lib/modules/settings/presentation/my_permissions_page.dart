@@ -43,11 +43,15 @@ class MyPermissionsPage extends ConsumerWidget {
                 const SizedBox(height: 2),
                 Text(
                   'Vai trò: ${session.roleLabel}',
-                  style: OmniType.caption.copyWith(color: scheme.onSurfaceVariant),
+                  style: OmniType.caption.copyWith(
+                    color: scheme.onSurfaceVariant,
+                  ),
                 ),
                 Text(
                   'Đang giữ ${held.length} quyền',
-                  style: OmniType.caption.copyWith(color: scheme.onSurfaceVariant),
+                  style: OmniType.caption.copyWith(
+                    color: scheme.onSurfaceVariant,
+                  ),
                 ),
               ],
             ),

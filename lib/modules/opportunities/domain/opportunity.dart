@@ -14,46 +14,46 @@ enum PipelineStage {
   /// The API stores both a legacy UPPERCASE vocabulary and the canonical
   /// lowercase one, so both are accepted on read.
   static PipelineStage parse(String? raw) => switch (raw) {
-        'LEAD' || 'new' => PipelineStage.fresh,
-        'QUALIFIED' || 'consulted' => PipelineStage.consulted,
-        'PROPOSAL' || 'quoted' => PipelineStage.quoted,
-        'NEGOTIATION' || 'negotiating' => PipelineStage.negotiating,
-        'WON' || 'won' => PipelineStage.won,
-        'LOST' || 'lost' => PipelineStage.lost,
-        _ => PipelineStage.fresh,
-      };
+    'LEAD' || 'new' => PipelineStage.fresh,
+    'QUALIFIED' || 'consulted' => PipelineStage.consulted,
+    'PROPOSAL' || 'quoted' => PipelineStage.quoted,
+    'NEGOTIATION' || 'negotiating' => PipelineStage.negotiating,
+    'WON' || 'won' => PipelineStage.won,
+    'LOST' || 'lost' => PipelineStage.lost,
+    _ => PipelineStage.fresh,
+  };
 
   /// Canonical value written back.
   String get slug => switch (this) {
-        PipelineStage.fresh => 'new',
-        PipelineStage.consulted => 'consulted',
-        PipelineStage.quoted => 'quoted',
-        PipelineStage.negotiating => 'negotiating',
-        PipelineStage.won => 'won',
-        PipelineStage.lost => 'lost',
-      };
+    PipelineStage.fresh => 'new',
+    PipelineStage.consulted => 'consulted',
+    PipelineStage.quoted => 'quoted',
+    PipelineStage.negotiating => 'negotiating',
+    PipelineStage.won => 'won',
+    PipelineStage.lost => 'lost',
+  };
 
   String get label => switch (this) {
-        PipelineStage.fresh => 'Mới',
-        PipelineStage.consulted => 'Tư vấn',
-        PipelineStage.quoted => 'Báo giá',
-        PipelineStage.negotiating => 'Đàm phán',
-        PipelineStage.won => 'Thắng',
-        PipelineStage.lost => 'Thua',
-      };
+    PipelineStage.fresh => 'Mới',
+    PipelineStage.consulted => 'Tư vấn',
+    PipelineStage.quoted => 'Báo giá',
+    PipelineStage.negotiating => 'Đàm phán',
+    PipelineStage.won => 'Thắng',
+    PipelineStage.lost => 'Thua',
+  };
 
   bool get isClosed => this == PipelineStage.won || this == PipelineStage.lost;
 
   /// Default probability when the record carries none — the shape of a normal
   /// funnel, so forecasts aren't all zero on day one.
   int get defaultProbability => switch (this) {
-        PipelineStage.fresh => 10,
-        PipelineStage.consulted => 30,
-        PipelineStage.quoted => 50,
-        PipelineStage.negotiating => 75,
-        PipelineStage.won => 100,
-        PipelineStage.lost => 0,
-      };
+    PipelineStage.fresh => 10,
+    PipelineStage.consulted => 30,
+    PipelineStage.quoted => 50,
+    PipelineStage.negotiating => 75,
+    PipelineStage.won => 100,
+    PipelineStage.lost => 0,
+  };
 
   static const board = [
     PipelineStage.fresh,
@@ -68,11 +68,13 @@ enum PipelineStage {
 class OpportunityNote {
   const OpportunityNote({required this.content, this.author, this.at});
 
-  factory OpportunityNote.fromJson(Map<String, dynamic> json) => OpportunityNote(
-        content: json.strOr('content', ''),
-        author: json.str('author'),
-        at: DateUtilsX.parse(json['at']) ?? DateUtilsX.parse(json['created_at']),
-      );
+  factory OpportunityNote.fromJson(
+    Map<String, dynamic> json,
+  ) => OpportunityNote(
+    content: json.strOr('content', ''),
+    author: json.str('author'),
+    at: DateUtilsX.parse(json['at']) ?? DateUtilsX.parse(json['created_at']),
+  );
 
   final String content;
   final String? author;
@@ -159,22 +161,22 @@ class Opportunity {
   }
 
   Map<String, dynamic> toPayload() => {
-        'title': title,
-        if (customerId != null) 'customer_id': customerId,
-        if (ownerId != null) 'owner_user_id': ownerId,
-        'estimated_budget': value,
-        'opportunity_stage': stage.slug,
-        if (expectedCloseAt != null)
-          'expected_end_date': expectedCloseAt!.toIso8601String().split('T').first,
-        'metadata': {
-          ...metadata,
-          if (customerName != null) 'customer_name': customerName,
-          if (product != null) 'product': product,
-          'probability': effectiveProbability,
-          'channel': source.slug,
-          'tags': tags,
-        },
-      };
+    'title': title,
+    if (customerId != null) 'customer_id': customerId,
+    if (ownerId != null) 'owner_user_id': ownerId,
+    'estimated_budget': value,
+    'opportunity_stage': stage.slug,
+    if (expectedCloseAt != null)
+      'expected_end_date': expectedCloseAt!.toIso8601String().split('T').first,
+    'metadata': {
+      ...metadata,
+      if (customerName != null) 'customer_name': customerName,
+      if (product != null) 'product': product,
+      'probability': effectiveProbability,
+      'channel': source.slug,
+      'tags': tags,
+    },
+  };
 
   Opportunity copyWith({
     String? title,

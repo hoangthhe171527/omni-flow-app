@@ -31,15 +31,15 @@ class TeamMember {
   String get roleLabel => jobTitle ?? 'Nhân viên';
 
   TeamMember withLoad(int count) => TeamMember(
-        membershipId: membershipId,
-        userId: userId,
-        name: name,
-        email: email,
-        jobTitle: jobTitle,
-        avatarUrl: avatarUrl,
-        status: status,
-        openConversations: count,
-      );
+    membershipId: membershipId,
+    userId: userId,
+    name: name,
+    email: email,
+    jobTitle: jobTitle,
+    avatarUrl: avatarUrl,
+    status: status,
+    openConversations: count,
+  );
 
   static TeamMember fromJson(
     Map<String, dynamic> membership,
@@ -49,7 +49,8 @@ class TeamMember {
     return TeamMember(
       membershipId: membership.strOr('id', ''),
       userId: membership.strOr('user_id', ''),
-      name: user?.str('full_name') ??
+      name:
+          user?.str('full_name') ??
           metadata.str('name') ??
           membership.str('job_title') ??
           'Thành viên',

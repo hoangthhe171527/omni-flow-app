@@ -23,7 +23,8 @@ class OpportunityFormPage extends ConsumerStatefulWidget {
   bool get isEdit => opportunityId != null;
 
   @override
-  ConsumerState<OpportunityFormPage> createState() => _OpportunityFormPageState();
+  ConsumerState<OpportunityFormPage> createState() =>
+      _OpportunityFormPageState();
 }
 
 class _OpportunityFormPageState extends ConsumerState<OpportunityFormPage> {
@@ -50,7 +51,9 @@ class _OpportunityFormPageState extends ConsumerState<OpportunityFormPage> {
     if (_prefilled) return;
     _prefilled = true;
     _title.text = opportunity.title;
-    _value.text = opportunity.value == 0 ? '' : opportunity.value.toStringAsFixed(0);
+    _value.text = opportunity.value == 0
+        ? ''
+        : opportunity.value.toStringAsFixed(0);
     _product.text = opportunity.product ?? '';
     _stage = opportunity.stage;
     _expectedClose = opportunity.expectedCloseAt;
@@ -87,7 +90,8 @@ class _OpportunityFormPageState extends ConsumerState<OpportunityFormPage> {
       stage: _stage,
       customerId: _customer?.id ?? widget.customerId,
       customerName: _customer?.name,
-      value: double.tryParse(_value.text.replaceAll(RegExp(r'[^0-9]'), '')) ?? 0,
+      value:
+          double.tryParse(_value.text.replaceAll(RegExp(r'[^0-9]'), '')) ?? 0,
       product: _product.text.trim().isEmpty ? null : _product.text.trim(),
       expectedCloseAt: _expectedClose,
     );
@@ -100,7 +104,9 @@ class _OpportunityFormPageState extends ConsumerState<OpportunityFormPage> {
 
       ref.invalidate(pipelineSummaryProvider);
       ref.invalidate(stageOpportunitiesProvider);
-      if (widget.isEdit) ref.invalidate(opportunityProvider(widget.opportunityId!));
+      if (widget.isEdit) {
+        ref.invalidate(opportunityProvider(widget.opportunityId!));
+      }
       if (!mounted) return;
 
       if (widget.isEdit) {
@@ -114,8 +120,9 @@ class _OpportunityFormPageState extends ConsumerState<OpportunityFormPage> {
     } on AppException catch (error) {
       setState(() => _saving = false);
       if (!mounted) return;
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text(error.message)));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(error.message)));
     }
   }
 
@@ -168,8 +175,11 @@ class _OpportunityFormPageState extends ConsumerState<OpportunityFormPage> {
                 padding: const EdgeInsets.all(OmniSpacing.md),
                 child: Row(
                   children: [
-                    Icon(Icons.person_outline_rounded,
-                        size: 18, color: scheme.onSurfaceVariant),
+                    Icon(
+                      Icons.person_outline_rounded,
+                      size: 18,
+                      color: scheme.onSurfaceVariant,
+                    ),
                     const SizedBox(width: OmniSpacing.md),
                     Expanded(
                       child: Text(
@@ -181,7 +191,10 @@ class _OpportunityFormPageState extends ConsumerState<OpportunityFormPage> {
                         ),
                       ),
                     ),
-                    Icon(Icons.chevron_right_rounded, color: scheme.onSurfaceVariant),
+                    Icon(
+                      Icons.chevron_right_rounded,
+                      color: scheme.onSurfaceVariant,
+                    ),
                   ],
                 ),
               ),
@@ -192,8 +205,11 @@ class _OpportunityFormPageState extends ConsumerState<OpportunityFormPage> {
               required: true,
               hint: _value.text.isEmpty
                   ? null
-                  : Formatters.vnd(double.tryParse(
-                      _value.text.replaceAll(RegExp(r'[^0-9]'), ''))),
+                  : Formatters.vnd(
+                      double.tryParse(
+                        _value.text.replaceAll(RegExp(r'[^0-9]'), ''),
+                      ),
+                    ),
               child: TextFormField(
                 controller: _value,
                 keyboardType: TextInputType.number,
@@ -214,7 +230,9 @@ class _OpportunityFormPageState extends ConsumerState<OpportunityFormPage> {
               label: 'Sản phẩm / dịch vụ',
               child: TextFormField(
                 controller: _product,
-                decoration: const InputDecoration(hintText: 'VD: iPhone 15 Pro Max'),
+                decoration: const InputDecoration(
+                  hintText: 'VD: iPhone 15 Pro Max',
+                ),
               ),
             ),
             const SizedBox(height: OmniSpacing.lg),
@@ -225,8 +243,11 @@ class _OpportunityFormPageState extends ConsumerState<OpportunityFormPage> {
                 padding: const EdgeInsets.all(OmniSpacing.md),
                 child: Row(
                   children: [
-                    Icon(Icons.event_outlined,
-                        size: 18, color: scheme.onSurfaceVariant),
+                    Icon(
+                      Icons.event_outlined,
+                      size: 18,
+                      color: scheme.onSurfaceVariant,
+                    ),
                     const SizedBox(width: OmniSpacing.md),
                     Expanded(
                       child: Text(

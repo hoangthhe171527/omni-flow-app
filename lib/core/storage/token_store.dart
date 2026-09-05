@@ -13,7 +13,8 @@ class TokenStore {
 
   final FlutterSecureStorage _storage;
 
-  Future<String?> readAccessToken() => _storage.read(key: StorageKeys.accessToken);
+  Future<String?> readAccessToken() =>
+      _storage.read(key: StorageKeys.accessToken);
 
   Future<String?> readRefreshToken() =>
       _storage.read(key: StorageKeys.refreshToken);

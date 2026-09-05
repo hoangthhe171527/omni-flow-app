@@ -81,7 +81,9 @@ abstract final class Formatters {
 
   static String _trim(double value) {
     final rounded = value.toStringAsFixed(1);
-    return rounded.endsWith('.0') ? rounded.substring(0, rounded.length - 2) : rounded;
+    return rounded.endsWith('.0')
+        ? rounded.substring(0, rounded.length - 2)
+        : rounded;
   }
 }
 

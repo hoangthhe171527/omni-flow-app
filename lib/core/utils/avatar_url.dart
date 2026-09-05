@@ -42,7 +42,8 @@ String? resolveAvatarUrl(String? value) {
   // proxy is the stable public contract for mobile clients.
   final avatarMarker = '/avatars/';
   final markerIndex = url.path.indexOf(avatarMarker);
-  if (markerIndex >= 0 && (isInternalHost || !url.path.startsWith(avatarPath))) {
+  if (markerIndex >= 0 &&
+      (isInternalHost || !url.path.startsWith(avatarPath))) {
     final file = url.path.substring(markerIndex + avatarMarker.length);
     if (file.isNotEmpty && !file.contains('/')) {
       return api.replace(path: '$avatarPath$file').toString();

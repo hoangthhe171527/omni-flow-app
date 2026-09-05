@@ -11,18 +11,18 @@ enum CustomerStatus {
   /// The API's `customer_status` vocabulary is coarser than what a rep thinks
   /// in, so it is mapped rather than shown raw.
   static CustomerStatus parse(String? raw) => switch (raw) {
-        'ACTIVE' => CustomerStatus.active,
-        'WARM' => CustomerStatus.vip,
-        'AT_RISK' || 'LOST' || 'INACTIVE' => CustomerStatus.inactive,
-        _ => CustomerStatus.fresh,
-      };
+    'ACTIVE' => CustomerStatus.active,
+    'WARM' => CustomerStatus.vip,
+    'AT_RISK' || 'LOST' || 'INACTIVE' => CustomerStatus.inactive,
+    _ => CustomerStatus.fresh,
+  };
 
   String get label => switch (this) {
-        CustomerStatus.fresh => 'Mới',
-        CustomerStatus.active => 'Đang hoạt động',
-        CustomerStatus.vip => 'VIP',
-        CustomerStatus.inactive => 'Ngưng hoạt động',
-      };
+    CustomerStatus.fresh => 'Mới',
+    CustomerStatus.active => 'Đang hoạt động',
+    CustomerStatus.vip => 'VIP',
+    CustomerStatus.inactive => 'Ngưng hoạt động',
+  };
 }
 
 class Customer {
@@ -49,7 +49,8 @@ class Customer {
 
   factory Customer.fromJson(Map<String, dynamic> json) {
     final metadata = json.child('metadata');
-    final name = json.str('display_name') ??
+    final name =
+        json.str('display_name') ??
         json.str('legal_name') ??
         json.str('primary_contact_name') ??
         'Khách chưa đặt tên';
@@ -71,7 +72,8 @@ class Customer {
       ownerId: json.str('assigned_sales_rep_id'),
       ownerName: json.str('assigned_sales_rep_name'),
       note: metadata.str('note'),
-      lastInteractionAt: DateUtilsX.parse(json['last_booking_date']) ??
+      lastInteractionAt:
+          DateUtilsX.parse(json['last_booking_date']) ??
           DateUtilsX.parse(json['updated_at']),
       createdAt: DateUtilsX.parse(json['created_at']),
     );
@@ -107,26 +109,26 @@ class Customer {
   }
 
   Map<String, dynamic> toPayload() => {
-        'legal_name': name,
-        'display_name': name,
-        'customer_type': customerType,
-        'primary_contact_name': contactName.isEmpty ? name : contactName,
-        'primary_contact_phone': phone,
-        'primary_contact_email': email,
-        'address': address,
-        'tax_code': taxCode,
-        'customer_status': switch (status) {
-          CustomerStatus.vip => 'WARM',
-          CustomerStatus.inactive => 'INACTIVE',
-          _ => 'ACTIVE',
-        },
-        if (ownerId != null) 'assigned_sales_rep_id': ownerId,
-        'metadata': {
-          'channel': source.slug,
-          'tags': tags,
-          if (note != null) 'note': note,
-        },
-      };
+    'legal_name': name,
+    'display_name': name,
+    'customer_type': customerType,
+    'primary_contact_name': contactName.isEmpty ? name : contactName,
+    'primary_contact_phone': phone,
+    'primary_contact_email': email,
+    'address': address,
+    'tax_code': taxCode,
+    'customer_status': switch (status) {
+      CustomerStatus.vip => 'WARM',
+      CustomerStatus.inactive => 'INACTIVE',
+      _ => 'ACTIVE',
+    },
+    if (ownerId != null) 'assigned_sales_rep_id': ownerId,
+    'metadata': {
+      'channel': source.slug,
+      'tags': tags,
+      if (note != null) 'note': note,
+    },
+  };
 
   Customer copyWith({
     String? name,

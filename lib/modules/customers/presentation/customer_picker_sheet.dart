@@ -13,7 +13,8 @@ class CustomerPickerSheet extends ConsumerStatefulWidget {
   const CustomerPickerSheet({super.key});
 
   @override
-  ConsumerState<CustomerPickerSheet> createState() => _CustomerPickerSheetState();
+  ConsumerState<CustomerPickerSheet> createState() =>
+      _CustomerPickerSheetState();
 }
 
 class _CustomerPickerSheetState extends ConsumerState<CustomerPickerSheet> {
@@ -71,7 +72,9 @@ class _CustomerPickerSheetState extends ConsumerState<CustomerPickerSheet> {
                     ),
                     subtitle: Text(
                       customer.phone.isEmpty ? '—' : customer.phone,
-                      style: OmniType.micro.copyWith(color: scheme.onSurfaceVariant),
+                      style: OmniType.micro.copyWith(
+                        color: scheme.onSurfaceVariant,
+                      ),
                     ),
                     onTap: () => Navigator.pop(context, customer),
                   );
@@ -85,11 +88,10 @@ class _CustomerPickerSheetState extends ConsumerState<CustomerPickerSheet> {
   }
 }
 
-final _customerSearchProvider =
-    FutureProvider.autoDispose.family<List<Customer>, String>((ref, search) async {
-  final page = await ref.watch(customersApiProvider).list(
-        query: {if (search.isNotEmpty) 'search': search},
-        perPage: 20,
-      );
-  return page.items;
-});
+final _customerSearchProvider = FutureProvider.autoDispose
+    .family<List<Customer>, String>((ref, search) async {
+      final page = await ref
+          .watch(customersApiProvider)
+          .list(query: {if (search.isNotEmpty) 'search': search}, perPage: 20);
+      return page.items;
+    });

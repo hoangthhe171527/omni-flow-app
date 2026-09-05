@@ -18,9 +18,9 @@ enum AccessScope {
   bool get isWide => this == AccessScope.team || this == AccessScope.all;
 
   String get label => switch (this) {
-        AccessScope.none => 'Không có quyền',
-        AccessScope.own => 'Của tôi',
-        AccessScope.team => 'Nhóm của tôi',
-        AccessScope.all => 'Toàn công ty',
-      };
+    AccessScope.none => 'Không có quyền',
+    AccessScope.own => 'Của tôi',
+    AccessScope.team => 'Nhóm của tôi',
+    AccessScope.all => 'Toàn công ty',
+  };
 }

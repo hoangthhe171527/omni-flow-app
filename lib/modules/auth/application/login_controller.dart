@@ -5,7 +5,11 @@ import '../../../security/session/auth_gateway.dart';
 import '../../../security/session/session_controller.dart';
 
 class LoginState {
-  const LoginState({this.submitting = false, this.error, this.fieldErrors = const {}});
+  const LoginState({
+    this.submitting = false,
+    this.error,
+    this.fieldErrors = const {},
+  });
 
   final bool submitting;
   final String? error;
@@ -39,8 +43,9 @@ class LoginController extends Notifier<LoginState> {
   }
 }
 
-final loginControllerProvider =
-    NotifierProvider<LoginController, LoginState>(LoginController.new);
+final loginControllerProvider = NotifierProvider<LoginController, LoginState>(
+  LoginController.new,
+);
 
 /// Workspaces the signed-in user may enter — read by the picker screen.
 final tenantOptionsProvider = FutureProvider<List<TenantOption>>((ref) {

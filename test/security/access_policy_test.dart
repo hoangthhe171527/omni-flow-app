@@ -46,13 +46,22 @@ void main() {
     });
 
     test('named capabilities only appear when granted', () {
-      const withApproval = AccessPolicy({'crm.quotes.read', 'crm.quotes.approve'});
+      const withApproval = AccessPolicy({
+        'crm.quotes.read',
+        'crm.quotes.approve',
+      });
       const withoutApproval = AccessPolicy({'crm.quotes.read'});
 
-      expect(withApproval.crud('crm.quotes', capabilities: {'approve'}).can('approve'),
-          isTrue);
       expect(
-        withoutApproval.crud('crm.quotes', capabilities: {'approve'}).can('approve'),
+        withApproval
+            .crud('crm.quotes', capabilities: {'approve'})
+            .can('approve'),
+        isTrue,
+      );
+      expect(
+        withoutApproval
+            .crud('crm.quotes', capabilities: {'approve'})
+            .can('approve'),
         isFalse,
       );
     });
@@ -83,7 +92,9 @@ void main() {
     test('an own-scoped member is not offered the assignee filter', () {
       // Every row would be theirs — the filter would be a no-op that looks broken.
       expect(
-        InboxAccess.of(const AccessPolicy({'inbox.read.own'})).showsAssigneeFilter,
+        InboxAccess.of(
+          const AccessPolicy({'inbox.read.own'}),
+        ).showsAssigneeFilter,
         isFalse,
       );
       expect(

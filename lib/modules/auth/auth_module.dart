@@ -22,15 +22,15 @@ class AuthModule extends OmniModule {
 
   @override
   List<ModuleRoute> routes() => [
-        ModuleRoute(
-          path: loginPath,
-          name: login,
-          builder: (_, _) => const LoginPage(),
-        ),
-        ModuleRoute(
-          path: workspacePath,
-          name: workspace,
-          builder: (_, _) => const WorkspacePage(),
-        ),
-      ];
+    ModuleRoute(
+      path: loginPath,
+      name: login,
+      builder: (_, _) => const LoginPage(),
+    ),
+    ModuleRoute(
+      path: workspacePath,
+      name: workspace,
+      builder: (_, _) => const WorkspacePage(),
+    ),
+  ];
 }

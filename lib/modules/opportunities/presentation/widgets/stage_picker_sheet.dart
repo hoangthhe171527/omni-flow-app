@@ -47,7 +47,9 @@ class StagePickerSheet extends StatelessWidget {
                     _ => Icons.circle_outlined,
                   },
                   size: 16,
-                  color: stage == current ? scheme.primary : scheme.onSurfaceVariant,
+                  color: stage == current
+                      ? scheme.primary
+                      : scheme.onSurfaceVariant,
                 ),
               ),
               title: Text(

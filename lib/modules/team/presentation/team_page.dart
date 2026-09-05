@@ -42,11 +42,15 @@ class TeamPage extends ConsumerWidget {
                       children: [
                         Text(
                           member.name,
-                          style: OmniType.bodyStrong.copyWith(color: scheme.onSurface),
+                          style: OmniType.bodyStrong.copyWith(
+                            color: scheme.onSurface,
+                          ),
                         ),
                         Text(
                           member.email ?? member.roleLabel,
-                          style: OmniType.micro.copyWith(color: scheme.onSurfaceVariant),
+                          style: OmniType.micro.copyWith(
+                            color: scheme.onSurfaceVariant,
+                          ),
                         ),
                       ],
                     ),

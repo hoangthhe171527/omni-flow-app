@@ -11,9 +11,7 @@ class AccessRequirement {
   const AccessRequirement.all(this.permissions) : requireAll = true;
 
   /// No permission needed (login, forbidden, the workspace picker).
-  const AccessRequirement.open()
-      : permissions = const [],
-        requireAll = false;
+  const AccessRequirement.open() : permissions = const [], requireAll = false;
 
   final List<String> permissions;
   final bool requireAll;

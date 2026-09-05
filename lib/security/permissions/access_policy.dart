@@ -33,10 +33,7 @@ class AccessPolicy {
 
   /// Convention-based CRUD for resources that follow
   /// `<resource>.read|create|update|delete`, which is most of the CRM surface.
-  ResourceAccess crud(
-    String resource, {
-    Set<String> capabilities = const {},
-  }) {
+  ResourceAccess crud(String resource, {Set<String> capabilities = const {}}) {
     return ResourceAccess(
       readScope: scopeOf('$resource.read'),
       canCreate: can('$resource.create'),

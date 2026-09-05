@@ -24,28 +24,28 @@ enum Channel {
   unknown;
 
   static Channel parse(String? slug) => switch (slug) {
-        'facebook' => Channel.facebook,
-        'zalo' => Channel.zalo,
-        'zalo_personal' => Channel.zaloPersonal,
-        'facebook_personal' => Channel.facebookPersonal,
-        'tiktok' => Channel.tiktok,
-        'web' => Channel.web,
-        'instagram' => Channel.instagram,
-        'whatsapp' => Channel.whatsapp,
-        _ => Channel.unknown,
-      };
+    'facebook' => Channel.facebook,
+    'zalo' => Channel.zalo,
+    'zalo_personal' => Channel.zaloPersonal,
+    'facebook_personal' => Channel.facebookPersonal,
+    'tiktok' => Channel.tiktok,
+    'web' => Channel.web,
+    'instagram' => Channel.instagram,
+    'whatsapp' => Channel.whatsapp,
+    _ => Channel.unknown,
+  };
 
   String get slug => switch (this) {
-        Channel.facebook => 'facebook',
-        Channel.zalo => 'zalo',
-        Channel.zaloPersonal => 'zalo_personal',
-        Channel.facebookPersonal => 'facebook_personal',
-        Channel.tiktok => 'tiktok',
-        Channel.web => 'web',
-        Channel.instagram => 'instagram',
-        Channel.whatsapp => 'whatsapp',
-        Channel.unknown => 'unknown',
-      };
+    Channel.facebook => 'facebook',
+    Channel.zalo => 'zalo',
+    Channel.zaloPersonal => 'zalo_personal',
+    Channel.facebookPersonal => 'facebook_personal',
+    Channel.tiktok => 'tiktok',
+    Channel.web => 'web',
+    Channel.instagram => 'instagram',
+    Channel.whatsapp => 'whatsapp',
+    Channel.unknown => 'unknown',
+  };
 
   ChannelMeta get meta => ChannelMeta.of(this);
 }
@@ -78,79 +78,79 @@ class ChannelMeta {
   final IconData icon;
 
   static ChannelMeta of(Channel channel) => switch (channel) {
-        // "Facebook" alone read as "some Facebook thing" next to "Facebook cá
-        // nhân"; name the asset so a Page and a personal inbox can't be confused.
-        Channel.facebook => const ChannelMeta(
-            name: 'Facebook Page',
-            short: 'FB Page',
-            kind: ChannelKind.official,
-            color: Color(0xFF1877F2),
-            tint: Color(0xFFE7F0FE),
-            icon: Icons.facebook_rounded,
-          ),
-        Channel.facebookPersonal => const ChannelMeta(
-            name: 'Facebook cá nhân',
-            short: 'FB cá nhân',
-            kind: ChannelKind.personal,
-            color: Color(0xFF1D4ED8),
-            tint: Color(0xFFE7F0FE),
-            icon: Icons.facebook_rounded,
-          ),
-        Channel.zalo => const ChannelMeta(
-            name: 'Zalo OA',
-            short: 'Zalo OA',
-            kind: ChannelKind.official,
-            color: Color(0xFF0EA5E9),
-            tint: Color(0xFFE0F2FE),
-            icon: Icons.chat_bubble_rounded,
-          ),
-        Channel.zaloPersonal => const ChannelMeta(
-            name: 'Zalo cá nhân',
-            short: 'Zalo cá nhân',
-            kind: ChannelKind.personal,
-            color: Color(0xFF0369A1),
-            tint: Color(0xFFE0F2FE),
-            icon: Icons.chat_bubble_rounded,
-          ),
-        Channel.tiktok => const ChannelMeta(
-            name: 'TikTok',
-            short: 'TikTok',
-            kind: ChannelKind.official,
-            color: Color(0xFF0F172A),
-            tint: Color(0xFFF1F5F9),
-            icon: Icons.music_note_rounded,
-          ),
-        Channel.web => const ChannelMeta(
-            name: 'Website Chat',
-            short: 'Web',
-            kind: ChannelKind.official,
-            color: OmniColors.success,
-            tint: Color(0xFFD1FAE5),
-            icon: Icons.language_rounded,
-          ),
-        Channel.instagram => const ChannelMeta(
-            name: 'Instagram',
-            short: 'Instagram',
-            kind: ChannelKind.official,
-            color: Color(0xFFEC4899),
-            tint: Color(0xFFFCE7F3),
-            icon: Icons.camera_alt_rounded,
-          ),
-        Channel.whatsapp => const ChannelMeta(
-            name: 'WhatsApp',
-            short: 'WhatsApp',
-            kind: ChannelKind.personal,
-            color: Color(0xFF22C55E),
-            tint: Color(0xFFDCFCE7),
-            icon: Icons.chat_rounded,
-          ),
-        Channel.unknown => const ChannelMeta(
-            name: 'Khác',
-            short: 'Khác',
-            kind: ChannelKind.official,
-            color: OmniColors.mutedForeground,
-            tint: OmniColors.muted,
-            icon: Icons.forum_rounded,
-          ),
-      };
+    // "Facebook" alone read as "some Facebook thing" next to "Facebook cá
+    // nhân"; name the asset so a Page and a personal inbox can't be confused.
+    Channel.facebook => const ChannelMeta(
+      name: 'Facebook Page',
+      short: 'FB Page',
+      kind: ChannelKind.official,
+      color: Color(0xFF1877F2),
+      tint: Color(0xFFE7F0FE),
+      icon: Icons.facebook_rounded,
+    ),
+    Channel.facebookPersonal => const ChannelMeta(
+      name: 'Facebook cá nhân',
+      short: 'FB cá nhân',
+      kind: ChannelKind.personal,
+      color: Color(0xFF1D4ED8),
+      tint: Color(0xFFE7F0FE),
+      icon: Icons.facebook_rounded,
+    ),
+    Channel.zalo => const ChannelMeta(
+      name: 'Zalo OA',
+      short: 'Zalo OA',
+      kind: ChannelKind.official,
+      color: Color(0xFF0EA5E9),
+      tint: Color(0xFFE0F2FE),
+      icon: Icons.chat_bubble_rounded,
+    ),
+    Channel.zaloPersonal => const ChannelMeta(
+      name: 'Zalo cá nhân',
+      short: 'Zalo cá nhân',
+      kind: ChannelKind.personal,
+      color: Color(0xFF0369A1),
+      tint: Color(0xFFE0F2FE),
+      icon: Icons.chat_bubble_rounded,
+    ),
+    Channel.tiktok => const ChannelMeta(
+      name: 'TikTok',
+      short: 'TikTok',
+      kind: ChannelKind.official,
+      color: Color(0xFF0F172A),
+      tint: Color(0xFFF1F5F9),
+      icon: Icons.music_note_rounded,
+    ),
+    Channel.web => const ChannelMeta(
+      name: 'Website Chat',
+      short: 'Web',
+      kind: ChannelKind.official,
+      color: OmniColors.success,
+      tint: Color(0xFFD1FAE5),
+      icon: Icons.language_rounded,
+    ),
+    Channel.instagram => const ChannelMeta(
+      name: 'Instagram',
+      short: 'Instagram',
+      kind: ChannelKind.official,
+      color: Color(0xFFEC4899),
+      tint: Color(0xFFFCE7F3),
+      icon: Icons.camera_alt_rounded,
+    ),
+    Channel.whatsapp => const ChannelMeta(
+      name: 'WhatsApp',
+      short: 'WhatsApp',
+      kind: ChannelKind.personal,
+      color: Color(0xFF22C55E),
+      tint: Color(0xFFDCFCE7),
+      icon: Icons.chat_rounded,
+    ),
+    Channel.unknown => const ChannelMeta(
+      name: 'Khác',
+      short: 'Khác',
+      kind: ChannelKind.official,
+      color: OmniColors.mutedForeground,
+      tint: OmniColors.muted,
+      icon: Icons.forum_rounded,
+    ),
+  };
 }

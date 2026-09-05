@@ -22,26 +22,30 @@ AppException mapDioException(DioException error) {
 
   final status = error.response?.statusCode;
   final body = error.response?.data;
-  final map = body is Map ? body.cast<String, dynamic>() : const <String, dynamic>{};
+  final map = body is Map
+      ? body.cast<String, dynamic>()
+      : const <String, dynamic>{};
   final message = (map['message'] as String?)?.trim();
 
   return switch (status) {
     401 => UnauthorizedException(message ?? 'Phiên đăng nhập đã hết hạn.'),
     403 => ForbiddenException(
-        message ?? 'Bạn không có quyền thực hiện thao tác này.',
-        requiredPermissions: _stringList(map['required_permissions']),
-      ),
+      message ?? 'Bạn không có quyền thực hiện thao tác này.',
+      requiredPermissions: _stringList(map['required_permissions']),
+    ),
     404 => NotFoundException(message ?? 'Không tìm thấy dữ liệu.'),
     422 => ValidationException(
-        message ?? 'Dữ liệu chưa hợp lệ.',
-        errors: _fieldErrors(map['errors']),
-      ),
-    _ when status != null && status >= 500 =>
-      ServerException(message ?? 'Máy chủ đang gặp sự cố.', code: '$status'),
+      message ?? 'Dữ liệu chưa hợp lệ.',
+      errors: _fieldErrors(map['errors']),
+    ),
+    _ when status != null && status >= 500 => ServerException(
+      message ?? 'Máy chủ đang gặp sự cố.',
+      code: '$status',
+    ),
     _ => NetworkException(
-        message ?? error.message ?? 'Đã có lỗi xảy ra.',
-        code: status?.toString(),
-      ),
+      message ?? error.message ?? 'Đã có lỗi xảy ra.',
+      code: status?.toString(),
+    ),
   };
 }
 
@@ -55,7 +59,9 @@ Map<String, List<String>> _fieldErrors(Object? value) {
   return value.map(
     (key, messages) => MapEntry(
       '$key',
-      messages is List ? messages.map((m) => '$m').toList() : <String>['$messages'],
+      messages is List
+          ? messages.map((m) => '$m').toList()
+          : <String>['$messages'],
     ),
   );
 }

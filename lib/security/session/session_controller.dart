@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/error/app_exception.dart';
+import '../../core/error/crash_reporting.dart';
 import '../../core/network/active_tenant.dart';
 import '../../core/storage/preferences_store.dart';
 import '../../core/storage/storage_keys.dart';
@@ -42,6 +43,16 @@ final sessionPreLogoutProvider = Provider<SessionPreLogout>(
 /// tenant, log out, and end the session when the API says the token is dead.
 class SessionController extends Notifier<Session> {
   Timer? _restoreRetryTimer;
+
+  /// Grows with each consecutive failed launch retry; reset the moment one
+  /// succeeds, so a device that recovers is not still waiting two minutes.
+  static const _initialRestoreBackoff = Duration(seconds: 5);
+  Duration _restoreBackoff = _initialRestoreBackoff;
+
+  /// How long the next launch retry will wait. Exposed so a test can assert the
+  /// schedule without waiting out real timers.
+  @visibleForTesting
+  Duration get restoreBackoff => _restoreBackoff;
 
   @override
   Session build() {
@@ -178,7 +189,20 @@ class SessionController extends Notifier<Session> {
   Future<void> _loadContext({bool retryOnTransientFailure = false}) async {
     final previous = state;
     try {
-      state = await _gateway.loadContext();
+      final session = await _gateway.loadContext();
+      state = session;
+      // Back to normal: the next outage starts its backoff from 5s again, so a
+      // device that recovers and later drops out is not made to wait the two
+      // minutes the previous outage had climbed to.
+      _restoreBackoff = _initialRestoreBackoff;
+      // Ids only — enough to tell one broken device from a broken tenant,
+      // without putting a name or a message body into a crash report.
+      unawaited(
+        CrashReporting.identify(
+          userId: session.user?.id,
+          tenantId: session.tenant?.id,
+        ),
+      );
     } on UnauthorizedException {
       await _clearCredentials();
       state = const Session.expired();
@@ -195,15 +219,33 @@ class SessionController extends Notifier<Session> {
     }
   }
 
+  /// Backoff for the launch retry: 5s, 10s, 20s, 40s, 80s, then 2 minutes.
+  ///
+  /// The retry used to be a flat 5 seconds with no ceiling, so a device left
+  /// offline called `/auth/refresh` and `/auth/context` twelve times a minute
+  /// forever — draining a phone that was doing nothing, and, when the cause was
+  /// the server rather than the phone, aiming every installed client at it at a
+  /// fixed rate for as long as it stayed down. Backing off means a recovering
+  /// server is not immediately knocked over by its own clients.
+  static const _maxRestoreBackoff = Duration(minutes: 2);
+
   void _scheduleRestoreRetry() {
     if (_restoreRetryTimer?.isActive ?? false) return;
-    _restoreRetryTimer = Timer(const Duration(seconds: 5), restore);
+
+    final delay = _restoreBackoff;
+    final next = delay * 2;
+    _restoreBackoff = next > _maxRestoreBackoff ? _maxRestoreBackoff : next;
+
+    _restoreRetryTimer = Timer(delay, restore);
   }
 
   Future<void> _clearCredentials() async {
     await _tokens.clear();
     await _prefs.remove(StorageKeys.tenantId);
     ref.read(activeTenantIdProvider.notifier).state = null;
+    // Detach the identity too. A shared demo phone would otherwise keep
+    // attributing the next person's crashes to whoever logged out.
+    unawaited(CrashReporting.identify());
   }
 }
 

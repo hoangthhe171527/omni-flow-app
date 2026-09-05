@@ -142,6 +142,73 @@ void main() {
       expect(events, isNot(contains('credentials.clear')));
     },
   );
+
+  test('the launch retry backs off and resets once a load succeeds', () async {
+    // The retry used to be a flat 5 seconds forever, so a phone left offline
+    // called /auth/refresh and /auth/context twelve times a minute indefinitely
+    // — and when the cause was the server rather than the phone, every install
+    // did that to it for as long as it stayed down.
+    SharedPreferences.setMockInitialValues({StorageKeys.tenantId: 'tenant-1'});
+    final sharedPreferences = await SharedPreferences.getInstance();
+    final events = <String>[];
+    final gateway = _RecordingAuthGateway(
+      events,
+      logoutFails: false,
+      restoreFailure: const NetworkException('offline'),
+    );
+    final container = ProviderContainer(
+      overrides: [
+        tokenStoreProvider.overrideWithValue(
+          _RecordingTokenStore(events, refreshToken: 'refresh-token'),
+        ),
+        preferencesStoreProvider.overrideWithValue(
+          _RecordingPreferencesStore(sharedPreferences, events),
+        ),
+        authGatewayProvider.overrideWithValue(gateway),
+      ],
+    );
+    addTearDown(container.dispose);
+
+    final controller = container.read(sessionControllerProvider.notifier);
+    // restore() cancels any pending timer first, so driving it by hand walks the
+    // schedule without waiting out a single real second.
+    await controller.restore();
+    expect(controller.restoreBackoff, const Duration(seconds: 10));
+    await controller.restore();
+    expect(controller.restoreBackoff, const Duration(seconds: 20));
+    await controller.restore();
+    expect(controller.restoreBackoff, const Duration(seconds: 40));
+
+    // Credentials survive throughout: an outage is not an expiry.
+    expect(
+      container.read(sessionControllerProvider).status,
+      SessionStatus.restoring,
+    );
+
+    for (var i = 0; i < 6; i++) {
+      await controller.restore();
+    }
+    expect(
+      controller.restoreBackoff,
+      const Duration(minutes: 2),
+      reason: 'the wait is capped, not unbounded',
+    );
+
+    gateway.restoreFailure = null;
+    await controller.restore();
+
+    expect(
+      container.read(sessionControllerProvider).status,
+      SessionStatus.authenticated,
+    );
+    expect(
+      controller.restoreBackoff,
+      const Duration(seconds: 5),
+      reason:
+          'a device that recovers must not still be waiting two minutes '
+          'when the next outage arrives',
+    );
+  });
 }
 
 class _SessionHarness {
@@ -235,6 +302,15 @@ class _RecordingTokenStore extends TokenStore {
   Future<String?> readRefreshToken() async => refreshToken;
 
   @override
+  Future<void> save({required String accessToken, String? refreshToken}) async {
+    // Without this the base class reaches the real secure-storage plugin, which
+    // has no implementation under `flutter test` — so any path that rotates a
+    // token (every successful restore) died on MissingPluginException.
+    events.add('credentials.save');
+    hasCredentials = true;
+  }
+
+  @override
   Future<void> clear() async {
     events.add('credentials.clear');
     hasCredentials = false;
@@ -264,7 +340,7 @@ class _RecordingAuthGateway implements AuthGateway {
 
   final List<String> events;
   final bool logoutFails;
-  final AppException? restoreFailure;
+  AppException? restoreFailure;
 
   @override
   Future<Session> loadContext() async {

@@ -1,3 +1,4 @@
+import '../../../core/utils/client_id.dart';
 import '../../../core/utils/formatters.dart';
 import '../../../core/utils/json.dart';
 import '../../../core/utils/media_url.dart';
@@ -33,6 +34,7 @@ class Message {
     required this.author,
     required this.text,
     required this.sentAt,
+    this.clientId,
     this.status = DeliveryStatus.none,
     this.error,
     this.recalled = false,
@@ -52,6 +54,7 @@ class Message {
     final from = json.str('from');
     return Message(
       id: json.strOr('id', ''),
+      clientId: json.str('client_message_id'),
       author: _author(from, direction),
       text: json.strOr('text', ''),
       sentAt:
@@ -78,6 +81,14 @@ class Message {
   }
 
   final String id;
+
+  /// Idempotency key this message was sent under, echoed back by the API.
+  ///
+  /// Set on every message the app itself sent — including while it is still an
+  /// optimistic bubble, where it equals [id]. Null on inbound messages and on
+  /// anything sent before this field existed.
+  final String? clientId;
+
   final MessageAuthor author;
   final String text;
   final DateTime? sentAt;
@@ -104,6 +115,38 @@ class Message {
   bool get isNote => author == MessageAuthor.note;
   bool get hasAttachments => attachments.isNotEmpty;
 
+  /// Still an optimistic bubble: the server has never answered for it, so [id]
+  /// is the locally generated key rather than a server id.
+  bool get isPending => clientId != null && clientId == id;
+
+  /// The same message, queued for another attempt.
+  ///
+  /// Whether the original key is reused is the whole point of this method:
+  ///
+  ///  * A bubble that never got a server id ([isPending]) has an *unknown*
+  ///    outcome — the request may well have been accepted and only its response
+  ///    lost. Reusing the key lets the API recognise the retry and hand back the
+  ///    message it already queued, instead of delivering a second copy.
+  ///  * A bubble the server did answer for is a message the server definitely
+  ///    stored and the platform then rejected. Reusing the key there would
+  ///    resolve to that same failure forever, leaving a retry button that can
+  ///    never succeed — so this starts a genuinely new attempt.
+  Message requeued() {
+    final key = isPending ? (clientId ?? id) : newClientId();
+    return Message(
+      id: key,
+      clientId: key,
+      author: author,
+      text: text,
+      sentAt: DateTime.now(),
+      status: isNote ? DeliveryStatus.none : DeliveryStatus.queued,
+      replyToMessageId: replyToMessageId,
+      replyToText: replyToText,
+      replyToAuthorName: replyToAuthorName,
+      attachments: attachments,
+    );
+  }
+
   static MessageAuthor _author(String? from, String? direction) {
     if (from == 'note') return MessageAuthor.note;
     if (from == 'agent') return MessageAuthor.agent;
@@ -122,15 +165,22 @@ class Message {
   };
 
   /// Optimistic local echo, shown the instant the rep hits send.
+  ///
+  /// The bubble's [id] *is* its [clientId] until the server answers, so the two
+  /// identifiers never have to be kept in sync. Pass [clientId] to reuse the key
+  /// of an earlier attempt — that is what makes "Gửi lại" a retry of the same
+  /// send rather than a second one the customer would also receive.
   static Message optimistic({
-    required String localId,
     required String text,
+    String? clientId,
     List<MessageAttachment> attachments = const [],
     bool asNote = false,
     Message? replyTo,
   }) {
+    final key = clientId ?? newClientId();
     return Message(
-      id: localId,
+      id: key,
+      clientId: key,
       author: asNote ? MessageAuthor.note : MessageAuthor.agent,
       text: text,
       sentAt: DateTime.now(),
@@ -146,6 +196,7 @@ class Message {
     DeliveryStatus? status,
     String? error,
     String? id,
+    String? clientId,
     String? replyToMessageId,
     String? replyToText,
     String? replyToAuthorName,
@@ -153,6 +204,7 @@ class Message {
   }) {
     return Message(
       id: id ?? this.id,
+      clientId: clientId ?? this.clientId,
       author: author,
       text: text,
       sentAt: sentAt,
