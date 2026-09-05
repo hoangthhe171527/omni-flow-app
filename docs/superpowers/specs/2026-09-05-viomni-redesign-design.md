@@ -121,9 +121,25 @@ Có test chặn: `test/design/status_chip_test.dart`.
 | Bo góc chip | 999 | **8** | Chip bo tròn hoàn toàn đọc như thẻ tag, không như bộ lọc |
 | Bóng thẻ | `0 4px 12px` | **không có** — viền 1px + nền trắng | Bóng đổ nhiều là thứ làm giao diện trông cũ |
 | Bóng nổi (sheet, FAB) | | `0 1px 2px .05` + `0 14px 34px -14px .2` | Chỉ dùng cho thứ thật sự nổi lên khỏi trang |
-| Khoảng cách | tuỳ chỗ | **lưới 4dp**, thang 4/8/12/16/24/32 | Mục §8 của `docs/ui-audit-2026-09.md` |
+| Khoảng cách | tuỳ chỗ | **4dp cho bố cục, 2dp cho thành phần nhỏ** — xem dưới | Mục §8 của `docs/ui-audit-2026-09.md` |
 | Thời lượng | `OmniDuration` 140/220/350 | giữ | Đã có |
 | Kích thước icon | `OmniIconSize` | giữ | Đã có |
+
+**Về lưới 4dp — đã xem lại và quyết định khác bản audit.** Đếm ra 12 chỗ lệch
+lưới. Nhưng đọc từng chỗ thì tất cả đều nằm trong **thành phần nhỏ**: chấm
+đếm chưa đọc (`7/2`), ô tick công đoạn (`3`), viên lọc (`14/10`), viên tab
+(`11/4`). Ở kích thước 16–24dp, chênh 1dp là 5% chiều cao — ép lên bội số của
+4 sẽ đổi kích thước những thứ này mà không ai đọc ra khác biệt, đồng thời đe
+doạ hai ràng buộc quan trọng hơn đang có test canh: vùng chạm 44dp và bố cục
+ở cỡ chữ 200%.
+
+Nên luật là: **4dp cho bố cục** (khoảng cách giữa các khối, lề màn, lề thẻ —
+tức toàn bộ `OmniSpacing`), **2dp cho phần đệm bên trong thành phần nhỏ**.
+Cả 12 chỗ lệch đều nằm trên lưới 2dp. Không sửa gì, và không phải vì khó —
+mà vì sửa sẽ làm giao diện xấu đi.
+
+Còn 11 chỗ khác trong module hộp thư (`9/5`, `11/7`, `14/6`) thì thuộc ngoại
+lệ Zalo: chúng khớp số đo của app Zalo thật, và đó là mục đích.
 
 **Giảm chuyển động.** `MediaQuery.disableAnimationsOf(context)` → mọi
 `AnimatedFoo` về `Duration.zero`, `PageController.animateToPage` →
