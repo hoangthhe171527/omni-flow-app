@@ -311,8 +311,8 @@ class _PreviewAppState extends State<_PreviewApp> {
       child: MaterialApp(
         title: 'Xem trước giao diện',
         debugShowCheckedModeBanner: false,
-        theme: OmniTheme.light,
-        darkTheme: OmniTheme.dark,
+        theme: OmniTheme.light(),
+        darkTheme: OmniTheme.dark(),
         themeMode: _mode,
         home: _Gallery(
           mode: _mode,

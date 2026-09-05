@@ -74,8 +74,8 @@ class _OmniAppState extends ConsumerState<OmniApp> with WidgetsBindingObserver {
 
     return MaterialApp.router(
       title: AppConfig.appName,
-      theme: OmniTheme.light,
-      darkTheme: OmniTheme.dark,
+      theme: OmniTheme.light(),
+      darkTheme: OmniTheme.dark(),
       // Was pinned to light, so a phone in dark mode got one glaring white app
       // — worst of all on the messaging screens, which sit next to Zalo.
       themeMode: ref.watch(themeModeProvider),

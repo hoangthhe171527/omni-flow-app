@@ -1,11 +1,16 @@
+import 'package:flutter/foundation.dart' show defaultTargetPlatform;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../platform/omni_platform.dart';
 import '../tokens/tokens.dart';
 
 abstract final class OmniTheme {
-  static ThemeData get light => _build(
+  /// Nền tảng là tham số có mặc định, không phải bắt buộc: mọi chỗ gọi sẵn có
+  /// không phải sửa, mà test vẫn ép được nền tảng khi cần.
+  static ThemeData light([TargetPlatform? platform]) => _build(
     brightness: Brightness.light,
+    platform: platform ?? defaultTargetPlatform,
     background: OmniColors.background,
     surface: OmniColors.card,
     surfaceMuted: OmniColors.muted,
@@ -15,8 +20,9 @@ abstract final class OmniTheme {
     primary: OmniColors.primary,
   );
 
-  static ThemeData get dark => _build(
+  static ThemeData dark([TargetPlatform? platform]) => _build(
     brightness: Brightness.dark,
+    platform: platform ?? defaultTargetPlatform,
     background: OmniColors.darkBackground,
     surface: OmniColors.darkCard,
     surfaceMuted: OmniColors.darkMuted,
@@ -28,6 +34,7 @@ abstract final class OmniTheme {
 
   static ThemeData _build({
     required Brightness brightness,
+    required TargetPlatform platform,
     required Color background,
     required Color surface,
     required Color surfaceMuted,
@@ -56,21 +63,31 @@ abstract final class OmniTheme {
 
     final textTheme = OmniType.textTheme(onSurface, onSurfaceMuted);
 
+    final apple = isApplePlatform(platform);
+
     return ThemeData(
       useMaterial3: true,
       brightness: brightness,
+      // Widget con đọc nền tảng qua isApple(context), tức qua đây. Quên đặt là
+      // chúng rơi về defaultTargetPlatform và test hết ép được.
+      platform: platform,
       colorScheme: scheme,
       scaffoldBackgroundColor: background,
       fontFamily: OmniType.family,
       textTheme: textTheme,
-      splashFactory: InkSparkle.splashFactory,
+      // iOS không có gợn sóng, nó làm mờ. NoSplash chứ không phải một ripple
+      // nhạt hơn: phản hồi chạm vẫn còn nguyên qua highlightColor của InkWell.
+      splashFactory: apple ? NoSplash.splashFactory : InkSparkle.splashFactory,
+      // pageTransitionsTheme CỐ Ý không đặt. Mặc định của Flutter đã dùng
+      // CupertinoPageTransitionsBuilder cho iOS — trượt ngang KÈM cử chỉ
+      // vuốt-quay-lại. Đặt vào đây là làm hỏng thứ đang đúng.
       appBarTheme: AppBarTheme(
         backgroundColor: background,
         surfaceTintColor: Colors.transparent,
         foregroundColor: onSurface,
         elevation: 0,
         scrolledUnderElevation: 0,
-        centerTitle: false,
+        centerTitle: apple,
         titleTextStyle: OmniType.title.copyWith(color: onSurface),
         systemOverlayStyle: brightness == Brightness.light
             ? SystemUiOverlayStyle.dark
