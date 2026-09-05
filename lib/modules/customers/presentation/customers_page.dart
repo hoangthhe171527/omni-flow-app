@@ -43,11 +43,7 @@ class _CustomersPageState extends ConsumerState<CustomersPage> {
     final controller = ref.read(customerFilterProvider.notifier);
 
     final scheme = Theme.of(context).colorScheme;
-    final meta = OmniColors.chat(
-      context,
-      OmniColors.chatMeta,
-      OmniColors.chatMetaDark,
-    );
+    final meta = scheme.onSurfaceVariant;
 
     return Scaffold(
       // Header and list on one plane — the AppBar's `background` against the
@@ -129,11 +125,7 @@ class _CustomersPageState extends ConsumerState<CustomersPage> {
               Divider(
                 height: 1,
                 thickness: 1,
-                color: OmniColors.chat(
-                  context,
-                  OmniColors.chatDivider,
-                  OmniColors.chatDividerDark,
-                ),
+                color: scheme.outlineVariant,
               ),
             ],
           ),
@@ -172,11 +164,7 @@ class _CustomersPageState extends ConsumerState<CustomersPage> {
               height: 1,
               thickness: 1,
               indent: 76,
-              color: OmniColors.chat(
-                context,
-                OmniColors.chatDivider,
-                OmniColors.chatDividerDark,
-              ),
+              color: scheme.outlineVariant,
             ),
             itemBuilder: (context, index) {
               if (index >= state.items.length) {

@@ -109,6 +109,9 @@ class InboxFilterBar extends ConsumerWidget {
                   label: quick.label,
                   selected: filter.quick == quick,
                   count: facets?.countFor(quick, currentUserId: userId),
+                  // Hộp thư là bề mặt cố ý mượn Zalo — cùng ngoại lệ với bảng
+                  // màu chat. Mọi màn khác dùng màu chính của theme.
+                  tint: OmniColors.chatPrimary,
                   onTap: () => controller.setQuick(quick),
                 ),
               );

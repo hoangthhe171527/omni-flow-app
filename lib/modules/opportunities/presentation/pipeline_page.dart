@@ -79,11 +79,7 @@ class PipelinePage extends ConsumerWidget {
               Divider(
                 height: 1,
                 thickness: 1,
-                color: OmniColors.chat(
-                  context,
-                  OmniColors.chatDivider,
-                  OmniColors.chatDividerDark,
-                ),
+                color: scheme.outlineVariant,
               ),
             ],
           ),
@@ -124,11 +120,7 @@ class PipelinePage extends ConsumerWidget {
                     thickness: 1,
                     indent: 16,
                     endIndent: 16,
-                    color: OmniColors.chat(
-                      context,
-                      OmniColors.chatDivider,
-                      OmniColors.chatDividerDark,
-                    ),
+                    color: scheme.outlineVariant,
                   ),
                   itemBuilder: (context, index) => OpportunityCard(
                     opportunity: list[index],
@@ -177,7 +169,7 @@ class _StageTabs extends StatelessWidget {
 
           return Center(
             child: Material(
-              color: isSelected ? OmniColors.chatPrimary : Colors.transparent,
+              color: isSelected ? scheme.primary : Colors.transparent,
               borderRadius: OmniRadius.chipAll,
               clipBehavior: Clip.antiAlias,
               child: InkWell(
@@ -196,7 +188,7 @@ class _StageTabs extends StatelessWidget {
                           fontSize: 13.5,
                           height: 1.1,
                           color: isSelected
-                              ? Colors.white
+                              ? scheme.onPrimary
                               : scheme.onSurfaceVariant,
                           fontWeight: isSelected
                               ? FontWeight.w700
@@ -212,11 +204,14 @@ class _StageTabs extends StatelessWidget {
                           style: OmniType.caption.copyWith(
                             fontSize: 13.5,
                             height: 1.1,
-                            color:
-                                (isSelected
-                                        ? Colors.white
-                                        : scheme.onSurfaceVariant)
-                                    .withValues(alpha: 0.7),
+                            // Không giảm độ mờ ở viên ĐANG CHỌN: nó đã nổi
+                            // nhờ nền đặc, và 70% độ mờ chồng lên đó là chỗ
+                            // duy nhất trên hàng này không đạt ngưỡng đọc.
+                            color: isSelected
+                                ? scheme.onPrimary
+                                : scheme.onSurfaceVariant.withValues(
+                                    alpha: 0.7,
+                                  ),
                             fontWeight: FontWeight.w600,
                             fontFeatures: OmniType.tabular,
                           ),

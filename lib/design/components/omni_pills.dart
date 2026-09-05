@@ -12,12 +12,21 @@ class OmniFilterPill extends StatelessWidget {
     required this.selected,
     required this.onTap,
     this.count,
+    this.tint,
   });
 
   final String label;
   final bool selected;
   final int? count;
   final VoidCallback onTap;
+
+  /// Màu của viên đang được chọn. Bỏ trống thì lấy màu chính của theme.
+  ///
+  /// Chỉ hộp thư truyền vào, và truyền [OmniColors.chatPrimary] để khớp Zalo.
+  /// Trước đây widget này ghim thẳng màu Zalo, nên "Hôm nay" trên màn Việc của
+  /// tôi hiện xanh dương giữa một app mòng két — ngoại lệ chat rò ra khỏi
+  /// module chat. `chat_palette_boundary_test.dart` chặn việc đó tái diễn.
+  final Color? tint;
 
   @override
   Widget build(BuildContext context) {
@@ -31,9 +40,15 @@ class OmniFilterPill extends StatelessWidget {
     // on the one they are. Emptying the others lets the selection carry the
     // whole signal, and the row turns into a line of words above the list
     // instead of a tray of buttons.
-    final background = selected ? OmniColors.chatPrimary : Colors.transparent;
+    // Chữ trên viên đã chọn phải đi theo NỀN của chính nó, không mặc định
+    // trắng: ở chế độ tối, màu chính là #4FBFAE và chữ trắng trên đó chỉ đạt
+    // 2.18:1. Màu Zalo #0068FF thì trắng vẫn đúng, nên chỗ nào truyền [tint]
+    // vào thì chỗ đó chịu trách nhiệm — hộp thư là chỗ duy nhất.
+    final background = selected
+        ? (tint ?? scheme.primary)
+        : Colors.transparent;
     final foreground = selected
-        ? Colors.white
+        ? (tint != null ? Colors.white : scheme.onPrimary)
         : dark
         ? Colors.white.withValues(alpha: 0.6)
         : scheme.onSurfaceVariant;
