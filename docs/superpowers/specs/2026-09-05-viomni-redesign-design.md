@@ -170,14 +170,15 @@ Nên "người giao việc" được suy ra:
 final isAssignerProvider = Provider<bool>(...);
 ```
 
-**Việc phải làm ở API:** `tasks.projects.manage.all` hiện chỉ tồn tại phía
-server; endpoint `/me` chưa trả nó về. Đợt 1 phải thêm nó vào danh mục quyền
-trả cho client.
+**Không phải làm gì ở API.** Đã kiểm bằng cách gọi thật vào
+`/api/v1/auth/context`: quyền này về tới app đầy đủ. Bản nháp trước của mục
+này nói ngược lại — sai.
 
-**Chưa có vai "thợ xưởng".** Cả 4 vai demo (admin/manager/sales/support) đều
-giữ `tasks.read` + `tasks.write`, nên hiện tại ai cũng thấy giao diện người
-giao việc. Đợt 3 thêm vai `workshop_member` vào danh mục quyền — không có nó,
-phần phân vai đúng nhưng không quan sát được.
+**Bốn vai hệ thống đã chia đúng ở đây.** `admin` và `manager` giữ
+`tasks.projects.manage.all`; `sales` và `support` thì không — trong khi cả bốn
+đều giữ `tasks.read` và `tasks.write`. Nghĩa là phép phân vai **quan sát được
+ngay với tài khoản demo đang có**, không cần thêm vai `workshop_member` như
+bản nháp trước đề xuất. Bỏ đề xuất đó khỏi Đợt 3.
 
 ---
 
@@ -344,7 +345,7 @@ Mỗi đợt merge được độc lập và để lại app chạy được.
 ### Đợt 3 — thứ tự & KPI
 - Sửa sắp xếp ở `MongoTaskRepository`
 - `GET /api/tasks/kpi` + widget
-- Vai `workshop_member` trong danh mục quyền
+- (đã bỏ — bốn vai hệ thống đã chia đúng, xem §4.1)
 - Dữ liệu demo: 1 team, 2 kế hoạch, 5 nhóm việc, ~20 cây đàn, 4 thợ
 
 ### Không làm (YAGNI)
