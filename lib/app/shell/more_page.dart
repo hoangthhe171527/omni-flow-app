@@ -264,24 +264,14 @@ class MorePage extends ConsumerWidget {
   }
 
   Future<void> _confirmLogout(BuildContext context, WidgetRef ref) async {
-    final confirmed = await showDialog<bool>(
+    final confirmed = await showOmniConfirm(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Đăng xuất?'),
-        content: const Text('Bạn sẽ cần đăng nhập lại để tiếp tục làm việc.'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Huỷ'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('Đăng xuất'),
-          ),
-        ],
-      ),
+      title: 'Đăng xuất?',
+      message: 'Bạn sẽ cần đăng nhập lại để tiếp tục làm việc.',
+      confirmLabel: 'Đăng xuất',
+      destructive: true,
     );
-    if (confirmed == true) {
+    if (confirmed) {
       await ref.read(sessionControllerProvider.notifier).logout();
     }
   }
@@ -363,6 +353,10 @@ class _DeleteAccountDialogState extends State<_DeleteAccountDialog> {
 
   @override
   Widget build(BuildContext context) {
+    // Không dùng showOmniConfirm: hộp thoại này có ô mật khẩu và một ô tick
+    // xác nhận, tức là một biểu mẫu chứ không phải câu hỏi có/không. Đây cũng
+    // đúng là chỗ nên bắt người dùng chậm lại — xoá tài khoản không được dễ
+    // như bấm "Đồng ý".
     return AlertDialog(
       title: const Text('Xóa tài khoản?'),
       content: SingleChildScrollView(

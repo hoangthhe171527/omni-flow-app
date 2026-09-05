@@ -146,6 +146,10 @@ class InboxBulkBar extends ConsumerWidget {
   Future<void> _label(BuildContext context, WidgetRef ref) async {
     final messenger = ScaffoldMessenger.of(context);
     final controller = TextEditingController();
+    // Không dùng showOmniConfirm: đây không phải câu hỏi có/không mà là một ô
+    // nhập liệu. CupertinoAlertDialog có nhận TextField, nhưng một hộp thoại
+    // nhập liệu là màn hình chứ không phải lời nhắc — nó xứng đáng có thiết kế
+    // riêng chứ không phải nhét vào cái API dành cho câu hỏi.
     final label = await showDialog<String>(
       context: context,
       builder: (context) => AlertDialog(
