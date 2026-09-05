@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:omni_app/design/components/omni_avatar.dart';
 import 'package:omni_app/design/components/omni_status_chip.dart';
 import 'package:omni_app/design/theme/omni_theme.dart';
 import 'package:omni_app/modules/tasks/domain/task.dart';
@@ -37,6 +38,49 @@ void main() {
           'Chip rộng ${chip.width.toStringAsFixed(0)}dp trên thẻ 380dp. '
           'Một chip trạng thái chạy hết hàng đọc như thanh tiến độ.',
     );
+  });
+
+  testWidgets('thẻ nói ai đang làm, kể cả khi chỉ có một người', (tester) async {
+    await tester.pumpWidget(
+      host(
+        Task.fromJson({
+          'id': 't',
+          'title': 'KAWAI HAT-5',
+          'assignee_names': ['Hằng Ni'],
+        }),
+      ),
+    );
+
+    expect(
+      find.byType(OmniAvatar),
+      findsOneWidget,
+      reason:
+          'Trước đây thẻ chỉ nói khi có TỪ HAI người trở lên — im lặng đúng '
+          'trường hợp thường gặp nhất.',
+    );
+  });
+
+  testWidgets('việc chưa gán ai thì nói rõ trên thẻ', (tester) async {
+    await tester.pumpWidget(
+      host(Task.fromJson({'id': 't', 'title': 'Chưa ai nhận'})),
+    );
+
+    expect(find.text('Chưa gán'), findsOneWidget);
+  });
+
+  testWidgets('quá ba người thì gộp phần dư thành một con số', (tester) async {
+    await tester.pumpWidget(
+      host(
+        Task.fromJson({
+          'id': 't',
+          'title': 'Đông người',
+          'assignee_names': ['A', 'B', 'C', 'D', 'E'],
+        }),
+      ),
+    );
+
+    expect(find.byType(OmniAvatar), findsNWidgets(3));
+    expect(find.text('+2'), findsOneWidget);
   });
 
   testWidgets('nhãn hạn dài vẫn không tràn', (tester) async {

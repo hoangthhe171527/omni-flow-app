@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 
+import '../../../../design/components/omni_avatar.dart';
 import '../../../../design/tokens/tokens.dart';
-import 'due_chip.dart';
 import '../../domain/task.dart';
+import 'due_chip.dart';
 
 /// One task in the list.
 ///
@@ -71,13 +72,11 @@ class TaskCard extends StatelessWidget {
                     // không thấy vì chip chỉ là chữ với icon, không có nền.
                     Flexible(child: DueChip(task: task)),
                     const Spacer(),
-                    if (task.assigneeNames.length > 1)
-                      Text(
-                        '+${task.assigneeNames.length - 1} người',
-                        style: text.labelSmall?.copyWith(
-                          color: scheme.onSurfaceVariant,
-                        ),
-                      ),
+                    // "Ai đang làm cây này" là câu hỏi thứ hai của quản đốc,
+                    // ngay sau "nó đang ở công đoạn nào". Trước đây thẻ chỉ
+                    // nói khi có TỪ HAI người trở lên — tức là im lặng đúng
+                    // trường hợp thường gặp nhất.
+                    _Assignees(names: task.assigneeNames),
                   ],
                 ),
               ],
@@ -143,3 +142,75 @@ class _Progress extends StatelessWidget {
   }
 }
 
+
+/// Ai đang làm, dạng avatar chồng mép.
+///
+/// Avatar chứ không phải tên: ba người trên một thẻ vẫn đọc được mà không
+/// chiếm một dòng riêng, và trên bảng thì mỗi dp chiều cao đều phải trả giá
+/// bằng một thẻ ít đi. Tên đầy đủ nằm trong nhãn trợ năng và trong chi tiết.
+class _Assignees extends StatelessWidget {
+  const _Assignees({required this.names});
+
+  final List<String> names;
+
+  /// Ba là đủ. Cái thứ tư trở đi thành một con số.
+  static const _max = 3;
+
+  @override
+  Widget build(BuildContext context) {
+    if (names.isEmpty) {
+      return Text(
+        'Chưa gán',
+        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+          color: Theme.of(context).colorScheme.onSurfaceVariant,
+          fontStyle: FontStyle.italic,
+        ),
+      );
+    }
+
+    final shown = names.take(_max).toList();
+    final extra = names.length - shown.length;
+    final scheme = Theme.of(context).colorScheme;
+
+    return Semantics(
+      label: names.join(', '),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          SizedBox(
+            // Mỗi avatar 22dp, chồng lên nhau 8dp.
+            width: 22 + (shown.length - 1) * 14,
+            height: 22,
+            child: Stack(
+              children: [
+                for (var i = 0; i < shown.length; i++)
+                  Positioned(
+                    left: i * 14,
+                    child: Container(
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        // Viền cùng màu mặt thẻ: nó cắt hai avatar chồng nhau
+                        // ra thành hai hình, không phải một vệt.
+                        border: Border.all(color: scheme.surface, width: 1.5),
+                      ),
+                      child: OmniAvatar(name: shown[i], size: 22),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          if (extra > 0) ...[
+            const SizedBox(width: OmniSpacing.xs),
+            Text(
+              '+$extra',
+              style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                color: scheme.onSurfaceVariant,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
