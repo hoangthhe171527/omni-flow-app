@@ -91,6 +91,26 @@ class TasksApi {
     return Task.fromJson(response.object);
   }
 
+  /// Chuyển một công việc sang công đoạn khác.
+  ///
+  /// Thay cho kéo thả thẻ giữa các cột: trên điện thoại, kéo qua ranh giới
+  /// trang là một cử chỉ tồi — nó tranh với chính cử chỉ lật trang của bảng.
+  ///
+  /// Đi qua PUT /tasks/{id} vì `section_id` là một trường thường của công
+  /// việc, không phải một hành động riêng. Đặt ra một endpoint riêng cho nó
+  /// nghĩa là có hai đường ghi cùng một trường.
+  Future<Task> moveToSection(String taskId, String? sectionId) async {
+    final response = await _client.put(
+      '$_base/$taskId',
+      // Chuỗi rỗng chứ không null: API bỏ qua trường null (xem
+      // `UpdateTaskDTO::toAttributes`), nên gửi null sẽ không xoá được công
+      // đoạn — nó lặng lẽ không làm gì.
+      body: {'section_id': sectionId ?? ''},
+    );
+
+    return Task.fromJson(response.object);
+  }
+
   Future<void> comment(String taskId, String body) =>
       _client.post('$_base/$taskId/comments', body: {'content': body});
 

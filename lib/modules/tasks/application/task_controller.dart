@@ -182,6 +182,25 @@ class TaskController
     state = AsyncData(current.copyWith(task: updated));
   }
 
+  /// Chuyển công việc sang công đoạn khác.
+  ///
+  /// KHÔNG lạc quan như [toggleSubtask]: tick một công đoạn là việc người thợ
+  /// làm hàng chục lần một ca ở chỗ sóng yếu, nên nó phải nhúc nhích ngay.
+  /// Chuyển công đoạn là việc quản đốc làm vài lần một ngày ở văn phòng, và
+  /// một cây đàn nhảy cột rồi nhảy ngược lại vì mạng hỏng là thứ khó tin hơn
+  /// nhiều so với một giây chờ.
+  Future<void> moveToSection(String? sectionId) async {
+    final current = state.valueOrNull;
+    if (current == null) return;
+
+    final updated = await ref
+        .read(tasksApiProvider)
+        .moveToSection(arg, sectionId);
+    if (_disposed) return;
+
+    state = AsyncData(current.copyWith(task: updated));
+  }
+
   /// The server confirmed the tick: take it out of the outbox and adopt the
   /// server's copy of the task.
   void _settle(String subtaskId, Task updated) {

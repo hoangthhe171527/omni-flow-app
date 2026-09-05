@@ -234,6 +234,15 @@ class _StubTasksApi implements TasksApi {
   }
 
   @override
+  Future<Task> moveToSection(String taskId, String? sectionId) async {
+    await Future<void>.delayed(const Duration(milliseconds: 400));
+    final row = _rows.firstWhere((t) => t['id'] == taskId);
+    row['section_id'] = sectionId ?? '';
+
+    return Task.fromJson(row);
+  }
+
+  @override
   Future<void> comment(String taskId, String body) async {}
 
   @override

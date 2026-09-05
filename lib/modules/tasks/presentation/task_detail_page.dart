@@ -6,11 +6,15 @@ import 'package:image_picker/image_picker.dart';
 import '../../../core/utils/formatters.dart';
 import '../../../design/components/components.dart';
 import '../../../design/tokens/tokens.dart';
+import '../../plans/application/plans_providers.dart';
+import '../../plans/domain/plan.dart';
 import '../application/task_controller.dart';
 import '../application/tasks_providers.dart';
 import '../data/tasks_api.dart';
 import '../domain/task.dart';
+import 'widgets/assigner_panel.dart';
 import 'widgets/due_chip.dart';
+import 'widgets/move_section_sheet.dart';
 import 'widgets/subtask_row.dart';
 
 /// One task, and the two things a worker does with it: tick stages, and say it
@@ -41,6 +45,7 @@ class TaskDetailPage extends ConsumerWidget {
           state: state,
           canComplete: access.canComplete,
           canAttach: access.canAttach,
+          isAssigner: access.isAssigner,
         ),
       ),
     );
@@ -53,17 +58,25 @@ class _Loaded extends ConsumerWidget {
     required this.state,
     required this.canComplete,
     required this.canAttach,
+    required this.isAssigner,
   });
 
   final String taskId;
   final TaskDetailState state;
   final bool canComplete;
   final bool canAttach;
+  final bool isAssigner;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final task = state.visible;
     final controller = ref.read(taskDetailProvider(taskId).notifier);
+
+    // Công đoạn chỉ đọc được khi biết công việc thuộc kế hoạch nào. Việc rời —
+    // không thuộc kế hoạch — vẫn mở được, chỉ là không có gì để chuyển.
+    final plan = task.projectId == null
+        ? const AsyncValue<Plan?>.data(null)
+        : ref.watch(planProvider(task.projectId!)).whenData<Plan?>((p) => p);
 
     return Column(
       children: [
@@ -73,7 +86,17 @@ class _Loaded extends ConsumerWidget {
             child: ListView(
               padding: const EdgeInsets.only(bottom: OmniSpacing.xxl),
               children: [
-                _Header(task: task),
+                // Người giao việc thấy cùng những dữ kiện đó trong bảng điều
+                // phối ngay dưới, ở dạng sửa được. Hiện cả hai là in cùng một
+                // thông tin hai lần trên một màn hình bằng bàn tay.
+                _Header(task: task, showFacts: !isAssigner),
+                if (isAssigner)
+                  AssignerPanel(
+                    task: task,
+                    sectionName: _sectionName(plan.valueOrNull, task.sectionId),
+                    onMoveSection: () =>
+                        _moveSection(context, controller, plan.valueOrNull, task),
+                  ),
                 if (task.hasSubtasks) ...[
                   const SizedBox(height: OmniSpacing.sm),
                   _StageList(
@@ -100,12 +123,50 @@ class _Loaded extends ConsumerWidget {
       ],
     );
   }
+
+  /// Tên công đoạn hiện tại. Null khi chưa xếp, hoặc khi nhóm đã bị xoá khỏi
+  /// kế hoạch — hai chuyện khác nhau với cơ sở dữ liệu, cùng một câu trả lời
+  /// với người dùng: "chưa xếp công đoạn".
+  String? _sectionName(Plan? plan, String? sectionId) {
+    if (plan == null || sectionId == null || sectionId.isEmpty) return null;
+
+    for (final section in plan.sections) {
+      if (section.id == sectionId) return section.name;
+    }
+
+    return null;
+  }
+
+  Future<void> _moveSection(
+    BuildContext context,
+    TaskController controller,
+    Plan? plan,
+    Task task,
+  ) async {
+    final chosen = await showMoveSectionSheet(
+      context: context,
+      sections: plan?.sections ?? const [],
+      current: task.sectionId,
+    );
+
+    // Đóng sheet mà không chọn, hoặc chọn lại đúng công đoạn đang đứng: không
+    // có gì để ghi, và một lượt ghi rỗng vẫn chạm updated_at.
+    if (chosen == null || chosen == task.sectionId) return;
+
+    await controller.moveToSection(chosen);
+  }
 }
 
 class _Header extends StatelessWidget {
-  const _Header({required this.task});
+  const _Header({required this.task, this.showFacts = true});
 
   final Task task;
+
+  /// Hiện dải chip hạn + người làm.
+  ///
+  /// Tắt với người giao việc: họ có cùng những dữ kiện đó ngay dưới, trong
+  /// bảng điều phối, ở dạng sửa được.
+  final bool showFacts;
 
   @override
   Widget build(BuildContext context) {
@@ -130,18 +191,20 @@ class _Header extends StatelessWidget {
             const SizedBox(height: OmniSpacing.xs),
           ],
           Text(task.title, style: OmniType.title),
-          const SizedBox(height: OmniSpacing.lg),
-          // Deadline and people are chips, not sentences: at a glance from a
-          // workbench, three short facts beat one long line.
-          Wrap(
-            spacing: OmniSpacing.sm,
-            runSpacing: OmniSpacing.sm,
-            children: [
-              DueChip(task: task),
-              for (final name in task.assigneeNames)
-                _Chip(icon: Icons.person_outline_rounded, label: name),
-            ],
-          ),
+          if (showFacts) ...[
+            const SizedBox(height: OmniSpacing.lg),
+            // Deadline and people are chips, not sentences: at a glance from a
+            // workbench, three short facts beat one long line.
+            Wrap(
+              spacing: OmniSpacing.sm,
+              runSpacing: OmniSpacing.sm,
+              children: [
+                DueChip(task: task),
+                for (final name in task.assigneeNames)
+                  _Chip(icon: Icons.person_outline_rounded, label: name),
+              ],
+            ),
+          ],
           if (task.hasSubtasks) ...[
             const SizedBox(height: OmniSpacing.lg),
             _Progress(task: task),
