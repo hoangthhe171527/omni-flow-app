@@ -49,19 +49,21 @@ class TasksModule extends OmniModule {
   ];
 
   @override
-  List<ModuleDestination> destinations() => [
-    ModuleDestination(
+  List<ModuleNavEntry> navEntries() => [
+    ModuleNavEntry(
       moduleId: 'tasks',
       label: 'Việc của tôi',
+      subtitle: 'Việc được giao cho bạn',
       icon: Icons.checklist_outlined,
       selectedIcon: Icons.checklist_rounded,
       routeName: list,
-      // Between the inbox and customers: after the thing that interrupts you,
-      // before the things you go looking for.
-      order: 15,
-      access: AccessRequirement.any(TaskPermissions.anyRead),
-      // Late and due-today only. A badge showing 40 is wallpaper; one showing
-      // 3 is a prompt.
+      area: NavArea.work,
+      // Với thợ xưởng, đây LÀ trang chủ của họ.
+      weight: NavWeight.primary,
+      order: 10,
+      access: const AccessRequirement.any(TaskPermissions.anyRead),
+      // Chỉ việc trễ và việc hôm nay. Badge hiện 40 là giấy dán tường; hiện 3
+      // là một lời nhắc.
       badge: taskBadgeProvider,
     ),
   ];

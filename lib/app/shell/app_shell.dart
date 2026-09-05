@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/module/module_registry.dart';
+import '../../core/nav/pinned_tabs.dart';
 import '../../core/module/nav_destination.dart';
 import '../../design/components/components.dart';
 import '../../design/tokens/tokens.dart';
@@ -25,23 +26,24 @@ class AppShell extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final declared = ref.watch(declaredDestinationsProvider);
-    final visible = ref.watch(visibleDestinationsProvider);
-    final tabs = visible.take(maxTabs).toList();
-    final moreBranchIndex = declared.length;
+    // Branch dựng từ danh sách KHÔNG lọc quyền, y như router — hai bên phải
+    // đánh chỉ số giống hệt nhau, lệch một là bấm tab này ra màn kia.
+    final branchEntries = ref.watch(branchNavEntriesProvider);
+    final tabs = ref.watch(tabEntriesProvider).take(maxTabs).toList();
+    final moreBranchIndex = branchEntries.length;
 
     // Branch index the shell is currently showing, expressed in tab terms.
     final currentBranch = navigationShell.currentIndex;
     final selected = currentBranch == moreBranchIndex
         ? tabs.length
-        : tabs.indexWhere((tab) => declared.indexOf(tab) == currentBranch);
+        : tabs.indexWhere((tab) => branchEntries.indexOf(tab) == currentBranch);
 
     final selectedIndex = selected < 0 ? tabs.length : selected;
 
     void select(int index) {
       final branch = index >= tabs.length
           ? moreBranchIndex
-          : declared.indexOf(tabs[index]);
+          : branchEntries.indexOf(tabs[index]);
       navigationShell.goBranch(
         branch,
         // Tapping the active tab pops that tab back to its root — the
@@ -93,7 +95,7 @@ class _ShellNavigationRail extends ConsumerWidget {
     required this.onSelected,
   });
 
-  final List<ModuleDestination> tabs;
+  final List<ModuleNavEntry> tabs;
   final int selectedIndex;
   final ValueChanged<int> onSelected;
 
@@ -101,7 +103,7 @@ class _ShellNavigationRail extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final scheme = Theme.of(context).colorScheme;
 
-    Widget iconFor(ModuleDestination destination, {required bool selected}) {
+    Widget iconFor(ModuleNavEntry destination, {required bool selected}) {
       final badgeProvider = destination.badge;
       final count = badgeProvider == null ? 0 : ref.watch(badgeProvider);
       return Stack(
@@ -164,7 +166,7 @@ class _ShellNavigationRail extends ConsumerWidget {
         const NavigationRailDestination(
           icon: Icon(Icons.more_horiz_rounded),
           selectedIcon: Icon(Icons.more_horiz_rounded),
-          label: Text('Thêm'),
+          label: Text('Tất cả'),
         ),
       ],
     );
@@ -178,7 +180,7 @@ class _ShellNavBar extends StatelessWidget {
     required this.onSelected,
   });
 
-  final List<ModuleDestination> tabs;
+  final List<ModuleNavEntry> tabs;
   final int selectedIndex;
   final ValueChanged<int> onSelected;
 
@@ -239,11 +241,11 @@ class _ShellNavItem extends ConsumerWidget {
 
   const _ShellNavItem.more({required this.selected, required this.onTap})
     : destination = null,
-      label = 'Thêm',
-      icon = Icons.more_horiz_rounded,
-      selectedIcon = Icons.more_horiz_rounded;
+      label = 'Tất cả',
+      icon = Icons.apps_outlined,
+      selectedIcon = Icons.apps_rounded;
 
-  final ModuleDestination? destination;
+  final ModuleNavEntry? destination;
   final String? label;
   final IconData? icon;
   final IconData? selectedIcon;

@@ -45,15 +45,19 @@ class NotificationsModule extends OmniModule {
   ];
 
   @override
-  List<ModuleMenuEntry> menuEntries() => const [
-    ModuleMenuEntry(
+  List<ModuleNavEntry> navEntries() => const [
+    ModuleNavEntry(
       moduleId: 'notifications',
       label: 'Thông báo',
       subtitle: 'Việc được giao, việc đã xong',
       icon: Icons.notifications_none_rounded,
+      selectedIcon: Icons.notifications_rounded,
       routeName: centre,
-      group: 'Tài khoản',
-      order: 10,
+      area: NavArea.communication,
+      // Chỗ để ghé sau khi có gì đó gọi mình tới, không phải chỗ để sống. Đến
+      // được từ chuông trên "Việc của tôi" và từ danh bạ.
+      weight: NavWeight.secondary,
+      order: 20,
     ),
   ];
 }

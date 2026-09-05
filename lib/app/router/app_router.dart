@@ -8,7 +8,7 @@ import '../../modules/auth/auth_module.dart';
 import '../../security/session/session.dart';
 import '../../security/session/session_controller.dart';
 import '../shell/app_shell.dart';
-import '../shell/more_page.dart';
+import '../shell/directory_page.dart';
 import '../shell/splash_page.dart';
 import 'access_boundary.dart';
 import 'session_refresh.dart';
@@ -16,12 +16,14 @@ import 'shell_routes.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
   final rootKey = GlobalKey<NavigatorState>(debugLabel: 'root');
-  final destinations = ref.watch(declaredDestinationsProvider);
+  // Chỉ mục PRIMARY thành branch, và branch dựng từ danh sách KHÔNG lọc quyền.
+  // Một tab phải giữ ngăn xếp điều hướng riêng, còn biến mọi mục thành branch
+  // nghĩa là 20 module thành 20 navigator. Mục secondary là "chỗ để ghé" — mở
+  // từ danh bạ, phủ lên shell, đóng lại là xong.
+  final branchEntries = ref.watch(branchNavEntriesProvider);
   final moduleRoutes = ref.watch(moduleRoutesProvider);
 
-  // Routes that back a bottom-bar tab become shell branches (each keeps its own
-  // navigation stack); everything else is pushed full-screen over the shell.
-  final tabRouteNames = destinations.map((d) => d.routeName).toSet();
+  final tabRouteNames = branchEntries.map((e) => e.routeName).toSet();
   final tabRoutes = <String, ModuleRoute>{
     for (final route in moduleRoutes)
       if (tabRouteNames.contains(route.name)) route.name: route,
@@ -45,10 +47,10 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (context, state, navigationShell) =>
             AppShell(navigationShell: navigationShell),
         branches: [
-          for (final destination in destinations)
+          for (final entry in branchEntries)
             StatefulShellBranch(
               routes: [
-                if (tabRoutes[destination.routeName] case final route?)
+                if (tabRoutes[entry.routeName] case final route?)
                   _toGoRoute(route, rootKey),
               ],
             ),
@@ -59,7 +61,7 @@ final routerProvider = Provider<GoRouter>((ref) {
               GoRoute(
                 path: ShellRoutes.morePath,
                 name: ShellRoutes.more,
-                builder: (_, _) => const MorePage(),
+                builder: (_, _) => const DirectoryPage(),
               ),
             ],
           ),
@@ -109,13 +111,13 @@ String? _redirect(Ref ref, GoRouterState state) {
 /// rep with only inbox rights lands in the inbox; a finance-only user does not
 /// land on a blank permission wall.
 String _homePath(Ref ref) {
-  final visible = ref.read(visibleDestinationsProvider);
+  final visible = ref.read(primaryNavEntriesProvider);
   if (visible.isEmpty) return ShellRoutes.morePath;
 
   final routes = ref.read(moduleRoutesProvider);
-  for (final destination in visible) {
+  for (final entry in visible) {
     for (final route in routes) {
-      if (route.name == destination.routeName) return route.path;
+      if (route.name == entry.routeName) return route.path;
     }
   }
   return ShellRoutes.morePath;

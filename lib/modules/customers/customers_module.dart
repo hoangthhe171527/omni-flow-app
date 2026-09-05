@@ -61,14 +61,17 @@ class CustomersModule extends OmniModule {
   ];
 
   @override
-  List<ModuleDestination> destinations() => const [
-    ModuleDestination(
+  List<ModuleNavEntry> navEntries() => const [
+    ModuleNavEntry(
       moduleId: 'customers',
       label: 'Khách hàng',
+      subtitle: 'Danh bạ và lịch sử liên hệ',
       icon: Icons.people_outline_rounded,
       selectedIcon: Icons.people_rounded,
       routeName: list,
-      order: 20,
+      area: NavArea.sales,
+      weight: NavWeight.primary,
+      order: 10,
       access: AccessRequirement.any(CustomerPermissions.anyRead),
     ),
   ];

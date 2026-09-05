@@ -6,32 +6,39 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../core/config/app_config.dart';
 import '../../core/error/app_exception.dart';
 import '../../core/module/module_registry.dart';
+import '../../core/module/nav_destination.dart';
 import '../../design/components/components.dart';
 import '../../design/tokens/tokens.dart';
 import '../../core/theme/theme_mode_controller.dart';
 import '../../security/session/session_controller.dart';
 
-/// The "Thêm" tab: the profile block, plus every module entry that didn't earn
-/// a permanent tab, grouped by section.
+/// Danh bạ "Tất cả": hồ sơ người dùng, rồi MỌI tính năng họ có quyền dùng,
+/// gom theo nhóm và tìm được bằng từ khoá.
 ///
-/// Nothing here is hard-coded per module — modules declare entries, the registry
-/// filters them by permission, this page renders whatever comes back. A module
-/// that ships tomorrow appears here without this file changing.
-class MorePage extends ConsumerWidget {
-  const MorePage({super.key});
+/// Không có gì viết cứng theo module — module khai báo mục, registry lọc theo
+/// quyền, màn này dựng bất cứ thứ gì nhận được. Một module ra mắt ngày mai xuất
+/// hiện ở đây mà file này không đổi một dòng.
+///
+/// Đổi tên từ "Thêm": "Thêm" gợi ý phần thừa, trong khi đây là đường vào chính
+/// của phần lớn tính năng.
+class DirectoryPage extends ConsumerStatefulWidget {
+  const DirectoryPage({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<DirectoryPage> createState() => _DirectoryPageState();
+}
+
+class _DirectoryPageState extends ConsumerState<DirectoryPage> {
+  String _query = '';
+
+  @override
+  Widget build(BuildContext context) {
     final session = ref.watch(sessionProvider);
-    final groups = ref.watch(visibleMenuEntriesProvider);
-    final overflowTabs = ref
-        .watch(visibleDestinationsProvider)
-        .skip(4)
-        .toList();
+    final groups = _filtered(ref.watch(directoryGroupsProvider), _query);
     final scheme = Theme.of(context).colorScheme;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Thêm')),
+      appBar: AppBar(title: const Text('Tất cả')),
       body: Center(
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 720),
@@ -119,33 +126,29 @@ class MorePage extends ConsumerWidget {
               ),
               OmniCard(padding: EdgeInsets.zero, child: const _ThemeTile()),
 
-              // Tabs that didn't fit in the bottom bar still need a way in.
-              if (overflowTabs.isNotEmpty) ...[
-                const OmniSectionHeader(
-                  title: 'Khu vực khác',
-                  padding: _headerPadding,
+              Padding(
+                padding: const EdgeInsets.only(top: OmniSpacing.lg),
+                child: OmniSearchField(
+                  hint: 'Tìm tính năng…',
+                  onChanged: (value) => setState(() => _query = value),
                 ),
-                OmniCard(
-                  padding: EdgeInsets.zero,
-                  child: Column(
-                    children: [
-                      for (var i = 0; i < overflowTabs.length; i++) ...[
-                        if (i > 0)
-                          const Divider(height: 1, indent: OmniSpacing.section),
-                        _MenuTile(
-                          icon: overflowTabs[i].icon,
-                          label: overflowTabs[i].label,
-                          onTap: () =>
-                              context.goNamed(overflowTabs[i].routeName),
-                        ),
-                      ],
-                    ],
+              ),
+
+              if (groups.isEmpty)
+                const Padding(
+                  padding: EdgeInsets.only(top: OmniSpacing.section),
+                  child: OmniEmptyState(
+                    icon: Icons.search_off_rounded,
+                    title: 'Không tìm thấy',
+                    message: 'Thử một từ khác, hoặc xoá ô tìm kiếm.',
                   ),
                 ),
-              ],
 
               for (final entry in groups.entries) ...[
-                OmniSectionHeader(title: entry.key, padding: _headerPadding),
+                OmniSectionHeader(
+                  title: entry.key.label,
+                  padding: _headerPadding,
+                ),
                 OmniCard(
                   padding: EdgeInsets.zero,
                   child: Column(
@@ -497,4 +500,65 @@ class _ThemeTile extends ConsumerWidget {
       ),
     );
   }
+}
+
+/// Bỏ dấu để "kenh" tìm ra "Kết nối kênh".
+///
+/// Người dùng gõ trên bàn phím điện thoại, giữa lúc làm việc, và sẽ không bật
+/// bộ gõ tiếng Việt lên chỉ để tìm một màn hình.
+String foldDiacritics(String input) {
+  const marks =
+      'àáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩ'
+      'òóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹđ';
+  const plain =
+      'aaaaaaaaaaaaaaaaaeeeeeeeeeee iiiii'
+      'ooooooooooooooooouuuuuuuuuuuyyyyyd';
+
+  final buffer = StringBuffer();
+  for (final rune in input.toLowerCase().runes) {
+    final char = String.fromCharCode(rune);
+    final index = marks.indexOf(char);
+    buffer.write(index >= 0 ? plain[index] : char);
+  }
+
+  return buffer.toString();
+}
+
+/// Một mục có khớp từ khoá không.
+///
+/// Khớp cả dòng phụ: người dùng nhớ "zalo" chứ không nhớ tính năng tên là
+/// "Kết nối kênh".
+bool matchesQuery({
+  required String label,
+  required String? subtitle,
+  required String query,
+}) {
+  final needle = foldDiacritics(query.trim());
+  if (needle.isEmpty) return true;
+
+  return foldDiacritics(label).contains(needle) ||
+      foldDiacritics(subtitle ?? '').contains(needle);
+}
+
+/// Lọc trước khi dựng, để nhóm không còn mục nào thì biến mất luôn cả tiêu đề —
+/// một tiêu đề nhóm trống trông như lỗi tải dữ liệu.
+Map<NavArea, List<ModuleNavEntry>> _filtered(
+  Map<NavArea, List<ModuleNavEntry>> groups,
+  String query,
+) {
+  final result = <NavArea, List<ModuleNavEntry>>{};
+  for (final area in NavArea.values) {
+    final kept = (groups[area] ?? const <ModuleNavEntry>[])
+        .where(
+          (entry) => matchesQuery(
+            label: entry.label,
+            subtitle: entry.subtitle,
+            query: query,
+          ),
+        )
+        .toList();
+    if (kept.isNotEmpty) result[area] = kept;
+  }
+
+  return result;
 }

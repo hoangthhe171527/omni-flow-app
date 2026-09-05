@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:omni_app/bootstrap.dart';
 import 'package:omni_app/core/module/module_registry.dart';
+import 'package:omni_app/core/module/nav_destination.dart';
 import 'package:omni_app/modules/channels/domain/channel_permissions.dart';
 import 'package:omni_app/security/permissions/access_policy.dart';
 import 'package:omni_app/security/session/session.dart';
@@ -26,7 +27,7 @@ ProviderContainer _containerFor(Set<String> permissions) {
 }
 
 List<String> _menuLabels(ProviderContainer container) => container
-    .read(visibleMenuEntriesProvider)
+    .read(directoryGroupsProvider)
     .values
     .expand((entries) => entries)
     .map((entry) => entry.label)
@@ -58,8 +59,9 @@ void main() {
     final container = _containerFor({ChannelPermissions.read});
     addTearDown(container.dispose);
 
-    final inbox = container.read(visibleMenuEntriesProvider)['Hộp thư'] ?? [];
-    expect(inbox.map((e) => e.label), contains('Kết nối kênh'));
+    final group =
+        container.read(directoryGroupsProvider)[NavArea.communication] ?? [];
+    expect(group.map((e) => e.label), contains('Kết nối kênh'));
   });
 
   test('kênh không chiếm tab dưới', () {
@@ -67,8 +69,8 @@ void main() {
     addTearDown(container.dispose);
 
     final labels = container
-        .read(visibleDestinationsProvider)
-        .map((d) => d.label);
+        .read(primaryNavEntriesProvider)
+        .map((e) => e.label);
     expect(labels, isNot(contains('Kết nối kênh')));
   });
 }

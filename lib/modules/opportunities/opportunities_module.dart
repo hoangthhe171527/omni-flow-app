@@ -70,15 +70,19 @@ class OpportunitiesModule extends OmniModule {
   /// not what they need at arm's reach. Sales work happens on the web, where
   /// the pipeline keeps its place.
   @override
-  List<ModuleMenuEntry> menuEntries() => const [
-    ModuleMenuEntry(
+  List<ModuleNavEntry> navEntries() => const [
+    ModuleNavEntry(
       moduleId: 'opportunities',
       label: 'Cơ hội',
       subtitle: 'Theo dõi cơ hội bán hàng',
-      icon: Icons.trending_up_rounded,
+      icon: Icons.trending_up_outlined,
+      selectedIcon: Icons.trending_up_rounded,
       routeName: pipeline,
-      group: 'Bán hàng',
-      order: 10,
+      area: NavArea.sales,
+      // Người bán hàng sống ở đây cả ngày; người thợ thì không có quyền và
+      // cũng không thấy nó. Quyền tự lo việc đó.
+      weight: NavWeight.primary,
+      order: 20,
       access: AccessRequirement.any(OpportunityPermissions.anyRead),
     ),
   ];
