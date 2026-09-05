@@ -21,9 +21,10 @@ void main() {
         'id': id,
         'name': name,
         'team_id': ?teamId,
-        'tasks_count': 10,
-        'done_count': 4,
-        'overdue_count': overdue,
+        // Hình dạng thật của API: ba con số nằm trong `stats`. Bài này từng
+        // dựng dữ liệu bằng tên trường tôi đoán ra, nên nó xanh trong khi app
+        // thật hiện "Chưa có việc nào".
+        'stats': {'total': 10, 'done': 4, 'overdue': overdue},
       });
 
   Widget host({

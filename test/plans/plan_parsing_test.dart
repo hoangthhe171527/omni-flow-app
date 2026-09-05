@@ -139,6 +139,55 @@ void main() {
       });
     });
 
+    // Chép nguyên văn một phản hồi thật từ
+    // `GET /api/v1/projects?team_id=…`, không phải một hình dạng tôi tưởng
+    // tượng ra. Bản đầu của bộ phân tích đoán `tasks_count`/`done_count`/
+    // `overdue_count` và mọi kế hoạch hiện "Chưa có việc nào" dù có 5 cây
+    // đàn — một cái tên đoán ra không báo lỗi, nó chỉ trả 0 mãi mãi.
+    group('số liệu, theo đúng hình dạng API thật gửi', () {
+      final real = {
+        'id': '01a07263-6f8f-70f5-b62e-3e5fc8ca4a8a',
+        'name': 'Dan co',
+        'color': 'indigo',
+        'status': 'active',
+        'team_id': '01a07263-3e78-73db-ac8c-9df0b809e33b',
+        'sections': [
+          {'name': 'Nhap xuong', 'order': 0, 'id': 's1'},
+          {'name': 'Dang phuc che', 'order': 1, 'id': 's2'},
+          {'name': 'Cho QC', 'order': 2, 'id': 's3'},
+        ],
+        'member_ids': ['01a071b9-6528-7384-8013-5b68f7651994'],
+        'is_template': false,
+        'owner_id': '01a071b9-6528-7384-8013-5b68f7651994',
+        'member_roles': {'01a071b9-6528-7384-8013-5b68f7651994': 'owner'},
+        'stats': {'total': 5, 'done': 0, 'overdue': 3, 'progress': 0},
+      };
+
+      test('đọc được ba con số trong stats', () {
+        final plan = Plan.fromJson(real);
+
+        expect(plan.taskCount, 5);
+        expect(plan.doneCount, 0);
+        expect(plan.overdueCount, 3);
+      });
+
+      test('vai owner đọc đúng từ member_roles', () {
+        final plan = Plan.fromJson(real);
+
+        expect(
+          plan.roleOf('01a071b9-6528-7384-8013-5b68f7651994'),
+          PlanRole.owner,
+        );
+      });
+
+      test('kế hoạch chưa có stats thì là 0, không ném lỗi', () {
+        final plan = Plan.fromJson({'id': 'p', 'name': 'X'});
+
+        expect(plan.taskCount, 0);
+        expect(plan.progress, 0);
+      });
+    });
+
     test('ngày đọc được cả khi API gửi chuỗi rỗng', () {
       final plan = Plan.fromJson({
         'id': 'p1',

@@ -81,6 +81,7 @@ class Plan {
 
   factory Plan.fromJson(Map<String, dynamic> json) {
     final sections = json.mapList('sections').map(PlanSection.fromJson).toList();
+    final stats = json.child('stats');
 
     // Chỉ sắp lại khi MỌI nhóm đều có order. Thiếu dù một cái thì API đã sắp
     // sẵn rồi, và tự sắp lại là bịa ra một thứ tự mà xưởng không hề chọn.
@@ -104,9 +105,14 @@ class Plan {
       ),
       startDate: DateUtilsX.parse(json['start_date']),
       endDate: DateUtilsX.parse(json['end_date']),
-      taskCount: json.intOfAny(['tasks_count', 'task_count']),
-      doneCount: json.intOfAny(['done_count', 'completed_count']),
-      overdueCount: json.intOfAny(['overdue_count']),
+      // API gói ba con số này trong `stats`, không rải phẳng ra ngoài — xem
+      // `MongoProjectRepository::attachStats()`. Bản đầu của file này đoán
+      // `tasks_count`/`done_count`/`overdue_count` và mọi kế hoạch hiện "Chưa
+      // có việc nào" dù có 5 cây đàn. Đúng cái bẫy đã bắt `assignee=me`:
+      // một cái tên đoán ra không báo lỗi, nó chỉ trả về 0 mãi mãi.
+      taskCount: stats.intOr('total'),
+      doneCount: stats.intOr('done'),
+      overdueCount: stats.intOr('overdue'),
     );
   }
 
