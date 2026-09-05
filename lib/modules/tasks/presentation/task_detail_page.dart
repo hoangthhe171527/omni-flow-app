@@ -521,7 +521,7 @@ class _Chip extends StatelessWidget {
       ),
       decoration: BoxDecoration(
         color: scheme.surfaceContainerHighest,
-        borderRadius: OmniRadius.pillAll,
+        borderRadius: OmniRadius.chipAll,
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,

@@ -178,7 +178,7 @@ class _StageTabs extends StatelessWidget {
           return Center(
             child: Material(
               color: isSelected ? OmniColors.chatPrimary : Colors.transparent,
-              borderRadius: OmniRadius.pillAll,
+              borderRadius: OmniRadius.chipAll,
               clipBehavior: Clip.antiAlias,
               child: InkWell(
                 onTap: () => onSelected(stage),

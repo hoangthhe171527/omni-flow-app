@@ -128,7 +128,7 @@ abstract final class OmniTheme {
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
           backgroundColor: primary,
-          foregroundColor: OmniColors.primaryForeground,
+          foregroundColor: onPrimary,
           minimumSize: const Size.fromHeight(52),
           textStyle: OmniType.bodyStrong,
           shape: const RoundedRectangleBorder(borderRadius: OmniRadius.mdAll),
@@ -138,7 +138,7 @@ abstract final class OmniTheme {
         style: OutlinedButton.styleFrom(
           foregroundColor: onSurface,
           minimumSize: const Size.fromHeight(52),
-          side: BorderSide(color: border),
+          side: BorderSide(color: borderInteractive),
           textStyle: OmniType.bodyStrong,
           shape: const RoundedRectangleBorder(borderRadius: OmniRadius.mdAll),
         ),
@@ -151,7 +151,7 @@ abstract final class OmniTheme {
       ),
       floatingActionButtonTheme: FloatingActionButtonThemeData(
         backgroundColor: primary,
-        foregroundColor: OmniColors.primaryForeground,
+        foregroundColor: onPrimary,
         elevation: 2,
         shape: const RoundedRectangleBorder(borderRadius: OmniRadius.xlAll),
       ),
@@ -168,11 +168,11 @@ abstract final class OmniTheme {
         labelStyle: OmniType.caption.copyWith(color: onSurfaceMuted),
         border: OutlineInputBorder(
           borderRadius: OmniRadius.mdAll,
-          borderSide: BorderSide(color: border),
+          borderSide: BorderSide(color: borderInteractive),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: OmniRadius.mdAll,
-          borderSide: BorderSide(color: border),
+          borderSide: BorderSide(color: borderInteractive),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: OmniRadius.mdAll,
@@ -213,9 +213,9 @@ abstract final class OmniTheme {
       ),
       chipTheme: ChipThemeData(
         backgroundColor: surface,
-        side: BorderSide(color: border),
+        side: BorderSide(color: borderInteractive),
         labelStyle: OmniType.caption.copyWith(color: onSurface),
-        shape: const RoundedRectangleBorder(borderRadius: OmniRadius.pillAll),
+        shape: const RoundedRectangleBorder(borderRadius: OmniRadius.chipAll),
         padding: const EdgeInsets.symmetric(horizontal: OmniSpacing.md),
       ),
       snackBarTheme: SnackBarThemeData(

@@ -128,8 +128,12 @@ abstract final class OmniColors {
   static const darkMuted = Color(0xFF1E2A27);
   static const darkBorder = Color(0xFF27332F);
 
-  /// Bản tối của [borderInteractive]. 3.02:1 trên thẻ tối.
-  static const darkBorderInteractive = Color(0xFF5C6D68);
+  /// Bản tối của [borderInteractive].
+  ///
+  /// Phải đạt 3:1 trên CẢ HAI mặt nó có thể nằm lên: [darkCard] (3.50) và
+  /// [darkMuted] (3.14) — ô nhập ở chế độ tối tô nền bằng cái thứ hai. Giá
+  /// trị #5C6D68 chọn ban đầu chỉ đo trên mặt thẻ và trượt ở ô nhập.
+  static const darkBorderInteractive = Color(0xFF667772);
 
   /// Bản tối của [accent] và [accentForeground].
   ///

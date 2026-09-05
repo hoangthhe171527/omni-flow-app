@@ -39,7 +39,7 @@ class OmniFilterPill extends StatelessWidget {
 
     return Material(
       color: background,
-      borderRadius: OmniRadius.pillAll,
+      borderRadius: OmniRadius.chipAll,
       clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: onTap,

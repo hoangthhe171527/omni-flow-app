@@ -75,6 +75,56 @@ void main() {
     });
   });
 
+  // ColorScheme đúng vẫn có thể bị một *ButtonThemeData ghi đè. Đây là chỗ
+  // đúng-ở-tầng-dưới-sai-ở-tầng-trên: nút chính lấy màu chữ từ
+  // FilledButtonThemeData chứ không từ scheme.onPrimary.
+  group('theme của từng thành phần không ghi đè bằng hằng số', () {
+    for (final (name, theme) in [
+      ('sáng', OmniTheme.light(TargetPlatform.android)),
+      ('tối', OmniTheme.dark(TargetPlatform.android)),
+    ]) {
+      test('$name: chữ trên nút chính đọc được', () {
+        final style = theme.filledButtonTheme.style!;
+        final fg = style.foregroundColor!.resolve({})!;
+        final bg = style.backgroundColor!.resolve({})!;
+        final r = contrastRatio(fg, bg);
+
+        expect(
+          r,
+          greaterThanOrEqualTo(4.5),
+          reason:
+              'FilledButton ở chế độ $name chỉ đạt ${r.toStringAsFixed(2)}:1. '
+              'Trước đây foregroundColor ghim cứng màu trắng, nên ở chế độ '
+              'tối nó là trắng trên teal sáng.',
+        );
+      });
+
+      test('$name: viền ô nhập đạt 3:1', () {
+        final border =
+            theme.inputDecorationTheme.enabledBorder! as OutlineInputBorder;
+        final r = contrastRatio(
+          border.borderSide.color,
+          theme.inputDecorationTheme.fillColor!,
+        );
+
+        expect(
+          r,
+          greaterThanOrEqualTo(3),
+          reason:
+              'Viền ô nhập ở chế độ $name chỉ đạt ${r.toStringAsFixed(2)}:1 '
+              'so với nền của chính nó — WCAG 1.4.11.',
+        );
+      });
+
+      test('$name: viền nút viền đạt 3:1', () {
+        final side = theme.outlinedButtonTheme.style!.side!.resolve({})!;
+        final r = contrastRatio(side.color, theme.scaffoldBackgroundColor);
+
+        expect(r, greaterThanOrEqualTo(3));
+      });
+    }
+  });
+
   // Bài đo cuối: đi thẳng qua ColorScheme của cả hai chế độ và bắt mọi cặp
   // (chữ, nền) mà Material đã ghép sẵn phải đạt ngưỡng. Nếu ai đó thêm một
   // khe mới vào scheme và gán sai bản sáng/tối, bài này thấy.
