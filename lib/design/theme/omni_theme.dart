@@ -68,6 +68,12 @@ abstract final class OmniTheme {
       // chỉ đạt 2.77:1 và 3.76:1.
       secondary: OmniColors.infoSurface,
       onSecondary: Colors.white,
+      // Bỏ trống hai khe này là để Flutter điền màu mặc định của nó vào.
+      // Widget nào không được app tạo kiểu riêng sẽ với tới đây —
+      // SegmentedButton trên màn "Tất cả" là một, và nó đang hiện xanh tím
+      // giữa một app mòng két. Trỏ về cùng nền nhấn với primaryContainer.
+      secondaryContainer: accent,
+      onSecondaryContainer: onAccent,
       error: OmniColors.dangerSurface,
       onError: Colors.white,
       surface: surface,

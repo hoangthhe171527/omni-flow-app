@@ -143,8 +143,19 @@ void main() {
           s.surfaceContainerHighest,
         ),
         ('onPrimary / primary', s.onPrimary, s.primary),
-        ('onPrimaryContainer / primaryContainer', s.onPrimaryContainer, s.primaryContainer),
+        (
+          'onPrimaryContainer / primaryContainer',
+          s.onPrimaryContainer,
+          s.primaryContainer,
+        ),
         ('onSecondary / secondary', s.onSecondary, s.secondary),
+        // Hai khe này ít ai đặt bằng tay, nên chúng là chỗ Flutter điền màu
+        // mặc định của nó vào một app đã có bảng màu riêng.
+        (
+          'onSecondaryContainer / secondaryContainer',
+          s.onSecondaryContainer,
+          s.secondaryContainer,
+        ),
         ('onError / error', s.onError, s.error),
         ('onSurface / nền trang', s.onSurface, theme.scaffoldBackgroundColor),
       ];
