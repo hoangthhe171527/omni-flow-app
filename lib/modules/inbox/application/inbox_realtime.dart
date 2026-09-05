@@ -50,7 +50,7 @@ final inboxRealtimeSubscriptionProvider = Provider<void>((ref) {
   if (channel == null) return;
 
   final client = ref.watch(realtimeClientProvider);
-  final unsubscribe = client.subscribe(channel, (event) {
+  final unsubscribe = client.subscribePrivate(channel, (event) {
     if (event.event == 'message.created') {
       final signal = ref.read(inboxRealtimeSignalProvider.notifier);
       signal.state = signal.state + 1;
@@ -81,13 +81,14 @@ final conversationRealtimeSubscriptionProvider = Provider.autoDispose
         'conversation.read',
       };
 
-      final unsubscribe = client.subscribe('conversation.$conversationId', (
-        event,
-      ) {
-        if (!relevant.contains(event.event)) return;
-        final signal = ref.read(inboxRealtimeSignalProvider.notifier);
-        signal.state = signal.state + 1;
-      });
+      final unsubscribe = client.subscribePrivate(
+        'conversation.$conversationId',
+        (event) {
+          if (!relevant.contains(event.event)) return;
+          final signal = ref.read(inboxRealtimeSignalProvider.notifier);
+          signal.state = signal.state + 1;
+        },
+      );
 
       ref.onDispose(unsubscribe);
     });

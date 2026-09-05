@@ -118,6 +118,28 @@ void main() {
     });
   });
 
+  group('private channels', () {
+    test('prefixes a server-side channel name for the wire', () {
+      // Laravel's PrivateChannel prepends this before broadcasting; a client
+      // that omits it subscribes to a public channel that never receives.
+      expect(
+        PusherProtocol.privateChannel('conversation.c1'),
+        'private-conversation.c1',
+      );
+      expect(
+        PusherProtocol.privateChannel('tenant.t1.inbox'),
+        'private-tenant.t1.inbox',
+      );
+    });
+
+    test('is idempotent, so a wire name passed twice is unharmed', () {
+      expect(
+        PusherProtocol.privateChannel('private-conversation.c1'),
+        'private-conversation.c1',
+      );
+    });
+  });
+
   group('outgoing frames', () {
     test('subscribe carries the channel and its signature', () {
       final sent =

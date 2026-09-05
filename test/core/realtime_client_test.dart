@@ -186,6 +186,50 @@ void main() {
     expect(client.isConnected, isTrue);
   });
 
+  test(
+    'subscribePrivate asks for the private channel, not a public one',
+    () async {
+      // The bug this exists for: Laravel's PrivateChannel broadcasts to
+      // `private-conversation.c1`, but subscribing to `conversation.c1` is a
+      // legal request for a PUBLIC channel of that name. It succeeds, needs no
+      // authorization, and then delivers nothing — forever, and silently, which
+      // is indistinguishable from a quiet inbox. Earlier tests here passed
+      // literal 'private-x' names and so could never have caught it.
+      final received = <RealtimeEvent>[];
+      client.subscribePrivate('conversation.c1', received.add);
+      await settle();
+      await handshake();
+
+      final subscribes = socket.sent
+          .map((raw) => jsonDecode(raw) as Map<String, dynamic>)
+          .where((frame) => frame['event'] == 'pusher:subscribe')
+          .toList();
+      expect(subscribes.single['data']['channel'], 'private-conversation.c1');
+
+      // And the events the server actually sends arrive on that name.
+      socket.emit({
+        'event': '.message.created',
+        'channel': 'private-conversation.c1',
+        'data': jsonEncode({'conversation_id': 'c1'}),
+      });
+      await settle();
+
+      expect(received, hasLength(1));
+    },
+  );
+
+  test('subscribePrivate does not double the prefix', () async {
+    client.subscribePrivate('private-already', (_) {});
+    await settle();
+    await handshake();
+
+    final subscribes = socket.sent
+        .map((raw) => jsonDecode(raw) as Map<String, dynamic>)
+        .where((frame) => frame['event'] == 'pusher:subscribe')
+        .toList();
+    expect(subscribes.single['data']['channel'], 'private-already');
+  });
+
   test('a reconnect re-subscribes instead of coming back silent', () async {
     // The failure this guards is invisible: the socket returns, the status says
     // connected, and no message ever arrives again because the server has no

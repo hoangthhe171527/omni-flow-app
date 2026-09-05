@@ -272,7 +272,20 @@ class RealtimeClient {
     }
   }
 
-  /// Listens to [channel], returning a function that stops listening.
+  /// Listens to a PRIVATE channel by its server-side name.
+  ///
+  /// Every channel this app uses is private, and the `private-` prefix is added
+  /// here rather than at the call sites: subscribing to the unprefixed name
+  /// succeeds, asks for no authorization, and delivers nothing at all, which is
+  /// indistinguishable from a quiet inbox.
+  void Function() subscribePrivate(
+    String name,
+    void Function(RealtimeEvent event) onEvent,
+  ) => subscribe(PusherProtocol.privateChannel(name), onEvent);
+
+  /// Listens to [channel] by its exact wire name, returning a function that
+  /// stops listening. Prefer [subscribePrivate] unless you have the wire name
+  /// already.
   ///
   /// The channel is subscribed on the first listener and dropped after the last
   /// one leaves, so an inbox screen and an open thread can share a channel

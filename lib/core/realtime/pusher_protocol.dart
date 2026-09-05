@@ -31,6 +31,17 @@ abstract final class PusherProtocol {
     );
   }
 
+  /// The wire name of a private channel.
+  ///
+  /// Laravel's `PrivateChannel` prepends `private-` before broadcasting, so a
+  /// server-side `conversation.{id}` is `private-conversation.{id}` on the wire.
+  /// The prefix is also what marks a channel as guarded: subscribing without it
+  /// asks for a *public* channel of that name, which succeeds, needs no auth,
+  /// and then receives nothing — silently, forever. laravel-echo hides this
+  /// behind `.private()`; here it is named so it cannot be forgotten.
+  static String privateChannel(String name) =>
+      name.startsWith('private-') ? name : 'private-$name';
+
   static String subscribe({required String channel, required String auth}) {
     return jsonEncode({
       'event': 'pusher:subscribe',
