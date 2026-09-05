@@ -63,15 +63,22 @@ class OpportunitiesModule extends OmniModule {
     ),
   ];
 
+  /// Reached through "Thêm" rather than a tab.
+  ///
+  /// Four tabs is the ceiling and "Việc của tôi" took this slot: the people who
+  /// use the phone all day are on the workshop floor, and a sales pipeline is
+  /// not what they need at arm's reach. Sales work happens on the web, where
+  /// the pipeline keeps its place.
   @override
-  List<ModuleDestination> destinations() => const [
-    ModuleDestination(
+  List<ModuleMenuEntry> menuEntries() => const [
+    ModuleMenuEntry(
       moduleId: 'opportunities',
       label: 'Cơ hội',
-      icon: Icons.trending_up_outlined,
-      selectedIcon: Icons.trending_up_rounded,
+      subtitle: 'Theo dõi cơ hội bán hàng',
+      icon: Icons.trending_up_rounded,
       routeName: pipeline,
-      order: 30,
+      group: 'Bán hàng',
+      order: 10,
       access: AccessRequirement.any(OpportunityPermissions.anyRead),
     ),
   ];

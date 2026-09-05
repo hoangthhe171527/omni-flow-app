@@ -94,7 +94,8 @@ void main() {
         'notification_id': 'notification-7',
       });
 
-      expect(intent?.conversationId, 'conversation-42');
+      expect(intent?.target, PushTarget.conversation);
+      expect(intent?.id, 'conversation-42');
     });
 
     test('ignores unrelated or unroutable payloads', () {

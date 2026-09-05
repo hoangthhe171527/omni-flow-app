@@ -9,6 +9,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../inbox/application/inbox_providers.dart';
+import 'notifications_providers.dart';
 import '../data/push_api.dart';
 
 // Android freezes a channel's sound after first creation. v4 intentionally
@@ -20,6 +21,24 @@ const _tokenRefreshGenerationKey = 'fcm_token_refresh_generation';
 // kept an FCM token locally while its server-side row was removed/invalidated.
 const _tokenRefreshGeneration = 3;
 const _androidSound = RawResourceAndroidNotificationSound('omni_message_alert');
+
+// Work gets a channel of its own so it can be muted — or kept — separately
+// from customer messages. A worker who silences the shop inbox at night must
+// still be reachable about tomorrow's pianos, and someone who mutes work
+// notifications should not lose customer messages with them. It also keeps the
+// message alert sound off notifications that are not messages.
+const _taskChannelId = 'tasks_v1';
+const _taskChannelName = 'Công việc';
+const _taskChannelDescription =
+    'Thông báo khi bạn được giao việc, đến lượt bạn, hoặc việc đã hoàn thành.';
+
+const _taskChannel = AndroidNotificationChannel(
+  _taskChannelId,
+  _taskChannelName,
+  description: _taskChannelDescription,
+  importance: Importance.high,
+  enableVibration: true,
+);
 
 const _androidChannel = AndroidNotificationChannel(
   _androidChannelId,
@@ -96,17 +115,43 @@ bool shouldShowLocalForegroundNotification({
   required bool hasRemoteNotification,
 }) => platform == 'android' || !hasRemoteNotification;
 
-/// A deliberately small, routing-only payload. Notification text is for the
-/// lock screen; navigation always uses the conversation id and reloads data.
-class PushIntent {
-  const PushIntent({required this.conversationId});
+/// The kind of screen a push wants opened.
+enum PushTarget { conversation, task }
 
-  final String conversationId;
+/// A deliberately small, routing-only payload. Notification text is for the
+/// lock screen; navigation always uses an id and reloads the data.
+///
+/// This is a trust boundary: the payload is written by the server and handed
+/// over by the OS, sometimes to a process that is still starting. Anything
+/// unrecognised, or recognised but incomplete, resolves to null — a tap that
+/// does nothing is the correct outcome, and far better than a crash on launch
+/// or a route to a screen that does not exist.
+class PushIntent {
+  const PushIntent({required this.target, required this.id});
+
+  final PushTarget target;
+
+  /// Id of the thing to open — a conversation or a task, per [target].
+  final String id;
 
   static PushIntent? fromData(Map<String, dynamic> data) {
-    if (data['type'] != 'inbox_message') return null;
-    final id = data['conversation_id']?.toString() ?? '';
-    return id.isEmpty ? null : PushIntent(conversationId: id);
+    final target = switch (data['type']) {
+      'inbox_message' => PushTarget.conversation,
+      // Every task push opens the task itself. A stage is not a screen of its
+      // own, and the worker needs the surrounding work to act on it anyway.
+      'task_assigned' ||
+      'task_stage_open' ||
+      'task_completed' => PushTarget.task,
+      _ => null,
+    };
+    if (target == null) return null;
+
+    final key = target == PushTarget.conversation
+        ? 'conversation_id'
+        : 'task_id';
+    final id = data[key]?.toString() ?? '';
+
+    return id.isEmpty ? null : PushIntent(target: target, id: id);
   }
 }
 
@@ -270,6 +315,11 @@ class PushNotifications {
           AndroidFlutterLocalNotificationsPlugin
         >()
         ?.createNotificationChannel(_androidChannel);
+    await _local
+        .resolvePlatformSpecificImplementation<
+          AndroidFlutterLocalNotificationsPlugin
+        >()
+        ?.createNotificationChannel(_taskChannel);
     final launchDetails = await _local.getNotificationAppLaunchDetails();
     if (launchDetails?.didNotificationLaunchApp ?? false) {
       _openFromLocalNotificationPayload(
@@ -373,8 +423,15 @@ class PushNotifications {
   Future<void> _showForeground(RemoteMessage message) async {
     final platform = _runtimePushPlatform;
     if (platform == null) return;
-    if (PushIntent.fromData(message.data) != null) {
+    final intent = PushIntent.fromData(message.data);
+    // Only an inbox push refreshes the inbox. A task assignment arriving while
+    // the app is open would otherwise fire a pointless inbox refetch.
+    if (intent?.target == PushTarget.conversation) {
       final signal = _ref.read(inboxRealtimeSignalProvider.notifier);
+      signal.state = signal.state + 1;
+    }
+    if (intent?.target == PushTarget.task) {
+      final signal = _ref.read(notificationSignalProvider.notifier);
       signal.state = signal.state + 1;
     }
     final notification = message.notification;
@@ -387,8 +444,12 @@ class PushNotifications {
       // the same customer message. Data-only messages still need a local alert.
       return;
     }
-    final title = notification?.title ?? 'Tin nhắn mới';
-    final body = notification?.body ?? 'Khách hàng vừa gửi tin nhắn.';
+    final isTask = intent?.target == PushTarget.task;
+    final title =
+        notification?.title ?? (isTask ? 'Công việc' : 'Tin nhắn mới');
+    final body =
+        notification?.body ??
+        (isTask ? 'Có cập nhật về công việc.' : 'Khách hàng vừa gửi tin nhắn.');
     final senderName = message.data['sender_name']?.toString().trim() ?? '';
     final sourceLabel = message.data['source_label']?.toString().trim() ?? '';
     final conversationId =
@@ -413,29 +474,37 @@ class PushNotifications {
             ],
           );
     await _local.show(
-      conversationId.isNotEmpty
-          ? conversationId.hashCode & 0x7fffffff
-          : message.messageId?.hashCode ??
-                DateTime.now().microsecondsSinceEpoch,
+      _notificationId(intent, message),
       title,
       body,
       NotificationDetails(
         android: platform == 'android'
-            ? AndroidNotificationDetails(
-                _androidChannelId,
-                'Tin nhắn khách hàng',
-                channelDescription:
-                    'Thông báo khi khách hàng gửi tin nhắn mới.',
-                importance: Importance.max,
-                priority: Priority.max,
-                playSound: true,
-                sound: _androidSound,
-                enableVibration: true,
-                audioAttributesUsage: AudioAttributesUsage.notificationEvent,
-                category: AndroidNotificationCategory.message,
-                fullScreenIntent: false,
-                styleInformation: messagingStyle,
-              )
+            ? (isTask
+                  ? const AndroidNotificationDetails(
+                      _taskChannelId,
+                      _taskChannelName,
+                      channelDescription: _taskChannelDescription,
+                      importance: Importance.high,
+                      priority: Priority.high,
+                      enableVibration: true,
+                      category: AndroidNotificationCategory.reminder,
+                    )
+                  : AndroidNotificationDetails(
+                      _androidChannelId,
+                      'Tin nhắn khách hàng',
+                      channelDescription:
+                          'Thông báo khi khách hàng gửi tin nhắn mới.',
+                      importance: Importance.max,
+                      priority: Priority.max,
+                      playSound: true,
+                      sound: _androidSound,
+                      enableVibration: true,
+                      audioAttributesUsage:
+                          AudioAttributesUsage.notificationEvent,
+                      category: AndroidNotificationCategory.message,
+                      fullScreenIntent: false,
+                      styleInformation: messagingStyle,
+                    ))
             : null,
         iOS: platform == 'ios'
             ? DarwinNotificationDetails(
@@ -452,6 +521,15 @@ class PushNotifications {
       ),
       payload: jsonEncode(message.data),
     );
+  }
+
+  /// One slot per thing, so a second update about the same task replaces the
+  /// first instead of stacking. Six rows about one piano is how a worker learns
+  /// to swipe the whole shade away without reading it.
+  int _notificationId(PushIntent? intent, RemoteMessage message) {
+    if (intent != null) return intent.id.hashCode & 0x7fffffff;
+
+    return message.messageId?.hashCode ?? DateTime.now().microsecondsSinceEpoch;
   }
 
   void _openFromLocalNotificationPayload(String? payload) {

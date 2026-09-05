@@ -4,6 +4,8 @@ import 'package:go_router/go_router.dart';
 
 import '../../../design/components/components.dart';
 import '../../../design/tokens/tokens.dart';
+import '../../notifications/application/notifications_providers.dart';
+import '../../notifications/notifications_module.dart';
 import '../application/tasks_providers.dart';
 import '../data/tasks_api.dart';
 import '../tasks_module.dart';
@@ -56,6 +58,15 @@ class _MyTasksPageState extends ConsumerState<MyTasksPage> {
         title: const Text('Việc của tôi'),
         titleSpacing: OmniSpacing.lg,
         toolbarHeight: 56,
+        actions: [
+          // The bell lives here because this is the screen a worker is already
+          // on. Making them go through "Thêm" to find out they were given
+          // something is a step too many.
+          _BellButton(
+            unread: ref.watch(unreadNotificationCountProvider),
+            onTap: () => context.pushNamed(NotificationsModule.centre),
+          ),
+        ],
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(56),
           child: _BucketBar(
@@ -129,6 +140,58 @@ class _MyTasksPageState extends ConsumerState<MyTasksPage> {
     TaskBucket.all => 'Việc được giao cho bạn sẽ hiện ở đây.',
     _ => 'Kéo xuống để làm mới.',
   };
+}
+
+/// The bell, with a count when there is one.
+///
+/// 48dp of target, and the count is announced rather than left as a red dot a
+/// screen reader would skip.
+class _BellButton extends StatelessWidget {
+  const _BellButton({required this.unread, required this.onTap});
+
+  final int unread;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      button: true,
+      label: unread > 0 ? 'Thông báo, $unread chưa đọc' : 'Thông báo',
+      child: IconButton(
+        onPressed: onTap,
+        iconSize: 24,
+        icon: Stack(
+          clipBehavior: Clip.none,
+          children: [
+            const Icon(Icons.notifications_none_rounded),
+            if (unread > 0)
+              Positioned(
+                top: -4,
+                right: -6,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: OmniSpacing.xs,
+                  ),
+                  constraints: const BoxConstraints(minWidth: 16),
+                  decoration: const BoxDecoration(
+                    color: OmniColors.destructive,
+                    borderRadius: OmniRadius.pillAll,
+                  ),
+                  child: Text(
+                    unread > 99 ? '99+' : '$unread',
+                    textAlign: TextAlign.center,
+                    style: OmniType.micro.copyWith(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
 }
 
 class _BucketBar extends StatelessWidget {

@@ -13,8 +13,10 @@ import 'modules/auth/data/auth_api.dart';
 import 'modules/channels/channels_module.dart';
 import 'modules/customers/customers_module.dart';
 import 'modules/inbox/inbox_module.dart';
+import 'modules/notifications/notifications_module.dart';
 import 'modules/opportunities/opportunities_module.dart';
 import 'modules/settings/settings_module.dart';
+import 'modules/tasks/tasks_module.dart';
 import 'modules/team/team_module.dart';
 import 'security/session/auth_gateway.dart';
 
@@ -26,10 +28,12 @@ import 'security/session/auth_gateway.dart';
 const List<OmniModule> appModules = [
   AuthModule(),
   InboxModule(),
+  TasksModule(),
   CustomersModule(),
   OpportunitiesModule(),
   TeamModule(),
   ChannelsModule(),
+  NotificationsModule(),
   SettingsModule(),
 ];
 

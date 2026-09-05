@@ -301,8 +301,9 @@ class _ActionBarState extends ConsumerState<_ActionBar> {
 
   @override
   Widget build(BuildContext context) {
-    if (!widget.canComplete && !widget.canAttach)
+    if (!widget.canComplete && !widget.canAttach) {
       return const SizedBox.shrink();
+    }
 
     final done = widget.task.isDone;
 
@@ -369,8 +370,9 @@ class _ActionBarState extends ConsumerState<_ActionBar> {
           .setStatus(done ? 'done' : 'in_progress');
       // The list behind this screen is showing the old progress until told.
       ref.read(myTasksProvider.notifier).refresh();
-      if (mounted && done)
+      if (mounted && done) {
         _say('Đã báo hoàn thành. Quản lý sẽ nhận thông báo.');
+      }
     } on Object {
       if (mounted) _say('Chưa lưu được. Kiểm tra mạng rồi thử lại.');
     } finally {

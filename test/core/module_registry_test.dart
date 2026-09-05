@@ -4,6 +4,7 @@ import 'package:omni_app/bootstrap.dart';
 import 'package:omni_app/core/module/module_registry.dart';
 import 'package:omni_app/modules/customers/domain/customer_permissions.dart';
 import 'package:omni_app/modules/inbox/domain/inbox_permissions.dart';
+import 'package:omni_app/modules/tasks/domain/task_permissions.dart';
 import 'package:omni_app/security/permissions/access_policy.dart';
 import 'package:omni_app/security/session/session.dart';
 import 'package:omni_app/security/session/session_controller.dart';
@@ -47,8 +48,8 @@ void main() {
   test('destinations stay in declared order as permissions widen', () {
     final container = _containerFor({
       InboxPermissions.read,
+      TaskPermissions.read,
       CustomerPermissions.read,
-      'crm.sales_opportunities.read',
     });
     addTearDown(container.dispose);
 
@@ -56,7 +57,22 @@ void main() {
         .read(visibleDestinationsProvider)
         .map((d) => d.label)
         .toList();
-    expect(labels, ['Hộp thư', 'Khách hàng', 'Cơ hội']);
+    expect(labels, ['Hộp thư', 'Việc của tôi', 'Khách hàng']);
+  });
+
+  test('a sales permission alone no longer buys a tab', () {
+    // Cơ hội moved to "Thêm": four tabs is the ceiling and "Việc của tôi" took
+    // the slot. The people who live in the phone are on the workshop floor.
+    final container = _containerFor({'crm.sales_opportunities.read'});
+    addTearDown(container.dispose);
+
+    expect(container.read(visibleDestinationsProvider), isEmpty);
+    expect(
+      container
+          .read(visibleMenuEntriesProvider)['Bán hàng']
+          ?.map((e) => e.label),
+      contains('Cơ hội'),
+    );
   });
 
   test('the route table is permission-independent', () {

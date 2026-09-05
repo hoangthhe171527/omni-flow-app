@@ -10,6 +10,7 @@ import '../core/theme/theme_mode_controller.dart';
 import '../design/theme/omni_theme.dart';
 import '../modules/inbox/inbox_module.dart';
 import '../modules/notifications/application/push_notifications.dart';
+import '../modules/tasks/tasks_module.dart';
 import '../security/session/session_controller.dart';
 import '../security/session/session.dart';
 import 'router/app_router.dart';
@@ -108,12 +109,13 @@ class _OmniAppState extends ConsumerState<OmniApp> with WidgetsBindingObserver {
     ref.read(pushIntentProvider.notifier).state = null;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
+      final route = switch (intent.target) {
+        PushTarget.conversation => InboxModule.thread,
+        PushTarget.task => TasksModule.detail,
+      };
       ref
           .read(routerProvider)
-          .pushNamed(
-            InboxModule.thread,
-            pathParameters: {'id': intent.conversationId},
-          );
+          .pushNamed(route, pathParameters: {'id': intent.id});
     });
   }
 }
