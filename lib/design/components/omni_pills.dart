@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../core/domain/channel.dart';
+import '../platform/omni_motion_scope.dart';
 import '../tokens/tokens.dart';
 
 /// Horizontally scrolling filter pill with an optional count.
@@ -200,7 +201,7 @@ class OmniCountBadge extends StatelessWidget {
     return TweenAnimationBuilder<double>(
       key: ValueKey(count),
       tween: Tween(begin: 0.6, end: 1),
-      duration: OmniDuration.base,
+      duration: OmniMotion.of(context).base,
       curve: Curves.easeOutBack,
       builder: (context, scale, child) =>
           Transform.scale(scale: scale, child: child),

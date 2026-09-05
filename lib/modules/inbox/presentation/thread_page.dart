@@ -7,6 +7,7 @@ import 'package:image_picker/image_picker.dart';
 import '../../../core/error/app_exception.dart';
 import '../../../core/utils/formatters.dart';
 import '../../../design/components/components.dart';
+import '../../../design/platform/omni_motion_scope.dart';
 import '../../../design/tokens/tokens.dart';
 import '../../../core/realtime/realtime_client.dart';
 import '../application/inbox_providers.dart';
@@ -356,7 +357,7 @@ class _ThreadPageState extends ConsumerState<ThreadPage>
       if (target != null) {
         Scrollable.ensureVisible(
           target,
-          duration: OmniDuration.base,
+          duration: OmniMotion.of(context).base,
           curve: Curves.easeOut,
           alignment: 0.35,
         );
@@ -381,7 +382,7 @@ class _ThreadPageState extends ConsumerState<ThreadPage>
     if (!_scrollController.hasClients) return;
     _scrollController.animateTo(
       0,
-      duration: const Duration(milliseconds: 240),
+      duration: OmniMotion.of(context).base,
       curve: Curves.easeOut,
     );
   }
