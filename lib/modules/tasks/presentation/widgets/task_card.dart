@@ -66,7 +66,11 @@ class TaskCard extends StatelessWidget {
                 const SizedBox(height: OmniSpacing.md),
                 Row(
                   children: [
-                    Expanded(child: DueChip(task: task)),
+                    // Flexible chứ không Expanded: chip giờ có nền, và
+                    // Expanded kéo cái nền đó chạy hết bề ngang thẻ. Cũ thì
+                    // không thấy vì chip chỉ là chữ với icon, không có nền.
+                    Flexible(child: DueChip(task: task)),
+                    const Spacer(),
                     if (task.assigneeNames.length > 1)
                       Text(
                         '+${task.assigneeNames.length - 1} người',
