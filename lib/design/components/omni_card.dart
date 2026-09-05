@@ -97,7 +97,11 @@ class OmniSectionHeader extends StatelessWidget {
               onTap: onAction,
               child: Row(
                 children: [
-                  Icon(Icons.add_rounded, size: 16, color: scheme.primary),
+                  Icon(
+                    Icons.add_rounded,
+                    size: OmniIconSize.sm,
+                    color: scheme.primary,
+                  ),
                   const SizedBox(width: 2),
                   Text(
                     action!,
@@ -195,7 +199,7 @@ class OmniDetailRow extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             if (icon != null) ...[
-              Icon(icon, size: 18, color: scheme.onSurfaceVariant),
+              Icon(icon, size: OmniIconSize.md, color: scheme.onSurfaceVariant),
               const SizedBox(width: OmniSpacing.md),
             ],
             SizedBox(
@@ -219,7 +223,7 @@ class OmniDetailRow extends StatelessWidget {
             if (onTap != null)
               Icon(
                 Icons.chevron_right_rounded,
-                size: 18,
+                size: OmniIconSize.md,
                 color: scheme.onSurfaceVariant,
               ),
           ],

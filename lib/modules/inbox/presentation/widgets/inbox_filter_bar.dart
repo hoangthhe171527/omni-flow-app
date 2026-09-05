@@ -53,7 +53,7 @@ class InboxFilterBar extends ConsumerWidget {
           padding: const EdgeInsets.fromLTRB(16, 4, 8, 4),
           child: Row(
             children: [
-              Icon(Icons.search_rounded, size: 22, color: meta),
+              Icon(Icons.search_rounded, size: OmniIconSize.lg, color: meta),
               const SizedBox(width: 12),
               Expanded(
                 child: TextField(
@@ -246,7 +246,7 @@ class InboxFilterBar extends ConsumerWidget {
               padding: const EdgeInsets.only(left: 8),
               child: Icon(
                 Icons.check_rounded,
-                size: 17,
+                size: OmniIconSize.md,
                 color: OmniColors.chatPrimary,
               ),
             ),
@@ -279,7 +279,7 @@ class _FilterButton extends StatelessWidget {
         children: [
           Icon(
             Icons.tune_rounded,
-            size: 22,
+            size: OmniIconSize.lg,
             color: active ? OmniColors.chatPrimary : scheme.onSurfaceVariant,
           ),
           if (active)

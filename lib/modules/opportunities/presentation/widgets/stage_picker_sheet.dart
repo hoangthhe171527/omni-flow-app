@@ -46,7 +46,7 @@ class StagePickerSheet extends StatelessWidget {
                     PipelineStage.lost => Icons.cancel_outlined,
                     _ => Icons.circle_outlined,
                   },
-                  size: 16,
+                  size: OmniIconSize.sm,
                   color: stage == current
                       ? scheme.primary
                       : scheme.onSurfaceVariant,

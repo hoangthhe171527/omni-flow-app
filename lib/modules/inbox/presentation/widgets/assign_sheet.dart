@@ -89,7 +89,7 @@ class _AssignSheetState extends ConsumerState<AssignSheet> {
                           backgroundColor: scheme.surfaceContainerHighest,
                           child: Icon(
                             Icons.person_off_outlined,
-                            size: 18,
+                            size: OmniIconSize.md,
                             color: scheme.onSurfaceVariant,
                           ),
                         ),
@@ -115,7 +115,7 @@ class _AssignSheetState extends ConsumerState<AssignSheet> {
                       leading: OmniAvatar(
                         name: member.name,
                         imageUrl: member.avatarUrl,
-                        size: 40,
+                        size: OmniIconSize.hero,
                       ),
                       title: Text(
                         member.name,

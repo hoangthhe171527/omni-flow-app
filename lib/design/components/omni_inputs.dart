@@ -59,14 +59,14 @@ class _OmniSearchFieldState extends State<OmniSearchField> {
         prefixIcon: Icon(
           Icons.search_rounded,
           color: scheme.onSurfaceVariant,
-          size: 20,
+          size: OmniIconSize.lg,
         ),
         suffixIcon: _controller.text.isEmpty
             ? widget.trailing
             : IconButton(
                 icon: Icon(
                   Icons.close_rounded,
-                  size: 18,
+                  size: OmniIconSize.md,
                   color: scheme.onSurfaceVariant,
                 ),
                 onPressed: () {
@@ -125,7 +125,11 @@ class OmniField extends StatelessWidget {
           const SizedBox(height: 5),
           Row(
             children: [
-              Icon(Icons.error_outline_rounded, size: 13, color: scheme.error),
+              Icon(
+                Icons.error_outline_rounded,
+                size: OmniIconSize.xs,
+                color: scheme.error,
+              ),
               const SizedBox(width: 4),
               Expanded(
                 child: Text(

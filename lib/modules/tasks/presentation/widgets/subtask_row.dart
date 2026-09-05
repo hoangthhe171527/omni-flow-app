@@ -162,7 +162,7 @@ class _Box extends StatelessWidget {
       child: done
           ? Icon(
               Icons.check_rounded,
-              size: 18,
+              size: OmniIconSize.md,
               color: failed ? OmniColors.destructive : Colors.white,
             )
           : null,
@@ -222,7 +222,7 @@ class _FailureNotice extends StatelessWidget {
           children: [
             const Icon(
               Icons.error_outline_rounded,
-              size: 14,
+              size: OmniIconSize.xs,
               color: OmniColors.dangerText,
             ),
             const SizedBox(width: OmniSpacing.xs),

@@ -53,7 +53,7 @@ class ChannelTile extends StatelessWidget {
               color: meta.tint,
               borderRadius: OmniRadius.smAll,
             ),
-            child: Icon(meta.icon, size: 20, color: meta.color),
+            child: Icon(meta.icon, size: OmniIconSize.lg, color: meta.color),
           ),
           const SizedBox(width: OmniSpacing.md),
           Expanded(

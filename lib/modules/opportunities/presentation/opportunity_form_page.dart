@@ -177,7 +177,7 @@ class _OpportunityFormPageState extends ConsumerState<OpportunityFormPage> {
                   children: [
                     Icon(
                       Icons.person_outline_rounded,
-                      size: 18,
+                      size: OmniIconSize.md,
                       color: scheme.onSurfaceVariant,
                     ),
                     const SizedBox(width: OmniSpacing.md),
@@ -245,7 +245,7 @@ class _OpportunityFormPageState extends ConsumerState<OpportunityFormPage> {
                   children: [
                     Icon(
                       Icons.event_outlined,
-                      size: 18,
+                      size: OmniIconSize.md,
                       color: scheme.onSurfaceVariant,
                     ),
                     const SizedBox(width: OmniSpacing.md),

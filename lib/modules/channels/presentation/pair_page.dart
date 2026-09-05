@@ -187,7 +187,7 @@ class _PairPageState extends ConsumerState<PairPage>
             const SizedBox(height: OmniSpacing.xl),
             const Icon(
               Icons.check_circle_rounded,
-              size: 48,
+              size: OmniIconSize.hero,
               color: OmniColors.successText,
             ),
             const SizedBox(height: OmniSpacing.md),
@@ -214,7 +214,7 @@ class _PairPageState extends ConsumerState<PairPage>
       const SizedBox(height: OmniSpacing.xl),
       const Icon(
         Icons.error_outline_rounded,
-        size: 40,
+        size: OmniIconSize.hero,
         color: OmniColors.dangerText,
       ),
       const SizedBox(height: OmniSpacing.md),

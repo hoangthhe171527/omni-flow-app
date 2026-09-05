@@ -166,7 +166,7 @@ class _DueChip extends StatelessWidget {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(Icons.schedule_rounded, size: 16, color: colour),
+        Icon(Icons.schedule_rounded, size: OmniIconSize.sm, color: colour),
         const SizedBox(width: OmniSpacing.xs),
         Flexible(
           child: Text(

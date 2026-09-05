@@ -120,7 +120,7 @@ class MessageBubble extends StatelessWidget {
         ],
         if (message.pinned) ...[
           const SizedBox(width: 5),
-          Icon(Icons.push_pin_rounded, size: 13, color: color),
+          Icon(Icons.push_pin_rounded, size: OmniIconSize.xs, color: color),
         ],
       ],
     );
@@ -205,7 +205,7 @@ class MessageBubble extends StatelessWidget {
                 ? OmniAvatar(
                     name: message.senderName ?? '?',
                     imageUrl: message.senderAvatar,
-                    size: 32,
+                    size: OmniIconSize.hero,
                   )
                 // Reserve the width so bubbles above stay in the same column.
                 : const SizedBox(width: 32),
@@ -242,7 +242,7 @@ class MessageBubble extends StatelessWidget {
                           OmniAvatar(
                             name: message.senderName!,
                             imageUrl: message.senderAvatar,
-                            size: 16,
+                            size: OmniIconSize.sm,
                           ),
                           const SizedBox(width: 5),
                           Text(
@@ -710,7 +710,7 @@ class _ReplySwipeState extends State<_ReplySwipe>
                   opacity: progress,
                   child: Icon(
                     Icons.reply_rounded,
-                    size: 22,
+                    size: OmniIconSize.lg,
                     color: OmniColors.chatPrimary,
                   ),
                 ),
@@ -795,7 +795,11 @@ class _MetaLine extends StatelessWidget {
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Icon(Icons.error_outline_rounded, size: 15, color: scheme.error),
+              Icon(
+                Icons.error_outline_rounded,
+                size: OmniIconSize.sm,
+                color: scheme.error,
+              ),
               const SizedBox(width: 5),
               Expanded(
                 child: Text(
@@ -884,8 +888,8 @@ class _DeliveryReceipt extends StatelessWidget {
     return Semantics(
       label: label,
       child: AnimatedSwitcher(
-        duration: const Duration(milliseconds: 220),
-        reverseDuration: const Duration(milliseconds: 140),
+        duration: OmniDuration.base,
+        reverseDuration: OmniDuration.fast,
         switchInCurve: Curves.easeOutBack,
         switchOutCurve: Curves.easeIn,
         transitionBuilder: (child, animation) => FadeTransition(
@@ -896,7 +900,7 @@ class _DeliveryReceipt extends StatelessWidget {
           key: ValueKey('delivery-receipt-${status.name}'),
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, size: 16, color: color),
+            Icon(icon, size: OmniIconSize.sm, color: color),
             if (showLabel) ...[
               const SizedBox(width: 3),
               Text(
@@ -943,7 +947,7 @@ class _NoteBubble extends StatelessWidget {
               children: [
                 const Icon(
                   Icons.sticky_note_2_outlined,
-                  size: 14,
+                  size: OmniIconSize.xs,
                   color: amber,
                 ),
                 const SizedBox(width: 5),
@@ -1010,7 +1014,7 @@ class _ImageGallery extends StatelessWidget {
       PageRouteBuilder<void>(
         opaque: true,
         barrierColor: Colors.black,
-        transitionDuration: const Duration(milliseconds: 220),
+        transitionDuration: OmniDuration.base,
         reverseTransitionDuration: const Duration(milliseconds: 180),
         pageBuilder: (_, animation, _) => FadeTransition(
           opacity: CurvedAnimation(parent: animation, curve: Curves.easeOut),
@@ -1279,7 +1283,7 @@ class _NetworkMediaImageState extends State<_NetworkMediaImage> {
       key: ValueKey('${widget.url}#$_attempt'),
       imageUrl: widget.url,
       fit: widget.fit,
-      fadeInDuration: const Duration(milliseconds: 140),
+      fadeInDuration: OmniDuration.fast,
       fadeOutDuration: const Duration(milliseconds: 80),
       useOldImageOnUrlChange: true,
       memCacheWidth: decodeWidth,
@@ -1461,7 +1465,7 @@ class _FileAttachments extends StatelessWidget {
                     children: [
                       Icon(
                         Icons.insert_drive_file_outlined,
-                        size: 18,
+                        size: OmniIconSize.md,
                         color: OmniColors.chatPrimary,
                       ),
                       const SizedBox(width: 6),
@@ -1478,7 +1482,7 @@ class _FileAttachments extends StatelessWidget {
                       const SizedBox(width: 7),
                       Icon(
                         Icons.download_rounded,
-                        size: 17,
+                        size: OmniIconSize.md,
                         color: scheme.onSurfaceVariant,
                       ),
                     ],

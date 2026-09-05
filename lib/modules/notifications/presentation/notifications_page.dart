@@ -252,7 +252,7 @@ class _KindIcon extends StatelessWidget {
         color: colour.withValues(alpha: 0.12),
         borderRadius: BorderRadius.circular(OmniRadius.md),
       ),
-      child: Icon(icon, size: 20, color: colour),
+      child: Icon(icon, size: OmniIconSize.lg, color: colour),
     );
   }
 }

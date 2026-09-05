@@ -356,7 +356,7 @@ class _ThreadPageState extends ConsumerState<ThreadPage>
       if (target != null) {
         Scrollable.ensureVisible(
           target,
-          duration: const Duration(milliseconds: 220),
+          duration: OmniDuration.base,
           curve: Curves.easeOut,
           alignment: 0.35,
         );
@@ -519,12 +519,12 @@ class _ThreadAppBar extends StatelessWidget implements PreferredSizeWidget {
                         names: conversation!.groupMembers
                             .map((m) => m.name ?? '?')
                             .toList(),
-                        size: 40,
+                        size: OmniIconSize.hero,
                       )
                     : OmniAvatar(
                         name: conversation!.title,
                         imageUrl: conversation!.customerAvatar,
-                        size: 40,
+                        size: OmniIconSize.hero,
                       ),
                 const SizedBox(width: 10),
                 Expanded(
@@ -797,7 +797,7 @@ class _ReadOnlyBar extends StatelessWidget {
         children: [
           Icon(
             Icons.lock_outline_rounded,
-            size: 16,
+            size: OmniIconSize.sm,
             color: scheme.onSurfaceVariant,
           ),
           const SizedBox(width: OmniSpacing.sm),

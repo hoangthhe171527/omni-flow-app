@@ -78,7 +78,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                       child: const Icon(
                         Icons.layers_rounded,
                         color: Colors.white,
-                        size: 26,
+                        size: OmniIconSize.xl,
                       ),
                     ),
                     const SizedBox(height: OmniSpacing.xxl),
@@ -109,7 +109,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                           hintText: 'ten@congty.vn',
                           prefixIcon: Icon(
                             Icons.mail_outline_rounded,
-                            size: 20,
+                            size: OmniIconSize.lg,
                           ),
                         ),
                         validator: (value) {
@@ -135,14 +135,14 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                           hintText: 'Nhập mật khẩu',
                           prefixIcon: const Icon(
                             Icons.lock_outline_rounded,
-                            size: 20,
+                            size: OmniIconSize.lg,
                           ),
                           suffixIcon: IconButton(
                             icon: Icon(
                               _obscure
                                   ? Icons.visibility_outlined
                                   : Icons.visibility_off_outlined,
-                              size: 20,
+                              size: OmniIconSize.lg,
                             ),
                             onPressed: () =>
                                 setState(() => _obscure = !_obscure),
@@ -166,7 +166,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                           children: [
                             Icon(
                               Icons.error_outline_rounded,
-                              size: 18,
+                              size: OmniIconSize.md,
                               color: scheme.error,
                             ),
                             const SizedBox(width: OmniSpacing.sm),

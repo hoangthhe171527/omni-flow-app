@@ -220,7 +220,7 @@ class _SourceLabel extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(meta.icon, size: 13, color: meta.color),
+          Icon(meta.icon, size: OmniIconSize.xs, color: meta.color),
           const SizedBox(width: 4),
           Flexible(
             child: Text(
@@ -267,12 +267,12 @@ class _Avatar extends StatelessWidget {
                   names: conversation.groupMembers
                       .map((m) => m.name ?? '?')
                       .toList(),
-                  size: 52,
+                  size: OmniIconSize.hero,
                 )
               : OmniAvatar(
                   name: conversation.title,
                   imageUrl: conversation.customerAvatar,
-                  size: 52,
+                  size: OmniIconSize.hero,
                 ),
           Positioned(
             right: -1,
@@ -289,7 +289,11 @@ class _Avatar extends StatelessWidget {
                   // sitting on top of the avatar rather than punched into it.
                   border: Border.all(color: scheme.surface, width: 2),
                 ),
-                child: Icon(meta.icon, size: 10, color: Colors.white),
+                child: Icon(
+                  meta.icon,
+                  size: OmniIconSize.xs,
+                  color: Colors.white,
+                ),
               ),
             ),
           ),

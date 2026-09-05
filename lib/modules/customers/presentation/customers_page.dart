@@ -69,7 +69,11 @@ class _CustomersPageState extends ConsumerState<CustomersPage> {
                 padding: const EdgeInsets.fromLTRB(16, 4, 16, 4),
                 child: Row(
                   children: [
-                    Icon(Icons.search_rounded, size: 22, color: meta),
+                    Icon(
+                      Icons.search_rounded,
+                      size: OmniIconSize.lg,
+                      color: meta,
+                    ),
                     const SizedBox(width: 12),
                     Expanded(
                       child: TextField(

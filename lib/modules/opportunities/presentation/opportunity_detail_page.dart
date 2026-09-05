@@ -269,7 +269,7 @@ class _StageStepper extends StatelessWidget {
                 child: i < currentIndex
                     ? const Icon(
                         Icons.check_rounded,
-                        size: 13,
+                        size: OmniIconSize.xs,
                         color: Colors.white,
                       )
                     : null,

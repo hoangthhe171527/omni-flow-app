@@ -44,7 +44,7 @@ class ConversationContextSheet extends ConsumerWidget {
               OmniAvatar(
                 name: threadInfo.title,
                 imageUrl: threadInfo.customerAvatar,
-                size: 56,
+                size: OmniIconSize.hero,
               ),
               const SizedBox(width: OmniSpacing.md),
               Expanded(
@@ -298,7 +298,7 @@ class _AssetTabs extends StatelessWidget {
                     children: [
                       Icon(
                         _tabs[index].$1,
-                        size: 20,
+                        size: OmniIconSize.lg,
                         color: selected == index
                             ? OmniColors.chatPrimary
                             : scheme.onSurfaceVariant,
@@ -434,7 +434,7 @@ class _MediaViewerPageState extends State<_MediaViewerPage> {
                     errorWidget: (_, _, _) => const Icon(
                       Icons.broken_image_outlined,
                       color: Colors.white54,
-                      size: 48,
+                      size: OmniIconSize.hero,
                     ),
                   ),
           ),
@@ -470,7 +470,7 @@ class _AssetTile extends StatelessWidget {
           child: Icon(
             Icons.play_circle_fill_rounded,
             color: Colors.white,
-            size: 42,
+            size: OmniIconSize.hero,
           ),
         ),
         Positioned(
@@ -619,7 +619,7 @@ class _QuickAction extends StatelessWidget {
       padding: const EdgeInsets.symmetric(vertical: OmniSpacing.md),
       child: Column(
         children: [
-          Icon(icon, size: 20, color: scheme.primary),
+          Icon(icon, size: OmniIconSize.lg, color: scheme.primary),
           const SizedBox(height: 5),
           Text(label, style: OmniType.micro.copyWith(color: scheme.onSurface)),
         ],

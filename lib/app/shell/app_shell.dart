@@ -128,7 +128,7 @@ class _ShellNavigationRail extends ConsumerWidget {
       selectedIconTheme: IconThemeData(color: scheme.primary, size: 24),
       unselectedIconTheme: IconThemeData(
         color: scheme.onSurfaceVariant,
-        size: 23,
+        size: OmniIconSize.xl,
       ),
       selectedLabelTextStyle: OmniType.micro.copyWith(
         color: scheme.primary,
@@ -150,7 +150,7 @@ class _ShellNavigationRail extends ConsumerWidget {
           child: const Icon(
             Icons.layers_rounded,
             color: Colors.white,
-            size: 23,
+            size: OmniIconSize.xl,
           ),
         ),
       ),
@@ -277,7 +277,7 @@ class _ShellNavItem extends ConsumerWidget {
                   selected
                       ? (destination?.selectedIcon ?? selectedIcon!)
                       : (destination?.icon ?? icon!),
-                  size: 23,
+                  size: OmniIconSize.xl,
                   color: color,
                 ),
                 if (count > 0)

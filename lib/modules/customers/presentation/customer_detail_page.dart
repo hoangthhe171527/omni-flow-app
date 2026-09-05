@@ -269,7 +269,7 @@ class _ActionTile extends StatelessWidget {
       padding: const EdgeInsets.symmetric(vertical: OmniSpacing.md),
       child: Column(
         children: [
-          Icon(icon, size: 20, color: color),
+          Icon(icon, size: OmniIconSize.lg, color: color),
           const SizedBox(height: 5),
           Text(label, style: OmniType.micro.copyWith(color: color)),
         ],

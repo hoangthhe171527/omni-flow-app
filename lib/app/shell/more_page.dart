@@ -49,7 +49,7 @@ class MorePage extends ConsumerWidget {
                     OmniAvatar(
                       name: session.displayName,
                       imageUrl: session.user?.avatarUrl,
-                      size: 52,
+                      size: OmniIconSize.hero,
                     ),
                     const SizedBox(width: OmniSpacing.md),
                     Expanded(
@@ -85,7 +85,7 @@ class MorePage extends ConsumerWidget {
                   children: [
                     Icon(
                       Icons.workspaces_outline,
-                      size: 20,
+                      size: OmniIconSize.lg,
                       color: scheme.primary,
                     ),
                     const SizedBox(width: OmniSpacing.md),
@@ -320,7 +320,7 @@ class _MenuTile extends StatelessWidget {
           color: iconBackground,
           borderRadius: OmniRadius.smAll,
         ),
-        child: Icon(icon, size: 18, color: iconColor),
+        child: Icon(icon, size: OmniIconSize.md, color: iconColor),
       ),
       title: Text(
         label,
@@ -456,7 +456,7 @@ class _ThemeTile extends ConsumerWidget {
             ),
             child: Icon(
               themeModeDisplay(mode).icon,
-              size: 18,
+              size: OmniIconSize.md,
               color: scheme.primary,
             ),
           ),

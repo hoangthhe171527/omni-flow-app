@@ -151,7 +151,7 @@ class OmniTag extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           if (icon != null) ...[
-            Icon(icon, size: 12, color: color),
+            Icon(icon, size: OmniIconSize.xs, color: color),
             const SizedBox(width: 4),
           ],
           Text(
@@ -194,7 +194,7 @@ class OmniCountBadge extends StatelessWidget {
     return TweenAnimationBuilder<double>(
       key: ValueKey(count),
       tween: Tween(begin: 0.6, end: 1),
-      duration: const Duration(milliseconds: 220),
+      duration: OmniDuration.base,
       curve: Curves.easeOutBack,
       builder: (context, scale, child) =>
           Transform.scale(scale: scale, child: child),
@@ -268,7 +268,7 @@ class OmniStatusChip extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           if (icon != null) ...[
-            Icon(icon, size: 13, color: tone.color),
+            Icon(icon, size: OmniIconSize.xs, color: tone.color),
             const SizedBox(width: 5),
           ],
           Text(

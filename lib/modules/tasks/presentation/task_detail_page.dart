@@ -298,7 +298,7 @@ class _Viewers extends StatelessWidget {
             children: [
               Icon(
                 Icons.visibility_outlined,
-                size: 16,
+                size: OmniIconSize.sm,
                 color: scheme.onSurfaceVariant,
               ),
               const SizedBox(width: OmniSpacing.xs),
@@ -525,7 +525,7 @@ class _Chip extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 16, color: tone),
+          Icon(icon, size: OmniIconSize.sm, color: tone),
           const SizedBox(width: OmniSpacing.xs),
           Text(label, style: OmniType.caption.copyWith(color: tone)),
         ],
