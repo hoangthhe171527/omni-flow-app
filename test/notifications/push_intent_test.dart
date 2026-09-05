@@ -43,6 +43,23 @@ void main() {
       expect(intent.id, 't-1');
     });
 
+    test('an overdue reminder opens the late task', () {
+      // The reminder sweep pushes only for work that is already late; the
+      // due-soon variant reaches the bell but not the phone. Both resolve, so
+      // tapping either one from the notification list goes somewhere.
+      expect(
+        PushIntent.fromData({'type': 'task_overdue', 'task_id': 't-1'})!.id,
+        't-1',
+      );
+      expect(
+        PushIntent.fromData({
+          'type': 'task_due_soon',
+          'task_id': 't-1',
+        })!.target,
+        PushTarget.task,
+      );
+    });
+
     test('a completion opens the finished task', () {
       final intent = PushIntent.fromData({
         'type': 'task_completed',

@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 
+import '../../../core/utils/formatters.dart';
 import '../../../design/components/components.dart';
 import '../../../design/tokens/tokens.dart';
 import '../application/task_controller.dart';
@@ -85,6 +86,7 @@ class _Loaded extends ConsumerWidget {
                 if (task.description != null &&
                     task.description!.trim().isNotEmpty)
                   _Description(text: task.description!),
+                if (task.viewers.isNotEmpty) _Viewers(viewers: task.viewers),
               ],
             ),
           ),
@@ -268,6 +270,66 @@ class _Description extends StatelessWidget {
           ),
           const SizedBox(height: OmniSpacing.sm),
           Text(text, style: OmniType.body),
+        ],
+      ),
+    );
+  }
+}
+
+/// "Thành viên đã xem" — who has opened this task.
+///
+/// Placed last, below the work itself: it answers the manager's question
+/// ("did they get it") and never the worker's, so it must not sit between a
+/// worker and the stage they came to tick.
+class _Viewers extends StatelessWidget {
+  const _Viewers({required this.viewers});
+
+  final List<TaskViewer> viewers;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.only(top: OmniSpacing.sm),
+      color: OmniColors.card,
+      padding: const EdgeInsets.all(OmniSpacing.lg),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(
+                Icons.visibility_outlined,
+                size: 16,
+                color: OmniColors.mutedForeground,
+              ),
+              const SizedBox(width: OmniSpacing.xs),
+              Text(
+                'Thành viên đã xem',
+                style: OmniType.overline.copyWith(
+                  color: OmniColors.mutedForeground,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: OmniSpacing.md),
+          Wrap(
+            spacing: OmniSpacing.sm,
+            runSpacing: OmniSpacing.sm,
+            children: [
+              for (final viewer in viewers)
+                Tooltip(
+                  message: viewer.viewedAt == null
+                      ? viewer.label
+                      : '${viewer.label} · ${Formatters.relative(viewer.viewedAt)}',
+                  child: _Chip(
+                    icon: Icons.check_rounded,
+                    label: viewer.label,
+                    color: OmniColors.mutedForeground,
+                  ),
+                ),
+            ],
+          ),
         ],
       ),
     );

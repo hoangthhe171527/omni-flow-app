@@ -141,7 +141,9 @@ class PushIntent {
       // own, and the worker needs the surrounding work to act on it anyway.
       'task_assigned' ||
       'task_stage_open' ||
-      'task_completed' => PushTarget.task,
+      'task_completed' ||
+      'task_overdue' ||
+      'task_due_soon' => PushTarget.task,
       _ => null,
     };
     if (target == null) return null;

@@ -43,6 +43,28 @@ class Subtask {
   );
 }
 
+/// Somebody who has opened this task, and when they last did.
+///
+/// A seen-list, not an audit log: the manager's question is "did they get it",
+/// which one row per person answers and a row per open buries.
+class TaskViewer {
+  const TaskViewer({required this.userId, this.name, this.viewedAt});
+
+  factory TaskViewer.fromJson(Map<String, dynamic> json) => TaskViewer(
+    userId: json.strOr('user_id', ''),
+    name: json.str('name'),
+    viewedAt: DateUtilsX.parse(json['viewed_at']),
+  );
+
+  final String userId;
+  final String? name;
+  final DateTime? viewedAt;
+
+  /// Falls back to the id rather than showing nothing: the API fills the name
+  /// only when it can resolve the membership, and a blank chip is unreadable.
+  String get label => (name ?? '').trim().isEmpty ? userId : name!.trim();
+}
+
 /// A unit of work somebody is responsible for.
 class Task {
   const Task({
@@ -61,6 +83,7 @@ class Task {
     this.customFields = const {},
     this.attachmentCount = 0,
     this.commentCount = 0,
+    this.viewers = const [],
   });
 
   factory Task.fromJson(Map<String, dynamic> json) => Task(
@@ -83,6 +106,7 @@ class Task {
     customFields: json.child('custom_fields'),
     attachmentCount: json.intOr('attachments_count'),
     commentCount: json.intOr('comments_count'),
+    viewers: json.mapList('viewers').map(TaskViewer.fromJson).toList(),
   );
 
   final String id;
@@ -100,6 +124,10 @@ class Task {
   final Map<String, dynamic> customFields;
   final int attachmentCount;
   final int commentCount;
+
+  /// Who has opened this task. Empty on a list row — the API sends it only on
+  /// the detail response, where it is worth the bytes.
+  final List<TaskViewer> viewers;
 
   /// Only `done` is terminal; every other status id is defined by the project.
   bool get isDone => status == 'done';
@@ -159,5 +187,6 @@ class Task {
     customFields: customFields,
     attachmentCount: attachmentCount,
     commentCount: commentCount,
+    viewers: viewers,
   );
 }
