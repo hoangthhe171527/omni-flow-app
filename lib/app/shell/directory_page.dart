@@ -7,6 +7,7 @@ import '../../core/config/app_config.dart';
 import '../../core/error/app_exception.dart';
 import '../../core/module/module_registry.dart';
 import '../../core/module/nav_destination.dart';
+import '../router/shell_routes.dart';
 import '../../design/components/components.dart';
 import '../../design/tokens/tokens.dart';
 import '../../core/theme/theme_mode_controller.dart';
@@ -124,7 +125,21 @@ class _DirectoryPageState extends ConsumerState<DirectoryPage> {
                 title: 'Hiển thị',
                 padding: _headerPadding,
               ),
-              OmniCard(padding: EdgeInsets.zero, child: const _ThemeTile()),
+              OmniCard(
+                padding: EdgeInsets.zero,
+                child: Column(
+                  children: [
+                    const _ThemeTile(),
+                    const Divider(height: 1, indent: OmniSpacing.section),
+                    _MenuTile(
+                      icon: Icons.tab_rounded,
+                      label: 'Chọn tab',
+                      subtitle: 'Chọn 4 mục hiện ở thanh dưới',
+                      onTap: () => context.pushNamed(ShellRoutes.pinTabs),
+                    ),
+                  ],
+                ),
+              ),
 
               Padding(
                 padding: const EdgeInsets.only(top: OmniSpacing.lg),
@@ -507,12 +522,29 @@ class _ThemeTile extends ConsumerWidget {
 /// Người dùng gõ trên bàn phím điện thoại, giữa lúc làm việc, và sẽ không bật
 /// bộ gõ tiếng Việt lên chỉ để tìm một màn hình.
 String foldDiacritics(String input) {
+  // Hai chuỗi này phải khớp từng ký tự một. Lệch một là mọi chữ sau đó ánh xạ
+  // sai — âm thầm, không lỗi, chỉ là tìm không ra. Nhóm theo nguyên âm để đếm
+  // được bằng mắt: a×17, e×11, i×5, o×17, u×11, y×5, đ×1 = 67.
   const marks =
-      'àáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩ'
-      'òóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹđ';
+      'àáạảãâầấậẩẫăằắặẳẵ' // a
+      'èéẹẻẽêềếệểễ' // e
+      'ìíịỉĩ' // i
+      'òóọỏõôồốộổỗơờớợởỡ' // o
+      'ùúụủũưừứựửữ' // u
+      'ỳýỵỷỹ' // y
+      'đ';
   const plain =
-      'aaaaaaaaaaaaaaaaaeeeeeeeeeee iiiii'
-      'ooooooooooooooooouuuuuuuuuuuyyyyyd';
+      'aaaaaaaaaaaaaaaaa'
+      'eeeeeeeeeee'
+      'iiiii'
+      'ooooooooooooooooo'
+      'uuuuuuuuuuu'
+      'yyyyy'
+      'd';
+  assert(
+    marks.length == plain.length,
+    'bảng bỏ dấu lệch: ${marks.length} vs ${plain.length}',
+  );
 
   final buffer = StringBuffer();
   for (final rune in input.toLowerCase().runes) {

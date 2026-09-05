@@ -9,6 +9,7 @@ import '../../security/session/session.dart';
 import '../../security/session/session_controller.dart';
 import '../shell/app_shell.dart';
 import '../shell/directory_page.dart';
+import '../shell/pin_tabs_page.dart';
 import '../shell/splash_page.dart';
 import 'access_boundary.dart';
 import 'session_refresh.dart';
@@ -66,6 +67,14 @@ final routerProvider = Provider<GoRouter>((ref) {
             ],
           ),
         ],
+      ),
+      // Màn chọn tab thuộc về shell, không thuộc module nào — nó nói về chính
+      // thanh dưới. Phủ lên shell vì mở ra rồi đóng lại, không giữ trạng thái.
+      GoRoute(
+        path: ShellRoutes.pinTabsPath,
+        name: ShellRoutes.pinTabs,
+        parentNavigatorKey: rootKey,
+        builder: (_, _) => const PinTabsPage(),
       ),
       for (final route in overlayRoutes) _toGoRoute(route, rootKey),
     ],
