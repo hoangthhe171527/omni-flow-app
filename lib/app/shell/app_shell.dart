@@ -112,7 +112,7 @@ class _ShellNavigationRail extends ConsumerWidget {
             Positioned(
               right: -10,
               top: -7,
-              child: OmniCountBadge(count: count, color: scheme.error),
+              child: OmniCountBadge(count: count, color: OmniColors.dangerText),
             ),
         ],
       );
@@ -284,7 +284,10 @@ class _ShellNavItem extends ConsumerWidget {
                   Positioned(
                     right: -10,
                     top: -6,
-                    child: OmniCountBadge(count: count, color: scheme.error),
+                    child: OmniCountBadge(
+                      count: count,
+                      color: OmniColors.dangerText,
+                    ),
                   ),
               ],
             ),

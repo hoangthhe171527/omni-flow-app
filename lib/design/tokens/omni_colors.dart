@@ -26,13 +26,29 @@ abstract final class OmniColors {
   // ---- Text --------------------------------------------------------------
   static const foreground = Color(0xFF20212B);
   static const secondaryForeground = Color(0xFF353643);
-  static const mutedForeground = Color(0xFF777889);
+
+  /// Chữ phụ.
+  ///
+  /// #777889 cũ chỉ đạt 4.10:1 trên nền trang, dưới ngưỡng AA — ở 82 chỗ trong
+  /// app. Giá trị này đạt 5.53:1 trên nền trang và 5.86:1 trên thẻ, mà mắt
+  /// thường gần như không thấy khác.
+  static const mutedForeground = Color(0xFF63646F);
 
   // ---- Semantic ----------------------------------------------------------
   static const success = Color(0xFF10B981);
   static const warning = Color(0xFFF59E0B);
   static const destructive = Color(0xFFEF4444);
   static const info = Color(0xFF0EA5E9);
+
+  // Bản đậm hơn của ba màu trên, dành riêng cho CHỮ. Bản gốc đạt lần lượt
+  // 2.54:1, 2.15:1 và 3.76:1 trên nền trắng — tốt để tô, không đủ để đọc.
+  //
+  // Giữ cả hai vì đây là hai việc khác nhau: icon lớn, thanh tiến độ, chấm
+  // trạng thái vẫn dùng bản gốc để không bị xỉn đi. Một cái NỀN mang chữ trắng
+  // thì tính là chữ — badge đỏ chữ trắng chỉ đạt 3.76:1 với bản gốc.
+  static const successText = Color(0xFF067A55);
+  static const warningText = Color(0xFF9A6206);
+  static const dangerText = Color(0xFFC2251C);
 
   // ---- Dark theme --------------------------------------------------------
   static const darkBackground = Color(0xFF0B1120);

@@ -174,7 +174,7 @@ class _BellButton extends StatelessWidget {
                   ),
                   constraints: const BoxConstraints(minWidth: 16),
                   decoration: const BoxDecoration(
-                    color: OmniColors.destructive,
+                    color: OmniColors.dangerText,
                     borderRadius: OmniRadius.pillAll,
                   ),
                   child: Text(

@@ -223,7 +223,7 @@ class _FailureNotice extends StatelessWidget {
             const Icon(
               Icons.error_outline_rounded,
               size: 14,
-              color: OmniColors.destructive,
+              color: OmniColors.dangerText,
             ),
             const SizedBox(width: OmniSpacing.xs),
             Expanded(
@@ -231,7 +231,7 @@ class _FailureNotice extends StatelessWidget {
                 'Chưa lưu được: $reason',
                 style: Theme.of(
                   context,
-                ).textTheme.labelSmall?.copyWith(color: OmniColors.destructive),
+                ).textTheme.labelSmall?.copyWith(color: OmniColors.dangerText),
               ),
             ),
           ],

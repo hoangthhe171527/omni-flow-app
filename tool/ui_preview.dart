@@ -21,7 +21,6 @@ import 'package:omni_app/modules/notifications/data/notifications_api.dart';
 import 'package:omni_app/modules/notifications/domain/app_notification.dart';
 import 'package:omni_app/modules/notifications/presentation/notifications_page.dart';
 import 'package:omni_app/modules/tasks/application/task_controller.dart';
-import 'package:omni_app/modules/tasks/application/tasks_providers.dart';
 import 'package:omni_app/modules/tasks/data/tasks_api.dart';
 import 'package:omni_app/modules/tasks/domain/task.dart';
 import 'package:omni_app/modules/tasks/domain/task_permissions.dart';
@@ -37,8 +36,7 @@ void main() => runApp(const ProviderScope(child: _PreviewApp()));
 // Stub data
 // ---------------------------------------------------------------------------
 
-String _iso(Duration offset) =>
-    DateTime.now().add(offset).toIso8601String();
+String _iso(Duration offset) => DateTime.now().add(offset).toIso8601String();
 
 /// Deliberately not all tidy: a piano that is late, one due today, one with no
 /// deadline at all, and a title long enough to need two lines.
@@ -54,7 +52,12 @@ final _tasks = <Map<String, dynamic>>[
         'Khách yêu cầu giữ nguyên màu vecni gốc. Kiểm tra kỹ phần chốt trước '
         'khi lắp lại bộ máy.',
     'checklist': [
-      {'id': 's-1', 'title': 'Tháo bộ máy', 'done': true, 'assignee_name': 'Luận'},
+      {
+        'id': 's-1',
+        'title': 'Tháo bộ máy',
+        'done': true,
+        'assignee_name': 'Luận',
+      },
       {'id': 's-2', 'title': 'Vệ sinh khung sườn', 'done': true},
       {
         'id': 's-3',
@@ -176,7 +179,9 @@ class _StubTasksApi implements TasksApi {
         TaskBucket.today => tasks.where((t) => t.isDueToday).toList(),
         TaskBucket.overdue => tasks.where((t) => t.isOverdue).toList(),
         TaskBucket.upcoming =>
-          tasks.where((t) => !t.isOverdue && !t.isDueToday && !t.isDone).toList(),
+          tasks
+              .where((t) => !t.isOverdue && !t.isDueToday && !t.isDone)
+              .toList(),
         TaskBucket.all => tasks,
       },
       pagination: const ApiPagination(
@@ -209,7 +214,8 @@ class _StubTasksApi implements TasksApi {
     if (subtaskId == 's-4') throw Exception('offline');
 
     final row = _rows.firstWhere((t) => t['id'] == taskId);
-    for (final item in (row['checklist'] as List).cast<Map<String, dynamic>>()) {
+    for (final item
+        in (row['checklist'] as List).cast<Map<String, dynamic>>()) {
       if (item['id'] == subtaskId) item['done'] = done;
     }
 
@@ -229,7 +235,11 @@ class _StubTasksApi implements TasksApi {
   Future<void> comment(String taskId, String body) async {}
 
   @override
-  Future<void> attach(String taskId, String filePath, {String? filename}) async {}
+  Future<void> attach(
+    String taskId,
+    String filePath, {
+    String? filename,
+  }) async {}
 }
 
 class _StubNotificationsApi implements NotificationsApi {

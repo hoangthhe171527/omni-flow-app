@@ -189,7 +189,7 @@ class _CustomerFormPageState extends ConsumerState<CustomerFormPage> {
                     const Icon(
                       Icons.warning_amber_rounded,
                       size: 18,
-                      color: OmniColors.warning,
+                      color: OmniColors.warningText,
                     ),
                     const SizedBox(width: OmniSpacing.sm),
                     Expanded(
