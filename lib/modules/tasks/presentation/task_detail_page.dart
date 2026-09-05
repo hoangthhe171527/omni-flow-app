@@ -28,7 +28,6 @@ class TaskDetailPage extends ConsumerWidget {
     final access = ref.watch(taskAccessProvider);
 
     return Scaffold(
-      backgroundColor: OmniColors.background,
       appBar: AppBar(
         title: const Text('Chi tiết công việc'),
         toolbarHeight: 56,
@@ -109,9 +108,10 @@ class _Header extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
     return Container(
       width: double.infinity,
-      color: OmniColors.card,
+      color: scheme.surface,
       padding: const EdgeInsets.fromLTRB(
         OmniSpacing.lg,
         OmniSpacing.lg,
@@ -124,9 +124,7 @@ class _Header extends StatelessWidget {
           if (task.projectName != null) ...[
             Text(
               task.projectName!,
-              style: OmniType.overline.copyWith(
-                color: OmniColors.mutedForeground,
-              ),
+              style: OmniType.overline.copyWith(color: scheme.onSurfaceVariant),
             ),
             const SizedBox(height: OmniSpacing.xs),
           ],
@@ -160,6 +158,7 @@ class _Progress extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
     final complete = task.doneCount == task.totalCount;
 
     return Column(
@@ -168,7 +167,7 @@ class _Progress extends StatelessWidget {
         Text(
           'Đã xong ${task.doneCount}/${task.totalCount} công đoạn',
           style: OmniType.caption.copyWith(
-            color: OmniColors.mutedForeground,
+            color: scheme.onSurfaceVariant,
             fontFeatures: OmniType.tabular,
           ),
         ),
@@ -178,9 +177,9 @@ class _Progress extends StatelessWidget {
           child: LinearProgressIndicator(
             value: task.progress,
             minHeight: 8,
-            backgroundColor: OmniColors.muted,
+            backgroundColor: scheme.surfaceContainerHighest,
             valueColor: AlwaysStoppedAnimation(
-              complete ? OmniColors.success : OmniColors.primary,
+              complete ? OmniColors.success : scheme.primary,
             ),
           ),
         ),
@@ -204,8 +203,9 @@ class _StageList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
     return Container(
-      color: OmniColors.card,
+      color: scheme.surface,
       padding: const EdgeInsets.symmetric(vertical: OmniSpacing.sm),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -219,9 +219,7 @@ class _StageList extends StatelessWidget {
             ),
             child: Text(
               'Công đoạn',
-              style: OmniType.overline.copyWith(
-                color: OmniColors.mutedForeground,
-              ),
+              style: OmniType.overline.copyWith(color: scheme.onSurfaceVariant),
             ),
           ),
           for (final subtask in task.subtasks) ...[
@@ -254,19 +252,18 @@ class _Description extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
     return Container(
       width: double.infinity,
       margin: const EdgeInsets.only(top: OmniSpacing.sm),
-      color: OmniColors.card,
+      color: scheme.surface,
       padding: const EdgeInsets.all(OmniSpacing.lg),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
             'Mô tả',
-            style: OmniType.overline.copyWith(
-              color: OmniColors.mutedForeground,
-            ),
+            style: OmniType.overline.copyWith(color: scheme.onSurfaceVariant),
           ),
           const SizedBox(height: OmniSpacing.sm),
           Text(text, style: OmniType.body),
@@ -288,26 +285,27 @@ class _Viewers extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
     return Container(
       width: double.infinity,
       margin: const EdgeInsets.only(top: OmniSpacing.sm),
-      color: OmniColors.card,
+      color: scheme.surface,
       padding: const EdgeInsets.all(OmniSpacing.lg),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              const Icon(
+              Icon(
                 Icons.visibility_outlined,
                 size: 16,
-                color: OmniColors.mutedForeground,
+                color: scheme.onSurfaceVariant,
               ),
               const SizedBox(width: OmniSpacing.xs),
               Text(
                 'Thành viên đã xem',
                 style: OmniType.overline.copyWith(
-                  color: OmniColors.mutedForeground,
+                  color: scheme.onSurfaceVariant,
                 ),
               ),
             ],
@@ -325,7 +323,7 @@ class _Viewers extends StatelessWidget {
                   child: _Chip(
                     icon: Icons.check_rounded,
                     label: viewer.label,
-                    color: OmniColors.mutedForeground,
+                    color: scheme.onSurfaceVariant,
                   ),
                 ),
             ],
@@ -363,6 +361,7 @@ class _ActionBarState extends ConsumerState<_ActionBar> {
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
     if (!widget.canComplete && !widget.canAttach) {
       return const SizedBox.shrink();
     }
@@ -370,9 +369,9 @@ class _ActionBarState extends ConsumerState<_ActionBar> {
     final done = widget.task.isDone;
 
     return Container(
-      decoration: const BoxDecoration(
-        color: OmniColors.card,
-        border: Border(top: BorderSide(color: OmniColors.border)),
+      decoration: BoxDecoration(
+        color: scheme.surface,
+        border: Border(top: BorderSide(color: scheme.outlineVariant)),
       ),
       child: SafeArea(
         top: false,
@@ -396,11 +395,9 @@ class _ActionBarState extends ConsumerState<_ActionBar> {
                       onPressed: _busy ? null : () => _setStatus(!done),
                       style: FilledButton.styleFrom(
                         backgroundColor: done
-                            ? OmniColors.muted
+                            ? scheme.surfaceContainerHighest
                             : OmniColors.success,
-                        foregroundColor: done
-                            ? OmniColors.foreground
-                            : Colors.white,
+                        foregroundColor: done ? scheme.onSurface : Colors.white,
                       ),
                       icon: Icon(
                         done
@@ -481,6 +478,7 @@ class _SquareButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
     return Tooltip(
       message: tooltip,
       child: SizedBox(
@@ -490,13 +488,13 @@ class _SquareButton extends StatelessWidget {
           onPressed: onPressed,
           style: OutlinedButton.styleFrom(
             padding: EdgeInsets.zero,
-            side: const BorderSide(color: OmniColors.border),
+            side: BorderSide(color: scheme.outlineVariant),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(OmniRadius.md),
             ),
           ),
           // Never icon-only to a screen reader: the tooltip names it aloud.
-          child: Icon(icon, color: OmniColors.secondaryForeground),
+          child: Icon(icon, color: scheme.onSurfaceVariant),
         ),
       ),
     );
@@ -512,15 +510,16 @@ class _Chip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final tone = color ?? OmniColors.secondaryForeground;
+    final scheme = Theme.of(context).colorScheme;
+    final tone = color ?? scheme.onSurfaceVariant;
 
     return Container(
       padding: const EdgeInsets.symmetric(
         horizontal: OmniSpacing.md,
         vertical: OmniSpacing.sm,
       ),
-      decoration: const BoxDecoration(
-        color: OmniColors.muted,
+      decoration: BoxDecoration(
+        color: scheme.surfaceContainerHighest,
         borderRadius: OmniRadius.pillAll,
       ),
       child: Row(
@@ -543,6 +542,7 @@ class _DueChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
     final overdue = task.daysOverdue;
     final (label, colour) = switch (task) {
       _ when overdue != null => (
@@ -552,9 +552,9 @@ class _DueChip extends StatelessWidget {
       _ when task.isDueToday => ('Hạn hôm nay', OmniColors.warning),
       _ when task.dueDate != null => (
         'Hạn ${task.dueDate!.day}/${task.dueDate!.month}',
-        OmniColors.secondaryForeground,
+        scheme.onSurfaceVariant,
       ),
-      _ => ('Chưa đặt hạn', OmniColors.mutedForeground),
+      _ => ('Chưa đặt hạn', scheme.onSurfaceVariant),
     };
 
     return _Chip(icon: Icons.schedule_rounded, label: label, color: colour);

@@ -47,6 +47,7 @@ class _NotificationsPageState extends ConsumerState<NotificationsPage> {
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
     // Holds the socket open for as long as this screen is mounted. The screen
     // owns the subscription, not the controller: fetching a list should not be
     // what opens a connection.
@@ -55,7 +56,6 @@ class _NotificationsPageState extends ConsumerState<NotificationsPage> {
     final unread = ref.watch(unreadNotificationCountProvider);
 
     return Scaffold(
-      backgroundColor: OmniColors.background,
       appBar: AppBar(
         title: const Text('Thông báo'),
         toolbarHeight: 56,
@@ -85,7 +85,7 @@ class _NotificationsPageState extends ConsumerState<NotificationsPage> {
             padding: const EdgeInsets.only(bottom: OmniSpacing.bottomSafe),
             itemCount: state.items.length,
             separatorBuilder: (_, _) =>
-                const Divider(height: 1, color: OmniColors.border),
+                Divider(height: 1, color: scheme.outlineVariant),
             itemBuilder: (context, index) {
               final notification = state.items[index];
 
@@ -127,12 +127,13 @@ class NotificationRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
     final unread = notification.isUnread;
 
     return Material(
       // Unread is carried by weight and a dot as well as by the tint, so it
       // survives both dim workshop light and colour-blindness.
-      color: unread ? OmniColors.accent : OmniColors.card,
+      color: unread ? scheme.primaryContainer : scheme.surface,
       child: InkWell(
         onTap: onTap,
         child: ConstrainedBox(
@@ -153,14 +154,14 @@ class NotificationRow extends StatelessWidget {
                         style: unread
                             ? OmniType.bodyStrong
                             : OmniType.body.copyWith(
-                                color: OmniColors.secondaryForeground,
+                                color: scheme.onSurfaceVariant,
                               ),
                       ),
                       const SizedBox(height: OmniSpacing.xxs),
                       Text(
                         notification.body,
                         style: OmniType.caption.copyWith(
-                          color: OmniColors.mutedForeground,
+                          color: scheme.onSurfaceVariant,
                         ),
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
@@ -170,7 +171,7 @@ class NotificationRow extends StatelessWidget {
                         Text(
                           Formatters.relative(notification.createdAt),
                           style: OmniType.micro.copyWith(
-                            color: OmniColors.mutedForeground,
+                            color: scheme.onSurfaceVariant,
                           ),
                         ),
                       ],
@@ -183,8 +184,8 @@ class NotificationRow extends StatelessWidget {
                     width: 8,
                     height: 8,
                     margin: const EdgeInsets.only(top: OmniSpacing.xs),
-                    decoration: const BoxDecoration(
-                      color: OmniColors.primary,
+                    decoration: BoxDecoration(
+                      color: scheme.primary,
                       shape: BoxShape.circle,
                     ),
                   ),
@@ -207,10 +208,11 @@ class _KindIcon extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
     final (icon, colour) = switch (kind) {
       NotificationKind.taskAssigned => (
         Icons.assignment_ind_outlined,
-        OmniColors.primary,
+        scheme.primary,
       ),
       NotificationKind.taskStageOpen => (
         Icons.pan_tool_alt_outlined,
@@ -234,15 +236,12 @@ class _KindIcon extends StatelessWidget {
       ),
       NotificationKind.taskCommented || NotificationKind.taskMentioned => (
         Icons.chat_bubble_outline_rounded,
-        OmniColors.primary,
+        scheme.primary,
       ),
-      NotificationKind.inboxMessage => (
-        Icons.forum_outlined,
-        OmniColors.primary,
-      ),
+      NotificationKind.inboxMessage => (Icons.forum_outlined, scheme.primary),
       NotificationKind.other => (
         Icons.notifications_none_rounded,
-        OmniColors.mutedForeground,
+        scheme.onSurfaceVariant,
       ),
     };
 
