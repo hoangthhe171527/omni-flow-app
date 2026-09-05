@@ -75,6 +75,7 @@ class Task {
     this.priority = 'med',
     this.projectId,
     this.projectName,
+    this.sectionId,
     this.assigneeIds = const [],
     this.assigneeNames = const [],
     this.dueDate,
@@ -94,6 +95,7 @@ class Task {
     priority: json.strOr('priority', 'med'),
     projectId: json.str('project_id'),
     projectName: json.str('project_name'),
+    sectionId: json.str('section_id'),
     assigneeIds: json.strList('assignee_ids'),
     assigneeNames: json.strList('assignee_names'),
     // The API writes the deadline as due_date; older documents used deadline.
@@ -116,6 +118,12 @@ class Task {
   final String priority;
   final String? projectId;
   final String? projectName;
+
+  /// Nhóm việc (công đoạn) công việc này đang nằm trong — một cột trên bảng.
+  ///
+  /// null nghĩa là chưa xếp vào công đoạn nào; bảng dồn chúng vào cột đầu
+  /// chứ không giấu đi. Một cây đàn không ai thấy là một cây đàn không ai làm.
+  final String? sectionId;
   final List<String> assigneeIds;
   final List<String> assigneeNames;
   final DateTime? dueDate;
