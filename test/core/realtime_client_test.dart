@@ -20,13 +20,20 @@ void main() {
   );
 
   late _FakeSocket socket;
+  late List<_FakeSocket> opened;
   late RealtimeClient client;
 
   setUp(() {
     socket = _FakeSocket();
+    opened = [socket];
     client = RealtimeClient(
       config: config,
-      socketFactory: (_) => socket,
+      // Hands out a fresh socket per connect after the first, so a reconnect
+      // can be driven the way the real one happens.
+      socketFactory: (_) {
+        if (opened.length == 1) return opened.first;
+        return opened.last;
+      },
       authorizer: (channel, socketId) async => 'key:sig-for-$channel',
     );
   });
@@ -179,6 +186,71 @@ void main() {
     expect(client.isConnected, isTrue);
   });
 
+  test('a reconnect re-subscribes instead of coming back silent', () async {
+    // The failure this guards is invisible: the socket returns, the status says
+    // connected, and no message ever arrives again because the server has no
+    // record of the subscription. A dropped connection loses its subscriptions,
+    // so the client has to reclaim them on the next handshake.
+    final received = <RealtimeEvent>[];
+    client.subscribe('private-conversation.c1', received.add);
+    await settle();
+    await handshake();
+    expect(client.isConnected, isTrue);
+
+    // The carrier drops the connection.
+    await socket.close();
+    await settle();
+    expect(client.isConnected, isFalse);
+
+    // What the backoff timer eventually does.
+    final reconnected = _FakeSocket();
+    opened.add(reconnected);
+    await client.connect();
+    await settle();
+    reconnected.emit({
+      'event': 'pusher:connection_established',
+      'data': jsonEncode({'socket_id': '2.2'}),
+    });
+    await settle();
+    await settle();
+
+    final subscribes = reconnected.sent
+        .map((raw) => jsonDecode(raw) as Map<String, dynamic>)
+        .where((frame) => frame['event'] == 'pusher:subscribe')
+        .toList();
+    expect(subscribes, hasLength(1), reason: 'the channel is claimed again');
+    expect(subscribes.first['data']['channel'], 'private-conversation.c1');
+    // Signed against the NEW socket id: a signature from the dead connection
+    // would be rejected.
+    expect(
+      subscribes.first['data']['auth'],
+      'key:sig-for-private-conversation.c1',
+    );
+
+    reconnected.emit({
+      'event': '.message.created',
+      'channel': 'private-conversation.c1',
+      'data': jsonEncode({'conversation_id': 'c1'}),
+    });
+    await settle();
+    expect(received, hasLength(1), reason: 'events flow again after reconnect');
+  });
+
+  test('a deliberate disconnect does not reconnect', () async {
+    // Logout must stay logged out. Reconnecting would reopen a socket
+    // authorized by the session that just ended.
+    client.subscribe('private-x', (_) {});
+    await settle();
+    await handshake();
+
+    await client.disconnect();
+    await settle();
+
+    expect(client.isConnected, isFalse);
+    // Nothing left to reclaim, so a later connect has no channels to restore.
+    expect(client.subscribedChannels, isEmpty);
+  });
+
   test('logout drops the socket and everything it was watching', () async {
     // The connection was authorized with the previous session's token and its
     // channels belong to that tenant; it must not survive into the next login.
@@ -215,6 +287,10 @@ class _FakeSocket implements WebSocketChannel {
   void emit(Map<String, dynamic> frame) => _incoming.add(jsonEncode(frame));
 
   void emitRaw(String frame) => _incoming.add(frame);
+
+  /// The connection dying on its own — what a proxy idle-timeout or a carrier
+  /// dropping a long-lived socket looks like to the client.
+  Future<void> close() => _incoming.close();
 
   @override
   Stream<dynamic> get stream => _incoming.stream;
