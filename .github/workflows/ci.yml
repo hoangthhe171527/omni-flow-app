@@ -1,0 +1,44 @@
+name: CI
+
+# Nothing ran automatically before this. Both checks below are green today
+# (`flutter analyze` reports no issues, `flutter test` passes 103 tests), so both
+# gate: a red build here means something actually broke.
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  analyze-and-test:
+    name: Analyze & test
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          # Dart 3.13 — satisfies the `sdk: ^3.11.5` constraint in pubspec.yaml.
+          flutter-version: '3.47.2'
+          channel: stable
+          cache: true
+
+      - name: Create .env
+        # pubspec declares `.env` as an asset, so the asset bundle fails to build
+        # without it — including for `flutter test`. It is gitignored because it
+        # holds the API base URL per environment; CI only needs the file to exist.
+        run: cp .env.example .env
+
+      - run: flutter pub get
+
+      - name: Analyze
+        # No `--no-fatal-infos`: the project is clean today, and the cheapest time
+        # to keep it that way is now.
+        run: flutter analyze
+
+      - name: Test
+        run: flutter test
