@@ -75,6 +75,13 @@ abstract final class OmniColors {
   static const destructive = Color(0xFFEF4444);
   static const info = Color(0xFF0EA5E9);
 
+  /// NỀN xanh dương mang chữ trắng.
+  ///
+  /// [info] là màu ĐỒ HOẠ — chấm, icon, viền trái. Chữ trắng trên nó chỉ đạt
+  /// 2.77:1, nên nó không bao giờ được làm nền cho chữ. Cùng cái bẫy đã bắt
+  /// [dangerSurface] ra đời.
+  static const infoSurface = Color(0xFF0369A1);
+
   // Bản đậm hơn của hai màu trên, dành riêng cho CHỮ. Bản gốc đạt lần lượt
   // 2.15:1 và 3.76:1 trên nền trắng — tốt để tô, không đủ để đọc.
   //
@@ -123,6 +130,13 @@ abstract final class OmniColors {
 
   /// Bản tối của [borderInteractive]. 3.02:1 trên thẻ tối.
   static const darkBorderInteractive = Color(0xFF5C6D68);
+
+  /// Bản tối của [accent] và [accentForeground].
+  ///
+  /// [accent] #E4F1EF là một khối sáng chói nếu đặt giữa màn hình tối — nền
+  /// nhấn phải TỐI đi cùng chiều với nền trang, chứ không giữ nguyên.
+  static const darkAccent = Color(0xFF123A34);
+  static const darkAccentForeground = Color(0xFF9FE3D6);
 
   static const darkForeground = Color(0xFFEAF2F0);
   static const darkMutedForeground = Color(0xFF9AAAA6);

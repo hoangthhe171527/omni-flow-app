@@ -15,9 +15,13 @@ abstract final class OmniTheme {
     surface: OmniColors.card,
     surfaceMuted: OmniColors.muted,
     border: OmniColors.border,
+    borderInteractive: OmniColors.borderInteractive,
     onSurface: OmniColors.foreground,
     onSurfaceMuted: OmniColors.mutedForeground,
     primary: OmniColors.primary,
+    onPrimary: OmniColors.primaryForeground,
+    accent: OmniColors.accent,
+    onAccent: OmniColors.accentForeground,
   );
 
   static ThemeData dark([TargetPlatform? platform]) => _build(
@@ -27,9 +31,15 @@ abstract final class OmniTheme {
     surface: OmniColors.darkCard,
     surfaceMuted: OmniColors.darkMuted,
     border: OmniColors.darkBorder,
+    borderInteractive: OmniColors.darkBorderInteractive,
     onSurface: OmniColors.darkForeground,
     onSurfaceMuted: OmniColors.darkMutedForeground,
     primary: OmniColors.darkPrimary,
+    // Chữ TỐI trên nút chính. Nền tối buộc [primary] phải sáng, và trắng trên
+    // #4FBFAE chỉ đạt 2.18:1 — đây là chỗ hai chế độ buộc phải khác nhau.
+    onPrimary: OmniColors.darkPrimaryForeground,
+    accent: OmniColors.darkAccent,
+    onAccent: OmniColors.darkAccentForeground,
   );
 
   static ThemeData _build({
@@ -39,25 +49,36 @@ abstract final class OmniTheme {
     required Color surface,
     required Color surfaceMuted,
     required Color border,
+    required Color borderInteractive,
     required Color onSurface,
     required Color onSurfaceMuted,
     required Color primary,
+    required Color onPrimary,
+    required Color accent,
+    required Color onAccent,
   }) {
     final scheme = ColorScheme(
       brightness: brightness,
       primary: primary,
-      onPrimary: OmniColors.primaryForeground,
-      primaryContainer: OmniColors.accent,
-      onPrimaryContainer: OmniColors.accentForeground,
-      secondary: OmniColors.info,
+      onPrimary: onPrimary,
+      primaryContainer: accent,
+      onPrimaryContainer: onAccent,
+      // Khe `secondary` và `error` là NỀN mang chữ trắng, nên phải dùng bản
+      // đậm. OmniColors.info và .destructive là màu ĐỒ HOẠ — trắng trên chúng
+      // chỉ đạt 2.77:1 và 3.76:1.
+      secondary: OmniColors.infoSurface,
       onSecondary: Colors.white,
-      error: OmniColors.destructive,
+      error: OmniColors.dangerSurface,
       onError: Colors.white,
       surface: surface,
       onSurface: onSurface,
       surfaceContainerHighest: surfaceMuted,
       onSurfaceVariant: onSurfaceMuted,
-      outline: border,
+      // Hai vai khác nhau: `outline` vẽ ranh giới thành phần TƯƠNG TÁC (ô
+      // nhập, nút viền) và phải đạt 3:1 theo WCAG 1.4.11; `outlineVariant` vẽ
+      // vạch ngăn TRANG TRÍ và được phép nhạt. Trước đây cả hai cùng một màu,
+      // tức là vai thứ nhất đang sai.
+      outline: borderInteractive,
       outlineVariant: border,
     );
 
