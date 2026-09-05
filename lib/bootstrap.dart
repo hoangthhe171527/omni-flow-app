@@ -15,6 +15,7 @@ import 'modules/customers/customers_module.dart';
 import 'modules/inbox/inbox_module.dart';
 import 'modules/notifications/notifications_module.dart';
 import 'modules/opportunities/opportunities_module.dart';
+import 'modules/plans/plans_module.dart';
 import 'modules/settings/settings_module.dart';
 import 'modules/tasks/tasks_module.dart';
 import 'modules/team/team_module.dart';
@@ -29,6 +30,7 @@ const List<OmniModule> appModules = [
   AuthModule(),
   InboxModule(),
   TasksModule(),
+  PlansModule(),
   CustomersModule(),
   OpportunitiesModule(),
   TeamModule(),

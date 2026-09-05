@@ -62,7 +62,10 @@ void main() {
     // work → communication → sales. Thiên về xưởng có chủ đích: người giữ đủ
     // quyền thấy "Việc của tôi" trước "Hộp thư". Đổi lại là đổi thứ tự các
     // hằng trong enum NavArea — một dòng, một chỗ.
-    expect(labels, ['Việc của tôi', 'Hộp thư', 'Khách hàng']);
+    //
+    // "Teams" đứng ngay sau "Việc của tôi" vì cùng NavArea.work và order 20 so
+    // với 10: thợ mở hàng đợi của mình trước, toàn cảnh xưởng sau.
+    expect(labels, ['Việc của tôi', 'Teams', 'Hộp thư', 'Khách hàng']);
   });
 
   test('người chỉ có quyền bán hàng vẫn được tab của mình', () {
