@@ -16,45 +16,70 @@ final moduleRoutesProvider = Provider<List<ModuleRoute>>((ref) {
   return [for (final module in ref.watch(modulesProvider)) ...module.routes()];
 });
 
-/// Every declared tab, permission-independent and stably ordered. The router
-/// builds one navigation branch per entry, so the branch list never changes
-/// underneath a running app — only which of them the user can see.
-final declaredDestinationsProvider = Provider<List<ModuleDestination>>((ref) {
-  final destinations = <ModuleDestination>[
-    for (final module in ref.watch(modulesProvider)) ...module.destinations(),
-  ]..sort((a, b) => a.order.compareTo(b.order));
-  return destinations;
-});
+/// Mọi mục đã khai báo, không lọc quyền, thứ tự ổn định.
+///
+/// Router dựng branch từ danh sách này, nên nó KHÔNG được co giãn theo quyền —
+/// cấu trúc branch đổi dưới chân người dùng là mọi tab mất vị trí cuộn và form
+/// đang gõ dở.
+///
+/// Sắp theo (nhóm, order trong nhóm): nhóm quyết trước, nên `order` chỉ cần
+/// đúng trong phạm vi module tự biết.
+final declaredNavEntriesProvider = Provider<List<ModuleNavEntry>>((ref) {
+  final entries =
+      <ModuleNavEntry>[
+        for (final module in ref.watch(modulesProvider)) ...module.navEntries(),
+      ]..sort((a, b) {
+        final byArea = a.area.index.compareTo(b.area.index);
 
-/// Tabs the current session may see. Recomputed automatically when permissions
-/// change (tenant switch, or a role edit picked up by a context reload).
-final visibleDestinationsProvider = Provider<List<ModuleDestination>>((ref) {
-  final policy = ref.watch(accessProvider);
-  return ref
-      .watch(declaredDestinationsProvider)
-      .where((destination) => destination.access.isSatisfiedBy(policy))
-      .toList();
-});
+        return byArea != 0 ? byArea : a.order.compareTo(b.order);
+      });
 
-final declaredMenuEntriesProvider = Provider<List<ModuleMenuEntry>>((ref) {
-  final entries = <ModuleMenuEntry>[
-    for (final module in ref.watch(modulesProvider)) ...module.menuEntries(),
-  ]..sort((a, b) => a.order.compareTo(b.order));
   return entries;
 });
 
-/// Entries for the "Thêm" screen, grouped by section.
-final visibleMenuEntriesProvider = Provider<Map<String, List<ModuleMenuEntry>>>(
-  (ref) {
-    final policy = ref.watch(accessProvider);
-    final grouped = <String, List<ModuleMenuEntry>>{};
-    for (final entry in ref.watch(declaredMenuEntriesProvider)) {
-      if (!entry.access.isSatisfiedBy(policy)) continue;
-      grouped.putIfAbsent(entry.group, () => []).add(entry);
-    }
-    return grouped;
-  },
-);
+/// Mục thành branch của shell — mọi mục primary, KHÔNG lọc quyền.
+///
+/// Router và shell cùng đọc provider này để đánh chỉ số branch. Hai nơi tự lọc
+/// lấy là hai nơi có thể lệch nhau, và lệch chỉ số branch nghĩa là bấm tab này
+/// ra màn kia.
+final branchNavEntriesProvider = Provider<List<ModuleNavEntry>>((ref) {
+  return ref
+      .watch(declaredNavEntriesProvider)
+      .where((entry) => entry.weight == NavWeight.primary)
+      .toList();
+});
+
+/// Mục phiên hiện tại được phép thấy. Tính lại khi quyền đổi (chuyển tenant,
+/// hoặc vai trò được sửa và nạp lại).
+final visibleNavEntriesProvider = Provider<List<ModuleNavEntry>>((ref) {
+  final policy = ref.watch(accessProvider);
+
+  return ref
+      .watch(declaredNavEntriesProvider)
+      .where((entry) => entry.access.isSatisfiedBy(policy))
+      .toList();
+});
+
+/// Mục đủ tư cách lên tab với quyền hiện tại, đã sắp theo thứ tự ưu tiên.
+final primaryNavEntriesProvider = Provider<List<ModuleNavEntry>>((ref) {
+  return ref
+      .watch(visibleNavEntriesProvider)
+      .where((entry) => entry.weight == NavWeight.primary)
+      .toList();
+});
+
+/// Danh bạ "Tất cả", gom theo nhóm. Nhóm không còn mục nào thì biến mất hẳn —
+/// một tiêu đề nhóm trống trông như lỗi tải dữ liệu.
+final directoryGroupsProvider = Provider<Map<NavArea, List<ModuleNavEntry>>>((
+  ref,
+) {
+  final grouped = <NavArea, List<ModuleNavEntry>>{};
+  for (final entry in ref.watch(visibleNavEntriesProvider)) {
+    grouped.putIfAbsent(entry.area, () => []).add(entry);
+  }
+
+  return grouped;
+});
 
 /// Every permission slug the app knows about, by module. Powers the
 /// "Quyền của tôi" diagnostics screen.

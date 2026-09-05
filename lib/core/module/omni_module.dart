@@ -39,9 +39,10 @@ abstract class OmniModule {
   /// Screens this module owns.
   List<ModuleRoute> routes();
 
-  /// Bottom-bar tabs this module offers.
-  List<ModuleDestination> destinations() => const [];
-
-  /// Entries for the "Thêm" screen.
-  List<ModuleMenuEntry> menuEntries() => const [];
+  /// Mục điều hướng module này đóng góp.
+  ///
+  /// Module khai báo mình là LOẠI VIỆC GÌ; shell tính ra nó nằm ở đâu. Không
+  /// module nào cần biết module khác tồn tại, và không ai phải sửa file của
+  /// module khác để nhường chỗ trên thanh tab.
+  List<ModuleNavEntry> navEntries() => const [];
 }

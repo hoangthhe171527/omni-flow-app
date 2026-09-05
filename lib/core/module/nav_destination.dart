@@ -3,66 +3,86 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../security/guard/access_requirement.dart';
 
-/// A tab a module contributes to the bottom bar.
+/// Loại việc một mục điều hướng thuộc về.
 ///
-/// The destination declares the permission it needs; the registry does the
-/// filtering. The shell renders whatever survives — it has no list of roles, no
-/// `if (isAdmin)`, and no knowledge of which module is which. That is precisely
-/// what keeps the shell from turning back into the role-branching god-widget it
-/// was in the previous app.
-class ModuleDestination {
-  const ModuleDestination({
+/// Thứ tự khai báo ở đây LÀ thứ tự ưu tiên trên thanh tab. Đổi thứ tự các hằng
+/// trong enum này là đổi cả app — cố ý như vậy: nó là một chỗ, một dòng, và
+/// người đổi thấy ngay mình đang đổi cái gì.
+///
+/// Thứ tự hiện tại thiên về xưởng: người giữ đủ quyền thấy "Việc của tôi"
+/// trước "Hộp thư".
+enum NavArea {
+  work('Công việc'),
+  communication('Trao đổi'),
+  sales('Bán hàng'),
+  admin('Quản trị'),
+  account('Tài khoản');
+
+  const NavArea(this.label);
+
+  /// Tiêu đề nhóm trong danh bạ "Tất cả".
+  final String label;
+}
+
+/// Chỗ để sống, hay chỗ để ghé.
+///
+/// Đây là phán đoán tác giả module ĐƯỢC PHÉP đưa ra, vì nó không phụ thuộc
+/// người dùng: "Kết nối kênh" là thứ cài một lần rồi cả năm không mở, với bất
+/// kỳ ai. Còn "chính xác 4 mục nào lên tab" thì phụ thuộc người dùng, nên
+/// không ai khai báo — nó được tính ra từ quyền.
+///
+/// Chỉ mục [primary] mới thành branch của shell và mới ghim được: một tab phải
+/// giữ được ngăn xếp điều hướng riêng, và biến mọi mục thành branch nghĩa là
+/// 20 module thành 20 navigator.
+enum NavWeight { primary, secondary }
+
+/// Một mục điều hướng do module khai báo.
+///
+/// Thay cho cặp `ModuleDestination` + `ModuleMenuEntry` cũ. Cặp đó bắt module
+/// tự quyết định LÚC VIẾT CODE rằng mình là tab hay mục menu — một quyết định
+/// phụ thuộc vào ai đang dùng, thứ module không thể biết. Hệ quả có thật: để
+/// đưa Tasks lên tab, phải mở `opportunities_module.dart` ra sửa. Đến module
+/// thứ 12 thì cách đó sập.
+class ModuleNavEntry {
+  const ModuleNavEntry({
     required this.moduleId,
     required this.label,
     required this.icon,
     required this.selectedIcon,
     required this.routeName,
-    required this.order,
+    required this.area,
+    this.weight = NavWeight.secondary,
+    this.order = 100,
+    this.subtitle,
     this.access = const AccessRequirement.open(),
     this.badge,
   });
 
   final String moduleId;
   final String label;
+
+  /// Dòng phụ trong danh bạ. Không hiện trên tab.
+  final String? subtitle;
+
   final IconData icon;
   final IconData selectedIcon;
 
-  /// Name of the [ModuleRoute] this tab shows. Also the branch key in the router.
+  /// Tên của [ModuleRoute] mục này mở. Cũng là khoá branch trong router.
   final String routeName;
 
-  /// Sort key across all modules. Lower comes first. Leave gaps (10, 20, 30…)
-  /// so a module can be slotted between two others without renumbering.
+  final NavArea area;
+
+  /// Mặc định [NavWeight.secondary]: một module mới xuất hiện trong danh bạ mà
+  /// không tự động tranh tab của người khác. Muốn tranh thì phải nói ra.
+  final NavWeight weight;
+
+  /// Chỉ so trong cùng một [area]. Không phải số toàn cục — không module nào
+  /// phải đàm phán với module khác về một con số chung.
   final int order;
 
   final AccessRequirement access;
 
-  /// Optional unread/pending count rendered on the tab. A provider rather than a
-  /// value so the shell can watch it without knowing what it counts.
+  /// Số đếm hiện trên tab. Là provider chứ không phải giá trị, để shell theo
+  /// dõi được mà không cần biết nó đếm cái gì.
   final ProviderListenable<int>? badge;
-}
-
-/// An entry a module contributes to the "Thêm" screen — everything that doesn't
-/// deserve a permanent tab: settings, members, roles, audit, channels.
-class ModuleMenuEntry {
-  const ModuleMenuEntry({
-    required this.moduleId,
-    required this.label,
-    required this.icon,
-    required this.routeName,
-    required this.group,
-    this.subtitle,
-    this.order = 100,
-    this.access = const AccessRequirement.open(),
-  });
-
-  final String moduleId;
-  final String label;
-  final String? subtitle;
-  final IconData icon;
-  final String routeName;
-
-  /// Section header on the "Thêm" screen: "Bán hàng", "Quản trị", "Tài khoản".
-  final String group;
-  final int order;
-  final AccessRequirement access;
 }
