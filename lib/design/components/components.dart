@@ -6,6 +6,7 @@ library;
 export 'omni_avatar.dart';
 export 'omni_card.dart';
 export 'omni_inputs.dart';
+export 'omni_status_chip.dart';
 export 'omni_pills.dart';
 export 'omni_states.dart';
 

@@ -23,11 +23,31 @@ class ChannelTile extends StatelessWidget {
   final VoidCallback onReconnect;
   final VoidCallback onDisconnect;
 
+  /// (nhãn, icon, sắc thái) cho mỗi trạng thái kênh.
+  ///
+  /// Icon không phải trang trí: bốn trạng thái này chỉ chênh nhau 1.04–1.20
+  /// lần về độ sáng, nên chỉ nhìn màu thì không tách được.
   static const _statusLabels = {
-    ChannelStatus.connected: ('Đang hoạt động', OmniTone.success),
-    ChannelStatus.error: ('Lỗi kết nối', OmniTone.danger),
-    ChannelStatus.pending: ('Đang chờ ghép nối', OmniTone.warning),
-    ChannelStatus.disconnected: ('Chưa kết nối', OmniTone.neutral),
+    ChannelStatus.connected: (
+      'Đang hoạt động',
+      Icons.check_circle_rounded,
+      OmniTone.success,
+    ),
+    ChannelStatus.error: (
+      'Lỗi kết nối',
+      Icons.error_outline_rounded,
+      OmniTone.danger,
+    ),
+    ChannelStatus.pending: (
+      'Đang chờ ghép nối',
+      Icons.hourglass_top_rounded,
+      OmniTone.warning,
+    ),
+    ChannelStatus.disconnected: (
+      'Chưa kết nối',
+      Icons.link_off_rounded,
+      OmniTone.neutral,
+    ),
   };
 
   bool get _needsReconnect =>
@@ -38,8 +58,9 @@ class ChannelTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final meta = connection.channel.meta;
-    final (statusLabel, tone) =
-        _statusLabels[connection.status] ?? ('Chưa kết nối', OmniTone.neutral);
+    final (statusLabel, statusIcon, tone) =
+        _statusLabels[connection.status] ??
+        ('Chưa kết nối', Icons.link_off_rounded, OmniTone.neutral);
 
     return OmniCard(
       padding: const EdgeInsets.all(OmniSpacing.md),
@@ -67,7 +88,11 @@ class ChannelTile extends StatelessWidget {
                 const SizedBox(height: OmniSpacing.xs),
                 Row(
                   children: [
-                    OmniStatusChip(label: statusLabel, tone: tone),
+                    OmniStatusChip(
+                      icon: statusIcon,
+                      label: statusLabel,
+                      tone: tone,
+                    ),
                     const SizedBox(width: OmniSpacing.sm),
                     Text(
                       '${connection.today} tin hôm nay',

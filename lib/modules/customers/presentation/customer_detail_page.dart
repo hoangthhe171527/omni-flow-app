@@ -174,6 +174,12 @@ class _Header extends StatelessWidget {
               Row(
                 children: [
                   OmniStatusChip(
+                    icon: switch (customer.status) {
+                      CustomerStatus.vip => Icons.star_rounded,
+                      CustomerStatus.active => Icons.check_circle_rounded,
+                      CustomerStatus.inactive => Icons.pause_circle_outlined,
+                      CustomerStatus.fresh => Icons.fiber_new_rounded,
+                    },
                     label: customer.status.label,
                     tone: switch (customer.status) {
                       CustomerStatus.vip => OmniTone.warning,

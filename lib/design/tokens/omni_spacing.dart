@@ -30,6 +30,14 @@ abstract final class OmniRadius {
   static const double xxl = 24;
   static const double pill = 999;
 
+  /// Chip: bộ lọc, trạng thái, thẻ nhãn.
+  ///
+  /// KHÔNG dùng [pill] cho chip. Một viên bo tròn hoàn toàn đọc như thẻ tag —
+  /// thứ để gắn vào — chứ không như bộ lọc, thứ để bật và tắt.
+  static const double chip = 8;
+
+  static const BorderRadius chipAll = BorderRadius.all(Radius.circular(chip));
+
   static const BorderRadius smAll = BorderRadius.all(Radius.circular(sm));
   static const BorderRadius mdAll = BorderRadius.all(Radius.circular(md));
   static const BorderRadius lgAll = BorderRadius.all(Radius.circular(lg));

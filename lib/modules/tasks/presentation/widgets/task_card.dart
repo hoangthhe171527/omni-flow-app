@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../../design/tokens/tokens.dart';
+import 'due_chip.dart';
 import '../../domain/task.dart';
 
 /// One task in the list.
@@ -65,7 +66,7 @@ class TaskCard extends StatelessWidget {
                 const SizedBox(height: OmniSpacing.md),
                 Row(
                   children: [
-                    Expanded(child: _DueChip(task: task)),
+                    Expanded(child: DueChip(task: task)),
                     if (task.assigneeNames.length > 1)
                       Text(
                         '+${task.assigneeNames.length - 1} người',
@@ -138,44 +139,3 @@ class _Progress extends StatelessWidget {
   }
 }
 
-/// The deadline, in words as well as colour.
-class _DueChip extends StatelessWidget {
-  const _DueChip({required this.task});
-
-  final Task task;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final text = Theme.of(context).textTheme.labelMedium;
-    final overdue = task.daysOverdue;
-
-    final (label, colour) = switch (task) {
-      _ when overdue != null => (
-        'Quá hạn $overdue ngày',
-        OmniColors.destructive,
-      ),
-      _ when task.isDueToday => ('Hạn hôm nay', OmniColors.warning),
-      _ when task.dueDate != null => (
-        'Hạn ${task.dueDate!.day}/${task.dueDate!.month}',
-        scheme.onSurfaceVariant,
-      ),
-      _ => ('Chưa đặt hạn', scheme.onSurfaceVariant),
-    };
-
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Icon(Icons.schedule_rounded, size: OmniIconSize.sm, color: colour),
-        const SizedBox(width: OmniSpacing.xs),
-        Flexible(
-          child: Text(
-            label,
-            style: text?.copyWith(color: colour, fontWeight: FontWeight.w500),
-            overflow: TextOverflow.ellipsis,
-          ),
-        ),
-      ],
-    );
-  }
-}

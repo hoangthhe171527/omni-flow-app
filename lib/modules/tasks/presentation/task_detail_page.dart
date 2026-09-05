@@ -10,6 +10,7 @@ import '../application/task_controller.dart';
 import '../application/tasks_providers.dart';
 import '../data/tasks_api.dart';
 import '../domain/task.dart';
+import 'widgets/due_chip.dart';
 import 'widgets/subtask_row.dart';
 
 /// One task, and the two things a worker does with it: tick stages, and say it
@@ -136,7 +137,7 @@ class _Header extends StatelessWidget {
             spacing: OmniSpacing.sm,
             runSpacing: OmniSpacing.sm,
             children: [
-              _DueChip(task: task),
+              DueChip(task: task),
               for (final name in task.assigneeNames)
                 _Chip(icon: Icons.person_outline_rounded, label: name),
             ],
@@ -535,28 +536,3 @@ class _Chip extends StatelessWidget {
 }
 
 /// The deadline said in words, so it does not depend on colour alone.
-class _DueChip extends StatelessWidget {
-  const _DueChip({required this.task});
-
-  final Task task;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final overdue = task.daysOverdue;
-    final (label, colour) = switch (task) {
-      _ when overdue != null => (
-        'Quá hạn $overdue ngày',
-        OmniColors.destructive,
-      ),
-      _ when task.isDueToday => ('Hạn hôm nay', OmniColors.warning),
-      _ when task.dueDate != null => (
-        'Hạn ${task.dueDate!.day}/${task.dueDate!.month}',
-        scheme.onSurfaceVariant,
-      ),
-      _ => ('Chưa đặt hạn', scheme.onSurfaceVariant),
-    };
-
-    return _Chip(icon: Icons.schedule_rounded, label: label, color: colour);
-  }
-}

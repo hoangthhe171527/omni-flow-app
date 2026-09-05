@@ -56,6 +56,9 @@ class TeamPage extends ConsumerWidget {
                     ),
                   ),
                   OmniStatusChip(
+                    icon: member.isActive
+                        ? Icons.badge_outlined
+                        : Icons.person_off_outlined,
                     label: member.roleLabel,
                     tone: member.isActive ? OmniTone.info : OmniTone.neutral,
                   ),
