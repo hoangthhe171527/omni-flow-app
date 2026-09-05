@@ -42,6 +42,48 @@ class PlansApi {
     return response.list.map(Plan.fromJson).toList();
   }
 
+  Future<Team> createTeam({required String name, String? description}) async {
+    final response = await _client.post(
+      '/teams',
+      body: {
+        'name': name,
+        if (description != null && description.trim().isNotEmpty)
+          'description': description.trim(),
+      },
+    );
+
+    return Team.fromJson(response.object);
+  }
+
+  /// Tạo một kế hoạch, kèm các nhóm việc của nó.
+  ///
+  /// Nhóm việc đi cùng lúc tạo chứ không thêm sau: một kế hoạch không có công
+  /// đoạn nào là một bảng chỉ có một cột, và người tạo sẽ phải quay lại làm
+  /// nốt việc mà lẽ ra form đã hỏi xong.
+  Future<Plan> createPlan({
+    required String name,
+    String? teamId,
+    List<String> sectionNames = const [],
+  }) async {
+    final response = await _client.post(
+      '/projects',
+      body: {
+        'name': name,
+        if (teamId != null && teamId.isNotEmpty) 'team_id': teamId,
+        if (sectionNames.isNotEmpty)
+          'sections': [
+            for (var i = 0; i < sectionNames.length; i++)
+              // Id do client sinh, và API nhận nguyên: `section_id` trên công
+              // việc trỏ vào chính những id này, nên chúng phải ổn định trong
+              // suốt vòng đời kế hoạch.
+              {'id': 's${i + 1}', 'name': sectionNames[i], 'order': i},
+          ],
+      },
+    );
+
+    return Plan.fromJson(response.object);
+  }
+
   Future<Plan> plan(String id) async {
     final response = await _client.get('/projects/$id');
 
