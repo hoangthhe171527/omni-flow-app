@@ -130,7 +130,9 @@ class _PairPageState extends ConsumerState<PairPage>
               Text(
                 'Hình như chưa có máy tính nào đang chạy omni-agent. Mở agent trên máy trực 24/7 rồi thử lại.',
                 textAlign: TextAlign.center,
-                style: OmniType.micro.copyWith(color: OmniColors.warningText),
+                style: OmniType.micro.copyWith(
+                  color: OmniColors.warningTextOf(context),
+                ),
               ),
             ],
           ],
@@ -168,7 +170,9 @@ class _PairPageState extends ConsumerState<PairPage>
             Text(
               'Mã đổi sau khoảng 100 giây — lưu xong quét luôn.',
               textAlign: TextAlign.center,
-              style: OmniType.micro.copyWith(color: OmniColors.warningText),
+              style: OmniType.micro.copyWith(
+                color: OmniColors.warningTextOf(context),
+              ),
             ),
           ],
         );
@@ -185,10 +189,13 @@ class _PairPageState extends ConsumerState<PairPage>
         return Column(
           children: [
             const SizedBox(height: OmniSpacing.xl),
-            const Icon(
+            // Dấu tick ĐẶC + chữ "Đã kết nối!" — trạng thái đọc được qua hình
+            // dạng. Không dùng màu xanh lá riêng: xem ghi chú Semantic trong
+            // omni_colors.dart.
+            Icon(
               Icons.check_circle_rounded,
               size: OmniIconSize.hero,
-              color: OmniColors.successText,
+              color: scheme.primary,
             ),
             const SizedBox(height: OmniSpacing.md),
             Text('Đã kết nối!', style: OmniType.bodyStrong),
@@ -212,10 +219,10 @@ class _PairPageState extends ConsumerState<PairPage>
   ) => Column(
     children: [
       const SizedBox(height: OmniSpacing.xl),
-      const Icon(
+      Icon(
         Icons.error_outline_rounded,
         size: OmniIconSize.hero,
-        color: OmniColors.dangerText,
+        color: OmniColors.dangerTextOf(context),
       ),
       const SizedBox(height: OmniSpacing.md),
       Text(message, textAlign: TextAlign.center, style: OmniType.body),

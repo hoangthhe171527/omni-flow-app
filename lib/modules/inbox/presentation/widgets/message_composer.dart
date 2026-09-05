@@ -211,14 +211,14 @@ class _MessageComposerState extends State<MessageComposer> {
                     Icon(
                       Icons.sticky_note_2_outlined,
                       size: OmniIconSize.xs,
-                      color: OmniColors.warningText,
+                      color: OmniColors.warningTextOf(context),
                     ),
                     const SizedBox(width: 6),
                     Expanded(
                       child: Text(
                         'Ghi chú nội bộ — khách KHÔNG nhìn thấy',
                         style: OmniType.micro.copyWith(
-                          color: OmniColors.warningText,
+                          color: OmniColors.warningTextOf(context),
                           fontWeight: FontWeight.w600,
                         ),
                       ),
@@ -228,7 +228,7 @@ class _MessageComposerState extends State<MessageComposer> {
                       child: Text(
                         'Bỏ',
                         style: OmniType.micro.copyWith(
-                          color: OmniColors.warningText,
+                          color: OmniColors.warningTextOf(context),
                           fontWeight: FontWeight.w700,
                         ),
                       ),
