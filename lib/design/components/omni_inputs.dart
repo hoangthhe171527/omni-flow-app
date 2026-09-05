@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
+import '../platform/omni_platform.dart';
 import '../tokens/tokens.dart';
 
 /// Debounced search field. Debouncing lives here rather than in each screen so
@@ -189,15 +190,29 @@ class OmniActionBar extends StatelessWidget {
 }
 
 /// Consistent modal sheet — used for assign, labels, filters, stage change.
+///
+/// Nơi DUY NHẤT trong app gọi `showModalBottomSheet`. Module gọi hàm này và
+/// nhận hình thức đúng nền tảng mà không phải biết nền tảng là gì.
 Future<T?> showOmniSheet<T>({
   required BuildContext context,
   required Widget Function(BuildContext context) builder,
   bool expand = false,
 }) {
+  final apple = isApple(context);
+
   return showModalBottomSheet<T>(
     context: context,
     isScrollControlled: true,
     useSafeArea: true,
+    // iOS bo góc rõ hơn Material và luôn có thanh kéo — đó là dấu hiệu người
+    // dùng iPhone đọc để biết sheet này kéo xuống đóng được. Trên Android thì
+    // nút back của hệ thống đã nói điều đó rồi.
+    showDragHandle: apple,
+    shape: RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(
+        top: Radius.circular(apple ? 14 : OmniRadius.xxl),
+      ),
+    ),
     builder: (context) => Padding(
       padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
       child: expand

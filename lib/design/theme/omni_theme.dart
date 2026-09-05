@@ -169,7 +169,9 @@ abstract final class OmniTheme {
       bottomSheetTheme: BottomSheetThemeData(
         backgroundColor: surface,
         surfaceTintColor: Colors.transparent,
-        showDragHandle: true,
+        // showDragHandle do showOmniSheet quyết theo nền tảng, không đặt ở đây:
+        // theme thắng thì mọi sheet đều có thanh kéo kể cả trên Android.
+        showDragHandle: apple,
         dragHandleColor: border,
         shape: const RoundedRectangleBorder(borderRadius: OmniRadius.sheet),
       ),
