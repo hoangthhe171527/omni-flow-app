@@ -11,7 +11,9 @@ import '../../../security/session/session_controller.dart';
 import '../../../security/permissions/access_scope.dart';
 import '../../channels/channels_module.dart';
 import '../../channels/domain/channel_permissions.dart';
+import '../../../core/realtime/realtime_client.dart';
 import '../application/inbox_providers.dart';
+import '../application/inbox_realtime.dart';
 import '../data/inbox_api.dart';
 import '../domain/inbox_filter.dart';
 import '../inbox_module.dart';
@@ -32,6 +34,8 @@ class _InboxPageState extends ConsumerState<InboxPage>
   final Set<String> _selected = {};
   bool _selectionMode = false;
   Timer? _syncTimer;
+  Duration? _syncPeriod;
+  bool _realtimeLive = false;
   String? _syncCursor;
   bool _syncing = false;
 
@@ -63,10 +67,17 @@ class _InboxPageState extends ConsumerState<InboxPage>
     }
   }
 
+  /// The catch-up poll, at whichever interval the socket's health calls for.
+  ///
+  /// Restarted rather than adjusted when that changes: a Timer's period is
+  /// fixed at construction, so a socket that drops has to rebuild the timer to
+  /// tighten the interval back up.
   void _startRealtimeFallback() {
-    _syncTimer ??= Timer.periodic(const Duration(seconds: 5), (_) {
-      _catchUpChanges();
-    });
+    final period = RealtimePolling.inbox(live: _realtimeLive);
+    if (_syncTimer != null && _syncPeriod == period) return;
+    _syncTimer?.cancel();
+    _syncPeriod = period;
+    _syncTimer = Timer.periodic(period, (_) => _catchUpChanges());
   }
 
   Future<void> _catchUpChanges() async {
@@ -118,6 +129,23 @@ class _InboxPageState extends ConsumerState<InboxPage>
       unawaited(ref.read(inboxListProvider.notifier).refresh());
       ref.invalidate(inboxFacetsProvider);
     });
+
+    // Holds the tenant inbox subscription open for as long as this screen is
+    // mounted. Watching it is what keeps the provider — and therefore the
+    // subscription — alive.
+    ref.watch(inboxRealtimeSubscriptionProvider);
+
+    // A socket that drops has to put the poll back on its tight interval, and a
+    // socket that comes up has to relax it again.
+    final live =
+        ref.watch(realtimeStatusProvider).valueOrNull ==
+        RealtimeStatus.connected;
+    if (live != _realtimeLive) {
+      _realtimeLive = live;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _startRealtimeFallback();
+      });
+    }
     final access = ref.watch(inboxAccessProvider);
     final list = ref.watch(inboxListProvider);
     final scheme = Theme.of(context).colorScheme;

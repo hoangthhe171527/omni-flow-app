@@ -8,7 +8,9 @@ import '../../../core/error/app_exception.dart';
 import '../../../core/utils/formatters.dart';
 import '../../../design/components/components.dart';
 import '../../../design/tokens/tokens.dart';
+import '../../../core/realtime/realtime_client.dart';
 import '../application/inbox_providers.dart';
+import '../application/inbox_realtime.dart';
 import '../application/thread_controller.dart';
 import '../data/inbox_api.dart';
 import '../domain/conversation.dart';
@@ -33,6 +35,8 @@ class _ThreadPageState extends ConsumerState<ThreadPage>
   final _searchController = TextEditingController();
   final _searchFocusNode = FocusNode();
   Timer? _syncTimer;
+  Duration? _syncPeriod;
+  bool _realtimeLive = false;
   String? _syncCursor;
   bool _syncing = false;
   Timer? _searchDebounce;
@@ -91,10 +95,14 @@ class _ThreadPageState extends ConsumerState<ThreadPage>
     }
   }
 
+  /// The catch-up poll, at whichever interval the socket's health calls for.
+  /// Rebuilt rather than adjusted, because a Timer's period is fixed once made.
   void _startRealtimeFallback() {
-    _syncTimer ??= Timer.periodic(const Duration(seconds: 8), (_) {
-      _catchUpChanges();
-    });
+    final period = RealtimePolling.thread(live: _realtimeLive);
+    if (_syncTimer != null && _syncPeriod == period) return;
+    _syncTimer?.cancel();
+    _syncPeriod = period;
+    _syncTimer = Timer.periodic(period, (_) => _catchUpChanges());
   }
 
   Future<void> _catchUpChanges() async {
@@ -153,6 +161,23 @@ class _ThreadPageState extends ConsumerState<ThreadPage>
       if (previous == next) return;
       _refreshThread();
     });
+
+    // Subscribes to this conversation's own stream for as long as the thread is
+    // open, so a delivery receipt or the customer's reply lands immediately
+    // rather than on the next poll.
+    ref.watch(
+      conversationRealtimeSubscriptionProvider(widget.conversationId),
+    );
+
+    final live =
+        ref.watch(realtimeStatusProvider).valueOrNull ==
+        RealtimeStatus.connected;
+    if (live != _realtimeLive) {
+      _realtimeLive = live;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _startRealtimeFallback();
+      });
+    }
 
     final conversation = ref.watch(conversationProvider(widget.conversationId));
     final thread = ref.watch(threadProvider(widget.conversationId));

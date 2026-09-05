@@ -52,6 +52,13 @@ dependencies:
   # vendor.
   firebase_crashlytics: ^5.3.0
   flutter_inappwebview: ^6.1.5
+  # Realtime over Laravel Reverb, which speaks the Pusher protocol. The protocol
+  # subset we need is small and implemented in core/realtime/, rather than taken
+  # from pusher_channels_flutter — that package only reaches Pusher's own cloud
+  # and cannot be pointed at a self-hosted Reverb. A raw socket also means no
+  # native plugin to configure per platform, and a client that is unit-testable
+  # against a fake socket.
+  web_socket_channel: ^3.0.3
 
 dev_dependencies:
   flutter_test:

@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 
 import '../core/config/app_config.dart';
+import '../core/realtime/realtime_client.dart';
 import '../core/theme/theme_mode_controller.dart';
 import '../design/theme/omni_theme.dart';
 import '../modules/inbox/inbox_module.dart';
@@ -39,6 +40,11 @@ class _OmniAppState extends ConsumerState<OmniApp>
         _openPushIntent(ref.read(pushIntentProvider));
       } else {
         unawaited(push.stop());
+        // The realtime socket was authorized with the ending session's token,
+        // and its channels belong to that tenant. Leaving it open would carry
+        // one workspace's message stream into the next sign-in — including a
+        // tenant switch, which is a session change like any other.
+        unawaited(ref.read(realtimeClientProvider).disconnect());
       }
     }, fireImmediately: true);
   }
