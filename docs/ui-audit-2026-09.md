@@ -3,11 +3,19 @@
 Audited against `ui-ux-pro-max/references/pro-rules.md` (native/mobile app rules
 and its pre-delivery checklist). Task D1 of the task-assignment plan.
 
-**This is a report. Nothing here is fixed.** One defect found during the audit
-*was* fixed, because it was introduced by this same branch rather than being
-existing behaviour: the two new screens read colours off the light palette
-directly and would have rendered white cards in dark mode (commit "the new task
-and notification screens were pinned to light mode").
+**Bản gốc là một báo cáo, không sửa gì.** Một lỗi được sửa ngay lúc audit vì nó
+do chính nhánh đó tạo ra: hai màn mới đọc màu từ bảng sáng nên chế độ tối sẽ ra
+thẻ trắng (commit "the new task and notification screens were pinned to light
+mode").
+
+> **Cập nhật 05.09.2026** — nhánh `feat/platform-adaptive-shell` đã sửa §1, §2,
+> §3, §4, §6 và §9. Mỗi mục có một khối trích dẫn nói rõ đã sửa gì, và **giữ
+> nguyên phần mô tả lỗi bên dưới**: bản audit là hồ sơ của một thời điểm, và
+> biết cái gì đã từng hỏng cũng có ích như biết cái gì đang hỏng. §5, §7, §8 vẫn
+> chưa sửa.
+>
+> Hai chỗ bản gốc ghi sai, đã đính chính tại chỗ: vùng chạm của pill là **29dp**
+> chứ không phải 34dp, và thang icon lẽ ra phải lấy 18 làm mặc định.
 
 ## How this was checked, and what that does not cover
 
@@ -26,6 +34,11 @@ Findings are ordered by what a person would actually hit, not by rule number.
 ---
 
 ## 1. Secondary text fails AA contrast — everywhere it is used
+
+> **Đã sửa** (nhánh `feat/platform-adaptive-shell`): `mutedForeground` #777889 →
+> #63646F, đạt 5.53:1 trên nền trang và 5.86:1 trên thẻ.
+> `test/design/contrast_test.dart` tính tỉ lệ cho cả hai theme, nên cả LOẠI lỗi
+> này bị chặn chứ không chỉ một token.
 
 `mutedForeground` (#777889) is the app's secondary text colour, used at body and
 caption size in **82 places**.
@@ -47,6 +60,16 @@ one-line change, but it moves every secondary line in the app, so it belongs in
 its own change with a look at the result — not bundled into a feature.
 
 ## 2. Semantic colours are used as text at sizes where they fail
+
+> **Đã sửa**: thêm `successText` / `warningText` / `dangerText`, chuyển 11 chỗ
+> dùng làm chữ. Bản gốc ở lại cho icon lớn, thanh tiến độ, chấm trạng thái.
+>
+> Phát hiện thêm khi sửa: một cái **nền mang chữ trắng cũng tính là chữ** —
+> badge đỏ ở thanh dưới chỉ đạt 3.76:1, nay 5.87:1.
+>
+> **Không sửa** `chatUnread` #FF3B30 (3.55:1 với chữ trắng): đó là đỏ hệ thống
+> của iOS, chọn có chủ đích để khớp Zalo, và comment trong code nói rõ vậy. Sửa
+> nó là phá một quyết định thiết kế chứ không phải sửa một sơ suất.
 
 `success`, `warning` and `destructive` are used as a text colour in **19
 places** — the overdue chip, status labels, error lines.
@@ -72,10 +95,14 @@ icons.
 
 ## 3. Three icon-only controls announce nothing
 
+> **Đã sửa**: cả ba có tooltip. Hai nút mật khẩu xướng cả TRẠNG THÁI ("Hiện
+> mật khẩu" / "Ẩn mật khẩu") — đó là thứ duy nhất cho người dùng screen reader
+> biết mật khẩu của họ có đang hiển thị hay không.
+
 | File | Control |
 |------|---------|
 | `lib/modules/auth/presentation/login_page.dart:140` | password visibility toggle |
-| `lib/app/shell/more_page.dart:383` | password visibility toggle |
+| `lib/app/shell/directory_page.dart` (trước là `more_page.dart:383`) | password visibility toggle |
 | `lib/design/components/omni_inputs.dart:66` | clear-search button |
 
 `IconButton` with no `tooltip` and no `Semantics` label. TalkBack and VoiceOver
@@ -87,6 +114,13 @@ currently visible on screen.
 The other 16 `IconButton`s in the app do carry tooltips.
 
 ## 4. Filter pills are a 34dp touch target
+
+> **Đã sửa**, và con số 34 trong bản này SAI: đo bằng widget test ra **29dp**,
+> chưa tới hai phần ba sàn của Android. Ràng buộc `minHeight: 44` giờ nằm trong
+> chính component, nên cả 5 màn đang dùng đều được sửa mà không phải đụng vào.
+>
+> Ba chỗ đặt chiều cao cứng 40dp quanh hàng pill cũng phải nới lên 48 — loại
+> lỗi mà test component không bắt được: pill đủ cao nhưng cha nó cắt đi.
 
 `OmniFilterPill` (`lib/design/components/omni_pills.dart:47`) is
 `EdgeInsets.symmetric(horizontal: 14, vertical: 7)` around a label — roughly
@@ -110,6 +144,17 @@ one-line guard at the few animation sites, and someone who turns that setting on
 usually has a reason.
 
 ## 6. Animation durations are ad-hoc
+
+> **Đã sửa**: `OmniDuration` (fast/base/slow) và `OmniIconSize`
+> (xs/sm/md/lg/xl/hero) trong `lib/design/tokens/omni_motion.dart`. Mọi giá trị
+> `size:` trong `lib/` giờ đều là token — không còn số trần nào.
+>
+> Thang icon đặt theo đếm thực tế chứ không theo lý thuyết: `md = 18` vì đó là
+> cỡ app dùng nhiều nhất (13 lần). Thang sm/md/lg = 16/20/24 mà tôi định dùng
+> sẽ khiến giá trị phổ biến nhất nằm ngoài thang.
+>
+> `debounce: 350ms` của ô tìm kiếm giữ nguyên: đó là chống dội mạng, không phải
+> chuyển động, dù trùng số với `OmniDuration.slow`.
 
 Twelve distinct durations across the app: 80, 140, 150, 160, 180, 220 (×4), 240,
 280, 350, 500 (×2), 1100, 2500 ms. There is no duration token in
@@ -142,6 +187,8 @@ each of these is a deliberate-looking exception that may not have been
 deliberate.
 
 ## 9. Minor: icon sizes are not tokenised
+
+> **Đã sửa** cùng §6.
 
 Fourteen distinct icon sizes: 13, 14, 15, 16, 17, 18, 20, 22, 23, 40, 42, 48,
 52, 56. The rules ask for an `icon-sm/md/lg` token set. 16/18/20 carry most of
