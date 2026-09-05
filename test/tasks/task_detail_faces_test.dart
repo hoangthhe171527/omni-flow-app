@@ -137,6 +137,38 @@ void main() {
       );
     });
 
+    // Người nhận việc thấy tình trạng hạn qua chip ở đầu màn. Người giao việc
+    // không còn chip đó (nó trùng với bảng điều phối), nên bảng phải tự mang
+    // tín hiệu — nếu không họ mất đúng thứ họ mở màn này ra để tìm.
+    testWidgets('quá hạn hiện ngay trong bảng điều phối', (tester) async {
+      final late_ = Task.fromJson({
+        'id': 't1',
+        'title': 'Trễ',
+        'due_date': '2020-01-01',
+        'checklist': <Map<String, dynamic>>[],
+      });
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            taskDetailProvider.overrideWith(
+              () => _StubDetail(TaskDetailState(task: late_)),
+            ),
+            taskAccessProvider.overrideWithValue(
+              TaskAccess.of(const AccessPolicy(assigner)),
+            ),
+          ],
+          child: MaterialApp(
+            theme: OmniTheme.light(TargetPlatform.android),
+            home: const TaskDetailPage(taskId: 't1'),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.textContaining('quá hạn'), findsOneWidget);
+    });
+
     testWidgets('vẫn tick được công đoạn như thợ', (tester) async {
       await tester.pumpWidget(host(permissions: assigner));
       await tester.pumpAndSettle();

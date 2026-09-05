@@ -147,15 +147,22 @@ class _Box extends StatelessWidget {
       );
     }
 
+    // "Đã xong" mang MÀU CHÍNH, không phải một màu xanh lá riêng. Xanh lá
+    // #10B981 cạnh mòng két #0F6E63 đọc như hai màu thương hiệu cãi nhau, và
+    // với người mù màu lục-đỏ thì hai màu đó gần như một. Xem ghi chú Semantic
+    // trong omni_colors.dart.
+    //
+    // Cái phân biệt "xong" với "chưa" là DẤU TICK ĐẶC trên nền đặc, không phải
+    // sắc màu.
     final colour = failed
         ? OmniColors.destructive
-        : (done ? OmniColors.success : scheme.outline);
+        : (done ? scheme.primary : scheme.outline);
 
     return Container(
       width: 24,
       height: 24,
       decoration: BoxDecoration(
-        color: done && !failed ? OmniColors.success : Colors.transparent,
+        color: done && !failed ? scheme.primary : Colors.transparent,
         border: Border.all(color: colour, width: 2),
         borderRadius: BorderRadius.circular(OmniRadius.xs),
       ),

@@ -55,13 +55,31 @@ class AssignerPanel extends StatelessWidget {
                 : task.assigneeNames.join(', '),
             muted: task.assigneeNames.isEmpty,
           ),
+          // Hạn mang theo TÌNH TRẠNG của nó, không chỉ con số.
+          //
+          // Người nhận việc thấy điều này qua chip ở đầu màn; người giao việc
+          // không thấy chip đó nữa (nó trùng với bảng này), nên nếu dòng này
+          // chỉ in ngày thì họ mất hẳn tín hiệu quá hạn — đúng thứ họ mở màn
+          // này ra để tìm.
           _Row(
-            icon: Icons.event_outlined,
+            icon: task.daysOverdue != null
+                ? Icons.error_outline_rounded
+                : Icons.event_outlined,
             label: 'Hạn',
-            value: task.dueDate == null
-                ? 'Chưa đặt hạn'
-                : Formatters.date(task.dueDate!),
+            value: switch (task) {
+              _ when task.dueDate == null => 'Chưa đặt hạn',
+              _ when task.daysOverdue != null =>
+                '${Formatters.date(task.dueDate!)} · quá hạn ${task.daysOverdue} ngày',
+              _ when task.isDueToday =>
+                '${Formatters.date(task.dueDate!)} · hôm nay',
+              _ => Formatters.date(task.dueDate!),
+            },
             muted: task.dueDate == null,
+            tone: switch (task) {
+              _ when task.daysOverdue != null => _Tone.danger,
+              _ when task.isDueToday => _Tone.warning,
+              _ => _Tone.plain,
+            },
           ),
           _Row(
             icon: Icons.flag_outlined,
@@ -100,30 +118,48 @@ class AssignerPanel extends StatelessWidget {
   };
 }
 
+/// Sắc thái của một dòng. Chỉ ba: bình thường, cần để ý, đã hỏng.
+enum _Tone { plain, warning, danger }
+
 class _Row extends StatelessWidget {
   const _Row({
     required this.icon,
     required this.label,
     required this.value,
     this.muted = false,
+    this.tone = _Tone.plain,
   });
 
   final IconData icon;
   final String label;
   final String value;
   final bool muted;
+  final _Tone tone;
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final text = Theme.of(context).textTheme;
 
+    // Cả icon lẫn chữ cùng một màu, để dòng đọc ra là một khối. Icon cũng đổi
+    // hình chứ không chỉ đổi màu — chênh độ sáng giữa các màu trạng thái chỉ
+    // 1.04–1.20 lần, nên màu một mình không phân biệt được.
+    final accent = switch (tone) {
+      _Tone.danger => OmniColors.dangerTextOf(context),
+      _Tone.warning => OmniColors.warningTextOf(context),
+      _Tone.plain => muted ? scheme.onSurfaceVariant : scheme.onSurface,
+    };
+
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: OmniSpacing.sm),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, size: OmniIconSize.md, color: scheme.onSurfaceVariant),
+          Icon(
+            icon,
+            size: OmniIconSize.md,
+            color: tone == _Tone.plain ? scheme.onSurfaceVariant : accent,
+          ),
           const SizedBox(width: OmniSpacing.md),
           SizedBox(
             width: 92,
@@ -136,7 +172,7 @@ class _Row extends StatelessWidget {
             child: Text(
               value,
               style: text.bodyMedium?.copyWith(
-                color: muted ? scheme.onSurfaceVariant : scheme.onSurface,
+                color: accent,
                 fontWeight: muted ? FontWeight.w400 : FontWeight.w600,
                 fontStyle: muted ? FontStyle.italic : FontStyle.normal,
               ),
