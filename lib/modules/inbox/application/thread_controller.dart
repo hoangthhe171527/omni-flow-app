@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/error/app_exception.dart';
@@ -346,6 +347,21 @@ class ThreadController
       _settle(draft.id, await call());
     } on AppException catch (error) {
       _fail(draft.id, error.message);
+    } on Object catch (error, stackTrace) {
+      // Anything that is not an AppException is a bug, not a network condition
+      // — but it must still land the bubble on `failed`. Letting it escape left
+      // the bubble on "đang gửi" with no error and no retry, which reads to the
+      // rep as "sent". The exception is still surfaced for a crash reporter to
+      // pick up rather than swallowed.
+      _fail(draft.id, 'Không gửi được. Vui lòng thử lại.');
+      FlutterError.reportError(
+        FlutterErrorDetails(
+          exception: error,
+          stack: stackTrace,
+          library: 'inbox',
+          context: ErrorDescription('sending a message'),
+        ),
+      );
     }
   }
 

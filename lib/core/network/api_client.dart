@@ -2,6 +2,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../config/app_config.dart';
+import '../error/app_exception.dart';
 import 'api_envelope.dart';
 import 'api_exception_mapper.dart';
 import 'dio_provider.dart';
@@ -58,10 +59,25 @@ class ApiClient {
     String? filename,
     Map<String, dynamic> fields = const {},
   }) async {
-    final form = FormData.fromMap({
-      ...fields,
-      field: await MultipartFile.fromFile(filePath, filename: filename),
-    });
+    final FormData form;
+    try {
+      form = FormData.fromMap({
+        ...fields,
+        field: await MultipartFile.fromFile(filePath, filename: filename),
+      });
+    } on Object catch (_) {
+      // Reading the file is I/O outside Dio, so it throws a raw
+      // FileSystemException rather than a DioException — and callers only catch
+      // AppException. That escaped every handler above: the outgoing bubble sat
+      // on "đang gửi" forever, with no error and no retry. Android reclaiming a
+      // picked image from its cache before the upload starts makes this a
+      // routine occurrence, not an edge case.
+      throw const NetworkException(
+        'Không đọc được tệp đã chọn. Vui lòng chọn lại.',
+        code: 'file_unreadable',
+      );
+    }
+
     return _send(
       () => _dio.post<Map<String, dynamic>>(_url(path), data: form),
     );

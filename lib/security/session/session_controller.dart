@@ -43,6 +43,16 @@ final sessionPreLogoutProvider = Provider<SessionPreLogout>(
 class SessionController extends Notifier<Session> {
   Timer? _restoreRetryTimer;
 
+  /// Grows with each consecutive failed launch retry; reset the moment one
+  /// succeeds, so a device that recovers is not still waiting two minutes.
+  static const _initialRestoreBackoff = Duration(seconds: 5);
+  Duration _restoreBackoff = _initialRestoreBackoff;
+
+  /// How long the next launch retry will wait. Exposed so a test can assert the
+  /// schedule without waiting out real timers.
+  @visibleForTesting
+  Duration get restoreBackoff => _restoreBackoff;
+
   @override
   Session build() {
     // A 401 on any business endpoint ends the session. Listening here (rather
@@ -179,6 +189,10 @@ class SessionController extends Notifier<Session> {
     final previous = state;
     try {
       state = await _gateway.loadContext();
+      // Back to normal: the next outage starts its backoff from 5s again, so a
+      // device that recovers and later drops out is not made to wait the two
+      // minutes the previous outage had climbed to.
+      _restoreBackoff = _initialRestoreBackoff;
     } on UnauthorizedException {
       await _clearCredentials();
       state = const Session.expired();
@@ -195,9 +209,24 @@ class SessionController extends Notifier<Session> {
     }
   }
 
+  /// Backoff for the launch retry: 5s, 10s, 20s, 40s, 80s, then 2 minutes.
+  ///
+  /// The retry used to be a flat 5 seconds with no ceiling, so a device left
+  /// offline called `/auth/refresh` and `/auth/context` twelve times a minute
+  /// forever — draining a phone that was doing nothing, and, when the cause was
+  /// the server rather than the phone, aiming every installed client at it at a
+  /// fixed rate for as long as it stayed down. Backing off means a recovering
+  /// server is not immediately knocked over by its own clients.
+  static const _maxRestoreBackoff = Duration(minutes: 2);
+
   void _scheduleRestoreRetry() {
     if (_restoreRetryTimer?.isActive ?? false) return;
-    _restoreRetryTimer = Timer(const Duration(seconds: 5), restore);
+
+    final delay = _restoreBackoff;
+    final next = delay * 2;
+    _restoreBackoff = next > _maxRestoreBackoff ? _maxRestoreBackoff : next;
+
+    _restoreRetryTimer = Timer(delay, restore);
   }
 
   Future<void> _clearCredentials() async {
