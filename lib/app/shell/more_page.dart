@@ -381,6 +381,8 @@ class _DeleteAccountDialogState extends State<_DeleteAccountDialog> {
               decoration: InputDecoration(
                 labelText: 'Mật khẩu hiện tại',
                 suffixIcon: IconButton(
+                  // Nhãn nói cả trạng thái — xem login_page.dart.
+                  tooltip: _obscure ? 'Hiện mật khẩu' : 'Ẩn mật khẩu',
                   onPressed: () => setState(() => _obscure = !_obscure),
                   icon: Icon(
                     _obscure

@@ -64,6 +64,7 @@ class _OmniSearchFieldState extends State<OmniSearchField> {
         suffixIcon: _controller.text.isEmpty
             ? widget.trailing
             : IconButton(
+                tooltip: 'Xoá nội dung tìm',
                 icon: Icon(
                   Icons.close_rounded,
                   size: OmniIconSize.md,

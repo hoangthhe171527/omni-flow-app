@@ -138,6 +138,10 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                             size: OmniIconSize.lg,
                           ),
                           suffixIcon: IconButton(
+                            // Nhãn nói cả TRẠNG THÁI: nếu không, người dùng
+                            // screen reader không có cách nào biết mật khẩu
+                            // của mình đang hiện trên màn hình hay không.
+                            tooltip: _obscure ? 'Hiện mật khẩu' : 'Ẩn mật khẩu',
                             icon: Icon(
                               _obscure
                                   ? Icons.visibility_outlined
