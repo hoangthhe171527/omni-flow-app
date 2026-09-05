@@ -14,6 +14,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:omni_app/core/network/api_envelope.dart';
+import 'package:omni_app/design/components/components.dart';
+import 'package:omni_app/design/platform/omni_platform.dart';
 import 'package:omni_app/design/theme/omni_theme.dart';
 import 'package:omni_app/design/tokens/tokens.dart';
 import 'package:omni_app/modules/notifications/application/notifications_providers.dart';
@@ -295,6 +297,14 @@ class _PreviewApp extends StatefulWidget {
 class _PreviewAppState extends State<_PreviewApp> {
   ThemeMode _mode = ThemeMode.light;
 
+  /// Nền tảng giả lập.
+  ///
+  /// Trình duyệt không thể là iPhone: Chrome trên Windows luôn báo mình là
+  /// Windows, nên app thật sẽ luôn dựng nhánh không-Apple. Vì lớp nền tảng đọc
+  /// từ `Theme.of(context).platform` chứ không từ `dart:io`, ép nó ở đây là đủ
+  /// để xem đúng hình thức iOS — và đó chính là lý do lớp ấy đọc từ Theme.
+  TargetPlatform _platform = TargetPlatform.android;
+
   @override
   Widget build(BuildContext context) {
     return ProviderScope(
@@ -311,15 +321,21 @@ class _PreviewAppState extends State<_PreviewApp> {
       child: MaterialApp(
         title: 'Xem trước giao diện',
         debugShowCheckedModeBanner: false,
-        theme: OmniTheme.light(),
-        darkTheme: OmniTheme.dark(),
+        theme: OmniTheme.light(_platform),
+        darkTheme: OmniTheme.dark(_platform),
         themeMode: _mode,
         home: _Gallery(
           mode: _mode,
+          platform: _platform,
           onToggleMode: () => setState(
             () => _mode = _mode == ThemeMode.light
                 ? ThemeMode.dark
                 : ThemeMode.light,
+          ),
+          onTogglePlatform: () => setState(
+            () => _platform = _platform == TargetPlatform.iOS
+                ? TargetPlatform.android
+                : TargetPlatform.iOS,
           ),
         ),
       ),
@@ -328,10 +344,17 @@ class _PreviewAppState extends State<_PreviewApp> {
 }
 
 class _Gallery extends StatefulWidget {
-  const _Gallery({required this.mode, required this.onToggleMode});
+  const _Gallery({
+    required this.mode,
+    required this.platform,
+    required this.onToggleMode,
+    required this.onTogglePlatform,
+  });
 
   final ThemeMode mode;
+  final TargetPlatform platform;
   final VoidCallback onToggleMode;
+  final VoidCallback onTogglePlatform;
 
   @override
   State<_Gallery> createState() => _GalleryState();
@@ -340,7 +363,13 @@ class _Gallery extends StatefulWidget {
 class _GalleryState extends State<_Gallery> {
   int _screen = 0;
 
-  static const _labels = ['Việc của tôi', 'Chi tiết', 'Thông báo', 'Dòng việc'];
+  static const _labels = [
+    'Việc của tôi',
+    'Chi tiết',
+    'Thông báo',
+    'Dòng việc',
+    'Nền tảng',
+  ];
 
   @override
   Widget build(BuildContext context) {
@@ -381,6 +410,23 @@ class _GalleryState extends State<_Gallery> {
                         ),
                       ),
                     ),
+                    // Nhãn chữ chứ không phải icon: đây là công tắc thay đổi ý
+                    // nghĩa của mọi thứ bên dưới, nên nó phải nói rõ đang ở
+                    // nhánh nào chứ không bắt người xem đoán.
+                    TextButton.icon(
+                      onPressed: widget.onTogglePlatform,
+                      icon: Icon(
+                        widget.platform == TargetPlatform.iOS
+                            ? Icons.phone_iphone_rounded
+                            : Icons.phone_android_rounded,
+                        size: OmniIconSize.md,
+                      ),
+                      label: Text(
+                        widget.platform == TargetPlatform.iOS
+                            ? 'iOS'
+                            : 'Android',
+                      ),
+                    ),
                     IconButton(
                       tooltip: 'Đổi sáng/tối',
                       onPressed: widget.onToggleMode,
@@ -400,7 +446,8 @@ class _GalleryState extends State<_Gallery> {
               0 => const MyTasksPage(),
               1 => const TaskDetailPage(taskId: 't-1'),
               2 => const NotificationsPage(),
-              _ => const _RowStates(),
+              3 => const _RowStates(),
+              _ => const _PlatformBits(),
             },
           ),
         ],
@@ -524,6 +571,148 @@ class _RowStates extends StatelessWidget {
           ),
         ),
         const SizedBox(height: OmniSpacing.section),
+      ],
+    );
+  }
+}
+
+/// Những thứ chỉ lộ ra khi chạm vào.
+///
+/// Trình duyệt không thể là iPhone — Chrome trên Windows luôn báo mình là
+/// Windows — nên app thật sẽ luôn dựng nhánh không-Apple. Công tắc iOS/Android
+/// ở thanh trên ép nền tảng qua ThemeData, và vì lớp nền tảng đọc từ
+/// `Theme.of(context).platform` chứ không từ `dart:io`, mọi thứ dưới đây đổi
+/// theo. Đó chính là lý do lớp ấy được viết như vậy.
+class _PlatformBits extends StatelessWidget {
+  const _PlatformBits();
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final apple = isApple(context);
+
+    Widget row(String label, String value) => Padding(
+      padding: const EdgeInsets.symmetric(vertical: OmniSpacing.xs),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 148,
+            child: Text(
+              label,
+              style: OmniType.caption.copyWith(color: scheme.onSurfaceVariant),
+            ),
+          ),
+          Expanded(child: Text(value, style: OmniType.bodyStrong)),
+        ],
+      ),
+    );
+
+    return ListView(
+      padding: const EdgeInsets.all(OmniSpacing.lg),
+      children: [
+        // AppBar thật của màn này nằm ngoài, nên dựng một cái giả để thấy được
+        // khác biệt canh tiêu đề mà không phải rời màn.
+        Container(
+          decoration: BoxDecoration(
+            color: scheme.surface,
+            border: Border.all(color: scheme.outlineVariant),
+            borderRadius: OmniRadius.lgAll,
+          ),
+          padding: const EdgeInsets.symmetric(
+            horizontal: OmniSpacing.lg,
+            vertical: OmniSpacing.md,
+          ),
+          child: Row(
+            children: [
+              Icon(
+                Icons.arrow_back_ios_new_rounded,
+                size: OmniIconSize.md,
+                color: scheme.onSurfaceVariant,
+              ),
+              Expanded(
+                child: Text(
+                  'Chi tiết công việc',
+                  textAlign: apple ? TextAlign.center : TextAlign.left,
+                  style: OmniType.title,
+                ),
+              ),
+              if (apple) const SizedBox(width: OmniIconSize.md),
+            ],
+          ),
+        ),
+        const SizedBox(height: OmniSpacing.lg),
+
+        Text('Đang dựng theo', style: OmniType.section),
+        const SizedBox(height: OmniSpacing.sm),
+        row('Nền tảng', apple ? 'iOS / macOS' : 'Android'),
+        row('Tiêu đề', apple ? 'canh giữa' : 'canh trái'),
+        row('Chạm', apple ? 'mờ dần (NoSplash)' : 'gợn sóng (InkSparkle)'),
+        row('Hộp thoại', apple ? 'CupertinoAlertDialog' : 'AlertDialog'),
+        row('Sheet', apple ? 'có thanh kéo, bo 14' : 'không thanh kéo, bo 24'),
+        row(
+          'Chuyển cảnh',
+          apple ? 'trượt ngang + vuốt quay lại' : 'Material (mặc định)',
+        ),
+
+        const SizedBox(height: OmniSpacing.section),
+        Text('Bấm thử', style: OmniType.section),
+        const SizedBox(height: OmniSpacing.sm),
+        Text(
+          'Hai thứ này chỉ khác nhau khi hiện ra, nên phải bấm mới thấy.',
+          style: OmniType.caption.copyWith(color: scheme.onSurfaceVariant),
+        ),
+        const SizedBox(height: OmniSpacing.md),
+
+        FilledButton(
+          onPressed: () async {
+            final ok = await showOmniConfirm(
+              context: context,
+              title: 'Hoàn thành công việc?',
+              message: 'Quản lý sẽ nhận thông báo.',
+              confirmLabel: 'Hoàn thành',
+            );
+            if (context.mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text(ok ? 'Đã xác nhận' : 'Đã huỷ')),
+              );
+            }
+          },
+          child: const Text('Mở hộp thoại xác nhận'),
+        ),
+        const SizedBox(height: OmniSpacing.md),
+
+        OutlinedButton(
+          onPressed: () => showOmniSheet<void>(
+            context: context,
+            builder: (_) => Padding(
+              padding: const EdgeInsets.all(OmniSpacing.xxl),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Chọn người làm', style: OmniType.section),
+                  const SizedBox(height: OmniSpacing.md),
+                  Text(
+                    apple
+                        ? 'Trên iOS: có thanh kéo ở đỉnh, bo góc 14.'
+                        : 'Trên Android: không thanh kéo, bo góc rộng hơn.',
+                    style: OmniType.body,
+                  ),
+                  const SizedBox(height: OmniSpacing.xxl),
+                ],
+              ),
+            ),
+          ),
+          child: const Text('Mở sheet'),
+        ),
+
+        const SizedBox(height: OmniSpacing.section),
+        Text(
+          'Cả hai nhánh chạy trên CÙNG một cây widget. Không màn hình module '
+          'nào biết nền tảng là gì — một test kiến trúc chặn điều đó.',
+          style: OmniType.caption.copyWith(color: scheme.onSurfaceVariant),
+        ),
       ],
     );
   }
