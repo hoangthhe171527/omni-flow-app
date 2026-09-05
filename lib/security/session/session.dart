@@ -66,8 +66,7 @@ class Session {
 
   const Session.restoring() : this(status: SessionStatus.restoring);
 
-  const Session.unauthenticated()
-      : this(status: SessionStatus.unauthenticated);
+  const Session.unauthenticated() : this(status: SessionStatus.unauthenticated);
 
   const Session.expired() : this(status: SessionStatus.expired);
 

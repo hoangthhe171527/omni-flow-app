@@ -35,6 +35,11 @@ jobs:
 
       - run: flutter pub get
 
+      - name: Check formatting
+        # Gating, because the tree is formatted. Left to a reviewer, formatting
+        # turns every diff into a mix of intent and whitespace.
+        run: dart format --output=none --set-exit-if-changed lib test
+
       - name: Analyze
         # No `--no-fatal-infos`: the project is clean today, and the cheapest time
         # to keep it that way is now.

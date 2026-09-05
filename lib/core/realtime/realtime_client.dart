@@ -348,10 +348,12 @@ final realtimeClientProvider = Provider<RealtimeClient>((ref) {
     // are the ones every other request uses — including a token the refresh
     // interceptor has just rotated.
     authorizer: (channel, socketId) async {
-      final response = await ref.read(dioProvider).post<Map<String, dynamic>>(
-        '${AppConfig.apiPrefix}/broadcasting/auth',
-        data: {'socket_id': socketId, 'channel_name': channel},
-      );
+      final response = await ref
+          .read(dioProvider)
+          .post<Map<String, dynamic>>(
+            '${AppConfig.apiPrefix}/broadcasting/auth',
+            data: {'socket_id': socketId, 'channel_name': channel},
+          );
       final auth = response.data?['auth'];
       if (auth is! String || auth.isEmpty) {
         throw StateError('Broadcast auth returned no signature.');

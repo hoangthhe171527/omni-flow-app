@@ -21,8 +21,7 @@ class OmniApp extends ConsumerStatefulWidget {
   ConsumerState<OmniApp> createState() => _OmniAppState();
 }
 
-class _OmniAppState extends ConsumerState<OmniApp>
-    with WidgetsBindingObserver {
+class _OmniAppState extends ConsumerState<OmniApp> with WidgetsBindingObserver {
   late final ProviderSubscription<Session> _sessionListener;
   late final void Function() _unregisterPreLogout;
 
@@ -109,10 +108,12 @@ class _OmniAppState extends ConsumerState<OmniApp>
     ref.read(pushIntentProvider.notifier).state = null;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      ref.read(routerProvider).pushNamed(
-        InboxModule.thread,
-        pathParameters: {'id': intent.conversationId},
-      );
+      ref
+          .read(routerProvider)
+          .pushNamed(
+            InboxModule.thread,
+            pathParameters: {'id': intent.conversationId},
+          );
     });
   }
 }

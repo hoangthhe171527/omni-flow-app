@@ -255,13 +255,15 @@ class ThreadController
     final draft = Message.optimistic(text: text, replyTo: replyTo);
     return _dispatch(
       draft: draft,
-      call: () async => ref.read(inboxApiProvider).send(
-        arg,
-        text: text,
-        attachments: await attachments,
-        replyToMessageId: replyTo?.id,
-        clientMessageId: draft.clientId,
-      ),
+      call: () async => ref
+          .read(inboxApiProvider)
+          .send(
+            arg,
+            text: text,
+            attachments: await attachments,
+            replyToMessageId: replyTo?.id,
+            clientMessageId: draft.clientId,
+          ),
     );
   }
 
@@ -303,7 +305,8 @@ class ThreadController
     final current = state.valueOrNull;
     if (current == null || found.isEmpty) return;
     final byId = <String, Message>{
-      for (final message in [...current.messages, ...found]) message.id: message,
+      for (final message in [...current.messages, ...found])
+        message.id: message,
     };
     state = AsyncData(
       current.copyWith(messages: byId.values.toList()..sort(compareMessages)),
@@ -368,9 +371,10 @@ class ThreadController
     final current = state.valueOrNull;
     if (current == null) return;
 
-    final draft = current.pending
-        .cast<Message?>()
-        .firstWhere((message) => message?.id == draftId, orElse: () => null);
+    final draft = current.pending.cast<Message?>().firstWhere(
+      (message) => message?.id == draftId,
+      orElse: () => null,
+    );
 
     // The API does not echo quoted-reply metadata for every channel, so carry
     // over what the draft knew rather than losing the quote on resolution.

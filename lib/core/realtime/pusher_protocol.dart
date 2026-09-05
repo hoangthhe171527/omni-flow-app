@@ -31,10 +31,7 @@ abstract final class PusherProtocol {
     );
   }
 
-  static String subscribe({
-    required String channel,
-    required String auth,
-  }) {
+  static String subscribe({required String channel, required String auth}) {
     return jsonEncode({
       'event': 'pusher:subscribe',
       'data': {'channel': channel, 'auth': auth},
@@ -102,11 +99,7 @@ abstract final class PusherProtocol {
 }
 
 class PusherFrame {
-  const PusherFrame({
-    required this.event,
-    this.channel,
-    this.data = const {},
-  });
+  const PusherFrame({required this.event, this.channel, this.data = const {}});
 
   final String event;
   final String? channel;

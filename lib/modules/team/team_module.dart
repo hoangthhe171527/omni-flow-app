@@ -26,26 +26,26 @@ class TeamModule extends OmniModule {
 
   @override
   List<ModuleRoute> routes() => [
-        ModuleRoute(
-          path: '/team',
-          name: list,
-          rootNavigator: true,
-          access: const AccessRequirement.any([TeamPermissions.membersRead]),
-          builder: (_, _) => const TeamPage(),
-        ),
-      ];
+    ModuleRoute(
+      path: '/team',
+      name: list,
+      rootNavigator: true,
+      access: const AccessRequirement.any([TeamPermissions.membersRead]),
+      builder: (_, _) => const TeamPage(),
+    ),
+  ];
 
   @override
   List<ModuleMenuEntry> menuEntries() => const [
-        ModuleMenuEntry(
-          moduleId: 'team',
-          label: 'Nhân viên',
-          subtitle: 'Danh sách thành viên trong workspace',
-          icon: Icons.group_outlined,
-          routeName: list,
-          group: 'Quản trị',
-          order: 10,
-          access: AccessRequirement.any([TeamPermissions.membersRead]),
-        ),
-      ];
+    ModuleMenuEntry(
+      moduleId: 'team',
+      label: 'Nhân viên',
+      subtitle: 'Danh sách thành viên trong workspace',
+      icon: Icons.group_outlined,
+      routeName: list,
+      group: 'Quản trị',
+      order: 10,
+      access: AccessRequirement.any([TeamPermissions.membersRead]),
+    ),
+  ];
 }

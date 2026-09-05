@@ -37,7 +37,9 @@ abstract final class CrashReporting {
       // Debug builds report to the console instead. Sending them would bury the
       // real field crashes under every exception raised while developing.
       _active = !kDebugMode;
-      await FirebaseCrashlytics.instance.setCrashlyticsCollectionEnabled(_active);
+      await FirebaseCrashlytics.instance.setCrashlyticsCollectionEnabled(
+        _active,
+      );
 
       FlutterError.onError = (details) {
         FlutterError.presentError(details);
@@ -62,11 +64,7 @@ abstract final class CrashReporting {
 
   /// Records a handled error — something the app recovered from but that still
   /// should not have happened.
-  static void recordHandled(
-    Object error,
-    StackTrace? stack, {
-    String? reason,
-  }) {
+  static void recordHandled(Object error, StackTrace? stack, {String? reason}) {
     _record(error, stack, fatal: false, reason: reason);
   }
 

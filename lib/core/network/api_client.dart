@@ -20,37 +20,36 @@ class ApiClient {
     String path, {
     Map<String, dynamic>? query,
     CancelToken? cancelToken,
-  }) =>
-      _send(() => _dio.get<Map<String, dynamic>>(
-            _url(path),
-            queryParameters: _clean(query),
-            cancelToken: cancelToken,
-          ));
+  }) => _send(
+    () => _dio.get<Map<String, dynamic>>(
+      _url(path),
+      queryParameters: _clean(query),
+      cancelToken: cancelToken,
+    ),
+  );
 
   Future<ApiEnvelope> post(
     String path, {
     Object? body,
     Map<String, dynamic>? query,
     CancelToken? cancelToken,
-  }) =>
-      _send(() => _dio.post<Map<String, dynamic>>(
-            _url(path),
-            data: body,
-            queryParameters: _clean(query),
-            cancelToken: cancelToken,
-          ));
+  }) => _send(
+    () => _dio.post<Map<String, dynamic>>(
+      _url(path),
+      data: body,
+      queryParameters: _clean(query),
+      cancelToken: cancelToken,
+    ),
+  );
 
-  Future<ApiEnvelope> put(String path, {Object? body}) => _send(
-        () => _dio.put<Map<String, dynamic>>(_url(path), data: body),
-      );
+  Future<ApiEnvelope> put(String path, {Object? body}) =>
+      _send(() => _dio.put<Map<String, dynamic>>(_url(path), data: body));
 
-  Future<ApiEnvelope> patch(String path, {Object? body}) => _send(
-        () => _dio.patch<Map<String, dynamic>>(_url(path), data: body),
-      );
+  Future<ApiEnvelope> patch(String path, {Object? body}) =>
+      _send(() => _dio.patch<Map<String, dynamic>>(_url(path), data: body));
 
-  Future<ApiEnvelope> delete(String path, {Object? body}) => _send(
-        () => _dio.delete<Map<String, dynamic>>(_url(path), data: body),
-      );
+  Future<ApiEnvelope> delete(String path, {Object? body}) =>
+      _send(() => _dio.delete<Map<String, dynamic>>(_url(path), data: body));
 
   Future<ApiEnvelope> upload(
     String path, {
@@ -78,9 +77,7 @@ class ApiClient {
       );
     }
 
-    return _send(
-      () => _dio.post<Map<String, dynamic>>(_url(path), data: form),
-    );
+    return _send(() => _dio.post<Map<String, dynamic>>(_url(path), data: form));
   }
 
   Future<ApiEnvelope> _send(
@@ -94,8 +91,9 @@ class ApiClient {
     }
   }
 
-  String _url(String path) =>
-      path.startsWith('/') ? '${AppConfig.apiPrefix}$path' : '${AppConfig.apiPrefix}/$path';
+  String _url(String path) => path.startsWith('/')
+      ? '${AppConfig.apiPrefix}$path'
+      : '${AppConfig.apiPrefix}/$path';
 
   /// Dio serialises nulls as the literal string "null"; drop them instead so an
   /// unset filter simply isn't sent.

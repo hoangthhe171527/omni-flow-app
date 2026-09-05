@@ -73,7 +73,8 @@ class CustomersApi {
     if (id == null) return null;
     return DuplicateMatch(
       id: id,
-      name: match.str('display_name') ?? match.strOr('legal_name', 'Khách hàng'),
+      name:
+          match.str('display_name') ?? match.strOr('legal_name', 'Khách hàng'),
       phone: match.str('primary_contact_phone'),
     );
   }

@@ -61,7 +61,10 @@ class OpportunityDetailPage extends ConsumerWidget {
             ),
             const SizedBox(height: OmniSpacing.lg),
             _StageStepper(current: data.stage),
-            const OmniSectionHeader(title: 'Thông tin', padding: _headerPadding),
+            const OmniSectionHeader(
+              title: 'Thông tin',
+              padding: _headerPadding,
+            ),
             OmniCard(
               child: Column(
                 children: [
@@ -72,9 +75,9 @@ class OpportunityDetailPage extends ConsumerWidget {
                     onTap: data.customerId == null
                         ? null
                         : () => context.pushNamed(
-                              CustomersModule.detail,
-                              pathParameters: {'id': data.customerId!},
-                            ),
+                            CustomersModule.detail,
+                            pathParameters: {'id': data.customerId!},
+                          ),
                   ),
                   OmniDetailRow(
                     label: 'Sản phẩm',
@@ -106,7 +109,10 @@ class OpportunityDetailPage extends ConsumerWidget {
               ),
             ),
             if (data.notes.isNotEmpty) ...[
-              const OmniSectionHeader(title: 'Ghi chú', padding: _headerPadding),
+              const OmniSectionHeader(
+                title: 'Ghi chú',
+                padding: _headerPadding,
+              ),
               for (final note in data.notes)
                 Padding(
                   padding: const EdgeInsets.only(bottom: OmniSpacing.sm),
@@ -168,8 +174,9 @@ class OpportunityDetailPage extends ConsumerWidget {
       await moveOpportunityStage(ref, opportunityId, stage);
     } on AppException catch (error) {
       if (!context.mounted) return;
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text(error.message)));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(error.message)));
     }
   }
 
@@ -202,8 +209,9 @@ class OpportunityDetailPage extends ConsumerWidget {
       ref.invalidate(stageOpportunitiesProvider);
     } on AppException catch (error) {
       if (!context.mounted) return;
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text(error.message)));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(error.message)));
     }
   }
 }
@@ -259,14 +267,20 @@ class _StageStepper extends StatelessWidget {
                   ),
                 ),
                 child: i < currentIndex
-                    ? const Icon(Icons.check_rounded, size: 13, color: Colors.white)
+                    ? const Icon(
+                        Icons.check_rounded,
+                        size: 13,
+                        color: Colors.white,
+                      )
                     : null,
               ),
               const SizedBox(height: 4),
               Text(
                 path[i].label,
                 style: OmniType.micro.copyWith(
-                  color: i <= currentIndex ? scheme.primary : scheme.onSurfaceVariant,
+                  color: i <= currentIndex
+                      ? scheme.primary
+                      : scheme.onSurfaceVariant,
                   fontSize: 10,
                 ),
               ),

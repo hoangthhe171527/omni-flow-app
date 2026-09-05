@@ -180,7 +180,10 @@ void main() {
     expect(controller.restoreBackoff, const Duration(seconds: 40));
 
     // Credentials survive throughout: an outage is not an expiry.
-    expect(container.read(sessionControllerProvider).status, SessionStatus.restoring);
+    expect(
+      container.read(sessionControllerProvider).status,
+      SessionStatus.restoring,
+    );
 
     for (var i = 0; i < 6; i++) {
       await controller.restore();
@@ -194,11 +197,15 @@ void main() {
     gateway.restoreFailure = null;
     await controller.restore();
 
-    expect(container.read(sessionControllerProvider).status, SessionStatus.authenticated);
+    expect(
+      container.read(sessionControllerProvider).status,
+      SessionStatus.authenticated,
+    );
     expect(
       controller.restoreBackoff,
       const Duration(seconds: 5),
-      reason: 'a device that recovers must not still be waiting two minutes '
+      reason:
+          'a device that recovers must not still be waiting two minutes '
           'when the next outage arrives',
     );
   });

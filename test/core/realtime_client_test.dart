@@ -47,7 +47,6 @@ void main() {
   }
 
   test('answers the ping that keeps the connection alive', () async {
-
     client.subscribe('private-x', (_) {});
     await settle();
     await handshake();
@@ -64,7 +63,6 @@ void main() {
   });
 
   test('subscribes only after the handshake supplies a socket id', () async {
-
     // A private subscription is signed against the socket id, so asking before
     // the handshake would produce a signature the server rejects.
     client.subscribe('private-conversation.c1', (_) {});
@@ -86,7 +84,6 @@ void main() {
   });
 
   test('delivers an event to its channel listeners, name normalised', () async {
-
     final received = <RealtimeEvent>[];
     client.subscribe('private-conversation.c1', received.add);
     await settle();
@@ -105,7 +102,6 @@ void main() {
   });
 
   test('does not deliver another channel’s events', () async {
-
     final received = <RealtimeEvent>[];
     client.subscribe('private-conversation.c1', received.add);
     await settle();
@@ -121,51 +117,51 @@ void main() {
     expect(received, isEmpty);
   });
 
-  test('two listeners share one subscription, and the last one out ends it',
-      () async {
+  test(
+    'two listeners share one subscription, and the last one out ends it',
+    () async {
+      // The inbox and an open thread can want the same channel. Subscribing twice
+      // would double every event; unsubscribing on the first leave would silence
+      // the other.
+      final first = <RealtimeEvent>[];
+      final second = <RealtimeEvent>[];
+      final leaveFirst = client.subscribe('private-x', first.add);
+      final leaveSecond = client.subscribe('private-x', second.add);
+      await settle();
+      await handshake();
 
-    // The inbox and an open thread can want the same channel. Subscribing twice
-    // would double every event; unsubscribing on the first leave would silence
-    // the other.
-    final first = <RealtimeEvent>[];
-    final second = <RealtimeEvent>[];
-    final leaveFirst = client.subscribe('private-x', first.add);
-    final leaveSecond = client.subscribe('private-x', second.add);
-    await settle();
-    await handshake();
+      expect(
+        socket.sent
+            .map((raw) => jsonDecode(raw) as Map<String, dynamic>)
+            .where((frame) => frame['event'] == 'pusher:subscribe'),
+        hasLength(1),
+      );
 
-    expect(
-      socket.sent
-          .map((raw) => jsonDecode(raw) as Map<String, dynamic>)
-          .where((frame) => frame['event'] == 'pusher:subscribe'),
-      hasLength(1),
-    );
+      leaveFirst();
+      socket.sent.clear();
+      socket.emit({
+        'event': '.thing',
+        'channel': 'private-x',
+        'data': jsonEncode(<String, dynamic>{}),
+      });
+      await settle();
 
-    leaveFirst();
-    socket.sent.clear();
-    socket.emit({
-      'event': '.thing',
-      'channel': 'private-x',
-      'data': jsonEncode(<String, dynamic>{}),
-    });
-    await settle();
+      expect(first, isEmpty, reason: 'the one that left hears nothing');
+      expect(second, hasLength(1), reason: 'the one still listening does');
+      expect(
+        socket.sent.map((raw) => jsonDecode(raw)['event']),
+        isNot(contains('pusher:unsubscribe')),
+      );
 
-    expect(first, isEmpty, reason: 'the one that left hears nothing');
-    expect(second, hasLength(1), reason: 'the one still listening does');
-    expect(
-      socket.sent.map((raw) => jsonDecode(raw)['event']),
-      isNot(contains('pusher:unsubscribe')),
-    );
-
-    leaveSecond();
-    expect(
-      socket.sent.map((raw) => jsonDecode(raw)['event']),
-      contains('pusher:unsubscribe'),
-    );
-  });
+      leaveSecond();
+      expect(
+        socket.sent.map((raw) => jsonDecode(raw)['event']),
+        contains('pusher:unsubscribe'),
+      );
+    },
+  );
 
   test('a malformed frame does not take the connection down', () async {
-
     final received = <RealtimeEvent>[];
     client.subscribe('private-x', received.add);
     await settle();

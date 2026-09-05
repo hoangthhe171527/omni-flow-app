@@ -7,11 +7,20 @@ ChannelConnection _connection(String id) =>
 
 void main() {
   test('trả về id chưa từng thấy', () {
-    expect(firstNewId({'a', 'b'}, [_connection('a'), _connection('b'), _connection('c')]), 'c');
+    expect(
+      firstNewId(
+        {'a', 'b'},
+        [_connection('a'), _connection('b'), _connection('c')],
+      ),
+      'c',
+    );
   });
 
   test('không có gì mới thì trả null', () {
-    expect(firstNewId({'a', 'b'}, [_connection('a'), _connection('b')]), isNull);
+    expect(
+      firstNewId({'a', 'b'}, [_connection('a'), _connection('b')]),
+      isNull,
+    );
   });
 
   test('kênh biến mất không bị nhầm là kênh mới', () {

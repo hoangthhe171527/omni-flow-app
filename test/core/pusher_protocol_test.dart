@@ -71,10 +71,7 @@ void main() {
 
     test('accepts a payload that is already an object', () {
       final frame = PusherProtocol.parse(
-        jsonEncode({
-          'event': 'pusher:ping',
-          'data': <String, dynamic>{},
-        }),
+        jsonEncode({'event': 'pusher:ping', 'data': <String, dynamic>{}}),
       );
 
       expect(frame!.isPing, isTrue);
@@ -105,7 +102,10 @@ void main() {
         PusherProtocol.normalizeEventName('.message.created'),
         'message.created',
       );
-      expect(PusherProtocol.normalizeEventName('message.created'), 'message.created');
+      expect(
+        PusherProtocol.normalizeEventName('message.created'),
+        'message.created',
+      );
     });
 
     test('recognises the protocol’s own bookkeeping', () {

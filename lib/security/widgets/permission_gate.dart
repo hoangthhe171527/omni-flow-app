@@ -25,11 +25,11 @@ class PermissionGate extends ConsumerWidget {
     required Widget child,
     Widget? fallback,
   }) : this(
-          key: key,
-          permissions: [permission],
-          child: child,
-          fallback: fallback,
-        );
+         key: key,
+         permissions: [permission],
+         child: child,
+         fallback: fallback,
+       );
 
   final List<String> permissions;
   final bool requireAll;

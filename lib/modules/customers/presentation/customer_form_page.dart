@@ -46,7 +46,14 @@ class _CustomerFormPageState extends ConsumerState<CustomerFormPage> {
   @override
   void dispose() {
     _duplicateTimer?.cancel();
-    for (final controller in [_name, _contact, _phone, _email, _address, _note]) {
+    for (final controller in [
+      _name,
+      _contact,
+      _phone,
+      _email,
+      _address,
+      _note,
+    ]) {
       controller.dispose();
     }
     super.dispose();
@@ -75,8 +82,9 @@ class _CustomerFormPageState extends ConsumerState<CustomerFormPage> {
     }
     _duplicateTimer = Timer(const Duration(milliseconds: 500), () async {
       try {
-        final match =
-            await ref.read(customersApiProvider).checkDuplicate(phone: value.trim());
+        final match = await ref
+            .read(customersApiProvider)
+            .checkDuplicate(phone: value.trim());
         if (mounted) setState(() => _duplicate = match);
       } on AppException {
         // A failed duplicate check must never block the form.
@@ -129,8 +137,9 @@ class _CustomerFormPageState extends ConsumerState<CustomerFormPage> {
     } on AppException catch (error) {
       setState(() => _saving = false);
       if (!mounted) return;
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text(error.message)));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(error.message)));
     }
   }
 
@@ -177,8 +186,11 @@ class _CustomerFormPageState extends ConsumerState<CustomerFormPage> {
                 ),
                 child: Row(
                   children: [
-                    const Icon(Icons.warning_amber_rounded,
-                        size: 18, color: OmniColors.warning),
+                    const Icon(
+                      Icons.warning_amber_rounded,
+                      size: 18,
+                      color: OmniColors.warning,
+                    ),
                     const SizedBox(width: OmniSpacing.sm),
                     Expanded(
                       child: Text(
@@ -208,7 +220,9 @@ class _CustomerFormPageState extends ConsumerState<CustomerFormPage> {
               child: TextFormField(
                 controller: _name,
                 textCapitalization: TextCapitalization.words,
-                decoration: const InputDecoration(hintText: 'VD: Nguyễn Thu Hà'),
+                decoration: const InputDecoration(
+                  hintText: 'VD: Nguyễn Thu Hà',
+                ),
                 validator: (value) =>
                     (value ?? '').trim().isEmpty ? 'Vui lòng nhập tên' : null,
               ),
@@ -218,7 +232,9 @@ class _CustomerFormPageState extends ConsumerState<CustomerFormPage> {
               label: 'Người liên hệ',
               child: TextFormField(
                 controller: _contact,
-                decoration: const InputDecoration(hintText: 'Nếu khác tên trên'),
+                decoration: const InputDecoration(
+                  hintText: 'Nếu khác tên trên',
+                ),
               ),
             ),
 

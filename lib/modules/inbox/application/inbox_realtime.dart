@@ -23,7 +23,8 @@ class RealtimePolling {
   static const threadLive = Duration(minutes: 2);
   static const threadFallback = Duration(seconds: 8);
 
-  static Duration inbox({required bool live}) => live ? inboxLive : inboxFallback;
+  static Duration inbox({required bool live}) =>
+      live ? inboxLive : inboxFallback;
 
   static Duration thread({required bool live}) =>
       live ? threadLive : threadFallback;

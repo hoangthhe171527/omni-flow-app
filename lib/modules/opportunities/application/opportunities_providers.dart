@@ -25,17 +25,17 @@ final pipelineSummaryProvider = FutureProvider<PipelineSummary>((ref) {
 /// back and forth doesn't refetch what's already loaded.
 final stageOpportunitiesProvider = FutureProvider.autoDispose
     .family<List<Opportunity>, PipelineStage>((ref, stage) async {
-  final search = ref.watch(pipelineSearchProvider);
-  final page = await ref
-      .watch(opportunitiesApiProvider)
-      .list(stage: stage, search: search.isEmpty ? null : search);
-  return page.items;
-});
+      final search = ref.watch(pipelineSearchProvider);
+      final page = await ref
+          .watch(opportunitiesApiProvider)
+          .list(stage: stage, search: search.isEmpty ? null : search);
+      return page.items;
+    });
 
-final opportunityProvider =
-    FutureProvider.autoDispose.family<Opportunity, String>((ref, id) {
-  return ref.watch(opportunitiesApiProvider).get(id);
-});
+final opportunityProvider = FutureProvider.autoDispose
+    .family<Opportunity, String>((ref, id) {
+      return ref.watch(opportunitiesApiProvider).get(id);
+    });
 
 /// Moves a deal and refreshes everything that shows a stage total.
 Future<Opportunity> moveOpportunityStage(

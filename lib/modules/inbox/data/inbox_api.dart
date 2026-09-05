@@ -86,15 +86,22 @@ class ConversationAssets {
     List<MessageAttachment> attachments(String key) =>
         (json[key] is List ? json[key] as List : const [])
             .whereType<Map>()
-            .map((item) => MessageAttachment.fromJson(item.cast<String, dynamic>()))
+            .map(
+              (item) =>
+                  MessageAttachment.fromJson(item.cast<String, dynamic>()),
+            )
             .toList();
     final rawLinks = json['links'];
     return ConversationAssets(
       media: attachments('media'),
       files: attachments('files'),
-      links: rawLinks is List ? rawLinks.map((item) => '$item').toList() : const [],
+      links: rawLinks is List
+          ? rawLinks.map((item) => '$item').toList()
+          : const [],
       cursor: json['pagination'] is Map
-          ? CursorPage.fromJson((json['pagination'] as Map).cast<String, dynamic>())
+          ? CursorPage.fromJson(
+              (json['pagination'] as Map).cast<String, dynamic>(),
+            )
           : const CursorPage.empty(),
     );
   }

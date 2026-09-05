@@ -37,8 +37,10 @@ void main() {
     final container = _containerFor({InboxPermissions.readOwn});
     addTearDown(container.dispose);
 
-    final labels =
-        container.read(visibleDestinationsProvider).map((d) => d.label).toList();
+    final labels = container
+        .read(visibleDestinationsProvider)
+        .map((d) => d.label)
+        .toList();
     expect(labels, ['Hộp thư']);
   });
 
@@ -50,8 +52,10 @@ void main() {
     });
     addTearDown(container.dispose);
 
-    final labels =
-        container.read(visibleDestinationsProvider).map((d) => d.label).toList();
+    final labels = container
+        .read(visibleDestinationsProvider)
+        .map((d) => d.label)
+        .toList();
     expect(labels, ['Hộp thư', 'Khách hàng', 'Cơ hội']);
   });
 
@@ -87,7 +91,10 @@ void main() {
     final container = _containerFor({});
     addTearDown(container.dispose);
 
-    final names = container.read(moduleRoutesProvider).map((r) => r.name).toList();
+    final names = container
+        .read(moduleRoutesProvider)
+        .map((r) => r.name)
+        .toList();
     expect(names.toSet().length, names.length);
   });
 }

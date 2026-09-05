@@ -20,16 +20,19 @@ enum CustomerQuickFilter {
   inactive;
 
   String get label => switch (this) {
-        CustomerQuickFilter.all => 'Tất cả',
-        CustomerQuickFilter.mine => 'Của tôi',
-        CustomerQuickFilter.vip => 'VIP',
-        CustomerQuickFilter.fresh => 'Mới',
-        CustomerQuickFilter.inactive => 'Ngưng hoạt động',
-      };
+    CustomerQuickFilter.all => 'Tất cả',
+    CustomerQuickFilter.mine => 'Của tôi',
+    CustomerQuickFilter.vip => 'VIP',
+    CustomerQuickFilter.fresh => 'Mới',
+    CustomerQuickFilter.inactive => 'Ngưng hoạt động',
+  };
 }
 
 class CustomerFilter {
-  const CustomerFilter({this.quick = CustomerQuickFilter.all, this.search = ''});
+  const CustomerFilter({
+    this.quick = CustomerQuickFilter.all,
+    this.search = '',
+  });
 
   final CustomerQuickFilter quick;
   final String search;
@@ -38,15 +41,15 @@ class CustomerFilter {
       CustomerFilter(quick: quick ?? this.quick, search: search ?? this.search);
 
   Map<String, dynamic> toQuery({String? currentUserId}) => {
-        if (search.isNotEmpty) 'search': search,
-        ...switch (quick) {
-          CustomerQuickFilter.all => const {},
-          CustomerQuickFilter.mine => {'assigned_sales_rep_id': currentUserId},
-          CustomerQuickFilter.vip => const {'customer_status': 'WARM'},
-          CustomerQuickFilter.fresh => const {'sort': '-created_at'},
-          CustomerQuickFilter.inactive => const {'customer_status': 'INACTIVE'},
-        },
-      };
+    if (search.isNotEmpty) 'search': search,
+    ...switch (quick) {
+      CustomerQuickFilter.all => const {},
+      CustomerQuickFilter.mine => {'assigned_sales_rep_id': currentUserId},
+      CustomerQuickFilter.vip => const {'customer_status': 'WARM'},
+      CustomerQuickFilter.fresh => const {'sort': '-created_at'},
+      CustomerQuickFilter.inactive => const {'customer_status': 'INACTIVE'},
+    },
+  };
 
   @override
   bool operator ==(Object other) =>
@@ -69,14 +72,16 @@ class CustomerFilterController extends Notifier<CustomerFilter> {
     );
   }
 
-  void setQuick(CustomerQuickFilter quick) => state = state.copyWith(quick: quick);
+  void setQuick(CustomerQuickFilter quick) =>
+      state = state.copyWith(quick: quick);
 
   void setSearch(String search) => state = state.copyWith(search: search);
 }
 
 final customerFilterProvider =
     NotifierProvider<CustomerFilterController, CustomerFilter>(
-        CustomerFilterController.new);
+      CustomerFilterController.new,
+    );
 
 class CustomerListState {
   const CustomerListState({
@@ -113,7 +118,9 @@ class CustomerListController
     final filter = ref.read(customerFilterProvider);
     final userId = ref.read(sessionProvider).user?.id;
     try {
-      final next = await ref.read(customersApiProvider).list(
+      final next = await ref
+          .read(customersApiProvider)
+          .list(
             query: filter.toQuery(currentUserId: userId),
             page: current.pagination.nextPage,
           );
@@ -131,9 +138,12 @@ class CustomerListController
 
 final customerListProvider =
     AutoDisposeAsyncNotifierProvider<CustomerListController, CustomerListState>(
-        CustomerListController.new);
+      CustomerListController.new,
+    );
 
-final customerProvider =
-    FutureProvider.autoDispose.family<Customer, String>((ref, id) {
+final customerProvider = FutureProvider.autoDispose.family<Customer, String>((
+  ref,
+  id,
+) {
   return ref.watch(customersApiProvider).get(id);
 });

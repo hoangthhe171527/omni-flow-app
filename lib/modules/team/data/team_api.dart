@@ -15,11 +15,14 @@ class TeamApi {
   /// every screen that needs a person's name.
   Future<List<TeamMember>> members({String? search}) async {
     final responses = await Future.wait([
-      _client.get('/memberships', query: {
-        'per_page': AppConfig.maxPerPage,
-        'status': 'active',
-        if (search != null && search.isNotEmpty) 'search': search,
-      }),
+      _client.get(
+        '/memberships',
+        query: {
+          'per_page': AppConfig.maxPerPage,
+          'status': 'active',
+          if (search != null && search.isNotEmpty) 'search': search,
+        },
+      ),
       _client.get('/identity/users', query: {'per_page': AppConfig.maxPerPage}),
     ]);
 
@@ -27,15 +30,18 @@ class TeamApi {
       for (final user in responses[1].list) user.strOr('id', ''): user,
     };
 
-    return responses[0]
-        .list
-        .map((membership) => TeamMember.fromJson(
-              membership,
-              users[membership.strOr('user_id', '')],
-            ))
+    return responses[0].list
+        .map(
+          (membership) => TeamMember.fromJson(
+            membership,
+            users[membership.strOr('user_id', '')],
+          ),
+        )
         .where((member) => member.userId.isNotEmpty)
         .toList();
   }
 }
 
-final teamApiProvider = Provider<TeamApi>((ref) => TeamApi(ref.watch(apiClientProvider)));
+final teamApiProvider = Provider<TeamApi>(
+  (ref) => TeamApi(ref.watch(apiClientProvider)),
+);

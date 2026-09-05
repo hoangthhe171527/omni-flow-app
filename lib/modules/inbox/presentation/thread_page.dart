@@ -109,10 +109,9 @@ class _ThreadPageState extends ConsumerState<ThreadPage>
     if (!mounted || _syncing) return;
     _syncing = true;
     try {
-      final changes = await ref.read(inboxApiProvider).changes(
-        _syncCursor,
-        conversationId: widget.conversationId,
-      );
+      final changes = await ref
+          .read(inboxApiProvider)
+          .changes(_syncCursor, conversationId: widget.conversationId);
       if (!mounted) return;
       _syncCursor = changes.cursor.isEmpty ? _syncCursor : changes.cursor;
       if (changes.count > 0) {
@@ -165,9 +164,7 @@ class _ThreadPageState extends ConsumerState<ThreadPage>
     // Subscribes to this conversation's own stream for as long as the thread is
     // open, so a delivery receipt or the customer's reply lands immediately
     // rather than on the next poll.
-    ref.watch(
-      conversationRealtimeSubscriptionProvider(widget.conversationId),
-    );
+    ref.watch(conversationRealtimeSubscriptionProvider(widget.conversationId));
 
     final live =
         ref.watch(realtimeStatusProvider).valueOrNull ==
@@ -323,12 +320,13 @@ class _ThreadPageState extends ConsumerState<ThreadPage>
     }
     _searchDebounce = Timer(const Duration(milliseconds: 280), () async {
       try {
-        final found = await ref.read(inboxApiProvider).searchMessages(
-          widget.conversationId,
-          query,
-        );
+        final found = await ref
+            .read(inboxApiProvider)
+            .searchMessages(widget.conversationId, query);
         if (!mounted || _searchController.text.trim() != query) return;
-        ref.read(threadProvider(widget.conversationId).notifier).mergeMessages(found);
+        ref
+            .read(threadProvider(widget.conversationId).notifier)
+            .mergeMessages(found);
         setState(() {
           _searchResults = found;
           _searchIndex = 0;
@@ -596,24 +594,9 @@ class _ThreadAppBar extends StatelessWidget implements PreferredSizeWidget {
           ),
           const SizedBox(width: 8),
         ] else ...[
-        IconButton(
-          tooltip: 'Tìm trong hội thoại',
-          onPressed: onSearch,
-          style: IconButton.styleFrom(
-            foregroundColor: scheme.onSurfaceVariant,
-            minimumSize: const Size(40, 40),
-            maximumSize: const Size(40, 40),
-            padding: EdgeInsets.zero,
-            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-          ),
-          icon: const Icon(Icons.search_rounded, size: 21),
-        ),
-        // The phone number lives on the customer record, not the thread, so
-        // "gọi" is offered in the context sheet where that data is loaded.
-        if (onAssign != null)
           IconButton(
-            tooltip: 'Gán nhân viên',
-            onPressed: onAssign,
+            tooltip: 'Tìm trong hội thoại',
+            onPressed: onSearch,
             style: IconButton.styleFrom(
               foregroundColor: scheme.onSurfaceVariant,
               minimumSize: const Size(40, 40),
@@ -621,21 +604,36 @@ class _ThreadAppBar extends StatelessWidget implements PreferredSizeWidget {
               padding: EdgeInsets.zero,
               tapTargetSize: MaterialTapTargetSize.shrinkWrap,
             ),
-            icon: const Icon(Icons.person_add_alt_outlined, size: 21),
+            icon: const Icon(Icons.search_rounded, size: 21),
           ),
-        IconButton(
-          tooltip: 'Thông tin khách hàng',
-          onPressed: onInfo,
-          style: IconButton.styleFrom(
-            foregroundColor: scheme.onSurfaceVariant,
-            minimumSize: const Size(40, 40),
-            maximumSize: const Size(40, 40),
-            padding: EdgeInsets.zero,
-            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+          // The phone number lives on the customer record, not the thread, so
+          // "gọi" is offered in the context sheet where that data is loaded.
+          if (onAssign != null)
+            IconButton(
+              tooltip: 'Gán nhân viên',
+              onPressed: onAssign,
+              style: IconButton.styleFrom(
+                foregroundColor: scheme.onSurfaceVariant,
+                minimumSize: const Size(40, 40),
+                maximumSize: const Size(40, 40),
+                padding: EdgeInsets.zero,
+                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              ),
+              icon: const Icon(Icons.person_add_alt_outlined, size: 21),
+            ),
+          IconButton(
+            tooltip: 'Thông tin khách hàng',
+            onPressed: onInfo,
+            style: IconButton.styleFrom(
+              foregroundColor: scheme.onSurfaceVariant,
+              minimumSize: const Size(40, 40),
+              maximumSize: const Size(40, 40),
+              padding: EdgeInsets.zero,
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            ),
+            icon: const Icon(Icons.info_outline_rounded, size: 21),
           ),
-          icon: const Icon(Icons.info_outline_rounded, size: 21),
-        ),
-        const SizedBox(width: 8),
+          const SizedBox(width: 8),
         ],
       ],
     );
@@ -717,27 +715,27 @@ class _MessageList extends StatelessWidget {
         return KeyedSubtree(
           key: keyForMessage(message.id),
           child: Column(
-          // Without this the Column defaults to centre, which collapsed to the
-          // bubble's own width and parked every message in the middle of the
-          // screen — the side a message is on is the whole point of a thread.
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            if (needsDayHeader) _DaySeparator(date: message.sentAt!),
-            MessageBubble(
-              message: message,
-              showSender: isGroup && !message.isOutbound && !grouped,
-              groupedWithPrevious: grouped,
-              isLastInGroup: isLastInGroup,
-              onRetry: message.status == DeliveryStatus.failed
-                  ? () => onRetry(message)
-                  : null,
-              onDiscard: message.status == DeliveryStatus.failed
-                  ? () => onDiscard(message)
-                  : null,
-              onReply: () => onReply(message),
-              onPin: () => onPin(message),
-            ),
-          ],
+            // Without this the Column defaults to centre, which collapsed to the
+            // bubble's own width and parked every message in the middle of the
+            // screen — the side a message is on is the whole point of a thread.
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              if (needsDayHeader) _DaySeparator(date: message.sentAt!),
+              MessageBubble(
+                message: message,
+                showSender: isGroup && !message.isOutbound && !grouped,
+                groupedWithPrevious: grouped,
+                isLastInGroup: isLastInGroup,
+                onRetry: message.status == DeliveryStatus.failed
+                    ? () => onRetry(message)
+                    : null,
+                onDiscard: message.status == DeliveryStatus.failed
+                    ? () => onDiscard(message)
+                    : null,
+                onReply: () => onReply(message),
+                onPin: () => onPin(message),
+              ),
+            ],
           ),
         );
       },

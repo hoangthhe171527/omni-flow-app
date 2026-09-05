@@ -20,24 +20,24 @@ class SettingsModule extends OmniModule {
 
   @override
   List<ModuleRoute> routes() => [
-        ModuleRoute(
-          path: '/settings/permissions',
-          name: myPermissions,
-          rootNavigator: true,
-          builder: (_, _) => const MyPermissionsPage(),
-        ),
-      ];
+    ModuleRoute(
+      path: '/settings/permissions',
+      name: myPermissions,
+      rootNavigator: true,
+      builder: (_, _) => const MyPermissionsPage(),
+    ),
+  ];
 
   @override
   List<ModuleMenuEntry> menuEntries() => const [
-        ModuleMenuEntry(
-          moduleId: 'settings',
-          label: 'Quyền của tôi',
-          subtitle: 'Xem những gì bạn được phép làm',
-          icon: Icons.shield_outlined,
-          routeName: myPermissions,
-          group: 'Tài khoản',
-          order: 90,
-        ),
-      ];
+    ModuleMenuEntry(
+      moduleId: 'settings',
+      label: 'Quyền của tôi',
+      subtitle: 'Xem những gì bạn được phép làm',
+      icon: Icons.shield_outlined,
+      routeName: myPermissions,
+      group: 'Tài khoản',
+      order: 90,
+    ),
+  ];
 }

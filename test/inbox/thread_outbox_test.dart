@@ -114,11 +114,12 @@ void main() {
 
       await controller().refresh();
 
-      expect(
-        read().messages.map((m) => m.id),
-        ['m1', 'm2', 'm3', 'm4'],
-        reason: 'A refresh must not collapse the thread back to one page.',
-      );
+      expect(read().messages.map((m) => m.id), [
+        'm1',
+        'm2',
+        'm3',
+        'm4',
+      ], reason: 'A refresh must not collapse the thread back to one page.');
     });
 
     test('advances a delivery status that moved on the server', () async {
@@ -144,7 +145,11 @@ void main() {
       await controller().refresh();
 
       expect(read().messages.map((m) => m.id), ['m90']);
-      expect(read().pending, hasLength(1), reason: 'The outbox is not history.');
+      expect(
+        read().pending,
+        hasLength(1),
+        reason: 'The outbox is not history.',
+      );
     });
 
     test(
