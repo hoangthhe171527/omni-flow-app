@@ -1,7 +1,7 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/error/app_exception.dart';
+import '../../../core/error/crash_reporting.dart';
 import '../data/inbox_api.dart';
 import '../domain/message.dart';
 
@@ -354,13 +354,10 @@ class ThreadController
       // rep as "sent". The exception is still surfaced for a crash reporter to
       // pick up rather than swallowed.
       _fail(draft.id, 'Không gửi được. Vui lòng thử lại.');
-      FlutterError.reportError(
-        FlutterErrorDetails(
-          exception: error,
-          stack: stackTrace,
-          library: 'inbox',
-          context: ErrorDescription('sending a message'),
-        ),
+      CrashReporting.recordHandled(
+        error,
+        stackTrace,
+        reason: 'inbox: sending a message',
       );
     }
   }

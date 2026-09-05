@@ -14,6 +14,9 @@ val googleServicesFile = layout.projectDirectory.file("google-services.json")
 // resources can never be produced accidentally.
 if (googleServicesFile.asFile.isFile) {
     apply(plugin = "com.google.gms.google-services")
+    // Crashlytics depends on google-services having run, so it is applied in the
+    // same branch and never on its own.
+    apply(plugin = "com.google.firebase.crashlytics")
 }
 
 val verifyReleaseGoogleServices by tasks.registering {

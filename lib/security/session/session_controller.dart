@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/error/app_exception.dart';
+import '../../core/error/crash_reporting.dart';
 import '../../core/network/active_tenant.dart';
 import '../../core/storage/preferences_store.dart';
 import '../../core/storage/storage_keys.dart';
@@ -188,11 +189,20 @@ class SessionController extends Notifier<Session> {
   Future<void> _loadContext({bool retryOnTransientFailure = false}) async {
     final previous = state;
     try {
-      state = await _gateway.loadContext();
+      final session = await _gateway.loadContext();
+      state = session;
       // Back to normal: the next outage starts its backoff from 5s again, so a
       // device that recovers and later drops out is not made to wait the two
       // minutes the previous outage had climbed to.
       _restoreBackoff = _initialRestoreBackoff;
+      // Ids only — enough to tell one broken device from a broken tenant,
+      // without putting a name or a message body into a crash report.
+      unawaited(
+        CrashReporting.identify(
+          userId: session.user?.id,
+          tenantId: session.tenant?.id,
+        ),
+      );
     } on UnauthorizedException {
       await _clearCredentials();
       state = const Session.expired();
@@ -233,6 +243,9 @@ class SessionController extends Notifier<Session> {
     await _tokens.clear();
     await _prefs.remove(StorageKeys.tenantId);
     ref.read(activeTenantIdProvider.notifier).state = null;
+    // Detach the identity too. A shared demo phone would otherwise keep
+    // attributing the next person's crashes to whoever logged out.
+    unawaited(CrashReporting.identify());
   }
 }
 
