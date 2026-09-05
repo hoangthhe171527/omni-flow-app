@@ -59,7 +59,7 @@ class _CustomersPageState extends ConsumerState<CustomersPage> {
         titleSpacing: OmniSpacing.lg,
         toolbarHeight: 56,
         bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(89),
+          preferredSize: const Size.fromHeight(97),
           child: Column(
             children: [
               // Same flat search line as the inbox: icon, word, no box. The
@@ -106,7 +106,7 @@ class _CustomersPageState extends ConsumerState<CustomersPage> {
                 ),
               ),
               SizedBox(
-                height: 40,
+                height: 48,
                 child: ListView.separated(
                   scrollDirection: Axis.horizontal,
                   padding: const EdgeInsets.symmetric(horizontal: 16),

@@ -201,7 +201,7 @@ class _InboxPageState extends ConsumerState<InboxPage>
         // line plus one pill row, and the stale number left a dead white gap.
         bottom: const PreferredSize(
           // Search line + pill row + the rule under them.
-          preferredSize: Size.fromHeight(89),
+          preferredSize: Size.fromHeight(97),
           child: InboxFilterBar(),
         ),
       ),

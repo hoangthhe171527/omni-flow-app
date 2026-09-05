@@ -43,36 +43,42 @@ class OmniFilterPill extends StatelessWidget {
       clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                label,
-                style: OmniType.caption.copyWith(
-                  fontSize: 13.5,
-                  height: 1.1,
-                  color: foreground,
-                  fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
-                ),
-              ),
-              if (count != null && count! > 0) ...[
-                const SizedBox(width: 5),
+        // 44dp là sàn, không phải mục tiêu: pill này đo được 29dp trước khi có
+        // ràng buộc này. Vùng chạm cao hơn phần nhìn thấy — đúng cách, vì cái
+        // cần lớn là chỗ ngón tay chạm chứ không phải viên thuốc trên màn hình.
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(minHeight: 44),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
                 Text(
-                  '$count',
+                  label,
                   style: OmniType.caption.copyWith(
                     fontSize: 13.5,
                     height: 1.1,
-                    // Dimmed rather than boxed: the count qualifies the label, it
-                    // is not a second thing to look at.
-                    color: foreground.withValues(alpha: 0.6),
-                    fontWeight: FontWeight.w600,
-                    fontFeatures: OmniType.tabular,
+                    color: foreground,
+                    fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
                   ),
                 ),
+                if (count != null && count! > 0) ...[
+                  const SizedBox(width: 5),
+                  Text(
+                    '$count',
+                    style: OmniType.caption.copyWith(
+                      fontSize: 13.5,
+                      height: 1.1,
+                      // Dimmed rather than boxed: the count qualifies the label, it
+                      // is not a second thing to look at.
+                      color: foreground.withValues(alpha: 0.6),
+                      fontWeight: FontWeight.w600,
+                      fontFeatures: OmniType.tabular,
+                    ),
+                  ),
+                ],
               ],
-            ],
+            ),
           ),
         ),
       ),

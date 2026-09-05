@@ -96,7 +96,7 @@ class InboxFilterBar extends ConsumerWidget {
         // The one filter row worth keeping visible: triage state is what a rep
         // switches between all day.
         SizedBox(
-          height: 40,
+          height: 48,
           child: ListView.separated(
             scrollDirection: Axis.horizontal,
             padding: const EdgeInsets.fromLTRB(16, 0, 16, 0),
@@ -210,7 +210,7 @@ class InboxFilterBar extends ConsumerWidget {
 
     return PopupMenuItem<_ChannelChoice>(
       value: value,
-      height: 40,
+      height: 48,
       child: Row(
         children: [
           if (color != null)
