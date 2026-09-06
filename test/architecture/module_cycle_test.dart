@@ -16,30 +16,10 @@ import 'package:flutter_test/flutter_test.dart';
 /// Test chạy trên mã nguồn nên nó bắt được vòng ngay khi vòng vừa xuất hiện,
 /// kể cả ở module chưa có test widget nào.
 void main() {
-  // Hai vòng có sẵn từ trước, mỗi cái có TÊN và có LÝ DO. Đây không phải một
-  // biểu thức nới lỏng — nó là danh sách đóng, và thêm dòng vào đây phải kèm
-  // lý do viết thành chữ.
-  //
-  // Cả hai đều là cùng một hình dạng: module A import `b_module.dart` của
-  // module B chỉ để lấy MỘT hằng số tên route cho `context.pushNamed(...)`.
-  // Không có dữ liệu nào chảy qua, không có kiểu nào dùng chung — nhưng trình
-  // biên dịch vẫn thấy một cạnh, và trình biên dịch mới là thứ quyết định
-  // module nào tách được khỏi module nào.
-  //
-  // Cách gỡ chung cho cả hai: tên route rời khỏi lớp module, thành hằng số
-  // trong một file `routes.dart` riêng mà ai cũng đọc được mà không kéo theo
-  // phần hiện thực. Là việc gọn nhưng chạm bốn module, nên nó là một thay đổi
-  // riêng chứ không ghé vào giữa một thay đổi khác.
-  const known = <String>{
-    // customer_detail mở màn cơ hội; opportunity_detail và opportunity_form
-    // mở màn khách hàng. Điều hướng hai chiều giữa hai màn của cùng một quy
-    // trình bán hàng.
-    'customers ↔ opportunities',
-    // notifications_module trỏ vào TasksModule.detail để mở sâu vào công việc
-    // từ một thông báo; my_tasks_page trỏ ngược lại để mở màn thông báo từ
-    // nút chuông.
-    'notifications ↔ tasks',
-  };
+  // Danh sách đóng, hiện đang RỖNG. Cả hai vòng từng có ở đây đã được gỡ
+  // bằng cách tách tên route ra `routes.dart`. Thêm dòng vào đây phải kèm lý
+  // do viết thành chữ, và test dưới cùng canh không có dòng thừa.
+  const known = <String>{};
 
   test('không có chu trình MỚI nào giữa các module', () {
     final graph = _moduleGraph();
@@ -88,6 +68,36 @@ void main() {
     );
   });
 
+  // `routes.dart` được miễn khỏi đồ thị vì nó chỉ chứa hằng số. Bài này giữ
+  // cho lời miễn ấy đúng: một `routes.dart` có import là một cửa hậu để lách
+  // toàn bộ test trên.
+  test('mọi routes.dart đều là lá — không import gì', () {
+    final offenders = <String>[];
+
+    for (final module in Directory('lib/modules').listSync().whereType<Directory>()) {
+      final file = File('${module.path}/routes.dart');
+      if (!file.existsSync()) continue;
+
+      final imports = file
+          .readAsLinesSync()
+          .where((line) => line.trimLeft().startsWith('import '))
+          .toList();
+
+      if (imports.isNotEmpty) {
+        offenders.add('${file.path}: ${imports.join(', ')}');
+      }
+    }
+
+    expect(
+      offenders,
+      isEmpty,
+      reason:
+          'routes.dart phải là hằng số thuần:\n${offenders.join('\n')}\n\n'
+          'Nó được miễn khỏi đồ thị phụ thuộc CHÍNH VÌ nó không kéo theo gì. '
+          'Một import ở đây biến lời miễn thành một cửa hậu.',
+    );
+  });
+
   test('đồ thị đọc được, tức là test trên có ý nghĩa', () {
     // Một biểu thức tìm sai đường dẫn sẽ cho đồ thị RỖNG, và một test tìm chu
     // trình trong đồ thị rỗng thì luôn xanh. Bài này canh chính điều đó.
@@ -115,9 +125,20 @@ Map<String, Set<String>> _moduleGraph() {
       if (entity is! File || !entity.path.endsWith('.dart')) continue;
 
       for (final line in entity.readAsLinesSync()) {
+        final trimmed = line.trim();
+
+        // `routes.dart` không phải một cạnh. Nó chỉ chứa hằng số tên route và
+        // KHÔNG import gì — bài "mọi routes.dart đều là lá" canh điều đó — nên
+        // phụ thuộc vào nó không thể kéo theo phần hiện thực của module kia, và
+        // không thể nằm trong một chu trình.
+        //
+        // Đây là chỗ hai vòng cũ được gỡ: chúng tồn tại chỉ vì `pushNamed` cần
+        // một chuỗi, và lấy chuỗi ấy phải import cả lớp module.
+        if (trimmed.endsWith("/routes.dart';")) continue;
+
         final match = RegExp(
           r'''^import '(?:\.\./)+([a-z_]+)/''',
-        ).firstMatch(line.trim());
+        ).firstMatch(trimmed);
         final target = match?.group(1);
 
         // `core`, `design`, `security`, `app` là hạ tầng dùng chung — mọi

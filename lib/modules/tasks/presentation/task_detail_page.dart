@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 
+import '../../../core/error/app_exception.dart';
 import '../../../core/utils/formatters.dart';
 import '../../../design/components/components.dart';
 import '../../../design/tokens/tokens.dart';
@@ -119,6 +120,10 @@ class _Loaded extends ConsumerWidget {
     TaskController controller,
     Task task,
   ) async {
+    // Lấy messenger TRƯỚC khi await: sau khi sheet đóng, `context` có thể đã
+    // rời khỏi cây widget, và tra nó lúc đó là một lỗi lúc chạy.
+    final messenger = ScaffoldMessenger.of(context);
+
     // Danh sách công đoạn đi kèm phản hồi chi tiết. Trước đây chỗ này gọi
     // `planProvider` — một lượt mạng thứ hai chỉ để lấy vài cái tên, và là
     // cạnh duy nhất khiến module tasks phụ thuộc module plans.
@@ -132,7 +137,14 @@ class _Loaded extends ConsumerWidget {
     // có gì để ghi, và một lượt ghi rỗng vẫn chạm updated_at.
     if (chosen == null || chosen == task.sectionId) return;
 
-    await controller.moveToSection(chosen);
+    try {
+      await controller.moveToSection(chosen);
+    } on AppException catch (e) {
+      // Cổng QC từ chối bằng 422 kèm TÊN các công đoạn còn thiếu. Nuốt lỗi ở
+      // đây là để quản đốc bấm lại lần nữa mà không hiểu vì sao thẻ không
+      // nhúc nhích — và câu trả lời thì đã nằm sẵn trong phản hồi.
+      messenger.showSnackBar(SnackBar(content: Text(e.message)));
+    }
   }
 }
 

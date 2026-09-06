@@ -6,7 +6,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../../core/utils/formatters.dart';
 import '../../../design/components/components.dart';
 import '../../../design/tokens/tokens.dart';
-import '../../opportunities/opportunities.dart';
+import '../../opportunities/routes.dart';
 import '../application/customers_providers.dart';
 import '../customers_module.dart';
 import '../domain/customer.dart';
@@ -242,7 +242,7 @@ class _QuickActions extends StatelessWidget {
             icon: Icons.trending_up_rounded,
             label: 'Tạo cơ hội',
             onTap: () => context.pushNamed(
-              OpportunitiesModule.create,
+              OpportunityRoutes.create,
               queryParameters: {'customer': customer.id},
             ),
           ),

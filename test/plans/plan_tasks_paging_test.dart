@@ -124,6 +124,7 @@ class _PagedApi implements PlansApi {
     required String name,
     String? teamId,
     List<String> sectionNames = const [],
+    Set<String> gatedSectionNames = const {},
   }) async => Plan.fromJson({'id': 'p', 'name': name});
 }
 

@@ -1,10 +1,11 @@
+import 'routes.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/module/module_route.dart';
 import '../../core/module/nav_destination.dart';
 import '../../core/module/omni_module.dart';
-import '../tasks/tasks_module.dart';
+import '../tasks/routes.dart';
 import 'presentation/notifications_page.dart';
 
 /// The bell.
@@ -18,7 +19,7 @@ import 'presentation/notifications_page.dart';
 class NotificationsModule extends OmniModule {
   const NotificationsModule();
 
-  static const centre = 'notifications.centre';
+  static const centre = NotificationRoutes.centre;
 
   @override
   String get id => 'notifications';
@@ -37,7 +38,7 @@ class NotificationsModule extends OmniModule {
         // Passing the callback rather than importing a page keeps the two
         // modules from depending on each other's presentation layer.
         onOpenTask: (taskId) => context.pushNamed(
-          TasksModule.detail,
+          TaskRoutes.detail,
           pathParameters: {'id': taskId},
         ),
       ),

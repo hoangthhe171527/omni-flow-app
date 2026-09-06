@@ -76,7 +76,7 @@ class ConversationContextSheet extends ConsumerWidget {
                     onTap: () {
                       Navigator.pop(context);
                       context.pushNamed(
-                        CustomersModule.detail,
+                        CustomerRoutes.detail,
                         pathParameters: {'id': threadInfo.customerId!},
                       );
                     },
@@ -98,7 +98,7 @@ class ConversationContextSheet extends ConsumerWidget {
                   onTap: () {
                     Navigator.pop(context);
                     context.pushNamed(
-                      OpportunitiesModule.create,
+                      OpportunityRoutes.create,
                       queryParameters: {
                         if (threadInfo.customerId != null)
                           'customer': threadInfo.customerId!,

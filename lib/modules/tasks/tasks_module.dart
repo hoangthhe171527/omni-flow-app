@@ -1,3 +1,4 @@
+import 'routes.dart';
 import 'package:flutter/material.dart';
 
 import '../../core/module/module_route.dart';
@@ -18,8 +19,8 @@ import 'presentation/task_detail_page.dart';
 class TasksModule extends OmniModule {
   const TasksModule();
 
-  static const list = 'tasks.list';
-  static const detail = 'tasks.detail';
+  static const list = TaskRoutes.list;
+  static const detail = TaskRoutes.detail;
 
   @override
   String get id => 'tasks';

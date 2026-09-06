@@ -1,3 +1,4 @@
+import 'routes.dart';
 import 'package:flutter/material.dart';
 
 import '../../core/module/module_route.dart';
@@ -12,10 +13,10 @@ import 'presentation/customers_page.dart';
 class CustomersModule extends OmniModule {
   const CustomersModule();
 
-  static const list = 'customers.list';
-  static const detail = 'customers.detail';
-  static const create = 'customers.create';
-  static const edit = 'customers.edit';
+  static const list = CustomerRoutes.list;
+  static const detail = CustomerRoutes.detail;
+  static const create = CustomerRoutes.create;
+  static const edit = CustomerRoutes.edit;
 
   @override
   String get id => 'customers';

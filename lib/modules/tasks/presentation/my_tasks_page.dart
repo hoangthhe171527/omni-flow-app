@@ -5,7 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../design/components/components.dart';
 import '../../../design/tokens/tokens.dart';
 import '../../notifications/application/notifications_providers.dart';
-import '../../notifications/notifications_module.dart';
+import '../../notifications/routes.dart';
 import '../application/tasks_providers.dart';
 import '../data/tasks_api.dart';
 import '../tasks_module.dart';
@@ -64,7 +64,7 @@ class _MyTasksPageState extends ConsumerState<MyTasksPage> {
           // something is a step too many.
           _BellButton(
             unread: ref.watch(unreadNotificationCountProvider),
-            onTap: () => context.pushNamed(NotificationsModule.centre),
+            onTap: () => context.pushNamed(NotificationRoutes.centre),
           ),
         ],
         bottom: PreferredSize(

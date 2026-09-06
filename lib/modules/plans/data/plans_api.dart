@@ -64,6 +64,7 @@ class PlansApi {
     required String name,
     String? teamId,
     List<String> sectionNames = const [],
+    Set<String> gatedSectionNames = const {},
   }) async {
     final response = await _client.post(
       '/projects',
@@ -76,7 +77,16 @@ class PlansApi {
               // Id do client sinh, và API nhận nguyên: `section_id` trên công
               // việc trỏ vào chính những id này, nên chúng phải ổn định trong
               // suốt vòng đời kế hoạch.
-              {'id': 's${i + 1}', 'name': sectionNames[i], 'order': i},
+              {
+                'id': 's${i + 1}',
+                'name': sectionNames[i],
+                'order': i,
+                // Cổng QC là DỮ LIỆU trên từng công đoạn, không phải một vị
+                // trí API suy ra. Gửi cờ chỉ khi bật: một `false` tường minh
+                // trên mọi công đoạn làm tài liệu to ra mà không nói gì thêm.
+                if (gatedSectionNames.contains(sectionNames[i]))
+                  'requires_checklist': true,
+              },
           ],
       },
     );

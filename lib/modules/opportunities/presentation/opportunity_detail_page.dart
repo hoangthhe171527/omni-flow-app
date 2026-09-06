@@ -6,7 +6,7 @@ import '../../../core/error/app_exception.dart';
 import '../../../core/utils/formatters.dart';
 import '../../../design/components/components.dart';
 import '../../../design/tokens/tokens.dart';
-import '../../customers/customers.dart';
+import '../../customers/routes.dart';
 import '../application/opportunities_providers.dart';
 import '../data/opportunities_api.dart';
 import '../domain/opportunity.dart';
@@ -75,7 +75,7 @@ class OpportunityDetailPage extends ConsumerWidget {
                     onTap: data.customerId == null
                         ? null
                         : () => context.pushNamed(
-                            CustomersModule.detail,
+                            CustomerRoutes.detail,
                             pathParameters: {'id': data.customerId!},
                           ),
                   ),

@@ -144,6 +144,7 @@ class _RecordingApi implements PlansApi {
     required String name,
     String? teamId,
     List<String> sectionNames = const [],
+    Set<String> gatedSectionNames = const {},
   }) async {
     createdName = name;
     createdTeamId = teamId;

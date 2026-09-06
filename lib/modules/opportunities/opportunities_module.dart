@@ -1,3 +1,4 @@
+import 'routes.dart';
 import 'package:flutter/material.dart';
 
 import '../../core/module/module_route.dart';
@@ -12,10 +13,10 @@ import 'presentation/pipeline_page.dart';
 class OpportunitiesModule extends OmniModule {
   const OpportunitiesModule();
 
-  static const pipeline = 'opportunities.pipeline';
-  static const detail = 'opportunities.detail';
-  static const create = 'opportunities.create';
-  static const edit = 'opportunities.edit';
+  static const pipeline = OpportunityRoutes.pipeline;
+  static const detail = OpportunityRoutes.detail;
+  static const create = OpportunityRoutes.create;
+  static const edit = OpportunityRoutes.edit;
 
   @override
   String get id => 'opportunities';

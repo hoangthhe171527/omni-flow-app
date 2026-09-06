@@ -6,7 +6,10 @@
 library;
 
 export 'application/customers_providers.dart';
-export 'customers_module.dart' show CustomersModule;
+// KHÔNG xuất lớp module. Module khác chỉ cần TÊN ROUTE, và lấy nó qua
+//  — một file hằng số không import gì. Xuất lớp module ở đây
+// là mở lại đúng cửa hậu đã tạo ra chu trình customers ↔ opportunities.
+export 'routes.dart';
 export 'domain/customer.dart';
 export 'domain/customer_permissions.dart';
 export 'presentation/customer_picker_sheet.dart';

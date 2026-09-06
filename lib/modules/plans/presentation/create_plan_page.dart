@@ -21,6 +21,20 @@ const kWorkshopSections = <String>[
   'Đã giao',
 ];
 
+/// Công đoạn nào đặt CỔNG QC: vào đây thì checklist của cây đàn phải xong.
+///
+/// Theo `docs/TNP_PIANO_WORKSHOP_FLOW.md`:
+///   - §B3 "đủ 10/10 → kéo sang `Chờ QC`" — cổng đầu tiên nằm ở đây, tức cột
+///     GIỮA của năm cột, không phải cột cuối.
+///   - §B4 "số cây hoàn thành tháng = số card vào cột `Hoàn thiện`" — đây là
+///     chỗ con số thưởng được đếm, nên nó cũng phải có cổng.
+///   - `Đã giao` có cổng để không ai đi đường vòng qua hai cột trên.
+///
+/// Chỉ áp cho kế hoạch tạo MỚI bằng bộ công đoạn xưởng. Kế hoạch đã có và
+/// công đoạn người dùng tự thêm đều không có cổng — bật cổng cho dữ liệu cũ
+/// là chặn công việc đang chạy bằng một quy tắc nó chưa từng biết.
+const kGatedWorkshopSections = <String>{'Chờ QC', 'Hoàn thiện', 'Đã giao'};
+
 class CreatePlanPage extends ConsumerStatefulWidget {
   const CreatePlanPage({super.key});
 
@@ -149,6 +163,7 @@ class _CreatePlanPageState extends ConsumerState<CreatePlanPage> {
               for (final s in _sections)
                 if (s.trim().isNotEmpty) s.trim(),
             ],
+            gatedSectionNames: kGatedWorkshopSections,
           );
 
       ref.invalidate(teamsWithPlansProvider);
