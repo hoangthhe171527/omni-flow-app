@@ -60,12 +60,15 @@ void main() {
   // vạch ngăn TRANG TRÍ. Gán cùng một màu cho cả hai nghĩa là một trong hai
   // vai đang sai — và vai sai ở đây là vai phải đạt 3:1.
   group('hai loại đường kẻ', () {
-    test('sáng: outline là viền tương tác, outlineVariant là viền trang trí', () {
-      final s = OmniTheme.light(TargetPlatform.android).colorScheme;
+    test(
+      'sáng: outline là viền tương tác, outlineVariant là viền trang trí',
+      () {
+        final s = OmniTheme.light(TargetPlatform.android).colorScheme;
 
-      expect(s.outline, OmniColors.borderInteractive);
-      expect(s.outlineVariant, OmniColors.border);
-    });
+        expect(s.outline, OmniColors.borderInteractive);
+        expect(s.outlineVariant, OmniColors.border);
+      },
+    );
 
     test('tối: cùng cách chia', () {
       final s = OmniTheme.dark(TargetPlatform.android).colorScheme;

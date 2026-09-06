@@ -236,9 +236,9 @@ class _FailureNotice extends StatelessWidget {
             Expanded(
               child: Text(
                 'Chưa lưu được: $reason',
-                style: Theme.of(
-                  context,
-                ).textTheme.labelSmall?.copyWith(color: OmniColors.dangerTextOf(context)),
+                style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                  color: OmniColors.dangerTextOf(context),
+                ),
               ),
             ),
           ],

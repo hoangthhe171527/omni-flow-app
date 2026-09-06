@@ -78,13 +78,15 @@ class OmniStatusChip extends StatelessWidget {
   /// lần — đủ để thấy viên chip, chưa đủ để nó trông như một cái nút.
   (Color, Color) _palette(ColorScheme scheme, {required bool dark}) =>
       switch (tone) {
-        OmniTone.neutral => dark
-            ? (OmniColors.darkMutedForeground, OmniColors.darkMuted)
-            : (OmniColors.mutedForeground, OmniColors.muted),
+        OmniTone.neutral =>
+          dark
+              ? (OmniColors.darkMutedForeground, OmniColors.darkMuted)
+              : (OmniColors.mutedForeground, OmniColors.muted),
 
-        OmniTone.info => dark
-            ? (const Color(0xFF7FC7EE), const Color(0xFF10283A))
-            : (OmniColors.infoSurface, const Color(0xFFE5F1F8)),
+        OmniTone.info =>
+          dark
+              ? (const Color(0xFF7FC7EE), const Color(0xFF10283A))
+              : (OmniColors.infoSurface, const Color(0xFFE5F1F8)),
 
         // "Đã xong" mang chính màu chính, không có xanh lá riêng: mọi ứng
         // viên xanh lá chỉ chênh màu chính 1.13–1.20 lần về độ sáng. Xem ghi
@@ -94,12 +96,14 @@ class OmniStatusChip extends StatelessWidget {
           scheme.primaryContainer,
         ),
 
-        OmniTone.warning => dark
-            ? (OmniColors.warningTextDark, const Color(0xFF322517))
-            : (OmniColors.warningText, const Color(0xFFFDF3E3)),
+        OmniTone.warning =>
+          dark
+              ? (OmniColors.warningTextDark, const Color(0xFF322517))
+              : (OmniColors.warningText, const Color(0xFFFDF3E3)),
 
-        OmniTone.danger => dark
-            ? (OmniColors.dangerTextDark, const Color(0xFF33211F))
-            : (OmniColors.dangerText, const Color(0xFFFDECEA)),
+        OmniTone.danger =>
+          dark
+              ? (OmniColors.dangerTextDark, const Color(0xFF33211F))
+              : (OmniColors.dangerText, const Color(0xFFFDECEA)),
       };
 }

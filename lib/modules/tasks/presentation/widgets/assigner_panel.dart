@@ -14,11 +14,7 @@ import '../../domain/task.dart';
 /// Ranh giới đi qua `TaskAccess.isAssigner`, tức qua QUYỀN. Không qua tên vai
 /// trò: vai trò do từng tenant tự đặt tên.
 class AssignerPanel extends StatelessWidget {
-  const AssignerPanel({
-    super.key,
-    required this.task,
-    this.onMoveSection,
-  });
+  const AssignerPanel({super.key, required this.task, this.onMoveSection});
 
   final Task task;
 

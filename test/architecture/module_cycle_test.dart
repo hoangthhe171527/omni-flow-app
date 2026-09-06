@@ -74,7 +74,9 @@ void main() {
   test('mọi routes.dart đều là lá — không import gì', () {
     final offenders = <String>[];
 
-    for (final module in Directory('lib/modules').listSync().whereType<Directory>()) {
+    for (final module in Directory(
+      'lib/modules',
+    ).listSync().whereType<Directory>()) {
       final file = File('${module.path}/routes.dart');
       if (!file.existsSync()) continue;
 

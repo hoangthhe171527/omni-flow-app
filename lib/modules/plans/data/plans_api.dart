@@ -162,7 +162,11 @@ Future<PlanTasks> loadAllTasksInPlan(PlansApi api, String planId) async {
   var reachedEnd = false;
 
   for (var page = 1; all.length < kMaxTasksOnBoard; page++) {
-    final result = await api.tasksInPlan(planId, page: page, perPage: _pageSize);
+    final result = await api.tasksInPlan(
+      planId,
+      page: page,
+      perPage: _pageSize,
+    );
     all.addAll(result.items);
 
     // Dừng theo DỮ LIỆU nhận được, không theo `last_page` API tự khai. Một

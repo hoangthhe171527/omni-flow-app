@@ -35,13 +35,13 @@ class TaskAccess extends ResourceAccess {
     required bool canWrite,
     required this.isAssigner,
   }) : super(
-        canCreate: canWrite,
-        canUpdate: canWrite,
-        canDelete: canWrite,
-        capabilities: canWrite
-            ? const {'complete', 'comment', 'attach'}
-            : const {},
-      );
+         canCreate: canWrite,
+         canUpdate: canWrite,
+         canDelete: canWrite,
+         capabilities: canWrite
+             ? const {'complete', 'comment', 'attach'}
+             : const {},
+       );
 
   /// Người này GIAO việc, chứ không chỉ nhận việc.
   ///

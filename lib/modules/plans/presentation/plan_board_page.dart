@@ -55,14 +55,14 @@ class _PlanBoardPageState extends ConsumerState<PlanBoardPage> {
           controller: _controller,
           current: _current.clamp(0, _columnCount(plan) - 1),
           onPage: (index) => setState(() => _current = index),
-          onRetryTasks: () =>
-              ref.invalidate(planTasksProvider(widget.planId)),
+          onRetryTasks: () => ref.invalidate(planTasksProvider(widget.planId)),
         ),
       ),
     );
   }
 
-  int _columnCount(Plan plan) => plan.sections.isEmpty ? 1 : plan.sections.length;
+  int _columnCount(Plan plan) =>
+      plan.sections.isEmpty ? 1 : plan.sections.length;
 }
 
 class _Board extends StatelessWidget {
@@ -115,10 +115,8 @@ class _Board extends StatelessWidget {
                 controller: controller,
                 onPageChanged: onPage,
                 itemCount: columns.length,
-                itemBuilder: (context, index) => _Column(
-                  section: columns[index],
-                  tasks: buckets[index],
-                ),
+                itemBuilder: (context, index) =>
+                    _Column(section: columns[index], tasks: buckets[index]),
               ),
             ),
           ],
@@ -193,7 +191,6 @@ class _TruncatedNotice extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-
     return Container(
       width: double.infinity,
       color: OmniColors.warningTextOf(context).withValues(alpha: 0.08),

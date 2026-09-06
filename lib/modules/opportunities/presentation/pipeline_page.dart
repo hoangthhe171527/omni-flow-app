@@ -76,11 +76,7 @@ class PipelinePage extends ConsumerWidget {
                 onSelected: (next) =>
                     ref.read(selectedStageProvider.notifier).state = next,
               ),
-              Divider(
-                height: 1,
-                thickness: 1,
-                color: scheme.outlineVariant,
-              ),
+              Divider(height: 1, thickness: 1, color: scheme.outlineVariant),
             ],
           ),
         ),

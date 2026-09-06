@@ -58,9 +58,7 @@ void main() {
       final controller = PageController();
       addTearDown(controller.dispose);
 
-      await tester.pumpWidget(
-        _pager(controller, disableAnimations: false),
-      );
+      await tester.pumpWidget(_pager(controller, disableAnimations: false));
 
       final context = tester.element(find.byType(PageView));
       controller.goTo(context, 2);
@@ -90,20 +88,18 @@ void main() {
   });
 }
 
-Widget _pager(
-  PageController controller, {
-  required bool disableAnimations,
-}) => MediaQuery(
-  data: MediaQueryData(disableAnimations: disableAnimations),
-  child: Directionality(
-    textDirection: TextDirection.ltr,
-    child: PageView(
-      controller: controller,
-      children: const [
-        SizedBox.expand(),
-        SizedBox.expand(),
-        SizedBox.expand(),
-      ],
-    ),
-  ),
-);
+Widget _pager(PageController controller, {required bool disableAnimations}) =>
+    MediaQuery(
+      data: MediaQueryData(disableAnimations: disableAnimations),
+      child: Directionality(
+        textDirection: TextDirection.ltr,
+        child: PageView(
+          controller: controller,
+          children: const [
+            SizedBox.expand(),
+            SizedBox.expand(),
+            SizedBox.expand(),
+          ],
+        ),
+      ),
+    );

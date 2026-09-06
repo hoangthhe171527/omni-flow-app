@@ -80,7 +80,10 @@ class Plan {
   });
 
   factory Plan.fromJson(Map<String, dynamic> json) {
-    final sections = json.mapList('sections').map(PlanSection.fromJson).toList();
+    final sections = json
+        .mapList('sections')
+        .map(PlanSection.fromJson)
+        .toList();
     final stats = json.child('stats');
 
     // Chỉ sắp lại khi MỌI nhóm đều có order. Thiếu dù một cái thì API đã sắp
@@ -100,9 +103,9 @@ class Plan {
       teamId: json.str('team_id'),
       sections: sections,
       memberIds: json.strList('member_ids'),
-      memberRoles: json.child('member_roles').map(
-        (userId, role) => MapEntry(userId, PlanRole.parse('$role')),
-      ),
+      memberRoles: json
+          .child('member_roles')
+          .map((userId, role) => MapEntry(userId, PlanRole.parse('$role'))),
       startDate: DateUtilsX.parse(json['start_date']),
       endDate: DateUtilsX.parse(json['end_date']),
       // API gói ba con số này trong `stats`, không rải phẳng ra ngoài — xem

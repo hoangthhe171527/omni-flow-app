@@ -8,7 +8,8 @@ import 'package:omni_app/security/permissions/access_policy.dart';
 /// cấu hình — một xưởng có thể gọi vai đó là "quản đốc", xưởng khác gọi là
 /// "tổ trưởng". Quyền thì không đổi tên.
 void main() {
-  TaskAccess accessWith(Set<String> slugs) => TaskAccess.of(AccessPolicy(slugs));
+  TaskAccess accessWith(Set<String> slugs) =>
+      TaskAccess.of(AccessPolicy(slugs));
 
   test('người quản lý mọi kế hoạch là người giao việc', () {
     final access = accessWith({

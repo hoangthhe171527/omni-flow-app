@@ -44,9 +44,7 @@ class OmniFilterPill extends StatelessWidget {
     // trắng: ở chế độ tối, màu chính là #4FBFAE và chữ trắng trên đó chỉ đạt
     // 2.18:1. Màu Zalo #0068FF thì trắng vẫn đúng, nên chỗ nào truyền [tint]
     // vào thì chỗ đó chịu trách nhiệm — hộp thư là chỗ duy nhất.
-    final background = selected
-        ? (tint ?? scheme.primary)
-        : Colors.transparent;
+    final background = selected ? (tint ?? scheme.primary) : Colors.transparent;
     final foreground = selected
         ? (tint != null ? Colors.white : scheme.onPrimary)
         : dark
@@ -250,4 +248,3 @@ class OmniCountBadge extends StatelessWidget {
     );
   }
 }
-

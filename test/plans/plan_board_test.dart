@@ -25,11 +25,8 @@ void main() {
     ],
   });
 
-  Task task(String id, String title, {String? sectionId}) => Task.fromJson({
-    'id': id,
-    'title': title,
-    'section_id': ?sectionId,
-  });
+  Task task(String id, String title, {String? sectionId}) =>
+      Task.fromJson({'id': id, 'title': title, 'section_id': ?sectionId});
 
   Widget host({
     required Plan plan,
@@ -38,9 +35,9 @@ void main() {
   }) => ProviderScope(
     overrides: [
       planProvider(planId).overrideWith((ref) async => plan),
-      planTasksProvider(planId).overrideWith(
-        (ref) async => (tasks: tasks, truncated: false),
-      ),
+      planTasksProvider(
+        planId,
+      ).overrideWith((ref) async => (tasks: tasks, truncated: false)),
     ],
     child: MaterialApp(
       theme: OmniTheme.light(TargetPlatform.android),

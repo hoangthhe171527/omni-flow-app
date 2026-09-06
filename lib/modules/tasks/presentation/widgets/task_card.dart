@@ -143,7 +143,6 @@ class _Progress extends StatelessWidget {
   }
 }
 
-
 /// Ai đang làm, dạng avatar chồng mép.
 ///
 /// Avatar chứ không phải tên: ba người trên một thẻ vẫn đọc được mà không

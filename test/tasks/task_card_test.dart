@@ -26,7 +26,13 @@ void main() {
     tester,
   ) async {
     await tester.pumpWidget(
-      host(Task.fromJson({'id': 't', 'title': 'KAWAI HAT-5', 'due_date': '2026-12-31'})),
+      host(
+        Task.fromJson({
+          'id': 't',
+          'title': 'KAWAI HAT-5',
+          'due_date': '2026-12-31',
+        }),
+      ),
     );
 
     final chip = tester.getSize(find.byType(OmniStatusChip));
@@ -40,7 +46,9 @@ void main() {
     );
   });
 
-  testWidgets('thẻ nói ai đang làm, kể cả khi chỉ có một người', (tester) async {
+  testWidgets('thẻ nói ai đang làm, kể cả khi chỉ có một người', (
+    tester,
+  ) async {
     await tester.pumpWidget(
       host(
         Task.fromJson({

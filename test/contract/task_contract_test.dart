@@ -78,7 +78,11 @@ void main() {
       );
 
       expect(task.subtasks, isNotEmpty, reason: 'checklist');
-      expect(task.planSections, isNotEmpty, reason: 'cho sheet chuyển công đoạn');
+      expect(
+        task.planSections,
+        isNotEmpty,
+        reason: 'cho sheet chuyển công đoạn',
+      );
     });
 
     test('người đã xem có TÊN, không phải một UUID trần', () {

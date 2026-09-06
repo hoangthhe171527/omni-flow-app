@@ -65,7 +65,6 @@ class TaskViewer {
   String get label => (name ?? '').trim().isEmpty ? userId : name!.trim();
 }
 
-
 /// Một công đoạn của kế hoạch, như công việc nhìn thấy nó.
 ///
 /// Bản sao nhỏ của `PlanSection` bên module plans, và CỐ Ý là bản sao: nếu
@@ -120,7 +119,10 @@ class Task {
     projectName: json.str('project_name'),
     sectionId: json.str('section_id'),
     sectionName: json.str('section_name'),
-    planSections: json.mapList('plan_sections').map(TaskSection.fromJson).toList(),
+    planSections: json
+        .mapList('plan_sections')
+        .map(TaskSection.fromJson)
+        .toList(),
     assigneeIds: json.strList('assignee_ids'),
     assigneeNames: json.strList('assignee_names'),
     // The API writes the deadline as due_date; older documents used deadline.

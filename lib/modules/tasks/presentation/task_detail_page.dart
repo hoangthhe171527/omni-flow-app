@@ -86,7 +86,8 @@ class _Loaded extends ConsumerWidget {
                 if (isAssigner)
                   AssignerPanel(
                     task: task,
-                    onMoveSection: () => _moveSection(context, controller, task),
+                    onMoveSection: () =>
+                        _moveSection(context, controller, task),
                   ),
                 if (task.hasSubtasks) ...[
                   const SizedBox(height: OmniSpacing.sm),

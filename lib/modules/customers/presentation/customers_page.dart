@@ -122,11 +122,7 @@ class _CustomersPageState extends ConsumerState<CustomersPage> {
                 ),
               ),
               const SizedBox(height: 4),
-              Divider(
-                height: 1,
-                thickness: 1,
-                color: scheme.outlineVariant,
-              ),
+              Divider(height: 1, thickness: 1, color: scheme.outlineVariant),
             ],
           ),
         ),

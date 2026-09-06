@@ -45,8 +45,7 @@ class PlansModule extends OmniModule {
       name: board,
       rootNavigator: true,
       access: const AccessRequirement.any(TaskPermissions.anyRead),
-      builder: (_, state) =>
-          PlanBoardPage(planId: state.pathParameters['id']!),
+      builder: (_, state) => PlanBoardPage(planId: state.pathParameters['id']!),
     ),
   ];
 

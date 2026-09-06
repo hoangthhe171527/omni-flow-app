@@ -96,10 +96,7 @@ class _CreateTeamPageState extends ConsumerState<CreateTeamPage> {
     try {
       await ref
           .read(plansApiProvider)
-          .createTeam(
-            name: _name.text.trim(),
-            description: _description.text,
-          );
+          .createTeam(name: _name.text.trim(), description: _description.text);
 
       ref.invalidate(teamsWithPlansProvider);
       if (mounted) Navigator.of(context).pop(true);

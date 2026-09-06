@@ -37,11 +37,7 @@ class DueChip extends StatelessWidget {
         'Hạn ${task.dueDate!.day}/${task.dueDate!.month}',
         OmniTone.neutral,
       ),
-      _ => (
-        Icons.schedule_outlined,
-        'Chưa đặt hạn',
-        OmniTone.neutral,
-      ),
+      _ => (Icons.schedule_outlined, 'Chưa đặt hạn', OmniTone.neutral),
     };
 
     return OmniStatusChip(icon: icon, label: label, tone: tone);
