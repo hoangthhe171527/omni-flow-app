@@ -1,6 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../tasks/domain/task.dart';
+import '../../tasks/application/tasks_providers.dart';
 import '../data/plans_api.dart';
 import '../domain/plan.dart';
 import '../domain/team.dart';
@@ -52,11 +52,17 @@ final planProvider = FutureProvider.family<Plan, String>(
   (ref, id) => ref.watch(plansApiProvider).plan(id),
 );
 
-final planTasksProvider = FutureProvider.family<List<Task>, String>((
+/// Mọi việc trong một kế hoạch — hết các trang, không chỉ trang đầu.
+///
+/// Theo dõi [taskRealtimeSignalProvider]: hai người cùng mở bảng, một người
+/// chuyển công đoạn, và người kia phải thấy. Không có dòng này thì bảng đứng
+/// yên cho tới khi ai đó kéo để tải lại — và trên một bảng, "đứng yên" đọc
+/// giống hệt "không có gì thay đổi".
+final planTasksProvider = FutureProvider.family<PlanTasks, String>((
   ref,
   planId,
-) async {
-  final page = await ref.watch(plansApiProvider).tasksInPlan(planId);
+) {
+  ref.watch(taskRealtimeSignalProvider);
 
-  return page.items;
+  return loadAllTasksInPlan(ref.watch(plansApiProvider), planId);
 });

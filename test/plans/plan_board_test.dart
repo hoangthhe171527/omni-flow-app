@@ -38,7 +38,9 @@ void main() {
   }) => ProviderScope(
     overrides: [
       planProvider(planId).overrideWith((ref) async => plan),
-      planTasksProvider(planId).overrideWith((ref) async => tasks),
+      planTasksProvider(planId).overrideWith(
+        (ref) async => (tasks: tasks, truncated: false),
+      ),
     ],
     child: MaterialApp(
       theme: OmniTheme.light(TargetPlatform.android),

@@ -103,7 +103,16 @@ class PlansApi {
   }) async {
     final response = await _client.get(
       '/tasks',
-      query: {'project_id': planId, 'page': page, 'per_page': perPage},
+      query: {
+        'project_id': planId,
+        'page': page,
+        'per_page': perPage,
+        // Tường minh, dù lọc theo project_id đã ngầm cho ra thứ tự này. Một
+        // hợp đồng ngầm là thứ đã hỏng một lần rồi: `assignee=me` từng được
+        // ghi trong comment là "resolved server-side" cho một hành vi chưa
+        // bao giờ tồn tại.
+        'sort': 'queue',
+      },
     );
 
     return Paged(
@@ -111,6 +120,60 @@ class PlansApi {
       pagination: response.pagination ?? const ApiPagination.empty(),
     );
   }
+}
+
+/// Số việc tối đa bảng nạp về.
+///
+/// Xưởng piano có khoảng 60 cây đàn đang chạy; 500 là chỗ để lớn gấp tám lần
+/// mà vẫn có trần. Vượt trần không phải "kế hoạch to" mà là dữ liệu hỏng hoặc
+/// một cách dùng khác hẳn — và lúc đó bảng phải NÓI RA thay vì lặng lẽ vẽ một
+/// phần.
+const kMaxTasksOnBoard = 500;
+
+/// Trang xin mỗi lượt. 100 là trần API (`min($perPage, 100)`), nên đây là số
+/// lượt đi mạng ít nhất có thể.
+const _pageSize = 100;
+
+/// Mọi việc trong một kế hoạch, đã gom hết các trang.
+typedef PlanTasks = ({List<Task> tasks, bool truncated});
+
+/// Nạp TẤT CẢ việc của một kế hoạch, không chỉ trang đầu.
+///
+/// Bảng trước đây gọi [PlansApi.tasksInPlan] đúng một lần và vẽ những gì nhận
+/// được — 30 việc, vì đó là `AppConfig.defaultPerPage`. Xưởng có khoảng 60 cây
+/// đàn, nên một nửa biến mất khỏi bảng mà KHÔNG có dấu hiệu nào: không nút tải
+/// thêm, không con số, không dòng chữ. Quản đốc nhìn một bảng đầy và tưởng
+/// mình đã thấy hết.
+///
+/// Nạp hết chứ không cuộn-vô-tận vì bảng chia theo cột: một việc chưa nạp là
+/// một cột hiện sai số lượng, và không ai cuộn tới nó để phát hiện ra.
+Future<PlanTasks> loadAllTasksInPlan(PlansApi api, String planId) async {
+  final all = <Task>[];
+  var reachedEnd = false;
+
+  for (var page = 1; all.length < kMaxTasksOnBoard; page++) {
+    final result = await api.tasksInPlan(planId, page: page, perPage: _pageSize);
+    all.addAll(result.items);
+
+    // Dừng theo DỮ LIỆU nhận được, không theo `last_page` API tự khai. Một
+    // API cũ hoặc lỗi có thể khai còn 98 trang rồi trả về rỗng, và tin nó là
+    // lặp vô hạn.
+    if (result.items.length < _pageSize) {
+      reachedEnd = true;
+      break;
+    }
+  }
+
+  // Hai lý do vòng lặp kết thúc, và chỉ MỘT trong hai nghĩa là đã thấy hết.
+  // Bản đầu suy `truncated` từ `all.length > trần` — nhưng vòng lặp dừng ĐÚNG
+  // ở trần, nên điều kiện đó không bao giờ đúng và cái trần im lặng cắt dữ
+  // liệu. Đúng thứ hàm này ra đời để ngăn.
+  return (
+    tasks: all.length > kMaxTasksOnBoard
+        ? all.sublist(0, kMaxTasksOnBoard)
+        : all,
+    truncated: !reachedEnd,
+  );
 }
 
 final plansApiProvider = Provider<PlansApi>(

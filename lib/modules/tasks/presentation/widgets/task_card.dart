@@ -108,7 +108,6 @@ class _Progress extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final complete = task.doneCount == task.totalCount;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -132,9 +131,11 @@ class _Progress extends StatelessWidget {
             value: task.progress,
             minHeight: 6,
             backgroundColor: scheme.surfaceContainerHighest,
-            valueColor: AlwaysStoppedAnimation(
-              complete ? OmniColors.success : scheme.primary,
-            ),
+            // Xong hay chưa đọc qua CON SỐ bên trên và qua độ dài thanh,
+            // không qua sắc màu. Đổi sang xanh lá khi đầy là đưa vào một màu
+            // thương hiệu thứ hai — cùng lỗi đã sửa ở ô tick công đoạn, và
+            // người mù màu lục-đỏ không thấy khác biệt nào cả.
+            valueColor: AlwaysStoppedAnimation(scheme.primary),
           ),
         ),
       ],

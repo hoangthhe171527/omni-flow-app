@@ -9,6 +9,7 @@ import '../../tasks/domain/task.dart';
 import '../../tasks/presentation/widgets/task_card.dart';
 import '../../tasks/tasks_module.dart';
 import '../application/plans_providers.dart';
+import '../data/plans_api.dart';
 import '../domain/plan.dart';
 import 'widgets/section_pager.dart';
 
@@ -75,7 +76,7 @@ class _Board extends StatelessWidget {
   });
 
   final Plan plan;
-  final AsyncValue<List<Task>> tasks;
+  final AsyncValue<PlanTasks> tasks;
   final PageController controller;
   final int current;
   final ValueChanged<int> onPage;
@@ -94,11 +95,12 @@ class _Board extends StatelessWidget {
     return OmniAsyncView(
       value: tasks,
       onRetry: onRetryTasks,
-      data: (all) {
-        final buckets = _bucket(all, columns);
+      data: (loaded) {
+        final buckets = _bucket(loaded.tasks, columns);
 
         return Column(
           children: [
+            if (loaded.truncated) const _TruncatedNotice(),
             SectionIndicator(
               sections: columns,
               current: current,
@@ -176,6 +178,47 @@ class _Column extends StatelessWidget {
           TasksModule.detail,
           pathParameters: {'id': tasks[index].id},
         ),
+      ),
+    );
+  }
+}
+
+/// Kế hoạch vượt trần: bảng chỉ vẽ được một phần, và phải nói ra.
+///
+/// Nạp một phần mà im lặng là nói dối — quản đốc nhìn một bảng đầy và tưởng
+/// mình đã thấy hết. Con số ở đây là thứ họ cần để biết mình đang nhìn bao
+/// nhiêu phần của sự thật.
+class _TruncatedNotice extends StatelessWidget {
+  const _TruncatedNotice();
+
+  @override
+  Widget build(BuildContext context) {
+
+    return Container(
+      width: double.infinity,
+      color: OmniColors.warningTextOf(context).withValues(alpha: 0.08),
+      padding: const EdgeInsets.symmetric(
+        horizontal: OmniSpacing.lg,
+        vertical: OmniSpacing.md,
+      ),
+      child: Row(
+        children: [
+          Icon(
+            Icons.info_outline_rounded,
+            size: OmniIconSize.sm,
+            color: OmniColors.warningTextOf(context),
+          ),
+          const SizedBox(width: OmniSpacing.sm),
+          Expanded(
+            child: Text(
+              'Kế hoạch này có hơn $kMaxTasksOnBoard việc. Bảng đang hiện '
+              '$kMaxTasksOnBoard việc đầu theo thứ tự xưởng xếp.',
+              style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                color: OmniColors.warningTextOf(context),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
