@@ -53,7 +53,7 @@ class InboxFilterBar extends ConsumerWidget {
           padding: const EdgeInsets.fromLTRB(16, 4, 8, 4),
           child: Row(
             children: [
-              Icon(Icons.search_rounded, size: 22, color: meta),
+              Icon(Icons.search_rounded, size: OmniIconSize.lg, color: meta),
               const SizedBox(width: 12),
               Expanded(
                 child: TextField(
@@ -96,7 +96,7 @@ class InboxFilterBar extends ConsumerWidget {
         // The one filter row worth keeping visible: triage state is what a rep
         // switches between all day.
         SizedBox(
-          height: 40,
+          height: 48,
           child: ListView.separated(
             scrollDirection: Axis.horizontal,
             padding: const EdgeInsets.fromLTRB(16, 0, 16, 0),
@@ -109,6 +109,9 @@ class InboxFilterBar extends ConsumerWidget {
                   label: quick.label,
                   selected: filter.quick == quick,
                   count: facets?.countFor(quick, currentUserId: userId),
+                  // Hộp thư là bề mặt cố ý mượn Zalo — cùng ngoại lệ với bảng
+                  // màu chat. Mọi màn khác dùng màu chính của theme.
+                  tint: OmniColors.chatPrimary,
                   onTap: () => controller.setQuick(quick),
                 ),
               );
@@ -210,7 +213,7 @@ class InboxFilterBar extends ConsumerWidget {
 
     return PopupMenuItem<_ChannelChoice>(
       value: value,
-      height: 40,
+      height: 48,
       child: Row(
         children: [
           if (color != null)
@@ -246,7 +249,7 @@ class InboxFilterBar extends ConsumerWidget {
               padding: const EdgeInsets.only(left: 8),
               child: Icon(
                 Icons.check_rounded,
-                size: 17,
+                size: OmniIconSize.md,
                 color: OmniColors.chatPrimary,
               ),
             ),
@@ -279,7 +282,7 @@ class _FilterButton extends StatelessWidget {
         children: [
           Icon(
             Icons.tune_rounded,
-            size: 22,
+            size: OmniIconSize.lg,
             color: active ? OmniColors.chatPrimary : scheme.onSurfaceVariant,
           ),
           if (active)

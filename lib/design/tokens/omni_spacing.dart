@@ -21,14 +21,28 @@ abstract final class OmniSpacing {
 }
 
 abstract final class OmniRadius {
-  /// The design system's `--radius` is 1rem; the rest of the scale derives.
+  /// Thang bo góc.
+  ///
+  /// Đã hạ từ 16/12 xuống 14/10. Bo quá tròn làm thẻ trông mềm và ăn chỗ — mà
+  /// màn hình chính của app là một danh sách dài, nơi mỗi dp chiều cao đều
+  /// phải trả giá bằng một dòng chữ ít đi.
   static const double xs = 8;
-  static const double sm = 12;
+  static const double sm = 10;
   static const double md = 14;
-  static const double lg = 16;
-  static const double xl = 20;
+  static const double lg = 14;
+  static const double xl = 18;
   static const double xxl = 24;
+
+  /// Chỉ còn cho avatar, chấm đếm và nút tròn.
   static const double pill = 999;
+
+  /// Chip: bộ lọc, trạng thái, thẻ nhãn.
+  ///
+  /// KHÔNG dùng [pill] cho chip. Một viên bo tròn hoàn toàn đọc như thẻ tag —
+  /// thứ để gắn vào — chứ không như bộ lọc, thứ để bật và tắt.
+  static const double chip = 8;
+
+  static const BorderRadius chipAll = BorderRadius.all(Radius.circular(chip));
 
   static const BorderRadius smAll = BorderRadius.all(Radius.circular(sm));
   static const BorderRadius mdAll = BorderRadius.all(Radius.circular(md));

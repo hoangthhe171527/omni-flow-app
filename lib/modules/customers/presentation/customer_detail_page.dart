@@ -6,7 +6,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../../core/utils/formatters.dart';
 import '../../../design/components/components.dart';
 import '../../../design/tokens/tokens.dart';
-import '../../opportunities/opportunities.dart';
+import '../../opportunities/routes.dart';
 import '../application/customers_providers.dart';
 import '../customers_module.dart';
 import '../domain/customer.dart';
@@ -174,6 +174,12 @@ class _Header extends StatelessWidget {
               Row(
                 children: [
                   OmniStatusChip(
+                    icon: switch (customer.status) {
+                      CustomerStatus.vip => Icons.star_rounded,
+                      CustomerStatus.active => Icons.check_circle_rounded,
+                      CustomerStatus.inactive => Icons.pause_circle_outlined,
+                      CustomerStatus.fresh => Icons.fiber_new_rounded,
+                    },
                     label: customer.status.label,
                     tone: switch (customer.status) {
                       CustomerStatus.vip => OmniTone.warning,
@@ -236,7 +242,7 @@ class _QuickActions extends StatelessWidget {
             icon: Icons.trending_up_rounded,
             label: 'Tạo cơ hội',
             onTap: () => context.pushNamed(
-              OpportunitiesModule.create,
+              OpportunityRoutes.create,
               queryParameters: {'customer': customer.id},
             ),
           ),
@@ -269,7 +275,7 @@ class _ActionTile extends StatelessWidget {
       padding: const EdgeInsets.symmetric(vertical: OmniSpacing.md),
       child: Column(
         children: [
-          Icon(icon, size: 20, color: color),
+          Icon(icon, size: OmniIconSize.lg, color: color),
           const SizedBox(height: 5),
           Text(label, style: OmniType.micro.copyWith(color: color)),
         ],

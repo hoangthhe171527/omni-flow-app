@@ -1,0 +1,244 @@
+import '../../../core/utils/formatters.dart';
+import '../../../core/utils/json.dart';
+
+/// One step of a task, owned by one person.
+///
+/// In the workshop a task is a piano and these are its stages — "Nắp phím
+/// (Hằng Ni)", "Bộ máy (Luận)" — worked in order by different people. That is
+/// why an item carries an owner and a date of its own rather than being a bare
+/// line of text.
+class Subtask {
+  const Subtask({
+    required this.id,
+    required this.title,
+    required this.done,
+    this.assigneeId,
+    this.assigneeName,
+    this.dueDate,
+  });
+
+  factory Subtask.fromJson(Map<String, dynamic> json) => Subtask(
+    id: json.strOr('id', ''),
+    title: json.strOr('title', ''),
+    done: json.flag('done'),
+    assigneeId: json.str('assignee_id'),
+    assigneeName: json.str('assignee_name'),
+    dueDate: DateUtilsX.parse(json['due_date']),
+  );
+
+  final String id;
+  final String title;
+  final bool done;
+  final String? assigneeId;
+  final String? assigneeName;
+  final DateTime? dueDate;
+
+  Subtask copyWith({bool? done}) => Subtask(
+    id: id,
+    title: title,
+    done: done ?? this.done,
+    assigneeId: assigneeId,
+    assigneeName: assigneeName,
+    dueDate: dueDate,
+  );
+}
+
+/// Somebody who has opened this task, and when they last did.
+///
+/// A seen-list, not an audit log: the manager's question is "did they get it",
+/// which one row per person answers and a row per open buries.
+class TaskViewer {
+  const TaskViewer({required this.userId, this.name, this.viewedAt});
+
+  factory TaskViewer.fromJson(Map<String, dynamic> json) => TaskViewer(
+    userId: json.strOr('user_id', ''),
+    name: json.str('name'),
+    viewedAt: DateUtilsX.parse(json['viewed_at']),
+  );
+
+  final String userId;
+  final String? name;
+  final DateTime? viewedAt;
+
+  /// Falls back to the id rather than showing nothing: the API fills the name
+  /// only when it can resolve the membership, and a blank chip is unreadable.
+  String get label => (name ?? '').trim().isEmpty ? userId : name!.trim();
+}
+
+/// Một công đoạn của kế hoạch, như công việc nhìn thấy nó.
+///
+/// Bản sao nhỏ của `PlanSection` bên module plans, và CỐ Ý là bản sao: nếu
+/// module tasks import kiểu của module plans thì hai module tham chiếu vòng
+/// vào nhau, và tới module thứ mười hai thì không ai gỡ ra được nữa.
+///
+/// Cái được sao chép ở đây là hai chuỗi. Cái tránh được là một cạnh trong đồ
+/// thị phụ thuộc.
+class TaskSection {
+  const TaskSection({required this.id, required this.name});
+
+  factory TaskSection.fromJson(Map<String, dynamic> json) => TaskSection(
+    id: json.strOr('id', ''),
+    name: json.strOr('name', 'Nhóm chưa đặt tên'),
+  );
+
+  final String id;
+  final String name;
+}
+
+/// A unit of work somebody is responsible for.
+class Task {
+  const Task({
+    required this.id,
+    required this.title,
+    this.description,
+    this.status = 'todo',
+    this.priority = 'med',
+    this.projectId,
+    this.projectName,
+    this.sectionId,
+    this.sectionName,
+    this.planSections = const [],
+    this.assigneeIds = const [],
+    this.assigneeNames = const [],
+    this.dueDate,
+    this.startDate,
+    this.subtasks = const [],
+    this.customFields = const {},
+    this.attachmentCount = 0,
+    this.commentCount = 0,
+    this.viewers = const [],
+  });
+
+  factory Task.fromJson(Map<String, dynamic> json) => Task(
+    id: json.strOr('id', ''),
+    title: json.strOr('title', ''),
+    description: json.str('description'),
+    status: json.strOr('status', 'todo'),
+    priority: json.strOr('priority', 'med'),
+    projectId: json.str('project_id'),
+    projectName: json.str('project_name'),
+    sectionId: json.str('section_id'),
+    sectionName: json.str('section_name'),
+    planSections: json
+        .mapList('plan_sections')
+        .map(TaskSection.fromJson)
+        .toList(),
+    assigneeIds: json.strList('assignee_ids'),
+    assigneeNames: json.strList('assignee_names'),
+    // The API writes the deadline as due_date; older documents used deadline.
+    // Reading only one of them is how a whole column silently shows "no date".
+    dueDate:
+        DateUtilsX.parse(json['due_date']) ??
+        DateUtilsX.parse(json['deadline']),
+    startDate: DateUtilsX.parse(json['start_date']),
+    subtasks: json.mapList('checklist').map(Subtask.fromJson).toList(),
+    customFields: json.child('custom_fields'),
+    attachmentCount: json.intOr('attachments_count'),
+    commentCount: json.intOr('comments_count'),
+    viewers: json.mapList('viewers').map(TaskViewer.fromJson).toList(),
+  );
+
+  final String id;
+  final String title;
+  final String? description;
+  final String status;
+  final String priority;
+  final String? projectId;
+  final String? projectName;
+
+  /// Nhóm việc (công đoạn) công việc này đang nằm trong — một cột trên bảng.
+  ///
+  /// null nghĩa là chưa xếp vào công đoạn nào; bảng dồn chúng vào cột đầu
+  /// chứ không giấu đi. Một cây đàn không ai thấy là một cây đàn không ai làm.
+  final String? sectionId;
+
+  /// Tên công đoạn, do API giải sẵn.
+  ///
+  /// Trước đây màn chi tiết phải gọi thêm `/projects/{id}` chỉ để dịch MỘT id
+  /// thành MỘT tên — và chính lượt gọi ấy bắt module `tasks` phải import
+  /// module `plans`, tạo ra phụ thuộc VÒNG giữa hai module.
+  ///
+  /// null cả khi chưa xếp công đoạn lẫn khi nhóm đã bị xoá khỏi kế hoạch: hai
+  /// chuyện khác nhau với cơ sở dữ liệu, cùng một câu trả lời với người dùng.
+  final String? sectionName;
+
+  /// Các công đoạn của kế hoạch chứa việc này.
+  ///
+  /// Chỉ có mặt ở phản hồi CHI TIẾT, nơi sheet "Chuyển công đoạn" cần nó.
+  /// Dòng danh sách không mang theo: 50 việc × 5 công đoạn là 250 bản sao của
+  /// cùng một mảng trên mỗi trang, mà thẻ trên bảng không dùng tới.
+  final List<TaskSection> planSections;
+  final List<String> assigneeIds;
+  final List<String> assigneeNames;
+  final DateTime? dueDate;
+  final DateTime? startDate;
+  final List<Subtask> subtasks;
+  final Map<String, dynamic> customFields;
+  final int attachmentCount;
+  final int commentCount;
+
+  /// Who has opened this task. Empty on a list row — the API sends it only on
+  /// the detail response, where it is worth the bytes.
+  final List<TaskViewer> viewers;
+
+  /// Only `done` is terminal; every other status id is defined by the project.
+  bool get isDone => status == 'done';
+
+  int get doneCount => subtasks.where((s) => s.done).length;
+
+  int get totalCount => subtasks.length;
+
+  /// 0.0–1.0, and 0 rather than NaN when there are no stages at all.
+  ///
+  /// This is the number the card leads with, because "how far along is this
+  /// piano" is the only question a worker opens the app to answer.
+  double get progress => totalCount == 0 ? 0 : doneCount / totalCount;
+
+  bool get hasSubtasks => subtasks.isNotEmpty;
+
+  /// Days past the deadline, or null when it is not overdue.
+  ///
+  /// Compared by calendar day, not by instant: a task due today at 09:00 is not
+  /// "overdue" at 10:00 to somebody standing at a workbench.
+  int? get daysOverdue {
+    final due = dueDate;
+    if (due == null || isDone) return null;
+    final today = DateTime.now();
+    final dueDay = DateTime(due.year, due.month, due.day);
+    final todayDay = DateTime(today.year, today.month, today.day);
+    final difference = todayDay.difference(dueDay).inDays;
+
+    return difference > 0 ? difference : null;
+  }
+
+  bool get isOverdue => daysOverdue != null;
+
+  bool get isDueToday {
+    final due = dueDate;
+    if (due == null || isDone) return false;
+    final today = DateTime.now();
+
+    return due.year == today.year &&
+        due.month == today.month &&
+        due.day == today.day;
+  }
+
+  Task copyWith({List<Subtask>? subtasks, String? status}) => Task(
+    id: id,
+    title: title,
+    description: description,
+    status: status ?? this.status,
+    priority: priority,
+    projectId: projectId,
+    projectName: projectName,
+    assigneeIds: assigneeIds,
+    assigneeNames: assigneeNames,
+    dueDate: dueDate,
+    startDate: startDate,
+    subtasks: subtasks ?? this.subtasks,
+    customFields: customFields,
+    attachmentCount: attachmentCount,
+    commentCount: commentCount,
+    viewers: viewers,
+  );
+}

@@ -81,7 +81,7 @@ class MyPermissionsPage extends ConsumerWidget {
                               held.contains(slug)
                                   ? Icons.check_circle_rounded
                                   : Icons.remove_circle_outline_rounded,
-                              size: 16,
+                              size: OmniIconSize.sm,
                               color: held.contains(slug)
                                   ? OmniColors.success
                                   : scheme.onSurfaceVariant,

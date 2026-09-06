@@ -7,6 +7,7 @@ import 'package:image_picker/image_picker.dart';
 import '../../../core/error/app_exception.dart';
 import '../../../core/utils/formatters.dart';
 import '../../../design/components/components.dart';
+import '../../../design/platform/omni_motion_scope.dart';
 import '../../../design/tokens/tokens.dart';
 import '../../../core/realtime/realtime_client.dart';
 import '../application/inbox_providers.dart';
@@ -356,7 +357,7 @@ class _ThreadPageState extends ConsumerState<ThreadPage>
       if (target != null) {
         Scrollable.ensureVisible(
           target,
-          duration: const Duration(milliseconds: 220),
+          duration: OmniMotion.of(context).base,
           curve: Curves.easeOut,
           alignment: 0.35,
         );
@@ -381,7 +382,7 @@ class _ThreadPageState extends ConsumerState<ThreadPage>
     if (!_scrollController.hasClients) return;
     _scrollController.animateTo(
       0,
-      duration: const Duration(milliseconds: 240),
+      duration: OmniMotion.of(context).base,
       curve: Curves.easeOut,
     );
   }
@@ -519,12 +520,12 @@ class _ThreadAppBar extends StatelessWidget implements PreferredSizeWidget {
                         names: conversation!.groupMembers
                             .map((m) => m.name ?? '?')
                             .toList(),
-                        size: 40,
+                        size: OmniIconSize.hero,
                       )
                     : OmniAvatar(
                         name: conversation!.title,
                         imageUrl: conversation!.customerAvatar,
-                        size: 40,
+                        size: OmniIconSize.hero,
                       ),
                 const SizedBox(width: 10),
                 Expanded(
@@ -797,7 +798,7 @@ class _ReadOnlyBar extends StatelessWidget {
         children: [
           Icon(
             Icons.lock_outline_rounded,
-            size: 16,
+            size: OmniIconSize.sm,
             color: scheme.onSurfaceVariant,
           ),
           const SizedBox(width: OmniSpacing.sm),

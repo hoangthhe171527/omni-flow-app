@@ -6,7 +6,7 @@ import '../../../core/error/app_exception.dart';
 import '../../../core/utils/formatters.dart';
 import '../../../design/components/components.dart';
 import '../../../design/tokens/tokens.dart';
-import '../../customers/customers.dart';
+import '../../customers/routes.dart';
 import '../application/opportunities_providers.dart';
 import '../data/opportunities_api.dart';
 import '../domain/opportunity.dart';
@@ -75,7 +75,7 @@ class OpportunityDetailPage extends ConsumerWidget {
                     onTap: data.customerId == null
                         ? null
                         : () => context.pushNamed(
-                            CustomersModule.detail,
+                            CustomerRoutes.detail,
                             pathParameters: {'id': data.customerId!},
                           ),
                   ),
@@ -181,26 +181,13 @@ class OpportunityDetailPage extends ConsumerWidget {
   }
 
   Future<void> _markWon(BuildContext context, WidgetRef ref) async {
-    final confirmed = await showDialog<bool>(
+    final confirmed = await showOmniConfirm(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Đánh dấu thắng?'),
-        content: const Text(
-          'Cơ hội sẽ chuyển sang giai đoạn Thắng và tính vào doanh thu.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Huỷ'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('Xác nhận'),
-          ),
-        ],
-      ),
+      title: 'Đánh dấu thắng?',
+      message: 'Cơ hội sẽ chuyển sang giai đoạn Thắng và tính vào doanh thu.',
+      confirmLabel: 'Xác nhận',
     );
-    if (confirmed != true) return;
+    if (!confirmed) return;
 
     try {
       await ref.read(opportunitiesApiProvider).markWon(opportunityId);
@@ -269,7 +256,7 @@ class _StageStepper extends StatelessWidget {
                 child: i < currentIndex
                     ? const Icon(
                         Icons.check_rounded,
-                        size: 13,
+                        size: OmniIconSize.xs,
                         color: Colors.white,
                       )
                     : null,

@@ -43,11 +43,7 @@ class _CustomersPageState extends ConsumerState<CustomersPage> {
     final controller = ref.read(customerFilterProvider.notifier);
 
     final scheme = Theme.of(context).colorScheme;
-    final meta = OmniColors.chat(
-      context,
-      OmniColors.chatMeta,
-      OmniColors.chatMetaDark,
-    );
+    final meta = scheme.onSurfaceVariant;
 
     return Scaffold(
       // Header and list on one plane — the AppBar's `background` against the
@@ -59,7 +55,7 @@ class _CustomersPageState extends ConsumerState<CustomersPage> {
         titleSpacing: OmniSpacing.lg,
         toolbarHeight: 56,
         bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(89),
+          preferredSize: const Size.fromHeight(97),
           child: Column(
             children: [
               // Same flat search line as the inbox: icon, word, no box. The
@@ -69,7 +65,11 @@ class _CustomersPageState extends ConsumerState<CustomersPage> {
                 padding: const EdgeInsets.fromLTRB(16, 4, 16, 4),
                 child: Row(
                   children: [
-                    Icon(Icons.search_rounded, size: 22, color: meta),
+                    Icon(
+                      Icons.search_rounded,
+                      size: OmniIconSize.lg,
+                      color: meta,
+                    ),
                     const SizedBox(width: 12),
                     Expanded(
                       child: TextField(
@@ -102,7 +102,7 @@ class _CustomersPageState extends ConsumerState<CustomersPage> {
                 ),
               ),
               SizedBox(
-                height: 40,
+                height: 48,
                 child: ListView.separated(
                   scrollDirection: Axis.horizontal,
                   padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -122,15 +122,7 @@ class _CustomersPageState extends ConsumerState<CustomersPage> {
                 ),
               ),
               const SizedBox(height: 4),
-              Divider(
-                height: 1,
-                thickness: 1,
-                color: OmniColors.chat(
-                  context,
-                  OmniColors.chatDivider,
-                  OmniColors.chatDividerDark,
-                ),
-              ),
+              Divider(height: 1, thickness: 1, color: scheme.outlineVariant),
             ],
           ),
         ),
@@ -168,11 +160,7 @@ class _CustomersPageState extends ConsumerState<CustomersPage> {
               height: 1,
               thickness: 1,
               indent: 76,
-              color: OmniColors.chat(
-                context,
-                OmniColors.chatDivider,
-                OmniColors.chatDividerDark,
-              ),
+              color: scheme.outlineVariant,
             ),
             itemBuilder: (context, index) {
               if (index >= state.items.length) {

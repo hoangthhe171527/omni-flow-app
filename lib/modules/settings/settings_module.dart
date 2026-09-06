@@ -29,15 +29,17 @@ class SettingsModule extends OmniModule {
   ];
 
   @override
-  List<ModuleMenuEntry> menuEntries() => const [
-    ModuleMenuEntry(
+  List<ModuleNavEntry> navEntries() => const [
+    ModuleNavEntry(
       moduleId: 'settings',
       label: 'Quyền của tôi',
       subtitle: 'Xem những gì bạn được phép làm',
       icon: Icons.shield_outlined,
+      selectedIcon: Icons.shield_rounded,
       routeName: myPermissions,
-      group: 'Tài khoản',
-      order: 90,
+      area: NavArea.account,
+      weight: NavWeight.secondary,
+      order: 10,
     ),
   ];
 }

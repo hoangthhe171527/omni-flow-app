@@ -36,14 +36,16 @@ class TeamModule extends OmniModule {
   ];
 
   @override
-  List<ModuleMenuEntry> menuEntries() => const [
-    ModuleMenuEntry(
+  List<ModuleNavEntry> navEntries() => const [
+    ModuleNavEntry(
       moduleId: 'team',
       label: 'Nhân viên',
       subtitle: 'Danh sách thành viên trong workspace',
       icon: Icons.group_outlined,
+      selectedIcon: Icons.group_rounded,
       routeName: list,
-      group: 'Quản trị',
+      area: NavArea.admin,
+      weight: NavWeight.secondary,
       order: 10,
       access: AccessRequirement.any([TeamPermissions.membersRead]),
     ),

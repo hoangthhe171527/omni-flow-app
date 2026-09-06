@@ -38,26 +38,16 @@ class _ChannelsPageState extends ConsumerState<ChannelsPage> {
   }
 
   Future<void> _disconnect(ChannelConnection connection) async {
-    final confirmed = await showDialog<bool>(
+    final confirmed = await showOmniConfirm(
       context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text('Ngắt kết nối?'),
-        content: Text(
-          '${connection.label} sẽ ngừng nhận tin về hộp thư. Nối lại được bất cứ lúc nào.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(false),
-            child: const Text('Huỷ'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.of(dialogContext).pop(true),
-            child: const Text('Ngắt kết nối'),
-          ),
-        ],
-      ),
+      title: 'Ngắt kết nối?',
+      message:
+          '${connection.label} sẽ ngừng nhận tin về hộp thư. '
+          'Nối lại được bất cứ lúc nào.',
+      confirmLabel: 'Ngắt kết nối',
+      destructive: true,
     );
-    if (confirmed != true || !mounted) return;
+    if (!confirmed || !mounted) return;
     try {
       await ref.read(channelsApiProvider).disconnect(connection.id);
       ref.invalidate(channelsProvider);

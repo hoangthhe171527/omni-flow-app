@@ -47,13 +47,16 @@ class InboxModule extends OmniModule {
   ];
 
   @override
-  List<ModuleDestination> destinations() => [
-    ModuleDestination(
+  List<ModuleNavEntry> navEntries() => [
+    ModuleNavEntry(
       moduleId: id,
       label: 'Hộp thư',
+      subtitle: 'Tin nhắn khách hàng',
       icon: Icons.forum_outlined,
       selectedIcon: Icons.forum_rounded,
       routeName: list,
+      area: NavArea.communication,
+      weight: NavWeight.primary,
       order: 10,
       access: const AccessRequirement.any(InboxPermissions.anyRead),
       badge: inboxUnreadBadgeProvider,

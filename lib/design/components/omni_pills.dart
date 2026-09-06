@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../core/domain/channel.dart';
+import '../platform/omni_motion_scope.dart';
 import '../tokens/tokens.dart';
 
 /// Horizontally scrolling filter pill with an optional count.
@@ -11,12 +12,21 @@ class OmniFilterPill extends StatelessWidget {
     required this.selected,
     required this.onTap,
     this.count,
+    this.tint,
   });
 
   final String label;
   final bool selected;
   final int? count;
   final VoidCallback onTap;
+
+  /// Màu của viên đang được chọn. Bỏ trống thì lấy màu chính của theme.
+  ///
+  /// Chỉ hộp thư truyền vào, và truyền [OmniColors.chatPrimary] để khớp Zalo.
+  /// Trước đây widget này ghim thẳng màu Zalo, nên "Hôm nay" trên màn Việc của
+  /// tôi hiện xanh dương giữa một app mòng két — ngoại lệ chat rò ra khỏi
+  /// module chat. `chat_palette_boundary_test.dart` chặn việc đó tái diễn.
+  final Color? tint;
 
   @override
   Widget build(BuildContext context) {
@@ -30,49 +40,59 @@ class OmniFilterPill extends StatelessWidget {
     // on the one they are. Emptying the others lets the selection carry the
     // whole signal, and the row turns into a line of words above the list
     // instead of a tray of buttons.
-    final background = selected ? OmniColors.chatPrimary : Colors.transparent;
+    // Chữ trên viên đã chọn phải đi theo NỀN của chính nó, không mặc định
+    // trắng: ở chế độ tối, màu chính là #4FBFAE và chữ trắng trên đó chỉ đạt
+    // 2.18:1. Màu Zalo #0068FF thì trắng vẫn đúng, nên chỗ nào truyền [tint]
+    // vào thì chỗ đó chịu trách nhiệm — hộp thư là chỗ duy nhất.
+    final background = selected ? (tint ?? scheme.primary) : Colors.transparent;
     final foreground = selected
-        ? Colors.white
+        ? (tint != null ? Colors.white : scheme.onPrimary)
         : dark
         ? Colors.white.withValues(alpha: 0.6)
         : scheme.onSurfaceVariant;
 
     return Material(
       color: background,
-      borderRadius: OmniRadius.pillAll,
+      borderRadius: OmniRadius.chipAll,
       clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                label,
-                style: OmniType.caption.copyWith(
-                  fontSize: 13.5,
-                  height: 1.1,
-                  color: foreground,
-                  fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
-                ),
-              ),
-              if (count != null && count! > 0) ...[
-                const SizedBox(width: 5),
+        // 44dp là sàn, không phải mục tiêu: pill này đo được 29dp trước khi có
+        // ràng buộc này. Vùng chạm cao hơn phần nhìn thấy — đúng cách, vì cái
+        // cần lớn là chỗ ngón tay chạm chứ không phải viên thuốc trên màn hình.
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(minHeight: 44),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
                 Text(
-                  '$count',
+                  label,
                   style: OmniType.caption.copyWith(
                     fontSize: 13.5,
                     height: 1.1,
-                    // Dimmed rather than boxed: the count qualifies the label, it
-                    // is not a second thing to look at.
-                    color: foreground.withValues(alpha: 0.6),
-                    fontWeight: FontWeight.w600,
-                    fontFeatures: OmniType.tabular,
+                    color: foreground,
+                    fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
                   ),
                 ),
+                if (count != null && count! > 0) ...[
+                  const SizedBox(width: 5),
+                  Text(
+                    '$count',
+                    style: OmniType.caption.copyWith(
+                      fontSize: 13.5,
+                      height: 1.1,
+                      // Dimmed rather than boxed: the count qualifies the label, it
+                      // is not a second thing to look at.
+                      color: foreground.withValues(alpha: 0.6),
+                      fontWeight: FontWeight.w600,
+                      fontFeatures: OmniType.tabular,
+                    ),
+                  ),
+                ],
               ],
-            ],
+            ),
           ),
         ),
       ),
@@ -151,7 +171,7 @@ class OmniTag extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           if (icon != null) ...[
-            Icon(icon, size: 12, color: color),
+            Icon(icon, size: OmniIconSize.xs, color: color),
             const SizedBox(width: 4),
           ],
           Text(
@@ -194,7 +214,7 @@ class OmniCountBadge extends StatelessWidget {
     return TweenAnimationBuilder<double>(
       key: ValueKey(count),
       tween: Tween(begin: 0.6, end: 1),
-      duration: const Duration(milliseconds: 220),
+      duration: OmniMotion.of(context).base,
       curve: Curves.easeOutBack,
       builder: (context, scale, child) =>
           Transform.scale(scale: scale, child: child),
@@ -224,61 +244,6 @@ class OmniCountBadge extends StatelessWidget {
             fontFeatures: OmniType.tabular,
           ),
         ),
-      ),
-    );
-  }
-}
-
-enum OmniTone { neutral, info, success, warning, danger }
-
-extension OmniToneColor on OmniTone {
-  Color get color => switch (this) {
-    OmniTone.neutral => OmniColors.mutedForeground,
-    OmniTone.info => OmniColors.info,
-    OmniTone.success => OmniColors.success,
-    OmniTone.warning => OmniColors.warning,
-    OmniTone.danger => OmniColors.destructive,
-  };
-}
-
-class OmniStatusChip extends StatelessWidget {
-  const OmniStatusChip({
-    super.key,
-    required this.label,
-    this.tone = OmniTone.neutral,
-    this.icon,
-  });
-
-  final String label;
-  final OmniTone tone;
-  final IconData? icon;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: OmniSpacing.md,
-        vertical: 5,
-      ),
-      decoration: BoxDecoration(
-        color: tone.color.withValues(alpha: 0.12),
-        borderRadius: OmniRadius.pillAll,
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          if (icon != null) ...[
-            Icon(icon, size: 13, color: tone.color),
-            const SizedBox(width: 5),
-          ],
-          Text(
-            label,
-            style: OmniType.micro.copyWith(
-              color: tone.color,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-        ],
       ),
     );
   }

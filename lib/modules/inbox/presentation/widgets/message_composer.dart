@@ -210,15 +210,15 @@ class _MessageComposerState extends State<MessageComposer> {
                   children: [
                     Icon(
                       Icons.sticky_note_2_outlined,
-                      size: 14,
-                      color: OmniColors.warning,
+                      size: OmniIconSize.xs,
+                      color: OmniColors.warningTextOf(context),
                     ),
                     const SizedBox(width: 6),
                     Expanded(
                       child: Text(
                         'Ghi chú nội bộ — khách KHÔNG nhìn thấy',
                         style: OmniType.micro.copyWith(
-                          color: OmniColors.warning,
+                          color: OmniColors.warningTextOf(context),
                           fontWeight: FontWeight.w600,
                         ),
                       ),
@@ -228,7 +228,7 @@ class _MessageComposerState extends State<MessageComposer> {
                       child: Text(
                         'Bỏ',
                         style: OmniType.micro.copyWith(
-                          color: OmniColors.warning,
+                          color: OmniColors.warningTextOf(context),
                           fontWeight: FontWeight.w700,
                         ),
                       ),
@@ -401,7 +401,7 @@ class _ComposerIcon extends StatelessWidget {
       tooltip: tooltip,
       // 44 keeps every icon past the touch minimum even though it reads small.
       constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
-      icon: Icon(icon, size: 24, color: scheme.onSurfaceVariant),
+      icon: Icon(icon, size: OmniIconSize.xl, color: scheme.onSurfaceVariant),
     );
   }
 }
@@ -468,7 +468,7 @@ class _ImageTray extends StatelessWidget {
                       height: 24,
                       child: Icon(
                         Icons.close_rounded,
-                        size: 15,
+                        size: OmniIconSize.sm,
                         color: scheme.onInverseSurface,
                       ),
                     ),
@@ -518,7 +518,11 @@ class _SendButton extends StatelessWidget {
                     color: Colors.white,
                   ),
                 )
-              : const Icon(Icons.send_rounded, size: 18, color: Colors.white),
+              : const Icon(
+                  Icons.send_rounded,
+                  size: OmniIconSize.md,
+                  color: Colors.white,
+                ),
         ),
       ),
     );

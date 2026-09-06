@@ -48,15 +48,19 @@ class ChannelsModule extends OmniModule {
   ];
 
   @override
-  List<ModuleMenuEntry> menuEntries() => const [
-    ModuleMenuEntry(
+  List<ModuleNavEntry> navEntries() => const [
+    ModuleNavEntry(
       moduleId: 'channels',
       label: 'Kết nối kênh',
       subtitle: 'Nối Zalo, Facebook, TikTok vào hộp thư',
       icon: Icons.hub_outlined,
+      selectedIcon: Icons.hub_rounded,
       routeName: list,
-      group: 'Hộp thư',
-      order: 5,
+      area: NavArea.communication,
+      // Cài một lần rồi cả năm không mở. Nó không tranh tab với "Khách hàng" —
+      // đây chính là ca làm lộ ra nhu cầu phải có NavWeight.
+      weight: NavWeight.secondary,
+      order: 30,
       access: AccessRequirement.any(ChannelPermissions.anyRead),
     ),
   ];

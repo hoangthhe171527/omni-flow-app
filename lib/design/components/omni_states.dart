@@ -80,7 +80,11 @@ class OmniEmptyState extends StatelessWidget {
                 color: scheme.surfaceContainerHighest,
                 shape: BoxShape.circle,
               ),
-              child: Icon(icon, size: 30, color: scheme.onSurfaceVariant),
+              child: Icon(
+                icon,
+                size: OmniIconSize.hero,
+                color: scheme.onSurfaceVariant,
+              ),
             ),
             const SizedBox(height: OmniSpacing.lg),
             Text(
