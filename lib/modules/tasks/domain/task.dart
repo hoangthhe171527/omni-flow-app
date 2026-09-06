@@ -65,6 +65,27 @@ class TaskViewer {
   String get label => (name ?? '').trim().isEmpty ? userId : name!.trim();
 }
 
+
+/// Một công đoạn của kế hoạch, như công việc nhìn thấy nó.
+///
+/// Bản sao nhỏ của `PlanSection` bên module plans, và CỐ Ý là bản sao: nếu
+/// module tasks import kiểu của module plans thì hai module tham chiếu vòng
+/// vào nhau, và tới module thứ mười hai thì không ai gỡ ra được nữa.
+///
+/// Cái được sao chép ở đây là hai chuỗi. Cái tránh được là một cạnh trong đồ
+/// thị phụ thuộc.
+class TaskSection {
+  const TaskSection({required this.id, required this.name});
+
+  factory TaskSection.fromJson(Map<String, dynamic> json) => TaskSection(
+    id: json.strOr('id', ''),
+    name: json.strOr('name', 'Nhóm chưa đặt tên'),
+  );
+
+  final String id;
+  final String name;
+}
+
 /// A unit of work somebody is responsible for.
 class Task {
   const Task({
@@ -76,6 +97,8 @@ class Task {
     this.projectId,
     this.projectName,
     this.sectionId,
+    this.sectionName,
+    this.planSections = const [],
     this.assigneeIds = const [],
     this.assigneeNames = const [],
     this.dueDate,
@@ -96,6 +119,8 @@ class Task {
     projectId: json.str('project_id'),
     projectName: json.str('project_name'),
     sectionId: json.str('section_id'),
+    sectionName: json.str('section_name'),
+    planSections: json.mapList('plan_sections').map(TaskSection.fromJson).toList(),
     assigneeIds: json.strList('assignee_ids'),
     assigneeNames: json.strList('assignee_names'),
     // The API writes the deadline as due_date; older documents used deadline.
@@ -124,6 +149,23 @@ class Task {
   /// null nghĩa là chưa xếp vào công đoạn nào; bảng dồn chúng vào cột đầu
   /// chứ không giấu đi. Một cây đàn không ai thấy là một cây đàn không ai làm.
   final String? sectionId;
+
+  /// Tên công đoạn, do API giải sẵn.
+  ///
+  /// Trước đây màn chi tiết phải gọi thêm `/projects/{id}` chỉ để dịch MỘT id
+  /// thành MỘT tên — và chính lượt gọi ấy bắt module `tasks` phải import
+  /// module `plans`, tạo ra phụ thuộc VÒNG giữa hai module.
+  ///
+  /// null cả khi chưa xếp công đoạn lẫn khi nhóm đã bị xoá khỏi kế hoạch: hai
+  /// chuyện khác nhau với cơ sở dữ liệu, cùng một câu trả lời với người dùng.
+  final String? sectionName;
+
+  /// Các công đoạn của kế hoạch chứa việc này.
+  ///
+  /// Chỉ có mặt ở phản hồi CHI TIẾT, nơi sheet "Chuyển công đoạn" cần nó.
+  /// Dòng danh sách không mang theo: 50 việc × 5 công đoạn là 250 bản sao của
+  /// cùng một mảng trên mỗi trang, mà thẻ trên bảng không dùng tới.
+  final List<TaskSection> planSections;
   final List<String> assigneeIds;
   final List<String> assigneeNames;
   final DateTime? dueDate;

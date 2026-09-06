@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../../design/components/components.dart';
 import '../../../../design/tokens/tokens.dart';
-import '../../../plans/domain/plan.dart';
+import '../../domain/task.dart';
 
 /// Chọn công đoạn mới cho một cây đàn.
 ///
@@ -14,7 +14,7 @@ import '../../../plans/domain/plan.dart';
 /// kéo thả không nói được: đang ở đâu, có những đâu để đi.
 Future<String?> showMoveSectionSheet({
   required BuildContext context,
-  required List<PlanSection> sections,
+  required List<TaskSection> sections,
   required String? current,
 }) => showOmniSheet<String>(
   context: context,
@@ -24,7 +24,7 @@ Future<String?> showMoveSectionSheet({
 class _MoveSectionSheet extends StatelessWidget {
   const _MoveSectionSheet({required this.sections, required this.current});
 
-  final List<PlanSection> sections;
+  final List<TaskSection> sections;
   final String? current;
 
   @override

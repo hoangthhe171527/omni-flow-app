@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:omni_app/design/theme/omni_theme.dart';
-import 'package:omni_app/modules/plans/domain/plan.dart';
+import 'package:omni_app/modules/tasks/domain/task.dart';
 import 'package:omni_app/modules/tasks/presentation/widgets/move_section_sheet.dart';
 
 /// Chọn công đoạn mới, thay cho kéo thả.
@@ -11,14 +11,14 @@ import 'package:omni_app/modules/tasks/presentation/widgets/move_section_sheet.d
 /// sai một nửa số lần. Một danh sách thì không đoán sai lần nào.
 void main() {
   const sections = [
-    PlanSection(id: 's1', name: 'Nhập xưởng', order: 0),
-    PlanSection(id: 's2', name: 'Đang phục chế', order: 1),
-    PlanSection(id: 's3', name: 'Chờ QC', order: 2),
+    TaskSection(id: 's1', name: 'Nhập xưởng'),
+    TaskSection(id: 's2', name: 'Đang phục chế'),
+    TaskSection(id: 's3', name: 'Chờ QC'),
   ];
 
   Future<String?> open(
     WidgetTester tester, {
-    List<PlanSection> list = sections,
+    List<TaskSection> list = sections,
     String? current = 's2',
   }) async {
     String? result;

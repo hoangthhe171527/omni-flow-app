@@ -6,8 +6,6 @@ import 'package:image_picker/image_picker.dart';
 import '../../../core/utils/formatters.dart';
 import '../../../design/components/components.dart';
 import '../../../design/tokens/tokens.dart';
-import '../../plans/application/plans_providers.dart';
-import '../../plans/domain/plan.dart';
 import '../application/task_controller.dart';
 import '../application/tasks_providers.dart';
 import '../data/tasks_api.dart';
@@ -72,12 +70,6 @@ class _Loaded extends ConsumerWidget {
     final task = state.visible;
     final controller = ref.read(taskDetailProvider(taskId).notifier);
 
-    // Công đoạn chỉ đọc được khi biết công việc thuộc kế hoạch nào. Việc rời —
-    // không thuộc kế hoạch — vẫn mở được, chỉ là không có gì để chuyển.
-    final plan = task.projectId == null
-        ? const AsyncValue<Plan?>.data(null)
-        : ref.watch(planProvider(task.projectId!)).whenData<Plan?>((p) => p);
-
     return Column(
       children: [
         Expanded(
@@ -93,9 +85,7 @@ class _Loaded extends ConsumerWidget {
                 if (isAssigner)
                   AssignerPanel(
                     task: task,
-                    sectionName: _sectionName(plan.valueOrNull, task.sectionId),
-                    onMoveSection: () =>
-                        _moveSection(context, controller, plan.valueOrNull, task),
+                    onMoveSection: () => _moveSection(context, controller, task),
                   ),
                 if (task.hasSubtasks) ...[
                   const SizedBox(height: OmniSpacing.sm),
@@ -124,28 +114,17 @@ class _Loaded extends ConsumerWidget {
     );
   }
 
-  /// Tên công đoạn hiện tại. Null khi chưa xếp, hoặc khi nhóm đã bị xoá khỏi
-  /// kế hoạch — hai chuyện khác nhau với cơ sở dữ liệu, cùng một câu trả lời
-  /// với người dùng: "chưa xếp công đoạn".
-  String? _sectionName(Plan? plan, String? sectionId) {
-    if (plan == null || sectionId == null || sectionId.isEmpty) return null;
-
-    for (final section in plan.sections) {
-      if (section.id == sectionId) return section.name;
-    }
-
-    return null;
-  }
-
   Future<void> _moveSection(
     BuildContext context,
     TaskController controller,
-    Plan? plan,
     Task task,
   ) async {
+    // Danh sách công đoạn đi kèm phản hồi chi tiết. Trước đây chỗ này gọi
+    // `planProvider` — một lượt mạng thứ hai chỉ để lấy vài cái tên, và là
+    // cạnh duy nhất khiến module tasks phụ thuộc module plans.
     final chosen = await showMoveSectionSheet(
       context: context,
-      sections: plan?.sections ?? const [],
+      sections: task.planSections,
       current: task.sectionId,
     );
 

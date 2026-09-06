@@ -17,14 +17,10 @@ class AssignerPanel extends StatelessWidget {
   const AssignerPanel({
     super.key,
     required this.task,
-    required this.sectionName,
     this.onMoveSection,
   });
 
   final Task task;
-
-  /// Tên công đoạn hiện tại, đã tra từ kế hoạch. Null khi chưa xếp.
-  final String? sectionName;
 
   final VoidCallback? onMoveSection;
 
@@ -89,8 +85,8 @@ class AssignerPanel extends StatelessWidget {
           _Row(
             icon: Icons.view_column_outlined,
             label: 'Công đoạn',
-            value: sectionName ?? 'Chưa xếp công đoạn',
-            muted: sectionName == null,
+            value: task.sectionName ?? 'Chưa xếp công đoạn',
+            muted: task.sectionName == null,
           ),
           if (onMoveSection != null) ...[
             const SizedBox(height: OmniSpacing.md),
