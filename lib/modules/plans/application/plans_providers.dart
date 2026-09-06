@@ -2,7 +2,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../tasks/application/tasks_providers.dart';
 import '../data/plans_api.dart';
+import '../domain/feed_entry.dart';
 import '../domain/plan.dart';
+import '../domain/workshop_kpi.dart';
 import '../domain/team.dart';
 
 /// Một team cùng các kế hoạch của nó, đã ghép sẵn để vẽ một khối trên màn.
@@ -65,4 +67,22 @@ final planTasksProvider = FutureProvider.family<PlanTasks, String>((
   ref.watch(taskRealtimeSignalProvider);
 
   return loadAllTasksInPlan(ref.watch(plansApiProvider), planId);
+});
+
+/// Số cây xong tháng này và mốc thưởng kế tiếp.
+///
+/// Tách khỏi [workshopFeedProvider]: hai lượt gọi mạng độc lập, và KPI phải
+/// quét nhật ký cả tháng trong khi dòng hoạt động chỉ lấy vài chục dòng mới
+/// nhất. Buộc chúng vào nhau là để cái chậm giữ cái nhanh lại.
+final workshopKpiProvider = FutureProvider<WorkshopKpi>((ref) {
+  ref.watch(taskRealtimeSignalProvider);
+
+  return ref.watch(plansApiProvider).kpi();
+});
+
+/// Chuyện gì vừa xảy ra ở xưởng.
+final workshopFeedProvider = FutureProvider<List<FeedEntry>>((ref) {
+  ref.watch(taskRealtimeSignalProvider);
+
+  return ref.watch(plansApiProvider).feed();
 });

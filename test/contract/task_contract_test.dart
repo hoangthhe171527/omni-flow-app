@@ -2,7 +2,9 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:omni_app/modules/plans/domain/feed_entry.dart';
 import 'package:omni_app/modules/plans/domain/plan.dart';
+import 'package:omni_app/modules/plans/domain/workshop_kpi.dart';
 import 'package:omni_app/modules/plans/domain/team.dart';
 import 'package:omni_app/modules/tasks/domain/task.dart';
 
@@ -137,6 +139,65 @@ void main() {
               'lặng.',
         );
       }
+    });
+  });
+
+  group('GET /tasks/kpi', () {
+    test('mọi trường thẻ KPI dựa vào đều có mặt', () {
+      final kpi = WorkshopKpi.fromJson(
+        load('tasks_kpi')['data'] as Map<String, dynamic>,
+      );
+
+      // Con số này là căn cứ trả thưởng. Một trường đọc hụt ở đây không hiện
+      // ra thành màn trắng — nó hiện ra thành một con số sai.
+      expect(kpi.tiers, isNotEmpty, reason: 'bảng mốc thưởng');
+      expect(kpi.daysLeft, greaterThanOrEqualTo(0));
+    });
+
+    test('bảng mốc khớp với §1 của tài liệu xưởng', () {
+      final kpi = WorkshopKpi.fromJson(
+        load('tasks_kpi')['data'] as Map<String, dynamic>,
+      );
+
+      // 35/40/50/55/60/65/70 cây → 3/6/10/13/17/21/25 triệu. Nếu config đổi
+      // mà bài này không đổi, con số trên thẻ lệch với thứ khách đã chốt.
+      expect(kpi.tiers.first.count, 35);
+      expect(kpi.tiers.first.bonus, 3);
+      expect(kpi.tiers.last.count, 70);
+      expect(kpi.tiers.last.bonus, 25);
+    });
+  });
+
+  group('GET /tasks/feed', () {
+    test('mỗi dòng nói được cây nào, ai làm, lúc nào', () {
+      final rows = listOf(load('tasks_feed'));
+      expect(rows, isNotEmpty, reason: 'Bản ghi rỗng thì không kiểm được gì.');
+
+      final entry = FeedEntry.fromJson(rows.first);
+
+      expect(entry.taskId, isNotEmpty);
+      expect(entry.taskTitle, isNotEmpty);
+      expect(entry.at, isNotNull);
+      expect(
+        entry.userName,
+        isNotNull,
+        reason:
+            'Không có tên thì dòng hiện một hành động không ai chịu trách '
+            'nhiệm — và PeopleDirectory sinh ra để tránh đúng điều đó.',
+      );
+    });
+
+    test('loại hoạt động đọc ra một FeedKind có nghĩa', () {
+      final rows = listOf(load('tasks_feed'));
+      final kinds = rows.map((r) => FeedEntry.fromJson(r).kind).toSet();
+
+      expect(
+        kinds,
+        isNot(equals({FeedKind.other})),
+        reason:
+            'Mọi dòng rơi về `other` nghĩa là tên loại bên API đã đổi và app '
+            'đang hiện "có thay đổi" cho tất cả.',
+      );
     });
   });
 

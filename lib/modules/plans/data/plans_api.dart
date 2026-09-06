@@ -5,6 +5,8 @@ import '../../../core/network/api_client.dart';
 import '../../../core/network/api_envelope.dart';
 import '../../tasks/domain/task.dart';
 import '../domain/plan.dart';
+import '../domain/feed_entry.dart';
+import '../domain/workshop_kpi.dart';
 import '../domain/team.dart';
 
 /// Đọc cây Team → Kế hoạch → Công việc.
@@ -13,6 +15,8 @@ import '../domain/team.dart';
 /// `member_roles`, `tasks` mang `section_id`. App chỉ chưa từng hỏi tới.
 class PlansApi {
   PlansApi(this._client);
+
+  static const _tasks = '/tasks';
 
   final ApiClient _client;
 
@@ -92,6 +96,26 @@ class PlansApi {
     );
 
     return Plan.fromJson(response.object);
+  }
+
+  /// "Tháng này xong bao nhiêu cây, còn bao xa tới mốc thưởng."
+  ///
+  /// Bỏ trống [planId] thì tính trên toàn bộ tenant — đúng cách xưởng đếm,
+  /// vì thưởng theo TEAM chứ không theo từng kế hoạch (§1 tài liệu xưởng).
+  Future<WorkshopKpi> kpi({String? planId}) async {
+    final response = await _client.get(
+      '$_tasks/kpi',
+      query: {if (planId != null && planId.isNotEmpty) 'project_id': planId},
+    );
+
+    return WorkshopKpi.fromJson(response.object);
+  }
+
+  /// Dòng thời gian của cả xưởng, mới nhất trước.
+  Future<List<FeedEntry>> feed({int limit = 30}) async {
+    final response = await _client.get('/feed', query: {'limit': limit});
+
+    return response.list.map(FeedEntry.fromJson).toList();
   }
 
   Future<Plan> plan(String id) async {

@@ -65,7 +65,15 @@ void main() {
     //
     // "Teams" đứng ngay sau "Việc của tôi" vì cùng NavArea.work và order 20 so
     // với 10: thợ mở hàng đợi của mình trước, toàn cảnh xưởng sau.
-    expect(labels, ['Việc của tôi', 'Teams', 'Hộp thư', 'Khách hàng']);
+    // Ba mục của NavArea.work đứng trước, theo order 10/20/30: thợ mở hàng
+    // đợi của mình trước, toàn cảnh xưởng sau, rồi mới tới dòng thời gian.
+    expect(labels, [
+      'Việc của tôi',
+      'Teams',
+      'Dòng việc',
+      'Hộp thư',
+      'Khách hàng',
+    ]);
   });
 
   test('người chỉ có quyền bán hàng vẫn được tab của mình', () {
