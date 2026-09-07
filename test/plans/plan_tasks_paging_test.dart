@@ -82,6 +82,11 @@ void main() {
 
 /// Trả về đúng [total] việc, chia trang theo `perPage` mà chỗ gọi xin.
 class _PagedApi implements PlansApi {
+  @override
+  Future<Plan> updateSections(String planId, List<PlanSection> sections) async {
+    throw UnimplementedError();
+  }
+
   _PagedApi({required this.total});
 
   final int total;

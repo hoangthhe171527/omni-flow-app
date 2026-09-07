@@ -41,7 +41,13 @@ enum PlanRole {
 /// "Nhập xưởng", "Đang phục chế", "Chờ QC", "Hoàn thiện", "Đã giao". Mỗi màn
 /// lướt ngang là một nhóm việc.
 class PlanSection {
-  const PlanSection({required this.id, required this.name, this.order});
+  const PlanSection({
+    required this.id,
+    required this.name,
+    this.order,
+    this.requiresChecklist = false,
+    this.countsForKpi = false,
+  });
 
   factory PlanSection.fromJson(Map<String, dynamic> json) => PlanSection(
     id: json.strOr('id', ''),
@@ -49,11 +55,24 @@ class PlanSection {
     // null chứ không 0: "chưa đặt thứ tự" khác "đứng đầu", và phân biệt được
     // hai cái đó là điều giữ cho thứ tự API trả về không bị xáo lại.
     order: json['order'] is num ? (json['order'] as num).toInt() : null,
+    requiresChecklist: json.flag('requires_checklist'),
+    countsForKpi: json.flag('counts_for_kpi'),
   );
 
   final String id;
   final String name;
   final int? order;
+
+  /// Cổng: vào nhóm này thì mọi việc con phải xong trước (§B3).
+  ///
+  /// App không tự đặt cờ này ở đâu ngoài lúc tạo kế hoạch, nhưng nó PHẢI đọc
+  /// được: `PUT /projects/{id}` thay cả mảng `sections`, nên sửa tên một nhóm
+  /// mà không mang cờ theo là xoá sạch cổng QC của cả kế hoạch — im lặng.
+  final bool requiresChecklist;
+
+  /// Nhóm này là ĐÍCH đếm KPI tháng (§B4). Mất nó thì thẻ KPI về 0 và trông
+  /// hệt như một tháng chưa ai làm được gì.
+  final bool countsForKpi;
 }
 
 /// Một kế hoạch — `project` phía API.

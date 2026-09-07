@@ -14,6 +14,7 @@ import '../../tasks/tasks_module.dart';
 import '../application/plans_providers.dart';
 import '../data/plans_api.dart';
 import '../domain/plan.dart';
+import 'edit_sections_page.dart';
 import 'widgets/section_pager.dart';
 
 /// Chỗ nút "Việc mới" chiếm, cộng vào đáy danh sách để nó không che thẻ cuối.
@@ -53,7 +54,20 @@ class _PlanBoardPageState extends ConsumerState<PlanBoardPage> {
     final loaded = plan.valueOrNull;
 
     return Scaffold(
-      appBar: AppBar(title: Text(loaded?.name ?? 'Kế hoạch')),
+      appBar: AppBar(
+        title: Text(loaded?.name ?? 'Kế hoạch'),
+        actions: [
+          // Sửa các cột của chính cái bảng đang nhìn. Nhóm việc trước đây
+          // chỉ khai được lúc tạo kế hoạch, nên một cái tên gõ nhầm là phải
+          // tạo lại cả kế hoạch — mà công việc thì đã nằm trong đó rồi.
+          if (loaded != null && ref.watch(taskAccessProvider).isAssigner)
+            IconButton(
+              onPressed: _editSections,
+              icon: const Icon(Icons.view_column_outlined),
+              tooltip: 'Sửa nhóm việc',
+            ),
+        ],
+      ),
       // Nút tạo nằm trên BẢNG, không nằm ở "Việc của tôi": ở đây kế hoạch và
       // cột đang đứng đã biết sẵn, nên việc mới ra đời đúng chỗ mà không phải
       // hỏi thêm câu nào. Ở "Việc của tôi" thì cả hai đều phải hỏi.
@@ -82,6 +96,14 @@ class _PlanBoardPageState extends ConsumerState<PlanBoardPage> {
 
   int _columnCount(Plan plan) =>
       plan.sections.isEmpty ? 1 : plan.sections.length;
+
+  Future<void> _editSections() async {
+    await Navigator.of(context).push<bool>(
+      MaterialPageRoute(
+        builder: (_) => EditSectionsPage(planId: widget.planId),
+      ),
+    );
+  }
 
   /// Mở màn tạo việc với kế hoạch + cột đang đứng điền sẵn.
   Future<void> _createTask(Plan plan) async {

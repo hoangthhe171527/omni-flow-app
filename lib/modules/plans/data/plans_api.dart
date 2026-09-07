@@ -98,6 +98,38 @@ class PlansApi {
     return Plan.fromJson(response.object);
   }
 
+  /// Đặt lại danh sách nhóm việc của một kế hoạch đã có.
+  ///
+  /// Nhóm việc trước đây chỉ khai được LÚC TẠO, nên một cái tên gõ nhầm hay
+  /// một quy trình đổi đi là phải tạo lại cả kế hoạch — mà công việc thì đã
+  /// nằm trong đó rồi.
+  ///
+  /// Id GIỮ NGUYÊN với nhóm đã có: `section_id` trên từng công việc trỏ vào
+  /// chính những id này. Sinh id mới cho một nhóm chỉ đổi tên là làm mọi công
+  /// việc trong đó rơi về cột đầu.
+  ///
+  /// Nhóm mới nhận id chưa từng dùng trong kế hoạch này — không dùng lại id
+  /// của nhóm vừa xoá, vì công việc cũ vẫn đang trỏ vào đó.
+  Future<Plan> updateSections(String planId, List<PlanSection> sections) async {
+    final response = await _client.put(
+      '/projects/$planId',
+      body: {
+        'sections': [
+          for (var i = 0; i < sections.length; i++)
+            {
+              'id': sections[i].id,
+              'name': sections[i].name,
+              'order': i,
+              if (sections[i].requiresChecklist) 'requires_checklist': true,
+              if (sections[i].countsForKpi) 'counts_for_kpi': true,
+            },
+        ],
+      },
+    );
+
+    return Plan.fromJson(response.object);
+  }
+
   /// "Tháng này xong bao nhiêu cây, còn bao xa tới mốc thưởng."
   ///
   /// Bỏ trống [planId] thì tính trên toàn bộ tenant — đúng cách xưởng đếm,

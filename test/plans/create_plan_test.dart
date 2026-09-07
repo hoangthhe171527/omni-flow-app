@@ -139,6 +139,11 @@ void main() {
 
 /// Ghi lại tham số của lần gọi tạo, không đi mạng.
 class _RecordingApi implements PlansApi {
+  @override
+  Future<Plan> updateSections(String planId, List<PlanSection> sections) async {
+    throw UnimplementedError();
+  }
+
   String? createdName;
   List<String>? createdSections;
   String? createdTeamId;
