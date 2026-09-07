@@ -3,15 +3,27 @@ import '../../../core/utils/json.dart';
 
 /// Loại việc đã xảy ra trên một cây đàn.
 ///
-/// Bốn loại API thật sự ghi (`TaskActivityService::TRACKED` cộng `created` và
-/// `assignees`). Giá trị lạ rơi về [other] và vẫn hiện được — một client cũ
-/// gặp loại mới phải nói "có thay đổi" chứ không được giấu cả dòng.
+/// CHÍN loại `TaskActivityService` thật sự ghi. Bản đầu chỉ đọc năm, và bốn
+/// loại còn lại rơi hết về [other] — trong đó có `subtask_completed` và
+/// `attachment_added`, tức là **tick xong một công đoạn** và **gửi ảnh**: hai
+/// việc thợ làm nhiều nhất trong ngày (§B2 "xong việc nào tick việc đó, kèm
+/// ảnh nếu cần").
+///
+/// Hậu quả là dòng thời gian đọc lên toàn "đã có thay đổi" — đúng số dòng,
+/// nhưng không nói được ai vừa làm gì, mà đó là toàn bộ lý do màn này tồn tại.
+///
+/// Giá trị lạ vẫn rơi về [other] và vẫn hiện: một client cũ gặp loại mới phải
+/// nói "có thay đổi" chứ không được giấu cả dòng.
 enum FeedKind {
   created,
   status,
   section,
   dueDate,
   assignees,
+  subtaskCompleted,
+  subtaskAssigned,
+  attachmentAdded,
+  attachmentRemoved,
   other;
 
   static FeedKind parse(String? value) => switch (value?.trim()) {
@@ -20,6 +32,10 @@ enum FeedKind {
     'section_id' => section,
     'due_date' => dueDate,
     'assignees' => assignees,
+    'subtask_completed' => subtaskCompleted,
+    'subtask_assigned' => subtaskAssigned,
+    'attachment_added' => attachmentAdded,
+    'attachment_removed' => attachmentRemoved,
     _ => other,
   };
 }
@@ -35,6 +51,7 @@ class FeedEntry {
     this.userName,
     this.from,
     this.to,
+    this.detail,
   });
 
   factory FeedEntry.fromJson(Map<String, dynamic> json) => FeedEntry(
@@ -49,6 +66,10 @@ class FeedEntry {
     userName: json.str('user_name'),
     from: json.str('from'),
     to: json.str('to'),
+    // Hai khoá khác nhau cho cùng một vai trò: `subtask_completed` mang
+    // `title` (tên công đoạn), `attachment_added` mang `name` (tên tệp). Đọc
+    // cả hai ở đây thay vì bắt màn hình biết loại nào dùng khoá nào.
+    detail: json.str('title') ?? json.str('name'),
   );
 
   final String id;
@@ -63,6 +84,10 @@ class FeedEntry {
   final String? from;
   final String? to;
 
+  /// Tên công đoạn (tick việc con) hoặc tên tệp (đính kèm). Null khi loại
+  /// hoạt động không mang theo gì để gọi tên.
+  final String? detail;
+
   /// Câu mô tả, viết theo cách người xưởng nói.
   ///
   /// Không ghép tên công đoạn vào đây: `from`/`to` là ID, và in một ID ra màn
@@ -74,6 +99,20 @@ class FeedEntry {
     FeedKind.status => 'đã đổi trạng thái',
     FeedKind.dueDate => 'đã đổi hạn',
     FeedKind.assignees => 'đã đổi người làm',
+    // Gọi thẳng tên công đoạn khi biết. "đã xong Body ngoài" là một câu quản
+    // đốc đọc lướt hiểu ngay; "đã hoàn thành việc con" thì phải mở cây đàn ra
+    // mới biết việc con nào.
+    FeedKind.subtaskCompleted => switch (detail) {
+      final String s when s.isNotEmpty => 'đã xong $s',
+      _ => 'đã xong một công đoạn',
+    },
+    FeedKind.subtaskAssigned => 'đã giao một công đoạn',
+    // Ảnh là bằng chứng của §B2, nên nói rõ có tệp gì chứ không nói chung chung.
+    FeedKind.attachmentAdded => switch (detail) {
+      final String s when s.isNotEmpty => 'đã gửi $s',
+      _ => 'đã gửi tệp đính kèm',
+    },
+    FeedKind.attachmentRemoved => 'đã gỡ tệp đính kèm',
     FeedKind.other => 'đã có thay đổi',
   };
 }

@@ -165,6 +165,12 @@ class _FeedRow extends StatelessWidget {
     FeedKind.status => Icons.check_circle_outline_rounded,
     FeedKind.dueDate => Icons.event_outlined,
     FeedKind.assignees => Icons.person_outline_rounded,
+    // Hai loại thợ tạo ra nhiều nhất trong ngày, nên chúng phải phân biệt
+    // được với nhau chỉ bằng biểu tượng khi lướt nhanh.
+    FeedKind.subtaskCompleted => Icons.task_alt_rounded,
+    FeedKind.subtaskAssigned => Icons.how_to_reg_outlined,
+    FeedKind.attachmentAdded => Icons.image_outlined,
+    FeedKind.attachmentRemoved => Icons.hide_image_outlined,
     FeedKind.other => Icons.circle_outlined,
   };
 }
