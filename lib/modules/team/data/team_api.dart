@@ -13,6 +13,17 @@ class TeamApi {
   /// Memberships carry the tenant role; the user record carries the name and
   /// avatar. The API keeps them apart, so they're joined here rather than in
   /// every screen that needs a person's name.
+  /// Liên kết (hoặc GỠ) tài khoản Zalo của một thành viên.
+  ///
+  /// Chuỗi rỗng là gỡ: `UpdateMembershipDTO` chỉ lọc bỏ null, nên rỗng đi qua
+  /// được và ghi đè thành rỗng — đúng thứ cần khi một người nghỉ việc.
+  ///
+  /// Cần quyền `membership.members.update`, tức là quản đốc trở lên. Đó là cả
+  /// điểm của cơ chế: bot không được tự nhận ra ai vừa nhắn, mà phải dựa vào
+  /// một liên kết người có thẩm quyền đã tự tay tạo (§G4).
+  Future<void> setZaloUserId(String membershipId, String zaloUserId) => _client
+      .put('/memberships/$membershipId', body: {'zalo_user_id': zaloUserId});
+
   Future<List<TeamMember>> members({String? search}) async {
     final responses = await Future.wait([
       _client.get(
