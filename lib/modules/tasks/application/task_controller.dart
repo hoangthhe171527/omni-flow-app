@@ -201,6 +201,21 @@ class TaskController
     state = AsyncData(current.copyWith(task: updated));
   }
 
+  /// Đặt lại danh sách người làm.
+  ///
+  /// Chờ server như [moveToSection], không lạc quan: gán việc là lời hứa với
+  /// một người khác, và một cái tên hiện lên rồi biến mất vì mạng hỏng còn tệ
+  /// hơn một giây chờ.
+  Future<void> setAssignees(List<String> userIds) async {
+    final current = state.valueOrNull;
+    if (current == null) return;
+
+    final updated = await ref.read(tasksApiProvider).setAssignees(arg, userIds);
+    if (_disposed) return;
+
+    state = AsyncData(current.copyWith(task: updated));
+  }
+
   /// The server confirmed the tick: take it out of the outbox and adopt the
   /// server's copy of the task.
   void _settle(String subtaskId, Task updated) {

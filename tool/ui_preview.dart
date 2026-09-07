@@ -243,6 +243,18 @@ class _StubTasksApi implements TasksApi {
   }
 
   @override
+  Future<Task> setAssignees(String taskId, List<String> userIds) async {
+    await Future<void>.delayed(const Duration(milliseconds: 400));
+    final row = _rows.firstWhere((t) => t['id'] == taskId);
+    row['assignee_ids'] = userIds;
+    // Bản xem trước không có danh bạ thật, nên dựng tên từ id để màn hình vẫn
+    // đổi thấy được sau khi gán.
+    row['assignee_names'] = userIds.map((id) => 'Người $id').toList();
+
+    return Task.fromJson(row);
+  }
+
+  @override
   Future<void> comment(String taskId, String body) async {}
 
   @override

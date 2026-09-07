@@ -111,6 +111,23 @@ class TasksApi {
     return Task.fromJson(response.object);
   }
 
+  /// Đặt lại TOÀN BỘ danh sách người làm.
+  ///
+  /// API ghi đè `assignee_ids` chứ không thêm/bớt từng người, nên chỗ gọi phải
+  /// gửi danh sách đầy đủ sau thay đổi. Gửi thiếu một người là gỡ họ ra khỏi
+  /// việc — im lặng, và người đó mất luôn thông báo lẫn việc trong danh sách
+  /// của mình.
+  ///
+  /// Danh sách rỗng gửi được và có nghĩa: trả việc về "chưa gán ai".
+  Future<Task> setAssignees(String taskId, List<String> userIds) async {
+    final response = await _client.put(
+      '$_base/$taskId',
+      body: {'assignee_ids': userIds},
+    );
+
+    return Task.fromJson(response.object);
+  }
+
   Future<void> comment(String taskId, String body) =>
       _client.post('$_base/$taskId/comments', body: {'content': body});
 

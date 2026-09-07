@@ -11,6 +11,7 @@ import '../application/task_controller.dart';
 import '../application/tasks_providers.dart';
 import '../data/tasks_api.dart';
 import '../domain/task.dart';
+import 'widgets/assign_task_sheet.dart';
 import 'widgets/assigner_panel.dart';
 import 'widgets/due_chip.dart';
 import 'widgets/move_section_sheet.dart';
@@ -88,6 +89,7 @@ class _Loaded extends ConsumerWidget {
                     task: task,
                     onMoveSection: () =>
                         _moveSection(context, controller, task),
+                    onAssign: () => _assign(context, controller, task),
                   ),
                 if (task.hasSubtasks) ...[
                   const SizedBox(height: OmniSpacing.sm),
@@ -115,6 +117,40 @@ class _Loaded extends ConsumerWidget {
       ],
     );
   }
+
+  /// Giao việc cho ai, ngay tại chỗ.
+  ///
+  /// Trước đây dòng "Người làm" chỉ đọc được, nên giao việc là thao tác duy
+  /// nhất trong cả luồng bắt buộc phải mở máy tính — trong khi người giao việc
+  /// ở xưởng thì đứng giữa nhà xưởng.
+  Future<void> _assign(
+    BuildContext context,
+    TaskController controller,
+    Task task,
+  ) async {
+    // Lấy messenger TRƯỚC khi await: sau khi sheet đóng, `context` có thể đã
+    // rời khỏi cây widget.
+    final messenger = ScaffoldMessenger.of(context);
+
+    final chosen = await showAssignTaskSheet(
+      context: context,
+      currentIds: task.assigneeIds,
+    );
+
+    // Đóng sheet mà không lưu, hoặc lưu lại đúng danh sách cũ: không có gì để
+    // ghi, và một lượt ghi rỗng vẫn chạm `updated_at` lẫn nhật ký hoạt động.
+    if (chosen == null || _sameIds(chosen, task.assigneeIds)) return;
+
+    try {
+      await controller.setAssignees(chosen);
+    } on AppException catch (e) {
+      messenger.showSnackBar(SnackBar(content: Text(e.message)));
+    }
+  }
+
+  /// So hai danh sách người làm mà không quan tâm thứ tự.
+  static bool _sameIds(List<String> a, List<String> b) =>
+      a.length == b.length && a.toSet().containsAll(b);
 
   Future<void> _moveSection(
     BuildContext context,
@@ -275,7 +311,7 @@ class _StageList extends StatelessWidget {
               OmniSpacing.sm,
             ),
             child: Text(
-              'Công đoạn',
+              'Việc con',
               style: OmniType.overline.copyWith(color: scheme.onSurfaceVariant),
             ),
           ),
