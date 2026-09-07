@@ -14,6 +14,7 @@ import '../domain/task.dart';
 import 'widgets/assign_task_sheet.dart';
 import 'widgets/assigner_panel.dart';
 import 'widgets/due_chip.dart';
+import 'widgets/edit_sheets.dart';
 import 'widgets/move_section_sheet.dart';
 import 'widgets/subtask_row.dart';
 
@@ -83,13 +84,23 @@ class _Loaded extends ConsumerWidget {
                 // Người giao việc thấy cùng những dữ kiện đó trong bảng điều
                 // phối ngay dưới, ở dạng sửa được. Hiện cả hai là in cùng một
                 // thông tin hai lần trên một màn hình bằng bàn tay.
-                _Header(task: task, showFacts: !isAssigner),
+                _Header(
+                  task: task,
+                  showFacts: !isAssigner,
+                  onEditTitle: isAssigner
+                      ? () => _editTitle(context, controller, task)
+                      : null,
+                ),
                 if (isAssigner)
                   AssignerPanel(
                     task: task,
                     onMoveSection: () =>
                         _moveSection(context, controller, task),
                     onAssign: () => _assign(context, controller, task),
+                    onEditDueDate: () =>
+                        _editDueDate(context, controller, task),
+                    onEditPriority: () =>
+                        _editPriority(context, controller, task),
                   ),
                 if (task.hasSubtasks) ...[
                   const SizedBox(height: OmniSpacing.sm),
@@ -100,9 +111,16 @@ class _Loaded extends ConsumerWidget {
                     controller: controller,
                   ),
                 ],
-                if (task.description != null &&
-                    task.description!.trim().isNotEmpty)
-                  _Description(text: task.description!),
+                // Người giao việc thấy khối mô tả KỂ CẢ khi trống — nếu không
+                // thì không có chỗ nào để thêm mô tả lần đầu.
+                if (isAssigner ||
+                    (task.description?.trim().isNotEmpty ?? false))
+                  _Description(
+                    text: task.description ?? '',
+                    onEdit: isAssigner
+                        ? () => _editDescription(context, controller, task)
+                        : null,
+                  ),
                 if (task.viewers.isNotEmpty) _Viewers(viewers: task.viewers),
               ],
             ),
@@ -152,6 +170,111 @@ class _Loaded extends ConsumerWidget {
   static bool _sameIds(List<String> a, List<String> b) =>
       a.length == b.length && a.toSet().containsAll(b);
 
+  /// Đặt hoặc xoá hạn.
+  ///
+  /// Xoá được là điều kiện đủ để chức năng này dùng thật: đặt nhầm ngày rồi
+  /// kẹt luôn thì lần sau người ta không dám đặt nữa. "Chưa hẹn" là một trạng
+  /// thái có nghĩa, không phải một ô còn thiếu.
+  Future<void> _editDueDate(
+    BuildContext context,
+    TaskController controller,
+    Task task,
+  ) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final now = DateTime.now();
+
+    final chosen = await showDueDateSheet(
+      context: context,
+      current: task.dueDate,
+      firstDate: DateTime(now.year - 1),
+      lastDate: DateTime(now.year + 3),
+    );
+
+    if (chosen == null) return;
+
+    final value = chosen.clear ? null : chosen.date;
+    if (_sameDay(value, task.dueDate)) return;
+
+    try {
+      await controller.setDueDate(value);
+    } on AppException catch (e) {
+      messenger.showSnackBar(SnackBar(content: Text(e.message)));
+    }
+  }
+
+  static bool _sameDay(DateTime? a, DateTime? b) {
+    if (a == null || b == null) return a == b;
+
+    return a.year == b.year && a.month == b.month && a.day == b.day;
+  }
+
+  Future<void> _editPriority(
+    BuildContext context,
+    TaskController controller,
+    Task task,
+  ) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final chosen = await showPrioritySheet(
+      context: context,
+      current: task.priority,
+    );
+
+    if (chosen == null || chosen == task.priority) return;
+
+    try {
+      await controller.setPriority(chosen);
+    } on AppException catch (e) {
+      messenger.showSnackBar(SnackBar(content: Text(e.message)));
+    }
+  }
+
+  Future<void> _editTitle(
+    BuildContext context,
+    TaskController controller,
+    Task task,
+  ) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final chosen = await showTextEditSheet(
+      context: context,
+      title: 'Tên việc',
+      initial: task.title,
+      hint: 'Việc cần làm là gì?',
+    );
+
+    if (chosen == null) return;
+
+    try {
+      await controller.setTitle(chosen);
+    } on AppException catch (e) {
+      messenger.showSnackBar(SnackBar(content: Text(e.message)));
+    }
+  }
+
+  Future<void> _editDescription(
+    BuildContext context,
+    TaskController controller,
+    Task task,
+  ) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final chosen = await showTextEditSheet(
+      context: context,
+      title: 'Mô tả',
+      initial: task.description ?? '',
+      hint: 'Ghi chú, yêu cầu, lưu ý khi làm…',
+      multiline: true,
+      // Xoá sạch mô tả là một lựa chọn hợp lệ, khác với tên việc.
+      allowEmpty: true,
+    );
+
+    if (chosen == null) return;
+
+    try {
+      await controller.setDescription(chosen);
+    } on AppException catch (e) {
+      messenger.showSnackBar(SnackBar(content: Text(e.message)));
+    }
+  }
+
   Future<void> _moveSection(
     BuildContext context,
     TaskController controller,
@@ -186,7 +309,7 @@ class _Loaded extends ConsumerWidget {
 }
 
 class _Header extends StatelessWidget {
-  const _Header({required this.task, this.showFacts = true});
+  const _Header({required this.task, this.showFacts = true, this.onEditTitle});
 
   final Task task;
 
@@ -195,6 +318,9 @@ class _Header extends StatelessWidget {
   /// Tắt với người giao việc: họ có cùng những dữ kiện đó ngay dưới, trong
   /// bảng điều phối, ở dạng sửa được.
   final bool showFacts;
+
+  /// Đổi tên việc. Null = chỉ đọc.
+  final VoidCallback? onEditTitle;
 
   @override
   Widget build(BuildContext context) {
@@ -218,7 +344,27 @@ class _Header extends StatelessWidget {
             ),
             const SizedBox(height: OmniSpacing.xs),
           ],
-          Text(task.title, style: OmniType.title),
+          // Chạm vào chính cái tên để sửa nó. Một nút bút chì ở góc trên là
+          // thêm một thứ phải tìm, trong khi cái tên thì đang ở ngay đó.
+          if (onEditTitle == null)
+            Text(task.title, style: OmniType.title)
+          else
+            InkWell(
+              onTap: onEditTitle,
+              borderRadius: OmniRadius.mdAll,
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(child: Text(task.title, style: OmniType.title)),
+                  const SizedBox(width: OmniSpacing.sm),
+                  Icon(
+                    Icons.edit_outlined,
+                    size: OmniIconSize.md,
+                    color: scheme.onSurfaceVariant,
+                  ),
+                ],
+              ),
+            ),
           if (showFacts) ...[
             const SizedBox(height: OmniSpacing.lg),
             // Deadline and people are chips, not sentences: at a glance from a
@@ -339,9 +485,11 @@ class _StageList extends StatelessWidget {
 }
 
 class _Description extends StatelessWidget {
-  const _Description({required this.text});
+  const _Description({required this.text, this.onEdit});
 
   final String text;
+
+  final VoidCallback? onEdit;
 
   @override
   Widget build(BuildContext context) {
@@ -359,7 +507,25 @@ class _Description extends StatelessWidget {
             style: OmniType.overline.copyWith(color: scheme.onSurfaceVariant),
           ),
           const SizedBox(height: OmniSpacing.sm),
-          Text(text, style: OmniType.body),
+          if (onEdit == null)
+            Text(text, style: OmniType.body)
+          else
+            InkWell(
+              onTap: onEdit,
+              borderRadius: OmniRadius.mdAll,
+              child: SizedBox(
+                width: double.infinity,
+                child: Text(
+                  text.trim().isEmpty ? 'Thêm mô tả…' : text,
+                  style: text.trim().isEmpty
+                      ? OmniType.body.copyWith(
+                          color: scheme.onSurfaceVariant,
+                          fontStyle: FontStyle.italic,
+                        )
+                      : OmniType.body,
+                ),
+              ),
+            ),
         ],
       ),
     );

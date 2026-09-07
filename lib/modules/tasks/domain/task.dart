@@ -223,6 +223,20 @@ class Task {
         due.day == today.day;
   }
 
+  /// Bản sao có sửa vài trường.
+  ///
+  /// Viết tay, nên nó CHỈ đúng khi mọi trường đều được chép lại — và bản trước
+  /// bỏ sót đúng ba trường thêm vào lúc làm tầng nhóm việc: `sectionId`,
+  /// `sectionName`, `planSections`.
+  ///
+  /// Hậu quả không nằm ở chỗ dễ đoán. Tick một việc con là đi qua đây (cập
+  /// nhật lạc quan), nên chỉ cần tick một cái là `planSections` biến mất —
+  /// và sheet "Chuyển nhóm việc" từ đó báo "kế hoạch này chưa khai báo nhóm
+  /// việc nào". Tức là: tick xong công đoạn thì hết kéo được cây đàn sang cột
+  /// kế tiếp, đúng hai thao tác đi liền nhau ở §B2 → §B3.
+  ///
+  /// `task_copy_with_test.dart` so từng trường, để lần thêm trường sau không
+  /// lặp lại chuyện này.
   Task copyWith({List<Subtask>? subtasks, String? status}) => Task(
     id: id,
     title: title,
@@ -231,6 +245,9 @@ class Task {
     priority: priority,
     projectId: projectId,
     projectName: projectName,
+    sectionId: sectionId,
+    sectionName: sectionName,
+    planSections: planSections,
     assigneeIds: assigneeIds,
     assigneeNames: assigneeNames,
     dueDate: dueDate,

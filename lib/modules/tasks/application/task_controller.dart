@@ -206,11 +206,33 @@ class TaskController
   /// Chờ server như [moveToSection], không lạc quan: gán việc là lời hứa với
   /// một người khác, và một cái tên hiện lên rồi biến mất vì mạng hỏng còn tệ
   /// hơn một giây chờ.
-  Future<void> setAssignees(List<String> userIds) async {
+  Future<void> setAssignees(List<String> userIds) =>
+      _apply((api) => api.setAssignees(arg, userIds));
+
+  Future<void> setTitle(String title) =>
+      _apply((api) => api.setTitle(arg, title));
+
+  Future<void> setDescription(String description) =>
+      _apply((api) => api.setDescription(arg, description));
+
+  Future<void> setPriority(String priority) =>
+      _apply((api) => api.setPriority(arg, priority));
+
+  /// null = xoá hạn.
+  Future<void> setDueDate(DateTime? dueDate) =>
+      _apply((api) => api.setDueDate(arg, dueDate));
+
+  /// Gọi API rồi thay công việc trong state bằng bản server trả về.
+  ///
+  /// Không lạc quan, và có lý do: mọi thứ đi qua đây đều là sửa dữ liệu điều
+  /// phối — hạn, ưu tiên, người làm. Chúng được sửa vài lần một ngày, và một
+  /// giá trị hiện lên rồi lặng lẽ quay về cũ vì mạng hỏng thì tệ hơn nhiều so
+  /// với một giây chờ. Tick việc con thì ngược lại, nên nó có đường riêng.
+  Future<void> _apply(Future<Task> Function(TasksApi api) call) async {
     final current = state.valueOrNull;
     if (current == null) return;
 
-    final updated = await ref.read(tasksApiProvider).setAssignees(arg, userIds);
+    final updated = await call(ref.read(tasksApiProvider));
     if (_disposed) return;
 
     state = AsyncData(current.copyWith(task: updated));

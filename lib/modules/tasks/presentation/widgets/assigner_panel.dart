@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../../core/utils/formatters.dart';
 import '../../../../design/tokens/tokens.dart';
 import '../../domain/task.dart';
+import 'edit_sheets.dart';
 
 /// Phần chỉ người GIAO việc thấy.
 ///
@@ -19,6 +20,8 @@ class AssignerPanel extends StatelessWidget {
     required this.task,
     this.onMoveSection,
     this.onAssign,
+    this.onEditDueDate,
+    this.onEditPriority,
   });
 
   final Task task;
@@ -27,6 +30,10 @@ class AssignerPanel extends StatelessWidget {
 
   /// Mở bộ chọn người làm. Null thì dòng "Người làm" chỉ đọc như trước.
   final VoidCallback? onAssign;
+
+  final VoidCallback? onEditDueDate;
+
+  final VoidCallback? onEditPriority;
 
   @override
   Widget build(BuildContext context) {
@@ -78,6 +85,7 @@ class AssignerPanel extends StatelessWidget {
               _ => Formatters.date(task.dueDate!),
             },
             muted: task.dueDate == null,
+            onTap: onEditDueDate,
             tone: switch (task) {
               _ when task.daysOverdue != null => _Tone.danger,
               _ when task.isDueToday => _Tone.warning,
@@ -87,7 +95,8 @@ class AssignerPanel extends StatelessWidget {
           _Row(
             icon: Icons.flag_outlined,
             label: 'Ưu tiên',
-            value: _priorityLabel(task.priority),
+            value: priorityLabel(task.priority),
+            onTap: onEditPriority,
           ),
           _Row(
             icon: Icons.view_column_outlined,
@@ -107,18 +116,6 @@ class AssignerPanel extends StatelessWidget {
       ),
     );
   }
-
-  /// Nhãn tiếng Việt cho ba mức API dùng.
-  ///
-  /// Giá trị lạ hiện nguyên văn chứ không rơi về "Bình thường": một dự án
-  /// thêm mức "khẩn" mà app im lặng hạ nó xuống bình thường là cách một việc
-  /// gấp bị bỏ quên.
-  String _priorityLabel(String priority) => switch (priority) {
-    'high' => 'Cao',
-    'med' || 'medium' => 'Bình thường',
-    'low' => 'Thấp',
-    _ => priority,
-  };
 }
 
 /// Sắc thái của một dòng. Chỉ ba: bình thường, cần để ý, đã hỏng.

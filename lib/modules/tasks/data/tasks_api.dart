@@ -148,6 +148,27 @@ class TasksApi {
       '${date.month.toString().padLeft(2, '0')}-'
       '${date.day.toString().padLeft(2, '0')}';
 
+  /// Đổi tên công việc.
+  Future<Task> setTitle(String taskId, String title) =>
+      _patch(taskId, {'title': title});
+
+  /// Đổi mô tả. Chuỗi rỗng là xoá mô tả — một lựa chọn hợp lệ.
+  Future<Task> setDescription(String taskId, String description) =>
+      _patch(taskId, {'description': description});
+
+  /// Đổi mức ưu tiên. API nhận `low` | `med` | `high`.
+  Future<Task> setPriority(String taskId, String priority) =>
+      _patch(taskId, {'priority': priority});
+
+  /// Đặt hoặc XOÁ hạn.
+  ///
+  /// null = xoá, và gửi đi bằng chuỗi rỗng chứ không phải null: bên API,
+  /// `UpdateTaskDTO::toAttributes` lọc bỏ đúng những trường null, nên gửi null
+  /// sẽ không xoá được gì — nó lặng lẽ không làm gì cả. Cùng cái bẫy đã gặp ở
+  /// `section_id`.
+  Future<Task> setDueDate(String taskId, DateTime? dueDate) =>
+      _patch(taskId, {'due_date': dueDate == null ? '' : _ymd(dueDate)});
+
   /// Đặt lại TOÀN BỘ danh sách người làm.
   ///
   /// API ghi đè `assignee_ids` chứ không thêm/bớt từng người, nên chỗ gọi phải
@@ -156,11 +177,16 @@ class TasksApi {
   /// của mình.
   ///
   /// Danh sách rỗng gửi được và có nghĩa: trả việc về "chưa gán ai".
-  Future<Task> setAssignees(String taskId, List<String> userIds) async {
-    final response = await _client.put(
-      '$_base/$taskId',
-      body: {'assignee_ids': userIds},
-    );
+  Future<Task> setAssignees(String taskId, List<String> userIds) =>
+      _patch(taskId, {'assignee_ids': userIds});
+
+  /// Ghi MỘT trường của công việc.
+  ///
+  /// API chỉ có PUT /tasks/{id} và nó ghi đúng những trường được gửi, nên gửi
+  /// một trường là sửa một trường — không cần đọc rồi ghi lại cả bản ghi, và
+  /// hai người sửa hai trường khác nhau không đè lên nhau.
+  Future<Task> _patch(String taskId, Map<String, dynamic> body) async {
+    final response = await _client.put('$_base/$taskId', body: body);
 
     return Task.fromJson(response.object);
   }

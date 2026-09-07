@@ -265,6 +265,33 @@ class _StubTasksApi implements TasksApi {
   }
 
   @override
+  Future<Task> setTitle(String taskId, String title) =>
+      _edit(taskId, 'title', title);
+
+  @override
+  Future<Task> setDescription(String taskId, String description) =>
+      _edit(taskId, 'description', description);
+
+  @override
+  Future<Task> setPriority(String taskId, String priority) =>
+      _edit(taskId, 'priority', priority);
+
+  @override
+  Future<Task> setDueDate(String taskId, DateTime? dueDate) => _edit(
+    taskId,
+    'due_date',
+    dueDate?.toIso8601String().split('T').first ?? '',
+  );
+
+  Future<Task> _edit(String taskId, String field, Object? value) async {
+    await Future<void>.delayed(const Duration(milliseconds: 300));
+    final row = _rows.firstWhere((t) => t['id'] == taskId);
+    row[field] = value;
+
+    return Task.fromJson(row);
+  }
+
+  @override
   Future<Task> setAssignees(String taskId, List<String> userIds) async {
     await Future<void>.delayed(const Duration(milliseconds: 400));
     final row = _rows.firstWhere((t) => t['id'] == taskId);
