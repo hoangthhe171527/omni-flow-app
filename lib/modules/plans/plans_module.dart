@@ -63,7 +63,7 @@ class PlansModule extends OmniModule {
     ModuleNavEntry(
       moduleId: 'plans',
       label: 'Dòng việc',
-      subtitle: 'Chuyện gì vừa xảy ra ở xưởng, và KPI tháng',
+      subtitle: 'Hoạt động gần đây của cả nhóm, và KPI tháng',
       icon: Icons.timeline_outlined,
       selectedIcon: Icons.timeline_rounded,
       routeName: timeline,
@@ -77,7 +77,7 @@ class PlansModule extends OmniModule {
     ModuleNavEntry(
       moduleId: 'plans',
       label: 'Teams',
-      subtitle: 'Kế hoạch và công đoạn của xưởng',
+      subtitle: 'Kế hoạch và nhóm việc của team',
       icon: Icons.workspaces_outline,
       selectedIcon: Icons.workspaces_rounded,
       routeName: teams,

@@ -157,7 +157,7 @@ class _Column extends StatelessWidget {
       return OmniEmptyState(
         icon: Icons.inbox_outlined,
         title: 'Chưa có việc ở "${section.name}"',
-        message: 'Việc chuyển sang công đoạn này sẽ hiện ở đây.',
+        message: 'Việc chuyển sang nhóm việc này sẽ hiện ở đây.',
       );
     }
 
@@ -209,7 +209,7 @@ class _TruncatedNotice extends StatelessWidget {
           Expanded(
             child: Text(
               'Kế hoạch này có hơn $kMaxTasksOnBoard việc. Bảng đang hiện '
-              '$kMaxTasksOnBoard việc đầu theo thứ tự xưởng xếp.',
+              '$kMaxTasksOnBoard việc đầu theo thứ tự trên bảng.',
               style: Theme.of(context).textTheme.labelMedium?.copyWith(
                 color: OmniColors.warningTextOf(context),
               ),

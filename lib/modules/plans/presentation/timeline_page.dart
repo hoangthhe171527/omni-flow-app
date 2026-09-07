@@ -44,7 +44,7 @@ class TimelinePage extends ConsumerWidget {
             icon: Icons.history_rounded,
             title: 'Chưa có hoạt động nào',
             message:
-                'Việc được tạo, chuyển công đoạn hay đổi hạn sẽ hiện ở đây.',
+                'Việc được tạo, chuyển nhóm việc hay đổi hạn sẽ hiện ở đây.',
           ),
           data: (rows) {
             final groups = FeedGroup.from(rows);

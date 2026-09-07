@@ -81,7 +81,7 @@ class AssignerPanel extends StatelessWidget {
           _Row(
             icon: Icons.view_column_outlined,
             label: 'Công đoạn',
-            value: task.sectionName ?? 'Chưa xếp công đoạn',
+            value: task.sectionName ?? 'Chưa xếp nhóm việc',
             muted: task.sectionName == null,
           ),
           if (onMoveSection != null) ...[
@@ -89,7 +89,7 @@ class AssignerPanel extends StatelessWidget {
             OutlinedButton.icon(
               onPressed: onMoveSection,
               icon: const Icon(Icons.swap_horiz_rounded),
-              label: const Text('Chuyển công đoạn'),
+              label: const Text('Chuyển nhóm việc'),
             ),
           ],
         ],

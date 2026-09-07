@@ -51,7 +51,7 @@ void main() {
     return returned ? result : null;
   }
 
-  testWidgets('liệt kê đúng các công đoạn của kế hoạch', (tester) async {
+  testWidgets('liệt kê đúng các nhóm việc của kế hoạch', (tester) async {
     await open(tester);
 
     expect(find.text('Nhập xưởng'), findsOneWidget);
@@ -59,14 +59,14 @@ void main() {
     expect(find.text('Chờ QC'), findsOneWidget);
   });
 
-  testWidgets('đánh dấu công đoạn đang đứng', (tester) async {
+  testWidgets('đánh dấu nhóm việc đang đứng', (tester) async {
     await open(tester);
 
     expect(find.byIcon(Icons.radio_button_checked_rounded), findsOneWidget);
     expect(find.byIcon(Icons.radio_button_unchecked_rounded), findsNWidgets(2));
   });
 
-  testWidgets('chọn một công đoạn thì đóng lại và trả về id của nó', (
+  testWidgets('chọn một nhóm việc thì đóng lại và trả về id của nó', (
     tester,
   ) async {
     String? chosen;
@@ -100,7 +100,7 @@ void main() {
     expect(find.text('Chờ QC'), findsNothing);
   });
 
-  testWidgets('công đoạn hiện tại vẫn bấm được', (tester) async {
+  testWidgets('nhóm việc hiện tại vẫn bấm được', (tester) async {
     String? chosen;
     var settled = false;
 
@@ -140,11 +140,11 @@ void main() {
     expect(chosen, 's2');
   });
 
-  testWidgets('kế hoạch chưa có công đoạn nào thì nói rõ', (tester) async {
+  testWidgets('kế hoạch chưa có nhóm việc nào thì nói rõ', (tester) async {
     await open(tester, list: const [], current: null);
 
     expect(
-      find.text('Kế hoạch này chưa khai báo công đoạn nào.'),
+      find.text('Kế hoạch này chưa khai báo nhóm việc nào.'),
       findsOneWidget,
     );
   });

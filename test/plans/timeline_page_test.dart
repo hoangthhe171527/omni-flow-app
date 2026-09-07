@@ -73,7 +73,7 @@ void main() {
 
     expect(find.text('KAWAI HAT-5'), findsOneWidget);
     expect(
-      find.textContaining('cây xong tháng này'),
+      find.textContaining('việc xong tháng này'),
       findsNothing,
       reason:
           'Thưởng tính theo TEAM (§1). Bày mốc thưởng trước mặt từng thợ là '
@@ -86,7 +86,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('12'), findsOneWidget);
-    expect(find.textContaining('cây xong tháng này'), findsOneWidget);
+    expect(find.textContaining('việc xong tháng này'), findsOneWidget);
     expect(find.text('KAWAI HAT-5'), findsOneWidget);
   });
 
@@ -96,7 +96,7 @@ void main() {
     await tester.pumpWidget(host(feed: [entry()]));
     await tester.pumpAndSettle();
 
-    expect(find.text('Hằng Ni đã chuyển công đoạn'), findsOneWidget);
+    expect(find.text('Hằng Ni đã chuyển nhóm việc'), findsOneWidget);
   });
 
   testWidgets('không tra được tên thì chỉ hiện hành động, không hiện UUID', (
@@ -105,7 +105,7 @@ void main() {
     await tester.pumpWidget(host(feed: [entry(user: null)]));
     await tester.pumpAndSettle();
 
-    expect(find.text('đã chuyển công đoạn'), findsOneWidget);
+    expect(find.text('đã chuyển nhóm việc'), findsOneWidget);
   });
 
   testWidgets('loại hoạt động lạ vẫn hiện, không bị giấu', (tester) async {
@@ -129,7 +129,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(
-      find.textContaining('Chưa có kế hoạch nào đánh dấu công đoạn đích'),
+      find.textContaining('Chưa có kế hoạch nào đánh dấu nhóm việc đích'),
       findsOneWidget,
       reason:
           'Một số 0 vì chưa cấu hình trông y hệt một số 0 vì chưa làm được cây '
@@ -192,7 +192,7 @@ void main() {
     expect(find.text('KAWAI HAT-5'), findsOneWidget);
     expect(find.text('Hằng Ni đã xong Body ngoài'), findsOneWidget);
     expect(find.text('luận đã gửi tệp đính kèm'), findsOneWidget);
-    expect(find.text('linh đã chuyển công đoạn'), findsOneWidget);
+    expect(find.text('linh đã chuyển nhóm việc'), findsOneWidget);
   });
 
   testWidgets('cây khác nhau vẫn là thẻ khác nhau', (tester) async {
@@ -220,9 +220,9 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('thợ 0 đã chuyển công đoạn'), findsOneWidget);
-    expect(find.text('thợ 4 đã chuyển công đoạn'), findsOneWidget);
-    expect(find.text('thợ 5 đã chuyển công đoạn'), findsNothing);
+    expect(find.text('thợ 0 đã chuyển nhóm việc'), findsOneWidget);
+    expect(find.text('thợ 4 đã chuyển nhóm việc'), findsOneWidget);
+    expect(find.text('thợ 5 đã chuyển nhóm việc'), findsNothing);
     expect(find.text('và 2 hoạt động nữa'), findsOneWidget);
   });
 }

@@ -5,7 +5,7 @@ import '../../../core/utils/json.dart';
 ///
 /// CHÍN loại `TaskActivityService` thật sự ghi. Bản đầu chỉ đọc năm, và bốn
 /// loại còn lại rơi hết về [other] — trong đó có `subtask_completed` và
-/// `attachment_added`, tức là **tick xong một công đoạn** và **gửi ảnh**: hai
+/// `attachment_added`, tức là **tick xong một việc con** và **gửi ảnh**: hai
 /// việc thợ làm nhiều nhất trong ngày (§B2 "xong việc nào tick việc đó, kèm
 /// ảnh nếu cần").
 ///
@@ -67,7 +67,7 @@ class FeedEntry {
     from: json.str('from'),
     to: json.str('to'),
     // Hai khoá khác nhau cho cùng một vai trò: `subtask_completed` mang
-    // `title` (tên công đoạn), `attachment_added` mang `name` (tên tệp). Đọc
+    // `title` (tên việc con), `attachment_added` mang `name` (tên tệp). Đọc
     // cả hai ở đây thay vì bắt màn hình biết loại nào dùng khoá nào.
     detail: json.str('title') ?? json.str('name'),
   );
@@ -79,34 +79,34 @@ class FeedEntry {
   final DateTime? at;
   final String? userName;
 
-  /// Với [FeedKind.section] đây là ID công đoạn, không phải tên — tên công
-  /// đoạn sống trên kế hoạch, và dòng thời gian không kéo theo kế hoạch nào.
+  /// Với [FeedKind.section] đây là ID nhóm việc, không phải tên — tên nhóm
+  /// việc sống trên kế hoạch, và dòng thời gian không kéo theo kế hoạch nào.
   final String? from;
   final String? to;
 
-  /// Tên công đoạn (tick việc con) hoặc tên tệp (đính kèm). Null khi loại
+  /// Tên việc con (khi tick) hoặc tên tệp (khi đính kèm). Null khi loại
   /// hoạt động không mang theo gì để gọi tên.
   final String? detail;
 
   /// Câu mô tả, viết theo cách người xưởng nói.
   ///
-  /// Không ghép tên công đoạn vào đây: `from`/`to` là ID, và in một ID ra màn
+  /// Không ghép tên nhóm việc vào đây: `from`/`to` là ID, và in một ID ra màn
   /// hình còn tệ hơn không in gì. Màn hình biết cây đàn nào, và mở nó ra là
-  /// thấy công đoạn hiện tại.
+  /// thấy nhóm việc hiện tại.
   String get summary => switch (kind) {
-    FeedKind.created => 'đã nhận vào xưởng',
-    FeedKind.section => 'đã chuyển công đoạn',
+    FeedKind.created => 'đã tạo việc',
+    FeedKind.section => 'đã chuyển nhóm việc',
     FeedKind.status => 'đã đổi trạng thái',
     FeedKind.dueDate => 'đã đổi hạn',
     FeedKind.assignees => 'đã đổi người làm',
-    // Gọi thẳng tên công đoạn khi biết. "đã xong Body ngoài" là một câu quản
+    // Gọi thẳng tên việc con khi biết. "đã xong Body ngoài" là một câu quản
     // đốc đọc lướt hiểu ngay; "đã hoàn thành việc con" thì phải mở cây đàn ra
     // mới biết việc con nào.
     FeedKind.subtaskCompleted => switch (detail) {
       final String s when s.isNotEmpty => 'đã xong $s',
-      _ => 'đã xong một công đoạn',
+      _ => 'đã xong một việc con',
     },
-    FeedKind.subtaskAssigned => 'đã giao một công đoạn',
+    FeedKind.subtaskAssigned => 'đã giao một việc con',
     // Ảnh là bằng chứng của §B2, nên nói rõ có tệp gì chứ không nói chung chung.
     FeedKind.attachmentAdded => switch (detail) {
       final String s when s.isNotEmpty => 'đã gửi $s',

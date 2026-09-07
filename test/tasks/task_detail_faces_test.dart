@@ -61,7 +61,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('Điều phối'), findsNothing);
-      expect(find.text('Chuyển công đoạn'), findsNothing);
+      expect(find.text('Chuyển nhóm việc'), findsNothing);
     });
 
     testWidgets('VẪN thấy và tick được công đoạn', (tester) async {
@@ -100,7 +100,7 @@ void main() {
       await tester.pumpWidget(host(permissions: assigner));
       await tester.pumpAndSettle();
 
-      expect(find.text('Chuyển công đoạn'), findsOneWidget);
+      expect(find.text('Chuyển nhóm việc'), findsOneWidget);
     });
 
     testWidgets('việc chưa gán ai thì nói rõ, không để trống', (tester) async {

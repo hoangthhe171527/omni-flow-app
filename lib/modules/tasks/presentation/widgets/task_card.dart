@@ -91,7 +91,7 @@ class TaskCard extends StatelessWidget {
   String get _semanticLabel {
     final parts = <String>[task.title];
     if (task.hasSubtasks) {
-      parts.add('${task.doneCount} trên ${task.totalCount} công đoạn xong');
+      parts.add('${task.doneCount} trên ${task.totalCount} việc con xong');
     }
     final overdue = task.daysOverdue;
     if (overdue != null) parts.add('quá hạn $overdue ngày');
@@ -115,7 +115,7 @@ class _Progress extends StatelessWidget {
         Row(
           children: [
             Text(
-              '${task.doneCount}/${task.totalCount} công đoạn',
+              '${task.doneCount}/${task.totalCount} việc con',
               style: Theme.of(context).textTheme.labelMedium?.copyWith(
                 color: scheme.onSurfaceVariant,
                 // Tabular so the numbers do not jitter as stages complete.

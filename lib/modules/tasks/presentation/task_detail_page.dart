@@ -220,7 +220,7 @@ class _Progress extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Đã xong ${task.doneCount}/${task.totalCount} công đoạn',
+          'Đã xong ${task.doneCount}/${task.totalCount} việc con',
           style: OmniType.caption.copyWith(
             color: scheme.onSurfaceVariant,
             fontFeatures: OmniType.tabular,

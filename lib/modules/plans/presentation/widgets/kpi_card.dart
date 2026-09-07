@@ -37,8 +37,8 @@ class KpiCard extends StatelessWidget {
             const SizedBox(width: OmniSpacing.md),
             Expanded(
               child: Text(
-                'Chưa có kế hoạch nào đánh dấu công đoạn đích, nên chưa đếm '
-                'được cây nào hoàn thành. Đánh dấu trong phần nhóm việc của '
+                'Chưa có kế hoạch nào đánh dấu nhóm việc đích, nên chưa đếm '
+                'được việc nào hoàn thành. Đánh dấu trong phần nhóm việc của '
                 'kế hoạch.',
                 style: text.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
               ),
@@ -66,7 +66,7 @@ class KpiCard extends StatelessWidget {
               ),
               const SizedBox(width: OmniSpacing.sm),
               Text(
-                'cây xong tháng này',
+                'việc xong tháng này',
                 style: text.bodyMedium?.copyWith(
                   color: scheme.onSurfaceVariant,
                 ),
@@ -124,7 +124,7 @@ class _Milestone extends StatelessWidget {
       children: [
         Expanded(
           child: Text(
-            'Còn ${next.remaining} cây tới mốc ${next.count} — '
+            'Còn ${next.remaining} việc tới mốc ${next.count} — '
             'thưởng ${next.bonus} triệu',
             style: text.labelMedium?.copyWith(color: scheme.onSurfaceVariant),
           ),
@@ -134,7 +134,7 @@ class _Milestone extends StatelessWidget {
           Text(
             // Một chữ số thập phân: "0.5 cây/ngày" đọc được, "0.4545…" thì
             // không, và làm tròn lên thành 1 là nói dối về nhịp cần thiết.
-            '${pace.toStringAsFixed(1)} cây/ngày · còn ${kpi.daysLeft} ngày',
+            '${pace.toStringAsFixed(1)} việc/ngày · còn ${kpi.daysLeft} ngày',
             style: text.labelSmall?.copyWith(
               color: scheme.onSurfaceVariant,
               fontFeatures: OmniType.tabular,

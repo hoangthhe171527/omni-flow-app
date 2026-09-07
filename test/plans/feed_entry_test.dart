@@ -5,7 +5,7 @@ import 'package:omni_app/modules/plans/domain/feed_entry.dart';
 ///
 /// Bản đầu đọc năm trong chín loại `TaskActivityService` ghi, nên bốn loại còn
 /// lại rơi hết về "đã có thay đổi" — trong đó có `subtask_completed` và
-/// `attachment_added`, tức tick xong một công đoạn và gửi ảnh: hai việc thợ
+/// `attachment_added`, tức tick xong một việc con và gửi ảnh: hai việc thợ
 /// làm nhiều nhất trong ngày. Số dòng vẫn đúng, nội dung thì rỗng.
 void main() {
   FeedEntry of(String type, [Map<String, dynamic> extra = const {}]) =>
@@ -51,8 +51,8 @@ void main() {
     });
   });
 
-  group('tick xong công đoạn', () {
-    test('gọi thẳng tên công đoạn', () {
+  group('tick xong việc con', () {
+    test('gọi thẳng tên việc con', () {
       // "đã xong Body ngoài" đọc lướt là hiểu. "đã hoàn thành việc con" thì
       // phải mở cây đàn ra mới biết việc con nào.
       final entry = of('subtask_completed', {'title': 'Body ngoài'});
@@ -60,11 +60,11 @@ void main() {
       expect(entry.summary, 'đã xong Body ngoài');
     });
 
-    test('thiếu tên thì vẫn nói được là công đoạn nào đó xong', () {
-      expect(of('subtask_completed').summary, 'đã xong một công đoạn');
+    test('thiếu tên thì vẫn nói được là việc con nào đó xong', () {
+      expect(of('subtask_completed').summary, 'đã xong một việc con');
       expect(
         of('subtask_completed', {'title': ''}).summary,
-        'đã xong một công đoạn',
+        'đã xong một việc con',
       );
     });
   });
