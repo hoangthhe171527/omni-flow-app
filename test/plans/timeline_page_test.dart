@@ -23,13 +23,16 @@ void main() {
     String type = 'section_id',
     String title = 'KAWAI HAT-5',
     String? user = 'Hằng Ni',
+    String taskId = 't1',
+    String? detail,
   }) => FeedEntry.fromJson({
     'id': 'a1',
     'type': type,
-    'task_id': 't1',
+    'task_id': taskId,
     'task_title': title,
     'created_at': '2026-09-06T08:00:00Z',
     'user_name': ?user,
+    'title': ?detail,
   });
 
   Map<String, dynamic> kpiJson({int delivered = 12, bool configured = true}) =>
@@ -170,5 +173,56 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Chưa có hoạt động nào'), findsOneWidget);
+  });
+
+  testWidgets('tên cây đàn hiện MỘT lần cho nhiều hoạt động', (tester) async {
+    // Trước đây mỗi hoạt động là một dòng mang theo tên cây đàn, nên ba người
+    // đụng vào cùng một cây trong một buổi cho ba dòng lặp lại y hệt nhau.
+    await tester.pumpWidget(
+      host(
+        feed: [
+          entry(type: 'subtask_completed', detail: 'Body ngoài'),
+          entry(type: 'attachment_added', user: 'luận'),
+          entry(type: 'section_id', user: 'linh'),
+        ],
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('KAWAI HAT-5'), findsOneWidget);
+    expect(find.text('Hằng Ni đã xong Body ngoài'), findsOneWidget);
+    expect(find.text('luận đã gửi tệp đính kèm'), findsOneWidget);
+    expect(find.text('linh đã chuyển công đoạn'), findsOneWidget);
+  });
+
+  testWidgets('cây khác nhau vẫn là thẻ khác nhau', (tester) async {
+    await tester.pumpWidget(
+      host(
+        feed: [
+          entry(taskId: 't1', title: 'KAWAI HAT-5'),
+          entry(taskId: 't2', title: 'YAMAHA U1H'),
+        ],
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('KAWAI HAT-5'), findsOneWidget);
+    expect(find.text('YAMAHA U1H'), findsOneWidget);
+  });
+
+  testWidgets('một cây bị rework dồn dập không đẩy cả xưởng khỏi màn hình', (
+    tester,
+  ) async {
+    // Bảy hoạt động liên tiếp trên một cây. Hiện hết thì thẻ đó chiếm trọn màn
+    // và những cây khác biến mất — đúng thứ màn "tổng quan" không được làm.
+    await tester.pumpWidget(
+      host(feed: [for (var i = 0; i < 7; i++) entry(user: 'thợ $i')]),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('thợ 0 đã chuyển công đoạn'), findsOneWidget);
+    expect(find.text('thợ 4 đã chuyển công đoạn'), findsOneWidget);
+    expect(find.text('thợ 5 đã chuyển công đoạn'), findsNothing);
+    expect(find.text('và 2 hoạt động nữa'), findsOneWidget);
   });
 }

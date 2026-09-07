@@ -9,6 +9,7 @@ import '../../tasks/application/tasks_providers.dart';
 import '../../tasks/routes.dart';
 import '../application/plans_providers.dart';
 import '../domain/feed_entry.dart';
+import '../domain/feed_group.dart';
 import 'widgets/kpi_card.dart';
 
 /// "Chuyện gì vừa xảy ra ở xưởng", và "tháng này xong bao nhiêu cây".
@@ -45,24 +46,27 @@ class TimelinePage extends ConsumerWidget {
             message:
                 'Việc được tạo, chuyển công đoạn hay đổi hạn sẽ hiện ở đây.',
           ),
-          data: (rows) => ListView.separated(
-            padding: const EdgeInsets.fromLTRB(
-              OmniSpacing.lg,
-              OmniSpacing.lg,
-              OmniSpacing.lg,
-              OmniSpacing.bottomSafe,
-            ),
-            // +1 cho thẻ KPI ở đầu, chỉ khi người xem là người giao việc.
-            itemCount: rows.length + (isAssigner ? 1 : 0),
-            separatorBuilder: (_, _) => const SizedBox(height: OmniSpacing.md),
-            itemBuilder: (context, index) {
-              if (isAssigner && index == 0) return const _Kpi();
+          data: (rows) {
+            final groups = FeedGroup.from(rows);
 
-              final entry = rows[index - (isAssigner ? 1 : 0)];
+            return ListView.separated(
+              padding: const EdgeInsets.fromLTRB(
+                OmniSpacing.lg,
+                OmniSpacing.lg,
+                OmniSpacing.lg,
+                OmniSpacing.bottomSafe,
+              ),
+              // +1 cho thẻ KPI ở đầu, chỉ khi người xem là người giao việc.
+              itemCount: groups.length + (isAssigner ? 1 : 0),
+              separatorBuilder: (_, _) =>
+                  const SizedBox(height: OmniSpacing.md),
+              itemBuilder: (context, index) {
+                if (isAssigner && index == 0) return const _Kpi();
 
-              return _FeedRow(entry: entry);
-            },
-          ),
+                return _FeedCard(group: groups[index - (isAssigner ? 1 : 0)]);
+              },
+            );
+          },
         ),
       ),
     );
@@ -96,8 +100,65 @@ class _Kpi extends ConsumerWidget {
   }
 }
 
-class _FeedRow extends StatelessWidget {
-  const _FeedRow({required this.entry});
+/// Một cây đàn, và những gì vừa xảy ra với nó.
+///
+/// Tiêu đề cây đàn hiện MỘT lần rồi mới tới các hoạt động, thay vì lặp lại
+/// trên từng dòng. Cùng một lượng thông tin, nhưng mắt chỉ phải đọc tên cây
+/// một lần và phần còn lại là chuyện đã xảy ra — đó là khác biệt giữa một bản
+/// tóm tắt và một cuốn sổ.
+class _FeedCard extends StatelessWidget {
+  const _FeedCard({required this.group});
+
+  /// Nhiều hơn ngần này thì một cây đàn bị rework dồn dập sẽ đẩy cả xưởng ra
+  /// khỏi màn hình. Phần còn lại vẫn đếm được, và mở cây đàn ra là thấy đủ.
+  static const _maxLines = 5;
+
+  final FeedGroup group;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final text = Theme.of(context).textTheme;
+    final shown = group.entries.take(_maxLines).toList();
+    final hidden = group.entries.length - shown.length;
+
+    return OmniCard(
+      onTap: group.taskId.isEmpty
+          ? null
+          : () => context.pushNamed(
+              TaskRoutes.detail,
+              pathParameters: {'id': group.taskId},
+            ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            group.taskTitle,
+            style: text.titleSmall?.copyWith(fontWeight: FontWeight.w600),
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+          ),
+          const SizedBox(height: OmniSpacing.sm),
+          for (final entry in shown) _FeedLine(entry: entry),
+          if (hidden > 0)
+            Padding(
+              padding: const EdgeInsets.only(top: OmniSpacing.xs),
+              child: Text(
+                'và $hidden hoạt động nữa',
+                style: text.labelSmall?.copyWith(
+                  color: scheme.onSurfaceVariant,
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Một hoạt động: ai, làm gì, lúc nào.
+class _FeedLine extends StatelessWidget {
+  const _FeedLine({required this.entry});
 
   final FeedEntry entry;
 
@@ -106,55 +167,30 @@ class _FeedRow extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     final text = Theme.of(context).textTheme;
 
-    return InkWell(
-      onTap: entry.taskId.isEmpty
-          ? null
-          : () => context.pushNamed(
-              TaskRoutes.detail,
-              pathParameters: {'id': entry.taskId},
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: OmniSpacing.xxs),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(_icon, size: OmniIconSize.sm, color: scheme.onSurfaceVariant),
+          const SizedBox(width: OmniSpacing.sm),
+          Expanded(
+            child: Text(
+              // Tên người đứng trước hành động khi biết được: "Hằng Ni đã xong
+              // Body ngoài" đọc như một câu, còn "đã xong Body ngoài — Hằng Ni"
+              // đọc như một bản ghi.
+              entry.userName == null
+                  ? entry.summary
+                  : '${entry.userName} ${entry.summary}',
+              style: text.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
             ),
-      borderRadius: OmniRadius.lgAll,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: OmniSpacing.xs),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Icon(_icon, size: OmniIconSize.md, color: scheme.onSurfaceVariant),
-            const SizedBox(width: OmniSpacing.md),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    entry.taskTitle,
-                    style: text.bodyMedium?.copyWith(
-                      fontWeight: FontWeight.w600,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    // Tên người đứng trước hành động khi biết được: "Hằng Ni
-                    // đã chuyển công đoạn" đọc như một câu, còn "đã chuyển
-                    // công đoạn — Hằng Ni" đọc như một bản ghi.
-                    entry.userName == null
-                        ? entry.summary
-                        : '${entry.userName} ${entry.summary}',
-                    style: text.labelMedium?.copyWith(
-                      color: scheme.onSurfaceVariant,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(width: OmniSpacing.sm),
-            Text(
-              Formatters.relative(entry.at),
-              style: text.labelSmall?.copyWith(color: scheme.onSurfaceVariant),
-            ),
-          ],
-        ),
+          ),
+          const SizedBox(width: OmniSpacing.sm),
+          Text(
+            Formatters.relative(entry.at),
+            style: text.labelSmall?.copyWith(color: scheme.onSurfaceVariant),
+          ),
+        ],
       ),
     );
   }

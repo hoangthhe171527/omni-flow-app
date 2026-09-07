@@ -113,7 +113,11 @@ class PlansApi {
 
   /// Dòng thời gian của cả xưởng, mới nhất trước.
   Future<List<FeedEntry>> feed({int limit = 30}) async {
-    final response = await _client.get('/feed', query: {'limit': limit});
+    // `$_tasks/feed`, không phải `/feed`. Bản đầu viết thiếu tiền tố và gọi
+    // vào `/api/v1/feed` — một đường dẫn không tồn tại. Test hợp đồng không
+    // bắt được vì nó đọc bản ghi từ FILE: nó kiểm hình dạng phản hồi, không
+    // kiểm địa chỉ đã gửi đi. Xem `plans_api_paths_test.dart`.
+    final response = await _client.get('$_tasks/feed', query: {'limit': limit});
 
     return response.list.map(FeedEntry.fromJson).toList();
   }
