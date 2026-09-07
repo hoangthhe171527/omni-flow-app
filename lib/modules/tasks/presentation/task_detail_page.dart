@@ -109,6 +109,7 @@ class _Loaded extends ConsumerWidget {
                     state: state,
                     enabled: canComplete,
                     controller: controller,
+                    canEdit: isAssigner,
                   ),
                 ],
                 // Người giao việc thấy khối mô tả KỂ CẢ khi trống — nếu không
@@ -433,12 +434,17 @@ class _StageList extends StatelessWidget {
     required this.state,
     required this.enabled,
     required this.controller,
+    required this.canEdit,
   });
 
   final Task task;
   final TaskDetailState state;
   final bool enabled;
   final TaskController controller;
+
+  /// Thêm / đổi tên / xoá việc con. Dựng checklist là việc của người GIAO
+  /// việc; thợ tick chứ không đổi danh sách phải làm.
+  final bool canEdit;
 
   @override
   Widget build(BuildContext context) {
@@ -473,14 +479,75 @@ class _StageList extends StatelessWidget {
                 done: state.pendingFor(subtask.id)?.done ?? subtask.done,
               ),
               onDiscard: () => controller.discard(subtask.id),
+              onEdit: canEdit ? () => _editSubtask(context, subtask) : null,
             ),
             // 12dp between rows rather than the usual 8: a mis-tap here marks
             // the wrong stage of a piano complete.
             const SizedBox(height: OmniSpacing.md),
           ],
+          if (canEdit)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: OmniSpacing.lg),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: TextButton.icon(
+                  onPressed: () => _addSubtask(context),
+                  icon: const Icon(Icons.add_rounded),
+                  label: const Text('Thêm việc con'),
+                ),
+              ),
+            ),
         ],
       ),
     );
+  }
+
+  Future<void> _addSubtask(BuildContext context) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final title = await showTextEditSheet(
+      context: context,
+      title: 'Việc con mới',
+      initial: '',
+      hint: 'Công đoạn, bước cần làm…',
+    );
+
+    if (title == null) return;
+
+    try {
+      await controller.addSubtask(title);
+    } on AppException catch (e) {
+      messenger.showSnackBar(SnackBar(content: Text(e.message)));
+    }
+  }
+
+  /// Đổi tên hoặc xoá một việc con.
+  Future<void> _editSubtask(BuildContext context, Subtask subtask) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final action = await showSubtaskActionSheet(
+      context: context,
+      title: subtask.title,
+    );
+
+    if (action == null) return;
+
+    try {
+      if (action == SubtaskAction.remove) {
+        await controller.removeSubtask(subtask.id);
+        return;
+      }
+
+      if (!context.mounted) return;
+      final renamed = await showTextEditSheet(
+        context: context,
+        title: 'Đổi tên việc con',
+        initial: subtask.title,
+      );
+      if (renamed == null) return;
+
+      await controller.renameSubtask(subtask.id, renamed);
+    } on AppException catch (e) {
+      messenger.showSnackBar(SnackBar(content: Text(e.message)));
+    }
   }
 }
 

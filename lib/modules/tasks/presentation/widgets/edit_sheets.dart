@@ -123,6 +123,60 @@ Future<DueDateChoice?> showDueDateSheet({
   return null;
 }
 
+enum SubtaskAction { rename, remove }
+
+/// Đổi tên hay xoá một việc con.
+///
+/// Hỏi trước rồi mới mở ô nhập, thay vì để một nút thùng rác cạnh mỗi hàng:
+/// hàng việc con là chỗ thợ chạm hàng chục lần một ca với tay bẩn, và một nút
+/// xoá nằm ngay đó là một cái bẫy. Ở đây phải cố ý mở ra mới thấy nó.
+Future<SubtaskAction?> showSubtaskActionSheet({
+  required BuildContext context,
+  required String title,
+}) => showOmniSheet<SubtaskAction>(
+  context: context,
+  builder: (context) => SafeArea(
+    child: Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(
+            OmniSpacing.lg,
+            OmniSpacing.sm,
+            OmniSpacing.lg,
+            OmniSpacing.sm,
+          ),
+          child: Text(
+            title,
+            style: Theme.of(
+              context,
+            ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
+        ListTile(
+          leading: const Icon(Icons.edit_outlined),
+          title: const Text('Đổi tên'),
+          onTap: () => Navigator.of(context).pop(SubtaskAction.rename),
+        ),
+        ListTile(
+          leading: Icon(
+            Icons.delete_outline_rounded,
+            color: OmniColors.dangerTextOf(context),
+          ),
+          title: Text(
+            'Xoá việc con',
+            style: TextStyle(color: OmniColors.dangerTextOf(context)),
+          ),
+          onTap: () => Navigator.of(context).pop(SubtaskAction.remove),
+        ),
+      ],
+    ),
+  ),
+);
+
 /// Sửa một đoạn văn bản (tên việc, mô tả).
 ///
 /// Trả về `null` khi người dùng đóng mà không lưu — khác hẳn chuỗi rỗng, vốn

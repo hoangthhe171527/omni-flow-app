@@ -265,6 +265,48 @@ class _StubTasksApi implements TasksApi {
   }
 
   @override
+  Future<Task> addSubtask(String taskId, String title) async {
+    await Future<void>.delayed(const Duration(milliseconds: 300));
+    final row = _rows.firstWhere((t) => t['id'] == taskId);
+    final list = [...(row['checklist'] as List? ?? const [])];
+    list.add({'id': 'c${list.length + 1}', 'title': title, 'done': false});
+    row['checklist'] = list;
+
+    return Task.fromJson(row);
+  }
+
+  @override
+  Future<Task> renameSubtask(
+    String taskId,
+    String subtaskId,
+    String title,
+  ) async {
+    await Future<void>.delayed(const Duration(milliseconds: 300));
+    final row = _rows.firstWhere((t) => t['id'] == taskId);
+    row['checklist'] = [
+      for (final item in (row['checklist'] as List? ?? const []))
+        if ((item as Map)['id'] == subtaskId)
+          {...item, 'title': title}
+        else
+          item,
+    ];
+
+    return Task.fromJson(row);
+  }
+
+  @override
+  Future<Task> removeSubtask(String taskId, String subtaskId) async {
+    await Future<void>.delayed(const Duration(milliseconds: 300));
+    final row = _rows.firstWhere((t) => t['id'] == taskId);
+    row['checklist'] = [
+      for (final item in (row['checklist'] as List? ?? const []))
+        if ((item as Map)['id'] != subtaskId) item,
+    ];
+
+    return Task.fromJson(row);
+  }
+
+  @override
   Future<Task> setTitle(String taskId, String title) =>
       _edit(taskId, 'title', title);
 

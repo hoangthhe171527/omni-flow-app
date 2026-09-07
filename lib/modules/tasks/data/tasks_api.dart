@@ -82,6 +82,45 @@ class TasksApi {
     return Task.fromJson(response.object);
   }
 
+  /// Thêm một việc con vào cuối danh sách.
+  ///
+  /// Id do SERVER sinh: hai người thêm cùng lúc mà client tự sinh id thì có thể
+  /// trùng, và một checklist có hai mục cùng id thì mọi lệnh sau đó trỏ nhầm.
+  Future<Task> addSubtask(String taskId, String title) async {
+    final response = await _client.post(
+      '$_base/$taskId/checklist',
+      body: {'title': title},
+    );
+
+    return Task.fromJson(response.object);
+  }
+
+  /// Đổi tên một việc con.
+  ///
+  /// Một lệnh cho một việc con, không PUT cả mảng checklist: hai người sửa hai
+  /// mục khác nhau trên cùng công việc sẽ ghi đè nhau, vì mỗi bên gửi lên một
+  /// bản chụp của cả mảng.
+  Future<Task> renameSubtask(
+    String taskId,
+    String subtaskId,
+    String title,
+  ) async {
+    final response = await _client.patch(
+      '$_base/$taskId/checklist/$subtaskId',
+      body: {'title': title},
+    );
+
+    return Task.fromJson(response.object);
+  }
+
+  Future<Task> removeSubtask(String taskId, String subtaskId) async {
+    final response = await _client.delete(
+      '$_base/$taskId/checklist/$subtaskId',
+    );
+
+    return Task.fromJson(response.object);
+  }
+
   Future<Task> setStatus(String taskId, String status) async {
     final response = await _client.patch(
       '$_base/$taskId/status',

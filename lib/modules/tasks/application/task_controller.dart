@@ -222,6 +222,22 @@ class TaskController
   Future<void> setDueDate(DateTime? dueDate) =>
       _apply((api) => api.setDueDate(arg, dueDate));
 
+  Future<void> addSubtask(String title) =>
+      _apply((api) => api.addSubtask(arg, title));
+
+  Future<void> renameSubtask(String subtaskId, String title) =>
+      _apply((api) => api.renameSubtask(arg, subtaskId, title));
+
+  /// Xoá một việc con.
+  ///
+  /// Dọn luôn tick đang chờ của nó nếu có: giữ lại một dòng lỗi "chưa lưu
+  /// được" cho một việc con vừa biến mất là để người dùng bấm "Thử lại" vào
+  /// một thứ không còn tồn tại.
+  Future<void> removeSubtask(String subtaskId) async {
+    await _apply((api) => api.removeSubtask(arg, subtaskId));
+    discard(subtaskId);
+  }
+
   /// Gọi API rồi thay công việc trong state bằng bản server trả về.
   ///
   /// Không lạc quan, và có lý do: mọi thứ đi qua đây đều là sửa dữ liệu điều
