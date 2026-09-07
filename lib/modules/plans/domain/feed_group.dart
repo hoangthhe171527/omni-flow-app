@@ -26,6 +26,15 @@ class FeedGroup {
   /// Thời điểm mới nhất trong khối — cũng là thời điểm khối này đứng chỗ.
   DateTime? get at => entries.first.at;
 
+  /// Kế hoạch của cây đàn này, lấy từ dòng đầu tiên biết nó.
+  ///
+  /// Mọi dòng trong khối đều thuộc cùng một công việc nên cùng một kế hoạch;
+  /// dòng nào không mang tên (loại hoạt động cũ) thì lấy của dòng khác.
+  String? get planName => entries
+      .map((e) => e.planName)
+      .where((name) => name != null && name.isNotEmpty)
+      .firstOrNull;
+
   /// Gộp một danh sách đã xếp theo thời gian (mới nhất trước).
   static List<FeedGroup> from(List<FeedEntry> rows) {
     final groups = <FeedGroup>[];

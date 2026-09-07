@@ -16,6 +16,9 @@ import '../data/plans_api.dart';
 import '../domain/plan.dart';
 import 'widgets/section_pager.dart';
 
+/// Chỗ nút "Việc mới" chiếm, cộng vào đáy danh sách để nó không che thẻ cuối.
+const double _fabInset = 72;
+
 /// Bảng công việc của một kế hoạch: mỗi màn lướt ngang là MỘT nhóm việc.
 ///
 /// Tôi từng cho rằng điện thoại không hợp kanban. Ảnh chụp myXteam của người
@@ -207,12 +210,20 @@ class _Column extends StatelessWidget {
         OmniSpacing.lg,
         0,
         OmniSpacing.lg,
-        OmniSpacing.bottomSafe,
+        // Chừa chỗ cho nút "Việc mới": nó nổi trên danh sách, nên cột đầy
+        // việc thì nó che mất đúng thẻ cuối — thẻ người ta phải cuộn xa nhất
+        // mới tới.
+        OmniSpacing.bottomSafe + _fabInset,
       ),
       itemCount: tasks.length,
       separatorBuilder: (_, _) => const SizedBox(height: OmniSpacing.sm),
       itemBuilder: (context, index) => TaskCard(
         task: tasks[index],
+        // Tiêu đề màn đã LÀ tên kế hoạch, và cả bảng chỉ thuộc một kế hoạch.
+        // In lại trên từng thẻ là ba dòng giống nhau trên một màn hình.
+        // Ở "Việc của tôi" thì ngược lại: việc đến từ nhiều kế hoạch, nên ở
+        // đó dòng này là thứ phân biệt.
+        showPlanName: false,
         onTap: () => context.pushNamed(
           TasksModule.detail,
           pathParameters: {'id': tasks[index].id},

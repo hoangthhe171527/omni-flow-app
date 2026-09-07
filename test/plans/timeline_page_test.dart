@@ -25,14 +25,20 @@ void main() {
     String? user = 'Hằng Ni',
     String taskId = 't1',
     String? detail,
+    String? planName,
+    String? imageUrl,
   }) => FeedEntry.fromJson({
     'id': 'a1',
-    'type': type,
     'task_id': taskId,
     'task_title': title,
     'created_at': '2026-09-06T08:00:00Z',
     'user_name': ?user,
     'title': ?detail,
+    'project_name': ?planName,
+    'url': ?imageUrl,
+    // Có ảnh thì loại phải là `image` — FeedEntry chỉ nhận thumbnail khi
+    // API nói đó là ảnh.
+    'type': imageUrl == null ? type : 'image',
   });
 
   Map<String, dynamic> kpiJson({int delivered = 12, bool configured = true}) =>
@@ -208,6 +214,40 @@ void main() {
 
     expect(find.text('KAWAI HAT-5'), findsOneWidget);
     expect(find.text('YAMAHA U1H'), findsOneWidget);
+  });
+
+  testWidgets('thẻ nói cả KẾ HOẠCH, không chỉ tên cây đàn', (tester) async {
+    // Một xưởng chạy hai kế hoạch song song thì "cây nào" chưa đủ — còn
+    // phải biết việc đó thuộc tháng nào.
+    await tester.pumpWidget(
+      host(feed: [entry(planName: 'Xưởng đàn cơ — 2026-09')]),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Xưởng đàn cơ — 2026-09'), findsOneWidget);
+  });
+
+  testWidgets('ảnh đính kèm hiện NGAY trên dòng', (tester) async {
+    // §B2: ảnh chính là bằng chứng của công đoạn. Bắt mở từng cây ra để xem
+    // là bỏ mất lý do người ta lướt màn này.
+    await tester.pumpWidget(
+      host(
+        feed: [entry(type: 'attachment_added', imageUrl: 'https://x/body.jpg')],
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byType(Image), findsOneWidget);
+  });
+
+  testWidgets('giờ hiện TUYỆT ĐỐI, không phải "2 giờ trước"', (tester) async {
+    // Quản đốc đối chiếu dòng này với ca làm và với lời thợ nói, và "09:35"
+    // là thứ so được.
+    await tester.pumpWidget(host(feed: [entry()]));
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining(':'), findsWidgets);
+    expect(find.textContaining('trước'), findsNothing);
   });
 
   testWidgets('một cây bị rework dồn dập không đẩy cả xưởng khỏi màn hình', (

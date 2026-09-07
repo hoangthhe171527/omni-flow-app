@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/utils/formatters.dart';
+import '../../../core/utils/media_url.dart';
 import '../../../design/components/components.dart';
 import '../../../design/tokens/tokens.dart';
 import '../../tasks/application/tasks_providers.dart';
@@ -138,6 +139,17 @@ class _FeedCard extends StatelessWidget {
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
           ),
+          // Kế hoạch nào. Một xưởng chạy hai kế hoạch song song thì "cây
+          // nào" chưa đủ để biết đang nhìn việc của tháng nào.
+          if (group.planName != null) ...[
+            const SizedBox(height: 2),
+            Text(
+              group.planName!,
+              style: text.labelSmall?.copyWith(color: scheme.onSurfaceVariant),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ],
           const SizedBox(height: OmniSpacing.sm),
           for (final entry in shown) _FeedLine(entry: entry),
           if (hidden > 0)
@@ -175,19 +187,45 @@ class _FeedLine extends StatelessWidget {
           Icon(_icon, size: OmniIconSize.sm, color: scheme.onSurfaceVariant),
           const SizedBox(width: OmniSpacing.sm),
           Expanded(
-            child: Text(
-              // Tên người đứng trước hành động khi biết được: "Hằng Ni đã xong
-              // Body ngoài" đọc như một câu, còn "đã xong Body ngoài — Hằng Ni"
-              // đọc như một bản ghi.
-              entry.userName == null
-                  ? entry.summary
-                  : '${entry.userName} ${entry.summary}',
-              style: text.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  // Tên người đứng trước hành động khi biết được: "Hằng Ni đã
+                  // xong Body ngoài" đọc như một câu, còn "đã xong Body ngoài
+                  // — Hằng Ni" đọc như một bản ghi.
+                  entry.userName == null
+                      ? entry.summary
+                      : '${entry.userName} ${entry.summary}',
+                  style: text.bodySmall?.copyWith(
+                    color: scheme.onSurfaceVariant,
+                  ),
+                ),
+                // Ảnh hiện NGAY trên dòng. §B2 nói ảnh chính là bằng chứng
+                // của công đoạn, nên bắt mở từng cây ra để xem là bỏ mất lý
+                // do người ta lướt màn này.
+                if (entry.imageUrl != null) ...[
+                  const SizedBox(height: OmniSpacing.xs),
+                  ClipRRect(
+                    borderRadius: OmniRadius.smAll,
+                    child: Image.network(
+                      resolveMediaUrl(entry.imageUrl!),
+                      width: 96,
+                      height: 96,
+                      fit: BoxFit.cover,
+                      // Ảnh hỏng không được để lại một ô vỡ giữa dòng chữ.
+                      errorBuilder: (_, _, _) => const SizedBox.shrink(),
+                    ),
+                  ),
+                ],
+              ],
             ),
           ),
           const SizedBox(width: OmniSpacing.sm),
+          // Giờ TUYỆT ĐỐI, không phải "2 giờ trước": quản đốc đối chiếu dòng
+          // này với ca làm và với lời thợ nói, và "09:35" là thứ so được.
           Text(
-            Formatters.relative(entry.at),
+            Formatters.time(entry.at),
             style: text.labelSmall?.copyWith(color: scheme.onSurfaceVariant),
           ),
         ],

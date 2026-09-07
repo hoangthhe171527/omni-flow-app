@@ -12,10 +12,23 @@ import 'due_chip.dart';
 /// on colour alone — a red chip with no words is unreadable to somebody
 /// colour-blind and meaningless in workshop light.
 class TaskCard extends StatelessWidget {
-  const TaskCard({super.key, required this.task, required this.onTap});
+  const TaskCard({
+    super.key,
+    required this.task,
+    required this.onTap,
+    this.showPlanName = true,
+  });
 
   final Task task;
   final VoidCallback onTap;
+
+  /// Hiện tên kế hoạch phía trên tiêu đề.
+  ///
+  /// Tắt trên BẢNG của một kế hoạch: tiêu đề màn đã là tên đó, và cả bảng
+  /// chỉ thuộc một kế hoạch — in lại trên từng thẻ là ba dòng giống nhau
+  /// trên một màn hình. Bật ở "Việc của tôi", nơi việc đến từ nhiều kế
+  /// hoạch và dòng này chính là thứ phân biệt chúng.
+  final bool showPlanName;
 
   @override
   Widget build(BuildContext context) {
@@ -40,7 +53,7 @@ class TaskCard extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                if (task.projectName != null) ...[
+                if (showPlanName && task.projectName != null) ...[
                   Text(
                     task.projectName!,
                     style: text.labelSmall?.copyWith(

@@ -52,6 +52,8 @@ class FeedEntry {
     this.from,
     this.to,
     this.detail,
+    this.planName,
+    this.imageUrl,
   });
 
   factory FeedEntry.fromJson(Map<String, dynamic> json) => FeedEntry(
@@ -70,6 +72,10 @@ class FeedEntry {
     // `title` (tên việc con), `attachment_added` mang `name` (tên tệp). Đọc
     // cả hai ở đây thay vì bắt màn hình biết loại nào dùng khoá nào.
     detail: json.str('title') ?? json.str('name'),
+    planName: json.str('project_name'),
+    // Chỉ ẢNH mới hiện thumbnail. Một tệp PDF render ra ô vỡ thì tệ hơn là
+    // không render gì.
+    imageUrl: json.str('type') == 'image' ? json.str('url') : null,
   );
 
   final String id;
@@ -87,6 +93,15 @@ class FeedEntry {
   /// Tên việc con (khi tick) hoặc tên tệp (khi đính kèm). Null khi loại
   /// hoạt động không mang theo gì để gọi tên.
   final String? detail;
+
+  /// Kế hoạch chứa công việc này. Một xưởng chạy hai kế hoạch song song thì
+  /// "cây nào" chưa đủ — còn phải biết "của tháng nào".
+  final String? planName;
+
+  /// Ảnh đính kèm, để hiện ngay trên dòng. §B2 nói ảnh CHÍNH LÀ bằng chứng
+  /// của công đoạn, nên bắt mở từng cây ra để xem là bỏ mất lý do người ta
+  /// lướt dòng thời gian.
+  final String? imageUrl;
 
   /// Câu mô tả, viết theo cách người xưởng nói.
   ///
