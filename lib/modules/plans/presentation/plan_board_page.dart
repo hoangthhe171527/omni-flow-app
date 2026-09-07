@@ -6,7 +6,10 @@ import '../../../design/components/components.dart';
 import '../../../design/platform/omni_motion_scope.dart';
 import '../../../design/tokens/tokens.dart';
 import '../../tasks/domain/task.dart';
+import '../../tasks/application/tasks_providers.dart';
+import '../../tasks/presentation/create_task_page.dart';
 import '../../tasks/presentation/widgets/task_card.dart';
+import '../../tasks/routes.dart';
 import '../../tasks/tasks_module.dart';
 import '../application/plans_providers.dart';
 import '../data/plans_api.dart';
@@ -44,8 +47,21 @@ class _PlanBoardPageState extends ConsumerState<PlanBoardPage> {
     final plan = ref.watch(planProvider(widget.planId));
     final tasks = ref.watch(planTasksProvider(widget.planId));
 
+    final loaded = plan.valueOrNull;
+
     return Scaffold(
-      appBar: AppBar(title: Text(plan.valueOrNull?.name ?? 'Kế hoạch')),
+      appBar: AppBar(title: Text(loaded?.name ?? 'Kế hoạch')),
+      // Nút tạo nằm trên BẢNG, không nằm ở "Việc của tôi": ở đây kế hoạch và
+      // cột đang đứng đã biết sẵn, nên việc mới ra đời đúng chỗ mà không phải
+      // hỏi thêm câu nào. Ở "Việc của tôi" thì cả hai đều phải hỏi.
+      floatingActionButton:
+          loaded == null || !ref.watch(taskAccessProvider).canCreate
+          ? null
+          : FloatingActionButton.extended(
+              onPressed: () => _createTask(loaded),
+              icon: const Icon(Icons.add_rounded),
+              label: const Text('Việc mới'),
+            ),
       body: OmniAsyncView(
         value: plan,
         onRetry: () => ref.invalidate(planProvider(widget.planId)),
@@ -63,6 +79,31 @@ class _PlanBoardPageState extends ConsumerState<PlanBoardPage> {
 
   int _columnCount(Plan plan) =>
       plan.sections.isEmpty ? 1 : plan.sections.length;
+
+  /// Mở màn tạo việc với kế hoạch + cột đang đứng điền sẵn.
+  Future<void> _createTask(Plan plan) async {
+    final sections = plan.sections;
+    final current = _current.clamp(0, _columnCount(plan) - 1);
+
+    final created = await context.pushNamed<String>(
+      TaskRoutes.create,
+      extra: CreateTaskArgs(
+        planId: plan.id,
+        sectionId: sections.isEmpty ? null : sections[current].id,
+        // Chép sang value type của module tasks. `PlanSection` sống ở plans,
+        // và bắt tasks biết kiểu đó là đóng một vòng phụ thuộc.
+        sections: [
+          for (final s in sections) TaskSection(id: s.id, name: s.name),
+        ],
+      ),
+    );
+
+    // Chỉ làm mới khi thật sự tạo được. Huỷ giữa chừng mà vẫn gọi lại mạng là
+    // bắt người dùng chờ một lượt tải cho một việc họ vừa quyết định không làm.
+    if (created != null && mounted) {
+      ref.invalidate(planTasksProvider(widget.planId));
+    }
+  }
 }
 
 class _Board extends StatelessWidget {

@@ -111,6 +111,43 @@ class TasksApi {
     return Task.fromJson(response.object);
   }
 
+  /// Tạo một công việc mới.
+  ///
+  /// Chỉ `title` là bắt buộc — đúng như API. Mọi thứ khác bỏ trống được, vì
+  /// người tạo việc thường đang đứng giữa ca làm và chỉ kịp gõ cái tên; điền
+  /// nốt là chuyện của màn chi tiết sau đó.
+  ///
+  /// Trường nào null thì KHÔNG gửi, chứ không gửi null: `UpdateTaskDTO` bỏ qua
+  /// null, nên gửi cũng vô ích, và một thân request đầy null làm nhật ký khó
+  /// đọc khi cần truy lại ai đã đặt gì.
+  Future<Task> create({
+    required String title,
+    String? projectId,
+    String? sectionId,
+    List<String> assigneeIds = const [],
+    DateTime? dueDate,
+  }) async {
+    final response = await _client.post(
+      _base,
+      body: {
+        'title': title,
+        if (projectId != null && projectId.isNotEmpty) 'project_id': projectId,
+        if (sectionId != null && sectionId.isNotEmpty) 'section_id': sectionId,
+        if (assigneeIds.isNotEmpty) 'assignee_ids': assigneeIds,
+        // API nhận `YYYY-MM-DD` và tự hiểu theo múi giờ nghiệp vụ. Gửi cả giờ
+        // là mời nó lệch một ngày ở hai đầu tháng.
+        if (dueDate != null) 'due_date': _ymd(dueDate),
+      },
+    );
+
+    return Task.fromJson(response.object);
+  }
+
+  static String _ymd(DateTime date) =>
+      '${date.year.toString().padLeft(4, '0')}-'
+      '${date.month.toString().padLeft(2, '0')}-'
+      '${date.day.toString().padLeft(2, '0')}';
+
   /// Đặt lại TOÀN BỘ danh sách người làm.
   ///
   /// API ghi đè `assignee_ids` chứ không thêm/bớt từng người, nên chỗ gọi phải

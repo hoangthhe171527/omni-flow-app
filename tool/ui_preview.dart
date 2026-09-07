@@ -243,6 +243,28 @@ class _StubTasksApi implements TasksApi {
   }
 
   @override
+  Future<Task> create({
+    required String title,
+    String? projectId,
+    String? sectionId,
+    List<String> assigneeIds = const [],
+    DateTime? dueDate,
+  }) async {
+    await Future<void>.delayed(const Duration(milliseconds: 400));
+    final row = <String, dynamic>{
+      'id': 't${_rows.length + 1}',
+      'title': title,
+      'project_id': projectId,
+      'section_id': sectionId,
+      'assignee_ids': assigneeIds,
+      'checklist': <Map<String, dynamic>>[],
+    };
+    _rows.add(row);
+
+    return Task.fromJson(row);
+  }
+
+  @override
   Future<Task> setAssignees(String taskId, List<String> userIds) async {
     await Future<void>.delayed(const Duration(milliseconds: 400));
     final row = _rows.firstWhere((t) => t['id'] == taskId);
