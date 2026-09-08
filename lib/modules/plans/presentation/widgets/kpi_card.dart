@@ -96,6 +96,19 @@ class KpiCard extends StatelessWidget {
             const SizedBox(height: OmniSpacing.sm),
           ],
           _Milestone(kpi: kpi),
+          // Số lần làm lại (§B3). Chữ nhỏ, không tô đỏ, không kèm tên ai: nó
+          // là thông tin để cải thiện chứ không phải một lời buộc tội. Ẩn khi
+          // bằng 0 thay vì khoe một số 0.
+          if (kpi.rework > 0) ...[
+            const SizedBox(height: OmniSpacing.sm),
+            Text(
+              '${kpi.rework} lần phải làm lại trong tháng',
+              style: text.labelSmall?.copyWith(
+                color: scheme.onSurfaceVariant,
+                fontFeatures: OmniType.tabular,
+              ),
+            ),
+          ],
         ],
       ),
     );

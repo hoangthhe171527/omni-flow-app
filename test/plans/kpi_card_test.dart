@@ -16,12 +16,14 @@ void main() {
     List<BonusTier> tiers = const [BonusTier(count: 35, bonus: 3)],
     NextTier? next,
     bool configured = true,
+    int rework = 0,
   }) => WorkshopKpi(
     delivered: delivered,
     reachedBonus: 0,
     daysLeft: 10,
     tiers: tiers,
     isConfigured: configured,
+    rework: rework,
     nextTier: next,
   );
 
@@ -68,5 +70,15 @@ void main() {
 
     expect(find.textContaining('Còn 23 việc tới mốc 35'), findsOneWidget);
     expect(find.byType(LinearProgressIndicator), findsOneWidget);
+  });
+
+  testWidgets("số lần làm lại hiện ra khi có, ẩn khi bằng 0", (tester) async {
+    // §B3: "hệ thống tự đếm rework". Một số 0 khoe ra không nói thêm được gì,
+    // còn một con số khác 0 thì là thứ đáng bàn trong cuộc họp cuối tháng.
+    await show(tester, kpi(rework: 3));
+    expect(find.text("3 lần phải làm lại trong tháng"), findsOneWidget);
+
+    await show(tester, kpi());
+    expect(find.textContaining("phải làm lại"), findsNothing);
   });
 }

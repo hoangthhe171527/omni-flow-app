@@ -36,6 +36,7 @@ class WorkshopKpi {
     required this.daysLeft,
     required this.tiers,
     required this.isConfigured,
+    this.rework = 0,
     this.nextTier,
   });
 
@@ -67,6 +68,7 @@ class WorkshopKpi {
       // luôn là 0. Một số 0 vì chưa cấu hình trông y hệt một số 0 vì chưa làm
       // được cây nào — widget phải nói ra là cái nào.
       isConfigured: json.strList('counting_sections').isNotEmpty,
+      rework: json.intOr('rework'),
       nextTier: next.isEmpty
           ? null
           : NextTier(
@@ -88,6 +90,13 @@ class WorkshopKpi {
 
   /// Đã có kế hoạch nào đánh dấu cột đích chưa.
   final bool isConfigured;
+
+  /// Số LẦN công việc bị kéo lùi trong tháng (§B3).
+  ///
+  /// Đếm lần chứ không đếm cây: một cây trượt QC ba lần là ba lần cả xưởng
+  /// làm lại. Không kèm tên ai — §3 và §7 nói rõ không dùng dữ liệu cá nhân
+  /// làm căn cứ lương và không public xếp hạng cá nhân trong xưởng.
+  final int rework;
 
   /// Đã vượt mốc cao nhất — tin tốt, không phải lỗi.
   bool get isAtTopTier => nextTier == null && tiers.isNotEmpty;
