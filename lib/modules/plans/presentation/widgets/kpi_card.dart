@@ -81,16 +81,20 @@ class KpiCard extends StatelessWidget {
             ],
           ),
           const SizedBox(height: OmniSpacing.lg),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(OmniRadius.chip / 2),
-            child: LinearProgressIndicator(
-              value: kpi.progressToNext,
-              minHeight: 8,
-              backgroundColor: scheme.surfaceContainerHighest,
-              valueColor: AlwaysStoppedAnimation(scheme.primary),
+          // Không có mốc nào thì không có gì để chạy tới — một thanh đầy 100%
+          // ở đây là một lời khen bịa ra.
+          if (kpi.tiers.isNotEmpty) ...[
+            ClipRRect(
+              borderRadius: BorderRadius.circular(OmniRadius.chip / 2),
+              child: LinearProgressIndicator(
+                value: kpi.progressToNext,
+                minHeight: 8,
+                backgroundColor: scheme.surfaceContainerHighest,
+                valueColor: AlwaysStoppedAnimation(scheme.primary),
+              ),
             ),
-          ),
-          const SizedBox(height: OmniSpacing.sm),
+            const SizedBox(height: OmniSpacing.sm),
+          ],
           _Milestone(kpi: kpi),
         ],
       ),
@@ -109,6 +113,20 @@ class _Milestone extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     final text = Theme.of(context).textTheme;
     final next = kpi.nextTier;
+
+    if (kpi.tiers.isEmpty) {
+      // Workspace chưa khai bảng mốc thưởng. `nextTier` cũng null lúc này, nên
+      // nhánh dưới sẽ chúc mừng một xưởng chưa ai nhập bảng thưởng — hai
+      // chuyện khác hẳn nhau mà nhìn từ `nextTier` thì giống hệt.
+      //
+      // Trước đây không xảy ra vì bảng nằm trong config của bản triển khai và
+      // luôn có sẵn. Từ khi nó là cấu hình của từng workspace, đây là trạng
+      // thái bình thường của mọi workspace mới.
+      return Text(
+        'Workspace chưa khai bảng mốc thưởng.',
+        style: text.labelMedium?.copyWith(color: scheme.onSurfaceVariant),
+      );
+    }
 
     if (next == null) {
       // Vượt mốc cao nhất là tin tốt. Một ô trống ở đây đọc như lỗi tải.
