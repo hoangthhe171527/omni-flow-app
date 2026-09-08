@@ -778,9 +778,17 @@ class _ActionBarState extends ConsumerState<_ActionBar> {
     }
   }
 
+  /// Đính ảnh: chụp mới, hoặc lấy ảnh đã có sẵn trong máy.
+  ///
+  /// Trước đây chỉ mở thẳng camera. Nhưng người thợ thường đã chụp rồi — ảnh
+  /// vừa gửi trong nhóm Zalo, hoặc chụp lúc tháo máy nửa tiếng trước — và bắt
+  /// chụp lại một cây đàn đã lắp xong thì đơn giản là không làm được.
   Future<void> _attachPhoto() async {
+    final source = await _pickSource();
+    if (source == null) return;
+
     final photo = await ImagePicker().pickImage(
-      source: ImageSource.camera,
+      source: source,
       imageQuality: 85,
     );
     if (photo == null) return;
@@ -796,6 +804,30 @@ class _ActionBarState extends ConsumerState<_ActionBar> {
       if (mounted) setState(() => _busy = false);
     }
   }
+
+  /// Hỏi chụp mới hay chọn từ máy. null = đóng lại, không đính gì.
+  Future<ImageSource?> _pickSource() => showModalBottomSheet<ImageSource>(
+    context: context,
+    builder: (sheetContext) => SafeArea(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Chụp đứng trước: ở xưởng thì phần lớn là chụp ngay tại chỗ, và
+          // mục đầu tiên là mục ngón tay bẩn chạm trúng.
+          ListTile(
+            leading: const Icon(Icons.photo_camera_outlined),
+            title: const Text('Chụp ảnh'),
+            onTap: () => Navigator.pop(sheetContext, ImageSource.camera),
+          ),
+          ListTile(
+            leading: const Icon(Icons.photo_library_outlined),
+            title: const Text('Chọn ảnh có sẵn'),
+            onTap: () => Navigator.pop(sheetContext, ImageSource.gallery),
+          ),
+        ],
+      ),
+    ),
+  );
 
   void _say(String message) {
     ScaffoldMessenger.of(
