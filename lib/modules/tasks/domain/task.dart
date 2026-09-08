@@ -65,6 +65,44 @@ class TaskViewer {
   String get label => (name ?? '').trim().isEmpty ? userId : name!.trim();
 }
 
+/// Một bình luận trên công việc.
+///
+/// §B3: QC không đạt thì bình luận @mention người phụ trách công đoạn lỗi rồi
+/// kéo cây về. Đó là chỗ duy nhất trong cả luồng ghi lại LÝ DO một cây bị trả
+/// về — nhật ký hoạt động chỉ biết nó đã bị chuyển cột.
+class TaskComment {
+  const TaskComment({
+    required this.id,
+    required this.body,
+    this.userId,
+    this.userName,
+    this.createdAt,
+  });
+
+  factory TaskComment.fromJson(Map<String, dynamic> json) => TaskComment(
+    id: json.strOr('id', ''),
+    body: json.strOr('body', ''),
+    userId: json.str('user_id'),
+    // API tra tên ra từ danh sách thành viên ở mỗi lần đọc, chứ không lưu tên
+    // vào bình luận — để tên không cũ đi trong những bình luận cũ.
+    userName: json.str('user_name'),
+    createdAt: DateUtilsX.parse(json['created_at']),
+  );
+
+  final String id;
+  final String body;
+  final String? userId;
+  final String? userName;
+  final DateTime? createdAt;
+
+  /// Không bao giờ hiện UUID: nó không nói cho ai điều gì.
+  String get author {
+    final name = (userName ?? '').trim();
+
+    return name.isEmpty ? 'Người đã rời' : name;
+  }
+}
+
 /// Một công đoạn của kế hoạch, như công việc nhìn thấy nó.
 ///
 /// Bản sao nhỏ của `PlanSection` bên module plans, và CỐ Ý là bản sao: nếu
@@ -107,6 +145,7 @@ class Task {
     this.attachmentCount = 0,
     this.commentCount = 0,
     this.viewers = const [],
+    this.comments = const [],
   });
 
   factory Task.fromJson(Map<String, dynamic> json) => Task(
@@ -136,6 +175,7 @@ class Task {
     attachmentCount: json.intOr('attachments_count'),
     commentCount: json.intOr('comments_count'),
     viewers: json.mapList('viewers').map(TaskViewer.fromJson).toList(),
+    comments: json.mapList('comments').map(TaskComment.fromJson).toList(),
   );
 
   final String id;
@@ -180,6 +220,10 @@ class Task {
   /// Who has opened this task. Empty on a list row — the API sends it only on
   /// the detail response, where it is worth the bytes.
   final List<TaskViewer> viewers;
+
+  /// Bình luận, cũ nhất trước. Chỉ có ở phản hồi chi tiết, và API cắt bớt
+  /// phần cũ — [commentCount] mới là tổng thật.
+  final List<TaskComment> comments;
 
   /// Only `done` is terminal; every other status id is defined by the project.
   bool get isDone => status == 'done';
@@ -257,5 +301,6 @@ class Task {
     attachmentCount: attachmentCount,
     commentCount: commentCount,
     viewers: viewers,
+    comments: comments,
   );
 }

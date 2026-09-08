@@ -346,7 +346,7 @@ class _StubTasksApi implements TasksApi {
   }
 
   @override
-  Future<void> comment(String taskId, String body) async {}
+  Future<Task> comment(String taskId, String body) => get(taskId);
 
   @override
   Future<void> attach(

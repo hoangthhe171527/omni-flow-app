@@ -87,7 +87,7 @@ void main() {
 
       await tester.tap(find.text('Thêm việc con'));
       await tester.pumpAndSettle();
-      await tester.enterText(find.byType(TextField), 'Lên dây');
+      await tester.enterText(sheetField, 'Lên dây');
       await tester.pump();
       await tester.tap(find.text('Lưu'));
       await tester.pumpAndSettle();
@@ -117,7 +117,7 @@ void main() {
       await openActions(tester);
       await tester.tap(find.text('Đổi tên'));
       await tester.pumpAndSettle();
-      await tester.enterText(find.byType(TextField), 'Body ngoài');
+      await tester.enterText(sheetField, 'Body ngoài');
       await tester.pump();
       await tester.tap(find.text('Lưu'));
       await tester.pumpAndSettle();
@@ -199,3 +199,10 @@ class _RecordingAdapter implements HttpClientAdapter {
   @override
   void close({bool force = false}) {}
 }
+
+/// Ô nhập của sheet đang mở, không phải ô nhập nào khác trên màn hình.
+///
+/// Màn chi tiết công việc có sẵn ô viết trao đổi ở cuối trang (§B3), nên
+/// `find.byType(TextField)` khớp hai ô. Sheet luôn tự lấy tiêu điểm, và đó là
+/// khác biệt có nghĩa: ô vừa mở ra để gõ.
+final sheetField = find.byWidgetPredicate((w) => w is TextField && w.autofocus);

@@ -230,8 +230,19 @@ class TasksApi {
     return Task.fromJson(response.object);
   }
 
-  Future<void> comment(String taskId, String body) =>
-      _client.post('$_base/$taskId/comments', body: {'content': body});
+  /// Viết một bình luận, và nhận về công việc đã có nó.
+  ///
+  /// Khoá là `body`, KHÔNG phải `content`. Bản trước gửi `content` và server
+  /// trả 422 cho mọi bình luận gửi từ app — không ai phát hiện vì chưa màn
+  /// hình nào gọi tới hàm này. Xem `CreateTaskCommentRequest`.
+  Future<Task> comment(String taskId, String body) async {
+    final response = await _client.post(
+      '$_base/$taskId/comments',
+      body: {'body': body},
+    );
+
+    return Task.fromJson(response.object);
+  }
 
   Future<void> attach(String taskId, String filePath, {String? filename}) =>
       _client.upload(

@@ -13,6 +13,7 @@ import '../data/tasks_api.dart';
 import '../domain/task.dart';
 import 'widgets/assign_task_sheet.dart';
 import 'widgets/assigner_panel.dart';
+import 'widgets/comment_section.dart';
 import 'widgets/due_chip.dart';
 import 'widgets/edit_sheets.dart';
 import 'widgets/move_section_sheet.dart';
@@ -122,6 +123,14 @@ class _Loaded extends ConsumerWidget {
                         ? () => _editDescription(context, controller, task)
                         : null,
                   ),
+                // Trao đổi đứng TRÊN "đã xem": lý do một cây bị trả về là
+                // thứ người thợ cần đọc, còn ai đã mở việc là câu hỏi của
+                // quản đốc.
+                CommentSection(
+                  task: task,
+                  taskId: taskId,
+                  canWrite: canComplete,
+                ),
                 if (task.viewers.isNotEmpty) _Viewers(viewers: task.viewers),
               ],
             ),

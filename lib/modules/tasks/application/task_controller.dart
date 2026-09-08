@@ -222,6 +222,12 @@ class TaskController
   Future<void> setDueDate(DateTime? dueDate) =>
       _apply((api) => api.setDueDate(arg, dueDate));
 
+  /// Viết một bình luận.
+  ///
+  /// §B3: QC không đạt thì bình luận rồi kéo cây về. Đây là chỗ duy nhất trong
+  /// cả luồng ghi lại LÝ DO — nhật ký hoạt động chỉ biết cây đã bị chuyển cột.
+  Future<void> comment(String body) => _apply((api) => api.comment(arg, body));
+
   Future<void> addSubtask(String title) =>
       _apply((api) => api.addSubtask(arg, title));
 
