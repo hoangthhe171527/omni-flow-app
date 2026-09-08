@@ -222,6 +222,10 @@ class TaskController
   Future<void> setDueDate(DateTime? dueDate) =>
       _apply((api) => api.setDueDate(arg, dueDate));
 
+  /// Chấm điểm QC. 0 = xoá điểm.
+  Future<void> setRating(int rating) =>
+      _apply((api) => api.setRating(arg, rating));
+
   /// Viết một bình luận.
   ///
   /// §B3: QC không đạt thì bình luận rồi kéo cây về. Đây là chỗ duy nhất trong

@@ -349,6 +349,10 @@ class _StubTasksApi implements TasksApi {
   Future<Task> comment(String taskId, String body) => get(taskId);
 
   @override
+  Future<Task> setRating(String taskId, int rating) =>
+      _edit(taskId, 'rating', rating);
+
+  @override
   Future<void> attach(
     String taskId,
     String filePath, {

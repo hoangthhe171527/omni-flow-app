@@ -199,6 +199,14 @@ class TasksApi {
   Future<Task> setPriority(String taskId, String priority) =>
       _patch(taskId, {'priority': priority});
 
+  /// Chấm điểm QC, 0–5 sao. 0 = xoá điểm đã chấm.
+  ///
+  /// Gửi số 0 chứ không gửi null: `UpdateTaskDTO::toAttributes` lọc bỏ đúng
+  /// những trường null, nên null sẽ lặng lẽ không làm gì. Cùng cái bẫy đã
+  /// gặp ở `section_id` và `due_date`.
+  Future<Task> setRating(String taskId, int rating) =>
+      _patch(taskId, {'rating': rating.clamp(0, 5)});
+
   /// Đặt hoặc XOÁ hạn.
   ///
   /// null = xoá, và gửi đi bằng chuỗi rỗng chứ không phải null: bên API,

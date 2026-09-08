@@ -17,6 +17,7 @@ import 'widgets/comment_section.dart';
 import 'widgets/due_chip.dart';
 import 'widgets/edit_sheets.dart';
 import 'widgets/move_section_sheet.dart';
+import 'widgets/rating_row.dart';
 import 'widgets/subtask_row.dart';
 
 /// One task, and the two things a worker does with it: tick stages, and say it
@@ -123,6 +124,9 @@ class _Loaded extends ConsumerWidget {
                         ? () => _editDescription(context, controller, task)
                         : null,
                   ),
+                // Điểm kiểm đứng ngay sau công việc và TRƯỚC trao đổi: nó là
+                // kết luận, còn trao đổi là lý do phía sau kết luận đó.
+                RatingRow(task: task, taskId: taskId, canRate: isAssigner),
                 // Trao đổi đứng TRÊN "đã xem": lý do một cây bị trả về là
                 // thứ người thợ cần đọc, còn ai đã mở việc là câu hỏi của
                 // quản đốc.

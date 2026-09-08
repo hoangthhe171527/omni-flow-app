@@ -144,6 +144,7 @@ class Task {
     this.customFields = const {},
     this.attachmentCount = 0,
     this.commentCount = 0,
+    this.rating = 0,
     this.viewers = const [],
     this.comments = const [],
   });
@@ -174,6 +175,7 @@ class Task {
     customFields: json.child('custom_fields'),
     attachmentCount: json.intOr('attachments_count'),
     commentCount: json.intOr('comments_count'),
+    rating: json.intOr('rating'),
     viewers: json.mapList('viewers').map(TaskViewer.fromJson).toList(),
     comments: json.mapList('comments').map(TaskComment.fromJson).toList(),
   );
@@ -216,6 +218,12 @@ class Task {
   final Map<String, dynamic> customFields;
   final int attachmentCount;
   final int commentCount;
+
+  /// Điểm QC, 0–5 sao. 0 = chưa chấm (§4, §B3).
+  ///
+  /// Chấm điểm là việc của người kiểm, không phải của người làm — ai cũng
+  /// tự chấm được thì con số thôi là một đánh giá.
+  final int rating;
 
   /// Who has opened this task. Empty on a list row — the API sends it only on
   /// the detail response, where it is worth the bytes.
@@ -300,6 +308,7 @@ class Task {
     customFields: customFields,
     attachmentCount: attachmentCount,
     commentCount: commentCount,
+    rating: rating,
     viewers: viewers,
     comments: comments,
   );
