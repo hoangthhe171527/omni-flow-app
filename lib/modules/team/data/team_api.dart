@@ -15,8 +15,13 @@ class TeamApi {
   /// every screen that needs a person's name.
   /// Liên kết (hoặc GỠ) tài khoản Zalo của một thành viên.
   ///
-  /// Chuỗi rỗng là gỡ: `UpdateMembershipDTO` chỉ lọc bỏ null, nên rỗng đi qua
-  /// được và ghi đè thành rỗng — đúng thứ cần khi một người nghỉ việc.
+  /// Chuỗi rỗng là gỡ. Cái làm nên chuyện là GỬI khoá đó lên: server phân
+  /// biệt "có gửi khoá" với "không gửi khoá", vì middleware của Laravel đã
+  /// biến chuỗi rỗng thành null trước khi tới controller.
+  ///
+  /// Chú thích cũ nói ngược lại, và suốt thời gian đó GỠ LIÊN KẾT KHÔNG CHẠY:
+  /// API trả 200 với dữ liệu y nguyên, nên người thợ đã nghỉ việc vẫn được bot
+  /// xưởng ghi công. Xem `ClearFieldWithEmptyStringTest` bên API.
   ///
   /// Cần quyền `membership.members.update`, tức là quản đốc trở lên. Đó là cả
   /// điểm của cơ chế: bot không được tự nhận ra ai vừa nhắn, mà phải dựa vào
