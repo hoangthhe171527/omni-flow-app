@@ -141,9 +141,9 @@ class TasksApi {
   Future<Task> moveToSection(String taskId, String? sectionId) async {
     final response = await _client.put(
       '$_base/$taskId',
-      // Chuỗi rỗng chứ không null: API bỏ qua trường null (xem
-      // `UpdateTaskDTO::toAttributes`), nên gửi null sẽ không xoá được công
-      // đoạn — nó lặng lẽ không làm gì.
+      // Luôn GỬI khoá `section_id`, kể cả khi gỡ. Server phân biệt "có gửi
+      // khoá" với "không gửi khoá" chứ không nhìn giá trị — chuỗi rỗng bị
+      // middleware của Laravel biến thành null trước khi tới controller.
       body: {'section_id': sectionId ?? ''},
     );
 
@@ -209,10 +209,14 @@ class TasksApi {
 
   /// Đặt hoặc XOÁ hạn.
   ///
-  /// null = xoá, và gửi đi bằng chuỗi rỗng chứ không phải null: bên API,
-  /// `UpdateTaskDTO::toAttributes` lọc bỏ đúng những trường null, nên gửi null
-  /// sẽ không xoá được gì — nó lặng lẽ không làm gì cả. Cùng cái bẫy đã gặp ở
-  /// `section_id`.
+  /// null = xoá, gửi đi bằng chuỗi rỗng. Điều QUAN TRỌNG là gửi khoá đó lên —
+  /// server phân biệt "có gửi khoá" với "không gửi khoá", chứ không nhìn giá
+  /// trị: `ConvertEmptyStringsToNull` của Laravel biến chuỗi rỗng thành null
+  /// trước khi tới controller, nên gửi '' hay null tới nơi đều là null.
+  ///
+  /// Chú thích cũ ở đây nói ngược lại — rằng chuỗi rỗng đi qua được còn null
+  /// thì bị lọc. Suốt thời gian đó hạn KHÔNG xoá được: API trả 200 với dữ liệu
+  /// y nguyên. Xem `ClearFieldWithEmptyStringTest` bên API.
   Future<Task> setDueDate(String taskId, DateTime? dueDate) =>
       _patch(taskId, {'due_date': dueDate == null ? '' : _ymd(dueDate)});
 
