@@ -9,4 +9,8 @@ abstract final class StorageKeys {
   static const locale = 'omni.locale';
   static const themeMode = 'omni.theme_mode';
   static const lastInboxFilter = 'omni.inbox.last_filter';
+
+  /// Tiền tố; khoá thật là `<tiền tố>.<id công việc>`. Hàng chờ tick việc con
+  /// chưa được server xác nhận của MỘT công việc — xem `SubtaskOutbox`.
+  static const subtaskOutbox = 'omni.tasks.subtask_outbox';
 }

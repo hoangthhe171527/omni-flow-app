@@ -38,7 +38,31 @@ class CommentSection extends ConsumerStatefulWidget {
 
 class _CommentSectionState extends ConsumerState<CommentSection> {
   final _controller = TextEditingController();
+  final _mentions = <String>{};
   bool _sending = false;
+
+  /// Ai có thể bị nhắc: người của việc và người của từng công đoạn.
+  ///
+  /// Lấy từ chính công việc đang mở, KHÔNG gọi danh sách nhân sự: vai thợ cố ý
+  /// không có quyền đó, nên một bộ chọn dựa vào /team sẽ rỗng đúng trong tay
+  /// người hay phải trả việc về nhất. Đây cũng là cách duy nhất không viết
+  /// cứng cho một loại việc nào — công đoạn nào cũng có người phụ trách.
+  Map<String, String> get _candidates {
+    final out = <String, String>{};
+    final ids = widget.task.assigneeIds;
+    final names = widget.task.assigneeNames;
+    for (var i = 0; i < ids.length; i++) {
+      final name = i < names.length ? names[i].trim() : '';
+      if (name.isNotEmpty) out[ids[i]] = name;
+    }
+    for (final step in widget.task.subtasks) {
+      final id = step.assigneeId ?? '';
+      final name = (step.assigneeName ?? '').trim();
+      if (id.isNotEmpty && name.isNotEmpty) out[id] = name;
+    }
+
+    return out;
+  }
 
   @override
   void dispose() {
@@ -53,10 +77,15 @@ class _CommentSectionState extends ConsumerState<CommentSection> {
     final messenger = ScaffoldMessenger.of(context);
     setState(() => _sending = true);
     try {
-      await ref.read(taskDetailProvider(widget.taskId).notifier).comment(body);
+      await ref
+          .read(taskDetailProvider(widget.taskId).notifier)
+          .comment(body, mentionedUserIds: _mentions.toList());
       // Xoá ô nhập CHỈ khi server đã nhận. Xoá trước rồi lỗi mạng là mất chữ
       // người ta vừa gõ, và ở đây chữ đó là lý do một cây đàn bị trả về.
-      if (mounted) _controller.clear();
+      if (mounted) {
+        _controller.clear();
+        _mentions.clear();
+      }
     } on AppException catch (e) {
       messenger.showSnackBar(SnackBar(content: Text(e.message)));
     } on Object {
@@ -117,6 +146,29 @@ class _CommentSectionState extends ConsumerState<CommentSection> {
           ],
           if (widget.canWrite) ...[
             const SizedBox(height: OmniSpacing.lg),
+            // §B3: QC trượt thì phải nhắc tên người phụ trách công đoạn lỗi.
+            // Bày sẵn thành chip thay vì bắt gõ tên: gõ tên chỉ ra một chuỗi
+            // chữ, không ra một lời nhắc mà người kia đọc được ở máy của họ.
+            if (_candidates.isNotEmpty)
+              Wrap(
+                spacing: OmniSpacing.xs,
+                children: [
+                  for (final person in _candidates.entries)
+                    FilterChip(
+                      label: Text(person.value),
+                      selected: _mentions.contains(person.key),
+                      onSelected: _sending
+                          ? null
+                          : (on) => setState(() {
+                              if (on) {
+                                _mentions.add(person.key);
+                              } else {
+                                _mentions.remove(person.key);
+                              }
+                            }),
+                    ),
+                ],
+              ),
             Row(
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
@@ -183,6 +235,16 @@ class _Comment extends StatelessWidget {
         ),
         const SizedBox(height: OmniSpacing.xs),
         Text(comment.body, style: text.bodyMedium),
+        // Người thợ không có hộp thư, nên thông báo "bạn được nhắc tên" rơi
+        // vào chỗ họ không mở được. Dòng này là kênh DUY NHẤT báo cho họ biết
+        // công đoạn của mình là chỗ bị trả về.
+        if (comment.mentionedUserNames.isNotEmpty) ...[
+          const SizedBox(height: OmniSpacing.xs),
+          Text(
+            'Nhắc: ${comment.mentionedUserNames.join(', ')}',
+            style: text.labelSmall?.copyWith(color: scheme.primary),
+          ),
+        ],
       ],
     );
   }

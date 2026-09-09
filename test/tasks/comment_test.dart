@@ -102,7 +102,12 @@ void main() {
     final request = recorder.singleRequest;
     expect(request.method, 'POST');
     expect(request.uri.path, '/api/v1/tasks/t1/comments');
-    expect(request.data, {'body': 'Đã sửa xong cạnh body.'});
+    // Khoá là `body`. Không so cả map: từ khi bình luận mang thêm danh sách
+    // người được nhắc (§B3), thân yêu cầu có thêm `mentioned_user_ids` — điều
+    // đó đúng, và một phép so cả map sẽ đỏ mỗi lần thêm một trường hợp lệ.
+    final body = request.data as Map;
+    expect(body['body'], 'Đã sửa xong cạnh body.');
+    expect(body.containsKey('content'), isFalse);
   });
 
   testWidgets('bình luận rỗng thì KHÔNG gửi đi', (tester) async {
@@ -186,7 +191,10 @@ class _StubController extends TaskController {
       TaskDetailState(task: _task);
 
   @override
-  Future<void> comment(String body) async => _sent.add(body);
+  Future<void> comment(
+    String body, {
+    List<String> mentionedUserIds = const [],
+  }) async => _sent.add(body);
 }
 
 class _RecordingAdapter implements HttpClientAdapter {

@@ -143,7 +143,12 @@ class PushIntent {
       'task_stage_open' ||
       'task_completed' ||
       'task_overdue' ||
-      'task_due_soon' => PushTarget.task,
+      'task_due_soon' ||
+      // Thiếu hai dòng này thì push bình luận/nhắc tên vẫn hiện trên màn hình
+      // khoá nhưng chạm vào không mở được cây đàn, chuông trong app không tự
+      // cập nhật, và ở tiền cảnh nó rơi nhầm sang kênh tin nhắn khách hàng.
+      'task_commented' ||
+      'task_mentioned' => PushTarget.task,
       _ => null,
     };
     if (target == null) return null;

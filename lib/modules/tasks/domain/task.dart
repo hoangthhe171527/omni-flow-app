@@ -76,6 +76,7 @@ class TaskComment {
     required this.body,
     this.userId,
     this.userName,
+    this.mentionedUserNames = const [],
     this.createdAt,
   });
 
@@ -86,6 +87,9 @@ class TaskComment {
     // API tra tên ra từ danh sách thành viên ở mỗi lần đọc, chứ không lưu tên
     // vào bình luận — để tên không cũ đi trong những bình luận cũ.
     userName: json.str('user_name'),
+    // Tên, không phải id: vai thợ không có quyền nhân sự, app không có danh
+    // sách nào để tự tra một UUID ra tên người.
+    mentionedUserNames: json.strList('mentioned_user_names'),
     createdAt: DateUtilsX.parse(json['created_at']),
   );
 
@@ -93,6 +97,7 @@ class TaskComment {
   final String body;
   final String? userId;
   final String? userName;
+  final List<String> mentionedUserNames;
   final DateTime? createdAt;
 
   /// Không bao giờ hiện UUID: nó không nói cho ai điều gì.
@@ -101,6 +106,39 @@ class TaskComment {
 
     return name.isEmpty ? 'Người đã rời' : name;
   }
+}
+
+/// Một tệp đã đính trên công việc — phần lớn là ảnh chụp công đoạn.
+///
+/// App gửi ảnh lên được từ lâu (nút máy ảnh ở thanh dưới màn chi tiết), và
+/// API vẫn trả mảng `attachments` về trong mỗi lần đọc việc. Nhưng `Task`
+/// trước đây chỉ đọc `attachments_count` — một khoá API KHÔNG BAO GIỜ gửi —
+/// nên mảng bị vứt ngay lúc parse: ảnh gửi xong là mất khỏi điện thoại, muốn
+/// xem lại phải mở web. Một con số cũng không thay được chỗ này: nó không cho
+/// ai nhìn lại vết xước trên body.
+class TaskAttachment {
+  const TaskAttachment({
+    required this.id,
+    required this.url,
+    required this.name,
+    required this.type,
+  });
+
+  factory TaskAttachment.fromJson(Map<String, dynamic> json) => TaskAttachment(
+    id: json.strOr('id', ''),
+    url: json.strOr('url', ''),
+    name: json.strOr('name', 'Tệp'),
+    // API đặt 'image' hoặc 'file' theo MIME lúc tải lên. Tài liệu cũ thiếu
+    // khoá này thì coi là tệp: hiện cái tên còn hơn hiện một ô ảnh vỡ.
+    type: json.strOr('type', 'file'),
+  );
+
+  final String id;
+  final String url;
+  final String name;
+  final String type;
+
+  bool get isImage => type == 'image';
 }
 
 /// Một công đoạn của kế hoạch, như công việc nhìn thấy nó.
@@ -142,6 +180,7 @@ class Task {
     this.startDate,
     this.subtasks = const [],
     this.customFields = const {},
+    this.attachments = const [],
     this.attachmentCount = 0,
     this.commentCount = 0,
     this.rating = 0,
@@ -173,6 +212,10 @@ class Task {
     startDate: DateUtilsX.parse(json['start_date']),
     subtasks: json.mapList('checklist').map(Subtask.fromJson).toList(),
     customFields: json.child('custom_fields'),
+    attachments: json
+        .mapList('attachments')
+        .map(TaskAttachment.fromJson)
+        .toList(),
     attachmentCount: json.intOr('attachments_count'),
     commentCount: json.intOr('comments_count'),
     rating: json.intOr('rating'),
@@ -216,6 +259,13 @@ class Task {
   final DateTime? startDate;
   final List<Subtask> subtasks;
   final Map<String, dynamic> customFields;
+
+  /// Tệp đã đính, đọc thẳng từ mảng `attachments` của API.
+  ///
+  /// Có ở CẢ dòng danh sách lẫn phản hồi chi tiết: `TaskController::listRow`
+  /// bên API chỉ cắt `comments` và `activity` khỏi dòng danh sách.
+  final List<TaskAttachment> attachments;
+
   final int attachmentCount;
   final int commentCount;
 
@@ -306,6 +356,7 @@ class Task {
     startDate: startDate,
     subtasks: subtasks ?? this.subtasks,
     customFields: customFields,
+    attachments: attachments,
     attachmentCount: attachmentCount,
     commentCount: commentCount,
     rating: rating,

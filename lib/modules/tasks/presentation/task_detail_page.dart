@@ -2,11 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/error/app_exception.dart';
 import '../../../core/utils/formatters.dart';
 import '../../../design/components/components.dart';
 import '../../../design/tokens/tokens.dart';
+import '../../../security/session/session_controller.dart';
 import '../application/task_controller.dart';
 import '../application/tasks_providers.dart';
 import '../data/tasks_api.dart';
@@ -74,6 +76,7 @@ class _Loaded extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final task = state.visible;
     final controller = ref.read(taskDetailProvider(taskId).notifier);
+    final myUserId = ref.watch(sessionProvider).user?.id;
 
     return Column(
       children: [
@@ -93,6 +96,27 @@ class _Loaded extends ConsumerWidget {
                       ? () => _editTitle(context, controller, task)
                       : null,
                 ),
+                // §3 là pull-based: ai rảnh TỰ NHẬN. Nhưng cho tới giờ chỗ
+                // duy nhất chạm được `assignee_ids` là bảng điều phối ngay
+                // dưới, mà bảng đó chỉ hiện với người có
+                // `tasks.projects.manage.all` — nên người thợ đứng ngay trước
+                // cây đàn chưa ai nhận vẫn phải nhắn quản đốc mới được gán.
+                // Thông báo "Công đoạn đang trống" (NotifyStageOpen) dẫn họ
+                // tới đúng màn này rồi bỏ họ ở đó.
+                //
+                // Server chưa bao giờ chặn: `assertCanEditTasks` chỉ chặn vai
+                // `viewer`, còn `tasks.write` thì `worker` có sẵn. Chỗ đứt là
+                // ở đây — không có gì để bấm.
+                //
+                // Chỉ hiện khi mình CHƯA có tên trong việc: đây là nút thêm
+                // mình vào, không phải nút bật/tắt. Bỏ mình ra là một quyết
+                // định khác hẳn và vẫn là việc của quản đốc.
+                if (!isAssigner &&
+                    myUserId != null &&
+                    !task.assigneeIds.contains(myUserId))
+                  _ClaimBar(
+                    onClaim: () => _claim(context, controller, task, myUserId),
+                  ),
                 if (isAssigner)
                   AssignerPanel(
                     task: task,
@@ -104,7 +128,13 @@ class _Loaded extends ConsumerWidget {
                     onEditPriority: () =>
                         _editPriority(context, controller, task),
                   ),
-                if (task.hasSubtasks) ...[
+                // Người giao việc thấy khối việc con KỂ CẢ khi trống — nút
+                // "Thêm việc con" nằm BÊN TRONG khối này, nên gói nó theo
+                // `hasSubtasks` là khoá mất chính đường tạo việc con đầu tiên:
+                // một công việc vừa tạo luôn có checklist rỗng, và dựng danh
+                // sách công đoạn lại buộc phải mở máy tính. Người thợ vẫn
+                // không thấy gì khi trống — họ tick chứ không dựng danh sách.
+                if (isAssigner || task.hasSubtasks) ...[
                   const SizedBox(height: OmniSpacing.sm),
                   _StageList(
                     task: task,
@@ -112,6 +142,10 @@ class _Loaded extends ConsumerWidget {
                     enabled: canComplete,
                     controller: controller,
                     canEdit: isAssigner,
+                    // §3: người nhận việc là CHÍNH người đang cầm máy, nên id
+                    // lấy từ phiên chứ không nhận từ đâu khác — không có màn
+                    // nào trong app chọn hộ người khác.
+                    currentUserId: ref.watch(sessionProvider).user?.id,
                   ),
                 ],
                 // Người giao việc thấy khối mô tả KỂ CẢ khi trống — nếu không
@@ -124,6 +158,11 @@ class _Loaded extends ConsumerWidget {
                         ? () => _editDescription(context, controller, task)
                         : null,
                   ),
+                // Ảnh đính kèm đứng NGAY TRƯỚC điểm chấm: người kiểm nhìn ảnh
+                // rồi mới chấm, còn người bị trả việc về xem lại chính tấm
+                // mình đã gửi. Trước đây app gửi ảnh lên rồi không xem lại
+                // được ở đâu cả.
+                _Attachments(attachments: task.attachments),
                 // Điểm kiểm đứng ngay sau công việc và TRƯỚC trao đổi: nó là
                 // kết luận, còn trao đổi là lý do phía sau kết luận đó.
                 RatingRow(task: task, taskId: taskId, canRate: isAssigner),
@@ -148,6 +187,32 @@ class _Loaded extends ConsumerWidget {
         ),
       ],
     );
+  }
+
+  /// Tự nhận việc: THÊM mình vào danh sách người làm.
+  ///
+  /// Gửi lại CẢ danh sách kèm id của mình, chứ không gửi mỗi id của mình:
+  /// `PUT /tasks/{id}` ghi đè `assignee_ids`, nên gửi một mình là lặng lẽ gỡ
+  /// những người đang cùng làm ra khỏi việc — họ mất luôn việc trong danh
+  /// sách của mình và không có gì báo cho ai biết.
+  ///
+  /// Không hỏi lại: nhận nhầm thì quản đốc gỡ ra trong một giây, còn thêm một
+  /// hộp thoại giữa người thợ và việc họ định làm thì ngày nào cũng tốn.
+  Future<void> _claim(
+    BuildContext context,
+    TaskController controller,
+    Task task,
+    String userId,
+  ) async {
+    // Lấy messenger TRƯỚC khi await: ghi xong thì widget này biến mất (mình đã
+    // có tên trong việc) và `context` không còn trong cây widget nữa.
+    final messenger = ScaffoldMessenger.of(context);
+
+    try {
+      await controller.setAssignees([...task.assigneeIds, userId]);
+    } on AppException catch (e) {
+      messenger.showSnackBar(SnackBar(content: Text(e.message)));
+    }
   }
 
   /// Giao việc cho ai, ngay tại chỗ.
@@ -322,6 +387,63 @@ class _Loaded extends ConsumerWidget {
   }
 }
 
+/// "Nhận việc này" — người thợ tự thêm mình vào một việc chưa nhận.
+///
+/// Cố ý KHÔNG mở bộ chọn người: nó chỉ gửi đúng một id, id của chính người
+/// đang bấm. Bộ chọn người lấy danh sách từ `GET /memberships`, đường cần
+/// `membership.members.read` — quyền mà vai `worker` cố ý không có, nên với
+/// đúng người cần tự nhận thì bộ chọn đó luôn rỗng. Gán NGƯỜI KHÁC vẫn là
+/// việc của quản đốc, và vẫn nằm trong bảng điều phối.
+class _ClaimBar extends StatefulWidget {
+  const _ClaimBar({required this.onClaim});
+
+  final Future<void> Function() onClaim;
+
+  @override
+  State<_ClaimBar> createState() => _ClaimBarState();
+}
+
+class _ClaimBarState extends State<_ClaimBar> {
+  bool _busy = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+
+    return Container(
+      color: scheme.surface,
+      padding: const EdgeInsets.fromLTRB(
+        OmniSpacing.lg,
+        0,
+        OmniSpacing.lg,
+        OmniSpacing.lg,
+      ),
+      child: SizedBox(
+        width: double.infinity,
+        height: 48,
+        child: OutlinedButton.icon(
+          onPressed: _busy ? null : _claim,
+          icon: const Icon(Icons.person_add_alt_rounded),
+          label: const Text('Nhận việc này'),
+        ),
+      ),
+    );
+  }
+
+  /// Khoá nút trong lúc gửi: hai lần chạm liên tiếp là hai lượt ghi, và lượt
+  /// sau mang theo bản chụp cũ nên nó nhân đôi id của mình trong danh sách.
+  Future<void> _claim() async {
+    setState(() => _busy = true);
+    try {
+      await widget.onClaim();
+    } finally {
+      // Nhận xong thì widget này biến mất cùng lần dựng lại, nên chỉ đường
+      // THẤT BẠI mới thật sự cần mở khoá.
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+}
+
 class _Header extends StatelessWidget {
   const _Header({required this.task, this.showFacts = true, this.onEditTitle});
 
@@ -448,6 +570,7 @@ class _StageList extends StatelessWidget {
     required this.enabled,
     required this.controller,
     required this.canEdit,
+    required this.currentUserId,
   });
 
   final Task task;
@@ -458,6 +581,10 @@ class _StageList extends StatelessWidget {
   /// Thêm / đổi tên / xoá việc con. Dựng checklist là việc của người GIAO
   /// việc; thợ tick chứ không đổi danh sách phải làm.
   final bool canEdit;
+
+  /// Ai đang cầm máy. Null = chưa có phiên người dùng (token máy), và khi đó
+  /// không mời nhận việc: không biết nhận về cho ai.
+  final String? currentUserId;
 
   @override
   Widget build(BuildContext context) {
@@ -493,6 +620,11 @@ class _StageList extends StatelessWidget {
               ),
               onDiscard: () => controller.discard(subtask.id),
               onEdit: canEdit ? () => _editSubtask(context, subtask) : null,
+              // Nhận việc KHÔNG khoá theo `canEdit`: dựng checklist là việc của
+              // quản đốc, còn nhận một công đoạn trống là việc của thợ (§3).
+              onClaim: currentUserId == null
+                  ? null
+                  : () => _claim(context, subtask.id),
             ),
             // 12dp between rows rather than the usual 8: a mis-tap here marks
             // the wrong stage of a piano complete.
@@ -513,6 +645,21 @@ class _StageList extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  /// Nhận công đoạn này về mình.
+  ///
+  /// Bắt lỗi tại chỗ: [TaskController.claimSubtask] chờ server và NÉM khi hỏng,
+  /// mà một Future ném ra từ callback của nút thì không ai bắt — bấm xong không
+  /// có gì xảy ra và cũng không có gì báo, đúng kiểu hỏng im lặng đã lặp lại
+  /// nhiều lần ở dự án này.
+  Future<void> _claim(BuildContext context, String subtaskId) async {
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      await controller.claimSubtask(subtaskId, currentUserId!);
+    } on AppException catch (e) {
+      messenger.showSnackBar(SnackBar(content: Text(e.message)));
+    }
   }
 
   Future<void> _addSubtask(BuildContext context) async {
@@ -666,6 +813,143 @@ class _Viewers extends StatelessWidget {
                   ),
                 ),
             ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Ảnh và tệp đã đính trên công việc.
+///
+/// Hiện cho MỌI người đọc được việc, không gắn với quyền đính kèm: người thợ
+/// bị trả việc về cần nhìn lại tấm ảnh chỗ lỗi, kể cả khi họ không gửi thêm
+/// ảnh mới.
+class _Attachments extends StatelessWidget {
+  const _Attachments({required this.attachments});
+
+  final List<TaskAttachment> attachments;
+
+  @override
+  Widget build(BuildContext context) {
+    // Chưa có tệp nào thì không chiếm chỗ: mỗi khối rỗng đẩy nút "Hoàn thành"
+    // xa thêm một quãng trên màn hình cầm một tay giữa xưởng.
+    if (attachments.isEmpty) return const SizedBox.shrink();
+
+    final scheme = Theme.of(context).colorScheme;
+
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.only(top: OmniSpacing.sm),
+      color: scheme.surface,
+      padding: const EdgeInsets.all(OmniSpacing.lg),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                Icons.attachment_outlined,
+                size: OmniIconSize.sm,
+                color: scheme.onSurfaceVariant,
+              ),
+              const SizedBox(width: OmniSpacing.xs),
+              Text(
+                'Tệp đính kèm (${attachments.length})',
+                style: OmniType.overline.copyWith(
+                  color: scheme.onSurfaceVariant,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: OmniSpacing.sm),
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: [
+                for (final attachment in attachments)
+                  Padding(
+                    padding: const EdgeInsets.only(right: OmniSpacing.sm),
+                    child: _AttachmentThumb(attachment: attachment),
+                  ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Một ô 96dp: ảnh thì hiện chính nó, tệp khác thì hiện tên.
+class _AttachmentThumb extends StatelessWidget {
+  const _AttachmentThumb({required this.attachment});
+
+  final TaskAttachment attachment;
+
+  /// Mở bản đầy đủ ra ngoài app, như module hộp thư vẫn làm với tệp đính kèm.
+  /// Ô 96dp đủ để nhận ra là tấm nào, không đủ để soi một vết xước.
+  Future<void> _open() async {
+    final uri = Uri.tryParse(attachment.url);
+    if (uri == null) return;
+    await launchUrl(uri, mode: LaunchMode.externalApplication);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+
+    return SizedBox(
+      width: 96,
+      height: 96,
+      child: Material(
+        color: scheme.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(OmniRadius.sm),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: _open,
+          child: attachment.isImage
+              ? Image.network(
+                  attachment.url,
+                  fit: BoxFit.cover,
+                  // Mất mạng hay ảnh hỏng thì rơi về cái tên, chứ không để lại
+                  // một ô xám không nói gì.
+                  errorBuilder: (context, error, stackTrace) =>
+                      _AttachmentName(name: attachment.name),
+                )
+              : _AttachmentName(name: attachment.name),
+        ),
+      ),
+    );
+  }
+}
+
+class _AttachmentName extends StatelessWidget {
+  const _AttachmentName({required this.name});
+
+  final String name;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+
+    return Padding(
+      padding: const EdgeInsets.all(OmniSpacing.sm),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.insert_drive_file_outlined,
+            size: OmniIconSize.lg,
+            color: scheme.onSurfaceVariant,
+          ),
+          const SizedBox(height: OmniSpacing.xs),
+          Text(
+            name,
+            maxLines: 2,
+            textAlign: TextAlign.center,
+            overflow: TextOverflow.ellipsis,
+            style: OmniType.micro,
           ),
         ],
       ),

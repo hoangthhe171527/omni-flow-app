@@ -89,6 +89,29 @@ class _EditSectionsPageState extends ConsumerState<EditSectionsPage> {
                         countsForKpi: sections[i].countsForKpi,
                       );
                     }),
+                    // Hai cờ này là quy tắc TRẢ TIỀN, không phải trình bày:
+                    // chúng quyết định một việc có bị chặn ở cổng QC hay
+                    // không, và nhóm nào là đích đếm KPI tháng. Trước đây màn
+                    // này chỉ mang chúng đi theo khi lưu, nên chúng chỉ đặt
+                    // được từ web — tức là ở xưởng thì không đặt được.
+                    onGateChanged: (on) => setState(() {
+                      sections[i] = PlanSection(
+                        id: sections[i].id,
+                        name: sections[i].name,
+                        order: i,
+                        requiresChecklist: on,
+                        countsForKpi: sections[i].countsForKpi,
+                      );
+                    }),
+                    onKpiChanged: (on) => setState(() {
+                      sections[i] = PlanSection(
+                        id: sections[i].id,
+                        name: sections[i].name,
+                        order: i,
+                        requiresChecklist: sections[i].requiresChecklist,
+                        countsForKpi: on,
+                      );
+                    }),
                     // Kế hoạch phải còn ít nhất một cột, nếu không cái bảng
                     // không còn chỗ nào để hiện việc.
                     onRemove: sections.length > 1
@@ -196,11 +219,24 @@ class _SectionRow extends StatefulWidget {
     super.key,
     required this.section,
     required this.onChanged,
+    required this.onGateChanged,
+    required this.onKpiChanged,
     this.onRemove,
   });
 
   final PlanSection section;
   final ValueChanged<String> onChanged;
+
+  /// Bật/tắt cổng QC của nhóm này.
+  ///
+  /// Bắt buộc chứ không cho null: một hàng không đổi được cờ trông y hệt một
+  /// hàng đổi được, và im lặng như thế đúng là cách khiếm khuyết này sống
+  /// được nhiều tháng.
+  final ValueChanged<bool> onGateChanged;
+
+  /// Bật/tắt việc nhóm này có phải đích đếm KPI tháng hay không.
+  final ValueChanged<bool> onKpiChanged;
+
   final VoidCallback? onRemove;
 
   @override
@@ -224,28 +260,53 @@ class _SectionRowState extends State<_SectionRow> {
 
     return Padding(
       padding: const EdgeInsets.only(bottom: OmniSpacing.sm),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Expanded(
-            child: TextField(
-              controller: _controller,
-              decoration: InputDecoration(
-                hintText: 'Tên nhóm việc',
-                isDense: true,
-                // Nói ra nhóm nào đang mang quy tắc, để người sửa biết mình
-                // đang đụng vào thứ gì trước khi xoá nó.
-                helperText: gated ? _rulesOf(widget.section) : null,
+          Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: _controller,
+                  decoration: InputDecoration(
+                    hintText: 'Tên nhóm việc',
+                    isDense: true,
+                    // Nói ra nhóm nào đang mang quy tắc, để người sửa biết
+                    // mình đang đụng vào thứ gì trước khi xoá nó.
+                    helperText: gated ? _rulesOf(widget.section) : null,
+                  ),
+                  onChanged: widget.onChanged,
+                ),
               ),
-              onChanged: widget.onChanged,
-            ),
+              IconButton(
+                onPressed: widget.onRemove,
+                icon: Icon(
+                  Icons.close_rounded,
+                  color: widget.onRemove == null
+                      ? scheme.onSurfaceVariant
+                      : null,
+                ),
+                tooltip: 'Bỏ nhóm việc này',
+              ),
+            ],
           ),
-          IconButton(
-            onPressed: widget.onRemove,
-            icon: Icon(
-              Icons.close_rounded,
-              color: widget.onRemove == null ? scheme.onSurfaceVariant : null,
-            ),
-            tooltip: 'Bỏ nhóm việc này',
+          // Đặt ngay tại đây chứ không giấu sau một màn khác: quản đốc đứng
+          // giữa xưởng với cái điện thoại, và cho tới giờ hai cờ này chỉ bật
+          // được từ web. Nhãn nói HẬU QUẢ chứ không nói tên cờ — bật nhầm thì
+          // bảng trông y hệt, chỉ có con số cuối tháng khác đi.
+          SwitchListTile(
+            value: widget.section.requiresChecklist,
+            onChanged: widget.onGateChanged,
+            title: const Text('Chặn vào nhóm khi việc con chưa xong'),
+            dense: true,
+            contentPadding: EdgeInsets.zero,
+          ),
+          SwitchListTile(
+            value: widget.section.countsForKpi,
+            onChanged: widget.onKpiChanged,
+            title: const Text('Nhóm này là đích đếm KPI tháng'),
+            dense: true,
+            contentPadding: EdgeInsets.zero,
           ),
         ],
       ),

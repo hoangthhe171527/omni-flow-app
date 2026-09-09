@@ -113,6 +113,28 @@ class TasksApi {
     return Task.fromJson(response.object);
   }
 
+  /// Tự nhận một việc con đang trống.
+  ///
+  /// §3: xưởng chạy kiểu pull — ai rảnh thì nhận công đoạn kế tiếp, không ai
+  /// đứng ra phân. Server bắn "Công đoạn đang trống" cho cả tổ; đây là đường
+  /// duy nhất trong app trả lời được cái thông báo đó.
+  ///
+  /// Cùng một lệnh PATCH với tick, KHÔNG phải PUT cả mảng checklist: nhận việc
+  /// và tick xảy ra cùng lúc ở xưởng, nên một bản chụp cả mảng gửi lúc nhận
+  /// việc sẽ xoá mất dấu tick người khác vừa đánh — im lặng.
+  Future<Task> claimSubtask(
+    String taskId,
+    String subtaskId,
+    String userId,
+  ) async {
+    final response = await _client.patch(
+      '$_base/$taskId/checklist/$subtaskId',
+      body: {'assignee_id': userId},
+    );
+
+    return Task.fromJson(response.object);
+  }
+
   Future<Task> removeSubtask(String taskId, String subtaskId) async {
     final response = await _client.delete(
       '$_base/$taskId/checklist/$subtaskId',
@@ -247,10 +269,18 @@ class TasksApi {
   /// Khoá là `body`, KHÔNG phải `content`. Bản trước gửi `content` và server
   /// trả 422 cho mọi bình luận gửi từ app — không ai phát hiện vì chưa màn
   /// hình nào gọi tới hàm này. Xem `CreateTaskCommentRequest`.
-  Future<Task> comment(String taskId, String body) async {
+  Future<Task> comment(
+    String taskId,
+    String body, {
+    List<String> mentionedUserIds = const [],
+  }) async {
     final response = await _client.post(
       '$_base/$taskId/comments',
-      body: {'body': body},
+      // §B3: QC trượt thì bình luận phải nhắc tên người phụ trách công đoạn
+      // lỗi. Khoá server nhận là `mentioned_user_ids` (xem
+      // `CreateTaskCommentRequest`). Không gửi thì tên chỉ là chữ trong câu:
+      // không ai được báo, và không màn hình nào tô nó lên.
+      body: {'body': body, 'mentioned_user_ids': mentionedUserIds},
     );
 
     return Task.fromJson(response.object);
