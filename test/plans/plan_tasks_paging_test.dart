@@ -1,6 +1,8 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:omni_app/core/network/api_envelope.dart';
+import 'package:omni_app/modules/plans/domain/feed_entry.dart';
 import 'package:omni_app/modules/plans/domain/plan.dart';
+import 'package:omni_app/modules/plans/domain/workshop_kpi.dart';
 import 'package:omni_app/modules/plans/domain/team.dart';
 import 'package:omni_app/modules/plans/data/plans_api.dart';
 import 'package:omni_app/modules/tasks/domain/task.dart';
@@ -80,6 +82,11 @@ void main() {
 
 /// Trả về đúng [total] việc, chia trang theo `perPage` mà chỗ gọi xin.
 class _PagedApi implements PlansApi {
+  @override
+  Future<Plan> updateSections(String planId, List<PlanSection> sections) async {
+    throw UnimplementedError();
+  }
+
   _PagedApi({required this.total});
 
   final int total;
@@ -109,6 +116,13 @@ class _PagedApi implements PlansApi {
       ),
     );
   }
+
+  @override
+  Future<WorkshopKpi> kpi({String? planId}) async =>
+      WorkshopKpi.fromJson(const {});
+
+  @override
+  Future<List<FeedEntry>> feed({int limit = 30}) async => const [];
 
   @override
   Future<List<Team>> teams() async => const [];

@@ -17,6 +17,9 @@ import 'shell_routes.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
   final rootKey = GlobalKey<NavigatorState>(debugLabel: 'root');
+  // Sống cùng router: một router mới (đổi quyền, đổi tenant) bắt đầu lại từ
+  // trống, đúng như mong đợi.
+  final pending = _PendingDestination();
   // Chỉ mục PRIMARY thành branch, và branch dựng từ danh sách KHÔNG lọc quyền.
   // Một tab phải giữ ngăn xếp điều hướng riêng, còn biến mọi mục thành branch
   // nghĩa là 20 module thành 20 navigator. Mục secondary là "chỗ để ghé" — mở
@@ -37,7 +40,7 @@ final routerProvider = Provider<GoRouter>((ref) {
     navigatorKey: rootKey,
     initialLocation: ShellRoutes.splashPath,
     refreshListenable: ref.watch(sessionRefreshProvider),
-    redirect: (context, state) => _redirect(ref, state),
+    redirect: (context, state) => _redirect(ref, state, pending),
     routes: [
       GoRoute(
         path: ShellRoutes.splashPath,
@@ -94,16 +97,41 @@ GoRoute _toGoRoute(ModuleRoute route, GlobalKey<NavigatorState> rootKey) {
   );
 }
 
+/// Nơi người dùng ĐỊNH tới, giữ lại trong lúc phiên còn đang khôi phục.
+///
+/// Không có nó thì mọi liên kết sâu đều mất: app khởi động ở trạng thái
+/// `restoring`, redirect đẩy về splash và VỨT đích đến, rồi khi khôi phục xong
+/// thì đưa về tab mặc định. Mở một công việc từ thông báo đẩy, tải lại trang
+/// khi đang xem chi tiết, hay dán một đường dẫn — cả ba đều rơi về màn chủ.
+///
+/// Một ô nhớ THUẦN, không phải provider. Bản đầu dùng `StateProvider` và ghi
+/// vào nó ngay trong `redirect`; Riverpod cấm sửa state giữa lúc build nên nó
+/// ném "At least listener of the StateNotifier … threw an exception", và màn
+/// hình đứng mãi ở khung xương. Redirect không cần thứ gì phản ứng — nó chỉ
+/// cần một chỗ đặt tạm giữa hai lần gọi.
+class _PendingDestination {
+  /// URL đầy đủ chứ không chỉ đường dẫn khớp: bộ lọc và tham số truy vấn cũng
+  /// là một phần của "chỗ tôi định tới".
+  String? value;
+}
+
 /// Auth-state routing only. Permission routing is the [AccessBoundary]'s job —
 /// splitting them keeps this function from growing into a second permission
 /// system that has to be kept in sync with the first.
-String? _redirect(Ref ref, GoRouterState state) {
+String? _redirect(Ref ref, GoRouterState state, _PendingDestination pending) {
   final session = ref.read(sessionProvider);
   final location = state.matchedLocation;
 
   final isSplash = location == ShellRoutes.splashPath;
   final isLogin = location == AuthModule.loginPath;
   final isWorkspace = location == AuthModule.workspacePath;
+  // Ba màn này là TRẠM DỪNG của chính luồng đăng nhập. Nhớ chúng làm đích đến
+  // sẽ tạo ra một vòng: đăng nhập xong lại quay về màn đăng nhập.
+  final isWayStation = isSplash || isLogin || isWorkspace;
+
+  if (!isWayStation && session.status != SessionStatus.authenticated) {
+    pending.value = state.uri.toString();
+  }
 
   return switch (session.status) {
     SessionStatus.restoring => isSplash ? null : ShellRoutes.splashPath,
@@ -112,8 +140,22 @@ String? _redirect(Ref ref, GoRouterState state) {
     SessionStatus.tenantPending =>
       isWorkspace ? null : AuthModule.workspacePath,
     SessionStatus.authenticated =>
-      (isLogin || isWorkspace || isSplash) ? _homePath(ref) : null,
+      isWayStation ? _afterSignIn(ref, pending) : null,
   };
+}
+
+/// Chỗ đưa người dùng tới sau khi phiên sẵn sàng.
+///
+/// Đích đã ghi nhớ nếu có, và ghi nhớ đó dùng ĐÚNG MỘT LẦN — không xoá thì lần
+/// đăng nhập sau lại nhảy tới một công việc từ phiên trước, giữa lúc người
+/// dùng không hề bấm gì liên quan.
+String _afterSignIn(Ref ref, _PendingDestination pending) {
+  final destination = pending.value;
+  if (destination == null) return _homePath(ref);
+
+  pending.value = null;
+
+  return destination;
 }
 
 /// Landing screen after sign-in: the first tab this user can actually see. A

@@ -3,7 +3,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../design/components/components.dart';
 import '../../../design/tokens/tokens.dart';
+import '../../../core/error/app_exception.dart';
+import '../../../security/session/session_controller.dart';
 import '../application/team_providers.dart';
+import '../data/team_api.dart';
+import '../domain/team_member.dart';
 
 class TeamPage extends ConsumerWidget {
   const TeamPage({super.key});
@@ -12,6 +16,9 @@ class TeamPage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final members = ref.watch(teamMembersProvider);
     final scheme = Theme.of(context).colorScheme;
+    // Liên kết Zalo là thao tác của người có thẩm quyền — xem doc của
+    // `TeamMember.zaloUserId`. Ai không có quyền thì thẻ chỉ đọc như cũ.
+    final canLink = ref.watch(accessProvider).can('membership.members.update');
 
     return Scaffold(
       appBar: AppBar(title: const Text('Nhân viên')),
@@ -31,6 +38,7 @@ class TeamPage extends ConsumerWidget {
           itemBuilder: (context, index) {
             final member = list[index];
             return OmniCard(
+              onTap: canLink ? () => _linkZalo(context, ref, member) : null,
               padding: const EdgeInsets.all(OmniSpacing.md),
               child: Row(
                 children: [
@@ -52,6 +60,21 @@ class TeamPage extends ConsumerWidget {
                             color: scheme.onSurfaceVariant,
                           ),
                         ),
+                        // Nói ra ai đã liên kết Zalo: không có dòng này thì
+                        // quản đốc phải mở từng người ra mới biết còn thiếu ai,
+                        // và bot thì im lặng từ chối những người chưa liên kết.
+                        if (canLink)
+                          Text(
+                            member.zaloUserId == null
+                                ? 'Chưa liên kết Zalo'
+                                : 'Zalo: ${member.zaloUserId}',
+                            style: OmniType.micro.copyWith(
+                              color: scheme.onSurfaceVariant,
+                              fontStyle: member.zaloUserId == null
+                                  ? FontStyle.italic
+                                  : FontStyle.normal,
+                            ),
+                          ),
                       ],
                     ),
                   ),
@@ -66,6 +89,110 @@ class TeamPage extends ConsumerWidget {
               ),
             );
           },
+        ),
+      ),
+    );
+  }
+}
+
+/// Liên kết (hoặc gỡ) tài khoản Zalo của một thành viên.
+///
+/// Đây là thao tác làm cho bot xưởng biết ai vừa nhắn trong nhóm (§G4). Bot cố
+/// ý KHÔNG tự đoán: máy chạy nó nằm ở xưởng không ai trông và đang cầm sẵn
+/// cookie của một tài khoản Zalo, nên nó phải dựa vào một liên kết mà người có
+/// thẩm quyền tự tay tạo.
+Future<void> _linkZalo(
+  BuildContext context,
+  WidgetRef ref,
+  TeamMember member,
+) async {
+  final messenger = ScaffoldMessenger.of(context);
+
+  final saved = await showOmniSheet<String>(
+    context: context,
+    builder: (context) => _LinkZaloSheet(member: member),
+  );
+
+  if (saved == null || saved == (member.zaloUserId ?? '')) return;
+
+  try {
+    await ref.read(teamApiProvider).setZaloUserId(member.membershipId, saved);
+    ref.invalidate(teamMembersProvider);
+  } on AppException catch (e) {
+    messenger.showSnackBar(SnackBar(content: Text(e.message)));
+  }
+}
+
+/// Sheet TỰ giữ controller của mình.
+///
+/// Bản đầu dựng controller ở chỗ gọi rồi `dispose()` ngay khi sheet trả về —
+/// nhưng sheet còn đang chạy hoạt ảnh thoát và vẫn dựng lại TextField, nên nó
+/// ném "A TextEditingController was used after being disposed". Vòng đời của
+/// controller phải trùng vòng đời của widget dùng nó.
+class _LinkZaloSheet extends StatefulWidget {
+  const _LinkZaloSheet({required this.member});
+
+  final TeamMember member;
+
+  @override
+  State<_LinkZaloSheet> createState() => _LinkZaloSheetState();
+}
+
+class _LinkZaloSheetState extends State<_LinkZaloSheet> {
+  late final _controller = TextEditingController(
+    text: widget.member.zaloUserId ?? '',
+  );
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final text = Theme.of(context).textTheme;
+    final scheme = Theme.of(context).colorScheme;
+
+    return Padding(
+      padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(
+          OmniSpacing.lg,
+          OmniSpacing.sm,
+          OmniSpacing.lg,
+          OmniSpacing.lg,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Liên kết Zalo — ${widget.member.name}',
+              style: text.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+            ),
+            const SizedBox(height: OmniSpacing.xs),
+            Text(
+              'Id Zalo của người này. Sau khi liên kết, tin họ nhắn trong nhóm '
+              'xưởng sẽ được ghi nhận đúng tên. Để trống là gỡ liên kết.',
+              style: text.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
+            ),
+            const SizedBox(height: OmniSpacing.md),
+            TextField(
+              controller: _controller,
+              autofocus: true,
+              decoration: const InputDecoration(hintText: 'Ví dụ: 79000012345'),
+            ),
+            const SizedBox(height: OmniSpacing.lg),
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton(
+                onPressed: () =>
+                    Navigator.of(context).pop(_controller.text.trim()),
+                child: const Text('Lưu'),
+              ),
+            ),
+          ],
         ),
       ),
     );

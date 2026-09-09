@@ -1,0 +1,1 @@
+{"success":true,"data":{"from":"2026-09-01T00:00:00+07:00","until":"2026-10-01T00:00:00+07:00","delivered":1,"reached_bonus":0,"next_tier":{"count":35,"bonus":3,"remaining":34},"tiers":{"35":3,"40":6,"50":10,"55":13,"60":17,"65":21,"70":25},"days_left":25,"counting_sections":["s3"]}}

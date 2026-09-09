@@ -7,6 +7,7 @@ import '../../core/module/omni_module.dart';
 import '../../security/guard/access_requirement.dart';
 import 'application/tasks_providers.dart';
 import 'domain/task_permissions.dart';
+import 'presentation/create_task_page.dart';
 import 'presentation/my_tasks_page.dart';
 import 'presentation/task_detail_page.dart';
 
@@ -21,6 +22,7 @@ class TasksModule extends OmniModule {
 
   static const list = TaskRoutes.list;
   static const detail = TaskRoutes.detail;
+  static const create = TaskRoutes.create;
 
   @override
   String get id => 'tasks';
@@ -38,6 +40,27 @@ class TasksModule extends OmniModule {
       name: list,
       access: const AccessRequirement.any(TaskPermissions.anyRead),
       builder: (_, _) => const MyTasksPage(),
+    ),
+    // ĐỨNG TRƯỚC '/tasks/:id': ngược lại thì "new" bị bắt làm một id công việc
+    // và màn tạo không bao giờ mở được.
+    ModuleRoute(
+      path: '/tasks/new',
+      name: create,
+      rootNavigator: true,
+      // Tạo việc là quyền GHI, không phải quyền riêng của người giao việc: §3
+      // nói xưởng chạy pull-based, ai cũng ghi được việc mình nhìn thấy.
+      access: const AccessRequirement.all([TaskPermissions.write]),
+      builder: (_, state) {
+        final args = state.extra is CreateTaskArgs
+            ? state.extra! as CreateTaskArgs
+            : const CreateTaskArgs();
+
+        return CreateTaskPage(
+          planId: args.planId,
+          sectionId: args.sectionId,
+          sections: args.sections,
+        );
+      },
     ),
     ModuleRoute(
       path: '/tasks/:id',

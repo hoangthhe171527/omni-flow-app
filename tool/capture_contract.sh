@@ -51,6 +51,9 @@ capture "/tasks?project_id=$PLAN&per_page=5" tasks_index
 TASK=$(grep -o '"id":"[^"]*"' "$OUT/tasks_index.json" | head -1 | cut -d'"' -f4)
 capture "/tasks/$TASK" tasks_show
 
+capture "/tasks/kpi" tasks_kpi
+capture "/tasks/feed?limit=5" tasks_feed
+
 echo
 echo "Xong. Đọc lại các file trước khi commit — chúng là dữ liệu thật của một"
 echo "tenant, nên đừng chép từ production."

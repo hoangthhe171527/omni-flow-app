@@ -5,7 +5,9 @@ import 'package:omni_app/design/theme/omni_theme.dart';
 import 'package:omni_app/modules/plans/application/plans_providers.dart';
 import 'package:omni_app/core/network/api_envelope.dart';
 import 'package:omni_app/modules/plans/data/plans_api.dart';
+import 'package:omni_app/modules/plans/domain/feed_entry.dart';
 import 'package:omni_app/modules/plans/domain/plan.dart';
+import 'package:omni_app/modules/plans/domain/workshop_kpi.dart';
 import 'package:omni_app/modules/plans/domain/team.dart';
 import 'package:omni_app/modules/plans/presentation/create_plan_page.dart';
 import 'package:omni_app/modules/tasks/domain/task.dart';
@@ -26,17 +28,19 @@ void main() {
     ),
   );
 
-  testWidgets('điền sẵn năm công đoạn của xưởng', (tester) async {
+  testWidgets('điền sẵn bộ nhóm việc mặc định', (tester) async {
     await tester.pumpWidget(host());
     await tester.pumpAndSettle();
 
-    for (final name in kWorkshopSections) {
+    for (final name in kDefaultSections) {
       expect(
         find.text(name),
         findsOneWidget,
         reason:
-            'Xưởng này chạy đúng năm công đoạn đó. Bắt gõ lại năm lần cho mỗi '
-            'kế hoạch mới là bắt làm một việc form đã biết trước câu trả lời.',
+            'Bộ mặc định phải CHUNG, không theo ngành nào: app dùng cho nhiều '
+            'loại công việc, và mọi tenant mới đều nhận đúng những chữ này. '
+            'Bắt gõ lại cho mỗi kế hoạch mới là bắt làm một việc form đã biết '
+            'trước câu trả lời.',
       );
     }
   });
@@ -50,7 +54,7 @@ void main() {
     expect(button.onPressed, isNull);
   });
 
-  testWidgets('có tên rồi thì lưu được, và gửi đúng các công đoạn', (
+  testWidgets('có tên rồi thì lưu được, và gửi đúng các nhóm việc', (
     tester,
   ) async {
     await tester.pumpWidget(host());
@@ -64,7 +68,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(api.createdName, 'Đàn cơ');
-    expect(api.createdSections, kWorkshopSections);
+    expect(api.createdSections, kDefaultSections);
   });
 
   testWidgets('tên chỉ có khoảng trắng không tính là có tên', (tester) async {
@@ -78,7 +82,7 @@ void main() {
     expect(button.onPressed, isNull);
   });
 
-  testWidgets('công đoạn để trống thì bị bỏ, không gửi cột không tên', (
+  testWidgets('nhóm việc để trống thì bị bỏ, không gửi cột không tên', (
     tester,
   ) async {
     await tester.pumpWidget(host());
@@ -98,7 +102,7 @@ void main() {
       isNot(contains('')),
       reason: 'Một cột không tên trên bảng thì vô dụng.',
     );
-    expect(api.createdSections?.length, kWorkshopSections.length - 1);
+    expect(api.createdSections?.length, kDefaultSections.length - 1);
   });
 
   testWidgets('chưa có team nào thì không hỏi thuộc team nào', (tester) async {
@@ -135,6 +139,11 @@ void main() {
 
 /// Ghi lại tham số của lần gọi tạo, không đi mạng.
 class _RecordingApi implements PlansApi {
+  @override
+  Future<Plan> updateSections(String planId, List<PlanSection> sections) async {
+    throw UnimplementedError();
+  }
+
   String? createdName;
   List<String>? createdSections;
   String? createdTeamId;
@@ -156,6 +165,13 @@ class _RecordingApi implements PlansApi {
   @override
   Future<Team> createTeam({required String name, String? description}) async =>
       Team.fromJson({'id': 't1', 'name': name});
+
+  @override
+  Future<WorkshopKpi> kpi({String? planId}) async =>
+      WorkshopKpi.fromJson(const {});
+
+  @override
+  Future<List<FeedEntry>> feed({int limit = 30}) async => const [];
 
   @override
   Future<List<Team>> teams() async => const [];

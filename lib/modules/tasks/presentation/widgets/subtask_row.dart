@@ -25,6 +25,7 @@ class SubtaskRow extends StatelessWidget {
     required this.onToggle,
     required this.onRetry,
     required this.onDiscard,
+    this.onEdit,
   });
 
   /// Comfortably above the 48dp Android minimum: this is a gloved thumb.
@@ -36,6 +37,12 @@ class SubtaskRow extends StatelessWidget {
   final ValueChanged<bool> onToggle;
   final VoidCallback onRetry;
   final VoidCallback onDiscard;
+
+  /// Đổi tên / xoá việc con này. Null = chỉ đọc, và không hiện nút.
+  ///
+  /// Nút nằm CẠNH hàng chứ không thay chỗ chạm của hàng: hàng vẫn là mục
+  /// tiêu 56dp để tick, còn sửa là một hành động hiếm hơn nhiều.
+  final VoidCallback? onEdit;
 
   bool get _failed => pending?.failed ?? false;
 
@@ -109,6 +116,14 @@ class SubtaskRow extends StatelessWidget {
                       ],
                     ),
                   ),
+                  if (onEdit != null)
+                    IconButton(
+                      onPressed: onEdit,
+                      icon: const Icon(Icons.more_horiz_rounded),
+                      iconSize: OmniIconSize.md,
+                      color: scheme.onSurfaceVariant,
+                      tooltip: 'Sửa việc con',
+                    ),
                 ],
               ),
             ),

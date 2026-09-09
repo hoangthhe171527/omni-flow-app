@@ -44,7 +44,7 @@ class _MoveSectionSheet extends StatelessWidget {
             OmniSpacing.md,
           ),
           child: Text(
-            'Chuyển công đoạn',
+            'Chuyển nhóm việc',
             style: text.titleMedium?.copyWith(fontWeight: FontWeight.w700),
           ),
         ),
@@ -57,7 +57,7 @@ class _MoveSectionSheet extends StatelessWidget {
               OmniSpacing.xl,
             ),
             child: Text(
-              'Kế hoạch này chưa khai báo công đoạn nào.',
+              'Kế hoạch này chưa khai báo nhóm việc nào.',
               style: text.bodyMedium?.copyWith(color: scheme.onSurfaceVariant),
             ),
           )

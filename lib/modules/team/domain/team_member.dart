@@ -11,6 +11,7 @@ class TeamMember {
     this.jobTitle,
     this.avatarUrl,
     this.status = 'active',
+    this.zaloUserId,
     this.openConversations = 0,
   });
 
@@ -22,6 +23,12 @@ class TeamMember {
   final String? avatarUrl;
   final String status;
 
+  /// Tài khoản Zalo đã liên kết, để bot xưởng biết ai vừa nhắn (§G4).
+  ///
+  /// Chỉ quản đốc đặt được, và đó là điểm của nó: máy chạy bot nằm ở xưởng
+  /// không ai trông, nên nó không được phép tự khẳng định người gửi là ai.
+  final String? zaloUserId;
+
   /// How many threads they already hold — shown in the assign sheet so work
   /// isn't handed to whoever happens to be at the top of the list.
   final int openConversations;
@@ -32,6 +39,7 @@ class TeamMember {
 
   TeamMember withLoad(int count) => TeamMember(
     membershipId: membershipId,
+    zaloUserId: zaloUserId,
     userId: userId,
     name: name,
     email: email,
@@ -56,6 +64,7 @@ class TeamMember {
           'Thành viên',
       email: user?.str('email'),
       jobTitle: membership.str('job_title') ?? membership.str('member_type'),
+      zaloUserId: membership.str('zalo_user_id'),
       avatarUrl: user?.str('avatar'),
       status: membership.strOr('status', 'active'),
     );

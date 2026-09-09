@@ -65,6 +65,44 @@ class TaskViewer {
   String get label => (name ?? '').trim().isEmpty ? userId : name!.trim();
 }
 
+/// Một bình luận trên công việc.
+///
+/// §B3: QC không đạt thì bình luận @mention người phụ trách công đoạn lỗi rồi
+/// kéo cây về. Đó là chỗ duy nhất trong cả luồng ghi lại LÝ DO một cây bị trả
+/// về — nhật ký hoạt động chỉ biết nó đã bị chuyển cột.
+class TaskComment {
+  const TaskComment({
+    required this.id,
+    required this.body,
+    this.userId,
+    this.userName,
+    this.createdAt,
+  });
+
+  factory TaskComment.fromJson(Map<String, dynamic> json) => TaskComment(
+    id: json.strOr('id', ''),
+    body: json.strOr('body', ''),
+    userId: json.str('user_id'),
+    // API tra tên ra từ danh sách thành viên ở mỗi lần đọc, chứ không lưu tên
+    // vào bình luận — để tên không cũ đi trong những bình luận cũ.
+    userName: json.str('user_name'),
+    createdAt: DateUtilsX.parse(json['created_at']),
+  );
+
+  final String id;
+  final String body;
+  final String? userId;
+  final String? userName;
+  final DateTime? createdAt;
+
+  /// Không bao giờ hiện UUID: nó không nói cho ai điều gì.
+  String get author {
+    final name = (userName ?? '').trim();
+
+    return name.isEmpty ? 'Người đã rời' : name;
+  }
+}
+
 /// Một công đoạn của kế hoạch, như công việc nhìn thấy nó.
 ///
 /// Bản sao nhỏ của `PlanSection` bên module plans, và CỐ Ý là bản sao: nếu
@@ -106,7 +144,9 @@ class Task {
     this.customFields = const {},
     this.attachmentCount = 0,
     this.commentCount = 0,
+    this.rating = 0,
     this.viewers = const [],
+    this.comments = const [],
   });
 
   factory Task.fromJson(Map<String, dynamic> json) => Task(
@@ -135,7 +175,9 @@ class Task {
     customFields: json.child('custom_fields'),
     attachmentCount: json.intOr('attachments_count'),
     commentCount: json.intOr('comments_count'),
+    rating: json.intOr('rating'),
     viewers: json.mapList('viewers').map(TaskViewer.fromJson).toList(),
+    comments: json.mapList('comments').map(TaskComment.fromJson).toList(),
   );
 
   final String id;
@@ -177,9 +219,19 @@ class Task {
   final int attachmentCount;
   final int commentCount;
 
+  /// Điểm QC, 0–5 sao. 0 = chưa chấm (§4, §B3).
+  ///
+  /// Chấm điểm là việc của người kiểm, không phải của người làm — ai cũng
+  /// tự chấm được thì con số thôi là một đánh giá.
+  final int rating;
+
   /// Who has opened this task. Empty on a list row — the API sends it only on
   /// the detail response, where it is worth the bytes.
   final List<TaskViewer> viewers;
+
+  /// Bình luận, cũ nhất trước. Chỉ có ở phản hồi chi tiết, và API cắt bớt
+  /// phần cũ — [commentCount] mới là tổng thật.
+  final List<TaskComment> comments;
 
   /// Only `done` is terminal; every other status id is defined by the project.
   bool get isDone => status == 'done';
@@ -223,6 +275,20 @@ class Task {
         due.day == today.day;
   }
 
+  /// Bản sao có sửa vài trường.
+  ///
+  /// Viết tay, nên nó CHỈ đúng khi mọi trường đều được chép lại — và bản trước
+  /// bỏ sót đúng ba trường thêm vào lúc làm tầng nhóm việc: `sectionId`,
+  /// `sectionName`, `planSections`.
+  ///
+  /// Hậu quả không nằm ở chỗ dễ đoán. Tick một việc con là đi qua đây (cập
+  /// nhật lạc quan), nên chỉ cần tick một cái là `planSections` biến mất —
+  /// và sheet "Chuyển nhóm việc" từ đó báo "kế hoạch này chưa khai báo nhóm
+  /// việc nào". Tức là: tick xong công đoạn thì hết kéo được cây đàn sang cột
+  /// kế tiếp, đúng hai thao tác đi liền nhau ở §B2 → §B3.
+  ///
+  /// `task_copy_with_test.dart` so từng trường, để lần thêm trường sau không
+  /// lặp lại chuyện này.
   Task copyWith({List<Subtask>? subtasks, String? status}) => Task(
     id: id,
     title: title,
@@ -231,6 +297,9 @@ class Task {
     priority: priority,
     projectId: projectId,
     projectName: projectName,
+    sectionId: sectionId,
+    sectionName: sectionName,
+    planSections: planSections,
     assigneeIds: assigneeIds,
     assigneeNames: assigneeNames,
     dueDate: dueDate,
@@ -239,6 +308,8 @@ class Task {
     customFields: customFields,
     attachmentCount: attachmentCount,
     commentCount: commentCount,
+    rating: rating,
     viewers: viewers,
+    comments: comments,
   );
 }

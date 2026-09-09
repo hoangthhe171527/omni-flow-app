@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../../core/utils/formatters.dart';
 import '../../../../design/tokens/tokens.dart';
 import '../../domain/task.dart';
+import 'edit_sheets.dart';
 
 /// Phần chỉ người GIAO việc thấy.
 ///
@@ -14,11 +15,25 @@ import '../../domain/task.dart';
 /// Ranh giới đi qua `TaskAccess.isAssigner`, tức qua QUYỀN. Không qua tên vai
 /// trò: vai trò do từng tenant tự đặt tên.
 class AssignerPanel extends StatelessWidget {
-  const AssignerPanel({super.key, required this.task, this.onMoveSection});
+  const AssignerPanel({
+    super.key,
+    required this.task,
+    this.onMoveSection,
+    this.onAssign,
+    this.onEditDueDate,
+    this.onEditPriority,
+  });
 
   final Task task;
 
   final VoidCallback? onMoveSection;
+
+  /// Mở bộ chọn người làm. Null thì dòng "Người làm" chỉ đọc như trước.
+  final VoidCallback? onAssign;
+
+  final VoidCallback? onEditDueDate;
+
+  final VoidCallback? onEditPriority;
 
   @override
   Widget build(BuildContext context) {
@@ -46,6 +61,9 @@ class AssignerPanel extends StatelessWidget {
                 ? 'Chưa gán ai'
                 : task.assigneeNames.join(', '),
             muted: task.assigneeNames.isEmpty,
+            // Chạm vào chính dòng đang nói "chưa gán ai" để gán — chỗ người ta
+            // nhìn cũng là chỗ người ta bấm, không phải một nút ở tận đâu.
+            onTap: onAssign,
           ),
           // Hạn mang theo TÌNH TRẠNG của nó, không chỉ con số.
           //
@@ -67,6 +85,7 @@ class AssignerPanel extends StatelessWidget {
               _ => Formatters.date(task.dueDate!),
             },
             muted: task.dueDate == null,
+            onTap: onEditDueDate,
             tone: switch (task) {
               _ when task.daysOverdue != null => _Tone.danger,
               _ when task.isDueToday => _Tone.warning,
@@ -76,12 +95,13 @@ class AssignerPanel extends StatelessWidget {
           _Row(
             icon: Icons.flag_outlined,
             label: 'Ưu tiên',
-            value: _priorityLabel(task.priority),
+            value: priorityLabel(task.priority),
+            onTap: onEditPriority,
           ),
           _Row(
             icon: Icons.view_column_outlined,
-            label: 'Công đoạn',
-            value: task.sectionName ?? 'Chưa xếp công đoạn',
+            label: 'Nhóm việc',
+            value: task.sectionName ?? 'Chưa xếp nhóm việc',
             muted: task.sectionName == null,
           ),
           if (onMoveSection != null) ...[
@@ -89,25 +109,13 @@ class AssignerPanel extends StatelessWidget {
             OutlinedButton.icon(
               onPressed: onMoveSection,
               icon: const Icon(Icons.swap_horiz_rounded),
-              label: const Text('Chuyển công đoạn'),
+              label: const Text('Chuyển nhóm việc'),
             ),
           ],
         ],
       ),
     );
   }
-
-  /// Nhãn tiếng Việt cho ba mức API dùng.
-  ///
-  /// Giá trị lạ hiện nguyên văn chứ không rơi về "Bình thường": một dự án
-  /// thêm mức "khẩn" mà app im lặng hạ nó xuống bình thường là cách một việc
-  /// gấp bị bỏ quên.
-  String _priorityLabel(String priority) => switch (priority) {
-    'high' => 'Cao',
-    'med' || 'medium' => 'Bình thường',
-    'low' => 'Thấp',
-    _ => priority,
-  };
 }
 
 /// Sắc thái của một dòng. Chỉ ba: bình thường, cần để ý, đã hỏng.
@@ -120,6 +128,7 @@ class _Row extends StatelessWidget {
     required this.value,
     this.muted = false,
     this.tone = _Tone.plain,
+    this.onTap,
   });
 
   final IconData icon;
@@ -127,6 +136,9 @@ class _Row extends StatelessWidget {
   final String value;
   final bool muted;
   final _Tone tone;
+
+  /// Dòng sửa được thì bấm được. Null = chỉ đọc, và không hiện mũi tên.
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -142,7 +154,7 @@ class _Row extends StatelessWidget {
       _Tone.plain => muted ? scheme.onSurfaceVariant : scheme.onSurface,
     };
 
-    return Padding(
+    final row = Padding(
       padding: const EdgeInsets.symmetric(vertical: OmniSpacing.sm),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -170,8 +182,20 @@ class _Row extends StatelessWidget {
               ),
             ),
           ),
+          // Mũi tên CHỈ hiện ở dòng sửa được. Đặt nó lên mọi dòng thì nó thôi
+          // là tín hiệu và thành đường viền.
+          if (onTap != null)
+            Icon(
+              Icons.chevron_right_rounded,
+              size: OmniIconSize.md,
+              color: scheme.onSurfaceVariant,
+            ),
         ],
       ),
     );
+
+    if (onTap == null) return row;
+
+    return InkWell(onTap: onTap, borderRadius: OmniRadius.mdAll, child: row);
   }
 }

@@ -43,7 +43,7 @@ class TeamsPage extends ConsumerWidget {
             icon: Icons.workspaces_outline,
             title: 'Chưa có team nào',
             message: isAssigner
-                ? 'Tạo một team để nhóm các kế hoạch của xưởng lại.'
+                ? 'Tạo một team để nhóm các kế hoạch lại.'
                 : 'Khi bạn được thêm vào một kế hoạch, nó sẽ hiện ở đây.',
           ),
           data: (list) => ListView.separated(
@@ -85,7 +85,7 @@ class TeamsPage extends ConsumerWidget {
             minTileHeight: 56,
             leading: const Icon(Icons.assignment_outlined),
             title: const Text('Tạo kế hoạch'),
-            subtitle: const Text('Các công đoạn và công việc trong đó'),
+            subtitle: const Text('Các nhóm việc và công việc trong đó'),
             onTap: () => Navigator.of(context).pop(_CreateChoice.plan),
           ),
           const SizedBox(height: OmniSpacing.sm),

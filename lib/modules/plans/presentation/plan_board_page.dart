@@ -6,12 +6,19 @@ import '../../../design/components/components.dart';
 import '../../../design/platform/omni_motion_scope.dart';
 import '../../../design/tokens/tokens.dart';
 import '../../tasks/domain/task.dart';
+import '../../tasks/application/tasks_providers.dart';
+import '../../tasks/presentation/create_task_page.dart';
 import '../../tasks/presentation/widgets/task_card.dart';
+import '../../tasks/routes.dart';
 import '../../tasks/tasks_module.dart';
 import '../application/plans_providers.dart';
 import '../data/plans_api.dart';
 import '../domain/plan.dart';
+import 'edit_sections_page.dart';
 import 'widgets/section_pager.dart';
+
+/// Chỗ nút "Việc mới" chiếm, cộng vào đáy danh sách để nó không che thẻ cuối.
+const double _fabInset = 72;
 
 /// Bảng công việc của một kế hoạch: mỗi màn lướt ngang là MỘT nhóm việc.
 ///
@@ -44,8 +51,34 @@ class _PlanBoardPageState extends ConsumerState<PlanBoardPage> {
     final plan = ref.watch(planProvider(widget.planId));
     final tasks = ref.watch(planTasksProvider(widget.planId));
 
+    final loaded = plan.valueOrNull;
+
     return Scaffold(
-      appBar: AppBar(title: Text(plan.valueOrNull?.name ?? 'Kế hoạch')),
+      appBar: AppBar(
+        title: Text(loaded?.name ?? 'Kế hoạch'),
+        actions: [
+          // Sửa các cột của chính cái bảng đang nhìn. Nhóm việc trước đây
+          // chỉ khai được lúc tạo kế hoạch, nên một cái tên gõ nhầm là phải
+          // tạo lại cả kế hoạch — mà công việc thì đã nằm trong đó rồi.
+          if (loaded != null && ref.watch(taskAccessProvider).isAssigner)
+            IconButton(
+              onPressed: _editSections,
+              icon: const Icon(Icons.view_column_outlined),
+              tooltip: 'Sửa nhóm việc',
+            ),
+        ],
+      ),
+      // Nút tạo nằm trên BẢNG, không nằm ở "Việc của tôi": ở đây kế hoạch và
+      // cột đang đứng đã biết sẵn, nên việc mới ra đời đúng chỗ mà không phải
+      // hỏi thêm câu nào. Ở "Việc của tôi" thì cả hai đều phải hỏi.
+      floatingActionButton:
+          loaded == null || !ref.watch(taskAccessProvider).canCreate
+          ? null
+          : FloatingActionButton.extended(
+              onPressed: () => _createTask(loaded),
+              icon: const Icon(Icons.add_rounded),
+              label: const Text('Việc mới'),
+            ),
       body: OmniAsyncView(
         value: plan,
         onRetry: () => ref.invalidate(planProvider(widget.planId)),
@@ -63,6 +96,39 @@ class _PlanBoardPageState extends ConsumerState<PlanBoardPage> {
 
   int _columnCount(Plan plan) =>
       plan.sections.isEmpty ? 1 : plan.sections.length;
+
+  Future<void> _editSections() async {
+    await Navigator.of(context).push<bool>(
+      MaterialPageRoute(
+        builder: (_) => EditSectionsPage(planId: widget.planId),
+      ),
+    );
+  }
+
+  /// Mở màn tạo việc với kế hoạch + cột đang đứng điền sẵn.
+  Future<void> _createTask(Plan plan) async {
+    final sections = plan.sections;
+    final current = _current.clamp(0, _columnCount(plan) - 1);
+
+    final created = await context.pushNamed<String>(
+      TaskRoutes.create,
+      extra: CreateTaskArgs(
+        planId: plan.id,
+        sectionId: sections.isEmpty ? null : sections[current].id,
+        // Chép sang value type của module tasks. `PlanSection` sống ở plans,
+        // và bắt tasks biết kiểu đó là đóng một vòng phụ thuộc.
+        sections: [
+          for (final s in sections) TaskSection(id: s.id, name: s.name),
+        ],
+      ),
+    );
+
+    // Chỉ làm mới khi thật sự tạo được. Huỷ giữa chừng mà vẫn gọi lại mạng là
+    // bắt người dùng chờ một lượt tải cho một việc họ vừa quyết định không làm.
+    if (created != null && mounted) {
+      ref.invalidate(planTasksProvider(widget.planId));
+    }
+  }
 }
 
 class _Board extends StatelessWidget {
@@ -157,7 +223,7 @@ class _Column extends StatelessWidget {
       return OmniEmptyState(
         icon: Icons.inbox_outlined,
         title: 'Chưa có việc ở "${section.name}"',
-        message: 'Việc chuyển sang công đoạn này sẽ hiện ở đây.',
+        message: 'Việc chuyển sang nhóm việc này sẽ hiện ở đây.',
       );
     }
 
@@ -166,12 +232,20 @@ class _Column extends StatelessWidget {
         OmniSpacing.lg,
         0,
         OmniSpacing.lg,
-        OmniSpacing.bottomSafe,
+        // Chừa chỗ cho nút "Việc mới": nó nổi trên danh sách, nên cột đầy
+        // việc thì nó che mất đúng thẻ cuối — thẻ người ta phải cuộn xa nhất
+        // mới tới.
+        OmniSpacing.bottomSafe + _fabInset,
       ),
       itemCount: tasks.length,
       separatorBuilder: (_, _) => const SizedBox(height: OmniSpacing.sm),
       itemBuilder: (context, index) => TaskCard(
         task: tasks[index],
+        // Tiêu đề màn đã LÀ tên kế hoạch, và cả bảng chỉ thuộc một kế hoạch.
+        // In lại trên từng thẻ là ba dòng giống nhau trên một màn hình.
+        // Ở "Việc của tôi" thì ngược lại: việc đến từ nhiều kế hoạch, nên ở
+        // đó dòng này là thứ phân biệt.
+        showPlanName: false,
         onTap: () => context.pushNamed(
           TasksModule.detail,
           pathParameters: {'id': tasks[index].id},
@@ -209,7 +283,7 @@ class _TruncatedNotice extends StatelessWidget {
           Expanded(
             child: Text(
               'Kế hoạch này có hơn $kMaxTasksOnBoard việc. Bảng đang hiện '
-              '$kMaxTasksOnBoard việc đầu theo thứ tự xưởng xếp.',
+              '$kMaxTasksOnBoard việc đầu theo thứ tự trên bảng.',
               style: Theme.of(context).textTheme.labelMedium?.copyWith(
                 color: OmniColors.warningTextOf(context),
               ),

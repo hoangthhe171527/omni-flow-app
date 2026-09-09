@@ -48,7 +48,7 @@ class _CreateTeamPageState extends ConsumerState<CreateTeamPage> {
             textCapitalization: TextCapitalization.sentences,
             decoration: const InputDecoration(
               labelText: 'Tên team',
-              hintText: 'Xưởng TNP',
+              hintText: 'Tổ sản xuất, Nhóm kinh doanh…',
             ),
             onChanged: (_) => setState(() {}),
           ),

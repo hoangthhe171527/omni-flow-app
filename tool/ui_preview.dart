@@ -243,7 +243,114 @@ class _StubTasksApi implements TasksApi {
   }
 
   @override
-  Future<void> comment(String taskId, String body) async {}
+  Future<Task> create({
+    required String title,
+    String? projectId,
+    String? sectionId,
+    List<String> assigneeIds = const [],
+    DateTime? dueDate,
+  }) async {
+    await Future<void>.delayed(const Duration(milliseconds: 400));
+    final row = <String, dynamic>{
+      'id': 't${_rows.length + 1}',
+      'title': title,
+      'project_id': projectId,
+      'section_id': sectionId,
+      'assignee_ids': assigneeIds,
+      'checklist': <Map<String, dynamic>>[],
+    };
+    _rows.add(row);
+
+    return Task.fromJson(row);
+  }
+
+  @override
+  Future<Task> addSubtask(String taskId, String title) async {
+    await Future<void>.delayed(const Duration(milliseconds: 300));
+    final row = _rows.firstWhere((t) => t['id'] == taskId);
+    final list = [...(row['checklist'] as List? ?? const [])];
+    list.add({'id': 'c${list.length + 1}', 'title': title, 'done': false});
+    row['checklist'] = list;
+
+    return Task.fromJson(row);
+  }
+
+  @override
+  Future<Task> renameSubtask(
+    String taskId,
+    String subtaskId,
+    String title,
+  ) async {
+    await Future<void>.delayed(const Duration(milliseconds: 300));
+    final row = _rows.firstWhere((t) => t['id'] == taskId);
+    row['checklist'] = [
+      for (final item in (row['checklist'] as List? ?? const []))
+        if ((item as Map)['id'] == subtaskId)
+          {...item, 'title': title}
+        else
+          item,
+    ];
+
+    return Task.fromJson(row);
+  }
+
+  @override
+  Future<Task> removeSubtask(String taskId, String subtaskId) async {
+    await Future<void>.delayed(const Duration(milliseconds: 300));
+    final row = _rows.firstWhere((t) => t['id'] == taskId);
+    row['checklist'] = [
+      for (final item in (row['checklist'] as List? ?? const []))
+        if ((item as Map)['id'] != subtaskId) item,
+    ];
+
+    return Task.fromJson(row);
+  }
+
+  @override
+  Future<Task> setTitle(String taskId, String title) =>
+      _edit(taskId, 'title', title);
+
+  @override
+  Future<Task> setDescription(String taskId, String description) =>
+      _edit(taskId, 'description', description);
+
+  @override
+  Future<Task> setPriority(String taskId, String priority) =>
+      _edit(taskId, 'priority', priority);
+
+  @override
+  Future<Task> setDueDate(String taskId, DateTime? dueDate) => _edit(
+    taskId,
+    'due_date',
+    dueDate?.toIso8601String().split('T').first ?? '',
+  );
+
+  Future<Task> _edit(String taskId, String field, Object? value) async {
+    await Future<void>.delayed(const Duration(milliseconds: 300));
+    final row = _rows.firstWhere((t) => t['id'] == taskId);
+    row[field] = value;
+
+    return Task.fromJson(row);
+  }
+
+  @override
+  Future<Task> setAssignees(String taskId, List<String> userIds) async {
+    await Future<void>.delayed(const Duration(milliseconds: 400));
+    final row = _rows.firstWhere((t) => t['id'] == taskId);
+    row['assignee_ids'] = userIds;
+    // Bản xem trước không có danh bạ thật, nên dựng tên từ id để màn hình vẫn
+    // đổi thấy được sau khi gán.
+    row['assignee_names'] = userIds.map((id) => 'Người $id').toList();
+
+    return Task.fromJson(row);
+  }
+
+  @override
+  Future<Task> comment(String taskId, String body) => get(taskId);
+
+  @override
+  Future<Task> setRating(String taskId, int rating) =>
+      _edit(taskId, 'rating', rating);
 
   @override
   Future<void> attach(

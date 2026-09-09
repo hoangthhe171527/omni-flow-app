@@ -7,33 +7,29 @@ import '../application/plans_providers.dart';
 import '../data/plans_api.dart';
 import '../domain/team.dart';
 
-/// Năm công đoạn của xưởng piano, điền sẵn.
+/// Bốn nhóm việc điền sẵn cho một kế hoạch mới.
 ///
-/// Lấy từ `docs/TNP_PIANO_WORKSHOP_FLOW.md`: Nhập xưởng → Đang phục chế →
-/// Chờ QC → Hoàn thiện → Đã giao. Điền sẵn chứ không bắt buộc — một xưởng
-/// khác sửa được, nhưng xưởng này thì không phải gõ lại năm lần cho mỗi kế
-/// hoạch mới.
-const kWorkshopSections = <String>[
-  'Nhập xưởng',
-  'Đang phục chế',
-  'Chờ QC',
-  'Hoàn thiện',
-  'Đã giao',
-];
+/// Cố ý CHUNG, không theo ngành nào. App này dùng cho nhiều loại công việc —
+/// xưởng phục chế đàn chỉ là một khách hàng — nên thứ điền sẵn cho mọi tenant
+/// phải là thứ ai đọc cũng hiểu. Bộ trước đây là năm cột của xưởng piano
+/// ("Nhập xưởng → Đang phục chế → Chờ QC → …"), và mọi khách mới đều nhận
+/// đúng năm chữ đó.
+///
+/// Điền sẵn chứ không bắt buộc: sửa, xoá, thêm đều được ngay trên màn tạo.
+/// Khách có quy trình riêng khai một lần rồi nhân bản kế hoạch hằng tháng
+/// (`POST /projects/{id}/copy`), nên không ai phải gõ lại mỗi tháng.
+const kDefaultSections = <String>['Cần làm', 'Đang làm', 'Chờ duyệt', 'Xong'];
 
-/// Công đoạn nào đặt CỔNG QC: vào đây thì checklist của cây đàn phải xong.
+/// Nhóm việc nào đặt CỔNG: vào đây thì mọi việc con phải xong trước.
 ///
-/// Theo `docs/TNP_PIANO_WORKSHOP_FLOW.md`:
-///   - §B3 "đủ 10/10 → kéo sang `Chờ QC`" — cổng đầu tiên nằm ở đây, tức cột
-///     GIỮA của năm cột, không phải cột cuối.
-///   - §B4 "số cây hoàn thành tháng = số card vào cột `Hoàn thiện`" — đây là
-///     chỗ con số thưởng được đếm, nên nó cũng phải có cổng.
-///   - `Đã giao` có cổng để không ai đi đường vòng qua hai cột trên.
+/// "Chờ duyệt" và "Xong" là hai chỗ một công việc được tuyên bố là làm xong —
+/// và tuyên bố đó sai khi việc con còn dở. Hai nhóm đầu không có cổng, vì
+/// chúng là nơi việc đang chạy.
 ///
-/// Chỉ áp cho kế hoạch tạo MỚI bằng bộ công đoạn xưởng. Kế hoạch đã có và
-/// công đoạn người dùng tự thêm đều không có cổng — bật cổng cho dữ liệu cũ
-/// là chặn công việc đang chạy bằng một quy tắc nó chưa từng biết.
-const kGatedWorkshopSections = <String>{'Chờ QC', 'Hoàn thiện', 'Đã giao'};
+/// Chỉ áp cho kế hoạch tạo MỚI bằng bộ điền sẵn. Kế hoạch đã có và nhóm việc
+/// người dùng tự thêm đều không có cổng — bật cổng cho dữ liệu cũ là chặn
+/// công việc đang chạy bằng một quy tắc nó chưa từng biết.
+const kGatedDefaultSections = <String>{'Chờ duyệt', 'Xong'};
 
 class CreatePlanPage extends ConsumerStatefulWidget {
   const CreatePlanPage({super.key});
@@ -44,7 +40,7 @@ class CreatePlanPage extends ConsumerStatefulWidget {
 
 class _CreatePlanPageState extends ConsumerState<CreatePlanPage> {
   final _name = TextEditingController();
-  final _sections = [...kWorkshopSections];
+  final _sections = [...kDefaultSections];
   String? _teamId;
   bool _saving = false;
   String? _error;
@@ -98,7 +94,7 @@ class _CreatePlanPageState extends ConsumerState<CreatePlanPage> {
           ),
           const SizedBox(height: OmniSpacing.xs),
           Text(
-            'Mỗi nhóm việc là một công đoạn, và là một cột trên bảng.',
+            'Mỗi nhóm việc là một cột trên bảng.',
             style: text.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
           ),
           const SizedBox(height: OmniSpacing.md),
@@ -163,7 +159,7 @@ class _CreatePlanPageState extends ConsumerState<CreatePlanPage> {
               for (final s in _sections)
                 if (s.trim().isNotEmpty) s.trim(),
             ],
-            gatedSectionNames: kGatedWorkshopSections,
+            gatedSectionNames: kGatedDefaultSections,
           );
 
       ref.invalidate(teamsWithPlansProvider);
@@ -245,7 +241,7 @@ class _SectionRowState extends State<_SectionRow> {
             child: TextField(
               controller: _controller,
               decoration: InputDecoration(
-                hintText: 'Tên công đoạn ${widget.index + 1}',
+                hintText: 'Tên nhóm việc ${widget.index + 1}',
                 isDense: true,
               ),
               onChanged: widget.onChanged,

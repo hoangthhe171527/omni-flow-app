@@ -82,6 +82,45 @@ class TasksApi {
     return Task.fromJson(response.object);
   }
 
+  /// Thêm một việc con vào cuối danh sách.
+  ///
+  /// Id do SERVER sinh: hai người thêm cùng lúc mà client tự sinh id thì có thể
+  /// trùng, và một checklist có hai mục cùng id thì mọi lệnh sau đó trỏ nhầm.
+  Future<Task> addSubtask(String taskId, String title) async {
+    final response = await _client.post(
+      '$_base/$taskId/checklist',
+      body: {'title': title},
+    );
+
+    return Task.fromJson(response.object);
+  }
+
+  /// Đổi tên một việc con.
+  ///
+  /// Một lệnh cho một việc con, không PUT cả mảng checklist: hai người sửa hai
+  /// mục khác nhau trên cùng công việc sẽ ghi đè nhau, vì mỗi bên gửi lên một
+  /// bản chụp của cả mảng.
+  Future<Task> renameSubtask(
+    String taskId,
+    String subtaskId,
+    String title,
+  ) async {
+    final response = await _client.patch(
+      '$_base/$taskId/checklist/$subtaskId',
+      body: {'title': title},
+    );
+
+    return Task.fromJson(response.object);
+  }
+
+  Future<Task> removeSubtask(String taskId, String subtaskId) async {
+    final response = await _client.delete(
+      '$_base/$taskId/checklist/$subtaskId',
+    );
+
+    return Task.fromJson(response.object);
+  }
+
   Future<Task> setStatus(String taskId, String status) async {
     final response = await _client.patch(
       '$_base/$taskId/status',
@@ -111,8 +150,107 @@ class TasksApi {
     return Task.fromJson(response.object);
   }
 
-  Future<void> comment(String taskId, String body) =>
-      _client.post('$_base/$taskId/comments', body: {'content': body});
+  /// Tạo một công việc mới.
+  ///
+  /// Chỉ `title` là bắt buộc — đúng như API. Mọi thứ khác bỏ trống được, vì
+  /// người tạo việc thường đang đứng giữa ca làm và chỉ kịp gõ cái tên; điền
+  /// nốt là chuyện của màn chi tiết sau đó.
+  ///
+  /// Trường nào null thì KHÔNG gửi, chứ không gửi null: `UpdateTaskDTO` bỏ qua
+  /// null, nên gửi cũng vô ích, và một thân request đầy null làm nhật ký khó
+  /// đọc khi cần truy lại ai đã đặt gì.
+  Future<Task> create({
+    required String title,
+    String? projectId,
+    String? sectionId,
+    List<String> assigneeIds = const [],
+    DateTime? dueDate,
+  }) async {
+    final response = await _client.post(
+      _base,
+      body: {
+        'title': title,
+        if (projectId != null && projectId.isNotEmpty) 'project_id': projectId,
+        if (sectionId != null && sectionId.isNotEmpty) 'section_id': sectionId,
+        if (assigneeIds.isNotEmpty) 'assignee_ids': assigneeIds,
+        // API nhận `YYYY-MM-DD` và tự hiểu theo múi giờ nghiệp vụ. Gửi cả giờ
+        // là mời nó lệch một ngày ở hai đầu tháng.
+        if (dueDate != null) 'due_date': _ymd(dueDate),
+      },
+    );
+
+    return Task.fromJson(response.object);
+  }
+
+  static String _ymd(DateTime date) =>
+      '${date.year.toString().padLeft(4, '0')}-'
+      '${date.month.toString().padLeft(2, '0')}-'
+      '${date.day.toString().padLeft(2, '0')}';
+
+  /// Đổi tên công việc.
+  Future<Task> setTitle(String taskId, String title) =>
+      _patch(taskId, {'title': title});
+
+  /// Đổi mô tả. Chuỗi rỗng là xoá mô tả — một lựa chọn hợp lệ.
+  Future<Task> setDescription(String taskId, String description) =>
+      _patch(taskId, {'description': description});
+
+  /// Đổi mức ưu tiên. API nhận `low` | `med` | `high`.
+  Future<Task> setPriority(String taskId, String priority) =>
+      _patch(taskId, {'priority': priority});
+
+  /// Chấm điểm QC, 0–5 sao. 0 = xoá điểm đã chấm.
+  ///
+  /// Gửi số 0 chứ không gửi null: `UpdateTaskDTO::toAttributes` lọc bỏ đúng
+  /// những trường null, nên null sẽ lặng lẽ không làm gì. Cùng cái bẫy đã
+  /// gặp ở `section_id` và `due_date`.
+  Future<Task> setRating(String taskId, int rating) =>
+      _patch(taskId, {'rating': rating.clamp(0, 5)});
+
+  /// Đặt hoặc XOÁ hạn.
+  ///
+  /// null = xoá, và gửi đi bằng chuỗi rỗng chứ không phải null: bên API,
+  /// `UpdateTaskDTO::toAttributes` lọc bỏ đúng những trường null, nên gửi null
+  /// sẽ không xoá được gì — nó lặng lẽ không làm gì cả. Cùng cái bẫy đã gặp ở
+  /// `section_id`.
+  Future<Task> setDueDate(String taskId, DateTime? dueDate) =>
+      _patch(taskId, {'due_date': dueDate == null ? '' : _ymd(dueDate)});
+
+  /// Đặt lại TOÀN BỘ danh sách người làm.
+  ///
+  /// API ghi đè `assignee_ids` chứ không thêm/bớt từng người, nên chỗ gọi phải
+  /// gửi danh sách đầy đủ sau thay đổi. Gửi thiếu một người là gỡ họ ra khỏi
+  /// việc — im lặng, và người đó mất luôn thông báo lẫn việc trong danh sách
+  /// của mình.
+  ///
+  /// Danh sách rỗng gửi được và có nghĩa: trả việc về "chưa gán ai".
+  Future<Task> setAssignees(String taskId, List<String> userIds) =>
+      _patch(taskId, {'assignee_ids': userIds});
+
+  /// Ghi MỘT trường của công việc.
+  ///
+  /// API chỉ có PUT /tasks/{id} và nó ghi đúng những trường được gửi, nên gửi
+  /// một trường là sửa một trường — không cần đọc rồi ghi lại cả bản ghi, và
+  /// hai người sửa hai trường khác nhau không đè lên nhau.
+  Future<Task> _patch(String taskId, Map<String, dynamic> body) async {
+    final response = await _client.put('$_base/$taskId', body: body);
+
+    return Task.fromJson(response.object);
+  }
+
+  /// Viết một bình luận, và nhận về công việc đã có nó.
+  ///
+  /// Khoá là `body`, KHÔNG phải `content`. Bản trước gửi `content` và server
+  /// trả 422 cho mọi bình luận gửi từ app — không ai phát hiện vì chưa màn
+  /// hình nào gọi tới hàm này. Xem `CreateTaskCommentRequest`.
+  Future<Task> comment(String taskId, String body) async {
+    final response = await _client.post(
+      '$_base/$taskId/comments',
+      body: {'body': body},
+    );
+
+    return Task.fromJson(response.object);
+  }
 
   Future<void> attach(String taskId, String filePath, {String? filename}) =>
       _client.upload(

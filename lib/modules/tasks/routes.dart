@@ -12,4 +12,5 @@ library;
 abstract final class TaskRoutes {
   static const list = 'tasks.list';
   static const detail = 'tasks.detail';
+  static const create = 'tasks.create';
 }

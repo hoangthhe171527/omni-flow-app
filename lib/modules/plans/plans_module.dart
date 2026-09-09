@@ -7,6 +7,8 @@ import '../../security/guard/access_requirement.dart';
 import '../tasks/domain/task_permissions.dart';
 import 'presentation/plan_board_page.dart';
 import 'presentation/teams_page.dart';
+import 'presentation/timeline_page.dart';
+import 'routes.dart';
 
 /// Tầng trên của cây công việc: Team → Kế hoạch → Nhóm việc → Công việc.
 ///
@@ -20,8 +22,9 @@ import 'presentation/teams_page.dart';
 class PlansModule extends OmniModule {
   const PlansModule();
 
-  static const teams = 'plans.teams';
-  static const board = 'plans.board';
+  static const teams = PlanRoutes.teams;
+  static const board = PlanRoutes.board;
+  static const timeline = PlanRoutes.timeline;
 
   @override
   String get id => 'plans';
@@ -34,6 +37,12 @@ class PlansModule extends OmniModule {
 
   @override
   List<ModuleRoute> routes() => [
+    ModuleRoute(
+      path: '/timeline',
+      name: timeline,
+      access: const AccessRequirement.any(TaskPermissions.anyRead),
+      builder: (_, _) => const TimelinePage(),
+    ),
     ModuleRoute(
       path: '/teams',
       name: teams,
@@ -53,8 +62,22 @@ class PlansModule extends OmniModule {
   List<ModuleNavEntry> navEntries() => const [
     ModuleNavEntry(
       moduleId: 'plans',
+      label: 'Dòng việc',
+      subtitle: 'Hoạt động gần đây của cả nhóm, và KPI tháng',
+      icon: Icons.timeline_outlined,
+      selectedIcon: Icons.timeline_rounded,
+      routeName: timeline,
+      area: NavArea.work,
+      weight: NavWeight.primary,
+      // Sau "Việc của tôi" (10) và "Teams" (20). Thợ mở hàng đợi trước,
+      // toàn cảnh sau, rồi mới tới dòng thời gian.
+      order: 30,
+      access: AccessRequirement.any(TaskPermissions.anyRead),
+    ),
+    ModuleNavEntry(
+      moduleId: 'plans',
       label: 'Teams',
-      subtitle: 'Kế hoạch và công đoạn của xưởng',
+      subtitle: 'Kế hoạch và nhóm việc của team',
       icon: Icons.workspaces_outline,
       selectedIcon: Icons.workspaces_rounded,
       routeName: teams,

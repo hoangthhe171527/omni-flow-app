@@ -25,8 +25,12 @@ void main() {
     ],
   });
 
-  Task task(String id, String title, {String? sectionId}) =>
-      Task.fromJson({'id': id, 'title': title, 'section_id': ?sectionId});
+  Task task(String id, String title, {String? sectionId}) => Task.fromJson({
+    'id': id,
+    'title': title,
+    'section_id': ?sectionId,
+    'project_name': 'Đàn cơ',
+  });
 
   Widget host({
     required Plan plan,
@@ -47,6 +51,25 @@ void main() {
       ),
     ),
   );
+
+  testWidgets('thẻ KHÔNG lặp lại tên kế hoạch', (tester) async {
+    // Tiêu đề màn đã là "Đàn cơ", và cả bảng chỉ thuộc một kế hoạch. In lại
+    // trên từng thẻ là ba dòng giống hệt nhau trên một màn hình bằng bàn tay.
+    await tester.pumpWidget(
+      host(
+        plan: plan,
+        tasks: [
+          task('t1', 'KAWAI HAT-5', sectionId: 's1'),
+          task('t2', 'YAMAHA U1H', sectionId: 's1'),
+        ],
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    // Đúng một lần: ở tiêu đề màn.
+    expect(find.text('Đàn cơ'), findsOneWidget);
+    expect(find.text('KAWAI HAT-5'), findsOneWidget);
+  });
 
   testWidgets('mỗi màn đúng MỘT nhóm việc, không hé cột bên cạnh', (
     tester,
