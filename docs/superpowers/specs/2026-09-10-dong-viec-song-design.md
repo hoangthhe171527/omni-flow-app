@@ -3,7 +3,7 @@
 **Ngày:** 2026-09-10
 **Phạm vi:** `omni-flow-app` (chính), `omni-flow-api` (feed + push), `omni-flow` (web — chỉ phải KHÔNG hỏng)
 **Nguồn nghiệp vụ:** `omni-flow-api/docs/TNP_PIANO_WORKSHOP_FLOW.md` §B2, §B4
-**Tiền đề:** `docs/superpowers/specs/2026-09-05-viomni-redesign-design.md` (đã xong — tầng Team → Kế hoạch → Nhóm việc)
+**Tiền đề:** `docs/superpowers/specs/2026-09-05-viomni-redesign-design.md` (đã xong — tầng Team → Dự án → Nhóm việc)
 
 Đây là dự án con **thứ nhất trong ba**. Hai cái còn lại đã tách riêng, mỗi cái
 một vòng spec → kế hoạch → thi công:
@@ -75,7 +75,7 @@ Bốn provider theo dõi tín hiệu mà không nơi nào mở kênh cho:
 
 | Provider | Màn hình |
 |---|---|
-| `planTasksProvider` (`plans_providers.dart:92`) | Bảng kế hoạch |
+| `planTasksProvider` (`plans_providers.dart:92`) | Bảng dự án |
 | `workshopKpiProvider` (`plans_providers.dart:103`) | Thẻ KPI |
 | `workshopFeedProvider` (`plans_providers.dart:125`) | Dòng việc |
 | `workloadProvider` (`tasks_providers.dart:168`) | Tải việc của một người (`workload_page.dart`) |
@@ -157,7 +157,7 @@ Trong DB **không có** loại `piano_done`. "Cây đàn xong" trong KPI là ho�
 (`modules/Tasks/Domain/Support/WorkshopKpi.php:60`) — **không phải**
 `status = done`.
 
-Server đọc `section_id` của hoạt động, tra cờ trên nhóm việc của kế hoạch, và
+Server đọc `section_id` của hoạt động, tra cờ trên nhóm việc của dự án, và
 gắn nhãn `piano_done` cho dòng khớp.
 
 Suy ở **server** vì client không có bảng nhóm việc trong tay. Để client đoán
@@ -286,7 +286,7 @@ Gộp đăng ký kênh vào **chính provider tín hiệu**: `taskRealtimeSignal
 `tasksRealtimeSubscriptionProvider` **bị xoá**. Không giữ lại như alias: một
 provider không còn tác dụng mà vẫn còn tên là cái bẫy tiếp theo.
 
-Lợi kèm theo: bảng kế hoạch và thẻ KPI được sửa cùng lúc, không tốn thêm dòng.
+Lợi kèm theo: bảng dự án và thẻ KPI được sửa cùng lúc, không tốn thêm dòng.
 
 ### 6.2 Gộp nhịp — 400ms
 
@@ -441,7 +441,7 @@ và không tìm thấy bản cài ở các vị trí thường gặp (kiểm ng�
 | R2 | Cửa sổ 15 phút gộp ảnh (§4.5) khớp nhịp xưởng | Ảnh rơi ra thành dòng riêng — vẫn thấy, chỉ kém gọn. Chỉnh số là xong. |
 | R3 | Trần 200 task đủ cho 7 ngày | Cờ `truncated` nói ra thay vì cắt im lặng (§4.6). |
 | R4 | Quản đốc chịu được ~50 push/ngày | Công tắc §7.4 là lối thoát; §7.5 là bước kế tiếp. |
-| R5 | Mọi kế hoạch đều đã đánh dấu `counts_for_kpi` | Chưa đánh dấu → không có dòng `piano_done`. Dòng chữ nhỏ ở §5.2 dẫn tới chỗ sửa. |
+| R5 | Mọi dự án đều đã đánh dấu `counts_for_kpi` | Chưa đánh dấu → không có dòng `piano_done`. Dòng chữ nhỏ ở §5.2 dẫn tới chỗ sửa. |
 
 **R1 là rủi ro chặn.** Kiểm trước, không viết UI trên một giả định chưa xác minh.
 
