@@ -135,14 +135,18 @@ class _PagedApi implements PlansApi {
   @override
   Future<Plan> plan(String id) async => Plan.fromJson({'id': id, 'name': 'X'});
   @override
-  Future<Team> createTeam({required String name, String? description}) async =>
-      Team.fromJson({'id': 't', 'name': name});
+  Future<Team> createTeam({
+    required String name,
+    String? description,
+    Set<String> memberIds = const {},
+  }) async => Team.fromJson({'id': 't', 'name': name});
   @override
   Future<Plan> createPlan({
     required String name,
     String? teamId,
     List<String> sectionNames = const [],
     Set<String> gatedSectionNames = const {},
+    String? cover,
   }) async => Plan.fromJson({'id': 'p', 'name': name});
 }
 

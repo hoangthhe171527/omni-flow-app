@@ -83,6 +83,36 @@ void main() {
     );
   });
 
+  test('createTeam gửi member_ids khi có chọn người', () async {
+    // API đã nhận `member_ids` từ lâu (CreateTeamRequest, và
+    // MongoTeamRepository::create ghi nó vào org unit); app chỉ chưa bao giờ
+    // gửi. Một trường server sẵn sàng nhận mà client không gửi là cùng họ với
+    // những lỗi im lặng khác của dự án này, chỉ khác chiều.
+    await api.createTeam(name: 'Tổ phục chế', memberIds: {'u-1', 'u-2'});
+
+    final body = adapter.singleRequest.data as Map<String, dynamic>;
+
+    expect(body['member_ids'], containsAll(<String>['u-1', 'u-2']));
+  });
+
+  test('createTeam KHÔNG gửi member_ids khi không chọn ai', () async {
+    // Gửi một mảng RỖNG và không gửi gì là hai chuyện khác nhau với một API
+    // dùng `array_key_exists`.
+    await api.createTeam(name: 'Tổ phục chế');
+
+    final body = adapter.singleRequest.data as Map<String, dynamic>;
+
+    expect(body.containsKey('member_ids'), isFalse);
+  });
+
+  test('createPlan gửi cover khi có chọn nền', () async {
+    await api.createPlan(name: 'Phục chế T10', cover: 'amber-2');
+
+    final body = adapter.singleRequest.data as Map<String, dynamic>;
+
+    expect(body['cover'], 'amber-2');
+  });
+
   test('kpi gọi /tasks/kpi', () async {
     await api.kpi();
 

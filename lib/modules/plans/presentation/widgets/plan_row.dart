@@ -35,6 +35,19 @@ class PlanRow extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // Nền dự án. Không có chỗ này thì chọn nền xong không thấy ở đâu
+              // cả, và cả tính năng là một ô cấu hình không có hậu quả.
+              //
+              // `plan.cover` null với mọi dự án tạo trước tính năng — không
+              // cần kiểm, `gradientOf` tự rơi về nền mặc định.
+              Container(
+                height: 6,
+                decoration: BoxDecoration(
+                  gradient: OmniCovers.gradientOf(plan.cover),
+                  borderRadius: OmniRadius.smAll,
+                ),
+              ),
+              const SizedBox(height: OmniSpacing.md),
               Row(
                 children: [
                   Expanded(

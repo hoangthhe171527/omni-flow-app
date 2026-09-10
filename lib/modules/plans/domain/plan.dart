@@ -86,6 +86,7 @@ class Plan {
     required this.name,
     this.description,
     this.color,
+    this.cover,
     this.status = 'active',
     this.teamId,
     this.teamName,
@@ -120,6 +121,7 @@ class Plan {
       status: json.strOr('status', 'active'),
       // null với mọi dự án tạo trước tầng Team — tức là gần như tất cả
       // những gì đang có trong cơ sở dữ liệu hôm nay.
+      cover: json.str('cover'),
       teamId: json.str('team_id'),
       teamName: json.str('team_name'),
       sections: sections,
@@ -144,6 +146,13 @@ class Plan {
   final String name;
   final String? description;
   final String? color;
+
+  /// TÊN nền cho thẻ dự án (`teal-1`), không phải URL.
+  ///
+  /// Null với mọi dự án tạo trước tính năng này — `OmniCovers.gradientOf` tự
+  /// rơi về nền mặc định, nên không chỗ nào phải kiểm null.
+  final String? cover;
+
   final String status;
   final String? teamId;
 

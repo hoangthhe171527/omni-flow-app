@@ -418,6 +418,35 @@ void main() {
       expect(reread.teamName, team.name);
     });
 
+    test('team tạo kèm thành viên GIỮ ĐỦ người', () async {
+      // API nhận `member_ids` từ lâu; app chỉ chưa bao giờ gửi. Kiểu lỗi
+      // "client không gửi thứ server chờ" đã xảy ra nhiều lần ở dự án này, và
+      // chỉ một vòng đi–về qua HTTP thật mới bắt được.
+      final roster = await team.members();
+      final ids = roster.take(1).map((m) => m.userId).toSet();
+
+      final created = await plans.createTeam(
+        name: 'To co thanh vien',
+        memberIds: ids,
+      );
+
+      final found = (await plans.teams()).firstWhere((t) => t.id == created.id);
+
+      expect(found.memberIds, containsAll(ids));
+    });
+
+    test('nền dự án lưu rồi ĐỌC LẠI được', () async {
+      // `cover` phải đi qua CreateProjectRequest, CreateProjectDTO và
+      // `toAttributes()` — ba danh sách trường viết tay, và bỏ sót một chỗ nào
+      // cũng cho ra 201 rồi mất dữ liệu.
+      final plan = await plans.createPlan(
+        name: 'Ke hoach nen',
+        cover: 'amber-2',
+      );
+
+      expect((await plans.plan(plan.id)).cover, 'amber-2');
+    });
+
     test('tổ vừa tạo xuất hiện trong danh sách tổ', () async {
       final name = 'To hoan thien ${DateTime.now().microsecondsSinceEpoch}';
       final team = await plans.createTeam(name: name);

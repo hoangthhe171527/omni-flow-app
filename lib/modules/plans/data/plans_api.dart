@@ -61,13 +61,20 @@ class PlansApi {
     return response.list.map(Plan.fromJson).toList();
   }
 
-  Future<Team> createTeam({required String name, String? description}) async {
+  Future<Team> createTeam({
+    required String name,
+    String? description,
+    Set<String> memberIds = const {},
+  }) async {
     final response = await _client.post(
       '/teams',
       body: {
         'name': name,
         if (description != null && description.trim().isNotEmpty)
           'description': description.trim(),
+        // Không gửi một mảng RỖNG: "không chọn ai" và "chọn xong rồi bỏ hết"
+        // là hai chuyện khác nhau với một API dùng `array_key_exists`.
+        if (memberIds.isNotEmpty) 'member_ids': memberIds.toList(),
       },
     );
 
@@ -84,12 +91,15 @@ class PlansApi {
     String? teamId,
     List<String> sectionNames = const [],
     Set<String> gatedSectionNames = const {},
+    String? cover,
   }) async {
     final response = await _client.post(
       '/projects',
       body: {
         'name': name,
         if (teamId != null && teamId.isNotEmpty) 'team_id': teamId,
+        // TÊN nền, không phải URL — client dịch nó thành gradient.
+        if (cover != null && cover.isNotEmpty) 'cover': cover,
         if (sectionNames.isNotEmpty)
           'sections': [
             for (var i = 0; i < sectionNames.length; i++)
