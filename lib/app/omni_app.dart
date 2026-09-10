@@ -10,6 +10,7 @@ import '../core/theme/theme_mode_controller.dart';
 import '../design/theme/omni_theme.dart';
 import '../modules/inbox/inbox_module.dart';
 import '../modules/notifications/application/push_notifications.dart';
+import '../modules/tasks/application/tasks_providers.dart';
 import '../modules/tasks/tasks_module.dart';
 import '../security/session/session_controller.dart';
 import '../security/session/session.dart';
@@ -64,6 +65,13 @@ class _OmniAppState extends ConsumerState<OmniApp> with WidgetsBindingObserver {
       return;
     }
     unawaited(ref.read(pushNotificationsProvider).ensureRegistered());
+
+    // Socket có thể đã chết LẶNG trong lúc app ở nền: proxy hết hạn chờ, nhà
+    // mạng cắt kết nối dài, máy ngủ. Màn hình lúc ấy hiện dữ liệu cũ mà trông y
+    // hệt dữ liệu mới — trên dòng việc, "đứng yên" đọc giống hệt "chưa ai làm
+    // gì". Nên nối lại VÀ buộc một lượt tải lại, không tin vào socket.
+    unawaited(ref.read(realtimeClientProvider).connect());
+    ref.read(taskRealtimeSignalProvider.notifier).bump();
   }
 
   @override

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/network/api_envelope.dart';
@@ -14,12 +16,6 @@ final taskAccessProvider = Provider<TaskAccess>((ref) {
 /// Which bucket of "my work" is on screen.
 final taskBucketProvider = StateProvider<TaskBucket>((ref) => TaskBucket.today);
 
-/// Bumped when realtime says something about this user's work changed.
-///
-/// A signal, never data: acting on it means refetching through the API, which
-/// re-applies the caller's permissions. A broadcast payload has not.
-final taskRealtimeSignalProvider = StateProvider<int>((ref) => 0);
-
 /// Kênh "có thực thể vừa đổi" của tenant đang đăng nhập; null khi chưa có tenant.
 final _entityChannelProvider = Provider<String?>((ref) {
   final tenantId = ref.watch(sessionProvider).tenant?.id;
@@ -29,36 +25,70 @@ final _entityChannelProvider = Provider<String?>((ref) {
       : 'tenant.$tenantId.entities';
 });
 
-/// Nối tín hiệu ở trên vào socket.
+/// Bumped when realtime says something about this user's work changed.
 ///
-/// Thiếu mảnh này thì [taskRealtimeSignalProvider] được bốn provider theo dõi
-/// mà KHÔNG CHỖ NÀO tăng: nó vĩnh viễn bằng 0 và không bao giờ kích hoạt một
-/// lượt tải lại. Quản đốc chuyển công đoạn trên web, danh sách trong app đứng
-/// yên — mà trên một danh sách việc, "đứng yên" đọc giống hệt "chưa có gì đổi",
-/// nên hỏng mà không ai biết. Server đã phát sẵn (Task dùng
-/// BroadcastsEntityChanges) và web đã nghe sẵn (Topbar → subscribeEntities);
-/// chỉ app là chưa xin kênh.
+/// A signal, never data: acting on it means refetching through the API, which
+/// re-applies the caller's permissions. A broadcast payload has not.
 ///
-/// Đây là TÍN HIỆU, không phải dữ liệu: payload broadcast chưa đi qua bộ lọc
-/// quyền của người xem, nên phải hỏi lại API — nơi có bộ lọc đó. Lọc theo
-/// `type` vì kênh này chở mọi loại thực thể của tenant; nhận tất cả thì một
-/// khách hàng hay đơn hàng ai đó sửa cũng kéo theo một lượt tải lại danh sách
-/// việc.
-final tasksRealtimeSubscriptionProvider = Provider<void>((ref) {
-  final channel = ref.watch(_entityChannelProvider);
-  if (channel == null) return;
+/// Provider này TỰ MỞ KÊNH.
+///
+/// Trước đây việc đó nằm ở một provider thứ hai (`tasksRealtimeSubscription`)
+/// mà mọi người dùng tín hiệu phải nhớ theo dõi KÈM — và bốn trong năm chỗ đã
+/// quên: bảng dự án, thẻ KPI, dòng việc, và tải việc của một người. Chỗ duy
+/// nhất nhớ là `MyTasksController`, một provider autoDispose; nên realtime của
+/// bốn màn kia sống chết theo việc màn "Việc của tôi" có tình cờ còn trong bộ
+/// nhớ hay không. Kiểu hỏng tệ nhất: CÓ LÚC CHẠY.
+///
+/// Một mảnh thay vì hai: không còn cái để quên. `ref.watch(...)` tín hiệu này
+/// tự nó là đủ.
+final taskRealtimeSignalProvider =
+    NotifierProvider<TaskRealtimeSignal, int>(TaskRealtimeSignal.new);
 
-  final client = ref.watch(realtimeClientProvider);
-  final unsubscribe = client.subscribePrivate(channel, (event) {
+class TaskRealtimeSignal extends Notifier<int> {
+  /// Gộp các sự kiện dồn dập. Tick xong ba việc con liên tiếp là ba lần
+  /// `entity.changed` trong hai giây, và mỗi lần là một lượt quét nhật ký cả
+  /// xưởng để vẽ ra cùng một màn hình.
+  static const _coalesceWindow = Duration(milliseconds: 400);
+
+  Timer? _coalesce;
+
+  @override
+  int build() {
+    final channel = ref.watch(_entityChannelProvider);
+    if (channel != null) {
+      // Server đã phát sẵn (Task dùng BroadcastsEntityChanges) và web đã nghe
+      // sẵn (Topbar → subscribeEntities); chỉ app là chưa xin kênh.
+      final unsubscribe = ref
+          .watch(realtimeClientProvider)
+          .subscribePrivate(channel, _onEvent);
+      ref.onDispose(unsubscribe);
+    }
+
+    ref.onDispose(() => _coalesce?.cancel());
+
+    return 0;
+  }
+
+  void _onEvent(RealtimeEvent event) {
     if (event.event != 'entity.changed') return;
+    // Kênh này chở MỌI loại thực thể của tenant. Nhận tất cả thì một khách
+    // hàng hay đơn hàng ai đó sửa cũng kéo theo một lượt tải lại danh sách việc.
     if (event.data['type'] != 'task') return;
 
-    final signal = ref.read(taskRealtimeSignalProvider.notifier);
-    signal.state = signal.state + 1;
-  });
+    _coalesce?.cancel();
+    _coalesce = Timer(_coalesceWindow, () => state = state + 1);
+  }
 
-  ref.onDispose(unsubscribe);
-});
+  /// Buộc một lượt tải lại.
+  ///
+  /// Dùng khi app quay lại từ nền: socket có thể đã chết lặng trong lúc đó
+  /// (proxy hết hạn chờ, nhà mạng cắt kết nối dài), và màn hình lúc ấy hiện dữ
+  /// liệu cũ mà trông y hệt dữ liệu mới.
+  void bump() {
+    _coalesce?.cancel();
+    state = state + 1;
+  }
+}
 
 class TaskListState {
   const TaskListState({
@@ -78,10 +108,9 @@ class TaskListState {
 class MyTasksController extends AutoDisposeAsyncNotifier<TaskListState> {
   @override
   Future<TaskListState> build() async {
-    // Giữ đăng ký kênh sống cùng danh sách, không gửi lên màn hình: đặt ở màn
-    // hình thì lần sau ai dựng lại danh sách ở chỗ khác sẽ quên, và cái quên đó
-    // im lặng đúng như lần này.
-    ref.watch(tasksRealtimeSubscriptionProvider);
+    // Theo dõi tín hiệu là ĐỦ — nó tự mở kênh. Trước đây ở đây có thêm một
+    // dòng `ref.watch(tasksRealtimeSubscriptionProvider)`, và chính việc phải
+    // nhớ hai dòng thay vì một là thứ bốn màn khác đã quên.
     ref.watch(taskRealtimeSignalProvider);
     final bucket = ref.watch(taskBucketProvider);
     final page = await ref.watch(tasksApiProvider).mine(bucket: bucket);
