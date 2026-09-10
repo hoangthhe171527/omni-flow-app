@@ -406,14 +406,32 @@ Phần duy nhất chứng minh tính năng chạy. Tự động hoá không thay
 Web gọi `/tasks/feed` không truyền tham số mới. Một test khẳng định: gọi không
 `types`/`since` → phản hồi **y hệt hôm nay**.
 
-### 8.4 Giới hạn của máy đang làm
+### 8.4 Chạy được gì trên máy này
 
-`flutter`, `dart`, `php`, `node`, `bun`, `composer`, `gh` **không có trên PATH**
-và không tìm thấy bản cài ở các vị trí thường gặp (kiểm ngày 2026-09-10).
+Công cụ có đủ, chỉ không nằm trên PATH (kiểm ngày 2026-09-10):
 
-- **API**: Docker Desktop có sẵn, repo có `docker-compose.dev.yml` → phpunit
-  chạy được trong container.
-- **App Flutter**: cần máy của chủ dự án. Viết được test, không chạy được test.
+- Flutter 3.47.2 — `D:\_tools\flutter\bin`
+- Docker CLI — `C:\Users\My laptop\AppData\Local\Programs\DockerDesktop\resources\bin`
+- Node, gh — `D:\_tools\`
+
+Stack local đã chạy sẵn, dựng bằng **hai** tệp compose:
+
+```
+docker compose -f docker-compose.dev.yml -f docker-compose.local.yml up -d
+```
+
+API `:8000`, web `:5173`, Reverb `:8081`, khoá `omnicrm-local-key`.
+
+**Realtime ở local đã bật sẵn phía server** — `docker-compose.local.yml` ghi đè
+`REALTIME_DRIVER=broadcast` qua khối `environment:`, nên `.env` để nguyên vẫn
+chạy. Web đã được trỏ vào Reverb.
+
+**Chỉ app Flutter là chưa**: `omni-flow-app/.env` để `REALTIME_KEY` và
+`REALTIME_HOST` trống, và app tự tắt realtime khi thấy vậy. Điền vào là xong —
+xem §11 bước 1.
+
+Lưu ý khi chạy test API: thư mục `tests/` **không** được bind-mount vào
+container. Tệp kiểm mới phải `docker cp` vào trước khi chạy.
 
 **Không tuyên bố "xong" dựa trên việc code đã viết ra.** Xong là sau khi §8.2
 được chạy và báo lại.
@@ -449,12 +467,13 @@ và không tìm thấy bản cài ở các vị trí thường gặp (kiểm ng�
 
 ## 11. Thứ tự thi công
 
-1. **Kiểm R1** — xác minh `entity.changed` phát khi tick việc con. Chặn mọi thứ sau.
-2. **Server §4.1** — sửa ghi đè `type`, kèm test hợp đồng §8.1.
-3. **Server §4.2–4.7** — `types` / `since` / `day` / `piano_done` / gộp ảnh / `truncated`. Kèm test §8.3.
-4. **App §6** — realtime tận gốc. Kèm test tích hợp §8.1 (test này bắt được lỗi thật).
-5. **App §5** — màn hình mới.
-6. **Push §7** — danh sách trắng, `push: true`, công tắc, trang Cài đặt.
-7. **Bài kiểm chạy thật §8.2** — cần hai máy, cần chủ dự án.
+1. **Trỏ app vào Reverb** — điền `REALTIME_KEY`/`REALTIME_HOST`/`REALTIME_PORT`/`REALTIME_SCHEME` trong `omni-flow-app/.env`. Không có bước này thì §6 không chứng minh được, vì app tự tắt realtime khi khoá trống.
+2. **Kiểm R1** — xác minh `entity.changed` phát khi tick việc con. Chặn mọi thứ sau.
+3. **Server §4.1** — sửa ghi đè `type`, kèm test hợp đồng §8.1.
+4. **Server §4.2–4.7** — `types` / `since` / `day` / `piano_done` / gộp ảnh / `truncated`. Kèm test §8.3.
+5. **App §6** — realtime tận gốc. Kèm test tích hợp §8.1 (test này bắt được lỗi thật).
+6. **App §5** — màn hình mới.
+7. **Push §7** — danh sách trắng, `push: true`, công tắc, trang Cài đặt.
+8. **Bài kiểm chạy thật §8.2** — cần hai máy, cần chủ dự án.
 
-Bước 2–3 và bước 4 độc lập nhau, làm song song được. Bước 5 cần cả hai.
+Bước 3–4 và bước 5 độc lập nhau, làm song song được. Bước 6 cần cả hai.
