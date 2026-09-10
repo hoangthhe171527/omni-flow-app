@@ -54,9 +54,9 @@ class _MyTasksPageState extends ConsumerState<MyTasksPage> {
 
     return Scaffold(
       backgroundColor: scheme.surface,
-      appBar: AppBar(
+      appBar: OmniAppBar(
         backgroundColor: scheme.surface,
-        title: const Text('Việc của tôi'),
+        title: 'Việc của tôi',
         titleSpacing: OmniSpacing.lg,
         toolbarHeight: 56,
         actions: [

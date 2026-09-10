@@ -66,7 +66,7 @@ class _NotificationSettingsPageState
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Thông báo')),
+      appBar: const OmniAppBar(title: 'Thông báo'),
       body: switch ((_enabled, _loadError)) {
         (_, final Object error?) => OmniErrorView(
           error: error,

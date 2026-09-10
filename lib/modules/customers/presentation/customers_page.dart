@@ -49,9 +49,9 @@ class _CustomersPageState extends ConsumerState<CustomersPage> {
       // Header and list on one plane — the AppBar's `background` against the
       // rows' `surface` is what draws a phantom frame around the search area.
       backgroundColor: scheme.surface,
-      appBar: AppBar(
+      appBar: OmniAppBar(
         backgroundColor: scheme.surface,
-        title: const Text('Khách hàng'),
+        title: 'Khách hàng',
         titleSpacing: OmniSpacing.lg,
         toolbarHeight: 56,
         bottom: PreferredSize(

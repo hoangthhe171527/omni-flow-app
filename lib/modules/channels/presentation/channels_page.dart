@@ -146,7 +146,7 @@ class _ChannelsPageState extends ConsumerState<ChannelsPage> {
     final channels = ref.watch(channelsProvider);
     final canWrite = ref.watch(accessProvider).can(ChannelPermissions.write);
     return Scaffold(
-      appBar: AppBar(title: const Text('Kết nối kênh')),
+      appBar: const OmniAppBar(title: 'Kết nối kênh'),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: _connecting ? null : (canWrite ? _pickChannel : null),
         icon: const Icon(Icons.add_link_rounded),

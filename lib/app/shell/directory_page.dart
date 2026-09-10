@@ -39,7 +39,7 @@ class _DirectoryPageState extends ConsumerState<DirectoryPage> {
     final scheme = Theme.of(context).colorScheme;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Tất cả')),
+      appBar: const OmniAppBar(title: 'Tất cả'),
       body: Center(
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 720),

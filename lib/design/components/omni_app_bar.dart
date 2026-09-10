@@ -50,6 +50,9 @@ class OmniAppBar extends StatelessWidget implements PreferredSizeWidget {
     this.actions = const [],
     this.showAccount = true,
     this.bottom,
+    this.backgroundColor,
+    this.titleSpacing,
+    this.toolbarHeight,
   });
 
   final String title;
@@ -64,9 +67,20 @@ class OmniAppBar extends StatelessWidget implements PreferredSizeWidget {
 
   final PreferredSizeWidget? bottom;
 
+  /// Ba tham số dưới đây chỉ là ống dẫn thẳng xuống [AppBar].
+  ///
+  /// Có mặt vì các màn gốc SẴN CÓ đang đặt chúng, và chuyển sang [OmniAppBar]
+  /// mà bỏ qua là lặng lẽ đổi diện mạo của sáu màn — kiểu thay đổi không ai
+  /// nhìn ra trong một bản diff, chỉ nhận ra khi mở app lên và thấy nó "hơi
+  /// khác". Cố ý KHÔNG mở thêm ống dẫn nào ngoài ba cái đang thật sự dùng.
+  final Color? backgroundColor;
+  final double? titleSpacing;
+  final double? toolbarHeight;
+
   @override
-  Size get preferredSize =>
-      Size.fromHeight(kToolbarHeight + (bottom?.preferredSize.height ?? 0));
+  Size get preferredSize => Size.fromHeight(
+    (toolbarHeight ?? kToolbarHeight) + (bottom?.preferredSize.height ?? 0),
+  );
 
   @override
   Widget build(BuildContext context) {
@@ -75,6 +89,9 @@ class OmniAppBar extends StatelessWidget implements PreferredSizeWidget {
     return AppBar(
       title: Text(title),
       bottom: bottom,
+      backgroundColor: backgroundColor,
+      titleSpacing: titleSpacing,
+      toolbarHeight: toolbarHeight,
       actions: [...actions, if (account != null) account(context)],
     );
   }

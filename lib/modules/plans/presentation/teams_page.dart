@@ -30,7 +30,7 @@ class TeamsPage extends ConsumerWidget {
         .can('organization.org_units.create');
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Dự án')),
+      appBar: const OmniAppBar(title: 'Dự án'),
       floatingActionButton: isAssigner
           ? FloatingActionButton.extended(
               onPressed: () => _create(context, canCreateTeam: canCreateTeam),
