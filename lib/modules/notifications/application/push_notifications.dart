@@ -148,6 +148,12 @@ class PushIntent {
       // khoá nhưng chạm vào không mở được cây đàn, chuông trong app không tự
       // cập nhật, và ở tiền cảnh nó rơi nhầm sang kênh tin nhắn khách hàng.
       'task_commented' ||
+      // Thiếu dòng này thì push tiến độ hiện trên màn khoá mà chạm vào không
+      // mở được cây đàn — đúng lỗi đã xảy ra hai lần ngay trên, với
+      // `task_commented` và `task_mentioned`. Danh sách này là HỢP ĐỒNG với
+      // `NotificationType` bên API; thêm loại ở đó mà quên ở đây thì thông báo
+      // vẫn hiện, chỉ là chạm vào không đi đâu cả.
+      'task_progress' ||
       'task_mentioned' => PushTarget.task,
       _ => null,
     };

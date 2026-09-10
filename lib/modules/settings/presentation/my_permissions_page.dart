@@ -23,7 +23,7 @@ class MyPermissionsPage extends ConsumerWidget {
     final scheme = Theme.of(context).colorScheme;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Quyền của tôi')),
+      appBar: const OmniAppBar(title: 'Quyền của tôi'),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(
           OmniSpacing.lg,

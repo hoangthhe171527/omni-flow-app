@@ -38,6 +38,81 @@ void main() {
     expect(adapter.singleRequest.uri.queryParameters['limit'], '12');
   });
 
+  test('feed gửi types và since', () async {
+    await api.feed(types: kFeedCompletionTypes, days: 7);
+
+    final query = adapter.singleRequest.uri.queryParameters;
+
+    expect(query['types'], 'subtask_completed,piano_done,attachment_added');
+    expect(query['since'], matches(RegExp(r'^\d{4}-\d{2}-\d{2}$')));
+  });
+
+  test('attachment_added PHẢI nằm trong danh sách xin', () async {
+    // Màn hình không vẽ `attachment_added` thành một loại riêng, nên rất dễ
+    // bị coi là thừa và gỡ ra. Nhưng server cần chính những dòng đó để gộp ảnh
+    // vào dòng việc xong (FeedPhotoMerge). Gỡ ra thì ảnh biến mất khỏi dòng
+    // việc — không lỗi, không log, chỉ là những tấm ảnh không bao giờ hiện.
+    expect(kFeedCompletionTypes, contains('attachment_added'));
+  });
+
+  test('feed đọc được cờ truncated', () async {
+    adapter.body = '{"success":true,"data":[],"truncated":true}';
+
+    final feed = await api.feed();
+
+    expect(feed.truncated, isTrue);
+  });
+
+  test('thiếu truncated thì hiểu là chưa cắt', () async {
+    // Một API cũ không gửi khoá này. Mặc định phải là "chưa cắt" — hiện một
+    // lời cảnh báo cắt bớt trên một danh sách đầy đủ là nói dối theo chiều
+    // ngược lại.
+    final feed = await api.feed();
+
+    expect(feed.truncated, isFalse);
+  });
+
+  test('feed không gửi types khi không xin loại nào', () async {
+    // Rỗng nghĩa là "mọi loại" ở phía server. Gửi `types=` rỗng là gửi một bộ
+    // lọc không khớp gì.
+    await api.feed();
+
+    expect(
+      adapter.singleRequest.uri.queryParameters.containsKey('types'),
+      isFalse,
+    );
+  });
+
+  test('createTeam gửi member_ids khi có chọn người', () async {
+    // API đã nhận `member_ids` từ lâu (CreateTeamRequest, và
+    // MongoTeamRepository::create ghi nó vào org unit); app chỉ chưa bao giờ
+    // gửi. Một trường server sẵn sàng nhận mà client không gửi là cùng họ với
+    // những lỗi im lặng khác của dự án này, chỉ khác chiều.
+    await api.createTeam(name: 'Tổ phục chế', memberIds: {'u-1', 'u-2'});
+
+    final body = adapter.singleRequest.data as Map<String, dynamic>;
+
+    expect(body['member_ids'], containsAll(<String>['u-1', 'u-2']));
+  });
+
+  test('createTeam KHÔNG gửi member_ids khi không chọn ai', () async {
+    // Gửi một mảng RỖNG và không gửi gì là hai chuyện khác nhau với một API
+    // dùng `array_key_exists`.
+    await api.createTeam(name: 'Tổ phục chế');
+
+    final body = adapter.singleRequest.data as Map<String, dynamic>;
+
+    expect(body.containsKey('member_ids'), isFalse);
+  });
+
+  test('createPlan gửi cover khi có chọn nền', () async {
+    await api.createPlan(name: 'Phục chế T10', cover: 'amber-2');
+
+    final body = adapter.singleRequest.data as Map<String, dynamic>;
+
+    expect(body['cover'], 'amber-2');
+  });
+
   test('kpi gọi /tasks/kpi', () async {
     await api.kpi();
 
@@ -71,6 +146,11 @@ void main() {
 class _RecordingAdapter implements HttpClientAdapter {
   final List<RequestOptions> requests = [];
 
+  /// Thân phản hồi. Đổi được để kiểm những khoá NGOÀI `data` — `truncated`
+  /// nằm ở cấp gốc, và nếu app không đọc nó thì trần 200 việc lại quay về cắt
+  /// im lặng.
+  String body = '{"success":true,"data":[]}';
+
   RequestOptions get singleRequest {
     expect(requests, hasLength(1));
     return requests.single;
@@ -87,7 +167,7 @@ class _RecordingAdapter implements HttpClientAdapter {
     // `data` phải là mảng cho feed và object cho phần còn lại; trả về mảng
     // rỗng thì `response.object` vẫn đọc được như map rỗng.
     return ResponseBody.fromString(
-      '{"success":true,"data":[]}',
+      body,
       200,
       headers: {
         Headers.contentTypeHeader: [Headers.jsonContentType],

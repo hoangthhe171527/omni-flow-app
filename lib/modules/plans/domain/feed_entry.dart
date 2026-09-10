@@ -24,6 +24,14 @@ enum FeedKind {
   subtaskAssigned,
   attachmentAdded,
   attachmentRemoved,
+
+  /// Cả cây đàn đã xong.
+  ///
+  /// KHÔNG có loại này trong nhật ký: server gắn nhãn lúc đọc, cho những lần
+  /// chuyển vào một nhóm việc mang cờ `counts_for_kpi` — đúng thứ thẻ KPI đếm.
+  /// Suy ở server vì client không có bảng nhóm việc trong tay, và hai client
+  /// đoán riêng sẽ đoán khác nhau.
+  pianoDone,
   other;
 
   static FeedKind parse(String? value) => switch (value?.trim()) {
@@ -36,6 +44,13 @@ enum FeedKind {
     'subtask_assigned' => subtaskAssigned,
     'attachment_added' => attachmentAdded,
     'attachment_removed' => attachmentRemoved,
+    'piano_done' => pianoDone,
+    // Dạng CŨ. Server từng để loại TỆP ('image'/'file') ghi đè loại HOẠT ĐỘNG
+    // trong `TaskActivityService::entry()`, nên những dòng ghi trước bản sửa
+    // nằm trong Mongo với `type: 'image'`. Chúng không được backfill và sẽ ở
+    // đó mãi; đọc chúng ở đây rẻ hơn một migration, và không có cửa sổ nào
+    // dữ liệu hiện sai.
+    'image' || 'file' => attachmentAdded,
     _ => other,
   };
 }
@@ -54,6 +69,10 @@ class FeedEntry {
     this.detail,
     this.planName,
     this.imageUrl,
+    this.photos = const [],
+    this.day = '',
+    this.userId,
+    this.userAvatar,
   });
 
   factory FeedEntry.fromJson(Map<String, dynamic> json) => FeedEntry(
@@ -75,7 +94,23 @@ class FeedEntry {
     planName: json.str('project_name'),
     // Chỉ ẢNH mới hiện thumbnail. Một tệp PDF render ra ô vỡ thì tệ hơn là
     // không render gì.
-    imageUrl: json.str('type') == 'image' ? json.str('url') : null,
+    //
+    // Hai khoá vì hai thời kỳ dữ liệu: `file_type` là dạng mới, `type ==
+    // 'image'` là dạng cũ — xem ghi chú ở [FeedKind.parse].
+    imageUrl: (json.str('file_type') == 'image' || json.str('type') == 'image')
+        ? json.str('url')
+        : null,
+    // Ảnh server đã gộp sẵn vào dòng này: những `attachment_added` cùng cây
+    // đàn, cùng người gửi, trong vòng 15 phút (`FeedPhotoMerge`).
+    photos: json.strList('photos'),
+    // Ngày lịch theo giờ xưởng, do SERVER tính. Không suy lại từ `at`: máy chủ
+    // chạy UTC và ca chiều của xưởng rơi sang ngày hôm sau theo giờ đó.
+    day: json.strOr('day', ''),
+    userId: json.str('user_id'),
+    // Server giải sẵn (`PeopleDirectory`), client không tự tra id ra ảnh —
+    // cùng lập luận với `user_name`, và mỗi dòng tự đi hỏi là mỗi dòng một
+    // lượt gọi mạng.
+    userAvatar: json.str('user_avatar'),
   );
 
   final String id;
@@ -103,6 +138,23 @@ class FeedEntry {
   /// lướt dòng thời gian.
   final String? imageUrl;
 
+  /// Ảnh bằng chứng của chính công đoạn này, server đã gộp sẵn.
+  ///
+  /// Khác [imageUrl]: cái kia là ảnh của một dòng `attachment_added` đứng
+  /// riêng, cái này là ảnh thuộc về một dòng việc xong.
+  final List<String> photos;
+
+  /// `YYYY-MM-DD` theo giờ xưởng, do server tính. Rỗng nghĩa là không xếp được
+  /// vào ngày nào — [DayGroup] bỏ qua chứ không đoán.
+  final String day;
+
+  /// Ai làm. Để widget dòng dựng được ô người.
+  final String? userId;
+
+  /// Ảnh đại diện của người làm, server giải sẵn. Null khi họ chưa đặt ảnh —
+  /// `OmniAvatar` rơi về chữ cái đầu.
+  final String? userAvatar;
+
   /// Câu mô tả, viết theo cách người xưởng nói.
   ///
   /// Không ghép tên nhóm việc vào đây: `from`/`to` là ID, và in một ID ra màn
@@ -128,6 +180,7 @@ class FeedEntry {
       _ => 'đã gửi tệp đính kèm',
     },
     FeedKind.attachmentRemoved => 'đã gỡ tệp đính kèm',
+    FeedKind.pianoDone => 'đã xong toàn bộ',
     FeedKind.other => 'đã có thay đổi',
   };
 }

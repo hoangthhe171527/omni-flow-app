@@ -56,8 +56,8 @@ class _NotificationsPageState extends ConsumerState<NotificationsPage> {
     final unread = ref.watch(unreadNotificationCountProvider);
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Thông báo'),
+      appBar: OmniAppBar(
+        title: 'Thông báo',
         toolbarHeight: 56,
         actions: [
           if (unread > 0)

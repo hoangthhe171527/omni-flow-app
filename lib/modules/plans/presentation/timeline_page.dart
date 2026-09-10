@@ -2,83 +2,232 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../core/utils/formatters.dart';
-import '../../../core/utils/media_url.dart';
 import '../../../design/components/components.dart';
 import '../../../design/tokens/tokens.dart';
 import '../../tasks/application/tasks_providers.dart';
 import '../../tasks/routes.dart';
 import '../application/plans_providers.dart';
+import '../domain/day_group.dart';
 import '../domain/feed_entry.dart';
-import '../domain/feed_group.dart';
+import '../routes.dart';
+import 'widgets/completion_row.dart';
+import 'widgets/day_header.dart';
 import 'widgets/kpi_card.dart';
+import 'widgets/piano_done_row.dart';
 
-/// "Chuyện gì vừa xảy ra ở xưởng", và "tháng này xong bao nhiêu cây".
+/// "Hôm nay ai xong cái gì", và "tháng này xong bao nhiêu cây".
 ///
-/// Hai câu hỏi của chủ xưởng, và §B4 của tài liệu nói rõ màn này thay hoàn
-/// toàn cái bảng đếm tay trên Zalo. Con số đứng trên cùng vì nó là thứ được
-/// hỏi hằng ngày; dòng hoạt động ở dưới trả lời "vì sao con số đó".
+/// Hai câu hỏi của chủ xưởng. §B4 nói rõ màn này thay hoàn toàn cái bảng đếm
+/// tay trên Zalo: con số đứng trên cùng vì nó là thứ được hỏi hằng ngày, và
+/// những việc đã đánh dấu xong ở dưới trả lời "vì sao con số đó".
+///
+/// Chỉ VIỆC ĐÃ XONG. Tạo việc, đổi hạn, đổi người và chuyển nhóm việc không
+/// hiện ở đây — chúng đẩy đúng thứ người ta vào xem ra khỏi màn hình, và mỗi
+/// công việc đã có nhật ký riêng đầy đủ.
 ///
 /// Thẻ KPI chỉ hiện với người GIAO việc. Thợ mở màn này để xem việc của team
-/// đang chạy tới đâu, không phải để theo dõi mốc thưởng — và §1 nói rõ thưởng
+/// đang chạy tới đâu, không phải để theo dõi mốc thưởng — §1 nói rõ thưởng
 /// theo team, nên bày nó ra trước mặt từng người là đổi cách xưởng làm việc.
-class TimelinePage extends ConsumerWidget {
+class TimelinePage extends ConsumerStatefulWidget {
   const TimelinePage({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<TimelinePage> createState() => _TimelinePageState();
+}
+
+class _TimelinePageState extends ConsumerState<TimelinePage> {
+  /// Id những dòng đã vẽ ở lần dựng trước.
+  ///
+  /// Dòng KHÔNG nằm trong tập này là dòng vừa tới qua realtime, và chỉ nó được
+  /// chạy hiệu ứng. Animate cả danh sách mỗi lần tải lại thì màn hình nhấp nháy
+  /// mỗi khi ai đó tick một việc — khó chịu hơn là không có hiệu ứng gì.
+  final Set<String> _seen = {};
+
+  @override
+  Widget build(BuildContext context) {
     final feed = ref.watch(workshopFeedProvider);
     final isAssigner = ref.watch(taskAccessProvider).isAssigner;
 
+    // `valueOrNull`, KHÔNG `when(loading: …)`: khi realtime bơm tín hiệu,
+    // provider chuyển sang loading và cả màn sẽ nháy sang vòng xoay trong khi
+    // không ai yêu cầu gì cả. Kéo-để-tải-lại thì VẪN thấy vòng xoay của
+    // RefreshIndicator, vì người dùng vừa yêu cầu nó nên phải thấy nó chạy.
+    final data = feed.valueOrNull;
+    final groups = DayGroup.from(data?.entries ?? const []);
+
     return Scaffold(
-      appBar: AppBar(title: const Text('Dòng việc')),
+      appBar: const OmniAppBar(title: 'Dòng việc'),
       body: RefreshIndicator(
         onRefresh: () async {
           ref.invalidate(workshopFeedProvider);
           ref.invalidate(workshopKpiProvider);
+          await ref.read(workshopFeedProvider.future);
         },
-        child: OmniAsyncView(
-          value: feed,
-          onRetry: () => ref.invalidate(workshopFeedProvider),
-          isEmpty: (rows) => rows.isEmpty && !isAssigner,
-          empty: const OmniEmptyState(
-            icon: Icons.history_rounded,
-            title: 'Chưa có hoạt động nào',
-            message:
-                'Việc được tạo, chuyển nhóm việc hay đổi hạn sẽ hiện ở đây.',
+        child: switch ((data, feed)) {
+          // Chưa có gì để vẽ và đang tải lần đầu.
+          (null, AsyncLoading()) => const Center(
+            child: CircularProgressIndicator(),
           ),
-          data: (rows) {
-            final groups = FeedGroup.from(rows);
-
-            return ListView.separated(
-              padding: const EdgeInsets.fromLTRB(
-                OmniSpacing.lg,
-                OmniSpacing.lg,
-                OmniSpacing.lg,
-                OmniSpacing.bottomSafe,
-              ),
-              // +1 cho thẻ KPI ở đầu, chỉ khi người xem là người giao việc.
-              itemCount: groups.length + (isAssigner ? 1 : 0),
-              separatorBuilder: (_, _) =>
-                  const SizedBox(height: OmniSpacing.md),
-              itemBuilder: (context, index) {
-                if (isAssigner && index == 0) return const _Kpi();
-
-                return _FeedCard(group: groups[index - (isAssigner ? 1 : 0)]);
-              },
-            );
-          },
-        ),
+          (null, AsyncError(:final error)) => OmniErrorView(
+            error: error,
+            onRetry: () => ref.invalidate(workshopFeedProvider),
+          ),
+          _ => _Feed(
+            groups: groups,
+            isAssigner: isAssigner,
+            truncated: data?.truncated ?? false,
+            seen: _seen,
+          ),
+        },
       ),
+    );
+  }
+}
+
+class _Feed extends ConsumerWidget {
+  const _Feed({
+    required this.groups,
+    required this.isAssigner,
+    required this.truncated,
+    required this.seen,
+  });
+
+  final List<DayGroup> groups;
+  final bool isAssigner;
+  final bool truncated;
+  final Set<String> seen;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return CustomScrollView(
+      // Luôn cuộn được, kể cả khi rỗng — nếu không thì kéo-để-tải-lại không
+      // hoạt động đúng ở màn trống, mà đó là lúc người ta muốn kéo nhất.
+      physics: const AlwaysScrollableScrollPhysics(),
+      slivers: [
+        if (isAssigner)
+          const SliverPadding(
+            padding: EdgeInsets.fromLTRB(
+              OmniSpacing.lg,
+              OmniSpacing.lg,
+              OmniSpacing.lg,
+              0,
+            ),
+            sliver: SliverToBoxAdapter(child: _Kpi()),
+          ),
+        if (groups.isEmpty)
+          const SliverFillRemaining(
+            hasScrollBody: false,
+            child: OmniEmptyState(
+              icon: Icons.task_alt_rounded,
+              title: 'Chưa có việc nào xong',
+              // KHÔNG phải "chưa có hoạt động nào": có thể có rất nhiều hoạt
+              // động mà không có việc nào được đánh dấu xong. Hai chuyện khác
+              // hẳn nhau, và nói nhầm thì người đọc đi tìm sai chỗ.
+              message:
+                  'Chưa có việc nào được đánh dấu xong trong 7 ngày qua. '
+                  'Tick xong một công đoạn là nó hiện ở đây ngay.',
+            ),
+          ),
+        for (final group in groups) ...[
+          SliverPadding(
+            padding: const EdgeInsets.symmetric(horizontal: OmniSpacing.lg),
+            sliver: SliverPersistentHeader(
+              pinned: true,
+              delegate: DayHeaderDelegate(group),
+            ),
+          ),
+          SliverPadding(
+            padding: const EdgeInsets.symmetric(horizontal: OmniSpacing.lg),
+            sliver: SliverList.builder(
+              itemCount: group.entries.length,
+              itemBuilder: (context, index) {
+                final entry = group.entries[index];
+                final isNew = seen.isNotEmpty && !seen.contains(entry.id);
+                seen.add(entry.id);
+
+                return _SlideInOnce(
+                  key: ValueKey(entry.id),
+                  enabled: isNew,
+                  child: _Row(entry: entry),
+                );
+              },
+            ),
+          ),
+        ],
+        if (truncated)
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.all(OmniSpacing.lg),
+              child: Text(
+                // Trần 200 việc ở server. Cắt mà không nói là để người đọc
+                // tưởng mình đã thấy hết — và một dòng thời gian thiếu thì
+                // không nhìn ra được là nó thiếu.
+                'Chỉ hiện 7 ngày gần nhất.',
+                style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
+              ),
+            ),
+          ),
+        const SliverToBoxAdapter(
+          child: SizedBox(height: OmniSpacing.bottomSafe),
+        ),
+      ],
+    );
+  }
+}
+
+/// Chọn kiểu dòng theo loại. Cây đàn xong đứng riêng vì nó đếm được.
+class _Row extends StatelessWidget {
+  const _Row({required this.entry});
+
+  final FeedEntry entry;
+
+  @override
+  Widget build(BuildContext context) {
+    void open() {
+      if (entry.taskId.isEmpty) return;
+      context.pushNamed(
+        TaskRoutes.detail,
+        pathParameters: {'id': entry.taskId},
+      );
+    }
+
+    return entry.kind == FeedKind.pianoDone
+        ? PianoDoneRow(entry: entry, onTap: open)
+        : CompletionRow(entry: entry, onTap: open);
+  }
+}
+
+/// Mờ dần + trượt lên, đúng MỘT lần, cho dòng vừa tới qua realtime.
+class _SlideInOnce extends StatelessWidget {
+  const _SlideInOnce({super.key, required this.enabled, required this.child});
+
+  final bool enabled;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    if (!enabled) return child;
+
+    return TweenAnimationBuilder<double>(
+      tween: Tween(begin: 0, end: 1),
+      duration: const Duration(milliseconds: 220),
+      curve: Curves.easeOut,
+      builder: (context, t, child) => Opacity(
+        opacity: t,
+        child: Transform.translate(offset: Offset(0, 8 * (1 - t)), child: child),
+      ),
+      child: child,
     );
   }
 }
 
 /// Thẻ KPI tự chịu trạng thái tải của mình.
 ///
-/// Tách khỏi dòng hoạt động: hai lượt gọi mạng độc lập, và một cái chậm không
-/// được giữ cái kia lại. Cụ thể: KPI phải quét nhật ký cả tháng, dòng hoạt
-/// động thì chỉ lấy vài chục dòng mới nhất.
+/// Tách khỏi dòng việc: hai lượt gọi mạng độc lập, và một cái chậm không được
+/// giữ cái kia lại. Cụ thể: KPI phải quét nhật ký cả tháng, dòng việc thì chỉ
+/// lấy cửa sổ bảy ngày.
 class _Kpi extends ConsumerWidget {
   const _Kpi();
 
@@ -92,178 +241,30 @@ class _Kpi extends ConsumerWidget {
     // vào đó một ngày giữa tháng.
     final atCurrentMonth = month.year == now.year && month.month == now.month;
 
-    return Padding(
-      padding: const EdgeInsets.only(bottom: OmniSpacing.sm),
-      child: kpi.when(
-        data: (data) => KpiCard(
-          kpi: data,
-          month: month,
-          onPrevMonth: () => ref.read(kpiMonthProvider.notifier).state =
-              DateTime(month.year, month.month - 1),
-          // Không đi tới tương lai: một tháng chưa tới luôn có `delivered = 0`,
-          // và số 0 đó trông y hệt "tháng này chưa ai xong cây nào".
-          onNextMonth: atCurrentMonth
-              ? null
-              : () => ref.read(kpiMonthProvider.notifier).state = DateTime(
-                  month.year,
-                  month.month + 1,
-                ),
-        ),
-        // Một ô trống cao bằng thẻ, để dòng hoạt động bên dưới không nhảy khi
-        // con số tới nơi.
-        loading: () => const SizedBox(height: 132),
-        // KPI hỏng không được che mất dòng hoạt động — nó là thứ phụ trên màn
-        // này, dù là thứ quan trọng nhất với chủ xưởng.
-        error: (_, _) => const SizedBox.shrink(),
-      ),
-    );
-  }
-}
-
-/// Một cây đàn, và những gì vừa xảy ra với nó.
-///
-/// Tiêu đề cây đàn hiện MỘT lần rồi mới tới các hoạt động, thay vì lặp lại
-/// trên từng dòng. Cùng một lượng thông tin, nhưng mắt chỉ phải đọc tên cây
-/// một lần và phần còn lại là chuyện đã xảy ra — đó là khác biệt giữa một bản
-/// tóm tắt và một cuốn sổ.
-class _FeedCard extends StatelessWidget {
-  const _FeedCard({required this.group});
-
-  /// Nhiều hơn ngần này thì một cây đàn bị rework dồn dập sẽ đẩy cả xưởng ra
-  /// khỏi màn hình. Phần còn lại vẫn đếm được, và mở cây đàn ra là thấy đủ.
-  static const _maxLines = 5;
-
-  final FeedGroup group;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final text = Theme.of(context).textTheme;
-    final shown = group.entries.take(_maxLines).toList();
-    final hidden = group.entries.length - shown.length;
-
-    return OmniCard(
-      onTap: group.taskId.isEmpty
-          ? null
-          : () => context.pushNamed(
-              TaskRoutes.detail,
-              pathParameters: {'id': group.taskId},
-            ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            group.taskTitle,
-            style: text.titleSmall?.copyWith(fontWeight: FontWeight.w600),
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-          ),
-          // Dự án nào. Một xưởng chạy hai dự án song song thì "cây
-          // nào" chưa đủ để biết đang nhìn việc của tháng nào.
-          if (group.planName != null) ...[
-            const SizedBox(height: 2),
-            Text(
-              group.planName!,
-              style: text.labelSmall?.copyWith(color: scheme.onSurfaceVariant),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
-          ],
-          const SizedBox(height: OmniSpacing.sm),
-          for (final entry in shown) _FeedLine(entry: entry),
-          if (hidden > 0)
-            Padding(
-              padding: const EdgeInsets.only(top: OmniSpacing.xs),
-              child: Text(
-                'và $hidden hoạt động nữa',
-                style: text.labelSmall?.copyWith(
-                  color: scheme.onSurfaceVariant,
-                ),
+    return kpi.when(
+      data: (data) => KpiCard(
+        kpi: data,
+        month: month,
+        onPrevMonth: () => ref.read(kpiMonthProvider.notifier).state =
+            DateTime(month.year, month.month - 1),
+        // Không đi tới tương lai: một tháng chưa tới luôn có `delivered = 0`,
+        // và số 0 đó trông y hệt "tháng này chưa ai xong cây nào".
+        onNextMonth: atCurrentMonth
+            ? null
+            : () => ref.read(kpiMonthProvider.notifier).state = DateTime(
+                month.year,
+                month.month + 1,
               ),
-            ),
-        ],
+        // Không có dự án nào trong tay ở màn này, nên đưa người dùng tới danh
+        // sách dự án — chỗ gần nhất mở được phần nhóm việc.
+        onConfigure: () => context.pushNamed(PlanRoutes.teams),
       ),
+      // Một ô trống cao bằng thẻ, để dòng việc bên dưới không nhảy khi con số
+      // tới nơi.
+      loading: () => const SizedBox(height: 132),
+      // KPI hỏng không được che mất dòng việc — nó là thứ phụ trên màn này, dù
+      // là thứ quan trọng nhất với chủ xưởng.
+      error: (_, _) => const SizedBox.shrink(),
     );
   }
-}
-
-/// Một hoạt động: ai, làm gì, lúc nào.
-class _FeedLine extends StatelessWidget {
-  const _FeedLine({required this.entry});
-
-  final FeedEntry entry;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final text = Theme.of(context).textTheme;
-
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: OmniSpacing.xxs),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(_icon, size: OmniIconSize.sm, color: scheme.onSurfaceVariant),
-          const SizedBox(width: OmniSpacing.sm),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  // Tên người đứng trước hành động khi biết được: "Hằng Ni đã
-                  // xong Body ngoài" đọc như một câu, còn "đã xong Body ngoài
-                  // — Hằng Ni" đọc như một bản ghi.
-                  entry.userName == null
-                      ? entry.summary
-                      : '${entry.userName} ${entry.summary}',
-                  style: text.bodySmall?.copyWith(
-                    color: scheme.onSurfaceVariant,
-                  ),
-                ),
-                // Ảnh hiện NGAY trên dòng. §B2 nói ảnh chính là bằng chứng
-                // của công đoạn, nên bắt mở từng cây ra để xem là bỏ mất lý
-                // do người ta lướt màn này.
-                if (entry.imageUrl != null) ...[
-                  const SizedBox(height: OmniSpacing.xs),
-                  ClipRRect(
-                    borderRadius: OmniRadius.smAll,
-                    child: Image.network(
-                      resolveMediaUrl(entry.imageUrl!),
-                      width: 96,
-                      height: 96,
-                      fit: BoxFit.cover,
-                      // Ảnh hỏng không được để lại một ô vỡ giữa dòng chữ.
-                      errorBuilder: (_, _, _) => const SizedBox.shrink(),
-                    ),
-                  ),
-                ],
-              ],
-            ),
-          ),
-          const SizedBox(width: OmniSpacing.sm),
-          // Giờ TUYỆT ĐỐI, không phải "2 giờ trước": quản đốc đối chiếu dòng
-          // này với ca làm và với lời thợ nói, và "09:35" là thứ so được.
-          Text(
-            Formatters.time(entry.at),
-            style: text.labelSmall?.copyWith(color: scheme.onSurfaceVariant),
-          ),
-        ],
-      ),
-    );
-  }
-
-  IconData get _icon => switch (entry.kind) {
-    FeedKind.created => Icons.add_circle_outline_rounded,
-    FeedKind.section => Icons.swap_horiz_rounded,
-    FeedKind.status => Icons.check_circle_outline_rounded,
-    FeedKind.dueDate => Icons.event_outlined,
-    FeedKind.assignees => Icons.person_outline_rounded,
-    // Hai loại thợ tạo ra nhiều nhất trong ngày, nên chúng phải phân biệt
-    // được với nhau chỉ bằng biểu tượng khi lướt nhanh.
-    FeedKind.subtaskCompleted => Icons.task_alt_rounded,
-    FeedKind.subtaskAssigned => Icons.how_to_reg_outlined,
-    FeedKind.attachmentAdded => Icons.image_outlined,
-    FeedKind.attachmentRemoved => Icons.hide_image_outlined,
-    FeedKind.other => Icons.circle_outlined,
-  };
 }

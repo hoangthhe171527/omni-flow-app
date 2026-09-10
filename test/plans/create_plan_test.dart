@@ -28,11 +28,35 @@ void main() {
     ),
   );
 
+  /// Cuộn xuống cho tới khi nút "Tạo dự án" được DỰNG.
+  ///
+  /// Màn này là một `ListView`, nên widget dưới vùng nhìn thấy không tồn tại
+  /// trong cây — `ensureVisible` không cứu được vì nó cần widget đã có. Từ khi
+  /// màn thêm dải xem trước nền (120dp) thì nút rơi hẳn xuống dưới trong cửa
+  /// sổ kiểm 800×600.
+  Future<void> revealSave(WidgetTester tester) async {
+    await tester.scrollUntilVisible(
+      find.text('Tạo dự án'),
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pumpAndSettle();
+  }
+
   testWidgets('điền sẵn bộ nhóm việc mặc định', (tester) async {
     await tester.pumpWidget(host());
     await tester.pumpAndSettle();
 
     for (final name in kDefaultSections) {
+      // Cuộn tới từng cái: `ListView` không dựng thứ nằm dưới vùng nhìn thấy,
+      // và từ khi màn có dải xem trước nền thì nhóm việc cuối rơi xuống dưới.
+      await tester.scrollUntilVisible(
+        find.text(name),
+        200,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.pumpAndSettle();
+
       expect(
         find.text(name),
         findsOneWidget,
@@ -49,6 +73,7 @@ void main() {
     await tester.pumpWidget(host());
     await tester.pumpAndSettle();
 
+    await revealSave(tester);
     final button = tester.widget<FilledButton>(find.byType(FilledButton));
 
     expect(button.onPressed, isNull);
@@ -62,8 +87,7 @@ void main() {
 
     await tester.enterText(find.byType(TextField).first, 'Đàn cơ');
     await tester.pumpAndSettle();
-    await tester.ensureVisible(find.text('Tạo dự án'));
-    await tester.pumpAndSettle();
+    await revealSave(tester);
     await tester.tap(find.text('Tạo dự án'));
     await tester.pumpAndSettle();
 
@@ -78,6 +102,7 @@ void main() {
     await tester.enterText(find.byType(TextField).first, '   ');
     await tester.pumpAndSettle();
 
+    await revealSave(tester);
     final button = tester.widget<FilledButton>(find.byType(FilledButton));
     expect(button.onPressed, isNull);
   });
@@ -92,8 +117,7 @@ void main() {
     // Ô đầu tiên là tên dự án, nên công đoạn thứ nhất là TextField thứ hai.
     await tester.enterText(find.byType(TextField).at(1), '   ');
     await tester.pumpAndSettle();
-    await tester.ensureVisible(find.text('Tạo dự án'));
-    await tester.pumpAndSettle();
+    await revealSave(tester);
     await tester.tap(find.text('Tạo dự án'));
     await tester.pumpAndSettle();
 
@@ -148,30 +172,46 @@ class _RecordingApi implements PlansApi {
   List<String>? createdSections;
   String? createdTeamId;
 
+  String? createdCover;
+  Set<String>? createdMemberIds;
+
   @override
   Future<Plan> createPlan({
     required String name,
     String? teamId,
     List<String> sectionNames = const [],
     Set<String> gatedSectionNames = const {},
+    String? cover,
   }) async {
     createdName = name;
     createdTeamId = teamId;
     createdSections = sectionNames;
+    createdCover = cover;
 
     return Plan.fromJson({'id': 'p1', 'name': name});
   }
 
   @override
-  Future<Team> createTeam({required String name, String? description}) async =>
-      Team.fromJson({'id': 't1', 'name': name});
+  Future<Team> createTeam({
+    required String name,
+    String? description,
+    Set<String> memberIds = const {},
+  }) async {
+    createdMemberIds = memberIds;
+
+    return Team.fromJson({'id': 't1', 'name': name});
+  }
 
   @override
   Future<WorkshopKpi> kpi({String? planId, DateTime? month}) async =>
       WorkshopKpi.fromJson(const {});
 
   @override
-  Future<List<FeedEntry>> feed({int limit = 30}) async => const [];
+  Future<WorkshopFeed> feed({
+    List<String> types = const [],
+    int days = 7,
+    int limit = 30,
+  }) async => (entries: const <FeedEntry>[], truncated: false);
 
   @override
   Future<List<Team>> teams() async => const [];

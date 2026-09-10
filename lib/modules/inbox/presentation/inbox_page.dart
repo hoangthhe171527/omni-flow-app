@@ -160,9 +160,9 @@ class _InboxPageState extends ConsumerState<InboxPage>
       // read as a tinted panel framing itself — the "khung mờ" around the search
       // field was that seam, not a border on the field.
       backgroundColor: scheme.surface,
-      appBar: AppBar(
+      appBar: OmniAppBar(
         backgroundColor: scheme.surface,
-        title: const Text('Hộp thư'),
+        title: 'Hộp thư',
         titleSpacing: OmniSpacing.lg,
         toolbarHeight: 56,
         actions: [

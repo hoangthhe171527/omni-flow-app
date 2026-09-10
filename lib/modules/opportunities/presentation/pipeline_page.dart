@@ -29,9 +29,9 @@ class PipelinePage extends ConsumerWidget {
 
     return Scaffold(
       backgroundColor: scheme.surface,
-      appBar: AppBar(
+      appBar: OmniAppBar(
         backgroundColor: scheme.surface,
-        title: const Text('Cơ hội'),
+        title: 'Cơ hội',
         titleSpacing: OmniSpacing.lg,
         toolbarHeight: 56,
         // The headline number lives in the bar. It used to be one of two big

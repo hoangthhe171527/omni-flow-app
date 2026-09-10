@@ -32,7 +32,7 @@ class TeamPage extends ConsumerWidget {
         .can('tasks.projects.manage.all');
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Nhân viên')),
+      appBar: const OmniAppBar(title: 'Nhân viên'),
       body: OmniAsyncView(
         value: members,
         onRetry: () => ref.invalidate(teamMembersProvider),

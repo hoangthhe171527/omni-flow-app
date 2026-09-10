@@ -9,6 +9,21 @@ import '../domain/feed_entry.dart';
 import '../domain/workshop_kpi.dart';
 import '../domain/team.dart';
 
+/// Dòng việc của xưởng, kèm câu trả lời cho "đã thấy hết chưa".
+typedef WorkshopFeed = ({List<FeedEntry> entries, bool truncated});
+
+/// Những loại dòng màn Dòng việc cần.
+///
+/// `attachment_added` có mặt dù màn hình KHÔNG vẽ nó thành một loại riêng:
+/// server gộp ảnh vào chính dòng việc xong (`FeedPhotoMerge`), và nó cần những
+/// dòng ảnh đó để gộp. Gỡ khỏi danh sách này thì ảnh biến mất khỏi dòng việc —
+/// không lỗi, không log, chỉ là những tấm ảnh không bao giờ hiện.
+const kFeedCompletionTypes = <String>[
+  'subtask_completed',
+  'piano_done',
+  'attachment_added',
+];
+
 /// Đọc cây Team → Dự án → Công việc.
 ///
 /// Ba trong bốn tầng đã có sẵn ở API từ lâu — `projects` mang `sections` và
@@ -46,13 +61,20 @@ class PlansApi {
     return response.list.map(Plan.fromJson).toList();
   }
 
-  Future<Team> createTeam({required String name, String? description}) async {
+  Future<Team> createTeam({
+    required String name,
+    String? description,
+    Set<String> memberIds = const {},
+  }) async {
     final response = await _client.post(
       '/teams',
       body: {
         'name': name,
         if (description != null && description.trim().isNotEmpty)
           'description': description.trim(),
+        // Không gửi một mảng RỖNG: "không chọn ai" và "chọn xong rồi bỏ hết"
+        // là hai chuyện khác nhau với một API dùng `array_key_exists`.
+        if (memberIds.isNotEmpty) 'member_ids': memberIds.toList(),
       },
     );
 
@@ -69,12 +91,15 @@ class PlansApi {
     String? teamId,
     List<String> sectionNames = const [],
     Set<String> gatedSectionNames = const {},
+    String? cover,
   }) async {
     final response = await _client.post(
       '/projects',
       body: {
         'name': name,
         if (teamId != null && teamId.isNotEmpty) 'team_id': teamId,
+        // TÊN nền, không phải URL — client dịch nó thành gradient.
+        if (cover != null && cover.isNotEmpty) 'cover': cover,
         if (sectionNames.isNotEmpty)
           'sections': [
             for (var i = 0; i < sectionNames.length; i++)
@@ -156,14 +181,40 @@ class PlansApi {
   }
 
   /// Dòng thời gian của cả xưởng, mới nhất trước.
-  Future<List<FeedEntry>> feed({int limit = 30}) async {
+  ///
+  /// [days] là số ngày ngược về trước; server cắt theo NGÀY LỊCH giờ xưởng.
+  /// [types] rỗng nghĩa là xin MỌI loại — không gửi khoá `types` trong trường
+  /// hợp đó, vì một `types=` rỗng ở phía server là một bộ lọc không khớp gì.
+  Future<WorkshopFeed> feed({
+    List<String> types = const [],
+    int days = 7,
+    int limit = 30,
+  }) async {
+    final since = DateTime.now().subtract(Duration(days: days));
+
     // `$_tasks/feed`, không phải `/feed`. Bản đầu viết thiếu tiền tố và gọi
     // vào `/api/v1/feed` — một đường dẫn không tồn tại. Test hợp đồng không
     // bắt được vì nó đọc bản ghi từ FILE: nó kiểm hình dạng phản hồi, không
     // kiểm địa chỉ đã gửi đi. Xem `plans_api_paths_test.dart`.
-    final response = await _client.get('$_tasks/feed', query: {'limit': limit});
+    final response = await _client.get(
+      '$_tasks/feed',
+      query: {
+        'limit': limit,
+        if (types.isNotEmpty) 'types': types.join(','),
+        'since':
+            '${since.year.toString().padLeft(4, '0')}-'
+            '${since.month.toString().padLeft(2, '0')}-'
+            '${since.day.toString().padLeft(2, '0')}',
+      },
+    );
 
-    return response.list.map(FeedEntry.fromJson).toList();
+    return (
+      entries: response.list.map(FeedEntry.fromJson).toList(),
+      // Server nạp tối đa 200 việc cho cửa sổ này. Chạm trần nghĩa là những
+      // cây đàn cũ nhất KHÔNG có mặt — và một dòng thời gian thiếu thì người
+      // đọc không nhìn ra được là nó thiếu. Mang cờ về để màn hình nói ra.
+      truncated: response.raw['truncated'] == true,
+    );
   }
 
   Future<Plan> plan(String id) async {

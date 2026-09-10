@@ -69,11 +69,47 @@ void main() {
     expect(find.text('Đã đạt mốc cao nhất của tháng.'), findsOneWidget);
   });
 
-  testWidgets('chưa đánh dấu nhóm việc đích: nói cách sửa', (tester) async {
-    // Số 0 vì chưa cấu hình trông y hệt số 0 vì tháng này chưa xong việc nào.
+  testWidgets('chưa đánh dấu nhóm việc đích: một DÒNG, không phải một khối', (
+    tester,
+  ) async {
+    // Số 0 vì chưa cấu hình trông y hệt số 0 vì tháng này chưa xong việc nào,
+    // nên vẫn phải nói ra. Nhưng câu cũ chiếm cả một thẻ ở ĐẦU màn Dòng việc —
+    // đúng chỗ dễ thấy nhất của ngày — để nói một điều người thợ không làm gì
+    // được và người quản đốc chỉ cần đọc một lần.
     await show(tester, kpi(delivered: 0, configured: false));
 
-    expect(find.textContaining('Chưa có dự án nào'), findsOneWidget);
+    expect(
+      find.textContaining('nên chưa đếm được việc nào hoàn thành'),
+      findsNothing,
+    );
+    expect(find.text('Đánh dấu nhóm việc đích'), findsOneWidget);
+
+    final height = tester.getSize(find.byType(KpiCard)).height;
+    expect(
+      height,
+      lessThan(64),
+      reason: 'Một dòng bấm được, không phải một thẻ cao bằng thẻ KPI thật.',
+    );
+  });
+
+  testWidgets('dòng đó bấm được và dẫn tới chỗ sửa', (tester) async {
+    var tapped = false;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: OmniTheme.light(TargetPlatform.android),
+        home: Scaffold(
+          body: KpiCard(
+            kpi: kpi(delivered: 0, configured: false),
+            month: DateTime(2026, 9),
+            onConfigure: () => tapped = true,
+          ),
+        ),
+      ),
+    );
+    await tester.tap(find.text('Đánh dấu nhóm việc đích'));
+
+    expect(tapped, isTrue);
   });
 
   testWidgets('có mốc kế tiếp: hiện khoảng cách và nhịp cần thiết', (

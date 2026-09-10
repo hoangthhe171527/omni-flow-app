@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:omni_app/core/config/app_config.dart';
 import 'package:omni_app/core/network/api_client.dart';
 import 'package:omni_app/modules/plans/data/plans_api.dart';
+import 'package:omni_app/modules/plans/domain/feed_entry.dart';
 import 'package:omni_app/modules/tasks/data/tasks_api.dart';
 import 'package:omni_app/modules/team/data/team_api.dart';
 
@@ -276,11 +277,76 @@ void main() {
 
       final feed = await plans.feed();
       expect(
-        feed,
+        feed.entries,
         isNotEmpty,
         reason: 'Vừa tạo một việc thì dòng thời gian phải có bản ghi.',
       );
-      expect(feed.first.taskTitle, isNotEmpty);
+      expect(feed.entries.first.taskTitle, isNotEmpty);
+    });
+
+    test('mỗi dòng mang NGÀY do server tính', () async {
+      final plan = await plans.createPlan(
+        name: 'Ke hoach ngay',
+        sectionNames: const ['A'],
+      );
+      await tasks.create(title: 'Cay dan co ngay', projectId: plan.id);
+
+      final feed = await plans.feed();
+
+      // Thiếu `day` thì màn hình phải gom theo giờ THIẾT BỊ, và một điện thoại
+      // đặt sai múi giờ đủ làm hai người nhìn hai ngày khác nhau trên cùng một
+      // sự kiện. Đây là màn dùng để đối chiếu với ca làm.
+      expect(
+        feed.entries.first.day,
+        matches(RegExp(r'^\d{4}-\d{2}-\d{2}$')),
+        reason: 'Server phải gửi `day` dạng YYYY-MM-DD theo giờ xưởng.',
+      );
+    });
+
+    test('ảnh đại diện đi tới được từng dòng feed', () async {
+      // Mối nối kiểu đã hỏng tám lần trong dự án này: server có trường, client
+      // đọc một tên khác, và không ai báo lỗi. Tài khoản kiểm thử chưa đặt
+      // ảnh, nên `userAvatar` phải là NULL — không phải chuỗi rỗng, và đọc nó
+      // không được ném lỗi.
+      final plan = await plans.createPlan(
+        name: 'Ke hoach avatar',
+        sectionNames: const ['A'],
+      );
+      await tasks.create(title: 'Cay dan avatar', projectId: plan.id);
+
+      final feed = await plans.feed();
+      final row = feed.entries.first;
+
+      expect(row.userName, isNotNull);
+      expect(row.userAvatar, isNull);
+    });
+
+    test('xin việc-đã-xong thì không nhận về mọi lần chuyển nhóm', () async {
+      // Bộ lọc `types` chạy trên nhật ký THÔ, còn nhãn `piano_done` chỉ có sau
+      // khi server tra cờ `counts_for_kpi`. Lọc trước khi gắn nhãn thì kết quả
+      // rỗng — không lỗi, và màn hình đọc đúng như "chưa cây nào xong".
+      final plan = await plans.createPlan(
+        name: 'Ke hoach loc',
+        sectionNames: const ['Nhap xuong', 'Hoan thien'],
+      );
+      final task = await tasks.create(
+        title: 'Cay dan loc',
+        projectId: plan.id,
+      );
+      await tasks.moveToSection(task.id, plan.sections.last.id);
+
+      final feed = await plans.feed(types: kFeedCompletionTypes);
+
+      expect(
+        feed.entries.where((e) => e.kind == FeedKind.section),
+        isEmpty,
+        reason: 'Chuyển nhóm việc thường không được lọt vào màn việc-đã-xong.',
+      );
+      expect(
+        feed.entries.where((e) => e.kind == FeedKind.created),
+        isEmpty,
+        reason: '`created` không nằm trong danh sách xin.',
+      );
     });
 
     test('KPI đọc được, và nói rõ khi chưa cấu hình', () async {
@@ -350,6 +416,35 @@ void main() {
       final listed = await plans.plans();
       final reread = listed.firstWhere((p) => p.id == plan.id);
       expect(reread.teamName, team.name);
+    });
+
+    test('team tạo kèm thành viên GIỮ ĐỦ người', () async {
+      // API nhận `member_ids` từ lâu; app chỉ chưa bao giờ gửi. Kiểu lỗi
+      // "client không gửi thứ server chờ" đã xảy ra nhiều lần ở dự án này, và
+      // chỉ một vòng đi–về qua HTTP thật mới bắt được.
+      final roster = await team.members();
+      final ids = roster.take(1).map((m) => m.userId).toSet();
+
+      final created = await plans.createTeam(
+        name: 'To co thanh vien',
+        memberIds: ids,
+      );
+
+      final found = (await plans.teams()).firstWhere((t) => t.id == created.id);
+
+      expect(found.memberIds, containsAll(ids));
+    });
+
+    test('nền dự án lưu rồi ĐỌC LẠI được', () async {
+      // `cover` phải đi qua CreateProjectRequest, CreateProjectDTO và
+      // `toAttributes()` — ba danh sách trường viết tay, và bỏ sót một chỗ nào
+      // cũng cho ra 201 rồi mất dữ liệu.
+      final plan = await plans.createPlan(
+        name: 'Ke hoach nen',
+        cover: 'amber-2',
+      );
+
+      expect((await plans.plan(plan.id)).cover, 'amber-2');
     });
 
     test('tổ vừa tạo xuất hiện trong danh sách tổ', () async {

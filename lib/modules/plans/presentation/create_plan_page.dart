@@ -5,6 +5,7 @@ import '../../../core/error/app_exception.dart';
 import '../../../design/tokens/tokens.dart';
 import '../application/plans_providers.dart';
 import '../data/plans_api.dart';
+import 'widgets/cover_picker.dart';
 import '../domain/team.dart';
 
 /// Bốn nhóm việc điền sẵn cho một dự án mới.
@@ -32,7 +33,13 @@ const kDefaultSections = <String>['Cần làm', 'Đang làm', 'Chờ duyệt', '
 const kGatedDefaultSections = <String>{'Chờ duyệt', 'Xong'};
 
 class CreatePlanPage extends ConsumerStatefulWidget {
-  const CreatePlanPage({super.key});
+  const CreatePlanPage({super.key, this.teamId});
+
+  /// Team điền sẵn khi tới từ luồng "vừa tạo team xong".
+  ///
+  /// Không null thì ô chọn team KHÔNG hiện: người dùng vừa tạo đúng cái team
+  /// đó xong, và cho họ đổi ở đây chỉ mời một cú bấm nhầm.
+  final String? teamId;
 
   @override
   ConsumerState<CreatePlanPage> createState() => _CreatePlanPageState();
@@ -42,8 +49,15 @@ class _CreatePlanPageState extends ConsumerState<CreatePlanPage> {
   final _name = TextEditingController();
   final _sections = [...kDefaultSections];
   String? _teamId;
+  String _cover = OmniCovers.fallback;
   bool _saving = false;
   String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _teamId = widget.teamId;
+  }
 
   @override
   void dispose() {
@@ -69,6 +83,28 @@ class _CreatePlanPageState extends ConsumerState<CreatePlanPage> {
           OmniSpacing.bottomSafe,
         ),
         children: [
+          // Xem trước NGAY: tên hiện trên chính dải nền trong lúc gõ, nên
+          // người tạo thấy kết quả thật thay vì đoán. Đây cũng là chỗ kiểm
+          // được bằng mắt rằng nền đủ tối cho chữ trắng, ngay tại chỗ chọn.
+          Container(
+            height: 120,
+            alignment: Alignment.bottomLeft,
+            padding: const EdgeInsets.all(OmniSpacing.lg),
+            decoration: BoxDecoration(
+              gradient: OmniCovers.gradientOf(_cover),
+              borderRadius: OmniRadius.lgAll,
+            ),
+            child: Text(
+              _name.text.trim().isEmpty ? 'Dự án mới' : _name.text.trim(),
+              style: text.titleLarge?.copyWith(
+                color: Colors.white,
+                fontWeight: FontWeight.w700,
+              ),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          const SizedBox(height: OmniSpacing.lg),
           TextField(
             controller: _name,
             autofocus: true,
@@ -80,13 +116,28 @@ class _CreatePlanPageState extends ConsumerState<CreatePlanPage> {
             onChanged: (_) => setState(() {}),
           ),
           const SizedBox(height: OmniSpacing.lg),
-          _TeamPicker(
-            teams: [
-              for (final group in teams.valueOrNull ?? const []) group.team,
-            ],
-            selected: _teamId,
-            onChanged: (id) => setState(() => _teamId = id),
+          Text(
+            'Nền',
+            style: text.titleSmall?.copyWith(fontWeight: FontWeight.w700),
           ),
+          const SizedBox(height: OmniSpacing.sm),
+          CoverPicker(
+            value: _cover,
+            onChanged: (value) => setState(() => _cover = value),
+          ),
+          // Ô chọn team ẩn khi tới từ luồng "vừa tạo team xong": người dùng
+          // vừa tạo đúng cái team đó, và cho họ đổi ở đây chỉ mời một cú bấm
+          // nhầm ngay sau khi đã quyết định.
+          if (widget.teamId == null) ...[
+            const SizedBox(height: OmniSpacing.lg),
+            _TeamPicker(
+              teams: [
+                for (final group in teams.valueOrNull ?? const []) group.team,
+              ],
+              selected: _teamId,
+              onChanged: (id) => setState(() => _teamId = id),
+            ),
+          ],
           const SizedBox(height: OmniSpacing.xxl),
           Text(
             'Nhóm việc',
@@ -153,6 +204,7 @@ class _CreatePlanPageState extends ConsumerState<CreatePlanPage> {
           .createPlan(
             name: _name.text.trim(),
             teamId: _teamId,
+            cover: _cover,
             // Bỏ dòng trống: người dùng bấm "Thêm nhóm việc" rồi đổi ý là
             // chuyện thường, và một cột không tên trên bảng thì vô dụng.
             sectionNames: [

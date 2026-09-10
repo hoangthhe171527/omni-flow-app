@@ -91,7 +91,9 @@ void main() {
       'channel': 'private-tenant.tenant-1.entities',
       'data': jsonEncode({'type': 'task', 'id': 't1', 'action': 'updated'}),
     });
-    await settle();
+    // Tín hiệu gộp nhịp 400ms: tick xong ba việc con liên tiếp chỉ tốn MỘT
+    // lượt tải lại. Chờ qua quãng lặng đó rồi mới đòi con số.
+    await Future<void>.delayed(const Duration(milliseconds: 600));
     await container.read(myTasksProvider.future);
 
     expect(

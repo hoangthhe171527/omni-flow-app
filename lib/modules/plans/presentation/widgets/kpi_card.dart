@@ -19,6 +19,7 @@ class KpiCard extends StatelessWidget {
     required this.month,
     this.onPrevMonth,
     this.onNextMonth,
+    this.onConfigure,
   });
 
   final WorkshopKpi kpi;
@@ -36,6 +37,9 @@ class KpiCard extends StatelessWidget {
   /// hay "thiếu bao nhiêu so với mốc" (tháng đã khép).
   final VoidCallback? onNextMonth;
 
+  /// Mở chỗ đánh dấu nhóm việc đích. Chỉ dùng khi KPI chưa cấu hình.
+  final VoidCallback? onConfigure;
+
   bool get _isCurrentMonth => onNextMonth == null;
 
   @override
@@ -43,39 +47,48 @@ class KpiCard extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     final text = Theme.of(context).textTheme;
 
-    // Chưa dự án nào đánh dấu cột đích. Một số 0 ở đây trông y hệt "tháng
-    // này chưa xong cây nào", nên thẻ phải nói ra là cái nào — và nói luôn
-    // cách sửa.
+    // Chưa dự án nào đánh dấu cột đích. Một số 0 ở đây trông y hệt "tháng này
+    // chưa xong cây nào", nên vẫn phải nói ra là cái nào.
+    //
+    // Nhưng MỘT DÒNG, không phải một khối. Bản trước dựng nguyên một thẻ cao
+    // bằng thẻ KPI thật, đứng ở đầu màn Dòng việc — tức là chiếm đúng chỗ dễ
+    // thấy nhất của ngày để nói một điều người thợ không làm gì được và người
+    // quản đốc chỉ cần đọc một lần. Chỗ đó thuộc về việc xưởng vừa làm xong.
+    //
+    // Không có thanh chọn tháng ở nhánh này: chưa cấu hình thì mọi tháng đều
+    // ra 0, và ba mũi tên qua lại giữa các số 0 chỉ tốn chỗ.
     if (!kpi.isConfigured) {
-      return _Shell(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Thanh chọn tháng ở CẢ nhánh này: lùi về một tháng đã cấu hình
-            // xong là cách nhanh nhất để thấy con số đáng lẽ trông ra sao.
-            _MonthBar(month: month, onPrev: onPrevMonth, onNext: onNextMonth),
-            const SizedBox(height: OmniSpacing.md),
-            Row(
-              children: [
-                Icon(
-                  Icons.info_outline_rounded,
-                  size: OmniIconSize.lg,
-                  color: scheme.onSurfaceVariant,
-                ),
-                const SizedBox(width: OmniSpacing.md),
-                Expanded(
-                  child: Text(
-                    'Chưa có dự án nào đánh dấu nhóm việc đích, nên chưa '
-                    'đếm được việc nào hoàn thành. Đánh dấu trong phần nhóm '
-                    'việc của dự án.',
-                    style: text.bodySmall?.copyWith(
-                      color: scheme.onSurfaceVariant,
-                    ),
+      return InkWell(
+        onTap: onConfigure,
+        borderRadius: OmniRadius.smAll,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(
+            horizontal: OmniSpacing.sm,
+            vertical: OmniSpacing.sm,
+          ),
+          child: Row(
+            children: [
+              Icon(
+                Icons.flag_outlined,
+                size: OmniIconSize.sm,
+                color: scheme.onSurfaceVariant,
+              ),
+              const SizedBox(width: OmniSpacing.sm),
+              Expanded(
+                child: Text(
+                  'Đánh dấu nhóm việc đích',
+                  style: text.labelMedium?.copyWith(
+                    color: scheme.onSurfaceVariant,
                   ),
                 ),
-              ],
-            ),
-          ],
+              ),
+              Icon(
+                Icons.chevron_right_rounded,
+                size: OmniIconSize.sm,
+                color: scheme.onSurfaceVariant,
+              ),
+            ],
+          ),
         ),
       );
     }
