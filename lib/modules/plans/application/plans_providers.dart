@@ -34,15 +34,15 @@ final teamsWithPlansProvider = FutureProvider<List<TeamWithPlans>>((ref) async {
       TeamWithPlans(team: team, plans: byTeam[team.id] ?? const []),
   ];
 
-  // Dự án có tổ mà tổ ĐÓ không nằm trong danh sách vừa tải.
+  // Dự án có team mà team ĐÓ không nằm trong danh sách vừa tải.
   //
-  // Đây từng là chỗ dự án biến mất: app tra tên tổ trong `GET /teams` còn web
+  // Đây từng là chỗ dự án biến mất: app tra tên team trong `GET /teams` còn web
   // tra trong `GET /org-units` — hai bảng khác nhau — nên mỗi dự án tạo ở bên
-  // này rơi vào "chưa thuộc tổ nào" ở bên kia. API giờ giải sẵn `team_name`,
+  // này rơi vào "chưa xếp team" ở bên kia. API giờ giải sẵn `team_name`,
   // nên dựng được đúng khối cho nó thay vì dồn vào rổ mồ côi.
   //
-  // Vẫn còn lý do khác để rơi vào đây: tổ bị lưu trữ (danh sách mặc định giấu
-  // tổ đã lưu trữ), hoặc danh sách tổ tải hỏng. Cả hai đều KHÔNG được làm dự
+  // Vẫn còn lý do khác để rơi vào đây: team bị lưu trữ (danh sách mặc định giấu
+  // team đã lưu trữ), hoặc danh sách team tải hỏng. Cả hai đều KHÔNG được làm dự
   // án biến mất.
   final known = {for (final team in teams) team.id};
   final extras = <String, TeamWithPlans>{};
@@ -54,19 +54,19 @@ final teamsWithPlansProvider = FutureProvider<List<TeamWithPlans>>((ref) async {
         .firstWhere((n) => (n ?? '').isNotEmpty, orElse: () => null);
 
     extras[entry.key] = TeamWithPlans(
-      team: Team(id: entry.key, name: name ?? 'Tổ không còn tồn tại'),
+      team: Team(id: entry.key, name: name ?? 'Team không còn tồn tại'),
       plans: entry.value,
     );
   }
   grouped.addAll(extras.values);
 
-  // Dự án thật sự chưa xếp tổ. Chúng đi vào một khối riêng ở cuối chứ không
+  // Dự án thật sự chưa xếp team. Chúng đi vào một khối riêng ở cuối chứ không
   // bị bỏ qua: giấu chúng nghĩa là công việc đang chạy biến mất khỏi app.
   final orphans = byTeam[''] ?? const <Plan>[];
   if (orphans.isNotEmpty) {
     grouped.add(
       TeamWithPlans(
-        team: const Team(id: '', name: 'Chưa xếp tổ'),
+        team: const Team(id: '', name: 'Chưa xếp team'),
         plans: orphans,
       ),
     );

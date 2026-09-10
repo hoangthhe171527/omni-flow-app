@@ -56,7 +56,7 @@ void main() {
             'Trước đây dự án này rơi vào "chưa xếp tổ" — cùng một dự án, hai '
             'màn hình nói hai chuyện khác nhau.',
       );
-      expect(names, isNot(contains('Chưa xếp tổ')));
+      expect(names, isNot(contains('Chưa xếp team')));
 
       final block = groups.firstWhere((g) => g.team.name == 'Tổ web');
       expect(block.plans.map((p) => p.id), ['p1']);
@@ -75,7 +75,7 @@ void main() {
     );
 
     final orphan = groups.firstWhere((g) => g.team.id == '');
-    expect(orphan.team.name, 'Chưa xếp tổ');
+    expect(orphan.team.name, 'Chưa xếp team');
     expect(orphan.plans.map((p) => p.id), ['p1']);
   });
 
@@ -90,7 +90,7 @@ void main() {
       );
 
       final block = groups.firstWhere((g) => g.team.id == 'da-bi-xoa');
-      expect(block.team.name, 'Tổ không còn tồn tại');
+      expect(block.team.name, 'Team không còn tồn tại');
       expect(block.plans.map((p) => p.id), ['p1']);
     },
   );

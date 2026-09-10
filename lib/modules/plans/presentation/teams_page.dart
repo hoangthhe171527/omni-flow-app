@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../design/components/components.dart';
 import '../../../design/tokens/tokens.dart';
+import '../../../security/session/session_controller.dart';
 import '../../tasks/application/tasks_providers.dart';
 import '../application/plans_providers.dart';
 import '../plans_module.dart';
@@ -23,12 +24,16 @@ class TeamsPage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final groups = ref.watch(teamsWithPlansProvider);
     final isAssigner = ref.watch(taskAccessProvider).isAssigner;
+    // Cùng quyền mà API đòi ở đường ghi `/teams` — xem `Interfaces/routes.php`.
+    final canCreateTeam = ref
+        .watch(accessProvider)
+        .can('organization.org_units.create');
 
     return Scaffold(
       appBar: AppBar(title: const Text('Dự án')),
       floatingActionButton: isAssigner
           ? FloatingActionButton.extended(
-              onPressed: () => _create(context),
+              onPressed: () => _create(context, canCreateTeam: canCreateTeam),
               icon: const Icon(Icons.add_rounded),
               label: const Text('Tạo mới'),
             )
@@ -68,19 +73,27 @@ class TeamsPage extends ConsumerWidget {
   /// Hỏi trước bằng một sheet thay vì hai nút nổi: hai FAB trên một màn buộc
   /// người dùng đọc cả hai nhãn trước mỗi lần bấm, còn một nút thì họ chỉ đọc
   /// khi thật sự cần chọn.
-  Future<void> _create(BuildContext context) async {
+  Future<void> _create(
+    BuildContext context, {
+    required bool canCreateTeam,
+  }) async {
     final choice = await showOmniSheet<_CreateChoice>(
       context: context,
       builder: (context) => Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          ListTile(
-            minTileHeight: 56,
-            leading: const Icon(Icons.workspaces_outline),
-            title: const Text('Tạo team'),
-            subtitle: const Text('Một nhóm người, chứa nhiều dự án'),
-            onTap: () => Navigator.of(context).pop(_CreateChoice.team),
-          ),
+          // Tạo team giờ LÀ tạo một đơn vị trong cơ cấu tổ chức — cùng thứ
+          // web tạo, và cùng thứ `Membership` gắn người vào. API đòi quyền
+          // org tương ứng; vai `manager` có sẵn, nhưng một vai tự cấu hình
+          // thì chưa chắc. Bày ra một dòng bấm vào là 403 tệ hơn không bày.
+          if (canCreateTeam)
+            ListTile(
+              minTileHeight: 56,
+              leading: const Icon(Icons.workspaces_outline),
+              title: const Text('Tạo team'),
+              subtitle: const Text('Một nhóm người, chứa nhiều dự án'),
+              onTap: () => Navigator.of(context).pop(_CreateChoice.team),
+            ),
           ListTile(
             minTileHeight: 56,
             leading: const Icon(Icons.assignment_outlined),
