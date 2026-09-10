@@ -57,7 +57,9 @@ void main() {
     Map<String, dynamic>? kpi,
   }) => ProviderScope(
     overrides: [
-      workshopFeedProvider.overrideWith((ref) async => feed),
+      workshopFeedProvider.overrideWith(
+        (ref) async => (entries: feed, truncated: false),
+      ),
       workshopKpiProvider.overrideWith(
         (ref) async => WorkshopKpi.fromJson(kpi ?? kpiJson()),
       ),
@@ -147,7 +149,9 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
-          workshopFeedProvider.overrideWith((ref) async => [entry()]),
+          workshopFeedProvider.overrideWith(
+            (ref) async => (entries: [entry()], truncated: false),
+          ),
           workshopKpiProvider.overrideWith(
             (ref) async => throw Exception('API sập'),
           ),

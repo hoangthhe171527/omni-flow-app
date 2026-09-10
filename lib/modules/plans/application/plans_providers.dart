@@ -2,7 +2,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../tasks/application/tasks_providers.dart';
 import '../data/plans_api.dart';
-import '../domain/feed_entry.dart';
 import '../domain/plan.dart';
 import '../domain/workshop_kpi.dart';
 import '../domain/team.dart';
@@ -120,9 +119,9 @@ final kpiMonthProvider = StateProvider<DateTime>((ref) {
   return DateTime(now.year, now.month);
 });
 
-/// Chuyện gì vừa xảy ra ở xưởng.
-final workshopFeedProvider = FutureProvider<List<FeedEntry>>((ref) {
+/// Chuyện gì vừa xảy ra ở xưởng — chỉ những việc đã đánh dấu xong.
+final workshopFeedProvider = FutureProvider<WorkshopFeed>((ref) {
   ref.watch(taskRealtimeSignalProvider);
 
-  return ref.watch(plansApiProvider).feed();
+  return ref.watch(plansApiProvider).feed(types: kFeedCompletionTypes);
 });

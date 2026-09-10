@@ -38,6 +38,51 @@ void main() {
     expect(adapter.singleRequest.uri.queryParameters['limit'], '12');
   });
 
+  test('feed gửi types và since', () async {
+    await api.feed(types: kFeedCompletionTypes, days: 7);
+
+    final query = adapter.singleRequest.uri.queryParameters;
+
+    expect(query['types'], 'subtask_completed,piano_done,attachment_added');
+    expect(query['since'], matches(RegExp(r'^\d{4}-\d{2}-\d{2}$')));
+  });
+
+  test('attachment_added PHẢI nằm trong danh sách xin', () async {
+    // Màn hình không vẽ `attachment_added` thành một loại riêng, nên rất dễ
+    // bị coi là thừa và gỡ ra. Nhưng server cần chính những dòng đó để gộp ảnh
+    // vào dòng việc xong (FeedPhotoMerge). Gỡ ra thì ảnh biến mất khỏi dòng
+    // việc — không lỗi, không log, chỉ là những tấm ảnh không bao giờ hiện.
+    expect(kFeedCompletionTypes, contains('attachment_added'));
+  });
+
+  test('feed đọc được cờ truncated', () async {
+    adapter.body = '{"success":true,"data":[],"truncated":true}';
+
+    final feed = await api.feed();
+
+    expect(feed.truncated, isTrue);
+  });
+
+  test('thiếu truncated thì hiểu là chưa cắt', () async {
+    // Một API cũ không gửi khoá này. Mặc định phải là "chưa cắt" — hiện một
+    // lời cảnh báo cắt bớt trên một danh sách đầy đủ là nói dối theo chiều
+    // ngược lại.
+    final feed = await api.feed();
+
+    expect(feed.truncated, isFalse);
+  });
+
+  test('feed không gửi types khi không xin loại nào', () async {
+    // Rỗng nghĩa là "mọi loại" ở phía server. Gửi `types=` rỗng là gửi một bộ
+    // lọc không khớp gì.
+    await api.feed();
+
+    expect(
+      adapter.singleRequest.uri.queryParameters.containsKey('types'),
+      isFalse,
+    );
+  });
+
   test('kpi gọi /tasks/kpi', () async {
     await api.kpi();
 
@@ -71,6 +116,11 @@ void main() {
 class _RecordingAdapter implements HttpClientAdapter {
   final List<RequestOptions> requests = [];
 
+  /// Thân phản hồi. Đổi được để kiểm những khoá NGOÀI `data` — `truncated`
+  /// nằm ở cấp gốc, và nếu app không đọc nó thì trần 200 việc lại quay về cắt
+  /// im lặng.
+  String body = '{"success":true,"data":[]}';
+
   RequestOptions get singleRequest {
     expect(requests, hasLength(1));
     return requests.single;
@@ -87,7 +137,7 @@ class _RecordingAdapter implements HttpClientAdapter {
     // `data` phải là mảng cho feed và object cho phần còn lại; trả về mảng
     // rỗng thì `response.object` vẫn đọc được như map rỗng.
     return ResponseBody.fromString(
-      '{"success":true,"data":[]}',
+      body,
       200,
       headers: {
         Headers.contentTypeHeader: [Headers.jsonContentType],

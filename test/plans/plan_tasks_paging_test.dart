@@ -122,7 +122,11 @@ class _PagedApi implements PlansApi {
       WorkshopKpi.fromJson(const {});
 
   @override
-  Future<List<FeedEntry>> feed({int limit = 30}) async => const [];
+  Future<WorkshopFeed> feed({
+    List<String> types = const [],
+    int days = 7,
+    int limit = 30,
+  }) async => (entries: const <FeedEntry>[], truncated: false);
 
   @override
   Future<List<Team>> teams() async => const [];

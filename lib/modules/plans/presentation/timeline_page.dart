@@ -40,7 +40,7 @@ class TimelinePage extends ConsumerWidget {
         child: OmniAsyncView(
           value: feed,
           onRetry: () => ref.invalidate(workshopFeedProvider),
-          isEmpty: (rows) => rows.isEmpty && !isAssigner,
+          isEmpty: (feed) => feed.entries.isEmpty && !isAssigner,
           empty: const OmniEmptyState(
             icon: Icons.history_rounded,
             title: 'Chưa có hoạt động nào',
@@ -48,7 +48,7 @@ class TimelinePage extends ConsumerWidget {
                 'Việc được tạo, chuyển nhóm việc hay đổi hạn sẽ hiện ở đây.',
           ),
           data: (rows) {
-            final groups = FeedGroup.from(rows);
+            final groups = FeedGroup.from(rows.entries);
 
             return ListView.separated(
               padding: const EdgeInsets.fromLTRB(
@@ -264,6 +264,7 @@ class _FeedLine extends StatelessWidget {
     FeedKind.subtaskAssigned => Icons.how_to_reg_outlined,
     FeedKind.attachmentAdded => Icons.image_outlined,
     FeedKind.attachmentRemoved => Icons.hide_image_outlined,
+    FeedKind.pianoDone => Icons.verified_rounded,
     FeedKind.other => Icons.circle_outlined,
   };
 }
