@@ -7,156 +7,83 @@ import 'package:omni_app/modules/plans/application/plans_providers.dart';
 import 'package:omni_app/modules/plans/domain/feed_entry.dart';
 import 'package:omni_app/modules/plans/domain/workshop_kpi.dart';
 import 'package:omni_app/modules/plans/presentation/timeline_page.dart';
+import 'package:omni_app/modules/plans/presentation/widgets/completion_row.dart';
+import 'package:omni_app/modules/plans/presentation/widgets/piano_done_row.dart';
 import 'package:omni_app/modules/tasks/application/tasks_providers.dart';
 import 'package:omni_app/modules/tasks/domain/task_permissions.dart';
 import 'package:omni_app/security/permissions/access_policy.dart';
 
-/// "Chuyện gì vừa xảy ra" cho mọi người, "tháng này xong bao nhiêu cây" cho
-/// người giao việc.
+/// Màn Dòng việc trả lời "HÔM NAY ai xong cái gì".
+///
+/// Bản trước gom theo cây đàn và trộn mọi loại thay đổi — tạo việc, đổi hạn,
+/// đổi người — nên việc xong lẫn trong tiếng ồn, và chỗ dễ thấy nhất của ngày
+/// thì bị một khối cảnh báo cấu hình chiếm.
 void main() {
   setUpAll(() => initializeDateFormatting('vi_VN'));
 
   const worker = {'tasks.read', 'tasks.write'};
-  const assigner = {'tasks.read', 'tasks.write', 'tasks.projects.manage.all'};
+  const assigner = {
+    'tasks.read',
+    'tasks.write',
+    'tasks.projects.manage.all',
+  };
+
+  String iso(DateTime d) =>
+      '${d.year.toString().padLeft(4, '0')}-'
+      '${d.month.toString().padLeft(2, '0')}-'
+      '${d.day.toString().padLeft(2, '0')}';
+
+  final today = iso(DateTime.now());
+  final yesterday = iso(DateTime.now().subtract(const Duration(days: 1)));
 
   FeedEntry entry({
-    String type = 'section_id',
-    String title = 'KAWAI HAT-5',
-    String? user = 'Hằng Ni',
-    String taskId = 't1',
-    String? detail,
-    String? planName,
-    String? imageUrl,
-  }) => FeedEntry.fromJson({
-    'id': 'a1',
-    'task_id': taskId,
-    'task_title': title,
-    'created_at': '2026-09-06T08:00:00Z',
-    'user_name': ?user,
-    'title': ?detail,
-    'project_name': ?planName,
-    'url': ?imageUrl,
-    // Có ảnh thì loại phải là `image` — FeedEntry chỉ nhận thumbnail khi
-    // API nói đó là ảnh.
-    'type': imageUrl == null ? type : 'image',
-  });
-
-  Map<String, dynamic> kpiJson({int delivered = 12, bool configured = true}) =>
-      {
-        'delivered': delivered,
-        'reached_bonus': 0,
-        'next_tier': {'count': 35, 'bonus': 3, 'remaining': 35 - delivered},
-        'tiers': {'35': 3},
-        'days_left': 18,
-        'counting_sections': configured ? ['s4'] : <String>[],
-      };
-
-  Widget host({
-    Set<String> permissions = worker,
-    List<FeedEntry> feed = const [],
-    Map<String, dynamic>? kpi,
-  }) => ProviderScope(
-    overrides: [
-      workshopFeedProvider.overrideWith(
-        (ref) async => (entries: feed, truncated: false),
-      ),
-      workshopKpiProvider.overrideWith(
-        (ref) async => WorkshopKpi.fromJson(kpi ?? kpiJson()),
-      ),
-      taskAccessProvider.overrideWithValue(
-        TaskAccess.of(AccessPolicy(permissions)),
-      ),
-    ],
-    child: MaterialApp(
-      theme: OmniTheme.light(TargetPlatform.android),
-      home: const TimelinePage(),
-    ),
+    String id = 'a1',
+    FeedKind kind = FeedKind.subtaskCompleted,
+    String? detail = 'Body ngoài',
+    String taskTitle = 'KAWAI HAT-5',
+    String? userName = 'Hằng Ni',
+    String? planName = 'Phục chế T9',
+    List<String> photos = const [],
+    String? day,
+  }) => FeedEntry(
+    id: id,
+    kind: kind,
+    taskId: 't1',
+    taskTitle: taskTitle,
+    at: DateTime(2026, 9, 10, 9, 35),
+    userName: userName,
+    detail: detail,
+    planName: planName,
+    photos: photos,
+    day: day ?? today,
   );
 
-  testWidgets('người nhận việc thấy dòng hoạt động, KHÔNG thấy thẻ KPI', (
-    tester,
-  ) async {
-    await tester.pumpWidget(host(feed: [entry()]));
-    await tester.pumpAndSettle();
-
-    expect(find.text('KAWAI HAT-5'), findsOneWidget);
-    expect(
-      find.textContaining('việc xong trong tháng'),
-      findsNothing,
-      reason:
-          'Thưởng tính theo TEAM (§1). Bày mốc thưởng trước mặt từng thợ là '
-          'đổi cách xưởng làm việc, và tài liệu nói rõ họ không làm vậy.',
-    );
-  });
-
-  testWidgets('người giao việc thấy cả hai', (tester) async {
-    await tester.pumpWidget(host(permissions: assigner, feed: [entry()]));
-    await tester.pumpAndSettle();
-
-    expect(find.text('12'), findsOneWidget);
-    expect(find.textContaining('việc xong trong tháng'), findsOneWidget);
-    expect(find.text('KAWAI HAT-5'), findsOneWidget);
-  });
-
-  testWidgets('tên người đứng trước hành động, đọc thành một câu', (
-    tester,
-  ) async {
-    await tester.pumpWidget(host(feed: [entry()]));
-    await tester.pumpAndSettle();
-
-    expect(find.text('Hằng Ni đã chuyển nhóm việc'), findsOneWidget);
-  });
-
-  testWidgets('không tra được tên thì chỉ hiện hành động, không hiện UUID', (
-    tester,
-  ) async {
-    await tester.pumpWidget(host(feed: [entry(user: null)]));
-    await tester.pumpAndSettle();
-
-    expect(find.text('đã chuyển nhóm việc'), findsOneWidget);
-  });
-
-  testWidgets('loại hoạt động lạ vẫn hiện, không bị giấu', (tester) async {
-    // Một client cũ gặp loại mới phải nói "có thay đổi" chứ không được im.
-    await tester.pumpWidget(host(feed: [entry(type: 'điều_gì_đó_mới')]));
-    await tester.pumpAndSettle();
-
-    expect(find.text('Hằng Ni đã có thay đổi'), findsOneWidget);
-  });
-
-  testWidgets('chưa đánh dấu cột đích thì thẻ nói ra, không hiện số 0', (
-    tester,
-  ) async {
-    await tester.pumpWidget(
-      host(
-        permissions: assigner,
-        feed: [entry()],
-        kpi: kpiJson(delivered: 0, configured: false),
-      ),
-    );
-    await tester.pumpAndSettle();
-
-    expect(
-      find.textContaining('Chưa có dự án nào đánh dấu nhóm việc đích'),
-      findsOneWidget,
-      reason:
-          'Một số 0 vì chưa cấu hình trông y hệt một số 0 vì chưa làm được cây '
-          'nào, và một trong hai là tin xấu về xưởng.',
-    );
-  });
-
-  testWidgets('KPI hỏng không che mất dòng hoạt động', (tester) async {
+  Future<void> show(
+    WidgetTester tester, {
+    List<FeedEntry> feed = const [],
+    bool truncated = false,
+    Set<String> permissions = worker,
+    bool kpiConfigured = true,
+  }) async {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
           workshopFeedProvider.overrideWith(
-            (ref) async => (entries: [entry()], truncated: false),
+            (ref) async => (entries: feed, truncated: truncated),
           ),
           workshopKpiProvider.overrideWith(
-            (ref) async => throw Exception('API sập'),
+            (ref) async => WorkshopKpi(
+              delivered: 28,
+              reachedBonus: 0,
+              daysLeft: 10,
+              tiers: const [BonusTier(count: 35, bonus: 3)],
+              isConfigured: kpiConfigured,
+              rework: 0,
+              nextTier: const NextTier(count: 35, bonus: 3, remaining: 7),
+            ),
           ),
           taskAccessProvider.overrideWithValue(
-            TaskAccess.of(const AccessPolicy(assigner)),
+            TaskAccess.of(AccessPolicy(permissions)),
           ),
         ],
         child: MaterialApp(
@@ -166,107 +93,165 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
+  }
+
+  testWidgets('gom theo ngày và đếm hai loại riêng', (tester) async {
+    await show(
+      tester,
+      feed: [
+        entry(id: 'a1'),
+        entry(id: 'a2', detail: 'Lên dây'),
+        entry(id: 'a3', kind: FeedKind.pianoDone),
+      ],
+    );
+
+    // Hai con số RIÊNG. Gộp thành "3 việc xong" sẽ đá nhau với thẻ KPI, thứ
+    // chỉ đếm cây.
+    expect(
+      find.text('HÔM NAY · 2 công đoạn · 1 cây xong'),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('mỗi ngày một tiêu đề riêng', (tester) async {
+    await show(
+      tester,
+      feed: [entry(id: 'a1'), entry(id: 'a2', day: yesterday)],
+    );
+
+    expect(find.textContaining('HÔM NAY'), findsOneWidget);
+    expect(find.textContaining('HÔM QUA'), findsOneWidget);
+  });
+
+  testWidgets('ảnh bằng chứng hiện NGAY trên dòng việc xong', (tester) async {
+    // §B2: ảnh CHÍNH LÀ bằng chứng của công đoạn. Bắt mở từng cây đàn ra để
+    // xem là bỏ mất lý do người ta lướt màn này.
+    await show(
+      tester,
+      feed: [
+        entry(photos: const ['/m/1.jpg', '/m/2.jpg']),
+      ],
+    );
+
+    // Đếm theo KHOÁ chứ không theo `Image`, và KHÔNG bỏ qua offstage.
+    //
+    // Trong test không có mạng, nên `Image.network` hỏng và `errorBuilder` trả
+    // về một ô rỗng — ô ảnh vẫn được DỰNG nhưng có kích thước 0, và finder mặc
+    // định coi nó là offstage. Câu hỏi ở đây là "màn hình có chừa chỗ cho đủ
+    // hai tấm ảnh không", không phải "ảnh có tải được trong test không".
+    expect(
+      find.byWidgetPredicate(
+        (w) =>
+            w.key is ValueKey<String> &&
+            (w.key! as ValueKey<String>).value.startsWith('photo:'),
+        skipOffstage: false,
+      ),
+      findsNWidgets(2),
+    );
+  });
+
+  testWidgets('không có ảnh thì không chừa dải trống', (tester) async {
+    await show(tester, feed: [entry()]);
 
     expect(
-      find.text('KAWAI HAT-5'),
-      findsOneWidget,
-      reason:
-          'KPI là thứ phụ trên màn này — quan trọng nhất với chủ xưởng, nhưng '
-          'không đáng đánh đổi cả màn hình khi nó hỏng.',
+      find.byWidgetPredicate(
+        (w) =>
+            w.key is ValueKey<String> &&
+            (w.key! as ValueKey<String>).value.startsWith('photo:'),
+        skipOffstage: false,
+      ),
+      findsNothing,
     );
   });
 
-  testWidgets('thợ chưa có hoạt động nào thì nói rõ là chưa có', (
+  testWidgets('dòng cây đàn xong khác hẳn dòng công đoạn', (tester) async {
+    await show(
+      tester,
+      feed: [entry(id: 'a1'), entry(id: 'a2', kind: FeedKind.pianoDone)],
+    );
+
+    expect(find.byType(PianoDoneRow), findsOneWidget);
+    expect(find.byType(CompletionRow), findsOneWidget);
+  });
+
+  testWidgets('câu nói rõ AI và LÀM GÌ', (tester) async {
+    await show(tester, feed: [entry()]);
+
+    expect(find.text('Hằng Ni đã xong Body ngoài'), findsOneWidget);
+  });
+
+  testWidgets('rỗng thì nói đúng cái đang rỗng', (tester) async {
+    await show(tester, feed: const []);
+
+    // KHÔNG phải "chưa có hoạt động nào": có thể có rất nhiều hoạt động mà
+    // không có việc nào được đánh dấu xong. Nói nhầm thì người đọc đi tìm sai
+    // chỗ.
+    expect(
+      find.textContaining('Chưa có việc nào được đánh dấu xong'),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('cắt bớt thì NÓI RA', (tester) async {
+    await show(tester, feed: [entry()], truncated: true);
+
+    expect(find.text('Chỉ hiện 7 ngày gần nhất.'), findsOneWidget);
+  });
+
+  testWidgets('không cắt thì không doạ', (tester) async {
+    await show(tester, feed: [entry()]);
+
+    expect(find.text('Chỉ hiện 7 ngày gần nhất.'), findsNothing);
+  });
+
+  testWidgets('thợ KHÔNG thấy thẻ KPI', (tester) async {
+    // §1: thưởng theo TEAM. Bày mốc thưởng ra trước mặt từng người là đổi cách
+    // xưởng làm việc.
+    await show(tester, feed: [entry()]);
+
+    expect(find.text('28'), findsNothing);
+  });
+
+  testWidgets('người giao việc thấy thẻ KPI', (tester) async {
+    await show(tester, feed: [entry()], permissions: assigner);
+
+    expect(find.text('28'), findsOneWidget);
+  });
+
+  testWidgets('KPI chưa cấu hình không chiếm chỗ của dòng việc', (
     tester,
   ) async {
-    await tester.pumpWidget(host());
-    await tester.pumpAndSettle();
-
-    expect(find.text('Chưa có hoạt động nào'), findsOneWidget);
-  });
-
-  testWidgets('tên cây đàn hiện MỘT lần cho nhiều hoạt động', (tester) async {
-    // Trước đây mỗi hoạt động là một dòng mang theo tên cây đàn, nên ba người
-    // đụng vào cùng một cây trong một buổi cho ba dòng lặp lại y hệt nhau.
-    await tester.pumpWidget(
-      host(
-        feed: [
-          entry(type: 'subtask_completed', detail: 'Body ngoài'),
-          entry(type: 'attachment_added', user: 'luận'),
-          entry(type: 'section_id', user: 'linh'),
-        ],
-      ),
+    await show(
+      tester,
+      feed: [entry()],
+      permissions: assigner,
+      kpiConfigured: false,
     );
-    await tester.pumpAndSettle();
 
-    expect(find.text('KAWAI HAT-5'), findsOneWidget);
+    expect(
+      find.textContaining('nên chưa đếm được việc nào hoàn thành'),
+      findsNothing,
+    );
+    expect(find.text('Đánh dấu nhóm việc đích'), findsOneWidget);
+    // Dòng việc vẫn ở đó, không bị đẩy xuống dưới màn hình.
     expect(find.text('Hằng Ni đã xong Body ngoài'), findsOneWidget);
-    expect(find.text('luận đã gửi tệp đính kèm'), findsOneWidget);
-    expect(find.text('linh đã chuyển nhóm việc'), findsOneWidget);
-  });
-
-  testWidgets('cây khác nhau vẫn là thẻ khác nhau', (tester) async {
-    await tester.pumpWidget(
-      host(
-        feed: [
-          entry(taskId: 't1', title: 'KAWAI HAT-5'),
-          entry(taskId: 't2', title: 'YAMAHA U1H'),
-        ],
-      ),
-    );
-    await tester.pumpAndSettle();
-
-    expect(find.text('KAWAI HAT-5'), findsOneWidget);
-    expect(find.text('YAMAHA U1H'), findsOneWidget);
-  });
-
-  testWidgets('thẻ nói cả KẾ HOẠCH, không chỉ tên cây đàn', (tester) async {
-    // Một xưởng chạy hai dự án song song thì "cây nào" chưa đủ — còn
-    // phải biết việc đó thuộc tháng nào.
-    await tester.pumpWidget(
-      host(feed: [entry(planName: 'Xưởng đàn cơ — 2026-09')]),
-    );
-    await tester.pumpAndSettle();
-
-    expect(find.text('Xưởng đàn cơ — 2026-09'), findsOneWidget);
-  });
-
-  testWidgets('ảnh đính kèm hiện NGAY trên dòng', (tester) async {
-    // §B2: ảnh chính là bằng chứng của công đoạn. Bắt mở từng cây ra để xem
-    // là bỏ mất lý do người ta lướt màn này.
-    await tester.pumpWidget(
-      host(
-        feed: [entry(type: 'attachment_added', imageUrl: 'https://x/body.jpg')],
-      ),
-    );
-    await tester.pumpAndSettle();
-
-    expect(find.byType(Image), findsOneWidget);
   });
 
   testWidgets('giờ hiện TUYỆT ĐỐI, không phải "2 giờ trước"', (tester) async {
-    // Quản đốc đối chiếu dòng này với ca làm và với lời thợ nói, và "09:35"
-    // là thứ so được.
-    await tester.pumpWidget(host(feed: [entry()]));
-    await tester.pumpAndSettle();
+    // Quản đốc đối chiếu dòng này với ca làm và với lời thợ nói.
+    await show(tester, feed: [entry()]);
 
-    expect(find.textContaining(':'), findsWidgets);
-    expect(find.textContaining('trước'), findsNothing);
+    expect(find.text('09:35'), findsOneWidget);
   });
 
-  testWidgets('một cây bị rework dồn dập không đẩy cả xưởng khỏi màn hình', (
-    tester,
-  ) async {
-    // Bảy hoạt động liên tiếp trên một cây. Hiện hết thì thẻ đó chiếm trọn màn
-    // và những cây khác biến mất — đúng thứ màn "tổng quan" không được làm.
-    await tester.pumpWidget(
-      host(feed: [for (var i = 0; i < 7; i++) entry(user: 'thợ $i')]),
+  testWidgets('ảnh gửi lẻ vẫn hiện, không bị nuốt', (tester) async {
+    await show(
+      tester,
+      feed: [
+        entry(id: 'a1', kind: FeedKind.attachmentAdded, detail: 'mau.jpg'),
+      ],
     );
-    await tester.pumpAndSettle();
 
-    expect(find.text('thợ 0 đã chuyển nhóm việc'), findsOneWidget);
-    expect(find.text('thợ 4 đã chuyển nhóm việc'), findsOneWidget);
-    expect(find.text('thợ 5 đã chuyển nhóm việc'), findsNothing);
-    expect(find.text('và 2 hoạt động nữa'), findsOneWidget);
+    expect(find.text('Hằng Ni đã gửi mau.jpg'), findsOneWidget);
   });
 }
