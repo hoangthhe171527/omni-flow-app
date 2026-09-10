@@ -13,4 +13,10 @@ abstract final class TaskRoutes {
   static const list = 'tasks.list';
   static const detail = 'tasks.detail';
   static const create = 'tasks.create';
+
+  /// Tải việc của một người. Mở từ danh sách nhân viên.
+  static const workload = 'tasks.workload';
+
+  /// Tìm một cây đàn theo tên hoặc số máy.
+  static const search = 'tasks.search';
 }

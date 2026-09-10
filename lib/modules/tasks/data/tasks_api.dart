@@ -8,16 +8,37 @@ import '../domain/task.dart';
 /// Which slice of a person's work to show.
 ///
 /// These are the four questions a worker actually has, in the order they have
-/// them — not a generic filter builder.
+/// them — not a generic filter builder. Cộng một câu thứ năm mà chỉ QUẢN ĐỐC
+/// hỏi, xem [open].
+///
+/// Tên các case khớp với `enum TaskBucket` bên API
+/// (`modules/Tasks/Domain/Enums/TaskBucket.php`). Lệch một chữ thì server
+/// không hiểu và im lặng rơi về "tất cả" — im lặng, vì một bộ lọc không đọc
+/// được thì bị bỏ qua chứ không báo lỗi.
 enum TaskBucket {
   today('Hôm nay'),
   overdue('Quá hạn'),
   upcoming('Sắp tới'),
+
+  /// Chưa xong, bất kể có đặt hạn hay không.
+  ///
+  /// Bốn nhóm kia đều xoay quanh HẠN, vì đó là cách một người thợ nhìn hàng
+  /// đợi của chính mình. Quản đốc hỏi khác — "người này đang gánh bao nhiêu
+  /// cây" — và câu đó không lọc theo hạn: phần lớn công đoạn ở xưởng không
+  /// đặt hạn riêng, chúng chạy theo bảng tháng (§B0).
+  open('Chưa xong'),
   all('Tất cả');
 
   const TaskBucket(this.label);
 
   final String label;
+
+  /// Bốn nhóm hiện trên màn "Việc của tôi".
+  ///
+  /// KHÔNG phải [values]: [open] là câu hỏi của quản đốc về NGƯỜI KHÁC, và
+  /// thêm nó vào hàng nút của người thợ là thêm một nút gần trùng "Tất cả"
+  /// vào đúng màn hình cần ít lựa chọn nhất.
+  static const forMyWork = [today, overdue, upcoming, all];
 }
 
 class TasksApi {
@@ -41,6 +62,77 @@ class TasksApi {
       query: {
         'assignee': 'me',
         'bucket': bucket.name,
+        'page': page,
+        'per_page': perPage,
+      },
+    );
+
+    return Paged(
+      items: response.list.map(Task.fromJson).toList(),
+      pagination: response.pagination ?? const ApiPagination.empty(),
+    );
+  }
+
+  /// Việc của MỘT người, cho quản đốc xem tải.
+  ///
+  /// Khác [mine] ở chỗ id đi từ client lên — và đó là lý do màn gọi hàm này
+  /// nằm sau `tasks.projects.manage.all`. [mine] cố ý không nhận id: nếu nhận
+  /// thì ai cũng đọc được hàng đợi của người khác chỉ bằng cách đổi tham số,
+  /// và §7 nói rõ xưởng không công khai số liệu từng cá nhân.
+  Future<Paged<Task>> byAssignee(
+    String userId, {
+    TaskBucket bucket = TaskBucket.open,
+    int page = 1,
+    int perPage = AppConfig.defaultPerPage,
+  }) async {
+    final response = await _client.get(
+      _base,
+      query: {
+        'assignee_id': userId,
+        'bucket': bucket.name,
+        'page': page,
+        'per_page': perPage,
+      },
+    );
+
+    return Paged(
+      items: response.list.map(Task.fromJson).toList(),
+      pagination: response.pagination ?? const ApiPagination.empty(),
+    );
+  }
+
+  /// Số việc quá hạn của một người, đếm ở SERVER.
+  ///
+  /// Không đếm trên danh sách đã tải: danh sách có phân trang, nên một con số
+  /// đếm từ trang một là con số của trang một — và nó trông y hệt một con số
+  /// của tất cả.
+  Future<int> overdueCount(String userId) async {
+    final response = await _client.get(
+      '$_base/stats',
+      query: {'assignee_id': userId},
+    );
+
+    return (response.object['overdue'] as num?)?.toInt() ?? 0;
+  }
+
+  /// Tìm một cây đàn theo tên hoặc số máy.
+  ///
+  /// Server so khớp trên `title`, `customer_name`, `name` và `code`, nên
+  /// "471302" tìm ra "SCHWESTER No.53 — SN 471302". Không lọc theo người:
+  /// người đi tìm một cây đàn thường KHÔNG phải người đang giữ nó — đó chính
+  /// là lý do họ phải tìm.
+  Future<Paged<Task>> search(
+    String query, {
+    int page = 1,
+    int perPage = AppConfig.defaultPerPage,
+  }) async {
+    final response = await _client.get(
+      _base,
+      query: {
+        'search': query,
+        // "Tất cả": một cây đã bàn giao tháng trước vẫn phải tìm lại được —
+        // đó gần như là lý do duy nhất người ta gõ một số máy vào ô tìm kiếm.
+        'bucket': TaskBucket.all.name,
         'page': page,
         'per_page': perPage,
       },

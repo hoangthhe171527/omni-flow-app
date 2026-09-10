@@ -10,6 +10,8 @@ import 'domain/task_permissions.dart';
 import 'presentation/create_task_page.dart';
 import 'presentation/my_tasks_page.dart';
 import 'presentation/task_detail_page.dart';
+import 'presentation/task_search_page.dart';
+import 'presentation/workload_page.dart';
 
 /// Work assigned to the signed-in person.
 ///
@@ -61,6 +63,27 @@ class TasksModule extends OmniModule {
           sections: args.sections,
         );
       },
+    ),
+    // Cũng đứng TRƯỚC '/tasks/:id', cùng lý do với '/tasks/new'.
+    ModuleRoute(
+      path: '/tasks/search',
+      name: TaskRoutes.search,
+      rootNavigator: true,
+      // Quyền ĐỌC, không phải quyền quản đốc: người đi tìm một cây đàn
+      // thường không phải người đang giữ nó — đó chính là lý do họ phải tìm.
+      access: const AccessRequirement.any(TaskPermissions.anyRead),
+      builder: (_, _) => const TaskSearchPage(),
+    ),
+    ModuleRoute(
+      path: '/tasks/by/:userId',
+      name: TaskRoutes.workload,
+      rootNavigator: true,
+      // Tải việc của NGƯỜI KHÁC nằm sau quyền giao việc. §7 nói xưởng không
+      // công khai số liệu cá nhân; đây là công cụ điều phối của quản đốc,
+      // không phải một bảng ai cũng mở được về bất kỳ ai.
+      access: const AccessRequirement.all([TaskPermissions.manageAllProjects]),
+      builder: (_, state) =>
+          WorkloadPage(userId: state.pathParameters['userId']!),
     ),
     ModuleRoute(
       path: '/tasks/:id',

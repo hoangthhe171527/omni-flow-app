@@ -73,7 +73,7 @@ void main() {
     await tester.pumpWidget(host());
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('Hằng Ni'));
+    await tester.tap(find.byTooltip('Liên kết Zalo — Hằng Ni'));
     await tester.pumpAndSettle();
     await tester.enterText(find.byType(TextField), '79000099999');
     await tester.pump();
@@ -90,7 +90,7 @@ void main() {
     await tester.pumpWidget(host());
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('Bảo Khánh'));
+    await tester.tap(find.byTooltip('Sửa liên kết Zalo — Bảo Khánh'));
     await tester.pumpAndSettle();
     await tester.enterText(find.byType(TextField), '');
     await tester.pump();
@@ -104,7 +104,7 @@ void main() {
     await tester.pumpWidget(host());
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('Bảo Khánh'));
+    await tester.tap(find.byTooltip('Sửa liên kết Zalo — Bảo Khánh'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Lưu'));
     await tester.pumpAndSettle();
@@ -121,6 +121,10 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Chưa liên kết Zalo'), findsNothing);
+    // Không còn nút để bấm. Trước đây cả thẻ là vùng bấm nên bài này phải
+    // chạm vào rồi kiểm sheet KHÔNG mở; giờ đường vào là một nút có nhãn, và
+    // vắng mặt nó là câu trả lời trực tiếp hơn.
+    expect(find.byTooltip('Liên kết Zalo — Hằng Ni'), findsNothing);
 
     await tester.tap(find.text('Hằng Ni'));
     await tester.pumpAndSettle();
