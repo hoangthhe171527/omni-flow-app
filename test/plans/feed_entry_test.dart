@@ -101,4 +101,54 @@ void main() {
       expect(of('attachment_added', {'name': 'truoc.png'}).detail, 'truoc.png');
     });
   });
+
+  group('dữ liệu ảnh hai thời kỳ', () {
+    // Server từng để loại TỆP ghi đè loại HOẠT ĐỘNG, nên những dòng ghi trước
+    // bản sửa nằm trong Mongo với `type: 'image'`. Không backfill — đọc được
+    // cả hai ở đây rẻ hơn một migration, và không có cửa sổ nào dữ liệu hiện
+    // sai.
+    test('dạng mới: type là hoạt động, file_type là tệp', () {
+      final entry = of('attachment_added', {
+        'file_type': 'image',
+        'name': 'body-ngoai.jpg',
+        'url': '/api/v1/tasks/media/abc.jpg',
+      });
+
+      expect(entry.kind, FeedKind.attachmentAdded);
+      expect(entry.summary, 'đã gửi body-ngoai.jpg');
+      expect(entry.imageUrl, '/api/v1/tasks/media/abc.jpg');
+    });
+
+    test('dạng cũ: type bị loại tệp ghi đè mất', () {
+      final entry = of('image', {
+        'name': 'lung-dan.jpg',
+        'url': '/api/v1/tasks/media/def.jpg',
+      });
+
+      expect(entry.kind, FeedKind.attachmentAdded);
+      expect(entry.summary, 'đã gửi lung-dan.jpg');
+      expect(entry.imageUrl, '/api/v1/tasks/media/def.jpg');
+    });
+
+    test('dạng cũ, tệp không phải ảnh', () {
+      final entry = of('file', {
+        'name': 'bao-gia.pdf',
+        'url': '/api/v1/tasks/media/ghi.pdf',
+      });
+
+      expect(entry.kind, FeedKind.attachmentAdded);
+      expect(entry.imageUrl, isNull);
+    });
+
+    test('dạng mới, tệp không phải ảnh thì không có thumbnail', () {
+      // Một PDF render ra ô vỡ giữa dòng chữ thì tệ hơn là không render gì.
+      final entry = of('attachment_added', {
+        'file_type': 'file',
+        'name': 'bao-gia.pdf',
+        'url': '/api/v1/tasks/media/ghi.pdf',
+      });
+
+      expect(entry.imageUrl, isNull);
+    });
+  });
 }

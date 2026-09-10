@@ -36,6 +36,12 @@ enum FeedKind {
     'subtask_assigned' => subtaskAssigned,
     'attachment_added' => attachmentAdded,
     'attachment_removed' => attachmentRemoved,
+    // Dạng CŨ. Server từng để loại TỆP ('image'/'file') ghi đè loại HOẠT ĐỘNG
+    // trong `TaskActivityService::entry()`, nên những dòng ghi trước bản sửa
+    // nằm trong Mongo với `type: 'image'`. Chúng không được backfill và sẽ ở
+    // đó mãi; đọc chúng ở đây rẻ hơn một migration, và không có cửa sổ nào
+    // dữ liệu hiện sai.
+    'image' || 'file' => attachmentAdded,
     _ => other,
   };
 }
@@ -75,7 +81,12 @@ class FeedEntry {
     planName: json.str('project_name'),
     // Chỉ ẢNH mới hiện thumbnail. Một tệp PDF render ra ô vỡ thì tệ hơn là
     // không render gì.
-    imageUrl: json.str('type') == 'image' ? json.str('url') : null,
+    //
+    // Hai khoá vì hai thời kỳ dữ liệu: `file_type` là dạng mới, `type ==
+    // 'image'` là dạng cũ — xem ghi chú ở [FeedKind.parse].
+    imageUrl: (json.str('file_type') == 'image' || json.str('type') == 'image')
+        ? json.str('url')
+        : null,
   );
 
   final String id;
