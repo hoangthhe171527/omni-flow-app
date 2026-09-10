@@ -27,11 +27,27 @@ void main() {
     nextTier: next,
   );
 
-  Future<void> show(WidgetTester tester, WorkshopKpi value) async {
+  /// [past] mở thẻ ở một tháng ĐÃ KHÉP.
+  ///
+  /// `onNextMonth == null` là tín hiệu duy nhất cho "đang ở tháng hiện tại" —
+  /// mũi tên tới tắt và tháng đang chạy luôn là cùng một sự thật, nên thẻ đọc
+  /// một cờ chứ không hai.
+  Future<void> show(
+    WidgetTester tester,
+    WorkshopKpi value, {
+    bool past = false,
+  }) async {
     await tester.pumpWidget(
       MaterialApp(
         theme: OmniTheme.light(TargetPlatform.android),
-        home: Scaffold(body: KpiCard(kpi: value)),
+        home: Scaffold(
+          body: KpiCard(
+            kpi: value,
+            month: DateTime(2026, past ? 8 : 9),
+            onPrevMonth: () {},
+            onNextMonth: past ? () {} : null,
+          ),
+        ),
       ),
     );
     await tester.pumpAndSettle();

@@ -13,9 +13,30 @@ import '../../domain/workshop_kpi.dart';
 /// nên không có tên ai trên thẻ này — thêm một bảng xếp hạng cá nhân là đổi
 /// cách xưởng làm việc, và tài liệu nói rõ họ không làm vậy.
 class KpiCard extends StatelessWidget {
-  const KpiCard({super.key, required this.kpi});
+  const KpiCard({
+    super.key,
+    required this.kpi,
+    required this.month,
+    this.onPrevMonth,
+    this.onNextMonth,
+  });
 
   final WorkshopKpi kpi;
+
+  /// Tháng đang xem. Chỉ năm và tháng có nghĩa.
+  final DateTime month;
+
+  final VoidCallback? onPrevMonth;
+
+  /// null nghĩa là KHÔNG đi tới được nữa — tức là đang ở tháng hiện tại.
+  ///
+  /// Một tín hiệu chứ không phải hai: mũi tên tắt và "đang ở tháng này" luôn
+  /// là cùng một sự thật, và tách chúng ra là tạo chỗ cho hai cờ nói ngược
+  /// nhau. Thẻ đọc nó để biết nên viết "còn bao xa tới mốc" (tháng đang chạy)
+  /// hay "thiếu bao nhiêu so với mốc" (tháng đã khép).
+  final VoidCallback? onNextMonth;
+
+  bool get _isCurrentMonth => onNextMonth == null;
 
   @override
   Widget build(BuildContext context) {
@@ -27,21 +48,36 @@ class KpiCard extends StatelessWidget {
     // cách sửa.
     if (!kpi.isConfigured) {
       return _Shell(
-        child: Row(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Icon(
-              Icons.info_outline_rounded,
-              size: OmniIconSize.lg,
-              color: scheme.onSurfaceVariant,
+            // Thanh chọn tháng ở CẢ nhánh này: lùi về một tháng đã cấu hình
+            // xong là cách nhanh nhất để thấy con số đáng lẽ trông ra sao.
+            _MonthBar(
+              month: month,
+              onPrev: onPrevMonth,
+              onNext: onNextMonth,
             ),
-            const SizedBox(width: OmniSpacing.md),
-            Expanded(
-              child: Text(
-                'Chưa có kế hoạch nào đánh dấu nhóm việc đích, nên chưa đếm '
-                'được việc nào hoàn thành. Đánh dấu trong phần nhóm việc của '
-                'kế hoạch.',
-                style: text.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
-              ),
+            const SizedBox(height: OmniSpacing.md),
+            Row(
+              children: [
+                Icon(
+                  Icons.info_outline_rounded,
+                  size: OmniIconSize.lg,
+                  color: scheme.onSurfaceVariant,
+                ),
+                const SizedBox(width: OmniSpacing.md),
+                Expanded(
+                  child: Text(
+                    'Chưa có kế hoạch nào đánh dấu nhóm việc đích, nên chưa '
+                    'đếm được việc nào hoàn thành. Đánh dấu trong phần nhóm '
+                    'việc của kế hoạch.',
+                    style: text.bodySmall?.copyWith(
+                      color: scheme.onSurfaceVariant,
+                    ),
+                  ),
+                ),
+              ],
             ),
           ],
         ),
@@ -52,6 +88,8 @@ class KpiCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          _MonthBar(month: month, onPrev: onPrevMonth, onNext: onNextMonth),
+          const SizedBox(height: OmniSpacing.sm),
           Row(
             crossAxisAlignment: CrossAxisAlignment.baseline,
             textBaseline: TextBaseline.alphabetic,
@@ -66,7 +104,10 @@ class KpiCard extends StatelessWidget {
               ),
               const SizedBox(width: OmniSpacing.sm),
               Text(
-                'việc xong tháng này',
+                // "trong tháng", không phải "tháng này": thanh ngay trên đã
+                // nói là tháng nào, và từ khi lùi được về tháng trước thì
+                // "tháng này" là một khẳng định sai.
+                'việc xong trong tháng',
                 style: text.bodyMedium?.copyWith(
                   color: scheme.onSurfaceVariant,
                 ),
@@ -95,7 +136,7 @@ class KpiCard extends StatelessWidget {
             ),
             const SizedBox(height: OmniSpacing.sm),
           ],
-          _Milestone(kpi: kpi),
+          _Milestone(kpi: kpi, isCurrentMonth: _isCurrentMonth),
           // Số lần làm lại (§B3). Chữ nhỏ, không tô đỏ, không kèm tên ai: nó
           // là thông tin để cải thiện chứ không phải một lời buộc tội. Ẩn khi
           // bằng 0 thay vì khoe một số 0.
@@ -115,11 +156,65 @@ class KpiCard extends StatelessWidget {
   }
 }
 
+/// Chọn tháng: ‹ Tháng 9/2026 ›
+///
+/// Cuối tháng chủ xưởng đọc con số để trao thưởng (§B4). Nhưng ngày mùng 1
+/// con số đã về 0, và tháng vừa khép lại là thứ không còn xem được ở đâu cả —
+/// nên số để trả thưởng phải đọc đúng trong ngày cuối cùng, hoặc chép tay ra
+/// chỗ khác. API nhận `?month=` từ lâu; app thì chưa từng gửi.
+///
+/// Không đi tới TƯƠNG LAI: một tháng chưa tới luôn có `delivered = 0`, và một
+/// số 0 ở đây trông y hệt "tháng này chưa ai xong cây nào".
+class _MonthBar extends StatelessWidget {
+  const _MonthBar({required this.month, this.onPrev, this.onNext});
+
+  final DateTime month;
+  final VoidCallback? onPrev;
+  final VoidCallback? onNext;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+
+    return Row(
+      children: [
+        IconButton(
+          onPressed: onPrev,
+          tooltip: 'Tháng trước',
+          visualDensity: VisualDensity.compact,
+          icon: const Icon(Icons.chevron_left_rounded),
+        ),
+        Expanded(
+          child: Text(
+            'Tháng ${month.month}/${month.year}',
+            textAlign: TextAlign.center,
+            style: Theme.of(context).textTheme.labelLarge?.copyWith(
+              color: scheme.onSurfaceVariant,
+              fontFeatures: OmniType.tabular,
+            ),
+          ),
+        ),
+        IconButton(
+          // null làm nút MỜ đi chứ không biến mất: một mũi tên biến mất làm
+          // hàng nút nhảy chỗ, và người dùng mất mốc để biết mình đang ở đâu.
+          onPressed: onNext,
+          tooltip: 'Tháng sau',
+          visualDensity: VisualDensity.compact,
+          icon: const Icon(Icons.chevron_right_rounded),
+        ),
+      ],
+    );
+  }
+}
+
 /// Dòng dưới thanh tiến độ: còn bao xa, và cần nhịp nào để kịp.
 class _Milestone extends StatelessWidget {
-  const _Milestone({required this.kpi});
+  const _Milestone({required this.kpi, required this.isCurrentMonth});
 
   final WorkshopKpi kpi;
+
+  /// Tháng đã khép thì không còn gì để "chạy tới".
+  final bool isCurrentMonth;
 
   @override
   Widget build(BuildContext context) {
@@ -155,8 +250,14 @@ class _Milestone extends StatelessWidget {
       children: [
         Expanded(
           child: Text(
-            'Còn ${next.remaining} việc tới mốc ${next.count} — '
-            'thưởng ${next.bonus} triệu',
+            // Tháng đã khép thì không còn gì để "chạy tới": "còn 5 việc tới
+            // mốc 35" đọc như một lời động viên cho một tháng đã hết, và
+            // người đọc nó là người sắp trả thưởng.
+            isCurrentMonth
+                ? 'Còn ${next.remaining} việc tới mốc ${next.count} — '
+                      'thưởng ${next.bonus} triệu'
+                : 'Thiếu ${next.remaining} việc so với mốc ${next.count} — '
+                      'thưởng ${next.bonus} triệu',
             style: text.labelMedium?.copyWith(color: scheme.onSurfaceVariant),
           ),
         ),

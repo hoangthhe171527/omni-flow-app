@@ -179,6 +179,57 @@ void main() {
     });
   });
 
+  group('quản đốc đứng giữa xưởng', () {
+    test('tải việc của một người đếm cả việc CHƯA đặt hạn', () async {
+      // Nhóm `open` là nhóm thứ năm, thêm cùng lúc với màn này. Bốn nhóm cũ
+      // đều lọc theo HẠN, mà phần lớn công đoạn ở xưởng không đặt hạn riêng —
+      // chúng chạy theo bảng tháng (§B0). Lệch một chữ giữa Dart và PHP thì
+      // server im lặng rơi về "tất cả", và con số lớn hơn sự thật.
+      final members = await team.members();
+      final me = members.first;
+
+      final task = await tasks.create(title: 'Cay chua dat han');
+      await tasks.setAssignees(task.id, [me.userId]);
+
+      final load = await tasks.byAssignee(me.userId);
+      expect(
+        load.items.map((t) => t.id),
+        contains(task.id),
+        reason: 'Việc chưa đặt hạn vẫn là việc đang gánh.',
+      );
+
+      // Xong rồi thì thôi là tải của ai. Không có nhánh này thì sau vài tháng
+      // con số chỉ nói lên người đó vào làm từ bao giờ.
+      await tasks.setStatus(task.id, 'done');
+      final after = await tasks.byAssignee(me.userId);
+      expect(after.items.map((t) => t.id), isNot(contains(task.id)));
+    });
+
+    test('tìm ra cây đàn theo số máy nằm trong tiêu đề', () async {
+      final stamp = DateTime.now().microsecondsSinceEpoch.toString();
+      await tasks.create(title: 'SCHWESTER No.53 — SN $stamp');
+
+      final hits = await tasks.search(stamp);
+      expect(hits.items, isNotEmpty, reason: 'Server so khớp theo đoạn trên `title`.');
+      expect(hits.items.first.title, contains(stamp));
+    });
+
+    test('nhật ký của một công việc mang TÊN người, không mang UUID', () async {
+      // Dòng thời gian toàn xưởng có tên người từ lâu; `activity` nhúng trong
+      // một công việc thì chưa ai giải — nên app không hiện nổi nhật ký, mà
+      // đó là chỗ duy nhất trả lời "ai đã kéo cây này về lại".
+      final task = await tasks.create(title: 'Cay co nhat ky');
+
+      final reread = await tasks.get(task.id);
+      expect(reread.activity, isNotEmpty, reason: 'Tạo việc phải để lại một dòng.');
+      expect(
+        reread.activity.first.userName,
+        isNotNull,
+        reason: 'API phải giải sẵn tên; app không có quyền tra ngược.',
+      );
+    });
+  });
+
   group('dòng thời gian và KPI', () {
     test('dòng thời gian gọi đúng /tasks/feed và có bản ghi', () async {
       // Đường dẫn từng thiếu tiền tố `/tasks` và gọi vào một đường không tồn
@@ -200,6 +251,21 @@ void main() {
       // cuối tháng có người đọc nhầm nó để trả thưởng.
       expect(kpi.isConfigured, isFalse);
       expect(kpi.delivered, 0);
+    });
+
+    test('tháng ĐÃ QUA không còn ngày nào để chạy', () async {
+      // `diffInDays(absolute: true)` bên API không biết chiều, nên xem lại
+      // tháng trước từng trả về một số dương — và app chia nó ra thành "nhịp
+      // cần thiết" cho một tháng đã hết ngày.
+      final now = DateTime.now();
+      final past = await plans.kpi(month: DateTime(now.year, now.month - 1));
+
+      expect(past.daysLeft, 0);
+      expect(past.perDayNeeded, isNull, reason: 'Không khuyên nhịp cho quá khứ.');
+
+      // Tháng đang chạy vẫn phải đếm ngược — sửa quá khứ mà hỏng hiện tại là
+      // mất đúng phần §B4 dùng.
+      expect((await plans.kpi()).daysLeft, greaterThan(0));
     });
   });
 

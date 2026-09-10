@@ -4,7 +4,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:omni_app/core/config/app_config.dart';
 import 'package:omni_app/core/network/api_envelope.dart';
 import 'package:omni_app/design/theme/omni_theme.dart';
-import 'package:omni_app/modules/tasks/application/tasks_providers.dart';
 import 'package:omni_app/modules/tasks/data/tasks_api.dart';
 import 'package:omni_app/modules/tasks/domain/task.dart';
 import 'package:omni_app/modules/tasks/presentation/workload_page.dart';

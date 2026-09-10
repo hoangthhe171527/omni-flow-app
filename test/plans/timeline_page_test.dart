@@ -79,7 +79,7 @@ void main() {
 
     expect(find.text('KAWAI HAT-5'), findsOneWidget);
     expect(
-      find.textContaining('việc xong tháng này'),
+      find.textContaining('việc xong trong tháng'),
       findsNothing,
       reason:
           'Thưởng tính theo TEAM (§1). Bày mốc thưởng trước mặt từng thợ là '
@@ -92,7 +92,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('12'), findsOneWidget);
-    expect(find.textContaining('việc xong tháng này'), findsOneWidget);
+    expect(find.textContaining('việc xong trong tháng'), findsOneWidget);
     expect(find.text('KAWAI HAT-5'), findsOneWidget);
   });
 

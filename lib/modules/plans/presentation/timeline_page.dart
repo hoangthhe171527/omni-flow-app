@@ -85,11 +85,28 @@ class _Kpi extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final kpi = ref.watch(workshopKpiProvider);
+    final month = ref.watch(kpiMonthProvider);
+    final now = DateTime.now();
+    // So sánh theo THÁNG, không theo ngày: `kpiMonthProvider` luôn giữ ngày 1,
+    // nên một phép so bằng trên DateTime sẽ đúng — cho tới lần đầu ai đó đặt
+    // vào đó một ngày giữa tháng.
+    final atCurrentMonth = month.year == now.year && month.month == now.month;
 
     return Padding(
       padding: const EdgeInsets.only(bottom: OmniSpacing.sm),
       child: kpi.when(
-        data: (data) => KpiCard(kpi: data),
+        data: (data) => KpiCard(
+          kpi: data,
+          month: month,
+          onPrevMonth: () => ref.read(kpiMonthProvider.notifier).state =
+              DateTime(month.year, month.month - 1),
+          // Không đi tới tương lai: một tháng chưa tới luôn có `delivered = 0`,
+          // và số 0 đó trông y hệt "tháng này chưa ai xong cây nào".
+          onNextMonth: atCurrentMonth
+              ? null
+              : () => ref.read(kpiMonthProvider.notifier).state =
+                    DateTime(month.year, month.month + 1),
+        ),
         // Một ô trống cao bằng thẻ, để dòng hoạt động bên dưới không nhảy khi
         // con số tới nơi.
         loading: () => const SizedBox(height: 132),

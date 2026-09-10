@@ -118,7 +118,7 @@ class _PagedApi implements PlansApi {
   }
 
   @override
-  Future<WorkshopKpi> kpi({String? planId}) async =>
+  Future<WorkshopKpi> kpi({String? planId, DateTime? month}) async =>
       WorkshopKpi.fromJson(const {});
 
   @override
