@@ -1,0 +1,255 @@
+name: Release
+
+# Đóng gói bản cài được cho thợ xưởng.
+#
+# Chạy TAY (`workflow_dispatch`), không tự chạy theo push: một bản lên kho là
+# một việc có chủ đích, và mỗi lần chạy tiêu một `build_number` không lấy lại
+# được — Google Play và App Store đều từ chối một số đã dùng.
+#
+# Vì sao build ở đây chứ không build trên máy:
+#
+#   - Máy đang phát triển là Windows, không có Android SDK và không thể build
+#     iOS. Bản iOS BẮT BUỘC phải build trên macOS; đây là ràng buộc của Apple,
+#     không phải lựa chọn.
+#   - Một bản dựng trên laptop không lặp lại được: không ai biết nó đã ký bằng
+#     khoá nào, đọc `.env` nào, dùng phiên bản Flutter nào.
+#
+# Toàn bộ khoá ký và cấu hình nhạy cảm đi vào đây bằng repository secrets. Không
+# có secret thì job DỪNG với lời giải thích, chứ không lặng lẽ cho ra một tệp
+# ký bằng khoá debug — thứ cài được lên máy mình và bị kho từ chối, hoặc tệ hơn,
+# được kho nhận rồi khoá cứng cả ứng dụng vào một cái khoá không ai giữ.
+#
+# Danh sách secret và cách tạo từng cái: docs/PHAT_HANH.md
+
+on:
+  workflow_dispatch:
+    inputs:
+      build_number:
+        description: >-
+          Số hiệu bản dựng (versionCode / CFBundleVersion). PHẢI lớn hơn mọi
+          lần đã tải lên trước đó — cả hai kho đều từ chối số đã dùng.
+        required: true
+        type: string
+      platform:
+        description: Nền tảng cần đóng gói
+        required: true
+        default: android
+        type: choice
+        options: [android, ios, both]
+
+concurrency:
+  # Hai bản dựng cùng lúc cùng tiêu một số hiệu là một trong hai bản chết.
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  android:
+    name: Android (AAB)
+    if: inputs.platform == 'android' || inputs.platform == 'both'
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: subosito/flutter-action@v2
+        with:
+          # Cùng phiên bản với ci.yml. Lệch nhau nghĩa là thứ được kiểm và thứ
+          # được phát hành không phải một.
+          flutter-version: '3.47.2'
+          channel: stable
+          cache: true
+
+      - name: Dựng .env
+        env:
+          ENV_FILE: ${{ secrets.ENV_FILE }}
+        run: |
+          if [ -n "$ENV_FILE" ]; then
+            printf '%s' "$ENV_FILE" > .env
+          else
+            # `.env.example` đã trỏ vào API thật, nên bản dựng vẫn chạy đúng —
+            # chỉ thiếu REALTIME_KEY, và app tự lùi về hỏi lại theo chu kỳ.
+            # Chậm hơn, nhưng không bao giờ sai. Nói ra để không ai tưởng
+            # realtime đang chạy.
+            echo "::warning::Không có secret ENV_FILE — dùng .env.example, realtime TẮT."
+            cp .env.example .env
+          fi
+
+      - name: Dựng google-services.json
+        env:
+          GOOGLE_SERVICES_JSON: ${{ secrets.GOOGLE_SERVICES_JSON }}
+        run: |
+          if [ -z "$GOOGLE_SERVICES_JSON" ]; then
+            echo "::error::Thiếu secret GOOGLE_SERVICES_JSON. Bản release đòi cấu hình Firebase của vn.app.sunriseieco.viomni — xem docs/PHAT_HANH.md."
+            exit 1
+          fi
+          printf '%s' "$GOOGLE_SERVICES_JSON" > android/app/google-services.json
+
+      - name: Dựng khoá ký
+        env:
+          KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          STORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          if [ -z "$KEYSTORE_BASE64" ]; then
+            echo "::error::Thiếu secret ANDROID_KEYSTORE_BASE64. Không có khoá thì Gradle lùi về khoá DEBUG, và một AAB ký bằng khoá debug bị Play từ chối — xem docs/PHAT_HANH.md."
+            exit 1
+          fi
+          echo "$KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/upload.jks"
+          cat > android/key.properties <<EOF
+          storeFile=$RUNNER_TEMP/upload.jks
+          storePassword=$STORE_PASSWORD
+          keyAlias=$KEY_ALIAS
+          keyPassword=$KEY_PASSWORD
+          EOF
+
+      - run: flutter pub get
+
+      - name: Đóng gói AAB
+        # AAB chứ không APK: Play chỉ nhận AAB cho ứng dụng mới từ 2021.
+        run: flutter build appbundle --release --build-number=${{ inputs.build_number }}
+
+      - name: Xác nhận đã ký bằng khoá thật
+        # Gradle cố ý KHÔNG chết khi thiếu khoá — nó lùi về khoá debug để một
+        # bản clone sạch vẫn build được. Chính vì vậy chỗ này phải kiểm: một
+        # tệp ký nhầm khoá trông y hệt một tệp ký đúng cho tới lúc tải lên.
+        run: |
+          keytool -printcert -jarfile build/app/outputs/bundle/release/app-release.aab > cert.txt
+          cat cert.txt
+          if grep -q "CN=Android Debug" cert.txt; then
+            echo "::error::AAB đang ký bằng khoá DEBUG. Play sẽ từ chối."
+            exit 1
+          fi
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: viomni-android-${{ inputs.build_number }}
+          path: build/app/outputs/bundle/release/app-release.aab
+          # Tệp này ký bằng khoá phát hành. Giữ lâu trên GitHub không thêm được
+          # gì — bản thật sống ở Play Console sau khi tải lên.
+          retention-days: 14
+
+      - name: Dọn khoá
+        # Chạy cả khi bước trên hỏng: một keystore còn nằm lại trên runner là
+        # một keystore ai đọc được log cũng chạm tới được.
+        if: always()
+        run: rm -f "$RUNNER_TEMP/upload.jks" android/key.properties
+
+  ios:
+    name: iOS (IPA)
+    if: inputs.platform == 'ios' || inputs.platform == 'both'
+    # macOS là ràng buộc của Apple: không có cách nào build iOS ở nơi khác.
+    runs-on: macos-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.47.2'
+          channel: stable
+          cache: true
+
+      - name: Dựng .env
+        env:
+          ENV_FILE: ${{ secrets.ENV_FILE }}
+        run: |
+          if [ -n "$ENV_FILE" ]; then
+            printf '%s' "$ENV_FILE" > .env
+          else
+            echo "::warning::Không có secret ENV_FILE — dùng .env.example, realtime TẮT."
+            cp .env.example .env
+          fi
+
+      - name: Nạp chứng thư ký vào keychain tạm
+        # Keychain RIÊNG cho lượt chạy, không đụng keychain mặc định của
+        # runner: nó bị xoá ở bước cuối, nên chứng thư không sống quá lượt
+        # chạy này kể cả khi runner được tái dùng.
+        env:
+          CERT_P12: ${{ secrets.IOS_DIST_CERT_P12 }}
+          CERT_PASSWORD: ${{ secrets.IOS_DIST_CERT_PASSWORD }}
+          PROFILE: ${{ secrets.IOS_PROVISIONING_PROFILE }}
+        run: |
+          if [ -z "$CERT_P12" ] || [ -z "$PROFILE" ]; then
+            echo "::error::Thiếu IOS_DIST_CERT_P12 hoặc IOS_PROVISIONING_PROFILE — xem docs/PHAT_HANH.md."
+            exit 1
+          fi
+
+          KEYCHAIN="$RUNNER_TEMP/build.keychain"
+          KEYCHAIN_PASSWORD=$(uuidgen)
+
+          echo "$CERT_P12" | base64 -d > "$RUNNER_TEMP/dist.p12"
+          echo "$PROFILE" | base64 -d > "$RUNNER_TEMP/profile.mobileprovision"
+
+          security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN"
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN"
+          security import "$RUNNER_TEMP/dist.p12" -P "$CERT_PASSWORD" \
+            -A -t cert -f pkcs12 -k "$KEYCHAIN"
+          # THÊM vào danh sách tìm kiếm chứ không thay thế: `-s` với một tên
+          # duy nhất sẽ hất login.keychain ra, và mọi thứ khác trên runner cần
+          # tới nó thì hỏng theo — một lỗi trông không liên quan gì tới ký.
+          security list-keychains -d user -s "$KEYCHAIN" \
+            $(security list-keychains -d user | tr -d '"')
+          # Cho codesign dùng khoá mà không hỏi mật khẩu — nếu không, xcodebuild
+          # treo ở một hộp thoại không ai bấm được.
+          security set-key-partition-list -S apple-tool:,apple: \
+            -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN" > /dev/null
+
+          mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
+          cp "$RUNNER_TEMP/profile.mobileprovision" \
+            ~/Library/MobileDevice/Provisioning\ Profiles/
+
+      - name: Dựng GoogleService-Info.plist
+        env:
+          GOOGLE_SERVICE_INFO_PLIST: ${{ secrets.IOS_GOOGLE_SERVICE_INFO_PLIST }}
+        run: |
+          # Tệp này ĐANG được theo dõi trong git, khác với bản Android. Secret
+          # chỉ để ghi đè khi cần đổi project Firebase mà không phải commit.
+          if [ -n "$GOOGLE_SERVICE_INFO_PLIST" ]; then
+            printf '%s' "$GOOGLE_SERVICE_INFO_PLIST" > ios/Runner/GoogleService-Info.plist
+          fi
+
+      - run: flutter pub get
+
+      - name: Đóng gói IPA
+        run: |
+          flutter build ipa --release \
+            --build-number=${{ inputs.build_number }} \
+            --export-options-plist=ios/ExportOptions.plist
+
+      - name: Tải lên TestFlight
+        env:
+          KEY_ID: ${{ secrets.APPSTORE_API_KEY_ID }}
+          ISSUER_ID: ${{ secrets.APPSTORE_API_ISSUER_ID }}
+          KEY_P8: ${{ secrets.APPSTORE_API_KEY_P8 }}
+        run: |
+          if [ -z "$KEY_ID" ]; then
+            echo "::warning::Thiếu APPSTORE_API_KEY_ID — bỏ qua bước tải lên, IPA vẫn nằm trong artifact."
+            exit 0
+          fi
+          # `altool` tìm khoá ở đúng thư mục này, đúng cách đặt tên này.
+          mkdir -p ~/.appstoreconnect/private_keys
+          printf '%s' "$KEY_P8" > ~/.appstoreconnect/private_keys/AuthKey_$KEY_ID.p8
+          xcrun altool --upload-app --type ios \
+            --file "$(find build/ios/ipa -name '*.ipa' | head -1)" \
+            --apiKey "$KEY_ID" --apiIssuer "$ISSUER_ID"
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: viomni-ios-${{ inputs.build_number }}
+          path: build/ios/ipa/*.ipa
+          retention-days: 14
+
+      - name: Dọn chứng thư
+        if: always()
+        run: |
+          security delete-keychain "$RUNNER_TEMP/build.keychain" || true
+          rm -f ~/Library/MobileDevice/Provisioning\ Profiles/profile.mobileprovision
+          rm -f ~/.appstoreconnect/private_keys/*.p8
