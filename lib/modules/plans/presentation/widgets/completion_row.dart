@@ -30,10 +30,7 @@ class CompletionRow extends StatelessWidget {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // `imageUrl` để trống là CỐ Ý: OmniAvatar đã nhận sẵn tham số đó,
-            // nên dự án con "Avatar người dùng" chỉ cần truyền vào — không phải
-            // sờ lại màn này.
-            OmniAvatar(name: who, size: 32),
+            OmniAvatar(name: who, imageUrl: entry.userAvatar, size: 32),
             const SizedBox(width: OmniSpacing.md),
             Expanded(
               child: Column(

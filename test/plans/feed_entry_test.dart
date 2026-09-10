@@ -102,6 +102,24 @@ void main() {
     });
   });
 
+  group('ảnh đại diện người làm', () {
+    test('đọc user_avatar khi server gửi', () {
+      // Server giải sẵn (PeopleDirectory) — client không tự tra id ra ảnh,
+      // cùng lập luận với `user_name`.
+      final entry = of('subtask_completed', {
+        'user_avatar': 'https://api.test/api/v1/auth/avatar/abc.png',
+      });
+
+      expect(entry.userAvatar, 'https://api.test/api/v1/auth/avatar/abc.png');
+    });
+
+    test('người chưa đặt ảnh thì null, không phải chuỗi rỗng', () {
+      // Chuỗi rỗng sẽ thành một thẻ ảnh trỏ vào hư không; null thì OmniAvatar
+      // rơi về chữ cái đầu.
+      expect(of('subtask_completed').userAvatar, isNull);
+    });
+  });
+
   group('dữ liệu ảnh hai thời kỳ', () {
     // Server từng để loại TỆP ghi đè loại HOẠT ĐỘNG, nên những dòng ghi trước
     // bản sửa nằm trong Mongo với `type: 'image'`. Không backfill — đọc được

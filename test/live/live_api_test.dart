@@ -303,6 +303,24 @@ void main() {
       );
     });
 
+    test('ảnh đại diện đi tới được từng dòng feed', () async {
+      // Mối nối kiểu đã hỏng tám lần trong dự án này: server có trường, client
+      // đọc một tên khác, và không ai báo lỗi. Tài khoản kiểm thử chưa đặt
+      // ảnh, nên `userAvatar` phải là NULL — không phải chuỗi rỗng, và đọc nó
+      // không được ném lỗi.
+      final plan = await plans.createPlan(
+        name: 'Ke hoach avatar',
+        sectionNames: const ['A'],
+      );
+      await tasks.create(title: 'Cay dan avatar', projectId: plan.id);
+
+      final feed = await plans.feed();
+      final row = feed.entries.first;
+
+      expect(row.userName, isNotNull);
+      expect(row.userAvatar, isNull);
+    });
+
     test('xin việc-đã-xong thì không nhận về mọi lần chuyển nhóm', () async {
       // Bộ lọc `types` chạy trên nhật ký THÔ, còn nhãn `piano_done` chỉ có sau
       // khi server tra cờ `counts_for_kpi`. Lọc trước khi gắn nhãn thì kết quả

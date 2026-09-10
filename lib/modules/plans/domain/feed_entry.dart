@@ -72,6 +72,7 @@ class FeedEntry {
     this.photos = const [],
     this.day = '',
     this.userId,
+    this.userAvatar,
   });
 
   factory FeedEntry.fromJson(Map<String, dynamic> json) => FeedEntry(
@@ -106,6 +107,10 @@ class FeedEntry {
     // chạy UTC và ca chiều của xưởng rơi sang ngày hôm sau theo giờ đó.
     day: json.strOr('day', ''),
     userId: json.str('user_id'),
+    // Server giải sẵn (`PeopleDirectory`), client không tự tra id ra ảnh —
+    // cùng lập luận với `user_name`, và mỗi dòng tự đi hỏi là mỗi dòng một
+    // lượt gọi mạng.
+    userAvatar: json.str('user_avatar'),
   );
 
   final String id;
@@ -143,9 +148,12 @@ class FeedEntry {
   /// vào ngày nào — [DayGroup] bỏ qua chứ không đoán.
   final String day;
 
-  /// Ai làm. Để widget dòng dựng được ô người, và để dự án con "Avatar" sau
-  /// này đổ ảnh vào đúng chỗ mà không phải sửa lại màn hình.
+  /// Ai làm. Để widget dòng dựng được ô người.
   final String? userId;
+
+  /// Ảnh đại diện của người làm, server giải sẵn. Null khi họ chưa đặt ảnh —
+  /// `OmniAvatar` rơi về chữ cái đầu.
+  final String? userAvatar;
 
   /// Câu mô tả, viết theo cách người xưởng nói.
   ///
