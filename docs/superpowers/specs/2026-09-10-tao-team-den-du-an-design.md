@@ -218,7 +218,7 @@ team trên web"), nên nó phải được kiểm bằng mắt trên cả hai.
 
 | # | Rủi ro | Nếu sai |
 |---|---|---|
-| R1 | Vai tạo được team cũng đọc được danh bạ (`membership.members.read`) | Ô "Thành viên" mở ra danh sách rỗng hoặc 403. **Kiểm bằng chạy thật với vai `manager`**, không suy từ bảng quyền — quyền do từng workspace cấu hình. |
+| ~~R1~~ | ~~Vai tạo được team cũng đọc được danh bạ~~ | **Đã gỡ 2026-09-10.** `SystemRolePresets::manager()` có CẢ HAI: `organization.org_units.create` (tạo team) và `membership.members.read` (đọc danh bạ). Đã kiểm thêm bằng gọi thật: `/memberships` và `/identity/users` đều trả 200. Vẫn giữ ghi chú: vai do từng workspace tự cấu hình được, nên một workspace gỡ `members.read` khỏi `manager` sẽ thấy ô "Thành viên" rỗng — sheet phải chịu được danh sách rỗng mà không vỡ. |
 | R2 | `POST /projects` nhận `team_id` của team vừa tạo | Đã có `TeamExists` rule, và live test hiện tại đã kiểm "team_id trỏ vào hư không bị TỪ CHỐI". Rủi ro thấp. |
 | R3 | Tám nền đủ tương phản với chữ trắng | Kiểm bằng mắt lúc dựng bảng màu; phần xem trước ở §4.4 làm chính việc đó lộ ra ngay. |
 
