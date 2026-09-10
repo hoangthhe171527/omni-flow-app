@@ -39,7 +39,7 @@ void main() {
         reason:
             'Bộ mặc định phải CHUNG, không theo ngành nào: app dùng cho nhiều '
             'loại công việc, và mọi tenant mới đều nhận đúng những chữ này. '
-            'Bắt gõ lại cho mỗi kế hoạch mới là bắt làm một việc form đã biết '
+            'Bắt gõ lại cho mỗi dự án mới là bắt làm một việc form đã biết '
             'trước câu trả lời.',
       );
     }
@@ -62,9 +62,9 @@ void main() {
 
     await tester.enterText(find.byType(TextField).first, 'Đàn cơ');
     await tester.pumpAndSettle();
-    await tester.ensureVisible(find.text('Tạo kế hoạch'));
+    await tester.ensureVisible(find.text('Tạo dự án'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Tạo kế hoạch'));
+    await tester.tap(find.text('Tạo dự án'));
     await tester.pumpAndSettle();
 
     expect(api.createdName, 'Đàn cơ');
@@ -89,12 +89,12 @@ void main() {
     await tester.pumpAndSettle();
 
     await tester.enterText(find.byType(TextField).first, 'Đàn điện');
-    // Ô đầu tiên là tên kế hoạch, nên công đoạn thứ nhất là TextField thứ hai.
+    // Ô đầu tiên là tên dự án, nên công đoạn thứ nhất là TextField thứ hai.
     await tester.enterText(find.byType(TextField).at(1), '   ');
     await tester.pumpAndSettle();
-    await tester.ensureVisible(find.text('Tạo kế hoạch'));
+    await tester.ensureVisible(find.text('Tạo dự án'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Tạo kế hoạch'));
+    await tester.tap(find.text('Tạo dự án'));
     await tester.pumpAndSettle();
 
     expect(

@@ -142,7 +142,7 @@ class TaskAttachment {
   bool get isImage => type == 'image';
 }
 
-/// Một công đoạn của kế hoạch, như công việc nhìn thấy nó.
+/// Một công đoạn của dự án, như công việc nhìn thấy nó.
 ///
 /// Bản sao nhỏ của `PlanSection` bên module plans, và CỐ Ý là bản sao: nếu
 /// module tasks import kiểu của module plans thì hai module tham chiếu vòng
@@ -246,11 +246,11 @@ class Task {
   /// thành MỘT tên — và chính lượt gọi ấy bắt module `tasks` phải import
   /// module `plans`, tạo ra phụ thuộc VÒNG giữa hai module.
   ///
-  /// null cả khi chưa xếp công đoạn lẫn khi nhóm đã bị xoá khỏi kế hoạch: hai
+  /// null cả khi chưa xếp công đoạn lẫn khi nhóm đã bị xoá khỏi dự án: hai
   /// chuyện khác nhau với cơ sở dữ liệu, cùng một câu trả lời với người dùng.
   final String? sectionName;
 
-  /// Các công đoạn của kế hoạch chứa việc này.
+  /// Các công đoạn của dự án chứa việc này.
   ///
   /// Chỉ có mặt ở phản hồi CHI TIẾT, nơi sheet "Chuyển công đoạn" cần nó.
   /// Dòng danh sách không mang theo: 50 việc × 5 công đoạn là 250 bản sao của
@@ -347,7 +347,7 @@ class Task {
   ///
   /// Hậu quả không nằm ở chỗ dễ đoán. Tick một việc con là đi qua đây (cập
   /// nhật lạc quan), nên chỉ cần tick một cái là `planSections` biến mất —
-  /// và sheet "Chuyển nhóm việc" từ đó báo "kế hoạch này chưa khai báo nhóm
+  /// và sheet "Chuyển nhóm việc" từ đó báo "dự án này chưa khai báo nhóm
   /// việc nào". Tức là: tick xong công đoạn thì hết kéo được cây đàn sang cột
   /// kế tiếp, đúng hai thao tác đi liền nhau ở §B2 → §B3.
   ///

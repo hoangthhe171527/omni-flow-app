@@ -101,7 +101,7 @@ void main() {
   });
 
   group('điền sẵn từ bảng', () {
-    testWidgets('mang theo kế hoạch và ĐÚNG cột đang đứng', (tester) async {
+    testWidgets('mang theo dự án và ĐÚNG cột đang đứng', (tester) async {
       // Cả điểm của việc đặt nút tạo trên bảng: việc mới ra đời đúng chỗ mà
       // không phải hỏi thêm câu nào.
       await tester.pumpWidget(host());

@@ -4,7 +4,7 @@ import '../../../../design/components/components.dart';
 import '../../../../design/tokens/tokens.dart';
 import '../../domain/plan.dart';
 
-/// Một kế hoạch trong danh sách của team.
+/// Một dự án trong danh sách của team.
 ///
 /// Ba con số, theo đúng thứ tự người quản đốc hỏi: đi được bao xa, còn bao
 /// nhiêu, có gì đang trễ. Trễ là thứ duy nhất được tô màu — nếu tô cả ba thì

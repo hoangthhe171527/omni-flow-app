@@ -9,7 +9,7 @@ import '../domain/feed_entry.dart';
 import '../domain/workshop_kpi.dart';
 import '../domain/team.dart';
 
-/// Đọc cây Team → Kế hoạch → Công việc.
+/// Đọc cây Team → Dự án → Công việc.
 ///
 /// Ba trong bốn tầng đã có sẵn ở API từ lâu — `projects` mang `sections` và
 /// `member_roles`, `tasks` mang `section_id`. App chỉ chưa từng hỏi tới.
@@ -29,10 +29,10 @@ class PlansApi {
     return response.list.map(Team.fromJson).toList();
   }
 
-  /// Kế hoạch, tuỳ chọn lọc theo team.
+  /// Dự án, tuỳ chọn lọc theo team.
   ///
-  /// Bỏ trống [teamId] thì trả về TẤT CẢ, kể cả kế hoạch chưa thuộc team nào —
-  /// mọi kế hoạch tạo trước tầng Team đều vậy, và giấu chúng đi nghĩa là công
+  /// Bỏ trống [teamId] thì trả về TẤT CẢ, kể cả dự án chưa thuộc team nào —
+  /// mọi dự án tạo trước tầng Team đều vậy, và giấu chúng đi nghĩa là công
   /// việc đang chạy biến mất khỏi app.
   Future<List<Plan>> plans({String? teamId}) async {
     final response = await _client.get(
@@ -59,9 +59,9 @@ class PlansApi {
     return Team.fromJson(response.object);
   }
 
-  /// Tạo một kế hoạch, kèm các nhóm việc của nó.
+  /// Tạo một dự án, kèm các nhóm việc của nó.
   ///
-  /// Nhóm việc đi cùng lúc tạo chứ không thêm sau: một kế hoạch không có công
+  /// Nhóm việc đi cùng lúc tạo chứ không thêm sau: một dự án không có công
   /// đoạn nào là một bảng chỉ có một cột, và người tạo sẽ phải quay lại làm
   /// nốt việc mà lẽ ra form đã hỏi xong.
   Future<Plan> createPlan({
@@ -80,7 +80,7 @@ class PlansApi {
             for (var i = 0; i < sectionNames.length; i++)
               // Id do client sinh, và API nhận nguyên: `section_id` trên công
               // việc trỏ vào chính những id này, nên chúng phải ổn định trong
-              // suốt vòng đời kế hoạch.
+              // suốt vòng đời dự án.
               {
                 'id': 's${i + 1}',
                 'name': sectionNames[i],
@@ -98,17 +98,17 @@ class PlansApi {
     return Plan.fromJson(response.object);
   }
 
-  /// Đặt lại danh sách nhóm việc của một kế hoạch đã có.
+  /// Đặt lại danh sách nhóm việc của một dự án đã có.
   ///
   /// Nhóm việc trước đây chỉ khai được LÚC TẠO, nên một cái tên gõ nhầm hay
-  /// một quy trình đổi đi là phải tạo lại cả kế hoạch — mà công việc thì đã
+  /// một quy trình đổi đi là phải tạo lại cả dự án — mà công việc thì đã
   /// nằm trong đó rồi.
   ///
   /// Id GIỮ NGUYÊN với nhóm đã có: `section_id` trên từng công việc trỏ vào
   /// chính những id này. Sinh id mới cho một nhóm chỉ đổi tên là làm mọi công
   /// việc trong đó rơi về cột đầu.
   ///
-  /// Nhóm mới nhận id chưa từng dùng trong kế hoạch này — không dùng lại id
+  /// Nhóm mới nhận id chưa từng dùng trong dự án này — không dùng lại id
   /// của nhóm vừa xoá, vì công việc cũ vẫn đang trỏ vào đó.
   Future<Plan> updateSections(String planId, List<PlanSection> sections) async {
     final response = await _client.put(
@@ -133,7 +133,7 @@ class PlansApi {
   /// "Tháng này xong bao nhiêu cây, còn bao xa tới mốc thưởng."
   ///
   /// Bỏ trống [planId] thì tính trên toàn bộ tenant — đúng cách xưởng đếm,
-  /// vì thưởng theo TEAM chứ không theo từng kế hoạch (§1 tài liệu xưởng).
+  /// vì thưởng theo TEAM chứ không theo từng dự án (§1 tài liệu xưởng).
   /// [month] là ngày bất kỳ trong tháng cần xem; bỏ trống là tháng đang chạy.
   ///
   /// Gửi dạng `YYYY-MM-01` chứ không gửi cả ngày giờ: server tự lấy đầu tháng
@@ -172,7 +172,7 @@ class PlansApi {
     return Plan.fromJson(response.object);
   }
 
-  /// Công việc trong một kế hoạch, theo thứ tự bảng.
+  /// Công việc trong một dự án, theo thứ tự bảng.
   ///
   /// Lọc theo `project_id` cũng chính là thứ làm API sắp theo `order` rồi
   /// `created_at` thay vì theo ngày tạo giảm dần — xem nhánh trong
@@ -207,7 +207,7 @@ class PlansApi {
 /// Số việc tối đa bảng nạp về.
 ///
 /// Xưởng piano có khoảng 60 cây đàn đang chạy; 500 là chỗ để lớn gấp tám lần
-/// mà vẫn có trần. Vượt trần không phải "kế hoạch to" mà là dữ liệu hỏng hoặc
+/// mà vẫn có trần. Vượt trần không phải "dự án to" mà là dữ liệu hỏng hoặc
 /// một cách dùng khác hẳn — và lúc đó bảng phải NÓI RA thay vì lặng lẽ vẽ một
 /// phần.
 const kMaxTasksOnBoard = 500;
@@ -216,10 +216,10 @@ const kMaxTasksOnBoard = 500;
 /// lượt đi mạng ít nhất có thể.
 const _pageSize = 100;
 
-/// Mọi việc trong một kế hoạch, đã gom hết các trang.
+/// Mọi việc trong một dự án, đã gom hết các trang.
 typedef PlanTasks = ({List<Task> tasks, bool truncated});
 
-/// Nạp TẤT CẢ việc của một kế hoạch, không chỉ trang đầu.
+/// Nạp TẤT CẢ việc của một dự án, không chỉ trang đầu.
 ///
 /// Bảng trước đây gọi [PlansApi.tasksInPlan] đúng một lần và vẽ những gì nhận
 /// được — 30 việc, vì đó là `AppConfig.defaultPerPage`. Xưởng có khoảng 60 cây

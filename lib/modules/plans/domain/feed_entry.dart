@@ -86,7 +86,7 @@ class FeedEntry {
   final String? userName;
 
   /// Với [FeedKind.section] đây là ID nhóm việc, không phải tên — tên nhóm
-  /// việc sống trên kế hoạch, và dòng thời gian không kéo theo kế hoạch nào.
+  /// việc sống trên dự án, và dòng thời gian không kéo theo dự án nào.
   final String? from;
   final String? to;
 
@@ -94,7 +94,7 @@ class FeedEntry {
   /// hoạt động không mang theo gì để gọi tên.
   final String? detail;
 
-  /// Kế hoạch chứa công việc này. Một xưởng chạy hai kế hoạch song song thì
+  /// Dự án chứa công việc này. Một xưởng chạy hai dự án song song thì
   /// "cây nào" chưa đủ — còn phải biết "của tháng nào".
   final String? planName;
 

@@ -45,7 +45,7 @@ void main() {
   });
 
   test('kpi không kèm project_id khi tính cả xưởng', () async {
-    // Thưởng theo TEAM chứ không theo từng kế hoạch (§1), nên mặc định là
+    // Thưởng theo TEAM chứ không theo từng dự án (§1), nên mặc định là
     // toàn tenant. Gửi kèm một project_id rỗng sẽ lọc mất gần hết.
     await api.kpi();
 

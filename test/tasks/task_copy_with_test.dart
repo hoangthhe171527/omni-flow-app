@@ -9,7 +9,7 @@ import 'package:omni_app/modules/tasks/domain/task.dart';
 ///
 /// Hậu quả không nằm ở chỗ dễ đoán, nên không ai nghi tới `copyWith`. Tick một
 /// việc con đi qua đây (cập nhật lạc quan), nên chỉ cần tick MỘT cái là
-/// `planSections` biến mất, và sheet "Chuyển nhóm việc" từ đó báo "kế hoạch
+/// `planSections` biến mất, và sheet "Chuyển nhóm việc" từ đó báo "dự án
 /// này chưa khai báo nhóm việc nào". Thợ tick xong công đoạn thì hết kéo được
 /// cây đàn sang cột kế tiếp — đúng hai thao tác đi liền nhau ở §B2 → §B3.
 void main() {

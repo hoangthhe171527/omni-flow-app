@@ -1,9 +1,9 @@
 import '../../../core/utils/json.dart';
 
-/// Một nhóm người, và là chỗ chứa các kế hoạch.
+/// Một nhóm người, và là chỗ chứa các dự án.
 ///
-/// Tầng trên cùng của cây myXteam: Team → Kế hoạch → Nhóm việc → Công việc.
-/// Với xưởng piano thường chỉ có một team ("Xưởng TNP") chứa hai kế hoạch —
+/// Tầng trên cùng của cây myXteam: Team → Dự án → Nhóm việc → Công việc.
+/// Với xưởng piano thường chỉ có một team ("Xưởng TNP") chứa hai dự án —
 /// đàn cơ và đàn điện. Tầng này tồn tại để khi xưởng mở tổ thứ hai thì không
 /// phải dựng lại gì.
 class Team {

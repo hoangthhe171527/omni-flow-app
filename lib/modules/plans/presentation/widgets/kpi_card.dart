@@ -43,7 +43,7 @@ class KpiCard extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     final text = Theme.of(context).textTheme;
 
-    // Chưa kế hoạch nào đánh dấu cột đích. Một số 0 ở đây trông y hệt "tháng
+    // Chưa dự án nào đánh dấu cột đích. Một số 0 ở đây trông y hệt "tháng
     // này chưa xong cây nào", nên thẻ phải nói ra là cái nào — và nói luôn
     // cách sửa.
     if (!kpi.isConfigured) {
@@ -65,9 +65,9 @@ class KpiCard extends StatelessWidget {
                 const SizedBox(width: OmniSpacing.md),
                 Expanded(
                   child: Text(
-                    'Chưa có kế hoạch nào đánh dấu nhóm việc đích, nên chưa '
+                    'Chưa có dự án nào đánh dấu nhóm việc đích, nên chưa '
                     'đếm được việc nào hoàn thành. Đánh dấu trong phần nhóm '
-                    'việc của kế hoạch.',
+                    'việc của dự án.',
                     style: text.bodySmall?.copyWith(
                       color: scheme.onSurfaceVariant,
                     ),

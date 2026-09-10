@@ -52,8 +52,8 @@ void main() {
     ),
   );
 
-  testWidgets('thẻ KHÔNG lặp lại tên kế hoạch', (tester) async {
-    // Tiêu đề màn đã là "Đàn cơ", và cả bảng chỉ thuộc một kế hoạch. In lại
+  testWidgets('thẻ KHÔNG lặp lại tên dự án', (tester) async {
+    // Tiêu đề màn đã là "Đàn cơ", và cả bảng chỉ thuộc một dự án. In lại
     // trên từng thẻ là ba dòng giống hệt nhau trên một màn hình bằng bàn tay.
     await tester.pumpWidget(
       host(
@@ -168,8 +168,8 @@ void main() {
     expect(find.text('Cây mồ côi'), findsOneWidget);
   });
 
-  testWidgets('kế hoạch chưa có nhóm việc nào vẫn xem được', (tester) async {
-    final bare = Plan.fromJson({'id': planId, 'name': 'Kế hoạch trống'});
+  testWidgets('dự án chưa có nhóm việc nào vẫn xem được', (tester) async {
+    final bare = Plan.fromJson({'id': planId, 'name': 'Dự án trống'});
 
     await tester.pumpWidget(
       host(plan: bare, tasks: [task('t1', 'Một cây đàn')]),

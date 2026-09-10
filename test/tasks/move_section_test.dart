@@ -51,7 +51,7 @@ void main() {
     return returned ? result : null;
   }
 
-  testWidgets('liệt kê đúng các nhóm việc của kế hoạch', (tester) async {
+  testWidgets('liệt kê đúng các nhóm việc của dự án', (tester) async {
     await open(tester);
 
     expect(find.text('Nhập xưởng'), findsOneWidget);
@@ -140,13 +140,10 @@ void main() {
     expect(chosen, 's2');
   });
 
-  testWidgets('kế hoạch chưa có nhóm việc nào thì nói rõ', (tester) async {
+  testWidgets('dự án chưa có nhóm việc nào thì nói rõ', (tester) async {
     await open(tester, list: const [], current: null);
 
-    expect(
-      find.text('Kế hoạch này chưa khai báo nhóm việc nào.'),
-      findsOneWidget,
-    );
+    expect(find.text('Dự án này chưa khai báo nhóm việc nào.'), findsOneWidget);
   });
 
   testWidgets('mỗi dòng cao ít nhất 56dp', (tester) async {

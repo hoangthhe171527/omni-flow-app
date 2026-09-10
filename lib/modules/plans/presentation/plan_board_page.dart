@@ -21,7 +21,7 @@ import 'widgets/section_pager.dart';
 /// Chỗ nút "Việc mới" chiếm, cộng vào đáy danh sách để nó không che thẻ cuối.
 const double _fabInset = 72;
 
-/// Bảng công việc của một kế hoạch: mỗi màn lướt ngang là MỘT nhóm việc.
+/// Bảng công việc của một dự án: mỗi màn lướt ngang là MỘT nhóm việc.
 ///
 /// Tôi từng cho rằng điện thoại không hợp kanban. Ảnh chụp myXteam của người
 /// dùng chứng minh ngược lại — cách làm đúng là PHÂN TRANG, không phải cuộn
@@ -62,7 +62,7 @@ class _PlanBoardPageState extends ConsumerState<PlanBoardPage> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(loaded?.name ?? 'Kế hoạch'),
+        title: Text(loaded?.name ?? 'Dự án'),
         actions: [
           // Lọc theo người. Mở cho MỌI người đọc được bảng, không riêng quản
           // đốc: §3 nói xưởng chạy kiểu pull, và "công đoạn nào đang trống"
@@ -79,8 +79,8 @@ class _PlanBoardPageState extends ConsumerState<PlanBoardPage> {
             ),
           ),
           // Sửa các cột của chính cái bảng đang nhìn. Nhóm việc trước đây
-          // chỉ khai được lúc tạo kế hoạch, nên một cái tên gõ nhầm là phải
-          // tạo lại cả kế hoạch — mà công việc thì đã nằm trong đó rồi.
+          // chỉ khai được lúc tạo dự án, nên một cái tên gõ nhầm là phải
+          // tạo lại cả dự án — mà công việc thì đã nằm trong đó rồi.
           if (loaded != null && ref.watch(taskAccessProvider).isAssigner)
             IconButton(
               onPressed: _editSections,
@@ -89,7 +89,7 @@ class _PlanBoardPageState extends ConsumerState<PlanBoardPage> {
             ),
         ],
       ),
-      // Nút tạo nằm trên BẢNG, không nằm ở "Việc của tôi": ở đây kế hoạch và
+      // Nút tạo nằm trên BẢNG, không nằm ở "Việc của tôi": ở đây dự án và
       // cột đang đứng đã biết sẵn, nên việc mới ra đời đúng chỗ mà không phải
       // hỏi thêm câu nào. Ở "Việc của tôi" thì cả hai đều phải hỏi.
       floatingActionButton:
@@ -133,7 +133,7 @@ class _PlanBoardPageState extends ConsumerState<PlanBoardPage> {
     );
   }
 
-  /// Mở màn tạo việc với kế hoạch + cột đang đứng điền sẵn.
+  /// Mở màn tạo việc với dự án + cột đang đứng điền sẵn.
   Future<void> _createTask(Plan plan) async {
     final sections = plan.sections;
     final current = _current.clamp(0, _columnCount(plan) - 1);
@@ -180,7 +180,7 @@ class _Board extends StatelessWidget {
   final BoardPerson person;
   final VoidCallback onClearPerson;
 
-  /// Một kế hoạch chưa khai báo nhóm việc nào vẫn phải xem được: một cột duy
+  /// Một dự án chưa khai báo nhóm việc nào vẫn phải xem được: một cột duy
   /// nhất, chứa tất cả.
   List<PlanSection> get _columns => plan.sections.isEmpty
       ? const [PlanSection(id: '', name: 'Tất cả công việc')]
@@ -295,9 +295,9 @@ class _Column extends StatelessWidget {
       separatorBuilder: (_, _) => const SizedBox(height: OmniSpacing.sm),
       itemBuilder: (context, index) => TaskCard(
         task: tasks[index],
-        // Tiêu đề màn đã LÀ tên kế hoạch, và cả bảng chỉ thuộc một kế hoạch.
+        // Tiêu đề màn đã LÀ tên dự án, và cả bảng chỉ thuộc một dự án.
         // In lại trên từng thẻ là ba dòng giống nhau trên một màn hình.
-        // Ở "Việc của tôi" thì ngược lại: việc đến từ nhiều kế hoạch, nên ở
+        // Ở "Việc của tôi" thì ngược lại: việc đến từ nhiều dự án, nên ở
         // đó dòng này là thứ phân biệt.
         showPlanName: false,
         onTap: () => context.pushNamed(
@@ -364,7 +364,7 @@ class _FilterBar extends StatelessWidget {
   }
 }
 
-/// Kế hoạch vượt trần: bảng chỉ vẽ được một phần, và phải nói ra.
+/// Dự án vượt trần: bảng chỉ vẽ được một phần, và phải nói ra.
 ///
 /// Nạp một phần mà im lặng là nói dối — quản đốc nhìn một bảng đầy và tưởng
 /// mình đã thấy hết. Con số ở đây là thứ họ cần để biết mình đang nhìn bao
@@ -391,7 +391,7 @@ class _TruncatedNotice extends StatelessWidget {
           const SizedBox(width: OmniSpacing.sm),
           Expanded(
             child: Text(
-              'Kế hoạch này có hơn $kMaxTasksOnBoard việc. Bảng đang hiện '
+              'Dự án này có hơn $kMaxTasksOnBoard việc. Bảng đang hiện '
               '$kMaxTasksOnBoard việc đầu theo thứ tự trên bảng.',
               style: Theme.of(context).textTheme.labelMedium?.copyWith(
                 color: OmniColors.warningTextOf(context),

@@ -106,13 +106,13 @@ void main() {
   });
 
   group('GET /projects', () {
-    test('số liệu kế hoạch nằm trong `stats`, không rải phẳng', () {
+    test('số liệu dự án nằm trong `stats`, không rải phẳng', () {
       final rows = listOf(load('projects_index'));
       expect(rows, isNotEmpty);
 
       final plan = Plan.fromJson(rows.first);
 
-      // Đây chính là chỗ bản đầu đoán `tasks_count` và mọi kế hoạch hiện
+      // Đây chính là chỗ bản đầu đoán `tasks_count` và mọi dự án hiện
       // "Chưa có việc nào" dù có 5 cây đàn.
       expect(plan.taskCount, greaterThan(0));
       expect(rows.first['stats'], isA<Map>());
@@ -125,7 +125,7 @@ void main() {
       expect(plan.sections.first.id, isNotEmpty);
     });
 
-    test('vai trong kế hoạch nằm trong bốn giá trị API định nghĩa', () {
+    test('vai trong dự án nằm trong bốn giá trị API định nghĩa', () {
       final raw = listOf(load('projects_index')).first;
       final roles = (raw['member_roles'] as Map?)?.values ?? const [];
 

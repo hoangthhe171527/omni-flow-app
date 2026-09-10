@@ -17,7 +17,7 @@ import 'package:omni_app/modules/tasks/presentation/task_search_page.dart'
 /// "Cây SN 471302 đang ở đâu."
 ///
 /// Ở xưởng người ta gọi cây đàn bằng số máy. Khách gọi điện hỏi cây của họ, và
-/// câu trả lời nằm rải trong bảy cột của hai kế hoạch — app trước đây không có
+/// câu trả lời nằm rải trong bảy cột của hai dự án — app trước đây không có
 /// đường nào tới nó ngoài việc lướt từng cột.
 ///
 /// `pumpAndSettle` KHÔNG đủ để vượt quãng lặng gõ phím: nó bơm tới khi không

@@ -7,7 +7,7 @@ import '../domain/plan.dart';
 import '../domain/workshop_kpi.dart';
 import '../domain/team.dart';
 
-/// Một team cùng các kế hoạch của nó, đã ghép sẵn để vẽ một khối trên màn.
+/// Một team cùng các dự án của nó, đã ghép sẵn để vẽ một khối trên màn.
 class TeamWithPlans {
   const TeamWithPlans({required this.team, required this.plans});
 
@@ -18,7 +18,7 @@ class TeamWithPlans {
 /// Cây Teams cho màn danh sách.
 ///
 /// Gọi hai lần rồi ghép ở client thay vì thêm một endpoint gộp: hai danh sách
-/// này nhỏ (một xưởng có một team và hai kế hoạch), và endpoint gộp sẽ là một
+/// này nhỏ (một xưởng có một team và hai dự án), và endpoint gộp sẽ là một
 /// hình dạng thứ ba phải giữ đồng bộ với hai cái đã có.
 final teamsWithPlansProvider = FutureProvider<List<TeamWithPlans>>((ref) async {
   final api = ref.watch(plansApiProvider);
@@ -34,14 +34,39 @@ final teamsWithPlansProvider = FutureProvider<List<TeamWithPlans>>((ref) async {
       TeamWithPlans(team: team, plans: byTeam[team.id] ?? const []),
   ];
 
-  // Kế hoạch chưa thuộc team nào — tức là MỌI kế hoạch tạo trước tầng Team.
-  // Chúng đi vào một khối riêng ở cuối chứ không bị bỏ qua: giấu chúng nghĩa
-  // là công việc đang chạy biến mất khỏi app.
+  // Dự án có tổ mà tổ ĐÓ không nằm trong danh sách vừa tải.
+  //
+  // Đây từng là chỗ dự án biến mất: app tra tên tổ trong `GET /teams` còn web
+  // tra trong `GET /org-units` — hai bảng khác nhau — nên mỗi dự án tạo ở bên
+  // này rơi vào "chưa thuộc tổ nào" ở bên kia. API giờ giải sẵn `team_name`,
+  // nên dựng được đúng khối cho nó thay vì dồn vào rổ mồ côi.
+  //
+  // Vẫn còn lý do khác để rơi vào đây: tổ bị lưu trữ (danh sách mặc định giấu
+  // tổ đã lưu trữ), hoặc danh sách tổ tải hỏng. Cả hai đều KHÔNG được làm dự
+  // án biến mất.
+  final known = {for (final team in teams) team.id};
+  final extras = <String, TeamWithPlans>{};
+  for (final entry in byTeam.entries) {
+    if (entry.key.isEmpty || known.contains(entry.key)) continue;
+
+    final name = entry.value
+        .map((p) => p.teamName)
+        .firstWhere((n) => (n ?? '').isNotEmpty, orElse: () => null);
+
+    extras[entry.key] = TeamWithPlans(
+      team: Team(id: entry.key, name: name ?? 'Tổ không còn tồn tại'),
+      plans: entry.value,
+    );
+  }
+  grouped.addAll(extras.values);
+
+  // Dự án thật sự chưa xếp tổ. Chúng đi vào một khối riêng ở cuối chứ không
+  // bị bỏ qua: giấu chúng nghĩa là công việc đang chạy biến mất khỏi app.
   final orphans = byTeam[''] ?? const <Plan>[];
   if (orphans.isNotEmpty) {
     grouped.add(
       TeamWithPlans(
-        team: const Team(id: '', name: 'Chưa thuộc team nào'),
+        team: const Team(id: '', name: 'Chưa xếp tổ'),
         plans: orphans,
       ),
     );
@@ -54,7 +79,7 @@ final planProvider = FutureProvider.family<Plan, String>(
   (ref, id) => ref.watch(plansApiProvider).plan(id),
 );
 
-/// Mọi việc trong một kế hoạch — hết các trang, không chỉ trang đầu.
+/// Mọi việc trong một dự án — hết các trang, không chỉ trang đầu.
 ///
 /// Theo dõi [taskRealtimeSignalProvider]: hai người cùng mở bảng, một người
 /// chuyển công đoạn, và người kia phải thấy. Không có dòng này thì bảng đứng

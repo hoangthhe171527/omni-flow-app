@@ -7,7 +7,7 @@ import '../application/plans_providers.dart';
 import '../data/plans_api.dart';
 import '../domain/team.dart';
 
-/// Bốn nhóm việc điền sẵn cho một kế hoạch mới.
+/// Bốn nhóm việc điền sẵn cho một dự án mới.
 ///
 /// Cố ý CHUNG, không theo ngành nào. App này dùng cho nhiều loại công việc —
 /// xưởng phục chế đàn chỉ là một khách hàng — nên thứ điền sẵn cho mọi tenant
@@ -16,7 +16,7 @@ import '../domain/team.dart';
 /// đúng năm chữ đó.
 ///
 /// Điền sẵn chứ không bắt buộc: sửa, xoá, thêm đều được ngay trên màn tạo.
-/// Khách có quy trình riêng khai một lần rồi nhân bản kế hoạch hằng tháng
+/// Khách có quy trình riêng khai một lần rồi nhân bản dự án hằng tháng
 /// (`POST /projects/{id}/copy`), nên không ai phải gõ lại mỗi tháng.
 const kDefaultSections = <String>['Cần làm', 'Đang làm', 'Chờ duyệt', 'Xong'];
 
@@ -26,7 +26,7 @@ const kDefaultSections = <String>['Cần làm', 'Đang làm', 'Chờ duyệt', '
 /// và tuyên bố đó sai khi việc con còn dở. Hai nhóm đầu không có cổng, vì
 /// chúng là nơi việc đang chạy.
 ///
-/// Chỉ áp cho kế hoạch tạo MỚI bằng bộ điền sẵn. Kế hoạch đã có và nhóm việc
+/// Chỉ áp cho dự án tạo MỚI bằng bộ điền sẵn. Dự án đã có và nhóm việc
 /// người dùng tự thêm đều không có cổng — bật cổng cho dữ liệu cũ là chặn
 /// công việc đang chạy bằng một quy tắc nó chưa từng biết.
 const kGatedDefaultSections = <String>{'Chờ duyệt', 'Xong'};
@@ -60,7 +60,7 @@ class _CreatePlanPageState extends ConsumerState<CreatePlanPage> {
     final text = Theme.of(context).textTheme;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Kế hoạch mới')),
+      appBar: AppBar(title: const Text('Dự án mới')),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(
           OmniSpacing.lg,
@@ -74,7 +74,7 @@ class _CreatePlanPageState extends ConsumerState<CreatePlanPage> {
             autofocus: true,
             textCapitalization: TextCapitalization.sentences,
             decoration: const InputDecoration(
-              labelText: 'Tên kế hoạch',
+              labelText: 'Tên dự án',
               hintText: 'Đàn cơ',
             ),
             onChanged: (_) => setState(() {}),
@@ -134,7 +134,7 @@ class _CreatePlanPageState extends ConsumerState<CreatePlanPage> {
                     height: 20,
                     child: CircularProgressIndicator(strokeWidth: 2),
                   )
-                : const Text('Tạo kế hoạch'),
+                : const Text('Tạo dự án'),
           ),
         ],
       ),
@@ -186,7 +186,7 @@ class _TeamPicker extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Chưa có team nào thì không hỏi: kế hoạch không thuộc team vẫn chạy được,
+    // Chưa có team nào thì không hỏi: dự án không thuộc team vẫn chạy được,
     // và một ô chọn rỗng chỉ làm người dùng tưởng mình thiếu bước nào đó.
     final real = teams.where((t) => t.id.isNotEmpty).toList();
     if (real.isEmpty) return const SizedBox.shrink();

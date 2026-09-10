@@ -57,9 +57,9 @@ void main() {
 
   testWidgets('mở ra thì nói TÊN CỘT, không nói id', (tester) async {
     // Đây là khác biệt duy nhất so với dòng thời gian toàn xưởng, và là lý do
-    // màn này đáng tồn tại: ở đây app biết công việc thuộc kế hoạch nào, nên
+    // màn này đáng tồn tại: ở đây app biết công việc thuộc dự án nào, nên
     // nó dịch được `from`/`to` thành tên. Dòng thời gian toàn xưởng không kéo
-    // theo kế hoạch nào nên nó chỉ nói được "đã chuyển nhóm việc".
+    // theo dự án nào nên nó chỉ nói được "đã chuyển nhóm việc".
     await tester.pumpWidget(
       host(
         task(const [

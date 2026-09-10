@@ -11,9 +11,9 @@ import 'create_plan_page.dart';
 import 'create_team_page.dart';
 import 'widgets/plan_row.dart';
 
-/// Team → Kế hoạch, tầng trên của cây công việc.
+/// Team → Dự án, tầng trên của cây công việc.
 ///
-/// Người NHẬN việc mở màn này để xem kế hoạch mình đang thuộc về. Người GIAO
+/// Người NHẬN việc mở màn này để xem dự án mình đang thuộc về. Người GIAO
 /// việc mở nó để trả lời "cây nào đang ở công đoạn nào, tắc ở đâu" — và chỉ
 /// họ mới thấy nút tạo.
 class TeamsPage extends ConsumerWidget {
@@ -25,7 +25,7 @@ class TeamsPage extends ConsumerWidget {
     final isAssigner = ref.watch(taskAccessProvider).isAssigner;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Teams')),
+      appBar: AppBar(title: const Text('Dự án')),
       floatingActionButton: isAssigner
           ? FloatingActionButton.extended(
               onPressed: () => _create(context),
@@ -43,8 +43,8 @@ class TeamsPage extends ConsumerWidget {
             icon: Icons.workspaces_outline,
             title: 'Chưa có team nào',
             message: isAssigner
-                ? 'Tạo một team để nhóm các kế hoạch lại.'
-                : 'Khi bạn được thêm vào một kế hoạch, nó sẽ hiện ở đây.',
+                ? 'Tạo một team để nhóm các dự án lại.'
+                : 'Khi bạn được thêm vào một dự án, nó sẽ hiện ở đây.',
           ),
           data: (list) => ListView.separated(
             padding: const EdgeInsets.fromLTRB(
@@ -78,13 +78,13 @@ class TeamsPage extends ConsumerWidget {
             minTileHeight: 56,
             leading: const Icon(Icons.workspaces_outline),
             title: const Text('Tạo team'),
-            subtitle: const Text('Một nhóm người, chứa nhiều kế hoạch'),
+            subtitle: const Text('Một nhóm người, chứa nhiều dự án'),
             onTap: () => Navigator.of(context).pop(_CreateChoice.team),
           ),
           ListTile(
             minTileHeight: 56,
             leading: const Icon(Icons.assignment_outlined),
-            title: const Text('Tạo kế hoạch'),
+            title: const Text('Tạo dự án'),
             subtitle: const Text('Các nhóm việc và công việc trong đó'),
             onTap: () => Navigator.of(context).pop(_CreateChoice.plan),
           ),
@@ -157,7 +157,7 @@ class _TeamBlock extends StatelessWidget {
               border: Border.all(color: scheme.outlineVariant),
             ),
             child: Text(
-              'Team này chưa có kế hoạch nào.',
+              'Team này chưa có dự án nào.',
               style: text.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
             ),
           )

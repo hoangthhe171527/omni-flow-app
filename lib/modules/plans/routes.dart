@@ -1,4 +1,4 @@
-/// Tên route của module kế hoạch. Xem `tasks/routes.dart` về lý do file này
+/// Tên route của module dự án. Xem `tasks/routes.dart` về lý do file này
 /// không import gì.
 library;
 

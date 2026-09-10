@@ -64,7 +64,7 @@ class WorkshopKpi {
       reachedBonus: json.intOr('reached_bonus'),
       daysLeft: json.intOr('days_left'),
       tiers: tiers,
-      // Rỗng nghĩa là chưa kế hoạch nào đánh dấu cột đích, và `delivered` sẽ
+      // Rỗng nghĩa là chưa dự án nào đánh dấu cột đích, và `delivered` sẽ
       // luôn là 0. Một số 0 vì chưa cấu hình trông y hệt một số 0 vì chưa làm
       // được cây nào — widget phải nói ra là cái nào.
       isConfigured: json.strList('counting_sections').isNotEmpty,
@@ -88,7 +88,7 @@ class WorkshopKpi {
   final List<BonusTier> tiers;
   final NextTier? nextTier;
 
-  /// Đã có kế hoạch nào đánh dấu cột đích chưa.
+  /// Đã có dự án nào đánh dấu cột đích chưa.
   final bool isConfigured;
 
   /// Số LẦN công việc bị kéo lùi trong tháng (§B3).

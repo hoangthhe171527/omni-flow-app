@@ -7,10 +7,10 @@ import '../application/plans_providers.dart';
 import '../data/plans_api.dart';
 import '../domain/plan.dart';
 
-/// Sửa các nhóm việc của một kế hoạch đã có.
+/// Sửa các nhóm việc của một dự án đã có.
 ///
 /// Trước đây nhóm việc chỉ khai được LÚC TẠO, nên một cái tên gõ nhầm hay một
-/// quy trình đổi đi là phải tạo lại cả kế hoạch — mà công việc thì đã nằm
+/// quy trình đổi đi là phải tạo lại cả dự án — mà công việc thì đã nằm
 /// trong đó rồi.
 ///
 /// Hai điều màn này giữ chặt:
@@ -35,7 +35,7 @@ class _EditSectionsPageState extends ConsumerState<EditSectionsPage> {
   bool _saving = false;
   String? _error;
 
-  /// Id đã từng dùng trong kế hoạch này, KỂ CẢ nhóm vừa xoá khỏi màn.
+  /// Id đã từng dùng trong dự án này, KỂ CẢ nhóm vừa xoá khỏi màn.
   ///
   /// Nhóm mới không được nhận lại id của một nhóm vừa bị bỏ: công việc cũ vẫn
   /// đang trỏ vào id đó, và chúng sẽ lặng lẽ xuất hiện trong nhóm mới.
@@ -112,7 +112,7 @@ class _EditSectionsPageState extends ConsumerState<EditSectionsPage> {
                         countsForKpi: on,
                       );
                     }),
-                    // Kế hoạch phải còn ít nhất một cột, nếu không cái bảng
+                    // Dự án phải còn ít nhất một cột, nếu không cái bảng
                     // không còn chỗ nào để hiện việc.
                     onRemove: sections.length > 1
                         ? () => setState(() => sections.removeAt(i))
@@ -170,7 +170,7 @@ class _EditSectionsPageState extends ConsumerState<EditSectionsPage> {
   bool _canSave(List<PlanSection> sections) =>
       !_saving && sections.every((s) => s.name.trim().isNotEmpty);
 
-  /// Id chưa từng dùng trong kế hoạch này.
+  /// Id chưa từng dùng trong dự án này.
   String _nextId() {
     var n = _usedIds.length + 1;
     while (_usedIds.contains('s$n')) {

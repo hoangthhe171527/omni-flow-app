@@ -99,8 +99,8 @@ void main() {
     team = TeamApi(client);
   });
 
-  group('kế hoạch và công việc', () {
-    test('tạo kế hoạch rồi đọc lại thấy đúng nhóm việc', () async {
+  group('dự án và công việc', () {
+    test('tạo dự án rồi đọc lại thấy đúng nhóm việc', () async {
       final plan = await plans.createPlan(
         name: 'Phuc che dan co',
         sectionNames: const ['Nhap xuong', 'Cho QC', 'Hoan thien'],
@@ -311,6 +311,67 @@ void main() {
       // mất đúng phần §B4 dùng.
       expect((await plans.kpi()).daysLeft, greaterThan(0));
     });
+  });
+
+  group('tổ và dự án — một nguồn sự thật', () {
+    // Lỗi người dùng báo: "tạo dự án trên điện thoại lại là tạo team trên
+    // web, dữ liệu có vẻ lệch nhau".
+    //
+    // `omni_projects.team_id` từng là con trỏ tự do. App tạo tổ bằng
+    // `POST /teams` (bảng `omni_teams`), web tạo bằng `POST /org-units`
+    // (`type=team`), và mỗi bên chỉ tra tên từ bảng của mình — nên mọi dự án
+    // tạo ở bên này hiện "chưa xếp tổ" ở bên kia. Vĩnh viễn, không một lỗi
+    // nào.
+    //
+    // Không một widget test nào bắt được: cả hai bên đều gửi đúng thứ mình
+    // tin là đúng. Chỉ một lượt gọi THẬT mới lộ ra hai bảng.
+
+    test('tổ tạo từ app đọc lại được, và dự án mang sẵn TÊN tổ', () async {
+      final team = await plans.createTeam(
+        name: 'To phuc che ${DateTime.now().microsecondsSinceEpoch}',
+      );
+      expect(team.id, isNotEmpty);
+
+      final plan = await plans.createPlan(
+        name: 'Du an trong to',
+        teamId: team.id,
+      );
+
+      // Tên tổ do SERVER giải. Chừng nào client còn tự tra id ra tên thì còn
+      // chỗ để tra nhầm bảng — đó chính là lỗi vừa sửa.
+      expect(
+        plan.teamName,
+        team.name,
+        reason: 'API phải gửi kèm team_name; app không được tra bảng nào cả.',
+      );
+
+      // Và đọc lại từ danh sách, không chỉ từ phản hồi vừa tạo: màn hình có
+      // nhóm là màn danh sách.
+      final listed = await plans.plans();
+      final reread = listed.firstWhere((p) => p.id == plan.id);
+      expect(reread.teamName, team.name);
+    });
+
+    test('tổ vừa tạo xuất hiện trong danh sách tổ', () async {
+      final name = 'To hoan thien ${DateTime.now().microsecondsSinceEpoch}';
+      final team = await plans.createTeam(name: name);
+
+      final all = await plans.teams();
+      expect(all.map((t) => t.id), contains(team.id));
+      expect(all.firstWhere((t) => t.id == team.id).name, name);
+    });
+
+    test(
+      'team_id trỏ vào hư không bị TỪ CHỐI, không lặng lẽ ghi vào',
+      () async {
+        // Trước đây API nhận bất cứ chuỗi nào rồi trả 201, và dự án đó rơi khỏi
+        // mọi màn hình có nhóm.
+        await expectLater(
+          plans.createPlan(name: 'Du an mo coi', teamId: 'khong-ton-tai'),
+          throwsA(anything),
+        );
+      },
+    );
   });
 
   group('nhân sự', () {

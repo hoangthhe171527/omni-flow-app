@@ -158,7 +158,7 @@ class _FeedCard extends StatelessWidget {
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
           ),
-          // Kế hoạch nào. Một xưởng chạy hai kế hoạch song song thì "cây
+          // Dự án nào. Một xưởng chạy hai dự án song song thì "cây
           // nào" chưa đủ để biết đang nhìn việc của tháng nào.
           if (group.planName != null) ...[
             const SizedBox(height: 2),

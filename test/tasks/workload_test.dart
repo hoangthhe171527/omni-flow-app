@@ -12,7 +12,7 @@ import 'package:omni_app/modules/team/team.dart';
 /// "Người này đang gánh bao nhiêu cây, và trễ cái nào."
 ///
 /// Câu hỏi quản đốc hỏi nhiều nhất khi đứng giữa xưởng, và app chưa có chỗ nào
-/// trả lời: "Việc của tôi" chỉ nói về người đang đăng nhập, còn bảng kế hoạch
+/// trả lời: "Việc của tôi" chỉ nói về người đang đăng nhập, còn bảng dự án
 /// nói về cây đàn chứ không nói về người. Muốn biết một người đang ôm mấy việc
 /// thì phải mở từng cột, đọc từng thẻ, đếm trong đầu.
 void main() {
