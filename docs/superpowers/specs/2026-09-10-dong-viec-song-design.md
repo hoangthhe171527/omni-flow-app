@@ -477,3 +477,37 @@ container. Tệp kiểm mới phải `docker cp` vào trước khi chạy.
 8. **Bài kiểm chạy thật §8.2** — cần hai máy, cần chủ dự án.
 
 Bước 3–4 và bước 5 độc lập nhau, làm song song được. Bước 6 cần cả hai.
+
+---
+
+## 12. Kết quả kiểm chứng (2026-09-10)
+
+### Đã chạy và xanh
+
+| Bộ | Kết quả |
+|---|---|
+| `php artisan test` (toàn bộ API, có Mongo thật) | **589 xanh**, 0 đỏ, 0 bỏ qua |
+| `flutter test` (toàn bộ app) | **612 xanh**, 1 bỏ qua (bài live cần server) |
+| `flutter analyze` | Sạch |
+| `flutter test test/live --dart-define=OMNI_LIVE_API=http://localhost:8000` | **17 xanh** — gọi API THẬT, không phải "bỏ qua" |
+
+### Ba lỗi thật, mỗi lỗi tái hiện được bằng test trước khi sửa
+
+1. **§3.2 ghi đè `type`** — `TaskFeedNamesTheAttachmentTest` đỏ với
+   `'file'` thay vì `'attachment_added'`.
+2. **§3.1 realtime không ai mở kênh** — `timeline_realtime_test.dart` đỏ 3/4:
+   kênh không được xin, dòng việc không bao giờ tự tải lại.
+3. **§3.3 push không mở được cây đàn** — `push_intent_test.dart` đỏ với
+   `intent == null`.
+
+### Một mảnh đứt phát hiện thêm trong lúc làm
+
+`UserDTO` không mang `notification_prefs`, nên công tắc ở §7.4 sẽ đọc ra rỗng
+mãi mãi — bật tắt xong không bao giờ có tác dụng, không có gì báo lỗi. Đã cho
+đi qua DTO và có một bài kiểm giữ điều đó.
+
+### CHƯA chạy — cần người, cần hai máy
+
+**Bài kiểm chín bước ở §8.2 chưa được chạy.** Tự động hoá không thay được nó:
+không bộ test nào chứng minh được rằng hai người ngồi hai máy nhìn thấy nhau
+làm việc. Tính năng chưa được coi là xong cho tới khi mục này có kết quả.
