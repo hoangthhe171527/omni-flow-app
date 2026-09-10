@@ -58,6 +58,19 @@ void main() {
     );
   }
 
+  /// Khung mặc định của flutter_test là 800×600 — thấp hơn một màn điện thoại.
+  /// Từ khi khối việc con hiện cả lúc danh sách còn rỗng (để dựng được công
+  /// đoạn đầu tiên từ điện thoại), khối mô tả bị đẩy xuống dưới mép khung và
+  /// mọi thao tác với nó đều trượt.
+  Future<void> pumpApp(WidgetTester tester, Widget app) async {
+    tester.view.physicalSize = const Size(500, 1600);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+
+    await tester.pumpWidget(app);
+    await tester.pumpAndSettle();
+  }
+
   Map<String, dynamic> sentBody() =>
       Map<String, dynamic>.from(adapter.singleRequest.data as Map);
 
@@ -67,7 +80,7 @@ void main() {
     ) async {
       // Chưa có hạn thì "xoá hạn" là lựa chọn vô nghĩa, và thêm một lần chạm
       // để tới cái duy nhất làm được là thêm một lần chạm thừa.
-      await tester.pumpWidget(host());
+      await pumpApp(tester, host());
       await tester.pumpAndSettle();
 
       await tester.tap(find.text('Chưa đặt hạn'));
@@ -78,7 +91,7 @@ void main() {
 
     testWidgets('đã có hạn thì XOÁ được', (tester) async {
       // Đặt nhầm ngày rồi kẹt luôn thì lần sau người ta không dám đặt nữa.
-      await tester.pumpWidget(host(task: taskWith({'due_date': '2026-12-31'})));
+      await pumpApp(tester, host(task: taskWith({'due_date': '2026-12-31'})));
       await tester.pumpAndSettle();
 
       await tester.tap(find.textContaining('31/12/2026'));
@@ -96,7 +109,7 @@ void main() {
     testWidgets('đổi được, và gửi mã API chứ không gửi nhãn tiếng Việt', (
       tester,
     ) async {
-      await tester.pumpWidget(host());
+      await pumpApp(tester, host());
       await tester.pumpAndSettle();
 
       await tester.tap(find.text('Bình thường'));
@@ -108,7 +121,7 @@ void main() {
     });
 
     testWidgets('chọn lại đúng mức đang có thì KHÔNG gọi API', (tester) async {
-      await tester.pumpWidget(host());
+      await pumpApp(tester, host());
       await tester.pumpAndSettle();
 
       await tester.tap(find.text('Bình thường'));
@@ -122,7 +135,7 @@ void main() {
 
   group('tên việc', () {
     testWidgets('sửa được bằng cách chạm vào chính cái tên', (tester) async {
-      await tester.pumpWidget(host());
+      await pumpApp(tester, host());
       await tester.pumpAndSettle();
 
       await tester.tap(find.text('KAWAI HAT-5'));
@@ -137,7 +150,7 @@ void main() {
 
     testWidgets('không cho lưu tên rỗng', (tester) async {
       // Một công việc không tên thì không tìm lại được trên bảng.
-      await tester.pumpWidget(host());
+      await pumpApp(tester, host());
       await tester.pumpAndSettle();
 
       await tester.tap(find.text('KAWAI HAT-5'));
@@ -154,7 +167,7 @@ void main() {
     testWidgets('không đổi gì thì nút Lưu tắt', (tester) async {
       // Lưu lại đúng nội dung cũ vẫn chạm updated_at và đẻ ra một dòng nhật ký
       // nói có người sửa — trong khi không ai sửa gì.
-      await tester.pumpWidget(host());
+      await pumpApp(tester, host());
       await tester.pumpAndSettle();
 
       await tester.tap(find.text('KAWAI HAT-5'));
@@ -170,17 +183,17 @@ void main() {
   group('mô tả', () {
     testWidgets('chưa có mô tả thì vẫn có chỗ để thêm', (tester) async {
       // Không hiện khối mô tả khi trống thì không có chỗ nào thêm lần đầu.
-      await tester.pumpWidget(host());
+      await pumpApp(tester, host());
       await tester.pumpAndSettle();
 
       expect(find.text('Thêm mô tả…'), findsOneWidget);
     });
 
     testWidgets('xoá sạch mô tả là lựa chọn hợp lệ', (tester) async {
-      await tester.pumpWidget(
+      await pumpApp(
+        tester,
         host(task: taskWith({'description': 'Khách dặn giữ nguyên phím ngà'})),
       );
-      await tester.pumpAndSettle();
 
       await tester.tap(find.text('Khách dặn giữ nguyên phím ngà'));
       await tester.pumpAndSettle();
@@ -197,7 +210,7 @@ void main() {
     testWidgets('không sửa được gì trong bảng điều phối', (tester) async {
       // Bảng điều phối là của người giao việc. Cho thợ thấy nút sửa là mời họ
       // làm một việc API sẽ từ chối.
-      await tester.pumpWidget(host(permissions: worker));
+      await pumpApp(tester, host(permissions: worker));
       await tester.pumpAndSettle();
 
       // Thợ VẪN thấy hạn — dưới dạng chip chỉ đọc ở đầu màn, vì đó là thứ họ

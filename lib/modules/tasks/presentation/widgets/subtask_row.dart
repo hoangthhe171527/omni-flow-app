@@ -26,6 +26,7 @@ class SubtaskRow extends StatelessWidget {
     required this.onRetry,
     required this.onDiscard,
     this.onEdit,
+    this.onClaim,
   });
 
   /// Comfortably above the 48dp Android minimum: this is a gloved thumb.
@@ -43,6 +44,14 @@ class SubtaskRow extends StatelessWidget {
   /// Nút nằm CẠNH hàng chứ không thay chỗ chạm của hàng: hàng vẫn là mục
   /// tiêu 56dp để tick, còn sửa là một hành động hiếm hơn nhiều.
   final VoidCallback? onEdit;
+
+  /// Nhận việc con này về mình. Null = màn hình không biết người dùng là ai,
+  /// và khi đó không mời nhận việc.
+  ///
+  /// KHÔNG dùng chung cờ với [onEdit]: dựng checklist là việc của quản đốc,
+  /// còn nhận một công đoạn trống là việc của thợ (§3). Gộp hai thứ vào một
+  /// quyền sẽ khoá đúng người cần nhận.
+  final VoidCallback? onClaim;
 
   bool get _failed => pending?.failed ?? false;
 
@@ -104,6 +113,31 @@ class SubtaskRow extends StatelessWidget {
                           // the name is a filterable fact and the title stays
                           // the name of the work.
                           _AssigneeChip(name: subtask.assigneeName!),
+                        ] else if (onClaim != null &&
+                            subtask.assigneeId == null &&
+                            !subtask.done) ...[
+                          const SizedBox(height: OmniSpacing.xs),
+                          // §3: không ai phân việc, ai rảnh thì nhận. Nút đứng
+                          // ĐÚNG chỗ cái chip sẽ hiện sau khi nhận, nên hàng
+                          // không nhảy và người thợ thấy ngay mình vừa nhận
+                          // công đoạn nào.
+                          //
+                          // Điều kiện hỏi `assigneeId` chứ không hỏi
+                          // `assigneeName`: tên là thứ server tra thêm và có thể
+                          // tra không ra, còn "việc này đã có người chưa" thì
+                          // chỉ id trả lời được — lấy tên làm căn cứ sẽ mời
+                          // người thứ hai nhận một công đoạn đã có chủ.
+                          Align(
+                            alignment: Alignment.centerLeft,
+                            child: TextButton.icon(
+                              onPressed: enabled ? onClaim : null,
+                              icon: const Icon(
+                                Icons.person_add_alt_rounded,
+                                size: OmniIconSize.md,
+                              ),
+                              label: const Text('Tôi nhận'),
+                            ),
+                          ),
                         ],
                         if (_failed) ...[
                           const SizedBox(height: OmniSpacing.sm),
