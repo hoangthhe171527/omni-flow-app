@@ -40,13 +40,13 @@ class CreateTaskPage extends ConsumerStatefulWidget {
     this.sections = const [],
   });
 
-  /// Kế hoạch việc này thuộc về. Null = việc rời, không nằm trên bảng nào.
+  /// Dự án việc này thuộc về. Null = việc rời, không nằm trên bảng nào.
   final String? planId;
 
   /// Nhóm việc điền sẵn — cột người dùng đang đứng lúc bấm tạo.
   final String? sectionId;
 
-  /// Các nhóm việc của kế hoạch, để đổi cột mà không phải gọi mạng lần nữa.
+  /// Các nhóm việc của dự án, để đổi cột mà không phải gọi mạng lần nữa.
   final List<TaskSection> sections;
 
   @override

@@ -13,8 +13,8 @@ import 'widgets/task_card.dart';
 /// "Người này đang gánh bao nhiêu cây, và trễ cái nào."
 ///
 /// Câu hỏi quản đốc hỏi nhiều nhất khi đứng giữa xưởng, và app chưa có chỗ
-/// nào trả lời: "Việc của tôi" chỉ nói về người đang đăng nhập, còn bảng kế
-/// hoạch nói về cây đàn chứ không nói về người. Muốn biết Hằng Ni đang ôm mấy
+/// nào trả lời: "Việc của tôi" chỉ nói về người đang đăng nhập, còn bảng dự
+/// án nói về cây đàn chứ không nói về người. Muốn biết Hằng Ni đang ôm mấy
 /// việc thì phải mở từng cột, đọc từng thẻ, đếm trong đầu — và làm lại từ đầu
 /// cho người tiếp theo.
 ///

@@ -135,7 +135,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(
-      find.textContaining('Chưa có kế hoạch nào đánh dấu nhóm việc đích'),
+      find.textContaining('Chưa có dự án nào đánh dấu nhóm việc đích'),
       findsOneWidget,
       reason:
           'Một số 0 vì chưa cấu hình trông y hệt một số 0 vì chưa làm được cây '
@@ -217,7 +217,7 @@ void main() {
   });
 
   testWidgets('thẻ nói cả KẾ HOẠCH, không chỉ tên cây đàn', (tester) async {
-    // Một xưởng chạy hai kế hoạch song song thì "cây nào" chưa đủ — còn
+    // Một xưởng chạy hai dự án song song thì "cây nào" chưa đủ — còn
     // phải biết việc đó thuộc tháng nào.
     await tester.pumpWidget(
       host(feed: [entry(planName: 'Xưởng đàn cơ — 2026-09')]),

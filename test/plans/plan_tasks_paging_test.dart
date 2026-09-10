@@ -7,7 +7,7 @@ import 'package:omni_app/modules/plans/domain/team.dart';
 import 'package:omni_app/modules/plans/data/plans_api.dart';
 import 'package:omni_app/modules/tasks/domain/task.dart';
 
-/// Bảng công việc phải thấy MỌI cây đàn trong kế hoạch.
+/// Bảng công việc phải thấy MỌI cây đàn trong dự án.
 ///
 /// `tasksInPlan` trả về một trang. Bảng gọi nó một lần và vẽ những gì nhận
 /// được — 30 việc, vì đó là `AppConfig.defaultPerPage`. Xưởng có khoảng 60
@@ -33,7 +33,7 @@ void main() {
     expect(api.pagesFetched, 1);
   });
 
-  test('kế hoạch rỗng không gọi thêm trang nào', () async {
+  test('dự án rỗng không gọi thêm trang nào', () async {
     final api = _PagedApi(total: 0);
 
     final all = await loadAllTasksInPlan(api, 'p1');
@@ -52,7 +52,7 @@ void main() {
       all.truncated,
       isTrue,
       reason:
-          'Một kế hoạch 5000 việc là dữ liệu hỏng hoặc một cách dùng khác hẳn. '
+          'Một dự án 5000 việc là dữ liệu hỏng hoặc một cách dùng khác hẳn. '
           'Nạp hết sẽ treo máy; nạp một phần mà im lặng là nói dối.',
     );
   });

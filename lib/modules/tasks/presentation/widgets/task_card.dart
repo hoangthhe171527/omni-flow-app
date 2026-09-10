@@ -22,12 +22,12 @@ class TaskCard extends StatelessWidget {
   final Task task;
   final VoidCallback onTap;
 
-  /// Hiện tên kế hoạch phía trên tiêu đề.
+  /// Hiện tên dự án phía trên tiêu đề.
   ///
-  /// Tắt trên BẢNG của một kế hoạch: tiêu đề màn đã là tên đó, và cả bảng
-  /// chỉ thuộc một kế hoạch — in lại trên từng thẻ là ba dòng giống nhau
-  /// trên một màn hình. Bật ở "Việc của tôi", nơi việc đến từ nhiều kế
-  /// hoạch và dòng này chính là thứ phân biệt chúng.
+  /// Tắt trên BẢNG của một dự án: tiêu đề màn đã là tên đó, và cả bảng
+  /// chỉ thuộc một dự án — in lại trên từng thẻ là ba dòng giống nhau
+  /// trên một màn hình. Bật ở "Việc của tôi", nơi việc đến từ nhiều
+  /// dự án và dòng này chính là thứ phân biệt chúng.
   final bool showPlanName;
 
   @override

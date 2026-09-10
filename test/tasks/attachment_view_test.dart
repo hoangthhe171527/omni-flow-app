@@ -27,7 +27,7 @@ void main() {
   // `bootstrap()`, còn test thì không đi qua đó.
   setUpAll(() => initializeDateFormatting('vi_VN'));
 
-  // Thợ: đọc và ghi, KHÔNG có quyền quản mọi kế hoạch. Xem ảnh không phải
+  // Thợ: đọc và ghi, KHÔNG có quyền quản mọi dự án. Xem ảnh không phải
   // đặc quyền của quản đốc.
   const worker = {'tasks.read', 'tasks.write'};
   const photoUrl = 'https://api.local/api/v1/tasks/media/9f1c2a.jpg';

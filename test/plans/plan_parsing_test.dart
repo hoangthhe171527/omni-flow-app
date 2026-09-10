@@ -4,7 +4,7 @@ import 'package:omni_app/modules/plans/domain/team.dart';
 
 /// Phân tích tài liệu Mongo không có lược đồ.
 ///
-/// Mọi kế hoạch đang tồn tại trong cơ sở dữ liệu đều được tạo TRƯỚC khi có
+/// Mọi dự án đang tồn tại trong cơ sở dữ liệu đều được tạo TRƯỚC khi có
 /// tầng Team, nên `team_id` của chúng là null và nhiều trường khác vắng mặt
 /// hẳn. Nếu bộ phân tích ném lỗi ở một trong những trường hợp đó thì màn
 /// Teams trống trơn với người dùng thật, dù nó đầy dữ liệu với dữ liệu mẫu.
@@ -32,14 +32,14 @@ void main() {
   });
 
   group('Plan', () {
-    test('kế hoạch cũ không có team_id vẫn đọc được', () {
+    test('dự án cũ không có team_id vẫn đọc được', () {
       final plan = Plan.fromJson({'id': 'p1', 'name': 'Đàn cơ'});
 
       expect(
         plan.teamId,
         isNull,
         reason:
-            'Mọi kế hoạch tạo trước tầng Team đều như vậy. Ném lỗi ở đây là '
+            'Mọi dự án tạo trước tầng Team đều như vậy. Ném lỗi ở đây là '
             'làm màn Teams trống với người dùng thật.',
       );
       expect(plan.sections, isEmpty);
@@ -90,7 +90,7 @@ void main() {
       expect(plan.sections.single.name, isNotEmpty);
     });
 
-    group('vai trong kế hoạch', () {
+    group('vai trong dự án', () {
       test('bốn vai của API đọc đúng', () {
         final plan = Plan.fromJson({
           'id': 'p1',
@@ -131,7 +131,7 @@ void main() {
         expect(plan.roleOf('ai-đó'), PlanRole.viewer);
       });
 
-      test('chỉ owner và manager mới quản kế hoạch', () {
+      test('chỉ owner và manager mới quản dự án', () {
         expect(PlanRole.owner.canManagePlan, isTrue);
         expect(PlanRole.manager.canManagePlan, isTrue);
         expect(PlanRole.member.canManagePlan, isFalse);
@@ -142,7 +142,7 @@ void main() {
     // Chép nguyên văn một phản hồi thật từ
     // `GET /api/v1/projects?team_id=…`, không phải một hình dạng tôi tưởng
     // tượng ra. Bản đầu của bộ phân tích đoán `tasks_count`/`done_count`/
-    // `overdue_count` và mọi kế hoạch hiện "Chưa có việc nào" dù có 5 cây
+    // `overdue_count` và mọi dự án hiện "Chưa có việc nào" dù có 5 cây
     // đàn — một cái tên đoán ra không báo lỗi, nó chỉ trả 0 mãi mãi.
     group('số liệu, theo đúng hình dạng API thật gửi', () {
       final real = {
@@ -180,7 +180,7 @@ void main() {
         );
       });
 
-      test('kế hoạch chưa có stats thì là 0, không ném lỗi', () {
+      test('dự án chưa có stats thì là 0, không ném lỗi', () {
         final plan = Plan.fromJson({'id': 'p', 'name': 'X'});
 
         expect(plan.taskCount, 0);

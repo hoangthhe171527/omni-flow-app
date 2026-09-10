@@ -56,7 +56,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Tạo mới'), findsNothing);
-    // Nhưng vẫn xem được kế hoạch mình thuộc về.
+    // Nhưng vẫn xem được dự án mình thuộc về.
     expect(find.text('Đàn cơ'), findsOneWidget);
   });
 
@@ -67,12 +67,12 @@ void main() {
     expect(find.text('Tạo mới'), findsOneWidget);
   });
 
-  testWidgets('mỗi kế hoạch hiện tiến độ và số việc trễ', (tester) async {
+  testWidgets('mỗi dự án hiện tiến độ và số việc trễ', (tester) async {
     await tester.pumpWidget(host(groups: [xuong]));
     await tester.pumpAndSettle();
 
     expect(find.text('Xong 4/10'), findsNWidgets(2));
-    // Chỉ kế hoạch CÓ việc trễ mới đeo chip. Đeo hết thì không cái nào nổi.
+    // Chỉ dự án CÓ việc trễ mới đeo chip. Đeo hết thì không cái nào nổi.
     expect(find.text('Trễ 3'), findsOneWidget);
   });
 
@@ -92,7 +92,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(
-      find.text('Team này chưa có kế hoạch nào.'),
+      find.text('Team này chưa có dự án nào.'),
       findsOneWidget,
       reason:
           'Một khối tiêu đề không có gì bên dưới đọc như lỗi tải, và người '
@@ -112,17 +112,17 @@ void main() {
     expect(find.textContaining('Tạo một team'), findsOneWidget);
   });
 
-  testWidgets('kế hoạch chưa thuộc team nào vẫn hiện, ở khối riêng', (
+  testWidgets('dự án chưa thuộc team nào vẫn hiện, ở khối riêng', (
     tester,
   ) async {
-    // Đây là MỌI kế hoạch tạo trước tầng Team — tức gần như tất cả những gì
+    // Đây là MỌI dự án tạo trước tầng Team — tức gần như tất cả những gì
     // đang có trong cơ sở dữ liệu hôm nay.
     await tester.pumpWidget(
       host(
         groups: [
           TeamWithPlans(
             team: const Team(id: '', name: 'Chưa thuộc team nào'),
-            plans: [plan('p9', 'Kế hoạch cũ')],
+            plans: [plan('p9', 'Dự án cũ')],
           ),
         ],
       ),
@@ -130,6 +130,6 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Chưa thuộc team nào'), findsOneWidget);
-    expect(find.text('Kế hoạch cũ'), findsOneWidget);
+    expect(find.text('Dự án cũ'), findsOneWidget);
   });
 }

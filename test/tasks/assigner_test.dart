@@ -11,7 +11,7 @@ void main() {
   TaskAccess accessWith(Set<String> slugs) =>
       TaskAccess.of(AccessPolicy(slugs));
 
-  test('người quản lý mọi kế hoạch là người giao việc', () {
+  test('người quản lý mọi dự án là người giao việc', () {
     final access = accessWith({
       'tasks.read',
       'tasks.write',

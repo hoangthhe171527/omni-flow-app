@@ -13,7 +13,7 @@ abstract final class TaskPermissions {
 
   static const write = 'tasks.write';
 
-  /// Quản lý được MỌI kế hoạch, không chỉ kế hoạch mình là thành viên.
+  /// Quản lý được MỌI dự án, không chỉ dự án mình là thành viên.
   ///
   /// Đây là ranh giới giữa người GIAO việc và người NHẬN việc. Bốn vai hệ
   /// thống của API chia đúng ở đây: `admin` và `manager` giữ nó, `sales` và
@@ -45,7 +45,7 @@ class TaskAccess extends ResourceAccess {
 
   /// Người này GIAO việc, chứ không chỉ nhận việc.
   ///
-  /// Mở thêm màn tổng quan kế hoạch, nút tạo kế hoạch, gán người, đổi hạn và
+  /// Mở thêm màn tổng quan dự án, nút tạo dự án, gán người, đổi hạn và
   /// xếp thứ tự hàng đợi. Đây là quyền CỘNG THÊM, không phải một vai thay
   /// thế: quản đốc cũng tick công đoạn như thợ.
   ///

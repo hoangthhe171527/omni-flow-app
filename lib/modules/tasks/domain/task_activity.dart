@@ -41,9 +41,9 @@ enum TaskActivityKind {
 /// Một dòng nhật ký của MỘT công việc.
 ///
 /// Khác dòng thời gian toàn xưởng ở đúng một chỗ, và chỗ đó là lý do màn này
-/// đáng tồn tại: ở đây app biết công việc thuộc kế hoạch nào, nên nó dịch được
+/// đáng tồn tại: ở đây app biết công việc thuộc dự án nào, nên nó dịch được
 /// `from`/`to` — vốn là ID nhóm việc — thành TÊN. Dòng thời gian toàn xưởng
-/// không kéo theo kế hoạch nào nên nó chỉ nói được "đã chuyển nhóm việc"; ở
+/// không kéo theo dự án nào nên nó chỉ nói được "đã chuyển nhóm việc"; ở
 /// đây nói được "đã chuyển Nhập xưởng → Chờ QC", và đó chính là câu trả lời
 /// cho "ai đã kéo cây này về lại".
 class TaskActivityEntry {
@@ -78,7 +78,7 @@ class TaskActivityEntry {
   final String? userName;
 
   /// Với [TaskActivityKind.section] đây là ID nhóm việc; [summary] dịch nó ra
-  /// tên bằng danh sách nhóm việc của kế hoạch.
+  /// tên bằng danh sách nhóm việc của dự án.
   final String? from;
   final String? to;
 
@@ -87,7 +87,7 @@ class TaskActivityEntry {
 
   /// Câu mô tả, viết theo cách người xưởng nói.
   ///
-  /// [sections] là các nhóm việc của kế hoạch chứa công việc này —
+  /// [sections] là các nhóm việc của dự án chứa công việc này —
   /// `Task.planSections`, thứ API gửi kèm ở phản hồi CHI TIẾT. Rỗng thì câu
   /// vẫn đọc được, chỉ mất phần tên cột: một id in ra màn hình còn tệ hơn
   /// không in gì.
@@ -133,7 +133,7 @@ class TaskActivityEntry {
       if (section.id == id) return section.name;
     }
 
-    // Nhóm việc đã bị xoá khỏi kế hoạch. Dòng nhật ký thì vẫn đúng — nó ghi
+    // Nhóm việc đã bị xoá khỏi dự án. Dòng nhật ký thì vẫn đúng — nó ghi
     // chuyện đã xảy ra — nên trả về null để câu lùi về dạng chung, chứ không
     // in ra một id.
     return null;

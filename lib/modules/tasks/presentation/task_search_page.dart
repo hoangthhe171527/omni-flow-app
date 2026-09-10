@@ -18,9 +18,9 @@ const kTaskSearchDebounce = Duration(milliseconds: 350);
 
 /// "Cây SN 471302 đang ở đâu."
 ///
-/// Ở xưởng người ta gọi cây đàn bằng số máy, không bằng tên kế hoạch hay tên
+/// Ở xưởng người ta gọi cây đàn bằng số máy, không bằng tên dự án hay tên
 /// cột. Khách gọi điện hỏi cây của họ, và câu trả lời nằm rải trong bảy cột
-/// của hai kế hoạch — app trước đây không có đường nào tới nó ngoài việc lướt
+/// của hai dự án — app trước đây không có đường nào tới nó ngoài việc lướt
 /// từng cột.
 ///
 /// Server so khớp trên `title`, `customer_name`, `name` và `code`, nên một số

@@ -73,7 +73,7 @@ void main() {
     // Số 0 vì chưa cấu hình trông y hệt số 0 vì tháng này chưa xong việc nào.
     await show(tester, kpi(delivered: 0, configured: false));
 
-    expect(find.textContaining('Chưa có kế hoạch nào'), findsOneWidget);
+    expect(find.textContaining('Chưa có dự án nào'), findsOneWidget);
   });
 
   testWidgets('có mốc kế tiếp: hiện khoảng cách và nhịp cần thiết', (

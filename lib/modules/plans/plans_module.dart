@@ -10,13 +10,13 @@ import 'presentation/teams_page.dart';
 import 'presentation/timeline_page.dart';
 import 'routes.dart';
 
-/// Tầng trên của cây công việc: Team → Kế hoạch → Nhóm việc → Công việc.
+/// Tầng trên của cây công việc: Team → Dự án → Nhóm việc → Công việc.
 ///
 /// Đứng riêng khỏi [TasksModule] vì hai màn trả lời hai câu hỏi khác nhau.
-/// "Việc của tôi" là hàng đợi của một người; "Teams" là toàn cảnh của xưởng.
+/// "Việc của tôi" là hàng đợi của một người; "Dự án" là toàn cảnh của xưởng.
 /// Gộp chúng lại là bắt người thợ đi qua một cái cây để tới danh sách của mình.
 ///
-/// Dùng chung quyền của module Tasks: kế hoạch LÀ `project` bên API, và nó nằm
+/// Dùng chung quyền của module Tasks: dự án LÀ `project` bên API, và nó nằm
 /// sau `tasks.read`/`tasks.write` ở đó. Đặt ra một bộ quyền thứ hai cho cùng
 /// một tài nguyên là cách hai bộ trôi khỏi nhau.
 class PlansModule extends OmniModule {
@@ -30,7 +30,7 @@ class PlansModule extends OmniModule {
   String get id => 'plans';
 
   @override
-  String get title => 'Kế hoạch';
+  String get title => 'Dự án';
 
   @override
   List<String> get permissions => TaskPermissions.all;
@@ -69,15 +69,15 @@ class PlansModule extends OmniModule {
       routeName: timeline,
       area: NavArea.work,
       weight: NavWeight.primary,
-      // Sau "Việc của tôi" (10) và "Teams" (20). Thợ mở hàng đợi trước,
+      // Sau "Việc của tôi" (10) và "Dự án" (20). Thợ mở hàng đợi trước,
       // toàn cảnh sau, rồi mới tới dòng thời gian.
       order: 30,
       access: AccessRequirement.any(TaskPermissions.anyRead),
     ),
     ModuleNavEntry(
       moduleId: 'plans',
-      label: 'Teams',
-      subtitle: 'Kế hoạch và nhóm việc của team',
+      label: 'Dự án',
+      subtitle: 'Mọi dự án của xưởng, xếp theo tổ',
       icon: Icons.workspaces_outline,
       selectedIcon: Icons.workspaces_rounded,
       routeName: teams,

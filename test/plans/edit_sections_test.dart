@@ -11,10 +11,10 @@ import 'package:omni_app/modules/plans/data/plans_api.dart';
 import 'package:omni_app/modules/plans/domain/plan.dart';
 import 'package:omni_app/modules/plans/presentation/edit_sections_page.dart';
 
-/// Sửa nhóm việc của một kế hoạch ĐÃ CÓ.
+/// Sửa nhóm việc của một dự án ĐÃ CÓ.
 ///
 /// Trước đây nhóm việc chỉ khai được lúc tạo, nên một cái tên gõ nhầm hay một
-/// quy trình đổi đi là phải tạo lại cả kế hoạch — mà công việc thì đã nằm
+/// quy trình đổi đi là phải tạo lại cả dự án — mà công việc thì đã nằm
 /// trong đó rồi.
 void main() {
   const planId = 'p1';
@@ -125,7 +125,7 @@ void main() {
   });
 
   testWidgets('nhóm cuối cùng không xoá được', (tester) async {
-    // Kế hoạch phải còn ít nhất một cột, nếu không bảng không còn chỗ nào để
+    // Dự án phải còn ít nhất một cột, nếu không bảng không còn chỗ nào để
     // hiện việc.
     await pumpApp(tester);
 

@@ -4,8 +4,8 @@ import '../../../core/utils/json.dart';
 /// Vai của một người TRONG MỘT KẾ HOẠCH.
 ///
 /// Khác với quyền toàn hệ thống (`tasks.read`, `tasks.projects.manage.all`):
-/// một người có thể là quản đốc của kế hoạch "Đàn cơ" mà chỉ là người xem ở
-/// kế hoạch "Đàn điện".
+/// một người có thể là quản đốc của dự án "Đàn cơ" mà chỉ là người xem ở
+/// dự án "Đàn điện".
 ///
 /// Bốn giá trị này do API định nghĩa — `member_roles` trong
 /// `CreateProjectRequest.php` giới hạn đúng `owner|manager|member|viewer`.
@@ -17,7 +17,7 @@ enum PlanRole {
   member,
   viewer;
 
-  /// Sửa được kế hoạch: đổi nhóm việc, thêm người, gán việc.
+  /// Sửa được dự án: đổi nhóm việc, thêm người, gán việc.
   ///
   /// Khớp với `ProjectAccessService` phía API — nó cũng chỉ cho owner và
   /// manager. Đây là bản sao để giao diện biết trước; API vẫn kiểm lại.
@@ -65,9 +65,9 @@ class PlanSection {
 
   /// Cổng: vào nhóm này thì mọi việc con phải xong trước (§B3).
   ///
-  /// App không tự đặt cờ này ở đâu ngoài lúc tạo kế hoạch, nhưng nó PHẢI đọc
+  /// App không tự đặt cờ này ở đâu ngoài lúc tạo dự án, nhưng nó PHẢI đọc
   /// được: `PUT /projects/{id}` thay cả mảng `sections`, nên sửa tên một nhóm
-  /// mà không mang cờ theo là xoá sạch cổng QC của cả kế hoạch — im lặng.
+  /// mà không mang cờ theo là xoá sạch cổng QC của cả dự án — im lặng.
   final bool requiresChecklist;
 
   /// Nhóm này là ĐÍCH đếm KPI tháng (§B4). Mất nó thì thẻ KPI về 0 và trông
@@ -75,7 +75,7 @@ class PlanSection {
   final bool countsForKpi;
 }
 
-/// Một kế hoạch — `project` phía API.
+/// Một dự án — `project` phía API.
 ///
 /// Với xưởng piano: "Đàn cơ" hoặc "Đàn điện". Bên trong là các nhóm việc
 /// (công đoạn), và trong mỗi nhóm là các công việc (mỗi công việc là MỘT CÂY
@@ -88,6 +88,7 @@ class Plan {
     this.color,
     this.status = 'active',
     this.teamId,
+    this.teamName,
     this.sections = const [],
     this.memberIds = const [],
     this.memberRoles = const {},
@@ -113,13 +114,14 @@ class Plan {
 
     return Plan(
       id: json.strOr('id', ''),
-      name: json.strOr('name', 'Kế hoạch chưa đặt tên'),
+      name: json.strOr('name', 'Dự án chưa đặt tên'),
       description: json.str('description'),
       color: json.str('color'),
       status: json.strOr('status', 'active'),
-      // null với mọi kế hoạch tạo trước tầng Team — tức là gần như tất cả
+      // null với mọi dự án tạo trước tầng Team — tức là gần như tất cả
       // những gì đang có trong cơ sở dữ liệu hôm nay.
       teamId: json.str('team_id'),
+      teamName: json.str('team_name'),
       sections: sections,
       memberIds: json.strList('member_ids'),
       memberRoles: json
@@ -129,7 +131,7 @@ class Plan {
       endDate: DateUtilsX.parse(json['end_date']),
       // API gói ba con số này trong `stats`, không rải phẳng ra ngoài — xem
       // `MongoProjectRepository::attachStats()`. Bản đầu của file này đoán
-      // `tasks_count`/`done_count`/`overdue_count` và mọi kế hoạch hiện "Chưa
+      // `tasks_count`/`done_count`/`overdue_count` và mọi dự án hiện "Chưa
       // có việc nào" dù có 5 cây đàn. Đúng cái bẫy đã bắt `assignee=me`:
       // một cái tên đoán ra không báo lỗi, nó chỉ trả về 0 mãi mãi.
       taskCount: stats.intOr('total'),
@@ -144,6 +146,18 @@ class Plan {
   final String? color;
   final String status;
   final String? teamId;
+
+  /// Tên tổ, do API giải sẵn.
+  ///
+  /// Đây là mảnh chữa tận gốc cho một lỗi im lặng: `team_id` từng được app tra
+  /// trong `GET /teams` còn web tra trong `GET /org-units` — hai bảng khác
+  /// nhau — nên mỗi dự án tạo ở bên này hiện "chưa xếp nhóm" ở bên kia. Chừng
+  /// nào client còn phải tự tra id ra tên thì còn chỗ để tra nhầm bảng.
+  ///
+  /// null nghĩa là dự án thật sự chưa xếp tổ, hoặc tổ đã bị xoá. Hai chuyện
+  /// khác nhau với cơ sở dữ liệu, cùng một câu trả lời với người dùng.
+  final String? teamName;
+
   final List<PlanSection> sections;
   final List<String> memberIds;
   final Map<String, PlanRole> memberRoles;
@@ -154,7 +168,7 @@ class Plan {
   final int doneCount;
   final int overdueCount;
 
-  /// Vai của một người trong kế hoạch này. Không có tên trong bảng thì là
+  /// Vai của một người trong dự án này. Không có tên trong bảng thì là
   /// người xem — cùng lý do với [PlanRole.parse].
   PlanRole roleOf(String userId) => memberRoles[userId] ?? PlanRole.viewer;
 
