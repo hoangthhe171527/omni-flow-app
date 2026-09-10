@@ -1,5 +1,6 @@
 import '../../../core/utils/formatters.dart';
 import '../../../core/utils/json.dart';
+import 'task_activity.dart';
 
 /// One step of a task, owned by one person.
 ///
@@ -186,6 +187,7 @@ class Task {
     this.rating = 0,
     this.viewers = const [],
     this.comments = const [],
+    this.activity = const [],
   });
 
   factory Task.fromJson(Map<String, dynamic> json) => Task(
@@ -221,6 +223,7 @@ class Task {
     rating: json.intOr('rating'),
     viewers: json.mapList('viewers').map(TaskViewer.fromJson).toList(),
     comments: json.mapList('comments').map(TaskComment.fromJson).toList(),
+    activity: json.mapList('activity').map(TaskActivityEntry.fromJson).toList(),
   );
 
   final String id;
@@ -282,6 +285,17 @@ class Task {
   /// Bình luận, cũ nhất trước. Chỉ có ở phản hồi chi tiết, và API cắt bớt
   /// phần cũ — [commentCount] mới là tổng thật.
   final List<TaskComment> comments;
+
+  /// Nhật ký của công việc: ai đã làm gì với cây đàn này, cũ nhất trước.
+  ///
+  /// API đã ghi nó từ lâu (tối đa 200 dòng, cắt phần cũ nhất) và gửi kèm ở
+  /// phản hồi CHI TIẾT, nhưng app chưa từng đọc — nên "ai đã kéo cây này về
+  /// lại Đang làm" là câu hỏi không có chỗ nào trả lời, kể cả khi câu trả lời
+  /// đã nằm sẵn trong phản hồi.
+  ///
+  /// Rỗng trên dòng danh sách: `TaskController::listRow` bên API cắt nó cùng
+  /// với `comments`.
+  final List<TaskActivityEntry> activity;
 
   /// Only `done` is terminal; every other status id is defined by the project.
   bool get isDone => status == 'done';
@@ -362,5 +376,6 @@ class Task {
     rating: rating,
     viewers: viewers,
     comments: comments,
+    activity: activity,
   );
 }

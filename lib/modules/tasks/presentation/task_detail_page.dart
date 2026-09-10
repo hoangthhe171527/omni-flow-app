@@ -13,6 +13,7 @@ import '../application/task_controller.dart';
 import '../application/tasks_providers.dart';
 import '../data/tasks_api.dart';
 import '../domain/task.dart';
+import 'widgets/activity_log.dart';
 import 'widgets/assign_task_sheet.dart';
 import 'widgets/assigner_panel.dart';
 import 'widgets/comment_section.dart';
@@ -175,6 +176,11 @@ class _Loaded extends ConsumerWidget {
                   canWrite: canComplete,
                 ),
                 if (task.viewers.isNotEmpty) _Viewers(viewers: task.viewers),
+                // Cuối cùng, và GẤP lại: nhật ký là thứ người ta tra khi có
+                // nghi vấn, không phải thứ đọc mỗi lần mở việc. Trao đổi ở
+                // trên ghi LÝ DO một cây bị trả về; chỗ này ghi việc đã xảy
+                // ra — ai chuyển, từ cột nào sang cột nào, lúc nào.
+                ActivityLog(task: task),
               ],
             ),
           ),

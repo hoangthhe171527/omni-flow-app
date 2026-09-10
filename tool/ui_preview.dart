@@ -184,6 +184,7 @@ class _StubTasksApi implements TasksApi {
           tasks
               .where((t) => !t.isOverdue && !t.isDueToday && !t.isDone)
               .toList(),
+        TaskBucket.open => tasks.where((t) => !t.isDone).toList(),
         TaskBucket.all => tasks,
       },
       pagination: const ApiPagination(
@@ -191,6 +192,41 @@ class _StubTasksApi implements TasksApi {
         lastPage: 1,
         perPage: 20,
         total: 4,
+      ),
+    );
+  }
+
+  @override
+  Future<Paged<Task>> byAssignee(
+    String userId, {
+    TaskBucket bucket = TaskBucket.open,
+    int page = 1,
+    int perPage = 20,
+  }) => mine(bucket: bucket, page: page, perPage: perPage);
+
+  @override
+  Future<int> overdueCount(String userId) async =>
+      _rows.map(Task.fromJson).where((t) => t.isOverdue).length;
+
+  @override
+  Future<Paged<Task>> search(
+    String query, {
+    int page = 1,
+    int perPage = 20,
+  }) async {
+    final needle = query.toLowerCase();
+    final hits = _rows
+        .map(Task.fromJson)
+        .where((t) => t.title.toLowerCase().contains(needle))
+        .toList();
+
+    return Paged(
+      items: hits,
+      pagination: ApiPagination(
+        currentPage: 1,
+        lastPage: 1,
+        perPage: perPage,
+        total: hits.length,
       ),
     );
   }

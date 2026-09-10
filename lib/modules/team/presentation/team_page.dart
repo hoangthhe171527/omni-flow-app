@@ -1,10 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../design/components/components.dart';
 import '../../../design/tokens/tokens.dart';
 import '../../../core/error/app_exception.dart';
 import '../../../security/session/session_controller.dart';
+// CHỈ tên route, không phải cả module công việc: `tasks` đã import `team`
+// (sheet giao việc), nên một import ngược lại đóng vòng. `routes.dart` không
+// import gì nên nó không nằm trong đồ thị — xem `module_cycle_test.dart`.
+import '../../tasks/routes.dart';
 import '../application/team_providers.dart';
 import '../data/team_api.dart';
 import '../domain/team_member.dart';
@@ -19,6 +24,12 @@ class TeamPage extends ConsumerWidget {
     // Liên kết Zalo là thao tác của người có thẩm quyền — xem doc của
     // `TeamMember.zaloUserId`. Ai không có quyền thì thẻ chỉ đọc như cũ.
     final canLink = ref.watch(accessProvider).can('membership.members.update');
+    // Xem tải việc của người khác nằm sau quyền giao việc (§7: xưởng không
+    // công khai số liệu cá nhân). Cùng quyền mà route `tasks.workload` đòi —
+    // kiểm ở đây để không bày ra một hàng người bấm vào là bị chặn.
+    final canSeeLoad = ref
+        .watch(accessProvider)
+        .can('tasks.projects.manage.all');
 
     return Scaffold(
       appBar: AppBar(title: const Text('Nhân viên')),
@@ -38,7 +49,17 @@ class TeamPage extends ConsumerWidget {
           itemBuilder: (context, index) {
             final member = list[index];
             return OmniCard(
-              onTap: canLink ? () => _linkZalo(context, ref, member) : null,
+              // Chạm vào một người là mở TẢI VIỆC của họ — câu hỏi quản đốc
+              // hỏi nhiều nhất khi đứng giữa xưởng. Trước đây chạm vào mở
+              // sheet liên kết Zalo, một thao tác làm vài lần trong đời một
+              // nhân viên: hành động chính của thẻ phải là thứ người ta làm
+              // hằng ngày, còn cái kia lùi về một nút riêng bên phải.
+              onTap: canSeeLoad
+                  ? () => context.pushNamed(
+                      TaskRoutes.workload,
+                      pathParameters: {'userId': member.userId},
+                    )
+                  : null,
               padding: const EdgeInsets.all(OmniSpacing.md),
               child: Row(
                 children: [
@@ -85,6 +106,21 @@ class TeamPage extends ConsumerWidget {
                     label: member.roleLabel,
                     tone: member.isActive ? OmniTone.info : OmniTone.neutral,
                   ),
+                  // Liên kết Zalo: một nút riêng, có nhãn, thay vì một cú
+                  // chạm vô hình lên cả thẻ.
+                  if (canLink)
+                    IconButton(
+                      onPressed: () => _linkZalo(context, ref, member),
+                      tooltip: member.zaloUserId == null
+                          ? 'Liên kết Zalo — ${member.name}'
+                          : 'Sửa liên kết Zalo — ${member.name}',
+                      icon: Icon(
+                        member.zaloUserId == null
+                            ? Icons.link_off_rounded
+                            : Icons.link_rounded,
+                        color: scheme.onSurfaceVariant,
+                      ),
+                    ),
                 ],
               ),
             );

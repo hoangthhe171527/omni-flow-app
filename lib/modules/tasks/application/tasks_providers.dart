@@ -150,6 +150,53 @@ final myTasksProvider =
       MyTasksController.new,
     );
 
+/// Tải việc của MỘT người: đang gánh bao nhiêu, trễ bao nhiêu.
+///
+/// [total] và [overdue] đều do SERVER đếm, không đếm trên [tasks]: danh sách
+/// có phân trang, nên một con số đếm từ trang một là con số của trang một —
+/// và trên màn hình nó trông y hệt một con số của tất cả.
+typedef Workload = ({List<Task> tasks, int total, int overdue});
+
+/// Việc đang gánh của một người, cho màn hình quản đốc.
+///
+/// autoDispose: quản đốc mở tải việc của một người rồi đóng lại, không quay
+/// lại người đó. Giữ trong bộ nhớ cả phiên là giữ đúng thứ chắc chắn đã cũ.
+final workloadProvider = FutureProvider.autoDispose.family<Workload, String>((
+  ref,
+  userId,
+) async {
+  ref.watch(taskRealtimeSignalProvider);
+  final api = ref.watch(tasksApiProvider);
+
+  // Song song: hai lượt gọi độc lập, và cái đếm nhanh không việc gì phải
+  // chờ cái danh sách.
+  final (page, overdue) = await (
+    // Một trang lớn thay vì cuộn vô tận: một người gánh 60 cây là đã bất
+    // thường, và màn này để LIẾC chứ không để đọc hết.
+    api.byAssignee(userId, perPage: 100),
+    api.overdueCount(userId),
+  ).wait;
+
+  return (tasks: page.items, total: page.pagination.total, overdue: overdue);
+});
+
+/// Chuỗi đang gõ ở ô tìm kiếm, sau khi đã chờ người dùng ngừng gõ.
+final taskSearchQueryProvider = StateProvider.autoDispose<String>((ref) => '');
+
+/// Kết quả tìm một cây đàn theo tên hoặc số máy.
+///
+/// Chuỗi rỗng KHÔNG gọi mạng: `search=` trống ở API nghĩa là "không lọc", tức
+/// là trả về toàn bộ công việc của xưởng — một danh sách 500 dòng hiện ra
+/// trước khi người dùng kịp gõ chữ đầu tiên.
+final taskSearchProvider = FutureProvider.autoDispose<List<Task>>((ref) async {
+  final query = ref.watch(taskSearchQueryProvider).trim();
+  if (query.isEmpty) return const [];
+
+  final page = await ref.watch(tasksApiProvider).search(query);
+
+  return page.items;
+});
+
 /// Count for the tab badge: work that is late or due today.
 ///
 /// Deliberately not "everything assigned to me" — a badge showing 40 is

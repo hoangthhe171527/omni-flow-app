@@ -77,7 +77,22 @@ final planTasksProvider = FutureProvider.family<PlanTasks, String>((
 final workshopKpiProvider = FutureProvider<WorkshopKpi>((ref) {
   ref.watch(taskRealtimeSignalProvider);
 
-  return ref.watch(plansApiProvider).kpi();
+  return ref.watch(plansApiProvider).kpi(month: ref.watch(kpiMonthProvider));
+});
+
+/// Tháng đang xem trên thẻ KPI. Luôn là ngày 1 của tháng đó.
+///
+/// Cuối tháng chủ xưởng đọc con số để trao thưởng (§B4) — nhưng ngày mùng 1
+/// thì con số đã về 0, và tháng vừa khép lại là thứ không còn xem được ở đâu
+/// cả. API nhận `?month=` từ lâu; app thì chưa từng gửi.
+///
+/// Không autoDispose: quản đốc lùi về tháng trước, mở một cây đàn ra xem, rồi
+/// quay lại — và tháng phải còn nguyên. Dọn nó đi là đưa họ về tháng này mà
+/// không nói gì.
+final kpiMonthProvider = StateProvider<DateTime>((ref) {
+  final now = DateTime.now();
+
+  return DateTime(now.year, now.month);
 });
 
 /// Chuyện gì vừa xảy ra ở xưởng.

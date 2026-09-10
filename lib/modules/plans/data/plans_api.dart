@@ -134,10 +134,22 @@ class PlansApi {
   ///
   /// Bỏ trống [planId] thì tính trên toàn bộ tenant — đúng cách xưởng đếm,
   /// vì thưởng theo TEAM chứ không theo từng kế hoạch (§1 tài liệu xưởng).
-  Future<WorkshopKpi> kpi({String? planId}) async {
+  /// [month] là ngày bất kỳ trong tháng cần xem; bỏ trống là tháng đang chạy.
+  ///
+  /// Gửi dạng `YYYY-MM-01` chứ không gửi cả ngày giờ: server tự lấy đầu tháng
+  /// theo giờ xưởng, và một chuỗi mang giờ UTC của máy người dùng có thể rơi
+  /// sang tháng bên cạnh — 2026-10-01T00:00 giờ Việt Nam là 2026-09-30 theo
+  /// UTC, và cả thẻ KPI sẽ trả lời cho tháng trước.
+  Future<WorkshopKpi> kpi({String? planId, DateTime? month}) async {
     final response = await _client.get(
       '$_tasks/kpi',
-      query: {if (planId != null && planId.isNotEmpty) 'project_id': planId},
+      query: {
+        if (planId != null && planId.isNotEmpty) 'project_id': planId,
+        if (month != null)
+          'month':
+              '${month.year.toString().padLeft(4, '0')}-'
+              '${month.month.toString().padLeft(2, '0')}-01',
+      },
     );
 
     return WorkshopKpi.fromJson(response.object);

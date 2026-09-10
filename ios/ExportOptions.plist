@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  Cách `xcodebuild -exportArchive` biến archive thành IPA nộp được.
+
+  Không có tệp này thì `flutter build ipa` chỉ dựng archive rồi dừng lại và bảo
+  người dùng mở Xcode — tức là bản iOS chỉ đóng gói được bằng tay, trên một cái
+  máy Mac cụ thể, bởi một người cụ thể.
+
+  Ba giá trị dưới đây KHÔNG phải lựa chọn tự do: chúng phải khớp với cấu hình
+  Release đang nằm sẵn trong Runner.xcodeproj, nơi CODE_SIGN_STYLE = Manual và
+  PROVISIONING_PROFILE_SPECIFIER = "Omni App AppStore Local". Lệch một chữ thì
+  bước xuất báo "no applicable devices" hoặc "no profiles found" — hai câu
+  không nói gì về nguyên nhân thật.
+-->
+<plist version="1.0">
+<dict>
+	<!-- `app-store` chứ không `app-store-connect`: Xcode mới hơn đặt tên lại và
+	     chỉ cảnh báo về tên cũ, còn Xcode cũ thì KHÔNG hiểu tên mới. Tên cũ
+	     chạy được ở cả hai. -->
+	<key>method</key>
+	<string>app-store</string>
+
+	<key>teamID</key>
+	<string>PN827425A2</string>
+
+	<key>signingStyle</key>
+	<string>manual</string>
+
+	<key>provisioningProfiles</key>
+	<dict>
+		<key>vn.app.sunriseieco.viomni</key>
+		<string>Omni App AppStore Local</string>
+	</dict>
+
+	<!-- Gửi kèm bảng ký hiệu để Crashlytics đọc được stack trace. Không gửi
+	     thì mỗi lần app chết ở xưởng chỉ để lại một danh sách địa chỉ nhớ. -->
+	<key>uploadSymbols</key>
+	<true/>
+
+	<!-- Không để Xcode tự sinh chứng thư/profile mới trên máy CI: nó sẽ tạo ra
+	     một cặp thứ hai mà không ai giữ, và Apple giới hạn số chứng thư phát
+	     hành cho mỗi tài khoản. -->
+	<key>manageAppVersionAndBuildNumber</key>
+	<false/>
+</dict>
+</plist>

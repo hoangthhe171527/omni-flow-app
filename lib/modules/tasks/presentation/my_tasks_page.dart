@@ -8,6 +8,7 @@ import '../../notifications/application/notifications_providers.dart';
 import '../../notifications/routes.dart';
 import '../application/tasks_providers.dart';
 import '../data/tasks_api.dart';
+import '../routes.dart';
 import '../tasks_module.dart';
 import 'widgets/task_card.dart';
 
@@ -59,6 +60,14 @@ class _MyTasksPageState extends ConsumerState<MyTasksPage> {
         titleSpacing: OmniSpacing.lg,
         toolbarHeight: 56,
         actions: [
+          // Tìm cây đàn. Ở đây vì đây là màn hình người thợ đang mở sẵn, và
+          // câu "cây SN 471302 ở đâu" hỏi giữa lúc làm chứ không hỏi lúc
+          // ngồi duyệt menu.
+          IconButton(
+            onPressed: () => context.pushNamed(TaskRoutes.search),
+            tooltip: 'Tìm cây đàn',
+            icon: const Icon(Icons.search_rounded),
+          ),
           // The bell lives here because this is the screen a worker is already
           // on. Making them go through "Thêm" to find out they were given
           // something is a step too many.
@@ -132,6 +141,10 @@ class _MyTasksPageState extends ConsumerState<MyTasksPage> {
     TaskBucket.today => 'Hôm nay không có việc nào',
     TaskBucket.overdue => 'Không có việc quá hạn',
     TaskBucket.upcoming => 'Chưa có việc sắp tới',
+    // `open` không có nút trên màn này (xem `TaskBucket.forMyWork`), nhưng
+    // switch phải phủ hết: bỏ sót một case là một lỗi biên dịch hôm nay và
+    // một dòng chữ trống nếu ai đó thêm `default`.
+    TaskBucket.open => 'Không còn việc nào đang mở',
     TaskBucket.all => 'Chưa có việc nào được giao',
   };
 
@@ -207,10 +220,10 @@ class _BucketBar extends StatelessWidget {
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: OmniSpacing.lg),
-        itemCount: TaskBucket.values.length,
+        itemCount: TaskBucket.forMyWork.length,
         separatorBuilder: (_, _) => const SizedBox(width: OmniSpacing.sm),
         itemBuilder: (context, index) {
-          final bucket = TaskBucket.values[index];
+          final bucket = TaskBucket.forMyWork[index];
 
           return Center(
             child: OmniFilterPill(
