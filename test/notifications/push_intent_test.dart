@@ -20,6 +20,22 @@ void main() {
       expect(intent.id, 'c-1');
     });
 
+    test('tiến độ công đoạn mở được cây đàn', () {
+      // Server đã gửi `type: 'task_progress'` từ lâu, nhưng danh sách trắng ở
+      // client không có nó — nên thông báo hiện trên màn khoá và chạm vào
+      // KHÔNG làm gì. Bật push mà thiếu dòng này thì tính năng trông như đã
+      // xong. Cùng lỗi đã xảy ra với `task_commented` và `task_mentioned`.
+      final intent = PushIntent.fromData({
+        'type': 'task_progress',
+        'task_id': 't-1',
+        'subtask_id': 's-2',
+      });
+
+      expect(intent, isNotNull);
+      expect(intent!.target, PushTarget.task);
+      expect(intent.id, 't-1');
+    });
+
     test('being given work opens that task', () {
       final intent = PushIntent.fromData({
         'type': 'task_assigned',

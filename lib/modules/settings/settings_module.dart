@@ -4,6 +4,7 @@ import '../../core/module/module_route.dart';
 import '../../core/module/nav_destination.dart';
 import '../../core/module/omni_module.dart';
 import 'presentation/my_permissions_page.dart';
+import 'presentation/notification_settings_page.dart';
 
 /// Account-level screens. Open to everyone — a user is always allowed to see
 /// who they are and what they can do.
@@ -11,6 +12,7 @@ class SettingsModule extends OmniModule {
   const SettingsModule();
 
   static const myPermissions = 'settings.permissions';
+  static const notifications = 'settings.notifications';
 
   @override
   String get id => 'settings';
@@ -26,6 +28,12 @@ class SettingsModule extends OmniModule {
       rootNavigator: true,
       builder: (_, _) => const MyPermissionsPage(),
     ),
+    ModuleRoute(
+      path: '/settings/notifications',
+      name: notifications,
+      rootNavigator: true,
+      builder: (_, _) => const NotificationSettingsPage(),
+    ),
   ];
 
   @override
@@ -40,6 +48,17 @@ class SettingsModule extends OmniModule {
       area: NavArea.account,
       weight: NavWeight.secondary,
       order: 10,
+    ),
+    ModuleNavEntry(
+      moduleId: 'settings',
+      label: 'Thông báo',
+      subtitle: 'Chọn khi nào máy được rung',
+      icon: Icons.notifications_outlined,
+      selectedIcon: Icons.notifications_rounded,
+      routeName: notifications,
+      area: NavArea.account,
+      weight: NavWeight.secondary,
+      order: 20,
     ),
   ];
 }
