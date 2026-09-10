@@ -7,9 +7,11 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import '../core/config/app_config.dart';
 import '../core/realtime/realtime_client.dart';
 import '../core/theme/theme_mode_controller.dart';
+import '../design/components/components.dart';
 import '../design/theme/omni_theme.dart';
 import '../modules/inbox/inbox_module.dart';
 import '../modules/notifications/application/push_notifications.dart';
+import '../modules/settings/presentation/widgets/account_menu_button.dart';
 import '../modules/tasks/application/tasks_providers.dart';
 import '../modules/tasks/tasks_module.dart';
 import '../security/session/session_controller.dart';
@@ -106,7 +108,14 @@ class _OmniAppState extends ConsumerState<OmniApp> with WidgetsBindingObserver {
         ).clamp(minScaleFactor: 0.9, maxScaleFactor: 1.3);
         return MediaQuery(
           data: MediaQuery.of(context).copyWith(textScaler: scale),
-          child: child ?? const SizedBox.shrink(),
+          // Cắm nút tài khoản MỘT lần, ở trên mọi route. Từ đây, màn nào dựng
+          // `OmniAppBar` cũng có nút ở góc phải mà không phải nhớ gì — xem
+          // docblock của `OmniAccountSlot` về lý do là chỗ cắm chứ không phải
+          // một import thẳng từ design lên module.
+          child: OmniAccountSlot(
+            builder: (_) => const AccountMenuButton(),
+            child: child ?? const SizedBox.shrink(),
+          ),
         );
       },
     );

@@ -3,6 +3,7 @@
 /// either in the module itself or, if a second module needs it too, here.
 library;
 
+export 'omni_app_bar.dart';
 export 'omni_avatar.dart';
 export 'omni_card.dart';
 export 'omni_inputs.dart';

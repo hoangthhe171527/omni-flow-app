@@ -56,7 +56,7 @@ class _TimelinePageState extends ConsumerState<TimelinePage> {
     final groups = DayGroup.from(data?.entries ?? const []);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Dòng việc')),
+      appBar: const OmniAppBar(title: 'Dòng việc'),
       body: RefreshIndicator(
         onRefresh: () async {
           ref.invalidate(workshopFeedProvider);
