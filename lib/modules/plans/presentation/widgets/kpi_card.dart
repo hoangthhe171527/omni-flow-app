@@ -53,11 +53,7 @@ class KpiCard extends StatelessWidget {
           children: [
             // Thanh chọn tháng ở CẢ nhánh này: lùi về một tháng đã cấu hình
             // xong là cách nhanh nhất để thấy con số đáng lẽ trông ra sao.
-            _MonthBar(
-              month: month,
-              onPrev: onPrevMonth,
-              onNext: onNextMonth,
-            ),
+            _MonthBar(month: month, onPrev: onPrevMonth, onNext: onNextMonth),
             const SizedBox(height: OmniSpacing.md),
             Row(
               children: [

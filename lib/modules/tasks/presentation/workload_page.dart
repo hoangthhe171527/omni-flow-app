@@ -189,7 +189,11 @@ class _Summary extends StatelessWidget {
 }
 
 class _Figure extends StatelessWidget {
-  const _Figure({required this.value, required this.label, required this.color});
+  const _Figure({
+    required this.value,
+    required this.label,
+    required this.color,
+  });
 
   final int value;
   final String label;

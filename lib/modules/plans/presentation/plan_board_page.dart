@@ -252,11 +252,7 @@ class _Board extends StatelessWidget {
 }
 
 class _Column extends StatelessWidget {
-  const _Column({
-    required this.section,
-    required this.tasks,
-    this.filteredBy,
-  });
+  const _Column({required this.section, required this.tasks, this.filteredBy});
 
   final PlanSection section;
   final List<Task> tasks;

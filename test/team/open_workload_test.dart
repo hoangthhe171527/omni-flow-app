@@ -32,14 +32,13 @@ void main() {
     const TeamMember(membershipId: 'm1', userId: 'u-hang-ni', name: 'Hằng Ni'),
   ];
 
-  Widget host({required Set<String> permissions, required List<String> opened}) {
+  Widget host({
+    required Set<String> permissions,
+    required List<String> opened,
+  }) {
     final router = GoRouter(
       routes: [
-        GoRoute(
-          path: '/team',
-          builder: (_, _) => const TeamPage(),
-          routes: [],
-        ),
+        GoRoute(path: '/team', builder: (_, _) => const TeamPage(), routes: []),
         GoRoute(
           path: '/tasks/by/:userId',
           name: TaskRoutes.workload,

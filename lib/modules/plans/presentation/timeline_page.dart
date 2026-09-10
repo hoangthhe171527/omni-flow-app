@@ -104,8 +104,10 @@ class _Kpi extends ConsumerWidget {
           // và số 0 đó trông y hệt "tháng này chưa ai xong cây nào".
           onNextMonth: atCurrentMonth
               ? null
-              : () => ref.read(kpiMonthProvider.notifier).state =
-                    DateTime(month.year, month.month + 1),
+              : () => ref.read(kpiMonthProvider.notifier).state = DateTime(
+                  month.year,
+                  month.month + 1,
+                ),
         ),
         // Một ô trống cao bằng thẻ, để dòng hoạt động bên dưới không nhảy khi
         // con số tới nơi.

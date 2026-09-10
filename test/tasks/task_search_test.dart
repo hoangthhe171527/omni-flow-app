@@ -24,7 +24,8 @@ import 'package:omni_app/modules/tasks/presentation/task_search_page.dart'
 /// còn khung hình nào được xếp lịch, mà một `Timer` đang chờ thì không xếp
 /// khung hình nào. Không đẩy đồng hồ giả qua mốc ấy thì mọi bài dưới đây đều
 /// "xanh" vì lượt tìm chưa từng chạy — hạng test tệ nhất.
-Duration _past(Duration debounce) => debounce + const Duration(milliseconds: 50);
+Duration _past(Duration debounce) =>
+    debounce + const Duration(milliseconds: 50);
 
 void main() {
   Widget host(TasksApi api) => ProviderScope(
@@ -66,10 +67,7 @@ void main() {
   testWidgets('tìm ra cây đàn theo số máy nằm trong tiêu đề', (tester) async {
     final api = _RecordingTasksApi(
       hits: [
-        Task.fromJson({
-          'id': 't1',
-          'title': 'SCHWESTER No.53 — SN 471302',
-        }),
+        Task.fromJson({'id': 't1', 'title': 'SCHWESTER No.53 — SN 471302'}),
       ],
     );
     await tester.pumpWidget(host(api));

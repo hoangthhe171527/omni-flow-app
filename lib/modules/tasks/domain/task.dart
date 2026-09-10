@@ -223,10 +223,7 @@ class Task {
     rating: json.intOr('rating'),
     viewers: json.mapList('viewers').map(TaskViewer.fromJson).toList(),
     comments: json.mapList('comments').map(TaskComment.fromJson).toList(),
-    activity: json
-        .mapList('activity')
-        .map(TaskActivityEntry.fromJson)
-        .toList(),
+    activity: json.mapList('activity').map(TaskActivityEntry.fromJson).toList(),
   );
 
   final String id;

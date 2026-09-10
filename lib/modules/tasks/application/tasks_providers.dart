@@ -161,26 +161,24 @@ typedef Workload = ({List<Task> tasks, int total, int overdue});
 ///
 /// autoDispose: quản đốc mở tải việc của một người rồi đóng lại, không quay
 /// lại người đó. Giữ trong bộ nhớ cả phiên là giữ đúng thứ chắc chắn đã cũ.
-final workloadProvider = FutureProvider.autoDispose
-    .family<Workload, String>((ref, userId) async {
-      ref.watch(taskRealtimeSignalProvider);
-      final api = ref.watch(tasksApiProvider);
+final workloadProvider = FutureProvider.autoDispose.family<Workload, String>((
+  ref,
+  userId,
+) async {
+  ref.watch(taskRealtimeSignalProvider);
+  final api = ref.watch(tasksApiProvider);
 
-      // Song song: hai lượt gọi độc lập, và cái đếm nhanh không việc gì phải
-      // chờ cái danh sách.
-      final (page, overdue) = await (
-        // Một trang lớn thay vì cuộn vô tận: một người gánh 60 cây là đã bất
-        // thường, và màn này để LIẾC chứ không để đọc hết.
-        api.byAssignee(userId, perPage: 100),
-        api.overdueCount(userId),
-      ).wait;
+  // Song song: hai lượt gọi độc lập, và cái đếm nhanh không việc gì phải
+  // chờ cái danh sách.
+  final (page, overdue) = await (
+    // Một trang lớn thay vì cuộn vô tận: một người gánh 60 cây là đã bất
+    // thường, và màn này để LIẾC chứ không để đọc hết.
+    api.byAssignee(userId, perPage: 100),
+    api.overdueCount(userId),
+  ).wait;
 
-      return (
-        tasks: page.items,
-        total: page.pagination.total,
-        overdue: overdue,
-      );
-    });
+  return (tasks: page.items, total: page.pagination.total, overdue: overdue);
+});
 
 /// Chuỗi đang gõ ở ô tìm kiếm, sau khi đã chờ người dùng ngừng gõ.
 final taskSearchQueryProvider = StateProvider.autoDispose<String>((ref) => '');

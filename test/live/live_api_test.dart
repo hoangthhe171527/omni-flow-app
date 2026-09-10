@@ -40,7 +40,11 @@ const _base = String.fromEnvironment('OMNI_LIVE_API');
 
 void main() {
   if (_base.isEmpty) {
-    test('API thật chưa được khai — bỏ qua', () {}, skip: 'Đặt --dart-define=OMNI_LIVE_API=http://localhost:8000 để chạy.');
+    test(
+      'API thật chưa được khai — bỏ qua',
+      () {},
+      skip: 'Đặt --dart-define=OMNI_LIVE_API=http://localhost:8000 để chạy.',
+    );
 
     return;
   }
@@ -53,7 +57,9 @@ void main() {
 
   setUpAll(() async {
     final stamp = DateTime.now().microsecondsSinceEpoch.toString();
-    final raw = Dio(BaseOptions(baseUrl: _base, headers: {'Accept': 'application/json'}));
+    final raw = Dio(
+      BaseOptions(baseUrl: _base, headers: {'Accept': 'application/json'}),
+    );
 
     final registered = await raw.post<Map<String, dynamic>>(
       '${AppConfig.apiPrefix}/auth/register',
@@ -71,7 +77,9 @@ void main() {
       '${AppConfig.apiPrefix}/auth/tenants',
       options: Options(headers: {'Authorization': 'Bearer $token'}),
     );
-    tenantId = (((tenants.data!['data'] as List).first as Map)['tenant'] as Map)['id'] as String;
+    tenantId =
+        (((tenants.data!['data'] as List).first as Map)['tenant'] as Map)['id']
+            as String;
 
     // Cùng hai header mà `dio_provider` gắn khi app chạy thật.
     client = ApiClient(
@@ -100,7 +108,11 @@ void main() {
       );
 
       expect(plan.id, isNotEmpty);
-      expect(plan.sections.map((s) => s.name), ['Nhap xuong', 'Cho QC', 'Hoan thien']);
+      expect(plan.sections.map((s) => s.name), [
+        'Nhap xuong',
+        'Cho QC',
+        'Hoan thien',
+      ]);
 
       // Cờ cổng QC phải sống sót qua vòng ghi–đọc. Mất nó là mất §B3, và mất
       // im lặng: bảng vẫn hiện đủ ba cột.
@@ -114,26 +126,39 @@ void main() {
         sectionNames: const ['Cho lam', 'Dang lam'],
       );
 
-      final created = await tasks.create(title: 'SCHWESTER No.53', projectId: plan.id);
+      final created = await tasks.create(
+        title: 'SCHWESTER No.53',
+        projectId: plan.id,
+      );
       expect(created.id, isNotEmpty);
 
       final members = await team.members();
-      expect(members, isNotEmpty, reason: 'Workspace mới phải có ít nhất người lập.');
+      expect(
+        members,
+        isNotEmpty,
+        reason: 'Workspace mới phải có ít nhất người lập.',
+      );
 
-      final assigned = await tasks.setAssignees(created.id, [members.first.userId]);
+      final assigned = await tasks.setAssignees(created.id, [
+        members.first.userId,
+      ]);
 
       // Đây là một trong ba trường app từng đoán sai: `assignee_names` chưa
       // từng được server sinh ra, và không gì báo — danh sách chỉ trống mãi.
       expect(
         assigned.assigneeNames,
         isNotEmpty,
-        reason: 'API phải giải sẵn tên người làm; app không có quyền tra ngược.',
+        reason:
+            'API phải giải sẵn tên người làm; app không có quyền tra ngược.',
       );
       expect(assigned.assigneeNames.first, isNotEmpty);
     });
 
     test('tick việc con đi qua endpoint từng mục và LƯU được', () async {
-      final plan = await plans.createPlan(name: 'Ke hoach tick', sectionNames: const ['A', 'B']);
+      final plan = await plans.createPlan(
+        name: 'Ke hoach tick',
+        sectionNames: const ['A', 'B'],
+      );
       final task = await tasks.create(title: 'KAWAI HAT-5', projectId: plan.id);
 
       // Việc con đầu tiên: id do SERVER sinh.
@@ -210,7 +235,11 @@ void main() {
       await tasks.create(title: 'SCHWESTER No.53 — SN $stamp');
 
       final hits = await tasks.search(stamp);
-      expect(hits.items, isNotEmpty, reason: 'Server so khớp theo đoạn trên `title`.');
+      expect(
+        hits.items,
+        isNotEmpty,
+        reason: 'Server so khớp theo đoạn trên `title`.',
+      );
       expect(hits.items.first.title, contains(stamp));
     });
 
@@ -221,7 +250,11 @@ void main() {
       final task = await tasks.create(title: 'Cay co nhat ky');
 
       final reread = await tasks.get(task.id);
-      expect(reread.activity, isNotEmpty, reason: 'Tạo việc phải để lại một dòng.');
+      expect(
+        reread.activity,
+        isNotEmpty,
+        reason: 'Tạo việc phải để lại một dòng.',
+      );
       expect(
         reread.activity.first.userName,
         isNotNull,
@@ -235,11 +268,18 @@ void main() {
       // Đường dẫn từng thiếu tiền tố `/tasks` và gọi vào một đường không tồn
       // tại. Màn hình chỉ hiện rỗng — "chưa có hoạt động nào" và 404 trông y
       // hệt nhau.
-      final plan = await plans.createPlan(name: 'Ke hoach feed', sectionNames: const ['A', 'B']);
+      final plan = await plans.createPlan(
+        name: 'Ke hoach feed',
+        sectionNames: const ['A', 'B'],
+      );
       await tasks.create(title: 'Cay dan cho feed', projectId: plan.id);
 
       final feed = await plans.feed();
-      expect(feed, isNotEmpty, reason: 'Vừa tạo một việc thì dòng thời gian phải có bản ghi.');
+      expect(
+        feed,
+        isNotEmpty,
+        reason: 'Vừa tạo một việc thì dòng thời gian phải có bản ghi.',
+      );
       expect(feed.first.taskTitle, isNotEmpty);
     });
 
@@ -261,7 +301,11 @@ void main() {
       final past = await plans.kpi(month: DateTime(now.year, now.month - 1));
 
       expect(past.daysLeft, 0);
-      expect(past.perDayNeeded, isNull, reason: 'Không khuyên nhịp cho quá khứ.');
+      expect(
+        past.perDayNeeded,
+        isNull,
+        reason: 'Không khuyên nhịp cho quá khứ.',
+      );
 
       // Tháng đang chạy vẫn phải đếm ngược — sửa quá khứ mà hỏng hiện tại là
       // mất đúng phần §B4 dùng.
@@ -277,11 +321,15 @@ void main() {
       final me = members.first;
 
       await team.setZaloUserId(me.membershipId, '79000012345');
-      final linked = (await team.members()).firstWhere((m) => m.membershipId == me.membershipId);
+      final linked = (await team.members()).firstWhere(
+        (m) => m.membershipId == me.membershipId,
+      );
       expect(linked.zaloUserId, '79000012345');
 
       await team.setZaloUserId(me.membershipId, '');
-      final cleared = (await team.members()).firstWhere((m) => m.membershipId == me.membershipId);
+      final cleared = (await team.members()).firstWhere(
+        (m) => m.membershipId == me.membershipId,
+      );
       expect(cleared.zaloUserId ?? '', isEmpty);
     });
   });

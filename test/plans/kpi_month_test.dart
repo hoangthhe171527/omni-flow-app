@@ -54,7 +54,11 @@ void main() {
       MaterialApp(
         theme: OmniTheme.light(TargetPlatform.android),
         home: Scaffold(
-          body: KpiCard(kpi: kpi(), month: DateTime(2026, 8), onPrevMonth: () {}),
+          body: KpiCard(
+            kpi: kpi(),
+            month: DateTime(2026, 8),
+            onPrevMonth: () {},
+          ),
         ),
       ),
     );
@@ -75,7 +79,11 @@ void main() {
       ),
     );
 
-    expect(next.onPressed, isNull, reason: 'Mũi tên tới phải MỜ, không biến mất.');
+    expect(
+      next.onPressed,
+      isNull,
+      reason: 'Mũi tên tới phải MỜ, không biến mất.',
+    );
     expect(find.byIcon(Icons.chevron_right_rounded), findsOneWidget);
   });
 
@@ -115,7 +123,10 @@ void main() {
 
     await api.kpi();
 
-    expect(recorder.singleRequest.uri.queryParameters.containsKey('month'), isFalse);
+    expect(
+      recorder.singleRequest.uri.queryParameters.containsKey('month'),
+      isFalse,
+    );
   });
 }
 

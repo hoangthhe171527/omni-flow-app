@@ -24,7 +24,9 @@ void main() {
 
   Widget host(Task value) => MaterialApp(
     theme: OmniTheme.light(TargetPlatform.android),
-    home: Scaffold(body: SingleChildScrollView(child: ActivityLog(task: value))),
+    home: Scaffold(
+      body: SingleChildScrollView(child: ActivityLog(task: value)),
+    ),
   );
 
   testWidgets('không có dòng nào thì không chiếm chỗ', (tester) async {
