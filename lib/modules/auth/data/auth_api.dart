@@ -81,17 +81,7 @@ class AuthApi implements AuthGateway {
 
     return Session(
       status: SessionStatus.authenticated,
-      user: SessionUser(
-        id: userJson.strOr('id', ''),
-        fullName: userJson.strOr(
-          'full_name',
-          userJson.strOr('email', 'Người dùng'),
-        ),
-        email: userJson.strOr('email', ''),
-        phone: userJson.str('phone'),
-        avatarUrl: userJson.str('avatar'),
-        locale: userJson.str('locale'),
-      ),
+      user: sessionUserFromJson(userJson),
       tenant: SessionTenant(
         id: tenantJson.strOr('id', ''),
         name: tenantJson.strOr('name', ''),
@@ -141,3 +131,18 @@ class AuthApi implements AuthGateway {
 final authApiProvider = Provider<AuthApi>((ref) {
   return AuthApi(ref.watch(apiClientProvider));
 });
+
+/// Một người dùng từ `data.user` của `/auth/me`.
+///
+/// Tách ra để kiểm được bằng JSON thuần — `loadContext()` gọi hai endpoint
+/// và một bài kiểm cho nó phải giả cả hai.
+SessionUser sessionUserFromJson(Map<String, dynamic> userJson) => SessionUser(
+  id: userJson.strOr('id', ''),
+  fullName: userJson.strOr('full_name', userJson.strOr('email', 'Người dùng')),
+  email: userJson.strOr('email', ''),
+  phone: userJson.str('phone'),
+  avatarUrl: userJson.str('avatar'),
+  locale: userJson.str('locale'),
+  // `appearance.background` — null hoặc thiếu (API cũ) đều là "mặc định".
+  background: userJson.child('appearance').str('background'),
+);

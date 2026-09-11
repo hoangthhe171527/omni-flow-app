@@ -21,6 +21,7 @@ class SessionUser {
     this.phone,
     this.avatarUrl,
     this.locale,
+    this.background,
   });
 
   final String id;
@@ -29,6 +30,9 @@ class SessionUser {
   final String? phone;
   final String? avatarUrl;
   final String? locale;
+
+  /// Tên nền cả app người này đã chọn (`OmniBackdrops`), null = mặc định.
+  final String? background;
 }
 
 class SessionTenant {
