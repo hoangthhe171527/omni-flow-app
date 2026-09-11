@@ -222,7 +222,10 @@ class _SlideInOnce extends StatelessWidget {
       curve: Curves.easeOut,
       builder: (context, t, child) => Opacity(
         opacity: t,
-        child: Transform.translate(offset: Offset(0, 8 * (1 - t)), child: child),
+        child: Transform.translate(
+          offset: Offset(0, 8 * (1 - t)),
+          child: child,
+        ),
       ),
       child: child,
     );
@@ -254,8 +257,10 @@ class _Kpi extends ConsumerWidget {
         // Mốc so sánh đi đường riêng: chưa về hoặc hỏng thì thẻ chỉ thiếu
         // một dòng, con số chính không chờ nó.
         previousDelivered: ref.watch(kpiPreviousDeliveredProvider).valueOrNull,
-        onPrevMonth: () => ref.read(kpiMonthProvider.notifier).state =
-            DateTime(month.year, month.month - 1),
+        onPrevMonth: () => ref.read(kpiMonthProvider.notifier).state = DateTime(
+          month.year,
+          month.month - 1,
+        ),
         // Không đi tới tương lai: một tháng chưa tới luôn có `delivered = 0`,
         // và số 0 đó trông y hệt "tháng này chưa ai xong cây nào".
         onNextMonth: atCurrentMonth

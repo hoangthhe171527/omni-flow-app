@@ -21,7 +21,13 @@ void main() {
     'assignee_ids': ['u-1', 'u-2'],
     'assignee_names': ['Hằng Ni', 'Luận'],
     'checklist': [
-      {'id': 's1', 'title': 'Sơn', 'done': false, 'assignee_id': 'u-3', 'assignee_name': 'Minh Anh'},
+      {
+        'id': 's1',
+        'title': 'Sơn',
+        'done': false,
+        'assignee_id': 'u-3',
+        'assignee_name': 'Minh Anh',
+      },
     ],
     'comments': [
       {
@@ -108,7 +114,9 @@ void main() {
     expect(suggestion('u-2'), findsNothing, reason: 'chọn xong thì gợi ý đóng');
   });
 
-  testWidgets('gửi thì id đọc từ chữ, không từ trạng thái ngầm', (tester) async {
+  testWidgets('gửi thì id đọc từ chữ, không từ trạng thái ngầm', (
+    tester,
+  ) async {
     await tester.pumpWidget(host());
 
     await type(tester, 'nhờ @L');
@@ -152,7 +160,9 @@ void main() {
   testWidgets('thân bình luận tô @Tên bằng màu chính', (tester) async {
     await tester.pumpWidget(host());
 
-    final scheme = Theme.of(tester.element(find.byType(CommentSection))).colorScheme;
+    final scheme = Theme.of(
+      tester.element(find.byType(CommentSection)),
+    ).colorScheme;
     final rich = tester.widget<RichText>(
       find.byWidgetPredicate(
         (w) => w is RichText && w.text.toPlainText().contains('@Luận xem lại'),

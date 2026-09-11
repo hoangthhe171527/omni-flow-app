@@ -28,10 +28,10 @@ void main() {
       return;
     }
 
-    final names = RegExp(r'''^\s*"([a-z]+-\d+)":''', multiLine: true)
-        .allMatches(web.readAsStringSync())
-        .map((m) => m.group(1)!)
-        .toList();
+    final names = RegExp(
+      r'''^\s*"([a-z]+-\d+)":''',
+      multiLine: true,
+    ).allMatches(web.readAsStringSync()).map((m) => m.group(1)!).toList();
 
     expect(
       names,

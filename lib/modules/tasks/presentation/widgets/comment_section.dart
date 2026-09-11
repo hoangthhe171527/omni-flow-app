@@ -323,8 +323,9 @@ class _Comment extends StatelessWidget {
         // nằm trong câu (bình luận từ web nhắc bằng nút, không có `@` trong
         // chữ). Có `@Tên` rồi mà lặp lại là nói hai lần.
         if (comment.mentionedUserNames.where(
-          (n) => !comment.body.contains('@$n'),
-        ) case final missing when missing.isNotEmpty) ...[
+              (n) => !comment.body.contains('@$n'),
+            )
+            case final missing when missing.isNotEmpty) ...[
           const SizedBox(height: OmniSpacing.xs),
           Text(
             'Nhắc: ${missing.join(', ')}',

@@ -56,7 +56,11 @@ void main() {
     final bg = button.style?.backgroundColor?.resolve({});
     final fg = button.style?.foregroundColor?.resolve({});
 
-    expect(bg, scheme.primary, reason: 'xanh lá #10B981 chỉ đạt 2,5:1 với chữ trắng');
+    expect(
+      bg,
+      scheme.primary,
+      reason: 'xanh lá #10B981 chỉ đạt 2,5:1 với chữ trắng',
+    );
     expect(fg, scheme.onPrimary);
   });
 }

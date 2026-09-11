@@ -23,9 +23,7 @@ class OmniAccountSlot extends InheritedWidget {
   /// [OmniAppBar] chỉ đơn giản không vẽ nút. Không ném lỗi: một AppBar không
   /// dựng được sẽ làm hỏng cả màn vì một thứ trang trí.
   static WidgetBuilder? maybeOf(BuildContext context) =>
-      context
-          .dependOnInheritedWidgetOfExactType<OmniAccountSlot>()
-          ?.builder;
+      context.dependOnInheritedWidgetOfExactType<OmniAccountSlot>()?.builder;
 
   @override
   bool updateShouldNotify(OmniAccountSlot oldWidget) =>

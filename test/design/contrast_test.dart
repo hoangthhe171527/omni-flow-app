@@ -179,8 +179,15 @@ void main() {
     // với lập luận "xanh lá nghĩa là xong" — nghĩa đúng, tương phản sai.
     final r = contrastRatio(Colors.white, OmniColors.success);
 
-    expect(r, lessThan(t), reason: 'nếu success đã đủ tối thì cập nhật ghi chú');
-    expect(contrastRatio(OmniColors.primaryForeground, OmniColors.primary), greaterThanOrEqualTo(t));
+    expect(
+      r,
+      lessThan(t),
+      reason: 'nếu success đã đủ tối thì cập nhật ghi chú',
+    );
+    expect(
+      contrastRatio(OmniColors.primaryForeground, OmniColors.primary),
+      greaterThanOrEqualTo(t),
+    );
   });
 
   for (final p in pairs) {

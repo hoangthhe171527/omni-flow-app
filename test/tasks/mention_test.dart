@@ -52,9 +52,7 @@ void main() {
     test('khớp đầu tên và đầu MỖI từ trong tên', () {
       expect(Mentions.suggest(people, 'l').map((e) => e.value), ['Luận']);
       expect(Mentions.suggest(people, 'ni').map((e) => e.value), ['Hằng Ni']);
-      expect(Mentions.suggest(people, 'anh').map((e) => e.value), [
-        'Minh Anh',
-      ]);
+      expect(Mentions.suggest(people, 'anh').map((e) => e.value), ['Minh Anh']);
     });
 
     test('gõ có dấu hay không dấu đều ra', () {

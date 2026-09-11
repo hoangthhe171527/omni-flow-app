@@ -27,11 +27,7 @@ void main() {
   setUpAll(() => initializeDateFormatting('vi_VN'));
 
   const worker = {'tasks.read', 'tasks.write'};
-  const assigner = {
-    'tasks.read',
-    'tasks.write',
-    'tasks.projects.manage.all',
-  };
+  const assigner = {'tasks.read', 'tasks.write', 'tasks.projects.manage.all'};
 
   String iso(DateTime d) =>
       '${d.year.toString().padLeft(4, '0')}-'
@@ -120,16 +116,16 @@ void main() {
 
     // Hai con số RIÊNG. Gộp thành "3 việc xong" sẽ đá nhau với thẻ KPI, thứ
     // chỉ đếm cây.
-    expect(
-      find.text('HÔM NAY · 2 công đoạn · 1 cây xong'),
-      findsOneWidget,
-    );
+    expect(find.text('HÔM NAY · 2 công đoạn · 1 cây xong'), findsOneWidget);
   });
 
   testWidgets('mỗi ngày một tiêu đề riêng', (tester) async {
     await show(
       tester,
-      feed: [entry(id: 'a1'), entry(id: 'a2', day: yesterday)],
+      feed: [
+        entry(id: 'a1'),
+        entry(id: 'a2', day: yesterday),
+      ],
     );
 
     expect(find.textContaining('HÔM NAY'), findsOneWidget);
@@ -180,7 +176,10 @@ void main() {
   testWidgets('dòng cây đàn xong khác hẳn dòng công đoạn', (tester) async {
     await show(
       tester,
-      feed: [entry(id: 'a1'), entry(id: 'a2', kind: FeedKind.pianoDone)],
+      feed: [
+        entry(id: 'a1'),
+        entry(id: 'a2', kind: FeedKind.pianoDone),
+      ],
     );
 
     expect(find.byType(PianoDoneRow), findsOneWidget);
@@ -311,7 +310,12 @@ void main() {
     // Trong test không có mạng nên ảnh nào cũng hỏng — đúng tình huống ngoài
     // xưởng khi sóng yếu. Ô rỗng 0dp làm dải ảnh co lại rồi giãn ra khi ảnh
     // tới, và người đọc không biết là có ảnh đang chờ.
-    await show(tester, feed: [entry(photos: const ['/m/1.jpg'])]);
+    await show(
+      tester,
+      feed: [
+        entry(photos: const ['/m/1.jpg']),
+      ],
+    );
 
     final tile = find.byKey(const ValueKey('photo:/m/1.jpg'));
     expect(tester.getSize(tile), const Size(88, 88));

@@ -105,9 +105,7 @@ void main() {
       await show(tester, kpi(delivered: 20), previousDelivered: 23);
 
       final line = tester.widget<Text>(find.text('−3 so với tháng 8'));
-      final scheme = Theme.of(
-        tester.element(find.byType(KpiCard)),
-      ).colorScheme;
+      final scheme = Theme.of(tester.element(find.byType(KpiCard))).colorScheme;
 
       expect(line.style?.color, scheme.onSurfaceVariant);
     });
@@ -129,23 +127,28 @@ void main() {
     expect(sentence.style?.fontSize, theme.labelSmall?.fontSize);
   });
 
-  test('provider tháng trước hỏi API đúng tháng liền trước tháng đang xem', () async {
-    // Tháng đang xem là tháng 1 thì tháng trước là tháng 12 NĂM TRƯỚC —
-    // `DateTime(y, 0)` tự lùi năm, nhưng đây là chỗ đáng có một bài kiểm.
-    final api = _MonthRecorder();
-    final container = ProviderContainer(
-      overrides: [
-        plansApiProvider.overrideWithValue(api),
-        kpiMonthProvider.overrideWith((ref) => DateTime(2026, 1)),
-      ],
-    );
-    addTearDown(container.dispose);
+  test(
+    'provider tháng trước hỏi API đúng tháng liền trước tháng đang xem',
+    () async {
+      // Tháng đang xem là tháng 1 thì tháng trước là tháng 12 NĂM TRƯỚC —
+      // `DateTime(y, 0)` tự lùi năm, nhưng đây là chỗ đáng có một bài kiểm.
+      final api = _MonthRecorder();
+      final container = ProviderContainer(
+        overrides: [
+          plansApiProvider.overrideWithValue(api),
+          kpiMonthProvider.overrideWith((ref) => DateTime(2026, 1)),
+        ],
+      );
+      addTearDown(container.dispose);
 
-    final previous = await container.read(kpiPreviousDeliveredProvider.future);
+      final previous = await container.read(
+        kpiPreviousDeliveredProvider.future,
+      );
 
-    expect(api.months, [DateTime(2025, 12)]);
-    expect(previous, 22);
-  });
+      expect(api.months, [DateTime(2025, 12)]);
+      expect(previous, 22);
+    },
+  );
 }
 
 class _MonthRecorder implements PlansApi {

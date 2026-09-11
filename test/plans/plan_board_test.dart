@@ -259,7 +259,10 @@ void main() {
       ],
     });
     await tester.pumpWidget(
-      host(plan: wide, tasks: [task('t8', 'PETROF P118', sectionId: 's8')]),
+      host(
+        plan: wide,
+        tasks: [task('t8', 'PETROF P118', sectionId: 's8')],
+      ),
     );
     await tester.pumpAndSettle();
 
@@ -276,6 +279,9 @@ void main() {
     }
 
     expect(find.text('PETROF P118'), findsOneWidget);
-    expect(tester.getRect(pill('Công đoạn số 8')).right, lessThanOrEqualTo(width));
+    expect(
+      tester.getRect(pill('Công đoạn số 8')).right,
+      lessThanOrEqualTo(width),
+    );
   });
 }

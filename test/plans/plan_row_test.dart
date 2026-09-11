@@ -24,7 +24,10 @@ void main() {
   Widget host(Plan p) => MaterialApp(
     theme: OmniTheme.light(TargetPlatform.android),
     home: Scaffold(
-      body: Padding(padding: const EdgeInsets.all(16), child: PlanRow(plan: p)),
+      body: Padding(
+        padding: const EdgeInsets.all(16),
+        child: PlanRow(plan: p),
+      ),
     ),
   );
 

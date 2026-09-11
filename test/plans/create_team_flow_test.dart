@@ -27,14 +27,14 @@ void main() {
           plansApiProvider.overrideWithValue(api),
           teamMembersProvider.overrideWith(
             (ref) async => [
-              TeamMember.fromJson(const {
-                'id': 'm-1',
-                'user_id': 'u-1',
-              }, const {'full_name': 'Hằng Ni'}),
-              TeamMember.fromJson(const {
-                'id': 'm-2',
-                'user_id': 'u-2',
-              }, const {'full_name': 'Tuấn'}),
+              TeamMember.fromJson(
+                const {'id': 'm-1', 'user_id': 'u-1'},
+                const {'full_name': 'Hằng Ni'},
+              ),
+              TeamMember.fromJson(
+                const {'id': 'm-2', 'user_id': 'u-2'},
+                const {'full_name': 'Tuấn'},
+              ),
             ],
           ),
         ],

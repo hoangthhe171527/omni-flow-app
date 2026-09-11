@@ -106,16 +106,21 @@ void main() {
       ),
     );
 
-    final rects = find
-        .byType(OmniAvatar)
-        .evaluate()
-        .map((e) => tester.getRect(find.byWidget(e.widget)))
-        .toList()
-      ..sort((a, b) => a.left.compareTo(b.left));
+    final rects =
+        find
+            .byType(OmniAvatar)
+            .evaluate()
+            .map((e) => tester.getRect(find.byWidget(e.widget)))
+            .toList()
+          ..sort((a, b) => a.left.compareTo(b.left));
     final overlap = rects[0].right - rects[1].left;
 
     expect(overlap, lessThanOrEqualTo(rects[0].width * 0.25 + 0.01));
-    expect(overlap, greaterThan(0), reason: 'vẫn là một chồng, không phải hai ô rời');
+    expect(
+      overlap,
+      greaterThan(0),
+      reason: 'vẫn là một chồng, không phải hai ô rời',
+    );
   });
 
   testWidgets('nhãn hạn dài vẫn không tràn', (tester) async {

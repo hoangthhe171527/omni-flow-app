@@ -329,10 +329,7 @@ void main() {
         name: 'Ke hoach loc',
         sectionNames: const ['Nhap xuong', 'Hoan thien'],
       );
-      final task = await tasks.create(
-        title: 'Cay dan loc',
-        projectId: plan.id,
-      );
+      final task = await tasks.create(title: 'Cay dan loc', projectId: plan.id);
       await tasks.moveToSection(task.id, plan.sections.last.id);
 
       final feed = await plans.feed(types: kFeedCompletionTypes);

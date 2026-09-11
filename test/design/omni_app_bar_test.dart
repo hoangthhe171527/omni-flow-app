@@ -12,9 +12,7 @@ void main() {
   const marker = Key('nut-tai-khoan-gia');
 
   Widget wrap(Widget bar, {bool plugged = true}) {
-    final app = MaterialApp(
-      home: Scaffold(appBar: bar as PreferredSizeWidget),
-    );
+    final app = MaterialApp(home: Scaffold(appBar: bar as PreferredSizeWidget));
 
     if (!plugged) return app;
 
@@ -81,7 +79,12 @@ void main() {
   testWidgets('có bottom thì chiều cao cộng thêm', (tester) async {
     const bar = OmniAppBar(
       title: 'Hộp thư',
-      bottom: TabBar(tabs: [Tab(text: 'A'), Tab(text: 'B')]),
+      bottom: TabBar(
+        tabs: [
+          Tab(text: 'A'),
+          Tab(text: 'B'),
+        ],
+      ),
     );
 
     expect(bar.preferredSize.height, greaterThan(kToolbarHeight));

@@ -108,7 +108,10 @@ void main() {
 
       final row = tester.widget<InkWell>(
         find
-            .ancestor(of: find.text('Nhóm việc'), matching: find.byType(InkWell))
+            .ancestor(
+              of: find.text('Nhóm việc'),
+              matching: find.byType(InkWell),
+            )
             .first,
       );
 

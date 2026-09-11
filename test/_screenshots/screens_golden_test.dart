@@ -85,14 +85,38 @@ final _tasks = <Map<String, dynamic>>[
         'Khách yêu cầu giữ nguyên màu vecni gốc. Kiểm tra kỹ phần chốt trước '
         'khi lắp lại bộ máy.',
     'checklist': [
-      {'id': 's-1', 'title': 'Tháo bộ máy', 'done': true, 'assignee_id': 'u-2', 'assignee_name': 'Luận'},
+      {
+        'id': 's-1',
+        'title': 'Tháo bộ máy',
+        'done': true,
+        'assignee_id': 'u-2',
+        'assignee_name': 'Luận',
+      },
       {'id': 's-2', 'title': 'Vệ sinh khung sườn', 'done': true},
-      {'id': 's-3', 'title': 'Nắp phím', 'done': false, 'assignee_id': 'u-1', 'assignee_name': 'Hằng Ni'},
+      {
+        'id': 's-3',
+        'title': 'Nắp phím',
+        'done': false,
+        'assignee_id': 'u-1',
+        'assignee_name': 'Hằng Ni',
+      },
       {'id': 's-4', 'title': 'Lên dây và cân chỉnh lực phím', 'done': false},
     ],
     'attachments': [
-      {'id': 'a1', 'name': 'body-truoc.jpg', 'url': 'https://x/a.jpg', 'type': 'image', 'size': 128000},
-      {'id': 'a2', 'name': 'bao-gia.pdf', 'url': 'https://x/b.pdf', 'type': 'file', 'size': 52000},
+      {
+        'id': 'a1',
+        'name': 'body-truoc.jpg',
+        'url': 'https://x/a.jpg',
+        'type': 'image',
+        'size': 128000,
+      },
+      {
+        'id': 'a2',
+        'name': 'bao-gia.pdf',
+        'url': 'https://x/b.pdf',
+        'type': 'file',
+        'size': 52000,
+      },
     ],
     'viewers': [
       {'user_id': 'Hằng Ni', 'viewed_at': _iso(const Duration(hours: -2))},
@@ -134,25 +158,70 @@ final _tasks = <Map<String, dynamic>>[
 ];
 
 final _notifications = <Map<String, dynamic>>[
-  {'id': 'n-1', 'notification_type': 'TASK_ASSIGNED', 'title': 'Bạn có việc mới', 'content': '«KAWAI HAT-5 · 2308512» — hạn 3 ngày trước', 'related_entity_type': 'task', 'related_entity_id': 't-1', 'created_at': _iso(const Duration(minutes: -8))},
-  {'id': 'n-2', 'notification_type': 'TASK_STAGE_OPEN', 'title': 'Công đoạn đang trống', 'content': 'Nắp phím đang trống — «KAWAI HAT-5 · 2308512»', 'related_entity_type': 'task', 'related_entity_id': 't-1', 'created_at': _iso(const Duration(hours: -1))},
-  {'id': 'n-3', 'notification_type': 'TASK_PROGRESS', 'title': 'Tiến độ công việc', 'content': 'Body ngoài xong — «KAWAI HAT-5»', 'related_entity_type': 'task', 'related_entity_id': 't-1', 'created_at': _iso(const Duration(hours: -3))},
-  {'id': 'n-4', 'notification_type': 'TASK_OVERDUE', 'title': 'Việc quá hạn', 'content': '«YAMAHA U3 · 1874203» đã quá hạn', 'related_entity_type': 'task', 'related_entity_id': 't-2', 'read_at': _iso(const Duration(hours: -20)), 'created_at': _iso(const Duration(days: -1))},
+  {
+    'id': 'n-1',
+    'notification_type': 'TASK_ASSIGNED',
+    'title': 'Bạn có việc mới',
+    'content': '«KAWAI HAT-5 · 2308512» — hạn 3 ngày trước',
+    'related_entity_type': 'task',
+    'related_entity_id': 't-1',
+    'created_at': _iso(const Duration(minutes: -8)),
+  },
+  {
+    'id': 'n-2',
+    'notification_type': 'TASK_STAGE_OPEN',
+    'title': 'Công đoạn đang trống',
+    'content': 'Nắp phím đang trống — «KAWAI HAT-5 · 2308512»',
+    'related_entity_type': 'task',
+    'related_entity_id': 't-1',
+    'created_at': _iso(const Duration(hours: -1)),
+  },
+  {
+    'id': 'n-3',
+    'notification_type': 'TASK_PROGRESS',
+    'title': 'Tiến độ công việc',
+    'content': 'Body ngoài xong — «KAWAI HAT-5»',
+    'related_entity_type': 'task',
+    'related_entity_id': 't-1',
+    'created_at': _iso(const Duration(hours: -3)),
+  },
+  {
+    'id': 'n-4',
+    'notification_type': 'TASK_OVERDUE',
+    'title': 'Việc quá hạn',
+    'content': '«YAMAHA U3 · 1874203» đã quá hạn',
+    'related_entity_type': 'task',
+    'related_entity_id': 't-2',
+    'read_at': _iso(const Duration(hours: -20)),
+    'created_at': _iso(const Duration(days: -1)),
+  },
 ];
 
 class _StubTasksApi implements TasksApi {
   @override
-  Future<Paged<Task>> mine({required TaskBucket bucket, int page = 1, int perPage = 20}) async {
+  Future<Paged<Task>> mine({
+    required TaskBucket bucket,
+    int page = 1,
+    int perPage = 20,
+  }) async {
     final tasks = _tasks.map(Task.fromJson).toList();
     return Paged(
       items: switch (bucket) {
         TaskBucket.today => tasks.where((t) => t.isDueToday).toList(),
         TaskBucket.overdue => tasks.where((t) => t.isOverdue).toList(),
-        TaskBucket.upcoming => tasks.where((t) => !t.isOverdue && !t.isDueToday && !t.isDone).toList(),
+        TaskBucket.upcoming =>
+          tasks
+              .where((t) => !t.isOverdue && !t.isDueToday && !t.isDone)
+              .toList(),
         TaskBucket.open => tasks.where((t) => !t.isDone).toList(),
         TaskBucket.all => tasks,
       },
-      pagination: const ApiPagination(currentPage: 1, lastPage: 1, perPage: 20, total: 4),
+      pagination: const ApiPagination(
+        currentPage: 1,
+        lastPage: 1,
+        perPage: 20,
+        total: 4,
+      ),
     );
   }
 
@@ -162,9 +231,18 @@ class _StubTasksApi implements TasksApi {
 
 class _StubNotificationsApi implements NotificationsApi {
   @override
-  Future<Paged<AppNotification>> list({int page = 1, int perPage = 20, bool unreadOnly = false}) async => Paged(
+  Future<Paged<AppNotification>> list({
+    int page = 1,
+    int perPage = 20,
+    bool unreadOnly = false,
+  }) async => Paged(
     items: _notifications.map(AppNotification.fromJson).toList(),
-    pagination: const ApiPagination(currentPage: 1, lastPage: 1, perPage: 20, total: 4),
+    pagination: const ApiPagination(
+      currentPage: 1,
+      lastPage: 1,
+      perPage: 20,
+      total: 4,
+    ),
   );
 
   @override
@@ -203,35 +281,63 @@ FeedEntry _feed({
 final _feedRows = [
   _feed(id: 'f1', photos: const ['https://x/1.jpg', 'https://x/2.jpg']),
   _feed(id: 'f2', detail: 'Lên dây', userName: 'Tuấn', hoursAgo: 2),
-  _feed(id: 'f3', kind: FeedKind.pianoDone, detail: null, taskTitle: 'YAMAHA U3 · 4402881', hoursAgo: 3),
-  _feed(id: 'f4', detail: 'Sơn lót', userName: 'Minh', taskTitle: 'KAWAI K-300 · 9911027', hoursAgo: 5),
-  _feed(id: 'f5', detail: 'Vệ sinh khung', userName: 'Luận', hoursAgo: 3, daysAgo: 1),
-  _feed(id: 'f6', detail: 'Tháo máy', userName: 'Luận', taskTitle: 'PETROF P125 · 7730115', hoursAgo: 6, daysAgo: 1),
+  _feed(
+    id: 'f3',
+    kind: FeedKind.pianoDone,
+    detail: null,
+    taskTitle: 'YAMAHA U3 · 4402881',
+    hoursAgo: 3,
+  ),
+  _feed(
+    id: 'f4',
+    detail: 'Sơn lót',
+    userName: 'Minh',
+    taskTitle: 'KAWAI K-300 · 9911027',
+    hoursAgo: 5,
+  ),
+  _feed(
+    id: 'f5',
+    detail: 'Vệ sinh khung',
+    userName: 'Luận',
+    hoursAgo: 3,
+    daysAgo: 1,
+  ),
+  _feed(
+    id: 'f6',
+    detail: 'Tháo máy',
+    userName: 'Luận',
+    taskTitle: 'PETROF P125 · 7730115',
+    hoursAgo: 6,
+    daysAgo: 1,
+  ),
 ];
 
 const _kpiJson = {
   'delivered': 28,
   'reached_bonus': 0,
   'days_left': 20,
-  'tiers': [{'count': 35, 'bonus': 5}],
+  'tiers': [
+    {'count': 35, 'bonus': 5},
+  ],
   'counting_sections': ['s4'],
   'rework': 1,
   'next_tier': {'count': 35, 'bonus': 5, 'remaining': 7},
 };
 
-Plan _plan(String id, String name, {String? cover, int overdue = 0}) => Plan.fromJson({
-  'id': id,
-  'name': name,
-  'team_id': 't1',
-  'cover': ?cover,
-  'sections': [
-    {'id': 's1', 'name': 'Nhập xưởng', 'order': 0},
-    {'id': 's2', 'name': 'Tháo máy', 'order': 1},
-    {'id': 's3', 'name': 'Phục chế', 'order': 2},
-    {'id': 's4', 'name': 'Hoàn thiện', 'order': 3, 'counts_for_kpi': true},
-  ],
-  'stats': {'total': 12, 'done': 5, 'overdue': overdue},
-});
+Plan _plan(String id, String name, {String? cover, int overdue = 0}) =>
+    Plan.fromJson({
+      'id': id,
+      'name': name,
+      'team_id': 't1',
+      'cover': ?cover,
+      'sections': [
+        {'id': 's1', 'name': 'Nhập xưởng', 'order': 0},
+        {'id': 's2', 'name': 'Tháo máy', 'order': 1},
+        {'id': 's3', 'name': 'Phục chế', 'order': 2},
+        {'id': 's4', 'name': 'Hoàn thiện', 'order': 3, 'counts_for_kpi': true},
+      ],
+      'stats': {'total': 12, 'done': 5, 'overdue': overdue},
+    });
 
 Future<void> _loadInter() async {
   final loader = FontLoader('Inter');
@@ -260,28 +366,48 @@ void main() {
     await initializeDateFormatting('vi_VN');
   });
 
-  Widget app(Widget home, {bool dark = false, Set<String> perms = _assigner, List<Override> extra = const []}) {
+  Widget app(
+    Widget home, {
+    bool dark = false,
+    Set<String> perms = _assigner,
+    List<Override> extra = const [],
+  }) {
     return ProviderScope(
       overrides: [
         sessionProvider.overrideWithValue(_session),
-        taskAccessProvider.overrideWithValue(TaskAccess.of(AccessPolicy(perms))),
+        taskAccessProvider.overrideWithValue(
+          TaskAccess.of(AccessPolicy(perms)),
+        ),
         accessProvider.overrideWithValue(AccessPolicy(perms)),
         tasksApiProvider.overrideWithValue(_StubTasksApi()),
         notificationsApiProvider.overrideWithValue(_StubNotificationsApi()),
         notificationRealtimeProvider.overrideWithValue(null),
-        workshopFeedProvider.overrideWith((ref) async => (entries: _feedRows, truncated: false)),
-        workshopKpiProvider.overrideWith((ref) async => WorkshopKpi.fromJson(_kpiJson)),
+        workshopFeedProvider.overrideWith(
+          (ref) async => (entries: _feedRows, truncated: false),
+        ),
+        workshopKpiProvider.overrideWith(
+          (ref) async => WorkshopKpi.fromJson(_kpiJson),
+        ),
         kpiPreviousDeliveredProvider.overrideWith((ref) async => 22),
-        teamsWithPlansProvider.overrideWith((ref) async => [
-          TeamWithPlans(
-            team: const Team(id: 't1', name: 'Tổ phục chế', memberIds: ['u1', 'u2', 'u3']),
-            plans: [
-              _plan('p1', 'Phục chế tháng 9', cover: 'teal-1', overdue: 3),
-              _plan('p2', 'Đàn điện — bảo hành', cover: 'amber-2'),
-            ],
-          ),
-          const TeamWithPlans(team: Team(id: 't2', name: 'Tổ giao nhận', memberIds: ['u4']), plans: []),
-        ]),
+        teamsWithPlansProvider.overrideWith(
+          (ref) async => [
+            TeamWithPlans(
+              team: const Team(
+                id: 't1',
+                name: 'Tổ phục chế',
+                memberIds: ['u1', 'u2', 'u3'],
+              ),
+              plans: [
+                _plan('p1', 'Phục chế tháng 9', cover: 'teal-1', overdue: 3),
+                _plan('p2', 'Đàn điện — bảo hành', cover: 'amber-2'),
+              ],
+            ),
+            const TeamWithPlans(
+              team: Team(id: 't2', name: 'Tổ giao nhận', memberIds: ['u4']),
+              plans: [],
+            ),
+          ],
+        ),
         ...extra,
       ],
       child: MaterialApp(
@@ -290,14 +416,22 @@ void main() {
         darkTheme: OmniTheme.dark(TargetPlatform.android),
         themeMode: dark ? ThemeMode.dark : ThemeMode.light,
         locale: const Locale('vi'),
-        home: OmniAccountSlot(builder: (_) => const AccountMenuButton(), child: home),
+        home: OmniAccountSlot(
+          builder: (_) => const AccountMenuButton(),
+          child: home,
+        ),
       ),
     );
   }
 
   /// [scrollTo]: cuộn cho tới khi widget này lên SÁT MÉP TRÊN rồi mới chụp —
   /// cho phần nằm dưới nếp gấp của một màn dài (trao đổi, nhật ký).
-  Future<void> shoot(WidgetTester tester, Widget w, String name, {Finder? scrollTo}) async {
+  Future<void> shoot(
+    WidgetTester tester,
+    Widget w,
+    String name, {
+    Finder? scrollTo,
+  }) async {
     tester.view.physicalSize = const Size(780, 1688);
     tester.view.devicePixelRatio = 2.0;
     addTearDown(tester.view.reset);
@@ -305,74 +439,144 @@ void main() {
     await tester.pump(const Duration(milliseconds: 100));
     await tester.pumpAndSettle(const Duration(milliseconds: 100));
     if (scrollTo != null) {
-      await tester.scrollUntilVisible(scrollTo, 200, scrollable: find.byType(Scrollable).first);
+      await tester.scrollUntilVisible(
+        scrollTo,
+        200,
+        scrollable: find.byType(Scrollable).first,
+      );
       await Scrollable.ensureVisible(tester.element(scrollTo), alignment: 0);
       await tester.pumpAndSettle(const Duration(milliseconds: 100));
     }
-    await expectLater(find.byType(MaterialApp), matchesGoldenFile('goldens/$name.png'));
+    await expectLater(
+      find.byType(MaterialApp),
+      matchesGoldenFile('goldens/$name.png'),
+    );
   }
 
-  testWidgets('01 dong viec', (t) => shoot(t, app(const TimelinePage()), '01-dong-viec'));
-  testWidgets('01b dong viec dark', (t) => shoot(t, app(const TimelinePage(), dark: true), '01b-dong-viec-dark'));
-  testWidgets('01c dong viec tho', (t) => shoot(t, app(const TimelinePage(), perms: {'tasks.read', 'tasks.write'}), '01c-dong-viec-tho'));
-  testWidgets('02 viec cua toi', (t) => shoot(t, app(const MyTasksPage()), '02-viec-cua-toi'));
-  testWidgets('03 chi tiet viec', (t) => shoot(
-    t,
-    app(const TaskDetailPage(taskId: 't-1'), extra: [
-      taskDetailProvider.overrideWith(() => _StubDetail(TaskDetailState(task: Task.fromJson(_tasks[0])))),
-    ]),
-    '03-chi-tiet-viec',
-  ));
-  testWidgets('03b chi tiet viec - trao doi', (t) => shoot(
-    t,
-    app(const TaskDetailPage(taskId: 't-1'), extra: [
-      taskDetailProvider.overrideWith(() => _StubDetail(TaskDetailState(task: Task.fromJson({
-        ..._tasks[0],
-        'comments_count': 5,
-        'comments': [
-          {
-            'id': 'c-1',
-            'body': 'QC không đạt: mặt búa số 32–40 chưa đều, còn vệt keo ở cụm giữa. Kéo về Đang phục chế, nhờ @Luận xem lại.',
-            'user_name': 'Nguyễn Thị Hằng Ni',
-            'mentioned_user_names': ['Luận'],
-            'created_at': _iso(const Duration(hours: -3)),
-          },
-          {
-            'id': 'c-2',
-            'body': 'Đã nhận, chiều làm lại.',
-            'user_name': 'Luận',
-            'created_at': _iso(const Duration(minutes: -40)),
-          },
-          {
-            'id': 'c-3',
-            'body': 'Ảnh sau khi sửa đã gửi.',
-            'user_name': 'Luận',
-            'created_at': _iso(const Duration(minutes: -5)),
-          },
+  testWidgets(
+    '01 dong viec',
+    (t) => shoot(t, app(const TimelinePage()), '01-dong-viec'),
+  );
+  testWidgets(
+    '01b dong viec dark',
+    (t) =>
+        shoot(t, app(const TimelinePage(), dark: true), '01b-dong-viec-dark'),
+  );
+  testWidgets(
+    '01c dong viec tho',
+    (t) => shoot(
+      t,
+      app(const TimelinePage(), perms: {'tasks.read', 'tasks.write'}),
+      '01c-dong-viec-tho',
+    ),
+  );
+  testWidgets(
+    '02 viec cua toi',
+    (t) => shoot(t, app(const MyTasksPage()), '02-viec-cua-toi'),
+  );
+  testWidgets(
+    '03 chi tiet viec',
+    (t) => shoot(
+      t,
+      app(
+        const TaskDetailPage(taskId: 't-1'),
+        extra: [
+          taskDetailProvider.overrideWith(
+            () => _StubDetail(TaskDetailState(task: Task.fromJson(_tasks[0]))),
+          ),
         ],
-      })))),
-    ]),
-    '03b-chi-tiet-viec-trao-doi',
-    scrollTo: find.text('Trao đổi'),
-  ));
-  testWidgets('04 team du an', (t) => shoot(t, app(const TeamsPage()), '04-team-du-an'));
-  testWidgets('05 bang du an', (t) => shoot(
-    t,
-    app(const PlanBoardPage(planId: 'p1'), extra: [
-      planProvider('p1').overrideWith((ref) async => _plan('p1', 'Phục chế tháng 9', cover: 'teal-1')),
-      planTasksProvider('p1').overrideWith((ref) async => (
-        tasks: [
-          Task.fromJson({..._tasks[0], 'section_id': 's1'}),
-          Task.fromJson({..._tasks[1], 'section_id': 's1'}),
-          Task.fromJson({..._tasks[3], 'section_id': 's1'}),
+      ),
+      '03-chi-tiet-viec',
+    ),
+  );
+  testWidgets(
+    '03b chi tiet viec - trao doi',
+    (t) => shoot(
+      t,
+      app(
+        const TaskDetailPage(taskId: 't-1'),
+        extra: [
+          taskDetailProvider.overrideWith(
+            () => _StubDetail(
+              TaskDetailState(
+                task: Task.fromJson({
+                  ..._tasks[0],
+                  'comments_count': 5,
+                  'comments': [
+                    {
+                      'id': 'c-1',
+                      'body':
+                          'QC không đạt: mặt búa số 32–40 chưa đều, còn vệt keo ở cụm giữa. Kéo về Đang phục chế, nhờ @Luận xem lại.',
+                      'user_name': 'Nguyễn Thị Hằng Ni',
+                      'mentioned_user_names': ['Luận'],
+                      'created_at': _iso(const Duration(hours: -3)),
+                    },
+                    {
+                      'id': 'c-2',
+                      'body': 'Đã nhận, chiều làm lại.',
+                      'user_name': 'Luận',
+                      'created_at': _iso(const Duration(minutes: -40)),
+                    },
+                    {
+                      'id': 'c-3',
+                      'body': 'Ảnh sau khi sửa đã gửi.',
+                      'user_name': 'Luận',
+                      'created_at': _iso(const Duration(minutes: -5)),
+                    },
+                  ],
+                }),
+              ),
+            ),
+          ),
         ],
-        truncated: false,
-      )),
-    ]),
-    '05-bang-du-an',
-  ));
-  testWidgets('06 tao du an', (t) => shoot(t, app(const CreatePlanPage(teamId: 't1')), '06-tao-du-an'));
-  testWidgets('07 tao team', (t) => shoot(t, app(const CreateTeamPage()), '07-tao-team'));
-  testWidgets('08 thong bao', (t) => shoot(t, app(const NotificationsPage()), '08-thong-bao'));
-  testWidgets('09 dang nhap', (t) => shoot(t, app(const LoginPage()), '09-dang-nhap'));
+      ),
+      '03b-chi-tiet-viec-trao-doi',
+      scrollTo: find.text('Trao đổi'),
+    ),
+  );
+  testWidgets(
+    '04 team du an',
+    (t) => shoot(t, app(const TeamsPage()), '04-team-du-an'),
+  );
+  testWidgets(
+    '05 bang du an',
+    (t) => shoot(
+      t,
+      app(
+        const PlanBoardPage(planId: 'p1'),
+        extra: [
+          planProvider('p1').overrideWith(
+            (ref) async => _plan('p1', 'Phục chế tháng 9', cover: 'teal-1'),
+          ),
+          planTasksProvider('p1').overrideWith(
+            (ref) async => (
+              tasks: [
+                Task.fromJson({..._tasks[0], 'section_id': 's1'}),
+                Task.fromJson({..._tasks[1], 'section_id': 's1'}),
+                Task.fromJson({..._tasks[3], 'section_id': 's1'}),
+              ],
+              truncated: false,
+            ),
+          ),
+        ],
+      ),
+      '05-bang-du-an',
+    ),
+  );
+  testWidgets(
+    '06 tao du an',
+    (t) => shoot(t, app(const CreatePlanPage(teamId: 't1')), '06-tao-du-an'),
+  );
+  testWidgets(
+    '07 tao team',
+    (t) => shoot(t, app(const CreateTeamPage()), '07-tao-team'),
+  );
+  testWidgets(
+    '08 thong bao',
+    (t) => shoot(t, app(const NotificationsPage()), '08-thong-bao'),
+  );
+  testWidgets(
+    '09 dang nhap',
+    (t) => shoot(t, app(const LoginPage()), '09-dang-nhap'),
+  );
 }

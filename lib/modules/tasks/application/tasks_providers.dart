@@ -41,8 +41,9 @@ final _entityChannelProvider = Provider<String?>((ref) {
 ///
 /// Một mảnh thay vì hai: không còn cái để quên. `ref.watch(...)` tín hiệu này
 /// tự nó là đủ.
-final taskRealtimeSignalProvider =
-    NotifierProvider<TaskRealtimeSignal, int>(TaskRealtimeSignal.new);
+final taskRealtimeSignalProvider = NotifierProvider<TaskRealtimeSignal, int>(
+  TaskRealtimeSignal.new,
+);
 
 class TaskRealtimeSignal extends Notifier<int> {
   /// Gộp các sự kiện dồn dập. Tick xong ba việc con liên tiếp là ba lần
