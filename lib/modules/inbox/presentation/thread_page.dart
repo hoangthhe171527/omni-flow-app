@@ -10,6 +10,7 @@ import '../../../design/components/components.dart';
 import '../../../design/platform/omni_motion_scope.dart';
 import '../../../design/tokens/tokens.dart';
 import '../../../core/realtime/realtime_client.dart';
+import '../../settings/presentation/widgets/surface_backdrop.dart';
 import '../application/inbox_providers.dart';
 import '../application/inbox_realtime.dart';
 import '../application/thread_controller.dart';
@@ -206,82 +207,84 @@ class _ThreadPageState extends ConsumerState<ThreadPage>
         onSearchNext: () => _moveSearch(1),
         onCloseSearch: _closeSearch,
       ),
-      body: Column(
-        children: [
-          Expanded(
-            // No tint layer over the canvas: it fought the chat background and
-            // washed the bubbles back down into the page.
-            child: OmniAsyncView(
-              value: thread,
-              onRetry: () =>
-                  ref.invalidate(threadProvider(widget.conversationId)),
-              isEmpty: (state) => state.isEmpty,
-              empty: const OmniEmptyState(
-                icon: Icons.chat_bubble_outline_rounded,
-                title: 'Chưa có tin nhắn',
-                message: 'Gửi tin đầu tiên để bắt đầu cuộc trò chuyện.',
-              ),
-              data: (state) => _MessageList(
-                state: state,
-                controller: _scrollController,
-                isGroup: conversation.valueOrNull?.isGroup ?? false,
-                // retry(), not send(): a fresh send would drop the reply the
-                // rep was answering, leave the failed bubble sitting below the
-                // new one, and — because it would carry a new idempotency key —
-                // deliver a second copy whenever the first attempt had in fact
-                // reached the server.
-                onRetry: (message) => ref
-                    .read(threadProvider(widget.conversationId).notifier)
-                    .retry(message),
-                onDiscard: (message) => ref
-                    .read(threadProvider(widget.conversationId).notifier)
-                    .discard(message.id),
-                onReply: (message) => setState(() => _replyingTo = message),
-                onPin: _togglePin,
-                keyForMessage: _keyForMessage,
+      body: SurfaceBackdrop(
+        child: Column(
+          children: [
+            Expanded(
+              // No tint layer over the canvas: it fought the chat background and
+              // washed the bubbles back down into the page.
+              child: OmniAsyncView(
+                value: thread,
+                onRetry: () =>
+                    ref.invalidate(threadProvider(widget.conversationId)),
+                isEmpty: (state) => state.isEmpty,
+                empty: const OmniEmptyState(
+                  icon: Icons.chat_bubble_outline_rounded,
+                  title: 'Chưa có tin nhắn',
+                  message: 'Gửi tin đầu tiên để bắt đầu cuộc trò chuyện.',
+                ),
+                data: (state) => _MessageList(
+                  state: state,
+                  controller: _scrollController,
+                  isGroup: conversation.valueOrNull?.isGroup ?? false,
+                  // retry(), not send(): a fresh send would drop the reply the
+                  // rep was answering, leave the failed bubble sitting below the
+                  // new one, and — because it would carry a new idempotency key —
+                  // deliver a second copy whenever the first attempt had in fact
+                  // reached the server.
+                  onRetry: (message) => ref
+                      .read(threadProvider(widget.conversationId).notifier)
+                      .retry(message),
+                  onDiscard: (message) => ref
+                      .read(threadProvider(widget.conversationId).notifier)
+                      .discard(message.id),
+                  onReply: (message) => setState(() => _replyingTo = message),
+                  onPin: _togglePin,
+                  keyForMessage: _keyForMessage,
+                ),
               ),
             ),
-          ),
-          if (access.canSend)
-            MessageComposer(
-              canNote: access.canNote,
-              suggestions: _suggestions(conversation.valueOrNull),
-              replyTo: _replyingTo,
-              onCancelReply: () => setState(() => _replyingTo = null),
-              onPickImages: _pickImages,
-              onTakePhoto: _takePhoto,
-              onSend: (text, mode, images, replyTo) async {
-                final controller = ref.read(
-                  threadProvider(widget.conversationId).notifier,
-                );
-                if (mode == ComposeMode.note) {
-                  await controller.addNote(text);
-                } else {
-                  try {
-                    final upload = Future.wait(
-                      images.map(
-                        (image) => ref
-                            .read(inboxApiProvider)
-                            .uploadMedia(image.path, filename: image.name),
-                      ),
-                    );
-                    await controller.sendAfterUpload(
-                      text,
-                      attachments: upload,
-                      replyTo: replyTo,
-                    );
-                  } on AppException catch (error) {
-                    _toast(error.message);
-                    rethrow;
+            if (access.canSend)
+              MessageComposer(
+                canNote: access.canNote,
+                suggestions: _suggestions(conversation.valueOrNull),
+                replyTo: _replyingTo,
+                onCancelReply: () => setState(() => _replyingTo = null),
+                onPickImages: _pickImages,
+                onTakePhoto: _takePhoto,
+                onSend: (text, mode, images, replyTo) async {
+                  final controller = ref.read(
+                    threadProvider(widget.conversationId).notifier,
+                  );
+                  if (mode == ComposeMode.note) {
+                    await controller.addNote(text);
+                  } else {
+                    try {
+                      final upload = Future.wait(
+                        images.map(
+                          (image) => ref
+                              .read(inboxApiProvider)
+                              .uploadMedia(image.path, filename: image.name),
+                        ),
+                      );
+                      await controller.sendAfterUpload(
+                        text,
+                        attachments: upload,
+                        replyTo: replyTo,
+                      );
+                    } on AppException catch (error) {
+                      _toast(error.message);
+                      rethrow;
+                    }
                   }
-                }
-                if (mounted) setState(() => _replyingTo = null);
-                _scrollToBottom();
-              },
-            )
-          else
-            _ReadOnlyBar(),
-        ],
+                  if (mounted) setState(() => _replyingTo = null);
+                  _scrollToBottom();
+                },
+              )
+            else
+              _ReadOnlyBar(),
+          ],
+        ),
       ),
     );
   }
