@@ -98,20 +98,18 @@ class AssignerPanel extends StatelessWidget {
             value: priorityLabel(task.priority),
             onTap: onEditPriority,
           ),
+          // Chạm vào chính dòng "Nhóm việc" để chuyển — cùng quy ước với ba
+          // dòng trên. Bản trước dòng này trơ, và một nút "Chuyển nhóm việc"
+          // đứng riêng bên dưới: hai chỗ cho một việc, và là dòng DUY NHẤT
+          // trong bảng không bấm được — người dùng bấm vào, không thấy gì,
+          // rồi mới tìm ra cái nút.
           _Row(
             icon: Icons.view_column_outlined,
             label: 'Nhóm việc',
             value: task.sectionName ?? 'Chưa xếp nhóm việc',
             muted: task.sectionName == null,
+            onTap: onMoveSection,
           ),
-          if (onMoveSection != null) ...[
-            const SizedBox(height: OmniSpacing.md),
-            OutlinedButton.icon(
-              onPressed: onMoveSection,
-              icon: const Icon(Icons.swap_horiz_rounded),
-              label: const Text('Chuyển nhóm việc'),
-            ),
-          ],
         ],
       ),
     );

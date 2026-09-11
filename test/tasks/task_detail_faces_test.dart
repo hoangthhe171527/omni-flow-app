@@ -61,7 +61,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('Điều phối'), findsNothing);
-      expect(find.text('Chuyển nhóm việc'), findsNothing);
+      expect(find.text('Nhóm việc'), findsNothing);
     });
 
     testWidgets('VẪN thấy và tick được công đoạn', (tester) async {
@@ -96,11 +96,24 @@ void main() {
       expect(find.text('Hằng Ni'), findsOneWidget);
     });
 
-    testWidgets('thấy nút chuyển công đoạn', (tester) async {
+    testWidgets('dòng "Nhóm việc" bấm được để chuyển — không có nút riêng', (
+      tester,
+    ) async {
+      // Bản trước dòng này trơ và một nút "Chuyển nhóm việc" đứng riêng bên
+      // dưới: hai chỗ cho một việc, và là dòng DUY NHẤT trong bảng không bấm
+      // được. Cùng quy ước với "Người làm", "Hạn", "Ưu tiên": chỗ người ta
+      // nhìn cũng là chỗ người ta bấm.
       await tester.pumpWidget(host(permissions: assigner));
       await tester.pumpAndSettle();
 
-      expect(find.text('Chuyển nhóm việc'), findsOneWidget);
+      final row = tester.widget<InkWell>(
+        find
+            .ancestor(of: find.text('Nhóm việc'), matching: find.byType(InkWell))
+            .first,
+      );
+
+      expect(row.onTap, isNotNull);
+      expect(find.text('Chuyển nhóm việc'), findsNothing);
     });
 
     testWidgets('việc chưa gán ai thì nói rõ, không để trống', (tester) async {
