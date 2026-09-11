@@ -36,7 +36,7 @@ abstract final class OmniType {
   /// Small all-caps label above a group of fields or a list section.
   static const TextStyle overline = TextStyle(
     fontFamily: family,
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: FontWeight.w600,
     height: 1.2,
     letterSpacing: 0.8,
@@ -64,9 +64,15 @@ abstract final class OmniType {
     height: 1.35,
   );
 
+  /// Cỡ nhỏ nhất của app, và 12 là SÀN, không phải điểm xuất phát để bớt.
+  ///
+  /// Từng là 11. Đây là style của `labelSmall` — dòng phụ của mọi dòng việc,
+  /// giờ trên thẻ, nhãn điều hướng — và tiếng Việt xếp dấu cả trên lẫn dưới
+  /// thân chữ: ở 11px, "Hằng" và "Hắng" đọc như nhau ở khoảng cách một cánh
+  /// tay ngoài xưởng. `type_scale_test.dart` giữ sàn này.
   static const TextStyle micro = TextStyle(
     fontFamily: family,
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: FontWeight.w600,
     height: 1.2,
   );
