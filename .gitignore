@@ -65,3 +65,4 @@ firebase-release/
 
 # Anh chup man hinh cua bo soat UI (test/_screenshots) — moi nguoi tu dung.
 test/_screenshots/goldens/
+test/_screenshots/failures/
