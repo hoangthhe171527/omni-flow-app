@@ -7,6 +7,7 @@ import '../../../design/platform/omni_motion_scope.dart';
 import '../../../design/tokens/tokens.dart';
 import '../../tasks/domain/task.dart';
 import '../../tasks/application/tasks_providers.dart';
+import '../../settings/presentation/widgets/surface_backdrop.dart';
 import '../../tasks/presentation/create_task_page.dart';
 import '../../tasks/presentation/widgets/task_card.dart';
 import '../../tasks/routes.dart';
@@ -217,14 +218,18 @@ class _Board extends StatelessWidget {
               onSelected: (i) => controller.goTo(context, i),
             ),
             Expanded(
-              child: PageView.builder(
-                controller: controller,
-                onPageChanged: onPage,
-                itemCount: columns.length,
-                itemBuilder: (context, index) => _Column(
-                  section: columns[index],
-                  tasks: buckets[index],
-                  filteredBy: person.chipLabel,
+              // Nền cả app nằm SAU các cột, không sau dải nhóm việc: dải và
+              // AppBar giữ nền phẳng để đọc; thẻ việc vốn đục nên vẫn nổi.
+              child: SurfaceBackdrop(
+                child: PageView.builder(
+                  controller: controller,
+                  onPageChanged: onPage,
+                  itemCount: columns.length,
+                  itemBuilder: (context, index) => _Column(
+                    section: columns[index],
+                    tasks: buckets[index],
+                    filteredBy: person.chipLabel,
+                  ),
                 ),
               ),
             ),

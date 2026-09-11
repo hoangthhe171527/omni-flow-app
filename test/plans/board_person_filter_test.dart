@@ -7,8 +7,11 @@ import 'package:omni_app/modules/plans/application/plans_providers.dart';
 import 'package:omni_app/modules/plans/domain/plan.dart';
 import 'package:omni_app/modules/plans/presentation/plan_board_page.dart';
 import 'package:omni_app/modules/plans/presentation/widgets/person_filter_sheet.dart';
+import 'package:omni_app/modules/settings/application/appearance_providers.dart';
 import 'package:omni_app/modules/tasks/domain/task.dart';
 import 'package:omni_app/modules/team/team.dart';
+
+import '../support/fixed_background.dart';
 
 /// Lọc bảng theo người.
 ///
@@ -59,6 +62,7 @@ void main() {
           TeamMember(membershipId: 'm2', userId: 'u-luan', name: 'Luận'),
         ],
       ),
+      backgroundProvider.overrideWith(FixedBackground.new),
     ],
     child: MaterialApp(
       theme: OmniTheme.light(TargetPlatform.android),

@@ -41,6 +41,7 @@ import 'package:omni_app/modules/plans/presentation/create_team_page.dart';
 import 'package:omni_app/modules/plans/presentation/plan_board_page.dart';
 import 'package:omni_app/modules/plans/presentation/teams_page.dart';
 import 'package:omni_app/modules/plans/presentation/timeline_page.dart';
+import 'package:omni_app/modules/settings/application/appearance_providers.dart';
 import 'package:omni_app/modules/settings/presentation/widgets/account_menu_button.dart';
 import 'package:omni_app/modules/tasks/application/task_controller.dart';
 import 'package:omni_app/modules/tasks/application/tasks_providers.dart';
@@ -52,6 +53,8 @@ import 'package:omni_app/modules/tasks/presentation/task_detail_page.dart';
 import 'package:omni_app/security/permissions/access_policy.dart';
 import 'package:omni_app/security/session/session.dart';
 import 'package:omni_app/security/session/session_controller.dart';
+
+import '../support/fixed_background.dart';
 
 String _iso(Duration offset) => DateTime.now().add(offset).toIso8601String();
 
@@ -381,9 +384,12 @@ void main() {
     bool dark = false,
     Set<String> perms = _assigner,
     List<Override> extra = const [],
+    String? background,
   }) {
     return ProviderScope(
       overrides: [
+        // Nền cả app: mặc định (null) trừ màn cố ý chụp có nền.
+        backgroundProvider.overrideWith(() => FixedBackground(background)),
         sessionProvider.overrideWithValue(_session),
         taskAccessProvider.overrideWithValue(
           TaskAccess.of(AccessPolicy(perms)),
@@ -571,6 +577,32 @@ void main() {
         ],
       ),
       '05-bang-du-an',
+    ),
+  );
+  testWidgets(
+    '05b bang du an - nen',
+    (t) => shoot(
+      t,
+      app(
+        const PlanBoardPage(planId: 'p1'),
+        background: 'walnut',
+        extra: [
+          planProvider('p1').overrideWith(
+            (ref) async => _plan('p1', 'Phục chế tháng 9', cover: 'teal-1'),
+          ),
+          planTasksProvider('p1').overrideWith(
+            (ref) async => (
+              tasks: [
+                Task.fromJson({..._tasks[0], 'section_id': 's1'}),
+                Task.fromJson({..._tasks[1], 'section_id': 's1'}),
+                Task.fromJson({..._tasks[3], 'section_id': 's1'}),
+              ],
+              truncated: false,
+            ),
+          ),
+        ],
+      ),
+      '05b-bang-du-an-nen',
     ),
   );
   testWidgets(

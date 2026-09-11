@@ -6,7 +6,10 @@ import 'package:omni_app/design/theme/omni_theme.dart';
 import 'package:omni_app/modules/plans/application/plans_providers.dart';
 import 'package:omni_app/modules/plans/domain/plan.dart';
 import 'package:omni_app/modules/plans/presentation/plan_board_page.dart';
+import 'package:omni_app/modules/settings/application/appearance_providers.dart';
 import 'package:omni_app/modules/tasks/domain/task.dart';
+
+import '../support/fixed_background.dart';
 
 /// Màn quan trọng nhất của người giao việc, và là chỗ tôi từng sai.
 ///
@@ -43,6 +46,7 @@ void main() {
       planTasksProvider(
         planId,
       ).overrideWith((ref) async => (tasks: tasks, truncated: false)),
+      backgroundProvider.overrideWith(FixedBackground.new),
     ],
     child: MaterialApp(
       theme: OmniTheme.light(TargetPlatform.android),
