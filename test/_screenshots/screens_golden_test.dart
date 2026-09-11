@@ -332,7 +332,7 @@ void main() {
         'comments': [
           {
             'id': 'c-1',
-            'body': 'QC không đạt: mặt búa số 32–40 chưa đều, còn vệt keo ở cụm giữa. Kéo về Đang phục chế, nhờ Luận xem lại.',
+            'body': 'QC không đạt: mặt búa số 32–40 chưa đều, còn vệt keo ở cụm giữa. Kéo về Đang phục chế, nhờ @Luận xem lại.',
             'user_name': 'Nguyễn Thị Hằng Ni',
             'mentioned_user_names': ['Luận'],
             'created_at': _iso(const Duration(hours: -3)),

@@ -228,7 +228,7 @@ class _CommentSectionState extends ConsumerState<CommentSection> {
                     maxLines: 4,
                     textCapitalization: TextCapitalization.sentences,
                     decoration: const InputDecoration(
-                      hintText: 'Viết trao đổi… gõ @ để nhắc tên',
+                      hintText: 'Viết trao đổi…',
                       isDense: true,
                     ),
                     onSubmitted: (_) => _send(),
