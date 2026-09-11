@@ -37,9 +37,12 @@ void main() {
     expect(find.byType(AppBar), findsOneWidget);
   });
 
-  testWidgets('nút riêng của màn đứng TRƯỚC nút tài khoản', (tester) async {
-    // Nút tài khoản là thứ luôn có mặt, nên nó thuộc về mép ngoài cùng và
-    // không được xê dịch theo từng màn.
+  testWidgets('màn gốc: nút tài khoản ở GÓC TRÁI, trước tiêu đề', (
+    tester,
+  ) async {
+    // Người dùng nhìn ảnh chụp và nói avatar bên trái "thuận mắt hơn": mắt
+    // đọc trái→phải, và Slack/Zalo/Google đều đặt danh tính ở đầu dòng. Nút
+    // riêng của màn (tìm, chuông) giữ mép phải — hai mép cân nhau.
     await tester.pumpWidget(
       wrap(
         const OmniAppBar(
@@ -49,10 +52,52 @@ void main() {
       ),
     );
 
-    final search = tester.getTopLeft(find.byIcon(Icons.search_rounded)).dx;
     final account = tester.getTopLeft(find.byKey(marker)).dx;
+    final title = tester.getTopLeft(find.text('Việc của tôi')).dx;
+    final search = tester.getTopLeft(find.byIcon(Icons.search_rounded)).dx;
 
-    expect(search, lessThan(account));
+    expect(account, lessThan(title));
+    expect(title, lessThan(search));
+  });
+
+  testWidgets('màn đẩy vào: có nút quay lại, KHÔNG có nút tài khoản', (
+    tester,
+  ) async {
+    // `leading` chỉ có một chỗ. Màn con đã có nút quay lại ở đó, và doc của
+    // widget này nói rõ: nút tài khoản ở màn "Team mới" chỉ mời người ta đi
+    // lạc giữa chừng một việc đang làm dở.
+    await tester.pumpWidget(
+      MaterialApp(
+        home: OmniAccountSlot(
+          builder: (_) => const Icon(Icons.person, key: marker),
+          child: Builder(
+            builder: (context) => Scaffold(
+              appBar: const OmniAppBar(title: 'Gốc'),
+              body: Center(
+                child: TextButton(
+                  onPressed: () => Navigator.of(context).push(
+                    MaterialPageRoute<void>(
+                      builder: (_) => const Scaffold(
+                        appBar: OmniAppBar(title: 'Quyền của tôi'),
+                      ),
+                    ),
+                  ),
+                  child: const Text('mở'),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+    expect(find.byKey(marker), findsOneWidget, reason: 'màn gốc có avatar');
+
+    await tester.tap(find.text('mở'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Quyền của tôi'), findsOneWidget);
+    expect(find.byType(BackButton), findsOneWidget);
+    expect(find.byKey(marker), findsNothing);
   });
 
   testWidgets('tắt được cho màn cố ý không muốn', (tester) async {

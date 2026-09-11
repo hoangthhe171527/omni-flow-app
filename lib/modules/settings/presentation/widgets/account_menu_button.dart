@@ -34,7 +34,9 @@ class _AccountMenuButtonState extends ConsumerState<AccountMenuButton> {
     final name = user?.fullName ?? 'Tài khoản';
 
     return Padding(
-      padding: const EdgeInsets.only(right: OmniSpacing.md),
+      // Đệm đều hai bên: nút giờ đứng ở `leading` (góc trái) của OmniAppBar,
+      // trong một ô 56dp — 32dp ảnh ở giữa.
+      padding: const EdgeInsets.symmetric(horizontal: OmniSpacing.md),
       child: InkResponse(
         onTap: _busy ? null : _open,
         radius: 24,

@@ -82,15 +82,29 @@ class OmniAppBar extends StatelessWidget implements PreferredSizeWidget {
 
   @override
   Widget build(BuildContext context) {
-    final account = showAccount ? OmniAccountSlot.maybeOf(context) : null;
+    // Nút tài khoản ở GÓC TRÁI, trước tiêu đề — như Slack, Zalo, Google: mắt
+    // đọc trái→phải và danh tính đứng đầu dòng; nút riêng của màn (tìm,
+    // chuông) giữ mép phải nên hai mép cân nhau. Bản đầu đặt nó ở mép phải
+    // và người dùng nhìn ảnh chụp thấy lệch.
+    //
+    // `leading` chỉ có một chỗ: màn ĐẨY VÀO đã có nút quay lại ở đó, và màn
+    // đẩy vào cũng không nên có nút tài khoản (xem doc lớp) — nên chỉ màn gốc
+    // (không quay lại được) mới vẽ.
+    final canPop = ModalRoute.of(context)?.canPop ?? false;
+    final account = showAccount && !canPop
+        ? OmniAccountSlot.maybeOf(context)
+        : null;
 
     return AppBar(
+      leading: account == null ? null : account(context),
+      // 32dp ảnh + 12dp mỗi bên: khớp lề 16dp của tiêu đề khi không có nút.
+      leadingWidth: account == null ? null : 56,
       title: Text(title),
       bottom: bottom,
       backgroundColor: backgroundColor,
       titleSpacing: titleSpacing,
       toolbarHeight: toolbarHeight,
-      actions: [...actions, if (account != null) account(context)],
+      actions: actions,
     );
   }
 }
