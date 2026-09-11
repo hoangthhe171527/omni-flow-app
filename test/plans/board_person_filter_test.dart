@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:omni_app/design/components/components.dart';
 import 'package:omni_app/design/theme/omni_theme.dart';
 import 'package:omni_app/modules/plans/application/plans_providers.dart';
 import 'package:omni_app/modules/plans/domain/plan.dart';
@@ -107,17 +108,23 @@ void main() {
 
   testWidgets('con số cạnh tên nhóm việc đi theo bộ lọc', (tester) async {
     // Ngược lại thì cột ghi "3 việc" mà chỉ vẽ ra 1 — và người đọc tin con số.
+    // Số việc nằm TRONG viên của nhóm trên dải, cạnh tên nhóm.
+    Finder countIn(int n) => find.descendant(
+      of: find.widgetWithText(OmniFilterPill, 'Đang làm'),
+      matching: find.text('$n'),
+    );
+
     await tester.pumpWidget(host());
     await tester.pumpAndSettle();
-    expect(find.text('3 việc'), findsOneWidget);
+    expect(countIn(3), findsOneWidget);
 
     await tester.tap(find.byTooltip('Lọc theo người'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Luận'));
     await tester.pumpAndSettle();
 
-    expect(find.text('1 việc'), findsOneWidget);
-    expect(find.text('3 việc'), findsNothing);
+    expect(countIn(1), findsOneWidget);
+    expect(countIn(3), findsNothing);
   });
 
   testWidgets('nói ra là đang lọc, và có đường ra', (tester) async {

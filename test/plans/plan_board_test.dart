@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:omni_app/design/components/components.dart';
 import 'package:omni_app/design/theme/omni_theme.dart';
 import 'package:omni_app/modules/plans/application/plans_providers.dart';
 import 'package:omni_app/modules/plans/domain/plan.dart';
@@ -205,7 +206,21 @@ void main() {
     );
   });
 
-  testWidgets('số việc của nhóm đang mở hiện cạnh tên nhóm', (tester) async {
+  /// Viên của một nhóm việc trên dải, kể cả khi đã cuộn khuất.
+  Finder pill(String section) =>
+      find.widgetWithText(OmniFilterPill, section, skipOffstage: false);
+
+  /// Số việc hiện TRONG viên của nhóm đó.
+  Finder countIn(String section, int n) =>
+      find.descendant(of: pill(section), matching: find.text('$n'));
+
+  testWidgets('MỌI nhóm hiện tên và số việc trên dải, không chỉ nhóm đang mở', (
+    tester,
+  ) async {
+    // Bản đầu là một hàng chấm: chấm thứ ba không nói nó là "Chờ QC", và số
+    // việc chỉ hiện cho nhóm đang mở. Người quản đốc phải vuốt qua từng trang
+    // để biết công đoạn nào đang dồn việc — đúng câu hỏi bảng này sinh ra để
+    // trả lời bằng một cái nhìn.
     await tester.pumpWidget(
       host(
         plan: plan,
@@ -218,6 +233,49 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('2 việc'), findsOneWidget);
+    expect(pill('Nhập xưởng'), findsOneWidget);
+    expect(pill('Đang phục chế'), findsOneWidget);
+    expect(pill('Chờ QC'), findsOneWidget);
+
+    expect(countIn('Nhập xưởng', 2), findsOneWidget);
+    expect(countIn('Đang phục chế', 1), findsOneWidget);
+    // Nhóm rỗng KHÔNG in số 0: "0" cạnh tên là tiếng ồn, và cột rỗng đã nói
+    // rõ là rỗng khi mở ra.
+    expect(countIn('Chờ QC', 0), findsNothing);
+  });
+
+  testWidgets('vuốt sang trang thì viên của nhóm đó tự cuộn vào vùng nhìn', (
+    tester,
+  ) async {
+    // Tám nhóm việc tràn khỏi một màn 800dp. Vuốt tới trang cuối mà dải vẫn
+    // đứng ở đầu thì viên đang sáng nằm khuất — người dùng không biết mình
+    // đang ở đâu, đúng thứ dải này sinh ra để nói.
+    final wide = Plan.fromJson({
+      'id': planId,
+      'name': 'Đàn cơ',
+      'sections': [
+        for (var i = 1; i <= 8; i++)
+          {'id': 's$i', 'name': 'Công đoạn số $i', 'order': i},
+      ],
+    });
+    await tester.pumpWidget(
+      host(plan: wide, tasks: [task('t8', 'PETROF P118', sectionId: 's8')]),
+    );
+    await tester.pumpAndSettle();
+
+    final width = tester.getSize(find.byType(PlanBoardPage)).width;
+    expect(
+      tester.getRect(pill('Công đoạn số 8')).left,
+      greaterThan(width),
+      reason: 'tám viên phải tràn khỏi màn thì bài này mới có nghĩa',
+    );
+
+    for (var i = 0; i < 7; i++) {
+      await tester.fling(find.byType(PageView), const Offset(-400, 0), 1000);
+      await tester.pumpAndSettle();
+    }
+
+    expect(find.text('PETROF P118'), findsOneWidget);
+    expect(tester.getRect(pill('Công đoạn số 8')).right, lessThanOrEqualTo(width));
   });
 }

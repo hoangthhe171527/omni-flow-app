@@ -1,14 +1,19 @@
 import 'package:flutter/material.dart';
 
+import '../../../../design/components/components.dart';
 import '../../../../design/platform/omni_motion_scope.dart';
 import '../../../../design/tokens/tokens.dart';
 import '../../domain/plan.dart';
 
-/// Dải chấm trang: đang ở nhóm việc nào, và nhảy thẳng tới nhóm khác.
+/// Dải nhóm việc CÓ TÊN: đang ở đâu, các nhóm khác tên gì và mỗi nhóm có bao
+/// nhiêu việc — nhìn một lần, không cần vuốt qua từng trang để biết.
 ///
-/// Vuốt bốn lần để tới cột cuối là bốn lần quá nhiều. Dải này chạm được, nên
-/// khoảng cách giữa hai công đoạn bất kỳ luôn là một cú chạm.
-class SectionIndicator extends StatelessWidget {
+/// Bản đầu là một hàng chấm: chấm thứ ba không nói nó là "Chờ QC", và số việc
+/// chỉ hiện cho nhóm đang mở. Mọi bảng công việc trên thị trường đều đặt tên
+/// cột lên thanh chuyển; chấm là cho ảnh trong một album, nơi các trang không
+/// có tên. Dải này chạm được, nên khoảng cách giữa hai công đoạn bất kỳ vẫn
+/// là một cú chạm — và khi vuốt trang, viên đang mở tự cuộn vào vùng nhìn.
+class SectionIndicator extends StatefulWidget {
   const SectionIndicator({
     super.key,
     required this.sections,
@@ -21,92 +26,82 @@ class SectionIndicator extends StatelessWidget {
   final int current;
   final ValueChanged<int> onSelected;
 
-  /// Số việc trong một nhóm, để hiện cạnh tên nhóm đang mở.
+  /// Số việc trong một nhóm, hiện cạnh tên MỌI nhóm.
   final int Function(int index)? countOf;
 
   @override
+  State<SectionIndicator> createState() => _SectionIndicatorState();
+}
+
+class _SectionIndicatorState extends State<SectionIndicator> {
+  /// Một khoá cho mỗi viên, để cuộn viên đang mở vào vùng nhìn.
+  ///
+  /// Theo chỉ số chứ không theo id: hai nhóm có thể trùng tên, và một nhóm
+  /// vừa bị xoá thì chỉ số vẫn trỏ đúng viên đang đứng ở vị trí đó.
+  final _keys = <int, GlobalKey>{};
+
+  GlobalKey _keyFor(int index) => _keys.putIfAbsent(index, GlobalKey.new);
+
+  @override
+  void didUpdateWidget(SectionIndicator old) {
+    super.didUpdateWidget(old);
+    if (old.current != widget.current) _reveal();
+  }
+
+  /// Cuộn viên đang mở vào giữa dải sau khi khung hình này vẽ xong.
+  ///
+  /// Mọi viên đều được DỰNG (một `Row` trong `SingleChildScrollView`, không
+  /// phải `ListView.builder`), nên viên ngoài vùng nhìn vẫn có context để
+  /// cuộn tới. Số nhóm việc của một dự án đếm trên đầu ngón tay, dựng hết là
+  /// rẻ hơn đoán độ rộng.
+  void _reveal() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final target = _keys[widget.current]?.currentContext;
+      if (!mounted || target == null) return;
+
+      Scrollable.ensureVisible(
+        target,
+        alignment: 0.5,
+        duration: OmniMotion.of(context).base,
+        curve: Curves.easeOutCubic,
+      );
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final text = Theme.of(context).textTheme;
-    final count = countOf?.call(current);
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        SizedBox(
-          height: 44,
-          child: ListView.separated(
-            scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(horizontal: OmniSpacing.lg),
-            itemCount: sections.length,
-            separatorBuilder: (_, _) => const SizedBox(width: OmniSpacing.xs),
-            itemBuilder: (context, index) {
-              final selected = index == current;
-
-              return Center(
-                child: Semantics(
-                  button: true,
-                  selected: selected,
-                  label: sections[index].name,
-                  child: InkWell(
-                    onTap: () => onSelected(index),
-                    borderRadius: OmniRadius.pillAll,
-                    // Vùng chạm 44dp cho một cái chấm 8dp: cái cần lớn là chỗ
-                    // ngón tay chạm, không phải cái chấm trên màn hình.
-                    child: SizedBox(
-                      width: 28,
-                      height: 44,
-                      child: Center(
-                        child: AnimatedContainer(
-                          duration: OmniMotion.of(context).fast,
-                          width: selected ? 22 : 8,
-                          height: 8,
-                          decoration: BoxDecoration(
-                            color: selected
-                                ? scheme.primary
-                                : scheme.outlineVariant,
-                            borderRadius: OmniRadius.pillAll,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              );
-            },
-          ),
-        ),
-        Padding(
-          padding: const EdgeInsets.fromLTRB(
-            OmniSpacing.lg,
-            0,
-            OmniSpacing.lg,
-            OmniSpacing.md,
-          ),
-          child: Row(
-            children: [
-              Expanded(
-                child: Text(
-                  sections.isEmpty ? '' : sections[current].name,
-                  style: text.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w700,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      padding: const EdgeInsets.symmetric(
+        horizontal: OmniSpacing.lg,
+        vertical: OmniSpacing.xs,
+      ),
+      child: Row(
+        children: [
+          for (var i = 0; i < widget.sections.length; i++) ...[
+            if (i > 0) const SizedBox(width: OmniSpacing.xs),
+            // Nhãn trợ năng là TÊN, số việc là giá trị: "Chờ QC, 3 việc, nút,
+            // đã chọn". Hai `Text` rời trong viên sẽ đọc thành hai nút.
+            Semantics(
+              key: _keyFor(i),
+              button: true,
+              selected: i == widget.current,
+              label: widget.sections[i].name,
+              value: switch (widget.countOf?.call(i)) {
+                null => null,
+                final n => '$n việc',
+              },
+              excludeSemantics: true,
+              child: OmniFilterPill(
+                label: widget.sections[i].name,
+                selected: i == widget.current,
+                count: widget.countOf?.call(i),
+                onTap: () => widget.onSelected(i),
               ),
-              if (count != null)
-                Text(
-                  '$count việc',
-                  style: text.labelMedium?.copyWith(
-                    color: scheme.onSurfaceVariant,
-                    fontFeatures: OmniType.tabular,
-                  ),
-                ),
-            ],
-          ),
-        ),
-      ],
+            ),
+          ],
+        ],
+      ),
     );
   }
 }
