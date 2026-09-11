@@ -6,9 +6,10 @@ import '../../domain/plan.dart';
 
 /// Một dự án trong danh sách của team.
 ///
-/// Ba con số, theo đúng thứ tự người quản đốc hỏi: đi được bao xa, còn bao
-/// nhiêu, có gì đang trễ. Trễ là thứ duy nhất được tô màu — nếu tô cả ba thì
-/// không cái nào nổi.
+/// Khối đầu thẻ là nền dự án ôm lấy tên — đúng cái người tạo đã thấy ở ô xem
+/// trước lúc chọn nền. Bên dưới, ba con số theo đúng thứ tự người quản đốc
+/// hỏi: đi được bao xa, còn bao nhiêu, có gì đang trễ. Trễ là thứ duy nhất
+/// được tô màu — nếu tô cả ba thì không cái nào nổi.
 class PlanRow extends StatelessWidget {
   const PlanRow({super.key, required this.plan, this.onTap});
 
@@ -19,6 +20,14 @@ class PlanRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final text = Theme.of(context).textTheme;
+
+    final counts = [
+      if (plan.taskCount == 0)
+        'Chưa có việc nào'
+      else
+        'Xong ${plan.doneCount}/${plan.taskCount}',
+      if (plan.sections.isNotEmpty) '${plan.sections.length} nhóm việc',
+    ].join(' · ');
 
     return Material(
       color: scheme.surface,
@@ -31,78 +40,77 @@ class PlanRow extends StatelessWidget {
             borderRadius: OmniRadius.lgAll,
             border: Border.all(color: scheme.outlineVariant),
           ),
-          padding: const EdgeInsets.all(OmniSpacing.lg),
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // Nền dự án. Không có chỗ này thì chọn nền xong không thấy ở đâu
-              // cả, và cả tính năng là một ô cấu hình không có hậu quả.
+              // Nền dự án LÀ đầu thẻ, và tên nằm trong nó. Bản đầu vẽ nền
+              // thành một vạch 6dp ngay trên thanh tiến độ — cùng bề dày,
+              // cùng bo góc — và nó đọc như một thanh tiến độ thứ hai.
               //
-              // `plan.cover` null với mọi dự án tạo trước tính năng — không
-              // cần kiểm, `gradientOf` tự rơi về nền mặc định.
+              // Chữ trắng: mọi nền trong `OmniCovers` đều đạt 4,5:1 với
+              // trắng, `omni_covers_test.dart` giữ điều đó. `plan.cover` null
+              // với mọi dự án tạo trước tính năng — `gradientOf` tự rơi về
+              // nền mặc định, nên danh sách không có hai kiểu thẻ lẫn nhau.
               Container(
-                height: 6,
+                constraints: const BoxConstraints(minHeight: 56),
+                alignment: Alignment.centerLeft,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: OmniSpacing.lg,
+                  vertical: OmniSpacing.md,
+                ),
                 decoration: BoxDecoration(
                   gradient: OmniCovers.gradientOf(plan.cover),
-                  borderRadius: OmniRadius.smAll,
+                ),
+                child: Text(
+                  plan.name,
+                  style: text.titleSmall?.copyWith(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w700,
+                  ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
-              const SizedBox(height: OmniSpacing.md),
-              Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      plan.name,
-                      style: text.titleSmall?.copyWith(
-                        fontWeight: FontWeight.w700,
+              Padding(
+                padding: const EdgeInsets.all(OmniSpacing.lg),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(OmniRadius.chip / 2),
+                      child: LinearProgressIndicator(
+                        value: plan.progress,
+                        minHeight: 6,
+                        backgroundColor: scheme.surfaceContainerHighest,
+                        valueColor: AlwaysStoppedAnimation(scheme.primary),
                       ),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
                     ),
-                  ),
-                  if (plan.sections.isNotEmpty) ...[
-                    const SizedBox(width: OmniSpacing.sm),
-                    Text(
-                      '${plan.sections.length} nhóm việc',
-                      style: text.labelSmall?.copyWith(
-                        color: scheme.onSurfaceVariant,
-                      ),
+                    const SizedBox(height: OmniSpacing.sm),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            counts,
+                            style: text.labelMedium?.copyWith(
+                              color: scheme.onSurfaceVariant,
+                              fontFeatures: OmniType.tabular,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        if (plan.overdueCount > 0) ...[
+                          const SizedBox(width: OmniSpacing.sm),
+                          OmniStatusChip(
+                            icon: Icons.error_outline_rounded,
+                            label: 'Trễ ${plan.overdueCount}',
+                            tone: OmniTone.danger,
+                          ),
+                        ],
+                      ],
                     ),
                   ],
-                ],
-              ),
-              const SizedBox(height: OmniSpacing.md),
-              // Thanh tiến độ là ĐỒ HOẠ, nên nó được dùng màu success gốc —
-              // đứng một mình, không cạnh chữ nào cùng tông.
-              ClipRRect(
-                borderRadius: BorderRadius.circular(OmniRadius.chip / 2),
-                child: LinearProgressIndicator(
-                  value: plan.progress,
-                  minHeight: 6,
-                  backgroundColor: scheme.surfaceContainerHighest,
-                  valueColor: AlwaysStoppedAnimation(scheme.primary),
                 ),
-              ),
-              const SizedBox(height: OmniSpacing.sm),
-              Row(
-                children: [
-                  Text(
-                    plan.taskCount == 0
-                        ? 'Chưa có việc nào'
-                        : 'Xong ${plan.doneCount}/${plan.taskCount}',
-                    style: text.labelMedium?.copyWith(
-                      color: scheme.onSurfaceVariant,
-                      fontFeatures: OmniType.tabular,
-                    ),
-                  ),
-                  const Spacer(),
-                  if (plan.overdueCount > 0)
-                    OmniStatusChip(
-                      icon: Icons.error_outline_rounded,
-                      label: 'Trễ ${plan.overdueCount}',
-                      tone: OmniTone.danger,
-                    ),
-                ],
               ),
             ],
           ),
