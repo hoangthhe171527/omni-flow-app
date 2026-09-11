@@ -91,6 +91,33 @@ void main() {
     expect(find.text('+2'), findsOneWidget);
   });
 
+  testWidgets('hai avatar chồng nhau không quá một phần tư', (tester) async {
+    // Ảnh chụp thật: "HN" và "LU" đè lên nhau tới mức chữ của người đứng
+    // trước bị người đứng sau che mất một nửa — 22dp chồng 8dp là 36%. Các
+    // app việc trên thị trường chồng ~25%: đủ để đọc là "một nhóm", vẫn thấy
+    // trọn chữ cái của từng người.
+    await tester.pumpWidget(
+      host(
+        Task.fromJson({
+          'id': 't',
+          'title': 'Hai người',
+          'assignee_names': ['Hằng Ni', 'Luận'],
+        }),
+      ),
+    );
+
+    final rects = find
+        .byType(OmniAvatar)
+        .evaluate()
+        .map((e) => tester.getRect(find.byWidget(e.widget)))
+        .toList()
+      ..sort((a, b) => a.left.compareTo(b.left));
+    final overlap = rects[0].right - rects[1].left;
+
+    expect(overlap, lessThanOrEqualTo(rects[0].width * 0.25 + 0.01));
+    expect(overlap, greaterThan(0), reason: 'vẫn là một chồng, không phải hai ô rời');
+  });
+
   testWidgets('nhãn hạn dài vẫn không tràn', (tester) async {
     await tester.pumpWidget(
       host(

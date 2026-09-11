@@ -169,6 +169,12 @@ class _Assignees extends StatelessWidget {
   /// Ba là đủ. Cái thứ tư trở đi thành một con số.
   static const _max = 3;
 
+  static const double _size = 24;
+  static const double _ring = 2;
+
+  /// Bước giữa hai avatar: 24 − 6 chồng.
+  static const double _step = 18;
+
   @override
   Widget build(BuildContext context) {
     if (names.isEmpty) {
@@ -191,22 +197,25 @@ class _Assignees extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           SizedBox(
-            // Mỗi avatar 22dp, chồng lên nhau 8dp.
-            width: 22 + (shown.length - 1) * 14,
-            height: 22,
+            // Mỗi avatar 24dp, chồng lên nhau 6dp (một phần tư). Bản trước
+            // 22dp chồng 8dp — 36% — và trong ảnh chụp thật "HN" bị "LU" che
+            // mất nửa chữ. Một phần tư là mức các app việc trên thị trường
+            // dùng: đủ để đọc là "một nhóm", vẫn thấy trọn chữ của từng người.
+            width: _size + 2 * _ring + (shown.length - 1) * _step,
+            height: _size + 2 * _ring,
             child: Stack(
               children: [
                 for (var i = 0; i < shown.length; i++)
                   Positioned(
-                    left: i * 14,
+                    left: i * _step,
                     child: Container(
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
                         // Viền cùng màu mặt thẻ: nó cắt hai avatar chồng nhau
                         // ra thành hai hình, không phải một vệt.
-                        border: Border.all(color: scheme.surface, width: 1.5),
+                        border: Border.all(color: scheme.surface, width: _ring),
                       ),
-                      child: OmniAvatar(name: shown[i], size: 22),
+                      child: OmniAvatar(name: shown[i], size: _size),
                     ),
                   ),
               ],
