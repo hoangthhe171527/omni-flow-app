@@ -244,7 +244,13 @@ class Task {
         .mapList('attachments')
         .map(TaskAttachment.fromJson)
         .toList(),
-    attachmentCount: json.intOr('attachments_count'),
+    // API KHÔNG gửi `attachments_count` (xem ghi chú ở [TaskAttachment]); nó
+    // gửi mảng. Đọc mỗi khoá đếm là thẻ việc không bao giờ hiện 📎 dù có hai
+    // tấm ảnh — và test với dữ liệu giả có khoá đếm vẫn xanh. Có khoá thì
+    // tin khoá (một danh sách có thể cắt mảng), không có thì đếm mảng.
+    attachmentCount: json.containsKey('attachments_count')
+        ? json.intOr('attachments_count')
+        : json.mapList('attachments').length,
     commentCount: json.intOr('comments_count'),
     rating: json.intOr('rating'),
     viewers: json.mapList('viewers').map(TaskViewer.fromJson).toList(),

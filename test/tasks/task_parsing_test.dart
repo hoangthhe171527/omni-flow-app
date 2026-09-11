@@ -130,6 +130,37 @@ void main() {
     });
   });
 
+  group('đếm đính kèm', () {
+    test('không có attachments_count thì đếm mảng attachments', () {
+      // API KHÔNG BAO GIỜ gửi `attachments_count` (xem ghi chú ở TaskAttachment);
+      // nó gửi mảng. Đọc mỗi khoá đếm là thẻ việc không bao giờ hiện 📎 dù có
+      // hai tấm ảnh — và test với dữ liệu giả có khoá đếm vẫn xanh.
+      final task = Task.fromJson({
+        'id': 't1',
+        'title': 'x',
+        'attachments': [
+          {'id': 'a1', 'url': 'https://x/1.jpg', 'type': 'image'},
+          {'id': 'a2', 'url': 'https://x/2.pdf', 'type': 'file'},
+        ],
+      });
+
+      expect(task.attachmentCount, 2);
+    });
+
+    test('có khoá đếm thì tin khoá đếm (danh sách có thể cắt mảng)', () {
+      final task = Task.fromJson({
+        'id': 't1',
+        'title': 'x',
+        'attachments_count': 7,
+        'attachments': [
+          {'id': 'a1', 'url': 'https://x/1.jpg', 'type': 'image'},
+        ],
+      });
+
+      expect(task.attachmentCount, 7);
+    });
+  });
+
   group('deadline', () {
     test('reads due_date, and falls back to the older deadline key', () {
       // Both keys exist in the collection. Reading only one is how a whole
