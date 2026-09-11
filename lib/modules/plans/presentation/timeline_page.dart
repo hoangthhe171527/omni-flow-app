@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../design/components/components.dart';
+import '../../../design/platform/omni_motion_scope.dart';
 import '../../../design/tokens/tokens.dart';
 import '../../tasks/application/tasks_providers.dart';
 import '../../tasks/routes.dart';
@@ -210,11 +211,14 @@ class _SlideInOnce extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (!enabled) return child;
+    // Người dùng đã tắt hiệu ứng thì dòng mới hiện NGAY — không mờ, không
+    // trượt. Đây là cài đặt trợ năng thật, và một cú trượt 8dp vẫn là một cú
+    // trượt với người bị chóng mặt vì chuyển động.
+    if (!enabled || !OmniMotion.enabled(context)) return child;
 
     return TweenAnimationBuilder<double>(
       tween: Tween(begin: 0, end: 1),
-      duration: const Duration(milliseconds: 220),
+      duration: OmniMotion.of(context).base,
       curve: Curves.easeOut,
       builder: (context, t, child) => Opacity(
         opacity: t,

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/error/app_exception.dart';
+import '../platform/omni_motion_scope.dart';
 import '../tokens/tokens.dart';
 
 /// Every async screen renders through here, so loading, empty, error and
@@ -205,7 +206,22 @@ class _OmniSkeletonBoxState extends State<OmniSkeletonBox>
   late final AnimationController _controller = AnimationController(
     vsync: this,
     duration: const Duration(milliseconds: 1100),
-  )..repeat(reverse: true);
+  );
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Nhấp nháy là chuyển động: một mảng sáng tối đều đặn khắp màn hình,
+    // đúng thứ cài đặt "giảm chuyển động" nhắm tới. Tắt thì đứng yên ở một
+    // sắc cố định — vẫn là khung xương, chỉ không thở.
+    if (OmniMotion.enabled(context)) {
+      if (!_controller.isAnimating) _controller.repeat(reverse: true);
+    } else {
+      _controller
+        ..stop()
+        ..value = 0.5;
+    }
+  }
 
   @override
   void dispose() {

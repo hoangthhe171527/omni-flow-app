@@ -5,6 +5,7 @@ import 'package:image_picker/image_picker.dart';
 
 import '../../../../core/error/app_exception.dart';
 import '../../../../design/components/components.dart';
+import '../../../../design/platform/omni_motion_scope.dart';
 import '../../../../design/tokens/tokens.dart';
 import '../../../../security/session/session_controller.dart';
 import '../../data/avatar_api.dart';
@@ -41,9 +42,10 @@ class _AccountMenuButtonState extends ConsumerState<AccountMenuButton> {
           alignment: Alignment.center,
           children: [
             // Chéo mờ giữa ảnh cũ và ảnh mới, để người dùng thấy nó đã đổi
-            // THẬT chứ không phải màn hình vừa nháy một cái.
+            // THẬT chứ không phải màn hình vừa nháy một cái. Theo thang chung
+            // và về 0 khi người dùng tắt hiệu ứng — ảnh đổi tức thì.
             AnimatedSwitcher(
-              duration: const Duration(milliseconds: 300),
+              duration: OmniMotion.of(context).base,
               child: OmniAvatar(
                 key: ValueKey(user?.avatarUrl ?? name),
                 name: name,
