@@ -8,10 +8,9 @@ import 'package:omni_app/modules/tasks/presentation/widgets/comment_section.dart
 
 /// Bố cục ô soạn trao đổi, đo bằng toạ độ chứ không bằng mắt.
 ///
-/// Ảnh chụp thật (bộ soát UI, màn 03b) cho thấy ba chỗ hỏng cùng một lúc:
-/// dãy chip nhắc tên dán sát mép trên ô nhập mà không có nhãn nói chúng là
-/// gì, nút gửi 40dp neo đáy một ô nhập 52dp nên lệch tâm, và thân bình luận —
-/// lý do một cây đàn bị trả về — in bằng màu chữ phụ, mờ hơn cả tên người.
+/// Ảnh chụp thật (bộ soát UI, màn 03b) từng cho thấy dãy gợi ý dán sát mép
+/// trên ô nhập, và thân bình luận — lý do một cây đàn bị trả về — in bằng màu
+/// chữ phụ, mờ hơn cả tên người.
 void main() {
   final task = Task.fromJson({
     'id': 't1',
@@ -41,28 +40,32 @@ void main() {
     ),
   );
 
-  testWidgets('dãy chip có nhãn và cách ô nhập ít nhất 8dp', (tester) async {
+  testWidgets('dải gợi ý @ cách ô nhập ít nhất 8dp', (tester) async {
     await tester.pumpWidget(host());
+    await tester.enterText(find.byType(TextField), '@');
+    await tester.pump();
 
-    expect(find.text('Nhắc tên'), findsOneWidget);
-
-    final chips = tester.getRect(find.byType(Wrap));
+    final strip = tester.getRect(find.byType(Wrap));
     final field = tester.getRect(find.byType(TextField));
 
     expect(
-      field.top - chips.bottom,
+      field.top - strip.bottom,
       greaterThanOrEqualTo(OmniSpacing.sm),
-      reason: 'chip dán sát ô nhập đọc như một khối lỗi, không phải hai thứ',
+      reason: 'gợi ý dán sát ô nhập đọc như một khối lỗi, không phải hai thứ',
     );
   });
 
-  testWidgets('nút gửi thẳng tâm với ô nhập khi một dòng', (tester) async {
+  testWidgets('nút @ và nút gửi thẳng tâm với ô nhập khi một dòng', (
+    tester,
+  ) async {
     await tester.pumpWidget(host());
 
     final field = tester.getRect(find.byType(TextField));
     final send = tester.getRect(find.byTooltip('Gửi'));
+    final at = tester.getRect(find.byTooltip('Nhắc tên'));
 
     expect((send.center.dy - field.center.dy).abs(), lessThanOrEqualTo(2));
+    expect((at.center.dy - field.center.dy).abs(), lessThanOrEqualTo(2));
   });
 
   testWidgets('thân bình luận in màu chữ CHÍNH, không phải màu phụ', (
@@ -70,9 +73,25 @@ void main() {
   ) async {
     await tester.pumpWidget(host());
 
-    final body = tester.widget<Text>(find.text('QC không đạt: mặt búa chưa đều.'));
-    final scheme = Theme.of(tester.element(find.byType(CommentSection))).colorScheme;
+    const body = 'QC không đạt: mặt búa chưa đều.';
+    final rich = tester.widget<RichText>(
+      find.byWidgetPredicate(
+        (w) => w is RichText && w.text.toPlainText() == body,
+      ),
+    );
+    final scheme = Theme.of(
+      tester.element(find.byType(CommentSection)),
+    ).colorScheme;
 
-    expect(body.style?.color, scheme.onSurface);
+    // Đọc đúng span CỦA thân bình luận: `Text.rich` bọc nó trong một span
+    // ngoài mang style mặc định, nên `rich.text.style` là của lớp vỏ.
+    final spans = <TextSpan>[];
+    rich.text.visitChildren((s) {
+      if (s is TextSpan) spans.add(s);
+      return true;
+    });
+    final own = spans.firstWhere((s) => s.text == body);
+
+    expect(own.style?.color, scheme.onSurface);
   });
 }
