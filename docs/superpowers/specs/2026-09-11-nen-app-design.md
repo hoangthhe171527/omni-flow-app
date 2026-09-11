@@ -145,12 +145,14 @@ App:
 - `test/settings/background_page_test.dart`: lưới 9 ô; chạm ô → provider đổi
   ngay và API nhận đúng tên; API lỗi → hoàn về + SnackBar; ô đang chọn có
   `selected`.
-- `test/inbox/thread_backdrop_test.dart`, `test/plans/board_backdrop_test.dart`:
-  có tên → `OmniBackdrop` với đúng tên; null → không có `OmniBackdrop`, màu
-  nền như cũ.
-- Phiên: `auth_api` parse `appearance.background`; cache `StorageKeys.background`
-  ghi/đọc.
-- Bộ chụp thêm `05b-bang-nen` và `11-chat-nen` (một mẫu sáng, một mẫu tối).
+- `test/settings/surface_backdrop_test.dart` (mảnh nối provider → `OmniBackdrop`,
+  dùng chung cho chat và bảng) và `test/plans/board_backdrop_test.dart`: có tên
+  → `OmniBackdrop` với đúng tên, PageView nằm trong nó; null → tên null (vẽ
+  phẳng như cũ). Màn chat chưa có host test widget nào nên nối bằng cùng
+  `SurfaceBackdrop` và kiểm tay trên app chạy local.
+- Phiên: `sessionUserFromJson` parse `appearance.background`; cache
+  `StorageKeys.background` ghi/đọc.
+- Bộ chụp thêm `05b-bang-du-an-nen` (bảng với nền "Gỗ óc chó").
 
 Web (vitest):
 - `backdrops.test.ts`: 8 tên, `backdropStyle` trả gradient + SVG cho tên
