@@ -19,9 +19,7 @@ void main() {
     Session session = const Session(status: SessionStatus.restoring),
     String? cached,
   }) async {
-    SharedPreferences.setMockInitialValues({
-      StorageKeys.background: ?cached,
-    });
+    SharedPreferences.setMockInitialValues({StorageKeys.background: ?cached});
     final prefs = PreferencesStore(await SharedPreferences.getInstance());
     api = _FakeApi();
     sessions = _FakeSessionController(session);
