@@ -55,6 +55,12 @@ import 'package:omni_app/security/session/session_controller.dart';
 
 String _iso(Duration offset) => DateTime.now().add(offset).toIso8601String();
 
+/// Hôm nay lúc [h]:[m] — hạn "hôm nay" phải còn là hôm nay dù chụp lúc mấy giờ.
+String _todayAt(int h, int m) {
+  final n = DateTime.now();
+  return DateTime(n.year, n.month, n.day, h, m).toIso8601String();
+}
+
 String _day(DateTime d) =>
     '${d.year.toString().padLeft(4, '0')}-'
     '${d.month.toString().padLeft(2, '0')}-'
@@ -80,6 +86,10 @@ final _tasks = <Map<String, dynamic>>[
     'status': 'doing',
     'due_date': _iso(const Duration(days: -3)),
     'assignee_ids': ['u-1', 'u-2'],
+    'priority': 'high',
+    'attachments_count': 2,
+    'comments_count': 3,
+    'rating': 4,
     'assignee_names': ['Hằng Ni', 'Luận'],
     'description':
         'Khách yêu cầu giữ nguyên màu vecni gốc. Kiểm tra kỹ phần chốt trước '
@@ -128,7 +138,7 @@ final _tasks = <Map<String, dynamic>>[
     'title': 'YAMAHA U3 · 1874203 — thay dạ búa toàn bộ và cân lại bàn phím',
     'project_name': 'Phục chế tháng 9',
     'status': 'todo',
-    'due_date': _iso(const Duration(hours: 5)),
+    'due_date': _todayAt(23, 30),
     'assignee_names': ['Hằng Ni'],
     'checklist': [
       {'id': 's-5', 'title': 'Tháo dạ búa cũ', 'done': false},

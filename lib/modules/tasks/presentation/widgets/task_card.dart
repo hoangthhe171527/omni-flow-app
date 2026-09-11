@@ -37,6 +37,32 @@ class TaskCard extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     final text = Theme.of(context).textTheme;
 
+    // Ba con số, chỉ khi > 0: "0 ảnh · 0 trao đổi" trên mọi thẻ là tiếng ồn.
+    // Chúng đứng CÙNG DÒNG với "2/4 việc con" (như Trello đặt badge cạnh tiến
+    // độ) để hàng cuối chỉ còn hạn + ưu tiên + avatar; ảnh chụp cho thấy dồn
+    // cả vào hàng cuối là gãy thành hai dòng. Việc không có công đoạn thì
+    // không có dòng tiến độ, con số mới rơi xuống hàng cuối.
+    final counts = <Widget>[
+      if (task.attachmentCount > 0)
+        _Count(
+          icon: Icons.attachment_outlined,
+          value: task.attachmentCount,
+          what: 'ảnh đính kèm',
+        ),
+      if (task.commentCount > 0)
+        _Count(
+          icon: Icons.forum_outlined,
+          value: task.commentCount,
+          what: 'trao đổi',
+        ),
+      if (task.rating > 0)
+        _Count(
+          icon: Icons.star_rounded,
+          value: task.rating,
+          what: 'điểm kiểm tra',
+        ),
+    ];
+
     return Semantics(
       button: true,
       label: _semanticLabel,
@@ -95,7 +121,7 @@ class TaskCard extends StatelessWidget {
                 ],
                 if (task.hasSubtasks) ...[
                   const SizedBox(height: OmniSpacing.md),
-                  _Progress(task: task),
+                  _Progress(task: task, trailing: counts),
                 ],
                 const SizedBox(height: OmniSpacing.md),
                 Row(
@@ -118,26 +144,7 @@ class TaskCard extends StatelessWidget {
                               label: priorityLabel(task.priority),
                               tone: OmniTone.warning,
                             ),
-                          // Ba con số, chỉ khi > 0: "0 ảnh · 0 trao đổi" trên
-                          // mọi thẻ là tiếng ồn.
-                          if (task.attachmentCount > 0)
-                            _Count(
-                              icon: Icons.attachment_outlined,
-                              value: task.attachmentCount,
-                              what: 'ảnh đính kèm',
-                            ),
-                          if (task.commentCount > 0)
-                            _Count(
-                              icon: Icons.forum_outlined,
-                              value: task.commentCount,
-                              what: 'trao đổi',
-                            ),
-                          if (task.rating > 0)
-                            _Count(
-                              icon: Icons.star_rounded,
-                              value: task.rating,
-                              what: 'điểm kiểm tra',
-                            ),
+                          if (!task.hasSubtasks) ...counts,
                         ],
                       ),
                     ),
@@ -210,9 +217,12 @@ class _Count extends StatelessWidget {
 }
 
 class _Progress extends StatelessWidget {
-  const _Progress({required this.task});
+  const _Progress({required this.task, this.trailing = const []});
 
   final Task task;
+
+  /// Các con số nhỏ (📎 💬 ★) đứng bên phải dòng "n/m việc con".
+  final List<Widget> trailing;
 
   @override
   Widget build(BuildContext context) {
@@ -223,14 +233,20 @@ class _Progress extends StatelessWidget {
       children: [
         Row(
           children: [
-            Text(
-              '${task.doneCount}/${task.totalCount} việc con',
-              style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                color: scheme.onSurfaceVariant,
-                // Tabular so the numbers do not jitter as stages complete.
-                fontFeatures: const [FontFeature.tabularFigures()],
+            Expanded(
+              child: Text(
+                '${task.doneCount}/${task.totalCount} việc con',
+                style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                  color: scheme.onSurfaceVariant,
+                  // Tabular so the numbers do not jitter as stages complete.
+                  fontFeatures: const [FontFeature.tabularFigures()],
+                ),
               ),
             ),
+            for (final w in trailing) ...[
+              const SizedBox(width: OmniSpacing.sm),
+              w,
+            ],
           ],
         ),
         const SizedBox(height: OmniSpacing.sm),

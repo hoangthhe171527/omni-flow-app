@@ -107,6 +107,37 @@ void main() {
       expect(find.text('4'), findsOneWidget);
     });
 
+    testWidgets('có công đoạn thì các con số đứng CÙNG DÒNG "n/m việc con"', (
+      tester,
+    ) async {
+      // Ảnh chụp: dồn cả hạn + ưu tiên + ba con số vào hàng cuối là gãy thành
+      // hai dòng, avatar lơ lửng ở giữa. Badge đứng cạnh tiến độ như Trello.
+      await tester.pumpWidget(
+        host(
+          Task.fromJson({
+            'id': 't',
+            'title': 'x',
+            'attachments_count': 2,
+            'comments_count': 3,
+            'checklist': [
+              {'id': 'a', 'title': 'Tháo máy', 'done': true},
+              {'id': 'b', 'title': 'Nắp phím', 'done': false},
+            ],
+          }),
+        ),
+      );
+
+      final progressY = tester.getCenter(find.text('1/2 việc con')).dy;
+      expect(
+        (tester.getCenter(find.text('2')).dy - progressY).abs(),
+        lessThan(2),
+      );
+      expect(
+        (tester.getCenter(find.text('3')).dy - progressY).abs(),
+        lessThan(2),
+      );
+    });
+
     testWidgets('bằng 0 thì KHÔNG in số 0 cũng không in biểu tượng', (
       tester,
     ) async {
