@@ -12,6 +12,7 @@ import '../domain/feed_entry.dart';
 import '../routes.dart';
 import 'widgets/completion_row.dart';
 import 'widgets/day_header.dart';
+import 'widgets/feed_skeleton.dart';
 import 'widgets/kpi_card.dart';
 import 'widgets/piano_done_row.dart';
 
@@ -64,10 +65,11 @@ class _TimelinePageState extends ConsumerState<TimelinePage> {
           await ref.read(workshopFeedProvider.future);
         },
         child: switch ((data, feed)) {
-          // Chưa có gì để vẽ và đang tải lần đầu.
-          (null, AsyncLoading()) => const Center(
-            child: CircularProgressIndicator(),
-          ),
+          // Chưa có gì để vẽ và đang tải lần đầu: khung xương có hình dáng
+          // của chính danh sách sắp hiện, không phải vòng xoay giữa màn trắng.
+          // Đây là màn đầu tiên mở lên mỗi sáng, và dữ liệu tới thì bố cục
+          // không được nhảy.
+          (null, AsyncLoading()) => const FeedSkeleton(),
           (null, AsyncError(:final error)) => OmniErrorView(
             error: error,
             onRetry: () => ref.invalidate(workshopFeedProvider),

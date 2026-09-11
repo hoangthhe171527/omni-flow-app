@@ -109,10 +109,40 @@ class _Photos extends StatelessWidget {
             width: _size,
             height: _size,
             fit: BoxFit.cover,
-            // Một ảnh hỏng không được để lại ô vỡ giữa dòng chữ.
-            errorBuilder: (_, _, _) => const SizedBox.shrink(),
+            // Ô GIỮ CHỖ cùng cỡ trong lúc tải và khi hỏng, không phải ô 0dp.
+            // Bản đầu trả `SizedBox.shrink()` cho ảnh hỏng: dải ảnh co lại rồi
+            // giãn ra khi ảnh tới, và ngoài xưởng sóng yếu thì người đọc
+            // không biết là CÓ ảnh đang chờ. Kích thước cố định là thứ giữ cho
+            // bố cục không nhảy (CLS) — ảnh tới hay không, ô vẫn ở đó.
+            loadingBuilder: (_, child, progress) =>
+                progress == null ? child : const _PhotoPlaceholder(),
+            errorBuilder: (_, _, _) => const _PhotoPlaceholder(broken: true),
           ),
         ),
+      ),
+    );
+  }
+}
+
+/// Ô 88dp thay cho ảnh chưa tới (biểu tượng ảnh) hoặc hỏng (ảnh vỡ).
+class _PhotoPlaceholder extends StatelessWidget {
+  const _PhotoPlaceholder({this.broken = false});
+
+  final bool broken;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+
+    return Container(
+      width: _Photos._size,
+      height: _Photos._size,
+      color: scheme.surfaceContainerHighest,
+      alignment: Alignment.center,
+      child: Icon(
+        broken ? Icons.broken_image_outlined : Icons.image_outlined,
+        size: OmniIconSize.md,
+        color: scheme.onSurfaceVariant,
       ),
     );
   }

@@ -1,13 +1,18 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:intl/date_symbol_data_local.dart';
+import 'package:omni_app/design/components/components.dart';
 import 'package:omni_app/design/theme/omni_theme.dart';
 import 'package:omni_app/modules/plans/application/plans_providers.dart';
+import 'package:omni_app/modules/plans/data/plans_api.dart';
 import 'package:omni_app/modules/plans/domain/feed_entry.dart';
 import 'package:omni_app/modules/plans/domain/workshop_kpi.dart';
 import 'package:omni_app/modules/plans/presentation/timeline_page.dart';
 import 'package:omni_app/modules/plans/presentation/widgets/completion_row.dart';
+import 'package:omni_app/modules/plans/presentation/widgets/feed_skeleton.dart';
 import 'package:omni_app/modules/plans/presentation/widgets/piano_done_row.dart';
 import 'package:omni_app/modules/tasks/application/tasks_providers.dart';
 import 'package:omni_app/modules/tasks/domain/task_permissions.dart';
@@ -253,5 +258,61 @@ void main() {
     );
 
     expect(find.text('Hằng Ni đã gửi mau.jpg'), findsOneWidget);
+  });
+
+  testWidgets('tải lần đầu hiện KHUNG XƯƠNG dòng việc, không phải vòng xoay', (
+    tester,
+  ) async {
+    // Đây là màn đầu tiên mở lên mỗi sáng. Một vòng xoay giữa màn trắng nói
+    // "chưa có gì" — khung xương nói "sắp có, và trông thế này". Cùng thời
+    // gian chờ, cảm giác khác hẳn, và khi dữ liệu tới thì không nhảy bố cục.
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          workshopFeedProvider.overrideWith(
+            (ref) => Completer<WorkshopFeed>().future,
+          ),
+          workshopKpiProvider.overrideWith(
+            (ref) => Completer<WorkshopKpi>().future,
+          ),
+          taskAccessProvider.overrideWithValue(
+            TaskAccess.of(const AccessPolicy(worker)),
+          ),
+        ],
+        child: MaterialApp(
+          theme: OmniTheme.light(TargetPlatform.android),
+          home: const TimelinePage(),
+        ),
+      ),
+    );
+    // KHÔNG pumpAndSettle: khung xương nhấp nháy mãi cho tới khi có dữ liệu.
+    await tester.pump();
+
+    expect(find.byType(FeedSkeleton), findsOneWidget);
+    expect(find.byType(CircularProgressIndicator), findsNothing);
+    expect(
+      find.byType(OmniSkeletonBox, skipOffstage: false),
+      findsAtLeastNWidgets(4),
+      reason: 'khung xương phải trông như vài dòng việc, không phải một khối',
+    );
+  });
+
+  testWidgets('ảnh hỏng vẫn để lại ô 88dp có biểu tượng, không phải lỗ trống', (
+    tester,
+  ) async {
+    // Trong test không có mạng nên ảnh nào cũng hỏng — đúng tình huống ngoài
+    // xưởng khi sóng yếu. Ô rỗng 0dp làm dải ảnh co lại rồi giãn ra khi ảnh
+    // tới, và người đọc không biết là có ảnh đang chờ.
+    await show(tester, feed: [entry(photos: const ['/m/1.jpg'])]);
+
+    final tile = find.byKey(const ValueKey('photo:/m/1.jpg'));
+    expect(tester.getSize(tile), const Size(88, 88));
+    expect(
+      find.descendant(
+        of: tile,
+        matching: find.byIcon(Icons.broken_image_outlined),
+      ),
+      findsOneWidget,
+    );
   });
 }
