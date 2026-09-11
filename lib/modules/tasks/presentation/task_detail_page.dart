@@ -813,7 +813,13 @@ class _Viewers extends StatelessWidget {
                       ? viewer.label
                       : '${viewer.label} · ${Formatters.relative(viewer.viewedAt)}',
                   child: _Chip(
-                    icon: Icons.check_rounded,
+                    // Mặt người thay dấu tích: "đã xem" đã nằm ở tiêu đề khối,
+                    // còn AI xem thì mặt người nói nhanh hơn tên.
+                    leading: OmniAvatar(
+                      name: viewer.label,
+                      imageUrl: viewer.avatar,
+                      size: OmniIconSize.md,
+                    ),
                     label: viewer.label,
                     color: scheme.onSurfaceVariant,
                   ),
@@ -1173,9 +1179,12 @@ class _SquareButton extends StatelessWidget {
 }
 
 class _Chip extends StatelessWidget {
-  const _Chip({required this.icon, required this.label, this.color});
+  const _Chip({this.icon, this.leading, required this.label, this.color});
 
-  final IconData icon;
+  final IconData? icon;
+
+  /// Thay cho [icon] khi chip đại diện cho một NGƯỜI: mặt người thay biểu tượng.
+  final Widget? leading;
   final String label;
   final Color? color;
 
@@ -1196,7 +1205,10 @@ class _Chip extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: OmniIconSize.sm, color: tone),
+          if (leading != null)
+            leading!
+          else if (icon != null)
+            Icon(icon, size: OmniIconSize.sm, color: tone),
           const SizedBox(width: OmniSpacing.xs),
           Text(label, style: OmniType.caption.copyWith(color: tone)),
         ],

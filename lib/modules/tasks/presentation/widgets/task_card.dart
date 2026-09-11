@@ -89,7 +89,10 @@ class TaskCard extends StatelessWidget {
                     // ngay sau "nó đang ở công đoạn nào". Trước đây thẻ chỉ
                     // nói khi có TỪ HAI người trở lên — tức là im lặng đúng
                     // trường hợp thường gặp nhất.
-                    _Assignees(names: task.assigneeNames),
+                    _Assignees(
+                      names: task.assigneeNames,
+                      avatars: task.assigneeAvatars,
+                    ),
                   ],
                 ),
               ],
@@ -162,9 +165,12 @@ class _Progress extends StatelessWidget {
 /// chiếm một dòng riêng, và trên bảng thì mỗi dp chiều cao đều phải trả giá
 /// bằng một thẻ ít đi. Tên đầy đủ nằm trong nhãn trợ năng và trong chi tiết.
 class _Assignees extends StatelessWidget {
-  const _Assignees({required this.names});
+  const _Assignees({required this.names, this.avatars = const []});
 
   final List<String> names;
+
+  /// Ảnh thật, thẳng hàng với [names]; null (hoặc thiếu) thì rơi về chữ tắt.
+  final List<String?> avatars;
 
   /// Ba là đủ. Cái thứ tư trở đi thành một con số.
   static const _max = 3;
@@ -215,7 +221,11 @@ class _Assignees extends StatelessWidget {
                         // ra thành hai hình, không phải một vệt.
                         border: Border.all(color: scheme.surface, width: _ring),
                       ),
-                      child: OmniAvatar(name: shown[i], size: _size),
+                      child: OmniAvatar(
+                        name: shown[i],
+                        imageUrl: i < avatars.length ? avatars[i] : null,
+                        size: _size,
+                      ),
                     ),
                   ),
               ],

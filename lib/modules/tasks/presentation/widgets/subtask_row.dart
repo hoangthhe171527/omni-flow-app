@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../../../../design/components/components.dart';
 import '../../../../design/tokens/tokens.dart';
 import '../../application/task_controller.dart';
 import '../../domain/task.dart';
@@ -112,7 +113,10 @@ class SubtaskRow extends StatelessWidget {
                           // A chip rather than "(Hằng Ni)" inside the title, so
                           // the name is a filterable fact and the title stays
                           // the name of the work.
-                          _AssigneeChip(name: subtask.assigneeName!),
+                          _AssigneeChip(
+                            name: subtask.assigneeName!,
+                            avatar: subtask.assigneeAvatar,
+                          ),
                         ] else if (onClaim != null &&
                             subtask.assigneeId == null &&
                             !subtask.done) ...[
@@ -227,28 +231,41 @@ class _Box extends StatelessWidget {
 }
 
 class _AssigneeChip extends StatelessWidget {
-  const _AssigneeChip({required this.name});
+  const _AssigneeChip({required this.name, this.avatar});
 
   final String name;
+
+  /// Ảnh thật; null thì [OmniAvatar] tự rơi về chữ tắt. Mặt người đọc nhanh
+  /// hơn tên khi lướt một danh sách công đoạn dài.
+  final String? avatar;
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
 
     return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: OmniSpacing.sm,
-        vertical: OmniSpacing.xxs,
+      padding: const EdgeInsets.fromLTRB(
+        OmniSpacing.xxs,
+        OmniSpacing.xxs,
+        OmniSpacing.sm,
+        OmniSpacing.xxs,
       ),
       decoration: BoxDecoration(
         color: scheme.surfaceContainerHighest,
-        borderRadius: BorderRadius.circular(OmniRadius.xs),
+        borderRadius: BorderRadius.circular(OmniRadius.chip),
       ),
-      child: Text(
-        name,
-        style: Theme.of(
-          context,
-        ).textTheme.labelSmall?.copyWith(color: scheme.onSurfaceVariant),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          OmniAvatar(name: name, imageUrl: avatar, size: OmniIconSize.md),
+          const SizedBox(width: OmniSpacing.xs),
+          Text(
+            name,
+            style: Theme.of(
+              context,
+            ).textTheme.labelSmall?.copyWith(color: scheme.onSurfaceVariant),
+          ),
+        ],
       ),
     );
   }

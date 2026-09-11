@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/error/app_exception.dart';
 import '../../../../core/utils/formatters.dart';
+import '../../../../design/components/components.dart';
 import '../../../../design/tokens/tokens.dart';
 import '../../application/task_controller.dart';
 import '../../domain/mention.dart';
@@ -280,6 +281,14 @@ class _Comment extends StatelessWidget {
       children: [
         Row(
           children: [
+            // Mặt người trước tên: một chuỗi trao đổi đọc bằng mặt, như mọi
+            // app chat. Chưa có ảnh thì OmniAvatar tự vẽ chữ tắt.
+            OmniAvatar(
+              name: comment.author,
+              imageUrl: comment.userAvatar,
+              size: OmniIconSize.lg,
+            ),
+            const SizedBox(width: OmniSpacing.sm),
             Text(comment.author, style: OmniType.bodyStrong),
             const SizedBox(width: OmniSpacing.sm),
             if (comment.createdAt != null)

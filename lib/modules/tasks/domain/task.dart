@@ -15,6 +15,7 @@ class Subtask {
     required this.done,
     this.assigneeId,
     this.assigneeName,
+    this.assigneeAvatar,
     this.dueDate,
   });
 
@@ -24,6 +25,8 @@ class Subtask {
     done: json.flag('done'),
     assigneeId: json.str('assignee_id'),
     assigneeName: json.str('assignee_name'),
+    // Server chỉ đặt khoá khi người đó có ảnh (cùng quy ước `user_avatar`).
+    assigneeAvatar: json.str('assignee_avatar'),
     dueDate: DateUtilsX.parse(json['due_date']),
   );
 
@@ -32,6 +35,7 @@ class Subtask {
   final bool done;
   final String? assigneeId;
   final String? assigneeName;
+  final String? assigneeAvatar;
   final DateTime? dueDate;
 
   Subtask copyWith({bool? done}) => Subtask(
@@ -40,6 +44,7 @@ class Subtask {
     done: done ?? this.done,
     assigneeId: assigneeId,
     assigneeName: assigneeName,
+    assigneeAvatar: assigneeAvatar,
     dueDate: dueDate,
   );
 }
@@ -49,16 +54,23 @@ class Subtask {
 /// A seen-list, not an audit log: the manager's question is "did they get it",
 /// which one row per person answers and a row per open buries.
 class TaskViewer {
-  const TaskViewer({required this.userId, this.name, this.viewedAt});
+  const TaskViewer({
+    required this.userId,
+    this.name,
+    this.avatar,
+    this.viewedAt,
+  });
 
   factory TaskViewer.fromJson(Map<String, dynamic> json) => TaskViewer(
     userId: json.strOr('user_id', ''),
     name: json.str('name'),
+    avatar: json.str('avatar'),
     viewedAt: DateUtilsX.parse(json['viewed_at']),
   );
 
   final String userId;
   final String? name;
+  final String? avatar;
   final DateTime? viewedAt;
 
   /// Falls back to the id rather than showing nothing: the API fills the name
@@ -77,6 +89,7 @@ class TaskComment {
     required this.body,
     this.userId,
     this.userName,
+    this.userAvatar,
     this.mentionedUserNames = const [],
     this.createdAt,
   });
@@ -88,6 +101,7 @@ class TaskComment {
     // API tra tên ra từ danh sách thành viên ở mỗi lần đọc, chứ không lưu tên
     // vào bình luận — để tên không cũ đi trong những bình luận cũ.
     userName: json.str('user_name'),
+    userAvatar: json.str('user_avatar'),
     // Tên, không phải id: vai thợ không có quyền nhân sự, app không có danh
     // sách nào để tự tra một UUID ra tên người.
     mentionedUserNames: json.strList('mentioned_user_names'),
@@ -98,6 +112,7 @@ class TaskComment {
   final String body;
   final String? userId;
   final String? userName;
+  final String? userAvatar;
   final List<String> mentionedUserNames;
   final DateTime? createdAt;
 
@@ -177,6 +192,7 @@ class Task {
     this.planSections = const [],
     this.assigneeIds = const [],
     this.assigneeNames = const [],
+    this.assigneeAvatars = const [],
     this.dueDate,
     this.startDate,
     this.subtasks = const [],
@@ -206,6 +222,16 @@ class Task {
         .toList(),
     assigneeIds: json.strList('assignee_ids'),
     assigneeNames: json.strList('assignee_names'),
+    // KHÔNG dùng `strList`: nó nuốt null, mà API cố ý để null giữ chỗ cho
+    // người chưa có ảnh để mảng thẳng hàng với `assignee_ids`. Nuốt một null
+    // là ảnh của Luận nhảy sang mặt Hằng Ni.
+    assigneeAvatars: switch (json['assignee_avatars']) {
+      final List raw => [
+        for (final v in raw)
+          if (v is String && v.trim().isNotEmpty) v.trim() else null,
+      ],
+      _ => const [],
+    },
     // The API writes the deadline as due_date; older documents used deadline.
     // Reading only one of them is how a whole column silently shows "no date".
     dueDate:
@@ -258,6 +284,19 @@ class Task {
   final List<TaskSection> planSections;
   final List<String> assigneeIds;
   final List<String> assigneeNames;
+
+  /// URL ảnh của từng người, THẲNG HÀNG với [assigneeIds]; null khi người đó
+  /// chưa đặt ảnh (app rơi về chữ tắt). Rỗng với API cũ chưa gửi trường này.
+  final List<String?> assigneeAvatars;
+
+  /// Ảnh của người thứ [index] trong [assigneeIds], hoặc null.
+  ///
+  /// An toàn với mảng ngắn hơn (API cũ) và chỉ số ngoài phạm vi — một chỗ vẽ
+  /// avatar không được văng vì thiếu một tấm ảnh.
+  String? assigneeAvatarAt(int index) =>
+      index >= 0 && index < assigneeAvatars.length
+      ? assigneeAvatars[index]
+      : null;
   final DateTime? dueDate;
   final DateTime? startDate;
   final List<Subtask> subtasks;
@@ -379,6 +418,7 @@ class Task {
     planSections: planSections,
     assigneeIds: assigneeIds,
     assigneeNames: assigneeNames,
+    assigneeAvatars: assigneeAvatars,
     dueDate: dueDate,
     startDate: startDate,
     subtasks: subtasks ?? this.subtasks,

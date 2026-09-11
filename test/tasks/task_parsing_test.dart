@@ -36,6 +36,100 @@ void main() {
     });
   });
 
+  group('ảnh người', () {
+    // API gắn ảnh THẲNG HÀNG với `assignee_ids` (null cho người chưa có ảnh).
+    // Đọc bằng `strList` sẽ nuốt null và làm lệch hàng — ảnh của Luận nhảy
+    // sang mặt Hằng Ni. Nên có một hàm đọc riêng, và một bài kiểm cho nó.
+    test('ảnh người nhận thẳng hàng với id, giữ chỗ null', () {
+      final task = Task.fromJson({
+        'id': 't1',
+        'title': 'x',
+        'assignee_ids': ['u1', 'u2', 'u3'],
+        'assignee_names': ['Hằng Ni', 'Luận', 'Minh'],
+        'assignee_avatars': ['https://x/hn.png', null, 'https://x/m.png'],
+      });
+
+      expect(task.assigneeAvatars, [
+        'https://x/hn.png',
+        null,
+        'https://x/m.png',
+      ]);
+      expect(task.assigneeAvatarAt(0), 'https://x/hn.png');
+      expect(task.assigneeAvatarAt(1), isNull);
+      expect(task.assigneeAvatarAt(2), 'https://x/m.png');
+    });
+
+    test('API cũ không gửi mảng ảnh thì không ai có ảnh, không văng', () {
+      final task = Task.fromJson({
+        'id': 't1',
+        'title': 'x',
+        'assignee_ids': ['u1'],
+        'assignee_names': ['Hằng Ni'],
+      });
+
+      expect(task.assigneeAvatarAt(0), isNull);
+      expect(task.assigneeAvatarAt(7), isNull);
+    });
+
+    test('chuỗi rỗng đọc thành null, không thành thẻ ảnh trỏ vào hư không', () {
+      final task = Task.fromJson({
+        'id': 't1',
+        'title': 'x',
+        'assignee_ids': ['u1'],
+        'assignee_avatars': [''],
+      });
+
+      expect(task.assigneeAvatarAt(0), isNull);
+    });
+
+    test('công đoạn, bình luận, người xem mang theo ảnh', () {
+      final task = Task.fromJson({
+        'id': 't1',
+        'title': 'x',
+        'checklist': [
+          {
+            'id': 's1',
+            'title': 'Nắp phím',
+            'assignee_id': 'u1',
+            'assignee_name': 'Hằng Ni',
+            'assignee_avatar': 'https://x/hn.png',
+          },
+        ],
+        'comments': [
+          {
+            'id': 'c1',
+            'body': 'QC trượt',
+            'user_id': 'u1',
+            'user_name': 'Hằng Ni',
+            'user_avatar': 'https://x/hn.png',
+          },
+        ],
+        'viewers': [
+          {'user_id': 'u1', 'name': 'Hằng Ni', 'avatar': 'https://x/hn.png'},
+        ],
+      });
+
+      expect(task.subtasks.single.assigneeAvatar, 'https://x/hn.png');
+      expect(task.comments.single.userAvatar, 'https://x/hn.png');
+      expect(task.viewers.single.avatar, 'https://x/hn.png');
+    });
+
+    test('copyWith giữ nguyên mảng ảnh', () {
+      // Tick một việc con đi qua copyWith; bản đầu của copyWith từng làm rơi
+      // ba trường. Ảnh không được là trường thứ tư.
+      final task = Task.fromJson({
+        'id': 't1',
+        'title': 'x',
+        'assignee_ids': ['u1'],
+        'assignee_avatars': ['https://x/hn.png'],
+      });
+
+      expect(task.copyWith(status: 'done').assigneeAvatars, [
+        'https://x/hn.png',
+      ]);
+    });
+  });
+
   group('deadline', () {
     test('reads due_date, and falls back to the older deadline key', () {
       // Both keys exist in the collection. Reading only one is how a whole
