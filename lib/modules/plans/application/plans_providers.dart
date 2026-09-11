@@ -119,6 +119,21 @@ final kpiMonthProvider = StateProvider<DateTime>((ref) {
   return DateTime(now.year, now.month);
 });
 
+/// Số việc xong của tháng LIỀN TRƯỚC tháng đang xem — mốc so sánh cho thẻ KPI.
+///
+/// Provider riêng, không nhét vào [workshopKpiProvider]: lượt gọi này hỏng
+/// thì thẻ chỉ mất một dòng "+6 so với tháng 8", chứ không được kéo cả con số
+/// chính xuống theo. Không theo dõi tín hiệu realtime — một tháng đã khép
+/// không đổi vì ai đó vừa tick một việc của tháng này.
+final kpiPreviousDeliveredProvider = FutureProvider<int>((ref) async {
+  final month = ref.watch(kpiMonthProvider);
+  // `DateTime(y, 0)` tự lùi về tháng 12 năm trước.
+  final previous = DateTime(month.year, month.month - 1);
+  final kpi = await ref.watch(plansApiProvider).kpi(month: previous);
+
+  return kpi.delivered;
+});
+
 /// Chuyện gì vừa xảy ra ở xưởng — chỉ những việc đã đánh dấu xong.
 final workshopFeedProvider = FutureProvider<WorkshopFeed>((ref) {
   ref.watch(taskRealtimeSignalProvider);

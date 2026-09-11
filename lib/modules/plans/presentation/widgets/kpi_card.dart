@@ -17,6 +17,7 @@ class KpiCard extends StatelessWidget {
     super.key,
     required this.kpi,
     required this.month,
+    this.previousDelivered,
     this.onPrevMonth,
     this.onNextMonth,
     this.onConfigure,
@@ -26,6 +27,12 @@ class KpiCard extends StatelessWidget {
 
   /// Tháng đang xem. Chỉ năm và tháng có nghĩa.
   final DateTime month;
+
+  /// Số việc xong của tháng liền trước, để con số có một mốc so sánh.
+  ///
+  /// null khi chưa về hoặc lượt gọi hỏng — lúc đó KHÔNG có dòng so sánh. So
+  /// với một con số không có là bịa ra một xu hướng.
+  final int? previousDelivered;
 
   final VoidCallback? onPrevMonth;
 
@@ -130,6 +137,13 @@ class KpiCard extends StatelessWidget {
                 ),
             ],
           ),
+          if (previousDelivered case final int previous) ...[
+            const SizedBox(height: OmniSpacing.xs),
+            _Trend(
+              delta: kpi.delivered - previous,
+              previousMonth: DateTime(month.year, month.month - 1),
+            ),
+          ],
           const SizedBox(height: OmniSpacing.lg),
           // Không có mốc nào thì không có gì để chạy tới — một thanh đầy 100%
           // ở đây là một lời khen bịa ra.
@@ -239,9 +253,13 @@ class _Milestone extends StatelessWidget {
       // Trước đây không xảy ra vì bảng nằm trong config của bản triển khai và
       // luôn có sẵn. Từ khi nó là cấu hình của từng workspace, đây là trạng
       // thái bình thường của mọi workspace mới.
+      //
+      // Chữ NHỎ: câu này dành cho người quản trị đọc một lần, con số dành cho
+      // cả xưởng đọc mỗi ngày. Cùng cỡ với dòng mốc thưởng thì nó tranh mắt
+      // với thứ thẻ này sinh ra để nói.
       return Text(
         'Workspace chưa khai bảng mốc thưởng.',
-        style: text.labelMedium?.copyWith(color: scheme.onSurfaceVariant),
+        style: text.labelSmall?.copyWith(color: scheme.onSurfaceVariant),
       );
     }
 
@@ -282,6 +300,49 @@ class _Milestone extends StatelessWidget {
             ),
           ),
         ],
+      ],
+    );
+  }
+}
+
+/// "+6 so với tháng 8" — con số có một mốc để đọc là nhiều hay ít.
+///
+/// Hướng đi nằm ở BIỂU TƯỢNG và dấu, không ở màu: đỏ/xanh ở đây vừa là màu
+/// thương hiệu thứ hai (cùng lỗi đã sửa ở nút hoàn thành) vừa vô hình với
+/// người mù màu lục-đỏ. Một dòng, cỡ nhỏ, cùng màu với ngữ cảnh — nó bổ nghĩa
+/// cho con số, không phải một con số thứ hai.
+class _Trend extends StatelessWidget {
+  const _Trend({required this.delta, required this.previousMonth});
+
+  final int delta;
+  final DateTime previousMonth;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final text = Theme.of(context).textTheme;
+    final month = 'tháng ${previousMonth.month}';
+
+    final (icon, label) = switch (delta) {
+      > 0 => (Icons.trending_up_rounded, '+$delta so với $month'),
+      // Dấu trừ thật (U+2212), không phải gạch nối: cùng bề rộng với dấu
+      // cộng nên hai dòng của hai tháng thẳng hàng nhau.
+      < 0 => (Icons.trending_down_rounded, '−${-delta} so với $month'),
+      _ => (Icons.trending_flat_rounded, 'Bằng $month'),
+    };
+
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, size: OmniIconSize.sm, color: scheme.onSurfaceVariant),
+        const SizedBox(width: OmniSpacing.xs),
+        Text(
+          label,
+          style: text.labelSmall?.copyWith(
+            color: scheme.onSurfaceVariant,
+            fontFeatures: OmniType.tabular,
+          ),
+        ),
       ],
     );
   }

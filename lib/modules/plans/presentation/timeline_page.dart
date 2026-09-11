@@ -247,6 +247,9 @@ class _Kpi extends ConsumerWidget {
       data: (data) => KpiCard(
         kpi: data,
         month: month,
+        // Mốc so sánh đi đường riêng: chưa về hoặc hỏng thì thẻ chỉ thiếu
+        // một dòng, con số chính không chờ nó.
+        previousDelivered: ref.watch(kpiPreviousDeliveredProvider).valueOrNull,
         onPrevMonth: () => ref.read(kpiMonthProvider.notifier).state =
             DateTime(month.year, month.month - 1),
         // Không đi tới tương lai: một tháng chưa tới luôn có `delivered = 0`,

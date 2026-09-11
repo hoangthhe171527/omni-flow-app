@@ -69,10 +69,18 @@ void main() {
     bool truncated = false,
     Set<String> permissions = worker,
     bool kpiConfigured = true,
+    int previousDelivered = 22,
+    List<Override> extra = const [],
   }) async {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
+          ...extra,
+          // Mốc so sánh của thẻ KPI đi đường riêng; không đè thì nó gọi API
+          // thật ngay trong test.
+          kpiPreviousDeliveredProvider.overrideWith(
+            (ref) async => previousDelivered,
+          ),
           workshopFeedProvider.overrideWith(
             (ref) async => (entries: feed, truncated: truncated),
           ),
@@ -314,5 +322,19 @@ void main() {
       ),
       findsOneWidget,
     );
+  });
+
+  testWidgets('thẻ KPI so con số với tháng trước', (tester) async {
+    // "28" một mình không nói nhiều hay ít. Mốc tự nhiên nhất là tháng trước.
+    await show(
+      tester,
+      feed: [entry()],
+      permissions: assigner,
+      previousDelivered: 22,
+      extra: [kpiMonthProvider.overrideWith((ref) => DateTime(2026, 9))],
+    );
+
+    expect(find.text('28'), findsOneWidget);
+    expect(find.text('+6 so với tháng 8'), findsOneWidget);
   });
 }
