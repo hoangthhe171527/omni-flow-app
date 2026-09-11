@@ -62,3 +62,6 @@ firebase-release/
 .env
 .env.*
 !.env.example
+
+# Anh chup man hinh cua bo soat UI (test/_screenshots) — moi nguoi tu dung.
+test/_screenshots/goldens/

@@ -1,0 +1,8 @@
+# Tag cho bo kiem. Khong khai bao thi tag van chay; khai bao de dat mac dinh.
+tags:
+  # Goi API/Reverb that; loai ra bang --exclude-tags=live khi khong co stack local.
+  live: {}
+  # Bo chup man hinh de soat UI bang mat — khong phai bai kiem hoi quy.
+  # Chay tay: flutter test test/_screenshots --run-skipped --update-goldens
+  screenshots:
+    skip: "Anh chup man hinh: chay tay voi --run-skipped --update-goldens"
