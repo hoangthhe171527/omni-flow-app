@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 
 import '../../../../design/components/omni_avatar.dart';
+import '../../../../design/components/omni_status_chip.dart';
 import '../../../../design/tokens/tokens.dart';
 import '../../domain/task.dart';
 import 'due_chip.dart';
+import 'edit_sheets.dart';
 
 /// One task in the list.
 ///
@@ -73,6 +75,24 @@ class TaskCard extends StatelessWidget {
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                 ),
+                // Công đoạn ĐANG MỞ đầu tiên và ai làm — câu quản đốc hỏi khi
+                // lướt bảng ("cây này tới đâu rồi, ai đang cầm"). Bản trước thẻ
+                // chỉ có tên đàn + thanh tiến độ, và người dùng nói "không
+                // thấy thông tin gì".
+                if (task.nextOpenSubtask case final Subtask next) ...[
+                  const SizedBox(height: OmniSpacing.xs),
+                  Text(
+                    next.assigneeName == null
+                        ? '→ ${next.title}'
+                        : '→ ${next.title} · ${next.assigneeName}',
+                    style: text.labelMedium?.copyWith(
+                      color: scheme.primary,
+                      fontWeight: FontWeight.w600,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
                 if (task.hasSubtasks) ...[
                   const SizedBox(height: OmniSpacing.md),
                   _Progress(task: task),
@@ -80,11 +100,48 @@ class TaskCard extends StatelessWidget {
                 const SizedBox(height: OmniSpacing.md),
                 Row(
                   children: [
-                    // Flexible chứ không Expanded: chip giờ có nền, và
-                    // Expanded kéo cái nền đó chạy hết bề ngang thẻ. Cũ thì
-                    // không thấy vì chip chỉ là chữ với icon, không có nền.
-                    Flexible(child: DueChip(task: task)),
-                    const Spacer(),
+                    // Wrap chứ không Row: hạn + ưu tiên + ba con số có thể
+                    // không đủ chỗ trên một dòng 380dp, và thẻ tràn đọc như
+                    // lỗi. Chip ôm lấy chữ của nó (không Expanded từng chip).
+                    Expanded(
+                      child: Wrap(
+                        spacing: OmniSpacing.sm,
+                        runSpacing: OmniSpacing.xs,
+                        crossAxisAlignment: WrapCrossAlignment.center,
+                        children: [
+                          DueChip(task: task),
+                          // Chỉ "Cao" mới đáng một chip: mọi thẻ đều "Bình
+                          // thường" thì chữ đó không phân biệt được gì.
+                          if (task.priority == 'high')
+                            OmniStatusChip(
+                              icon: Icons.flag_rounded,
+                              label: priorityLabel(task.priority),
+                              tone: OmniTone.warning,
+                            ),
+                          // Ba con số, chỉ khi > 0: "0 ảnh · 0 trao đổi" trên
+                          // mọi thẻ là tiếng ồn.
+                          if (task.attachmentCount > 0)
+                            _Count(
+                              icon: Icons.attachment_outlined,
+                              value: task.attachmentCount,
+                              what: 'ảnh đính kèm',
+                            ),
+                          if (task.commentCount > 0)
+                            _Count(
+                              icon: Icons.forum_outlined,
+                              value: task.commentCount,
+                              what: 'trao đổi',
+                            ),
+                          if (task.rating > 0)
+                            _Count(
+                              icon: Icons.star_rounded,
+                              value: task.rating,
+                              what: 'điểm kiểm tra',
+                            ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: OmniSpacing.sm),
                     // "Ai đang làm cây này" là câu hỏi thứ hai của quản đốc,
                     // ngay sau "nó đang ở công đoạn nào". Trước đây thẻ chỉ
                     // nói khi có TỪ HAI người trở lên — tức là im lặng đúng
@@ -113,6 +170,42 @@ class TaskCard extends StatelessWidget {
     if (overdue != null) parts.add('quá hạn $overdue ngày');
 
     return parts.join(', ');
+  }
+}
+
+/// Một con số nhỏ kèm biểu tượng: 📎 2, 💬 3, ★ 4 — cùng cỡ, cùng màu phụ.
+///
+/// Biểu tượng nói loại, số nói bao nhiêu; đọc thành tiếng cho trợ năng là
+/// "2 ảnh đính kèm" chứ không phải một con số trần.
+class _Count extends StatelessWidget {
+  const _Count({required this.icon, required this.value, required this.what});
+
+  final IconData icon;
+  final int value;
+  final String what;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+
+    return Semantics(
+      label: '$value $what',
+      excludeSemantics: true,
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: OmniIconSize.sm, color: scheme.onSurfaceVariant),
+          const SizedBox(width: OmniSpacing.xxs),
+          Text(
+            '$value',
+            style: Theme.of(context).textTheme.labelSmall?.copyWith(
+              color: scheme.onSurfaceVariant,
+              fontFeatures: OmniType.tabular,
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
 
