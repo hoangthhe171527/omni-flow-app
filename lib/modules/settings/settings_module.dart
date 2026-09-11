@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../core/module/module_route.dart';
 import '../../core/module/nav_destination.dart';
 import '../../core/module/omni_module.dart';
+import 'presentation/background_page.dart';
 import 'presentation/my_permissions_page.dart';
 import 'presentation/notification_settings_page.dart';
 
@@ -13,6 +14,7 @@ class SettingsModule extends OmniModule {
 
   static const myPermissions = 'settings.permissions';
   static const notifications = 'settings.notifications';
+  static const background = 'settings.background';
 
   @override
   String get id => 'settings';
@@ -34,6 +36,12 @@ class SettingsModule extends OmniModule {
       rootNavigator: true,
       builder: (_, _) => const NotificationSettingsPage(),
     ),
+    ModuleRoute(
+      path: '/settings/background',
+      name: background,
+      rootNavigator: true,
+      builder: (_, _) => const BackgroundPage(),
+    ),
   ];
 
   @override
@@ -48,6 +56,17 @@ class SettingsModule extends OmniModule {
       area: NavArea.account,
       weight: NavWeight.secondary,
       order: 10,
+    ),
+    ModuleNavEntry(
+      moduleId: 'settings',
+      label: 'Nền',
+      subtitle: 'Chọn nền cho chat và bảng dự án',
+      icon: Icons.wallpaper_outlined,
+      selectedIcon: Icons.wallpaper_rounded,
+      routeName: background,
+      area: NavArea.account,
+      weight: NavWeight.secondary,
+      order: 15,
     ),
     ModuleNavEntry(
       moduleId: 'settings',

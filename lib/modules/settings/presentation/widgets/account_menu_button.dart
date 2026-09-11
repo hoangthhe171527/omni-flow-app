@@ -107,6 +107,14 @@ class _AccountMenuButtonState extends ConsumerState<AccountMenuButton> {
           ),
         ),
         const PopupMenuItem(
+          value: 'background',
+          child: ListTile(
+            contentPadding: EdgeInsets.zero,
+            leading: Icon(Icons.wallpaper_outlined),
+            title: Text('Nền'),
+          ),
+        ),
+        const PopupMenuItem(
           value: 'notifications',
           child: ListTile(
             contentPadding: EdgeInsets.zero,
@@ -139,6 +147,8 @@ class _AccountMenuButtonState extends ConsumerState<AccountMenuButton> {
     switch (choice) {
       case 'photo':
         await _pickAndUpload();
+      case 'background':
+        context.pushNamed(SettingsModule.background);
       case 'notifications':
         context.pushNamed(SettingsModule.notifications);
       case 'permissions':
