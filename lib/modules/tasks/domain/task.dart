@@ -312,6 +312,19 @@ class Task {
 
   bool get hasSubtasks => subtasks.isNotEmpty;
 
+  /// Công đoạn chưa xong đứng đầu danh sách, hoặc null khi đã xong hết.
+  ///
+  /// Là thứ một cú vuốt trên thẻ sẽ tick. Theo THỨ TỰ danh sách chứ không theo
+  /// người được giao: checklist của xưởng là quy trình, và công đoạn kế tiếp
+  /// là công đoạn kế tiếp trong quy trình.
+  Subtask? get nextOpenSubtask {
+    for (final s in subtasks) {
+      if (!s.done) return s;
+    }
+
+    return null;
+  }
+
   /// Days past the deadline, or null when it is not overdue.
   ///
   /// Compared by calendar day, not by instant: a task due today at 09:00 is not
