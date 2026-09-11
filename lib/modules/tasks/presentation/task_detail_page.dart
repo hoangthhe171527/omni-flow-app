@@ -1022,11 +1022,21 @@ class _ActionBarState extends ConsumerState<_ActionBar> {
                     height: 52,
                     child: FilledButton.icon(
                       onPressed: _busy ? null : () => _setStatus(!done),
+                      // Màu THƯƠNG HIỆU, không phải màu "thành công".
+                      //
+                      // Chữ trắng trên xanh lá #10B981 chỉ đạt 2,5:1 — trượt
+                      // chuẩn 4,5:1 trên đúng cái nút được bấm nhiều nhất trong
+                      // ngày, ngoài xưởng ánh sáng xấu. Và đó là màu xanh THỨ
+                      // HAI đứng cạnh mòng két thương hiệu: hai xanh cạnh tranh
+                      // nhau, không cái nào thắng. Trắng trên primary ≈ 7:1.
+                      // `test/design/contrast_test.dart` giữ cặp này.
                       style: FilledButton.styleFrom(
                         backgroundColor: done
                             ? scheme.surfaceContainerHighest
-                            : OmniColors.success,
-                        foregroundColor: done ? scheme.onSurface : Colors.white,
+                            : scheme.primary,
+                        foregroundColor: done
+                            ? scheme.onSurface
+                            : scheme.onPrimary,
                       ),
                       icon: Icon(
                         done

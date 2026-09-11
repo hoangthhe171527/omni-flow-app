@@ -173,6 +173,16 @@ void main() {
     ),
   ];
 
+  test('chữ trắng trên xanh "thành công" KHÔNG đủ cho một nút', () {
+    // Ghi lại lý do nút "Hoàn thành công việc" đổi từ success sang primary:
+    // trắng trên #10B981 chỉ ~2,5:1. Bài này giữ cho không ai đưa nó về lại
+    // với lập luận "xanh lá nghĩa là xong" — nghĩa đúng, tương phản sai.
+    final r = contrastRatio(Colors.white, OmniColors.success);
+
+    expect(r, lessThan(t), reason: 'nếu success đã đủ tối thì cập nhật ghi chú');
+    expect(contrastRatio(OmniColors.primaryForeground, OmniColors.primary), greaterThanOrEqualTo(t));
+  });
+
   for (final p in pairs) {
     test('${p.what} đạt ${p.min}:1', () {
       final r = contrastRatio(p.fg, p.bg);
