@@ -149,9 +149,19 @@ class _CommentSectionState extends ConsumerState<CommentSection> {
             // §B3: QC trượt thì phải nhắc tên người phụ trách công đoạn lỗi.
             // Bày sẵn thành chip thay vì bắt gõ tên: gõ tên chỉ ra một chuỗi
             // chữ, không ra một lời nhắc mà người kia đọc được ở máy của họ.
-            if (_candidates.isNotEmpty)
+            //
+            // Có NHÃN và có KHOẢNG CÁCH với ô nhập: ảnh chụp thật cho thấy dãy
+            // chip dán sát mép trên ô nhập, không chữ nào nói chúng là gì —
+            // đọc như một khối lỗi chứ không phải hai thứ riêng.
+            if (_candidates.isNotEmpty) ...[
+              Text(
+                'Nhắc tên',
+                style: text.labelSmall?.copyWith(color: scheme.onSurfaceVariant),
+              ),
+              const SizedBox(height: OmniSpacing.xs),
               Wrap(
                 spacing: OmniSpacing.xs,
+                runSpacing: OmniSpacing.xs,
                 children: [
                   for (final person in _candidates.entries)
                     FilterChip(
@@ -169,6 +179,8 @@ class _CommentSectionState extends ConsumerState<CommentSection> {
                     ),
                 ],
               ),
+              const SizedBox(height: OmniSpacing.sm),
+            ],
             Row(
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
@@ -234,7 +246,12 @@ class _Comment extends StatelessWidget {
           ],
         ),
         const SizedBox(height: OmniSpacing.xs),
-        Text(comment.body, style: text.bodyMedium),
+        // Màu chữ CHÍNH: `bodyMedium` của theme mang màu phụ, và thân bình
+        // luận — lý do một cây đàn bị trả về — từng in mờ hơn cả tên người.
+        Text(
+          comment.body,
+          style: text.bodyMedium?.copyWith(color: scheme.onSurface),
+        ),
         // Người thợ không có hộp thư, nên thông báo "bạn được nhắc tên" rơi
         // vào chỗ họ không mở được. Dòng này là kênh DUY NHẤT báo cho họ biết
         // công đoạn của mình là chỗ bị trả về.

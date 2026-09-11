@@ -79,14 +79,15 @@ final _tasks = <Map<String, dynamic>>[
     'project_name': 'Phục chế tháng 9',
     'status': 'doing',
     'due_date': _iso(const Duration(days: -3)),
+    'assignee_ids': ['u-1', 'u-2'],
     'assignee_names': ['Hằng Ni', 'Luận'],
     'description':
         'Khách yêu cầu giữ nguyên màu vecni gốc. Kiểm tra kỹ phần chốt trước '
         'khi lắp lại bộ máy.',
     'checklist': [
-      {'id': 's-1', 'title': 'Tháo bộ máy', 'done': true, 'assignee_name': 'Luận'},
+      {'id': 's-1', 'title': 'Tháo bộ máy', 'done': true, 'assignee_id': 'u-2', 'assignee_name': 'Luận'},
       {'id': 's-2', 'title': 'Vệ sinh khung sườn', 'done': true},
-      {'id': 's-3', 'title': 'Nắp phím', 'done': false, 'assignee_name': 'Hằng Ni'},
+      {'id': 's-3', 'title': 'Nắp phím', 'done': false, 'assignee_id': 'u-1', 'assignee_name': 'Hằng Ni'},
       {'id': 's-4', 'title': 'Lên dây và cân chỉnh lực phím', 'done': false},
     ],
     'attachments': [
@@ -294,13 +295,20 @@ void main() {
     );
   }
 
-  Future<void> shoot(WidgetTester tester, Widget w, String name) async {
+  /// [scrollTo]: cuộn cho tới khi widget này lên SÁT MÉP TRÊN rồi mới chụp —
+  /// cho phần nằm dưới nếp gấp của một màn dài (trao đổi, nhật ký).
+  Future<void> shoot(WidgetTester tester, Widget w, String name, {Finder? scrollTo}) async {
     tester.view.physicalSize = const Size(780, 1688);
     tester.view.devicePixelRatio = 2.0;
     addTearDown(tester.view.reset);
     await tester.pumpWidget(w);
     await tester.pump(const Duration(milliseconds: 100));
     await tester.pumpAndSettle(const Duration(milliseconds: 100));
+    if (scrollTo != null) {
+      await tester.scrollUntilVisible(scrollTo, 200, scrollable: find.byType(Scrollable).first);
+      await Scrollable.ensureVisible(tester.element(scrollTo), alignment: 0);
+      await tester.pumpAndSettle(const Duration(milliseconds: 100));
+    }
     await expectLater(find.byType(MaterialApp), matchesGoldenFile('goldens/$name.png'));
   }
 
@@ -314,6 +322,38 @@ void main() {
       taskDetailProvider.overrideWith(() => _StubDetail(TaskDetailState(task: Task.fromJson(_tasks[0])))),
     ]),
     '03-chi-tiet-viec',
+  ));
+  testWidgets('03b chi tiet viec - trao doi', (t) => shoot(
+    t,
+    app(const TaskDetailPage(taskId: 't-1'), extra: [
+      taskDetailProvider.overrideWith(() => _StubDetail(TaskDetailState(task: Task.fromJson({
+        ..._tasks[0],
+        'comments_count': 5,
+        'comments': [
+          {
+            'id': 'c-1',
+            'body': 'QC không đạt: mặt búa số 32–40 chưa đều, còn vệt keo ở cụm giữa. Kéo về Đang phục chế, nhờ Luận xem lại.',
+            'user_name': 'Nguyễn Thị Hằng Ni',
+            'mentioned_user_names': ['Luận'],
+            'created_at': _iso(const Duration(hours: -3)),
+          },
+          {
+            'id': 'c-2',
+            'body': 'Đã nhận, chiều làm lại.',
+            'user_name': 'Luận',
+            'created_at': _iso(const Duration(minutes: -40)),
+          },
+          {
+            'id': 'c-3',
+            'body': 'Ảnh sau khi sửa đã gửi.',
+            'user_name': 'Luận',
+            'created_at': _iso(const Duration(minutes: -5)),
+          },
+        ],
+      })))),
+    ]),
+    '03b-chi-tiet-viec-trao-doi',
+    scrollTo: find.text('Trao đổi'),
   ));
   testWidgets('04 team du an', (t) => shoot(t, app(const TeamsPage()), '04-team-du-an'));
   testWidgets('05 bang du an', (t) => shoot(
