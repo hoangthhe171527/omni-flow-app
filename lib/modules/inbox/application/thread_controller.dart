@@ -301,6 +301,46 @@ class ThreadController
     return pinned;
   }
 
+  /// Applies a realtime delivery receipt (`message.status`) in place.
+  ///
+  /// A receipt changes one field of one message already on screen; refetching
+  /// a whole page of history for that was the single most frequent pointless
+  /// request an open thread made. Returns false when the receipt could NOT be
+  /// applied — the message is not loaded, or [wireStatus] is not a delivery
+  /// state (`recalled` changes content, not delivery) — so the caller falls
+  /// back to a refetch instead of silently dropping it.
+  bool applyStatus(String messageId, String wireStatus) {
+    final status = Message.parseStatus(wireStatus);
+    if (status == DeliveryStatus.none) return false;
+    final current = state.valueOrNull;
+    if (current == null) return false;
+    final index = current.messages.indexWhere((item) => item.id == messageId);
+    if (index < 0) return false;
+
+    // Receipts can arrive out of order; "đã xem" must not step back to "đã
+    // nhận". Handled (true) rather than refetched: the screen is already ahead.
+    final before = _deliveryRank(current.messages[index].status);
+    final after = _deliveryRank(status);
+    if (before > 0 && after > 0 && after < before) return true;
+
+    state = AsyncData(
+      current.copyWith(
+        messages: [
+          for (final item in current.messages)
+            item.id == messageId ? item.copyWith(status: status) : item,
+        ],
+      ),
+    );
+    return true;
+  }
+
+  static int _deliveryRank(DeliveryStatus status) => switch (status) {
+    DeliveryStatus.sent => 1,
+    DeliveryStatus.delivered => 2,
+    DeliveryStatus.read => 3,
+    _ => 0,
+  };
+
   void mergeMessages(List<Message> found) {
     final current = state.valueOrNull;
     if (current == null || found.isEmpty) return;

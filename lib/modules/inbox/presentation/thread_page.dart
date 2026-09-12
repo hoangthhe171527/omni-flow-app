@@ -154,19 +154,17 @@ class _ThreadPageState extends ConsumerState<ThreadPage>
 
   @override
   Widget build(BuildContext context) {
-    // The inbox list already listens to the foreground push signal, but an
-    // open thread must invalidate its own message provider too. Without this,
-    // FCM shows the notification while the conversation remains stale until a
-    // manual reload or the next fallback poll.
-    ref.listen<int>(inboxRealtimeSignalProvider, (previous, next) {
+    // Tín hiệu của RIÊNG hội thoại này — tin mới, khách đã xem, và cả FCM ở
+    // nền trước — gộp nhịp 400ms. Nghe nó cũng chính là mở kênh của nó. Biên
+    // nhận "đã xem" của một hội thoại KHÁC không còn kéo màn này tải lại, và
+    // biên nhận của chính nó được vá tại chỗ chứ không qua đây.
+    ref.listen<int>(threadSignalProvider(widget.conversationId), (
+      previous,
+      next,
+    ) {
       if (previous == next) return;
       _refreshThread();
     });
-
-    // Subscribes to this conversation's own stream for as long as the thread is
-    // open, so a delivery receipt or the customer's reply lands immediately
-    // rather than on the next poll.
-    ref.watch(conversationRealtimeSubscriptionProvider(widget.conversationId));
 
     final live =
         ref.watch(realtimeStatusProvider).valueOrNull ==

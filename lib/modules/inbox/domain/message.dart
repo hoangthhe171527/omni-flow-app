@@ -60,7 +60,7 @@ class Message {
       sentAt:
           DateUtilsX.parse(json['sent_at']) ??
           DateUtilsX.parse(json['created_at']),
-      status: _status(json.str('status')),
+      status: parseStatus(json.str('status')),
       error: json.str('error'),
       recalled: json.flag('recalled'),
       pinned: json.flag('pinned'),
@@ -154,7 +154,9 @@ class Message {
     return direction == 'out' ? MessageAuthor.agent : MessageAuthor.customer;
   }
 
-  static DeliveryStatus _status(String? value) => switch (value) {
+  /// Wire name → [DeliveryStatus]; unknown or null is [DeliveryStatus.none].
+  /// Public because realtime receipts (`message.status`) carry the same names.
+  static DeliveryStatus parseStatus(String? value) => switch (value) {
     'queued' => DeliveryStatus.queued,
     'sent' => DeliveryStatus.sent,
     'delivered' => DeliveryStatus.delivered,

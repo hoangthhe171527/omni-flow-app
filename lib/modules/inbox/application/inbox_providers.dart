@@ -6,6 +6,12 @@ import '../data/inbox_api.dart';
 import '../domain/conversation.dart';
 import '../domain/inbox_filter.dart';
 import '../domain/inbox_permissions.dart';
+import 'inbox_realtime.dart';
+
+/// Module notifications bấm tín hiệu FCM qua file này; nó đã dọn sang
+/// `inbox_realtime.dart` cùng hai tín hiệu gộp nhịp, nhưng vẫn ở đúng chỗ cũ
+/// đối với người import.
+export 'inbox_realtime.dart' show inboxRealtimeSignalProvider;
 
 final inboxAccessProvider = Provider<InboxAccess>((ref) {
   return InboxAccess.of(ref.watch(accessProvider));
@@ -60,10 +66,6 @@ final inboxUnreadBadgeProvider = Provider<int>((ref) {
   return ref.watch(inboxFacetsProvider).valueOrNull?.unread ?? 0;
 });
 
-/// Bumped by a foreground FCM notification. Screens that are open immediately
-/// reload their inbox data instead of waiting for a pull-to-refresh gesture.
-final inboxRealtimeSignalProvider = StateProvider<int>((ref) => 0);
-
 final inboxLabelsProvider = FutureProvider.autoDispose<List<String>>((ref) {
   return ref.watch(inboxApiProvider).labels();
 });
@@ -93,7 +95,8 @@ class InboxListController
     extends AutoDisposeAsyncNotifier<ConversationListState> {
   @override
   Future<ConversationListState> build() async {
-    ref.watch(inboxRealtimeSignalProvider);
+    // Theo dõi tín hiệu là ĐỦ — nó tự mở kênh tenant và gộp nhịp 400ms.
+    ref.watch(inboxListSignalProvider);
     final query = ref.watch(_inboxQueryProvider);
     final page = await ref.watch(inboxApiProvider).list(query: query);
     return ConversationListState(

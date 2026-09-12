@@ -121,19 +121,14 @@ class _InboxPageState extends ConsumerState<InboxPage>
 
   @override
   Widget build(BuildContext context) {
-    // Foreground FCM used to show an OS banner but leave the visible inbox
-    // stale until the user refreshed. Make the push signal update the list and
-    // its unread facets immediately, just like a native chat app.
-    ref.listen<int>(inboxRealtimeSignalProvider, (previous, next) {
+    // Một tín hiệu gộp nhịp cho cả danh sách lẫn số đếm. Danh sách tự tải lại
+    // vì `InboxListController` theo dõi tín hiệu này; ở đây chỉ còn số đếm.
+    // Trước đây chỗ này gọi thêm `refresh()` trong khi controller cũng đang
+    // dựng lại — hai lượt tải cho một sự kiện.
+    ref.listen<int>(inboxListSignalProvider, (previous, next) {
       if (previous == next || !mounted) return;
-      unawaited(ref.read(inboxListProvider.notifier).refresh());
       ref.invalidate(inboxFacetsProvider);
     });
-
-    // Holds the tenant inbox subscription open for as long as this screen is
-    // mounted. Watching it is what keeps the provider — and therefore the
-    // subscription — alive.
-    ref.watch(inboxRealtimeSubscriptionProvider);
 
     // A socket that drops has to put the poll back on its tight interval, and a
     // socket that comes up has to relax it again.
