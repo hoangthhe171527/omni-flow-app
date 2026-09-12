@@ -67,8 +67,7 @@ class OpportunityCard extends ConsumerWidget {
                       opportunity.title,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: OmniType.body.copyWith(
-                        fontSize: 16,
+                      style: OmniType.listTitle.copyWith(
                         height: 1.2,
                         color: scheme.onSurface,
                         fontWeight: FontWeight.w500,
@@ -80,8 +79,7 @@ class OpportunityCard extends ConsumerWidget {
                   // aligned, tabular, so the column reads straight down.
                   Text(
                     Formatters.vndCompact(opportunity.value),
-                    style: OmniType.body.copyWith(
-                      fontSize: 16,
+                    style: OmniType.listTitle.copyWith(
                       height: 1.2,
                       color: scheme.onSurface,
                       fontWeight: FontWeight.w600,
@@ -99,8 +97,7 @@ class OpportunityCard extends ConsumerWidget {
                 ].join(' · '),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: OmniType.caption.copyWith(
-                  fontSize: 14,
+                style: OmniType.body.copyWith(
                   height: 1.25,
                   color: overdue
                       ? OmniColors.destructive

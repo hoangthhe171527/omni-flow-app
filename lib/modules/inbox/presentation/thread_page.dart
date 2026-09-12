@@ -10,7 +10,7 @@ import '../../../design/components/components.dart';
 import '../../../design/platform/omni_motion_scope.dart';
 import '../../../design/tokens/tokens.dart';
 import '../../../core/realtime/realtime_client.dart';
-import '../../settings/presentation/widgets/surface_backdrop.dart';
+import '../../settings/settings.dart';
 import '../application/inbox_providers.dart';
 import '../application/inbox_realtime.dart';
 import '../application/thread_controller.dart';

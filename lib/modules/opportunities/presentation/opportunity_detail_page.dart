@@ -268,7 +268,6 @@ class _StageStepper extends StatelessWidget {
                   color: i <= currentIndex
                       ? scheme.primary
                       : scheme.onSurfaceVariant,
-                  fontSize: 10,
                 ),
               ),
             ],

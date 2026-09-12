@@ -13,14 +13,11 @@ import 'package:flutter_test/flutter_test.dart';
 /// Test chạy trên mã nguồn, không trên widget, nên nó bắt cả màn chưa có test.
 void main() {
   test('không file nào ngoài lib/design tự đặt fontSize', () {
-    // Miễn trừ có TÊN và có LÝ DO, không phải một regex nới lỏng. Hai file này
-    // nằm ngoài phạm vi nhánh perf-inbox (module opportunities do nhánh khác
-    // sửa song song) và được dọn ở lượt sau. Khi một file trong danh sách đã
-    // sạch, test dưới bắt phải xoá nó khỏi đây — danh sách chỉ được co lại.
-    const deferred = <String>{
-      'lib/modules/opportunities/presentation/opportunity_detail_page.dart',
-      'lib/modules/opportunities/presentation/widgets/opportunity_card.dart',
-    };
+    // Miễn trừ có TÊN và có LÝ DO, không phải một regex nới lỏng. Hiện đang
+    // RỖNG: hai file opportunities từng nằm đây đã được gom về thang. Khi một
+    // file trong danh sách đã sạch, test dưới bắt phải xoá nó khỏi đây — danh
+    // sách chỉ được co lại.
+    const deferred = <String>{};
 
     final pattern = RegExp(r'fontSize:\s*\d');
     final offenders = <String>[];
