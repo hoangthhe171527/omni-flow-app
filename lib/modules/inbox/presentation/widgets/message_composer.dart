@@ -66,17 +66,7 @@ class _MessageComposerState extends State<MessageComposer> {
   final List<XFile> _pendingImages = [];
 
   @override
-  void initState() {
-    super.initState();
-    // Drives the image↔send swap, so the button reflects what typing did.
-    _controller.addListener(_onTextChanged);
-  }
-
-  void _onTextChanged() => setState(() {});
-
-  @override
   void dispose() {
-    _controller.removeListener(_onTextChanged);
     _controller.dispose();
     _focus.dispose();
     super.dispose();
@@ -175,141 +165,156 @@ class _MessageComposerState extends State<MessageComposer> {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final isNote = _mode == ComposeMode.note;
-    final canSend =
-        _controller.text.trim().isNotEmpty || _pendingImages.isNotEmpty;
     final tint = isNote ? OmniColors.warning : OmniColors.chatPrimary;
 
-    return Container(
-      decoration: BoxDecoration(
-        color: scheme.surface,
-        border: Border(
-          top: BorderSide(color: scheme.outline.withValues(alpha: 0.5)),
+    // Lớp vẽ riêng: gõ phím, nháy con trỏ, đổi nút gửi — chỉ composer raster
+    // lại, danh sách tin nhắn và nền phía trên nó thì không.
+    return RepaintBoundary(
+      child: Container(
+        decoration: BoxDecoration(
+          color: scheme.surface,
+          border: Border(
+            top: BorderSide(color: scheme.outline.withValues(alpha: 0.5)),
+          ),
         ),
-      ),
-      child: SafeArea(
-        top: false,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            if (widget.replyTo != null)
-              _ReplyPreview(
-                message: widget.replyTo!,
-                onClose: widget.onCancelReply,
-              ),
-            // Note mode is a state you cannot miss: a labelled amber strip, not
-            // a toggle you have to remember to look at.
-            if (isNote)
-              Container(
-                width: double.infinity,
-                color: OmniColors.warning.withValues(alpha: 0.12),
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 14,
-                  vertical: 6,
+        child: SafeArea(
+          top: false,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (widget.replyTo != null)
+                _ReplyPreview(
+                  message: widget.replyTo!,
+                  onClose: widget.onCancelReply,
                 ),
+              // Note mode is a state you cannot miss: a labelled amber strip, not
+              // a toggle you have to remember to look at.
+              if (isNote)
+                Container(
+                  width: double.infinity,
+                  color: OmniColors.warning.withValues(alpha: 0.12),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 6,
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.sticky_note_2_outlined,
+                        size: OmniIconSize.xs,
+                        color: OmniColors.warningTextOf(context),
+                      ),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: Text(
+                          'Ghi chú nội bộ — khách KHÔNG nhìn thấy',
+                          style: OmniType.micro.copyWith(
+                            color: OmniColors.warningTextOf(context),
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                      GestureDetector(
+                        onTap: () => setState(() => _mode = ComposeMode.reply),
+                        child: Text(
+                          'Bỏ',
+                          style: OmniType.micro.copyWith(
+                            color: OmniColors.warningTextOf(context),
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              if (_pendingImages.isNotEmpty)
+                _ImageTray(
+                  images: _pendingImages,
+                  onRemove: (image) =>
+                      setState(() => _pendingImages.remove(image)),
+                ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(4, 6, 4, 6),
                 child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
-                    Icon(
-                      Icons.sticky_note_2_outlined,
-                      size: OmniIconSize.xs,
-                      color: OmniColors.warningTextOf(context),
+                    _ComposerIcon(
+                      icon: Icons.emoji_emotions_outlined,
+                      tooltip: 'Biểu tượng cảm xúc',
+                      onTap: widget.enabled ? _openEmoji : null,
                     ),
-                    const SizedBox(width: 6),
                     Expanded(
-                      child: Text(
-                        'Ghi chú nội bộ — khách KHÔNG nhìn thấy',
-                        style: OmniType.micro.copyWith(
-                          color: OmniColors.warningTextOf(context),
-                          fontWeight: FontWeight.w600,
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(maxHeight: 120),
+                        child: TextField(
+                          controller: _controller,
+                          focusNode: _focus,
+                          enabled: widget.enabled,
+                          minLines: 1,
+                          maxLines: null,
+                          textCapitalization: TextCapitalization.sentences,
+                          style: OmniType.body.copyWith(
+                            fontSize: 15,
+                            color: scheme.onSurface,
+                          ),
+                          decoration: InputDecoration(
+                            hintText: isNote ? 'Ghi chú nội bộ…' : 'Tin nhắn',
+                            hintStyle: OmniType.body.copyWith(
+                              fontSize: 15,
+                              color: scheme.onSurfaceVariant,
+                            ),
+                            isDense: true,
+                            filled: false,
+                            border: InputBorder.none,
+                            enabledBorder: InputBorder.none,
+                            focusedBorder: InputBorder.none,
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 6,
+                              vertical: 10,
+                            ),
+                          ),
+                          onSubmitted: (_) => _send(),
                         ),
                       ),
                     ),
-                    GestureDetector(
-                      onTap: () => setState(() => _mode = ComposeMode.reply),
-                      child: Text(
-                        'Bỏ',
-                        style: OmniType.micro.copyWith(
-                          color: OmniColors.warningTextOf(context),
-                          fontWeight: FontWeight.w700,
-                        ),
+                    if (!isNote)
+                      _ComposerIcon(
+                        icon: Icons.image_outlined,
+                        tooltip: 'Thêm ảnh',
+                        onTap: widget.enabled && !_sending ? _pickImages : null,
                       ),
+                    _ComposerIcon(
+                      icon: Icons.more_horiz_rounded,
+                      tooltip: 'Thêm',
+                      onTap: widget.enabled ? _openMore : null,
+                    ),
+                    // Zalo swaps the trailing icon for send the moment there is
+                    // something to send, so the primary action is never a second
+                    // button competing for the same corner.
+                    //
+                    // Chỉ cụm này nghe controller. Trước đây cả composer
+                    // `setState` theo từng ký tự chỉ để đổi nút này — dựng lại ô
+                    // nhập, khay ảnh, dải ghi chú cho một phím gõ.
+                    ValueListenableBuilder<TextEditingValue>(
+                      valueListenable: _controller,
+                      builder: (context, value, _) {
+                        final canSend =
+                            value.text.trim().isNotEmpty ||
+                            _pendingImages.isNotEmpty;
+                        return canSend || _sending
+                            ? _SendButton(
+                                sending: _sending,
+                                tint: tint,
+                                onTap: widget.enabled ? _send : null,
+                              )
+                            : const SizedBox.shrink();
+                      },
                     ),
                   ],
                 ),
               ),
-            if (_pendingImages.isNotEmpty)
-              _ImageTray(
-                images: _pendingImages,
-                onRemove: (image) =>
-                    setState(() => _pendingImages.remove(image)),
-              ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(4, 6, 4, 6),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  _ComposerIcon(
-                    icon: Icons.emoji_emotions_outlined,
-                    tooltip: 'Biểu tượng cảm xúc',
-                    onTap: widget.enabled ? _openEmoji : null,
-                  ),
-                  Expanded(
-                    child: ConstrainedBox(
-                      constraints: const BoxConstraints(maxHeight: 120),
-                      child: TextField(
-                        controller: _controller,
-                        focusNode: _focus,
-                        enabled: widget.enabled,
-                        minLines: 1,
-                        maxLines: null,
-                        textCapitalization: TextCapitalization.sentences,
-                        style: OmniType.body.copyWith(
-                          fontSize: 15,
-                          color: scheme.onSurface,
-                        ),
-                        decoration: InputDecoration(
-                          hintText: isNote ? 'Ghi chú nội bộ…' : 'Tin nhắn',
-                          hintStyle: OmniType.body.copyWith(
-                            fontSize: 15,
-                            color: scheme.onSurfaceVariant,
-                          ),
-                          isDense: true,
-                          filled: false,
-                          border: InputBorder.none,
-                          enabledBorder: InputBorder.none,
-                          focusedBorder: InputBorder.none,
-                          contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 6,
-                            vertical: 10,
-                          ),
-                        ),
-                        onSubmitted: (_) => _send(),
-                      ),
-                    ),
-                  ),
-                  if (!isNote)
-                    _ComposerIcon(
-                      icon: Icons.image_outlined,
-                      tooltip: 'Thêm ảnh',
-                      onTap: widget.enabled && !_sending ? _pickImages : null,
-                    ),
-                  _ComposerIcon(
-                    icon: Icons.more_horiz_rounded,
-                    tooltip: 'Thêm',
-                    onTap: widget.enabled ? _openMore : null,
-                  ),
-                  // Zalo swaps the trailing icon for send the moment there is
-                  // something to send, so the primary action is never a second
-                  // button competing for the same corner.
-                  if (canSend || _sending)
-                    _SendButton(
-                      sending: _sending,
-                      tint: tint,
-                      onTap: widget.enabled ? _send : null,
-                    ),
-                ],
-              ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

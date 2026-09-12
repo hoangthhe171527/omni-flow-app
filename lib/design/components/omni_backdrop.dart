@@ -20,19 +20,13 @@ class OmniBackdrop extends StatelessWidget {
     final spec = OmniBackdrops.specOf(name, theme.brightness);
     if (spec == null) return child;
 
-    final inner = spec.pattern == OmniBackdropPattern.none
-        ? child
-        : CustomPaint(
-            painter: _PatternPainter(
-              spec.pattern,
-              theme.colorScheme.onSurface.withValues(
-                alpha: OmniBackdrops.patternAlpha,
-              ),
-            ),
-            child: child,
-          );
-
-    return DecoratedBox(
+    // Nền là một lớp RIÊNG nằm dưới nội dung, không phải cái bọc nội dung.
+    //
+    // Trước đây CustomPaint ôm lấy child: mỗi lần nội dung vẽ lại — gõ một
+    // phím vào composer, cuộn danh sách một frame — là vẽ lại cả trăm nét hoạ
+    // tiết để ra đúng bức nền cũ. Tách ra một RepaintBoundary + isComplex thì
+    // raster một lần rồi chỉ composite; đổi kích thước hay đổi theme mới vẽ.
+    final backdrop = DecoratedBox(
       decoration: BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topCenter,
@@ -40,7 +34,32 @@ class OmniBackdrop extends StatelessWidget {
           colors: [spec.top, spec.bottom],
         ),
       ),
-      child: inner,
+      child: spec.pattern == OmniBackdropPattern.none
+          ? null
+          : CustomPaint(
+              size: Size.infinite,
+              isComplex: true,
+              willChange: false,
+              painter: _PatternPainter(
+                spec.pattern,
+                theme.colorScheme.onSurface.withValues(
+                  alpha: OmniBackdrops.patternAlpha,
+                ),
+              ),
+            ),
+    );
+
+    return Stack(
+      // passthrough: child nhận đúng ràng buộc như khi CustomPaint còn bọc nó,
+      // nên kích thước màn không đổi vì lần tách này. Không clip: trước đây
+      // cũng không.
+      fit: StackFit.passthrough,
+      clipBehavior: Clip.none,
+      alignment: Alignment.topLeft,
+      children: [
+        Positioned.fill(child: RepaintBoundary(child: backdrop)),
+        child,
+      ],
     );
   }
 }
