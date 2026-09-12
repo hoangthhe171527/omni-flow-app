@@ -4,53 +4,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../design/components/components.dart';
 import '../../../../design/tokens/tokens.dart';
 import '../../../team/team.dart';
+import '../../domain/board_person.dart';
 
-/// Ai đang được lọc trên bảng.
-///
-/// Ba trạng thái, không phải hai: [everyone] là không lọc, [unassigned] là
-/// những cây CHƯA AI NHẬN, và một id người là một người cụ thể. Trạng thái
-/// giữa mới là thứ §3 cần — xưởng chạy kiểu pull, nên "công đoạn nào đang
-/// trống" là câu hỏi người thợ hỏi mỗi lần rảnh tay, và trước nay chỉ trả lời
-/// được bằng cách lướt hết bảng đọc từng thẻ.
-sealed class BoardPerson {
-  const BoardPerson();
-
-  static const everyone = _Everyone();
-  static const unassigned = _Unassigned();
-
-  const factory BoardPerson.person(String userId, String name) = _Person;
-}
-
-final class _Everyone extends BoardPerson {
-  const _Everyone();
-}
-
-final class _Unassigned extends BoardPerson {
-  const _Unassigned();
-}
-
-final class _Person extends BoardPerson {
-  const _Person(this.userId, this.name);
-
-  final String userId;
-  final String name;
-}
-
-extension BoardPersonX on BoardPerson {
-  /// Nhãn trên chip đang lọc. null khi không lọc gì.
-  String? get chipLabel => switch (this) {
-    _Everyone() => null,
-    _Unassigned() => 'Chưa giao ai',
-    _Person(:final name) => name,
-  };
-
-  /// Cây đàn này có thuộc bộ lọc không.
-  bool matches(List<String> assigneeIds) => switch (this) {
-    _Everyone() => true,
-    _Unassigned() => assigneeIds.isEmpty,
-    _Person(:final userId) => assigneeIds.contains(userId),
-  };
-}
+export '../../domain/board_person.dart';
 
 /// Chọn người để lọc bảng.
 Future<BoardPerson?> showPersonFilterSheet(
@@ -91,13 +47,13 @@ class _PersonFilterSheet extends ConsumerWidget {
           _Row(
             icon: Icons.groups_outlined,
             label: 'Tất cả mọi người',
-            selected: current is _Everyone,
+            selected: current.isEveryone,
             onTap: () => Navigator.of(context).pop(BoardPerson.everyone),
           ),
           _Row(
             icon: Icons.person_add_alt_outlined,
             label: 'Chưa giao ai',
-            selected: current is _Unassigned,
+            selected: current.isUnassigned,
             onTap: () => Navigator.of(context).pop(BoardPerson.unassigned),
           ),
           const Divider(height: 1),
@@ -115,9 +71,7 @@ class _PersonFilterSheet extends ConsumerWidget {
                     _Row(
                       icon: Icons.person_outline_rounded,
                       label: member.name,
-                      selected:
-                          current is _Person &&
-                          (current as _Person).userId == member.userId,
+                      selected: current.userId == member.userId,
                       onTap: () => Navigator.of(
                         context,
                       ).pop(BoardPerson.person(member.userId, member.name)),

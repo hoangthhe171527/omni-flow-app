@@ -3,7 +3,9 @@ import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../tasks/application/tasks_providers.dart';
+import '../../tasks/domain/task.dart';
 import '../data/plans_api.dart';
+import '../domain/board_person.dart';
 import '../domain/plan.dart';
 import '../domain/workshop_kpi.dart';
 import '../domain/team.dart';
@@ -175,3 +177,109 @@ final workshopFeedProvider = FutureProvider.autoDispose<WorkshopFeed>((ref) {
 
   return ref.watch(plansApiProvider).feed(types: kFeedCompletionTypes);
 });
+
+/// Khoá của một bảng đang nhìn: dự án nào, lọc theo ai.
+///
+/// Record, nên hai khoá cùng giá trị là một — và [BoardPerson] có `==`.
+typedef BoardKey = ({String planId, BoardPerson person});
+
+/// Bảng đã lọc theo người và chia cột — kết quả của [boardBucketsProvider].
+class BoardBuckets {
+  const BoardBuckets({
+    required this.columns,
+    required this.buckets,
+    required this.truncated,
+  });
+
+  /// Chia việc vào cột theo `section_id`, sau khi lọc theo [person].
+  ///
+  /// Lọc TRƯỚC khi chia cột, nên con số cạnh tên nhóm việc là số việc của
+  /// người đang lọc chứ không phải của cả nhóm. Ngược lại thì cột ghi "8 việc"
+  /// mà chỉ vẽ ra 2 — và người đọc tin con số.
+  ///
+  /// Việc không thuộc nhóm nào — hoặc thuộc một nhóm đã bị xoá — rơi vào cột
+  /// ĐẦU chứ không bị bỏ đi. Một cây đàn không ai thấy là một cây đàn không ai
+  /// làm. Dự án chưa khai nhóm việc nào vẫn xem được: một cột duy nhất.
+  factory BoardBuckets.build(
+    PlanTasks loaded,
+    List<PlanSection> sections,
+    BoardPerson person,
+  ) {
+    final columns = sections.isEmpty
+        ? const [PlanSection(id: '', name: 'Tất cả công việc')]
+        : sections;
+    final byId = {for (var i = 0; i < columns.length; i++) columns[i].id: i};
+    final buckets = List.generate(columns.length, (_) => <Task>[]);
+
+    for (final task in loaded.tasks) {
+      if (!person.matches(task.assigneeIds)) continue;
+      buckets[byId[task.sectionId ?? ''] ?? 0].add(task);
+    }
+
+    return BoardBuckets(
+      columns: columns,
+      buckets: buckets,
+      truncated: loaded.truncated,
+    );
+  }
+
+  /// Các cột của bảng — ít nhất một.
+  final List<PlanSection> columns;
+
+  /// Việc của từng cột, thẳng hàng với [columns].
+  final List<List<Task>> buckets;
+
+  /// Dự án vượt trần [kMaxTasksOnBoard]: bảng chỉ vẽ được một phần.
+  final bool truncated;
+
+  int countOf(int index) => buckets[index].length;
+}
+
+/// Bảng đã lọc và chia cột, tính MỘT lần cho mỗi (dự án, bộ lọc).
+///
+/// Trước đây `_Board.build` lọc 500 việc rồi chia cột ở mỗi lần dựng lại —
+/// và nó dựng lại mỗi cú vuốt sang trang (setState cho chỉ báo), mỗi lần
+/// quyền đổi, mỗi lần cha dựng lại vì bất kỳ lý do gì. Ở đây chỉ tính lại khi
+/// việc, cột, hay bộ lọc đổi.
+///
+/// Trạng thái đang tải / lỗi của nguồn đi thẳng ra, KỂ CẢ khi đã có dữ liệu:
+/// tải lại theo realtime thì bảng vẫn vẽ rổ cũ (màn đọc `valueOrNull`), không
+/// nháy sang vòng xoay. `whenData` sẽ đánh rơi dữ liệu cũ đúng lúc đó.
+final boardBucketsProvider = Provider.autoDispose
+    .family<AsyncValue<BoardBuckets>, BoardKey>((ref, key) {
+      final sections =
+          ref.watch(
+            planProvider(
+              key.planId,
+            ).select((plan) => plan.valueOrNull?.sections),
+          ) ??
+          const <PlanSection>[];
+      final tasks = ref.watch(planTasksProvider(key.planId));
+      final loaded = tasks.valueOrNull;
+
+      if (loaded == null) {
+        return switch (tasks) {
+          AsyncError(:final error, :final stackTrace) => AsyncError(
+            error,
+            stackTrace,
+          ),
+          _ => const AsyncLoading(),
+        };
+      }
+
+      final built = AsyncData(BoardBuckets.build(loaded, sections, key.person));
+      if (tasks.isLoading) {
+        return const AsyncLoading<BoardBuckets>().copyWithPrevious(
+          built,
+          isRefresh: tasks.isRefreshing,
+        );
+      }
+      if (tasks.hasError) {
+        return AsyncError<BoardBuckets>(
+          tasks.error!,
+          tasks.stackTrace!,
+        ).copyWithPrevious(built);
+      }
+
+      return built;
+    }, name: 'boardBuckets');
