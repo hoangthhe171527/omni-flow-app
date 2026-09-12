@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../tasks/application/tasks_providers.dart';
@@ -78,16 +80,47 @@ final planProvider = FutureProvider.family<Plan, String>(
   (ref, id) => ref.watch(plansApiProvider).plan(id),
 );
 
+/// Quãng ân hạn trước khi bảng / KPI / dòng việc bị dọn sau khi rời màn.
+///
+/// Ba provider ấy theo dõi tín hiệu realtime — và KHÔNG autoDispose thì sau
+/// khi đóng bảng, mỗi tick ở xưởng vẫn kéo theo một lượt tải lại toàn bộ việc
+/// của dự án đó, cho một màn hình không ai còn nhìn. Mở mười bảng trong ngày
+/// là mười lượt tải lại cho mỗi sự kiện.
+///
+/// Không autoDispose trần: quản đốc mở một cây đàn ra xem rồi quay lại bảng
+/// trong vài giây, và bảng phải còn nguyên. Hai phút là đủ cho một lượt đi
+/// về như thế, và đủ ngắn để không giữ mười bảng cả buổi.
+const kBoardKeepAlive = Duration(minutes: 2);
+
+extension on Ref<Object?> {
+  /// Sống thêm [kBoardKeepAlive] sau khi người nghe cuối cùng rời đi.
+  void lingerAfterLastListener() {
+    final link = keepAlive();
+    final timer = Timer(kBoardKeepAlive, link.close);
+    // Đóng link CŨ mỗi lần rebuild, không chỉ huỷ timer: Riverpod không dọn
+    // danh sách link khi rebuild, nên một link còn mở mà timer của nó đã bị
+    // huỷ là một provider không bao giờ được dọn.
+    onDispose(() {
+      timer.cancel();
+      link.close();
+    });
+  }
+}
+
 /// Mọi việc trong một dự án — hết các trang, không chỉ trang đầu.
 ///
 /// Theo dõi [taskRealtimeSignalProvider]: hai người cùng mở bảng, một người
 /// chuyển công đoạn, và người kia phải thấy. Không có dòng này thì bảng đứng
 /// yên cho tới khi ai đó kéo để tải lại — và trên một bảng, "đứng yên" đọc
 /// giống hệt "không có gì thay đổi".
-final planTasksProvider = FutureProvider.family<PlanTasks, String>((
+///
+/// autoDispose có ân hạn (xem [kBoardKeepAlive]): rời màn đủ lâu thì tín hiệu
+/// realtime không còn kéo theo lượt tải lại nào cho bảng này nữa.
+final planTasksProvider = FutureProvider.autoDispose.family<PlanTasks, String>((
   ref,
   planId,
 ) {
+  ref.lingerAfterLastListener();
   ref.watch(taskRealtimeSignalProvider);
 
   return loadAllTasksInPlan(ref.watch(plansApiProvider), planId);
@@ -98,7 +131,8 @@ final planTasksProvider = FutureProvider.family<PlanTasks, String>((
 /// Tách khỏi [workshopFeedProvider]: hai lượt gọi mạng độc lập, và KPI phải
 /// quét nhật ký cả tháng trong khi dòng hoạt động chỉ lấy vài chục dòng mới
 /// nhất. Buộc chúng vào nhau là để cái chậm giữ cái nhanh lại.
-final workshopKpiProvider = FutureProvider<WorkshopKpi>((ref) {
+final workshopKpiProvider = FutureProvider.autoDispose<WorkshopKpi>((ref) {
+  ref.lingerAfterLastListener();
   ref.watch(taskRealtimeSignalProvider);
 
   return ref.watch(plansApiProvider).kpi(month: ref.watch(kpiMonthProvider));
@@ -135,7 +169,8 @@ final kpiPreviousDeliveredProvider = FutureProvider<int>((ref) async {
 });
 
 /// Chuyện gì vừa xảy ra ở xưởng — chỉ những việc đã đánh dấu xong.
-final workshopFeedProvider = FutureProvider<WorkshopFeed>((ref) {
+final workshopFeedProvider = FutureProvider.autoDispose<WorkshopFeed>((ref) {
+  ref.lingerAfterLastListener();
   ref.watch(taskRealtimeSignalProvider);
 
   return ref.watch(plansApiProvider).feed(types: kFeedCompletionTypes);
