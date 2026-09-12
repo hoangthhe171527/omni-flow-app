@@ -34,7 +34,15 @@ class _DirectoryPageState extends ConsumerState<DirectoryPage> {
 
   @override
   Widget build(BuildContext context) {
-    final session = ref.watch(sessionProvider);
+    // `select` từng trường: màn này vẽ tên, ảnh, vai và tên xưởng — không
+    // phải cả phiên. Theo dõi cả Session là dựng lại toàn bộ danh bạ mỗi khi
+    // phiên đổi bất kỳ trường nào (token xoay, quyền tải lại).
+    final displayName = ref.watch(sessionProvider.select((s) => s.displayName));
+    final avatarUrl = ref.watch(
+      sessionProvider.select((s) => s.user?.avatarUrl),
+    );
+    final roleLabel = ref.watch(sessionProvider.select((s) => s.roleLabel));
+    final tenantName = ref.watch(sessionProvider.select((s) => s.tenant?.name));
     final groups = _filtered(ref.watch(directoryGroupsProvider), _query);
     final scheme = Theme.of(context).colorScheme;
 
@@ -55,8 +63,8 @@ class _DirectoryPageState extends ConsumerState<DirectoryPage> {
                 child: Row(
                   children: [
                     OmniAvatar(
-                      name: session.displayName,
-                      imageUrl: session.user?.avatarUrl,
+                      name: displayName,
+                      imageUrl: avatarUrl,
                       size: OmniIconSize.hero,
                     ),
                     const SizedBox(width: OmniSpacing.md),
@@ -65,14 +73,14 @@ class _DirectoryPageState extends ConsumerState<DirectoryPage> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            session.displayName,
+                            displayName,
                             style: OmniType.bodyStrong.copyWith(
                               color: scheme.onSurface,
                             ),
                           ),
                           const SizedBox(height: 2),
                           Text(
-                            session.roleLabel,
+                            roleLabel,
                             style: OmniType.caption.copyWith(
                               color: scheme.onSurfaceVariant,
                             ),
@@ -108,7 +116,7 @@ class _DirectoryPageState extends ConsumerState<DirectoryPage> {
                             ),
                           ),
                           Text(
-                            session.tenant?.name ?? '—',
+                            tenantName ?? '—',
                             style: OmniType.caption.copyWith(
                               color: scheme.onSurface,
                               fontWeight: FontWeight.w600,

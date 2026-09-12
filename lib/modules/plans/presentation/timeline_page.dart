@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -8,6 +9,7 @@ import '../../../design/tokens/tokens.dart';
 import '../../tasks/application/tasks_providers.dart';
 import '../../tasks/routes.dart';
 import '../application/plans_providers.dart';
+import '../data/plans_api.dart';
 import '../domain/day_group.dart';
 import '../domain/feed_entry.dart';
 import '../routes.dart';
@@ -38,12 +40,47 @@ class TimelinePage extends ConsumerStatefulWidget {
 }
 
 class _TimelinePageState extends ConsumerState<TimelinePage> {
-  /// Id những dòng đã vẽ ở lần dựng trước.
+  /// Id các dòng của lần feed GẦN NHẤT đã về.
   ///
-  /// Dòng KHÔNG nằm trong tập này là dòng vừa tới qua realtime, và chỉ nó được
-  /// chạy hiệu ứng. Animate cả danh sách mỗi lần tải lại thì màn hình nhấp nháy
-  /// mỗi khi ai đó tick một việc — khó chịu hơn là không có hiệu ứng gì.
-  final Set<String> _seen = {};
+  /// Đúng những id đang có, không hơn: bản trước là một tập "đã thấy" chỉ có
+  /// thêm không có bớt, phình theo phiên và nhớ cả những dòng đã rời khỏi cửa
+  /// sổ bảy ngày — nên một dòng rời đi rồi quay lại không bao giờ "mới" nữa.
+  Set<String> _known = const {};
+
+  /// Dòng vừa tới ở lần feed đổi gần nhất — CHỈ những dòng này chạy hiệu ứng.
+  ///
+  /// Tính KHI FEED ĐỔI (listener bên dưới), không tính trong build: build chạy
+  /// lại vì cuộn, vì đổi theme, vì cha dựng lại — và mỗi lần như thế câu trả
+  /// lời không được đổi. Bản trước ghi vào tập "đã thấy" ngay trong
+  /// `itemBuilder`, nên lần dựng thứ hai là dòng đang mờ dần đứng phắt lại.
+  /// Animate cả danh sách mỗi lần tải lại thì màn hình nhấp nháy mỗi khi ai
+  /// đó tick một việc — khó chịu hơn là không có hiệu ứng gì.
+  Set<String> _fresh = const {};
+
+  @override
+  void initState() {
+    super.initState();
+    // Feed có thể đã nằm sẵn trong provider (quay lại tab): những dòng đó
+    // không phải "vừa tới".
+    _known = _idsOf(ref.read(workshopFeedProvider));
+    ref.listenManual(workshopFeedProvider, (_, next) {
+      final ids = _idsOf(next);
+      // Lần đầu có dữ liệu: không dòng nào mới — cả danh sách cùng hiện.
+      final fresh = _known.isEmpty ? const <String>{} : ids.difference(_known);
+      if (setEquals(ids, _known) && setEquals(fresh, _fresh)) return;
+      setState(() {
+        _known = ids;
+        _fresh = fresh;
+      });
+    });
+  }
+
+  /// Id đang có trong [feed]; rỗng khi chưa có dữ liệu. Lúc đang tải lại,
+  /// `valueOrNull` vẫn là bản trước nên tập không thay đổi — không nhấp nháy.
+  static Set<String> _idsOf(AsyncValue<WorkshopFeed> feed) => {
+    for (final entry in feed.valueOrNull?.entries ?? const <FeedEntry>[])
+      entry.id,
+  };
 
   @override
   Widget build(BuildContext context) {
@@ -79,7 +116,7 @@ class _TimelinePageState extends ConsumerState<TimelinePage> {
             groups: groups,
             isAssigner: isAssigner,
             truncated: data?.truncated ?? false,
-            seen: _seen,
+            fresh: _fresh,
           ),
         },
       ),
@@ -92,13 +129,15 @@ class _Feed extends ConsumerWidget {
     required this.groups,
     required this.isAssigner,
     required this.truncated,
-    required this.seen,
+    required this.fresh,
   });
 
   final List<DayGroup> groups;
   final bool isAssigner;
   final bool truncated;
-  final Set<String> seen;
+
+  /// Dòng vừa tới, đã tính sẵn; bất biến trong suốt lần dựng này.
+  final Set<String> fresh;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -145,12 +184,10 @@ class _Feed extends ConsumerWidget {
               itemCount: group.entries.length,
               itemBuilder: (context, index) {
                 final entry = group.entries[index];
-                final isNew = seen.isNotEmpty && !seen.contains(entry.id);
-                seen.add(entry.id);
 
                 return _SlideInOnce(
                   key: ValueKey(entry.id),
-                  enabled: isNew,
+                  enabled: fresh.contains(entry.id),
                   child: _Row(entry: entry),
                 );
               },

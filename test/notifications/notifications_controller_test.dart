@@ -4,6 +4,8 @@ import 'package:omni_app/core/network/api_envelope.dart';
 import 'package:omni_app/modules/notifications/application/notifications_providers.dart';
 import 'package:omni_app/modules/notifications/data/notifications_api.dart';
 import 'package:omni_app/modules/notifications/domain/app_notification.dart';
+import 'package:omni_app/security/session/session.dart';
+import 'package:omni_app/security/session/session_controller.dart';
 
 /// The bell's two jobs: stay current, and clear its own dot.
 void main() {
@@ -15,7 +17,13 @@ void main() {
   setUp(() {
     api = _FakeNotificationsApi();
     container = ProviderContainer(
-      overrides: [notificationsApiProvider.overrideWithValue(api)],
+      overrides: [
+        notificationsApiProvider.overrideWithValue(api),
+        // The bell count keeps the user's realtime channel open, which reads
+        // the session. The real controller would start a secure-storage read
+        // that fails asynchronously and lands on the NEXT test.
+        sessionProvider.overrideWithValue(const Session.unauthenticated()),
+      ],
     );
   });
 
@@ -50,17 +58,23 @@ void main() {
       expect(read().items, hasLength(2));
     });
 
-    test('the unread count is what the badge shows', () async {
-      api.rows = [
-        _row('n1', 'a'),
-        _row('n2', 'b', readAt: '2026-09-05T08:00:00Z'),
-        _row('n3', 'c'),
-      ];
-      await open();
+    test(
+      'the list keeps its own unread count; the badge asks the server',
+      () async {
+        api.rows = [
+          _row('n1', 'a'),
+          _row('n2', 'b', readAt: '2026-09-05T08:00:00Z'),
+          _row('n3', 'c'),
+        ];
+        // The server counts across every page, not just the one on screen.
+        api.unread = 5;
+        await open();
 
-      expect(read().unreadCount, 2);
-      expect(container.read(unreadNotificationCountProvider), 2);
-    });
+        expect(read().unreadCount, 2);
+        container.listen(unreadNotificationCountProvider, (_, _) {});
+        expect(await container.read(unreadNotificationCountProvider.future), 5);
+      },
+    );
   });
 
   group('marking read', () {
@@ -152,6 +166,14 @@ class _FakeNotificationsApi implements NotificationsApi {
   bool failWrites = false;
   final List<String> markedRead = [];
   int markedAll = 0;
+  int unread = 0;
+
+  @override
+  Future<int> unreadCount() async {
+    if (failReads) throw Exception('offline');
+
+    return unread;
+  }
 
   @override
   Future<Paged<AppNotification>> list({

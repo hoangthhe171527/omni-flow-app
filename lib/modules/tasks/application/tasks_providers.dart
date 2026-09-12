@@ -120,6 +120,8 @@ class MyTasksController extends AutoDisposeAsyncNotifier<TaskListState> {
   }
 
   Future<void> refresh() async {
+    // Kéo để tải lại là "cho tôi con số mới": badge trên tab đi cùng.
+    ref.invalidate(taskOverdueCountProvider);
     state = await AsyncValue.guard(build);
   }
 
@@ -227,13 +229,29 @@ final taskSearchProvider = FutureProvider.autoDispose<List<Task>>((ref) async {
   return page.items;
 });
 
-/// Count for the tab badge: work that is late or due today.
+/// Số việc TRỄ của người đang đăng nhập, server đếm.
+///
+/// Không đọc [myTasksProvider]: badge từng là số việc trễ trên TRANG ĐẦU của
+/// RỔ ĐANG XEM — đứng ở "Sắp tới" thì badge là 0 dù có ba việc trễ. Và vì
+/// thanh tab theo dõi badge suốt phiên, `myTasksProvider` khai autoDispose mà
+/// không bao giờ được dọn: mỗi tín hiệu realtime là một lượt tải lại danh
+/// sách cho một tab có thể đang không mở.
+///
+/// null user (chưa đăng nhập) → 0, không gọi mạng.
+final taskOverdueCountProvider = FutureProvider.autoDispose<int>((ref) async {
+  final userId = ref.watch(sessionProvider.select((s) => s.user?.id));
+  if (userId == null || userId.isEmpty) return 0;
+
+  ref.watch(taskRealtimeSignalProvider);
+
+  return ref.watch(tasksApiProvider).overdueCount(userId);
+});
+
+/// Count for the tab badge: work that is late.
 ///
 /// Deliberately not "everything assigned to me" — a badge showing 40 is
-/// wallpaper, one showing 3 is a prompt.
-final taskBadgeProvider = Provider<int>((ref) {
-  final tasks = ref.watch(myTasksProvider).valueOrNull;
-  if (tasks == null) return 0;
-
-  return tasks.items.where((task) => task.isOverdue || task.isDueToday).length;
+/// wallpaper, one showing 3 is a prompt. Giữ con số cũ trong lúc đếm lại, để
+/// badge không nháy về 0 mỗi lần realtime bơm tín hiệu.
+final taskBadgeProvider = Provider.autoDispose<int>((ref) {
+  return ref.watch(taskOverdueCountProvider).valueOrNull ?? 0;
 });

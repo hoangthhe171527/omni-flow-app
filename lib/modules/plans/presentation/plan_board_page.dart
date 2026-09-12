@@ -40,7 +40,10 @@ class PlanBoardPage extends ConsumerStatefulWidget {
 class _PlanBoardPageState extends ConsumerState<PlanBoardPage> {
   // viewportFraction mặc định là 1.0 — cố ý không đổi. Xem doc của lớp.
   final _controller = PageController();
-  int _current = 0;
+
+  /// Trang đang đứng. ValueNotifier chứ không setState: một cú vuốt chỉ đổi
+  /// viên đang sáng trên dải chỉ báo, không việc gì phải dựng lại cả bảng.
+  final _current = ValueNotifier<int>(0);
 
   /// Đang lọc theo ai. Sống trong State của màn chứ không trong một provider
   /// toàn cục: đây là cách người dùng đang NHÌN một cái bảng, không phải một
@@ -51,13 +54,15 @@ class _PlanBoardPageState extends ConsumerState<PlanBoardPage> {
   @override
   void dispose() {
     _controller.dispose();
+    _current.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
+    // Không theo dõi việc ở đây: `_Board` tự đọc rổ đã chia từ provider, nên
+    // realtime đổi việc chỉ dựng lại bảng, không dựng lại AppBar và nút tạo.
     final plan = ref.watch(planProvider(widget.planId));
-    final tasks = ref.watch(planTasksProvider(widget.planId));
 
     final loaded = plan.valueOrNull;
 
@@ -106,10 +111,8 @@ class _PlanBoardPageState extends ConsumerState<PlanBoardPage> {
         onRetry: () => ref.invalidate(planProvider(widget.planId)),
         data: (plan) => _Board(
           plan: plan,
-          tasks: tasks,
           controller: _controller,
-          current: _current.clamp(0, _columnCount(plan) - 1),
-          onPage: (index) => setState(() => _current = index),
+          current: _current,
           onRetryTasks: () => ref.invalidate(planTasksProvider(widget.planId)),
           person: _person,
           onClearPerson: () => setState(() => _person = BoardPerson.everyone),
@@ -137,7 +140,7 @@ class _PlanBoardPageState extends ConsumerState<PlanBoardPage> {
   /// Mở màn tạo việc với dự án + cột đang đứng điền sẵn.
   Future<void> _createTask(Plan plan) async {
     final sections = plan.sections;
-    final current = _current.clamp(0, _columnCount(plan) - 1);
+    final current = _current.value.clamp(0, _columnCount(plan) - 1);
 
     final created = await context.pushNamed<String>(
       TaskRoutes.create,
@@ -160,62 +163,57 @@ class _PlanBoardPageState extends ConsumerState<PlanBoardPage> {
   }
 }
 
-class _Board extends StatelessWidget {
+/// Bảng: dải chỉ báo + các cột lướt ngang, vẽ từ rổ đã chia trong provider.
+class _Board extends ConsumerWidget {
   const _Board({
     required this.plan,
-    required this.tasks,
     required this.controller,
     required this.current,
-    required this.onPage,
     required this.onRetryTasks,
     required this.person,
     required this.onClearPerson,
   });
 
   final Plan plan;
-  final AsyncValue<PlanTasks> tasks;
   final PageController controller;
-  final int current;
-  final ValueChanged<int> onPage;
+
+  /// Trang đang đứng; chỉ dải chỉ báo nghe nó.
+  final ValueNotifier<int> current;
   final VoidCallback onRetryTasks;
   final BoardPerson person;
   final VoidCallback onClearPerson;
 
-  /// Một dự án chưa khai báo nhóm việc nào vẫn phải xem được: một cột duy
-  /// nhất, chứa tất cả.
-  List<PlanSection> get _columns => plan.sections.isEmpty
-      ? const [PlanSection(id: '', name: 'Tất cả công việc')]
-      : plan.sections;
-
   @override
-  Widget build(BuildContext context) {
-    final columns = _columns;
+  Widget build(BuildContext context, WidgetRef ref) {
+    // Lọc và chia cột đã xong trong provider — tính một lần cho mỗi (dự án,
+    // bộ lọc), không phải mỗi lần widget này dựng lại.
+    final buckets = ref.watch(
+      boardBucketsProvider((planId: plan.id, person: person)),
+    );
 
     return OmniAsyncView(
-      value: tasks,
+      value: buckets,
       onRetry: onRetryTasks,
-      data: (loaded) {
-        // Lọc TRƯỚC khi chia cột, nên con số cạnh tên nhóm việc là số việc
-        // của người đang lọc chứ không phải của cả nhóm. Ngược lại thì cột
-        // ghi "8 việc" mà chỉ vẽ ra 2 — và người đọc tin con số.
-        final visible = loaded.tasks
-            .where((t) => person.matches(t.assigneeIds))
-            .toList();
-        final buckets = _bucket(visible, columns);
+      data: (board) {
+        final columns = board.columns;
 
         return Column(
           children: [
-            if (loaded.truncated) const _TruncatedNotice(),
+            if (board.truncated) const _TruncatedNotice(),
             if (person.chipLabel case final String label)
               _FilterBar(label: label, onClear: onClearPerson),
-            SectionIndicator(
-              sections: columns,
-              current: current,
-              countOf: (i) => buckets[i].length,
-              // goTo nhảy thay vì trượt khi người dùng đã tắt hiệu ứng. Bảng
-              // lướt ngang toàn màn hình là đúng loại chuyển động mà cài đặt
-              // đó nhắm tới.
-              onSelected: (i) => controller.goTo(context, i),
+            // Chỉ dải chỉ báo dựng lại khi lướt trang; các cột đứng yên.
+            ValueListenableBuilder<int>(
+              valueListenable: current,
+              builder: (context, index, _) => SectionIndicator(
+                sections: columns,
+                current: index.clamp(0, columns.length - 1),
+                countOf: board.countOf,
+                // goTo nhảy thay vì trượt khi người dùng đã tắt hiệu ứng. Bảng
+                // lướt ngang toàn màn hình là đúng loại chuyển động mà cài đặt
+                // đó nhắm tới.
+                onSelected: (i) => controller.goTo(context, i),
+              ),
             ),
             Expanded(
               // Nền cả app nằm SAU các cột, không sau dải nhóm việc: dải và
@@ -223,11 +221,11 @@ class _Board extends StatelessWidget {
               child: SurfaceBackdrop(
                 child: PageView.builder(
                   controller: controller,
-                  onPageChanged: onPage,
+                  onPageChanged: (index) => current.value = index,
                   itemCount: columns.length,
                   itemBuilder: (context, index) => _Column(
                     section: columns[index],
-                    tasks: buckets[index],
+                    tasks: board.buckets[index],
                     filteredBy: person.chipLabel,
                   ),
                 ),
@@ -237,22 +235,6 @@ class _Board extends StatelessWidget {
         );
       },
     );
-  }
-
-  /// Chia việc vào cột theo `section_id`.
-  ///
-  /// Việc không thuộc nhóm nào — hoặc thuộc một nhóm đã bị xoá — rơi vào cột
-  /// ĐẦU chứ không bị bỏ đi. Một cây đàn không ai thấy là một cây đàn không ai
-  /// làm.
-  List<List<Task>> _bucket(List<Task> all, List<PlanSection> columns) {
-    final byId = {for (var i = 0; i < columns.length; i++) columns[i].id: i};
-    final buckets = List.generate(columns.length, (_) => <Task>[]);
-
-    for (final task in all) {
-      buckets[byId[task.sectionId ?? ''] ?? 0].add(task);
-    }
-
-    return buckets;
   }
 }
 

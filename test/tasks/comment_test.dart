@@ -135,9 +135,11 @@ void main() {
     expect(find.text('Chưa đạt phần đồng.'), findsNothing);
   });
 
-  testWidgets('nói ra phần bị cắt bớt thay vì im lặng giấu đi', (tester) async {
+  testWidgets('phần bị cắt bớt có nút xem thêm, không còn "xem trên web"', (
+    tester,
+  ) async {
     // API chỉ trả về phần mới nhất. Không nói ra thì người đọc tưởng đó là
-    // toàn bộ cuộc trao đổi.
+    // toàn bộ cuộc trao đổi — và bảo họ mở web là bảo họ đừng đọc.
     await tester.pumpWidget(
       host(
         task(
@@ -148,7 +150,8 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.textContaining('Còn 11 bình luận cũ hơn'), findsOneWidget);
+    expect(find.text('Xem thêm 11 bình luận cũ hơn'), findsOneWidget);
+    expect(find.textContaining('xem trên web'), findsNothing);
   });
 
   testWidgets('không có quyền ghi và chưa có bình luận thì không chiếm chỗ', (

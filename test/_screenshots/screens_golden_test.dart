@@ -244,6 +244,12 @@ class _StubTasksApi implements TasksApi {
 
 class _StubNotificationsApi implements NotificationsApi {
   @override
+  Future<int> unreadCount() async => _notifications
+      .map(AppNotification.fromJson)
+      .where((n) => n.isUnread)
+      .length;
+
+  @override
   Future<Paged<AppNotification>> list({
     int page = 1,
     int perPage = 20,

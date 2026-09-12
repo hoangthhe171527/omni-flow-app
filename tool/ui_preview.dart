@@ -168,6 +168,13 @@ class _StubTasksApi implements TasksApi {
   final _rows = [..._tasks];
 
   @override
+  Future<Paged<TaskComment>> comments(
+    String taskId, {
+    int page = 1,
+    int perPage = 20,
+  }) async => const Paged.empty();
+
+  @override
   Future<Paged<Task>> mine({
     required TaskBucket bucket,
     int page = 1,
@@ -406,6 +413,10 @@ class _StubTasksApi implements TasksApi {
 
 class _StubNotificationsApi implements NotificationsApi {
   final _rows = [..._notifications];
+
+  @override
+  Future<int> unreadCount() async =>
+      _rows.where((row) => row['read_at'] == null).length;
 
   @override
   Future<Paged<AppNotification>> list({

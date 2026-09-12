@@ -1,7 +1,9 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 
 import '../../core/utils/avatar_url.dart';
 import '../../core/utils/formatters.dart';
+import '../platform/omni_motion_scope.dart';
 import '../tokens/tokens.dart';
 
 /// Circular avatar with a deterministic coloured initials fallback.
@@ -39,6 +41,7 @@ class OmniAvatar extends StatelessWidget {
         fontWeight: FontWeight.w700,
       ),
     );
+    final motion = OmniMotion.of(context);
     final avatar = Container(
       width: size,
       height: size,
@@ -49,14 +52,30 @@ class OmniAvatar extends StatelessWidget {
       alignment: Alignment.center,
       child: resolvedImageUrl != null
           ? ClipOval(
-              child: Image.network(
-                resolvedImageUrl,
+              // Bộ nhớ đệm ĐĨA, không chỉ bộ nhớ: cùng một khuôn mặt hiện ở
+              // mười chỗ, và `Image.network` tải lại nó mỗi lần bị đẩy khỏi
+              // bộ nhớ đệm — ngoài xưởng sóng yếu là những vòng tròn trống.
+              child: CachedNetworkImage(
+                imageUrl: resolvedImageUrl,
                 width: size,
                 height: size,
                 fit: BoxFit.cover,
+                // Giải mã ở ĐÚNG cỡ vẽ. Avatar Zalo là 640×640 và thẻ việc vẽ
+                // nó ở 24dp: giải mã cỡ gốc là 1,6 MB bitmap cho một vòng
+                // tròn 72 điểm ảnh, nhân với hai người trên mỗi thẻ của một
+                // danh sách 30 việc. Chỉ khoá chiều rộng — đặt cả hai chiều
+                // là bóp một ảnh không vuông thành hình vuông trước khi cắt.
+                memCacheWidth: (size * MediaQuery.devicePixelRatioOf(context))
+                    .round(),
+                fadeInDuration: motion.fast,
+                fadeOutDuration: motion.fast,
+                // Chữ tắt đứng chỗ trong lúc tải: cùng màu, cùng cỡ, nên ảnh
+                // tới thì chỉ có khuôn mặt thay vào — không nhảy, không trống.
+                placeholderFadeInDuration: Duration.zero,
+                placeholder: (_, _) => fallback,
                 // Android can reject an expired platform URL or an unavailable
                 // mirror. Never leave a blank circle when that happens.
-                errorBuilder: (_, _, _) => fallback,
+                errorWidget: (_, _, _) => fallback,
               ),
             )
           : fallback,

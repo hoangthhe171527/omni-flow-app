@@ -9,6 +9,10 @@ abstract final class Formatters {
   static final _time = DateFormat('HH:mm', 'vi_VN');
   static final _dayHeader = DateFormat("EEEE, dd 'th'MM", 'vi_VN');
 
+  /// Biên dịch MỘT lần: [initials] chạy trong build của mọi avatar trên màn,
+  /// và `RegExp(...)` inline là biên dịch lại biểu thức cho mỗi khung hình.
+  static final _whitespace = RegExp(r'\s+');
+
   /// `34990000` → `34.990.000đ`
   static String vnd(num? amount) {
     if (amount == null) return '—';
@@ -72,7 +76,7 @@ abstract final class Formatters {
 
   /// Two-letter avatar fallback: "Nguyễn Thu Hà" → "TH".
   static String initials(String? name) {
-    final parts = (name ?? '').trim().split(RegExp(r'\s+'))
+    final parts = (name ?? '').trim().split(_whitespace)
       ..removeWhere((p) => p.isEmpty);
     if (parts.isEmpty) return '?';
     if (parts.length == 1) return parts.first.characters2();

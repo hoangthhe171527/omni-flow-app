@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:omni_app/design/theme/omni_theme.dart';
 import 'package:omni_app/design/tokens/tokens.dart';
+import 'package:omni_app/modules/tasks/application/task_controller.dart';
 import 'package:omni_app/modules/tasks/domain/task.dart';
 import 'package:omni_app/modules/tasks/presentation/widgets/comment_section.dart';
 
@@ -29,7 +30,10 @@ void main() {
     'comments_count': 1,
   });
 
+  // Khối trao đổi đọc bình luận qua provider, và provider ấy lấy hạt giống từ
+  // controller chi tiết: phải có một controller giả, không thì nó gọi API thật.
   Widget host() => ProviderScope(
+    overrides: [taskDetailProvider.overrideWith(() => _StubDetail(task))],
     child: MaterialApp(
       theme: OmniTheme.light(TargetPlatform.android),
       home: Scaffold(
@@ -94,4 +98,15 @@ void main() {
 
     expect(own.style?.color, scheme.onSurface);
   });
+}
+
+/// Trả về một trạng thái cố định, không gọi API.
+class _StubDetail extends TaskController {
+  _StubDetail(this._task);
+
+  final Task _task;
+
+  @override
+  Future<TaskDetailState> build(String arg) async =>
+      TaskDetailState(task: _task);
 }

@@ -111,6 +111,8 @@ class NotificationsController
 
     try {
       await ref.read(notificationsApiProvider).markRead(id);
+      // Chuông đếm ở server; server vừa đổi, nên hỏi lại nó.
+      ref.invalidate(unreadNotificationCountProvider);
     } catch (_) {
       state = AsyncData(current);
     }
@@ -129,6 +131,7 @@ class NotificationsController
 
     try {
       await ref.read(notificationsApiProvider).markAllRead();
+      ref.invalidate(unreadNotificationCountProvider);
     } catch (_) {
       state = AsyncData(current);
     }
@@ -141,7 +144,18 @@ final notificationsProvider =
       NotificationListState
     >(NotificationsController.new);
 
-/// Unread count for the bell badge.
-final unreadNotificationCountProvider = Provider<int>((ref) {
-  return ref.watch(notificationsProvider).valueOrNull?.unreadCount ?? 0;
+/// Số trên chuông, đếm ở SERVER.
+///
+/// Không đọc [notificationsProvider]: chuông hiện trên màn "Việc của tôi" cả
+/// phiên, nên đếm qua danh sách là nạp và giữ 20 bản ghi đầy đủ để vẽ một chữ
+/// số — và con số ấy sai ngay khi dòng chưa đọc nằm ở trang hai. Một lượt gọi
+/// đếm thì rẻ, đúng, và tự dọn khi không còn chuông nào nhìn nó.
+///
+/// Theo dõi [notificationRealtimeProvider] để chuông SỐNG: kênh riêng của
+/// người dùng mở ra ngay khi chuông hiện, không đợi tới lúc mở màn thông báo.
+final unreadNotificationCountProvider = FutureProvider.autoDispose<int>((ref) {
+  ref.watch(notificationRealtimeProvider);
+  ref.watch(notificationSignalProvider);
+
+  return ref.watch(notificationsApiProvider).unreadCount();
 });

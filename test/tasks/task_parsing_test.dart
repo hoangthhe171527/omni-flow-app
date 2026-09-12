@@ -130,6 +130,52 @@ void main() {
     });
   });
 
+  group('URL ảnh người chuẩn hoá LÚC PARSE', () {
+    // Ảnh người được vẽ ở hàng chục chỗ (thẻ, công đoạn, bình luận, đã xem),
+    // và mỗi chỗ từng tự chuẩn hoá URL trong build. Làm một lần khi đọc JSON:
+    // mọi nơi chỉ việc vẽ, và một chỗ quên chuẩn hoá không còn là một vòng
+    // tròn trống trên Android.
+    const relative = '/api/v1/inbox/avatar/hn.png';
+    const absolute =
+        'https://omni-api.app.sunriseieco.vn/api/v1/inbox/avatar/hn.png';
+
+    test('assignee_avatars: tuyệt đối, null giữ chỗ VẪN null', () {
+      final task = Task.fromJson({
+        'id': 't1',
+        'title': 'x',
+        'assignee_ids': ['u1', 'u2'],
+        'assignee_avatars': [relative, null],
+      });
+
+      expect(task.assigneeAvatars, [absolute, null]);
+    });
+
+    test('việc con, bình luận và đã xem cũng tuyệt đối', () {
+      final task = Task.fromJson({
+        'id': 't1',
+        'title': 'x',
+        'checklist': [
+          {
+            'id': 's1',
+            'title': 'Sơn',
+            'done': false,
+            'assignee_avatar': relative,
+          },
+        ],
+        'comments': [
+          {'id': 'c1', 'body': 'x', 'user_avatar': relative},
+        ],
+        'viewers': [
+          {'user_id': 'u1', 'avatar': relative},
+        ],
+      });
+
+      expect(task.subtasks.single.assigneeAvatar, absolute);
+      expect(task.comments.single.userAvatar, absolute);
+      expect(task.viewers.single.avatar, absolute);
+    });
+  });
+
   group('đếm đính kèm', () {
     test('không có attachments_count thì đếm mảng attachments', () {
       // API KHÔNG BAO GIỜ gửi `attachments_count` (xem ghi chú ở TaskAttachment);

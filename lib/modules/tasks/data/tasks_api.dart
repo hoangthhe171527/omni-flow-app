@@ -378,6 +378,28 @@ class TasksApi {
     return Task.fromJson(response.object);
   }
 
+  /// Bình luận của một việc, MỚI NHẤT TRƯỚC, phân trang.
+  ///
+  /// Phản hồi chi tiết chỉ mang phần mới nhất; đây là đường đọc phần còn lại
+  /// ngay trong app thay vì "xem trên web". Cùng hình dạng phần tử với
+  /// `comments[]` trong chi tiết, nên [TaskComment.fromJson] dùng lại được.
+  /// `per_page` trần 50 ở server — gửi hơn là bị cắt lặng lẽ, nên kẹp ở đây.
+  Future<Paged<TaskComment>> comments(
+    String taskId, {
+    int page = 1,
+    int perPage = AppConfig.defaultPerPage,
+  }) async {
+    final response = await _client.get(
+      '$_base/$taskId/comments',
+      query: {'page': page, 'per_page': perPage.clamp(1, 50)},
+    );
+
+    return Paged(
+      items: response.list.map(TaskComment.fromJson).toList(),
+      pagination: response.pagination ?? const ApiPagination.empty(),
+    );
+  }
+
   Future<void> attach(String taskId, String filePath, {String? filename}) =>
       _client.upload(
         '$_base/$taskId/attachments',

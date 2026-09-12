@@ -95,6 +95,13 @@ void main() {
     });
     await tester.pumpWidget(
       ProviderScope(
+        overrides: [
+          // Khối trao đổi gieo hạt từ controller chi tiết; không giả thì nó
+          // dựng controller thật và gọi API.
+          taskDetailProvider.overrideWith(
+            () => _StubDetail(TaskDetailState(task: task)),
+          ),
+        ],
         child: app(CommentSection(task: task, taskId: 't1', canWrite: false)),
       ),
     );
