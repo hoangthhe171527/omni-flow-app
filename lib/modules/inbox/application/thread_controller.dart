@@ -6,7 +6,7 @@ import '../data/inbox_api.dart';
 import '../domain/message.dart';
 
 class ThreadState {
-  const ThreadState({
+  ThreadState({
     this.messages = const [],
     this.pending = const [],
     this.hasMore = false,
@@ -36,8 +36,16 @@ class ThreadState {
   /// Chronological rather than outbox-last because the day separators and the
   /// same-sender grouping in the message list both read neighbouring entries and
   /// assume the list is ordered.
-  List<Message> get visible =>
-      [...messages, ...pending]..sort(ThreadController.compareMessages);
+  ///
+  /// Tính MỘT lần cho mỗi state (memo `late final`), không phải getter:
+  /// `_MessageList` đọc nó trong `build`, và trang chat dựng lại theo từng phím
+  /// gõ vào composer — một getter là copy + sort lại cả cửa sổ tin nhắn mỗi
+  /// frame để ra cùng một kết quả. Vì thế constructor không còn `const`; đổi
+  /// lấy đúng một lần sort cho mỗi lần state đổi. Unmodifiable để không ai sửa
+  /// tại chỗ thứ đã được cache.
+  late final List<Message> visible = List<Message>.unmodifiable(
+    <Message>[...messages, ...pending]..sort(ThreadController.compareMessages),
+  );
 
   bool get isEmpty => messages.isEmpty && pending.isEmpty;
 
@@ -368,7 +376,7 @@ class ThreadController
     required Future<Message> Function() call,
     String? replacing,
   }) async {
-    final current = state.valueOrNull ?? const ThreadState();
+    final current = state.valueOrNull ?? ThreadState();
     final superseded = replacing ?? draft.id;
     state = AsyncData(
       current.copyWith(

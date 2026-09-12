@@ -668,8 +668,16 @@ class _MessageList extends StatelessWidget {
     // Rendered bottom-up so new messages land where the eye already is and
     // loading history never shifts the viewport.
     // `visible` is history plus this device's outbox — a queued or failed
-    // send is not in `messages` and would otherwise never render.
-    final items = state.visible.reversed.toList();
+    // send is not in `messages` and would otherwise never render. It is sorted
+    // once per state; indexing it from the end instead of `.reversed.toList()`
+    // means this build copies nothing.
+    final visible = state.visible;
+    final count = visible.length;
+    // The list runs newest→oldest: reversed index i is visible[count - 1 - i].
+    Message? at(int reversedIndex) =>
+        reversedIndex < 0 || reversedIndex >= count
+        ? null
+        : visible[count - 1 - reversedIndex];
 
     return ListView.builder(
       controller: controller,
@@ -677,9 +685,9 @@ class _MessageList extends StatelessWidget {
       // Tight gutters: Zalo lets bubbles run close to both edges, which is what
       // makes the left/right split read at a glance.
       padding: const EdgeInsets.fromLTRB(8, OmniSpacing.lg, 8, OmniSpacing.md),
-      itemCount: items.length + (state.hasMore ? 1 : 0),
+      itemCount: count + (state.hasMore ? 1 : 0),
       itemBuilder: (context, index) {
-        if (index >= items.length) {
+        if (index >= count) {
           return const Padding(
             padding: EdgeInsets.all(OmniSpacing.lg),
             child: Center(
@@ -692,10 +700,10 @@ class _MessageList extends StatelessWidget {
           );
         }
 
-        final message = items[index];
-        // `items` runs newest→oldest, so the *next* index is the earlier message.
-        final earlier = index + 1 < items.length ? items[index + 1] : null;
-        final later = index > 0 ? items[index - 1] : null;
+        final message = at(index)!;
+        // Newest→oldest, so the *next* index is the earlier message.
+        final earlier = at(index + 1);
+        final later = at(index - 1);
         final needsDayHeader =
             message.sentAt != null &&
             (earlier?.sentAt == null ||
