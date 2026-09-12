@@ -408,6 +408,10 @@ class _StubNotificationsApi implements NotificationsApi {
   final _rows = [..._notifications];
 
   @override
+  Future<int> unreadCount() async =>
+      _rows.where((row) => row['read_at'] == null).length;
+
+  @override
   Future<Paged<AppNotification>> list({
     int page = 1,
     int perPage = 20,

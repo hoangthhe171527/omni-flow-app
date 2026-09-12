@@ -77,7 +77,9 @@ class _MyTasksPageState extends ConsumerState<MyTasksPage> {
           // on. Making them go through "Thêm" to find out they were given
           // something is a step too many.
           _BellButton(
-            unread: ref.watch(unreadNotificationCountProvider),
+            // Giữ số cũ trong lúc đếm lại: `valueOrNull` mang giá trị trước
+            // qua trạng thái đang tải, nên chuông không nháy về 0.
+            unread: ref.watch(unreadNotificationCountProvider).valueOrNull ?? 0,
             onTap: () => context.pushNamed(NotificationRoutes.centre),
           ),
         ],

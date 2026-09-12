@@ -209,5 +209,8 @@ class _NoNotifications implements NotificationsApi {
   }) async => const Paged.empty();
 
   @override
+  Future<int> unreadCount() async => 0;
+
+  @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }

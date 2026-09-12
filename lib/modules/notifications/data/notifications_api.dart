@@ -36,6 +36,19 @@ class NotificationsApi {
     );
   }
 
+  /// Số thông báo chưa đọc, đếm ở SERVER.
+  ///
+  /// Chuông chỉ cần MỘT con số. Trước đây nó được đếm trên trang đầu của
+  /// [list] — 20 bản ghi đầy đủ nạp và giữ cả phiên để vẽ một chữ số, và con
+  /// số ấy sai ngay khi dòng chưa đọc nằm ở trang hai.
+  ///
+  /// `GET /notifications/unread-count` → `{"data": {"count": N}}`.
+  Future<int> unreadCount() async {
+    final response = await _client.get('$_base/unread-count');
+
+    return (response.object['count'] as num?)?.toInt() ?? 0;
+  }
+
   Future<void> markRead(String id) => _client.post('$_base/$id/mark-read');
 
   Future<void> markAllRead() => _client.post('$_base/mark-all-read');

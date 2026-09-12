@@ -53,7 +53,8 @@ class _NotificationsPageState extends ConsumerState<NotificationsPage> {
     // what opens a connection.
     ref.watch(notificationRealtimeProvider);
     final notifications = ref.watch(notificationsProvider);
-    final unread = ref.watch(unreadNotificationCountProvider);
+    // Đếm ở server, qua mọi trang — không phải số dòng chưa đọc đang trên màn.
+    final unread = ref.watch(unreadNotificationCountProvider).valueOrNull ?? 0;
 
     return Scaffold(
       appBar: OmniAppBar(
