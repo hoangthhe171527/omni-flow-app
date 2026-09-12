@@ -1,3 +1,4 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -71,18 +72,23 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.textContaining('Tệp đính kèm'), findsOneWidget);
+    final thumbs = find.byWidgetPredicate(
+      (widget) => widget is CachedNetworkImage && widget.imageUrl == photoUrl,
+    );
     expect(
-      find.byWidgetPredicate(
-        (widget) =>
-            widget is Image &&
-            widget.image is NetworkImage &&
-            (widget.image as NetworkImage).url == photoUrl,
-      ),
+      thumbs,
       findsOneWidget,
       reason:
           'Ảnh đã gửi lên và API đã trả về, nhưng màn chi tiết không có chỗ '
           'nào xem lại — thợ phải mở web để nhìn tấm mình vừa chụp.',
     );
+
+    // Ô 96dp giải mã ở 96 × tỉ lệ điểm ảnh, không phải 3000×4000 của ảnh
+    // chụp. Khoá một chiều để ảnh 3:4 giữ tỉ lệ rồi mới được `cover` cắt.
+    final thumb = tester.widget<CachedNetworkImage>(thumbs);
+    final dpr = tester.view.devicePixelRatio;
+    expect(thumb.memCacheWidth, (96 * dpr).round());
+    expect(thumb.memCacheHeight, isNull);
   });
 
   testWidgets('tệp không phải ảnh vẫn hiện tên, không biến mất', (

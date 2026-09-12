@@ -1,8 +1,10 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 
 import '../../../../core/utils/formatters.dart';
 import '../../../../core/utils/media_url.dart';
 import '../../../../design/components/components.dart';
+import '../../../../design/platform/omni_motion_scope.dart';
 import '../../../../design/tokens/tokens.dart';
 import '../../domain/feed_entry.dart';
 
@@ -92,6 +94,14 @@ class _Photos extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Giải mã ở ĐÚNG cỡ vẽ. Ảnh chụp từ điện thoại là 3000×4000, ô này 88dp:
+    // giải mã cỡ gốc là 48 MB bitmap cho một ô, nhân với hai chục công đoạn
+    // xong kèm ảnh của một buổi sáng. Chỉ khoá chiều rộng — đặt cả hai chiều
+    // là bóp ảnh 3:4 thành hình vuông trước khi `cover` cắt.
+    final decodeWidth = (_size * MediaQuery.devicePixelRatioOf(context))
+        .round();
+    final fade = OmniMotion.of(context).fast;
+
     return SizedBox(
       height: _size,
       child: ListView.separated(
@@ -99,24 +109,29 @@ class _Photos extends StatelessWidget {
         itemCount: urls.length,
         separatorBuilder: (_, _) => const SizedBox(width: OmniSpacing.sm),
         itemBuilder: (context, index) => ClipRRect(
-          // Khoá theo URL: một ảnh hỏng bị errorBuilder thay bằng ô rỗng, nên
-          // đếm theo `Image` cho ra số khác nhau tuỳ ảnh nào tải xong trước.
-          // Khoá là thứ ổn định để nói "ô ảnh này CÓ trên màn hình".
+          // Khoá theo URL: một ảnh hỏng bị errorWidget thay bằng ô giữ chỗ,
+          // nên đếm theo widget ảnh cho ra số khác nhau tuỳ ảnh nào tải xong
+          // trước. Khoá là thứ ổn định để nói "ô ảnh này CÓ trên màn hình".
           key: ValueKey('photo:${urls[index]}'),
           borderRadius: OmniRadius.smAll,
-          child: Image.network(
-            resolveMediaUrl(urls[index]),
+          // Bộ nhớ đệm ĐĨA: quản đốc mở dòng việc mỗi sáng, và cùng những tấm
+          // ảnh đó không việc gì phải tải lại mỗi lần cuộn.
+          child: CachedNetworkImage(
+            imageUrl: resolveMediaUrl(urls[index]),
             width: _size,
             height: _size,
             fit: BoxFit.cover,
+            memCacheWidth: decodeWidth,
+            fadeInDuration: fade,
+            fadeOutDuration: fade,
+            placeholderFadeInDuration: Duration.zero,
             // Ô GIỮ CHỖ cùng cỡ trong lúc tải và khi hỏng, không phải ô 0dp.
             // Bản đầu trả `SizedBox.shrink()` cho ảnh hỏng: dải ảnh co lại rồi
             // giãn ra khi ảnh tới, và ngoài xưởng sóng yếu thì người đọc
             // không biết là CÓ ảnh đang chờ. Kích thước cố định là thứ giữ cho
             // bố cục không nhảy (CLS) — ảnh tới hay không, ô vẫn ở đó.
-            loadingBuilder: (_, child, progress) =>
-                progress == null ? child : const _PhotoPlaceholder(),
-            errorBuilder: (_, _, _) => const _PhotoPlaceholder(broken: true),
+            placeholder: (_, _) => const _PhotoPlaceholder(),
+            errorWidget: (_, _, _) => const _PhotoPlaceholder(broken: true),
           ),
         ),
       ),

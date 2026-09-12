@@ -1,3 +1,4 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -7,6 +8,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../../core/error/app_exception.dart';
 import '../../../core/utils/formatters.dart';
 import '../../../design/components/components.dart';
+import '../../../design/platform/omni_motion_scope.dart';
 import '../../../design/tokens/tokens.dart';
 import '../../../security/session/session_controller.dart';
 import '../application/task_controller.dart';
@@ -907,13 +909,16 @@ class _AttachmentThumb extends StatelessWidget {
     await launchUrl(uri, mode: LaunchMode.externalApplication);
   }
 
+  /// Cạnh ô, dp. Cũng là cỡ giải mã (nhân tỉ lệ điểm ảnh).
+  static const double _size = 96;
+
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
 
     return SizedBox(
-      width: 96,
-      height: 96,
+      width: _size,
+      height: _size,
       child: Material(
         color: scheme.surfaceContainerHighest,
         borderRadius: BorderRadius.circular(OmniRadius.sm),
@@ -921,12 +926,19 @@ class _AttachmentThumb extends StatelessWidget {
         child: InkWell(
           onTap: _open,
           child: attachment.isImage
-              ? Image.network(
-                  attachment.url,
+              // Bộ nhớ đệm đĩa + giải mã ở đúng cỡ vẽ: ảnh chụp công đoạn là
+              // 3000×4000, và giải mã cỡ gốc cho một ô 96dp là 48 MB bitmap
+              // mỗi tấm — ba tấm là màn chi tiết giật khi cuộn. Chỉ khoá
+              // chiều rộng để ảnh 3:4 giữ tỉ lệ rồi mới được `cover` cắt.
+              ? CachedNetworkImage(
+                  imageUrl: attachment.url,
                   fit: BoxFit.cover,
+                  memCacheWidth:
+                      (_size * MediaQuery.devicePixelRatioOf(context)).round(),
+                  fadeInDuration: OmniMotion.of(context).fast,
                   // Mất mạng hay ảnh hỏng thì rơi về cái tên, chứ không để lại
                   // một ô xám không nói gì.
-                  errorBuilder: (context, error, stackTrace) =>
+                  errorWidget: (_, _, _) =>
                       _AttachmentName(name: attachment.name),
                 )
               : _AttachmentName(name: attachment.name),

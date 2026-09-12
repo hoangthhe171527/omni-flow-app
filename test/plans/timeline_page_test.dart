@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -144,10 +145,10 @@ void main() {
 
     // Đếm theo KHOÁ chứ không theo `Image`, và KHÔNG bỏ qua offstage.
     //
-    // Trong test không có mạng, nên `Image.network` hỏng và `errorBuilder` trả
-    // về một ô rỗng — ô ảnh vẫn được DỰNG nhưng có kích thước 0, và finder mặc
-    // định coi nó là offstage. Câu hỏi ở đây là "màn hình có chừa chỗ cho đủ
-    // hai tấm ảnh không", không phải "ảnh có tải được trong test không".
+    // Trong test không có mạng, nên ảnh hỏng và `errorWidget` trả về ô giữ
+    // chỗ — số widget ảnh trên màn tuỳ vào ảnh nào hỏng xong trước, còn khoá
+    // thì luôn ở đó. Câu hỏi ở đây là "màn hình có chừa chỗ cho đủ hai tấm
+    // ảnh không", không phải "ảnh có tải được trong test không".
     expect(
       find.byWidgetPredicate(
         (w) =>
@@ -319,12 +320,37 @@ void main() {
 
     final tile = find.byKey(const ValueKey('photo:/m/1.jpg'));
     expect(tester.getSize(tile), const Size(88, 88));
+    // Ô giữ chỗ lúc ĐANG TẢI: cùng 88dp, có biểu tượng. Trong test ảnh không
+    // bao giờ đi tới trạng thái hỏng — bộ nhớ đệm đĩa của CachedNetworkImage
+    // chờ I/O thật, thứ không chạy trong đồng hồ giả của pumpAndSettle.
     expect(
-      find.descendant(
-        of: tile,
-        matching: find.byIcon(Icons.broken_image_outlined),
-      ),
+      find.descendant(of: tile, matching: find.byIcon(Icons.image_outlined)),
       findsOneWidget,
+    );
+
+    // Trạng thái HỎNG là widget mà `errorWidget` dựng ra: phải là cùng ô 88dp
+    // đó với biểu tượng ảnh vỡ, không phải `SizedBox.shrink()`.
+    final image = tester.widget<CachedNetworkImage>(
+      find.descendant(of: tile, matching: find.byType(CachedNetworkImage)),
+    );
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: Builder(
+            builder: (context) => image.errorWidget!(context, 'x', Object()),
+          ),
+        ),
+      ),
+    );
+    expect(find.byIcon(Icons.broken_image_outlined), findsOneWidget);
+    expect(
+      tester.getSize(
+        find.ancestor(
+          of: find.byIcon(Icons.broken_image_outlined),
+          matching: find.byType(Container),
+        ),
+      ),
+      const Size(88, 88),
     );
   });
 
