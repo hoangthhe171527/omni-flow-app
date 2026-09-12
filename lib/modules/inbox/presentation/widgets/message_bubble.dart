@@ -313,12 +313,31 @@ class _MessageText extends StatefulWidget {
 class _MessageTextState extends State<_MessageText> {
   final _recognizers = <TapGestureRecognizer>[];
 
+  /// Spans (and the recognizers inside them) follow the widget's LIFECYCLE,
+  /// not its builds. They used to be rebuilt in `build`, and a bubble rebuilds
+  /// whenever the list does — a keystroke in the composer, a receipt, a scroll
+  /// — so a link-heavy thread allocated and disposed N recognizers per frame
+  /// to produce the same text. Only the text decides them; the colour is
+  /// applied on the root span in `build`.
+  late List<InlineSpan> _spans = _buildSpans();
+
+  @override
+  void didUpdateWidget(covariant _MessageText oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.text != widget.text) _spans = _buildSpans();
+  }
+
   @override
   void dispose() {
+    _disposeRecognizers();
+    super.dispose();
+  }
+
+  void _disposeRecognizers() {
     for (final recognizer in _recognizers) {
       recognizer.dispose();
     }
-    super.dispose();
+    _recognizers.clear();
   }
 
   Future<void> _open(String value) async {
@@ -331,12 +350,8 @@ class _MessageTextState extends State<_MessageText> {
     );
   }
 
-  @override
-  Widget build(BuildContext context) {
-    for (final recognizer in _recognizers) {
-      recognizer.dispose();
-    }
-    _recognizers.clear();
+  List<InlineSpan> _buildSpans() {
+    _disposeRecognizers();
 
     final spans = <TextSpan>[];
     var cursor = 0;
@@ -351,7 +366,7 @@ class _MessageTextState extends State<_MessageText> {
         TextSpan(
           text: url,
           recognizer: recognizer,
-          style: TextStyle(
+          style: const TextStyle(
             color: OmniColors.chatPrimary,
             decoration: TextDecoration.underline,
             decorationColor: OmniColors.chatPrimary,
@@ -363,11 +378,15 @@ class _MessageTextState extends State<_MessageText> {
     if (cursor < widget.text.length) {
       spans.add(TextSpan(text: widget.text.substring(cursor)));
     }
+    return spans;
+  }
 
+  @override
+  Widget build(BuildContext context) {
     return Text.rich(
       TextSpan(
         style: OmniChatType.message.copyWith(color: widget.color),
-        children: spans,
+        children: _spans,
       ),
     );
   }
