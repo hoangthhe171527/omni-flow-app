@@ -110,9 +110,7 @@ class ConversationRow extends StatelessWidget {
                 conversation.title,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: OmniType.body.copyWith(
-                  fontSize: 16,
-                  height: 1.2,
+                style: OmniType.listTitle.copyWith(
                   // A read name also steps BACK in contrast, not just in
                   // weight. Two axes of difference are what make the two states
                   // separable without staring — and it keeps them apart for
@@ -128,7 +126,6 @@ class ConversationRow extends StatelessWidget {
             Text(
               Formatters.relative(conversation.lastMessageAt),
               style: OmniType.micro.copyWith(
-                fontSize: 12,
                 color: overdue ? scheme.error : meta,
                 fontWeight: unread ? FontWeight.w600 : FontWeight.w400,
               ),
@@ -165,8 +162,7 @@ class ConversationRow extends StatelessWidget {
                     : conversation.lastMessage,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: OmniType.caption.copyWith(
-                  fontSize: 14,
+                style: OmniType.body.copyWith(
                   height: 1.25,
                   // An unread preview is full-strength text; a read one drops to
                   // the muted tone, so the two are separable by weight AND by
@@ -187,10 +183,7 @@ class ConversationRow extends StatelessWidget {
             ] else if (conversation.isUnassigned) ...[
               const SizedBox(width: 8),
               // Not a warning, just a fact — the row must not shout about it.
-              Text(
-                'Chưa gán',
-                style: OmniType.micro.copyWith(fontSize: 11, color: meta),
-              ),
+              Text('Chưa gán', style: OmniType.micro.copyWith(color: meta)),
             ],
           ],
         ),
@@ -227,12 +220,7 @@ class _SourceLabel extends StatelessWidget {
               label,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: OmniType.micro.copyWith(
-                fontSize: 10.5,
-                height: 1.15,
-                color: meta.color,
-                fontWeight: FontWeight.w600,
-              ),
+              style: OmniType.micro.copyWith(height: 1.15, color: meta.color),
             ),
           ),
         ],

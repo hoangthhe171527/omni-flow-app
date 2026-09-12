@@ -48,12 +48,9 @@ class PipelinePage extends ConsumerWidget {
               children: [
                 Text(
                   Formatters.vndCompact(summary.valueOrNull?.openValue ?? 0),
-                  style: OmniType.body.copyWith(
-                    fontSize: 16,
+                  style: OmniType.money.copyWith(
                     height: 1.1,
                     color: scheme.onSurface,
-                    fontWeight: FontWeight.w700,
-                    fontFeatures: OmniType.tabular,
                   ),
                 ),
                 Text(
@@ -180,8 +177,7 @@ class _StageTabs extends StatelessWidget {
                     children: [
                       Text(
                         stage.label,
-                        style: OmniType.caption.copyWith(
-                          fontSize: 13.5,
+                        style: OmniType.body.copyWith(
                           height: 1.1,
                           color: isSelected
                               ? scheme.onPrimary
@@ -197,8 +193,7 @@ class _StageTabs extends StatelessWidget {
                           isSelected
                               ? '${total.count} · ${Formatters.vndCompact(total.value)}'
                               : '${total.count}',
-                          style: OmniType.caption.copyWith(
-                            fontSize: 13.5,
+                          style: OmniType.body.copyWith(
                             height: 1.1,
                             // Không giảm độ mờ ở viên ĐANG CHỌN: nó đã nổi
                             // nhờ nền đặc, và 70% độ mờ chồng lên đó là chỗ

@@ -201,11 +201,9 @@ class _StackedImageCarouselState extends State<_StackedImageCarousel> {
                     child: Text(
                       '${_index + 1} / ${widget.images.length}',
                       key: const ValueKey('message-image-inline-counter'),
-                      style: const TextStyle(
+                      style: OmniType.micro.copyWith(
                         color: Colors.white,
-                        fontSize: 12,
                         height: 1,
-                        fontWeight: FontWeight.w600,
                       ),
                     ),
                   ),
@@ -446,11 +444,7 @@ class _ImageViewerState extends State<_ImageViewer> {
                       ),
                       child: Text(
                         '${_index + 1} / ${widget.images.length}',
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 13,
-                          fontWeight: FontWeight.w500,
-                        ),
+                        style: OmniType.caption.copyWith(color: Colors.white),
                       ),
                     ),
                   ),

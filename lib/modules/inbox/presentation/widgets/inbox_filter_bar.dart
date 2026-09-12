@@ -63,10 +63,7 @@ class InboxFilterBar extends ConsumerWidget {
                     ),
                   onChanged: controller.setSearch,
                   textInputAction: TextInputAction.search,
-                  style: OmniType.body.copyWith(
-                    fontSize: 16,
-                    color: scheme.onSurface,
-                  ),
+                  style: OmniType.input.copyWith(color: scheme.onSurface),
                   decoration: InputDecoration(
                     isDense: true,
                     // The app-wide inputDecorationTheme sets `filled: true`, and
@@ -79,10 +76,7 @@ class InboxFilterBar extends ConsumerWidget {
                     focusedBorder: InputBorder.none,
                     contentPadding: EdgeInsets.zero,
                     hintText: 'Tìm kiếm',
-                    hintStyle: OmniType.body.copyWith(
-                      fontSize: 16,
-                      color: meta,
-                    ),
+                    hintStyle: OmniType.input.copyWith(color: meta),
                   ),
                 ),
               ),
@@ -228,8 +222,7 @@ class InboxFilterBar extends ConsumerWidget {
           Expanded(
             child: Text(
               label,
-              style: OmniType.caption.copyWith(
-                fontSize: 14,
+              style: OmniType.body.copyWith(
                 color: scheme.onSurface,
                 fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
               ),
@@ -239,7 +232,6 @@ class InboxFilterBar extends ConsumerWidget {
             Text(
               '$count',
               style: OmniType.caption.copyWith(
-                fontSize: 13,
                 color: scheme.onSurfaceVariant,
                 fontFeatures: OmniType.tabular,
               ),

@@ -253,14 +253,12 @@ class _MessageComposerState extends State<MessageComposer> {
                           minLines: 1,
                           maxLines: null,
                           textCapitalization: TextCapitalization.sentences,
-                          style: OmniType.body.copyWith(
-                            fontSize: 15,
+                          style: OmniType.input.copyWith(
                             color: scheme.onSurface,
                           ),
                           decoration: InputDecoration(
                             hintText: isNote ? 'Ghi chú nội bộ…' : 'Tin nhắn',
-                            hintStyle: OmniType.body.copyWith(
-                              fontSize: 15,
+                            hintStyle: OmniType.input.copyWith(
                               color: scheme.onSurfaceVariant,
                             ),
                             isDense: true,
@@ -632,7 +630,7 @@ class _EmojiSheet extends StatelessWidget {
             },
             borderRadius: OmniRadius.smAll,
             child: Center(
-              child: Text(_emojis[index], style: const TextStyle(fontSize: 26)),
+              child: Text(_emojis[index], style: OmniChatType.emoji),
             ),
           ),
         ),

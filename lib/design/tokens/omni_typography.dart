@@ -77,6 +77,26 @@ abstract final class OmniType {
     height: 1.2,
   );
 
+  /// Ô nhập liệu và ô tìm kiếm. 16 là ngưỡng iOS Safari/WebView không tự
+  /// phóng to khi focus, và là cỡ tay gõ đọc lại được thứ mình vừa gõ.
+  static const TextStyle input = TextStyle(
+    fontFamily: family,
+    fontSize: 16,
+    fontWeight: FontWeight.w400,
+    height: 1.3,
+  );
+
+  /// Dòng chính của một hàng danh sách (tên hội thoại, tên khách hàng): to
+  /// hơn body một bậc để mắt quét cột tên trước, nhưng không phải tiêu đề —
+  /// không letterSpacing âm, độ đậm vừa. Trạng thái đọc/chưa đọc đổi độ đậm
+  /// qua copyWith.
+  static const TextStyle listTitle = TextStyle(
+    fontFamily: family,
+    fontSize: 16,
+    fontWeight: FontWeight.w500,
+    height: 1.2,
+  );
+
   static const TextStyle money = TextStyle(
     fontFamily: family,
     fontSize: 17,
@@ -147,6 +167,11 @@ abstract final class OmniChatType {
     fontWeight: FontWeight.w500,
     height: 1.3,
   );
+
+  /// Emoji trong lưới chọn của composer — một glyph để chạm, không phải chữ
+  /// để đọc, nên nằm ngoài thang trên. Cỡ này vừa một ô của lưới 8 cột trên
+  /// màn 360dp mà vẫn chạm được.
+  static const TextStyle emoji = TextStyle(fontSize: 26, height: 1.2);
 }
 
 abstract final class OmniGradients {

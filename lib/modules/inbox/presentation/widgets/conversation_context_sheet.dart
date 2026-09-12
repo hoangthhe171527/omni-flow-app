@@ -481,7 +481,10 @@ class _AssetTile extends StatelessWidget {
             item.name ?? 'Video',
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: const TextStyle(color: Colors.white, fontSize: 10),
+            style: OmniType.micro.copyWith(
+              color: Colors.white,
+              fontWeight: FontWeight.w500,
+            ),
           ),
         ),
       ],

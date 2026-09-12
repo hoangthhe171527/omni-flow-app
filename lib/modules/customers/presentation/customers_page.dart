@@ -79,10 +79,7 @@ class _CustomersPageState extends ConsumerState<CustomersPage> {
                           ),
                         onChanged: controller.setSearch,
                         textInputAction: TextInputAction.search,
-                        style: OmniType.body.copyWith(
-                          fontSize: 16,
-                          color: scheme.onSurface,
-                        ),
+                        style: OmniType.input.copyWith(color: scheme.onSurface),
                         decoration: InputDecoration(
                           isDense: true,
                           filled: false,
@@ -91,10 +88,7 @@ class _CustomersPageState extends ConsumerState<CustomersPage> {
                           focusedBorder: InputBorder.none,
                           contentPadding: EdgeInsets.zero,
                           hintText: 'Tìm tên, số điện thoại',
-                          hintStyle: OmniType.body.copyWith(
-                            fontSize: 16,
-                            color: meta,
-                          ),
+                          hintStyle: OmniType.input.copyWith(color: meta),
                         ),
                       ),
                     ),
@@ -223,11 +217,8 @@ class CustomerCard extends StatelessWidget {
                             customer.name,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: OmniType.body.copyWith(
-                              fontSize: 16,
-                              height: 1.2,
+                            style: OmniType.listTitle.copyWith(
                               color: scheme.onSurface,
-                              fontWeight: FontWeight.w500,
                             ),
                           ),
                         ),
@@ -251,8 +242,7 @@ class CustomerCard extends StatelessWidget {
                             ].join(' · '),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: OmniType.caption.copyWith(
-                              fontSize: 14,
+                            style: OmniType.body.copyWith(
                               height: 1.25,
                               color: scheme.onSurfaceVariant,
                             ),
@@ -265,8 +255,7 @@ class CustomerCard extends StatelessWidget {
                           const SizedBox(width: 8),
                           Text(
                             Formatters.vndCompact(customer.lifetimeValue),
-                            style: OmniType.caption.copyWith(
-                              fontSize: 14,
+                            style: OmniType.body.copyWith(
                               color: scheme.onSurface,
                               fontWeight: FontWeight.w600,
                               fontFeatures: OmniType.tabular,

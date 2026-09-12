@@ -56,8 +56,7 @@ class InboxBulkBar extends ConsumerWidget {
                   'Đã chọn ${selectedIds.length}',
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: OmniType.caption.copyWith(
-                    fontSize: 14,
+                  style: OmniType.body.copyWith(
                     color: scheme.onSurface,
                     fontWeight: FontWeight.w600,
                   ),
@@ -206,7 +205,7 @@ class _BulkAction extends StatelessWidget {
     return TextButton.icon(
       onPressed: onTap,
       icon: Icon(icon, size: 18),
-      label: Text(label, style: OmniType.caption.copyWith(fontSize: 13.5)),
+      label: Text(label, style: OmniType.body),
       style: TextButton.styleFrom(
         foregroundColor: OmniColors.chatPrimary,
         padding: const EdgeInsets.symmetric(horizontal: 10),

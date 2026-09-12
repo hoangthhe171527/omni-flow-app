@@ -560,7 +560,6 @@ class _ThreadAppBar extends StatelessWidget implements PreferredSizeWidget {
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: OmniChatType.peer.copyWith(
-                          fontSize: 16,
                           color: scheme.onSurface,
                         ),
                       ),

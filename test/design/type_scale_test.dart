@@ -23,6 +23,8 @@ void main() {
     'body': OmniType.body,
     'caption': OmniType.caption,
     'micro': OmniType.micro,
+    'input': OmniType.input,
+    'listTitle': OmniType.listTitle,
     'money': OmniType.money,
     'moneyHero': OmniType.moneyHero,
   };

@@ -273,7 +273,7 @@ class MessageBubble extends StatelessWidget {
                             ),
                             child: Text(
                               message.reaction!,
-                              style: const TextStyle(fontSize: 11),
+                              style: OmniChatType.meta,
                             ),
                           ),
                         ),
@@ -741,7 +741,6 @@ class _DeliveryReceipt extends StatelessWidget {
                 label,
                 style: OmniChatType.meta.copyWith(
                   color: color,
-                  fontSize: 10.5,
                   fontWeight: read ? FontWeight.w600 : FontWeight.w500,
                 ),
               ),
