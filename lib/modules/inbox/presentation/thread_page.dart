@@ -17,6 +17,7 @@ import '../application/thread_controller.dart';
 import '../data/inbox_api.dart';
 import '../domain/conversation.dart';
 import '../domain/message.dart';
+import 'message_key_registry.dart';
 import 'widgets/assign_sheet.dart';
 import 'widgets/conversation_context_sheet.dart';
 import 'widgets/message_bubble.dart';
@@ -166,6 +167,16 @@ class _ThreadPageState extends ConsumerState<ThreadPage>
       _refreshThread();
     });
 
+    // Mỗi lần cửa sổ tin đổi (trang cũ tải thêm, refresh thay cả cửa sổ) là
+    // một lần dọn key của tin không còn trên màn.
+    ref.listen<AsyncValue<ThreadState>>(threadProvider(widget.conversationId), (
+      previous,
+      next,
+    ) {
+      final state = next.valueOrNull;
+      if (state != null) _pruneMessageKeys(state);
+    });
+
     final live =
         ref.watch(realtimeStatusProvider).valueOrNull ==
         RealtimeStatus.connected;
@@ -287,10 +298,20 @@ class _ThreadPageState extends ConsumerState<ThreadPage>
     );
   }
 
-  final Map<String, GlobalKey> _messageKeys = {};
+  /// Dọn theo cửa sổ đang hiển thị mỗi khi state đổi (xem [_pruneMessageKeys]);
+  /// trước đây là một Map giữ key của mọi tin từng đi qua màn hình.
+  final _messageKeys = MessageKeyRegistry();
 
-  GlobalKey _keyForMessage(String id) =>
-      _messageKeys.putIfAbsent(id, GlobalKey.new);
+  GlobalKey _keyForMessage(String id) => _messageKeys.keyFor(id);
+
+  void _pruneMessageKeys(ThreadState state) {
+    _messageKeys.prune({
+      for (final message in state.visible) message.id,
+      // Kết quả tìm kiếm cần key để cuộn tới, kể cả khi tin đó vừa được
+      // mergeMessages vào cửa sổ.
+      for (final message in _searchResults) message.id,
+    });
+  }
 
   void _openSearch() {
     setState(() => _searchMode = true);
@@ -353,7 +374,7 @@ class _ThreadPageState extends ConsumerState<ThreadPage>
     if (_searchResults.isEmpty) return;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      final key = _messageKeys[_searchResults[_searchIndex].id];
+      final key = _messageKeys.lookup(_searchResults[_searchIndex].id);
       final target = key?.currentContext;
       if (target != null) {
         Scrollable.ensureVisible(
