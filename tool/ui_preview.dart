@@ -168,6 +168,13 @@ class _StubTasksApi implements TasksApi {
   final _rows = [..._tasks];
 
   @override
+  Future<Paged<TaskComment>> comments(
+    String taskId, {
+    int page = 1,
+    int perPage = 20,
+  }) async => const Paged.empty();
+
+  @override
   Future<Paged<Task>> mine({
     required TaskBucket bucket,
     int page = 1,

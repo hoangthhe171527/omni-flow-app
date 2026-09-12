@@ -5,6 +5,7 @@ import '../../../../core/error/app_exception.dart';
 import '../../../../core/utils/formatters.dart';
 import '../../../../design/components/components.dart';
 import '../../../../design/tokens/tokens.dart';
+import '../../application/task_comments_controller.dart';
 import '../../application/task_controller.dart';
 import '../../domain/mention.dart';
 import '../../domain/task.dart';
@@ -147,17 +148,39 @@ class _CommentSectionState extends ConsumerState<CommentSection> {
     }
   }
 
+  /// Xin trang cũ hơn. Lỗi hiện ra, không im lặng: bấm mà không thấy gì xảy
+  /// ra là kiểu hỏng đã lặp lại nhiều lần ở dự án này.
+  Future<void> _loadOlder() async {
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      await ref.read(taskCommentsProvider(widget.taskId).notifier).loadOlder();
+    } on AppException catch (e) {
+      messenger.showSnackBar(SnackBar(content: Text(e.message)));
+    } on Object {
+      messenger.showSnackBar(
+        const SnackBar(
+          content: Text('Chưa tải được bình luận cũ. Thử lại khi có mạng.'),
+        ),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final text = Theme.of(context).textTheme;
-    final comments = widget.task.comments;
+    // Hạt giống là `task.comments`; provider cộng thêm những trang cũ đã xin.
+    // Nó giữ mới nhất trước (thứ tự API); lật lại để đọc như trò chuyện: cũ
+    // nhất trên, mới nhất dưới.
+    final thread = ref.watch(taskCommentsProvider(widget.taskId)).valueOrNull;
+    // Chưa gieo hạt (chi tiết còn đang tải) thì vẽ từ Task đang cầm, không vẽ
+    // một danh sách trống rồi nháy sang có.
+    final ready = thread != null && thread.seeded;
+    final comments = ready
+        ? thread.items.reversed.toList()
+        : widget.task.comments;
 
     // Không đọc được mà cũng không viết được thì đừng chiếm chỗ.
     if (comments.isEmpty && !widget.canWrite) return const SizedBox.shrink();
-
-    // API cắt bớt phần cũ; `commentCount` mới là tổng thật.
-    final hidden = widget.task.commentCount - comments.length;
 
     return Container(
       width: double.infinity,
@@ -183,11 +206,24 @@ class _CommentSectionState extends ConsumerState<CommentSection> {
               ),
             ],
           ),
-          if (hidden > 0) ...[
-            const SizedBox(height: OmniSpacing.sm),
-            Text(
-              'Còn $hidden bình luận cũ hơn, xem trên web.',
-              style: text.labelSmall?.copyWith(color: scheme.onSurfaceVariant),
+          // Phần cũ đọc được NGAY ĐÂY. Bản trước viết "xem trên web" — ở
+          // xưởng không ai mở web, và lý do một cây bị trả về ba tuần trước
+          // nằm đúng trong phần bị cắt.
+          if (ready && thread.hasMore) ...[
+            const SizedBox(height: OmniSpacing.xs),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: TextButton.icon(
+                onPressed: thread.loadingOlder ? null : _loadOlder,
+                icon: thread.loadingOlder
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.history_rounded),
+                label: Text('Xem thêm ${thread.hiddenCount} bình luận cũ hơn'),
+              ),
             ),
           ],
           for (final comment in comments) ...[
