@@ -1,6 +1,12 @@
+import '../../../core/utils/avatar_url.dart';
 import '../../../core/utils/formatters.dart';
 import '../../../core/utils/json.dart';
 import 'task_activity.dart';
+
+// URL ảnh người được chuẩn hoá NGAY LÚC PARSE (`resolveAvatarUrl`), ở cả bốn
+// chỗ API gửi nó: người làm, việc con, bình luận, đã xem. Ảnh được vẽ ở hàng
+// chục chỗ, và mỗi chỗ tự chuẩn hoá trong build là mỗi khung hình parse lại
+// cùng những URL đó — còn một chỗ quên là một vòng tròn trống trên Android.
 
 /// One step of a task, owned by one person.
 ///
@@ -26,7 +32,7 @@ class Subtask {
     assigneeId: json.str('assignee_id'),
     assigneeName: json.str('assignee_name'),
     // Server chỉ đặt khoá khi người đó có ảnh (cùng quy ước `user_avatar`).
-    assigneeAvatar: json.str('assignee_avatar'),
+    assigneeAvatar: resolveAvatarUrl(json.str('assignee_avatar')),
     dueDate: DateUtilsX.parse(json['due_date']),
   );
 
@@ -64,7 +70,7 @@ class TaskViewer {
   factory TaskViewer.fromJson(Map<String, dynamic> json) => TaskViewer(
     userId: json.strOr('user_id', ''),
     name: json.str('name'),
-    avatar: json.str('avatar'),
+    avatar: resolveAvatarUrl(json.str('avatar')),
     viewedAt: DateUtilsX.parse(json['viewed_at']),
   );
 
@@ -101,7 +107,7 @@ class TaskComment {
     // API tra tên ra từ danh sách thành viên ở mỗi lần đọc, chứ không lưu tên
     // vào bình luận — để tên không cũ đi trong những bình luận cũ.
     userName: json.str('user_name'),
-    userAvatar: json.str('user_avatar'),
+    userAvatar: resolveAvatarUrl(json.str('user_avatar')),
     // Tên, không phải id: vai thợ không có quyền nhân sự, app không có danh
     // sách nào để tự tra một UUID ra tên người.
     mentionedUserNames: json.strList('mentioned_user_names'),
@@ -228,7 +234,7 @@ class Task {
     assigneeAvatars: switch (json['assignee_avatars']) {
       final List raw => [
         for (final v in raw)
-          if (v is String && v.trim().isNotEmpty) v.trim() else null,
+          if (v is String && v.trim().isNotEmpty) resolveAvatarUrl(v) else null,
       ],
       _ => const [],
     },
