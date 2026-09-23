@@ -141,6 +141,20 @@ void main() {
 
     expect(pathOf(), '/api/v1/projects/p1');
   });
+
+  test('deleteTeam gọi DELETE /teams/{id}', () async {
+    await api.deleteTeam('team-1');
+
+    expect(pathOf(), '/api/v1/teams/team-1');
+    expect(adapter.singleRequest.method, 'DELETE');
+  });
+
+  test('deletePlan gọi DELETE /projects/{id}', () async {
+    await api.deletePlan('project-1');
+
+    expect(pathOf(), '/api/v1/projects/project-1');
+    expect(adapter.singleRequest.method, 'DELETE');
+  });
 }
 
 class _RecordingAdapter implements HttpClientAdapter {

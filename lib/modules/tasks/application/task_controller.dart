@@ -9,6 +9,7 @@ import '../../../core/storage/storage_keys.dart';
 import '../../../core/utils/client_id.dart';
 import '../data/tasks_api.dart';
 import '../domain/task.dart';
+import 'tasks_providers.dart';
 
 /// A tick that has not been confirmed by the server yet.
 ///
@@ -185,6 +186,9 @@ class TaskController
   Future<TaskDetailState> build(String taskId) async {
     _disposed = false;
     ref.onDispose(() => _disposed = true);
+    // An open detail must reconcile a delete/update performed on web or on
+    // another phone. Pending ticks live in the outbox and are restored below.
+    ref.watch(taskRealtimeSignalProvider);
 
     final task = await ref.watch(tasksApiProvider).get(taskId);
 

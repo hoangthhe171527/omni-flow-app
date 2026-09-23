@@ -90,6 +90,7 @@ class Plan {
     this.status = 'active',
     this.teamId,
     this.teamName,
+    this.ownerId,
     this.sections = const [],
     this.memberIds = const [],
     this.memberRoles = const {},
@@ -124,6 +125,7 @@ class Plan {
       cover: json.str('cover'),
       teamId: json.str('team_id'),
       teamName: json.str('team_name'),
+      ownerId: json.str('owner_id'),
       sections: sections,
       memberIds: json.strList('member_ids'),
       memberRoles: json
@@ -166,6 +168,7 @@ class Plan {
   /// null nghĩa là dự án thật sự chưa xếp tổ, hoặc tổ đã bị xoá. Hai chuyện
   /// khác nhau với cơ sở dữ liệu, cùng một câu trả lời với người dùng.
   final String? teamName;
+  final String? ownerId;
 
   final List<PlanSection> sections;
   final List<String> memberIds;
@@ -179,7 +182,9 @@ class Plan {
 
   /// Vai của một người trong dự án này. Không có tên trong bảng thì là
   /// người xem — cùng lý do với [PlanRole.parse].
-  PlanRole roleOf(String userId) => memberRoles[userId] ?? PlanRole.viewer;
+  PlanRole roleOf(String userId) => ownerId == userId
+      ? PlanRole.owner
+      : memberRoles[userId] ?? PlanRole.viewer;
 
   /// 0.0–1.0, và 0 chứ không phải NaN khi chưa có việc nào.
   double get progress => taskCount == 0 ? 0 : doneCount / taskCount;

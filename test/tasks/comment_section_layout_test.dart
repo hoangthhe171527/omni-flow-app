@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:intl/date_symbol_data_local.dart';
 import 'package:omni_app/design/theme/omni_theme.dart';
 import 'package:omni_app/design/tokens/tokens.dart';
 import 'package:omni_app/modules/tasks/application/task_controller.dart';
@@ -13,6 +14,8 @@ import 'package:omni_app/modules/tasks/presentation/widgets/comment_section.dart
 /// trên ô nhập, và thân bình luận — lý do một cây đàn bị trả về — in bằng màu
 /// chữ phụ, mờ hơn cả tên người.
 void main() {
+  setUpAll(() => initializeDateFormatting('vi_VN'));
+
   final task = Task.fromJson({
     'id': 't1',
     'title': 'KAWAI HAT-5',

@@ -150,6 +150,12 @@ class TasksApi {
     return Task.fromJson(response.object);
   }
 
+  /// Xoá mềm một công việc cha. Việc đã xoá biến mất ở cả web và app sau khi
+  /// hai client nhận tín hiệu realtime hoặc lần tải lại kế tiếp.
+  Future<void> deleteTask(String taskId) async {
+    await _client.delete('$_base/$taskId');
+  }
+
   /// Ticks or un-ticks one stage.
   ///
   /// [clientRequestId] is the idempotency key. A worker on bad workshop wifi

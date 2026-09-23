@@ -2,11 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/error/app_exception.dart';
 import '../../../design/components/components.dart';
 import '../../../design/tokens/tokens.dart';
 import '../../../security/session/session_controller.dart';
 import '../../tasks/application/tasks_providers.dart';
 import '../application/plans_providers.dart';
+import '../data/plans_api.dart';
 import '../plans_module.dart';
 import 'create_plan_page.dart';
 import 'create_team_page.dart';
@@ -23,11 +25,15 @@ class TeamsPage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final groups = ref.watch(teamsWithPlansProvider);
-    final isAssigner = ref.watch(taskAccessProvider).isAssigner;
+    final taskAccess = ref.watch(taskAccessProvider);
+    final isAssigner = taskAccess.isAssigner;
     // Cùng quyền mà API đòi ở đường ghi `/teams` — xem `Interfaces/routes.php`.
     final canCreateTeam = ref
         .watch(accessProvider)
         .can('organization.org_units.create');
+    final canDeleteTeam =
+        taskAccess.canDelete &&
+        ref.watch(accessProvider).can('organization.org_units.delete');
 
     return Scaffold(
       appBar: const OmniAppBar(title: 'Dự án'),
@@ -61,7 +67,8 @@ class TeamsPage extends ConsumerWidget {
             itemCount: list.length,
             separatorBuilder: (_, _) =>
                 const SizedBox(height: OmniSpacing.section),
-            itemBuilder: (context, index) => _TeamBlock(group: list[index]),
+            itemBuilder: (context, index) =>
+                _TeamBlock(group: list[index], canDelete: canDeleteTeam),
           ),
         ),
       ),
@@ -121,13 +128,14 @@ class TeamsPage extends ConsumerWidget {
 
 enum _CreateChoice { team, plan }
 
-class _TeamBlock extends StatelessWidget {
-  const _TeamBlock({required this.group});
+class _TeamBlock extends ConsumerWidget {
+  const _TeamBlock({required this.group, required this.canDelete});
 
   final TeamWithPlans group;
+  final bool canDelete;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final scheme = Theme.of(context).colorScheme;
     final text = Theme.of(context).textTheme;
 
@@ -148,6 +156,27 @@ class _TeamBlock extends StatelessWidget {
                 style: text.labelMedium?.copyWith(
                   color: scheme.onSurfaceVariant,
                 ),
+              ),
+            if (canDelete && !group.synthetic && group.team.id.isNotEmpty)
+              PopupMenuButton<_TeamAction>(
+                tooltip: 'Tuỳ chọn team',
+                onSelected: (action) {
+                  if (action == _TeamAction.delete) {
+                    _deleteTeam(context, ref);
+                  }
+                },
+                itemBuilder: (context) => const [
+                  PopupMenuItem(
+                    value: _TeamAction.delete,
+                    child: Row(
+                      children: [
+                        Icon(Icons.delete_outline, color: Colors.red),
+                        SizedBox(width: OmniSpacing.sm),
+                        Text('Xoá team', style: TextStyle(color: Colors.red)),
+                      ],
+                    ),
+                  ),
+                ],
               ),
           ],
         ),
@@ -189,4 +218,38 @@ class _TeamBlock extends StatelessWidget {
       ],
     );
   }
+
+  Future<void> _deleteTeam(BuildContext context, WidgetRef ref) async {
+    final messenger = ScaffoldMessenger.of(context);
+    if (group.plans.isNotEmpty) {
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(
+            'Team còn ${group.plans.length} dự án. Hãy chuyển các dự án sang team khác trước.',
+          ),
+        ),
+      );
+      return;
+    }
+
+    final confirmed = await showOmniConfirm(
+      context: context,
+      title: 'Xoá team “${group.team.name}”?',
+      message:
+          'Team sẽ biến mất trên cả điện thoại và web. Hành động này không thể hoàn tác.',
+      confirmLabel: 'Xoá team',
+      destructive: true,
+    );
+    if (!confirmed) return;
+
+    try {
+      await ref.read(plansApiProvider).deleteTeam(group.team.id);
+      ref.invalidate(teamsWithPlansProvider);
+      messenger.showSnackBar(const SnackBar(content: Text('Đã xoá team.')));
+    } on AppException catch (error) {
+      messenger.showSnackBar(SnackBar(content: Text(error.message)));
+    }
+  }
 }
+
+enum _TeamAction { delete }

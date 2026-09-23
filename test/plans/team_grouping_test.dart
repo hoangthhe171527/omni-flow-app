@@ -32,6 +32,7 @@ void main() {
     final container = ProviderContainer(
       overrides: [
         plansApiProvider.overrideWithValue(_StubPlansApi(teams, plans)),
+        planRealtimeSignalProvider.overrideWith(_StaticPlanSignal.new),
       ],
     );
     addTearDown(container.dispose);
@@ -79,21 +80,19 @@ void main() {
     expect(orphan.plans.map((p) => p.id), ['p1']);
   });
 
-  test(
-    'tổ không tra ra tên thì nói là không còn tồn tại, không im lặng',
-    () async {
-      // `team_name` vắng mặt nghĩa là API cũng không giải được — tổ đã bị xoá.
-      // Dự án vẫn phải hiện ra, kèm một câu giải thích vì sao nó ở đây.
-      final groups = await group(
-        teams: const [],
-        plans: [plan('p1', teamId: 'da-bi-xoa')],
-      );
+  test('tổ không tra ra tên thì yêu cầu xếp lại, không hiện team ma', () async {
+    // `team_name` vắng mặt nghĩa là API cũng không giải được — tổ đã bị xoá.
+    // Dự án vẫn phải hiện ra, kèm một câu giải thích vì sao nó ở đây.
+    final groups = await group(
+      teams: const [],
+      plans: [plan('p1', teamId: 'da-bi-xoa')],
+    );
 
-      final block = groups.firstWhere((g) => g.team.id == 'da-bi-xoa');
-      expect(block.team.name, 'Team không còn tồn tại');
-      expect(block.plans.map((p) => p.id), ['p1']);
-    },
-  );
+    final block = groups.firstWhere((g) => g.team.id == 'da-bi-xoa');
+    expect(block.team.name, 'Cần xếp lại team');
+    expect(block.synthetic, isTrue);
+    expect(block.plans.map((p) => p.id), ['p1']);
+  });
 
   test(
     'tổ rỗng vẫn là một khối — đó là thông tin, không phải chỗ trống',
@@ -138,4 +137,9 @@ class _StubPlansApi implements PlansApi {
 
   @override
   noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
+class _StaticPlanSignal extends PlanRealtimeSignal {
+  @override
+  int build() => 0;
 }

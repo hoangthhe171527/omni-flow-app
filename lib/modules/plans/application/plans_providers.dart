@@ -2,6 +2,8 @@ import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/realtime/realtime_client.dart';
+import '../../../security/session/session_controller.dart';
 import '../../tasks/application/tasks_providers.dart';
 import '../../tasks/domain/task.dart';
 import '../data/plans_api.dart';
@@ -12,10 +14,58 @@ import '../domain/team.dart';
 
 /// Một team cùng các dự án của nó, đã ghép sẵn để vẽ một khối trên màn.
 class TeamWithPlans {
-  const TeamWithPlans({required this.team, required this.plans});
+  const TeamWithPlans({
+    required this.team,
+    required this.plans,
+    this.synthetic = false,
+  });
 
   final Team team;
   final List<Plan> plans;
+  final bool synthetic;
+}
+
+final _planEntityChannelProvider = Provider<String?>((ref) {
+  final tenantId = ref.watch(sessionProvider).tenant?.id;
+  return (tenantId == null || tenantId.isEmpty)
+      ? null
+      : 'tenant.$tenantId.entities';
+});
+
+/// Tín hiệu làm mới cây Team → Dự án khi một thiết bị khác thay đổi nó.
+final planRealtimeSignalProvider = NotifierProvider<PlanRealtimeSignal, int>(
+  PlanRealtimeSignal.new,
+);
+
+class PlanRealtimeSignal extends Notifier<int> {
+  static const _coalesceWindow = Duration(milliseconds: 400);
+  Timer? _coalesce;
+
+  @override
+  int build() {
+    final channel = ref.watch(_planEntityChannelProvider);
+    if (channel != null) {
+      final unsubscribe = ref
+          .watch(realtimeClientProvider)
+          .subscribePrivate(channel, _onEvent);
+      ref.onDispose(unsubscribe);
+    }
+    ref.onDispose(() => _coalesce?.cancel());
+    return 0;
+  }
+
+  void _onEvent(RealtimeEvent event) {
+    if (event.event != 'entity.changed') return;
+    if (!const {'project', 'org_unit'}.contains(event.data['type'])) return;
+
+    _coalesce?.cancel();
+    _coalesce = Timer(_coalesceWindow, () => state = state + 1);
+  }
+
+  void bump() {
+    _coalesce?.cancel();
+    state = state + 1;
+  }
 }
 
 /// Cây Teams cho màn danh sách.
@@ -24,6 +74,7 @@ class TeamWithPlans {
 /// này nhỏ (một xưởng có một team và hai dự án), và endpoint gộp sẽ là một
 /// hình dạng thứ ba phải giữ đồng bộ với hai cái đã có.
 final teamsWithPlansProvider = FutureProvider<List<TeamWithPlans>>((ref) async {
+  ref.watch(planRealtimeSignalProvider);
   final api = ref.watch(plansApiProvider);
   final (teams, plans) = await (api.teams(), api.plans()).wait;
 
@@ -57,8 +108,9 @@ final teamsWithPlansProvider = FutureProvider<List<TeamWithPlans>>((ref) async {
         .firstWhere((n) => (n ?? '').isNotEmpty, orElse: () => null);
 
     extras[entry.key] = TeamWithPlans(
-      team: Team(id: entry.key, name: name ?? 'Team không còn tồn tại'),
+      team: Team(id: entry.key, name: name ?? 'Cần xếp lại team'),
       plans: entry.value,
+      synthetic: true,
     );
   }
   grouped.addAll(extras.values);
@@ -71,6 +123,7 @@ final teamsWithPlansProvider = FutureProvider<List<TeamWithPlans>>((ref) async {
       TeamWithPlans(
         team: const Team(id: '', name: 'Chưa xếp team'),
         plans: orphans,
+        synthetic: true,
       ),
     );
   }
@@ -78,9 +131,10 @@ final teamsWithPlansProvider = FutureProvider<List<TeamWithPlans>>((ref) async {
   return grouped;
 });
 
-final planProvider = FutureProvider.family<Plan, String>(
-  (ref, id) => ref.watch(plansApiProvider).plan(id),
-);
+final planProvider = FutureProvider.family<Plan, String>((ref, id) {
+  ref.watch(planRealtimeSignalProvider);
+  return ref.watch(plansApiProvider).plan(id);
+});
 
 /// Quãng ân hạn trước khi bảng / KPI / dòng việc bị dọn sau khi rời màn.
 ///
