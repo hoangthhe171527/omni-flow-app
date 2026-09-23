@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/error/app_exception.dart';
 import '../../../design/components/components.dart';
 import '../../../design/platform/omni_motion_scope.dart';
 import '../../../design/tokens/tokens.dart';
+import '../../../security/session/session_controller.dart';
 import '../../tasks/domain/task.dart';
 import '../../tasks/application/tasks_providers.dart';
 import '../../settings/settings.dart';
@@ -64,6 +66,14 @@ class _PlanBoardPageState extends ConsumerState<PlanBoardPage> {
     final plan = ref.watch(planProvider(widget.planId));
 
     final loaded = plan.valueOrNull;
+    final taskAccess = ref.watch(taskAccessProvider);
+    final currentUserId = ref.watch(sessionProvider.select((s) => s.user?.id));
+    final canDeletePlan =
+        loaded != null &&
+        taskAccess.canDelete &&
+        (taskAccess.isAssigner ||
+            (currentUserId != null &&
+                loaded.roleOf(currentUserId) == PlanRole.owner));
 
     return Scaffold(
       appBar: AppBar(
@@ -86,19 +96,37 @@ class _PlanBoardPageState extends ConsumerState<PlanBoardPage> {
           // Sửa các cột của chính cái bảng đang nhìn. Nhóm việc trước đây
           // chỉ khai được lúc tạo dự án, nên một cái tên gõ nhầm là phải
           // tạo lại cả dự án — mà công việc thì đã nằm trong đó rồi.
-          if (loaded != null && ref.watch(taskAccessProvider).isAssigner)
+          if (loaded != null && taskAccess.isAssigner)
             IconButton(
               onPressed: _editSections,
               icon: const Icon(Icons.view_column_outlined),
               tooltip: 'Sửa nhóm việc',
+            ),
+          if (canDeletePlan)
+            PopupMenuButton<_PlanAction>(
+              tooltip: 'Tuỳ chọn dự án',
+              onSelected: (action) {
+                if (action == _PlanAction.delete) _deletePlan(loaded);
+              },
+              itemBuilder: (context) => const [
+                PopupMenuItem(
+                  value: _PlanAction.delete,
+                  child: Row(
+                    children: [
+                      Icon(Icons.delete_outline, color: Colors.red),
+                      SizedBox(width: OmniSpacing.sm),
+                      Text('Xoá dự án', style: TextStyle(color: Colors.red)),
+                    ],
+                  ),
+                ),
+              ],
             ),
         ],
       ),
       // Nút tạo nằm trên BẢNG, không nằm ở "Việc của tôi": ở đây dự án và
       // cột đang đứng đã biết sẵn, nên việc mới ra đời đúng chỗ mà không phải
       // hỏi thêm câu nào. Ở "Việc của tôi" thì cả hai đều phải hỏi.
-      floatingActionButton:
-          loaded == null || !ref.watch(taskAccessProvider).canCreate
+      floatingActionButton: loaded == null || !taskAccess.canCreate
           ? null
           : FloatingActionButton.extended(
               onPressed: () => _createTask(loaded),
@@ -136,6 +164,32 @@ class _PlanBoardPageState extends ConsumerState<PlanBoardPage> {
     );
   }
 
+  Future<void> _deletePlan(Plan plan) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final confirmed = await showOmniConfirm(
+      context: context,
+      title: 'Xoá dự án “${plan.name}”?',
+      message:
+          'Toàn bộ công việc trong dự án cũng sẽ được chuyển vào thùng rác. Thao tác sẽ đồng bộ trên web và điện thoại.',
+      confirmLabel: 'Xoá dự án',
+      destructive: true,
+    );
+    if (!confirmed) return;
+
+    try {
+      await ref.read(plansApiProvider).deletePlan(plan.id);
+      ref.invalidate(teamsWithPlansProvider);
+      ref.invalidate(planProvider(plan.id));
+      ref.invalidate(planTasksProvider(plan.id));
+      ref.read(taskRealtimeSignalProvider.notifier).bump();
+      if (!mounted) return;
+      context.pop();
+      messenger.showSnackBar(const SnackBar(content: Text('Đã xoá dự án.')));
+    } on AppException catch (error) {
+      messenger.showSnackBar(SnackBar(content: Text(error.message)));
+    }
+  }
+
   /// Mở màn tạo việc với dự án + cột đang đứng điền sẵn.
   Future<void> _createTask(Plan plan) async {
     final sections = plan.sections;
@@ -161,6 +215,8 @@ class _PlanBoardPageState extends ConsumerState<PlanBoardPage> {
     }
   }
 }
+
+enum _PlanAction { delete }
 
 /// Bảng: dải chỉ báo + các cột lướt ngang, vẽ từ rổ đã chia trong provider.
 class _Board extends ConsumerWidget {

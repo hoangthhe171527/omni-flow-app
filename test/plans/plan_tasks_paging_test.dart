@@ -83,6 +83,12 @@ void main() {
 /// Trả về đúng [total] việc, chia trang theo `perPage` mà chỗ gọi xin.
 class _PagedApi implements PlansApi {
   @override
+  Future<void> deletePlan(String planId) async {}
+
+  @override
+  Future<void> deleteTeam(String teamId) async {}
+
+  @override
   Future<Plan> updateSections(String planId, List<PlanSection> sections) async {
     throw UnimplementedError();
   }

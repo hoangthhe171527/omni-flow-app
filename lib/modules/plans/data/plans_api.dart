@@ -36,12 +36,20 @@ class PlansApi {
   final ApiClient _client;
 
   Future<List<Team>> teams() async {
-    final response = await _client.get(
-      '/teams',
-      query: {'per_page': AppConfig.defaultPerPage},
-    );
+    final all = <Team>[];
+    var page = 1;
+    while (true) {
+      final response = await _client.get(
+        '/teams',
+        query: {'page': page, 'per_page': AppConfig.maxPerPage},
+      );
+      all.addAll(response.list.map(Team.fromJson));
+      final pagination = response.pagination;
+      if (pagination == null || !pagination.hasMore) break;
+      page = pagination.nextPage;
+    }
 
-    return response.list.map(Team.fromJson).toList();
+    return all;
   }
 
   /// Dự án, tuỳ chọn lọc theo team.
@@ -50,15 +58,24 @@ class PlansApi {
   /// mọi dự án tạo trước tầng Team đều vậy, và giấu chúng đi nghĩa là công
   /// việc đang chạy biến mất khỏi app.
   Future<List<Plan>> plans({String? teamId}) async {
-    final response = await _client.get(
-      '/projects',
-      query: {
-        if (teamId != null && teamId.isNotEmpty) 'team_id': teamId,
-        'per_page': AppConfig.defaultPerPage,
-      },
-    );
+    final all = <Plan>[];
+    var page = 1;
+    while (true) {
+      final response = await _client.get(
+        '/projects',
+        query: {
+          if (teamId != null && teamId.isNotEmpty) 'team_id': teamId,
+          'page': page,
+          'per_page': AppConfig.maxPerPage,
+        },
+      );
+      all.addAll(response.list.map(Plan.fromJson));
+      final pagination = response.pagination;
+      if (pagination == null || !pagination.hasMore) break;
+      page = pagination.nextPage;
+    }
 
-    return response.list.map(Plan.fromJson).toList();
+    return all;
   }
 
   Future<Team> createTeam({
@@ -79,6 +96,14 @@ class PlansApi {
     );
 
     return Team.fromJson(response.object);
+  }
+
+  /// Xoá một team rỗng.
+  ///
+  /// Server trả 409 nếu team còn dự án, kể cả dự án đang ở thùng rác. Không
+  /// xoá dây chuyền ở client: một lần dọn team không được làm biến mất cả xưởng.
+  Future<void> deleteTeam(String teamId) async {
+    await _client.delete('/teams/$teamId');
   }
 
   /// Tạo một dự án, kèm các nhóm việc của nó.
@@ -121,6 +146,11 @@ class PlansApi {
     );
 
     return Plan.fromJson(response.object);
+  }
+
+  /// Xoá mềm dự án; server xoá mềm các công việc thuộc dự án cùng lượt.
+  Future<void> deletePlan(String planId) async {
+    await _client.delete('/projects/$planId');
   }
 
   /// Đặt lại danh sách nhóm việc của một dự án đã có.

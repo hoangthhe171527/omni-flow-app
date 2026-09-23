@@ -74,6 +74,16 @@ void main() {
   Map<String, dynamic> sentBody() =>
       Map<String, dynamic>.from(adapter.singleRequest.data as Map);
 
+  test('deleteTask gọi đúng DELETE /tasks/{id}', () async {
+    adapter = _RecordingAdapter();
+    final api = TasksApi(ApiClient(Dio()..httpClientAdapter = adapter));
+
+    await api.deleteTask('t1');
+
+    expect(adapter.singleRequest.method, 'DELETE');
+    expect(adapter.singleRequest.uri.path, '/api/v1/tasks/t1');
+  });
+
   group('hạn', () {
     testWidgets('chưa có hạn thì mở thẳng lịch, không hỏi thêm', (
       tester,
