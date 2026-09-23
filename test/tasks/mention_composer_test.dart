@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:intl/date_symbol_data_local.dart';
 import 'package:omni_app/design/theme/omni_theme.dart';
 import 'package:omni_app/modules/tasks/application/task_controller.dart';
 import 'package:omni_app/modules/tasks/domain/task.dart';
@@ -13,6 +14,8 @@ import 'package:omni_app/modules/tasks/presentation/widgets/comment_section.dart
 /// rồi không thấy gì xảy ra. Giờ gõ `@` là ra gợi ý, chọn là `@Tên` nằm trong
 /// câu, và id gửi đi được đọc lại từ chính câu đó — xoá chữ là hết nhắc.
 void main() {
+  setUpAll(() => initializeDateFormatting('vi_VN'));
+
   late List<({String body, List<String> ids})> sent;
 
   final task = Task.fromJson({
