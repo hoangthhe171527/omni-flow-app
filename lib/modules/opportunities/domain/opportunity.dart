@@ -218,7 +218,33 @@ class Opportunity {
 class PipelineSummary {
   const PipelineSummary({this.byStage = const {}});
 
+  /// The API sends `{total_count, value_by_stage: {stage: value},
+  /// count_by_stage: {stage: count}}` (an empty map comes back as `[]`). The
+  /// older per-key `{stage: {count, value}}` shape is still read as a fallback.
   factory PipelineSummary.fromJson(Map<String, dynamic> json) {
+    final values = json['value_by_stage'];
+    final counts = json['count_by_stage'];
+    if (values is Map || values is List || counts is Map || counts is List) {
+      final valueMap = values is Map ? values : const {};
+      final countMap = counts is Map ? counts : const {};
+      final byStage = <PipelineStage, StageTotal>{};
+      for (final key in {...valueMap.keys, ...countMap.keys}) {
+        // A tenant-defined stage (e.g. `demo_sp`) has no column on this board;
+        // parse() would fold it into "Mới" and inflate that column.
+        if (!_knownStageCodes.contains(key.toString())) continue;
+        final stage = PipelineStage.parse(key.toString());
+        final previous = byStage[stage] ?? const StageTotal(count: 0, value: 0);
+        final value = valueMap[key];
+        final count = countMap[key];
+        // Legacy UPPERCASE and lowercase codes collapse onto one stage: add up.
+        byStage[stage] = StageTotal(
+          count: previous.count + (count is num ? count.toInt() : 0),
+          value: previous.value + (value is num ? value.toDouble() : 0),
+        );
+      }
+      return PipelineSummary(byStage: byStage);
+    }
+
     final byStage = <PipelineStage, StageTotal>{};
     for (final entry in json.entries) {
       final value = entry.value;
@@ -231,6 +257,11 @@ class PipelineSummary {
     }
     return PipelineSummary(byStage: byStage);
   }
+
+  static const _knownStageCodes = {
+    'new', 'consulted', 'quoted', 'negotiating', 'won', 'lost', //
+    'LEAD', 'QUALIFIED', 'PROPOSAL', 'NEGOTIATION', 'WON', 'LOST',
+  };
 
   final Map<PipelineStage, StageTotal> byStage;
 
