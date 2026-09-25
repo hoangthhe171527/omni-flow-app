@@ -180,6 +180,16 @@ void main() {
         );
       });
 
+      test('owner_id vẫn cho quyền owner khi member_roles cũ bị thiếu', () {
+        final plan = Plan.fromJson({
+          'id': 'p',
+          'name': 'X',
+          'owner_id': 'u-owner',
+        });
+
+        expect(plan.roleOf('u-owner'), PlanRole.owner);
+      });
+
       test('dự án chưa có stats thì là 0, không ném lỗi', () {
         final plan = Plan.fromJson({'id': 'p', 'name': 'X'});
 

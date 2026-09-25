@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:omni_app/core/error/app_exception.dart';
 import 'package:omni_app/core/storage/preferences_store.dart';
 import 'package:omni_app/modules/tasks/application/task_controller.dart';
+import 'package:omni_app/modules/tasks/application/tasks_providers.dart';
 import 'package:omni_app/modules/tasks/data/tasks_api.dart';
 import 'package:omni_app/modules/tasks/domain/task.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -32,6 +33,7 @@ void main() {
       overrides: [
         sharedPreferencesProvider.overrideWithValue(prefs),
         tasksApiProvider.overrideWithValue(api),
+        taskRealtimeSignalProvider.overrideWith(_SilentTaskRealtimeSignal.new),
       ],
     );
     // Giữ một người nghe: provider là autoDispose, không giữ thì nó bị huỷ
@@ -118,6 +120,11 @@ void main() {
     expect(reopened.pendingFor('c1'), isNull);
     expect(reopened.visible.subtasks.first.done, isTrue);
   });
+}
+
+final class _SilentTaskRealtimeSignal extends TaskRealtimeSignal {
+  @override
+  int build() => 0;
 }
 
 /// Đọc được, ghi thì không — đúng như xưởng lúc sóng chập chờn.

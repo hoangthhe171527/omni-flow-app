@@ -11,6 +11,7 @@ import '../design/components/components.dart';
 import '../design/theme/omni_theme.dart';
 import '../modules/inbox/inbox_module.dart';
 import '../modules/notifications/application/push_notifications.dart';
+import '../modules/plans/application/plans_providers.dart';
 import '../modules/settings/presentation/widgets/account_menu_button.dart';
 import '../modules/tasks/application/tasks_providers.dart';
 import '../modules/tasks/tasks_module.dart';
@@ -74,6 +75,7 @@ class _OmniAppState extends ConsumerState<OmniApp> with WidgetsBindingObserver {
     // gì". Nên nối lại VÀ buộc một lượt tải lại, không tin vào socket.
     unawaited(ref.read(realtimeClientProvider).connect());
     ref.read(taskRealtimeSignalProvider.notifier).bump();
+    ref.read(planRealtimeSignalProvider.notifier).bump();
   }
 
   @override

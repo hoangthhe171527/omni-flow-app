@@ -8,6 +8,7 @@ import '../../../security/session/session_controller.dart';
 import '../application/task_controller.dart';
 import '../application/task_detail_actions.dart';
 import '../application/tasks_providers.dart';
+import '../data/tasks_api.dart';
 import '../domain/task.dart';
 import 'widgets/activity_log.dart';
 import 'widgets/assign_task_sheet.dart';
@@ -42,11 +43,38 @@ class TaskDetailPage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final detail = ref.watch(taskDetailProvider(taskId));
     final access = ref.watch(taskAccessProvider);
+    final loadedTask = detail.valueOrNull?.visible;
 
     return Scaffold(
       appBar: AppBar(
         title: const Text('Chi tiết công việc'),
         toolbarHeight: 56,
+        actions: [
+          if (access.isAssigner && loadedTask != null)
+            PopupMenuButton<_TaskAction>(
+              tooltip: 'Tuỳ chọn công việc',
+              onSelected: (action) {
+                if (action == _TaskAction.delete) {
+                  _deleteTask(context, ref, loadedTask);
+                }
+              },
+              itemBuilder: (context) => const [
+                PopupMenuItem(
+                  value: _TaskAction.delete,
+                  child: Row(
+                    children: [
+                      Icon(Icons.delete_outline, color: Colors.red),
+                      SizedBox(width: OmniSpacing.sm),
+                      Text(
+                        'Xoá công việc',
+                        style: TextStyle(color: Colors.red),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+        ],
       ),
       body: OmniAsyncView(
         value: detail,
@@ -61,7 +89,40 @@ class TaskDetailPage extends ConsumerWidget {
       ),
     );
   }
+
+  Future<void> _deleteTask(
+    BuildContext context,
+    WidgetRef ref,
+    Task task,
+  ) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final confirmed = await showOmniConfirm(
+      context: context,
+      title: 'Xoá công việc “${task.title}”?',
+      message:
+          'Công việc sẽ biến mất trên web và điện thoại. Bạn có thể khôi phục từ thùng rác trên web.',
+      confirmLabel: 'Xoá công việc',
+      destructive: true,
+    );
+    if (!confirmed) return;
+
+    try {
+      await ref.read(tasksApiProvider).deleteTask(task.id);
+      ref.read(subtaskOutboxProvider).write(task.id, const []);
+      ref.invalidate(taskDetailProvider(task.id));
+      ref.read(taskRealtimeSignalProvider.notifier).bump();
+      if (!context.mounted) return;
+      Navigator.of(context).pop();
+      messenger.showSnackBar(
+        const SnackBar(content: Text('Đã xoá công việc.')),
+      );
+    } on AppException catch (error) {
+      messenger.showSnackBar(SnackBar(content: Text(error.message)));
+    }
+  }
 }
+
+enum _TaskAction { delete }
 
 class _Loaded extends ConsumerWidget {
   const _Loaded({

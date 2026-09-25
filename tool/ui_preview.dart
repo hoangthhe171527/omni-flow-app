@@ -168,6 +168,11 @@ class _StubTasksApi implements TasksApi {
   final _rows = [..._tasks];
 
   @override
+  Future<void> deleteTask(String taskId) async {
+    _rows.removeWhere((row) => row['id'] == taskId);
+  }
+
+  @override
   Future<Paged<TaskComment>> comments(
     String taskId, {
     int page = 1,
