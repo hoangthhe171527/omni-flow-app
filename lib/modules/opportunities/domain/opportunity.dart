@@ -63,6 +63,13 @@ enum PipelineStage {
     PipelineStage.won,
     PipelineStage.lost,
   ];
+
+  /// Codes [parse] knows. Anything else is a tenant-defined stage (a pipeline
+  /// configured on the web, e.g. `demo_sp`) that this board folds into [fresh].
+  static const knownCodes = {
+    'new', 'consulted', 'quoted', 'negotiating', 'won', 'lost', //
+    'LEAD', 'QUALIFIED', 'PROPOSAL', 'NEGOTIATION', 'WON', 'LOST',
+  };
 }
 
 class OpportunityNote {
@@ -99,19 +106,26 @@ class Opportunity {
     this.tags = const [],
     this.notes = const [],
     this.metadata = const {},
+    this.rawStage,
   });
+
+  /// Empty draft for the create form — filled by [applyForm].
+  factory Opportunity.blank() =>
+      const Opportunity(id: '', title: '', stage: PipelineStage.fresh);
 
   factory Opportunity.fromJson(Map<String, dynamic> json) {
     final metadata = json.child('metadata');
-    final stage = PipelineStage.parse(
-      json.str('opportunity_stage') ?? json.str('pipeline'),
-    );
+    // `pipeline` is the pipeline's NAME (`standard`), only a stage on very old
+    // records — never echo it back as a stage code.
+    final rawStage = json.str('opportunity_stage');
+    final stage = PipelineStage.parse(rawStage ?? json.str('pipeline'));
 
     return Opportunity(
       id: json.strOr('id', ''),
       code: json.strOr('opportunity_code', ''),
       title: json.strOr('title', 'Cơ hội'),
       stage: stage,
+      rawStage: rawStage,
       customerId: json.str('customer_id'),
       customerName: metadata.str('customer_name'),
       value: json.dbl('estimated_budget') ?? 0,
@@ -149,6 +163,24 @@ class Opportunity {
   /// know about (the web client writes several).
   final Map<String, dynamic> metadata;
 
+  /// The stage code exactly as the API sent it. [stage] folds a tenant-defined
+  /// code into [PipelineStage.fresh]; writing `stage.slug` back would silently
+  /// move the deal to `new`. Cleared as soon as the user picks another stage.
+  final String? rawStage;
+
+  /// What goes back to the API: the original code when it is a tenant-defined
+  /// stage the user didn't change, otherwise the canonical lowercase slug
+  /// (legacy UPPERCASE codes are normalised — the API only accepts lowercase).
+  String get stageCode {
+    final raw = rawStage;
+    if (raw != null &&
+        raw.isNotEmpty &&
+        !PipelineStage.knownCodes.contains(raw)) {
+      return raw;
+    }
+    return stage.slug;
+  }
+
   int get effectiveProbability => probability ?? stage.defaultProbability;
 
   /// Value weighted by probability — what a forecast actually sums.
@@ -165,18 +197,41 @@ class Opportunity {
     if (customerId != null) 'customer_id': customerId,
     if (ownerId != null) 'owner_user_id': ownerId,
     'estimated_budget': value,
-    'opportunity_stage': stage.slug,
+    'opportunity_stage': stageCode,
     if (expectedCloseAt != null)
       'expected_end_date': expectedCloseAt!.toIso8601String().split('T').first,
     'metadata': {
       ...metadata,
       if (customerName != null) 'customer_name': customerName,
       if (product != null) 'product': product,
-      'probability': effectiveProbability,
+      // Only a probability someone actually set. Writing the stage default
+      // pins it: the deal would keep 10% after moving to "Báo giá".
+      if (probability != null) 'probability': probability,
       'channel': source.slug,
       'tags': tags,
     },
   };
+
+  /// The form's fields applied to this record — the loaded opportunity when
+  /// editing ([Opportunity.blank] when creating), so everything the form
+  /// doesn't show (tags, channel, notes, a tenant-defined stage) survives.
+  Opportunity applyForm({
+    required String title,
+    required PipelineStage stage,
+    required double value,
+    String? customerId,
+    String? customerName,
+    String? product,
+    DateTime? expectedCloseAt,
+  }) => copyWith(
+    title: title,
+    stage: stage,
+    value: value,
+    customerId: customerId,
+    customerName: customerName,
+    product: product,
+    expectedCloseAt: expectedCloseAt,
+  );
 
   Opportunity copyWith({
     String? title,
@@ -207,6 +262,8 @@ class Opportunity {
       tags: tags ?? this.tags,
       notes: notes,
       metadata: metadata,
+      // Same stage → keep the original code; a different one → the user moved it.
+      rawStage: stage == null || stage == this.stage ? rawStage : null,
     );
   }
 }
@@ -218,7 +275,33 @@ class Opportunity {
 class PipelineSummary {
   const PipelineSummary({this.byStage = const {}});
 
+  /// The API sends `{total_count, value_by_stage: {stage: value},
+  /// count_by_stage: {stage: count}}` (an empty map comes back as `[]`). The
+  /// older per-key `{stage: {count, value}}` shape is still read as a fallback.
   factory PipelineSummary.fromJson(Map<String, dynamic> json) {
+    final values = json['value_by_stage'];
+    final counts = json['count_by_stage'];
+    if (values is Map || values is List || counts is Map || counts is List) {
+      final valueMap = values is Map ? values : const {};
+      final countMap = counts is Map ? counts : const {};
+      final byStage = <PipelineStage, StageTotal>{};
+      for (final key in {...valueMap.keys, ...countMap.keys}) {
+        // A tenant-defined stage (e.g. `demo_sp`) has no column on this board;
+        // parse() would fold it into "Mới" and inflate that column.
+        if (!PipelineStage.knownCodes.contains(key.toString())) continue;
+        final stage = PipelineStage.parse(key.toString());
+        final previous = byStage[stage] ?? const StageTotal(count: 0, value: 0);
+        final value = valueMap[key];
+        final count = countMap[key];
+        // Legacy UPPERCASE and lowercase codes collapse onto one stage: add up.
+        byStage[stage] = StageTotal(
+          count: previous.count + (count is num ? count.toInt() : 0),
+          value: previous.value + (value is num ? value.toDouble() : 0),
+        );
+      }
+      return PipelineSummary(byStage: byStage);
+    }
+
     final byStage = <PipelineStage, StageTotal>{};
     for (final entry in json.entries) {
       final value = entry.value;
