@@ -45,7 +45,12 @@ class Customer {
     this.note,
     this.lastInteractionAt,
     this.createdAt,
+    this.rawStatus,
   });
+
+  /// Empty draft for the create form — filled by [applyForm].
+  factory Customer.blank() =>
+      const Customer(id: '', name: '', source: Channel.zalo);
 
   factory Customer.fromJson(Map<String, dynamic> json) {
     final metadata = json.child('metadata');
@@ -68,6 +73,7 @@ class Customer {
       tags: metadata.strList('tags'),
       lifetimeValue: json.dbl('lifetime_booking_value') ?? 0,
       status: CustomerStatus.parse(json.str('customer_status')),
+      rawStatus: json.str('customer_status'),
       customerType: json.strOr('customer_type', 'DIRECT_CLIENT'),
       ownerId: json.str('assigned_sales_rep_id'),
       ownerName: json.str('assigned_sales_rep_name'),
@@ -98,6 +104,25 @@ class Customer {
   final DateTime? lastInteractionAt;
   final DateTime? createdAt;
 
+  /// `customer_status` exactly as the API sent it. [status] is coarser —
+  /// `AT_RISK`, `LOST` and `INACTIVE` all show as "Ngưng hoạt động" — so
+  /// writing `status` back would turn an at-risk customer into `INACTIVE`.
+  final String? rawStatus;
+
+  /// What goes back to the API: the original code while the user keeps the
+  /// same group, the group's own code once they pick another one.
+  String get statusCode {
+    final raw = rawStatus;
+    if (raw != null && raw.isNotEmpty && CustomerStatus.parse(raw) == status) {
+      return raw;
+    }
+    return switch (status) {
+      CustomerStatus.vip => 'WARM',
+      CustomerStatus.inactive => 'INACTIVE',
+      _ => 'ACTIVE',
+    };
+  }
+
   bool get hasPhone => phone.trim().isNotEmpty;
   bool get hasEmail => email.trim().isNotEmpty;
 
@@ -117,11 +142,7 @@ class Customer {
     'primary_contact_email': email,
     'address': address,
     'tax_code': taxCode,
-    'customer_status': switch (status) {
-      CustomerStatus.vip => 'WARM',
-      CustomerStatus.inactive => 'INACTIVE',
-      _ => 'ACTIVE',
-    },
+    'customer_status': statusCode,
     if (ownerId != null) 'assigned_sales_rep_id': ownerId,
     'metadata': {
       'channel': source.slug,
@@ -129,6 +150,29 @@ class Customer {
       if (note != null) 'note': note,
     },
   };
+
+  /// The form's fields applied to this record — the loaded customer when
+  /// editing ([Customer.blank] when creating), so what the form doesn't show
+  /// (tax code, tags, type, the fine-grained status) is written back as-is.
+  Customer applyForm({
+    required String name,
+    required String contactName,
+    required String phone,
+    required String email,
+    required String address,
+    required Channel source,
+    required CustomerStatus status,
+    String? note,
+  }) => copyWith(
+    name: name,
+    contactName: contactName,
+    phone: phone,
+    email: email,
+    address: address,
+    source: source,
+    status: status,
+    note: note,
+  );
 
   Customer copyWith({
     String? name,
@@ -162,6 +206,8 @@ class Customer {
       note: note ?? this.note,
       lastInteractionAt: lastInteractionAt,
       createdAt: createdAt,
+      // Kept only while the group is unchanged — see [statusCode].
+      rawStatus: status == null || status == this.status ? rawStatus : null,
     );
   }
 }

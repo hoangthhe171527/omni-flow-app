@@ -39,6 +39,9 @@ class _OpportunityFormPageState extends ConsumerState<OpportunityFormPage> {
   bool _saving = false;
   bool _prefilled = false;
 
+  /// The record being edited, as loaded (null when creating).
+  Opportunity? _original;
+
   @override
   void dispose() {
     _title.dispose();
@@ -50,6 +53,7 @@ class _OpportunityFormPageState extends ConsumerState<OpportunityFormPage> {
   void _prefill(Opportunity opportunity) {
     if (_prefilled) return;
     _prefilled = true;
+    _original = opportunity;
     _title.text = opportunity.title;
     _value.text = opportunity.value == 0
         ? ''
@@ -84,8 +88,9 @@ class _OpportunityFormPageState extends ConsumerState<OpportunityFormPage> {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _saving = true);
 
-    final draft = Opportunity(
-      id: widget.opportunityId ?? '',
+    // Edit applies the form to the LOADED record, so what the form doesn't show
+    // (a tenant-defined stage, tags, channel, notes) is written back unchanged.
+    final draft = (_original ?? Opportunity.blank()).applyForm(
       title: _title.text.trim(),
       stage: _stage,
       customerId: _customer?.id ?? widget.customerId,

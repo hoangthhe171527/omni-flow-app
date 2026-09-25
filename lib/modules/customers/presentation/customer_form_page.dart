@@ -39,6 +39,9 @@ class _CustomerFormPageState extends ConsumerState<CustomerFormPage> {
   CustomerStatus _status = CustomerStatus.fresh;
   bool _saving = false;
   bool _prefilled = false;
+
+  /// The record being edited, as loaded (null when creating).
+  Customer? _original;
   DuplicateMatch? _duplicate;
   Timer? _duplicateTimer;
   Map<String, List<String>> _fieldErrors = const {};
@@ -62,6 +65,7 @@ class _CustomerFormPageState extends ConsumerState<CustomerFormPage> {
   void _prefill(Customer customer) {
     if (_prefilled) return;
     _prefilled = true;
+    _original = customer;
     _name.text = customer.name;
     _contact.text = customer.contactName;
     _phone.text = customer.phone;
@@ -99,8 +103,9 @@ class _CustomerFormPageState extends ConsumerState<CustomerFormPage> {
       _fieldErrors = const {};
     });
 
-    final draft = Customer(
-      id: widget.customerId ?? '',
+    // Edit applies the form to the LOADED record: tax code, tags, type and a
+    // fine-grained status (AT_RISK/LOST) the form can't show survive the save.
+    final draft = (_original ?? Customer.blank()).applyForm(
       name: _name.text.trim(),
       contactName: _contact.text.trim(),
       phone: _phone.text.trim(),
