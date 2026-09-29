@@ -22,89 +22,104 @@ class MyPermissionsPage extends ConsumerWidget {
     final held = session.policy.slugs;
     final scheme = Theme.of(context).colorScheme;
 
+    final dark = Theme.of(context).brightness == Brightness.dark;
+
+    // `MPermissions.dc.html`: thẻ mực tóm tắt (tên, vai trò, số quyền màu quỹ
+    // đạo sáng), rồi mỗi module một thẻ trắng có tên ở đầu.
     return Scaffold(
       appBar: const OmniAppBar(title: 'Quyền của tôi'),
       body: ListView(
-        padding: const EdgeInsets.fromLTRB(
-          OmniSpacing.lg,
-          OmniSpacing.md,
-          OmniSpacing.lg,
-          OmniSpacing.xxl,
-        ),
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, OmniSpacing.xxl),
         children: [
-          OmniCard(
+          Container(
+            padding: const EdgeInsets.all(OmniSpacing.lg),
+            decoration: BoxDecoration(
+              color: dark ? OmniColors.darkMuted : OmniColors.ink,
+              borderRadius: const BorderRadius.all(Radius.circular(18)),
+            ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   session.displayName,
-                  style: OmniType.bodyStrong.copyWith(color: scheme.onSurface),
+                  style: OmniType.money.copyWith(color: Colors.white),
                 ),
-                const SizedBox(height: 2),
+                const SizedBox(height: 4),
                 Text(
                   'Vai trò: ${session.roleLabel}',
                   style: OmniType.caption.copyWith(
-                    color: scheme.onSurfaceVariant,
+                    fontWeight: FontWeight.w400,
+                    color: OmniColors.inkMutedForeground,
                   ),
                 ),
+                const SizedBox(height: 4),
                 Text(
                   'Đang giữ ${held.length} quyền',
                   style: OmniType.caption.copyWith(
-                    color: scheme.onSurfaceVariant,
+                    fontWeight: FontWeight.w700,
+                    color: OmniColors.orbit,
+                    fontFeatures: OmniType.tabular,
                   ),
                 ),
               ],
             ),
           ),
-          for (final entry in declared.entries) ...[
-            if (entry.value.isNotEmpty) ...[
-              OmniSectionHeader(
-                title: entry.key,
-                padding: const EdgeInsets.only(
-                  top: OmniSpacing.xxl,
-                  bottom: OmniSpacing.md,
-                ),
-              ),
-              OmniCard(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: OmniSpacing.lg,
-                  vertical: OmniSpacing.sm,
-                ),
-                child: Column(
-                  children: [
-                    for (final slug in entry.value)
+          for (final entry in declared.entries)
+            if (entry.value.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.only(top: 14),
+                child: OmniCard(
+                  padding: const EdgeInsets.fromLTRB(16, 6, 16, 6),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
                       Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 5),
-                        child: Row(
-                          children: [
-                            Icon(
-                              held.contains(slug)
-                                  ? Icons.check_circle_rounded
-                                  : Icons.remove_circle_outline_rounded,
-                              size: OmniIconSize.sm,
-                              color: held.contains(slug)
-                                  ? OmniColors.success
-                                  : scheme.onSurfaceVariant,
-                            ),
-                            const SizedBox(width: OmniSpacing.sm),
-                            Expanded(
-                              child: Text(
-                                slug,
-                                style: OmniType.micro.copyWith(
-                                  color: held.contains(slug)
-                                      ? scheme.onSurface
-                                      : scheme.onSurfaceVariant,
-                                ),
-                              ),
-                            ),
-                          ],
+                        padding: const EdgeInsets.symmetric(vertical: 10),
+                        child: Text(
+                          entry.key,
+                          style: OmniType.bodyStrong.copyWith(
+                            fontWeight: FontWeight.w700,
+                            color: scheme.onSurface,
+                          ),
                         ),
                       ),
-                  ],
+                      const Divider(height: 1),
+                      for (final slug in entry.value)
+                        Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 10),
+                          child: Row(
+                            children: [
+                              // Hình dạng nói có/không (tick đặc / vòng gạch),
+                              // màu chỉ nhắc lại.
+                              Icon(
+                                held.contains(slug)
+                                    ? Icons.check_circle_rounded
+                                    : Icons.remove_circle_outline_rounded,
+                                size: OmniIconSize.md,
+                                color: held.contains(slug)
+                                    ? scheme.primary
+                                    : scheme.onSurfaceVariant,
+                              ),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: Text(
+                                  slug,
+                                  style: OmniType.caption.copyWith(
+                                    fontFamily: 'monospace',
+                                    fontWeight: FontWeight.w400,
+                                    color: held.contains(slug)
+                                        ? scheme.onSurface
+                                        : scheme.onSurfaceVariant,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                    ],
+                  ),
                 ),
               ),
-            ],
-          ],
         ],
       ),
     );

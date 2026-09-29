@@ -38,31 +38,57 @@ class BackgroundPage extends ConsumerWidget {
       // OmniAppBar như hai màn tài khoản kia: màn đẩy vào nên nó tự giữ nút
       // quay lại và không vẽ avatar (xem OmniAppBar).
       appBar: const OmniAppBar(title: 'Nền'),
-      body: GridView.count(
-        crossAxisCount: 2,
-        padding: const EdgeInsets.fromLTRB(
-          OmniSpacing.lg,
-          OmniSpacing.lg,
-          OmniSpacing.lg,
-          OmniSpacing.bottomSafe,
-        ),
-        mainAxisSpacing: OmniSpacing.md,
-        crossAxisSpacing: OmniSpacing.md,
-        childAspectRatio: 3 / 4.6,
-        children: [
-          _Tile(
-            label: 'Mặc định',
-            selected: current == null,
-            onTap: () => pick(null),
-            preview: ColoredBox(color: scheme.surfaceContainerHighest),
-          ),
-          for (final n in OmniBackdrops.names)
-            _Tile(
-              label: OmniBackdrops.labelOf(n)!,
-              selected: current == n,
-              onTap: () => pick(n),
-              preview: OmniBackdrop(name: n, child: const SizedBox.expand()),
+      // `MBackground.dc.html`: một dòng giải thích, lưới ba cột, ô đang chọn
+      // có vành đôi màu chính.
+      body: CustomScrollView(
+        slivers: [
+          SliverPadding(
+            padding: const EdgeInsets.fromLTRB(20, 12, 20, 12),
+            sliver: SliverToBoxAdapter(
+              child: Text(
+                'Nền cho khung chat và bảng dự án.',
+                style: OmniType.body.copyWith(
+                  color: OmniColors.byBrightness(
+                    context,
+                    OmniColors.secondaryForeground,
+                    scheme.onSurfaceVariant,
+                  ),
+                ),
+              ),
             ),
+          ),
+          SliverPadding(
+            padding: const EdgeInsets.fromLTRB(
+              16,
+              0,
+              16,
+              OmniSpacing.bottomSafe,
+            ),
+            sliver: SliverGrid.count(
+              crossAxisCount: 3,
+              mainAxisSpacing: 14,
+              crossAxisSpacing: 10,
+              childAspectRatio: 3 / 5.4,
+              children: [
+                _Tile(
+                  label: 'Mặc định',
+                  selected: current == null,
+                  onTap: () => pick(null),
+                  preview: ColoredBox(color: scheme.surfaceContainerHighest),
+                ),
+                for (final n in OmniBackdrops.names)
+                  _Tile(
+                    label: OmniBackdrops.labelOf(n)!,
+                    selected: current == n,
+                    onTap: () => pick(n),
+                    preview: OmniBackdrop(
+                      name: n,
+                      child: const SizedBox.expand(),
+                    ),
+                  ),
+              ],
+            ),
+          ),
         ],
       ),
     );
@@ -85,7 +111,6 @@ class _Tile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final text = Theme.of(context).textTheme;
 
     return Semantics(
       button: true,
@@ -101,12 +126,22 @@ class _Tile extends StatelessWidget {
             Expanded(
               child: Container(
                 clipBehavior: Clip.antiAlias,
+                margin: const EdgeInsets.all(4),
                 decoration: BoxDecoration(
                   borderRadius: OmniRadius.lgAll,
-                  border: Border.all(
-                    color: selected ? scheme.primary : scheme.outlineVariant,
-                    width: selected ? 2 : 1,
-                  ),
+                  border: selected
+                      ? null
+                      : Border.all(color: scheme.outlineVariant),
+                  // Vành đôi: khe màu nền + vành màu chính.
+                  boxShadow: selected
+                      ? [
+                          BoxShadow(color: scheme.primary, spreadRadius: 4),
+                          BoxShadow(
+                            color: Theme.of(context).scaffoldBackgroundColor,
+                            spreadRadius: 2,
+                          ),
+                        ]
+                      : null,
                 ),
                 child: Stack(
                   fit: StackFit.expand,
@@ -125,11 +160,16 @@ class _Tile extends StatelessWidget {
                 ),
               ),
             ),
-            const SizedBox(height: OmniSpacing.sm),
-            Text(
-              label,
-              style: text.labelLarge?.copyWith(
-                fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+            const SizedBox(height: 6),
+            Center(
+              child: Text(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: OmniType.micro.copyWith(
+                  fontWeight: selected ? FontWeight.w700 : FontWeight.w600,
+                  color: scheme.onSurface,
+                ),
               ),
             ),
           ],

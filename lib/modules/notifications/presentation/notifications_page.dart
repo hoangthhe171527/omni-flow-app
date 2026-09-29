@@ -57,7 +57,9 @@ class _NotificationsPageState extends ConsumerState<NotificationsPage> {
     final unread = ref.watch(unreadNotificationCountProvider).valueOrNull ?? 0;
 
     return Scaffold(
+      backgroundColor: scheme.surface,
       appBar: OmniAppBar(
+        backgroundColor: scheme.surface,
         title: 'Thông báo',
         toolbarHeight: 56,
         actions: [
@@ -134,13 +136,13 @@ class NotificationRow extends StatelessWidget {
     return Material(
       // Unread is carried by weight and a dot as well as by the tint, so it
       // survives both dim workshop light and colour-blindness.
-      color: unread ? scheme.primaryContainer : scheme.surface,
+      color: unread ? scheme.primary.withValues(alpha: 0.05) : scheme.surface,
       child: InkWell(
         onTap: onTap,
         child: ConstrainedBox(
           constraints: const BoxConstraints(minHeight: 72),
           child: Padding(
-            padding: const EdgeInsets.all(OmniSpacing.lg),
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -152,17 +154,25 @@ class NotificationRow extends StatelessWidget {
                     children: [
                       Text(
                         notification.title,
-                        style: unread
-                            ? OmniType.bodyStrong
-                            : OmniType.body.copyWith(
-                                color: scheme.onSurfaceVariant,
-                              ),
+                        style: OmniType.bodyStrong.copyWith(
+                          fontWeight: unread
+                              ? FontWeight.w700
+                              : FontWeight.w500,
+                          color: scheme.onSurface,
+                        ),
                       ),
                       const SizedBox(height: OmniSpacing.xxs),
                       Text(
                         notification.body,
-                        style: OmniType.caption.copyWith(
-                          color: scheme.onSurfaceVariant,
+                        style: OmniType.body.copyWith(
+                          height: 20 / 14,
+                          color: unread
+                              ? OmniColors.byBrightness(
+                                  context,
+                                  OmniColors.secondaryForeground,
+                                  scheme.onSurfaceVariant,
+                                )
+                              : scheme.onSurfaceVariant,
                         ),
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
@@ -209,51 +219,50 @@ class _KindIcon extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final (icon, colour) = switch (kind) {
+    // Ô icon bo 12 tô theo giọng Orbit (`MNotifications.dc.html`): trễ hạn
+    // đỏ, sắp tới hạn vàng, được giao / tiến độ xanh dương, còn lại mòng két.
+    final (icon, tone) = switch (kind) {
       NotificationKind.taskAssigned => (
         Icons.assignment_ind_outlined,
-        scheme.primary,
+        OmniTone.info,
       ),
       NotificationKind.taskStageOpen => (
         Icons.pan_tool_alt_outlined,
-        OmniColors.info,
+        OmniTone.info,
       ),
-      NotificationKind.taskProgress => (
-        Icons.timeline_rounded,
-        OmniColors.info,
-      ),
+      NotificationKind.taskProgress => (Icons.timeline_rounded, OmniTone.info),
       NotificationKind.taskCompleted => (
         Icons.check_circle_outline_rounded,
-        OmniColors.success,
+        OmniTone.success,
       ),
       NotificationKind.taskOverdue => (
         Icons.warning_amber_rounded,
-        OmniColors.destructive,
+        OmniTone.danger,
       ),
       NotificationKind.taskDueSoon => (
         Icons.schedule_rounded,
-        OmniColors.warning,
+        OmniTone.warning,
       ),
       NotificationKind.taskCommented || NotificationKind.taskMentioned => (
         Icons.chat_bubble_outline_rounded,
-        scheme.primary,
+        OmniTone.success,
       ),
-      NotificationKind.inboxMessage => (Icons.forum_outlined, scheme.primary),
+      NotificationKind.inboxMessage => (Icons.forum_outlined, OmniTone.info),
       NotificationKind.other => (
         Icons.notifications_none_rounded,
-        scheme.onSurfaceVariant,
+        OmniTone.neutral,
       ),
     };
+    final (foreground, background) = tone.of(context);
 
     return Container(
       width: 40,
       height: 40,
       decoration: BoxDecoration(
-        color: colour.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(OmniRadius.md),
+        color: background,
+        borderRadius: OmniRadius.mdAll,
       ),
-      child: Icon(icon, size: OmniIconSize.lg, color: colour),
+      child: Icon(icon, size: OmniIconSize.lg, color: foreground),
     );
   }
 }
