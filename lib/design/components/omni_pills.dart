@@ -189,16 +189,59 @@ class OmniTag extends StatelessWidget {
 
 /// Solid filled unread count — deliberately not an outlined badge, so it reads
 /// as "action required" rather than decoration.
+///
+/// Hai giọng theo bộ Orbit: CHƯA ĐỌC là nền vàng [OmniColors.sun] chữ mực
+/// ([OmniCountBadge.unread]), CẦN XỬ LÝ (việc trễ hạn) là nền đỏ chữ trắng
+/// ([OmniCountBadge.alert]).
 class OmniCountBadge extends StatelessWidget {
-  const OmniCountBadge({super.key, required this.count, this.color});
+  const OmniCountBadge({
+    super.key,
+    required this.count,
+    this.color,
+    this.foreground,
+    this.ringColor,
+    this.compact = false,
+  });
+
+  /// Huy hiệu "chưa đọc": vàng, chữ mực.
+  const OmniCountBadge.unread({
+    super.key,
+    required this.count,
+    this.ringColor,
+    this.compact = true,
+  }) : color = OmniColors.sun,
+       foreground = OmniColors.sunForeground;
+
+  /// Huy hiệu "cần xử lý": đỏ, chữ trắng.
+  const OmniCountBadge.alert({
+    super.key,
+    required this.count,
+    this.ringColor,
+    this.compact = true,
+  }) : color = OmniColors.dangerSurface,
+       foreground = Colors.white;
 
   final int count;
   final Color? color;
+
+  /// Màu chữ. Mặc định trắng.
+  final Color? foreground;
+
+  /// Vành 2dp quanh huy hiệu, cùng màu mặt nó nằm lên — tách huy hiệu khỏi
+  /// icon bên dưới (thanh tab, ô trong danh bạ).
+  final Color? ringColor;
+
+  /// Cỡ 18dp, không quầng sáng — cho thanh tab và ô danh bạ.
+  final bool compact;
 
   @override
   Widget build(BuildContext context) {
     if (count <= 0) return const SizedBox.shrink();
     final background = color ?? Theme.of(context).colorScheme.primary;
+    final ring = ringColor;
+    // Thiết kế vẽ chữ 10px trong huy hiệu 18dp. Sàn chữ của app là 12
+    // (`type_scale_test`), nên huy hiệu gọn cao 20dp kể cả vành để chữ 12 vừa.
+    const height = 20.0;
 
     // The badge glows, not the text.
     //
@@ -219,28 +262,32 @@ class OmniCountBadge extends StatelessWidget {
       builder: (context, scale, child) =>
           Transform.scale(scale: scale, child: child),
       child: Container(
-        constraints: const BoxConstraints(minWidth: 20),
-        height: 20,
-        padding: const EdgeInsets.symmetric(horizontal: 6),
+        constraints: const BoxConstraints(minWidth: height),
+        height: height,
+        padding: EdgeInsets.symmetric(horizontal: compact ? 4 : 6),
         decoration: BoxDecoration(
           color: background,
           borderRadius: OmniRadius.pillAll,
-          boxShadow: [
-            BoxShadow(
-              color: background.withValues(alpha: 0.45),
-              blurRadius: 8,
-              spreadRadius: 0.5,
-            ),
-          ],
+          border: ring == null ? null : Border.all(color: ring, width: 2),
+          boxShadow: compact
+              ? null
+              : [
+                  BoxShadow(
+                    color: background.withValues(alpha: 0.45),
+                    blurRadius: 8,
+                    spreadRadius: 0.5,
+                  ),
+                ],
         ),
         alignment: Alignment.center,
         child: Text(
           count > 99 ? '99+' : '$count',
           style: OmniType.micro.copyWith(
-            color: Colors.white,
+            color: foreground ?? Colors.white,
             // Bold: this is the one number on the row that must be read from a
             // glance, and the regular weight let it sink into the pill.
-            fontWeight: FontWeight.w700,
+            fontWeight: compact ? FontWeight.w800 : FontWeight.w700,
+            height: 1,
             fontFeatures: OmniType.tabular,
           ),
         ),

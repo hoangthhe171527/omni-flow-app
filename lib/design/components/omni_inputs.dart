@@ -112,8 +112,9 @@ class OmniField extends StatelessWidget {
           children: [
             Text(
               label,
-              style: OmniType.caption.copyWith(
-                color: scheme.onSurfaceVariant,
+              // 14/600 màu chữ chính — nhãn của mọi biểu mẫu trong bộ Orbit.
+              style: OmniType.body.copyWith(
+                color: scheme.onSurface,
                 fontWeight: FontWeight.w600,
               ),
             ),

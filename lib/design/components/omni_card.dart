@@ -43,14 +43,16 @@ class OmniCard extends StatelessWidget {
 
     return Material(
       color: background ?? scheme.surface,
-      borderRadius: OmniRadius.lgAll,
+      borderRadius: OmniRadius.xlAll,
       clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: onTap,
         child: Ink(
           decoration: BoxDecoration(
-            borderRadius: OmniRadius.lgAll,
-            border: Border.all(color: borderColor ?? scheme.outline),
+            borderRadius: OmniRadius.xlAll,
+            // Viền TRANG TRÍ (outlineVariant, #E3E8EF): thẻ trắng trên nền xám
+            // đã tự tách khỏi nền. Viền tương tác 3:1 dành cho ô nhập, nút.
+            border: Border.all(color: borderColor ?? scheme.outlineVariant),
           ),
           child: content,
         ),

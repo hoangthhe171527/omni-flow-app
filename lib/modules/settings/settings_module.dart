@@ -60,7 +60,7 @@ class SettingsModule extends OmniModule {
     ModuleNavEntry(
       moduleId: 'settings',
       label: 'Nền',
-      subtitle: 'Chọn nền cho chat và bảng dự án',
+      subtitle: 'Nền cho chat và bảng dự án',
       icon: Icons.wallpaper_outlined,
       selectedIcon: Icons.wallpaper_rounded,
       routeName: background,
@@ -70,7 +70,9 @@ class SettingsModule extends OmniModule {
     ),
     ModuleNavEntry(
       moduleId: 'settings',
-      label: 'Thông báo',
+      // Tên đầy đủ: "Thông báo" đã là tên của trung tâm thông báo trong nhóm
+      // Trao đổi, hai mục cùng tên trên một màn là hai mục không phân biệt được.
+      label: 'Cài đặt thông báo',
       subtitle: 'Chọn khi nào máy được rung',
       icon: Icons.notifications_outlined,
       selectedIcon: Icons.notifications_rounded,

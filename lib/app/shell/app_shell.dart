@@ -6,6 +6,7 @@ import '../../core/module/module_registry.dart';
 import '../../core/nav/pinned_tabs.dart';
 import '../../core/module/nav_destination.dart';
 import '../../design/components/components.dart';
+import '../../design/platform/omni_motion_scope.dart';
 import '../../design/tokens/tokens.dart';
 
 /// The tab shell.
@@ -88,6 +89,30 @@ class AppShell extends ConsumerWidget {
   }
 }
 
+/// Huy hiệu số trên một mục điều hướng, đúng giọng của mục đó.
+///
+/// Chung cho thanh dưới và thanh bên để hai nơi không bao giờ tô cùng một số
+/// bằng hai màu khác nhau.
+class _NavBadge extends StatelessWidget {
+  const _NavBadge({required this.count, required this.tone});
+
+  final int count;
+  final NavBadgeTone tone;
+
+  @override
+  Widget build(BuildContext context) {
+    final ring = Theme.of(context).colorScheme.surface;
+
+    return switch (tone) {
+      NavBadgeTone.unread => OmniCountBadge.unread(
+        count: count,
+        ringColor: ring,
+      ),
+      NavBadgeTone.alert => OmniCountBadge.alert(count: count, ringColor: ring),
+    };
+  }
+}
+
 class _ShellNavigationRail extends ConsumerWidget {
   const _ShellNavigationRail({
     required this.tabs,
@@ -112,12 +137,9 @@ class _ShellNavigationRail extends ConsumerWidget {
           Icon(selected ? destination.selectedIcon : destination.icon),
           if (count > 0)
             Positioned(
-              right: -10,
-              top: -7,
-              child: OmniCountBadge(
-                count: count,
-                color: OmniColors.dangerSurface,
-              ),
+              right: -12,
+              top: -9,
+              child: _NavBadge(count: count, tone: destination.badgeTone),
             ),
         ],
       );
@@ -129,14 +151,17 @@ class _ShellNavigationRail extends ConsumerWidget {
       labelType: NavigationRailLabelType.all,
       groupAlignment: -0.75,
       backgroundColor: scheme.surface,
-      indicatorColor: scheme.primary.withValues(alpha: 0.11),
-      selectedIconTheme: IconThemeData(color: scheme.primary, size: 24),
+      indicatorColor: scheme.primaryContainer,
+      selectedIconTheme: IconThemeData(
+        color: scheme.onPrimaryContainer,
+        size: OmniIconSize.xl,
+      ),
       unselectedIconTheme: IconThemeData(
         color: scheme.onSurfaceVariant,
         size: OmniIconSize.xl,
       ),
       selectedLabelTextStyle: OmniType.micro.copyWith(
-        color: scheme.primary,
+        color: scheme.onPrimaryContainer,
         fontWeight: FontWeight.w700,
       ),
       unselectedLabelTextStyle: OmniType.micro.copyWith(
@@ -155,8 +180,8 @@ class _ShellNavigationRail extends ConsumerWidget {
             label: Text(destination.label),
           ),
         const NavigationRailDestination(
-          icon: Icon(Icons.more_horiz_rounded),
-          selectedIcon: Icon(Icons.more_horiz_rounded),
+          icon: Icon(Icons.grid_view_outlined),
+          selectedIcon: Icon(Icons.grid_view_rounded),
           label: Text('Tất cả'),
         ),
       ],
@@ -164,6 +189,8 @@ class _ShellNavigationRail extends ConsumerWidget {
   }
 }
 
+/// Thanh dưới theo `MTabBar.dc.html`: nền thẻ, vạch trên mảnh, mục đang chọn
+/// nằm trong viên nhạt 56×30 với icon và chữ màu chính đậm.
 class _ShellNavBar extends StatelessWidget {
   const _ShellNavBar({
     required this.tabs,
@@ -179,24 +206,15 @@ class _ShellNavBar extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
 
-    return Container(
+    return DecoratedBox(
       decoration: BoxDecoration(
         color: scheme.surface,
-        border: Border(
-          top: BorderSide(color: scheme.outline.withValues(alpha: 0.7)),
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.035),
-            blurRadius: 18,
-            offset: const Offset(0, -4),
-          ),
-        ],
+        border: Border(top: BorderSide(color: scheme.outlineVariant)),
       ),
       child: SafeArea(
         top: false,
         child: SizedBox(
-          height: 64,
+          height: 62,
           child: Row(
             children: [
               for (var i = 0; i < tabs.length; i++)
@@ -233,8 +251,8 @@ class _ShellNavItem extends ConsumerWidget {
   const _ShellNavItem.more({required this.selected, required this.onTap})
     : destination = null,
       label = 'Tất cả',
-      icon = Icons.apps_outlined,
-      selectedIcon = Icons.apps_rounded;
+      icon = Icons.grid_view_outlined,
+      selectedIcon = Icons.grid_view_rounded;
 
   final ModuleNavEntry? destination;
   final String? label;
@@ -246,54 +264,70 @@ class _ShellNavItem extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final scheme = Theme.of(context).colorScheme;
-    final color = selected ? scheme.primary : scheme.onSurfaceVariant;
+    // #075E59 trên viên #DDF5F2 ở chế độ sáng — cặp primaryContainer của
+    // theme, nên chế độ tối tự có bản của nó.
+    final color = selected
+        ? scheme.onPrimaryContainer
+        : scheme.onSurfaceVariant;
     final badgeProvider = destination?.badge;
     final count = badgeProvider == null ? 0 : ref.watch(badgeProvider);
+    final text = destination?.label ?? label!;
 
-    return InkWell(
-      onTap: onTap,
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 4),
-            decoration: BoxDecoration(
-              color: selected
-                  ? scheme.primary.withValues(alpha: 0.11)
-                  : Colors.transparent,
-              borderRadius: OmniRadius.pillAll,
-            ),
-            child: Stack(
-              clipBehavior: Clip.none,
-              children: [
-                Icon(
-                  selected
-                      ? (destination?.selectedIcon ?? selectedIcon!)
-                      : (destination?.icon ?? icon!),
-                  size: OmniIconSize.xl,
-                  color: color,
-                ),
-                if (count > 0)
-                  Positioned(
-                    right: -10,
-                    top: -6,
-                    child: OmniCountBadge(
-                      count: count,
-                      color: OmniColors.dangerSurface,
-                    ),
+    return Semantics(
+      selected: selected,
+      button: true,
+      label: count > 0 ? '$text, $count' : text,
+      excludeSemantics: true,
+      child: InkWell(
+        onTap: onTap,
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            AnimatedContainer(
+              duration: OmniMotion.of(context).base,
+              curve: OmniCurves.standard,
+              width: 56,
+              height: 30,
+              decoration: BoxDecoration(
+                color: selected ? scheme.primaryContainer : Colors.transparent,
+                borderRadius: OmniRadius.pillAll,
+              ),
+              child: Stack(
+                clipBehavior: Clip.none,
+                alignment: Alignment.center,
+                children: [
+                  Icon(
+                    selected
+                        ? (destination?.selectedIcon ?? selectedIcon!)
+                        : (destination?.icon ?? icon!),
+                    size: 22,
+                    color: color,
                   ),
-              ],
+                  if (count > 0)
+                    Positioned(
+                      right: 2,
+                      top: -4,
+                      child: _NavBadge(
+                        count: count,
+                        tone: destination!.badgeTone,
+                      ),
+                    ),
+                ],
+              ),
             ),
-          ),
-          const SizedBox(height: 3),
-          Text(
-            destination?.label ?? label!,
-            style: OmniType.micro.copyWith(
-              color: color,
-              fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+            const SizedBox(height: 3),
+            Text(
+              text,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: OmniType.micro.copyWith(
+                color: color,
+                fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+                letterSpacing: -0.12,
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

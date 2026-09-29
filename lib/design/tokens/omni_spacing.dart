@@ -43,6 +43,7 @@ abstract final class OmniRadius {
 
   static const BorderRadius chipAll = BorderRadius.all(Radius.circular(chip));
 
+  static const BorderRadius xsAll = BorderRadius.all(Radius.circular(xs));
   static const BorderRadius smAll = BorderRadius.all(Radius.circular(sm));
   static const BorderRadius mdAll = BorderRadius.all(Radius.circular(md));
   static const BorderRadius lgAll = BorderRadius.all(Radius.circular(lg));
@@ -61,6 +62,11 @@ abstract final class OmniShadows {
   /// barely perceptible on purpose.
   static const List<BoxShadow> card = [
     BoxShadow(color: Color(0x0A0B1A33), blurRadius: 16, offset: Offset(0, 4)),
+  ];
+
+  /// Bóng mảnh dưới phần đang chọn của bộ chọn phân đoạn.
+  static const List<BoxShadow> hairline = [
+    BoxShadow(color: Color(0x1F0B1A33), blurRadius: 2, offset: Offset(0, 1)),
   ];
 
   static const List<BoxShadow> raised = [

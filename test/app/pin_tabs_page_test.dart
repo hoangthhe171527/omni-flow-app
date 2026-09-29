@@ -108,6 +108,28 @@ void main() {
     expect(checked.onChanged, isNotNull);
   });
 
+  testWidgets('thẻ xem trước cho thấy thanh dưới và số chỗ còn trống', (
+    tester,
+  ) async {
+    await pump(tester, ['route.Một', 'route.Ba']);
+
+    expect(find.text('Thanh dưới sẽ là'), findsOneWidget);
+    // Viên cho mỗi tab đã chọn (cùng tên với dòng checkbox) và một viên "+2".
+    expect(find.text('Một'), findsNWidgets(2));
+    expect(find.text('Ba'), findsNWidgets(2));
+    expect(find.text('Hai'), findsOneWidget);
+    expect(find.text('+2'), findsOneWidget);
+  });
+
+  testWidgets('chưa ghim gì thì xem trước là 4 tab mặc định, không chỗ trống', (
+    tester,
+  ) async {
+    await pump(tester, const []);
+
+    expect(find.textContaining('+'), findsNothing);
+    expect(find.text('Năm'), findsOneWidget);
+  });
+
   testWidgets('chưa ghim gì thì không hiện nút đặt lại', (tester) async {
     // Không có gì để đặt lại thì nút đó chỉ là một câu hỏi không lời đáp.
     await pump(tester, const []);
