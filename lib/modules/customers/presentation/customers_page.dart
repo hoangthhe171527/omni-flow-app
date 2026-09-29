@@ -55,51 +55,62 @@ class _CustomersPageState extends ConsumerState<CustomersPage> {
         titleSpacing: OmniSpacing.lg,
         toolbarHeight: 56,
         bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(97),
+          preferredSize: const Size.fromHeight(105),
           child: Column(
             children: [
               // Same flat search line as the inbox: icon, word, no box. The
               // shared OmniSearchField carries the global `filled: true`, which
               // is the dim panel this screen had behind its search text.
+              // Ô tìm xám bo 12 như hộp thư (`MCustomers.dc.html`).
               Padding(
-                padding: const EdgeInsets.fromLTRB(16, 4, 16, 4),
-                child: Row(
-                  children: [
-                    Icon(
-                      Icons.search_rounded,
-                      size: OmniIconSize.lg,
-                      color: meta,
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: TextField(
-                        controller: TextEditingController(text: filter.search)
-                          ..selection = TextSelection.collapsed(
-                            offset: filter.search.length,
+                padding: const EdgeInsets.fromLTRB(20, 6, 20, 0),
+                child: Container(
+                  height: 44,
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  decoration: BoxDecoration(
+                    color: scheme.surfaceContainerHighest,
+                    borderRadius: OmniRadius.mdAll,
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.search_rounded,
+                        size: OmniIconSize.md,
+                        color: meta,
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: TextField(
+                          controller: TextEditingController(text: filter.search)
+                            ..selection = TextSelection.collapsed(
+                              offset: filter.search.length,
+                            ),
+                          onChanged: controller.setSearch,
+                          textInputAction: TextInputAction.search,
+                          style: OmniType.input.copyWith(
+                            color: scheme.onSurface,
                           ),
-                        onChanged: controller.setSearch,
-                        textInputAction: TextInputAction.search,
-                        style: OmniType.input.copyWith(color: scheme.onSurface),
-                        decoration: InputDecoration(
-                          isDense: true,
-                          filled: false,
-                          border: InputBorder.none,
-                          enabledBorder: InputBorder.none,
-                          focusedBorder: InputBorder.none,
-                          contentPadding: EdgeInsets.zero,
-                          hintText: 'Tìm tên, số điện thoại',
-                          hintStyle: OmniType.input.copyWith(color: meta),
+                          decoration: InputDecoration(
+                            isDense: true,
+                            filled: false,
+                            border: InputBorder.none,
+                            enabledBorder: InputBorder.none,
+                            focusedBorder: InputBorder.none,
+                            contentPadding: EdgeInsets.zero,
+                            hintText: 'Tìm tên, số điện thoại',
+                            hintStyle: OmniType.input.copyWith(color: meta),
+                          ),
                         ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
               SizedBox(
-                height: 48,
+                height: 50,
                 child: ListView.separated(
                   scrollDirection: Axis.horizontal,
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  padding: const EdgeInsets.fromLTRB(20, 4, 20, 2),
                   itemCount: CustomerQuickFilter.values.length,
                   separatorBuilder: (_, _) =>
                       const SizedBox(width: OmniSpacing.sm),
@@ -153,7 +164,7 @@ class _CustomersPageState extends ConsumerState<CustomersPage> {
             separatorBuilder: (_, _) => Divider(
               height: 1,
               thickness: 1,
-              indent: 76,
+              indent: 82,
               color: scheme.outlineVariant,
             ),
             itemBuilder: (context, index) {
@@ -186,12 +197,12 @@ class CustomerCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final inactive = customer.status == CustomerStatus.inactive;
+    final badge = customerStatusBadge(customer.status);
 
-    // Two lines and a hairline, like the inbox. It was a bordered card with a
-    // THIRD line carrying a source pill, two tags, an owner avatar and a
-    // relative time — six competing objects per customer, and 200 of them made
-    // a wall. Source, tags and owner all live on the detail page, which is where
-    // a rep acts on them; the list only has to answer "who, and are they warm".
+    // Ba dòng theo `MCustomers.dc.html`: tên + huy hiệu trạng thái; số điện
+    // thoại · nơi ở + tổng giá trị; lần liên hệ gần nhất. Khách ngưng hoạt
+    // động lùi cả tên lẫn số tiền về chữ phụ.
     return Material(
       color: scheme.surface,
       child: InkWell(
@@ -200,11 +211,11 @@ class CustomerCard extends StatelessWidget {
           pathParameters: {'id': customer.id},
         ),
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+          padding: const EdgeInsets.fromLTRB(20, 12, 20, 12),
           child: Row(
             children: [
               OmniAvatar(name: customer.name, size: 48),
-              const SizedBox(width: 12),
+              const SizedBox(width: 14),
               Expanded(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
@@ -218,20 +229,17 @@ class CustomerCard extends StatelessWidget {
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: OmniType.listTitle.copyWith(
-                              color: scheme.onSurface,
+                              fontWeight: FontWeight.w700,
+                              color: inactive
+                                  ? scheme.onSurfaceVariant
+                                  : scheme.onSurface,
                             ),
                           ),
                         ),
-                        const SizedBox(width: 8),
-                        Text(
-                          Formatters.relative(customer.lastInteractionAt),
-                          style: OmniChatType.meta.copyWith(
-                            color: scheme.onSurfaceVariant,
-                          ),
-                        ),
+                        if (badge != null) ...[const SizedBox(width: 8), badge],
                       ],
                     ),
-                    const SizedBox(height: 4),
+                    const SizedBox(height: 3),
                     Row(
                       children: [
                         Expanded(
@@ -256,14 +264,26 @@ class CustomerCard extends StatelessWidget {
                           Text(
                             Formatters.vndCompact(customer.lifetimeValue),
                             style: OmniType.body.copyWith(
-                              color: scheme.onSurface,
-                              fontWeight: FontWeight.w600,
+                              color: inactive
+                                  ? scheme.onSurfaceVariant
+                                  : scheme.onSurface,
+                              fontWeight: FontWeight.w700,
                               fontFeatures: OmniType.tabular,
                             ),
                           ),
                         ],
                       ],
                     ),
+                    if (customer.lastInteractionAt != null) ...[
+                      const SizedBox(height: 3),
+                      Text(
+                        'Liên hệ ${_ago(customer.lastInteractionAt)}',
+                        style: OmniType.micro.copyWith(
+                          fontWeight: FontWeight.w400,
+                          color: scheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ],
                   ],
                 ),
               ),
@@ -273,4 +293,31 @@ class CustomerCard extends StatelessWidget {
       ),
     );
   }
+}
+
+/// Huy hiệu trạng thái trên dòng khách: VIP vàng, Mới xanh dương, Ngưng xám.
+/// "Đang hoạt động" là trạng thái thường — không cần huy hiệu.
+Widget? customerStatusBadge(CustomerStatus status, {bool large = false}) =>
+    switch (status) {
+      CustomerStatus.vip => OmniBadge(
+        label: 'VIP',
+        tone: OmniTone.warning,
+        icon: large ? Icons.star_rounded : null,
+        large: large,
+      ),
+      CustomerStatus.fresh => OmniBadge(
+        label: 'Mới',
+        tone: OmniTone.info,
+        large: large,
+      ),
+      CustomerStatus.inactive => OmniBadge(label: 'Ngưng', large: large),
+      CustomerStatus.active => null,
+    };
+
+/// "18 phút trước", "Hôm qua", "12/08" — thêm "trước" chỉ khi đó là một
+/// khoảng thời gian, không phải một ngày.
+String _ago(DateTime? value) {
+  final text = Formatters.relative(value);
+  final span = RegExp(r'^\d+ (phút|giờ|ngày)$').hasMatch(text);
+  return span ? '$text trước' : text;
 }

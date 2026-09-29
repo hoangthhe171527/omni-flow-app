@@ -14,6 +14,7 @@ class OmniFilterPill extends StatelessWidget {
     this.count,
     this.tint,
     this.onInk = false,
+    this.outlined = false,
   });
 
   final String label;
@@ -31,6 +32,10 @@ class OmniFilterPill extends StatelessWidget {
   /// mực sáng hơn một bậc chữ xám xanh, viên đang chọn nền quỹ đạo sáng chữ
   /// tối đậm.
   final bool onInk;
+
+  /// Lựa chọn trong BIỂU MẪU (nguồn khách, giai đoạn): viên chưa chọn trong
+  /// suốt có viền mảnh thay vì nền xám, cao 36.
+  final bool outlined;
 
   @override
   Widget build(BuildContext context) {
@@ -57,6 +62,10 @@ class OmniFilterPill extends StatelessWidget {
           : dark
           ? OmniColors.primary
           : OmniColors.orbit;
+    } else if (outlined) {
+      background = Colors.transparent;
+      foreground = scheme.onSurface;
+      countColor = scheme.onSurfaceVariant;
     } else {
       background = scheme.surfaceContainerHighest;
       foreground = scheme.onSurface;
@@ -76,11 +85,17 @@ class OmniFilterPill extends StatelessWidget {
             widthFactor: 1,
             child: AnimatedContainer(
               duration: OmniMotion.of(context).fast,
-              constraints: const BoxConstraints(minHeight: 34),
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+              constraints: BoxConstraints(minHeight: outlined ? 36 : 34),
+              padding: EdgeInsets.symmetric(
+                horizontal: 14,
+                vertical: outlined ? 8 : 7,
+              ),
               decoration: BoxDecoration(
                 color: background,
                 borderRadius: OmniRadius.pillAll,
+                border: outlined && !selected
+                    ? Border.all(color: scheme.outlineVariant)
+                    : null,
               ),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
