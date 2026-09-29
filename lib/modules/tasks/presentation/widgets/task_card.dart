@@ -112,16 +112,31 @@ class TaskCard extends StatelessWidget {
                 // thấy thông tin gì".
                 if (task.nextOpenSubtask case final Subtask next) ...[
                   const SizedBox(height: OmniSpacing.xs),
-                  Text(
-                    next.assigneeName == null
-                        ? '→ ${next.title}'
-                        : '→ ${next.title} · ${next.assigneeName}',
-                    style: OmniType.body.copyWith(
-                      color: scheme.primary,
-                      fontWeight: FontWeight.w600,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
+                  // Mũi tên là ICON chứ không phải ký tự "→": Be Vietnam Pro
+                  // không có glyph U+2192, và trông cậy vào font dự phòng của
+                  // máy là mỗi máy một kiểu (hoặc ô trống).
+                  Row(
+                    children: [
+                      Icon(
+                        Icons.arrow_forward_rounded,
+                        size: 14,
+                        color: scheme.primary,
+                      ),
+                      const SizedBox(width: OmniSpacing.xs),
+                      Expanded(
+                        child: Text(
+                          next.assigneeName == null
+                              ? next.title
+                              : '${next.title} · ${next.assigneeName}',
+                          style: OmniType.body.copyWith(
+                            color: scheme.primary,
+                            fontWeight: FontWeight.w600,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
                   ),
                 ],
                 if (task.hasSubtasks) ...[

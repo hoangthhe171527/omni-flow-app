@@ -176,7 +176,7 @@ class _PairPageState extends ConsumerState<PairPage>
             ),
             const SizedBox(height: 18),
             Text(
-              'Lưu ảnh → mở ${widget.channel.meta.short} → Quét mã QR → chọn ảnh vừa lưu trong thư viện.',
+              'Lưu ảnh › mở ${widget.channel.meta.short} › Quét mã QR › chọn ảnh vừa lưu trong thư viện.',
               textAlign: TextAlign.center,
               style: OmniType.bodyStrong.copyWith(
                 fontWeight: FontWeight.w400,

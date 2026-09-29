@@ -71,7 +71,9 @@ class _TaskSearchPageState extends ConsumerState<TaskSearchPage> {
     return Scaffold(
       appBar: AppBar(
         backgroundColor: scheme.surface,
-        titleSpacing: 0,
+        // Luôn là màn đẩy vào; nếu mở thẳng (không có nút quay lại) thì ô
+        // tìm vẫn cách mép 16.
+        titleSpacing: (ModalRoute.of(context)?.canPop ?? false) ? 0 : 16,
         shape: Border(bottom: BorderSide(color: scheme.outlineVariant)),
         // Ô tìm là khối xám bo 12 như thiết kế, nút xoá nằm TRONG ô.
         title: Padding(

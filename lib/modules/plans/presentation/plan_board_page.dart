@@ -76,6 +76,7 @@ class _PlanBoardPageState extends ConsumerState<PlanBoardPage> {
             (currentUserId != null &&
                 loaded.roleOf(currentUserId) == PlanRole.owner));
 
+    final canPop = ModalRoute.of(context)?.canPop ?? false;
     final dark = Theme.of(context).brightness == Brightness.dark;
     final subtitle = [
       if (loaded?.teamName case final team? when team.isNotEmpty) team,
@@ -88,7 +89,10 @@ class _PlanBoardPageState extends ConsumerState<PlanBoardPage> {
         backgroundColor: dark ? OmniColors.darkMuted : OmniColors.ink,
         foregroundColor: Colors.white,
         systemOverlayStyle: SystemUiOverlayStyle.light,
-        titleSpacing: 0,
+        // Nút quay lại luôn có khi mở từ danh sách; khi không có (mở thẳng
+        // bằng liên kết sâu) thì tiêu đề lùi vào 16 chứ không dính mép.
+        leading: canPop ? const BackButton() : null,
+        titleSpacing: canPop ? 4 : OmniSpacing.lg,
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,

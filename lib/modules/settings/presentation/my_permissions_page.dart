@@ -105,7 +105,12 @@ class MyPermissionsPage extends ConsumerWidget {
                                 child: Text(
                                   slug,
                                   style: OmniType.caption.copyWith(
-                                    fontFamily: 'monospace',
+                                    // Thiết kế dùng chữ đơn cách, nhưng app
+                                    // không đóng gói font đơn cách và bí danh
+                                    // 'monospace' không có trên mọi máy (ảnh
+                                    // chụp ra ô trống). Giữ Be Vietnam Pro với
+                                    // chữ số đều cột.
+                                    fontFeatures: OmniType.tabular,
                                     fontWeight: FontWeight.w400,
                                     color: held.contains(slug)
                                         ? scheme.onSurface

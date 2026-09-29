@@ -515,7 +515,7 @@ class _ThreadAppBar extends StatelessWidget implements PreferredSizeWidget {
     return AppBar(
       toolbarHeight: 64,
       leadingWidth: 48,
-      titleSpacing: 0,
+      titleSpacing: (ModalRoute.of(context)?.canPop ?? false) ? 0 : 16,
       backgroundColor: scheme.surface,
       surfaceTintColor: Colors.transparent,
       elevation: 0,
