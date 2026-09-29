@@ -6,6 +6,13 @@ import '../due_chip.dart';
 import 'task_chip.dart';
 
 /// Đầu màn chi tiết: dự án, tên việc, dải dữ kiện, và tiến độ.
+/// 22/30 ExtraBold — tiêu đề của màn chi tiết trong bộ Orbit.
+final _titleStyle = OmniType.title.copyWith(
+  fontWeight: FontWeight.w800,
+  height: 30 / 22,
+  letterSpacing: -0.22,
+);
+
 class TaskHeader extends StatelessWidget {
   const TaskHeader({
     super.key,
@@ -33,12 +40,7 @@ class TaskHeader extends StatelessWidget {
     return Container(
       width: double.infinity,
       color: scheme.surface,
-      padding: const EdgeInsets.fromLTRB(
-        OmniSpacing.lg,
-        OmniSpacing.lg,
-        OmniSpacing.lg,
-        OmniSpacing.xl,
-      ),
+      padding: const EdgeInsets.fromLTRB(20, 4, 20, 20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -52,7 +54,7 @@ class TaskHeader extends StatelessWidget {
           // Chạm vào chính cái tên để sửa nó. Một nút bút chì ở góc trên là
           // thêm một thứ phải tìm, trong khi cái tên thì đang ở ngay đó.
           if (onEditTitle == null)
-            Text(task.title, style: OmniType.title)
+            Text(task.title, style: _titleStyle)
           else
             InkWell(
               onTap: onEditTitle,
@@ -60,7 +62,7 @@ class TaskHeader extends StatelessWidget {
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Expanded(child: Text(task.title, style: OmniType.title)),
+                  Expanded(child: Text(task.title, style: _titleStyle)),
                   const SizedBox(width: OmniSpacing.sm),
                   Icon(
                     Icons.edit_outlined,
@@ -94,6 +96,8 @@ class TaskHeader extends StatelessWidget {
   }
 }
 
+/// Khối tiến độ (`MTaskDetail.dc.html`): nền xám bo 14, "Đã xong n/m việc
+/// con" đậm bên trái, phần trăm bên phải, thanh quỹ đạo sáng dày 8.
 class _Progress extends StatelessWidget {
   const _Progress({required this.task});
 
@@ -102,32 +106,55 @@ class _Progress extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    final percent = (task.progress * 100).round();
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Đã xong ${task.doneCount}/${task.totalCount} việc con',
-          style: OmniType.caption.copyWith(
-            color: scheme.onSurfaceVariant,
-            fontFeatures: OmniType.tabular,
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        color: dark ? scheme.surfaceContainerHighest : OmniColors.background,
+        borderRadius: OmniRadius.lgAll,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  'Đã xong ${task.doneCount}/${task.totalCount} việc con',
+                  style: OmniType.body.copyWith(
+                    fontWeight: FontWeight.w600,
+                    color: scheme.onSurface,
+                    fontFeatures: OmniType.tabular,
+                  ),
+                ),
+              ),
+              Text(
+                '$percent%',
+                style: OmniType.body.copyWith(
+                  color: scheme.onSurfaceVariant,
+                  fontFeatures: OmniType.tabular,
+                ),
+              ),
+            ],
           ),
-        ),
-        const SizedBox(height: OmniSpacing.sm),
-        ClipRRect(
-          borderRadius: BorderRadius.circular(OmniRadius.xs),
-          child: LinearProgressIndicator(
-            value: task.progress,
-            minHeight: 8,
-            backgroundColor: scheme.surfaceContainerHighest,
-            // Xong hay chưa đọc qua CON SỐ bên trên và qua độ dài thanh,
-            // không qua sắc màu. Đổi sang xanh lá khi đầy là đưa vào một màu
-            // thương hiệu thứ hai — cùng lỗi đã sửa ở ô tick công đoạn, và
-            // người mù màu lục-đỏ không thấy khác biệt nào cả.
-            valueColor: AlwaysStoppedAnimation(scheme.primary),
+          const SizedBox(height: 6),
+          ClipRRect(
+            borderRadius: OmniRadius.pillAll,
+            child: LinearProgressIndicator(
+              value: task.progress,
+              minHeight: 8,
+              backgroundColor: scheme.outlineVariant,
+              // Xong hay chưa đọc qua CON SỐ và độ dài thanh, không qua sắc
+              // màu; quỹ đạo sáng là màu đồ hoạ của bộ Orbit.
+              valueColor: AlwaysStoppedAnimation(
+                dark ? scheme.primary : OmniColors.orbit,
+              ),
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }

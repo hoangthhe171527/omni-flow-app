@@ -21,25 +21,18 @@ class DueChip extends StatelessWidget {
 
     // Thứ tự các nhánh LÀ thứ tự ưu tiên: quá hạn nói to hơn hạn hôm nay, và
     // hạn hôm nay nói to hơn một ngày trong tương lai.
-    final (icon, label, tone) = switch (task) {
-      _ when overdue != null => (
-        Icons.error_outline_rounded,
-        'Quá hạn $overdue ngày',
-        OmniTone.danger,
-      ),
-      _ when task.isDueToday => (
-        Icons.today_rounded,
-        'Hạn hôm nay',
-        OmniTone.warning,
-      ),
+    // Bộ Orbit: viên bo tròn chữ đậm, không icon — CHỮ đã nói trạng thái,
+    // màu chỉ nhắc lại. Quá hạn đỏ, hôm nay xanh dương, còn lại trung tính.
+    final (label, tone) = switch (task) {
+      _ when overdue != null => ('Quá hạn $overdue ngày', OmniTone.danger),
+      _ when task.isDueToday => ('Hạn hôm nay', OmniTone.info),
       _ when task.dueDate != null => (
-        Icons.schedule_rounded,
         'Hạn ${task.dueDate!.day}/${task.dueDate!.month}',
         OmniTone.neutral,
       ),
-      _ => (Icons.schedule_outlined, 'Chưa đặt hạn', OmniTone.neutral),
+      _ => ('Chưa đặt hạn', OmniTone.neutral),
     };
 
-    return OmniStatusChip(icon: icon, label: label, tone: tone);
+    return OmniBadge(label: label, tone: tone, large: true);
   }
 }

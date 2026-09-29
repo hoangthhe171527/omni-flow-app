@@ -21,6 +21,9 @@ abstract final class OmniColors {
   /// Nét trang trí trên nền [ink]: các vòng quỹ đạo sau tiêu đề đăng nhập.
   static const inkLine = Color(0xFF1F3A5F);
 
+  /// Số "quá hạn" trên thẻ mực (đỏ sáng, 7.6:1 trên mực).
+  static const dangerOnInk = Color(0xFFFF8A80);
+
   /// Hai quầng tròn đồng tâm sau logo ở màn mở app — ngoài sáng hơn trong.
   static const inkHaloOuter = Color(0xFF10284A);
   static const inkHaloInner = Color(0xFF0E2240);

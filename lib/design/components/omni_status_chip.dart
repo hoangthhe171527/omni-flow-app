@@ -159,12 +159,16 @@ class OmniBadge extends StatelessWidget {
             Icon(icon, size: OmniIconSize.xs, color: foreground),
             const SizedBox(width: 4),
           ],
-          Text(
-            label,
-            style: OmniType.micro.copyWith(
-              color: foreground,
-              fontWeight: FontWeight.w800,
-              height: 1.2,
+          Flexible(
+            child: Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: OmniType.micro.copyWith(
+                color: foreground,
+                fontWeight: FontWeight.w800,
+                height: 1.2,
+              ),
             ),
           ),
         ],

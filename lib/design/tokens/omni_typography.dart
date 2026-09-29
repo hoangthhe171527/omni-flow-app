@@ -65,9 +65,9 @@ abstract final class OmniType {
   static const TextStyle overline = TextStyle(
     fontFamily: family,
     fontSize: 12,
-    fontWeight: FontWeight.w600,
+    fontWeight: FontWeight.w700,
     height: 1.2,
-    letterSpacing: 0.8,
+    letterSpacing: 0.96,
   );
 
   static const TextStyle bodyStrong = TextStyle(

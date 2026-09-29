@@ -153,12 +153,12 @@ void main() {
   });
 
   group('ưu tiên', () {
-    testWidgets('cao thì có chip "Cao"', (tester) async {
+    testWidgets('cao thì có chip "Ưu tiên cao"', (tester) async {
       await tester.pumpWidget(
         host(Task.fromJson({'id': 't', 'title': 'x', 'priority': 'high'})),
       );
 
-      expect(find.text('Cao'), findsOneWidget);
+      expect(find.text('Ưu tiên cao'), findsOneWidget);
     });
 
     testWidgets('bình thường thì không có chip', (tester) async {

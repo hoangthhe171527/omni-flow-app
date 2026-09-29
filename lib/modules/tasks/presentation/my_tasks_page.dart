@@ -58,7 +58,6 @@ class _MyTasksPageState extends ConsumerState<MyTasksPage> {
     final tasks = ref.watch(myTasksProvider);
 
     return Scaffold(
-      backgroundColor: scheme.surface,
       appBar: OmniAppBar(
         backgroundColor: scheme.surface,
         title: 'Việc của tôi',
@@ -84,9 +83,16 @@ class _MyTasksPageState extends ConsumerState<MyTasksPage> {
           ),
         ],
         bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(56),
+          preferredSize: const Size.fromHeight(65),
           child: _BucketBar(
             selected: bucket,
+            counts: {
+              TaskBucket.overdue: ?ref
+                  .watch(taskOverdueCountProvider)
+                  .valueOrNull,
+              if (tasks.valueOrNull case final state? when !state.hasMore)
+                bucket: state.items.length,
+            },
             onSelect: (next) =>
                 ref.read(taskBucketProvider.notifier).state = next,
           ),
@@ -353,32 +359,122 @@ class _BellButton extends StatelessWidget {
   }
 }
 
+/// Bộ chọn bốn nhóm việc (`MMyTasks.dc.html`): rãnh xám bo 14, nhóm đang chọn
+/// là ô trắng nổi nhẹ; "Quá hạn" chữ đỏ để luôn đọc ra là chỗ cần xử lý.
+///
+/// Số đếm chỉ hiện khi đã BIẾT chắc mà không phải gọi thêm API: số quá hạn đã
+/// được đếm sẵn cho huy hiệu tab, và nhóm đang mở biết số của chính nó khi đã
+/// tải hết trang. Nhóm khác không có số — đoán số là tệ hơn không có số.
 class _BucketBar extends StatelessWidget {
-  const _BucketBar({required this.selected, required this.onSelect});
+  const _BucketBar({
+    required this.selected,
+    required this.onSelect,
+    required this.counts,
+  });
 
   final TaskBucket selected;
   final ValueChanged<TaskBucket> onSelect;
+  final Map<TaskBucket, int> counts;
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      height: 56,
-      child: ListView.separated(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: OmniSpacing.lg),
-        itemCount: TaskBucket.forMyWork.length,
-        separatorBuilder: (_, _) => const SizedBox(width: OmniSpacing.sm),
-        itemBuilder: (context, index) {
-          final bucket = TaskBucket.forMyWork[index];
+    final scheme = Theme.of(context).colorScheme;
 
-          return Center(
-            child: OmniFilterPill(
-              label: bucket.label,
-              selected: bucket == selected,
-              onTap: () => onSelect(bucket),
+    return Container(
+      padding: const EdgeInsets.fromLTRB(20, 8, 20, 12),
+      decoration: BoxDecoration(
+        color: scheme.surface,
+        border: Border(bottom: BorderSide(color: scheme.outlineVariant)),
+      ),
+      child: Container(
+        padding: const EdgeInsets.all(4),
+        decoration: BoxDecoration(
+          color: scheme.surfaceContainerHighest,
+          borderRadius: OmniRadius.lgAll,
+        ),
+        child: Row(
+          children: [
+            for (final bucket in TaskBucket.forMyWork) ...[
+              if (bucket != TaskBucket.forMyWork.first)
+                const SizedBox(width: 4),
+              Expanded(
+                child: _Segment(
+                  bucket: bucket,
+                  count: counts[bucket],
+                  selected: bucket == selected,
+                  onTap: () => onSelect(bucket),
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _Segment extends StatelessWidget {
+  const _Segment({
+    required this.bucket,
+    required this.count,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final TaskBucket bucket;
+  final int? count;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    final label = count == null || count == 0
+        ? bucket.label
+        : '${bucket.label} · $count';
+    final color = bucket == TaskBucket.overdue && !selected
+        ? OmniColors.dangerTextOf(context)
+        : selected
+        ? scheme.onSurface
+        : dark
+        ? scheme.onSurfaceVariant
+        : OmniColors.secondaryForeground;
+
+    return Semantics(
+      button: true,
+      selected: selected,
+      label: label,
+      excludeSemantics: true,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: onTap,
+        child: AnimatedContainer(
+          duration: OmniMotion.of(context).fast,
+          // 36 nhìn thấy; cộng rãnh 4 mỗi bên là 44 vùng chạm.
+          height: 36,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: selected ? scheme.surface : Colors.transparent,
+            borderRadius: OmniRadius.smAll,
+            boxShadow: selected ? OmniShadows.hairline : null,
+          ),
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 4),
+              child: Text(
+                label,
+                maxLines: 1,
+                style: OmniType.caption.copyWith(
+                  color: color,
+                  fontWeight: selected ? FontWeight.w700 : FontWeight.w600,
+                  fontFeatures: OmniType.tabular,
+                ),
+              ),
             ),
-          );
-        },
+          ),
+        ),
       ),
     );
   }
