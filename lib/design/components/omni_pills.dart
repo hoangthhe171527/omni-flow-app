@@ -20,12 +20,10 @@ class OmniFilterPill extends StatelessWidget {
   final int? count;
   final VoidCallback onTap;
 
-  /// Màu của viên đang được chọn. Bỏ trống thì lấy màu chính của theme.
+  /// Màu nền của viên đang được chọn. Bỏ trống thì lấy màu mực của bộ Orbit.
   ///
-  /// Chỉ hộp thư truyền vào, và truyền [OmniColors.chatPrimary] để khớp Zalo.
-  /// Trước đây widget này ghim thẳng màu Zalo, nên "Hôm nay" trên màn Việc của
-  /// tôi hiện xanh dương giữa một app mòng két — ngoại lệ chat rò ra khỏi
-  /// module chat. `chat_palette_boundary_test.dart` chặn việc đó tái diễn.
+  /// Widget dùng chung không được ghim màu Zalo — `chat_palette_boundary_test`
+  /// chặn việc đó. Chỗ gọi nào cần màu riêng thì truyền vào từ chỗ gọi.
   final Color? tint;
 
   @override
@@ -33,65 +31,76 @@ class OmniFilterPill extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     final dark = Theme.of(context).brightness == Brightness.dark;
 
-    // Only the CHOSEN one is a pill. The rest are plain text.
-    //
-    // Six filled capsules in a row was the heaviest thing on the screen, and
-    // filling all of them spends the same ink on the five a rep is not using as
-    // on the one they are. Emptying the others lets the selection carry the
-    // whole signal, and the row turns into a line of words above the list
-    // instead of a tray of buttons.
-    // Chữ trên viên đã chọn phải đi theo NỀN của chính nó, không mặc định
-    // trắng: ở chế độ tối, màu chính là #4FBFAE và chữ trắng trên đó chỉ đạt
-    // 2.18:1. Màu Zalo #0068FF thì trắng vẫn đúng, nên chỗ nào truyền [tint]
-    // vào thì chỗ đó chịu trách nhiệm — hộp thư là chỗ duy nhất.
-    final background = selected ? (tint ?? scheme.primary) : Colors.transparent;
-    final foreground = selected
-        ? (tint != null ? Colors.white : scheme.onPrimary)
-        : dark
-        ? Colors.white.withValues(alpha: 0.6)
-        : scheme.onSurfaceVariant;
+    // Bộ Orbit: viên đang chọn là khối MỰC chữ trắng, số đếm màu quỹ đạo
+    // sáng; các viên khác nền xám nhạt chữ mực, số đếm chữ phụ. Ở chế độ tối
+    // khối mực biến mất vào nền, nên đảo lại: nền chữ sáng, chữ màu nền.
+    final Color background;
+    final Color foreground;
+    final Color countColor;
+    if (selected) {
+      background = tint ?? (dark ? scheme.onSurface : OmniColors.ink);
+      foreground = dark && tint == null ? scheme.surface : Colors.white;
+      countColor = tint != null
+          ? Colors.white.withValues(alpha: 0.75)
+          : dark
+          ? OmniColors.primary
+          : OmniColors.orbit;
+    } else {
+      background = scheme.surfaceContainerHighest;
+      foreground = scheme.onSurface;
+      countColor = scheme.onSurfaceVariant;
+    }
 
-    return Material(
-      color: background,
-      borderRadius: OmniRadius.chipAll,
-      clipBehavior: Clip.antiAlias,
+    return Semantics(
+      button: true,
+      selected: selected,
       child: InkWell(
         onTap: onTap,
-        // 44dp là sàn, không phải mục tiêu: pill này đo được 29dp trước khi có
-        // ràng buộc này. Vùng chạm cao hơn phần nhìn thấy — đúng cách, vì cái
-        // cần lớn là chỗ ngón tay chạm chứ không phải viên thuốc trên màn hình.
+        customBorder: const StadiumBorder(),
+        // 44dp là sàn vùng chạm; viên nhìn thấy cao 34dp như thiết kế.
         child: ConstrainedBox(
           constraints: const BoxConstraints(minHeight: 44),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  label,
-                  style: OmniType.caption.copyWith(
-                    fontSize: 13.5,
-                    height: 1.1,
-                    color: foreground,
-                    fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
-                  ),
-                ),
-                if (count != null && count! > 0) ...[
-                  const SizedBox(width: 5),
-                  Text(
-                    '$count',
-                    style: OmniType.caption.copyWith(
-                      fontSize: 13.5,
-                      height: 1.1,
-                      // Dimmed rather than boxed: the count qualifies the label, it
-                      // is not a second thing to look at.
-                      color: foreground.withValues(alpha: 0.6),
-                      fontWeight: FontWeight.w600,
-                      fontFeatures: OmniType.tabular,
+          child: Center(
+            widthFactor: 1,
+            child: AnimatedContainer(
+              duration: OmniMotion.of(context).fast,
+              constraints: const BoxConstraints(minHeight: 34),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+              decoration: BoxDecoration(
+                color: background,
+                borderRadius: OmniRadius.pillAll,
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Flexible(
+                    child: Text(
+                      label,
+                      style: OmniType.caption.copyWith(
+                        height: 1.2,
+                        color: foreground,
+                        fontWeight: selected
+                            ? FontWeight.w700
+                            : FontWeight.w600,
+                      ),
                     ),
                   ),
+                  if (count != null && count! > 0) ...[
+                    const SizedBox(width: 6),
+                    Text(
+                      '$count',
+                      style: OmniType.caption.copyWith(
+                        height: 1.2,
+                        color: countColor,
+                        fontWeight: selected
+                            ? FontWeight.w700
+                            : FontWeight.w600,
+                        fontFeatures: OmniType.tabular,
+                      ),
+                    ),
+                  ],
                 ],
-              ],
+              ),
             ),
           ),
         ),

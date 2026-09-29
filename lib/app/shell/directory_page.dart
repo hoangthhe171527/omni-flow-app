@@ -89,6 +89,7 @@ class _DirectoryPageState extends ConsumerState<DirectoryPage> {
               const SizedBox(height: OmniSpacing.lg),
               OmniSearchField(
                 hint: 'Tìm tính năng…',
+                outlined: true,
                 onChanged: (value) => setState(() => _query = value),
               ),
 
@@ -435,43 +436,21 @@ class _Surface extends StatelessWidget {
 }
 
 /// Màu ô icon theo nhóm: Công việc mòng két, Trao đổi xanh dương, Bán hàng
-/// vàng đất, Quản trị trung tính — như thiết kế.
+/// vàng đất, Quản trị trung tính — như thiết kế. Chế độ tối lấy bản tối của
+/// cùng giọng (xem `OmniToneColors`).
 ({Color background, Color foreground}) _toneFor(
   BuildContext context,
   NavArea area,
 ) {
-  final scheme = Theme.of(context).colorScheme;
-  if (Theme.of(context).brightness == Brightness.dark) {
-    return switch (area) {
-      NavArea.work => (
-        background: scheme.primaryContainer,
-        foreground: scheme.onPrimaryContainer,
-      ),
-      _ => (
-        background: scheme.surfaceContainerHighest,
-        foreground: scheme.onSurface,
-      ),
-    };
-  }
-
-  return switch (area) {
-    NavArea.work => (
-      background: OmniColors.accent,
-      foreground: OmniColors.primaryPressed,
-    ),
-    NavArea.communication => (
-      background: OmniColors.infoSoft,
-      foreground: OmniColors.infoText,
-    ),
-    NavArea.sales => (
-      background: OmniColors.warningSoft,
-      foreground: OmniColors.warningText,
-    ),
-    NavArea.admin || NavArea.account => (
-      background: OmniColors.muted,
-      foreground: OmniColors.secondaryForeground,
-    ),
+  final tone = switch (area) {
+    NavArea.work => OmniTone.success,
+    NavArea.communication => OmniTone.info,
+    NavArea.sales => OmniTone.warning,
+    NavArea.admin || NavArea.account => OmniTone.neutral,
   };
+  final (foreground, background) = tone.of(context);
+
+  return (background: background, foreground: foreground);
 }
 
 /// Lưới 3 cột. Dựng bằng hàng chứ không bằng GridView: ô phải cao bằng nhau

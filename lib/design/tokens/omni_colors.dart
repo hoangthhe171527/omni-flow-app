@@ -103,6 +103,9 @@ abstract final class OmniColors {
   static const success = Color(0xFF10B981);
   static const warning = Color(0xFFF59E0B);
 
+  /// Chấm "quá hạn trả lời" ở hộp thư — hổ phách, cạnh chấm đỏ "khẩn".
+  static const sla = Color(0xFFE0A100);
+
   /// Nguy — đồ hoạ và viền lỗi của ô nhập (5.32:1 trên thẻ).
   static const destructive = Color(0xFFC8322A);
 
@@ -125,6 +128,10 @@ abstract final class OmniColors {
 
   /// Nền nhạt của hộp báo lỗi (chữ [dangerText] trên nó đạt 6.40:1).
   static const dangerSoft = Color(0xFFFDECEA);
+
+  /// Ghi chú nội bộ (hộp thư, hồ sơ khách): nền vàng giấy, viền vàng đậm hơn.
+  static const noteSurface = Color(0xFFFFF6DB);
+  static const noteBorder = Color(0xFFF3D78A);
 
   /// Viền của nút "Đăng xuất" — ranh giới trang trí, nhạt, mang sắc đỏ.
   static const dangerBorder = Color(0xFFE7B6B1);
@@ -174,6 +181,17 @@ abstract final class OmniColors {
   /// chiều với nền trang, chứ không giữ nguyên khối sáng.
   static const darkAccent = Color(0xFF0E3438);
   static const darkAccentForeground = Color(0xFF9FEDE6);
+
+  /// Bản tối của các cặp nền nhạt / chữ đậm theo khu: ô icon trong "Tất cả",
+  /// ô chữ viết tắt ở màn chọn không gian, nhãn trạng thái. Nền nhạt của chế
+  /// độ sáng là khối chói trên nền tối, nên nền tối đi và chữ sáng lên.
+  static const darkInfoSoft = Color(0xFF17264A);
+  static const darkInfoText = Color(0xFF9DB6F5);
+  static const darkWarningSoft = Color(0xFF3A2E12);
+
+  /// Chọn bản sáng/tối của một cặp màu theo chế độ đang bật.
+  static Color byBrightness(BuildContext context, Color light, Color dark) =>
+      _byBrightness(context, light, dark);
 
   static const darkForeground = Color(0xFFE8EEF6);
   static const darkMutedForeground = Color(0xFF9AA8BD);

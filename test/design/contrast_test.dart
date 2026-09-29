@@ -148,6 +148,12 @@ void main() {
       min: t,
     ),
     (
+      what: 'chữ cảnh báo / ghi chú nội bộ',
+      fg: OmniColors.warningText,
+      bg: OmniColors.noteSurface,
+      min: t,
+    ),
+    (
       what: 'chữ nguy hiểm / hộp báo lỗi',
       fg: OmniColors.dangerText,
       bg: OmniColors.dangerSoft,
@@ -244,6 +250,18 @@ void main() {
       fg: OmniColors.darkBorderInteractive,
       bg: OmniColors.darkMuted,
       min: ui,
+    ),
+    (
+      what: 'tối: chữ thông tin / nền thông tin',
+      fg: OmniColors.darkInfoText,
+      bg: OmniColors.darkInfoSoft,
+      min: t,
+    ),
+    (
+      what: 'tối: chữ cảnh báo / nền cảnh báo',
+      fg: OmniColors.warningTextDark,
+      bg: OmniColors.darkWarningSoft,
+      min: t,
     ),
     (
       what: 'tối: chữ nhấn / nền nhấn',

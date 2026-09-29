@@ -131,7 +131,7 @@ class _WorkspacePageState extends ConsumerState<WorkspacePage> {
                         final tenant = list[index];
                         return _WorkspaceCard(
                           tenant: tenant,
-                          tone: _WorkspaceTone.at(index),
+                          tone: _WorkspaceTone.at(context, index),
                           busy: _entering == tenant.id,
                           onTap: _entering == null
                               ? () => _enter(tenant)
@@ -158,14 +158,21 @@ class _WorkspaceTone {
   final Color background;
   final Color foreground;
 
-  static const _tones = [
-    _WorkspaceTone(OmniColors.ink, OmniColors.orbit),
-    _WorkspaceTone(OmniColors.accent, OmniColors.primaryPressed),
-    _WorkspaceTone(OmniColors.warningSoft, OmniColors.warningText),
-    _WorkspaceTone(OmniColors.infoSoft, OmniColors.infoText),
-  ];
+  /// Ô đầu là khối mực chữ quỹ đạo sáng; các ô sau theo giọng Orbit, có bản
+  /// tối riêng (mực trên nền tối thì nâng lên một bậc).
+  static _WorkspaceTone at(BuildContext context, int index) {
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    const tones = [OmniTone.success, OmniTone.warning, OmniTone.info];
+    if (index % 4 == 0) {
+      return _WorkspaceTone(
+        dark ? OmniColors.darkMuted : OmniColors.ink,
+        OmniColors.orbit,
+      );
+    }
+    final (foreground, background) = tones[index % 4 - 1].of(context);
 
-  static _WorkspaceTone at(int index) => _tones[index % _tones.length];
+    return _WorkspaceTone(background, foreground);
+  }
 }
 
 class _WorkspaceCard extends StatelessWidget {
