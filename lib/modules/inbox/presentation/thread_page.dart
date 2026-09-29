@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../../../core/error/app_exception.dart';
@@ -10,6 +11,8 @@ import '../../../design/components/components.dart';
 import '../../../design/platform/omni_motion_scope.dart';
 import '../../../design/tokens/tokens.dart';
 import '../../../core/realtime/realtime_client.dart';
+import '../../../security/session/session_controller.dart';
+import '../../opportunities/opportunities.dart';
 import '../../settings/settings.dart';
 import '../application/inbox_providers.dart';
 import '../application/inbox_realtime.dart';
@@ -219,6 +222,7 @@ class _ThreadPageState extends ConsumerState<ThreadPage>
       body: SurfaceBackdrop(
         child: Column(
           children: [
+            _OpportunityStrip(conversationId: widget.conversationId),
             Expanded(
               // No tint layer over the canvas: it fought the chat background and
               // washed the bubbles back down into the page.
@@ -394,6 +398,8 @@ class _ThreadPageState extends ConsumerState<ThreadPage>
     if (conversation == null) return const [];
     return const [
       'Dạ em chào anh/chị ạ!',
+      'Em gửi báo giá ạ',
+      'Em gọi lại ngay',
       'Cảm ơn anh/chị đã quan tâm.',
       'Anh/chị cho em xin số điện thoại để tư vấn nhé.',
       'Bên em đang có chương trình ưu đãi ạ.',
@@ -507,15 +513,13 @@ class _ThreadAppBar extends StatelessWidget implements PreferredSizeWidget {
     final scheme = Theme.of(context).colorScheme;
 
     return AppBar(
-      toolbarHeight: 72,
-      leadingWidth: 52,
+      toolbarHeight: 64,
+      leadingWidth: 48,
       titleSpacing: 0,
       backgroundColor: scheme.surface,
       surfaceTintColor: Colors.transparent,
       elevation: 0,
-      shape: Border(
-        bottom: BorderSide(color: scheme.outline.withValues(alpha: 0.72)),
-      ),
+      shape: Border(bottom: BorderSide(color: scheme.outlineVariant)),
       title: searchMode
           ? TextField(
               controller: searchController,
@@ -542,12 +546,12 @@ class _ThreadAppBar extends StatelessWidget implements PreferredSizeWidget {
                         names: conversation!.groupMembers
                             .map((m) => m.name ?? '?')
                             .toList(),
-                        size: OmniIconSize.hero,
+                        size: 40,
                       )
                     : OmniAvatar(
                         name: conversation!.title,
                         imageUrl: conversation!.customerAvatar,
-                        size: OmniIconSize.hero,
+                        size: 40,
                       ),
                 const SizedBox(width: 10),
                 Expanded(
@@ -838,6 +842,118 @@ class _ReadOnlyBar extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// Dải cơ hội đang gắn với hội thoại, ngay dưới thanh trên (`MThread.dc.html`).
+///
+/// Đọc từ `conversationContextProvider` — cùng provider tấm thông tin khách
+/// dùng, nên mở tấm đó sau không tải lại. Hội thoại không kèm cơ hội trong dữ
+/// liệu của chính nó, nên đây là MỘT lượt gọi `/context` khi mở hội thoại.
+/// Chỉ gọi khi người dùng có quyền xem cơ hội; không có cơ hội đang mở thì
+/// không vẽ gì, lỗi mạng cũng không vẽ gì — dải này là lối tắt, không phải
+/// nội dung chính.
+class _OpportunityStrip extends ConsumerWidget {
+  const _OpportunityStrip({required this.conversationId});
+
+  final String conversationId;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final canRead = ref
+        .watch(accessProvider)
+        .canAny(OpportunityPermissions.anyRead);
+    if (!canRead) return const SizedBox.shrink();
+
+    final data = ref.watch(conversationContextProvider(conversationId));
+    final opportunities = data.valueOrNull?.opportunities ?? const [];
+    final open = opportunities.where(
+      (o) => o.status == null || o.status == 'open',
+    );
+    if (open.isEmpty) return const SizedBox.shrink();
+
+    final opportunity = open.first;
+    final scheme = Theme.of(context).colorScheme;
+    final budget = opportunity.budget;
+    final title = budget == null || budget <= 0
+        ? opportunity.title
+        : '${opportunity.title} · ${Formatters.vndCompact(budget)}';
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(12, 10, 12, 0),
+      child: Material(
+        color: scheme.surface,
+        borderRadius: OmniRadius.mdAll,
+        elevation: 0,
+        shadowColor: Colors.transparent,
+        child: InkWell(
+          borderRadius: OmniRadius.mdAll,
+          onTap: opportunity.id.isEmpty
+              ? null
+              : () => context.pushNamed(
+                  OpportunityRoutes.detail,
+                  pathParameters: {'id': opportunity.id},
+                ),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            decoration: const BoxDecoration(
+              borderRadius: OmniRadius.mdAll,
+              boxShadow: OmniShadows.hairline,
+            ),
+            child: Row(
+              children: [
+                Container(
+                  width: 32,
+                  height: 32,
+                  decoration: BoxDecoration(
+                    color: scheme.primaryContainer,
+                    borderRadius: OmniRadius.smAll,
+                  ),
+                  child: Icon(
+                    Icons.trending_up_rounded,
+                    size: OmniIconSize.md,
+                    color: scheme.onPrimaryContainer,
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        title,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: OmniType.caption.copyWith(
+                          fontWeight: FontWeight.w700,
+                          color: scheme.onSurface,
+                          fontFeatures: OmniType.tabular,
+                        ),
+                      ),
+                      if (opportunity.stage != null)
+                        Text(
+                          'Giai đoạn: ${opportunity.stage}',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: OmniType.micro.copyWith(
+                            fontWeight: FontWeight.w400,
+                            color: scheme.onSurfaceVariant,
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+                Icon(
+                  Icons.chevron_right_rounded,
+                  size: OmniIconSize.md,
+                  color: scheme.outline,
+                ),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }

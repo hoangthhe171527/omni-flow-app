@@ -35,12 +35,6 @@ class InboxFilterBar extends ConsumerWidget {
     ];
 
     final scheme = Theme.of(context).colorScheme;
-    final meta = OmniColors.chat(
-      context,
-      OmniColors.chatMeta,
-      OmniColors.chatMetaDark,
-    );
-
     return Column(
       children: [
         // Zalo's header is ONE flat line — a magnifier, a hint, and two icon
@@ -49,37 +43,62 @@ class InboxFilterBar extends ConsumerWidget {
         // conversation appeared. The platform row moved into the filter sheet;
         // it is a setting a rep changes occasionally, not something worth a
         // permanent row.
+        // Bộ Orbit: ô tìm là một khối xám nhạt bo 12, cạnh nó là nút lọc
+        // vuông viền mảnh — hai thứ cao bằng nhau (44dp) trên cùng một hàng.
         Padding(
-          padding: const EdgeInsets.fromLTRB(16, 4, 8, 4),
+          padding: const EdgeInsets.fromLTRB(20, 6, 20, 0),
           child: Row(
             children: [
-              Icon(Icons.search_rounded, size: OmniIconSize.lg, color: meta),
-              const SizedBox(width: 12),
               Expanded(
-                child: TextField(
-                  controller: TextEditingController(text: filter.search)
-                    ..selection = TextSelection.collapsed(
-                      offset: filter.search.length,
-                    ),
-                  onChanged: controller.setSearch,
-                  textInputAction: TextInputAction.search,
-                  style: OmniType.input.copyWith(color: scheme.onSurface),
-                  decoration: InputDecoration(
-                    isDense: true,
-                    // The app-wide inputDecorationTheme sets `filled: true`, and
-                    // that inherited fill was the dim box sitting behind the
-                    // search text. Zalo has no box here at all — just the icon,
-                    // the word, and a rule under the whole header.
-                    filled: false,
-                    border: InputBorder.none,
-                    enabledBorder: InputBorder.none,
-                    focusedBorder: InputBorder.none,
-                    contentPadding: EdgeInsets.zero,
-                    hintText: 'Tìm kiếm',
-                    hintStyle: OmniType.input.copyWith(color: meta),
+                child: Container(
+                  height: 44,
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  decoration: BoxDecoration(
+                    color: scheme.surfaceContainerHighest,
+                    borderRadius: OmniRadius.mdAll,
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.search_rounded,
+                        size: OmniIconSize.md,
+                        color: scheme.onSurfaceVariant,
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: TextField(
+                          controller: TextEditingController(text: filter.search)
+                            ..selection = TextSelection.collapsed(
+                              offset: filter.search.length,
+                            ),
+                          onChanged: controller.setSearch,
+                          textInputAction: TextInputAction.search,
+                          style: OmniType.input.copyWith(
+                            color: scheme.onSurface,
+                          ),
+                          decoration: InputDecoration(
+                            isDense: true,
+                            // The app-wide inputDecorationTheme sets `filled: true`, and
+                            // that inherited fill was the dim box sitting behind the
+                            // search text. Zalo has no box here at all — just the icon,
+                            // the word, and a rule under the whole header.
+                            filled: false,
+                            border: InputBorder.none,
+                            enabledBorder: InputBorder.none,
+                            focusedBorder: InputBorder.none,
+                            contentPadding: EdgeInsets.zero,
+                            hintText: 'Tìm kiếm',
+                            hintStyle: OmniType.input.copyWith(
+                              color: scheme.onSurfaceVariant,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ),
+              const SizedBox(width: 10),
               _FilterButton(
                 active: filter.channel != null || filter.label != null,
                 onTap: () => _openChannelMenu(context, ref),
@@ -90,10 +109,10 @@ class InboxFilterBar extends ConsumerWidget {
         // The one filter row worth keeping visible: triage state is what a rep
         // switches between all day.
         SizedBox(
-          height: 48,
+          height: 50,
           child: ListView.separated(
             scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 0),
+            padding: const EdgeInsets.fromLTRB(20, 4, 20, 2),
             itemCount: quickFilters.length,
             separatorBuilder: (_, _) => const SizedBox(width: OmniSpacing.sm),
             itemBuilder: (context, index) {
@@ -103,9 +122,6 @@ class InboxFilterBar extends ConsumerWidget {
                   label: quick.label,
                   selected: filter.quick == quick,
                   count: facets?.countFor(quick, currentUserId: userId),
-                  // Hộp thư là bề mặt cố ý mượn Zalo — cùng ngoại lệ với bảng
-                  // màu chat. Mọi màn khác dùng màu chính của theme.
-                  tint: OmniColors.chatPrimary,
                   onTap: () => controller.setQuick(quick),
                 ),
               );
@@ -266,32 +282,49 @@ class _FilterButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
 
-    return IconButton(
-      onPressed: onTap,
-      tooltip: 'Lọc theo kênh',
-      icon: Stack(
-        clipBehavior: Clip.none,
-        children: [
-          Icon(
-            Icons.tune_rounded,
-            size: OmniIconSize.lg,
-            color: active ? OmniColors.chatPrimary : scheme.onSurfaceVariant,
+    // Ô vuông 44 viền mảnh bo 12, cao bằng ô tìm bên cạnh; chấm màu chính ở
+    // góc khi đang lọc.
+    return Tooltip(
+      message: 'Lọc theo kênh',
+      child: Material(
+        color: scheme.surface,
+        shape: RoundedRectangleBorder(
+          borderRadius: OmniRadius.mdAll,
+          side: BorderSide(color: scheme.outlineVariant),
+        ),
+        child: InkWell(
+          onTap: onTap,
+          customBorder: const RoundedRectangleBorder(
+            borderRadius: OmniRadius.mdAll,
           ),
-          if (active)
-            Positioned(
-              right: -2,
-              top: -2,
-              child: Container(
-                width: 8,
-                height: 8,
-                decoration: BoxDecoration(
-                  color: OmniColors.chatPrimary,
-                  shape: BoxShape.circle,
-                  border: Border.all(color: scheme.surface, width: 1.5),
+          child: SizedBox.square(
+            dimension: 44,
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                Icon(
+                  Icons.tune_rounded,
+                  size: OmniIconSize.md,
+                  color: active ? scheme.primary : scheme.onSurface,
                 ),
-              ),
+                if (active)
+                  Positioned(
+                    right: 9,
+                    top: 9,
+                    child: Container(
+                      width: 8,
+                      height: 8,
+                      decoration: BoxDecoration(
+                        color: scheme.primary,
+                        shape: BoxShape.circle,
+                        border: Border.all(color: scheme.surface, width: 2),
+                      ),
+                    ),
+                  ),
+              ],
             ),
-        ],
+          ),
+        ),
       ),
     );
   }
