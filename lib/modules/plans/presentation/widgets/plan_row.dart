@@ -19,7 +19,7 @@ class PlanRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final text = Theme.of(context).textTheme;
+    final dark = Theme.of(context).brightness == Brightness.dark;
 
     final counts = [
       if (plan.taskCount == 0)
@@ -31,58 +31,77 @@ class PlanRow extends StatelessWidget {
 
     return Material(
       color: scheme.surface,
-      borderRadius: OmniRadius.lgAll,
+      borderRadius: _radius,
       clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: onTap,
         child: Ink(
           decoration: BoxDecoration(
-            borderRadius: OmniRadius.lgAll,
+            borderRadius: _radius,
             border: Border.all(color: scheme.outlineVariant),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // Nền dự án LÀ đầu thẻ, và tên nằm trong nó. Bản đầu vẽ nền
-              // thành một vạch 6dp ngay trên thanh tiến độ — cùng bề dày,
-              // cùng bo góc — và nó đọc như một thanh tiến độ thứ hai.
-              //
-              // Chữ trắng: mọi nền trong `OmniCovers` đều đạt 4,5:1 với
-              // trắng, `omni_covers_test.dart` giữ điều đó. `plan.cover` null
-              // với mọi dự án tạo trước tính năng — `gradientOf` tự rơi về
-              // nền mặc định, nên danh sách không có hai kiểu thẻ lẫn nhau.
+              // Nền dự án LÀ đầu thẻ, và tên nằm trong nó (`MProjects.dc.html`
+              // cao 64, một vòng quỹ đạo mảnh ở góc phải). Chữ trắng: mọi nền
+              // trong `OmniCovers` đều đạt 4,5:1 với trắng.
               Container(
-                constraints: const BoxConstraints(minHeight: 56),
-                alignment: Alignment.centerLeft,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: OmniSpacing.lg,
-                  vertical: OmniSpacing.md,
-                ),
+                constraints: const BoxConstraints(minHeight: 64),
                 decoration: BoxDecoration(
                   gradient: OmniCovers.gradientOf(plan.cover),
                 ),
-                child: Text(
-                  plan.name,
-                  style: text.titleSmall?.copyWith(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w700,
-                  ),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
+                child: Stack(
+                  clipBehavior: Clip.hardEdge,
+                  children: [
+                    Positioned(
+                      right: -30,
+                      top: -40,
+                      child: Container(
+                        width: 140,
+                        height: 140,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: Colors.white.withValues(alpha: 0.16),
+                            width: 1.5,
+                          ),
+                        ),
+                      ),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: OmniSpacing.lg,
+                        vertical: 18,
+                      ),
+                      child: Text(
+                        plan.name,
+                        style: OmniType.section.copyWith(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w700,
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
                 ),
               ),
               Padding(
-                padding: const EdgeInsets.all(OmniSpacing.lg),
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     ClipRRect(
-                      borderRadius: BorderRadius.circular(OmniRadius.chip / 2),
+                      borderRadius: OmniRadius.pillAll,
                       child: LinearProgressIndicator(
                         value: plan.progress,
                         minHeight: 6,
                         backgroundColor: scheme.surfaceContainerHighest,
-                        valueColor: AlwaysStoppedAnimation(scheme.primary),
+                        // Màu đồ hoạ của bộ Orbit.
+                        valueColor: AlwaysStoppedAnimation(
+                          dark ? scheme.primary : OmniColors.orbit,
+                        ),
                       ),
                     ),
                     const SizedBox(height: OmniSpacing.sm),
@@ -91,8 +110,11 @@ class PlanRow extends StatelessWidget {
                         Expanded(
                           child: Text(
                             counts,
-                            style: text.labelMedium?.copyWith(
-                              color: scheme.onSurfaceVariant,
+                            style: OmniType.caption.copyWith(
+                              fontWeight: FontWeight.w400,
+                              color: dark
+                                  ? scheme.onSurfaceVariant
+                                  : OmniColors.secondaryForeground,
                               fontFeatures: OmniType.tabular,
                             ),
                             maxLines: 1,
@@ -101,8 +123,7 @@ class PlanRow extends StatelessWidget {
                         ),
                         if (plan.overdueCount > 0) ...[
                           const SizedBox(width: OmniSpacing.sm),
-                          OmniStatusChip(
-                            icon: Icons.error_outline_rounded,
+                          OmniBadge(
                             label: 'Trễ ${plan.overdueCount}',
                             tone: OmniTone.danger,
                           ),
@@ -119,3 +140,5 @@ class PlanRow extends StatelessWidget {
     );
   }
 }
+
+const _radius = BorderRadius.all(Radius.circular(18));

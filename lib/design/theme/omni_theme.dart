@@ -158,8 +158,13 @@ abstract final class OmniTheme {
       floatingActionButtonTheme: FloatingActionButtonThemeData(
         backgroundColor: primary,
         foregroundColor: onPrimary,
-        elevation: 2,
-        shape: const RoundedRectangleBorder(borderRadius: OmniRadius.xlAll),
+        elevation: 4,
+        // Nút nổi bo 18, chữ 16/700 — như "Thêm khách", "Tạo mới" trong bộ Orbit.
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.all(Radius.circular(18)),
+        ),
+        extendedTextStyle: OmniType.input.copyWith(fontWeight: FontWeight.w700),
+        extendedSizeConstraints: const BoxConstraints.tightFor(height: 56),
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,

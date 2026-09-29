@@ -13,6 +13,7 @@ class OmniFilterPill extends StatelessWidget {
     required this.onTap,
     this.count,
     this.tint,
+    this.onInk = false,
   });
 
   final String label;
@@ -26,6 +27,11 @@ class OmniFilterPill extends StatelessWidget {
   /// chặn việc đó. Chỗ gọi nào cần màu riêng thì truyền vào từ chỗ gọi.
   final Color? tint;
 
+  /// Viên nằm trên nền MỰC (dải nhóm việc của bảng dự án): viên thường nền
+  /// mực sáng hơn một bậc chữ xám xanh, viên đang chọn nền quỹ đạo sáng chữ
+  /// tối đậm.
+  final bool onInk;
+
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
@@ -37,7 +43,13 @@ class OmniFilterPill extends StatelessWidget {
     final Color background;
     final Color foreground;
     final Color countColor;
-    if (selected) {
+    if (onInk) {
+      background = selected ? OmniColors.orbit : OmniColors.inkRaised;
+      foreground = selected
+          ? OmniColors.darkPrimaryForeground
+          : OmniColors.inkMutedForeground;
+      countColor = foreground;
+    } else if (selected) {
       background = tint ?? (dark ? scheme.onSurface : OmniColors.ink);
       foreground = dark && tint == null ? scheme.surface : Colors.white;
       countColor = tint != null
@@ -80,7 +92,7 @@ class OmniFilterPill extends StatelessWidget {
                         height: 1.2,
                         color: foreground,
                         fontWeight: selected
-                            ? FontWeight.w700
+                            ? (onInk ? FontWeight.w800 : FontWeight.w700)
                             : FontWeight.w600,
                       ),
                     ),

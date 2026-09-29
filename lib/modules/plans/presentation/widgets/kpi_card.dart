@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 
-import '../../../../design/components/components.dart';
 import '../../../../design/tokens/tokens.dart';
 import '../../domain/workshop_kpi.dart';
 
@@ -101,80 +100,100 @@ class KpiCard extends StatelessWidget {
     }
 
     return _Shell(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _MonthBar(month: month, onPrev: onPrevMonth, onNext: onNextMonth),
-          const SizedBox(height: OmniSpacing.sm),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.baseline,
-            textBaseline: TextBaseline.alphabetic,
-            children: [
+      builder: (context) {
+        final scheme = Theme.of(context).colorScheme;
+        final text = Theme.of(context).textTheme;
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _MonthBar(month: month, onPrev: onPrevMonth, onNext: onNextMonth),
+            const SizedBox(height: OmniSpacing.sm),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.baseline,
+              textBaseline: TextBaseline.alphabetic,
+              children: [
+                Text(
+                  '${kpi.delivered}',
+                  style: OmniType.moneyHero.copyWith(
+                    fontSize: OmniType.moneyHero.fontSize! * 52 / 28,
+                    fontWeight: FontWeight.w800,
+                    height: 1,
+                    letterSpacing: -1.5,
+                    color: scheme.primary,
+                  ),
+                ),
+                const SizedBox(width: OmniSpacing.sm),
+                Text(
+                  // "trong tháng", không phải "tháng này": thanh ngay trên đã
+                  // nói là tháng nào, và từ khi lùi được về tháng trước thì
+                  // "tháng này" là một khẳng định sai.
+                  'việc xong trong tháng',
+                  style: text.bodyMedium?.copyWith(
+                    color: scheme.onSurfaceVariant,
+                  ),
+                ),
+                const Spacer(),
+                if (kpi.reachedBonus > 0)
+                  // Vàng chữ mực: mốc thưởng đã đạt là tin vui duy nhất trên thẻ.
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 5,
+                    ),
+                    decoration: const BoxDecoration(
+                      color: OmniColors.sun,
+                      borderRadius: OmniRadius.pillAll,
+                    ),
+                    child: Text(
+                      'Đã đạt ${kpi.reachedBonus} triệu',
+                      style: OmniType.micro.copyWith(
+                        fontWeight: FontWeight.w800,
+                        color: OmniColors.sunForeground,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+            if (previousDelivered case final int previous) ...[
+              const SizedBox(height: OmniSpacing.xs),
+              _Trend(
+                delta: kpi.delivered - previous,
+                previousMonth: DateTime(month.year, month.month - 1),
+              ),
+            ],
+            const SizedBox(height: OmniSpacing.lg),
+            // Không có mốc nào thì không có gì để chạy tới — một thanh đầy 100%
+            // ở đây là một lời khen bịa ra.
+            if (kpi.tiers.isNotEmpty) ...[
+              ClipRRect(
+                borderRadius: BorderRadius.circular(OmniRadius.chip / 2),
+                child: LinearProgressIndicator(
+                  value: kpi.progressToNext,
+                  minHeight: 10,
+                  backgroundColor: scheme.surfaceContainerHighest,
+                  valueColor: AlwaysStoppedAnimation(scheme.primary),
+                ),
+              ),
+              const SizedBox(height: OmniSpacing.sm),
+            ],
+            _Milestone(kpi: kpi, isCurrentMonth: _isCurrentMonth),
+            // Số lần làm lại (§B3). Chữ nhỏ, không tô đỏ, không kèm tên ai: nó
+            // là thông tin để cải thiện chứ không phải một lời buộc tội. Ẩn khi
+            // bằng 0 thay vì khoe một số 0.
+            if (kpi.rework > 0) ...[
+              const SizedBox(height: OmniSpacing.sm),
               Text(
-                '${kpi.delivered}',
-                style: text.displaySmall?.copyWith(
-                  fontWeight: FontWeight.w700,
-                  color: scheme.primary,
+                '${kpi.rework} lần phải làm lại trong tháng',
+                style: text.labelSmall?.copyWith(
+                  color: scheme.onSurfaceVariant,
                   fontFeatures: OmniType.tabular,
                 ),
               ),
-              const SizedBox(width: OmniSpacing.sm),
-              Text(
-                // "trong tháng", không phải "tháng này": thanh ngay trên đã
-                // nói là tháng nào, và từ khi lùi được về tháng trước thì
-                // "tháng này" là một khẳng định sai.
-                'việc xong trong tháng',
-                style: text.bodyMedium?.copyWith(
-                  color: scheme.onSurfaceVariant,
-                ),
-              ),
-              const Spacer(),
-              if (kpi.reachedBonus > 0)
-                OmniStatusChip(
-                  icon: Icons.emoji_events_outlined,
-                  label: 'Đã đạt ${kpi.reachedBonus} triệu',
-                  tone: OmniTone.success,
-                ),
             ],
-          ),
-          if (previousDelivered case final int previous) ...[
-            const SizedBox(height: OmniSpacing.xs),
-            _Trend(
-              delta: kpi.delivered - previous,
-              previousMonth: DateTime(month.year, month.month - 1),
-            ),
           ],
-          const SizedBox(height: OmniSpacing.lg),
-          // Không có mốc nào thì không có gì để chạy tới — một thanh đầy 100%
-          // ở đây là một lời khen bịa ra.
-          if (kpi.tiers.isNotEmpty) ...[
-            ClipRRect(
-              borderRadius: BorderRadius.circular(OmniRadius.chip / 2),
-              child: LinearProgressIndicator(
-                value: kpi.progressToNext,
-                minHeight: 8,
-                backgroundColor: scheme.surfaceContainerHighest,
-                valueColor: AlwaysStoppedAnimation(scheme.primary),
-              ),
-            ),
-            const SizedBox(height: OmniSpacing.sm),
-          ],
-          _Milestone(kpi: kpi, isCurrentMonth: _isCurrentMonth),
-          // Số lần làm lại (§B3). Chữ nhỏ, không tô đỏ, không kèm tên ai: nó
-          // là thông tin để cải thiện chứ không phải một lời buộc tội. Ẩn khi
-          // bằng 0 thay vì khoe một số 0.
-          if (kpi.rework > 0) ...[
-            const SizedBox(height: OmniSpacing.sm),
-            Text(
-              '${kpi.rework} lần phải làm lại trong tháng',
-              style: text.labelSmall?.copyWith(
-                color: scheme.onSurfaceVariant,
-                fontFeatures: OmniType.tabular,
-              ),
-            ),
-          ],
-        ],
-      ),
+        );
+      },
     );
   }
 }
@@ -348,24 +367,73 @@ class _Trend extends StatelessWidget {
   }
 }
 
+/// Thẻ MỰC của Dòng việc (`MTimeline.dc.html`): bo 22, một vòng quỹ đạo mảnh
+/// ở góc, số lớn quỹ đạo sáng.
+///
+/// Nội dung dựng dưới một Theme riêng cho nền mực — chữ chính trắng, chữ phụ
+/// xám xanh, màu chính là quỹ đạo sáng, rãnh thanh tiến độ là mực sáng hơn
+/// một bậc — nên các mảnh con (thanh tháng, mốc thưởng, xu hướng) đọc màu từ
+/// theme như bình thường mà vẫn đúng trên nền tối, không phải tô tay từng chỗ.
 class _Shell extends StatelessWidget {
-  const _Shell({required this.child});
+  const _Shell({required this.builder});
 
-  final Widget child;
+  final WidgetBuilder builder;
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
+    final theme = Theme.of(context);
+    final dark = theme.brightness == Brightness.dark;
+    final ink = theme.copyWith(
+      colorScheme: theme.colorScheme.copyWith(
+        surface: OmniColors.ink,
+        onSurface: Colors.white,
+        onSurfaceVariant: OmniColors.inkMutedForeground,
+        primary: OmniColors.orbit,
+        surfaceContainerHighest: OmniColors.inkRaised,
+      ),
+      iconButtonTheme: IconButtonThemeData(
+        style: IconButton.styleFrom(
+          backgroundColor: OmniColors.inkRaised,
+          foregroundColor: Colors.white,
+          disabledBackgroundColor: OmniColors.inkRaised.withValues(alpha: 0.4),
+          disabledForegroundColor: Colors.white.withValues(alpha: 0.4),
+          fixedSize: const Size.square(36),
+          minimumSize: const Size.square(36),
+          shape: const RoundedRectangleBorder(borderRadius: OmniRadius.smAll),
+        ),
+      ),
+    );
 
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(OmniSpacing.lg),
+      clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
-        color: scheme.surface,
-        borderRadius: OmniRadius.lgAll,
-        border: Border.all(color: scheme.outlineVariant),
+        color: dark ? OmniColors.darkMuted : OmniColors.ink,
+        borderRadius: const BorderRadius.all(Radius.circular(22)),
       ),
-      child: child,
+      child: Stack(
+        children: [
+          Positioned(
+            right: -60,
+            top: -60,
+            child: Container(
+              width: 200,
+              height: 200,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                border: Border.all(color: OmniColors.inkLine, width: 1.5),
+              ),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.all(18),
+            child: Theme(
+              data: ink,
+              child: Builder(builder: builder),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

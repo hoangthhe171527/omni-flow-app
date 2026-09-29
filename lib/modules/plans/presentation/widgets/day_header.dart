@@ -26,10 +26,8 @@ class DayHeader extends StatelessWidget {
       color: scheme.surface,
       child: Text(
         group.summary,
-        style: Theme.of(context).textTheme.labelMedium?.copyWith(
+        style: OmniType.overline.copyWith(
           color: scheme.onSurfaceVariant,
-          fontWeight: FontWeight.w700,
-          letterSpacing: 0.4,
           fontFeatures: OmniType.tabular,
         ),
       ),

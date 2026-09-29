@@ -24,57 +24,81 @@ class CompletionRow extends StatelessWidget {
     final text = Theme.of(context).textTheme;
     final who = entry.userName ?? 'Ai đó';
 
-    return InkWell(
-      onTap: onTap,
-      borderRadius: OmniRadius.smAll,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: OmniSpacing.sm),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            OmniAvatar(name: who, imageUrl: entry.userAvatar, size: 32),
-            const SizedBox(width: OmniSpacing.md),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    // Tên người đứng trước hành động: "Hằng Ni đã xong Body
-                    // ngoài" đọc như một câu, còn "đã xong Body ngoài — Hằng
-                    // Ni" đọc như một bản ghi.
-                    '$who ${entry.summary}',
-                    style: text.bodyMedium,
+    // Thẻ trắng viền mảnh bo 16 (`MTimeline.dc.html`).
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      child: Material(
+        color: scheme.surface,
+        shape: RoundedRectangleBorder(
+          borderRadius: OmniRadius.xlAll,
+          side: BorderSide(color: scheme.outlineVariant),
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                OmniAvatar(name: who, imageUrl: entry.userAvatar, size: 36),
+                const SizedBox(width: OmniSpacing.md),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text.rich(
+                        // Tên người đứng trước hành động: "Hằng Ni đã xong Body
+                        // ngoài" đọc như một câu, còn "đã xong Body ngoài — Hằng
+                        // Ni" đọc như một bản ghi. Tên in đậm như thiết kế.
+                        TextSpan(
+                          children: [
+                            TextSpan(
+                              text: who,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                            TextSpan(text: ' ${entry.summary}'),
+                          ],
+                        ),
+                        style: OmniType.bodyStrong.copyWith(
+                          fontWeight: FontWeight.w400,
+                          color: scheme.onSurface,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        [
+                          entry.taskTitle,
+                          if (entry.planName != null) entry.planName!,
+                        ].join(' · '),
+                        style: text.labelSmall?.copyWith(
+                          color: scheme.onSurfaceVariant,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      if (entry.photos.isNotEmpty) ...[
+                        const SizedBox(height: OmniSpacing.sm),
+                        _Photos(urls: entry.photos),
+                      ],
+                    ],
                   ),
-                  const SizedBox(height: 2),
-                  Text(
-                    [
-                      entry.taskTitle,
-                      if (entry.planName != null) entry.planName!,
-                    ].join(' · '),
-                    style: text.labelSmall?.copyWith(
-                      color: scheme.onSurfaceVariant,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(width: OmniSpacing.sm),
+                // Giờ TUYỆT ĐỐI, không phải "2 giờ trước": quản đốc đối chiếu dòng
+                // này với ca làm và với lời thợ nói, và "09:35" là thứ so được.
+                Text(
+                  Formatters.time(entry.at),
+                  style: text.labelSmall?.copyWith(
+                    color: scheme.onSurfaceVariant,
+                    fontFeatures: OmniType.tabular,
                   ),
-                  if (entry.photos.isNotEmpty) ...[
-                    const SizedBox(height: OmniSpacing.sm),
-                    _Photos(urls: entry.photos),
-                  ],
-                ],
-              ),
+                ),
+              ],
             ),
-            const SizedBox(width: OmniSpacing.sm),
-            // Giờ TUYỆT ĐỐI, không phải "2 giờ trước": quản đốc đối chiếu dòng
-            // này với ca làm và với lời thợ nói, và "09:35" là thứ so được.
-            Text(
-              Formatters.time(entry.at),
-              style: text.labelSmall?.copyWith(
-                color: scheme.onSurfaceVariant,
-                fontFeatures: OmniType.tabular,
-              ),
-            ),
-          ],
+          ),
         ),
       ),
     );
