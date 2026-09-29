@@ -143,21 +143,9 @@ class _ShellNavigationRail extends ConsumerWidget {
         color: scheme.onSurfaceVariant,
         fontWeight: FontWeight.w500,
       ),
-      leading: Padding(
-        padding: const EdgeInsets.only(top: OmniSpacing.lg),
-        child: Container(
-          width: 44,
-          height: 44,
-          decoration: const BoxDecoration(
-            color: OmniColors.primary,
-            borderRadius: OmniRadius.mdAll,
-          ),
-          child: const Icon(
-            Icons.layers_rounded,
-            color: Colors.white,
-            size: OmniIconSize.xl,
-          ),
-        ),
+      leading: const Padding(
+        padding: EdgeInsets.only(top: OmniSpacing.lg),
+        child: OmniBrandMark(size: 44, semanticLabel: 'OmniCRM'),
       ),
       destinations: [
         for (final destination in tabs)

@@ -68,19 +68,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const SizedBox(height: OmniSpacing.section),
-                    Container(
-                      width: 52,
-                      height: 52,
-                      decoration: const BoxDecoration(
-                        color: OmniColors.primary,
-                        borderRadius: OmniRadius.mdAll,
-                      ),
-                      child: const Icon(
-                        Icons.layers_rounded,
-                        color: Colors.white,
-                        size: OmniIconSize.xl,
-                      ),
-                    ),
+                    const OmniBrandMark(size: 52, semanticLabel: 'OmniCRM'),
                     const SizedBox(height: OmniSpacing.xxl),
                     Text(
                       'Chào mừng trở lại',
