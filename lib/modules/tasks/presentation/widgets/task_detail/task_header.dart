@@ -54,7 +54,10 @@ class TaskHeader extends StatelessWidget {
           // Chạm vào chính cái tên để sửa nó. Một nút bút chì ở góc trên là
           // thêm một thứ phải tìm, trong khi cái tên thì đang ở ngay đó.
           if (onEditTitle == null)
-            Text(task.title, style: _titleStyle)
+            Text(
+              task.title,
+              style: _titleStyle.copyWith(color: scheme.onSurface),
+            )
           else
             InkWell(
               onTap: onEditTitle,
@@ -62,7 +65,12 @@ class TaskHeader extends StatelessWidget {
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Expanded(child: Text(task.title, style: _titleStyle)),
+                  Expanded(
+                    child: Text(
+                      task.title,
+                      style: _titleStyle.copyWith(color: scheme.onSurface),
+                    ),
+                  ),
                   const SizedBox(width: OmniSpacing.sm),
                   Icon(
                     Icons.edit_outlined,

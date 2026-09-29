@@ -86,10 +86,14 @@ class ChannelTile extends StatelessWidget {
                   style: OmniType.bodyStrong.copyWith(color: scheme.onSurface),
                 ),
                 const SizedBox(height: OmniSpacing.xs),
-                Row(
+                // Wrap chứ không Row: trên màn 360–390dp viên trạng thái dài
+                // ("Đang chờ ghép nối") cộng số tin hôm nay không đủ một dòng.
+                Wrap(
+                  spacing: OmniSpacing.sm,
+                  runSpacing: OmniSpacing.xs,
+                  crossAxisAlignment: WrapCrossAlignment.center,
                   children: [
                     _StatusPill(label: statusLabel, tone: tone),
-                    const SizedBox(width: OmniSpacing.sm),
                     Text(
                       '${connection.today} tin hôm nay',
                       style: OmniType.micro.copyWith(

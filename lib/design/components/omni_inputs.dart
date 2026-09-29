@@ -202,16 +202,29 @@ class OmniActionBar extends StatelessWidget {
       ),
       decoration: BoxDecoration(
         color: scheme.surface,
-        border: Border(top: BorderSide(color: scheme.outline)),
+        border: Border(top: BorderSide(color: scheme.outlineVariant)),
       ),
+      // Bộ Orbit: nút phụ ôm lấy chữ của nó ("Huỷ", "Đánh dấu thắng"), nút
+      // chính cuối hàng chiếm phần còn lại. Chia đều bề ngang làm chữ nút phụ
+      // gãy thành ba dòng trên màn 390dp.
       child: Row(
         children: [
           for (var i = 0; i < children.length; i++) ...[
-            if (i > 0) const SizedBox(width: OmniSpacing.md),
-            Expanded(
-              flex: i == children.length - 1 ? 2 : 1,
-              child: children[i],
-            ),
+            if (i > 0) const SizedBox(width: 10),
+            if (i == children.length - 1)
+              Expanded(child: children[i])
+            else
+              OutlinedButtonTheme(
+                data: OutlinedButtonThemeData(
+                  style: Theme.of(context).outlinedButtonTheme.style?.copyWith(
+                    minimumSize: const WidgetStatePropertyAll(Size(0, 52)),
+                    padding: const WidgetStatePropertyAll(
+                      EdgeInsets.symmetric(horizontal: 18),
+                    ),
+                  ),
+                ),
+                child: children[i],
+              ),
           ],
         ],
       ),
