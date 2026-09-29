@@ -1,108 +1,144 @@
 import 'package:flutter/material.dart';
 
-/// Palette, straight from the Sleek design system for this app
-/// (`design/html/*.html`, `:root` block). Values here and there must stay equal —
-/// when the design changes, change this file, not individual widgets.
+/// Bảng màu "Orbit" — nguồn là artifact giao diện đã duyệt (`Main.dc.html`
+/// trong bộ UI kit). Web và app dùng CÙNG bảng này: đổi thiết kế thì đổi file
+/// này, không đổi từng widget.
+///
+/// Mọi cặp chữ/nền được đo trong `contrast_test.dart`, không đo bằng mắt.
 abstract final class OmniColors {
-  // ---- Brand -------------------------------------------------------------
-  /// Mòng két. Dành cho hành động chính, hero đăng nhập và tab đang chọn.
+  // ---- Nhận diện ----------------------------------------------------------
+  /// Mực. Chữ chính, ô logo, thanh bên tối, màn mở app.
+  static const ink = Color(0xFF0B1A33);
+
+  /// Nền của ô logo khi logo nằm TRÊN một mặt mực (màn đăng nhập, màn mở app):
+  /// cùng họ với [ink] nhưng sáng hơn một bậc để ô còn tách khỏi nền.
+  static const inkRaised = Color(0xFF132744);
+
+  /// Chữ phụ đặt trên nền [ink] (8.46:1): dòng giới thiệu màn đăng nhập, câu
+  /// khẩu hiệu màn mở app.
+  static const inkMutedForeground = Color(0xFFA9B6CA);
+
+  /// Nét trang trí trên nền [ink]: các vòng quỹ đạo sau tiêu đề đăng nhập.
+  static const inkLine = Color(0xFF1F3A5F);
+
+  /// Hai quầng tròn đồng tâm sau logo ở màn mở app — ngoài sáng hơn trong.
+  static const inkHaloOuter = Color(0xFF10284A);
+  static const inkHaloInner = Color(0xFF0E2240);
+
+  /// Quỹ đạo sáng. CHỈ cho đồ hoạ: nét logo, thanh tiến độ, chữ trên nền mực.
   ///
-  /// Thay chàm #5B5CE2. Chàm không xấu — nó là màu mặc định của Tailwind và
-  /// Material, gặp ở mọi app SaaS. Mòng két giữ cùng họ lạnh (thợ đã quen
-  /// xanh lá của myXteam nên không thấy lạ) nhưng bão hoà thấp hơn hẳn.
+  /// Trên nền sáng nó chỉ đạt khoảng 1.9:1 — không bao giờ làm chữ hay nền
+  /// mang chữ trắng ở chế độ sáng.
+  static const orbit = Color(0xFF14D3C8);
+
+  /// Mặt trời. Chấm "tin mới" của logo và huy hiệu CHƯA ĐỌC — chỉ hai chỗ đó
+  /// được dùng màu vàng, để vàng luôn có nghĩa là "có cái mới".
   ///
-  /// 5.73:1 trên nền trang, 6.12:1 trên thẻ — xem `contrast_test.dart`.
-  static const primary = Color(0xFF0F6E63);
+  /// Chữ trên nó là [ink] (10.9:1), không phải trắng.
+  static const sun = Color(0xFFFFC43D);
+  static const sunForeground = ink;
+
+  // ---- Màu chính ----------------------------------------------------------
+  /// Quỹ đạo. Nút chính, liên kết, tab đang chọn.
+  ///
+  /// 4.99:1 trên thẻ, 4.65:1 trên nền trang — xem `contrast_test.dart`.
+  static const primary = Color(0xFF0A7D76);
   static const primaryForeground = Color(0xFFFFFFFF);
 
-  /// The brand gradient's far end — used only inside [OmniGradients].
-  static const primaryGlow = Color(0xFF3FA294);
+  /// Nút chính khi đang nhấn, và màu chữ/icon của tab đang chọn (đặt trên
+  /// [accent] thì cần tối hơn [primary] một bậc mới đọc rõ).
+  static const primaryPressed = Color(0xFF075E59);
 
-  /// Nền rất nhạt sau bề mặt được chọn / nhấn nhẹ.
-  static const accent = Color(0xFFE4F1EF);
-  static const accentForeground = Color(0xFF0C5D54);
+  /// Nền nhạt sau bề mặt được chọn: viên tab đang chọn, ô icon khu Công việc,
+  /// chip xem trước trên màn chọn tab.
+  static const accent = Color(0xFFDDF5F2);
+  static const accentForeground = primaryPressed;
 
-  // ---- Surfaces ----------------------------------------------------------
-  static const background = Color(0xFFF5F8F7);
+  /// Bản nhạt hơn nữa của [accent] — vầng sáng quanh ô nhập đang focus.
+  static const accentSoft = Color(0xFFE3F8F6);
+
+  // ---- Bề mặt -------------------------------------------------------------
+  static const background = Color(0xFFF5F7FA);
   static const card = Color(0xFFFFFFFF);
-  static const muted = Color(0xFFEDF3F1);
-  static const secondary = Color(0xFFE4F1EF);
+
+  /// Bề mặt trung tính: nền ô icon khu Quản trị, rãnh của bộ chọn phân đoạn,
+  /// vòng tròn của màn "không có quyền".
+  static const muted = Color(0xFFEEF1F5);
+  static const secondary = accent;
 
   /// Đường kẻ TRANG TRÍ: mép thẻ, vạch ngăn dòng.
   ///
-  /// 1.25:1 trên thẻ — nhạt một cách cố ý. Thẻ đã tự tách khỏi nền nhờ nền
-  /// trắng đặt trên nền ngả xanh, nên đường viền chỉ làm sắc mép chứ không
-  /// gánh việc nhận diện. Ranh giới nào PHẢI nhận ra được thì dùng
+  /// Nhạt một cách cố ý — thẻ trắng trên nền xám đã tự tách khỏi nền, đường
+  /// viền chỉ làm sắc mép. Ranh giới nào PHẢI nhận ra được thì dùng
   /// [borderInteractive].
-  static const border = Color(0xFFDFE8E6);
+  static const border = Color(0xFFE3E8EF);
+
+  /// Vạch ngăn giữa các dòng BÊN TRONG một thẻ — nhạt hơn [border] một chút.
+  static const divider = Color(0xFFEEF1F5);
 
   /// Ranh giới của thành phần TƯƠNG TÁC: ô nhập, nút viền, chip chưa chọn.
   ///
-  /// WCAG 1.4.11 đòi 3:1 cho ranh giới cần thiết để nhận ra một thành phần.
-  /// #7F918C là giá trị nhạt nhất còn đạt (3.32 trên thẻ, 3.10 trên nền) —
-  /// chọn nhạt nhất để ô nhập không đọc như một cái khung nặng.
-  static const borderInteractive = Color(0xFF7F918C);
+  /// Thiết kế ghi #8A97AB, nhưng giá trị đó chỉ đạt 2.96:1 trên thẻ và 2.76:1
+  /// trên nền — dưới ngưỡng 3:1 của WCAG 1.4.11. #8390A5 là bản gần nhất còn
+  /// đạt (3.23 trên thẻ, 3.01 trên nền); mắt thường không phân biệt được.
+  static const borderInteractive = Color(0xFF8390A5);
 
-  // ---- Text --------------------------------------------------------------
-  static const foreground = Color(0xFF151E1C);
-  static const secondaryForeground = Color(0xFF2E3A37);
+  // ---- Chữ ----------------------------------------------------------------
+  static const foreground = ink;
+  static const secondaryForeground = Color(0xFF3A4760);
 
-  /// Chữ phụ.
-  ///
-  /// #777889 cũ chỉ đạt 4.10:1 trên nền trang, dưới ngưỡng AA — ở 82 chỗ trong
-  /// app. Giá trị này đạt 5.26:1 trên nền trang và 5.62:1 trên thẻ, mà mắt
-  /// thường gần như không thấy khác.
-  static const mutedForeground = Color(0xFF5A6B67);
+  /// Chữ phụ. 5.65:1 trên nền trang, 6.07:1 trên thẻ.
+  static const mutedForeground = Color(0xFF56637A);
 
-  // ---- Semantic ----------------------------------------------------------
+  // ---- Ngữ nghĩa ----------------------------------------------------------
   //
   // KHÔNG có `successText`, và đó là một quyết định chứ không phải thiếu sót.
   //
   // Mọi ứng viên xanh lá đủ tối để làm chữ (#067A55, #157A33, #1B7F33,
-  // #2E7D32) chỉ chênh [primary] 1.13–1.20 lần về ĐỘ SÁNG. Người bị mù màu
-  // lục-đỏ — khoảng 8% nam giới, mà xưởng thì gần như toàn nam — nhìn hai màu
-  // đó gần như một. Độ sáng cũng là thứ duy nhất còn lại khi nhìn màn hình
-  // dưới nắng.
+  // #2E7D32) chỉ chênh [primary] 1.02–1.09 lần về ĐỘ SÁNG. Người bị mù màu
+  // lục-đỏ nhìn hai màu đó gần như một. Nên "đã xong" dùng chính [primary],
+  // cộng dấu tick ĐẶC. `contrast_test.dart` ghi lại phép đo này.
   //
-  // Nên "đã xong" dùng chính [primary], cộng dấu tick ĐẶC và chữ làm nhạt đi.
-  // Trạng thái đọc được qua hình dạng, không chỉ qua màu — cũng chính là điều
-  // WCAG 1.4.1 đòi hỏi. `contrast_test.dart` ghi lại phép đo này.
-  //
-  // [success] ở lại cho ĐỒ HOẠ: thanh tiến độ, chấm trạng thái, vòng tiến
-  // trình. Đồ hoạ không đứng cạnh chữ teal nên không bị nhầm với nó.
+  // [success] ở lại cho ĐỒ HOẠ: thanh tiến độ, chấm trạng thái.
   static const success = Color(0xFF10B981);
   static const warning = Color(0xFFF59E0B);
-  static const destructive = Color(0xFFEF4444);
-  static const info = Color(0xFF0EA5E9);
 
-  /// NỀN xanh dương mang chữ trắng.
-  ///
-  /// [info] là màu ĐỒ HOẠ — chấm, icon, viền trái. Chữ trắng trên nó chỉ đạt
-  /// 2.77:1, nên nó không bao giờ được làm nền cho chữ. Cùng cái bẫy đã bắt
-  /// [dangerSurface] ra đời.
-  static const infoSurface = Color(0xFF0369A1);
+  /// Nguy — đồ hoạ và viền lỗi của ô nhập (5.32:1 trên thẻ).
+  static const destructive = Color(0xFFC8322A);
 
-  // Bản đậm hơn của hai màu trên, dành riêng cho CHỮ. Bản gốc đạt lần lượt
-  // 2.15:1 và 3.76:1 trên nền trắng — tốt để tô, không đủ để đọc.
-  //
-  // Giữ cả hai vì đây là hai việc khác nhau: icon lớn, thanh tiến độ, chấm
-  // trạng thái vẫn dùng bản gốc để không bị xỉn đi. Một cái NỀN mang chữ trắng
-  // thì tính là chữ — badge đỏ chữ trắng chỉ đạt 3.76:1 với bản gốc.
-  static const warningText = Color(0xFF9A6206);
-  static const dangerText = Color(0xFFC2251C);
+  /// Thông tin — đồ hoạ.
+  static const info = Color(0xFF2456D6);
 
-  /// Bản dùng ở nền tối. Nền tối làm mọi màu phải SÁNG lên chứ không tối đi —
-  /// #9A6206 trên #16211E chỉ đạt 2.34:1.
+  /// NỀN xanh dương mang chữ trắng (6.22:1).
+  static const infoSurface = Color(0xFF2456D6);
+
+  /// Cặp nền nhạt / chữ đậm cho khu Trao đổi và nhãn thông tin.
+  static const infoSoft = Color(0xFFE6EDFD);
+  static const infoText = Color(0xFF1D46B0);
+
+  /// Cặp nền nhạt / chữ đậm cho khu Bán hàng và nhãn cảnh báo.
+  static const warningSoft = Color(0xFFFFF4D6);
+
+  // Bản đậm của cảnh báo/nguy, dành riêng cho CHỮ.
+  static const warningText = Color(0xFF7A4F00);
+  static const dangerText = Color(0xFFA32720);
+
+  /// Nền nhạt của hộp báo lỗi (chữ [dangerText] trên nó đạt 6.40:1).
+  static const dangerSoft = Color(0xFFFDECEA);
+
+  /// Viền của nút "Đăng xuất" — ranh giới trang trí, nhạt, mang sắc đỏ.
+  static const dangerBorder = Color(0xFFE7B6B1);
+
+  /// Bản dùng ở nền tối. Nền tối làm mọi màu phải SÁNG lên chứ không tối đi.
   static const warningTextDark = Color(0xFFE8A33D);
   static const dangerTextDark = Color(0xFFFF6B60);
 
-  /// NỀN đỏ mang chữ trắng: chấm đếm chưa đọc, badge số.
+  /// NỀN đỏ mang chữ trắng: huy hiệu việc trễ hạn, badge số cảnh báo.
   ///
-  /// Cùng giá trị với [dangerText] nhưng khác vai, nên khác tên: cái này
-  /// KHÔNG đổi theo chế độ tối. Dùng [dangerTextDark] làm nền thì chữ trắng
-  /// trên đó chỉ đạt 2.6:1 — sáng hơn không phải lúc nào cũng đúng, còn tuỳ
-  /// màu đó đang là chữ hay đang là nền.
-  static const dangerSurface = Color(0xFFC2251C);
+  /// KHÔNG đổi theo chế độ tối: dùng [dangerTextDark] làm nền thì chữ trắng
+  /// trên đó không đạt — sáng hơn không phải lúc nào cũng đúng, còn tuỳ màu đó
+  /// đang là chữ hay đang là nền.
+  static const dangerSurface = Color(0xFFC8322A);
 
   /// Chữ cảnh báo, đã chọn theo chế độ sáng/tối đang bật.
   ///
@@ -119,39 +155,36 @@ abstract final class OmniColors {
   static Color _byBrightness(BuildContext context, Color light, Color dark) =>
       Theme.of(context).brightness == Brightness.dark ? dark : light;
 
-  // ---- Dark theme --------------------------------------------------------
+  // ---- Chế độ tối ---------------------------------------------------------
   //
-  // Nền tối ngả xanh cùng hướng với bảng sáng, không phải navy như bản chàm
-  // cũ: hai chế độ phải đọc ra là cùng một sản phẩm.
-  static const darkBackground = Color(0xFF0E1614);
-  static const darkCard = Color(0xFF16211E);
-  static const darkMuted = Color(0xFF1E2A27);
-  static const darkBorder = Color(0xFF27332F);
+  // Nền tối là mực ngả xanh đêm, cùng họ với [ink]: hai chế độ phải đọc ra là
+  // cùng một sản phẩm.
+  static const darkBackground = Color(0xFF0B1422);
+  static const darkCard = Color(0xFF121E30);
+  static const darkMuted = Color(0xFF1A2840);
+  static const darkBorder = Color(0xFF22324A);
 
   /// Bản tối của [borderInteractive].
   ///
-  /// Phải đạt 3:1 trên CẢ HAI mặt nó có thể nằm lên: [darkCard] (3.50) và
-  /// [darkMuted] (3.14) — ô nhập ở chế độ tối tô nền bằng cái thứ hai. Giá
-  /// trị #5C6D68 chọn ban đầu chỉ đo trên mặt thẻ và trượt ở ô nhập.
-  static const darkBorderInteractive = Color(0xFF667772);
+  /// Phải đạt 3:1 trên CẢ HAI mặt nó có thể nằm lên: [darkCard] (3.73) và
+  /// [darkMuted] (3.29) — ô nhập ở chế độ tối tô nền bằng cái thứ hai.
+  static const darkBorderInteractive = Color(0xFF667894);
 
-  /// Bản tối của [accent] và [accentForeground].
-  ///
-  /// [accent] #E4F1EF là một khối sáng chói nếu đặt giữa màn hình tối — nền
-  /// nhấn phải TỐI đi cùng chiều với nền trang, chứ không giữ nguyên.
-  static const darkAccent = Color(0xFF123A34);
-  static const darkAccentForeground = Color(0xFF9FE3D6);
+  /// Bản tối của [accent] và [accentForeground]: nền nhấn phải TỐI đi cùng
+  /// chiều với nền trang, chứ không giữ nguyên khối sáng.
+  static const darkAccent = Color(0xFF0E3438);
+  static const darkAccentForeground = Color(0xFF9FEDE6);
 
-  static const darkForeground = Color(0xFFEAF2F0);
-  static const darkMutedForeground = Color(0xFF9AAAA6);
-  static const darkPrimary = Color(0xFF4FBFAE);
+  static const darkForeground = Color(0xFFE8EEF6);
+  static const darkMutedForeground = Color(0xFF9AA8BD);
+  static const darkPrimary = Color(0xFF2EE0D5);
 
   /// Chữ trên nút chính ở nền tối.
   ///
-  /// Nền tối buộc [darkPrimary] phải sáng, và chữ trắng trên #4FBFAE chỉ đạt
-  /// 2.18:1. Nên ở chế độ tối, chữ trên nút chính là chữ TỐI — đây là chỗ hai
-  /// chế độ buộc phải khác nhau, không phải chỗ đảo màu là xong.
-  static const darkPrimaryForeground = Color(0xFF06231F);
+  /// Nền tối buộc [darkPrimary] phải sáng, nên chữ trên nút chính là chữ TỐI
+  /// (9.30:1) — đây là chỗ hai chế độ buộc phải khác nhau, không phải chỗ đảo
+  /// màu là xong.
+  static const darkPrimaryForeground = Color(0xFF062A28);
 
   // ---- Chat ---------------------------------------------------------------
   /// Messaging surfaces follow Zalo's visual language rather than the CRM

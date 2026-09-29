@@ -149,7 +149,7 @@ class _ShellNavigationRail extends ConsumerWidget {
           width: 44,
           height: 44,
           decoration: const BoxDecoration(
-            gradient: OmniGradients.brand,
+            color: OmniColors.primary,
             borderRadius: OmniRadius.mdAll,
           ),
           child: const Icon(

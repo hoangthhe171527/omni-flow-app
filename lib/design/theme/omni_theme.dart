@@ -36,7 +36,7 @@ abstract final class OmniTheme {
     onSurfaceMuted: OmniColors.darkMutedForeground,
     primary: OmniColors.darkPrimary,
     // Chữ TỐI trên nút chính. Nền tối buộc [primary] phải sáng, và trắng trên
-    // #4FBFAE chỉ đạt 2.18:1 — đây là chỗ hai chế độ buộc phải khác nhau.
+    // #2EE0D5 chỉ đạt khoảng 1.6:1 — đây là chỗ hai chế độ buộc phải khác nhau.
     onPrimary: OmniColors.darkPrimaryForeground,
     accent: OmniColors.darkAccent,
     onAccent: OmniColors.darkAccentForeground,
@@ -115,7 +115,7 @@ abstract final class OmniTheme {
         elevation: 0,
         scrolledUnderElevation: 0,
         centerTitle: apple,
-        titleTextStyle: OmniType.title.copyWith(color: onSurface),
+        titleTextStyle: OmniType.navTitle.copyWith(color: onSurface),
         systemOverlayStyle: brightness == Brightness.light
             ? SystemUiOverlayStyle.dark
             : SystemUiOverlayStyle.light,
@@ -164,7 +164,7 @@ abstract final class OmniTheme {
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: brightness == Brightness.light
-            ? OmniColors.background
+            ? OmniColors.card
             : surfaceMuted,
         contentPadding: const EdgeInsets.symmetric(
           horizontal: OmniSpacing.lg,

@@ -1,19 +1,32 @@
 /// Thời lượng chuyển động và cỡ icon.
 ///
-/// App có 12 thời lượng và 14 cỡ icon rời rạc trước khi có file này. 220ms và
-/// 16/20/24 đã là chuẩn trên thực tế; đặt tên cho chúng để cái lệch chuẩn hoặc
-/// được biện minh, hoặc bị sửa.
+/// App có 12 thời lượng và 14 cỡ icon rời rạc trước khi có file này. Đặt tên
+/// cho chúng để cái lệch chuẩn hoặc được biện minh, hoặc bị sửa.
 library;
 
+import 'package:flutter/animation.dart';
+
+/// Thang thời lượng của bộ giao diện Orbit (`Main.dc.html`, mục "Chuyển động").
 abstract final class OmniDuration {
   /// Phản hồi chạm, đổi màu, hiện/ẩn tại chỗ.
-  static const fast = Duration(milliseconds: 140);
+  static const fast = Duration(milliseconds: 120);
 
-  /// Mặc định. Dùng khi không có lý do để nhanh hơn hay chậm hơn.
-  static const base = Duration(milliseconds: 220);
+  /// Đổi trạng thái, mở menu. Mặc định khi không có lý do để nhanh hay chậm.
+  static const base = Duration(milliseconds: 200);
 
-  /// Sheet trượt lên, chuyển màn bên trong một màn.
-  static const slow = Duration(milliseconds: 350);
+  /// Sheet trượt lên, chuyển màn.
+  static const slow = Duration(milliseconds: 320);
+
+  /// Hiệu ứng mở app — chạy MỘT lần mỗi lần khởi động (xem `OmniSplash`).
+  static const splash = Duration(milliseconds: 1400);
+}
+
+/// Đường cong của thang trên: ra nhanh, vào êm — cubic-bezier(.2,.8,.2,1).
+abstract final class OmniCurves {
+  static const standard = Cubic(0.2, 0.8, 0.2, 1);
+
+  /// Nảy nhẹ khi một chấm "bật" ra — cubic-bezier(.3,1.6,.5,1).
+  static const pop = Cubic(0.3, 1.6, 0.5, 1);
 }
 
 /// Thang này mô tả app đang làm gì, không phải áp một thang lý thuyết lên nó.

@@ -72,7 +72,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                       width: 52,
                       height: 52,
                       decoration: const BoxDecoration(
-                        gradient: OmniGradients.brand,
+                        color: OmniColors.primary,
                         borderRadius: OmniRadius.mdAll,
                       ),
                       child: const Icon(
