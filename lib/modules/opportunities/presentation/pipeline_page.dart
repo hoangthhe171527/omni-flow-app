@@ -279,7 +279,7 @@ class _StageTabs extends StatelessWidget {
           color: isSelected
               ? (dark ? scheme.onSurface : OmniColors.ink)
               : scheme.surfaceContainerHighest,
-          shape: const StadiumBorder(),
+          shape: const RoundedRectangleBorder(borderRadius: OmniRadius.chipAll),
           clipBehavior: Clip.antiAlias,
           child: InkWell(
             onTap: () => onSelected(stage.code),
@@ -294,14 +294,17 @@ class _StageTabs extends StatelessWidget {
                     if (hasCount && isSelected)
                       TextSpan(
                         text: ' · ${Formatters.vndCompact(total.value)}',
+                        // Xám xanh trên khối mực (8,5:1) — không còn màu quỹ
+                        // đạo sáng, màu đó chỉ cho logo và đồ hoạ.
                         style: TextStyle(
-                          color: dark ? OmniColors.primary : OmniColors.orbit,
+                          color: dark
+                              ? scheme.surface.withValues(alpha: 0.72)
+                              : OmniColors.inkMutedForeground,
                         ),
                       ),
                   ],
                 ),
-                style: OmniType.caption.copyWith(
-                  height: 1.2,
+                style: OmniType.chip.copyWith(
                   color: foreground,
                   fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
                   fontFeatures: OmniType.tabular,

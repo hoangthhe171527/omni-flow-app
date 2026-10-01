@@ -43,7 +43,7 @@ class InboxFilterBar extends ConsumerWidget {
         // conversation appeared. The platform row moved into the filter sheet;
         // it is a setting a rep changes occasionally, not something worth a
         // permanent row.
-        // Bộ Orbit: ô tìm là một khối xám nhạt bo 12, cạnh nó là nút lọc
+        // Ô tìm là một khối xám nhạt bo 8, cạnh nó là nút lọc
         // vuông viền mảnh — hai thứ cao bằng nhau (44dp) trên cùng một hàng.
         Padding(
           padding: const EdgeInsets.fromLTRB(20, 6, 20, 0),
@@ -282,15 +282,15 @@ class _FilterButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
 
-    // Ô vuông 44 viền mảnh bo 12, cao bằng ô tìm bên cạnh; chấm màu chính ở
-    // góc khi đang lọc.
+    // Ô vuông 44 viền #C9D2DE bo 8, cao bằng ô tìm bên cạnh; chấm màu chính
+    // ở góc khi đang lọc.
     return Tooltip(
       message: 'Lọc theo kênh',
       child: Material(
         color: scheme.surface,
         shape: RoundedRectangleBorder(
           borderRadius: OmniRadius.mdAll,
-          side: BorderSide(color: scheme.outlineVariant),
+          side: BorderSide(color: OmniColors.controlBorderOf(context)),
         ),
         child: InkWell(
           onTap: onTap,

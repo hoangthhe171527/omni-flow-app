@@ -228,7 +228,7 @@ class _DirectoryPageState extends ConsumerState<DirectoryPage> {
   }
 }
 
-/// Thẻ hồ sơ nền mực, ảnh đại diện có vành quỹ đạo sáng.
+/// Thẻ hồ sơ nền mực — mặt tối của thương hiệu.
 class _ProfileCard extends ConsumerWidget {
   const _ProfileCard();
 
@@ -254,24 +254,11 @@ class _ProfileCard extends ConsumerWidget {
       ),
       child: Row(
         children: [
-          Container(
-            padding: const EdgeInsets.all(2),
-            decoration: const BoxDecoration(
-              color: OmniColors.orbit,
-              shape: BoxShape.circle,
-            ),
-            child: Container(
-              padding: const EdgeInsets.all(2),
-              decoration: const BoxDecoration(
-                color: OmniColors.ink,
-                shape: BoxShape.circle,
-              ),
-              child: OmniAvatar(
-                name: displayName,
-                imageUrl: avatarUrl,
-                size: 48,
-              ),
-            ),
+          // Không còn vành quỹ đạo sáng quanh ảnh: màu đó chỉ cho logo. Đệm 4
+          // giữ nguyên chỗ của vành cũ để hàng không xê dịch.
+          Padding(
+            padding: const EdgeInsets.all(4),
+            child: OmniAvatar(name: displayName, imageUrl: avatarUrl, size: 48),
           ),
           const SizedBox(width: 14),
           Expanded(
@@ -380,7 +367,7 @@ class _WorkspaceCard extends ConsumerWidget {
   }
 }
 
-/// Nhãn nhóm viết hoa, giãn chữ.
+/// Nhãn nhóm 13/600 chữ phụ, viết thường.
 class _GroupLabel extends StatelessWidget {
   const _GroupLabel(this.text);
 
@@ -398,10 +385,8 @@ class _GroupLabel extends StatelessWidget {
       child: Semantics(
         header: true,
         child: Text(
-          text.toUpperCase(),
+          text,
           style: OmniType.overline.copyWith(
-            fontWeight: FontWeight.w600,
-            letterSpacing: 0.96,
             color: Theme.of(context).colorScheme.onSurfaceVariant,
           ),
         ),
@@ -435,20 +420,11 @@ class _Surface extends StatelessWidget {
   }
 }
 
-/// Màu ô icon theo nhóm: Công việc mòng két, Trao đổi xanh dương, Bán hàng
-/// vàng đất, Quản trị trung tính — như thiết kế. Chế độ tối lấy bản tối của
-/// cùng giọng (xem `OmniToneColors`).
-({Color background, Color foreground}) _toneFor(
-  BuildContext context,
-  NavArea area,
-) {
-  final tone = switch (area) {
-    NavArea.work => OmniTone.success,
-    NavArea.communication => OmniTone.info,
-    NavArea.sales => OmniTone.warning,
-    NavArea.admin || NavArea.account => OmniTone.neutral,
-  };
-  final (foreground, background) = tone.of(context);
+/// Màu ô icon: trung tính cho MỌI nhóm. Bản cũ tô theo nhóm (Công việc mòng
+/// két, Trao đổi xanh dương, Bán hàng vàng đất) — bốn giọng màu cho một lưới
+/// lối tắt là trang trí; nhóm đã có tên nhóm đứng trên.
+({Color background, Color foreground}) _tileTone(BuildContext context) {
+  final (foreground, background) = OmniTone.neutral.of(context);
 
   return (background: background, foreground: foreground);
 }
@@ -506,7 +482,7 @@ class _FeatureTile extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final scheme = Theme.of(context).colorScheme;
-    final tone = _toneFor(context, entry.area);
+    final tone = _tileTone(context);
     final badgeProvider = entry.badge;
     final count = badgeProvider == null ? 0 : ref.watch(badgeProvider);
 

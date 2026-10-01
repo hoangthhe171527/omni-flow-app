@@ -75,10 +75,8 @@ class OpportunityDetailPage extends ConsumerWidget {
                   const SizedBox(height: 6),
                   Text(
                     Formatters.vnd(data.value),
-                    style: OmniType.moneyHero.copyWith(
-                      fontWeight: FontWeight.w600,
-                      color: scheme.onPrimaryContainer,
-                    ),
+                    // Số tiền là DỮ LIỆU, chữ mực — màu chính chỉ cho hành động.
+                    style: OmniType.moneyHero.copyWith(color: scheme.onSurface),
                   ),
                   const SizedBox(height: 18),
                   _StageStepper(

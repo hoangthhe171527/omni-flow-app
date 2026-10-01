@@ -134,11 +134,11 @@ void main() {
   ) async {
     await pump(tester);
 
-    expect(find.text('CÔNG VIỆC'), findsOneWidget);
-    expect(find.text('TRAO ĐỔI'), findsOneWidget);
-    expect(find.text('BÁN HÀNG · QUẢN TRỊ'), findsOneWidget);
-    expect(find.text('CÁ NHÂN'), findsOneWidget);
-    expect(find.text('PHÁP LÝ & HỖ TRỢ'), findsOneWidget);
+    expect(find.text('Công việc'), findsOneWidget);
+    expect(find.text('Trao đổi'), findsOneWidget);
+    expect(find.text('Bán hàng · Quản trị'), findsOneWidget);
+    expect(find.text('Cá nhân'), findsOneWidget);
+    expect(find.text('Pháp lý & hỗ trợ'), findsOneWidget);
     // Mục khu Tài khoản nằm trong "Cá nhân", có dòng phụ.
     expect(find.text('Xem những gì bạn được phép làm'), findsOneWidget);
   });
@@ -182,7 +182,7 @@ void main() {
 
     expect(find.text('Hộp thư'), findsOneWidget);
     expect(find.text('Khách hàng'), findsNothing);
-    expect(find.text('CÔNG VIỆC'), findsNothing);
+    expect(find.text('Công việc'), findsNothing);
   });
 
   testWidgets('chọn giao diện bằng ba nút có nhãn đọc được', (tester) async {

@@ -219,21 +219,25 @@ class _KindIcon extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Ô icon bo 12 tô theo giọng Orbit (`MNotifications.dc.html`): trễ hạn
-    // đỏ, sắp tới hạn vàng, được giao / tiến độ xanh dương, còn lại mòng két.
+    // Ô icon xám trung tính, icon nói LOẠI bằng hình. Màu chỉ còn cho trạng
+    // thái: trễ hạn đỏ, sắp tới hạn hổ phách. Bản cũ tô bốn màu (xanh dương,
+    // mòng két, đỏ, vàng) — bốn giọng cho một danh sách là trang trí.
     final (icon, tone) = switch (kind) {
       NotificationKind.taskAssigned => (
         Icons.assignment_ind_outlined,
-        OmniTone.info,
+        OmniTone.neutral,
       ),
       NotificationKind.taskStageOpen => (
         Icons.pan_tool_alt_outlined,
-        OmniTone.info,
+        OmniTone.neutral,
       ),
-      NotificationKind.taskProgress => (Icons.timeline_rounded, OmniTone.info),
+      NotificationKind.taskProgress => (
+        Icons.timeline_rounded,
+        OmniTone.neutral,
+      ),
       NotificationKind.taskCompleted => (
         Icons.check_circle_outline_rounded,
-        OmniTone.success,
+        OmniTone.neutral,
       ),
       NotificationKind.taskOverdue => (
         Icons.warning_amber_rounded,
@@ -245,9 +249,9 @@ class _KindIcon extends StatelessWidget {
       ),
       NotificationKind.taskCommented || NotificationKind.taskMentioned => (
         Icons.chat_bubble_outline_rounded,
-        OmniTone.success,
+        OmniTone.neutral,
       ),
-      NotificationKind.inboxMessage => (Icons.forum_outlined, OmniTone.info),
+      NotificationKind.inboxMessage => (Icons.forum_outlined, OmniTone.neutral),
       NotificationKind.other => (
         Icons.notifications_none_rounded,
         OmniTone.neutral,
