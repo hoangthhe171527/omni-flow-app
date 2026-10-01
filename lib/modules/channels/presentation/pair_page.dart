@@ -10,7 +10,6 @@ import '../../../design/tokens/tokens.dart';
 import '../application/channels_providers.dart';
 import '../application/pairing_controller.dart';
 import '../domain/pairing.dart';
-import 'facebook_login_page.dart';
 import 'widgets/qr_saver.dart';
 
 class PairPage extends ConsumerStatefulWidget {
@@ -121,15 +120,6 @@ class _PairPageState extends ConsumerState<PairPage>
             const CircularProgressIndicator(),
             const SizedBox(height: OmniSpacing.lg),
             Text(_waitingMessage(state.snapshot.stage), style: OmniType.body),
-            if (widget.channel == Channel.facebookPersonal &&
-                state.connectionId != null) ...[
-              const SizedBox(height: OmniSpacing.lg),
-              FilledButton.icon(
-                onPressed: () => _openFacebookLogin(state.connectionId!),
-                icon: const Icon(Icons.login_rounded),
-                label: const Text('Mở đăng nhập Facebook'),
-              ),
-            ],
             if (state.showAgentHint) ...[
               const SizedBox(height: OmniSpacing.md),
               Text(
@@ -248,45 +238,16 @@ class _PairPageState extends ConsumerState<PairPage>
   );
 
   String _waitingMessage(String? stage) => switch (stage) {
-    'logging_in' =>
-      widget.channel == Channel.facebookPersonal
-          ? 'Đang kiểm tra phiên đăng nhập Facebook…'
-          : 'Đang đăng nhập trên máy chạy agent…',
-    'session_ready' => 'Đã đăng nhập. Agent đang kết nối Facebook…',
+    'logging_in' => 'Đang đăng nhập trên máy chạy agent…',
+    'session_ready' => 'Đã đăng nhập. Agent đang kết nối…',
     'tunnel_pending' => 'Đang mở đường kết nối ra ngoài…',
-    _ =>
-      widget.channel == Channel.facebookPersonal
-          ? 'Đăng nhập Facebook ngay trên điện thoại để kết nối.'
-          : 'Đang chuẩn bị mã QR…',
+    _ => 'Đang chuẩn bị mã QR…',
   };
 
   Future<void> _startPairing({bool forceRelogin = false}) async {
-    final started = await ref
+    await ref
         .read(pairingControllerProvider(widget.channel).notifier)
         .start(forceRelogin: forceRelogin);
-    if (!mounted ||
-        started == null ||
-        widget.channel != Channel.facebookPersonal) {
-      return;
-    }
-    await _openFacebookLogin(started.connectionId, freshSession: forceRelogin);
-  }
-
-  Future<void> _openFacebookLogin(
-    String connectionId, {
-    bool freshSession = false,
-  }) async {
-    await Navigator.of(context).push<bool>(
-      MaterialPageRoute(
-        fullscreenDialog: true,
-        builder: (_) => FacebookLoginPage(
-          connectionId: connectionId,
-          freshSession: freshSession,
-        ),
-      ),
-    );
-    if (!mounted) return;
-    ref.read(pairingControllerProvider(widget.channel).notifier).resume();
   }
 
   Uint8List _decodeQr(String dataUrl) {

@@ -46,25 +46,13 @@ class ChannelsApi {
   }) async {
     final response = await _client.post(
       '/channels/pair/start',
-      body: {
-        'channel_id': channel.slug,
-        'force_relogin': forceRelogin,
-        if (channel == Channel.facebookPersonal) 'login_mode': 'mobile',
-      },
+      // Không còn `login_mode: mobile`: app không đăng nhập Facebook hộ agent
+      // và không gửi cookie lên máy chủ (API trả 422 cho login_mode=mobile,
+      // 410 cho `facebook-session`).
+      body: {'channel_id': channel.slug, 'force_relogin': forceRelogin},
     );
     return PairingStart.fromJson(response.object);
   }
-
-  /// Transfers the short-lived Facebook browser session from this phone to the
-  /// registered background agent. The API encrypts it at rest and removes it as
-  /// soon as pairing completes.
-  Future<void> submitFacebookSession(
-    String connectionId,
-    List<Map<String, dynamic>> appState,
-  ) => _client.post(
-    '/channels/pair/$connectionId/facebook-session',
-    body: {'app_state': appState},
-  );
 
   Future<PairingStatus> pairStatus(String connectionId) async {
     final response = await _client.get('/channels/pair/$connectionId/status');
