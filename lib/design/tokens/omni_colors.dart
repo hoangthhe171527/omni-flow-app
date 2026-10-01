@@ -253,21 +253,14 @@ abstract final class OmniColors {
   static Color chat(BuildContext context, Color light, Color dark) =>
       Theme.of(context).brightness == Brightness.dark ? dark : light;
 
-  /// Deterministic avatar tint from a name, so the same person keeps the same
-  /// colour on every screen.
-  static const avatarPalette = <Color>[
-    Color(0xFF4338CA),
-    Color(0xFF0EA5E9),
-    Color(0xFF10B981),
-    Color(0xFFEC4899),
-    Color(0xFFF59E0B),
-    Color(0xFF8B5CF6),
-    Color(0xFF14B8A6),
-  ];
+  /// Avatar chữ tắt: nền xám trung tính, chữ cấp 2 (đo trong contrast_test).
+  ///
+  /// Không tô màu theo tên nữa. Bảy màu đậm cho bảy người là trang trí — màu
+  /// trong app chỉ được nói trạng thái và hành động chính. Có ảnh thì dùng ảnh.
+  static const avatarSurface = border;
+  static const avatarForeground = secondaryForeground;
 
-  static Color avatarFor(String seed) {
-    if (seed.isEmpty) return avatarPalette.first;
-    final hash = seed.codeUnits.fold<int>(0, (sum, unit) => sum + unit);
-    return avatarPalette[hash % avatarPalette.length];
-  }
+  /// Bản tối: nền nâng một bậc, chữ phụ sáng.
+  static const darkAvatarSurface = darkMuted;
+  static const darkAvatarForeground = darkMutedForeground;
 }

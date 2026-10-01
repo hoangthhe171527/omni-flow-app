@@ -21,25 +21,29 @@ abstract final class OmniSpacing {
 }
 
 abstract final class OmniRadius {
-  /// Thang bo góc của bộ giao diện Orbit.
+  /// Thang bo góc của đề xuất "Chuẩn hoá phong cách" (`SPrinciples.dc.html`).
   ///
-  /// Nút và ô nhập 12, ô icon 14, thẻ 16, thẻ lớn và sheet 20 — đúng như các
-  /// màn trong artifact đã duyệt đang dùng.
-  static const double xs = 8;
-  static const double sm = 10;
-  static const double md = 12;
-  static const double lg = 14;
-  static const double xl = 16;
-  static const double xxl = 20;
+  /// App: chip trạng thái 4, chip lọc 6, nút và ô nhập 8, thẻ 10, nút nổi 12,
+  /// sheet 16. Bo tròn hẳn ([pill]) chỉ cho avatar, chấm và số đếm.
+  static const double xs = 4;
+  static const double sm = 6;
+  static const double md = 8;
+  static const double lg = 8;
+  static const double xl = 10;
+  static const double xxl = 16;
+
+  /// Nút nổi ("Tạo mới", "Thêm khách").
+  static const double fab = 12;
 
   /// Chỉ còn cho avatar, chấm đếm và nút tròn.
   static const double pill = 999;
 
-  /// Chip: bộ lọc, trạng thái, thẻ nhãn.
+  /// Chip LỌC và chip chọn trong biểu mẫu.
   ///
   /// KHÔNG dùng [pill] cho chip. Một viên bo tròn hoàn toàn đọc như thẻ tag —
-  /// thứ để gắn vào — chứ không như bộ lọc, thứ để bật và tắt.
-  static const double chip = 8;
+  /// thứ để gắn vào — chứ không như bộ lọc, thứ để bật và tắt. Chip TRẠNG THÁI
+  /// (chỉ để đọc) dùng [xs].
+  static const double chip = 6;
 
   static const BorderRadius chipAll = BorderRadius.all(Radius.circular(chip));
 
@@ -49,6 +53,7 @@ abstract final class OmniRadius {
   static const BorderRadius lgAll = BorderRadius.all(Radius.circular(lg));
   static const BorderRadius xlAll = BorderRadius.all(Radius.circular(xl));
   static const BorderRadius xxlAll = BorderRadius.all(Radius.circular(xxl));
+  static const BorderRadius fabAll = BorderRadius.all(Radius.circular(fab));
   static const BorderRadius pillAll = BorderRadius.all(Radius.circular(pill));
 
   static const BorderRadius sheet = BorderRadius.only(
@@ -57,21 +62,16 @@ abstract final class OmniRadius {
   );
 }
 
+/// Viền thay bóng: thẻ, bảng, cột chỉ có viền #E3E8EF. Bóng chỉ dành cho thứ
+/// đang NỔI trên màn — menu, popover, sheet, hộp thoại, nút nổi.
 abstract final class OmniShadows {
-  /// Depth in this design comes from spacing, not elevation — shadows stay
-  /// barely perceptible on purpose.
-  static const List<BoxShadow> card = [
-    BoxShadow(color: Color(0x0A0B1A33), blurRadius: 16, offset: Offset(0, 4)),
-  ];
+  /// Thẻ không có bóng. Giữ tên để chỗ gọi cũ không phải đoán.
+  static const List<BoxShadow> card = [];
 
-  /// Bóng mảnh dưới phần đang chọn của bộ chọn phân đoạn.
-  static const List<BoxShadow> hairline = [
-    BoxShadow(color: Color(0x1F0B1A33), blurRadius: 2, offset: Offset(0, 1)),
-  ];
-
+  /// Thứ đang nổi: menu, popover, ô QR nổi trên nền mực. Màu trung tính —
+  /// không bao giờ là bóng màu thương hiệu.
   static const List<BoxShadow> raised = [
-    BoxShadow(color: Color(0x0F0B1A33), blurRadius: 2, offset: Offset(0, 1)),
-    BoxShadow(color: Color(0x140B1A33), blurRadius: 24, offset: Offset(0, 8)),
+    BoxShadow(color: Color(0x1F0B1A33), blurRadius: 16, offset: Offset(0, 4)),
   ];
 
   static const List<BoxShadow> sheet = [

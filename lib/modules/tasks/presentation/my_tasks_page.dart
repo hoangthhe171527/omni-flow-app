@@ -457,7 +457,7 @@ class _Segment extends StatelessWidget {
           decoration: BoxDecoration(
             color: selected ? scheme.surface : Colors.transparent,
             borderRadius: OmniRadius.smAll,
-            boxShadow: selected ? OmniShadows.hairline : null,
+            border: selected ? Border.all(color: scheme.outlineVariant) : null,
           ),
           child: FittedBox(
             fit: BoxFit.scaleDown,

@@ -150,7 +150,7 @@ class _Summary extends StatelessWidget {
           padding: const EdgeInsets.all(OmniSpacing.lg),
           decoration: BoxDecoration(
             color: dark ? OmniColors.darkMuted : OmniColors.ink,
-            borderRadius: OmniRadius.xxlAll,
+            borderRadius: OmniRadius.xlAll,
           ),
           child: Row(
             children: [

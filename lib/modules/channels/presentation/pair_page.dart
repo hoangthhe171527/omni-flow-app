@@ -143,9 +143,8 @@ class _PairPageState extends ConsumerState<PairPage>
               padding: const EdgeInsets.all(30),
               decoration: BoxDecoration(
                 color: Colors.white,
-                borderRadius: OmniRadius.xxlAll,
+                borderRadius: OmniRadius.xlAll,
                 border: Border.all(color: scheme.outlineVariant),
-                boxShadow: OmniShadows.raised,
               ),
               child: Image.memory(
                 _decodeQr(state.snapshot.qr!),

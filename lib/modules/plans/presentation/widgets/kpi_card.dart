@@ -409,7 +409,7 @@ class _Shell extends StatelessWidget {
       clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
         color: dark ? OmniColors.darkMuted : OmniColors.ink,
-        borderRadius: const BorderRadius.all(Radius.circular(22)),
+        borderRadius: OmniRadius.xlAll,
       ),
       child: Stack(
         children: [

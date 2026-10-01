@@ -35,7 +35,7 @@ class MyPermissionsPage extends ConsumerWidget {
             padding: const EdgeInsets.all(OmniSpacing.lg),
             decoration: BoxDecoration(
               color: dark ? OmniColors.darkMuted : OmniColors.ink,
-              borderRadius: const BorderRadius.all(Radius.circular(18)),
+              borderRadius: OmniRadius.xlAll,
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,

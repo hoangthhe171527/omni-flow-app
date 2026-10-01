@@ -183,7 +183,7 @@ class InboxFilterBar extends ConsumerWidget {
       // A hairline instead of a heavy popup shadow, matching the header rule.
       elevation: 3,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: OmniRadius.mdAll,
         side: BorderSide(color: scheme.outline.withValues(alpha: 0.4)),
       ),
       items: [

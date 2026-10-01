@@ -268,7 +268,7 @@ class _DashedBorder extends CustomPainter {
       ..addRRect(
         RRect.fromRectAndRadius(
           (Offset.zero & size).deflate(0.75),
-          const Radius.circular(18),
+          const Radius.circular(OmniRadius.xl),
         ),
       );
     final paint = Paint()

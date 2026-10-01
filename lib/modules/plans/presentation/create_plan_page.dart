@@ -121,7 +121,7 @@ class _CreatePlanPageState extends ConsumerState<CreatePlanPage> {
             clipBehavior: Clip.antiAlias,
             decoration: BoxDecoration(
               gradient: OmniCovers.gradientOf(_cover),
-              borderRadius: const BorderRadius.all(Radius.circular(18)),
+              borderRadius: OmniRadius.xlAll,
             ),
             child: Stack(
               children: [

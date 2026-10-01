@@ -131,11 +131,13 @@ abstract final class OmniTheme {
         ),
       ),
       dividerTheme: DividerThemeData(color: border, thickness: 1, space: 1),
+      // Nút cao 48, bo 8, chữ 15/600 (bảng token: "Nút — 48 (giữ)").
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
           backgroundColor: primary,
           foregroundColor: onPrimary,
-          minimumSize: const Size.fromHeight(52),
+          minimumSize: const Size.fromHeight(48),
+          elevation: 0,
           textStyle: OmniType.bodyStrong,
           shape: const RoundedRectangleBorder(borderRadius: OmniRadius.mdAll),
         ),
@@ -143,7 +145,7 @@ abstract final class OmniTheme {
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
           foregroundColor: onSurface,
-          minimumSize: const Size.fromHeight(52),
+          minimumSize: const Size.fromHeight(48),
           side: BorderSide(color: borderInteractive),
           textStyle: OmniType.bodyStrong,
           shape: const RoundedRectangleBorder(borderRadius: OmniRadius.mdAll),
@@ -153,18 +155,22 @@ abstract final class OmniTheme {
         style: TextButton.styleFrom(
           foregroundColor: primary,
           textStyle: OmniType.bodyStrong,
+          shape: const RoundedRectangleBorder(borderRadius: OmniRadius.mdAll),
         ),
       ),
+      // Nút nổi bo 12, chữ 15/600, cao 52. Bóng TRUNG TÍNH (màu bóng của
+      // scheme, không phải màu chính): nút nổi là một trong ít thứ được có
+      // bóng, nhưng không bao giờ là quầng màu thương hiệu.
       floatingActionButtonTheme: FloatingActionButtonThemeData(
         backgroundColor: primary,
         foregroundColor: onPrimary,
-        elevation: 4,
-        // Nút nổi bo 18, chữ 16/700 — như "Thêm khách", "Tạo mới" trong bộ Orbit.
-        shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.all(Radius.circular(18)),
-        ),
-        extendedTextStyle: OmniType.input.copyWith(fontWeight: FontWeight.w600),
-        extendedSizeConstraints: const BoxConstraints.tightFor(height: 56),
+        elevation: 3,
+        focusElevation: 3,
+        hoverElevation: 4,
+        highlightElevation: 4,
+        shape: const RoundedRectangleBorder(borderRadius: OmniRadius.fabAll),
+        extendedTextStyle: OmniType.bodyStrong,
+        extendedSizeConstraints: const BoxConstraints.tightFor(height: 52),
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
@@ -200,6 +206,7 @@ abstract final class OmniTheme {
           borderSide: BorderSide(color: OmniColors.destructive, width: 1.5),
         ),
       ),
+      // Sheet bo 16 — thứ đang nổi, nên được có bóng.
       bottomSheetTheme: BottomSheetThemeData(
         backgroundColor: surface,
         surfaceTintColor: Colors.transparent,
@@ -209,27 +216,65 @@ abstract final class OmniTheme {
         dragHandleColor: border,
         shape: const RoundedRectangleBorder(borderRadius: OmniRadius.sheet),
       ),
+      dialogTheme: DialogThemeData(
+        backgroundColor: surface,
+        surfaceTintColor: Colors.transparent,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.all(Radius.circular(12)),
+        ),
+      ),
+      popupMenuTheme: PopupMenuThemeData(
+        color: surface,
+        surfaceTintColor: Colors.transparent,
+        elevation: 3,
+        shape: RoundedRectangleBorder(
+          borderRadius: OmniRadius.mdAll,
+          side: BorderSide(color: border),
+        ),
+      ),
       navigationBarTheme: NavigationBarThemeData(
         backgroundColor: surface,
         surfaceTintColor: Colors.transparent,
         elevation: 0,
         height: 68,
-        indicatorColor: primary.withValues(alpha: 0.11),
+        indicatorColor: Colors.transparent,
         labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
         labelTextStyle: WidgetStateProperty.resolveWith(
           (states) => OmniType.micro.copyWith(
             color: states.contains(WidgetState.selected)
-                ? primary
+                ? onSurface
                 : onSurfaceMuted,
+            fontWeight: states.contains(WidgetState.selected)
+                ? FontWeight.w600
+                : FontWeight.w500,
           ),
         ),
+      ),
+      // MỘT kiểu tab cho cả app: gạch chân 2px màu chính, chữ mực 600; tab
+      // chưa chọn chữ phụ 500 (`SPrinciples.dc.html` §8).
+      tabBarTheme: TabBarThemeData(
+        indicatorSize: TabBarIndicatorSize.label,
+        indicator: UnderlineTabIndicator(
+          borderSide: BorderSide(color: primary, width: 2),
+        ),
+        dividerColor: border,
+        labelColor: onSurface,
+        unselectedLabelColor: onSurfaceMuted,
+        labelStyle: OmniType.bodyStrong,
+        unselectedLabelStyle: OmniType.body.copyWith(
+          fontWeight: FontWeight.w500,
+        ),
+        overlayColor: WidgetStatePropertyAll(primary.withValues(alpha: 0.06)),
       ),
       chipTheme: ChipThemeData(
         backgroundColor: surface,
         side: BorderSide(color: borderInteractive),
-        labelStyle: OmniType.caption.copyWith(color: onSurface),
+        labelStyle: OmniType.caption.copyWith(
+          color: onSurface,
+          fontWeight: FontWeight.w500,
+        ),
         shape: const RoundedRectangleBorder(borderRadius: OmniRadius.chipAll),
-        padding: const EdgeInsets.symmetric(horizontal: OmniSpacing.md),
+        padding: const EdgeInsets.symmetric(horizontal: OmniSpacing.sm),
       ),
       snackBarTheme: SnackBarThemeData(
         behavior: SnackBarBehavior.floating,
@@ -237,9 +282,13 @@ abstract final class OmniTheme {
         contentTextStyle: OmniType.body.copyWith(color: Colors.white),
         shape: const RoundedRectangleBorder(borderRadius: OmniRadius.mdAll),
       ),
+      // Tiến độ: 4px màu chính trên rãnh xám, đầu bo 2. Không bao giờ màu
+      // quỹ đạo sáng — màu đó chỉ cho logo và đồ hoạ.
       progressIndicatorTheme: ProgressIndicatorThemeData(
         color: primary,
+        linearTrackColor: border,
         linearMinHeight: 4,
+        borderRadius: const BorderRadius.all(Radius.circular(2)),
       ),
     );
   }

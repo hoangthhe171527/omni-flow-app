@@ -250,7 +250,7 @@ class _ProfileCard extends ConsumerWidget {
         color: Theme.of(context).brightness == Brightness.dark
             ? OmniColors.darkMuted
             : OmniColors.ink,
-        borderRadius: OmniRadius.xxlAll,
+        borderRadius: OmniRadius.xlAll,
       ),
       child: Row(
         children: [
@@ -881,7 +881,9 @@ class _ThemeSegment extends StatelessWidget {
             decoration: BoxDecoration(
               color: selected ? scheme.surface : Colors.transparent,
               borderRadius: OmniRadius.xsAll,
-              boxShadow: selected ? OmniShadows.hairline : null,
+              border: selected
+                  ? Border.all(color: scheme.outlineVariant)
+                  : null,
             ),
             child: Text(
               label,
