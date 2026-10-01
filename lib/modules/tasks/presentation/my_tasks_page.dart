@@ -83,7 +83,7 @@ class _MyTasksPageState extends ConsumerState<MyTasksPage> {
           ),
         ],
         bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(65),
+          preferredSize: const Size.fromHeight(_BucketBar.height),
           child: _BucketBar(
             selected: bucket,
             counts: {
@@ -359,8 +359,9 @@ class _BellButton extends StatelessWidget {
   }
 }
 
-/// Bộ chọn bốn nhóm việc (`MMyTasks.dc.html`): rãnh xám bo 14, nhóm đang chọn
-/// là ô trắng nổi nhẹ; "Quá hạn" chữ đỏ để luôn đọc ra là chỗ cần xử lý.
+/// Bộ chọn bốn nhóm việc — cùng MỘT kiểu tab với cả app: gạch chân 2px màu
+/// chính (`SMProjectsTasks.dc.html`). "Quá hạn" mang số đếm trong chip đỏ để
+/// luôn đọc ra là chỗ cần xử lý; các nhóm khác số xám.
 ///
 /// Số đếm chỉ hiện khi đã BIẾT chắc mà không phải gọi thêm API: số quá hạn đã
 /// được đếm sẵn cho huy hiệu tab, và nhóm đang mở biết số của chính nó khi đã
@@ -376,106 +377,24 @@ class _BucketBar extends StatelessWidget {
   final ValueChanged<TaskBucket> onSelect;
   final Map<TaskBucket, int> counts;
 
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-
-    return Container(
-      padding: const EdgeInsets.fromLTRB(20, 8, 20, 12),
-      decoration: BoxDecoration(
-        color: scheme.surface,
-        border: Border(bottom: BorderSide(color: scheme.outlineVariant)),
-      ),
-      child: Container(
-        padding: const EdgeInsets.all(4),
-        decoration: BoxDecoration(
-          color: scheme.surfaceContainerHighest,
-          borderRadius: OmniRadius.lgAll,
-        ),
-        child: Row(
-          children: [
-            for (final bucket in TaskBucket.forMyWork) ...[
-              if (bucket != TaskBucket.forMyWork.first)
-                const SizedBox(width: 4),
-              Expanded(
-                child: _Segment(
-                  bucket: bucket,
-                  count: counts[bucket],
-                  selected: bucket == selected,
-                  onTap: () => onSelect(bucket),
-                ),
-              ),
-            ],
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _Segment extends StatelessWidget {
-  const _Segment({
-    required this.bucket,
-    required this.count,
-    required this.selected,
-    required this.onTap,
-  });
-
-  final TaskBucket bucket;
-  final int? count;
-  final bool selected;
-  final VoidCallback onTap;
+  /// Cao của dải tab (44) cộng vạch đáy 1.
+  static const double height = 45;
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final dark = Theme.of(context).brightness == Brightness.dark;
-    final label = count == null || count == 0
-        ? bucket.label
-        : '${bucket.label} · $count';
-    final color = bucket == TaskBucket.overdue && !selected
-        ? OmniColors.dangerTextOf(context)
-        : selected
-        ? scheme.onSurface
-        : dark
-        ? scheme.onSurfaceVariant
-        : OmniColors.secondaryForeground;
+    const buckets = TaskBucket.forMyWork;
 
-    return Semantics(
-      button: true,
-      selected: selected,
-      label: label,
-      excludeSemantics: true,
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTap: onTap,
-        child: AnimatedContainer(
-          duration: OmniMotion.of(context).fast,
-          // 36 nhìn thấy; cộng rãnh 4 mỗi bên là 44 vùng chạm.
-          height: 36,
-          alignment: Alignment.center,
-          decoration: BoxDecoration(
-            color: selected ? scheme.surface : Colors.transparent,
-            borderRadius: OmniRadius.smAll,
-            border: selected ? Border.all(color: scheme.outlineVariant) : null,
+    return OmniTabStrip(
+      selected: buckets.indexOf(selected),
+      onSelected: (i) => onSelect(buckets[i]),
+      tabs: [
+        for (final bucket in buckets)
+          OmniTab(
+            label: bucket.label,
+            count: counts[bucket],
+            alert: bucket == TaskBucket.overdue,
           ),
-          child: FittedBox(
-            fit: BoxFit.scaleDown,
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 4),
-              child: Text(
-                label,
-                maxLines: 1,
-                style: OmniType.caption.copyWith(
-                  color: color,
-                  fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
-                  fontFeatures: OmniType.tabular,
-                ),
-              ),
-            ),
-          ),
-        ),
-      ),
+      ],
     );
   }
 }

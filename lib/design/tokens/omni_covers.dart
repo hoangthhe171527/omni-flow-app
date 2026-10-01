@@ -34,6 +34,12 @@ abstract final class OmniCovers {
   /// Web và app giữ hai bảng riêng (một bên Flutter, một bên CSS); cái phải
   /// đồng bộ là TÊN, không phải màu. Lệch một tên không được làm sập một màn
   /// danh sách ở bên kia.
+  /// Màu ĐỊNH DANH của dự án trong màn làm việc: ô vuông 8–10px cạnh tên
+  /// (`SPrinciples.dc.html` §7). Đầu thẻ tô cả gradient chỉ còn ở ô xem
+  /// trước lúc chọn nền — trong danh sách nó là trang trí.
+  static Color colorOf(String? name) =>
+      (_table[name] ?? _table[fallback]!).first;
+
   static LinearGradient gradientOf(String? name) => LinearGradient(
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,

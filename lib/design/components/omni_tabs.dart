@@ -10,6 +10,7 @@ class OmniTab {
     required this.label,
     this.count,
     this.alert = false,
+    this.semanticValue,
     this.key,
   });
 
@@ -22,6 +23,9 @@ class OmniTab {
   /// Số đếm là chuyện CẦN XỬ LÝ ("Quá hạn 3"): hiện thành chip đỏ thay vì chữ
   /// xám, để màu đỏ chỉ xuất hiện khi có cái gì đó thật sự trễ.
   final bool alert;
+
+  /// Giá trị đọc cho trợ năng thay cho con số trần ("3 việc").
+  final String? semanticValue;
 
   /// Khoá của ô tab — để cuộn tab đang chọn vào vùng nhìn.
   final Key? key;
@@ -66,7 +70,7 @@ class OmniTabStrip extends StatelessWidget {
         for (var i = 0; i < tabs.length; i++) ...[
           if (i > 0) SizedBox(width: gap),
           if (scrollable)
-            _TabItem(
+            OmniTabItem(
               key: tabs[i].key,
               tab: tabs[i],
               selected: i == selected,
@@ -74,7 +78,7 @@ class OmniTabStrip extends StatelessWidget {
             )
           else
             Flexible(
-              child: _TabItem(
+              child: OmniTabItem(
                 key: tabs[i].key,
                 tab: tabs[i],
                 selected: i == selected,
@@ -104,8 +108,10 @@ class OmniTabStrip extends StatelessWidget {
   }
 }
 
-class _TabItem extends StatelessWidget {
-  const _TabItem({
+/// Một ô tab của [OmniTabStrip]. Công khai để bài kiểm tìm được ô của MỘT
+/// tab (kể cả số đếm bên trong nó); màn hình dựng tab qua [OmniTabStrip].
+class OmniTabItem extends StatelessWidget {
+  const OmniTabItem({
     super.key,
     required this.tab,
     required this.selected,
@@ -126,7 +132,7 @@ class _TabItem extends StatelessWidget {
       button: true,
       selected: selected,
       label: tab.label,
-      value: hasCount ? '$count' : null,
+      value: tab.semanticValue ?? (hasCount ? '$count' : null),
       excludeSemantics: true,
       child: InkWell(
         onTap: onTap,

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../../../design/components/omni_tabs.dart';
 import '../../../../../design/tokens/tokens.dart';
 import '../../../domain/task.dart';
 import '../due_chip.dart';
@@ -147,19 +148,8 @@ class _Progress extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 6),
-          ClipRRect(
-            borderRadius: OmniRadius.pillAll,
-            child: LinearProgressIndicator(
-              value: task.progress,
-              minHeight: 8,
-              backgroundColor: scheme.outlineVariant,
-              // Xong hay chưa đọc qua CON SỐ và độ dài thanh, không qua sắc
-              // màu; quỹ đạo sáng là màu đồ hoạ của bộ Orbit.
-              valueColor: AlwaysStoppedAnimation(
-                dark ? scheme.primary : OmniColors.orbit,
-              ),
-            ),
-          ),
+          // Xong hay chưa đọc qua CON SỐ và độ dài thanh, không qua sắc màu.
+          OmniProgressBar(value: task.progress),
         ],
       ),
     );

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../../design/components/omni_avatar.dart';
+import '../../../../design/components/omni_tabs.dart';
 import '../../../../design/components/omni_status_chip.dart';
 import '../../../../design/tokens/tokens.dart';
 import '../../domain/task.dart';
@@ -88,7 +89,7 @@ class TaskCard extends StatelessWidget {
                 if (showPlanName && task.projectName != null) ...[
                   Text(
                     task.projectName!,
-                    style: OmniType.micro.copyWith(
+                    style: OmniType.caption.copyWith(
                       color: scheme.onSurfaceVariant,
                     ),
                     maxLines: 1,
@@ -98,11 +99,7 @@ class TaskCard extends StatelessWidget {
                 ],
                 Text.rich(
                   _highlighted(task.title, highlight, context),
-                  style: OmniType.listTitle.copyWith(
-                    fontWeight: FontWeight.w600,
-                    height: 22 / 16,
-                    color: scheme.onSurface,
-                  ),
+                  style: OmniType.section.copyWith(color: scheme.onSurface),
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -112,9 +109,10 @@ class TaskCard extends StatelessWidget {
                 // thấy thông tin gì".
                 if (task.nextOpenSubtask case final Subtask next) ...[
                   const SizedBox(height: OmniSpacing.xs),
-                  // Mũi tên là ICON chứ không phải ký tự "→": Be Vietnam Pro
-                  // không có glyph U+2192, và trông cậy vào font dự phòng của
-                  // máy là mỗi máy một kiểu (hoặc ô trống).
+                  // Mũi tên là ICON chứ không phải ký tự "→": icon cùng nét
+                  // với các icon khác trên thẻ, và không phụ thuộc font.
+                  // Mũi tên teal là chỗ duy nhất mang màu chính; chữ là chữ
+                  // mực — màu nhấn không dùng cho nội dung.
                   Row(
                     children: [
                       Icon(
@@ -129,8 +127,7 @@ class TaskCard extends StatelessWidget {
                               ? next.title
                               : '${next.title} · ${next.assigneeName}',
                           style: OmniType.body.copyWith(
-                            color: scheme.primary,
-                            fontWeight: FontWeight.w600,
+                            color: scheme.onSurface,
                           ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
@@ -163,7 +160,6 @@ class TaskCard extends StatelessWidget {
                               label:
                                   'Ưu tiên ${priorityLabel(task.priority).toLowerCase()}',
                               tone: OmniTone.warning,
-                              large: true,
                             ),
                           if (!task.hasSubtasks) ...counts,
                         ],
@@ -239,7 +235,7 @@ class _Count extends StatelessWidget {
 
 /// Thanh tiến độ và "n/m việc con" trên CÙNG một dòng (`MMyTasks.dc.html`).
 ///
-/// Thanh màu quỹ đạo sáng — màu đồ hoạ của bộ Orbit, chỉ dùng cho đồ hoạ.
+/// Thanh 4px màu chính ([OmniProgressBar]) — không còn màu quỹ đạo sáng.
 /// Xong hay chưa đọc qua CON SỐ và độ dài thanh, không qua sắc màu.
 class _Progress extends StatelessWidget {
   const _Progress({required this.task, this.trailing = const []});
@@ -256,23 +252,11 @@ class _Progress extends StatelessWidget {
 
     return Row(
       children: [
-        Expanded(
-          child: ClipRRect(
-            borderRadius: OmniRadius.pillAll,
-            child: LinearProgressIndicator(
-              value: task.progress,
-              minHeight: 6,
-              backgroundColor: scheme.surfaceContainerHighest,
-              valueColor: AlwaysStoppedAnimation(
-                dark ? scheme.primary : OmniColors.orbit,
-              ),
-            ),
-          ),
-        ),
+        Expanded(child: OmniProgressBar(value: task.progress)),
         const SizedBox(width: 10),
         Text(
           '${task.doneCount}/${task.totalCount} việc con',
-          style: OmniType.micro.copyWith(
+          style: OmniType.caption.copyWith(
             color: dark
                 ? scheme.onSurfaceVariant
                 : OmniColors.secondaryForeground,

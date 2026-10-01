@@ -112,9 +112,9 @@ void main() {
 
   testWidgets('con số cạnh tên nhóm việc đi theo bộ lọc', (tester) async {
     // Ngược lại thì cột ghi "3 việc" mà chỉ vẽ ra 1 — và người đọc tin con số.
-    // Số việc nằm TRONG viên của nhóm trên dải, cạnh tên nhóm.
+    // Số việc nằm TRONG tab của nhóm trên dải, cạnh tên nhóm.
     Finder countIn(int n) => find.descendant(
-      of: find.widgetWithText(OmniFilterPill, 'Đang làm'),
+      of: find.widgetWithText(OmniTabItem, 'Đang làm'),
       matching: find.text('$n'),
     );
 

@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -77,18 +76,17 @@ class _PlanBoardPageState extends ConsumerState<PlanBoardPage> {
                 loaded.roleOf(currentUserId) == PlanRole.owner));
 
     final canPop = ModalRoute.of(context)?.canPop ?? false;
-    final dark = Theme.of(context).brightness == Brightness.dark;
     final subtitle = [
       if (loaded?.teamName case final team? when team.isNotEmpty) team,
       if (loaded != null && loaded.taskCount > 0) '${loaded.taskCount} việc',
     ].join(' · ');
 
     return Scaffold(
-      // Đầu bảng là một khối MỰC liền với dải nhóm việc (`MPlanBoard.dc.html`).
+      // Đầu bảng là mặt TRẮNG liền với dải tab nhóm việc — cùng kiểu đầu màn
+      // với mọi màn làm việc khác (đề xuất "Chuẩn hoá phong cách"). Khối mực
+      // cũ là một kiểu tab thứ ba trên cùng một app.
       appBar: AppBar(
-        backgroundColor: dark ? OmniColors.darkMuted : OmniColors.ink,
-        foregroundColor: Colors.white,
-        systemOverlayStyle: SystemUiOverlayStyle.light,
+        backgroundColor: Theme.of(context).colorScheme.surface,
         // Nút quay lại luôn có khi mở từ danh sách; khi không có (mở thẳng
         // bằng liên kết sâu) thì tiêu đề lùi vào 16 chứ không dính mép.
         leading: canPop ? const BackButton() : null,
@@ -102,16 +100,14 @@ class _PlanBoardPageState extends ConsumerState<PlanBoardPage> {
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: OmniType.section.copyWith(
-                fontWeight: FontWeight.w600,
-                color: Colors.white,
+                color: Theme.of(context).colorScheme.onSurface,
               ),
             ),
             if (subtitle.isNotEmpty)
               Text(
                 subtitle,
-                style: OmniType.micro.copyWith(
-                  fontWeight: FontWeight.w400,
-                  color: OmniColors.inkMutedForeground,
+                style: OmniType.caption.copyWith(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
                 ),
               ),
           ],
