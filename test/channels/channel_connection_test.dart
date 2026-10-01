@@ -1,8 +1,14 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:flutter/foundation.dart';
+import 'package:go_router/go_router.dart';
 import 'package:omni_app/core/domain/channel.dart';
+import 'package:omni_app/design/theme/omni_theme.dart';
+import 'package:omni_app/modules/channels/channels_module.dart';
 import 'package:omni_app/modules/channels/domain/channel_connection.dart';
 import 'package:omni_app/modules/channels/domain/connectable_channel.dart';
+import 'package:omni_app/modules/channels/presentation/pair_page.dart';
+import 'package:omni_app/modules/channels/presentation/unsupported_pair_page.dart';
 
 /// Đọc đúng tên trường API thật trả về.
 ///
@@ -129,6 +135,53 @@ void main() {
       expect(
         ConnectableChannels.methodFor(Channel.unknown),
         ConnectMethod.none,
+      );
+    });
+  });
+
+  group('route ghép nối', () {
+    // Chọn kênh đã ẩn Facebook cá nhân, nhưng deep link `/channels/pair/...`
+    // vẫn tới route — và trước đây mở màn ghép nối kèm đăng nhập thu cookie.
+    testWidgets('deep link ghép nối Facebook cá nhân không mở màn ghép nối', (
+      tester,
+    ) async {
+      final route = const ChannelsModule().routes().firstWhere(
+        (r) => r.name == ChannelsModule.pair,
+      );
+      final router = GoRouter(
+        initialLocation: '/channels/pair/facebook_personal',
+        routes: [GoRoute(path: route.path, builder: route.builder)],
+      );
+      addTearDown(router.dispose);
+
+      await tester.pumpWidget(
+        ProviderScope(
+          child: MaterialApp.router(
+            theme: OmniTheme.light(TargetPlatform.android),
+            routerConfig: router,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.byType(PairPage), findsNothing);
+      expect(find.byType(UnsupportedPairPage), findsOneWidget);
+      expect(find.text('Kênh này chưa hỗ trợ trên điện thoại'), findsOneWidget);
+    });
+
+    test('kênh ghép nối được vẫn tới màn ghép nối', () {
+      // Môi trường test là Android: Zalo cá nhân ghép nối được.
+      expect(
+        ChannelsModule.pairScreenFor(Channel.zaloPersonal),
+        isA<PairPage>(),
+      );
+      expect(
+        ChannelsModule.pairScreenFor(Channel.facebookPersonal),
+        isA<UnsupportedPairPage>(),
+      );
+      expect(
+        ChannelsModule.pairScreenFor(Channel.unknown),
+        isA<UnsupportedPairPage>(),
       );
     });
   });

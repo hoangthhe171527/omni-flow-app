@@ -4,7 +4,6 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../core/error/app_exception.dart';
 import '../../../../core/utils/formatters.dart';
-import '../../../../design/components/components.dart';
 import '../../../../design/tokens/tokens.dart';
 import '../../application/opportunities_providers.dart';
 import '../../domain/opportunity.dart';
@@ -113,14 +112,10 @@ class OpportunityCard extends ConsumerWidget {
   }
 
   Future<void> _moveStage(BuildContext context, WidgetRef ref) async {
-    final stage = await showOmniSheet<PipelineStage>(
-      context: context,
-      builder: (_) => StagePickerSheet(current: opportunity.stage),
-    );
-    if (stage == null || stage == opportunity.stage) return;
-
     try {
-      await moveOpportunityStage(ref, opportunity.id, stage);
+      final stage = await pickOpportunityStage(context, ref, opportunity);
+      if (stage == null) return;
+      await moveOpportunityStage(ref, opportunity, stage.code);
       if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Đã chuyển sang "${stage.label}".')),

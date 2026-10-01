@@ -1,3 +1,5 @@
+import 'package:flutter/foundation.dart';
+
 import '../../../core/domain/channel.dart';
 import '../../../core/utils/formatters.dart';
 import '../../../core/utils/json.dart';
@@ -30,6 +32,7 @@ class Customer {
     required this.id,
     required this.name,
     this.code = '',
+    this.legalName = '',
     this.contactName = '',
     this.phone = '',
     this.email = '',
@@ -46,6 +49,8 @@ class Customer {
     this.lastInteractionAt,
     this.createdAt,
     this.rawStatus,
+    this.metadata = const {},
+    this.origin,
   });
 
   /// Empty draft for the create form — filled by [applyForm].
@@ -60,34 +65,48 @@ class Customer {
         json.str('primary_contact_name') ??
         'Khách chưa đặt tên';
 
-    return Customer(
+    final loaded = Customer(
       id: json.strOr('id', ''),
       name: name,
       code: json.strOr('customer_code', ''),
+      legalName: json.strOr('legal_name', ''),
       contactName: json.strOr('primary_contact_name', ''),
       phone: json.strOr('primary_contact_phone', ''),
       email: json.strOr('primary_contact_email', ''),
       address: json.strOr('address', ''),
       taxCode: json.strOr('tax_code', ''),
-      source: Channel.parse(metadata.str('channel') ?? metadata.str('source')),
+      // `source` is the web's key; `channel` is what older app builds wrote.
+      source: Channel.parse(metadata.str('source') ?? metadata.str('channel')),
       tags: metadata.strList('tags'),
-      lifetimeValue: json.dbl('lifetime_booking_value') ?? 0,
+      // `orders_total` (sum of orders) only comes from `/customers/accounts`;
+      // `/customers` carries the stored `lifetime_booking_value`.
+      lifetimeValue:
+          json.dbl('orders_total') ?? json.dbl('lifetime_booking_value') ?? 0,
       status: CustomerStatus.parse(json.str('customer_status')),
       rawStatus: json.str('customer_status'),
       customerType: json.strOr('customer_type', 'DIRECT_CLIENT'),
       ownerId: json.str('assigned_sales_rep_id'),
       ownerName: json.str('assigned_sales_rep_name'),
-      note: metadata.str('note'),
+      note: _noteOf(metadata),
       lastInteractionAt:
+          DateUtilsX.parse(json['last_interaction_at']) ??
           DateUtilsX.parse(json['last_booking_date']) ??
           DateUtilsX.parse(json['updated_at']),
       createdAt: DateUtilsX.parse(json['created_at']),
+      metadata: metadata,
     );
+    return loaded._from(loaded);
   }
 
   final String id;
+
+  /// What the app shows and edits: `display_name`, else `legal_name`.
   final String name;
   final String code;
+
+  /// `legal_name` as loaded (company name on invoices). The app has no field
+  /// for it and never overwrites it — see [toPayload].
+  final String legalName;
   final String contactName;
   final String phone;
   final String email;
@@ -109,6 +128,13 @@ class Customer {
   /// writing `status` back would turn an at-risk customer into `INACTIVE`.
   final String? rawStatus;
 
+  /// The metadata bag as loaded. Read-only: never echoed back.
+  final Map<String, dynamic> metadata;
+
+  /// The record as loaded from the API; null for a new draft. [toPayload]
+  /// sends only what differs from it.
+  final Customer? origin;
+
   /// What goes back to the API: the original code while the user keeps the
   /// same group, the group's own code once they pick another one.
   String get statusCode {
@@ -126,6 +152,10 @@ class Customer {
   bool get hasPhone => phone.trim().isNotEmpty;
   bool get hasEmail => email.trim().isNotEmpty;
 
+  /// The web's "Cá nhân / Doanh nghiệp" (`metadata.party_type`); a record
+  /// without it is an individual, as on the web.
+  bool get isBusiness => metadata['party_type'] == 'business';
+
   /// The city is the last comma-separated part of the address — good enough for
   /// a list row, and the API has no separate field.
   String get city {
@@ -133,8 +163,58 @@ class Customer {
     return address.split(',').last.trim();
   }
 
-  Map<String, dynamic> toPayload() => {
-    'legal_name': name,
+  /// `POST` (new draft) or `PUT` body.
+  ///
+  /// `PUT /customers/{id}` (`UpdateCustomer`) keeps every field it is not sent
+  /// and merges `metadata` SHALLOWLY (`MetadataPatch::merge`: a key sent
+  /// overwrites, a key sent as null is removed, a key not sent is kept). So an
+  /// edit sends only what changed since loading — echoing the whole record
+  /// would write back the copy the app holds over whatever the web changed
+  /// meanwhile (legal name, source, notes, keys this app doesn't know).
+  ///
+  /// Names: the form edits the DISPLAY name only. `legal_name` is sent when
+  /// creating (required there), or for an individual whose legal name is
+  /// still blank — never over a company's registered name.
+  Map<String, dynamic> toPayload() {
+    final fields = _fields();
+    final meta = _ownMetadata();
+    final origin = this.origin;
+
+    if (origin == null || id.isEmpty) {
+      return {
+        'legal_name': name,
+        ...fields,
+        'metadata': {
+          for (final entry in meta.entries)
+            if (entry.value != null) entry.key: entry.value,
+        },
+      };
+    }
+
+    final loadedFields = origin._fields();
+    final loadedMeta = origin._ownMetadata();
+    final changedMeta = <String, dynamic>{
+      for (final entry in meta.entries)
+        if (!_same(entry.value, loadedMeta[entry.key])) entry.key: entry.value,
+    };
+    // A source picked in the app supersedes the `channel` older builds wrote;
+    // the API's source filter matches either key, so the stale one goes.
+    if (changedMeta.containsKey('source') &&
+        origin.metadata.containsKey('channel')) {
+      changedMeta['channel'] = null;
+    }
+
+    return {
+      if (origin.legalName.isEmpty && !isBusiness && name != origin.name)
+        'legal_name': name,
+      for (final entry in fields.entries)
+        if (!_same(entry.value, loadedFields[entry.key]))
+          entry.key: entry.value,
+      if (changedMeta.isNotEmpty) 'metadata': changedMeta,
+    };
+  }
+
+  Map<String, dynamic> _fields() => {
     'display_name': name,
     'customer_type': customerType,
     'primary_contact_name': contactName.isEmpty ? name : contactName,
@@ -143,17 +223,33 @@ class Customer {
     'address': address,
     'tax_code': taxCode,
     'customer_status': statusCode,
-    if (ownerId != null) 'assigned_sales_rep_id': ownerId,
-    'metadata': {
-      'channel': source.slug,
-      'tags': tags,
-      if (note != null) 'note': note,
-    },
+    'assigned_sales_rep_id': ?ownerId,
   };
+
+  /// The metadata keys this app writes. Notes go under the web's `notes` AND
+  /// the `note` older app builds read — the web writes both the same way.
+  Map<String, dynamic> _ownMetadata() => {
+    'source': source.slug,
+    'tags': tags,
+    'notes': note,
+    'note': note,
+  };
+
+  static bool _same(Object? a, Object? b) =>
+      a is List && b is List ? listEquals(a, b) : a == b;
+
+  /// `metadata.notes` when it is text (the web's key), else `metadata.note`.
+  /// A converted lead can carry `notes` as a LIST of entries — not a note.
+  static String? _noteOf(Map<String, dynamic> metadata) {
+    final notes = metadata['notes'];
+    if (notes is String && notes.trim().isNotEmpty) return notes.trim();
+    return metadata.str('note');
+  }
 
   /// The form's fields applied to this record — the loaded customer when
   /// editing ([Customer.blank] when creating), so what the form doesn't show
-  /// (tax code, tags, type, the fine-grained status) is written back as-is.
+  /// (tax code, tags, type, the fine-grained status) is kept. [note] is
+  /// applied as given: an emptied note box clears the note.
   Customer applyForm({
     required String name,
     required String contactName,
@@ -171,8 +267,7 @@ class Customer {
     address: address,
     source: source,
     status: status,
-    note: note,
-  );
+  )._withNote(note);
 
   Customer copyWith({
     String? name,
@@ -191,6 +286,7 @@ class Customer {
       id: id,
       name: name ?? this.name,
       code: code,
+      legalName: legalName,
       contactName: contactName ?? this.contactName,
       phone: phone ?? this.phone,
       email: email ?? this.email,
@@ -208,6 +304,58 @@ class Customer {
       createdAt: createdAt,
       // Kept only while the group is unchanged — see [statusCode].
       rawStatus: status == null || status == this.status ? rawStatus : null,
+      metadata: metadata,
+      origin: origin,
     );
   }
+
+  Customer _withNote(String? note) => Customer(
+    id: id,
+    name: name,
+    code: code,
+    legalName: legalName,
+    contactName: contactName,
+    phone: phone,
+    email: email,
+    address: address,
+    taxCode: taxCode,
+    source: source,
+    tags: tags,
+    lifetimeValue: lifetimeValue,
+    status: status,
+    customerType: customerType,
+    ownerId: ownerId,
+    ownerName: ownerName,
+    note: note,
+    lastInteractionAt: lastInteractionAt,
+    createdAt: createdAt,
+    rawStatus: rawStatus,
+    metadata: metadata,
+    origin: origin,
+  );
+
+  Customer _from(Customer origin) => Customer(
+    id: id,
+    name: name,
+    code: code,
+    legalName: legalName,
+    contactName: contactName,
+    phone: phone,
+    email: email,
+    address: address,
+    taxCode: taxCode,
+    source: source,
+    tags: tags,
+    lifetimeValue: lifetimeValue,
+    status: status,
+    customerType: customerType,
+    ownerId: ownerId,
+    ownerName: ownerName,
+    note: note,
+    lastInteractionAt: lastInteractionAt,
+    createdAt: createdAt,
+    rawStatus: rawStatus,
+    metadata: metadata,
+    origin: origin,
+  );
 }

@@ -54,6 +54,13 @@ capture "/tasks/$TASK" tasks_show
 capture "/tasks/kpi" tasks_kpi
 capture "/tasks/feed?limit=5" tasks_feed
 
+# Bảng cơ hội. Tenant nên có ít nhất một quy trình tuỳ biến (vd `ban_le` với
+# giai đoạn Thắng/Thua mã riêng) — bản ghi chỉ có `standard` thì test quy trình
+# tuỳ biến xanh vô nghĩa.
+capture "/sales-opportunities/pipelines" sales_opportunities_pipelines
+capture "/sales-opportunities?per_page=3" sales_opportunities_index
+capture "/sales-opportunities/summary" sales_opportunities_summary
+
 echo
 echo "Xong. Đọc lại các file trước khi commit — chúng là dữ liệu thật của một"
 echo "tenant, nên đừng chép từ production."

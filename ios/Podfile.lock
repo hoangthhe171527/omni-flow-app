@@ -60,13 +60,6 @@ PODS:
     - nanopb (~> 3.30910.0)
     - PromisesSwift (~> 2.1)
   - Flutter (1.0.0)
-  - flutter_inappwebview_ios (0.0.1):
-    - Flutter
-    - flutter_inappwebview_ios/Core (= 0.0.1)
-    - OrderedSet (~> 6.0.3)
-  - flutter_inappwebview_ios/Core (0.0.1):
-    - Flutter
-    - OrderedSet (~> 6.0.3)
   - flutter_local_notifications (0.0.1):
     - Flutter
   - flutter_secure_storage (6.0.0):
@@ -108,7 +101,6 @@ PODS:
     - nanopb/encode (= 3.30910.0)
   - nanopb/decode (3.30910.0)
   - nanopb/encode (3.30910.0)
-  - OrderedSet (6.0.3)
   - PromisesObjC (2.4.1)
   - PromisesSwift (2.4.1):
     - PromisesObjC (= 2.4.1)
@@ -129,7 +121,6 @@ DEPENDENCIES:
   - firebase_crashlytics (from `.symlinks/plugins/firebase_crashlytics/ios`)
   - firebase_messaging (from `.symlinks/plugins/firebase_messaging/ios`)
   - Flutter (from `Flutter`)
-  - flutter_inappwebview_ios (from `.symlinks/plugins/flutter_inappwebview_ios/ios`)
   - flutter_local_notifications (from `.symlinks/plugins/flutter_local_notifications/ios`)
   - flutter_secure_storage (from `.symlinks/plugins/flutter_secure_storage/ios`)
   - gal (from `.symlinks/plugins/gal/darwin`)
@@ -153,7 +144,6 @@ SPEC REPOS:
     - GoogleDataTransport
     - GoogleUtilities
     - nanopb
-    - OrderedSet
     - PromisesObjC
     - PromisesSwift
 
@@ -166,8 +156,6 @@ EXTERNAL SOURCES:
     :path: ".symlinks/plugins/firebase_messaging/ios"
   Flutter:
     :path: Flutter
-  flutter_inappwebview_ios:
-    :path: ".symlinks/plugins/flutter_inappwebview_ios/ios"
   flutter_local_notifications:
     :path: ".symlinks/plugins/flutter_local_notifications/ios"
   flutter_secure_storage:
@@ -199,7 +187,6 @@ SPEC CHECKSUMS:
   FirebaseRemoteConfigInterop: 3cbd659033c3129ea81a756a52e4bf1cfc20c3a7
   FirebaseSessions: 3eaac5fd8077513b95f9723efd940438e3e35fb2
   Flutter: 71a624a5bc0c04062bf19101d501e466baf2fb47
-  flutter_inappwebview_ios: b89ba3482b96fb25e00c967aae065701b66e9b99
   flutter_local_notifications: 395056b3175ba4f08480a7c5de30cd36d69827e4
   flutter_secure_storage: 1ed9476fba7e7a782b22888f956cce43e2c62f13
   gal: baecd024ebfd13c441269ca7404792a7152fde89
@@ -207,7 +194,6 @@ SPEC CHECKSUMS:
   GoogleUtilities: 4e0c2ad9fa0d0d18b5c4df8bf57b461cba35b0bb
   image_picker_ios: e0ece4aa2a75771a7de3fa735d26d90817041326
   nanopb: fad817b59e0457d11a5dfbde799381cd727c1275
-  OrderedSet: e539b66b644ff081c73a262d24ad552a69be3a94
   PromisesObjC: 752c3227f599e3467650e47ea36f433eeb10c273
   PromisesSwift: 217dea0fd5d2ad65222a109c48698add13cc1c5b
   shared_preferences_foundation: 7036424c3d8ec98dfe75ff1667cb0cd531ec82bb

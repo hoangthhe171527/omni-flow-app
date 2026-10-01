@@ -162,7 +162,7 @@ class ConversationContextSheet extends ConsumerWidget {
                                 ),
                                 if (opportunity.stage != null)
                                   Text(
-                                    'Giai đoạn: ${opportunity.stage}',
+                                    'Giai đoạn: ${_stageLabel(ref, opportunity.stage!)}',
                                     style: OmniType.micro.copyWith(
                                       color: scheme.onSurfaceVariant,
                                     ),
@@ -669,3 +669,9 @@ class _QuickAction extends StatelessWidget {
     );
   }
 }
+
+/// Nhãn giai đoạn theo quy trình của tenant (`da_mua` → "Đã mua"). Ngữ cảnh
+/// hội thoại không gửi quy trình, nên tra mọi quy trình; danh mục chưa về thì
+/// hiện mã.
+String _stageLabel(WidgetRef ref, String code) =>
+    ref.watch(pipelineCatalogProvider).valueOrNull?.stageLabel(code) ?? code;

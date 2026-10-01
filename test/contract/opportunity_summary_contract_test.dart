@@ -3,12 +3,13 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:omni_app/modules/opportunities/domain/opportunity.dart';
+import 'package:omni_app/modules/opportunities/domain/pipeline_catalog.dart';
 
 /// `GET /sales-opportunities/summary` — app từng đọc khuôn `{stage: {count,
 /// value}}` mà API chưa bao giờ gửi. API gửi `{total_count, value_by_stage,
 /// count_by_stage}`, nên mọi cột pipeline hiện 0 mà không lỗi nào.
 ///
-/// Fixture chép NGUYÊN VĂN từ API local (2026-09-24, tenant demo).
+/// Fixture chép NGUYÊN VĂN từ API local (tenant demo, có quy trình `ban_le`).
 void main() {
   Map<String, dynamic> load(String name) {
     final file = File('test/contract/fixtures/$name.json');
@@ -17,7 +18,7 @@ void main() {
   }
 
   group('GET /sales-opportunities/summary', () {
-    test('đọc được số đếm và giá trị từng giai đoạn từ phản hồi thật', () {
+    test('đọc được số đếm và giá trị MỌI giai đoạn từ phản hồi thật', () {
       final data = load('sales_opportunities_summary')['data'];
       final summary = PipelineSummary.fromJson(
         (data as Map).cast<String, dynamic>(),
@@ -32,17 +33,15 @@ void main() {
       );
 
       for (final code in counts.keys) {
-        final stage = PipelineStage.parse(code);
-        expect(summary.totalFor(stage).count, counts[code]!.toInt());
-        expect(summary.totalFor(stage).value, values[code]!.toDouble());
+        expect(summary.totalFor(code).count, counts[code]!.toInt());
+        expect(summary.totalFor(code).value, values[code]!.toDouble());
       }
       final total = counts.values.fold<int>(0, (s, n) => s + n.toInt());
       expect(total, data['total_count']);
       expect(
-        summary.openCount +
-            summary.totalFor(PipelineStage.won).count +
-            summary.totalFor(PipelineStage.lost).count,
+        summary.byCode.values.fold<int>(0, (s, t) => s + t.count),
         total,
+        reason: 'Mã tuỳ biến không được rơi mất.',
       );
     });
 
@@ -52,22 +51,28 @@ void main() {
         'value_by_stage': <dynamic>[],
         'count_by_stage': <dynamic>[],
       });
-      expect(summary.openCount, 0);
-      expect(summary.openValue, 0);
+      final standard = PipelineCatalog.legacy.defaultPipeline;
+      expect(summary.openCount(standard), 0);
+      expect(summary.openValue(standard), 0);
     });
 
     test(
-      'giai đoạn tuỳ biến không dồn vào cột "Mới"; mã cũ chữ hoa cộng dồn',
+      'giai đoạn tuỳ biến giữ cột riêng; mã cũ chữ hoa KHÔNG dồn vào cột chữ thường',
       () {
         final summary = PipelineSummary.fromJson({
           'total_count': 4,
           'value_by_stage': {'new': 100, 'LEAD': 50, 'demo_sp': 999, 'won': 70},
           'count_by_stage': {'new': 1, 'LEAD': 1, 'demo_sp': 1, 'won': 1},
         });
-        expect(summary.totalFor(PipelineStage.fresh).count, 2);
-        expect(summary.totalFor(PipelineStage.fresh).value, 150);
-        expect(summary.totalFor(PipelineStage.won).value, 70);
-        expect(summary.openValue, 150);
+        final standard = PipelineCatalog.legacy.defaultPipeline;
+        // Cột "Mới" lọc đúng `opportunity_stage=new` ở máy chủ: số trên viên
+        // phải bằng số dòng cột hiện, nên `LEAD` không được cộng vào.
+        expect(summary.totalFor('new').count, 1);
+        expect(summary.totalFor('LEAD').count, 1);
+        expect(summary.totalFor('new').value, 100);
+        expect(summary.totalFor('demo_sp').value, 999);
+        expect(summary.totalFor('won').value, 70);
+        expect(summary.openValue(standard), 100);
       },
     );
 
@@ -75,8 +80,8 @@ void main() {
       final summary = PipelineSummary.fromJson({
         'quoted': {'count': 3, 'value': 300},
       });
-      expect(summary.totalFor(PipelineStage.quoted).count, 3);
-      expect(summary.totalFor(PipelineStage.quoted).value, 300);
+      expect(summary.totalFor('quoted').count, 3);
+      expect(summary.totalFor('quoted').value, 300);
     });
   });
 }

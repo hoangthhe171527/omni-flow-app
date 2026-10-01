@@ -6,8 +6,10 @@ import '../../core/module/nav_destination.dart';
 import '../../core/module/omni_module.dart';
 import '../../security/guard/access_requirement.dart';
 import 'domain/channel_permissions.dart';
+import 'domain/connectable_channel.dart';
 import 'presentation/channels_page.dart';
 import 'presentation/pair_page.dart';
+import 'presentation/unsupported_pair_page.dart';
 
 /// Nối tài khoản nhắn tin vào hộp thư.
 ///
@@ -43,9 +45,16 @@ class ChannelsModule extends OmniModule {
       rootNavigator: true,
       access: const AccessRequirement.any([ChannelPermissions.write]),
       builder: (_, state) =>
-          PairPage(channel: Channel.parse(state.pathParameters['channelId'])),
+          pairScreenFor(Channel.parse(state.pathParameters['channelId'])),
     ),
   ];
+
+  /// Chỉ kênh ghép nối được trên máy này mới tới [PairPage]. Facebook cá nhân
+  /// không bao giờ: app không còn đăng nhập Facebook hộ agent.
+  static Widget pairScreenFor(Channel channel) =>
+      ConnectableChannels.pair.contains(channel)
+      ? PairPage(channel: channel)
+      : UnsupportedPairPage(channel: channel);
 
   @override
   List<ModuleNavEntry> navEntries() => const [

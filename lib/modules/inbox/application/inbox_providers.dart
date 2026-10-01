@@ -93,8 +93,12 @@ class ConversationListState {
 /// `loadMore` for infinite scroll and `refresh` for pull-to-refresh.
 class InboxListController
     extends AutoDisposeAsyncNotifier<ConversationListState> {
+  /// Bumped by every (re)build; see [loadMore].
+  int _generation = 0;
+
   @override
   Future<ConversationListState> build() async {
+    _generation++;
     // Theo dõi tín hiệu là ĐỦ — nó tự mở kênh tenant và gộp nhịp 400ms.
     ref.watch(inboxListSignalProvider);
     final query = ref.watch(_inboxQueryProvider);
@@ -113,6 +117,7 @@ class InboxListController
   Future<void> loadMore() async {
     final current = state.valueOrNull;
     if (current == null || !current.hasMore || current.loadingMore) return;
+    final generation = _generation;
 
     state = AsyncData(
       ConversationListState(
@@ -129,17 +134,25 @@ class InboxListController
             query: ref.read(_inboxQueryProvider),
             page: current.pagination.nextPage,
           );
+      // The list was rebuilt while this page was in flight (filter change,
+      // realtime signal, pull-to-refresh): its page 2 belongs to a list that
+      // no longer exists. The fresh list wins.
+      if (generation != _generation) return;
+      // Append to what is on screen NOW — a [patch] may have landed meanwhile.
+      final latest = state.valueOrNull ?? current;
       state = AsyncData(
         ConversationListState(
-          items: [...current.items, ...next.items],
+          items: [...latest.items, ...next.items],
           pagination: next.pagination,
         ),
       );
     } catch (_) {
+      if (generation != _generation) return;
+      final latest = state.valueOrNull ?? current;
       // Keep what's on screen; the footer shows a retry.
       state = AsyncData(
         ConversationListState(
-          items: current.items,
+          items: latest.items,
           pagination: current.pagination,
         ),
       );
@@ -158,6 +171,9 @@ class InboxListController
             if (item.id == updated.id) updated else item,
         ],
         pagination: current.pagination,
+        // A page in flight stays in flight — dropping the flag would let a
+        // second scroll request the same page again.
+        loadingMore: current.loadingMore,
       ),
     );
   }

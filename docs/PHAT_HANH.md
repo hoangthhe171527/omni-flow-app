@@ -84,6 +84,11 @@ lần cho cả đời tài khoản.
    sách người kiểm.
 3. Điền phần **App content**: chính sách riêng tư (đã có URL ở mục 1), Data
    safety, Content rating, Target audience.
+   - Data safety: **App không thu thông tin đăng nhập của dịch vụ bên thứ
+     ba.** Kết nối Facebook/Zalo/TikTok chính thức đi OAuth ở trình duyệt
+     ngoài. Từ Đợt 4, app không còn màn đăng nhập Facebook nhúng, không đọc
+     cookie và không gửi phiên đăng nhập nào lên máy chủ (đã gỡ
+     `flutter_inappwebview`).
 
 > Bản **đầu tiên** phải tải lên bằng tay qua Play Console — Google không cho
 > API tải lên một ứng dụng chưa từng có bản nào. Lấy tệp `.aab` từ artifact
