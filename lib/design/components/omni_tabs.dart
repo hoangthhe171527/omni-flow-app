@@ -43,7 +43,6 @@ class OmniTabStrip extends StatelessWidget {
     required this.tabs,
     required this.selected,
     required this.onSelected,
-    this.scrollable = false,
     this.padding = const EdgeInsets.symmetric(horizontal: 20),
     this.gap = 20,
   });
@@ -52,10 +51,6 @@ class OmniTabStrip extends StatelessWidget {
   final int selected;
   final ValueChanged<int> onSelected;
 
-  /// Cuộn ngang khi số tab không biết trước (nhóm việc của một dự án). Không
-  /// cuộn thì các tab đứng sát trái theo đúng thứ tự.
-  final bool scrollable;
-
   final EdgeInsets padding;
   final double gap;
 
@@ -63,46 +58,35 @@ class OmniTabStrip extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
 
-    final row = Row(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      mainAxisSize: scrollable ? MainAxisSize.min : MainAxisSize.max,
-      children: [
-        for (var i = 0; i < tabs.length; i++) ...[
-          if (i > 0) SizedBox(width: gap),
-          if (scrollable)
-            OmniTabItem(
-              key: tabs[i].key,
-              tab: tabs[i],
-              selected: i == selected,
-              onTap: () => onSelected(i),
-            )
-          else
-            Flexible(
-              child: OmniTabItem(
-                key: tabs[i].key,
-                tab: tabs[i],
-                selected: i == selected,
-                onTap: () => onSelected(i),
-              ),
-            ),
-        ],
-      ],
-    );
-
+    // Mỗi tab rộng đúng bằng chữ của nó, đứng sát trái; hết chỗ thì dải cuộn
+    // ngang. Không chia đều bề ngang: chia đều là cắt "Hôm nay 4" thành
+    // "Hôm …" trong khi "Tất cả" bên cạnh còn thừa chỗ.
     return DecoratedBox(
       decoration: BoxDecoration(
         color: scheme.surface,
         border: Border(bottom: BorderSide(color: scheme.outlineVariant)),
       ),
       child: SizedBox(
+        width: double.infinity,
         height: 44,
-        child: scrollable
-            ? SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                padding: padding,
-                child: row,
-              )
-            : Padding(padding: padding, child: row),
+        child: SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          padding: padding,
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              for (var i = 0; i < tabs.length; i++) ...[
+                if (i > 0) SizedBox(width: gap),
+                OmniTabItem(
+                  key: tabs[i].key,
+                  tab: tabs[i],
+                  selected: i == selected,
+                  onTap: () => onSelected(i),
+                ),
+              ],
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -150,17 +134,12 @@ class OmniTabItem extends StatelessWidget {
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Flexible(
-                child: Text(
-                  tab.label,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: OmniType.body.copyWith(
-                    color: selected
-                        ? scheme.onSurface
-                        : scheme.onSurfaceVariant,
-                    fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
-                  ),
+              Text(
+                tab.label,
+                maxLines: 1,
+                style: OmniType.body.copyWith(
+                  color: selected ? scheme.onSurface : scheme.onSurfaceVariant,
+                  fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
                 ),
               ),
               if (hasCount) ...[

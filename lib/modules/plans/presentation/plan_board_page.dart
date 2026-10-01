@@ -360,7 +360,9 @@ class _Column extends StatelessWidget {
     return ListView.separated(
       padding: const EdgeInsets.fromLTRB(
         OmniSpacing.lg,
-        0,
+        // Khe 12 dưới dải tab: dải giờ là mặt trắng, thẻ đầu không được dính
+        // vào vạch đáy của nó.
+        OmniSpacing.md,
         OmniSpacing.lg,
         // Chừa chỗ cho nút "Việc mới": nó nổi trên danh sách, nên cột đầy
         // việc thì nó che mất đúng thẻ cuối — thẻ người ta phải cuộn xa nhất

@@ -74,7 +74,6 @@ class _SectionIndicatorState extends State<SectionIndicator> {
     // cạnh tên (`SPrinciples.dc.html` §8) — thay dải viên trên nền mực. Nhãn
     // trợ năng là TÊN, số việc là giá trị: "Chờ QC, 3 việc, nút, đã chọn".
     return OmniTabStrip(
-      scrollable: true,
       padding: const EdgeInsets.symmetric(horizontal: OmniSpacing.lg),
       selected: widget.current,
       onSelected: widget.onSelected,
