@@ -380,7 +380,7 @@ class _DuplicateNotice extends StatelessWidget {
                   const TextSpan(text: 'Số điện thoại này đã tồn tại — '),
                   TextSpan(
                     text: name,
-                    style: const TextStyle(fontWeight: FontWeight.w700),
+                    style: const TextStyle(fontWeight: FontWeight.w600),
                   ),
                 ],
               ),

@@ -56,7 +56,7 @@ class MyPermissionsPage extends ConsumerWidget {
                 Text(
                   'Đang giữ ${held.length} quyền',
                   style: OmniType.caption.copyWith(
-                    fontWeight: FontWeight.w700,
+                    fontWeight: FontWeight.w600,
                     color: OmniColors.orbit,
                     fontFeatures: OmniType.tabular,
                   ),
@@ -78,7 +78,7 @@ class MyPermissionsPage extends ConsumerWidget {
                         child: Text(
                           entry.key,
                           style: OmniType.bodyStrong.copyWith(
-                            fontWeight: FontWeight.w700,
+                            fontWeight: FontWeight.w600,
                             color: scheme.onSurface,
                           ),
                         ),

@@ -347,7 +347,7 @@ class _BellButton extends StatelessWidget {
                     textAlign: TextAlign.center,
                     style: OmniType.micro.copyWith(
                       color: Colors.white,
-                      fontWeight: FontWeight.w700,
+                      fontWeight: FontWeight.w600,
                     ),
                   ),
                 ),
@@ -468,7 +468,7 @@ class _Segment extends StatelessWidget {
                 maxLines: 1,
                 style: OmniType.caption.copyWith(
                   color: color,
-                  fontWeight: selected ? FontWeight.w700 : FontWeight.w600,
+                  fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
                   fontFeatures: OmniType.tabular,
                 ),
               ),

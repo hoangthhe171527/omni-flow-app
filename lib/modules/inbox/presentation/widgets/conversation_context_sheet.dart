@@ -174,7 +174,7 @@ class ConversationContextSheet extends ConsumerWidget {
                             Formatters.vnd(opportunity.budget),
                             style: OmniType.caption.copyWith(
                               color: scheme.onSurface,
-                              fontWeight: FontWeight.w700,
+                              fontWeight: FontWeight.w600,
                               fontFeatures: OmniType.tabular,
                             ),
                           ),
@@ -320,7 +320,7 @@ class _AssetTabs extends StatelessWidget {
                               ? OmniColors.chatPrimary
                               : scheme.onSurfaceVariant,
                           fontWeight: selected == index
-                              ? FontWeight.w700
+                              ? FontWeight.w600
                               : FontWeight.w500,
                         ),
                       ),
@@ -651,7 +651,7 @@ class _QuickAction extends StatelessWidget {
               Text(
                 label,
                 style: OmniType.bodyStrong.copyWith(
-                  fontWeight: FontWeight.w700,
+                  fontWeight: FontWeight.w600,
                   color: foreground,
                 ),
               ),

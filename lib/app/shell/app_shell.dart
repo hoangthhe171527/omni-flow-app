@@ -162,7 +162,7 @@ class _ShellNavigationRail extends ConsumerWidget {
       ),
       selectedLabelTextStyle: OmniType.micro.copyWith(
         color: scheme.onPrimaryContainer,
-        fontWeight: FontWeight.w700,
+        fontWeight: FontWeight.w600,
       ),
       unselectedLabelTextStyle: OmniType.micro.copyWith(
         color: scheme.onSurfaceVariant,
@@ -322,7 +322,7 @@ class _ShellNavItem extends ConsumerWidget {
               overflow: TextOverflow.ellipsis,
               style: OmniType.micro.copyWith(
                 color: color,
-                fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+                fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
                 letterSpacing: -0.12,
               ),
             ),

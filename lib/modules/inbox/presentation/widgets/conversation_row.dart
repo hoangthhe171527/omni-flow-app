@@ -111,7 +111,7 @@ class ConversationRow extends StatelessWidget {
                   // separable without staring — and it keeps them apart for
                   // anyone who cannot rely on the accent wash.
                   color: unread ? scheme.onSurface : _readName(context),
-                  fontWeight: unread ? FontWeight.w700 : FontWeight.w500,
+                  fontWeight: unread ? FontWeight.w600 : FontWeight.w500,
                 ),
               ),
             ),
@@ -123,7 +123,7 @@ class ConversationRow extends StatelessWidget {
                     ? OmniColors.dangerTextOf(context)
                     : scheme.onSurfaceVariant,
                 fontWeight: overdue || unread
-                    ? FontWeight.w700
+                    ? FontWeight.w600
                     : FontWeight.w400,
                 fontFeatures: OmniType.tabular,
               ),

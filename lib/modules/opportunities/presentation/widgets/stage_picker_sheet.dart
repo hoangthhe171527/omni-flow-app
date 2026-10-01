@@ -57,7 +57,7 @@ class StagePickerSheet extends StatelessWidget {
             child: Text(
               'Chuyển giai đoạn',
               style: OmniType.navTitle.copyWith(
-                fontWeight: FontWeight.w800,
+                fontWeight: FontWeight.w600,
                 color: scheme.onSurface,
               ),
             ),
@@ -136,8 +136,8 @@ class _StageRow extends StatelessWidget {
                       stage.label,
                       style: OmniType.listTitle.copyWith(
                         fontWeight: selected
-                            ? FontWeight.w700
-                            : FontWeight.w600,
+                            ? FontWeight.w600
+                            : FontWeight.w500,
                         color: selected
                             ? scheme.onPrimaryContainer
                             : scheme.onSurface,

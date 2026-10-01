@@ -79,7 +79,7 @@ class TeamPage extends ConsumerWidget {
                           Text(
                             member.name,
                             style: OmniType.bodyStrong.copyWith(
-                              fontWeight: FontWeight.w700,
+                              fontWeight: FontWeight.w600,
                               color: scheme.onSurface,
                             ),
                           ),
@@ -227,7 +227,7 @@ class _LinkZaloSheetState extends State<_LinkZaloSheet> {
           children: [
             Text(
               'Liên kết Zalo — ${widget.member.name}',
-              style: text.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+              style: text.titleMedium?.copyWith(fontWeight: FontWeight.w600),
             ),
             const SizedBox(height: OmniSpacing.xs),
             Text(

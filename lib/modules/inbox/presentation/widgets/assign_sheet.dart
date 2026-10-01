@@ -54,7 +54,7 @@ class _AssignSheetState extends ConsumerState<AssignSheet> {
           Text(
             'Gán nhân viên',
             style: OmniType.navTitle.copyWith(
-              fontWeight: FontWeight.w800,
+              fontWeight: FontWeight.w600,
               color: scheme.onSurface,
             ),
           ),

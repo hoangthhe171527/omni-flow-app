@@ -217,7 +217,7 @@ class _Figure extends StatelessWidget {
           '$value',
           style: OmniType.moneyHero.copyWith(
             fontSize: OmniType.moneyHero.fontSize! + 4,
-            fontWeight: FontWeight.w800,
+            fontWeight: FontWeight.w600,
             color: color,
           ),
         ),

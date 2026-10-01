@@ -56,10 +56,12 @@ Future<Widget> bootstrap() async {
   // OFL đòi giấy phép đi kèm font khi phân phối. Font nằm trong gói app, nên
   // giấy phép cũng phải đọc được từ trong app — trang "Giấy phép" của Flutter.
   LicenseRegistry.addLicense(() async* {
-    final text = await rootBundle.loadString(
-      'assets/fonts/BeVietnamPro-OFL.txt',
-    );
-    yield LicenseEntryWithLineBreaks(const ['Be Vietnam Pro'], text);
+    yield LicenseEntryWithLineBreaks(const [
+      'Inter',
+    ], await rootBundle.loadString('assets/fonts/Inter-OFL.txt'));
+    yield LicenseEntryWithLineBreaks(const [
+      'Be Vietnam Pro',
+    ], await rootBundle.loadString('assets/fonts/BeVietnamPro-OFL.txt'));
   });
 
   final preferences = await SharedPreferences.getInstance();

@@ -148,7 +148,7 @@ class _CreatePlanPageState extends ConsumerState<CreatePlanPage> {
                     _name.text.trim().isEmpty ? 'Dự án mới' : _name.text.trim(),
                     style: OmniType.title.copyWith(
                       color: Colors.white,
-                      fontWeight: FontWeight.w700,
+                      fontWeight: FontWeight.w600,
                     ),
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,

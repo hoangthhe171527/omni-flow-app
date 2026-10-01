@@ -303,7 +303,7 @@ class _StageTabs extends StatelessWidget {
                 style: OmniType.caption.copyWith(
                   height: 1.2,
                   color: foreground,
-                  fontWeight: isSelected ? FontWeight.w700 : FontWeight.w600,
+                  fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
                   fontFeatures: OmniType.tabular,
                 ),
               ),
@@ -357,7 +357,7 @@ class _PipelinePickerSheet extends StatelessWidget {
             child: Text(
               'Quy trình bán hàng',
               style: OmniType.navTitle.copyWith(
-                fontWeight: FontWeight.w800,
+                fontWeight: FontWeight.w600,
                 color: scheme.onSurface,
               ),
             ),
@@ -381,8 +381,8 @@ class _PipelinePickerSheet extends StatelessWidget {
                           pipeline.label,
                           style: OmniType.listTitle.copyWith(
                             fontWeight: pipeline.code == current
-                                ? FontWeight.w700
-                                : FontWeight.w600,
+                                ? FontWeight.w600
+                                : FontWeight.w500,
                             color: pipeline.code == current
                                 ? scheme.onPrimaryContainer
                                 : scheme.onSurface,

@@ -99,7 +99,7 @@ class TaskCard extends StatelessWidget {
                 Text.rich(
                   _highlighted(task.title, highlight, context),
                   style: OmniType.listTitle.copyWith(
-                    fontWeight: FontWeight.w700,
+                    fontWeight: FontWeight.w600,
                     height: 22 / 16,
                     color: scheme.onSurface,
                   ),

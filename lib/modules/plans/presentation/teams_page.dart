@@ -148,7 +148,7 @@ class _TeamBlock extends ConsumerWidget {
               child: Text(
                 group.team.name,
                 style: OmniType.section.copyWith(
-                  fontWeight: FontWeight.w700,
+                  fontWeight: FontWeight.w600,
                   color: scheme.onSurface,
                 ),
               ),

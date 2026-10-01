@@ -163,7 +163,7 @@ abstract final class OmniTheme {
         shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.all(Radius.circular(18)),
         ),
-        extendedTextStyle: OmniType.input.copyWith(fontWeight: FontWeight.w700),
+        extendedTextStyle: OmniType.input.copyWith(fontWeight: FontWeight.w600),
         extendedSizeConstraints: const BoxConstraints.tightFor(height: 56),
       ),
       inputDecorationTheme: InputDecorationTheme(
@@ -171,9 +171,11 @@ abstract final class OmniTheme {
         fillColor: brightness == Brightness.light
             ? OmniColors.card
             : surfaceMuted,
+        // 13 + dòng 22 (thân 15/22) + 13 = ô cao 48 — cỡ nút và ô nhập của
+        // app trong bảng token, và thẳng tâm với nút icon 48 đứng cạnh.
         contentPadding: const EdgeInsets.symmetric(
           horizontal: OmniSpacing.lg,
-          vertical: OmniSpacing.lg,
+          vertical: 13,
         ),
         hintStyle: OmniType.body.copyWith(color: onSurfaceMuted),
         labelStyle: OmniType.caption.copyWith(color: onSurfaceMuted),

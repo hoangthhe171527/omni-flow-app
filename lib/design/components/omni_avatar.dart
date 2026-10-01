@@ -38,7 +38,7 @@ class OmniAvatar extends StatelessWidget {
       style: OmniType.micro.copyWith(
         color: color,
         fontSize: size * 0.34,
-        fontWeight: FontWeight.w700,
+        fontWeight: FontWeight.w600,
       ),
     );
     final motion = OmniMotion.of(context);

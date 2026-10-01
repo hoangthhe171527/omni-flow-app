@@ -7,7 +7,7 @@ import 'package:omni_app/modules/inbox/inbox_module.dart';
 import 'package:omni_app/modules/tasks/tasks_module.dart';
 
 /// Quy ước của bộ Orbit cho điều hướng: vàng là "mới", đỏ là "phải xử lý";
-/// màn gốc của tab có tiêu đề lớn 26/800.
+/// màn gốc của tab có tiêu đề lớn 24/600.
 void main() {
   group('giọng huy hiệu', () {
     test('Hộp thư đếm tin CHƯA ĐỌC — huy hiệu vàng', () {
@@ -47,7 +47,7 @@ void main() {
   });
 
   group('tiêu đề lớn', () {
-    testWidgets('màn gốc: 26/800 canh trái', (tester) async {
+    testWidgets('màn gốc: 24/600 canh trái', (tester) async {
       await tester.pumpWidget(
         const MaterialApp(
           home: Scaffold(appBar: OmniAppBar(title: 'Việc của tôi')),
@@ -55,8 +55,8 @@ void main() {
       );
 
       final bar = tester.widget<AppBar>(find.byType(AppBar));
-      expect(bar.titleTextStyle!.fontSize, 26);
-      expect(bar.titleTextStyle!.fontWeight, FontWeight.w800);
+      expect(bar.titleTextStyle!.fontSize, 24);
+      expect(bar.titleTextStyle!.fontWeight, FontWeight.w600);
       expect(bar.centerTitle, isFalse);
     });
 

@@ -220,7 +220,7 @@ class _MessageComposerState extends State<MessageComposer> {
                           'Bỏ',
                           style: OmniType.micro.copyWith(
                             color: OmniColors.warningTextOf(context),
-                            fontWeight: FontWeight.w700,
+                            fontWeight: FontWeight.w600,
                           ),
                         ),
                       ),
@@ -410,7 +410,7 @@ class _ReplyPreview extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                   style: OmniType.micro.copyWith(
                     color: OmniColors.chatPrimary,
-                    fontWeight: FontWeight.w700,
+                    fontWeight: FontWeight.w600,
                   ),
                 ),
                 const SizedBox(height: 2),

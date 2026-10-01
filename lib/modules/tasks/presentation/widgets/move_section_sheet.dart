@@ -45,7 +45,7 @@ class _MoveSectionSheet extends StatelessWidget {
           ),
           child: Text(
             'Chuyển nhóm việc',
-            style: text.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+            style: text.titleMedium?.copyWith(fontWeight: FontWeight.w600),
           ),
         ),
         if (sections.isEmpty)
@@ -79,7 +79,7 @@ class _MoveSectionSheet extends StatelessWidget {
                 section.name,
                 style: text.bodyLarge?.copyWith(
                   fontWeight: section.id == current
-                      ? FontWeight.w700
+                      ? FontWeight.w600
                       : FontWeight.w400,
                 ),
               ),

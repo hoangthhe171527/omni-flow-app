@@ -281,7 +281,7 @@ class _ProfileCard extends ConsumerWidget {
                 Text(
                   displayName,
                   style: OmniType.section.copyWith(
-                    fontWeight: FontWeight.w700,
+                    fontWeight: FontWeight.w600,
                     color: Colors.white,
                   ),
                 ),
@@ -354,7 +354,7 @@ class _WorkspaceCard extends ConsumerWidget {
                 Text(
                   tenantName ?? '—',
                   style: OmniType.bodyStrong.copyWith(
-                    fontWeight: FontWeight.w700,
+                    fontWeight: FontWeight.w600,
                     color: scheme.onSurface,
                   ),
                 ),
@@ -400,7 +400,7 @@ class _GroupLabel extends StatelessWidget {
         child: Text(
           text.toUpperCase(),
           style: OmniType.overline.copyWith(
-            fontWeight: FontWeight.w700,
+            fontWeight: FontWeight.w600,
             letterSpacing: 0.96,
             color: Theme.of(context).colorScheme.onSurfaceVariant,
           ),
@@ -551,7 +551,6 @@ class _FeatureTile extends ConsumerWidget {
                       overflow: TextOverflow.ellipsis,
                       style: OmniType.caption.copyWith(
                         fontWeight: FontWeight.w600,
-                        height: 17 / 13,
                         color: scheme.onSurface,
                       ),
                     ),
@@ -692,7 +691,7 @@ class _LogoutButton extends StatelessWidget {
           width: 1.5,
         ),
         shape: const RoundedRectangleBorder(borderRadius: OmniRadius.lgAll),
-        textStyle: OmniType.input.copyWith(fontWeight: FontWeight.w700),
+        textStyle: OmniType.input.copyWith(fontWeight: FontWeight.w600),
       ),
       child: const Text('Đăng xuất'),
     );
@@ -887,7 +886,7 @@ class _ThemeSegment extends StatelessWidget {
             child: Text(
               label,
               style: OmniType.micro.copyWith(
-                fontWeight: selected ? FontWeight.w700 : FontWeight.w600,
+                fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
                 color: selected ? scheme.onSurface : scheme.onSurfaceVariant,
               ),
             ),

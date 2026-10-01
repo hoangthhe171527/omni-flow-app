@@ -93,7 +93,7 @@ class OmniSectionHeader extends StatelessWidget {
               title.toUpperCase(),
               // 12/700, giãn chữ .08em — nhãn nhóm của mọi màn trong bộ Orbit.
               style: OmniType.overline.copyWith(
-                fontWeight: FontWeight.w700,
+                fontWeight: FontWeight.w600,
                 letterSpacing: 0.96,
                 color: scheme.onSurfaceVariant,
               ),

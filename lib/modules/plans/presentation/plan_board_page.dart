@@ -102,7 +102,7 @@ class _PlanBoardPageState extends ConsumerState<PlanBoardPage> {
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: OmniType.section.copyWith(
-                fontWeight: FontWeight.w700,
+                fontWeight: FontWeight.w600,
                 color: Colors.white,
               ),
             ),
@@ -420,7 +420,7 @@ class _FilterBar extends StatelessWidget {
                   const TextSpan(text: 'Đang lọc: '),
                   TextSpan(
                     text: label,
-                    style: const TextStyle(fontWeight: FontWeight.w700),
+                    style: const TextStyle(fontWeight: FontWeight.w600),
                   ),
                 ],
               ),
@@ -436,7 +436,7 @@ class _FilterBar extends StatelessWidget {
             onPressed: onClear,
             style: TextButton.styleFrom(
               foregroundColor: foreground,
-              textStyle: OmniType.caption.copyWith(fontWeight: FontWeight.w700),
+              textStyle: OmniType.caption.copyWith(fontWeight: FontWeight.w600),
             ),
             child: const Text('Bỏ lọc'),
           ),

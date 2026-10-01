@@ -41,7 +41,7 @@ class _PersonFilterSheet extends ConsumerWidget {
             ),
             child: Text(
               'Lọc theo người',
-              style: text.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+              style: text.titleMedium?.copyWith(fontWeight: FontWeight.w600),
             ),
           ),
           _Row(

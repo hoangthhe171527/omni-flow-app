@@ -166,7 +166,7 @@ class OmniBadge extends StatelessWidget {
               overflow: TextOverflow.ellipsis,
               style: OmniType.micro.copyWith(
                 color: foreground,
-                fontWeight: FontWeight.w800,
+                fontWeight: FontWeight.w600,
                 height: 1.2,
               ),
             ),

@@ -229,7 +229,7 @@ class CustomerCard extends StatelessWidget {
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: OmniType.listTitle.copyWith(
-                              fontWeight: FontWeight.w700,
+                              fontWeight: FontWeight.w600,
                               color: inactive
                                   ? scheme.onSurfaceVariant
                                   : scheme.onSurface,
@@ -267,7 +267,7 @@ class CustomerCard extends StatelessWidget {
                               color: inactive
                                   ? scheme.onSurfaceVariant
                                   : scheme.onSurface,
-                              fontWeight: FontWeight.w700,
+                              fontWeight: FontWeight.w600,
                               fontFeatures: OmniType.tabular,
                             ),
                           ),

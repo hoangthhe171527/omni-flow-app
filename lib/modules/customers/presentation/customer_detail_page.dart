@@ -191,7 +191,7 @@ class _Header extends StatelessWidget {
               Text(
                 customer.name,
                 style: OmniType.title.copyWith(
-                  fontWeight: FontWeight.w800,
+                  fontWeight: FontWeight.w600,
                   letterSpacing: -0.22,
                   color: scheme.onSurface,
                 ),
@@ -307,7 +307,7 @@ class _ActionTile extends StatelessWidget {
                 Text(
                   label,
                   style: OmniType.caption.copyWith(
-                    fontWeight: FontWeight.w700,
+                    fontWeight: FontWeight.w600,
                     color: foreground,
                   ),
                 ),

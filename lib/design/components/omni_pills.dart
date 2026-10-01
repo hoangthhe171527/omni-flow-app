@@ -107,7 +107,7 @@ class OmniFilterPill extends StatelessWidget {
                         height: 1.2,
                         color: foreground,
                         fontWeight: selected
-                            ? (onInk ? FontWeight.w800 : FontWeight.w700)
+                            ? (onInk ? FontWeight.w600 : FontWeight.w500)
                             : FontWeight.w600,
                       ),
                     ),
@@ -120,8 +120,8 @@ class OmniFilterPill extends StatelessWidget {
                         height: 1.2,
                         color: countColor,
                         fontWeight: selected
-                            ? FontWeight.w700
-                            : FontWeight.w600,
+                            ? FontWeight.w600
+                            : FontWeight.w500,
                         fontFeatures: OmniType.tabular,
                       ),
                     ),
@@ -322,7 +322,7 @@ class OmniCountBadge extends StatelessWidget {
             color: foreground ?? Colors.white,
             // Bold: this is the one number on the row that must be read from a
             // glance, and the regular weight let it sink into the pill.
-            fontWeight: compact ? FontWeight.w800 : FontWeight.w700,
+            fontWeight: FontWeight.w600,
             height: 1,
             fontFeatures: OmniType.tabular,
           ),

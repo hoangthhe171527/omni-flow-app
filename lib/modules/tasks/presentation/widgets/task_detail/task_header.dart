@@ -6,10 +6,9 @@ import '../due_chip.dart';
 import 'task_chip.dart';
 
 /// Đầu màn chi tiết: dự án, tên việc, dải dữ kiện, và tiến độ.
-/// 22/30 ExtraBold — tiêu đề của màn chi tiết trong bộ Orbit.
+/// 20/28 SemiBold — tiêu đề của màn chi tiết (đề xuất "Chuẩn hoá phong cách").
 final _titleStyle = OmniType.title.copyWith(
-  fontWeight: FontWeight.w800,
-  height: 30 / 22,
+  fontWeight: FontWeight.w600,
   letterSpacing: -0.22,
 );
 

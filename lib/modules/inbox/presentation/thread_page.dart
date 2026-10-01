@@ -927,7 +927,7 @@ class _OpportunityStrip extends ConsumerWidget {
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: OmniType.caption.copyWith(
-                          fontWeight: FontWeight.w700,
+                          fontWeight: FontWeight.w600,
                           color: scheme.onSurface,
                           fontFeatures: OmniType.tabular,
                         ),

@@ -78,7 +78,7 @@ class PlanRow extends StatelessWidget {
                         plan.name,
                         style: OmniType.section.copyWith(
                           color: Colors.white,
-                          fontWeight: FontWeight.w700,
+                          fontWeight: FontWeight.w600,
                         ),
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
