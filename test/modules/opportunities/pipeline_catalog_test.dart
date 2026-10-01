@@ -91,4 +91,13 @@ void main() {
     final catalog = PipelineCatalog.fromJson({'pipelines': <dynamic>[]});
     expect(catalog.defaultPipeline.stages, hasLength(6));
   });
+
+  test('nhãn giai đoạn cho nơi không biết quy trình (hộp thư)', () {
+    final catalog = PipelineCatalog.fromJson(json);
+    // Không phải mã của quy trình mặc định → tra các quy trình khác.
+    expect(catalog.stageLabel('won'), 'WON');
+    expect(catalog.stageLabel('da_mua'), 'DA_MUA');
+    expect(catalog.stageLabel('da_mua', pipeline: 'ban_le'), 'DA_MUA');
+    expect(catalog.stageLabel('khong_ton_tai'), 'khong_ton_tai');
+  });
 }

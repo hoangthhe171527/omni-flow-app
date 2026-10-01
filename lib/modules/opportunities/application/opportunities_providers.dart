@@ -92,8 +92,13 @@ class StageListState {
 /// said there were more.
 class StageOpportunitiesController
     extends AutoDisposeFamilyAsyncNotifier<StageListState, String> {
+  /// Bumped by every (re)build. A page requested under an older generation
+  /// belongs to a list that no longer exists — see [loadMore].
+  int _generation = 0;
+
   @override
   Future<StageListState> build(String stageCode) async {
+    _generation++;
     final query = await ref.watch(boardQueryProvider.future);
     final page = await ref
         .watch(opportunitiesApiProvider)
@@ -114,6 +119,7 @@ class StageOpportunitiesController
   Future<void> loadMore() async {
     final current = state.valueOrNull;
     if (current == null || !current.hasMore || current.loadingMore) return;
+    final generation = _generation;
 
     state = AsyncData(
       StageListState(
@@ -134,8 +140,12 @@ class StageOpportunitiesController
             search: query.search.isEmpty ? null : query.search,
             page: current.pagination.nextPage,
           );
-      // A deal moved between the two requests shifts the window: skip what
-      // is already on screen rather than list it twice.
+      // The column was rebuilt while this page was in flight (a move
+      // invalidated it, or pull-to-refresh): appending to the OLD rows would
+      // bring back a deal that has left the column. The fresh list wins.
+      if (generation != _generation) return;
+      // Skip what is already on screen rather than list it twice (another
+      // user's write can shift the server's page window).
       final seen = {for (final item in current.items) item.id};
       state = AsyncData(
         StageListState(
@@ -147,6 +157,7 @@ class StageOpportunitiesController
         ),
       );
     } catch (_) {
+      if (generation != _generation) return;
       // Keep what's on screen; scrolling to the end again retries.
       state = AsyncData(
         StageListState(items: current.items, pagination: current.pagination),

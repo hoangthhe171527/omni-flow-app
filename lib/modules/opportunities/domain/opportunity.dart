@@ -121,6 +121,9 @@ class Opportunity {
     this.notes = const [],
     this.metadata = const {},
     this.loadedMetadata = const {},
+    this.loadedStageCode = '',
+    this.loadedExpectedCloseAt,
+    this.campaignObjective,
   });
 
   /// Empty draft for the create form — filled by [applyForm]. An empty
@@ -141,14 +144,19 @@ class Opportunity {
     );
     final tags = metadata.strList('tags');
     final outcome = json.str('outcome');
+    final stageCode = PipelineStage.canonicalCode(
+      json.str('opportunity_stage') ?? '',
+    );
+    final expectedCloseAt = DateUtilsX.parse(json['expected_end_date']);
 
     return Opportunity(
       id: json.strOr('id', ''),
       code: json.strOr('opportunity_code', ''),
       title: json.strOr('title', 'Cơ hội'),
-      stageCode: PipelineStage.canonicalCode(
-        json.str('opportunity_stage') ?? '',
-      ),
+      stageCode: stageCode,
+      loadedStageCode: stageCode,
+      loadedExpectedCloseAt: expectedCloseAt,
+      campaignObjective: json.str('campaign_objective'),
       pipelineCode: json.str('pipeline')?.toLowerCase(),
       status: json.str('opportunity_status')?.toUpperCase(),
       outcome: outcome == null ? null : StageOutcome.parse(outcome),
@@ -157,7 +165,7 @@ class Opportunity {
       value: json.dbl('estimated_budget') ?? 0,
       probability: probability,
       product: product,
-      expectedCloseAt: DateUtilsX.parse(json['expected_end_date']),
+      expectedCloseAt: expectedCloseAt,
       ownerId: json.str('owner_user_id'),
       ownerName: metadata.str('owner_name'),
       source: source,
@@ -214,6 +222,19 @@ class Opportunity {
   /// loaded — what [toPayload] diffs against.
   final Map<String, dynamic> loadedMetadata;
 
+  /// [stageCode] as loaded ('' on a draft). An edit that leaves the stage
+  /// alone does not send it: a legacy `LEAD` reads as `new`, and sending `new`
+  /// back is a stage CHANGE to the server — it would recompute the status and
+  /// turn a CANCELLED deal OPEN.
+  final String loadedStageCode;
+
+  /// `expected_end_date` as loaded — to tell "cleared" from "never set".
+  final DateTime? loadedExpectedCloseAt;
+
+  /// `campaign_objective` as loaded: [product] falls back to it, so clearing
+  /// the product clears it too.
+  final String? campaignObjective;
+
   /// Compatibility view of [stageCode]; a tenant-defined code reads as
   /// [PipelineStage.fresh]. Display code uses the [PipelineCatalog].
   PipelineStage get stage => PipelineStage.parse(stageCode);
@@ -225,6 +246,9 @@ class Opportunity {
     if (outcome case final o?) return o != StageOutcome.open;
     return PipelineStage.knownCodes.contains(stageCode) && stage.isClosed;
   }
+
+  /// Huỷ — đóng mà không phải thua (`opportunity_status = CANCELLED`).
+  bool get isCancelled => status == 'CANCELLED';
 
   bool get isWon {
     if (status case final s?) return s == 'WON';
@@ -272,27 +296,35 @@ class Opportunity {
       for (final entry in own.entries)
         if (!_sameValue(entry.value, loadedMetadata[entry.key]))
           entry.key: entry.value,
+      // Cleared in the form (product): null removes the key server-side.
+      for (final key in loadedMetadata.keys)
+        if (!own.containsKey(key)) key: null,
     };
+    final stageChanged = stageCode.isNotEmpty && stageCode != loadedStageCode;
 
     return {
       'title': title,
       if (customerId != null) 'customer_id': customerId,
       if (ownerId != null) 'owner_user_id': ownerId,
       'estimated_budget': value,
-      if (stageCode.isNotEmpty) 'opportunity_stage': stageCode,
+      if (stageChanged) 'opportunity_stage': stageCode,
       if (pipelineCode != null) 'pipeline': pipelineCode,
       if (expectedCloseAt != null)
-        'expected_end_date': expectedCloseAt!
-            .toIso8601String()
-            .split('T')
-            .first,
+        'expected_end_date': expectedCloseAt!.toIso8601String().split('T').first
+      // `expected_end_date` and `campaign_objective` are CLEARABLE in
+      // `UpdateSalesOpportunity`: null (validated `nullable`) writes null.
+      else if (loadedExpectedCloseAt != null)
+        'expected_end_date': null,
+      if (product == null && campaignObjective != null)
+        'campaign_objective': null,
       if (changed.isNotEmpty) 'metadata': changed,
     };
   }
 
   /// The form's fields applied to this record — the loaded opportunity when
   /// editing ([Opportunity.blank] when creating), so everything the form
-  /// doesn't show (tags, channel, notes, the pipeline) survives.
+  /// doesn't show (tags, channel, notes, the pipeline) survives. [product] and
+  /// [expectedCloseAt] are applied AS GIVEN: an emptied box clears the value.
   Opportunity applyForm({
     required String title,
     required String stageCode,
@@ -301,12 +333,12 @@ class Opportunity {
     String? customerName,
     String? product,
     DateTime? expectedCloseAt,
-  }) => copyWith(
+  }) => _copy(
     title: title,
     stageCode: stageCode,
     value: value,
-    customerId: customerId,
-    customerName: customerName,
+    customerId: customerId ?? this.customerId,
+    customerName: customerName ?? this.customerName,
     product: product,
     expectedCloseAt: expectedCloseAt,
   );
@@ -323,6 +355,34 @@ class Opportunity {
     DateTime? expectedCloseAt,
     String? ownerId,
     List<String>? tags,
+  }) => _copy(
+    title: title ?? this.title,
+    stageCode: stageCode ?? this.stageCode,
+    pipelineCode: pipelineCode ?? this.pipelineCode,
+    customerId: customerId ?? this.customerId,
+    customerName: customerName ?? this.customerName,
+    value: value ?? this.value,
+    probability: probability ?? this.probability,
+    product: product ?? this.product,
+    expectedCloseAt: expectedCloseAt ?? this.expectedCloseAt,
+    ownerId: ownerId ?? this.ownerId,
+    tags: tags ?? this.tags,
+  );
+
+  /// Copy where [product] and [expectedCloseAt] are taken as given (null
+  /// clears); every other omitted field keeps this record's value.
+  Opportunity _copy({
+    required String? product,
+    required DateTime? expectedCloseAt,
+    String? title,
+    String? stageCode,
+    String? pipelineCode,
+    String? customerId,
+    String? customerName,
+    double? value,
+    int? probability,
+    String? ownerId,
+    List<String>? tags,
   }) {
     return Opportunity(
       id: id,
@@ -336,8 +396,8 @@ class Opportunity {
       customerName: customerName ?? this.customerName,
       value: value ?? this.value,
       probability: probability ?? this.probability,
-      product: product ?? this.product,
-      expectedCloseAt: expectedCloseAt ?? this.expectedCloseAt,
+      product: product,
+      expectedCloseAt: expectedCloseAt,
       ownerId: ownerId ?? this.ownerId,
       ownerName: ownerName,
       source: source,
@@ -345,6 +405,9 @@ class Opportunity {
       notes: notes,
       metadata: metadata,
       loadedMetadata: loadedMetadata,
+      loadedStageCode: loadedStageCode,
+      loadedExpectedCloseAt: loadedExpectedCloseAt,
+      campaignObjective: campaignObjective,
     );
   }
 
@@ -382,11 +445,12 @@ class PipelineSummary {
   /// older per-key `{stage: {count, value}}` shape is still read as a fallback.
   ///
   /// EVERY code is kept — a tenant-defined stage (`da_mua`) is a real column.
-  /// Legacy UPPERCASE codes add up onto their lowercase slug.
+  /// Codes are counted EXACTLY as stored: a column lists `opportunity_stage =
+  /// code` (exact match server-side), so folding a legacy `LEAD` into `new`
+  /// would put 5 on the chip of a column that shows 3.
   factory PipelineSummary.fromJson(Map<String, dynamic> json) {
     final byCode = <String, StageTotal>{};
-    void add(String rawCode, num? count, num? value) {
-      final code = PipelineStage.canonicalCode(rawCode);
+    void add(String code, num? count, num? value) {
       final previous = byCode[code] ?? const StageTotal(count: 0, value: 0);
       byCode[code] = StageTotal(
         count: previous.count + (count?.toInt() ?? 0),

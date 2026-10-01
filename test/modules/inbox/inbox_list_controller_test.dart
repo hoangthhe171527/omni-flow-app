@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -105,6 +107,54 @@ void main() {
     expect(api.calls.where((c) => c.page == 2), hasLength(1));
   });
 
+  test(
+    'trang 2 về sau khi danh sách đã làm mới → bỏ, không nối vào bản cũ',
+    () async {
+      api.pages = {
+        1: ['c1', 'c2'],
+        2: ['c3'],
+      };
+      await open();
+      final gate = api.holds[2] = Completer<void>();
+      final more = controller().loadMore();
+      await Future<void>.delayed(Duration.zero);
+
+      // c1 đã được xử lý ở chỗ khác; danh sách làm mới còn c2, c9 (một trang).
+      api.pages = {
+        1: ['c2', 'c9'],
+      };
+      await controller().refresh();
+      expect(ids(), ['c2', 'c9']);
+
+      gate.complete();
+      await more;
+
+      expect(ids(), ['c2', 'c9'], reason: 'c1 không được hiện lại.');
+      expect(read().hasMore, isFalse);
+      expect(read().loadingMore, isFalse);
+    },
+  );
+
+  test('patch trong lúc trang 2 đang tải không bị trang 2 xoá mất', () async {
+    api.pages = {
+      1: ['c1', 'c2'],
+      2: ['c3'],
+    };
+    await open();
+    final gate = api.holds[2] = Completer<void>();
+    final more = controller().loadMore();
+    await Future<void>.delayed(Duration.zero);
+
+    controller().patch(_conversation('c2', unread: 0));
+    expect(read().loadingMore, isTrue, reason: 'Không mở cửa cho lượt trùng.');
+
+    gate.complete();
+    await more;
+
+    expect(ids(), ['c1', 'c2', 'c3']);
+    expect(read().items.map((c) => c.unread), [3, 0, 3]);
+  });
+
   test('patch thay đúng một hội thoại theo id, giữ thứ tự', () async {
     api.pages = {
       1: ['c1', 'c2'],
@@ -179,6 +229,9 @@ class _FakeInboxApi extends InboxApi {
   bool failNextList = false;
   final calls = <_ListCall>[];
 
+  /// Trang nào đang bị giữ lại (mạng chậm) cho tới khi completer xong.
+  final holds = <int, Completer<void>>{};
+
   @override
   Future<Paged<Conversation>> list({
     required Map<String, dynamic> query,
@@ -186,6 +239,9 @@ class _FakeInboxApi extends InboxApi {
     int perPage = AppConfig.defaultPerPage,
   }) async {
     calls.add((query: query, page: page));
+    // Trả dữ liệu của LÚC HỎI — trang về muộn mang dữ liệu cũ.
+    final pages = this.pages;
+    await holds[page]?.future;
     if (failNextList) {
       failNextList = false;
       throw const NetworkException('Không có kết nối mạng.');

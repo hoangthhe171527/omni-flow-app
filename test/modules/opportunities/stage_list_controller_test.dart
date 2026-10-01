@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -66,6 +68,67 @@ void main() {
       hasLength(45),
       reason: 'Không lặp dòng của trang 1.',
     );
+  });
+
+  group('trang 2 về muộn', () {
+    // Mạng chậm: trang 2 đang bay thì cột được dựng lại (chuyển một thẻ ra
+    // khỏi cột → invalidate, hay kéo để làm mới). Trang 2 về sau không được
+    // nối vào 30 dòng CŨ — thẻ đã rời cột sẽ hiện lại ở đây.
+    Future<void> race(Future<void> Function() rebuild) async {
+      api.total = 45;
+      await open('lien_he');
+      final gate = api.holds[2] = Completer<void>();
+
+      final more = container
+          .read(stageOpportunitiesProvider('lien_he').notifier)
+          .loadMore();
+      await Future<void>.delayed(Duration.zero);
+
+      api.idPrefix = 'moi';
+      await rebuild();
+      expect(read('lien_he').items.first.id, 'moi0');
+
+      gate.complete();
+      await more;
+
+      final ids = read('lien_he').items.map((o) => o.id);
+      expect(ids, hasLength(30), reason: 'Trang 2 của danh sách cũ bị bỏ.');
+      expect(ids.every((id) => id.startsWith('moi')), isTrue);
+      expect(read('lien_he').hasMore, isTrue, reason: 'Cuộn tiếp vẫn tải.');
+      expect(read('lien_he').loadingMore, isFalse);
+    }
+
+    test('sau invalidate (chuyển giai đoạn)', () async {
+      await race(() async {
+        container.invalidate(stageOpportunitiesProvider);
+        await container.read(stageOpportunitiesProvider('lien_he').future);
+      });
+    });
+
+    test('sau kéo để làm mới', () async {
+      await race(
+        () => container
+            .read(stageOpportunitiesProvider('lien_he').notifier)
+            .refresh(),
+      );
+    });
+
+    test('trang 2 lỗi muộn cũng không ghi đè danh sách mới', () async {
+      api.total = 45;
+      await open('lien_he');
+      final gate = api.holds[2] = Completer<void>();
+      final more = container
+          .read(stageOpportunitiesProvider('lien_he').notifier)
+          .loadMore();
+      await Future<void>.delayed(Duration.zero);
+      api.idPrefix = 'moi';
+      container.invalidate(stageOpportunitiesProvider);
+      await container.read(stageOpportunitiesProvider('lien_he').future);
+
+      gate.completeError(const NetworkException('mất mạng'));
+      await more;
+      expect(read('lien_he').items.first.id, 'moi0');
+    });
   });
 
   test('cột gửi mã giai đoạn thô và quy trình đang xem', () async {
@@ -210,6 +273,10 @@ class _FakeOpportunitiesApi extends OpportunitiesApi {
   _FakeOpportunitiesApi() : super(ApiClient(Dio()));
 
   int total = 3;
+  String idPrefix = 'o';
+
+  /// Trang nào đang bị giữ lại (mạng chậm) cho tới khi completer xong.
+  final holds = <int, Completer<void>>{};
   PipelineCatalog catalog = PipelineCatalog.fromJson({
     'default': 'ban_le',
     'pipelines': [
@@ -266,13 +333,16 @@ class _FakeOpportunitiesApi extends OpportunitiesApi {
       page: page,
       perPage: perPage,
     );
+    // Chụp tiền tố LÚC GỬI: trang trả muộn mang dữ liệu của lúc nó được hỏi.
+    final prefix = idPrefix;
+    await holds[page]?.future;
     final start = (page - 1) * perPage;
     final count = (total - start).clamp(0, perPage);
     return Paged(
       items: [
         for (var i = start; i < start + count; i++)
           Opportunity.fromJson({
-            'id': 'o$i',
+            'id': '$prefix$i',
             'title': 'Cơ hội $i',
             'opportunity_stage': stageCode,
           }),

@@ -272,6 +272,13 @@ class _StageStepper extends StatelessWidget {
 
     // Thắng/thua theo `opportunity_status` của máy chủ — một quy trình tuỳ
     // biến gọi giai đoạn Thắng là `da_mua`, không phải `won`.
+    if (opportunity.isCancelled) {
+      return const OmniStatusChip(
+        label: 'Đã huỷ',
+        tone: OmniTone.neutral,
+        icon: Icons.block_rounded,
+      );
+    }
     if (opportunity.isClosed) {
       final won = opportunity.isWon;
       return OmniStatusChip(

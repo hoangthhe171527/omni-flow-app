@@ -934,7 +934,7 @@ class _OpportunityStrip extends ConsumerWidget {
                       ),
                       if (opportunity.stage != null)
                         Text(
-                          'Giai đoạn: ${opportunity.stage}',
+                          'Giai đoạn: ${_stageLabel(ref, opportunity.stage!)}',
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: OmniType.micro.copyWith(
@@ -958,3 +958,9 @@ class _OpportunityStrip extends ConsumerWidget {
     );
   }
 }
+
+/// Nhãn giai đoạn theo quy trình của tenant (`da_mua` → "Đã mua"). Ngữ cảnh
+/// hội thoại không gửi quy trình, nên tra mọi quy trình; danh mục chưa về thì
+/// hiện mã.
+String _stageLabel(WidgetRef ref, String code) =>
+    ref.watch(pipelineCatalogProvider).valueOrNull?.stageLabel(code) ?? code;

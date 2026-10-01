@@ -168,6 +168,19 @@ class PipelineCatalog {
     return defaultPipeline;
   }
 
+  /// Nhãn của mã giai đoạn để hiển thị: tra trong [pipeline] (null = mặc
+  /// định) trước, rồi mọi quy trình khác (nơi không biết quy trình, như ngữ
+  /// cảnh hộp thư); không thấy ở đâu thì trả nguyên mã.
+  String stageLabel(String code, {String? pipeline}) {
+    final own = pipelineOf(pipeline).stage(code);
+    if (own != null) return own.label;
+    for (final p in pipelines) {
+      final stage = p.stage(code);
+      if (stage != null) return stage.label;
+    }
+    return code;
+  }
+
   /// Danh mục dự phòng khi API cũ chưa có `/pipelines` (404): đúng 6 giai
   /// đoạn chuẩn mà máy chủ dùng cho quy trình `standard` chưa cấu hình
   /// (`SeedDefaultCrmPipelines::standardStageDefaults`).

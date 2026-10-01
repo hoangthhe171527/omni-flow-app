@@ -2,6 +2,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:omni_app/core/config/app_config.dart';
 import 'package:omni_app/core/network/api_client.dart';
@@ -11,6 +12,8 @@ import 'package:omni_app/modules/opportunities/application/opportunities_provide
 import 'package:omni_app/modules/opportunities/data/opportunities_api.dart';
 import 'package:omni_app/modules/opportunities/domain/opportunity.dart';
 import 'package:omni_app/modules/opportunities/domain/pipeline_catalog.dart';
+import 'package:omni_app/modules/opportunities/opportunities_module.dart';
+import 'package:omni_app/modules/opportunities/presentation/opportunity_form_page.dart';
 import 'package:omni_app/modules/opportunities/presentation/pipeline_page.dart';
 import 'package:omni_app/security/permissions/access_scope.dart';
 import 'package:omni_app/security/permissions/resource_access.dart';
@@ -92,6 +95,61 @@ void main() {
     expect(api.calls.last.pipeline, 'standard');
     expect(api.calls.last.stageCode, 'new');
   });
+
+  testWidgets('tạo cơ hội khi đang xem quy trình khác mặc định → vào đúng '
+      'quy trình đó', (tester) async {
+    final router = GoRouter(
+      initialLocation: '/opportunities/new',
+      routes: [
+        GoRoute(
+          path: '/opportunities/new',
+          name: OpportunitiesModule.create,
+          builder: (_, _) => const OpportunityFormPage(),
+        ),
+        GoRoute(
+          path: '/opportunities/:id',
+          name: OpportunitiesModule.detail,
+          builder: (_, _) => const Text('chi tiết'),
+        ),
+      ],
+    );
+    addTearDown(router.dispose);
+    // Biểu mẫu là ListView: cửa sổ test 800×600 không dựng tới hàng viên
+    // giai đoạn ở cuối.
+    tester.view.physicalSize = const Size(800, 2000);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          opportunitiesApiProvider.overrideWithValue(api),
+          opportunityAccessProvider.overrideWithValue(
+            const ResourceAccess(readScope: AccessScope.all),
+          ),
+          // Bảng đang xem "Bán hàng chuẩn", không phải quy trình mặc định.
+          selectedPipelineProvider.overrideWith((ref) => 'standard'),
+        ],
+        child: MaterialApp.router(
+          theme: OmniTheme.light(TargetPlatform.android),
+          routerConfig: router,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    // Viên giai đoạn là của quy trình đang xem.
+    expect(find.text('Mới'), findsOneWidget);
+    expect(find.text('Liên hệ'), findsNothing);
+
+    await tester.enterText(find.byType(TextFormField).at(0), 'Đàn U3');
+    await tester.enterText(find.byType(TextFormField).at(1), '5000000');
+    await tester.tap(find.text('Tạo cơ hội'));
+    await tester.pumpAndSettle();
+
+    expect(api.created.single['pipeline'], 'standard');
+    expect(api.created.single['opportunity_stage'], 'new');
+  });
 }
 
 typedef _Call = ({String? stageCode, String? pipeline, bool mine, int page});
@@ -102,6 +160,13 @@ class _FakeApi extends OpportunitiesApi {
   int total = 3;
   final calls = <_Call>[];
   final summaryMine = <bool>[];
+  final created = <Map<String, dynamic>>[];
+
+  @override
+  Future<Opportunity> create(Opportunity draft) async {
+    created.add(draft.toPayload());
+    return Opportunity.fromJson({...draft.toPayload(), 'id': 'new1'});
+  }
 
   @override
   Future<PipelineCatalog> pipelines() async => PipelineCatalog.fromJson({

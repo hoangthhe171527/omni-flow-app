@@ -57,7 +57,7 @@ void main() {
     });
 
     test(
-      'giai đoạn tuỳ biến giữ cột riêng, không dồn vào "Mới"; mã cũ chữ hoa cộng dồn',
+      'giai đoạn tuỳ biến giữ cột riêng; mã cũ chữ hoa KHÔNG dồn vào cột chữ thường',
       () {
         final summary = PipelineSummary.fromJson({
           'total_count': 4,
@@ -65,11 +65,14 @@ void main() {
           'count_by_stage': {'new': 1, 'LEAD': 1, 'demo_sp': 1, 'won': 1},
         });
         final standard = PipelineCatalog.legacy.defaultPipeline;
-        expect(summary.totalFor('new').count, 2);
-        expect(summary.totalFor('new').value, 150);
+        // Cột "Mới" lọc đúng `opportunity_stage=new` ở máy chủ: số trên viên
+        // phải bằng số dòng cột hiện, nên `LEAD` không được cộng vào.
+        expect(summary.totalFor('new').count, 1);
+        expect(summary.totalFor('LEAD').count, 1);
+        expect(summary.totalFor('new').value, 100);
         expect(summary.totalFor('demo_sp').value, 999);
         expect(summary.totalFor('won').value, 70);
-        expect(summary.openValue(standard), 150);
+        expect(summary.openValue(standard), 100);
       },
     );
 
