@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../../../core/domain/channel.dart';
 import '../../../core/utils/formatters.dart';
 import '../../../design/components/components.dart';
 import '../../../design/tokens/tokens.dart';
@@ -85,7 +86,6 @@ class CustomerDetailPage extends ConsumerWidget {
                         child: OmniStatTile(
                           label: 'Nguồn',
                           value: data.source.meta.short,
-                          tone: data.source.meta.color,
                         ),
                       ),
                       const SizedBox(width: OmniSpacing.sm),
@@ -180,9 +180,11 @@ class _Header extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     final badge = customerStatusBadge(customer.status, large: true);
 
+    // `SMCustomerDetail.dc.html`: avatar trung tính 56, tên 20/600, VIP là
+    // chip hổ phách bo 4 có icon sao.
     return Row(
       children: [
-        OmniAvatar(name: customer.name, size: 64),
+        OmniAvatar(name: customer.name, size: 56),
         const SizedBox(width: 14),
         Expanded(
           child: Column(
@@ -190,11 +192,7 @@ class _Header extends StatelessWidget {
             children: [
               Text(
                 customer.name,
-                style: OmniType.title.copyWith(
-                  fontWeight: FontWeight.w800,
-                  letterSpacing: -0.22,
-                  color: scheme.onSurface,
-                ),
+                style: OmniType.title.copyWith(color: scheme.onSurface),
               ),
               const SizedBox(height: 6),
               Row(
@@ -203,9 +201,9 @@ class _Header extends StatelessWidget {
                   if (customer.code.isNotEmpty)
                     Text(
                       customer.code,
-                      style: OmniType.micro.copyWith(
-                        fontWeight: FontWeight.w400,
+                      style: OmniType.caption.copyWith(
                         color: scheme.onSurfaceVariant,
+                        fontFeatures: OmniType.tabular,
                       ),
                     ),
                 ],
@@ -231,7 +229,6 @@ class _QuickActions extends StatelessWidget {
           child: _ActionTile(
             icon: Icons.call_outlined,
             label: 'Gọi',
-            tone: OmniTone.success,
             enabled: customer.hasPhone,
             onTap: () => launchUrl(Uri.parse('tel:${customer.phone}')),
           ),
@@ -241,7 +238,8 @@ class _QuickActions extends StatelessWidget {
           child: _ActionTile(
             icon: Icons.chat_bubble_outline_rounded,
             label: 'Nhắn Zalo',
-            tone: OmniTone.info,
+            // Zalo giữ màu thương hiệu của nó — chỉ ở icon, không ở nền.
+            iconColor: Channel.zalo.meta.color,
             enabled: customer.hasPhone,
             onTap: () => launchUrl(
               Uri.parse('https://zalo.me/${customer.phone}'),
@@ -254,7 +252,6 @@ class _QuickActions extends StatelessWidget {
           child: _ActionTile(
             icon: Icons.trending_up_rounded,
             label: 'Tạo cơ hội',
-            tone: OmniTone.neutral,
             onTap: () => context.pushNamed(
               OpportunityRoutes.create,
               queryParameters: {'customer': customer.id},
@@ -266,50 +263,56 @@ class _QuickActions extends StatelessWidget {
   }
 }
 
-/// Ô hành động tô màu theo giọng: gọi mòng két, nhắn xanh dương, tạo cơ hội
-/// xám. Ô tắt (khách chưa có số) mờ đi chứ không biến mất.
+/// Ba nút nhanh CÙNG một kiểu: nền trắng, viền #C9D2DE, icon màu chính, chữ
+/// mực. Bản cũ tô ba nền khác nhau (teal nhạt, xanh nhạt, xám) — ba giọng
+/// màu cho ba nút ngang hàng. Ô tắt (khách chưa có số) mờ đi chứ không biến
+/// mất.
 class _ActionTile extends StatelessWidget {
   const _ActionTile({
     required this.icon,
     required this.label,
-    required this.tone,
     required this.onTap,
+    this.iconColor,
     this.enabled = true,
   });
 
   final IconData icon;
   final String label;
-  final OmniTone tone;
   final VoidCallback onTap;
+  final Color? iconColor;
   final bool enabled;
 
   @override
   Widget build(BuildContext context) {
-    var (foreground, background) = tone.of(context);
-    if (tone == OmniTone.neutral) {
-      foreground = Theme.of(context).colorScheme.onSurface;
-    }
+    final scheme = Theme.of(context).colorScheme;
 
     return Opacity(
       opacity: enabled ? 1 : 0.45,
       child: Material(
-        color: background,
-        borderRadius: OmniRadius.lgAll,
+        color: scheme.surface,
+        shape: RoundedRectangleBorder(
+          borderRadius: OmniRadius.mdAll,
+          side: BorderSide(color: OmniColors.controlBorderOf(context)),
+        ),
+        clipBehavior: Clip.antiAlias,
         child: InkWell(
           onTap: enabled ? onTap : null,
-          borderRadius: OmniRadius.lgAll,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 12),
+          child: SizedBox(
+            height: 64,
             child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(icon, size: OmniIconSize.lg, color: foreground),
-                const SizedBox(height: 6),
+                Icon(
+                  icon,
+                  size: OmniIconSize.lg,
+                  color: iconColor ?? scheme.primary,
+                ),
+                const SizedBox(height: 4),
                 Text(
                   label,
-                  style: OmniType.caption.copyWith(
-                    fontWeight: FontWeight.w700,
-                    color: foreground,
-                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: OmniType.chip.copyWith(color: scheme.onSurface),
                 ),
               ],
             ),
@@ -320,7 +323,7 @@ class _ActionTile extends StatelessWidget {
   }
 }
 
-/// Nhãn khách: viên trắng viền mảnh bo 8.
+/// Nhãn khách: ô trắng viền #C9D2DE bo 6, cao 30.
 class _Label extends StatelessWidget {
   const _Label(this.text);
 
@@ -331,16 +334,17 @@ class _Label extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      constraints: const BoxConstraints(minHeight: 30),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
         color: scheme.surface,
         borderRadius: OmniRadius.chipAll,
-        border: Border.all(color: scheme.outlineVariant),
+        border: Border.all(color: OmniColors.controlBorderOf(context)),
       ),
       child: Text(
         text,
-        style: OmniType.caption.copyWith(
-          fontWeight: FontWeight.w600,
+        style: OmniType.chip.copyWith(
+          fontWeight: FontWeight.w400,
           color: scheme.onSurface,
         ),
       ),
@@ -348,7 +352,8 @@ class _Label extends StatelessWidget {
   }
 }
 
-/// Ghi chú về khách: nền vàng giấy như ghi chú nội bộ ở hộp thư.
+/// Ghi chú về khách: thẻ trắng như mọi nhóm khác trên màn. Nền vàng giấy nhớ
+/// là trang trí — và vàng trong app chỉ được nói "có cái mới".
 class _Note extends StatelessWidget {
   const _Note({required this.text});
 
@@ -356,25 +361,15 @@ class _Note extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final dark = Theme.of(context).brightness == Brightness.dark;
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-      decoration: BoxDecoration(
-        color: dark ? OmniColors.darkWarningSoft : OmniColors.noteSurface,
-        borderRadius: OmniRadius.xlAll,
-        border: Border.all(
-          color: dark
-              ? OmniColors.warningTextDark.withValues(alpha: 0.4)
-              : OmniColors.noteBorder,
-        ),
-      ),
-      child: Text(
-        text,
-        style: OmniType.bodyStrong.copyWith(
-          fontWeight: FontWeight.w400,
-          height: 22 / 15,
-          color: Theme.of(context).colorScheme.onSurface,
+    return OmniCard(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      child: SizedBox(
+        width: double.infinity,
+        child: Text(
+          text,
+          style: OmniType.body.copyWith(
+            color: Theme.of(context).colorScheme.onSurface,
+          ),
         ),
       ),
     );

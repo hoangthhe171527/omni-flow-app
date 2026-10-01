@@ -90,7 +90,7 @@ class NoAccessView extends StatelessWidget {
                     'Bạn không có quyền xem mục này',
                     textAlign: TextAlign.center,
                     style: OmniType.title.copyWith(
-                      fontWeight: FontWeight.w800,
+                      fontWeight: FontWeight.w600,
                       color: scheme.onSurface,
                     ),
                   ),
@@ -101,7 +101,7 @@ class NoAccessView extends StatelessWidget {
                         const TextSpan(text: 'Cần quyền '),
                         TextSpan(
                           text: permissions,
-                          style: const TextStyle(fontWeight: FontWeight.w700),
+                          style: const TextStyle(fontWeight: FontWeight.w600),
                         ),
                         const TextSpan(
                           text: '. Liên hệ quản trị viên để được cấp quyền.',

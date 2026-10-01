@@ -117,7 +117,7 @@ class KpiCard extends StatelessWidget {
                   '${kpi.delivered}',
                   style: OmniType.moneyHero.copyWith(
                     fontSize: OmniType.moneyHero.fontSize! * 52 / 28,
-                    fontWeight: FontWeight.w800,
+                    fontWeight: FontWeight.w600,
                     height: 1,
                     letterSpacing: -1.5,
                     color: scheme.primary,
@@ -148,7 +148,7 @@ class KpiCard extends StatelessWidget {
                     child: Text(
                       'Đã đạt ${kpi.reachedBonus} triệu',
                       style: OmniType.micro.copyWith(
-                        fontWeight: FontWeight.w800,
+                        fontWeight: FontWeight.w600,
                         color: OmniColors.sunForeground,
                       ),
                     ),
@@ -409,7 +409,7 @@ class _Shell extends StatelessWidget {
       clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
         color: dark ? OmniColors.darkMuted : OmniColors.ink,
-        borderRadius: const BorderRadius.all(Radius.circular(22)),
+        borderRadius: OmniRadius.xlAll,
       ),
       child: Stack(
         children: [

@@ -90,7 +90,7 @@ class PinTabsPage extends ConsumerWidget {
               style: TextButton.styleFrom(
                 minimumSize: const Size.fromHeight(48),
                 textStyle: OmniType.bodyStrong.copyWith(
-                  fontWeight: FontWeight.w700,
+                  fontWeight: FontWeight.w600,
                 ),
               ),
               child: const Text('Đặt lại về mặc định'),
@@ -177,7 +177,7 @@ class _Chip extends StatelessWidget {
     required this.label,
     required this.foreground,
     this.background,
-    this.weight = FontWeight.w700,
+    this.weight = FontWeight.w600,
   });
 
   final String label;

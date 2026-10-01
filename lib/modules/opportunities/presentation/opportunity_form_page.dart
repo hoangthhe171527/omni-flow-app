@@ -391,7 +391,7 @@ class _PickerBox extends StatelessWidget {
                     overflow: TextOverflow.ellipsis,
                     style: OmniType.input.copyWith(
                       fontWeight: strong && !placeholder
-                          ? FontWeight.w700
+                          ? FontWeight.w600
                           : FontWeight.w400,
                       color: placeholder
                           ? scheme.onSurfaceVariant

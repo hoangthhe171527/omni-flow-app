@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:omni_app/design/tokens/omni_colors.dart';
@@ -25,6 +27,7 @@ void main() {
     'micro': OmniType.micro,
     'input': OmniType.input,
     'listTitle': OmniType.listTitle,
+    'chip': OmniType.chip,
     'money': OmniType.money,
     'moneyHero': OmniType.moneyHero,
   };
@@ -58,5 +61,39 @@ void main() {
     // dòng phụ và dòng chính của một thẻ trông như nhau.
     expect(OmniType.micro.fontSize!, lessThan(OmniType.caption.fontSize!));
     expect(OmniType.caption.fontSize!, lessThan(OmniType.body.fontSize!));
+  });
+
+  // Tiếng Việt xếp dấu cả trên lẫn dưới thân chữ: dòng khít hơn 1,4 thì dấu
+  // của dòng dưới chạm chân dòng trên (`SFonts.dc.html`).
+  for (final entry in scale.entries) {
+    test('${entry.key}: khoảng dòng ≥ 1,4', () {
+      expect(entry.value.height, greaterThanOrEqualTo(1.4));
+    });
+  }
+
+  // App chỉ đóng gói Inter 400/500/600. Xin 700 hay 800 là để máy tự chọn
+  // bản gần nhất hoặc tô đậm giả — chữ đậm không đều giữa các máy.
+  test('không chữ nào trong lib/ đậm hơn 600 (trừ chữ thương hiệu)', () {
+    final heavy = <String>[];
+    for (final entity in Directory('lib').listSync(recursive: true)) {
+      if (entity is! File || !entity.path.endsWith('.dart')) continue;
+      final lines = entity.readAsLinesSync();
+      for (var i = 0; i < lines.length; i++) {
+        if (RegExp(r'FontWeight\.(w[789]00|bold)').hasMatch(lines[i])) {
+          heavy.add('${entity.path.replaceAll(r'\', '/')}:${i + 1}');
+        }
+      }
+    }
+
+    expect(heavy, [
+      // `OmniType.wordmark` — Be Vietnam Pro 800, chỉ cho chữ "OmniCRM".
+      'lib/design/tokens/omni_typography.dart:56',
+    ]);
+  });
+
+  test('font giao diện là Inter, chữ thương hiệu giữ Be Vietnam Pro', () {
+    expect(OmniType.family, 'Inter');
+    expect(OmniType.body.fontFamily, 'Inter');
+    expect(OmniType.wordmark.fontFamily, 'Be Vietnam Pro');
   });
 }

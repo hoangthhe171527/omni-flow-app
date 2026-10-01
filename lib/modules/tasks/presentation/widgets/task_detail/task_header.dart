@@ -1,15 +1,15 @@
 import 'package:flutter/material.dart';
 
+import '../../../../../design/components/omni_tabs.dart';
 import '../../../../../design/tokens/tokens.dart';
 import '../../../domain/task.dart';
 import '../due_chip.dart';
 import 'task_chip.dart';
 
 /// Đầu màn chi tiết: dự án, tên việc, dải dữ kiện, và tiến độ.
-/// 22/30 ExtraBold — tiêu đề của màn chi tiết trong bộ Orbit.
+/// 20/28 SemiBold — tiêu đề của màn chi tiết (đề xuất "Chuẩn hoá phong cách").
 final _titleStyle = OmniType.title.copyWith(
-  fontWeight: FontWeight.w800,
-  height: 30 / 22,
+  fontWeight: FontWeight.w600,
   letterSpacing: -0.22,
 );
 
@@ -148,19 +148,8 @@ class _Progress extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 6),
-          ClipRRect(
-            borderRadius: OmniRadius.pillAll,
-            child: LinearProgressIndicator(
-              value: task.progress,
-              minHeight: 8,
-              backgroundColor: scheme.outlineVariant,
-              // Xong hay chưa đọc qua CON SỐ và độ dài thanh, không qua sắc
-              // màu; quỹ đạo sáng là màu đồ hoạ của bộ Orbit.
-              valueColor: AlwaysStoppedAnimation(
-                dark ? scheme.primary : OmniColors.orbit,
-              ),
-            ),
-          ),
+          // Xong hay chưa đọc qua CON SỐ và độ dài thanh, không qua sắc màu.
+          OmniProgressBar(value: task.progress),
         ],
       ),
     );

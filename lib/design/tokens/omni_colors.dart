@@ -79,6 +79,15 @@ abstract final class OmniColors {
   /// Vạch ngăn giữa các dòng BÊN TRONG một thẻ — nhạt hơn [border] một chút.
   static const divider = Color(0xFFEEF1F5);
 
+  /// Viền của nút phụ và ô chọn chưa chọn trong biểu mẫu (#C9D2DE,
+  /// `SPrinciples.dc.html` §5). Đậm hơn [border] để đọc ra là bấm được, nhạt
+  /// hơn [borderInteractive] — viền ô NHẬP mới phải đạt 3:1.
+  static const controlBorder = Color(0xFFC9D2DE);
+
+  /// [controlBorder] theo chế độ đang bật.
+  static Color controlBorderOf(BuildContext context) =>
+      _byBrightness(context, controlBorder, darkBorderInteractive);
+
   /// Ranh giới của thành phần TƯƠNG TÁC: ô nhập, nút viền, chip chưa chọn.
   ///
   /// Thiết kế ghi #8A97AB, nhưng giá trị đó chỉ đạt 2.96:1 trên thẻ và 2.76:1
@@ -253,21 +262,14 @@ abstract final class OmniColors {
   static Color chat(BuildContext context, Color light, Color dark) =>
       Theme.of(context).brightness == Brightness.dark ? dark : light;
 
-  /// Deterministic avatar tint from a name, so the same person keeps the same
-  /// colour on every screen.
-  static const avatarPalette = <Color>[
-    Color(0xFF4338CA),
-    Color(0xFF0EA5E9),
-    Color(0xFF10B981),
-    Color(0xFFEC4899),
-    Color(0xFFF59E0B),
-    Color(0xFF8B5CF6),
-    Color(0xFF14B8A6),
-  ];
+  /// Avatar chữ tắt: nền xám trung tính, chữ cấp 2 (đo trong contrast_test).
+  ///
+  /// Không tô màu theo tên nữa. Bảy màu đậm cho bảy người là trang trí — màu
+  /// trong app chỉ được nói trạng thái và hành động chính. Có ảnh thì dùng ảnh.
+  static const avatarSurface = border;
+  static const avatarForeground = secondaryForeground;
 
-  static Color avatarFor(String seed) {
-    if (seed.isEmpty) return avatarPalette.first;
-    final hash = seed.codeUnits.fold<int>(0, (sum, unit) => sum + unit);
-    return avatarPalette[hash % avatarPalette.length];
-  }
+  /// Bản tối: nền nâng một bậc, chữ phụ sáng.
+  static const darkAvatarSurface = darkMuted;
+  static const darkAvatarForeground = darkMutedForeground;
 }

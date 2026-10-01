@@ -72,7 +72,7 @@ class _EditSectionsPageState extends ConsumerState<EditSectionsPage> {
                     borderRadius: OmniRadius.smAll,
                   ),
                   textStyle: OmniType.body.copyWith(
-                    fontWeight: FontWeight.w700,
+                    fontWeight: FontWeight.w600,
                   ),
                 ),
                 child: _saving

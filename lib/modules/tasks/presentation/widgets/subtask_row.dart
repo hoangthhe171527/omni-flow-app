@@ -147,7 +147,7 @@ class SubtaskRow extends StatelessWidget {
                                   borderRadius: OmniRadius.xsAll,
                                 ),
                                 textStyle: OmniType.caption.copyWith(
-                                  fontWeight: FontWeight.w700,
+                                  fontWeight: FontWeight.w600,
                                 ),
                               ),
                               icon: const Icon(

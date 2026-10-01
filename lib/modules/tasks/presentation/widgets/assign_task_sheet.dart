@@ -56,7 +56,7 @@ class _AssignTaskSheetState extends ConsumerState<_AssignTaskSheet> {
           ),
           child: Text(
             'Ai làm việc này',
-            style: text.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+            style: text.titleMedium?.copyWith(fontWeight: FontWeight.w600),
           ),
         ),
         Padding(

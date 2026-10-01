@@ -158,7 +158,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                           onPressed: state.submitting ? null : _submit,
                           style: FilledButton.styleFrom(
                             textStyle: OmniType.input.copyWith(
-                              fontWeight: FontWeight.w700,
+                              fontWeight: FontWeight.w600,
                             ),
                           ),
                           child: state.submitting

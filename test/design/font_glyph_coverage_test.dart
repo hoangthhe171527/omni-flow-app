@@ -3,7 +3,7 @@ import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
 
-/// Mọi ký tự ngoài ASCII trong mã UI phải có glyph trong Be Vietnam Pro.
+/// Mọi ký tự ngoài ASCII trong mã UI phải có glyph trong Inter, font của app.
 ///
 /// Font không có glyph thì máy tự rơi về font dự phòng của hệ điều hành —
 /// mỗi máy một kiểu, và có máy ra ô trống. "→" từng lọt vào thẻ việc theo
@@ -11,7 +11,7 @@ import 'package:flutter_test/flutter_test.dart';
 /// hệ thống, và bảng chọn emoji cố ý dùng nó.
 void main() {
   test('không ký tự nào trong lib/ thiếu glyph trong font của app', () {
-    final have = _cmap('assets/fonts/BeVietnamPro-Regular.ttf');
+    final have = _cmap('assets/fonts/Inter-Regular.ttf');
     final missing = <String>[];
 
     for (final entity in Directory('lib').listSync(recursive: true)) {
@@ -37,17 +37,18 @@ void main() {
       missing,
       isEmpty,
       reason:
-          'Ký tự không có trong Be Vietnam Pro:\n${missing.join('\n')}\n'
+          'Ký tự không có trong Inter:\n${missing.join('\n')}\n'
           'Dùng icon Material (vd. Icons.arrow_forward_rounded) hoặc ký tự có '
           'sẵn trong font (›, ·, —).',
     );
   });
 
-  test('bộ đọc cmap đọc đúng: chữ Việt có, "→" không', () {
-    final have = _cmap('assets/fonts/BeVietnamPro-Regular.ttf');
+  test('bộ đọc cmap đọc đúng: chữ Việt có, emoji không', () {
+    final have = _cmap('assets/fonts/Inter-Regular.ttf');
 
     expect(have.containsAll('ệữđ₫·›—…'.runes), isTrue);
-    expect(have.contains(0x2192), isFalse);
+    // Emoji luôn cần font emoji của hệ thống — không font chữ nào có.
+    expect(have.contains(0x1F600), isFalse);
   });
 }
 

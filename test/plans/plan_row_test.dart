@@ -1,14 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:omni_app/design/theme/omni_theme.dart';
+import 'package:omni_app/design/tokens/tokens.dart';
 import 'package:omni_app/modules/plans/domain/plan.dart';
 import 'package:omni_app/modules/plans/presentation/widgets/plan_row.dart';
 
-/// Nền dự án là một KHỐI ĐẦU THẺ mang tên dự án, không phải một vạch 6dp.
+/// Thẻ dự án trong danh sách (`SMProjectsTasks.dc.html`, nửa "Đề xuất").
 ///
-/// Bản đầu vẽ nền thành dải mỏng ngay trên thanh tiến độ — cùng bề dày, cùng
-/// bo góc — và trong ảnh chụp nó đọc như một thanh tiến độ thứ hai màu tím.
-/// Nền chỉ có nghĩa khi nó ÔM tên dự án, đúng như ô xem trước lúc tạo.
+/// Định danh dự án là một Ô VUÔNG màu nền dự án cạnh tên — không còn đầu thẻ
+/// tô gradient 64px với vòng quỹ đạo. Trong màn làm việc, khối màu đậm là
+/// trang trí; ô vuông vẫn giữ được "dự án nào màu nào" mà không chiếm chỗ.
 void main() {
   final plan = Plan.fromJson(const {
     'id': 'p1',
@@ -26,49 +27,58 @@ void main() {
     home: Scaffold(
       body: Padding(
         padding: const EdgeInsets.all(16),
-        child: PlanRow(plan: p),
+        child: PlanRow(plan: p, onTap: () {}),
       ),
     ),
   );
 
-  /// Khối duy nhất trong thẻ mang gradient nền.
-  Finder coverBlock() => find.byWidgetPredicate(
+  Finder gradients() => find.byWidgetPredicate(
     (w) =>
         w is Container &&
         w.decoration is BoxDecoration &&
         (w.decoration as BoxDecoration).gradient != null,
   );
 
-  testWidgets('tên dự án nằm TRONG khối nền, chữ trắng', (tester) async {
-    await tester.pumpWidget(host(plan));
-
-    expect(coverBlock(), findsOneWidget);
-    expect(
-      find.descendant(of: coverBlock(), matching: find.text('Đàn cơ')),
-      findsOneWidget,
-      reason: 'nền không ôm tên thì chỉ là một vạch màu vô nghĩa',
-    );
-
-    final name = tester.widget<Text>(find.text('Đàn cơ'));
-    expect(name.style?.color, Colors.white);
-  });
-
-  testWidgets('khối nền là đầu thẻ: chạm mép, cao ≥ 56dp, trên thanh tiến độ', (
+  testWidgets('không còn đầu thẻ gradient; ô vuông mang màu nền dự án', (
     tester,
   ) async {
     await tester.pumpWidget(host(plan));
 
-    final cover = tester.getRect(coverBlock());
-    final card = tester.getRect(find.byType(PlanRow));
-    final bar = tester.getRect(find.byType(LinearProgressIndicator));
+    expect(gradients(), findsNothing);
+    final swatch = tester.widget<PlanSwatch>(find.byType(PlanSwatch));
+    expect(swatch.cover, 'plum-1');
+    expect(
+      tester.getSize(find.byType(PlanSwatch)).width,
+      lessThanOrEqualTo(10),
+    );
 
-    // Một vạch 6dp có đệm quanh là thứ vừa bị bỏ. Khối đầu thẻ phải chạm ba
-    // mép trên của thẻ (trừ nét viền 1dp) và đủ cao để chứa một dòng tên.
-    expect(cover.height, greaterThanOrEqualTo(56));
-    expect(cover.top, closeTo(card.top, 1.5));
-    expect(cover.left, closeTo(card.left, 1.5));
-    expect(cover.width, closeTo(card.width, 3));
-    expect(bar.top, greaterThan(cover.bottom));
+    final box =
+        tester
+                .widget<Container>(
+                  find.descendant(
+                    of: find.byType(PlanSwatch),
+                    matching: find.byType(Container),
+                  ),
+                )
+                .decoration!
+            as BoxDecoration;
+    expect(box.color, OmniCovers.colorOf('plum-1'));
+  });
+
+  testWidgets('tên chữ mực, ô vuông đứng trước tên, tiến độ dưới tên', (
+    tester,
+  ) async {
+    await tester.pumpWidget(host(plan));
+
+    final name = tester.widget<Text>(find.text('Đàn cơ'));
+    expect(name.style?.color, OmniColors.foreground);
+
+    final swatch = tester.getRect(find.byType(PlanSwatch));
+    final title = tester.getRect(find.text('Đàn cơ'));
+    final bar = tester.getRect(find.byType(LinearProgressIndicator));
+    expect(swatch.right, lessThan(title.left));
+    expect(bar.top, greaterThan(title.bottom));
+    expect(bar.height, 4);
   });
 
   testWidgets('ba con số của quản đốc vẫn còn', (tester) async {
@@ -79,20 +89,15 @@ void main() {
     expect(find.text('Trễ 2'), findsOneWidget);
   });
 
-  testWidgets('dự án tạo trước tính năng (cover null) vẫn có khối đầu', (
+  testWidgets('dự án tạo trước tính năng (cover null) vẫn có ô vuông', (
     tester,
   ) async {
-    // Gần như mọi dự án trong cơ sở dữ liệu hôm nay. Không có khối đầu thì
-    // danh sách là hai kiểu thẻ lẫn nhau.
     await tester.pumpWidget(
       host(Plan.fromJson(const {'id': 'p0', 'name': 'Dự án cũ'})),
     );
 
-    expect(coverBlock(), findsOneWidget);
-    expect(
-      find.descendant(of: coverBlock(), matching: find.text('Dự án cũ')),
-      findsOneWidget,
-    );
+    expect(find.byType(PlanSwatch), findsOneWidget);
+    expect(OmniCovers.colorOf(null), OmniCovers.colorOf(OmniCovers.fallback));
     expect(find.text('Chưa có việc nào'), findsOneWidget);
   });
 }

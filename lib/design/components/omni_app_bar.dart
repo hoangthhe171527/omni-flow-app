@@ -97,7 +97,7 @@ class OmniAppBar extends StatelessWidget implements PreferredSizeWidget {
         ? OmniAccountSlot.maybeOf(context)
         : null;
 
-    // Màn gốc của tab dùng tiêu đề LỚN (26/800) canh trái, như mọi màn gốc
+    // Màn gốc của tab dùng tiêu đề LỚN (24/600) canh trái, như mọi màn gốc
     // trong bộ Orbit; màn đẩy vào giữ tiêu đề thường của theme.
     final scheme = Theme.of(context).colorScheme;
 

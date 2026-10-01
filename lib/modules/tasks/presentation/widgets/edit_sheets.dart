@@ -43,7 +43,7 @@ Future<String?> showPrioritySheet({
             'Mức ưu tiên',
             style: Theme.of(
               context,
-            ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+            ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
           ),
         ),
         for (final entry in kPriorities.entries)
@@ -151,7 +151,7 @@ Future<SubtaskAction?> showSubtaskActionSheet({
             title,
             style: Theme.of(
               context,
-            ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+            ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
           ),
@@ -255,7 +255,7 @@ class _TextEditSheetState extends State<_TextEditSheet> {
               widget.title,
               style: Theme.of(
                 context,
-              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
             ),
             const SizedBox(height: OmniSpacing.md),
             TextField(

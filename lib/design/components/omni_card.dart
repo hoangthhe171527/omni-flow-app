@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 
 import '../tokens/tokens.dart';
 
-/// The single surface primitive. Hairline border, near-invisible shadow —
-/// hierarchy comes from spacing, not elevation.
+/// The single surface primitive: white, a hairline E3E8EF border, radius 10,
+/// NO shadow — hierarchy comes from spacing and borders, not elevation.
 class OmniCard extends StatelessWidget {
   const OmniCard({
     super.key,
@@ -90,13 +90,10 @@ class OmniSectionHeader extends StatelessWidget {
         children: [
           Expanded(
             child: Text(
-              title.toUpperCase(),
-              // 12/700, giãn chữ .08em — nhãn nhóm của mọi màn trong bộ Orbit.
-              style: OmniType.overline.copyWith(
-                fontWeight: FontWeight.w700,
-                letterSpacing: 0.96,
-                color: scheme.onSurfaceVariant,
-              ),
+              title,
+              // 13/600 chữ phụ, viết thường — tiêu đề nhóm của đề xuất "Chuẩn
+              // hoá phong cách". IN HOA giãn chữ đọc ra chất tài liệu.
+              style: OmniType.overline.copyWith(color: scheme.onSurfaceVariant),
             ),
           ),
           if (action != null)
@@ -124,7 +121,8 @@ class OmniSectionHeader extends StatelessWidget {
 }
 
 /// One KPI tile — pipeline value, open opportunities, conversation count.
-/// Ô số liệu nhỏ: nhãn 12 chữ phụ, số 17/700 (`MCustomerDetail.dc.html`).
+/// Ô số liệu nhỏ: nhãn 13 chữ phụ, số 16/600 màu chữ chính
+/// (`SMCustomerDetail.dc.html`). Màu kênh hay màu trạng thái không vào số.
 class OmniStatTile extends StatelessWidget {
   const OmniStatTile({
     super.key,
@@ -144,7 +142,7 @@ class OmniStatTile extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
 
     return OmniCard(
-      padding: const EdgeInsets.all(OmniSpacing.md),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
@@ -153,17 +151,17 @@ class OmniStatTile extends StatelessWidget {
             label,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: OmniType.micro.copyWith(
-              fontWeight: FontWeight.w400,
-              color: scheme.onSurfaceVariant,
-            ),
+            style: OmniType.caption.copyWith(color: scheme.onSurfaceVariant),
           ),
           const SizedBox(height: 2),
           Text(
             value,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: OmniType.money.copyWith(color: tone ?? scheme.onSurface),
+            style: OmniType.section.copyWith(
+              color: tone ?? scheme.onSurface,
+              fontFeatures: OmniType.tabular,
+            ),
           ),
           if (caption != null) ...[
             const SizedBox(height: 2),
@@ -234,7 +232,7 @@ class OmniDetailRow extends StatelessWidget {
     return InkWell(
       onTap: onTap,
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -246,21 +244,17 @@ class OmniDetailRow extends StatelessWidget {
               width: 110,
               child: Text(
                 label,
-                style: OmniType.bodyStrong.copyWith(
-                  fontWeight: FontWeight.w400,
-                  color: scheme.onSurfaceVariant,
-                ),
+                style: OmniType.body.copyWith(color: scheme.onSurfaceVariant),
               ),
             ),
             Expanded(
               child: Text(
                 value,
-                style: OmniType.bodyStrong.copyWith(
-                  height: 21 / 15,
+                style: OmniType.body.copyWith(
                   color:
                       valueColor ?? (link ? scheme.primary : scheme.onSurface),
                   fontWeight: link || strong
-                      ? FontWeight.w600
+                      ? FontWeight.w500
                       : FontWeight.w400,
                 ),
               ),

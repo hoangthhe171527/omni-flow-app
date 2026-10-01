@@ -898,9 +898,10 @@ class _OpportunityStrip extends ConsumerWidget {
                 ),
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-            decoration: const BoxDecoration(
+            decoration: BoxDecoration(
               borderRadius: OmniRadius.mdAll,
-              boxShadow: OmniShadows.hairline,
+              // Viền thay bóng: thẻ nằm yên trên nền chat, không nổi.
+              border: Border.all(color: scheme.outlineVariant),
             ),
             child: Row(
               children: [
@@ -927,7 +928,7 @@ class _OpportunityStrip extends ConsumerWidget {
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: OmniType.caption.copyWith(
-                          fontWeight: FontWeight.w700,
+                          fontWeight: FontWeight.w600,
                           color: scheme.onSurface,
                           fontFeatures: OmniType.tabular,
                         ),

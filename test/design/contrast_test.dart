@@ -18,6 +18,26 @@ void main() {
   const ui = 3.0;
 
   final pairs = <_Pair>[
+    // ---- Avatar chữ tắt: trung tính ở cả hai chế độ ----
+    (
+      what: 'chữ avatar / nền avatar',
+      fg: OmniColors.avatarForeground,
+      bg: OmniColors.avatarSurface,
+      min: t,
+    ),
+    (
+      what: 'chữ avatar / nền avatar (tối)',
+      fg: OmniColors.darkAvatarForeground,
+      bg: OmniColors.darkAvatarSurface,
+      min: t,
+    ),
+    // Số đếm trong chip lọc đang chọn (khối mực).
+    (
+      what: 'số chip chọn / mực',
+      fg: OmniColors.inkMutedForeground,
+      bg: OmniColors.ink,
+      min: t,
+    ),
     // ---- Sáng: chữ trên các bề mặt ----
     (
       what: 'chữ chính / nền',

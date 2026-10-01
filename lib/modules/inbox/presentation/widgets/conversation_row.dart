@@ -111,7 +111,7 @@ class ConversationRow extends StatelessWidget {
                   // separable without staring — and it keeps them apart for
                   // anyone who cannot rely on the accent wash.
                   color: unread ? scheme.onSurface : _readName(context),
-                  fontWeight: unread ? FontWeight.w700 : FontWeight.w500,
+                  fontWeight: unread ? FontWeight.w600 : FontWeight.w400,
                 ),
               ),
             ),
@@ -123,7 +123,7 @@ class ConversationRow extends StatelessWidget {
                     ? OmniColors.dangerTextOf(context)
                     : scheme.onSurfaceVariant,
                 fontWeight: overdue || unread
-                    ? FontWeight.w700
+                    ? FontWeight.w600
                     : FontWeight.w400,
                 fontFeatures: OmniType.tabular,
               ),
@@ -160,13 +160,12 @@ class ConversationRow extends StatelessWidget {
                     : conversation.lastMessage,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: OmniType.body.copyWith(
-                  height: 1.25,
+                style: OmniType.chip.copyWith(
                   // An unread preview is full-strength text; a read one drops to
                   // the muted tone, so the two are separable by weight AND by
                   // contrast rather than by weight alone.
                   color: unread ? scheme.onSurface : scheme.onSurfaceVariant,
-                  fontWeight: unread ? FontWeight.w600 : FontWeight.w400,
+                  fontWeight: unread ? FontWeight.w500 : FontWeight.w400,
                 ),
               ),
             ),
@@ -220,17 +219,19 @@ class _SourceLabel extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(meta.icon, size: OmniIconSize.xs, color: meta.color),
-          const SizedBox(width: 4),
           Flexible(
             child: Text(
               label,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
+              // Chữ cấp 2, không màu kênh: màu kênh chỉ còn ở huy hiệu tròn
+              // góc avatar. "FB Page" xanh #1877F2 cỡ 12 chỉ đạt ~4,2:1.
               style: OmniType.micro.copyWith(
-                height: 1.15,
-                fontWeight: FontWeight.w600,
-                color: meta.color,
+                color: OmniColors.byBrightness(
+                  context,
+                  OmniColors.secondaryForeground,
+                  Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
               ),
             ),
           ),

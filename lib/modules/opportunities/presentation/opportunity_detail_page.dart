@@ -68,18 +68,15 @@ class OpportunityDetailPage extends ConsumerWidget {
                   Text(
                     data.title,
                     style: OmniType.title.copyWith(
-                      fontWeight: FontWeight.w800,
-                      height: 30 / 22,
+                      fontWeight: FontWeight.w600,
                       color: scheme.onSurface,
                     ),
                   ),
                   const SizedBox(height: 6),
                   Text(
                     Formatters.vnd(data.value),
-                    style: OmniType.moneyHero.copyWith(
-                      fontWeight: FontWeight.w800,
-                      color: scheme.onPrimaryContainer,
-                    ),
+                    // Số tiền là DỮ LIỆU, chữ mực — màu chính chỉ cho hành động.
+                    style: OmniType.moneyHero.copyWith(color: scheme.onSurface),
                   ),
                   const SizedBox(height: 18),
                   _StageStepper(
@@ -328,9 +325,9 @@ class _StageStepper extends StatelessWidget {
                     textAlign: TextAlign.center,
                     style: OmniType.micro.copyWith(
                       fontWeight: i == currentIndex
-                          ? FontWeight.w800
-                          : i < currentIndex
                           ? FontWeight.w600
+                          : i < currentIndex
+                          ? FontWeight.w500
                           : FontWeight.w400,
                       color: i == currentIndex
                           ? scheme.onPrimaryContainer

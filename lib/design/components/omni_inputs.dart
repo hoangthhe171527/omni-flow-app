@@ -217,7 +217,7 @@ class OmniActionBar extends StatelessWidget {
               OutlinedButtonTheme(
                 data: OutlinedButtonThemeData(
                   style: Theme.of(context).outlinedButtonTheme.style?.copyWith(
-                    minimumSize: const WidgetStatePropertyAll(Size(0, 52)),
+                    minimumSize: const WidgetStatePropertyAll(Size(0, 48)),
                     padding: const WidgetStatePropertyAll(
                       EdgeInsets.symmetric(horizontal: 18),
                     ),

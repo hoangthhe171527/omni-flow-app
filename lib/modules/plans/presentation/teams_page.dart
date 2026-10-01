@@ -148,7 +148,7 @@ class _TeamBlock extends ConsumerWidget {
               child: Text(
                 group.team.name,
                 style: OmniType.section.copyWith(
-                  fontWeight: FontWeight.w700,
+                  fontWeight: FontWeight.w600,
                   color: scheme.onSurface,
                 ),
               ),
@@ -268,7 +268,7 @@ class _DashedBorder extends CustomPainter {
       ..addRRect(
         RRect.fromRectAndRadius(
           (Offset.zero & size).deflate(0.75),
-          const Radius.circular(18),
+          const Radius.circular(OmniRadius.xl),
         ),
       );
     final paint = Paint()

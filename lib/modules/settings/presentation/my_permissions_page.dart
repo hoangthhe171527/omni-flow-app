@@ -35,7 +35,7 @@ class MyPermissionsPage extends ConsumerWidget {
             padding: const EdgeInsets.all(OmniSpacing.lg),
             decoration: BoxDecoration(
               color: dark ? OmniColors.darkMuted : OmniColors.ink,
-              borderRadius: const BorderRadius.all(Radius.circular(18)),
+              borderRadius: OmniRadius.xlAll,
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -56,7 +56,7 @@ class MyPermissionsPage extends ConsumerWidget {
                 Text(
                   'Đang giữ ${held.length} quyền',
                   style: OmniType.caption.copyWith(
-                    fontWeight: FontWeight.w700,
+                    fontWeight: FontWeight.w600,
                     color: OmniColors.orbit,
                     fontFeatures: OmniType.tabular,
                   ),
@@ -78,7 +78,7 @@ class MyPermissionsPage extends ConsumerWidget {
                         child: Text(
                           entry.key,
                           style: OmniType.bodyStrong.copyWith(
-                            fontWeight: FontWeight.w700,
+                            fontWeight: FontWeight.w600,
                             color: scheme.onSurface,
                           ),
                         ),

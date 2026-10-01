@@ -6,7 +6,9 @@ import '../../core/utils/formatters.dart';
 import '../platform/omni_motion_scope.dart';
 import '../tokens/tokens.dart';
 
-/// Circular avatar with a deterministic coloured initials fallback.
+/// Circular avatar with a NEUTRAL initials fallback: grey surface, secondary
+/// text — the same for everyone (`SPrinciples.dc.html` §7). Colour per name
+/// was decoration; colour in this app speaks only of state and primary action.
 ///
 /// Fallback is the norm, not the exception: most Zalo/Facebook contacts reach us
 /// without a usable avatar URL, so initials must look intentional rather than
@@ -31,24 +33,27 @@ class OmniAvatar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = OmniColors.avatarFor(name);
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    final surface = dark
+        ? OmniColors.darkAvatarSurface
+        : OmniColors.avatarSurface;
+    final ink = dark
+        ? OmniColors.darkAvatarForeground
+        : OmniColors.avatarForeground;
     final resolvedImageUrl = resolveAvatarUrl(imageUrl);
     final fallback = Text(
       Formatters.initials(name),
       style: OmniType.micro.copyWith(
-        color: color,
+        color: ink,
         fontSize: size * 0.34,
-        fontWeight: FontWeight.w700,
+        fontWeight: FontWeight.w600,
       ),
     );
     final motion = OmniMotion.of(context);
     final avatar = Container(
       width: size,
       height: size,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        color: color.withValues(alpha: 0.14),
-      ),
+      decoration: BoxDecoration(shape: BoxShape.circle, color: surface),
       alignment: Alignment.center,
       child: resolvedImageUrl != null
           ? ClipOval(

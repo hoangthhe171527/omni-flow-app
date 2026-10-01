@@ -210,11 +210,11 @@ void main() {
     );
   });
 
-  /// Viên của một nhóm việc trên dải, kể cả khi đã cuộn khuất.
+  /// Tab của một nhóm việc trên dải, kể cả khi đã cuộn khuất.
   Finder pill(String section) =>
-      find.widgetWithText(OmniFilterPill, section, skipOffstage: false);
+      find.widgetWithText(OmniTabItem, section, skipOffstage: false);
 
-  /// Số việc hiện TRONG viên của nhóm đó.
+  /// Số việc hiện TRONG tab của nhóm đó.
   Finder countIn(String section, int n) =>
       find.descendant(of: pill(section), matching: find.text('$n'));
 

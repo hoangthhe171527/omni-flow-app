@@ -225,7 +225,7 @@ class _WorkspaceCard extends StatelessWidget {
                       .toString()
                       .toUpperCase(),
                   style: OmniType.body.copyWith(
-                    fontWeight: FontWeight.w800,
+                    fontWeight: FontWeight.w600,
                     letterSpacing: 0.28,
                     color: tone.foreground,
                   ),
@@ -239,7 +239,7 @@ class _WorkspaceCard extends StatelessWidget {
                     Text(
                       tenant.name,
                       style: OmniType.listTitle.copyWith(
-                        fontWeight: FontWeight.w700,
+                        fontWeight: FontWeight.w600,
                         color: scheme.onSurface,
                       ),
                     ),

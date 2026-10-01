@@ -150,7 +150,7 @@ class _Summary extends StatelessWidget {
           padding: const EdgeInsets.all(OmniSpacing.lg),
           decoration: BoxDecoration(
             color: dark ? OmniColors.darkMuted : OmniColors.ink,
-            borderRadius: OmniRadius.xxlAll,
+            borderRadius: OmniRadius.xlAll,
           ),
           child: Row(
             children: [
@@ -217,7 +217,7 @@ class _Figure extends StatelessWidget {
           '$value',
           style: OmniType.moneyHero.copyWith(
             fontSize: OmniType.moneyHero.fontSize! + 4,
-            fontWeight: FontWeight.w800,
+            fontWeight: FontWeight.w600,
             color: color,
           ),
         ),

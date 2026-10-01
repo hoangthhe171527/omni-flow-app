@@ -13,6 +13,7 @@ export 'omni_status_chip.dart';
 export 'omni_pills.dart';
 export 'omni_splash.dart';
 export 'omni_states.dart';
+export 'omni_tabs.dart';
 
 /// Lớp nền tảng đi kèm barrel này: module gọi showOmniConfirm mà không phải
 /// biết iOS hay Android, và cũng không được phép biết — xem

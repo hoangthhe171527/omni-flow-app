@@ -151,9 +151,14 @@ class _ShellNavigationRail extends ConsumerWidget {
       labelType: NavigationRailLabelType.all,
       groupAlignment: -0.75,
       backgroundColor: scheme.surface,
-      indicatorColor: scheme.primaryContainer,
+      // Mục đang chọn: nền xám trung tính + chữ mực, icon màu chính — không
+      // còn chữ teal nhỏ trên nền teal nhạt (`SPrinciples.dc.html` §6).
+      indicatorColor: scheme.surfaceContainerHighest,
+      indicatorShape: const RoundedRectangleBorder(
+        borderRadius: OmniRadius.mdAll,
+      ),
       selectedIconTheme: IconThemeData(
-        color: scheme.onPrimaryContainer,
+        color: scheme.primary,
         size: OmniIconSize.xl,
       ),
       unselectedIconTheme: IconThemeData(
@@ -161,8 +166,8 @@ class _ShellNavigationRail extends ConsumerWidget {
         size: OmniIconSize.xl,
       ),
       selectedLabelTextStyle: OmniType.micro.copyWith(
-        color: scheme.onPrimaryContainer,
-        fontWeight: FontWeight.w700,
+        color: scheme.onSurface,
+        fontWeight: FontWeight.w600,
       ),
       unselectedLabelTextStyle: OmniType.micro.copyWith(
         color: scheme.onSurfaceVariant,
@@ -189,8 +194,8 @@ class _ShellNavigationRail extends ConsumerWidget {
   }
 }
 
-/// Thanh dưới theo `MTabBar.dc.html`: nền thẻ, vạch trên mảnh, mục đang chọn
-/// nằm trong viên nhạt 56×30 với icon và chữ màu chính đậm.
+/// Thanh dưới: nền thẻ, vạch trên mảnh; mục đang chọn là icon màu chính, vạch
+/// 2px màu chính ở mép trên và chữ mực đậm (`SMProjectsTasks.dc.html`).
 class _ShellNavBar extends StatelessWidget {
   const _ShellNavBar({
     required this.tabs,
@@ -264,11 +269,10 @@ class _ShellNavItem extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final scheme = Theme.of(context).colorScheme;
-    // #075E59 trên viên #DDF5F2 ở chế độ sáng — cặp primaryContainer của
-    // theme, nên chế độ tối tự có bản của nó.
-    final color = selected
-        ? scheme.onPrimaryContainer
-        : scheme.onSurfaceVariant;
+    // Mục đang chọn: icon màu chính + vạch 2px ở mép trên + chữ mực 600. Không
+    // còn viên nền teal nhạt — nền màu cho một mục điều hướng là trang trí.
+    final iconColor = selected ? scheme.primary : scheme.onSurfaceVariant;
+    final labelColor = selected ? scheme.onSurface : scheme.onSurfaceVariant;
     final badgeProvider = destination?.badge;
     final count = badgeProvider == null ? 0 : ref.watch(badgeProvider);
     final text = destination?.label ?? label!;
@@ -280,50 +284,63 @@ class _ShellNavItem extends ConsumerWidget {
       excludeSemantics: true,
       child: InkWell(
         onTap: onTap,
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
+        child: Stack(
           children: [
-            AnimatedContainer(
-              duration: OmniMotion.of(context).base,
-              curve: OmniCurves.standard,
-              width: 56,
-              height: 30,
-              decoration: BoxDecoration(
-                color: selected ? scheme.primaryContainer : Colors.transparent,
-                borderRadius: OmniRadius.pillAll,
-              ),
-              child: Stack(
-                clipBehavior: Clip.none,
-                alignment: Alignment.center,
-                children: [
-                  Icon(
-                    selected
-                        ? (destination?.selectedIcon ?? selectedIcon!)
-                        : (destination?.icon ?? icon!),
-                    size: 22,
-                    color: color,
-                  ),
-                  if (count > 0)
-                    Positioned(
-                      right: 2,
-                      top: -4,
-                      child: _NavBadge(
-                        count: count,
-                        tone: destination!.badgeTone,
-                      ),
-                    ),
-                ],
+            Positioned(
+              top: 0,
+              left: 0,
+              right: 0,
+              child: FractionallySizedBox(
+                widthFactor: 0.56,
+                child: AnimatedContainer(
+                  duration: OmniMotion.of(context).base,
+                  curve: OmniCurves.standard,
+                  height: 2,
+                  color: selected ? scheme.primary : Colors.transparent,
+                ),
               ),
             ),
-            const SizedBox(height: 3),
-            Text(
-              text,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: OmniType.micro.copyWith(
-                color: color,
-                fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
-                letterSpacing: -0.12,
+            Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  SizedBox(
+                    width: 44,
+                    height: 28,
+                    child: Stack(
+                      clipBehavior: Clip.none,
+                      alignment: Alignment.center,
+                      children: [
+                        Icon(
+                          selected
+                              ? (destination?.selectedIcon ?? selectedIcon!)
+                              : (destination?.icon ?? icon!),
+                          size: 24,
+                          color: iconColor,
+                        ),
+                        if (count > 0)
+                          Positioned(
+                            right: -4,
+                            top: -4,
+                            child: _NavBadge(
+                              count: count,
+                              tone: destination!.badgeTone,
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    text,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: OmniType.micro.copyWith(
+                      color: labelColor,
+                      fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
+                    ),
+                  ),
+                ],
               ),
             ),
           ],

@@ -167,7 +167,7 @@ class _Tile extends StatelessWidget {
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: OmniType.micro.copyWith(
-                  fontWeight: selected ? FontWeight.w700 : FontWeight.w600,
+                  fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
                   color: scheme.onSurface,
                 ),
               ),

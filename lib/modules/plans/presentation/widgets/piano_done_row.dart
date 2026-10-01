@@ -54,7 +54,7 @@ class PianoDoneRow extends StatelessWidget {
                       Text(
                         '${entry.taskTitle} ĐÃ XONG',
                         style: text.bodyMedium?.copyWith(
-                          fontWeight: FontWeight.w700,
+                          fontWeight: FontWeight.w600,
                           color: scheme.onPrimaryContainer,
                         ),
                         maxLines: 2,

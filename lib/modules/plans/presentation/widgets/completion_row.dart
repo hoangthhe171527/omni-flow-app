@@ -56,7 +56,7 @@ class CompletionRow extends StatelessWidget {
                             TextSpan(
                               text: who,
                               style: const TextStyle(
-                                fontWeight: FontWeight.w700,
+                                fontWeight: FontWeight.w600,
                               ),
                             ),
                             TextSpan(text: ' ${entry.summary}'),

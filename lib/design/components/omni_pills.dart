@@ -22,19 +22,19 @@ class OmniFilterPill extends StatelessWidget {
   final int? count;
   final VoidCallback onTap;
 
-  /// Màu nền của viên đang được chọn. Bỏ trống thì lấy màu mực của bộ Orbit.
+  /// Màu nền của viên đang được chọn. Bỏ trống thì lấy màu mực.
   ///
   /// Widget dùng chung không được ghim màu Zalo — `chat_palette_boundary_test`
   /// chặn việc đó. Chỗ gọi nào cần màu riêng thì truyền vào từ chỗ gọi.
   final Color? tint;
 
-  /// Viên nằm trên nền MỰC (dải nhóm việc của bảng dự án): viên thường nền
-  /// mực sáng hơn một bậc chữ xám xanh, viên đang chọn nền quỹ đạo sáng chữ
-  /// tối đậm.
+  /// Viên nằm trên nền MỰC của màn đăng nhập (màn thương hiệu, nơi màu quỹ
+  /// đạo sáng còn được dùng): viên thường nền mực sáng hơn một bậc chữ xám
+  /// xanh, viên đang chọn nền quỹ đạo sáng chữ tối đậm.
   final bool onInk;
 
-  /// Lựa chọn trong BIỂU MẪU (nguồn khách, giai đoạn): viên chưa chọn trong
-  /// suốt có viền mảnh thay vì nền xám, cao 36.
+  /// Lựa chọn trong BIỂU MẪU (nguồn khách, giai đoạn): ô trắng viền #C9D2DE
+  /// thay vì nền xám; đang chọn thì viền màu chính 2px.
   final bool outlined;
 
   @override
@@ -42,30 +42,41 @@ class OmniFilterPill extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     final dark = Theme.of(context).brightness == Brightness.dark;
 
-    // Bộ Orbit: viên đang chọn là khối MỰC chữ trắng, số đếm màu quỹ đạo
-    // sáng; các viên khác nền xám nhạt chữ mực, số đếm chữ phụ. Ở chế độ tối
-    // khối mực biến mất vào nền, nên đảo lại: nền chữ sáng, chữ màu nền.
+    // Viên đang chọn là khối MỰC chữ trắng, số đếm xám xanh #A9B6CA (8,5:1
+    // trên mực — không còn màu quỹ đạo sáng, màu đó chỉ cho logo); các viên
+    // khác nền xám nhạt chữ mực, số đếm chữ phụ. Ở chế độ tối khối mực biến
+    // mất vào nền, nên đảo lại: nền chữ sáng, chữ màu nền.
+    //
+    // Lựa chọn trong biểu mẫu ([outlined]) đang chọn là ô trắng viền màu
+    // chính 2px — không phải khối đặc giữa một biểu mẫu toàn ô trắng.
     final Color background;
     final Color foreground;
     final Color countColor;
+    Border? border;
     if (onInk) {
       background = selected ? OmniColors.orbit : OmniColors.inkRaised;
       foreground = selected
           ? OmniColors.darkPrimaryForeground
           : OmniColors.inkMutedForeground;
       countColor = foreground;
+    } else if (selected && outlined) {
+      background = scheme.surface;
+      foreground = scheme.onSurface;
+      countColor = scheme.onSurfaceVariant;
+      border = Border.all(color: scheme.primary, width: 2);
     } else if (selected) {
       background = tint ?? (dark ? scheme.onSurface : OmniColors.ink);
       foreground = dark && tint == null ? scheme.surface : Colors.white;
       countColor = tint != null
           ? Colors.white.withValues(alpha: 0.75)
           : dark
-          ? OmniColors.primary
-          : OmniColors.orbit;
+          ? scheme.surface.withValues(alpha: 0.72)
+          : OmniColors.inkMutedForeground;
     } else if (outlined) {
-      background = Colors.transparent;
+      background = scheme.surface;
       foreground = scheme.onSurface;
       countColor = scheme.onSurfaceVariant;
+      border = Border.all(color: OmniColors.controlBorderOf(context));
     } else {
       background = scheme.surfaceContainerHighest;
       foreground = scheme.onSurface;
@@ -77,7 +88,9 @@ class OmniFilterPill extends StatelessWidget {
       selected: selected,
       child: InkWell(
         onTap: onTap,
-        customBorder: const StadiumBorder(),
+        customBorder: const RoundedRectangleBorder(
+          borderRadius: OmniRadius.chipAll,
+        ),
         // 44dp là sàn vùng chạm; viên nhìn thấy cao 34dp như thiết kế.
         child: ConstrainedBox(
           constraints: const BoxConstraints(minHeight: 44),
@@ -85,17 +98,12 @@ class OmniFilterPill extends StatelessWidget {
             widthFactor: 1,
             child: AnimatedContainer(
               duration: OmniMotion.of(context).fast,
-              constraints: BoxConstraints(minHeight: outlined ? 36 : 34),
-              padding: EdgeInsets.symmetric(
-                horizontal: 14,
-                vertical: outlined ? 8 : 7,
-              ),
+              constraints: const BoxConstraints(minHeight: 34),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
               decoration: BoxDecoration(
                 color: background,
-                borderRadius: OmniRadius.pillAll,
-                border: outlined && !selected
-                    ? Border.all(color: scheme.outlineVariant)
-                    : null,
+                borderRadius: OmniRadius.chipAll,
+                border: border,
               ),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
@@ -103,12 +111,11 @@ class OmniFilterPill extends StatelessWidget {
                   Flexible(
                     child: Text(
                       label,
-                      style: OmniType.caption.copyWith(
-                        height: 1.2,
+                      style: OmniType.chip.copyWith(
                         color: foreground,
                         fontWeight: selected
-                            ? (onInk ? FontWeight.w800 : FontWeight.w700)
-                            : FontWeight.w600,
+                            ? FontWeight.w600
+                            : FontWeight.w500,
                       ),
                     ),
                   ),
@@ -116,12 +123,8 @@ class OmniFilterPill extends StatelessWidget {
                     const SizedBox(width: 6),
                     Text(
                       '$count',
-                      style: OmniType.caption.copyWith(
-                        height: 1.2,
+                      style: OmniType.chip.copyWith(
                         color: countColor,
-                        fontWeight: selected
-                            ? FontWeight.w700
-                            : FontWeight.w600,
                         fontFeatures: OmniType.tabular,
                       ),
                     ),
@@ -163,7 +166,7 @@ class OmniSourcePill extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
       decoration: BoxDecoration(
         color: meta.tint,
-        borderRadius: OmniRadius.smAll,
+        borderRadius: OmniRadius.xsAll,
       ),
       child: Text(
         label.toUpperCase(),
@@ -201,7 +204,7 @@ class OmniTag extends StatelessWidget {
         color: tone == null
             ? scheme.surfaceContainerHighest
             : tone!.withValues(alpha: 0.12),
-        borderRadius: OmniRadius.smAll,
+        borderRadius: OmniRadius.xsAll,
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -214,7 +217,7 @@ class OmniTag extends StatelessWidget {
             label,
             style: OmniType.micro.copyWith(
               color: color,
-              fontWeight: FontWeight.w600,
+              fontWeight: FontWeight.w500,
             ),
           ),
         ],
@@ -279,16 +282,12 @@ class OmniCountBadge extends StatelessWidget {
     // (`type_scale_test`), nên huy hiệu gọn cao 20dp kể cả vành để chữ 12 vừa.
     const height = 20.0;
 
-    // The badge glows, not the text.
+    // No glow: the badge is a solid shape and reads on its own — a halo was
+    // decoration, and shadows are kept for what floats (menus, sheets, FAB).
+    // There is no halo around the NAME either: Vietnamese diacritics stack
+    // above and below the x-height and a glow bleeds into the marks.
     //
-    // A halo around the NAME is what gets asked for, but no messaging app does
-    // it — and it is actively wrong for Vietnamese, where diacritics stack above
-    // and below the x-height (ế, ộ, ữ) and a glow bleeds straight into the marks
-    // that carry the meaning. Putting the light on the badge gets the same "this
-    // one is live" read with none of that cost: it is a solid shape, so a halo
-    // only makes it rounder.
-    //
-    // It also scales in, so a count that arrives while the rep is looking at the
+    // It scales in, so a count that arrives while the rep is looking at the
     // list announces itself instead of appearing between two blinks.
     return TweenAnimationBuilder<double>(
       key: ValueKey(count),
@@ -305,15 +304,6 @@ class OmniCountBadge extends StatelessWidget {
           color: background,
           borderRadius: OmniRadius.pillAll,
           border: ring == null ? null : Border.all(color: ring, width: 2),
-          boxShadow: compact
-              ? null
-              : [
-                  BoxShadow(
-                    color: background.withValues(alpha: 0.45),
-                    blurRadius: 8,
-                    spreadRadius: 0.5,
-                  ),
-                ],
         ),
         alignment: Alignment.center,
         child: Text(
@@ -322,7 +312,7 @@ class OmniCountBadge extends StatelessWidget {
             color: foreground ?? Colors.white,
             // Bold: this is the one number on the row that must be read from a
             // glance, and the regular weight let it sink into the pill.
-            fontWeight: compact ? FontWeight.w800 : FontWeight.w700,
+            fontWeight: FontWeight.w600,
             height: 1,
             fontFeatures: OmniType.tabular,
           ),

@@ -69,7 +69,7 @@ class OpportunityCard extends ConsumerWidget {
                       style: OmniType.listTitle.copyWith(
                         height: 1.2,
                         color: scheme.onSurface,
-                        fontWeight: FontWeight.w700,
+                        fontWeight: FontWeight.w600,
                       ),
                     ),
                   ),
@@ -81,7 +81,7 @@ class OpportunityCard extends ConsumerWidget {
                     style: OmniType.listTitle.copyWith(
                       height: 1.2,
                       color: scheme.onSurface,
-                      fontWeight: FontWeight.w700,
+                      fontWeight: FontWeight.w600,
                       fontFeatures: OmniType.tabular,
                     ),
                   ),

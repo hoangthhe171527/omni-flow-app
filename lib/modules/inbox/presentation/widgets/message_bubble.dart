@@ -478,7 +478,7 @@ class _ReplySwipeState extends State<_ReplySwipe>
                   'Thao tác tin nhắn',
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: TextStyle(fontWeight: FontWeight.w700),
+                  style: TextStyle(fontWeight: FontWeight.w600),
                 ),
               ),
               if (widget.onReply != null)
@@ -594,7 +594,7 @@ class _QuotedMessage extends StatelessWidget {
             overflow: TextOverflow.ellipsis,
             style: OmniChatType.meta.copyWith(
               color: OmniColors.chatPrimary,
-              fontWeight: FontWeight.w700,
+              fontWeight: FontWeight.w600,
             ),
           ),
           const SizedBox(height: 2),
@@ -796,7 +796,7 @@ class _NoteBubble extends StatelessWidget {
                       color: amber,
                       // The one place bold is right: this label is the guard
                       // against a note being mistaken for a customer message.
-                      fontWeight: FontWeight.w700,
+                      fontWeight: FontWeight.w600,
                       letterSpacing: 0.6,
                     ),
                   ),
