@@ -79,6 +79,15 @@ abstract final class OmniColors {
   /// Vạch ngăn giữa các dòng BÊN TRONG một thẻ — nhạt hơn [border] một chút.
   static const divider = Color(0xFFEEF1F5);
 
+  /// Viền của nút phụ và ô chọn chưa chọn trong biểu mẫu (#C9D2DE,
+  /// `SPrinciples.dc.html` §5). Đậm hơn [border] để đọc ra là bấm được, nhạt
+  /// hơn [borderInteractive] — viền ô NHẬP mới phải đạt 3:1.
+  static const controlBorder = Color(0xFFC9D2DE);
+
+  /// [controlBorder] theo chế độ đang bật.
+  static Color controlBorderOf(BuildContext context) =>
+      _byBrightness(context, controlBorder, darkBorderInteractive);
+
   /// Ranh giới của thành phần TƯƠNG TÁC: ô nhập, nút viền, chip chưa chọn.
   ///
   /// Thiết kế ghi #8A97AB, nhưng giá trị đó chỉ đạt 2.96:1 trên thẻ và 2.76:1

@@ -41,7 +41,7 @@ class OmniStatusChip extends StatelessWidget {
     return DecoratedBox(
       decoration: BoxDecoration(
         color: background,
-        borderRadius: OmniRadius.chipAll,
+        borderRadius: OmniRadius.xsAll,
       ),
       child: Padding(
         padding: const EdgeInsets.symmetric(
@@ -62,7 +62,6 @@ class OmniStatusChip extends StatelessWidget {
                 style: theme.textTheme.labelMedium?.copyWith(
                   color: foreground,
                   fontWeight: FontWeight.w600,
-                  height: 1.2,
                 ),
               ),
             ),
@@ -98,10 +97,15 @@ extension OmniToneColors on OmniTone {
           ? (OmniColors.darkInfoText, OmniColors.darkInfoSoft)
           : (OmniColors.infoText, OmniColors.infoSoft),
 
-    // "Đã xong" mang chính màu chính, không có xanh lá riêng: mọi ứng viên
-    // xanh lá chỉ chênh màu chính rất ít về độ sáng. Xem ghi chú Semantic
-    // trong omni_colors.dart.
-    OmniTone.success => (scheme.onPrimaryContainer, scheme.primaryContainer),
+    // "Đã xong" mang màu chính, không có xanh lá riêng: mọi ứng viên xanh lá
+    // chỉ chênh màu chính rất ít về độ sáng (ghi chú Semantic trong
+    // omni_colors.dart). Nền TRUNG TÍNH, không phải nền teal nhạt: chữ teal
+    // cỡ nhỏ trên #E3F8F6 chỉ sát ngưỡng 4,5:1 (`SPrinciples.dc.html` §6);
+    // chữ teal đậm trên xám đạt thoải mái.
+    OmniTone.success =>
+      dark
+          ? (scheme.primary, OmniColors.darkMuted)
+          : (OmniColors.primaryPressed, OmniColors.muted),
 
     OmniTone.warning =>
       dark
@@ -124,7 +128,8 @@ extension OmniToneColors on OmniTone {
 }
 
 /// Huy hiệu nhãn ngắn trên một dòng danh sách: "VIP", "Mới", "Ngưng"
-/// (`MCustomers.dc.html`). Viên bo tròn cao 22, chữ đậm.
+/// (`MCustomers.dc.html`). Chip bo 4 cao 20, chữ 12/500 — chip trạng thái của
+/// đề xuất "Chuẩn hoá phong cách", không còn viên thuốc bo tròn.
 class OmniBadge extends StatelessWidget {
   const OmniBadge({
     super.key,
@@ -138,7 +143,7 @@ class OmniBadge extends StatelessWidget {
   final OmniTone tone;
   final IconData? icon;
 
-  /// Cỡ 26 cho phần đầu màn chi tiết.
+  /// Cỡ 22 cho phần đầu màn chi tiết.
   final bool large;
 
   @override
@@ -146,11 +151,11 @@ class OmniBadge extends StatelessWidget {
     final (foreground, background) = tone.of(context);
 
     return Container(
-      constraints: BoxConstraints(minHeight: large ? 26 : 22),
-      padding: EdgeInsets.symmetric(horizontal: large ? 10 : 8, vertical: 2),
+      constraints: BoxConstraints(minHeight: large ? 22 : 20),
+      padding: EdgeInsets.symmetric(horizontal: large ? 8 : 6, vertical: 1),
       decoration: BoxDecoration(
         color: background,
-        borderRadius: OmniRadius.pillAll,
+        borderRadius: OmniRadius.xsAll,
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -166,8 +171,7 @@ class OmniBadge extends StatelessWidget {
               overflow: TextOverflow.ellipsis,
               style: OmniType.micro.copyWith(
                 color: foreground,
-                fontWeight: FontWeight.w600,
-                height: 1.2,
+                fontWeight: FontWeight.w500,
               ),
             ),
           ),

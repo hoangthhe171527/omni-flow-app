@@ -120,6 +120,15 @@ abstract final class OmniType {
     height: 1.4,
   );
 
+  /// Chữ trong chip lọc và nút phân đoạn: 14, độ đậm đổi theo trạng thái chọn
+  /// qua copyWith.
+  static const TextStyle chip = TextStyle(
+    fontFamily: family,
+    fontSize: 14,
+    fontWeight: FontWeight.w500,
+    height: 1.4,
+  );
+
   /// Ô nhập liệu và ô tìm kiếm. 16 là ngưỡng iOS Safari/WebView không tự
   /// phóng to khi focus, và là cỡ tay gõ đọc lại được thứ mình vừa gõ.
   static const TextStyle input = TextStyle(

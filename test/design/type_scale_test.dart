@@ -27,6 +27,7 @@ void main() {
     'micro': OmniType.micro,
     'input': OmniType.input,
     'listTitle': OmniType.listTitle,
+    'chip': OmniType.chip,
     'money': OmniType.money,
     'moneyHero': OmniType.moneyHero,
   };
