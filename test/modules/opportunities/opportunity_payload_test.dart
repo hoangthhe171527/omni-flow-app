@@ -17,10 +17,10 @@ void main() {
   };
 
   group('giai đoạn gốc', () {
-    test('giai đoạn tuỳ biến hiện ở cột Mới nhưng gửi lại đúng mã gốc', () {
+    test('giai đoạn tuỳ biến giữ nguyên mã, gửi lại đúng mã gốc', () {
       final opp = Opportunity.fromJson(json());
       expect(opp.stage, PipelineStage.fresh);
-      expect(opp.rawStage, 'demo_sp');
+      expect(opp.stageCode, 'demo_sp');
       expect(opp.toPayload()['opportunity_stage'], 'demo_sp');
     });
 
@@ -28,7 +28,7 @@ void main() {
       final opp = Opportunity.fromJson(json());
       final edited = opp.applyForm(
         title: 'Piano điện',
-        stage: PipelineStage.fresh,
+        stageCode: opp.stageCode,
         value: 2000,
       );
       expect(edited.toPayload()['opportunity_stage'], 'demo_sp');
@@ -39,12 +39,12 @@ void main() {
       final opp = Opportunity.fromJson(json());
       expect(
         opp
-            .applyForm(title: 'x', stage: PipelineStage.quoted, value: 1)
+            .applyForm(title: 'x', stageCode: 'quoted', value: 1)
             .toPayload()['opportunity_stage'],
         'quoted',
       );
       expect(
-        opp.copyWith(stage: PipelineStage.won).toPayload()['opportunity_stage'],
+        opp.copyWith(stageCode: 'won').toPayload()['opportunity_stage'],
         'won',
       );
     });
@@ -54,35 +54,54 @@ void main() {
       expect(opp.toPayload()['opportunity_stage'], 'negotiating');
     });
 
-    test('tạo mới dùng slug của giai đoạn đã chọn', () {
+    test('tạo mới dùng mã của giai đoạn đã chọn', () {
       final draft = Opportunity.blank().applyForm(
         title: 'Mới',
-        stage: PipelineStage.consulted,
+        stageCode: 'consulted',
         value: 5,
         customerId: 'c9',
       );
       expect(draft.toPayload()['opportunity_stage'], 'consulted');
       expect(draft.toPayload()['customer_id'], 'c9');
     });
+
+    test(
+      'tạo mới chưa chọn giai đoạn → không gửi, máy chủ chọn giai đoạn đầu',
+      () {
+        final draft = Opportunity.blank().applyForm(
+          title: 'Mới',
+          stageCode: '',
+          value: 5,
+        );
+        expect(draft.toPayload().containsKey('opportunity_stage'), isFalse);
+      },
+    );
   });
 
   group('metadata', () {
     test(
       'không có xác suất → không gửi (không ghim xác suất mặc định của giai đoạn)',
       () {
-        final metadata =
-            Opportunity.fromJson(json()).toPayload()['metadata'] as Map;
+        final payload = Opportunity.fromJson(json()).toPayload();
+        final metadata = (payload['metadata'] as Map?) ?? const {};
         expect(metadata.containsKey('probability'), isFalse);
-        expect(metadata['notes'], 'n');
+        // API gộp metadata, nên khoá web ghi (`notes`) không cần — và không
+        // được — gửi lại: bản app đang cầm có thể đã cũ.
+        expect(metadata.containsKey('notes'), isFalse);
       },
     );
 
-    test('có xác suất → gửi đúng số đó', () {
+    test('có xác suất → gửi đúng số đó khi nó đổi', () {
       final opp = Opportunity.fromJson(json(metadata: {'probability': 40}));
-      expect((opp.toPayload()['metadata'] as Map)['probability'], 40);
+      expect(opp.probability, 40);
+      expect(
+        (opp.copyWith(probability: 55).toPayload()['metadata']
+            as Map)['probability'],
+        55,
+      );
     });
 
-    test('sửa form giữ tags/kênh của bản ghi gốc', () {
+    test('sửa form không gửi lại tags/kênh của bản ghi gốc (máy chủ giữ)', () {
       final opp = Opportunity.fromJson(
         json(
           metadata: {
@@ -91,13 +110,11 @@ void main() {
           },
         ),
       );
-      final metadata =
-          opp
-                  .applyForm(title: 'x', stage: PipelineStage.fresh, value: 1)
-                  .toPayload()['metadata']
-              as Map;
-      expect(metadata['tags'], ['nóng']);
-      expect(metadata['channel'], 'zalo');
+      final payload = opp
+          .applyForm(title: 'x', stageCode: opp.stageCode, value: 1)
+          .toPayload();
+      expect(opp.tags, ['nóng']);
+      expect(payload.containsKey('metadata'), isFalse);
     });
   });
 }

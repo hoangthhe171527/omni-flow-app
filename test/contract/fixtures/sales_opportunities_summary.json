@@ -1,1 +1,1 @@
-{"success":true,"data":{"total_count":2,"value_by_stage":{"consulted":18500000,"quoted":16900000},"count_by_stage":{"consulted":1,"quoted":1}}}
+{"success":true,"data":{"total_count":7,"value_by_stage":{"consulted":18500000,"quoted":16900000,"da_mua":54000000,"tu_van":18500000,"khong_mua":37000000},"count_by_stage":{"consulted":1,"quoted":1,"da_mua":2,"tu_van":1,"khong_mua":2},"won_month_count":0,"won_month_value":0,"lost_month_count":0}}

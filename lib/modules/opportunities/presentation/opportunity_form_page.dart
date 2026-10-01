@@ -10,6 +10,7 @@ import '../../customers/customers.dart';
 import '../application/opportunities_providers.dart';
 import '../data/opportunities_api.dart';
 import '../domain/opportunity.dart';
+import '../domain/pipeline_catalog.dart';
 import '../opportunities_module.dart';
 
 class OpportunityFormPage extends ConsumerStatefulWidget {
@@ -33,7 +34,8 @@ class _OpportunityFormPageState extends ConsumerState<OpportunityFormPage> {
   final _value = TextEditingController();
   final _product = TextEditingController();
 
-  PipelineStage _stage = PipelineStage.fresh;
+  /// Mã giai đoạn đã chọn; rỗng = giai đoạn mở đầu tiên của quy trình.
+  String _stageCode = '';
   DateTime? _expectedClose;
   Customer? _customer;
   bool _saving = false;
@@ -59,7 +61,7 @@ class _OpportunityFormPageState extends ConsumerState<OpportunityFormPage> {
         ? ''
         : opportunity.value.toStringAsFixed(0);
     _product.text = opportunity.product ?? '';
-    _stage = opportunity.stage;
+    _stageCode = opportunity.stageCode;
     _expectedClose = opportunity.expectedCloseAt;
   }
 
@@ -84,15 +86,27 @@ class _OpportunityFormPageState extends ConsumerState<OpportunityFormPage> {
     if (picked != null) setState(() => _expectedClose = picked);
   }
 
+  /// The pipeline whose stages the form offers: the record's own when editing,
+  /// the tenant's default when creating. Null until the catalog is in.
+  PipelineDef? get _pipeline => ref
+      .read(pipelineCatalogProvider)
+      .valueOrNull
+      ?.pipelineOf(_original?.pipelineCode);
+
+  /// Nothing picked yet on a new deal → the pipeline's first open stage
+  /// (empty when the catalog isn't in: the server then picks it).
+  String get _effectiveStageCode =>
+      _stageCode.isNotEmpty ? _stageCode : _pipeline?.firstStage?.code ?? '';
+
   Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _saving = true);
 
     // Edit applies the form to the LOADED record, so what the form doesn't show
-    // (a tenant-defined stage, tags, channel, notes) is written back unchanged.
+    // (the pipeline, tags, channel, notes) is kept.
     final draft = (_original ?? Opportunity.blank()).applyForm(
       title: _title.text.trim(),
-      stage: _stage,
+      stageCode: _effectiveStageCode,
       customerId: _customer?.id ?? widget.customerId,
       customerName: _customer?.name,
       value:
@@ -134,6 +148,8 @@ class _OpportunityFormPageState extends ConsumerState<OpportunityFormPage> {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    // Giai đoạn của biểu mẫu đọc từ danh mục; dựng lại khi danh mục về.
+    ref.watch(pipelineCatalogProvider);
 
     if (widget.isEdit) {
       final existing = ref.watch(opportunityProvider(widget.opportunityId!));
@@ -270,12 +286,12 @@ class _OpportunityFormPageState extends ConsumerState<OpportunityFormPage> {
               spacing: OmniSpacing.sm,
               runSpacing: OmniSpacing.sm,
               children: [
-                for (final stage in PipelineStage.board)
+                for (final stage in _pipeline?.stages ?? const [])
                   OmniFilterPill(
                     label: stage.label,
-                    selected: _stage == stage,
+                    selected: _effectiveStageCode == stage.code,
                     outlined: true,
-                    onTap: () => setState(() => _stage = stage),
+                    onTap: () => setState(() => _stageCode = stage.code),
                   ),
               ],
             ),

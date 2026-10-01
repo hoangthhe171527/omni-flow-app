@@ -5,7 +5,7 @@ import 'package:omni_app/design/theme/omni_theme.dart';
 import 'package:omni_app/design/tokens/tokens.dart';
 import 'package:omni_app/modules/customers/domain/customer.dart';
 import 'package:omni_app/modules/customers/presentation/customers_page.dart';
-import 'package:omni_app/modules/opportunities/domain/opportunity.dart';
+import 'package:omni_app/modules/opportunities/domain/pipeline_catalog.dart';
 import 'package:omni_app/modules/opportunities/presentation/widgets/stage_picker_sheet.dart';
 
 /// Quy ước Orbit ở khu Bán hàng.
@@ -55,17 +55,77 @@ void main() {
     ) async {
       await tester.pumpWidget(
         host(
-          const SingleChildScrollView(
-            child: StagePickerSheet(current: PipelineStage.quoted),
+          SingleChildScrollView(
+            child: StagePickerSheet(
+              pipeline: PipelineCatalog.legacy.defaultPipeline,
+              currentCode: 'quoted',
+            ),
           ),
         ),
       );
 
-      for (final stage in PipelineStage.board) {
+      for (final stage in PipelineCatalog.legacy.defaultPipeline.stages) {
         expect(find.text(stage.label), findsOneWidget);
       }
       expect(find.byIcon(Icons.check_rounded), findsOneWidget);
       expect(find.byIcon(Icons.emoji_events_outlined), findsOneWidget);
+    });
+
+    testWidgets('quy trình tuỳ biến: giai đoạn Thắng mã riêng vẫn là cúp, '
+        'chọn trả về mã thô', (tester) async {
+      final retail = PipelineCatalog.fromJson({
+        'default': 'ban_le',
+        'pipelines': [
+          {
+            'code': 'ban_le',
+            'is_default': true,
+            'stages': [
+              {'code': 'lien_he', 'label': 'Liên hệ', 'sort_order': 1},
+              {
+                'code': 'da_mua',
+                'label': 'Đã mua',
+                'outcome': 'won',
+                'sort_order': 2,
+              },
+              {
+                'code': 'khong_mua',
+                'label': 'Không mua',
+                'outcome': 'lost',
+                'sort_order': 3,
+              },
+            ],
+          },
+        ],
+      }).defaultPipeline;
+      String? picked;
+      await tester.pumpWidget(
+        host(
+          Builder(
+            builder: (context) => TextButton(
+              onPressed: () async =>
+                  picked = await showModalBottomSheet<String>(
+                    context: context,
+                    builder: (_) => StagePickerSheet(
+                      pipeline: retail,
+                      currentCode: 'lien_he',
+                    ),
+                  ),
+              child: const Text('mở'),
+            ),
+          ),
+        ),
+      );
+      await tester.tap(find.text('mở'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Đã mua'), findsOneWidget);
+      expect(find.byIcon(Icons.emoji_events_outlined), findsOneWidget);
+      expect(find.byIcon(Icons.cancel_outlined), findsOneWidget);
+      expect(find.text('Mới'), findsNothing);
+
+      await tester.tap(find.text('Đã mua'));
+      await tester.pumpAndSettle();
+      expect(picked, 'da_mua');
     });
   });
 }

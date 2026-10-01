@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -8,8 +10,8 @@ import '../../../design/components/components.dart';
 import '../../../design/tokens/tokens.dart';
 import '../../customers/routes.dart';
 import '../application/opportunities_providers.dart';
-import '../data/opportunities_api.dart';
 import '../domain/opportunity.dart';
+import '../domain/pipeline_catalog.dart';
 import '../opportunities_module.dart';
 import 'widgets/stage_picker_sheet.dart';
 
@@ -22,6 +24,7 @@ class OpportunityDetailPage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final opportunity = ref.watch(opportunityProvider(opportunityId));
     final access = ref.watch(opportunityAccessProvider);
+    final catalog = ref.watch(pipelineCatalogProvider).valueOrNull;
     final scheme = Theme.of(context).colorScheme;
 
     // Bố cục `MOppDetail.dc.html`: khối trắng (tên, số tiền lớn, dải giai
@@ -79,7 +82,10 @@ class OpportunityDetailPage extends ConsumerWidget {
                     ),
                   ),
                   const SizedBox(height: 18),
-                  _StageStepper(current: data.stage),
+                  _StageStepper(
+                    opportunity: data,
+                    pipeline: catalog?.pipelineOf(data.pipelineCode),
+                  ),
                 ],
               ),
             ),
@@ -110,7 +116,8 @@ class OpportunityDetailPage extends ConsumerWidget {
                       ),
                       OmniDetailRow(
                         label: 'Xác suất',
-                        value: '${data.effectiveProbability}%',
+                        value:
+                            '${data.effectiveProbability(catalog?.pipelineOf(data.pipelineCode))}%',
                       ),
                       OmniDetailRow(
                         label: 'Dự kiến chốt',
@@ -125,7 +132,11 @@ class OpportunityDetailPage extends ConsumerWidget {
                       ),
                       OmniDetailRow(
                         label: 'Giá trị kỳ vọng',
-                        value: Formatters.vnd(data.weightedValue),
+                        value: Formatters.vnd(
+                          data.weightedValue(
+                            catalog?.pipelineOf(data.pipelineCode),
+                          ),
+                        ),
                         strong: true,
                       ),
                     ],
@@ -200,14 +211,10 @@ class OpportunityDetailPage extends ConsumerWidget {
     final current = ref.read(opportunityProvider(opportunityId)).valueOrNull;
     if (current == null) return;
 
-    final stage = await showOmniSheet<PipelineStage>(
-      context: context,
-      builder: (_) => StagePickerSheet(current: current.stage),
-    );
-    if (stage == null || stage == current.stage) return;
-
     try {
-      await moveOpportunityStage(ref, opportunityId, stage);
+      final stage = await pickOpportunityStage(context, ref, current);
+      if (stage == null) return;
+      await moveOpportunityStage(ref, current, stage.code);
     } on AppException catch (error) {
       if (!context.mounted) return;
       ScaffoldMessenger.of(
@@ -226,10 +233,22 @@ class OpportunityDetailPage extends ConsumerWidget {
     if (!confirmed) return;
 
     try {
-      await ref.read(opportunitiesApiProvider).markWon(opportunityId);
-      ref.invalidate(opportunityProvider(opportunityId));
-      ref.invalidate(pipelineSummaryProvider);
-      ref.invalidate(stageOpportunitiesProvider);
+      final result = await ref
+          .read(opportunityActionsProvider)
+          .markWon(opportunityId);
+      if (!context.mounted) return;
+      // App chưa có màn đơn hàng nên không điều hướng — chỉ báo có đơn.
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            result.orderCreated
+                ? 'Đã đánh dấu thắng và tạo đơn hàng.'
+                : result.orderId != null
+                ? 'Đã đánh dấu thắng. Cơ hội đã có đơn hàng.'
+                : 'Đã đánh dấu thắng.',
+          ),
+        ),
+      );
     } on AppException catch (error) {
       if (!context.mounted) return;
       ScaffoldMessenger.of(
@@ -240,79 +259,85 @@ class OpportunityDetailPage extends ConsumerWidget {
 }
 
 class _StageStepper extends StatelessWidget {
-  const _StageStepper({required this.current});
+  const _StageStepper({required this.opportunity, required this.pipeline});
 
-  final PipelineStage current;
+  final Opportunity opportunity;
+
+  /// Quy trình của cơ hội; null khi danh mục chưa tải xong.
+  final PipelineDef? pipeline;
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    // Won/lost are outcomes, not steps — the path a deal walks is the four
-    // working stages.
-    const path = [
-      PipelineStage.fresh,
-      PipelineStage.consulted,
-      PipelineStage.quoted,
-      PipelineStage.negotiating,
-    ];
-    final currentIndex = path.indexOf(current);
 
-    if (current.isClosed) {
+    // Thắng/thua theo `opportunity_status` của máy chủ — một quy trình tuỳ
+    // biến gọi giai đoạn Thắng là `da_mua`, không phải `won`.
+    if (opportunity.isClosed) {
+      final won = opportunity.isWon;
       return OmniStatusChip(
-        label: current == PipelineStage.won ? 'Đã thắng' : 'Đã thua',
-        tone: current == PipelineStage.won ? OmniTone.success : OmniTone.danger,
-        icon: current == PipelineStage.won
-            ? Icons.emoji_events_outlined
-            : Icons.cancel_outlined,
+        label: won ? 'Đã thắng' : 'Đã thua',
+        tone: won ? OmniTone.success : OmniTone.danger,
+        icon: won ? Icons.emoji_events_outlined : Icons.cancel_outlined,
       );
     }
+
+    // Won/lost are outcomes, not steps — the path a deal walks is the
+    // pipeline's open stages.
+    final path = pipeline?.openStages ?? const <PipelineStageDef>[];
+    if (path.isEmpty) return const SizedBox(height: 46);
+    final currentIndex = path.indexWhere(
+      (stage) => stage.code == opportunity.stageCode,
+    );
 
     // Dải giai đoạn: bước đã qua là chấm đặc có dấu tick, bước hiện tại là
     // vòng rỗng viền dày kèm quầng nhạt, bước sau là vòng mảnh. Đường nối
     // dày 3, tô màu chính tới bước hiện tại.
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        for (var i = 0; i < path.length; i++) ...[
-          if (i > 0)
-            Expanded(
-              child: Padding(
-                padding: const EdgeInsets.only(top: 10.5),
-                child: Container(
-                  height: 3,
-                  color: i <= currentIndex
-                      ? scheme.primary
-                      : scheme.outlineVariant,
-                ),
-              ),
-            ),
-          SizedBox(
-            width: 64,
-            child: Column(
-              children: [
-                _Dot(state: i.compareTo(currentIndex)),
-                const SizedBox(height: 6),
-                Text(
-                  path[i].label,
-                  textAlign: TextAlign.center,
-                  style: OmniType.micro.copyWith(
-                    fontWeight: i == currentIndex
-                        ? FontWeight.w800
-                        : i < currentIndex
-                        ? FontWeight.w600
-                        : FontWeight.w400,
-                    color: i == currentIndex
-                        ? scheme.onPrimaryContainer
-                        : i < currentIndex
-                        ? scheme.onSurface
-                        : scheme.onSurfaceVariant,
+    return LayoutBuilder(
+      builder: (context, constraints) => Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          for (var i = 0; i < path.length; i++) ...[
+            if (i > 0)
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.only(top: 10.5),
+                  child: Container(
+                    height: 3,
+                    color: i <= currentIndex
+                        ? scheme.primary
+                        : scheme.outlineVariant,
                   ),
                 ),
-              ],
+              ),
+            SizedBox(
+              // Quy trình nhiều giai đoạn mở hơn bốn vẫn vừa một hàng.
+              width: math.min(64, constraints.maxWidth / path.length),
+              child: Column(
+                children: [
+                  _Dot(state: i.compareTo(currentIndex)),
+                  const SizedBox(height: 6),
+                  Text(
+                    path[i].label,
+                    textAlign: TextAlign.center,
+                    style: OmniType.micro.copyWith(
+                      fontWeight: i == currentIndex
+                          ? FontWeight.w800
+                          : i < currentIndex
+                          ? FontWeight.w600
+                          : FontWeight.w400,
+                      color: i == currentIndex
+                          ? scheme.onPrimaryContainer
+                          : i < currentIndex
+                          ? scheme.onSurface
+                          : scheme.onSurfaceVariant,
+                    ),
+                  ),
+                ],
+              ),
             ),
-          ),
+          ],
         ],
-      ],
+      ),
     );
   }
 }

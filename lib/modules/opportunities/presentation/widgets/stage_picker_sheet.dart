@@ -1,13 +1,43 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../design/components/components.dart';
 import '../../../../design/tokens/tokens.dart';
+import '../../application/opportunities_providers.dart';
 import '../../domain/opportunity.dart';
+import '../../domain/pipeline_catalog.dart';
 
+/// Mở [StagePickerSheet] với quy trình CỦA cơ hội. Trả về giai đoạn mới, hoặc
+/// null khi người dùng đóng sheet hay chọn lại giai đoạn đang đứng.
+Future<PipelineStageDef?> pickOpportunityStage(
+  BuildContext context,
+  WidgetRef ref,
+  Opportunity opportunity,
+) async {
+  final catalog = await ref.read(pipelineCatalogProvider.future);
+  if (!context.mounted) return null;
+  final pipeline = catalog.pipelineOf(opportunity.pipelineCode);
+  final code = await showOmniSheet<String>(
+    context: context,
+    builder: (_) => StagePickerSheet(
+      pipeline: pipeline,
+      currentCode: opportunity.stageCode,
+    ),
+  );
+  if (code == null || code == opportunity.stageCode) return null;
+  return pipeline.stage(code);
+}
+
+/// Chọn giai đoạn trong quy trình của cơ hội; trả về MÃ giai đoạn.
 class StagePickerSheet extends StatelessWidget {
-  const StagePickerSheet({super.key, required this.current});
+  const StagePickerSheet({
+    super.key,
+    required this.pipeline,
+    required this.currentCode,
+  });
 
-  final PipelineStage current;
+  final PipelineDef pipeline;
+  final String currentCode;
 
   @override
   Widget build(BuildContext context) {
@@ -32,11 +62,11 @@ class StagePickerSheet extends StatelessWidget {
               ),
             ),
           ),
-          for (final stage in PipelineStage.board)
+          for (final stage in pipeline.stages)
             _StageRow(
               stage: stage,
-              selected: stage == current,
-              onTap: () => Navigator.pop(context, stage),
+              selected: stage.code == currentCode,
+              onTap: () => Navigator.pop(context, stage.code),
             ),
         ],
       ),
@@ -51,20 +81,17 @@ class _StageRow extends StatelessWidget {
     required this.onTap,
   });
 
-  final PipelineStage stage;
+  final PipelineStageDef stage;
   final bool selected;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final outcome = stage == PipelineStage.won || stage == PipelineStage.lost;
-    final (
-      outcomeFg,
-      outcomeBg,
-    ) = (stage == PipelineStage.won ? OmniTone.warning : OmniTone.neutral).of(
-      context,
-    );
+    final outcome = stage.isClosed;
+    final won = stage.outcome == StageOutcome.won;
+    final (outcomeFg, outcomeBg) = (won ? OmniTone.warning : OmniTone.neutral)
+        .of(context);
 
     final Widget marker = outcome
         ? Container(
@@ -72,9 +99,7 @@ class _StageRow extends StatelessWidget {
             height: 32,
             decoration: BoxDecoration(color: outcomeBg, shape: BoxShape.circle),
             child: Icon(
-              stage == PipelineStage.won
-                  ? Icons.emoji_events_outlined
-                  : Icons.cancel_outlined,
+              won ? Icons.emoji_events_outlined : Icons.cancel_outlined,
               size: OmniIconSize.md,
               color: outcomeFg,
             ),
@@ -118,13 +143,14 @@ class _StageRow extends StatelessWidget {
                             : scheme.onSurface,
                       ),
                     ),
-                    Text(
-                      'Xác suất mặc định ${stage.defaultProbability}%',
-                      style: OmniType.caption.copyWith(
-                        fontWeight: FontWeight.w400,
-                        color: scheme.onSurfaceVariant,
+                    if (stage.probability case final probability?)
+                      Text(
+                        'Xác suất mặc định $probability%',
+                        style: OmniType.caption.copyWith(
+                          fontWeight: FontWeight.w400,
+                          color: scheme.onSurfaceVariant,
+                        ),
                       ),
-                    ),
                   ],
                 ),
               ),
