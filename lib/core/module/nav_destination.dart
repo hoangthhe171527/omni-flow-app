@@ -36,6 +36,13 @@ enum NavArea {
 /// 20 module thành 20 navigator.
 enum NavWeight { primary, secondary }
 
+/// Giọng của số đếm trên tab.
+///
+/// [unread] — có cái MỚI chưa xem (tin nhắn): vàng, chữ mực. [alert] — có
+/// việc CẦN XỬ LÝ (việc trễ hạn): đỏ, chữ trắng. Bộ giao diện Orbit giữ màu
+/// vàng riêng cho "mới", nên hai loại số không được chung một màu.
+enum NavBadgeTone { unread, alert }
+
 /// Một mục điều hướng do module khai báo.
 ///
 /// Thay cho cặp `ModuleDestination` + `ModuleMenuEntry` cũ. Cặp đó bắt module
@@ -56,6 +63,7 @@ class ModuleNavEntry {
     this.subtitle,
     this.access = const AccessRequirement.open(),
     this.badge,
+    this.badgeTone = NavBadgeTone.unread,
   });
 
   final String moduleId;
@@ -85,4 +93,7 @@ class ModuleNavEntry {
   /// Số đếm hiện trên tab. Là provider chứ không phải giá trị, để shell theo
   /// dõi được mà không cần biết nó đếm cái gì.
   final ProviderListenable<int>? badge;
+
+  /// Số đếm là "chưa đọc" hay "cần xử lý" — quyết định màu của huy hiệu.
+  final NavBadgeTone badgeTone;
 }

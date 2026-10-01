@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../config/app_config.dart';
 import '../error/app_exception.dart';
 import 'api_envelope.dart';
+import 'active_tenant.dart';
 import 'api_exception_mapper.dart';
 import 'dio_provider.dart';
 
@@ -109,6 +110,15 @@ class ApiClient {
   }
 }
 
+/// Dựng lại MỖI KHI đổi không gian làm việc (hay đăng xuất: tenant về null).
+///
+/// Mọi provider API của module theo dõi provider này, và mọi provider dữ liệu
+/// theo dõi provider API của nó — nên đổi tenant đánh dấu bẩn cả chuỗi, và lần
+/// đọc sau tải lại từ server. Không có dòng này thì provider giữ cache cả phiên
+/// (danh sách nhân viên, kênh, tổng quan cơ hội…) vẫn trả dữ liệu của không
+/// gian CŨ sau khi đổi sang không gian mới — một lỗi rò dữ liệu giữa hai công
+/// ty, không phải chỉ là số liệu cũ.
 final apiClientProvider = Provider<ApiClient>((ref) {
+  ref.watch(activeTenantIdProvider);
   return ApiClient(ref.watch(dioProvider));
 });

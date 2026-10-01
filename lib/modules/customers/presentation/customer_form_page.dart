@@ -165,55 +165,17 @@ class _CustomerFormPageState extends ConsumerState<CustomerFormPage> {
     }
 
     return Scaffold(
+      backgroundColor: scheme.surface,
       appBar: AppBar(
+        backgroundColor: scheme.surface,
+        leading: const CloseButton(),
         title: Text(widget.isEdit ? 'Sửa khách hàng' : 'Thêm khách hàng'),
       ),
       body: Form(
         key: _formKey,
         child: ListView(
-          padding: const EdgeInsets.fromLTRB(
-            OmniSpacing.lg,
-            OmniSpacing.md,
-            OmniSpacing.lg,
-            OmniSpacing.xxl,
-          ),
+          padding: const EdgeInsets.fromLTRB(20, OmniSpacing.sm, 20, 24),
           children: [
-            if (_duplicate != null)
-              Container(
-                margin: const EdgeInsets.only(bottom: OmniSpacing.lg),
-                padding: const EdgeInsets.all(OmniSpacing.md),
-                decoration: BoxDecoration(
-                  color: OmniColors.warning.withValues(alpha: 0.1),
-                  borderRadius: OmniRadius.mdAll,
-                  border: Border.all(
-                    color: OmniColors.warning.withValues(alpha: 0.35),
-                  ),
-                ),
-                child: Row(
-                  children: [
-                    Icon(
-                      Icons.warning_amber_rounded,
-                      size: OmniIconSize.md,
-                      color: OmniColors.warningTextOf(context),
-                    ),
-                    const SizedBox(width: OmniSpacing.sm),
-                    Expanded(
-                      child: Text(
-                        'Số điện thoại này đã tồn tại — ${_duplicate!.name}',
-                        style: OmniType.caption,
-                      ),
-                    ),
-                    TextButton(
-                      onPressed: () => context.pushReplacementNamed(
-                        CustomersModule.detail,
-                        pathParameters: {'id': _duplicate!.id},
-                      ),
-                      child: const Text('Xem'),
-                    ),
-                  ],
-                ),
-              ),
-
             const OmniSectionHeader(
               title: 'Thông tin cơ bản',
               padding: EdgeInsets.only(bottom: OmniSpacing.md),
@@ -243,7 +205,10 @@ class _CustomerFormPageState extends ConsumerState<CustomerFormPage> {
               ),
             ),
 
-            const OmniSectionHeader(title: 'Liên hệ'),
+            const OmniSectionHeader(
+              title: 'Liên hệ',
+              padding: EdgeInsets.only(top: 22, bottom: OmniSpacing.md),
+            ),
             OmniField(
               label: 'Số điện thoại',
               required: true,
@@ -258,6 +223,18 @@ class _CustomerFormPageState extends ConsumerState<CustomerFormPage> {
                     : null,
               ),
             ),
+            // Trùng số: dải vàng nhạt ngay DƯỚI ô số điện thoại — chỗ mắt người
+            // gõ đang nhìn (`MCustomerForm.dc.html`).
+            if (_duplicate != null) ...[
+              const SizedBox(height: OmniSpacing.sm),
+              _DuplicateNotice(
+                name: _duplicate!.name,
+                onOpen: () => context.pushReplacementNamed(
+                  CustomersModule.detail,
+                  pathParameters: {'id': _duplicate!.id},
+                ),
+              ),
+            ],
             const SizedBox(height: OmniSpacing.lg),
             OmniField(
               label: 'Email',
@@ -285,11 +262,14 @@ class _CustomerFormPageState extends ConsumerState<CustomerFormPage> {
               ),
             ),
 
-            const OmniSectionHeader(title: 'Phân loại'),
+            const OmniSectionHeader(
+              title: 'Phân loại',
+              padding: EdgeInsets.only(top: 22, bottom: OmniSpacing.md),
+            ),
             Text(
               'Nguồn khách',
-              style: OmniType.caption.copyWith(
-                color: scheme.onSurfaceVariant,
+              style: OmniType.body.copyWith(
+                color: scheme.onSurface,
                 fontWeight: FontWeight.w600,
               ),
             ),
@@ -308,6 +288,7 @@ class _CustomerFormPageState extends ConsumerState<CustomerFormPage> {
                   OmniFilterPill(
                     label: channel.meta.short,
                     selected: _source == channel,
+                    outlined: true,
                     onTap: () => setState(() => _source = channel),
                   ),
               ],
@@ -315,8 +296,8 @@ class _CustomerFormPageState extends ConsumerState<CustomerFormPage> {
             const SizedBox(height: OmniSpacing.lg),
             Text(
               'Trạng thái',
-              style: OmniType.caption.copyWith(
-                color: scheme.onSurfaceVariant,
+              style: OmniType.body.copyWith(
+                color: scheme.onSurface,
                 fontWeight: FontWeight.w600,
               ),
             ),
@@ -329,6 +310,7 @@ class _CustomerFormPageState extends ConsumerState<CustomerFormPage> {
                   OmniFilterPill(
                     label: status.label,
                     selected: _status == status,
+                    outlined: true,
                     onTap: () => setState(() => _status = status),
                   ),
               ],
@@ -365,6 +347,50 @@ class _CustomerFormPageState extends ConsumerState<CustomerFormPage> {
                     ),
                   )
                 : Text(widget.isEdit ? 'Lưu thay đổi' : 'Lưu khách hàng'),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// "Số điện thoại này đã tồn tại — Nguyễn Thị Lan · Xem" trên nền vàng nhạt.
+class _DuplicateNotice extends StatelessWidget {
+  const _DuplicateNotice({required this.name, required this.onOpen});
+
+  final String name;
+  final VoidCallback onOpen;
+
+  @override
+  Widget build(BuildContext context) {
+    final (foreground, background) = OmniTone.warning.of(context);
+
+    return Container(
+      padding: const EdgeInsets.fromLTRB(14, 4, 4, 4),
+      decoration: BoxDecoration(
+        color: background,
+        borderRadius: OmniRadius.mdAll,
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text.rich(
+              TextSpan(
+                children: [
+                  const TextSpan(text: 'Số điện thoại này đã tồn tại — '),
+                  TextSpan(
+                    text: name,
+                    style: const TextStyle(fontWeight: FontWeight.w700),
+                  ),
+                ],
+              ),
+              style: OmniType.body.copyWith(color: foreground),
+            ),
+          ),
+          TextButton(
+            onPressed: onOpen,
+            style: TextButton.styleFrom(foregroundColor: foreground),
+            child: const Text('Xem'),
           ),
         ],
       ),

@@ -24,19 +24,27 @@ class PianoDoneRow extends StatelessWidget {
       padding: const EdgeInsets.symmetric(vertical: OmniSpacing.sm),
       child: Material(
         color: scheme.primaryContainer,
-        borderRadius: OmniRadius.mdAll,
+        borderRadius: OmniRadius.xlAll,
         child: InkWell(
           onTap: onTap,
-          borderRadius: OmniRadius.mdAll,
+          borderRadius: OmniRadius.xlAll,
           child: Padding(
-            padding: const EdgeInsets.all(OmniSpacing.md),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
             child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Icon(
-                  Icons.verified_rounded,
-                  size: OmniIconSize.md,
-                  color: scheme.onPrimaryContainer,
+                // Vòng tròn màu chính mang dấu tick trắng, như thiết kế.
+                Container(
+                  width: 36,
+                  height: 36,
+                  decoration: BoxDecoration(
+                    color: scheme.primary,
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    Icons.check_rounded,
+                    size: OmniIconSize.lg,
+                    color: scheme.onPrimary,
+                  ),
                 ),
                 const SizedBox(width: OmniSpacing.md),
                 Expanded(

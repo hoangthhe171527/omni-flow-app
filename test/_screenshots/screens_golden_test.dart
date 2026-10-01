@@ -9,8 +9,8 @@
 // Ảnh ra: test/_screenshots/goldens/*.png (780×1688, tức 390×844 @2x) — thư
 // mục này nằm trong .gitignore, mỗi người tự dựng.
 //
-// Nạp font Inter thật từ assets và MaterialIcons từ SDK, nếu không golden vẽ
-// chữ bằng font Ahem (toàn ô vuông) và không đọc được gì về kiểu chữ. Dữ liệu
+// Nạp font Be Vietnam Pro thật từ assets và MaterialIcons từ SDK, nếu không
+// golden vẽ chữ bằng font Ahem (toàn ô vuông) và không đọc được gì về kiểu chữ. Dữ liệu
 // mẫu chép từ tool/ui_preview.dart — cố ý có ca xấu: việc trễ, tên dài hai
 // dòng, ảnh (trong test không có mạng nên ảnh hiện ô giữ chỗ "ảnh vỡ").
 @Tags(['screenshots'])
@@ -358,10 +358,10 @@ Plan _plan(String id, String name, {String? cover, int overdue = 0}) =>
       'stats': {'total': 12, 'done': 5, 'overdue': overdue},
     });
 
-Future<void> _loadInter() async {
-  final loader = FontLoader('Inter');
-  for (final f in ['Regular', 'Medium', 'SemiBold', 'Bold']) {
-    final bytes = File('assets/fonts/Inter-$f.ttf').readAsBytesSync();
+Future<void> _loadAppFont() async {
+  final loader = FontLoader('Be Vietnam Pro');
+  for (final f in ['Regular', 'Medium', 'SemiBold', 'Bold', 'ExtraBold']) {
+    final bytes = File('assets/fonts/BeVietnamPro-$f.ttf').readAsBytesSync();
     loader.addFont(Future.value(ByteData.view(bytes.buffer)));
   }
   await loader.load();
@@ -381,7 +381,7 @@ Future<void> _loadInter() async {
 
 void main() {
   setUpAll(() async {
-    await _loadInter();
+    await _loadAppFont();
     await initializeDateFormatting('vi_VN');
   });
 

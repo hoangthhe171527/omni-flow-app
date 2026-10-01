@@ -77,33 +77,102 @@ class OmniStatusChip extends StatelessWidget {
   /// Mọi cặp đạt tối thiểu 4.63:1, và mọi nền tách khỏi mặt thẻ ít nhất 1.08
   /// lần — đủ để thấy viên chip, chưa đủ để nó trông như một cái nút.
   (Color, Color) _palette(ColorScheme scheme, {required bool dark}) =>
-      switch (tone) {
-        OmniTone.neutral =>
-          dark
-              ? (OmniColors.darkMutedForeground, OmniColors.darkMuted)
-              : (OmniColors.mutedForeground, OmniColors.muted),
+      tone.resolve(scheme, dark: dark);
+}
 
-        OmniTone.info =>
-          dark
-              ? (const Color(0xFF7FC7EE), const Color(0xFF10283A))
-              : (OmniColors.infoSurface, const Color(0xFFE5F1F8)),
+/// Cặp (chữ, nền) của mỗi giọng — nguồn chung cho chip trạng thái, huy hiệu
+/// nhãn và ô icon theo khu. Bảng Orbit: nền nhạt, chữ đậm cùng họ màu; chế độ
+/// tối đảo lại thành nền tối, chữ sáng. Mọi cặp có trong `contrast_test`.
+extension OmniToneColors on OmniTone {
+  (Color foreground, Color background) resolve(
+    ColorScheme scheme, {
+    required bool dark,
+  }) => switch (this) {
+    OmniTone.neutral =>
+      dark
+          ? (OmniColors.darkMutedForeground, OmniColors.darkMuted)
+          : (OmniColors.secondaryForeground, OmniColors.muted),
 
-        // "Đã xong" mang chính màu chính, không có xanh lá riêng: mọi ứng
-        // viên xanh lá chỉ chênh màu chính 1.13–1.20 lần về độ sáng. Xem ghi
-        // chú Semantic trong omni_colors.dart.
-        OmniTone.success => (
-          scheme.onPrimaryContainer,
-          scheme.primaryContainer,
-        ),
+    OmniTone.info =>
+      dark
+          ? (OmniColors.darkInfoText, OmniColors.darkInfoSoft)
+          : (OmniColors.infoText, OmniColors.infoSoft),
 
-        OmniTone.warning =>
-          dark
-              ? (OmniColors.warningTextDark, const Color(0xFF322517))
-              : (OmniColors.warningText, const Color(0xFFFDF3E3)),
+    // "Đã xong" mang chính màu chính, không có xanh lá riêng: mọi ứng viên
+    // xanh lá chỉ chênh màu chính rất ít về độ sáng. Xem ghi chú Semantic
+    // trong omni_colors.dart.
+    OmniTone.success => (scheme.onPrimaryContainer, scheme.primaryContainer),
 
-        OmniTone.danger =>
-          dark
-              ? (OmniColors.dangerTextDark, const Color(0xFF33211F))
-              : (OmniColors.dangerText, const Color(0xFFFDECEA)),
-      };
+    OmniTone.warning =>
+      dark
+          ? (OmniColors.warningTextDark, OmniColors.darkWarningSoft)
+          : (OmniColors.warningText, OmniColors.warningSoft),
+
+    OmniTone.danger =>
+      dark
+          ? (OmniColors.dangerTextDark, const Color(0xFF33211F))
+          : (OmniColors.dangerText, OmniColors.dangerSoft),
+  };
+
+  (Color foreground, Color background) of(BuildContext context) {
+    final theme = Theme.of(context);
+    return resolve(
+      theme.colorScheme,
+      dark: theme.brightness == Brightness.dark,
+    );
+  }
+}
+
+/// Huy hiệu nhãn ngắn trên một dòng danh sách: "VIP", "Mới", "Ngưng"
+/// (`MCustomers.dc.html`). Viên bo tròn cao 22, chữ đậm.
+class OmniBadge extends StatelessWidget {
+  const OmniBadge({
+    super.key,
+    required this.label,
+    this.tone = OmniTone.neutral,
+    this.icon,
+    this.large = false,
+  });
+
+  final String label;
+  final OmniTone tone;
+  final IconData? icon;
+
+  /// Cỡ 26 cho phần đầu màn chi tiết.
+  final bool large;
+
+  @override
+  Widget build(BuildContext context) {
+    final (foreground, background) = tone.of(context);
+
+    return Container(
+      constraints: BoxConstraints(minHeight: large ? 26 : 22),
+      padding: EdgeInsets.symmetric(horizontal: large ? 10 : 8, vertical: 2),
+      decoration: BoxDecoration(
+        color: background,
+        borderRadius: OmniRadius.pillAll,
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (icon != null) ...[
+            Icon(icon, size: OmniIconSize.xs, color: foreground),
+            const SizedBox(width: 4),
+          ],
+          Flexible(
+            child: Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: OmniType.micro.copyWith(
+                color: foreground,
+                fontWeight: FontWeight.w800,
+                height: 1.2,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }

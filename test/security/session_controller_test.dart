@@ -60,6 +60,31 @@ void main() {
     expect(harness.session.status, SessionStatus.unauthenticated);
   });
 
+  test('"Đổi" không gian: về màn chọn mà KHÔNG xoá phiên', () async {
+    final harness = await _SessionHarness.create();
+    addTearDown(harness.dispose);
+
+    harness.controller.chooseWorkspace();
+
+    expect(harness.session.status, SessionStatus.tenantPending);
+    // Không đăng xuất, không xoá token, không quên tenant đã lưu: tắt app
+    // giữa chừng thì lần mở sau vào lại không gian cũ.
+    expect(harness.events, isEmpty);
+    expect(harness.tokens.hasCredentials, isTrue);
+    expect(harness.preferences.hasTenant, isTrue);
+  });
+
+  test('"Đổi" khi chưa vào không gian nào thì không làm gì', () async {
+    final harness = await _SessionHarness.create();
+    addTearDown(harness.dispose);
+    await harness.controller.logout();
+    harness.events.clear();
+
+    harness.controller.chooseWorkspace();
+
+    expect(harness.session.status, SessionStatus.unauthenticated);
+  });
+
   test(
     'unauthorized expiry keeps its existing direct-clear behavior',
     () async {

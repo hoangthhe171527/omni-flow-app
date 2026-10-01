@@ -147,7 +147,10 @@ class _TeamBlock extends ConsumerWidget {
             Expanded(
               child: Text(
                 group.team.name,
-                style: text.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+                style: OmniType.section.copyWith(
+                  fontWeight: FontWeight.w700,
+                  color: scheme.onSurface,
+                ),
               ),
             ),
             if (group.team.memberCount > 0)
@@ -191,16 +194,16 @@ class _TeamBlock extends ConsumerWidget {
         if (group.plans.isEmpty)
           // Nói rõ là rỗng. Một khối tiêu đề không có gì bên dưới đọc như một
           // lỗi tải, và người dùng sẽ kéo để tải lại mãi.
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(OmniSpacing.lg),
-            decoration: BoxDecoration(
-              borderRadius: OmniRadius.lgAll,
-              border: Border.all(color: scheme.outlineVariant),
-            ),
-            child: Text(
-              'Team này chưa có dự án nào.',
-              style: text.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
+          CustomPaint(
+            painter: _DashedBorder(color: scheme.outlineVariant),
+            child: Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(18),
+              child: Text(
+                'Team này chưa có dự án nào.',
+                textAlign: TextAlign.center,
+                style: OmniType.body.copyWith(color: scheme.onSurfaceVariant),
+              ),
             ),
           )
         else
@@ -212,8 +215,7 @@ class _TeamBlock extends ConsumerWidget {
                 pathParameters: {'id': plan.id},
               ),
             ),
-            if (plan != group.plans.last)
-              const SizedBox(height: OmniSpacing.sm),
+            if (plan != group.plans.last) const SizedBox(height: 10),
           ],
       ],
     );
@@ -253,3 +255,33 @@ class _TeamBlock extends ConsumerWidget {
 }
 
 enum _TeamAction { delete }
+
+/// Viền đứt bo 18 cho khối "chưa có dự án" — Flutter không có sẵn viền đứt.
+class _DashedBorder extends CustomPainter {
+  _DashedBorder({required this.color});
+
+  final Color color;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final path = Path()
+      ..addRRect(
+        RRect.fromRectAndRadius(
+          (Offset.zero & size).deflate(0.75),
+          const Radius.circular(18),
+        ),
+      );
+    final paint = Paint()
+      ..color = color
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.5;
+    for (final metric in path.computeMetrics()) {
+      for (var d = 0.0; d < metric.length; d += 8) {
+        canvas.drawPath(metric.extractPath(d, d + 4), paint);
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(_DashedBorder oldDelegate) => oldDelegate.color != color;
+}

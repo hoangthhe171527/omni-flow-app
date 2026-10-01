@@ -55,7 +55,37 @@ class _EditSectionsPageState extends ConsumerState<EditSectionsPage> {
     final sections = _sections;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Nhóm việc')),
+      // "Lưu" nằm trên thanh trên như thiết kế (`MEditSections.dc.html`): danh
+      // sách dài thì nút ở cuối trang phải cuộn mới thấy.
+      appBar: AppBar(
+        title: const Text('Nhóm việc'),
+        actions: [
+          if (sections != null)
+            Padding(
+              padding: const EdgeInsets.only(right: 12),
+              child: FilledButton(
+                onPressed: _canSave(sections) ? () => _save(sections) : null,
+                style: FilledButton.styleFrom(
+                  minimumSize: const Size(0, 40),
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  shape: const RoundedRectangleBorder(
+                    borderRadius: OmniRadius.smAll,
+                  ),
+                  textStyle: OmniType.body.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                child: _saving
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Text('Lưu'),
+              ),
+            ),
+        ],
+      ),
       body: sections == null
           ? const Center(child: CircularProgressIndicator())
           : ListView(
@@ -68,11 +98,15 @@ class _EditSectionsPageState extends ConsumerState<EditSectionsPage> {
               children: [
                 Text(
                   'Mỗi nhóm việc là một cột trên bảng.',
-                  style: text.bodySmall?.copyWith(
-                    color: scheme.onSurfaceVariant,
+                  style: OmniType.body.copyWith(
+                    color: OmniColors.byBrightness(
+                      context,
+                      OmniColors.secondaryForeground,
+                      scheme.onSurfaceVariant,
+                    ),
                   ),
                 ),
-                const SizedBox(height: OmniSpacing.lg),
+                const SizedBox(height: OmniSpacing.md),
                 for (var i = 0; i < sections.length; i++)
                   _SectionRow(
                     key: ValueKey(sections[i].id),
@@ -151,17 +185,6 @@ class _EditSectionsPageState extends ConsumerState<EditSectionsPage> {
                     ),
                   ),
                 ],
-                const SizedBox(height: OmniSpacing.xl),
-                FilledButton(
-                  onPressed: _canSave(sections) ? () => _save(sections) : null,
-                  child: _saving
-                      ? const SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : const Text('Lưu'),
-                ),
               ],
             ),
     );
@@ -258,57 +281,68 @@ class _SectionRowState extends State<_SectionRow> {
     final gated =
         widget.section.requiresChecklist || widget.section.countsForKpi;
 
+    // Mỗi nhóm là một thẻ trắng viền mảnh bo 16.
     return Padding(
-      padding: const EdgeInsets.only(bottom: OmniSpacing.sm),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Material(
+        color: scheme.surface,
+        shape: RoundedRectangleBorder(
+          borderRadius: OmniRadius.xlAll,
+          side: BorderSide(color: scheme.outlineVariant),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(14, 10, 4, 6),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Expanded(
-                child: TextField(
-                  controller: _controller,
-                  decoration: InputDecoration(
-                    hintText: 'Tên nhóm việc',
-                    isDense: true,
-                    // Nói ra nhóm nào đang mang quy tắc, để người sửa biết
-                    // mình đang đụng vào thứ gì trước khi xoá nó.
-                    helperText: gated ? _rulesOf(widget.section) : null,
+              Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: _controller,
+                      decoration: InputDecoration(
+                        hintText: 'Tên nhóm việc',
+                        isDense: true,
+                        // Nói ra nhóm nào đang mang quy tắc, để người sửa biết
+                        // mình đang đụng vào thứ gì trước khi xoá nó.
+                        helperText: gated ? _rulesOf(widget.section) : null,
+                      ),
+                      onChanged: widget.onChanged,
+                    ),
                   ),
-                  onChanged: widget.onChanged,
-                ),
+                  IconButton(
+                    onPressed: widget.onRemove,
+                    icon: Icon(
+                      Icons.close_rounded,
+                      color: widget.onRemove == null
+                          ? scheme.onSurfaceVariant
+                          : null,
+                    ),
+                    tooltip: 'Bỏ nhóm việc này',
+                  ),
+                ],
               ),
-              IconButton(
-                onPressed: widget.onRemove,
-                icon: Icon(
-                  Icons.close_rounded,
-                  color: widget.onRemove == null
-                      ? scheme.onSurfaceVariant
-                      : null,
-                ),
-                tooltip: 'Bỏ nhóm việc này',
+              // Đặt ngay tại đây chứ không giấu sau một màn khác: quản đốc đứng
+              // giữa xưởng với cái điện thoại, và cho tới giờ hai cờ này chỉ bật
+              // được từ web. Nhãn nói HẬU QUẢ chứ không nói tên cờ — bật nhầm thì
+              // bảng trông y hệt, chỉ có con số cuối tháng khác đi.
+              SwitchListTile(
+                value: widget.section.requiresChecklist,
+                onChanged: widget.onGateChanged,
+                title: const Text('Chặn vào nhóm khi việc con chưa xong'),
+                dense: true,
+                contentPadding: EdgeInsets.zero,
+              ),
+              SwitchListTile(
+                value: widget.section.countsForKpi,
+                onChanged: widget.onKpiChanged,
+                title: const Text('Nhóm này là đích đếm KPI tháng'),
+                dense: true,
+                contentPadding: EdgeInsets.zero,
               ),
             ],
           ),
-          // Đặt ngay tại đây chứ không giấu sau một màn khác: quản đốc đứng
-          // giữa xưởng với cái điện thoại, và cho tới giờ hai cờ này chỉ bật
-          // được từ web. Nhãn nói HẬU QUẢ chứ không nói tên cờ — bật nhầm thì
-          // bảng trông y hệt, chỉ có con số cuối tháng khác đi.
-          SwitchListTile(
-            value: widget.section.requiresChecklist,
-            onChanged: widget.onGateChanged,
-            title: const Text('Chặn vào nhóm khi việc con chưa xong'),
-            dense: true,
-            contentPadding: EdgeInsets.zero,
-          ),
-          SwitchListTile(
-            value: widget.section.countsForKpi,
-            onChanged: widget.onKpiChanged,
-            title: const Text('Nhóm này là đích đếm KPI tháng'),
-            dense: true,
-            contentPadding: EdgeInsets.zero,
-          ),
-        ],
+        ),
       ),
     );
   }

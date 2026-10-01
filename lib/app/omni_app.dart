@@ -18,6 +18,7 @@ import '../modules/tasks/tasks_module.dart';
 import '../security/session/session_controller.dart';
 import '../security/session/session.dart';
 import 'router/app_router.dart';
+import 'shell/launch_splash.dart';
 
 class OmniApp extends ConsumerStatefulWidget {
   const OmniApp({super.key});
@@ -116,7 +117,9 @@ class _OmniAppState extends ConsumerState<OmniApp> with WidgetsBindingObserver {
           // một import thẳng từ design lên module.
           child: OmniAccountSlot(
             builder: (_) => const AccountMenuButton(),
-            child: child ?? const SizedBox.shrink(),
+            // Hiệu ứng mở app phủ lên router, không nằm trong nó — xem
+            // docblock của LaunchSplash về lý do không làm chậm điều hướng.
+            child: LaunchSplash(child: child ?? const SizedBox.shrink()),
           ),
         );
       },

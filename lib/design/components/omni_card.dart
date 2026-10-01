@@ -43,14 +43,16 @@ class OmniCard extends StatelessWidget {
 
     return Material(
       color: background ?? scheme.surface,
-      borderRadius: OmniRadius.lgAll,
+      borderRadius: OmniRadius.xlAll,
       clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: onTap,
         child: Ink(
           decoration: BoxDecoration(
-            borderRadius: OmniRadius.lgAll,
-            border: Border.all(color: borderColor ?? scheme.outline),
+            borderRadius: OmniRadius.xlAll,
+            // Viền TRANG TRÍ (outlineVariant, #E3E8EF): thẻ trắng trên nền xám
+            // đã tự tách khỏi nền. Viền tương tác 3:1 dành cho ô nhập, nút.
+            border: Border.all(color: borderColor ?? scheme.outlineVariant),
           ),
           child: content,
         ),
@@ -89,7 +91,12 @@ class OmniSectionHeader extends StatelessWidget {
           Expanded(
             child: Text(
               title.toUpperCase(),
-              style: OmniType.overline.copyWith(color: scheme.onSurfaceVariant),
+              // 12/700, giãn chữ .08em — nhãn nhóm của mọi màn trong bộ Orbit.
+              style: OmniType.overline.copyWith(
+                fontWeight: FontWeight.w700,
+                letterSpacing: 0.96,
+                color: scheme.onSurfaceVariant,
+              ),
             ),
           ),
           if (action != null)
@@ -117,6 +124,7 @@ class OmniSectionHeader extends StatelessWidget {
 }
 
 /// One KPI tile — pipeline value, open opportunities, conversation count.
+/// Ô số liệu nhỏ: nhãn 12 chữ phụ, số 17/700 (`MCustomerDetail.dc.html`).
 class OmniStatTile extends StatelessWidget {
   const OmniStatTile({
     super.key,
@@ -142,12 +150,15 @@ class OmniStatTile extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           Text(
-            label.toUpperCase(),
+            label,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: OmniType.overline.copyWith(color: scheme.onSurfaceVariant),
+            style: OmniType.micro.copyWith(
+              fontWeight: FontWeight.w400,
+              color: scheme.onSurfaceVariant,
+            ),
           ),
-          const SizedBox(height: OmniSpacing.sm),
+          const SizedBox(height: 2),
           Text(
             value,
             maxLines: 1,
@@ -169,7 +180,30 @@ class OmniStatTile extends StatelessWidget {
   }
 }
 
-/// Label/value row inside a detail card.
+/// Thẻ chứa các [OmniDetailRow], vạch ngăn giữa từng dòng.
+class OmniDetailCard extends StatelessWidget {
+  const OmniDetailCard({super.key, required this.rows});
+
+  final List<Widget> rows;
+
+  @override
+  Widget build(BuildContext context) {
+    return OmniCard(
+      padding: EdgeInsets.zero,
+      child: Column(
+        children: [
+          for (var i = 0; i < rows.length; i++) ...[
+            if (i > 0) const Divider(height: 1),
+            rows[i],
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+/// Dòng "nhãn — giá trị" trong thẻ chi tiết: nhãn chữ phụ cột 110, giá trị
+/// 15; dòng bấm được (gọi, gửi thư) tô giá trị màu chính đậm như liên kết.
 class OmniDetailRow extends StatelessWidget {
   const OmniDetailRow({
     super.key,
@@ -178,23 +212,29 @@ class OmniDetailRow extends StatelessWidget {
     this.icon,
     this.onTap,
     this.valueColor,
+    this.strong = false,
   });
 
   final String label;
   final String value;
+
+  /// Icon đầu dòng. Bộ Orbit không dùng; giữ cho chỗ gọi cũ.
   final IconData? icon;
   final VoidCallback? onTap;
   final Color? valueColor;
 
+  /// Giá trị đậm (người phụ trách, giai đoạn).
+  final bool strong;
+
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final link = onTap != null;
 
     return InkWell(
       onTap: onTap,
-      borderRadius: OmniRadius.smAll,
       child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: OmniSpacing.sm),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -203,10 +243,11 @@ class OmniDetailRow extends StatelessWidget {
               const SizedBox(width: OmniSpacing.md),
             ],
             SizedBox(
-              width: 104,
+              width: 110,
               child: Text(
                 label,
-                style: OmniType.caption.copyWith(
+                style: OmniType.bodyStrong.copyWith(
+                  fontWeight: FontWeight.w400,
                   color: scheme.onSurfaceVariant,
                 ),
               ),
@@ -214,18 +255,16 @@ class OmniDetailRow extends StatelessWidget {
             Expanded(
               child: Text(
                 value,
-                style: OmniType.caption.copyWith(
-                  color: valueColor ?? scheme.onSurface,
-                  fontWeight: FontWeight.w600,
+                style: OmniType.bodyStrong.copyWith(
+                  height: 21 / 15,
+                  color:
+                      valueColor ?? (link ? scheme.primary : scheme.onSurface),
+                  fontWeight: link || strong
+                      ? FontWeight.w600
+                      : FontWeight.w400,
                 ),
               ),
             ),
-            if (onTap != null)
-              Icon(
-                Icons.chevron_right_rounded,
-                size: OmniIconSize.md,
-                color: scheme.onSurfaceVariant,
-              ),
           ],
         ),
       ),

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/error/app_exception.dart';
+import '../../../design/components/components.dart';
 import '../../../design/tokens/tokens.dart';
 import '../application/plans_providers.dart';
 import '../data/plans_api.dart';
@@ -73,53 +74,102 @@ class _CreatePlanPageState extends ConsumerState<CreatePlanPage> {
     final scheme = Theme.of(context).colorScheme;
     final text = Theme.of(context).textTheme;
 
+    // Bố cục `MCreatePlan.dc.html`: nền trắng, xem trước nền dự án, các ô có
+    // nhãn phía trên, nút "Tạo dự án" ghim ở đáy.
+    final label = OmniType.body.copyWith(
+      fontWeight: FontWeight.w600,
+      color: scheme.onSurface,
+    );
+
     return Scaffold(
-      appBar: AppBar(title: const Text('Dự án mới')),
-      body: ListView(
-        padding: const EdgeInsets.fromLTRB(
-          OmniSpacing.lg,
-          OmniSpacing.lg,
-          OmniSpacing.lg,
-          OmniSpacing.bottomSafe,
+      backgroundColor: scheme.surface,
+      appBar: AppBar(
+        backgroundColor: scheme.surface,
+        leading: const CloseButton(),
+        title: const Text('Dự án mới'),
+      ),
+      bottomNavigationBar: DecoratedBox(
+        decoration: BoxDecoration(
+          color: scheme.surface,
+          border: Border(top: BorderSide(color: scheme.outlineVariant)),
         ),
+        child: SafeArea(
+          top: false,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+            child: FilledButton(
+              onPressed: _canSave ? _save : null,
+              child: _saving
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Text('Tạo dự án'),
+            ),
+          ),
+        ),
+      ),
+      body: ListView(
+        padding: const EdgeInsets.fromLTRB(20, OmniSpacing.sm, 20, 24),
         children: [
           // Xem trước NGAY: tên hiện trên chính dải nền trong lúc gõ, nên
           // người tạo thấy kết quả thật thay vì đoán. Đây cũng là chỗ kiểm
           // được bằng mắt rằng nền đủ tối cho chữ trắng, ngay tại chỗ chọn.
           Container(
             height: 120,
-            alignment: Alignment.bottomLeft,
-            padding: const EdgeInsets.all(OmniSpacing.lg),
+            clipBehavior: Clip.antiAlias,
             decoration: BoxDecoration(
               gradient: OmniCovers.gradientOf(_cover),
-              borderRadius: OmniRadius.lgAll,
+              borderRadius: const BorderRadius.all(Radius.circular(18)),
             ),
-            child: Text(
-              _name.text.trim().isEmpty ? 'Dự án mới' : _name.text.trim(),
-              style: text.titleLarge?.copyWith(
-                color: Colors.white,
-                fontWeight: FontWeight.w700,
-              ),
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
+            child: Stack(
+              children: [
+                Positioned(
+                  right: -40,
+                  top: -60,
+                  child: Container(
+                    width: 200,
+                    height: 200,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: Colors.white.withValues(alpha: 0.16),
+                        width: 1.5,
+                      ),
+                    ),
+                  ),
+                ),
+                Positioned(
+                  left: 16,
+                  right: 16,
+                  bottom: 16,
+                  child: Text(
+                    _name.text.trim().isEmpty ? 'Dự án mới' : _name.text.trim(),
+                    style: OmniType.title.copyWith(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w700,
+                    ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
             ),
           ),
-          const SizedBox(height: OmniSpacing.lg),
-          TextField(
-            controller: _name,
-            autofocus: true,
-            textCapitalization: TextCapitalization.sentences,
-            decoration: const InputDecoration(
-              labelText: 'Tên dự án',
-              hintText: 'Đàn cơ',
+          const SizedBox(height: 18),
+          OmniField(
+            label: 'Tên dự án',
+            child: TextField(
+              controller: _name,
+              autofocus: true,
+              textCapitalization: TextCapitalization.sentences,
+              decoration: const InputDecoration(hintText: 'Đàn cơ'),
+              onChanged: (_) => setState(() {}),
             ),
-            onChanged: (_) => setState(() {}),
           ),
-          const SizedBox(height: OmniSpacing.lg),
-          Text(
-            'Nền',
-            style: text.titleSmall?.copyWith(fontWeight: FontWeight.w700),
-          ),
+          const SizedBox(height: 18),
+          Text('Nền', style: label),
           const SizedBox(height: OmniSpacing.sm),
           CoverPicker(
             value: _cover,
@@ -139,10 +189,7 @@ class _CreatePlanPageState extends ConsumerState<CreatePlanPage> {
             ),
           ],
           const SizedBox(height: OmniSpacing.xxl),
-          Text(
-            'Nhóm việc',
-            style: text.titleSmall?.copyWith(fontWeight: FontWeight.w700),
-          ),
+          Text('Nhóm việc', style: label),
           const SizedBox(height: OmniSpacing.xs),
           Text(
             'Mỗi nhóm việc là một cột trên bảng.',
@@ -176,17 +223,6 @@ class _CreatePlanPageState extends ConsumerState<CreatePlanPage> {
               ),
             ),
           ],
-          const SizedBox(height: OmniSpacing.xxl),
-          FilledButton(
-            onPressed: _canSave ? _save : null,
-            child: _saving
-                ? const SizedBox(
-                    width: 20,
-                    height: 20,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                : const Text('Tạo dự án'),
-          ),
         ],
       ),
     );

@@ -1,3 +1,5 @@
+import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -50,6 +52,15 @@ Future<Widget> bootstrap() async {
 
   // Vietnamese date formatting is used on every list row.
   await initializeDateFormatting('vi_VN');
+
+  // OFL đòi giấy phép đi kèm font khi phân phối. Font nằm trong gói app, nên
+  // giấy phép cũng phải đọc được từ trong app — trang "Giấy phép" của Flutter.
+  LicenseRegistry.addLicense(() async* {
+    final text = await rootBundle.loadString(
+      'assets/fonts/BeVietnamPro-OFL.txt',
+    );
+    yield LicenseEntryWithLineBreaks(const ['Be Vietnam Pro'], text);
+  });
 
   final preferences = await SharedPreferences.getInstance();
 

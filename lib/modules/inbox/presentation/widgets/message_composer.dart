@@ -233,15 +233,19 @@ class _MessageComposerState extends State<MessageComposer> {
                   onRemove: (image) =>
                       setState(() => _pendingImages.remove(image)),
                 ),
+              // Trả lời nhanh: một hàng viên viền mảnh ngay trên ô nhập, chạm là
+              // chèn câu vào ô (không gửi luôn — người bán thường sửa một chữ).
+              if (!isNote && widget.enabled && widget.suggestions.isNotEmpty)
+                _QuickReplies(suggestions: widget.suggestions, onPick: _insert),
               Padding(
-                padding: const EdgeInsets.fromLTRB(4, 6, 4, 6),
+                padding: const EdgeInsets.fromLTRB(4, 4, 4, 6),
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
                     _ComposerIcon(
-                      icon: Icons.emoji_emotions_outlined,
-                      tooltip: 'Biểu tượng cảm xúc',
-                      onTap: widget.enabled ? _openEmoji : null,
+                      icon: Icons.add_circle_outline_rounded,
+                      tooltip: 'Thêm',
+                      onTap: widget.enabled ? _openMore : null,
                     ),
                     Expanded(
                       child: ConstrainedBox(
@@ -262,18 +266,26 @@ class _MessageComposerState extends State<MessageComposer> {
                               color: scheme.onSurfaceVariant,
                             ),
                             isDense: true,
-                            filled: false,
-                            border: InputBorder.none,
-                            enabledBorder: InputBorder.none,
-                            focusedBorder: InputBorder.none,
+                            // Viên xám bo tròn như thiết kế, không viền.
+                            filled: true,
+                            fillColor: scheme.surfaceContainerHighest,
+                            border: _pill,
+                            enabledBorder: _pill,
+                            focusedBorder: _pill,
+                            disabledBorder: _pill,
                             contentPadding: const EdgeInsets.symmetric(
-                              horizontal: 6,
-                              vertical: 10,
+                              horizontal: 14,
+                              vertical: 12,
                             ),
                           ),
                           onSubmitted: (_) => _send(),
                         ),
                       ),
+                    ),
+                    _ComposerIcon(
+                      icon: Icons.emoji_emotions_outlined,
+                      tooltip: 'Biểu tượng cảm xúc',
+                      onTap: widget.enabled ? _openEmoji : null,
                     ),
                     if (!isNote)
                       _ComposerIcon(
@@ -281,11 +293,6 @@ class _MessageComposerState extends State<MessageComposer> {
                         tooltip: 'Thêm ảnh',
                         onTap: widget.enabled && !_sending ? _pickImages : null,
                       ),
-                    _ComposerIcon(
-                      icon: Icons.more_horiz_rounded,
-                      tooltip: 'Thêm',
-                      onTap: widget.enabled ? _openMore : null,
-                    ),
                     // Zalo swaps the trailing icon for send the moment there is
                     // something to send, so the primary action is never a second
                     // button competing for the same corner.
@@ -314,6 +321,52 @@ class _MessageComposerState extends State<MessageComposer> {
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+const _pill = OutlineInputBorder(
+  borderRadius: BorderRadius.all(Radius.circular(22)),
+  borderSide: BorderSide.none,
+);
+
+/// Hàng trả lời nhanh trên ô nhập (`MThread.dc.html`).
+class _QuickReplies extends StatelessWidget {
+  const _QuickReplies({required this.suggestions, required this.onPick});
+
+  final List<String> suggestions;
+  final ValueChanged<String> onPick;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+
+    return SizedBox(
+      height: 44,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
+        itemCount: suggestions.length,
+        separatorBuilder: (_, _) => const SizedBox(width: 8),
+        itemBuilder: (context, index) {
+          final text = suggestions[index];
+          return ActionChip(
+            label: Text(text),
+            tooltip: 'Chèn: ',
+            onPressed: () => onPick(text),
+            visualDensity: VisualDensity.compact,
+            materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            labelStyle: OmniType.caption.copyWith(
+              fontWeight: FontWeight.w600,
+              color: scheme.onSurface,
+            ),
+            backgroundColor: scheme.surface,
+            side: BorderSide(color: scheme.outlineVariant),
+            shape: const StadiumBorder(),
+            padding: const EdgeInsets.symmetric(horizontal: 4),
+          );
+        },
       ),
     );
   }

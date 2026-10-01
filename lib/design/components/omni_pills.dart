@@ -13,6 +13,8 @@ class OmniFilterPill extends StatelessWidget {
     required this.onTap,
     this.count,
     this.tint,
+    this.onInk = false,
+    this.outlined = false,
   });
 
   final String label;
@@ -20,78 +22,112 @@ class OmniFilterPill extends StatelessWidget {
   final int? count;
   final VoidCallback onTap;
 
-  /// Màu của viên đang được chọn. Bỏ trống thì lấy màu chính của theme.
+  /// Màu nền của viên đang được chọn. Bỏ trống thì lấy màu mực của bộ Orbit.
   ///
-  /// Chỉ hộp thư truyền vào, và truyền [OmniColors.chatPrimary] để khớp Zalo.
-  /// Trước đây widget này ghim thẳng màu Zalo, nên "Hôm nay" trên màn Việc của
-  /// tôi hiện xanh dương giữa một app mòng két — ngoại lệ chat rò ra khỏi
-  /// module chat. `chat_palette_boundary_test.dart` chặn việc đó tái diễn.
+  /// Widget dùng chung không được ghim màu Zalo — `chat_palette_boundary_test`
+  /// chặn việc đó. Chỗ gọi nào cần màu riêng thì truyền vào từ chỗ gọi.
   final Color? tint;
+
+  /// Viên nằm trên nền MỰC (dải nhóm việc của bảng dự án): viên thường nền
+  /// mực sáng hơn một bậc chữ xám xanh, viên đang chọn nền quỹ đạo sáng chữ
+  /// tối đậm.
+  final bool onInk;
+
+  /// Lựa chọn trong BIỂU MẪU (nguồn khách, giai đoạn): viên chưa chọn trong
+  /// suốt có viền mảnh thay vì nền xám, cao 36.
+  final bool outlined;
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final dark = Theme.of(context).brightness == Brightness.dark;
 
-    // Only the CHOSEN one is a pill. The rest are plain text.
-    //
-    // Six filled capsules in a row was the heaviest thing on the screen, and
-    // filling all of them spends the same ink on the five a rep is not using as
-    // on the one they are. Emptying the others lets the selection carry the
-    // whole signal, and the row turns into a line of words above the list
-    // instead of a tray of buttons.
-    // Chữ trên viên đã chọn phải đi theo NỀN của chính nó, không mặc định
-    // trắng: ở chế độ tối, màu chính là #4FBFAE và chữ trắng trên đó chỉ đạt
-    // 2.18:1. Màu Zalo #0068FF thì trắng vẫn đúng, nên chỗ nào truyền [tint]
-    // vào thì chỗ đó chịu trách nhiệm — hộp thư là chỗ duy nhất.
-    final background = selected ? (tint ?? scheme.primary) : Colors.transparent;
-    final foreground = selected
-        ? (tint != null ? Colors.white : scheme.onPrimary)
-        : dark
-        ? Colors.white.withValues(alpha: 0.6)
-        : scheme.onSurfaceVariant;
+    // Bộ Orbit: viên đang chọn là khối MỰC chữ trắng, số đếm màu quỹ đạo
+    // sáng; các viên khác nền xám nhạt chữ mực, số đếm chữ phụ. Ở chế độ tối
+    // khối mực biến mất vào nền, nên đảo lại: nền chữ sáng, chữ màu nền.
+    final Color background;
+    final Color foreground;
+    final Color countColor;
+    if (onInk) {
+      background = selected ? OmniColors.orbit : OmniColors.inkRaised;
+      foreground = selected
+          ? OmniColors.darkPrimaryForeground
+          : OmniColors.inkMutedForeground;
+      countColor = foreground;
+    } else if (selected) {
+      background = tint ?? (dark ? scheme.onSurface : OmniColors.ink);
+      foreground = dark && tint == null ? scheme.surface : Colors.white;
+      countColor = tint != null
+          ? Colors.white.withValues(alpha: 0.75)
+          : dark
+          ? OmniColors.primary
+          : OmniColors.orbit;
+    } else if (outlined) {
+      background = Colors.transparent;
+      foreground = scheme.onSurface;
+      countColor = scheme.onSurfaceVariant;
+    } else {
+      background = scheme.surfaceContainerHighest;
+      foreground = scheme.onSurface;
+      countColor = scheme.onSurfaceVariant;
+    }
 
-    return Material(
-      color: background,
-      borderRadius: OmniRadius.chipAll,
-      clipBehavior: Clip.antiAlias,
+    return Semantics(
+      button: true,
+      selected: selected,
       child: InkWell(
         onTap: onTap,
-        // 44dp là sàn, không phải mục tiêu: pill này đo được 29dp trước khi có
-        // ràng buộc này. Vùng chạm cao hơn phần nhìn thấy — đúng cách, vì cái
-        // cần lớn là chỗ ngón tay chạm chứ không phải viên thuốc trên màn hình.
+        customBorder: const StadiumBorder(),
+        // 44dp là sàn vùng chạm; viên nhìn thấy cao 34dp như thiết kế.
         child: ConstrainedBox(
           constraints: const BoxConstraints(minHeight: 44),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  label,
-                  style: OmniType.caption.copyWith(
-                    fontSize: 13.5,
-                    height: 1.1,
-                    color: foreground,
-                    fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
-                  ),
-                ),
-                if (count != null && count! > 0) ...[
-                  const SizedBox(width: 5),
-                  Text(
-                    '$count',
-                    style: OmniType.caption.copyWith(
-                      fontSize: 13.5,
-                      height: 1.1,
-                      // Dimmed rather than boxed: the count qualifies the label, it
-                      // is not a second thing to look at.
-                      color: foreground.withValues(alpha: 0.6),
-                      fontWeight: FontWeight.w600,
-                      fontFeatures: OmniType.tabular,
+          child: Center(
+            widthFactor: 1,
+            child: AnimatedContainer(
+              duration: OmniMotion.of(context).fast,
+              constraints: BoxConstraints(minHeight: outlined ? 36 : 34),
+              padding: EdgeInsets.symmetric(
+                horizontal: 14,
+                vertical: outlined ? 8 : 7,
+              ),
+              decoration: BoxDecoration(
+                color: background,
+                borderRadius: OmniRadius.pillAll,
+                border: outlined && !selected
+                    ? Border.all(color: scheme.outlineVariant)
+                    : null,
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Flexible(
+                    child: Text(
+                      label,
+                      style: OmniType.caption.copyWith(
+                        height: 1.2,
+                        color: foreground,
+                        fontWeight: selected
+                            ? (onInk ? FontWeight.w800 : FontWeight.w700)
+                            : FontWeight.w600,
+                      ),
                     ),
                   ),
+                  if (count != null && count! > 0) ...[
+                    const SizedBox(width: 6),
+                    Text(
+                      '$count',
+                      style: OmniType.caption.copyWith(
+                        height: 1.2,
+                        color: countColor,
+                        fontWeight: selected
+                            ? FontWeight.w700
+                            : FontWeight.w600,
+                        fontFeatures: OmniType.tabular,
+                      ),
+                    ),
+                  ],
                 ],
-              ],
+              ),
             ),
           ),
         ),
@@ -189,16 +225,59 @@ class OmniTag extends StatelessWidget {
 
 /// Solid filled unread count — deliberately not an outlined badge, so it reads
 /// as "action required" rather than decoration.
+///
+/// Hai giọng theo bộ Orbit: CHƯA ĐỌC là nền vàng [OmniColors.sun] chữ mực
+/// ([OmniCountBadge.unread]), CẦN XỬ LÝ (việc trễ hạn) là nền đỏ chữ trắng
+/// ([OmniCountBadge.alert]).
 class OmniCountBadge extends StatelessWidget {
-  const OmniCountBadge({super.key, required this.count, this.color});
+  const OmniCountBadge({
+    super.key,
+    required this.count,
+    this.color,
+    this.foreground,
+    this.ringColor,
+    this.compact = false,
+  });
+
+  /// Huy hiệu "chưa đọc": vàng, chữ mực.
+  const OmniCountBadge.unread({
+    super.key,
+    required this.count,
+    this.ringColor,
+    this.compact = true,
+  }) : color = OmniColors.sun,
+       foreground = OmniColors.sunForeground;
+
+  /// Huy hiệu "cần xử lý": đỏ, chữ trắng.
+  const OmniCountBadge.alert({
+    super.key,
+    required this.count,
+    this.ringColor,
+    this.compact = true,
+  }) : color = OmniColors.dangerSurface,
+       foreground = Colors.white;
 
   final int count;
   final Color? color;
+
+  /// Màu chữ. Mặc định trắng.
+  final Color? foreground;
+
+  /// Vành 2dp quanh huy hiệu, cùng màu mặt nó nằm lên — tách huy hiệu khỏi
+  /// icon bên dưới (thanh tab, ô trong danh bạ).
+  final Color? ringColor;
+
+  /// Cỡ 18dp, không quầng sáng — cho thanh tab và ô danh bạ.
+  final bool compact;
 
   @override
   Widget build(BuildContext context) {
     if (count <= 0) return const SizedBox.shrink();
     final background = color ?? Theme.of(context).colorScheme.primary;
+    final ring = ringColor;
+    // Thiết kế vẽ chữ 10px trong huy hiệu 18dp. Sàn chữ của app là 12
+    // (`type_scale_test`), nên huy hiệu gọn cao 20dp kể cả vành để chữ 12 vừa.
+    const height = 20.0;
 
     // The badge glows, not the text.
     //
@@ -219,28 +298,32 @@ class OmniCountBadge extends StatelessWidget {
       builder: (context, scale, child) =>
           Transform.scale(scale: scale, child: child),
       child: Container(
-        constraints: const BoxConstraints(minWidth: 20),
-        height: 20,
-        padding: const EdgeInsets.symmetric(horizontal: 6),
+        constraints: const BoxConstraints(minWidth: height),
+        height: height,
+        padding: EdgeInsets.symmetric(horizontal: compact ? 4 : 6),
         decoration: BoxDecoration(
           color: background,
           borderRadius: OmniRadius.pillAll,
-          boxShadow: [
-            BoxShadow(
-              color: background.withValues(alpha: 0.45),
-              blurRadius: 8,
-              spreadRadius: 0.5,
-            ),
-          ],
+          border: ring == null ? null : Border.all(color: ring, width: 2),
+          boxShadow: compact
+              ? null
+              : [
+                  BoxShadow(
+                    color: background.withValues(alpha: 0.45),
+                    blurRadius: 8,
+                    spreadRadius: 0.5,
+                  ),
+                ],
         ),
         alignment: Alignment.center,
         child: Text(
           count > 99 ? '99+' : '$count',
           style: OmniType.micro.copyWith(
-            color: Colors.white,
+            color: foreground ?? Colors.white,
             // Bold: this is the one number on the row that must be read from a
             // glance, and the regular weight let it sink into the pill.
-            fontWeight: FontWeight.w700,
+            fontWeight: compact ? FontWeight.w800 : FontWeight.w700,
+            height: 1,
             fontFeatures: OmniType.tabular,
           ),
         ),

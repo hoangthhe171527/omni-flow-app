@@ -154,6 +154,21 @@ class SessionController extends Notifier<Session> {
     await _loadContext(retryOnTransientFailure: true);
   }
 
+  /// Rời không gian đang dùng để chọn lại — nút "Đổi" trong "Tất cả".
+  ///
+  /// KHÔNG đăng xuất và không xoá gì: token vẫn còn, `/auth/tenants` và
+  /// `/auth/switch-tenant` không cần tenant. Phiên chuyển về [tenantPending],
+  /// nên router đưa tới màn chọn, còn gốc app coi đây là một lần phiên kết
+  /// thúc: ngắt realtime và huỷ đăng ký đẩy của tenant cũ. Chọn xong đi qua
+  /// [selectTenant] y như lúc đăng nhập.
+  ///
+  /// Tenant đã lưu cũng giữ nguyên: tắt app giữa chừng thì lần mở sau vào lại
+  /// không gian cũ — đúng nghĩa "chưa đổi".
+  void chooseWorkspace() {
+    if (!state.isAuthenticated) return;
+    state = const Session(status: SessionStatus.tenantPending);
+  }
+
   Future<void> refreshContext() => _loadContext();
 
   Future<void> logout() async {

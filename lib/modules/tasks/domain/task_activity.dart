@@ -124,7 +124,7 @@ class TaskActivityEntry {
 
     final source = _nameOf(from, sections);
 
-    return source == null ? 'sang $target' : '$source → $target';
+    return source == null ? 'sang $target' : '$source › $target';
   }
 
   static String? _nameOf(String? id, List<TaskSection> sections) {

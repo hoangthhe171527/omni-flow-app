@@ -18,7 +18,7 @@ Future<void> saveQrToGallery(String dataUrl) async {
   } on GalException catch (error) {
     throw Exception(switch (error.type) {
       GalExceptionType.accessDenied =>
-        'Chưa cho phép lưu ảnh. Mở Cài đặt → Quyền để bật.',
+        'Chưa cho phép lưu ảnh. Mở Cài đặt › Quyền để bật.',
       _ => 'Không lưu được ảnh QR.',
     });
   }

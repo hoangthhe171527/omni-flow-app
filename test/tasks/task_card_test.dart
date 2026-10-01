@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:omni_app/design/components/omni_avatar.dart';
-import 'package:omni_app/design/components/omni_status_chip.dart';
+import 'package:omni_app/modules/tasks/presentation/widgets/due_chip.dart';
 import 'package:omni_app/design/theme/omni_theme.dart';
 import 'package:omni_app/modules/tasks/domain/task.dart';
 import 'package:omni_app/modules/tasks/presentation/widgets/task_card.dart';
@@ -35,7 +35,7 @@ void main() {
       ),
     );
 
-    final chip = tester.getSize(find.byType(OmniStatusChip));
+    final chip = tester.getSize(find.byType(DueChip));
 
     expect(
       chip.width,

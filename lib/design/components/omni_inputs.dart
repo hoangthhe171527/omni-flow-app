@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
+import '../platform/omni_motion_scope.dart';
 import '../platform/omni_platform.dart';
 import '../tokens/tokens.dart';
 
@@ -15,9 +16,15 @@ class OmniSearchField extends StatefulWidget {
     this.initialValue,
     this.debounce = const Duration(milliseconds: 350),
     this.trailing,
+    this.outlined = false,
   });
 
   final ValueChanged<String> onChanged;
+
+  /// Bộ Orbit có hai kiểu ô tìm: khối xám không viền (mặc định — hộp thư,
+  /// khách hàng, gán người) và ô trắng viền mảnh đặt trên nền xám (danh bạ
+  /// "Tất cả").
+  final bool outlined;
   final String hint;
   final String? initialValue;
   final Duration debounce;
@@ -28,6 +35,16 @@ class OmniSearchField extends StatefulWidget {
 }
 
 class _OmniSearchFieldState extends State<OmniSearchField> {
+  OutlineInputBorder _border(ColorScheme scheme) => widget.outlined
+      ? OutlineInputBorder(
+          borderRadius: OmniRadius.lgAll,
+          borderSide: BorderSide(color: scheme.outlineVariant),
+        )
+      : const OutlineInputBorder(
+          borderRadius: OmniRadius.mdAll,
+          borderSide: BorderSide.none,
+        );
+
   late final TextEditingController _controller = TextEditingController(
     text: widget.initialValue,
   );
@@ -76,8 +93,20 @@ class _OmniSearchFieldState extends State<OmniSearchField> {
                   _onChanged('');
                 },
               ),
+        isDense: true,
         contentPadding: const EdgeInsets.symmetric(vertical: 12),
-        fillColor: scheme.surface,
+        filled: true,
+        fillColor: widget.outlined
+            ? scheme.surface
+            : scheme.surfaceContainerHighest,
+        border: _border(scheme),
+        enabledBorder: _border(scheme),
+        focusedBorder: widget.outlined
+            ? OutlineInputBorder(
+                borderRadius: OmniRadius.lgAll,
+                borderSide: BorderSide(color: scheme.primary, width: 1.5),
+              )
+            : _border(scheme),
       ),
     );
   }
@@ -112,8 +141,9 @@ class OmniField extends StatelessWidget {
           children: [
             Text(
               label,
-              style: OmniType.caption.copyWith(
-                color: scheme.onSurfaceVariant,
+              // 14/600 màu chữ chính — nhãn của mọi biểu mẫu trong bộ Orbit.
+              style: OmniType.body.copyWith(
+                color: scheme.onSurface,
                 fontWeight: FontWeight.w600,
               ),
             ),
@@ -122,7 +152,7 @@ class OmniField extends StatelessWidget {
           ],
         ),
         const SizedBox(height: OmniSpacing.sm),
-        child,
+        OmniFocusGlow(child: child),
         if (error != null) ...[
           const SizedBox(height: 5),
           Row(
@@ -172,16 +202,29 @@ class OmniActionBar extends StatelessWidget {
       ),
       decoration: BoxDecoration(
         color: scheme.surface,
-        border: Border(top: BorderSide(color: scheme.outline)),
+        border: Border(top: BorderSide(color: scheme.outlineVariant)),
       ),
+      // Bộ Orbit: nút phụ ôm lấy chữ của nó ("Huỷ", "Đánh dấu thắng"), nút
+      // chính cuối hàng chiếm phần còn lại. Chia đều bề ngang làm chữ nút phụ
+      // gãy thành ba dòng trên màn 390dp.
       child: Row(
         children: [
           for (var i = 0; i < children.length; i++) ...[
-            if (i > 0) const SizedBox(width: OmniSpacing.md),
-            Expanded(
-              flex: i == children.length - 1 ? 2 : 1,
-              child: children[i],
-            ),
+            if (i > 0) const SizedBox(width: 10),
+            if (i == children.length - 1)
+              Expanded(child: children[i])
+            else
+              OutlinedButtonTheme(
+                data: OutlinedButtonThemeData(
+                  style: Theme.of(context).outlinedButtonTheme.style?.copyWith(
+                    minimumSize: const WidgetStatePropertyAll(Size(0, 52)),
+                    padding: const WidgetStatePropertyAll(
+                      EdgeInsets.symmetric(horizontal: 18),
+                    ),
+                  ),
+                ),
+                child: children[i],
+              ),
           ],
         ],
       ),
@@ -220,4 +263,53 @@ Future<T?> showOmniSheet<T>({
           : builder(context),
     ),
   );
+}
+
+/// Vầng sáng 4dp quanh ô nhập đang focus (`MLogin.dc.html`: viền màu chính
+/// 1.5 và `box-shadow: 0 0 0 4px #E3F8F6`).
+///
+/// InputDecoration không vẽ được bóng, nên vầng sáng nằm ở widget bọc ngoài và
+/// nghe focus của cả cây con — không cần FocusNode riêng cho từng ô. Chỉ thêm
+/// một lớp nhận diện "đang gõ ở đây", không thay viền: viền focus vẫn do theme
+/// vẽ, nên ô nào không bọc cũng không mất gì.
+class OmniFocusGlow extends StatefulWidget {
+  const OmniFocusGlow({
+    super.key,
+    required this.child,
+    this.borderRadius = OmniRadius.mdAll,
+  });
+
+  final Widget child;
+  final BorderRadius borderRadius;
+
+  @override
+  State<OmniFocusGlow> createState() => _OmniFocusGlowState();
+}
+
+class _OmniFocusGlowState extends State<OmniFocusGlow> {
+  bool _focused = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    final glow = dark
+        ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.18)
+        : OmniColors.accentSoft;
+
+    return Focus(
+      canRequestFocus: false,
+      skipTraversal: true,
+      onFocusChange: (focused) => setState(() => _focused = focused),
+      child: AnimatedContainer(
+        duration: OmniMotion.of(context).fast,
+        decoration: BoxDecoration(
+          borderRadius: widget.borderRadius,
+          boxShadow: _focused
+              ? [BoxShadow(color: glow, spreadRadius: 4)]
+              : const [],
+        ),
+        child: widget.child,
+      ),
+    );
+  }
 }

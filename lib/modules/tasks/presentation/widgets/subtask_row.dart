@@ -133,11 +133,26 @@ class SubtaskRow extends StatelessWidget {
                           // người thứ hai nhận một công đoạn đã có chủ.
                           Align(
                             alignment: Alignment.centerLeft,
-                            child: TextButton.icon(
+                            // Nút viền màu chính cao 32, chữ đậm — như thiết kế.
+                            child: OutlinedButton.icon(
                               onPressed: enabled ? onClaim : null,
+                              style: OutlinedButton.styleFrom(
+                                minimumSize: const Size(0, 32),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                ),
+                                foregroundColor: scheme.onPrimaryContainer,
+                                side: BorderSide(color: scheme.primary),
+                                shape: const RoundedRectangleBorder(
+                                  borderRadius: OmniRadius.xsAll,
+                                ),
+                                textStyle: OmniType.caption.copyWith(
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
                               icon: const Icon(
                                 Icons.person_add_alt_rounded,
-                                size: OmniIconSize.md,
+                                size: OmniIconSize.sm,
                               ),
                               label: const Text('Tôi nhận'),
                             ),
@@ -217,7 +232,7 @@ class _Box extends StatelessWidget {
       decoration: BoxDecoration(
         color: done && !failed ? scheme.primary : Colors.transparent,
         border: Border.all(color: colour, width: 2),
-        borderRadius: BorderRadius.circular(OmniRadius.xs),
+        borderRadius: BorderRadius.circular(7),
       ),
       child: done
           ? Icon(

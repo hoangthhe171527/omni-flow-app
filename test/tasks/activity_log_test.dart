@@ -79,7 +79,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(
-      find.text('Hằng Ni đã chuyển Chờ QC → Nhập xưởng'),
+      find.text('Hằng Ni đã chuyển Chờ QC › Nhập xưởng'),
       findsOneWidget,
       reason: 'Đây chính là câu trả lời cho "ai đã kéo cây này về lại".',
     );

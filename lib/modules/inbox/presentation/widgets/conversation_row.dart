@@ -55,10 +55,11 @@ class ConversationRow extends StatelessWidget {
       // The selected wash is stronger and wins, so multi-select stays readable.
       // (Its old fixed OmniColors.accent, a light indigo, turned a selected row
       // into a glaring white band in dark mode.)
+      // Bộ Orbit: hàng chưa đọc phủ một lớp mòng két rất nhạt (#F2FBFA).
       color: selected
-          ? OmniColors.chatPrimary.withValues(alpha: dark ? 0.22 : 0.09)
+          ? scheme.primary.withValues(alpha: dark ? 0.22 : 0.12)
           : unread
-          ? OmniColors.chatPrimary.withValues(alpha: dark ? 0.09 : 0.035)
+          ? scheme.primary.withValues(alpha: dark ? 0.10 : 0.05)
           : scheme.surface,
       child: InkWell(
         onTap: onTap,
@@ -66,7 +67,7 @@ class ConversationRow extends StatelessWidget {
         child: Padding(
           // 12/16 with a 52 avatar puts the row at ~76 tall — Zalo's rhythm, and
           // comfortably past the 48dp touch minimum.
-          padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+          padding: const EdgeInsets.fromLTRB(20, 12, 20, 12),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
@@ -75,7 +76,7 @@ class ConversationRow extends StatelessWidget {
                   selected
                       ? Icons.check_circle_rounded
                       : Icons.radio_button_unchecked_rounded,
-                  color: selected ? OmniColors.chatPrimary : scheme.outline,
+                  color: selected ? scheme.primary : scheme.outline,
                 ),
                 const SizedBox(width: OmniSpacing.md),
               ],
@@ -92,12 +93,6 @@ class ConversationRow extends StatelessWidget {
   Widget _body(BuildContext context, bool unread) {
     final scheme = Theme.of(context).colorScheme;
     final overdue = conversation.breachesSla;
-    // Secondary text follows the theme; a fixed grey goes invisible on black.
-    final meta = OmniColors.chat(
-      context,
-      OmniColors.chatMeta,
-      OmniColors.chatMetaDark,
-    );
 
     return Column(
       mainAxisSize: MainAxisSize.min,
@@ -115,10 +110,8 @@ class ConversationRow extends StatelessWidget {
                   // weight. Two axes of difference are what make the two states
                   // separable without staring — and it keeps them apart for
                   // anyone who cannot rely on the accent wash.
-                  color: unread
-                      ? scheme.onSurface
-                      : scheme.onSurface.withValues(alpha: 0.75),
-                  fontWeight: unread ? FontWeight.w700 : FontWeight.w400,
+                  color: unread ? scheme.onSurface : _readName(context),
+                  fontWeight: unread ? FontWeight.w700 : FontWeight.w500,
                 ),
               ),
             ),
@@ -126,8 +119,13 @@ class ConversationRow extends StatelessWidget {
             Text(
               Formatters.relative(conversation.lastMessageAt),
               style: OmniType.micro.copyWith(
-                color: overdue ? scheme.error : meta,
-                fontWeight: unread ? FontWeight.w600 : FontWeight.w400,
+                color: overdue
+                    ? OmniColors.dangerTextOf(context)
+                    : scheme.onSurfaceVariant,
+                fontWeight: overdue || unread
+                    ? FontWeight.w700
+                    : FontWeight.w400,
+                fontFeatures: OmniType.tabular,
               ),
             ),
           ],
@@ -141,14 +139,14 @@ class ConversationRow extends StatelessWidget {
                     ? 'Khẩn'
                     : 'Quá hạn trả lời ${Formatters.duration(conversation.waiting!)}',
                 child: Container(
-                  width: 6,
-                  height: 6,
+                  width: 7,
+                  height: 7,
                   margin: const EdgeInsets.only(right: 6),
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
                     color: conversation.urgent
                         ? OmniColors.destructive
-                        : OmniColors.warning,
+                        : OmniColors.sla,
                   ),
                 ),
               ),
@@ -167,23 +165,26 @@ class ConversationRow extends StatelessWidget {
                   // An unread preview is full-strength text; a read one drops to
                   // the muted tone, so the two are separable by weight AND by
                   // contrast rather than by weight alone.
-                  color: unread ? scheme.onSurface : meta,
+                  color: unread ? scheme.onSurface : scheme.onSurfaceVariant,
                   fontWeight: unread ? FontWeight.w600 : FontWeight.w400,
                 ),
               ),
             ),
             if (unread) ...[
               const SizedBox(width: 8),
-              // Red, not the CRM indigo the badge defaulted to — an indigo pill
-              // beside indigo chrome read as decoration, not as "unread".
-              OmniCountBadge(
-                count: conversation.unread,
-                color: OmniColors.chatUnread,
-              ),
+              // Vàng chữ mực: trong bộ Orbit màu vàng chỉ có một nghĩa — "có
+              // cái mới". Đỏ để dành cho khẩn và quá hạn.
+              OmniCountBadge.unread(count: conversation.unread),
             ] else if (conversation.isUnassigned) ...[
               const SizedBox(width: 8),
               // Not a warning, just a fact — the row must not shout about it.
-              Text('Chưa gán', style: OmniType.micro.copyWith(color: meta)),
+              Text(
+                'Chưa gán',
+                style: OmniType.micro.copyWith(
+                  fontWeight: FontWeight.w400,
+                  color: scheme.onSurfaceVariant,
+                ),
+              ),
             ],
           ],
         ),
@@ -195,6 +196,12 @@ class ConversationRow extends StatelessWidget {
 /// Compact source marker for scanning mixed-channel inboxes. The avatar keeps
 /// the visual mark, while this label makes the source unambiguous without
 /// spending a third row or turning the conversation list into a table.
+/// Tên đã đọc lùi về chữ cấp 2 (#3A4760), không chỉ nhạt độ đậm.
+Color _readName(BuildContext context) =>
+    Theme.of(context).brightness == Brightness.dark
+    ? Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.8)
+    : OmniColors.secondaryForeground;
+
 class _SourceLabel extends StatelessWidget {
   const _SourceLabel({required this.conversation});
 
@@ -220,7 +227,11 @@ class _SourceLabel extends StatelessWidget {
               label,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: OmniType.micro.copyWith(height: 1.15, color: meta.color),
+              style: OmniType.micro.copyWith(
+                height: 1.15,
+                fontWeight: FontWeight.w600,
+                color: meta.color,
+              ),
             ),
           ),
         ],
@@ -255,21 +266,21 @@ class _Avatar extends StatelessWidget {
                   names: conversation.groupMembers
                       .map((m) => m.name ?? '?')
                       .toList(),
-                  size: OmniIconSize.hero,
+                  size: 52,
                 )
               : OmniAvatar(
                   name: conversation.title,
                   imageUrl: conversation.customerAvatar,
-                  size: OmniIconSize.hero,
+                  size: 52,
                 ),
           Positioned(
-            right: -1,
-            bottom: -1,
+            right: -2,
+            bottom: -2,
             child: Semantics(
               label: 'Kênh ${meta.name}',
               child: Container(
-                width: 18,
-                height: 18,
+                width: 20,
+                height: 20,
                 decoration: BoxDecoration(
                   color: meta.color,
                   shape: BoxShape.circle,

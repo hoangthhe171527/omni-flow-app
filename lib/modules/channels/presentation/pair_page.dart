@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/domain/channel.dart';
+import '../../../design/components/components.dart';
 import '../../../design/tokens/tokens.dart';
 import '../application/channels_providers.dart';
 import '../application/pairing_controller.dart';
@@ -75,10 +76,14 @@ class _PairPageState extends ConsumerState<PairPage>
     });
 
     return Scaffold(
-      appBar: AppBar(title: Text('Ghép nối ${meta.name}')),
+      backgroundColor: Theme.of(context).colorScheme.surface,
+      appBar: AppBar(
+        backgroundColor: Theme.of(context).colorScheme.surface,
+        title: Text('Ghép nối ${meta.name}'),
+      ),
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.all(OmniSpacing.lg),
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
@@ -140,40 +145,51 @@ class _PairPageState extends ConsumerState<PairPage>
       case PairingView.qr:
         return Column(
           children: [
+            // Mã QR trong ô trắng bo 20 nổi nhẹ (`MPair.dc.html`) — trắng cả ở
+            // chế độ tối: máy quét cần nền sáng quanh mã.
             Container(
-              padding: const EdgeInsets.all(OmniSpacing.md),
+              width: 280,
+              height: 280,
+              padding: const EdgeInsets.all(30),
               decoration: BoxDecoration(
                 color: Colors.white,
-                borderRadius: OmniRadius.mdAll,
+                borderRadius: OmniRadius.xxlAll,
                 border: Border.all(color: scheme.outlineVariant),
+                boxShadow: OmniShadows.raised,
               ),
               child: Image.memory(
                 _decodeQr(state.snapshot.qr!),
-                width: 280,
-                height: 280,
+                width: 220,
+                height: 220,
                 gaplessPlayback: true,
               ),
             ),
-            const SizedBox(height: OmniSpacing.lg),
-            FilledButton.icon(
+            const SizedBox(height: 18),
+            OutlinedButton.icon(
               onPressed: () => _saveQr(state.snapshot.qr!),
-              icon: const Icon(Icons.download_rounded),
+              style: OutlinedButton.styleFrom(
+                minimumSize: const Size(0, 48),
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+              ),
+              icon: const Icon(Icons.download_rounded, size: OmniIconSize.md),
               label: const Text('Lưu ảnh QR'),
             ),
-            const SizedBox(height: OmniSpacing.md),
+            const SizedBox(height: 18),
             Text(
-              'Lưu ảnh → mở ${widget.channel.meta.short} → Quét mã QR → chọn ảnh vừa lưu trong thư viện.',
+              'Lưu ảnh › mở ${widget.channel.meta.short} › Quét mã QR › chọn ảnh vừa lưu trong thư viện.',
               textAlign: TextAlign.center,
-              style: OmniType.micro.copyWith(color: scheme.onSurfaceVariant),
-            ),
-            const SizedBox(height: OmniSpacing.sm),
-            Text(
-              'Mã đổi sau khoảng 100 giây — lưu xong quét luôn.',
-              textAlign: TextAlign.center,
-              style: OmniType.micro.copyWith(
-                color: OmniColors.warningTextOf(context),
+              style: OmniType.bodyStrong.copyWith(
+                fontWeight: FontWeight.w400,
+                height: 23 / 15,
+                color: OmniColors.byBrightness(
+                  context,
+                  OmniColors.secondaryForeground,
+                  scheme.onSurfaceVariant,
+                ),
               ),
             ),
+            const SizedBox(height: 18),
+            _Hint(text: 'Mã đổi sau khoảng 100 giây — lưu xong quét luôn.'),
           ],
         );
       case PairingView.scanned:
@@ -296,5 +312,35 @@ class _PairPageState extends ConsumerState<PairPage>
         context,
       ).showSnackBar(SnackBar(content: Text('$error')));
     }
+  }
+}
+
+/// Dải nhắc nền vàng nhạt có icon đồng hồ.
+class _Hint extends StatelessWidget {
+  const _Hint({required this.text});
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    final (foreground, background) = OmniTone.warning.of(context);
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        color: background,
+        borderRadius: OmniRadius.mdAll,
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.timer_outlined, size: OmniIconSize.md, color: foreground),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(text, style: OmniType.body.copyWith(color: foreground)),
+          ),
+        ],
+      ),
+    );
   }
 }

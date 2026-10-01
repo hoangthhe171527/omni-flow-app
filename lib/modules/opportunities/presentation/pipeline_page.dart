@@ -64,7 +64,7 @@ class PipelinePage extends ConsumerWidget {
           ),
         ],
         bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(49),
+          preferredSize: const Size.fromHeight(51),
           child: Column(
             children: [
               _StageTabs(
@@ -111,8 +111,8 @@ class PipelinePage extends ConsumerWidget {
                   separatorBuilder: (_, _) => Divider(
                     height: 1,
                     thickness: 1,
-                    indent: 16,
-                    endIndent: 16,
+                    indent: 0,
+                    endIndent: 0,
                     color: scheme.outlineVariant,
                   ),
                   itemBuilder: (context, index) => OpportunityCard(
@@ -143,72 +143,66 @@ class _StageTabs extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final dark = Theme.of(context).brightness == Brightness.dark;
 
-    // One line of pills, matching the inbox filter row. Two stacked lines per
-    // tab meant every stage permanently showed a value nobody was looking at —
-    // a rep reads the money for the stage they are IN. So the value appears
-    // only on the selected pill, which costs no extra height at all.
+    // Cùng kiểu viên với hộp thư (`MPipeline.dc.html`): viên đang chọn là
+    // khối mực, và chỉ nó mang thêm TỔNG TIỀN của giai đoạn — màu quỹ đạo
+    // sáng. Người bán đọc tiền của giai đoạn mình đang đứng, không phải cả hàng.
     return SizedBox(
-      height: 48,
+      height: 50,
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 16),
+        padding: const EdgeInsets.fromLTRB(20, 4, 20, 2),
         itemCount: PipelineStage.board.length,
         separatorBuilder: (_, _) => const SizedBox(width: OmniSpacing.sm),
         itemBuilder: (context, index) {
           final stage = PipelineStage.board[index];
           final total = summary?.totalFor(stage);
           final isSelected = stage == selected;
+          final hasCount = total != null && total.count > 0;
+          final foreground = isSelected
+              ? (dark ? scheme.surface : Colors.white)
+              : scheme.onSurface;
 
           return Center(
             child: Material(
-              color: isSelected ? scheme.primary : Colors.transparent,
-              borderRadius: OmniRadius.chipAll,
+              color: isSelected
+                  ? (dark ? scheme.onSurface : OmniColors.ink)
+                  : scheme.surfaceContainerHighest,
+              shape: const StadiumBorder(),
               clipBehavior: Clip.antiAlias,
               child: InkWell(
                 onTap: () => onSelected(stage),
-                child: Padding(
+                child: Container(
+                  constraints: const BoxConstraints(minHeight: 34),
                   padding: const EdgeInsets.symmetric(
                     horizontal: 14,
                     vertical: 7,
                   ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        stage.label,
-                        style: OmniType.body.copyWith(
-                          height: 1.1,
-                          color: isSelected
-                              ? scheme.onPrimary
-                              : scheme.onSurfaceVariant,
-                          fontWeight: isSelected
-                              ? FontWeight.w700
-                              : FontWeight.w500,
-                        ),
-                      ),
-                      if (total != null && total.count > 0) ...[
-                        const SizedBox(width: 5),
-                        Text(
-                          isSelected
-                              ? '${total.count} · ${Formatters.vndCompact(total.value)}'
-                              : '${total.count}',
-                          style: OmniType.body.copyWith(
-                            height: 1.1,
-                            // Không giảm độ mờ ở viên ĐANG CHỌN: nó đã nổi
-                            // nhờ nền đặc, và 70% độ mờ chồng lên đó là chỗ
-                            // duy nhất trên hàng này không đạt ngưỡng đọc.
-                            color: isSelected
-                                ? scheme.onPrimary
-                                : scheme.onSurfaceVariant.withValues(
-                                    alpha: 0.7,
-                                  ),
-                            fontWeight: FontWeight.w600,
-                            fontFeatures: OmniType.tabular,
+                  child: Text.rich(
+                    TextSpan(
+                      children: [
+                        TextSpan(text: stage.label),
+                        if (hasCount) TextSpan(text: ' ${total.count}'),
+                        if (hasCount && isSelected)
+                          TextSpan(
+                            text: ' · ${Formatters.vndCompact(total.value)}',
+                            style: TextStyle(
+                              color: dark
+                                  ? OmniColors.primary
+                                  : OmniColors.orbit,
+                            ),
                           ),
-                        ),
                       ],
-                    ],
+                    ),
+                    style: OmniType.caption.copyWith(
+                      height: 1.2,
+                      color: foreground,
+                      fontWeight: isSelected
+                          ? FontWeight.w700
+                          : FontWeight.w600,
+                      fontFeatures: OmniType.tabular,
+                    ),
                   ),
                 ),
               ),

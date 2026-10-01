@@ -70,37 +70,42 @@ class _SectionIndicatorState extends State<SectionIndicator> {
 
   @override
   Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      padding: const EdgeInsets.symmetric(
-        horizontal: OmniSpacing.lg,
-        vertical: OmniSpacing.xs,
-      ),
-      child: Row(
-        children: [
-          for (var i = 0; i < widget.sections.length; i++) ...[
-            if (i > 0) const SizedBox(width: OmniSpacing.xs),
-            // Nhãn trợ năng là TÊN, số việc là giá trị: "Chờ QC, 3 việc, nút,
-            // đã chọn". Hai `Text` rời trong viên sẽ đọc thành hai nút.
-            Semantics(
-              key: _keyFor(i),
-              button: true,
-              selected: i == widget.current,
-              label: widget.sections[i].name,
-              value: switch (widget.countOf?.call(i)) {
-                null => null,
-                final n => '$n việc',
-              },
-              excludeSemantics: true,
-              child: OmniFilterPill(
-                label: widget.sections[i].name,
+    final dark = Theme.of(context).brightness == Brightness.dark;
+
+    // Dải nhóm việc nằm trên nền MỰC, nối liền với thanh trên của bảng
+    // (`MPlanBoard.dc.html`). Viên đang mở tô quỹ đạo sáng chữ tối.
+    return ColoredBox(
+      color: dark ? OmniColors.darkMuted : OmniColors.ink,
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
+        child: Row(
+          children: [
+            for (var i = 0; i < widget.sections.length; i++) ...[
+              if (i > 0) const SizedBox(width: OmniSpacing.sm),
+              // Nhãn trợ năng là TÊN, số việc là giá trị: "Chờ QC, 3 việc,
+              // nút, đã chọn". Hai `Text` rời trong viên sẽ đọc thành hai nút.
+              Semantics(
+                key: _keyFor(i),
+                button: true,
                 selected: i == widget.current,
-                count: widget.countOf?.call(i),
-                onTap: () => widget.onSelected(i),
+                label: widget.sections[i].name,
+                value: switch (widget.countOf?.call(i)) {
+                  null => null,
+                  final n => '$n việc',
+                },
+                excludeSemantics: true,
+                child: OmniFilterPill(
+                  label: widget.sections[i].name,
+                  count: widget.countOf?.call(i),
+                  selected: i == widget.current,
+                  onInk: true,
+                  onTap: () => widget.onSelected(i),
+                ),
               ),
-            ),
+            ],
           ],
-        ],
+        ),
       ),
     );
   }

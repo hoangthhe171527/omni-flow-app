@@ -148,16 +148,16 @@ class _OpportunityFormPageState extends ConsumerState<OpportunityFormPage> {
     }
 
     return Scaffold(
-      appBar: AppBar(title: Text(widget.isEdit ? 'Sửa cơ hội' : 'Cơ hội mới')),
+      backgroundColor: scheme.surface,
+      appBar: AppBar(
+        backgroundColor: scheme.surface,
+        leading: const CloseButton(),
+        title: Text(widget.isEdit ? 'Sửa cơ hội' : 'Cơ hội mới'),
+      ),
       body: Form(
         key: _formKey,
         child: ListView(
-          padding: const EdgeInsets.fromLTRB(
-            OmniSpacing.lg,
-            OmniSpacing.lg,
-            OmniSpacing.lg,
-            OmniSpacing.xxl,
-          ),
+          padding: const EdgeInsets.fromLTRB(20, OmniSpacing.sm, 20, 24),
           children: [
             OmniField(
               label: 'Tên cơ hội',
@@ -175,32 +175,22 @@ class _OpportunityFormPageState extends ConsumerState<OpportunityFormPage> {
             const SizedBox(height: OmniSpacing.lg),
             OmniField(
               label: 'Khách hàng',
-              child: OmniCard(
+              child: _PickerBox(
                 onTap: _pickCustomer,
-                padding: const EdgeInsets.all(OmniSpacing.md),
-                child: Row(
-                  children: [
-                    Icon(
-                      Icons.person_outline_rounded,
-                      size: OmniIconSize.md,
-                      color: scheme.onSurfaceVariant,
-                    ),
-                    const SizedBox(width: OmniSpacing.md),
-                    Expanded(
-                      child: Text(
-                        _customer?.name ?? 'Chọn khách hàng',
-                        style: OmniType.caption.copyWith(
-                          color: _customer == null
-                              ? scheme.onSurfaceVariant
-                              : scheme.onSurface,
-                        ),
-                      ),
-                    ),
-                    Icon(
-                      Icons.chevron_right_rounded,
-                      color: scheme.onSurfaceVariant,
-                    ),
-                  ],
+                height: 56,
+                leading: _customer == null
+                    ? Icon(
+                        Icons.person_outline_rounded,
+                        size: OmniIconSize.md,
+                        color: scheme.onSurfaceVariant,
+                      )
+                    : OmniAvatar(name: _customer!.name, size: 32),
+                label: _customer?.name ?? 'Chọn khách hàng',
+                placeholder: _customer == null,
+                strong: true,
+                trailing: Icon(
+                  Icons.chevron_right_rounded,
+                  color: scheme.outline,
                 ),
               ),
             ),
@@ -219,7 +209,18 @@ class _OpportunityFormPageState extends ConsumerState<OpportunityFormPage> {
                 controller: _value,
                 keyboardType: TextInputType.number,
                 onChanged: (_) => setState(() {}),
-                decoration: const InputDecoration(hintText: '0'),
+                style: OmniType.money.copyWith(
+                  fontSize: OmniType.money.fontSize! + 1,
+                  color: scheme.onSurface,
+                ),
+                decoration: InputDecoration(
+                  hintText: '0',
+                  suffixText: '₫',
+                  suffixStyle: OmniType.bodyStrong.copyWith(
+                    fontWeight: FontWeight.w400,
+                    color: scheme.onSurfaceVariant,
+                  ),
+                ),
                 validator: (value) {
                   final parsed = double.tryParse(
                     (value ?? '').replaceAll(RegExp(r'[^0-9]'), ''),
@@ -243,38 +244,24 @@ class _OpportunityFormPageState extends ConsumerState<OpportunityFormPage> {
             const SizedBox(height: OmniSpacing.lg),
             OmniField(
               label: 'Dự kiến chốt',
-              child: OmniCard(
+              child: _PickerBox(
                 onTap: _pickDate,
-                padding: const EdgeInsets.all(OmniSpacing.md),
-                child: Row(
-                  children: [
-                    Icon(
-                      Icons.event_outlined,
-                      size: OmniIconSize.md,
-                      color: scheme.onSurfaceVariant,
-                    ),
-                    const SizedBox(width: OmniSpacing.md),
-                    Expanded(
-                      child: Text(
-                        _expectedClose == null
-                            ? 'Chọn ngày'
-                            : Formatters.date(_expectedClose),
-                        style: OmniType.caption.copyWith(
-                          color: _expectedClose == null
-                              ? scheme.onSurfaceVariant
-                              : scheme.onSurface,
-                        ),
-                      ),
-                    ),
-                  ],
+                leading: Icon(
+                  Icons.event_outlined,
+                  size: OmniIconSize.md,
+                  color: scheme.onSurfaceVariant,
                 ),
+                label: _expectedClose == null
+                    ? 'Chọn ngày'
+                    : Formatters.date(_expectedClose),
+                placeholder: _expectedClose == null,
               ),
             ),
             const SizedBox(height: OmniSpacing.lg),
             Text(
               'Giai đoạn',
-              style: OmniType.caption.copyWith(
-                color: scheme.onSurfaceVariant,
+              style: OmniType.body.copyWith(
+                color: scheme.onSurface,
                 fontWeight: FontWeight.w600,
               ),
             ),
@@ -287,6 +274,7 @@ class _OpportunityFormPageState extends ConsumerState<OpportunityFormPage> {
                   OmniFilterPill(
                     label: stage.label,
                     selected: _stage == stage,
+                    outlined: true,
                     onTap: () => setState(() => _stage = stage),
                   ),
               ],
@@ -314,6 +302,75 @@ class _OpportunityFormPageState extends ConsumerState<OpportunityFormPage> {
                 : Text(widget.isEdit ? 'Lưu thay đổi' : 'Tạo cơ hội'),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// Ô chọn trông như ô nhập (viền tương tác bo 12), mở một bảng chọn khi chạm:
+/// khách hàng, ngày chốt.
+class _PickerBox extends StatelessWidget {
+  const _PickerBox({
+    required this.onTap,
+    required this.leading,
+    required this.label,
+    this.placeholder = false,
+    this.strong = false,
+    this.trailing,
+    this.height = 52,
+  });
+
+  final VoidCallback onTap;
+  final Widget leading;
+  final String label;
+  final bool placeholder;
+  final bool strong;
+  final Widget? trailing;
+  final double height;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+
+    return Material(
+      color: scheme.surface,
+      shape: RoundedRectangleBorder(
+        borderRadius: OmniRadius.mdAll,
+        side: BorderSide(color: scheme.outline),
+      ),
+      child: InkWell(
+        onTap: onTap,
+        customBorder: const RoundedRectangleBorder(
+          borderRadius: OmniRadius.mdAll,
+        ),
+        child: SizedBox(
+          height: height,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 14),
+            child: Row(
+              children: [
+                leading,
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: OmniType.input.copyWith(
+                      fontWeight: strong && !placeholder
+                          ? FontWeight.w700
+                          : FontWeight.w400,
+                      color: placeholder
+                          ? scheme.onSurfaceVariant
+                          : scheme.onSurface,
+                    ),
+                  ),
+                ),
+                ?trailing,
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/error/app_exception.dart';
 import '../../../core/utils/formatters.dart';
+import '../../../design/components/components.dart';
 import '../../../design/tokens/tokens.dart';
 import '../../team/team.dart';
 import '../data/tasks_api.dart';
@@ -75,59 +76,80 @@ class _CreateTaskPageState extends ConsumerState<CreateTaskPage> {
     final text = Theme.of(context).textTheme;
     final names = ref.watch(teamMemberByIdProvider);
 
+    // Bố cục `MCreateTask.dc.html`: nền trắng, ô tên lớn, một thẻ ba dòng
+    // "nhãn — giá trị", lời nhắc, và nút "Tạo việc" ghim ở đáy.
     return Scaffold(
-      appBar: AppBar(title: const Text('Việc mới')),
+      backgroundColor: scheme.surface,
+      appBar: AppBar(
+        backgroundColor: scheme.surface,
+        leading: const CloseButton(),
+        title: const Text('Việc mới'),
+      ),
       body: ListView(
-        padding: const EdgeInsets.fromLTRB(
-          OmniSpacing.lg,
-          OmniSpacing.lg,
-          OmniSpacing.lg,
-          OmniSpacing.bottomSafe,
-        ),
+        padding: const EdgeInsets.fromLTRB(20, OmniSpacing.sm, 20, 24),
         children: [
-          TextField(
-            controller: _title,
-            autofocus: true,
-            textCapitalization: TextCapitalization.sentences,
-            decoration: const InputDecoration(
-              labelText: 'Tên việc',
-              hintText: 'Việc cần làm là gì?',
+          OmniField(
+            label: 'Tên việc',
+            child: TextField(
+              controller: _title,
+              autofocus: true,
+              textCapitalization: TextCapitalization.sentences,
+              style: OmniType.listTitle.copyWith(
+                fontWeight: FontWeight.w600,
+                color: scheme.onSurface,
+              ),
+              decoration: const InputDecoration(
+                hintText: 'Việc cần làm là gì?',
+              ),
+              onChanged: (_) => setState(() {}),
             ),
-            onChanged: (_) => setState(() {}),
           ),
-          const SizedBox(height: OmniSpacing.xl),
-          if (widget.sections.isNotEmpty)
-            _Field(
-              icon: Icons.view_column_outlined,
-              label: 'Nhóm việc',
-              value: _sectionName,
-              muted: _sectionId == null,
-              onTap: _pickSection,
+          const SizedBox(height: 18),
+          Container(
+            decoration: BoxDecoration(
+              borderRadius: OmniRadius.xlAll,
+              border: Border.all(color: scheme.outlineVariant),
             ),
-          _Field(
-            icon: Icons.person_outline_rounded,
-            label: 'Người làm',
-            value: _assigneeIds.isEmpty
-                ? 'Chưa gán ai'
-                : _assigneeIds
-                      .map((id) => names[id]?.name ?? 'Người đã rời')
-                      .join(', '),
-            muted: _assigneeIds.isEmpty,
-            onTap: _pickAssignees,
-          ),
-          _Field(
-            icon: Icons.event_outlined,
-            label: 'Hạn',
-            value: _dueDate == null
-                ? 'Chưa đặt hạn'
-                : Formatters.date(_dueDate!),
-            muted: _dueDate == null,
-            onTap: _pickDueDate,
-            // Đặt nhầm hạn rồi không gỡ được là một cái bẫy: hạn trống có
-            // nghĩa ("chưa hẹn"), khác hẳn một ngày đại khái nào đó.
-            onClear: _dueDate == null
-                ? null
-                : () => setState(() => _dueDate = null),
+            child: Material(
+              type: MaterialType.transparency,
+              child: Column(
+                children: [
+                  if (widget.sections.isNotEmpty) ...[
+                    _Field(
+                      label: 'Nhóm việc',
+                      value: _sectionName,
+                      muted: _sectionId == null,
+                      onTap: _pickSection,
+                    ),
+                    const Divider(height: 1),
+                  ],
+                  _Field(
+                    label: 'Người làm',
+                    value: _assigneeIds.isEmpty
+                        ? 'Chưa gán ai'
+                        : _assigneeIds
+                              .map((id) => names[id]?.name ?? 'Người đã rời')
+                              .join(', '),
+                    muted: _assigneeIds.isEmpty,
+                    onTap: _pickAssignees,
+                  ),
+                  const Divider(height: 1),
+                  _Field(
+                    label: 'Hạn',
+                    value: _dueDate == null
+                        ? 'Chưa đặt hạn'
+                        : Formatters.date(_dueDate!),
+                    muted: _dueDate == null,
+                    onTap: _pickDueDate,
+                    // Đặt nhầm hạn rồi không gỡ được là một cái bẫy: hạn trống
+                    // có nghĩa ("chưa hẹn"), khác hẳn một ngày đại khái nào đó.
+                    onClear: _dueDate == null
+                        ? null
+                        : () => setState(() => _dueDate = null),
+                  ),
+                ],
+              ),
+            ),
           ),
           if (_error != null) ...[
             const SizedBox(height: OmniSpacing.lg),
@@ -138,24 +160,38 @@ class _CreateTaskPageState extends ConsumerState<CreateTaskPage> {
               ),
             ),
           ],
-          const SizedBox(height: OmniSpacing.xxl),
-          FilledButton(
-            onPressed: _canSave ? _save : null,
-            child: _saving
-                ? const SizedBox(
-                    width: 20,
-                    height: 20,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                : const Text('Tạo việc'),
-          ),
-          const SizedBox(height: OmniSpacing.md),
+          const SizedBox(height: 18),
           Text(
             'Chỉ cần tên là tạo được. Hạn, người làm, việc con điền sau cũng '
             'kịp.',
-            style: text.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
+            style: OmniType.caption.copyWith(
+              fontWeight: FontWeight.w400,
+              color: scheme.onSurfaceVariant,
+            ),
           ),
         ],
+      ),
+      bottomNavigationBar: DecoratedBox(
+        decoration: BoxDecoration(
+          color: scheme.surface,
+          border: Border(top: BorderSide(color: scheme.outlineVariant)),
+        ),
+        child: SafeArea(
+          top: false,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+            child: FilledButton(
+              onPressed: _canSave ? _save : null,
+              child: _saving
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Text('Tạo việc'),
+            ),
+          ),
+        ),
       ),
     );
   }
@@ -250,7 +286,6 @@ class _CreateTaskPageState extends ConsumerState<CreateTaskPage> {
 /// Một dòng "nhãn — giá trị" bấm được, giống bảng điều phối ở màn chi tiết.
 class _Field extends StatelessWidget {
   const _Field({
-    required this.icon,
     required this.label,
     required this.value,
     required this.onTap,
@@ -258,7 +293,6 @@ class _Field extends StatelessWidget {
     this.onClear,
   });
 
-  final IconData icon;
   final String label;
   final String value;
   final VoidCallback onTap;
@@ -268,50 +302,46 @@ class _Field extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final text = Theme.of(context).textTheme;
 
     return InkWell(
       onTap: onTap,
-      borderRadius: OmniRadius.mdAll,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: OmniSpacing.md),
-        child: Row(
-          children: [
-            Icon(icon, size: OmniIconSize.md, color: scheme.onSurfaceVariant),
-            const SizedBox(width: OmniSpacing.md),
-            SizedBox(
-              width: 92,
-              child: Text(
-                label,
-                style: text.bodyMedium?.copyWith(
-                  color: scheme.onSurfaceVariant,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(minHeight: 52),
+        child: Padding(
+          padding: EdgeInsets.fromLTRB(16, 4, onClear == null ? 16 : 4, 4),
+          child: Row(
+            children: [
+              SizedBox(
+                width: 100,
+                child: Text(
+                  label,
+                  style: OmniType.body.copyWith(color: scheme.onSurfaceVariant),
                 ),
               ),
-            ),
-            Expanded(
-              child: Text(
-                value,
-                style: text.bodyMedium?.copyWith(
-                  fontWeight: muted ? FontWeight.w400 : FontWeight.w600,
-                  fontStyle: muted ? FontStyle.italic : FontStyle.normal,
-                  color: muted ? scheme.onSurfaceVariant : scheme.onSurface,
+              Expanded(
+                child: Text(
+                  value,
+                  style: OmniType.bodyStrong.copyWith(
+                    fontWeight: muted ? FontWeight.w400 : FontWeight.w600,
+                    color: muted ? scheme.onSurfaceVariant : scheme.onSurface,
+                  ),
                 ),
               ),
-            ),
-            if (onClear != null)
-              IconButton(
-                onPressed: onClear,
-                icon: const Icon(Icons.close_rounded),
-                iconSize: OmniIconSize.md,
-                tooltip: 'Xoá $label',
-              )
-            else
-              Icon(
-                Icons.chevron_right_rounded,
-                size: OmniIconSize.md,
-                color: scheme.onSurfaceVariant,
-              ),
-          ],
+              if (onClear != null)
+                IconButton(
+                  onPressed: onClear,
+                  icon: const Icon(Icons.close_rounded),
+                  iconSize: OmniIconSize.md,
+                  tooltip: 'Xoá $label',
+                )
+              else
+                Icon(
+                  Icons.chevron_right_rounded,
+                  size: OmniIconSize.md,
+                  color: scheme.outline,
+                ),
+            ],
+          ),
         ),
       ),
     );

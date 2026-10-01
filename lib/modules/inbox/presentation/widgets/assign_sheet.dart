@@ -53,7 +53,10 @@ class _AssignSheetState extends ConsumerState<AssignSheet> {
         children: [
           Text(
             'Gán nhân viên',
-            style: OmniType.section.copyWith(color: scheme.onSurface),
+            style: OmniType.navTitle.copyWith(
+              fontWeight: FontWeight.w800,
+              color: scheme.onSurface,
+            ),
           ),
           const SizedBox(height: OmniSpacing.md),
           OmniSearchField(
@@ -84,16 +87,31 @@ class _AssignSheetState extends ConsumerState<AssignSheet> {
                   itemBuilder: (context, index) {
                     if (index == 0) {
                       return ListTile(
-                        contentPadding: EdgeInsets.zero,
-                        leading: CircleAvatar(
-                          backgroundColor: scheme.surfaceContainerHighest,
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: OmniSpacing.sm,
+                        ),
+                        leading: Container(
+                          width: 44,
+                          height: 44,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: scheme.outline,
+                              width: 1.5,
+                            ),
+                          ),
                           child: Icon(
                             Icons.person_off_outlined,
                             size: OmniIconSize.md,
                             color: scheme.onSurfaceVariant,
                           ),
                         ),
-                        title: Text('Bỏ gán', style: OmniType.caption),
+                        title: Text(
+                          'Bỏ gán',
+                          style: OmniType.bodyStrong.copyWith(
+                            color: scheme.onSurface,
+                          ),
+                        ),
                         subtitle: Text(
                           'Trả hội thoại về hàng chờ',
                           style: OmniType.micro.copyWith(
@@ -111,7 +129,16 @@ class _AssignSheetState extends ConsumerState<AssignSheet> {
                     final current = member.userId == widget.currentAssigneeId;
 
                     return ListTile(
-                      contentPadding: EdgeInsets.zero,
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: OmniSpacing.sm,
+                      ),
+                      // Người đang giữ hội thoại: nền mòng két rất nhạt.
+                      tileColor: current
+                          ? scheme.primary.withValues(alpha: 0.05)
+                          : null,
+                      shape: const RoundedRectangleBorder(
+                        borderRadius: OmniRadius.mdAll,
+                      ),
                       leading: OmniAvatar(
                         name: member.name,
                         imageUrl: member.avatarUrl,
@@ -119,9 +146,8 @@ class _AssignSheetState extends ConsumerState<AssignSheet> {
                       ),
                       title: Text(
                         member.name,
-                        style: OmniType.caption.copyWith(
+                        style: OmniType.bodyStrong.copyWith(
                           color: scheme.onSurface,
-                          fontWeight: FontWeight.w600,
                         ),
                       ),
                       subtitle: Text(

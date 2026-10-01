@@ -144,7 +144,7 @@ void main() {
 
     expect(find.text('Đang lọc: Hằng Ni'), findsOneWidget);
 
-    await tester.tap(find.byTooltip('Bỏ lọc'));
+    await tester.tap(find.text('Bỏ lọc'));
     await tester.pumpAndSettle();
 
     expect(find.textContaining('Đang lọc'), findsNothing);

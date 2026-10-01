@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -75,9 +76,46 @@ class _PlanBoardPageState extends ConsumerState<PlanBoardPage> {
             (currentUserId != null &&
                 loaded.roleOf(currentUserId) == PlanRole.owner));
 
+    final canPop = ModalRoute.of(context)?.canPop ?? false;
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    final subtitle = [
+      if (loaded?.teamName case final team? when team.isNotEmpty) team,
+      if (loaded != null && loaded.taskCount > 0) '${loaded.taskCount} việc',
+    ].join(' · ');
+
     return Scaffold(
+      // Đầu bảng là một khối MỰC liền với dải nhóm việc (`MPlanBoard.dc.html`).
       appBar: AppBar(
-        title: Text(loaded?.name ?? 'Dự án'),
+        backgroundColor: dark ? OmniColors.darkMuted : OmniColors.ink,
+        foregroundColor: Colors.white,
+        systemOverlayStyle: SystemUiOverlayStyle.light,
+        // Nút quay lại luôn có khi mở từ danh sách; khi không có (mở thẳng
+        // bằng liên kết sâu) thì tiêu đề lùi vào 16 chứ không dính mép.
+        leading: canPop ? const BackButton() : null,
+        titleSpacing: canPop ? 4 : OmniSpacing.lg,
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              loaded?.name ?? 'Dự án',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: OmniType.section.copyWith(
+                fontWeight: FontWeight.w700,
+                color: Colors.white,
+              ),
+            ),
+            if (subtitle.isNotEmpty)
+              Text(
+                subtitle,
+                style: OmniType.micro.copyWith(
+                  fontWeight: FontWeight.w400,
+                  color: OmniColors.inkMutedForeground,
+                ),
+              ),
+          ],
+        ),
         actions: [
           // Lọc theo người. Mở cho MỌI người đọc được bảng, không riêng quản
           // đốc: §3 nói xưởng chạy kiểu pull, và "công đoạn nào đang trống"
@@ -365,40 +403,42 @@ class _FilterBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Dải vàng nhạt "Đang lọc: Kiệt · Bỏ lọc" (`MPlanBoard.dc.html`).
+    final (foreground, background) = OmniTone.warning.of(context);
     final scheme = Theme.of(context).colorScheme;
 
     return Container(
       width: double.infinity,
-      color: scheme.primary.withValues(alpha: 0.06),
-      padding: const EdgeInsets.fromLTRB(
-        OmniSpacing.lg,
-        OmniSpacing.sm,
-        OmniSpacing.sm,
-        OmniSpacing.sm,
-      ),
+      color: background,
+      padding: const EdgeInsets.fromLTRB(16, 4, 8, 4),
       child: Row(
         children: [
-          Icon(
-            Icons.filter_alt_rounded,
-            size: OmniIconSize.sm,
-            color: scheme.primary,
-          ),
-          const SizedBox(width: OmniSpacing.sm),
           Expanded(
-            child: Text(
-              'Đang lọc: $label',
-              style: Theme.of(
-                context,
-              ).textTheme.labelLarge?.copyWith(color: scheme.primary),
+            child: Text.rich(
+              TextSpan(
+                children: [
+                  const TextSpan(text: 'Đang lọc: '),
+                  TextSpan(
+                    text: label,
+                    style: const TextStyle(fontWeight: FontWeight.w700),
+                  ),
+                ],
+              ),
+              style: OmniType.caption.copyWith(
+                fontWeight: FontWeight.w400,
+                color: scheme.onSurface,
+              ),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
             ),
           ),
-          IconButton(
+          TextButton(
             onPressed: onClear,
-            tooltip: 'Bỏ lọc',
-            visualDensity: VisualDensity.compact,
-            icon: Icon(Icons.close_rounded, color: scheme.primary),
+            style: TextButton.styleFrom(
+              foregroundColor: foreground,
+              textStyle: OmniType.caption.copyWith(fontWeight: FontWeight.w700),
+            ),
+            child: const Text('Bỏ lọc'),
           ),
         ],
       ),

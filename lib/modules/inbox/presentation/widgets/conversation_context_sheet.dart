@@ -44,16 +44,18 @@ class ConversationContextSheet extends ConsumerWidget {
               OmniAvatar(
                 name: threadInfo.title,
                 imageUrl: threadInfo.customerAvatar,
-                size: OmniIconSize.hero,
+                size: 56,
               ),
-              const SizedBox(width: OmniSpacing.md),
+              const SizedBox(width: 14),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
                       threadInfo.title,
-                      style: OmniType.title.copyWith(color: scheme.onSurface),
+                      style: OmniType.navTitle.copyWith(
+                        color: scheme.onSurface,
+                      ),
                     ),
                     const SizedBox(height: OmniSpacing.xs),
                     OmniSourcePill(
@@ -73,6 +75,8 @@ class ConversationContextSheet extends ConsumerWidget {
                   child: _QuickAction(
                     icon: Icons.person_outline_rounded,
                     label: 'Hồ sơ KH',
+                    caption: 'Xem hồ sơ khách hàng',
+                    accent: true,
                     onTap: () {
                       Navigator.pop(context);
                       context.pushNamed(
@@ -87,6 +91,8 @@ class ConversationContextSheet extends ConsumerWidget {
                   child: _QuickAction(
                     icon: Icons.person_add_alt_rounded,
                     label: 'Chuyển KH',
+                    caption: 'Tạo khách từ hội thoại',
+                    accent: true,
                     onTap: () => _convert(context, ref),
                   ),
                 ),
@@ -95,6 +101,7 @@ class ConversationContextSheet extends ConsumerWidget {
                 child: _QuickAction(
                   icon: Icons.trending_up_rounded,
                   label: 'Tạo cơ hội',
+                  caption: 'Gắn sẵn khách này',
                   onTap: () {
                     Navigator.pop(context);
                     context.pushNamed(
@@ -603,29 +610,61 @@ Future<void> _openUrl(String raw) async {
   if (uri != null) await launchUrl(uri, mode: LaunchMode.externalApplication);
 }
 
+/// Ô hành động lớn trên tấm thông tin (`MThreadInfo.dc.html`): nền tô, icon,
+/// nhãn đậm và một dòng phụ. Ô đầu tô màu nhấn, ô sau tô xám.
 class _QuickAction extends StatelessWidget {
   const _QuickAction({
     required this.icon,
     required this.label,
+    required this.caption,
     required this.onTap,
+    this.accent = false,
   });
 
   final IconData icon;
   final String label;
+  final String caption;
   final VoidCallback onTap;
+  final bool accent;
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    return OmniCard(
-      onTap: onTap,
-      padding: const EdgeInsets.symmetric(vertical: OmniSpacing.md),
-      child: Column(
-        children: [
-          Icon(icon, size: OmniIconSize.lg, color: scheme.primary),
-          const SizedBox(height: 5),
-          Text(label, style: OmniType.micro.copyWith(color: scheme.onSurface)),
-        ],
+    final background = accent
+        ? scheme.primaryContainer
+        : scheme.surfaceContainerHighest;
+    final foreground = accent ? scheme.onPrimaryContainer : scheme.onSurface;
+
+    return Material(
+      color: background,
+      borderRadius: OmniRadius.xlAll,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: OmniRadius.xlAll,
+        child: Padding(
+          padding: const EdgeInsets.all(14),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(icon, size: OmniIconSize.lg, color: foreground),
+              const SizedBox(height: 6),
+              Text(
+                label,
+                style: OmniType.bodyStrong.copyWith(
+                  fontWeight: FontWeight.w700,
+                  color: foreground,
+                ),
+              ),
+              Text(
+                caption,
+                style: OmniType.micro.copyWith(
+                  fontWeight: FontWeight.w400,
+                  color: accent ? foreground : scheme.onSurfaceVariant,
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

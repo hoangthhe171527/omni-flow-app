@@ -31,12 +31,16 @@ class CoverPicker extends StatelessWidget {
                 width: 36,
                 height: 36,
                 decoration: BoxDecoration(
-                  shape: BoxShape.circle,
+                  borderRadius: OmniRadius.smAll,
                   gradient: OmniCovers.gradientOf(name),
-                  // Vành sáng thay vì dấu tích: một dấu tích trên chấm 36dp
-                  // che mất chính cái màu người ta đang so sánh.
-                  border: selected
-                      ? Border.all(color: scheme.onSurface, width: 3)
+                  // Vành đôi (khe trắng + vành màu chính) thay vì dấu tích:
+                  // một dấu tích trên ô 36dp che mất chính cái màu người ta
+                  // đang so sánh.
+                  boxShadow: selected
+                      ? [
+                          BoxShadow(color: scheme.primary, spreadRadius: 4),
+                          BoxShadow(color: scheme.surface, spreadRadius: 2),
+                        ]
                       : null,
                 ),
               ),

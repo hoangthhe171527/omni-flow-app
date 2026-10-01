@@ -45,7 +45,7 @@ class OpportunityCard extends ConsumerWidget {
         ),
         onLongPress: canMove ? () => _moveStage(context, ref) : null,
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+          padding: const EdgeInsets.fromLTRB(20, 14, 20, 14),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -54,8 +54,8 @@ class OpportunityCard extends ConsumerWidget {
                 children: [
                   if (overdue)
                     Container(
-                      width: 6,
-                      height: 6,
+                      width: 7,
+                      height: 7,
                       margin: const EdgeInsets.only(right: 6),
                       decoration: const BoxDecoration(
                         color: OmniColors.destructive,
@@ -70,7 +70,7 @@ class OpportunityCard extends ConsumerWidget {
                       style: OmniType.listTitle.copyWith(
                         height: 1.2,
                         color: scheme.onSurface,
-                        fontWeight: FontWeight.w500,
+                        fontWeight: FontWeight.w700,
                       ),
                     ),
                   ),
@@ -82,7 +82,7 @@ class OpportunityCard extends ConsumerWidget {
                     style: OmniType.listTitle.copyWith(
                       height: 1.2,
                       color: scheme.onSurface,
-                      fontWeight: FontWeight.w600,
+                      fontWeight: FontWeight.w700,
                       fontFeatures: OmniType.tabular,
                     ),
                   ),
@@ -93,15 +93,16 @@ class OpportunityCard extends ConsumerWidget {
                 [
                   opportunity.customerName ?? 'Chưa gắn khách hàng',
                   if (opportunity.expectedCloseAt != null)
-                    Formatters.date(opportunity.expectedCloseAt),
+                    '${overdue ? 'quá hạn' : 'chốt'} ${Formatters.date(opportunity.expectedCloseAt)}',
                 ].join(' · '),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: OmniType.body.copyWith(
                   height: 1.25,
                   color: overdue
-                      ? OmniColors.destructive
+                      ? OmniColors.dangerTextOf(context)
                       : scheme.onSurfaceVariant,
+                  fontWeight: overdue ? FontWeight.w600 : FontWeight.w400,
                 ),
               ),
             ],

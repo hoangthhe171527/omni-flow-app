@@ -38,8 +38,8 @@ void main() {
         theme.colorScheme.onPrimary,
         OmniColors.darkPrimaryForeground,
         reason:
-            'Nền tối buộc màu chính phải sáng, và chữ trắng trên #4FBFAE chỉ '
-            'đạt 2.18:1. Đây là chỗ hai chế độ buộc phải khác nhau chứ không '
+            'Nền tối buộc màu chính phải sáng, và chữ trắng trên #2EE0D5 chỉ '
+            'đạt 1.65:1. Đây là chỗ hai chế độ buộc phải khác nhau chứ không '
             'phải chỗ đảo màu là xong.',
       );
     });
@@ -49,7 +49,7 @@ void main() {
         theme.colorScheme.primaryContainer,
         isNot(OmniColors.accent),
         reason:
-            'accent #E4F1EF là một khối sáng chói giữa màn hình tối. Chế độ '
+            'accent #DDF5F2 là một khối sáng chói giữa màn hình tối. Chế độ '
             'tối phải có bản riêng.',
       );
     });

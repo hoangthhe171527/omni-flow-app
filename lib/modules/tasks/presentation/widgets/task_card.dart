@@ -19,6 +19,7 @@ class TaskCard extends StatelessWidget {
     required this.task,
     required this.onTap,
     this.showPlanName = true,
+    this.highlight = '',
   });
 
   final Task task;
@@ -32,10 +33,13 @@ class TaskCard extends StatelessWidget {
   /// dự án và dòng này chính là thứ phân biệt chúng.
   final bool showPlanName;
 
+  /// Đoạn chữ cần tô trong tiêu đề — màn tìm cây đàn tô đúng số máy vừa gõ
+  /// (nền vàng nhạt như thiết kế). Rỗng thì không tô.
+  final String highlight;
+
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final text = Theme.of(context).textTheme;
 
     // Ba con số, chỉ khi > 0: "0 ảnh · 0 trao đổi" trên mọi thẻ là tiếng ồn.
     // Chúng đứng CÙNG DÒNG với "2/4 việc con" (như Trello đặt badge cạnh tiến
@@ -68,15 +72,15 @@ class TaskCard extends StatelessWidget {
       label: _semanticLabel,
       child: Material(
         color: scheme.surface,
-        borderRadius: BorderRadius.circular(OmniRadius.lg),
+        borderRadius: OmniRadius.xlAll,
         child: InkWell(
           onTap: onTap,
-          borderRadius: BorderRadius.circular(OmniRadius.lg),
+          borderRadius: OmniRadius.xlAll,
           child: Container(
-            padding: const EdgeInsets.all(OmniSpacing.lg),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
             decoration: BoxDecoration(
               border: Border.all(color: scheme.outlineVariant),
-              borderRadius: BorderRadius.circular(OmniRadius.lg),
+              borderRadius: OmniRadius.xlAll,
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -84,19 +88,20 @@ class TaskCard extends StatelessWidget {
                 if (showPlanName && task.projectName != null) ...[
                   Text(
                     task.projectName!,
-                    style: text.labelSmall?.copyWith(
+                    style: OmniType.micro.copyWith(
                       color: scheme.onSurfaceVariant,
-                      letterSpacing: 0.4,
                     ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
                   const SizedBox(height: OmniSpacing.xs),
                 ],
-                Text(
-                  task.title,
-                  style: text.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w600,
+                Text.rich(
+                  _highlighted(task.title, highlight, context),
+                  style: OmniType.listTitle.copyWith(
+                    fontWeight: FontWeight.w700,
+                    height: 22 / 16,
+                    color: scheme.onSurface,
                   ),
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
@@ -107,20 +112,35 @@ class TaskCard extends StatelessWidget {
                 // thấy thông tin gì".
                 if (task.nextOpenSubtask case final Subtask next) ...[
                   const SizedBox(height: OmniSpacing.xs),
-                  Text(
-                    next.assigneeName == null
-                        ? '→ ${next.title}'
-                        : '→ ${next.title} · ${next.assigneeName}',
-                    style: text.labelMedium?.copyWith(
-                      color: scheme.primary,
-                      fontWeight: FontWeight.w600,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
+                  // Mũi tên là ICON chứ không phải ký tự "→": Be Vietnam Pro
+                  // không có glyph U+2192, và trông cậy vào font dự phòng của
+                  // máy là mỗi máy một kiểu (hoặc ô trống).
+                  Row(
+                    children: [
+                      Icon(
+                        Icons.arrow_forward_rounded,
+                        size: 14,
+                        color: scheme.primary,
+                      ),
+                      const SizedBox(width: OmniSpacing.xs),
+                      Expanded(
+                        child: Text(
+                          next.assigneeName == null
+                              ? next.title
+                              : '${next.title} · ${next.assigneeName}',
+                          style: OmniType.body.copyWith(
+                            color: scheme.primary,
+                            fontWeight: FontWeight.w600,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
                   ),
                 ],
                 if (task.hasSubtasks) ...[
-                  const SizedBox(height: OmniSpacing.md),
+                  const SizedBox(height: OmniSpacing.sm),
                   _Progress(task: task, trailing: counts),
                 ],
                 const SizedBox(height: OmniSpacing.md),
@@ -139,10 +159,11 @@ class TaskCard extends StatelessWidget {
                           // Chỉ "Cao" mới đáng một chip: mọi thẻ đều "Bình
                           // thường" thì chữ đó không phân biệt được gì.
                           if (task.priority == 'high')
-                            OmniStatusChip(
-                              icon: Icons.flag_rounded,
-                              label: priorityLabel(task.priority),
+                            OmniBadge(
+                              label:
+                                  'Ưu tiên ${priorityLabel(task.priority).toLowerCase()}',
                               tone: OmniTone.warning,
+                              large: true,
                             ),
                           if (!task.hasSubtasks) ...counts,
                         ],
@@ -216,53 +237,50 @@ class _Count extends StatelessWidget {
   }
 }
 
+/// Thanh tiến độ và "n/m việc con" trên CÙNG một dòng (`MMyTasks.dc.html`).
+///
+/// Thanh màu quỹ đạo sáng — màu đồ hoạ của bộ Orbit, chỉ dùng cho đồ hoạ.
+/// Xong hay chưa đọc qua CON SỐ và độ dài thanh, không qua sắc màu.
 class _Progress extends StatelessWidget {
   const _Progress({required this.task, this.trailing = const []});
 
   final Task task;
 
-  /// Các con số nhỏ (📎 💬 ★) đứng bên phải dòng "n/m việc con".
+  /// Các con số nhỏ (📎 💬 ★) đứng sau dòng "n/m việc con".
   final List<Widget> trailing;
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final dark = Theme.of(context).brightness == Brightness.dark;
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+    return Row(
       children: [
-        Row(
-          children: [
-            Expanded(
-              child: Text(
-                '${task.doneCount}/${task.totalCount} việc con',
-                style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                  color: scheme.onSurfaceVariant,
-                  // Tabular so the numbers do not jitter as stages complete.
-                  fontFeatures: const [FontFeature.tabularFigures()],
-                ),
+        Expanded(
+          child: ClipRRect(
+            borderRadius: OmniRadius.pillAll,
+            child: LinearProgressIndicator(
+              value: task.progress,
+              minHeight: 6,
+              backgroundColor: scheme.surfaceContainerHighest,
+              valueColor: AlwaysStoppedAnimation(
+                dark ? scheme.primary : OmniColors.orbit,
               ),
             ),
-            for (final w in trailing) ...[
-              const SizedBox(width: OmniSpacing.sm),
-              w,
-            ],
-          ],
-        ),
-        const SizedBox(height: OmniSpacing.sm),
-        ClipRRect(
-          borderRadius: BorderRadius.circular(OmniRadius.xs),
-          child: LinearProgressIndicator(
-            value: task.progress,
-            minHeight: 6,
-            backgroundColor: scheme.surfaceContainerHighest,
-            // Xong hay chưa đọc qua CON SỐ bên trên và qua độ dài thanh,
-            // không qua sắc màu. Đổi sang xanh lá khi đầy là đưa vào một màu
-            // thương hiệu thứ hai — cùng lỗi đã sửa ở ô tick công đoạn, và
-            // người mù màu lục-đỏ không thấy khác biệt nào cả.
-            valueColor: AlwaysStoppedAnimation(scheme.primary),
           ),
         ),
+        const SizedBox(width: 10),
+        Text(
+          '${task.doneCount}/${task.totalCount} việc con',
+          style: OmniType.micro.copyWith(
+            color: dark
+                ? scheme.onSurfaceVariant
+                : OmniColors.secondaryForeground,
+            // Tabular so the numbers do not jitter as stages complete.
+            fontFeatures: OmniType.tabular,
+          ),
+        ),
+        for (final w in trailing) ...[const SizedBox(width: OmniSpacing.sm), w],
       ],
     );
   }
@@ -284,11 +302,12 @@ class _Assignees extends StatelessWidget {
   /// Ba là đủ. Cái thứ tư trở đi thành một con số.
   static const _max = 3;
 
-  static const double _size = 24;
+  static const double _size = 26;
   static const double _ring = 2;
 
-  /// Bước giữa hai avatar: 24 − 6 chồng.
-  static const double _step = 18;
+  /// Bước giữa hai avatar: 26 − 6 chồng. Thiết kế chồng 8 (31%), nhưng
+  /// `task_card_test` giữ trần 25% vì ảnh chụp thật từng che mất nửa chữ tắt.
+  static const double _step = 20;
 
   @override
   Widget build(BuildContext context) {
@@ -354,4 +373,30 @@ class _Assignees extends StatelessWidget {
       ),
     );
   }
+}
+
+/// Tiêu đề với mọi chỗ khớp [query] (không phân biệt hoa thường) tô nền vàng.
+TextSpan _highlighted(String text, String query, BuildContext context) {
+  final needle = query.trim().toLowerCase();
+  if (needle.isEmpty) return TextSpan(text: text);
+
+  final dark = Theme.of(context).brightness == Brightness.dark;
+  final mark = TextStyle(
+    backgroundColor: dark ? OmniColors.darkWarningSoft : OmniColors.warningSoft,
+  );
+  final lower = text.toLowerCase();
+  final spans = <TextSpan>[];
+  var start = 0;
+  while (true) {
+    final hit = lower.indexOf(needle, start);
+    if (hit < 0) break;
+    if (hit > start) spans.add(TextSpan(text: text.substring(start, hit)));
+    spans.add(
+      TextSpan(text: text.substring(hit, hit + needle.length), style: mark),
+    );
+    start = hit + needle.length;
+  }
+  if (start < text.length) spans.add(TextSpan(text: text.substring(start)));
+
+  return TextSpan(children: spans);
 }

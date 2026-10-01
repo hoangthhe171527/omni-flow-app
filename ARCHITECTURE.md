@@ -290,7 +290,7 @@ Token lấy nguyên từ bản thiết kế Sleek (`design/html/*.html`, khối 
 | border | `#E2E8F0`, muted-foreground `#64748B` |
 | semantic | success `#10B981`, warning `#F59E0B`, danger `#EF4444`, info `#0EA5E9` |
 | radius | `--radius: 1rem` ⇒ 16px, thang 8/12/14/16/20/24 |
-| font | Inter; số tiền & bộ đếm dùng `FontFeature.tabularFigures()` |
+| font | Be Vietnam Pro (OFL, `assets/fonts`); số tiền & bộ đếm dùng `FontFeature.tabularFigures()` |
 
 Chiều sâu đến từ khoảng cách và thứ bậc, **không** từ đổ bóng — shadow cố tình rất nhạt.
 

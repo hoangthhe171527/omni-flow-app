@@ -44,7 +44,8 @@ void main() {
         ),
       );
 
-      expect(find.text('→ Nắp phím · Hằng Ni'), findsOneWidget);
+      expect(find.text('Nắp phím · Hằng Ni'), findsOneWidget);
+      expect(find.byIcon(Icons.arrow_forward_rounded), findsOneWidget);
       expect(find.textContaining('Lên dây'), findsNothing);
     });
 
@@ -61,7 +62,7 @@ void main() {
         ),
       );
 
-      expect(find.text('→ Nắp phím'), findsOneWidget);
+      expect(find.text('Nắp phím'), findsOneWidget);
     });
 
     testWidgets('xong hết hoặc không có công đoạn thì không có dòng này', (
@@ -153,12 +154,12 @@ void main() {
   });
 
   group('ưu tiên', () {
-    testWidgets('cao thì có chip "Cao"', (tester) async {
+    testWidgets('cao thì có chip "Ưu tiên cao"', (tester) async {
       await tester.pumpWidget(
         host(Task.fromJson({'id': 't', 'title': 'x', 'priority': 'high'})),
       );
 
-      expect(find.text('Cao'), findsOneWidget);
+      expect(find.text('Ưu tiên cao'), findsOneWidget);
     });
 
     testWidgets('bình thường thì không có chip', (tester) async {

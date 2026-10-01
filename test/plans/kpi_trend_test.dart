@@ -105,7 +105,10 @@ void main() {
       await show(tester, kpi(delivered: 20), previousDelivered: 23);
 
       final line = tester.widget<Text>(find.text('−3 so với tháng 8'));
-      final scheme = Theme.of(tester.element(find.byType(KpiCard))).colorScheme;
+      // Thẻ KPI nằm trên nền mực với theme riêng: đọc màu từ chính dòng chữ.
+      final scheme = Theme.of(
+        tester.element(find.text('−3 so với tháng 8')),
+      ).colorScheme;
 
       expect(line.style?.color, scheme.onSurfaceVariant);
     });

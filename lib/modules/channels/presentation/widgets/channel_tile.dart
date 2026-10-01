@@ -58,21 +58,21 @@ class ChannelTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final meta = connection.channel.meta;
-    final (statusLabel, statusIcon, tone) =
+    final (statusLabel, _, tone) =
         _statusLabels[connection.status] ??
         ('Chưa kết nối', Icons.link_off_rounded, OmniTone.neutral);
 
     return OmniCard(
-      padding: const EdgeInsets.all(OmniSpacing.md),
+      padding: const EdgeInsets.all(14),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Container(
-            width: 40,
-            height: 40,
+            width: 44,
+            height: 44,
             decoration: BoxDecoration(
               color: meta.tint,
-              borderRadius: OmniRadius.smAll,
+              borderRadius: OmniRadius.mdAll,
             ),
             child: Icon(meta.icon, size: OmniIconSize.lg, color: meta.color),
           ),
@@ -86,14 +86,14 @@ class ChannelTile extends StatelessWidget {
                   style: OmniType.bodyStrong.copyWith(color: scheme.onSurface),
                 ),
                 const SizedBox(height: OmniSpacing.xs),
-                Row(
+                // Wrap chứ không Row: trên màn 360–390dp viên trạng thái dài
+                // ("Đang chờ ghép nối") cộng số tin hôm nay không đủ một dòng.
+                Wrap(
+                  spacing: OmniSpacing.sm,
+                  runSpacing: OmniSpacing.xs,
+                  crossAxisAlignment: WrapCrossAlignment.center,
                   children: [
-                    OmniStatusChip(
-                      icon: statusIcon,
-                      label: statusLabel,
-                      tone: tone,
-                    ),
-                    const SizedBox(width: OmniSpacing.sm),
+                    _StatusPill(label: statusLabel, tone: tone),
                     Text(
                       '${connection.today} tin hôm nay',
                       style: OmniType.micro.copyWith(
@@ -122,6 +122,57 @@ class ChannelTile extends StatelessWidget {
             onPressed: canWrite ? onDisconnect : null,
             icon: const Icon(Icons.more_vert_rounded),
             tooltip: 'Ngắt kết nối',
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Trạng thái kênh: viên bo tròn cao 22 có chấm màu đứng trước chữ
+/// (`MChannels.dc.html`). Chấm + chữ, không chỉ màu.
+class _StatusPill extends StatelessWidget {
+  const _StatusPill({required this.label, required this.tone});
+
+  final String label;
+  final OmniTone tone;
+
+  @override
+  Widget build(BuildContext context) {
+    final (foreground, background) = tone.of(context);
+    final dot = switch (tone) {
+      OmniTone.success => Theme.of(context).colorScheme.primary,
+      OmniTone.danger => OmniColors.destructive,
+      OmniTone.warning => OmniColors.sla,
+      _ => foreground,
+    };
+
+    return Container(
+      constraints: const BoxConstraints(minHeight: 22),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+      decoration: BoxDecoration(
+        color: background,
+        borderRadius: OmniRadius.pillAll,
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 6,
+            height: 6,
+            decoration: BoxDecoration(color: dot, shape: BoxShape.circle),
+          ),
+          const SizedBox(width: 4),
+          Flexible(
+            child: Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: OmniType.micro.copyWith(
+                fontWeight: FontWeight.w700,
+                color: foreground,
+              ),
+            ),
           ),
         ],
       ),

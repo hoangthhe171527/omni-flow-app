@@ -66,38 +66,72 @@ class _TaskSearchPageState extends ConsumerState<TaskSearchPage> {
   Widget build(BuildContext context) {
     final query = ref.watch(taskSearchQueryProvider).trim();
     final results = ref.watch(taskSearchProvider);
+    final scheme = Theme.of(context).colorScheme;
 
     return Scaffold(
       appBar: AppBar(
-        title: TextField(
-          controller: _controller,
-          autofocus: true,
-          textInputAction: TextInputAction.search,
-          onChanged: _onChanged,
-          // Enter là "tìm NGAY", không phải chờ hết quãng lặng: người đã bấm
-          // xong thì không có gì để chờ nữa.
-          onSubmitted: (value) {
-            _timer?.cancel();
-            ref.read(taskSearchQueryProvider.notifier).state = value;
-          },
-          decoration: const InputDecoration(
-            border: InputBorder.none,
-            hintText: 'Tên cây đàn, số máy, tên khách',
+        backgroundColor: scheme.surface,
+        // Luôn là màn đẩy vào; nếu mở thẳng (không có nút quay lại) thì ô
+        // tìm vẫn cách mép 16.
+        titleSpacing: (ModalRoute.of(context)?.canPop ?? false) ? 0 : 16,
+        shape: Border(bottom: BorderSide(color: scheme.outlineVariant)),
+        // Ô tìm là khối xám bo 12 như thiết kế, nút xoá nằm TRONG ô.
+        title: Padding(
+          padding: const EdgeInsets.only(right: 12),
+          child: TextField(
+            controller: _controller,
+            autofocus: true,
+            textInputAction: TextInputAction.search,
+            onChanged: _onChanged,
+            // Enter là "tìm NGAY", không phải chờ hết quãng lặng: người đã bấm
+            // xong thì không có gì để chờ nữa.
+            onSubmitted: (value) {
+              _timer?.cancel();
+              ref.read(taskSearchQueryProvider.notifier).state = value;
+            },
+            style: OmniType.input.copyWith(
+              fontWeight: FontWeight.w500,
+              color: scheme.onSurface,
+            ),
+            decoration: InputDecoration(
+              isDense: true,
+              filled: true,
+              fillColor: scheme.surfaceContainerHighest,
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 12,
+                vertical: 12,
+              ),
+              border: _searchBorder,
+              enabledBorder: _searchBorder,
+              focusedBorder: _searchBorder,
+              hintText: 'Tên cây đàn, số máy, tên khách',
+              suffixIcon: _controller.text.isEmpty
+                  ? null
+                  : IconButton(
+                      tooltip: 'Xoá',
+                      onPressed: () {
+                        _timer?.cancel();
+                        _controller.clear();
+                        ref.read(taskSearchQueryProvider.notifier).state = '';
+                        setState(() {});
+                      },
+                      icon: Container(
+                        width: 28,
+                        height: 28,
+                        decoration: BoxDecoration(
+                          color: scheme.outlineVariant,
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(
+                          Icons.close_rounded,
+                          size: OmniIconSize.sm,
+                          color: scheme.onSurface,
+                        ),
+                      ),
+                    ),
+            ),
           ),
         ),
-        actions: [
-          if (_controller.text.isNotEmpty)
-            IconButton(
-              tooltip: 'Xoá',
-              onPressed: () {
-                _timer?.cancel();
-                _controller.clear();
-                ref.read(taskSearchQueryProvider.notifier).state = '';
-                setState(() {});
-              },
-              icon: const Icon(Icons.close_rounded),
-            ),
-        ],
       ),
       body: query.isEmpty
           ? const OmniEmptyState(
@@ -121,22 +155,44 @@ class _TaskSearchPageState extends ConsumerState<TaskSearchPage> {
               data: (list) => ListView.separated(
                 padding: const EdgeInsets.fromLTRB(
                   OmniSpacing.lg,
-                  OmniSpacing.lg,
+                  OmniSpacing.xs,
                   OmniSpacing.lg,
                   OmniSpacing.bottomSafe,
                 ),
-                itemCount: list.length,
-                separatorBuilder: (_, _) =>
-                    const SizedBox(height: OmniSpacing.md),
-                itemBuilder: (context, index) => TaskCard(
-                  task: list[index],
-                  onTap: () => context.pushNamed(
-                    TaskRoutes.detail,
-                    pathParameters: {'id': list[index].id},
-                  ),
+                itemCount: list.length + 1,
+                separatorBuilder: (_, index) => SizedBox(
+                  height: index == 0 ? OmniSpacing.sm : OmniSpacing.md,
                 ),
+                itemBuilder: (context, i) {
+                  if (i == 0) {
+                    return Padding(
+                      padding: const EdgeInsets.fromLTRB(4, 10, 4, 0),
+                      child: Text(
+                        '${list.length} kết quả · tìm cả việc đã xong',
+                        style: OmniType.caption.copyWith(
+                          fontWeight: FontWeight.w400,
+                          color: scheme.onSurfaceVariant,
+                        ),
+                      ),
+                    );
+                  }
+                  final task = list[i - 1];
+                  return TaskCard(
+                    task: task,
+                    highlight: query,
+                    onTap: () => context.pushNamed(
+                      TaskRoutes.detail,
+                      pathParameters: {'id': task.id},
+                    ),
+                  );
+                },
               ),
             ),
     );
   }
 }
+
+const _searchBorder = OutlineInputBorder(
+  borderRadius: OmniRadius.mdAll,
+  borderSide: BorderSide.none,
+);

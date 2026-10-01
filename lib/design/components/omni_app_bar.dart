@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../tokens/tokens.dart';
+
 /// Chỗ cắm cho nút tài khoản ở góc phải mọi [OmniAppBar].
 ///
 /// Vì sao là một chỗ cắm chứ không phải một import thẳng: nút tài khoản cần
@@ -95,11 +97,19 @@ class OmniAppBar extends StatelessWidget implements PreferredSizeWidget {
         ? OmniAccountSlot.maybeOf(context)
         : null;
 
+    // Màn gốc của tab dùng tiêu đề LỚN (26/800) canh trái, như mọi màn gốc
+    // trong bộ Orbit; màn đẩy vào giữ tiêu đề thường của theme.
+    final scheme = Theme.of(context).colorScheme;
+
     return AppBar(
       leading: account == null ? null : account(context),
       // 32dp ảnh + 12dp mỗi bên: khớp lề 16dp của tiêu đề khi không có nút.
       leadingWidth: account == null ? null : 56,
-      title: Text(title),
+      title: Text(title, maxLines: 1, overflow: TextOverflow.ellipsis),
+      titleTextStyle: canPop
+          ? null
+          : OmniType.largeTitle.copyWith(color: scheme.onSurface),
+      centerTitle: canPop ? null : false,
       bottom: bottom,
       backgroundColor: backgroundColor,
       titleSpacing: titleSpacing,

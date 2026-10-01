@@ -1,20 +1,48 @@
 import 'package:flutter/material.dart';
 
-import 'omni_colors.dart';
-
 abstract final class OmniType {
-  static const String family = 'Inter';
+  static const String family = 'Be Vietnam Pro';
 
   /// Counts and money use tabular figures so numbers never jitter as they
   /// update in place (unread badges, pipeline totals, message timestamps).
   static const List<FontFeature> tabular = [FontFeature.tabularFigures()];
 
+  /// Tiêu đề màn đăng nhập (30/38, ExtraBold).
   static const TextStyle displayLg = TextStyle(
     fontFamily: family,
     fontSize: 30,
-    fontWeight: FontWeight.w700,
-    height: 1.15,
+    fontWeight: FontWeight.w800,
+    height: 38 / 30,
     letterSpacing: -0.6,
+  );
+
+  /// Tiêu đề LỚN của màn gốc mỗi tab ("Việc của tôi", "Tất cả") và của màn
+  /// chọn không gian làm việc: 26/34, ExtraBold, chữ khít −0.02em.
+  static const TextStyle largeTitle = TextStyle(
+    fontFamily: family,
+    fontSize: 26,
+    fontWeight: FontWeight.w800,
+    height: 34 / 26,
+    letterSpacing: -0.52,
+  );
+
+  /// Tiêu đề thanh trên của màn ĐẨY VÀO (có nút quay lại): 20, Bold.
+  static const TextStyle navTitle = TextStyle(
+    fontFamily: family,
+    fontSize: 20,
+    fontWeight: FontWeight.w700,
+    height: 1.25,
+    letterSpacing: -0.2,
+  );
+
+  /// Chữ "OmniCRM" cạnh logo. Cỡ do chỗ đặt quyết định (22 ở thanh bên, 34 ở
+  /// màn mở app) qua `copyWith(fontSize:)` bên trong `lib/design`.
+  static const TextStyle wordmark = TextStyle(
+    fontFamily: family,
+    fontSize: 22,
+    fontWeight: FontWeight.w800,
+    height: 1.2,
+    letterSpacing: -0.44,
   );
 
   static const TextStyle title = TextStyle(
@@ -37,9 +65,9 @@ abstract final class OmniType {
   static const TextStyle overline = TextStyle(
     fontFamily: family,
     fontSize: 12,
-    fontWeight: FontWeight.w600,
+    fontWeight: FontWeight.w700,
     height: 1.2,
-    letterSpacing: 0.8,
+    letterSpacing: 0.96,
   );
 
   static const TextStyle bodyStrong = TextStyle(
@@ -172,12 +200,4 @@ abstract final class OmniChatType {
   /// để đọc, nên nằm ngoài thang trên. Cỡ này vừa một ô của lưới 8 cột trên
   /// màn 360dp mà vẫn chạm được.
   static const TextStyle emoji = TextStyle(fontSize: 26, height: 1.2);
-}
-
-abstract final class OmniGradients {
-  static const LinearGradient brand = LinearGradient(
-    begin: Alignment.topLeft,
-    end: Alignment.bottomRight,
-    colors: [OmniColors.primary, OmniColors.primaryGlow],
-  );
 }

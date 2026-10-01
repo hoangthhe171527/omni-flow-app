@@ -116,6 +116,92 @@ void main() {
       min: t,
     ),
 
+    // ---- Sáng: bảng Orbit ----
+    (
+      what: 'chữ mực / huy hiệu vàng chưa đọc',
+      fg: OmniColors.sunForeground,
+      bg: OmniColors.sun,
+      min: t,
+    ),
+    (
+      what: 'màu chính khi nhấn / thẻ',
+      fg: OmniColors.primaryPressed,
+      bg: OmniColors.card,
+      min: t,
+    ),
+    (
+      what: 'chữ phụ / nền nhấn (tab chưa chọn cạnh viên đang chọn)',
+      fg: OmniColors.mutedForeground,
+      bg: OmniColors.accent,
+      min: t,
+    ),
+    (
+      what: 'chữ thông tin / nền thông tin nhạt',
+      fg: OmniColors.infoText,
+      bg: OmniColors.infoSoft,
+      min: t,
+    ),
+    (
+      what: 'chữ cảnh báo / nền cảnh báo nhạt',
+      fg: OmniColors.warningText,
+      bg: OmniColors.warningSoft,
+      min: t,
+    ),
+    (
+      what: 'chữ cảnh báo / ghi chú nội bộ',
+      fg: OmniColors.warningText,
+      bg: OmniColors.noteSurface,
+      min: t,
+    ),
+    (
+      what: 'chữ nguy hiểm / hộp báo lỗi',
+      fg: OmniColors.dangerText,
+      bg: OmniColors.dangerSoft,
+      min: t,
+    ),
+    (
+      what: 'chữ trắng / nền đỏ của huy hiệu trễ hạn',
+      fg: OmniColors.card,
+      bg: OmniColors.dangerSurface,
+      min: t,
+    ),
+    (
+      what: 'chữ trắng / nền thông tin',
+      fg: OmniColors.card,
+      bg: OmniColors.infoSurface,
+      min: t,
+    ),
+    (
+      what: 'chữ cấp 2 / thẻ',
+      fg: OmniColors.secondaryForeground,
+      bg: OmniColors.card,
+      min: t,
+    ),
+    (
+      what: 'chữ trắng / nền mực',
+      fg: OmniColors.card,
+      bg: OmniColors.ink,
+      min: t,
+    ),
+    (
+      what: 'chữ phụ trên nền mực',
+      fg: OmniColors.inkMutedForeground,
+      bg: OmniColors.ink,
+      min: t,
+    ),
+    (
+      what: 'chữ "CRM" quỹ đạo sáng / nền mực',
+      fg: OmniColors.orbit,
+      bg: OmniColors.ink,
+      min: t,
+    ),
+    (
+      what: 'viền lỗi ô nhập / thẻ',
+      fg: OmniColors.destructive,
+      bg: OmniColors.card,
+      min: ui,
+    ),
+
     // ---- Tối ----
     (
       what: 'tối: chữ chính / nền',
@@ -158,6 +244,36 @@ void main() {
       fg: OmniColors.darkBorderInteractive,
       bg: OmniColors.darkCard,
       min: ui,
+    ),
+    (
+      what: 'tối: viền tương tác / nền ô nhập',
+      fg: OmniColors.darkBorderInteractive,
+      bg: OmniColors.darkMuted,
+      min: ui,
+    ),
+    (
+      what: 'tối: chữ thông tin / nền thông tin',
+      fg: OmniColors.darkInfoText,
+      bg: OmniColors.darkInfoSoft,
+      min: t,
+    ),
+    (
+      what: 'tối: chữ cảnh báo / nền cảnh báo',
+      fg: OmniColors.warningTextDark,
+      bg: OmniColors.darkWarningSoft,
+      min: t,
+    ),
+    (
+      what: 'tối: chữ nhấn / nền nhấn',
+      fg: OmniColors.darkAccentForeground,
+      bg: OmniColors.darkAccent,
+      min: t,
+    ),
+    (
+      what: 'tối: màu chính / nền',
+      fg: OmniColors.darkPrimary,
+      bg: OmniColors.darkBackground,
+      min: t,
     ),
     (
       what: 'tối: chữ cảnh báo / thẻ',

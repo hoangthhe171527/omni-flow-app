@@ -23,13 +23,11 @@ class DayHeader extends StatelessWidget {
       alignment: Alignment.centerLeft,
       // Nền ĐẶC, không trong suốt: tiêu đề dính mà để lộ nội dung trôi phía sau
       // thì hai dòng chữ chồng lên nhau.
-      color: scheme.surface,
+      color: Theme.of(context).scaffoldBackgroundColor,
       child: Text(
         group.summary,
-        style: Theme.of(context).textTheme.labelMedium?.copyWith(
+        style: OmniType.overline.copyWith(
           color: scheme.onSurfaceVariant,
-          fontWeight: FontWeight.w700,
-          letterSpacing: 0.4,
           fontFeatures: OmniType.tabular,
         ),
       ),

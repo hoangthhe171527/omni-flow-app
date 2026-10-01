@@ -24,18 +24,24 @@ class OpportunityDetailPage extends ConsumerWidget {
     final access = ref.watch(opportunityAccessProvider);
     final scheme = Theme.of(context).colorScheme;
 
+    // Bố cục `MOppDetail.dc.html`: khối trắng (tên, số tiền lớn, dải giai
+    // đoạn), rồi trên nền xám là thẻ thông tin và ghi chú.
     return Scaffold(
       appBar: AppBar(
+        backgroundColor: scheme.surface,
         title: const Text('Chi tiết cơ hội'),
         actions: [
           if (access.canUpdate)
-            IconButton(
-              tooltip: 'Sửa',
+            TextButton(
               onPressed: () => context.pushNamed(
                 OpportunitiesModule.edit,
                 pathParameters: {'id': opportunityId},
               ),
-              icon: const Icon(Icons.edit_outlined, size: 20),
+              style: TextButton.styleFrom(
+                minimumSize: const Size(0, 44),
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+              ),
+              child: const Text('Sửa'),
             ),
         ],
       ),
@@ -43,97 +49,127 @@ class OpportunityDetailPage extends ConsumerWidget {
         value: opportunity,
         onRetry: () => ref.invalidate(opportunityProvider(opportunityId)),
         data: (data) => ListView(
-          padding: const EdgeInsets.fromLTRB(
-            OmniSpacing.lg,
-            OmniSpacing.md,
-            OmniSpacing.lg,
-            OmniSpacing.bottomSafe,
-          ),
+          padding: const EdgeInsets.only(bottom: OmniSpacing.bottomSafe),
           children: [
-            Text(
-              data.title,
-              style: OmniType.title.copyWith(color: scheme.onSurface),
-            ),
-            const SizedBox(height: OmniSpacing.sm),
-            Text(
-              Formatters.vnd(data.value),
-              style: OmniType.moneyHero.copyWith(color: scheme.primary),
-            ),
-            const SizedBox(height: OmniSpacing.lg),
-            _StageStepper(current: data.stage),
-            const OmniSectionHeader(
-              title: 'Thông tin',
-              padding: _headerPadding,
-            ),
-            OmniCard(
+            Container(
+              padding: const EdgeInsets.fromLTRB(16, 4, 16, 20),
+              decoration: BoxDecoration(
+                color: scheme.surface,
+                border: Border(
+                  bottom: BorderSide(color: scheme.outlineVariant),
+                ),
+              ),
               child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  OmniDetailRow(
-                    label: 'Khách hàng',
-                    value: data.customerName ?? '—',
-                    icon: Icons.person_outline_rounded,
-                    onTap: data.customerId == null
-                        ? null
-                        : () => context.pushNamed(
-                            CustomerRoutes.detail,
-                            pathParameters: {'id': data.customerId!},
-                          ),
+                  Text(
+                    data.title,
+                    style: OmniType.title.copyWith(
+                      fontWeight: FontWeight.w800,
+                      height: 30 / 22,
+                      color: scheme.onSurface,
+                    ),
                   ),
-                  OmniDetailRow(
-                    label: 'Sản phẩm',
-                    value: data.product ?? '—',
-                    icon: Icons.inventory_2_outlined,
+                  const SizedBox(height: 6),
+                  Text(
+                    Formatters.vnd(data.value),
+                    style: OmniType.moneyHero.copyWith(
+                      fontWeight: FontWeight.w800,
+                      color: scheme.onPrimaryContainer,
+                    ),
                   ),
-                  OmniDetailRow(
-                    label: 'Xác suất',
-                    value: '${data.effectiveProbability}%',
-                    icon: Icons.percent_rounded,
-                  ),
-                  OmniDetailRow(
-                    label: 'Dự kiến chốt',
-                    value: Formatters.date(data.expectedCloseAt),
-                    icon: Icons.event_outlined,
-                    valueColor: data.isOverdue ? scheme.error : null,
-                  ),
-                  OmniDetailRow(
-                    label: 'Phụ trách',
-                    value: data.ownerName ?? 'Chưa gán',
-                    icon: Icons.badge_outlined,
-                  ),
-                  OmniDetailRow(
-                    label: 'Giá trị kỳ vọng',
-                    value: Formatters.vnd(data.weightedValue),
-                    icon: Icons.calculate_outlined,
-                  ),
+                  const SizedBox(height: 18),
+                  _StageStepper(current: data.stage),
                 ],
               ),
             ),
-            if (data.notes.isNotEmpty) ...[
-              const OmniSectionHeader(
-                title: 'Ghi chú',
-                padding: _headerPadding,
-              ),
-              for (final note in data.notes)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: OmniSpacing.sm),
-                  child: OmniCard(
-                    padding: const EdgeInsets.all(OmniSpacing.md),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(note.content, style: OmniType.body),
-                        const SizedBox(height: OmniSpacing.xs),
-                        Text(
-                          '${note.author ?? "Thành viên"} · ${Formatters.relative(note.at)}',
-                          style: OmniType.micro.copyWith(
-                            color: scheme.onSurfaceVariant,
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  const OmniSectionHeader(
+                    title: 'Thông tin',
+                    padding: _headerPadding,
+                  ),
+                  OmniDetailCard(
+                    rows: [
+                      OmniDetailRow(
+                        label: 'Khách hàng',
+                        value: data.customerName ?? '—',
+                        onTap: data.customerId == null
+                            ? null
+                            : () => context.pushNamed(
+                                CustomerRoutes.detail,
+                                pathParameters: {'id': data.customerId!},
+                              ),
+                      ),
+                      OmniDetailRow(
+                        label: 'Sản phẩm',
+                        value: data.product ?? '—',
+                      ),
+                      OmniDetailRow(
+                        label: 'Xác suất',
+                        value: '${data.effectiveProbability}%',
+                      ),
+                      OmniDetailRow(
+                        label: 'Dự kiến chốt',
+                        value: Formatters.date(data.expectedCloseAt),
+                        valueColor: data.isOverdue
+                            ? OmniColors.dangerTextOf(context)
+                            : null,
+                      ),
+                      OmniDetailRow(
+                        label: 'Phụ trách',
+                        value: data.ownerName ?? 'Chưa gán',
+                      ),
+                      OmniDetailRow(
+                        label: 'Giá trị kỳ vọng',
+                        value: Formatters.vnd(data.weightedValue),
+                        strong: true,
+                      ),
+                    ],
+                  ),
+                  if (data.notes.isNotEmpty) ...[
+                    const OmniSectionHeader(
+                      title: 'Ghi chú',
+                      padding: _headerPadding,
+                    ),
+                    for (final note in data.notes)
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: OmniSpacing.sm),
+                        child: OmniCard(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 14,
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                note.content,
+                                style: OmniType.bodyStrong.copyWith(
+                                  fontWeight: FontWeight.w400,
+                                  height: 22 / 15,
+                                  color: scheme.onSurface,
+                                ),
+                              ),
+                              const SizedBox(height: 6),
+                              Text(
+                                '${note.author ?? "Thành viên"} · ${Formatters.relative(note.at)}',
+                                style: OmniType.micro.copyWith(
+                                  fontWeight: FontWeight.w400,
+                                  color: scheme.onSurfaceVariant,
+                                ),
+                              ),
+                            ],
                           ),
                         ),
-                      ],
-                    ),
-                  ),
-                ),
-            ],
+                      ),
+                  ],
+                ],
+              ),
+            ),
           ],
         ),
       ),
@@ -144,10 +180,9 @@ class OpportunityDetailPage extends ConsumerWidget {
                   onPressed: () => _markWon(context, ref),
                   child: const Text('Đánh dấu thắng'),
                 ),
-                FilledButton.icon(
+                FilledButton(
                   onPressed: () => _moveStage(context, ref),
-                  icon: const Icon(Icons.swap_horiz_rounded, size: 18),
-                  label: const Text('Đổi giai đoạn'),
+                  child: const Text('Đổi giai đoạn'),
                 ),
               ],
             )
@@ -156,8 +191,9 @@ class OpportunityDetailPage extends ConsumerWidget {
   }
 
   static const _headerPadding = EdgeInsets.only(
-    top: OmniSpacing.xxl,
-    bottom: OmniSpacing.md,
+    top: OmniSpacing.lg,
+    bottom: OmniSpacing.sm,
+    left: OmniSpacing.xs,
   );
 
   Future<void> _moveStage(BuildContext context, WidgetRef ref) async {
@@ -231,49 +267,89 @@ class _StageStepper extends StatelessWidget {
       );
     }
 
+    // Dải giai đoạn: bước đã qua là chấm đặc có dấu tick, bước hiện tại là
+    // vòng rỗng viền dày kèm quầng nhạt, bước sau là vòng mảnh. Đường nối
+    // dày 3, tô màu chính tới bước hiện tại.
     return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         for (var i = 0; i < path.length; i++) ...[
           if (i > 0)
             Expanded(
-              child: Container(
-                height: 2,
-                color: i <= currentIndex ? scheme.primary : scheme.outline,
-              ),
-            ),
-          Column(
-            children: [
-              Container(
-                width: 22,
-                height: 22,
-                decoration: BoxDecoration(
-                  color: i <= currentIndex ? scheme.primary : scheme.surface,
-                  shape: BoxShape.circle,
-                  border: Border.all(
-                    color: i <= currentIndex ? scheme.primary : scheme.outline,
-                  ),
-                ),
-                child: i < currentIndex
-                    ? const Icon(
-                        Icons.check_rounded,
-                        size: OmniIconSize.xs,
-                        color: Colors.white,
-                      )
-                    : null,
-              ),
-              const SizedBox(height: 4),
-              Text(
-                path[i].label,
-                style: OmniType.micro.copyWith(
+              child: Padding(
+                padding: const EdgeInsets.only(top: 10.5),
+                child: Container(
+                  height: 3,
                   color: i <= currentIndex
                       ? scheme.primary
-                      : scheme.onSurfaceVariant,
+                      : scheme.outlineVariant,
                 ),
               ),
-            ],
+            ),
+          SizedBox(
+            width: 64,
+            child: Column(
+              children: [
+                _Dot(state: i.compareTo(currentIndex)),
+                const SizedBox(height: 6),
+                Text(
+                  path[i].label,
+                  textAlign: TextAlign.center,
+                  style: OmniType.micro.copyWith(
+                    fontWeight: i == currentIndex
+                        ? FontWeight.w800
+                        : i < currentIndex
+                        ? FontWeight.w600
+                        : FontWeight.w400,
+                    color: i == currentIndex
+                        ? scheme.onPrimaryContainer
+                        : i < currentIndex
+                        ? scheme.onSurface
+                        : scheme.onSurfaceVariant,
+                  ),
+                ),
+              ],
+            ),
           ),
         ],
       ],
+    );
+  }
+}
+
+class _Dot extends StatelessWidget {
+  const _Dot({required this.state});
+
+  /// < 0 đã qua, 0 hiện tại, > 0 chưa tới.
+  final int state;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+
+    return Container(
+      width: 24,
+      height: 24,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: state < 0 ? scheme.primary : scheme.surface,
+        border: state < 0
+            ? null
+            : Border.all(
+                color: state == 0 ? scheme.primary : scheme.outlineVariant,
+                width: state == 0 ? 3 : 2,
+              ),
+        boxShadow: state == 0
+            ? [BoxShadow(color: scheme.primaryContainer, spreadRadius: 4)]
+            : null,
+      ),
+      child: state < 0
+          ? Icon(
+              Icons.check_rounded,
+              size: OmniIconSize.sm,
+              color: scheme.onPrimary,
+            )
+          : null,
     );
   }
 }

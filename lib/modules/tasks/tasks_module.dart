@@ -112,6 +112,8 @@ class TasksModule extends OmniModule {
       // Chỉ việc trễ, server đếm. Badge hiện 40 là giấy dán tường; hiện 3
       // là một lời nhắc.
       badge: taskBadgeProvider,
+      // Việc trễ là thứ phải xử lý, không phải tin mới: huy hiệu đỏ.
+      badgeTone: NavBadgeTone.alert,
     ),
   ];
 }
