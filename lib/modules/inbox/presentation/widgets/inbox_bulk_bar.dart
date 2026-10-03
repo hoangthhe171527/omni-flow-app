@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/error/app_exception.dart';
 import '../../../../design/components/components.dart';
 import '../../../../design/tokens/tokens.dart';
+import '../../application/bulk_assign.dart';
 import '../../application/inbox_providers.dart';
 import '../../data/inbox_api.dart';
 import 'assign_sheet.dart';
@@ -127,19 +128,23 @@ class InboxBulkBar extends ConsumerWidget {
     );
     if (result == null) return;
 
-    final api = ref.read(inboxApiProvider);
+    // Không dừng ở hội thoại lỗi đầu tiên: hội thoại Zalo/FB cá nhân trả 422
+    // riêng nó (Đợt 5), những hội thoại khác vẫn gán được.
+    final outcome = await bulkAssign(
+      ref.read(inboxApiProvider),
+      List.of(selectedIds),
+      result.assigneeId,
+      note: result.note,
+    );
+    // Lỗi thật thì giữ lựa chọn để thử lại; danh sách vẫn làm mới vì một phần
+    // đã được gán.
+    if (outcome.error == null) onDone();
     try {
-      for (final id in selectedIds) {
-        await api.assign(id, result.assigneeId, note: result.note);
-      }
-      onDone();
       await ref.read(inboxListProvider.notifier).refresh();
-      messenger.showSnackBar(
-        SnackBar(content: Text('Đã gán ${selectedIds.length} hội thoại.')),
-      );
-    } on AppException catch (error) {
-      messenger.showSnackBar(SnackBar(content: Text(error.message)));
+    } on AppException {
+      // Làm mới hỏng không đổi kết quả gán; câu báo bên dưới vẫn đúng.
     }
+    messenger.showSnackBar(SnackBar(content: Text(outcome.message)));
   }
 
   Future<void> _label(BuildContext context, WidgetRef ref) async {
