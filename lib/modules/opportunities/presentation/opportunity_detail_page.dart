@@ -181,20 +181,39 @@ class OpportunityDetailPage extends ConsumerWidget {
           ],
         ),
       ),
-      bottomNavigationBar: access.canUpdate
-          ? OmniActionBar(
-              children: [
-                OutlinedButton(
-                  onPressed: () => _markWon(context, ref),
-                  child: const Text('Đánh dấu thắng'),
-                ),
-                FilledButton(
-                  onPressed: () => _moveStage(context, ref),
-                  child: const Text('Đổi giai đoạn'),
-                ),
-              ],
-            )
-          : null,
+      bottomNavigationBar: _actionBar(
+        context,
+        ref,
+        canUpdate: access.canUpdate,
+        data: opportunity.valueOrNull,
+      ),
+    );
+  }
+
+  /// Đợt 5 (OPP-X2): cơ hội đã HUỶ thì API từ chối (422) cả Thắng lẫn đổi giai
+  /// đoạn — không bày nút nào ra. Đã Thắng/Thua thì như web: không còn "Đánh
+  /// dấu thắng", nhưng vẫn "Đổi giai đoạn" — đó là đường mở lại cơ hội.
+  Widget? _actionBar(
+    BuildContext context,
+    WidgetRef ref, {
+    required bool canUpdate,
+    required Opportunity? data,
+  }) {
+    if (!canUpdate || (data?.isCancelled ?? false)) return null;
+    final closed = data?.isClosed ?? false;
+
+    return OmniActionBar(
+      children: [
+        if (!closed)
+          OutlinedButton(
+            onPressed: () => _markWon(context, ref),
+            child: const Text('Đánh dấu thắng'),
+          ),
+        FilledButton(
+          onPressed: () => _moveStage(context, ref),
+          child: const Text('Đổi giai đoạn'),
+        ),
+      ],
     );
   }
 
