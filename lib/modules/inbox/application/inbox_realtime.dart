@@ -84,6 +84,11 @@ final inboxListSignalProvider = NotifierProvider<InboxListSignal, int>(
 );
 
 class InboxListSignal extends Notifier<int> {
+  /// `conversation.updated` (Đợt 6, INB-I7): API phát khi hội thoại được giao,
+  /// đổi trạng thái, nhãn, đã đọc… mà không có tin mới. Payload chỉ có id, nên
+  /// cũng chỉ là tín hiệu hỏi lại.
+  static const _listEvents = {'message.created', 'conversation.updated'};
+
   @override
   int build() {
     final coalescer = _Coalescer(() => state = state + 1);
@@ -94,7 +99,7 @@ class InboxListSignal extends Notifier<int> {
       final unsubscribe = ref.watch(realtimeClientProvider).subscribePrivate(
         channel,
         (event) {
-          if (event.event == 'message.created') coalescer.schedule();
+          if (_listEvents.contains(event.event)) coalescer.schedule();
         },
       );
       ref.onDispose(unsubscribe);

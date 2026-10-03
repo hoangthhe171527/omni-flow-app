@@ -69,6 +69,31 @@ void main() {
     expect(h.api.listCalls, 2, reason: 'Không có lượt tải lại nào rơi rớt.');
   });
 
+  // Đợt 6 P1 (INB-I7): admin giao hội thoại cho sale mà không có tin mới thì
+  // API chỉ phát `conversation.updated` (chỉ id) — danh sách của sale phải tự
+  // hỏi lại, không chờ nhịp poll 2 phút.
+  test('conversation.updated → danh sách tải lại', () async {
+    final h = _Harness();
+    h.container.listen(inboxListProvider, (_, _) {});
+    await h.container.read(inboxListProvider.future);
+    expect(h.api.listCalls, 1);
+
+    await h.handshake();
+    h.emit(
+      channel: 'private-tenant.tenant-1.inbox',
+      event: 'conversation.updated',
+      data: {
+        'conversation_id': 'c1',
+        'conversation_ids': ['c1'],
+        'reason': 'assigned',
+      },
+    );
+
+    await wait(700);
+    await h.container.read(inboxListProvider.future);
+    expect(h.api.listCalls, 2);
+  });
+
   test('sự kiện của hội thoại A không đụng tín hiệu của hội thoại B', () async {
     final h = _Harness();
     var bumpsA = 0;

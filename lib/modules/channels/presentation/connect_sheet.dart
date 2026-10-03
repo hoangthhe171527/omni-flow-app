@@ -2,10 +2,18 @@ import 'package:flutter/material.dart';
 
 import '../../../core/domain/channel.dart';
 import '../../../design/tokens/tokens.dart';
+import '../../../security/permissions/access_policy.dart';
+import '../domain/channel_permissions.dart';
 import '../domain/connectable_channel.dart';
 
 /// Chọn kênh muốn nối, hoặc null nếu người dùng đóng sheet.
-Future<Channel?> showConnectSheet(BuildContext context) {
+Future<Channel?> showConnectSheet(
+  BuildContext context, {
+  required AccessPolicy access,
+}) {
+  final oauth = ChannelPermissions.canConnectCompany(access)
+      ? ConnectableChannels.oauth
+      : const <Channel>[];
   return showModalBottomSheet<Channel>(
     context: context,
     showDragHandle: true,
@@ -22,18 +30,21 @@ Future<Channel?> showConnectSheet(BuildContext context) {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Kênh chính thức', style: OmniType.bodyStrong),
-            Text(
-              'Nói danh nghĩa công ty. Nối bằng cách đăng nhập trên trình duyệt.',
-              style: OmniType.micro.copyWith(
-                color: Theme.of(sheetContext).colorScheme.onSurfaceVariant,
+            // Page/OA là kênh công ty: chỉ admin kết nối (quyết định
+            // 2026-10-04 #3). Sale không thấy mục này, API cũng trả 403.
+            if (oauth.isNotEmpty) ...[
+              Text('Kênh chính thức', style: OmniType.bodyStrong),
+              Text(
+                'Nói danh nghĩa công ty. Nối bằng cách đăng nhập trên trình duyệt.',
+                style: OmniType.micro.copyWith(
+                  color: Theme.of(sheetContext).colorScheme.onSurfaceVariant,
+                ),
               ),
-            ),
-            const SizedBox(height: OmniSpacing.sm),
-            for (final channel in ConnectableChannels.oauth)
-              _ChannelOption(channel: channel),
+              const SizedBox(height: OmniSpacing.sm),
+              for (final channel in oauth) _ChannelOption(channel: channel),
+            ],
             if (ConnectableChannels.pair.isNotEmpty) ...[
-              const SizedBox(height: OmniSpacing.lg),
+              if (oauth.isNotEmpty) const SizedBox(height: OmniSpacing.lg),
               Text('Tài khoản cá nhân', style: OmniType.bodyStrong),
               Text(
                 'Tài khoản riêng của nhân viên. Ghép nối bằng mã QR với máy đang chạy agent.',

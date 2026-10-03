@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/domain/channel.dart';
+import '../../../core/error/app_exception.dart';
 import '../data/channels_api.dart';
 import '../domain/pairing.dart';
 
@@ -116,10 +117,28 @@ class PairingController
           sawQr: _sawQr,
         ),
       );
-      if (_isFinished) _stop();
+      if (_isFinished) {
+        _stop();
+      } else if (_ticks >= pairingMaxPolls) {
+        _expire();
+      }
+    } on NotFoundException {
+      // Phiên không còn ở server: đã hết hạn và bị dọn, hoặc (API cũ) đã gộp
+      // vào kết nối có sẵn. Poll tiếp chỉ quay mãi (INB-I25).
+      _expire();
     } catch (_) {
-      // A transient network failure must not terminate a 30-minute pairing flow.
+      // Lỗi mạng tạm thời không được cắt ngang phiên ghép nối 30 phút…
+      // …nhưng cũng không được quay mãi.
+      if (_ticks >= pairingMaxPolls) _expire();
     }
+  }
+
+  void _expire() {
+    _stop();
+    state = state.copyWith(
+      snapshot: const PairingSnapshot(view: PairingView.expired),
+      showAgentHint: false,
+    );
   }
 }
 

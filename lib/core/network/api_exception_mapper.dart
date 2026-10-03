@@ -42,6 +42,7 @@ AppException mapDioException(DioException error) {
     422 => ValidationException(
       message ?? 'Dữ liệu chưa hợp lệ.',
       errors: _fieldErrors(map['errors']),
+      reason: _reason(map),
     ),
     _ when status != null && status >= 500 => ServerException(
       message ?? 'Máy chủ đang gặp sự cố.',
@@ -94,6 +95,16 @@ String? _forHumans(String? message) {
   }
 
   return message;
+}
+
+/// Mã nghiệp vụ của lỗi: `code` (vd 422 `personal_thread_not_reassignable`),
+/// hoặc `error_code` ở những endpoint dùng tên khoá cũ.
+String? _reason(Map<String, dynamic> map) {
+  for (final key in const ['code', 'error_code']) {
+    final value = map[key];
+    if (value is String && value.isNotEmpty) return value;
+  }
+  return null;
 }
 
 List<String> _stringList(Object? value) {
