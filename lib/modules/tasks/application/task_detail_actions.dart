@@ -20,17 +20,17 @@ class TaskDetailActions {
 
   /// Tự nhận việc: THÊM mình vào danh sách người làm.
   ///
-  /// Gửi lại CẢ danh sách kèm id của mình, chứ không gửi mỗi id của mình:
-  /// `PUT /tasks/{id}` ghi đè `assignee_ids`, nên gửi một mình là lặng lẽ gỡ
-  /// những người đang cùng làm ra khỏi việc — họ mất luôn việc trong danh
-  /// sách của mình và không có gì báo cho ai biết.
+  /// Đi qua lệnh claim riêng (CV-I2), không gửi lại danh sách: gửi lại bản
+  /// chụp lúc mở màn là đè người quản đốc vừa thêm giữa chừng — họ mất luôn
+  /// việc trong danh sách của mình và không có gì báo cho ai biết. Server tự
+  /// thêm mình vào danh sách hiện có.
   ///
   /// Không hỏi lại: nhận nhầm thì quản đốc gỡ ra trong một giây, còn thêm một
   /// hộp thoại giữa người thợ và việc họ định làm thì ngày nào cũng tốn.
   Future<void> claim(Task task, String userId) async {
     if (task.assigneeIds.contains(userId)) return;
 
-    await _controller.setAssignees([...task.assigneeIds, userId]);
+    await _controller.claimSelf(userId);
   }
 
   /// Giao việc cho ai. [chosen] null = đóng sheet mà không lưu.

@@ -33,7 +33,12 @@ AppException mapDioException(DioException error) {
       message ?? 'Bạn không có quyền thực hiện thao tác này.',
       requiredPermissions: _stringList(map['required_permissions']),
     ),
-    404 => NotFoundException(message ?? 'Không tìm thấy dữ liệu.'),
+    404 => NotFoundException(
+      message ?? 'Không tìm thấy dữ liệu.',
+      // Mọi 404 của API đi qua envelope `success:false`; route không tồn tại
+      // thì Laravel trả `{message:"The route … could not be found."}`.
+      routeMissing: !map.containsKey('success'),
+    ),
     422 => ValidationException(
       message ?? 'Dữ liệu chưa hợp lệ.',
       errors: _fieldErrors(map['errors']),

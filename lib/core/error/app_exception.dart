@@ -32,7 +32,14 @@ class ForbiddenException extends AppException {
 }
 
 class NotFoundException extends AppException {
-  const NotFoundException(super.message) : super(code: '404');
+  const NotFoundException(super.message, {this.routeMissing = false})
+    : super(code: '404');
+
+  /// 404 KHÔNG mang envelope `{success:false,…}` của API — tức là Laravel (hay
+  /// proxy) không có route này, chứ không phải API đã từ chối/không thấy bản
+  /// ghi. Chỗ gọi một route mới dùng nó để rơi về đường cũ với API chưa cập
+  /// nhật mà không nuốt 404 thật của nghiệp vụ.
+  final bool routeMissing;
 }
 
 /// 422 — field-level validation errors keyed by field name.

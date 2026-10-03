@@ -78,14 +78,13 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(saved, [
-      [me],
+      ['claim', me],
     ]);
   });
 
   testWidgets('việc đã có người: nhận THÊM chứ không đá ai ra', (tester) async {
-    // API ghi đè cả mảng `assignee_ids`, nên gửi mỗi id của mình là lặng lẽ gỡ
-    // người đang làm dở ra khỏi việc — và họ mất luôn việc trong danh sách của
-    // mình mà không có gì báo.
+    // CV-I2: không PUT lại `assignee_ids` từ bản chụp — người vừa được thêm
+    // giữa lúc mở màn và lúc bấm sẽ bị đè. Lệnh claim để server tự thêm mình.
     await tester.pumpWidget(host(ids: ['u1'], names: ['Hằng Ni']));
     await tester.pumpAndSettle();
 
@@ -93,7 +92,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(saved, [
-      ['u1', me],
+      ['claim', me],
     ]);
   });
 
@@ -118,7 +117,7 @@ void main() {
 
     expect(find.text('Ai làm việc này'), findsNothing);
     expect(saved, [
-      [me],
+      ['claim', me],
     ]);
   });
 }
@@ -135,5 +134,10 @@ class _RecordingDetail extends TaskController {
   @override
   Future<void> setAssignees(List<String> userIds) async {
     _saved.add(userIds);
+  }
+
+  @override
+  Future<void> claimSelf(String userId) async {
+    _saved.add(['claim', userId]);
   }
 }
