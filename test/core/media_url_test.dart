@@ -61,4 +61,48 @@ void main() {
       isNot(contains('..')),
     );
   });
+
+  // Fix round 1 (review W1/P1).
+  test('đường /storage/inbox/<tenant>/ (disk public) giữ tiền tố tenant', () {
+    expect(
+      resolveMediaUrl('/storage/inbox/t-1/x.jpg'),
+      at('/api/v1/inbox/media/t-1/x.jpg'),
+    );
+    expect(
+      resolveMediaUrl('http://10.0.2.2/storage/inbox/t-1/x.jpg'),
+      at('/api/v1/inbox/media/t-1/x.jpg'),
+    );
+    expect(
+      resolveMediaUrl('https://h/public/inbox/t-2/y.png'),
+      at('/api/v1/inbox/media/t-2/y.png'),
+    );
+  });
+
+  test('`..` mã hoá (%2e%2e) cũng bị chặn', () {
+    expect(resolveMediaUrl('/api/v1/inbox/media/%2e%2e/%2e%2e/users/me'), '');
+    expect(
+      resolveMediaUrl('https://h/api/v1/inbox/media/%2E%2E/%2E%2E/users/me'),
+      '',
+    );
+  });
+
+  test('`..` trong query không làm mất ảnh CDN', () {
+    const cdn = 'https://cdn.x/y.jpg?next=/a/..';
+    expect(resolveMediaUrl(cdn), cdn);
+  });
+
+  test('đổi host giữ nguyên query', () {
+    expect(
+      resolveMediaUrl('https://api.khac.vn/api/v1/inbox/media/t-1/x.jpg?v=2'),
+      api
+          .replace(path: '/api/v1/inbox/media/t-1/x.jpg', query: 'v=2')
+          .toString(),
+    );
+    expect(
+      resolveMediaUrl('/api/v1/inbox/media/t-1/x.jpg?sig=abc'),
+      api
+          .replace(path: '/api/v1/inbox/media/t-1/x.jpg', query: 'sig=abc')
+          .toString(),
+    );
+  });
 }

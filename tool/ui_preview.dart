@@ -397,8 +397,10 @@ class _StubTasksApi implements TasksApi {
   /// Bản xem trước đóng vai API cũ chưa có route claim: controller rơi về
   /// [setAssignees] như trước Đợt 5.
   @override
-  Future<Task> claim(String taskId) async =>
-      throw const NotFoundException('preview: chưa có /claim');
+  Future<Task> claim(String taskId) async => throw const NotFoundException(
+    'preview: chưa có /claim',
+    routeMissing: true,
+  );
 
   @override
   Future<Task> comment(

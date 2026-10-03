@@ -336,13 +336,18 @@ class TaskController
   /// Tự nhận việc qua `POST /tasks/{id}/claim` (CV-I2): server thêm mình vào
   /// danh sách, nên không còn bản chụp nào để đè người vừa được thêm.
   ///
-  /// API cũ (trước Đợt 5) chưa có route này và trả 404. Khi đó làm như cũ: gửi
+  /// API cũ (trước Đợt 5) chưa có route này: Laravel trả 404 không envelope
+  /// ([NotFoundException.routeMissing]). Khi đó làm như cũ: gửi
   /// lại cả danh sách đang thấy kèm id của mình. Việc đã bị xoá thì PUT cũng
   /// 404 và lỗi đó vẫn ném ra như trước.
   Future<void> claimSelf(String userId) => _apply((api) async {
     try {
       return await api.claim(arg);
-    } on NotFoundException {
+    } on NotFoundException catch (e) {
+      // Chỉ 404 "route chưa có" (API cũ) mới đi đường cũ. 404 có envelope
+      // của API (`guarded()` → "Not found.") là từ chối thật: PUT bản chụp ở
+      // đây chính là lỗi CV-I2 quay lại.
+      if (!e.routeMissing) rethrow;
       final ids = state.valueOrNull?.task.assigneeIds ?? const <String>[];
       return api.setAssignees(arg, [...ids, if (!ids.contains(userId)) userId]);
     }

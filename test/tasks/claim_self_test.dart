@@ -137,6 +137,32 @@ void main() {
     );
     expect(adapter.requests, hasLength(1));
   });
+
+  // Fix round 1: 404 của chính API (`guarded()` → {success:false, "Not found."})
+  // là "route có, nhưng từ chối/không thấy" — rơi về PUT bản chụp ở đây là đúng
+  // lỗi CV-I2 quay lại. Chỉ 404 "route chưa có" mới được đi đường cũ.
+  test('404 có envelope của API (success:false) NÉM ra, không PUT', () async {
+    adapter = _RoutingAdapter({
+      'POST /api/v1/tasks/t1/claim': (
+        404,
+        '{"success":false,"message":"Not found."}',
+      ),
+      'PUT /api/v1/tasks/t1': (
+        200,
+        '{"success":true,"data":{"id":"t1","title":"x","assignee_ids":["u9"]}}',
+      ),
+    });
+    final container = containerWith(taskWith(['u1']));
+    await container.read(taskDetailProvider('t1').future);
+
+    await expectLater(
+      container.read(taskDetailProvider('t1').notifier).claimSelf('u9'),
+      throwsA(isA<NotFoundException>()),
+    );
+    expect(adapter.requests.map((r) => '${r.method} ${r.uri.path}'), [
+      'POST /api/v1/tasks/t1/claim',
+    ]);
+  });
 }
 
 class _StubDetail extends TaskController {
