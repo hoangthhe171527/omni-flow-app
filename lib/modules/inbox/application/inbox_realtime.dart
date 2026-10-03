@@ -47,18 +47,35 @@ final inboxRealtimeSignalProvider = StateProvider<int>((ref) => 0);
 /// tin trước — từng là năm lượt gọi API để vẽ ra cùng một màn hình.
 const _coalesceWindow = Duration(milliseconds: 400);
 
+/// Chờ lâu nhất kể từ sự kiện ĐẦU của một loạt. Debounce thuần không có trần:
+/// sự kiện cách nhau dưới 400ms liên tục (giờ cao điểm, gán hàng loạt) thì
+/// màn hình không bao giờ tải lại cho tới khi có một khoảng lặng.
+const _coalesceMaxWait = Duration(seconds: 2);
+
 class _Coalescer {
   _Coalescer(this._fire);
 
   final void Function() _fire;
   Timer? _timer;
+  Timer? _maxTimer;
 
   void schedule() {
     _timer?.cancel();
-    _timer = Timer(_coalesceWindow, _fire);
+    _timer = Timer(_coalesceWindow, _flush);
+    _maxTimer ??= Timer(_coalesceMaxWait, _flush);
   }
 
-  void cancel() => _timer?.cancel();
+  void _flush() {
+    cancel();
+    _fire();
+  }
+
+  void cancel() {
+    _timer?.cancel();
+    _timer = null;
+    _maxTimer?.cancel();
+    _maxTimer = null;
+  }
 }
 
 /// The tenant-wide inbox stream for the signed-in session, or null when there is
@@ -70,7 +87,7 @@ final _inboxChannelProvider = Provider<String?>((ref) {
       : 'tenant.$tenantId.inbox';
 });
 
-/// "Danh sách hộp thư cần tải lại", gộp nhịp 400ms.
+/// "Danh sách hộp thư cần tải lại", gộp nhịp 400ms (trần 2 giây).
 ///
 /// Provider này TỰ MỞ KÊNH tenant. Trước đây việc đó nằm ở một provider thứ
 /// hai (`inboxRealtimeSubscriptionProvider`) mà màn danh sách phải nhớ theo
@@ -79,16 +96,14 @@ final _inboxChannelProvider = Provider<String?>((ref) {
 ///
 /// Vẫn là *tín hiệu*, không phải dữ liệu: payload broadcast chưa qua bộ lọc
 /// quyền của người xem, nên hành động duy nhất là hỏi lại REST API — nơi có.
+///
+/// Chỉ `message.created` (và FCM). `conversation.updated` đi đường riêng
+/// [inboxConversationUpdatesProvider]: nó mang id, nên chỉ vá đúng dòng đó.
 final inboxListSignalProvider = NotifierProvider<InboxListSignal, int>(
   InboxListSignal.new,
 );
 
 class InboxListSignal extends Notifier<int> {
-  /// `conversation.updated` (Đợt 6, INB-I7): API phát khi hội thoại được giao,
-  /// đổi trạng thái, nhãn, đã đọc… mà không có tin mới. Payload chỉ có id, nên
-  /// cũng chỉ là tín hiệu hỏi lại.
-  static const _listEvents = {'message.created', 'conversation.updated'};
-
   @override
   int build() {
     final coalescer = _Coalescer(() => state = state + 1);
@@ -99,7 +114,7 @@ class InboxListSignal extends Notifier<int> {
       final unsubscribe = ref.watch(realtimeClientProvider).subscribePrivate(
         channel,
         (event) {
-          if (_listEvents.contains(event.event)) coalescer.schedule();
+          if (event.event == 'message.created') coalescer.schedule();
         },
       );
       ref.onDispose(unsubscribe);
@@ -108,6 +123,88 @@ class InboxListSignal extends Notifier<int> {
     ref.listen(inboxRealtimeSignalProvider, (_, _) => coalescer.schedule());
 
     return 0;
+  }
+}
+
+/// Một loạt `conversation.updated` đã gộp nhịp.
+class ConversationUpdateBatch {
+  const ConversationUpdateBatch({
+    required this.reasonsById,
+    required this.unscoped,
+  });
+
+  /// id hội thoại → các `reason` API gửi (`assigned`, `labels`, `updated`,
+  /// `sent`, `read`, `deleted`, `converted`).
+  final Map<String, Set<String>> reasonsById;
+
+  /// Có sự kiện không mang id nào — chỉ biết "có gì đó đổi".
+  final bool unscoped;
+}
+
+/// `conversation.updated` (Đợt 6, INB-I7): API phát khi hội thoại được giao,
+/// đổi trạng thái, nhãn, gửi tin, đã đọc… — payload CHỈ có id và lý do.
+///
+/// Mỗi lần ai đó trong tenant mở một hội thoại (`read`) hay gửi một tin
+/// (`sent`) là một sự kiện tới MỌI máy. Tải lại trang 1 cho mỗi sự kiện vừa
+/// tốn vừa làm danh sách đang cuộn ở trang 3 co về 20 dòng. Nên ở đây chỉ gom
+/// id; [InboxListController] vá đúng những dòng đó.
+final inboxConversationUpdatesProvider =
+    NotifierProvider<InboxConversationUpdates, ConversationUpdateBatch?>(
+      InboxConversationUpdates.new,
+    );
+
+class InboxConversationUpdates extends Notifier<ConversationUpdateBatch?> {
+  final Map<String, Set<String>> _pending = {};
+  bool _pendingUnscoped = false;
+
+  @override
+  ConversationUpdateBatch? build() {
+    final coalescer = _Coalescer(_flush);
+    ref.onDispose(coalescer.cancel);
+
+    final channel = ref.watch(_inboxChannelProvider);
+    if (channel != null) {
+      final unsubscribe = ref.watch(realtimeClientProvider).subscribePrivate(
+        channel,
+        (event) {
+          if (event.event != 'conversation.updated') return;
+          _collect(event.data);
+          coalescer.schedule();
+        },
+      );
+      ref.onDispose(unsubscribe);
+    }
+
+    return null;
+  }
+
+  void _collect(Map<String, dynamic> data) {
+    final reason = data['reason'] is String
+        ? data['reason'] as String
+        : 'updated';
+    final ids = <String>{
+      if (data['conversation_ids'] case final List<dynamic> list)
+        for (final id in list)
+          if (id is String && id.isNotEmpty) id,
+      if (data['conversation_id'] case final String id when id.isNotEmpty) id,
+    };
+    if (ids.isEmpty) {
+      _pendingUnscoped = true;
+      return;
+    }
+    for (final id in ids) {
+      _pending.putIfAbsent(id, () => <String>{}).add(reason);
+    }
+  }
+
+  void _flush() {
+    if (_pending.isEmpty && !_pendingUnscoped) return;
+    state = ConversationUpdateBatch(
+      reasonsById: Map.of(_pending),
+      unscoped: _pendingUnscoped,
+    );
+    _pending.clear();
+    _pendingUnscoped = false;
   }
 }
 

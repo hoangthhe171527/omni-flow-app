@@ -101,6 +101,15 @@ PairingSnapshot resolvePairing(PairingStatus status) {
   if (status.status == 'expired') {
     return const PairingSnapshot(view: PairingView.expired);
   }
+  // Kết nối thành `error` (vd agent báo `running:false` — phiên hỏng): ghép
+  // nối đã kết thúc, chờ tiếp chỉ quay tới trần 30 phút.
+  if (status.status == 'error') {
+    return PairingSnapshot(
+      view: PairingView.failed,
+      stage: status.stage,
+      note: status.note,
+    );
+  }
   if (stage == 'error') {
     return PairingSnapshot(
       view: PairingView.failed,

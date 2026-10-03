@@ -24,19 +24,23 @@ class BulkAssignOutcome {
   /// người dùng thử lại.
   final AppException? error;
 
-  /// Câu báo cho người dùng.
+  /// Câu báo cho người dùng. Không nói "bỏ qua 0" khi không bỏ qua gì.
   String get message {
+    final summary = skipped > 0
+        ? 'Đã gán $done, bỏ qua $skipped hội thoại cá nhân.'
+        : (done > 0 || error == null)
+        ? 'Đã gán $done hội thoại.'
+        : '';
     if (error case final e?) {
-      return skipped > 0 || done > 0
-          ? 'Đã gán $done, bỏ qua $skipped hội thoại cá nhân. ${e.message}'
-          : e.message;
+      return summary.isEmpty ? e.message : '$summary ${e.message}';
     }
-    if (skipped > 0) return 'Đã gán $done, bỏ qua $skipped hội thoại cá nhân.';
-    return 'Đã gán $done hội thoại.';
+    return summary;
   }
 }
 
-/// Gán [ids] cho [assigneeId], từng hội thoại một, KHÔNG dừng ở lỗi đầu.
+/// Gán [ids] cho [assigneeId], từng hội thoại một, KHÔNG dừng ở lỗi đầu —
+/// trừ 422 của chính người được giao (`assignee_id` không kèm mã hội thoại cá
+/// nhân), vì lỗi đó lặp lại ở mọi hội thoại.
 ///
 /// Trước đây một 422 (hội thoại cá nhân) giữa danh sách làm cả lượt dừng lại
 /// và báo lỗi: các hội thoại phía sau không được gán, còn những hội thoại phía
@@ -62,6 +66,9 @@ Future<BulkAssignOutcome> bulkAssign(
         skipped++;
       } else {
         error ??= e;
+        // Lỗi nằm ở NGƯỜI được giao (vd đã ngưng), không ở hội thoại: mọi
+        // hội thoại sau cũng sẽ 422 y hệt — dừng, đừng gọi thêm N request.
+        if (e.errors.containsKey('assignee_id')) break;
       }
     } on AppException catch (e) {
       error ??= e;

@@ -42,8 +42,11 @@ void main() {
     expect(find.text('Zalo cá nhân'), findsOneWidget);
   });
 
-  testWidgets('chủ workspace (*): có đủ', (tester) async {
-    await openSheet(tester, {'*'});
+  testWidgets('admin (channels.read + channels.write): có đủ', (tester) async {
+    await openSheet(tester, {
+      ChannelPermissions.read,
+      ChannelPermissions.write,
+    });
 
     expect(find.text('Facebook Page'), findsOneWidget);
     expect(find.text('Zalo OA'), findsOneWidget);
@@ -54,7 +57,8 @@ void main() {
     bool can(Set<String> p) =>
         ChannelPermissions.canConnectCompany(AccessPolicy(p));
 
-    expect(can({'*'}), isTrue);
+    // `*` không phải slug quyền: API không cấp, không hiểu (fix vòng 1 m1).
+    expect(can({'*'}), isFalse);
     expect(can({'channels.read', 'channels.write'}), isTrue);
     expect(can({'channels.read.all', 'channels.write'}), isTrue);
     expect(can({'channels.read.own', 'channels.write'}), isFalse);

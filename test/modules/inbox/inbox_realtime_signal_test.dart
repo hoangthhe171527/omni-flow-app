@@ -94,6 +94,111 @@ void main() {
     expect(h.api.listCalls, 2);
   });
 
+  // Fix vòng 1 (I2): `read`/`sent` tới mọi máy trong tenant. Tải lại trang 1
+  // cho mỗi sự kiện vừa tốn vừa làm danh sách đang cuộn co về 20 dòng.
+  group('conversation.updated vá theo id', () {
+    Future<_Harness> loaded({int pagesLoaded = 1}) async {
+      final h = _Harness();
+      h.api.pages = (page) => _page(page);
+      h.api.onGet = (id) => _conv(id, last: 'mới');
+      h.container.listen(inboxListProvider, (_, _) {});
+      await h.container.read(inboxListProvider.future);
+      for (var i = 1; i < pagesLoaded; i++) {
+        await h.container.read(inboxListProvider.notifier).loadMore();
+      }
+      await h.handshake();
+      return h;
+    }
+
+    ConversationListState list(_Harness h) =>
+        h.container.read(inboxListProvider).requireValue;
+
+    test('dòng đang hiện: hỏi đúng hội thoại đó, vá tại chỗ', () async {
+      final h = await loaded();
+      h.emit(
+        channel: 'private-tenant.tenant-1.inbox',
+        event: 'conversation.updated',
+        data: {
+          'conversation_id': 'p1-3',
+          'conversation_ids': ['p1-3'],
+          'reason': 'labels',
+        },
+      );
+      await wait(700);
+
+      expect(h.api.listCalls, 1, reason: 'Không tải lại trang.');
+      expect(h.api.getCalls, ['p1-3']);
+      expect(list(h).items[3].id, 'p1-3');
+      expect(list(h).items[3].lastMessage, 'mới');
+    });
+
+    test('hội thoại mới được giao khi đã cuộn tới trang 2: gộp, không co '
+        'danh sách', () async {
+      final h = await loaded(pagesLoaded: 2);
+      expect(list(h).items, hasLength(40));
+      h.api.pages = (page) => Paged(
+        items: [_conv('moi'), for (var i = 0; i < 19; i++) _conv('p1-$i')],
+        pagination: const ApiPagination(
+          currentPage: 1,
+          lastPage: 3,
+          perPage: 20,
+          total: 61,
+        ),
+      );
+
+      h.emit(
+        channel: 'private-tenant.tenant-1.inbox',
+        event: 'conversation.updated',
+        data: {
+          'conversation_id': 'moi',
+          'conversation_ids': ['moi'],
+          'reason': 'assigned',
+        },
+      );
+      await wait(700);
+
+      expect(list(h).items.first.id, 'moi');
+      expect(list(h).items, hasLength(41));
+      expect(list(h).pagination.currentPage, 2, reason: 'Giữ trang đã tải.');
+    });
+
+    test('read của hội thoại không có trên màn: không hỏi gì', () async {
+      final h = await loaded();
+      h.emit(
+        channel: 'private-tenant.tenant-1.inbox',
+        event: 'conversation.updated',
+        data: {
+          'conversation_id': 'khac',
+          'conversation_ids': ['khac'],
+          'reason': 'read',
+        },
+      );
+      await wait(700);
+
+      expect(h.api.listCalls, 1);
+      expect(h.api.getCalls, isEmpty);
+    });
+  });
+
+  test('sự kiện dồn liên tục: vẫn tải lại sau tối đa ~2 giây', () async {
+    final h = _Harness();
+    h.container.listen(inboxListProvider, (_, _) {});
+    await h.container.read(inboxListProvider.future);
+    await h.handshake();
+
+    // Cách nhau 150ms suốt 2,7 giây: debounce 400ms thuần không bao giờ bắn.
+    for (var i = 0; i < 18; i++) {
+      h.emit(
+        channel: 'private-tenant.tenant-1.inbox',
+        event: 'message.created',
+        data: {'conversation_id': 'c$i', 'message_id': 'm$i'},
+      );
+      await wait(150);
+    }
+
+    expect(h.api.listCalls, greaterThanOrEqualTo(2));
+  });
+
   test('sự kiện của hội thoại A không đụng tín hiệu của hội thoại B', () async {
     final h = _Harness();
     var bumpsA = 0;
@@ -285,6 +390,11 @@ class _FakeInboxApi extends InboxApi {
   int messagesCalls = 0;
   List<Message> history = const [];
 
+  /// Trang server trả theo số trang; null = danh sách rỗng như cũ.
+  Paged<Conversation> Function(int page)? pages;
+  final List<String> getCalls = [];
+  Conversation Function(String id)? onGet;
+
   @override
   Future<Paged<Conversation>> list({
     required Map<String, dynamic> query,
@@ -292,7 +402,13 @@ class _FakeInboxApi extends InboxApi {
     int perPage = AppConfig.defaultPerPage,
   }) async {
     listCalls++;
-    return const Paged.empty();
+    return pages?.call(page) ?? const Paged.empty();
+  }
+
+  @override
+  Future<Conversation> get(String id) async {
+    getCalls.add(id);
+    return onGet!(id);
   }
 
   @override
@@ -340,3 +456,16 @@ class _FakeSink implements WebSocketSink {
   @override
   noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
+
+Conversation _conv(String id, {String last = ''}) =>
+    Conversation.fromJson({'id': id, 'channel': 'zalo', 'last_message': last});
+
+Paged<Conversation> _page(int page) => Paged(
+  items: [for (var i = 0; i < 20; i++) _conv('p$page-$i')],
+  pagination: ApiPagination(
+    currentPage: page,
+    lastPage: 3,
+    perPage: 20,
+    total: 60,
+  ),
+);

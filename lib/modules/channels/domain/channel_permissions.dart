@@ -22,8 +22,8 @@ abstract final class ChannelPermissions {
   /// Quyết định 2026-10-04 #3: Page/OA chỉ admin kết nối. API chặn
   /// `oauth/redirect` bằng quyền đọc kênh toàn tenant cộng [write]; sale
   /// (`read.own` + `write`) chỉ tự ghép nối tài khoản cá nhân. Kiểm ĐÚNG
-  /// slug, không suy `read` từ `write`.
+  /// slug, không suy `read` từ `write`. Không có slug `*`: API so khớp
+  /// chính xác (`*` chỉ là scope của JWT), và chủ workspace nhận đủ slug thật.
   static bool canConnectCompany(AccessPolicy access) =>
-      access.can('*') ||
-      ((access.can(read) || access.can(readAll)) && access.can(write));
+      (access.can(read) || access.can(readAll)) && access.can(write);
 }

@@ -56,6 +56,27 @@ void main() {
     expect(outcome.skipped, 0);
     expect(outcome.error, isNotNull);
     expect(outcome.error!.message, 'Người được giao đã ngưng.');
+    // Fix vòng 1 (m3): không nói "bỏ qua 0".
+    expect(outcome.message, 'Đã gán 1 hội thoại. Người được giao đã ngưng.');
+  });
+
+  // Fix vòng 1 (m4): người được giao đã ngưng thì mọi hội thoại đều 422 y
+  // hệt — dừng ngay ở lần đầu thay vì gọi N request.
+  test('422 assignee_id không mã: dừng ở lần đầu', () async {
+    adapter = _RoutingAdapter({
+      'i1': (
+        422,
+        '{"success":false,"message":"Người được giao đã ngưng.","errors":{"assignee_id":["Người được giao đã ngưng."]}}',
+      ),
+      'a1': (200, assigned),
+      'a2': (200, assigned),
+    });
+
+    final outcome = await bulkAssign(api(), ['i1', 'a1', 'a2'], 'u7');
+
+    expect(adapter.paths, hasLength(1));
+    expect(outcome.done, 0);
+    expect(outcome.message, 'Người được giao đã ngưng.');
   });
 
   test('không lỗi: câu báo như cũ', () async {
