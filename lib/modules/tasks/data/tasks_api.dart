@@ -351,6 +351,16 @@ class TasksApi {
   Future<Task> setAssignees(String taskId, List<String> userIds) =>
       _patch(taskId, {'assignee_ids': userIds});
 
+  /// Tự nhận việc: server THÊM người đang đăng nhập vào `assignee_ids` (CV-I2).
+  ///
+  /// Không gửi danh sách nào: một bản chụp gửi lên là đè người vừa được thêm
+  /// giữa lúc mở màn và lúc bấm. API trước Đợt 5 chưa có route này (404).
+  Future<Task> claim(String taskId) async {
+    final response = await _client.post('$_base/$taskId/claim');
+
+    return Task.fromJson(response.object);
+  }
+
   /// Ghi MỘT trường của công việc.
   ///
   /// API chỉ có PUT /tasks/{id} và nó ghi đúng những trường được gửi, nên gửi

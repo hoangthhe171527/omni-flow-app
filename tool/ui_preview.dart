@@ -13,6 +13,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:omni_app/core/error/app_exception.dart';
 import 'package:omni_app/core/network/api_envelope.dart';
 import 'package:omni_app/design/components/components.dart';
 import 'package:omni_app/design/platform/omni_platform.dart';
@@ -392,6 +393,12 @@ class _StubTasksApi implements TasksApi {
 
     return Task.fromJson(row);
   }
+
+  /// Bản xem trước đóng vai API cũ chưa có route claim: controller rơi về
+  /// [setAssignees] như trước Đợt 5.
+  @override
+  Future<Task> claim(String taskId) async =>
+      throw const NotFoundException('preview: chưa có /claim');
 
   @override
   Future<Task> comment(

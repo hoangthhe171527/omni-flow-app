@@ -9,6 +9,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 
 import '../../../../design/tokens/tokens.dart';
+import '../../../../core/utils/media_url.dart';
 import '../../domain/message.dart';
 
 class MessageImageGallery extends StatelessWidget {
@@ -298,10 +299,15 @@ class _NetworkMediaImage extends StatefulWidget {
 class _NetworkMediaImageState extends State<_NetworkMediaImage> {
   int _attempt = 0;
 
+  /// Ảnh vừa gửi mang URL nguyên văn của server (APP-I1); đổi host tại chỗ vẽ
+  /// để môi trường dev (host khác APP_URL) vẫn hiện được. URL đã resolve thì
+  /// resolve lại không đổi.
+  String get _url => resolveMediaUrl(widget.url);
+
   Future<void> _retry() async {
     // A failed CDN response must not poison the next attempt in either Flutter's
     // memory cache or the persistent cache manager.
-    await CachedNetworkImage.evictFromCache(widget.url);
+    await CachedNetworkImage.evictFromCache(_url);
     if (!mounted) return;
     setState(() => _attempt++);
   }
@@ -314,8 +320,8 @@ class _NetworkMediaImageState extends State<_NetworkMediaImage> {
     final decodeWidth = math.min((logicalWidth * pixelRatio).round(), 1440);
 
     return CachedNetworkImage(
-      key: ValueKey('${widget.url}#$_attempt'),
-      imageUrl: widget.url,
+      key: ValueKey('$_url#$_attempt'),
+      imageUrl: _url,
       fit: widget.fit,
       fadeInDuration: OmniDuration.fast,
       fadeOutDuration: const Duration(milliseconds: 80),

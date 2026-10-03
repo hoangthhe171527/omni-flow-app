@@ -19,6 +19,18 @@ class MessageAttachment {
         name: json.str('name'),
       );
 
+  /// Kết quả `POST /inbox/media`: giữ `url` NGUYÊN VĂN server trả về.
+  ///
+  /// URL này đi tiếp vào POST /messages và nền tảng (Zalo/FB) tải ảnh từ chính
+  /// nó. Dựng lại qua [resolveMediaUrl] là gửi cho khách một URL khác URL server
+  /// đã cấp (APP-I1). Chỗ vẽ ảnh tự resolve khi cần đổi host.
+  factory MessageAttachment.fromUpload(Map<String, dynamic> json) =>
+      MessageAttachment(
+        url: json.strOr('url', ''),
+        type: json.strOr('type', 'file'),
+        name: json.str('name'),
+      );
+
   final String url;
   final String type;
   final String? name;

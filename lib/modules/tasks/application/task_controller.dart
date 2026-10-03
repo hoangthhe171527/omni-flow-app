@@ -333,6 +333,21 @@ class TaskController
   Future<void> setAssignees(List<String> userIds) =>
       _apply((api) => api.setAssignees(arg, userIds));
 
+  /// Tự nhận việc qua `POST /tasks/{id}/claim` (CV-I2): server thêm mình vào
+  /// danh sách, nên không còn bản chụp nào để đè người vừa được thêm.
+  ///
+  /// API cũ (trước Đợt 5) chưa có route này và trả 404. Khi đó làm như cũ: gửi
+  /// lại cả danh sách đang thấy kèm id của mình. Việc đã bị xoá thì PUT cũng
+  /// 404 và lỗi đó vẫn ném ra như trước.
+  Future<void> claimSelf(String userId) => _apply((api) async {
+    try {
+      return await api.claim(arg);
+    } on NotFoundException {
+      final ids = state.valueOrNull?.task.assigneeIds ?? const <String>[];
+      return api.setAssignees(arg, [...ids, if (!ids.contains(userId)) userId]);
+    }
+  });
+
   Future<void> setTitle(String title) =>
       _apply((api) => api.setTitle(arg, title));
 

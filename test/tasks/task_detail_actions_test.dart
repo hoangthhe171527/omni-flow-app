@@ -30,14 +30,12 @@ void main() {
   });
 
   group('claim', () {
-    test('THÊM mình vào danh sách, gửi cả những người đang làm', () async {
-      // PUT ghi đè assignee_ids: gửi mỗi id của mình là lặng lẽ gỡ người
-      // khác ra khỏi việc.
+    test('nhận việc qua lệnh claim, KHÔNG gửi lại cả danh sách', () async {
+      // CV-I2: gửi lại `assignee_ids` từ bản chụp là đè người vừa được thêm
+      // giữa lúc mở màn và lúc bấm. Server tự THÊM mình vào danh sách.
       await actions.claim(task, 'u9');
 
-      // So từng vế: record so List theo danh tính, không theo nội dung.
-      expect(controller.calls.single.$1, 'setAssignees');
-      expect(controller.calls.single.$2, ['u1', 'u2', 'u9']);
+      expect(controller.calls, [('claimSelf', 'u9')]);
     });
 
     test('đã có tên rồi thì không ghi', () async {
@@ -199,6 +197,9 @@ class _Recording extends TaskController {
   @override
   Future<void> setAssignees(List<String> userIds) =>
       _record('setAssignees', userIds);
+
+  @override
+  Future<void> claimSelf(String userId) => _record('claimSelf', userId);
 
   @override
   Future<void> setDueDate(DateTime? dueDate) => _record('setDueDate', dueDate);

@@ -348,7 +348,7 @@ class InboxApi {
       filePath: filePath,
       filename: filename,
     );
-    return MessageAttachment.fromJson(response.object);
+    return MessageAttachment.fromUpload(response.object);
   }
 }
 
