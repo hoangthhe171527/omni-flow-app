@@ -392,7 +392,7 @@ class _NetworkMediaImageState extends State<_NetworkMediaImage> {
         color: scheme.surfaceContainerHighest,
         child: Center(
           child: IconButton(
-            tooltip: 'Táº£i láº¡i áº£nh',
+            tooltip: 'Tải lại ảnh',
             onPressed: _retry,
             icon: Icon(Icons.refresh_rounded, color: scheme.onSurfaceVariant),
           ),
