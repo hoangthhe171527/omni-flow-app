@@ -13,6 +13,7 @@ import 'package:omni_app/modules/inbox/application/inbox_realtime.dart';
 import 'package:omni_app/modules/inbox/application/thread_controller.dart';
 import 'package:omni_app/modules/inbox/data/inbox_api.dart';
 import 'package:omni_app/modules/inbox/domain/conversation.dart';
+import 'package:omni_app/modules/inbox/domain/inbox_filter.dart';
 import 'package:omni_app/modules/inbox/domain/message.dart';
 import 'package:omni_app/security/session/session.dart';
 import 'package:omni_app/security/session/session_controller.dart';
@@ -136,15 +137,9 @@ void main() {
         'danh sách', () async {
       final h = await loaded(pagesLoaded: 2);
       expect(list(h).items, hasLength(40));
-      h.api.pages = (page) => Paged(
-        items: [_conv('moi'), for (var i = 0; i < 19; i++) _conv('p1-$i')],
-        pagination: const ApiPagination(
-          currentPage: 1,
-          lastPage: 3,
-          perPage: 20,
-          total: 61,
-        ),
-      );
+      // GET theo id: hội thoại khớp bộ lọc và mới nhất — chèn lên đầu, không
+      // phải hỏi lại trang 1.
+      h.api.onGet = (id) => _conv(id, at: DateTime.utc(2026, 1, 2));
 
       h.emit(
         channel: 'private-tenant.tenant-1.inbox',
@@ -157,9 +152,82 @@ void main() {
       );
       await wait(700);
 
+      expect(h.api.listCalls, 2, reason: 'Không tải lại trang 1.');
       expect(list(h).items.first.id, 'moi');
       expect(list(h).items, hasLength(41));
       expect(list(h).pagination.currentPage, 2, reason: 'Giữ trang đã tải.');
+    });
+
+    // Fix vòng 2 (RI8): dòng vá xong phải được xét lại theo bộ lọc đang chọn.
+    test(
+      'tab "Chưa gán": hội thoại vừa được giao rời danh sách ngay',
+      () async {
+        final h = _Harness();
+        h.api.pages = (page) => _page(page);
+        h.api.onGet = (id) => _conv(id, assignee: 'u-9');
+        h.container.listen(inboxListProvider, (_, _) {});
+        h.container
+            .read(inboxFilterProvider.notifier)
+            .setQuick(InboxQuickFilter.unassigned);
+        await h.container.read(inboxListProvider.future);
+        await h.handshake();
+
+        h.emit(
+          channel: 'private-tenant.tenant-1.inbox',
+          event: 'conversation.updated',
+          data: {
+            'conversation_id': 'p1-3',
+            'conversation_ids': ['p1-3'],
+            'reason': 'assigned',
+          },
+        );
+        await wait(700);
+
+        expect(list(h).items.map((c) => c.id), isNot(contains('p1-3')));
+        expect(list(h).items, hasLength(19));
+      },
+    );
+
+    test('tab "Tất cả": hội thoại vừa đóng rời danh sách', () async {
+      final h = await loaded();
+      h.api.onGet = (id) => _conv(id, status: 'closed');
+
+      h.emit(
+        channel: 'private-tenant.tenant-1.inbox',
+        event: 'conversation.updated',
+        data: {
+          'conversation_id': 'p1-0',
+          'conversation_ids': ['p1-0'],
+          'reason': 'updated',
+        },
+      );
+      await wait(700);
+
+      expect(list(h).items.map((c) => c.id), isNot(contains('p1-0')));
+    });
+
+    test('đang tìm kiếm (không tự xét được): vá rồi hỏi lại trang 1', () async {
+      final h = _Harness();
+      h.api.pages = (page) => _page(page);
+      h.api.onGet = (id) => _conv(id, last: 'mới');
+      h.container.listen(inboxListProvider, (_, _) {});
+      h.container.read(inboxFilterProvider.notifier).setSearch('nguyen');
+      await h.container.read(inboxListProvider.future);
+      await h.handshake();
+      final before = h.api.listCalls;
+
+      h.emit(
+        channel: 'private-tenant.tenant-1.inbox',
+        event: 'conversation.updated',
+        data: {
+          'conversation_id': 'p1-3',
+          'conversation_ids': ['p1-3'],
+          'reason': 'labels',
+        },
+      );
+      await wait(700);
+
+      expect(h.api.listCalls, before + 1);
     });
 
     test('read của hội thoại không có trên màn: không hỏi gì', () async {
@@ -457,11 +525,29 @@ class _FakeSink implements WebSocketSink {
   noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
 
-Conversation _conv(String id, {String last = ''}) =>
-    Conversation.fromJson({'id': id, 'channel': 'zalo', 'last_message': last});
+Conversation _conv(
+  String id, {
+  String last = '',
+  DateTime? at,
+  String? assignee,
+  String status = 'open',
+}) => Conversation.fromJson({
+  'id': id,
+  'channel': 'zalo',
+  'last_message': last,
+  'status': status,
+  if (at != null) 'last_message_at': at.toIso8601String(),
+  'assignee': ?assignee,
+});
 
 Paged<Conversation> _page(int page) => Paged(
-  items: [for (var i = 0; i < 20; i++) _conv('p$page-$i')],
+  items: [
+    for (var i = 0; i < 20; i++)
+      _conv(
+        'p$page-$i',
+        at: DateTime.utc(2026).subtract(Duration(minutes: page * 100 + i)),
+      ),
+  ],
   pagination: ApiPagination(
     currentPage: page,
     lastPage: 3,

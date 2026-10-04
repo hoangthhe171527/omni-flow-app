@@ -201,36 +201,40 @@ class InboxListController
 
   /// Áp một loạt `conversation.updated` mà KHÔNG co danh sách về trang 1.
   ///
-  /// - Dòng đang hiện: hỏi lại đúng hội thoại đó rồi vá tại chỗ (404/403 thì
-  ///   bỏ dòng — không còn thuộc về người xem).
-  /// - `deleted`: bỏ dòng, không hỏi.
-  /// - Hội thoại chưa có trên màn (vừa được giao cho mình…): lấy trang 1 rồi
-  ///   GỘP vào những trang đã tải. Riêng `read` của hội thoại không có trên
-  ///   màn thì bỏ qua — người khác mở hội thoại không thêm gì vào danh sách
-  ///   của mình.
+  /// Mỗi hội thoại liên quan được hỏi lại đúng một lần (GET theo id), rồi
+  /// XÉT LẠI theo bộ lọc đang chọn ([InboxFilter.matches], cùng vị từ với
+  /// server):
+  /// - còn khớp: vá tại chỗ (đang hiện) hoặc chèn theo `last_message_at` (chưa
+  ///   hiện — vd vừa được giao cho mình);
+  /// - hết khớp: bỏ dòng — hội thoại vừa được giao rời tab "Chưa gán" ngay;
+  /// - không tự xét được (đang tìm kiếm…): vá rồi gộp trang 1 từ server.
+  ///
+  /// 404/403 thì bỏ dòng (không còn thuộc về người xem). `deleted` bỏ dòng
+  /// không hỏi. `read` của hội thoại không có trên màn thì bỏ qua — người
+  /// khác mở hội thoại không thêm gì vào danh sách của mình.
   Future<void> _applyUpdates(ConversationUpdateBatch batch) async {
     final current = state.valueOrNull;
     if (current == null) return;
     final generation = _generation;
+    final filter = ref.read(inboxFilterProvider);
+    final userId = ref.read(sessionProvider).user?.id;
 
     final loaded = {for (final c in current.items) c.id};
     final deleted = <String>{};
-    var refetch = <String>[];
+    var fetch = <String>[];
     var merge = batch.unscoped;
     batch.reasonsById.forEach((id, reasons) {
       if (reasons.contains('deleted')) {
         if (loaded.contains(id)) deleted.add(id);
-      } else if (loaded.contains(id)) {
-        refetch.add(id);
-      } else if (!reasons.every((r) => r == 'read')) {
-        merge = true;
+      } else if (loaded.contains(id) || !reasons.every((r) => r == 'read')) {
+        fetch.add(id);
       }
     });
-    if (refetch.length > _maxPatchIds) {
-      refetch = const [];
+    if (fetch.length > _maxPatchIds) {
+      fetch = const [];
       merge = true;
     }
-    if (!merge && deleted.isEmpty && refetch.isEmpty) return;
+    if (!merge && deleted.isEmpty && fetch.isEmpty) return;
 
     ref.invalidate(inboxFacetsProvider);
     if (deleted.isNotEmpty) _remove(deleted);
@@ -239,7 +243,7 @@ class InboxListController
     final fresh = <Conversation>[];
     final gone = <String>{};
     await Future.wait(
-      refetch.map((id) async {
+      fetch.map((id) async {
         try {
           fresh.add(await api.get(id));
         } on NotFoundException {
@@ -247,17 +251,59 @@ class InboxListController
         } on ForbiddenException {
           gone.add(id);
         } catch (_) {
-          // Giữ dòng cũ; nhịp poll an toàn sẽ sửa.
+          // Dòng đang hiện thì giữ bản cũ (nhịp poll sẽ sửa); hội thoại chưa
+          // hiện thì không biết có thuộc danh sách không — hỏi trang 1.
+          if (!loaded.contains(id)) merge = true;
         }
       }),
     );
     if (generation != _generation) return;
+
     for (final c in fresh) {
-      patch(c);
+      final matches = filter.matches(c, currentUserId: userId);
+      if (matches == null) {
+        if (loaded.contains(c.id)) patch(c);
+        merge = true;
+      } else if (!matches) {
+        gone.add(c.id);
+      } else if (loaded.contains(c.id)) {
+        patch(c);
+      } else {
+        _insert(c);
+      }
     }
     if (gone.isNotEmpty) _remove(gone);
 
     if (merge) await _mergeFirstPage();
+  }
+
+  /// Chèn một hội thoại vừa khớp bộ lọc vào đúng chỗ theo `last_message_at`
+  /// (mới nhất trên cùng). Cũ hơn mọi dòng đã tải mà server còn trang sau thì
+  /// không chèn: chỗ của nó ở trang chưa tải, cuộn tới sẽ gặp.
+  void _insert(Conversation c) {
+    final current = state.valueOrNull;
+    if (current == null) return;
+    if (current.items.any((x) => x.id == c.id)) {
+      patch(c);
+      return;
+    }
+    final at = c.lastMessageAt;
+    var index = at == null
+        ? -1
+        : current.items.indexWhere(
+            (x) => x.lastMessageAt == null || x.lastMessageAt!.isBefore(at),
+          );
+    if (index < 0) {
+      if (current.hasMore) return;
+      index = current.items.length;
+    }
+    state = AsyncData(
+      ConversationListState(
+        items: [...current.items]..insert(index, c),
+        pagination: current.pagination,
+        loadingMore: current.loadingMore,
+      ),
+    );
   }
 
   /// Lấy trang 1 và đặt lên đầu, GIỮ các trang đã cuộn phía sau.
