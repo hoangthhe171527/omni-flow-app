@@ -167,7 +167,7 @@ class ThreadController
   Future<void> reloadMedia() async {
     final current = state.valueOrNull;
     if (current == null || current.messages.isEmpty) return;
-    final oldestHeld = current.messages.first.id;
+    final oldest = current.messages.first;
     final api = ref.read(inboxApiProvider);
 
     final fresh = <Message>[];
@@ -177,7 +177,11 @@ class ThreadController
       final page = await api.messages(arg, before: before);
       if (_disposed) return;
       fresh.addAll(page.messages);
-      final reachedOldest = page.messages.any((m) => m.id == oldestHeld);
+      // Tới tin cũ nhất đang giữ — theo id, hoặc theo giờ khi tin đó đã bị
+      // xoá phía server (không thì đi hết trần trang mới dừng).
+      final reachedOldest = page.messages.any(
+        (m) => m.id == oldest.id || compareMessages(m, oldest) <= 0,
+      );
       if (reachedOldest ||
           !page.cursor.hasMore ||
           page.cursor.nextBefore == null) {
@@ -190,7 +194,6 @@ class ThreadController
     final latest = state.valueOrNull ?? current;
     // Không nới cửa sổ về phía cũ: tin cũ hơn tin cũ nhất đang giữ để
     // loadOlder() lấy theo con trỏ như thường, khỏi lặp hay hở.
-    final oldest = current.messages.first;
     final byId = <String, Message>{
       for (final message in latest.messages) message.id: message,
       for (final message in fresh)

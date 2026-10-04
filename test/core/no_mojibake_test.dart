@@ -10,14 +10,15 @@ import 'package:flutter_test/flutter_test.dart';
 /// - `Ã` + ký tự thay cho byte 0x80–0xBF (à, á, â, ã, è, é, ê, ì, í, ò, ó, ô,
 ///   õ, ù, ú, ý…). `ĐÃ XONG` hợp lệ vì sau `Ã` là khoảng trắng / chữ hoa.
 /// - `áº` / `á»` (ạ, ả, ấ, ố, ờ, ự…), `Ä‘` / `Ä'` (đ), `Ä\u0090` (Đ),
-///   `Æ°` (ư), `Æ¡` (ơ), `Æ¯` (Ư), `Ä©`/`Å©` (ĩ, ũ), `Äƒ` (ă).
+///   `Æ°` (ư), `Æ¡` (ơ), `Æ¯` (Ư), `Æ`+NBSP (Ơ), `Ä©`/`Å©` (ĩ, ũ),
+///   `Äƒ` (ă), `Ä‚` (Ă).
 final _mojibake = RegExp(
   '(Ã[\u0080-¿ŒœŠšŸŽžƒ'
   'ˆ˜–—‘-„†-•…‰'
   '‹›€™])'
   '|á[º»¸¹]'
-  "|Ä[‘'\u0090©ƒ]"
-  '|Æ[°¡¯]'
+  "|Ä[‘'\u0090©ƒ‚]"
+  '|Æ[°¡¯ ]'
   '|Å©',
 );
 
@@ -26,6 +27,9 @@ void main() {
     expect(_mojibake.hasMatch('Táº£i láº¡i áº£nh'), isTrue);
     expect(_mojibake.hasMatch('Ä‘Ã£ gá»­i'), isTrue);
     expect(_mojibake.hasMatch('ngÆ°á»i'), isTrue);
+    // Ơ (C6 A0 → `Æ` + NBSP) và Ă (C4 82 → `Ä‚`).
+    expect(_mojibake.hasMatch('Æ N'), isTrue);
+    expect(_mojibake.hasMatch('Ä‚N'), isTrue);
     expect(_mojibake.hasMatch('Tải lại ảnh'), isFalse);
     expect(_mojibake.hasMatch('ĐÃ XONG · MÃ giai đoạn · đã gửi'), isFalse);
   });

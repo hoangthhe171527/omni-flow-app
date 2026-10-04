@@ -27,6 +27,13 @@ import 'widgets/message_bubble.dart';
 import 'widgets/message_composer.dart';
 import 'widgets/message_images.dart';
 
+/// Nghỉ giữa hai lượt tự tải lại tin vì ảnh lỗi (MS-I24).
+const mediaReloadCooldown = Duration(minutes: 10);
+
+/// Đồng hồ của thời gian nghỉ trên — test thay để khỏi chờ 10 phút thật.
+@visibleForTesting
+DateTime Function() mediaReloadClock = DateTime.now;
+
 class ThreadPage extends ConsumerStatefulWidget {
   const ThreadPage({super.key, required this.conversationId});
 
@@ -52,8 +59,9 @@ class _ThreadPageState extends ConsumerState<ThreadPage>
   List<Message> _searchResults = const [];
   int _searchIndex = 0;
 
-  /// Lần gần nhất tải lại tin vì ảnh lỗi (link ký hết hạn, MS-I24).
+  /// Lần gần nhất tải lại tin THÀNH CÔNG vì ảnh lỗi (link ký hết hạn, MS-I24).
   DateTime? _lastMediaReload;
+  bool _mediaReloadInFlight = false;
 
   @override
   void initState() {
@@ -156,20 +164,35 @@ class _ThreadPageState extends ConsumerState<ThreadPage>
   /// Ảnh trong tin không tải được — thường là link ký đã quá 12 giờ. Tải lại
   /// tin để lấy URL ký mới, đúng MỘT lần cho cả loạt ảnh hỏng cùng lúc; ảnh vẫn
   /// hỏng sau đó (tệp đã xoá, mất mạng) không kéo thành vòng lặp tải lại.
-  void _onMediaLoadError() {
-    final now = DateTime.now();
+  ///
+  /// Thời gian nghỉ 10 phút chỉ tính từ lượt tải lại THÀNH CÔNG: lượt hỏng
+  /// (đang mất mạng) không được khoá việc phục hồi khi mạng đã về.
+  void _onMediaLoadError() => _reloadMedia(userInitiated: false);
+
+  /// Người dùng bấm "Tải lại ảnh": bỏ qua thời gian nghỉ (một lần bấm là một
+  /// lượt, không thể thành vòng lặp), vẫn không chồng lượt đang chạy.
+  void _onMediaUserRetry() => _reloadMedia(userInitiated: true);
+
+  void _reloadMedia({required bool userInitiated}) {
+    if (_mediaReloadInFlight) return;
     final last = _lastMediaReload;
-    if (last != null && now.difference(last) < const Duration(minutes: 10)) {
+    if (!userInitiated &&
+        last != null &&
+        mediaReloadClock().difference(last) < mediaReloadCooldown) {
       return;
     }
-    _lastMediaReload = now;
+    _mediaReloadInFlight = true;
     unawaited(
       ref
           .read(threadProvider(widget.conversationId).notifier)
           .reloadMedia()
+          .then((_) {
+            _lastMediaReload = mediaReloadClock();
+          })
           .catchError((_) {
             // Giữ nguyên thứ đang hiện; ảnh còn nút tải lại riêng.
-          }),
+          })
+          .whenComplete(() => _mediaReloadInFlight = false),
     );
   }
 
@@ -262,6 +285,7 @@ class _ThreadPageState extends ConsumerState<ThreadPage>
                 ),
                 data: (state) => MediaReloadScope(
                   onLoadError: _onMediaLoadError,
+                  onUserRetry: _onMediaUserRetry,
                   child: _MessageList(
                     state: state,
                     controller: _scrollController,

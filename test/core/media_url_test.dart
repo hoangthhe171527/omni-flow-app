@@ -121,4 +121,24 @@ void main() {
       expect(resolveMediaUrl(out), out);
     },
   );
+
+  test('mediaCacheKey bỏ expires/signature, giữ tham số khác', () {
+    expect(
+      mediaCacheKey(
+        'https://a.vn/api/v1/inbox/media/t-1/a.jpg?expires=1&signature=ab',
+      ),
+      'https://a.vn/api/v1/inbox/media/t-1/a.jpg',
+    );
+    expect(
+      mediaCacheKey(
+        'https://a.vn/api/v1/inbox/media/t-1/a.jpg?expires=1&signature=ab&v=2',
+      ),
+      'https://a.vn/api/v1/inbox/media/t-1/a.jpg?v=2',
+    );
+    expect(
+      mediaCacheKey('https://cdn.vn/a.jpg?v=2'),
+      'https://cdn.vn/a.jpg?v=2',
+    );
+    expect(mediaCacheKey('https://cdn.vn/a.jpg'), 'https://cdn.vn/a.jpg');
+  });
 }

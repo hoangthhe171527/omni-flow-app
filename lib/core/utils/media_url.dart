@@ -50,6 +50,28 @@ String resolveMediaUrl(String value) {
   return source;
 }
 
+/// Khoá cache cho URL media: bỏ `expires`/`signature` của link ký (MS-I24).
+///
+/// Cùng một tệp được ký lại mỗi giờ; URL khác nhau nhưng nội dung như nhau. Giữ
+/// các tham số khác (vd `v=2`) vì chúng có thể đổi nội dung.
+String mediaCacheKey(String url) {
+  final parsed = Uri.tryParse(url);
+  if (parsed == null || !parsed.hasQuery) return url;
+  final params = parsed.queryParametersAll;
+  if (!params.containsKey('expires') && !params.containsKey('signature')) {
+    return url;
+  }
+  final rest = Map<String, List<String>>.of(params)
+    ..remove('expires')
+    ..remove('signature');
+  if (rest.isEmpty) {
+    // Uri.replace(query: '') vẫn để lại dấu `?` — dựng lại không có query.
+    final base = parsed.replace(queryParameters: const {}).toString();
+    return base.endsWith('?') ? base.substring(0, base.length - 1) : base;
+  }
+  return parsed.replace(queryParameters: rest).toString();
+}
+
 final _dotDotSegment = RegExp(r'(^|/)\.\.($|/)');
 
 bool _hasDotDotPath(String source) {

@@ -102,6 +102,87 @@ void main() {
     });
   });
 
+  group('khoá ảnh bỏ chữ ký (link ký lại mỗi giờ)', () {
+    String signed(String sig) =>
+        'https://api.khac.vn/api/v1/inbox/media/t-1/a.jpg?expires=$sig&signature=s$sig';
+
+    Widget host(String url, {VoidCallback? onError, VoidCallback? onRetry}) =>
+        MaterialApp(
+          home: Scaffold(
+            body: MediaReloadScope(
+              onLoadError: onError ?? () {},
+              onUserRetry: onRetry,
+              child: MessageBubble(
+                message: Message(
+                  id: 'm1',
+                  author: MessageAuthor.customer,
+                  text: '',
+                  sentAt: null,
+                  attachments: [
+                    MessageAttachment(url: url, type: 'image/jpeg'),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        );
+
+    CachedNetworkImage imageOf(WidgetTester tester) =>
+        tester.widget<CachedNetworkImage>(find.byType(CachedNetworkImage));
+
+    testWidgets('cacheKey và key widget không chứa expires/signature', (
+      tester,
+    ) async {
+      await tester.pumpWidget(host(signed('1')));
+      final image = imageOf(tester);
+      expect(image.imageUrl, contains('signature=s1'));
+      expect(image.cacheKey, isNotNull);
+      expect(image.cacheKey, isNot(contains('signature')));
+      expect(image.cacheKey, isNot(contains('expires')));
+      expect(image.cacheKey, endsWith('/api/v1/inbox/media/t-1/a.jpg'));
+    });
+
+    testWidgets(
+      'chữ ký đổi khi ảnh đang tốt → giữ nguyên phần tử ảnh (không nháy)',
+      (tester) async {
+        await tester.pumpWidget(host(signed('1')));
+        final before = tester.element(find.byType(CachedNetworkImage));
+        final keyBefore = imageOf(tester).key;
+
+        await tester.pumpWidget(host(signed('2')));
+        expect(imageOf(tester).imageUrl, contains('signature=s2'));
+        expect(imageOf(tester).key, keyBefore);
+        expect(tester.element(find.byType(CachedNetworkImage)), same(before));
+      },
+    );
+
+    testWidgets('ảnh đã hỏng rồi nhận URL ký mới → dựng lại để tải URL mới', (
+      tester,
+    ) async {
+      await tester.pumpWidget(host(signed('1')));
+      final keyBefore = imageOf(tester).key;
+      imageOf(tester).errorListener!(Exception('HTTP 403'));
+
+      await tester.pumpWidget(host(signed('2')));
+      expect(imageOf(tester).key, isNot(keyBefore));
+    });
+
+    testWidgets('nút "Tải lại ảnh" nhờ màn chat lấy URL ký mới', (
+      tester,
+    ) async {
+      var retries = 0;
+      await tester.pumpWidget(host(signed('1'), onRetry: () => retries++));
+      final finder = find.byType(CachedNetworkImage);
+      final image = imageOf(tester);
+      final box =
+          image.errorWidget!(tester.element(finder), image.imageUrl, Object())
+              as ColoredBox;
+      final button = (box.child! as Center).child! as IconButton;
+      button.onPressed!();
+      expect(retries, 1);
+    });
+  });
+
   group('ThreadController.reloadMedia', () {
     test(
       'lấy lại cả cửa sổ đang giữ (kể cả trang cũ) với URL mới, giữ con trỏ',

@@ -22,14 +22,25 @@ class MediaReloadScope extends InheritedWidget {
   const MediaReloadScope({
     super.key,
     required this.onLoadError,
+    this.onUserRetry,
     required super.child,
   });
 
+  /// Ảnh tự lỗi khi tải (thường là link quá hạn) — màn chat có thời gian nghỉ.
   final VoidCallback onLoadError;
+
+  /// Người dùng bấm "Tải lại ảnh": lấy URL ký mới ngay, không chờ thời gian
+  /// nghỉ. Không đặt thì dùng [onLoadError].
+  final VoidCallback? onUserRetry;
 
   /// Không đăng ký phụ thuộc: chỉ gọi lúc ảnh lỗi, không cần vẽ lại theo.
   static VoidCallback? maybeOf(BuildContext context) =>
       context.getInheritedWidgetOfExactType<MediaReloadScope>()?.onLoadError;
+
+  static VoidCallback? userRetryOf(BuildContext context) {
+    final scope = context.getInheritedWidgetOfExactType<MediaReloadScope>();
+    return scope?.onUserRetry ?? scope?.onLoadError;
+  }
 
   @override
   bool updateShouldNotify(MediaReloadScope oldWidget) => false;
@@ -332,11 +343,22 @@ class _NetworkMediaImageState extends State<_NetworkMediaImage> {
   /// được giữ nguyên.
   String get _url => resolveMediaUrl(widget.url);
 
+  /// Khoá cache và khoá widget: URL bỏ `expires`/`signature`. Chữ ký đổi theo
+  /// giờ — không bỏ thì mỗi lượt làm mới tin là ảnh nháy về spinner, tải lại
+  /// từ mạng và thêm một bản vào cache đĩa.
+  String get _cacheKey => mediaCacheKey(_url);
+
   @override
   void didUpdateWidget(covariant _NetworkMediaImage oldWidget) {
     super.didUpdateWidget(oldWidget);
-    // Tin tải lại mang URL ký mới → URL mới được báo lại nếu cũng hỏng.
-    if (oldWidget.url != widget.url) _reported = false;
+    if (oldWidget.url != widget.url) {
+      // Ảnh đã hỏng với URL cũ: khoá cache giữ nguyên nên Image không tự tải
+      // lại — đổi lượt để dựng mới với URL ký mới. Ảnh đang hiện tốt thì giữ
+      // nguyên, không nháy.
+      if (_reported) _attempt++;
+      // URL mới được báo lại nếu cũng hỏng.
+      _reported = false;
+    }
   }
 
   void _onLoadError(Object _) {
@@ -346,9 +368,17 @@ class _NetworkMediaImageState extends State<_NetworkMediaImage> {
   }
 
   Future<void> _retry() async {
+    // Link có thể đã quá hạn: thử lại cùng URL chỉ nhận 403 lần nữa. Nhờ màn
+    // chat lấy URL ký mới trước (tin về thì didUpdateWidget dựng lại ảnh).
+    _reported = true;
+    MediaReloadScope.userRetryOf(context)?.call();
     // A failed CDN response must not poison the next attempt in either Flutter's
     // memory cache or the persistent cache manager.
-    await CachedNetworkImage.evictFromCache(_url);
+    try {
+      await CachedNetworkImage.evictFromCache(_url, cacheKey: _cacheKey);
+    } catch (_) {
+      // Không xoá được cache thì vẫn thử lại.
+    }
     if (!mounted) return;
     setState(() => _attempt++);
   }
@@ -361,8 +391,9 @@ class _NetworkMediaImageState extends State<_NetworkMediaImage> {
     final decodeWidth = math.min((logicalWidth * pixelRatio).round(), 1440);
 
     return CachedNetworkImage(
-      key: ValueKey('$_url#$_attempt'),
+      key: ValueKey('$_cacheKey#$_attempt'),
       imageUrl: _url,
+      cacheKey: _cacheKey,
       fit: widget.fit,
       fadeInDuration: OmniDuration.fast,
       fadeOutDuration: const Duration(milliseconds: 80),

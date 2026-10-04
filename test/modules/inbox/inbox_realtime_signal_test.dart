@@ -27,20 +27,21 @@ import 'package:web_socket_channel/web_socket_channel.dart';
 /// toàn bộ lịch sử, và một loạt 5 webhook trong 100ms là 5 lượt gọi API để vẽ
 /// ra cùng một màn hình.
 ///
-/// Đồng hồ thật, như `my_tasks_realtime_test`: cửa sổ gộp là 400ms nên các
-/// mốc kiểm ở đây cách nhau đủ xa để không phập phù khi máy bận.
+/// Đồng hồ GIẢ (testWidgets/FakeAsync, `tester.pump`): Timer gộp nhịp 400ms
+/// chạy đúng theo mốc kiểm. Bản đồng hồ thật chỉ dư 300ms và từng đỏ khi máy
+/// bận chạy việc khác song song.
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  Future<void> wait(int ms) => Future<void>.delayed(Duration(milliseconds: ms));
-
-  test('5 sự kiện trong 100ms → danh sách tải lại MỘT lần sau 400ms', () async {
+  testWidgets('5 sự kiện trong 100ms → danh sách tải lại MỘT lần sau 400ms', (
+    tester,
+  ) async {
     final h = _Harness();
     h.container.listen(inboxListProvider, (_, _) {});
     await h.container.read(inboxListProvider.future);
     expect(h.api.listCalls, 1);
 
-    await h.handshake();
+    await h.handshakeFake(tester);
     expect(h.subscribedChannels, contains('private-tenant.tenant-1.inbox'));
 
     for (var i = 0; i < 5; i++) {
@@ -49,7 +50,7 @@ void main() {
         event: 'message.created',
         data: {'conversation_id': 'c$i', 'message_id': 'm$i'},
       );
-      await wait(20);
+      await tester.pump(const Duration(milliseconds: 20));
     }
     expect(
       h.api.listCalls,
@@ -58,28 +59,28 @@ void main() {
     );
 
     // ~170ms sau sự kiện cuối: vẫn trong cửa sổ 400ms.
-    await wait(150);
+    await tester.pump(const Duration(milliseconds: 150));
     expect(h.api.listCalls, 1);
 
     // Qua cửa sổ kể từ sự kiện CUỐI: đúng một lượt tải lại cho cả loạt.
-    await wait(600);
+    await tester.pump(const Duration(milliseconds: 600));
     await h.container.read(inboxListProvider.future);
     expect(h.api.listCalls, 2);
 
-    await wait(500);
+    await tester.pump(const Duration(milliseconds: 500));
     expect(h.api.listCalls, 2, reason: 'Không có lượt tải lại nào rơi rớt.');
   });
 
   // Đợt 6 P1 (INB-I7): admin giao hội thoại cho sale mà không có tin mới thì
   // API chỉ phát `conversation.updated` (chỉ id) — danh sách của sale phải tự
   // hỏi lại, không chờ nhịp poll 2 phút.
-  test('conversation.updated → danh sách tải lại', () async {
+  testWidgets('conversation.updated → danh sách tải lại', (tester) async {
     final h = _Harness();
     h.container.listen(inboxListProvider, (_, _) {});
     await h.container.read(inboxListProvider.future);
     expect(h.api.listCalls, 1);
 
-    await h.handshake();
+    await h.handshakeFake(tester);
     h.emit(
       channel: 'private-tenant.tenant-1.inbox',
       event: 'conversation.updated',
@@ -90,15 +91,18 @@ void main() {
       },
     );
 
-    await wait(700);
+    await tester.pump(const Duration(milliseconds: 700));
     await h.container.read(inboxListProvider.future);
     expect(h.api.listCalls, 2);
   });
 
   // Fix vòng 1 (I2): `read`/`sent` tới mọi máy trong tenant. Tải lại trang 1
   // cho mỗi sự kiện vừa tốn vừa làm danh sách đang cuộn co về 20 dòng.
+  // Đồng hồ GIẢ (testWidgets/FakeAsync): Timer gộp nhịp 400ms chạy theo
+  // `tester.pump`, không phụ thuộc máy bận. Bản đồng hồ thật chỉ dư 300ms và
+  // từng đỏ khi máy chạy song song việc khác.
   group('conversation.updated vá theo id', () {
-    Future<_Harness> loaded({int pagesLoaded = 1}) async {
+    Future<_Harness> loaded(WidgetTester tester, {int pagesLoaded = 1}) async {
       final h = _Harness();
       h.api.pages = (page) => _page(page);
       h.api.onGet = (id) => _conv(id, last: 'mới');
@@ -107,15 +111,17 @@ void main() {
       for (var i = 1; i < pagesLoaded; i++) {
         await h.container.read(inboxListProvider.notifier).loadMore();
       }
-      await h.handshake();
+      await h.handshakeFake(tester);
       return h;
     }
 
     ConversationListState list(_Harness h) =>
         h.container.read(inboxListProvider).requireValue;
 
-    test('dòng đang hiện: hỏi đúng hội thoại đó, vá tại chỗ', () async {
-      final h = await loaded();
+    testWidgets('dòng đang hiện: hỏi đúng hội thoại đó, vá tại chỗ', (
+      tester,
+    ) async {
+      final h = await loaded(tester);
       h.emit(
         channel: 'private-tenant.tenant-1.inbox',
         event: 'conversation.updated',
@@ -125,7 +131,7 @@ void main() {
           'reason': 'labels',
         },
       );
-      await wait(700);
+      await tester.pump(const Duration(milliseconds: 700));
 
       expect(h.api.listCalls, 1, reason: 'Không tải lại trang.');
       expect(h.api.getCalls, ['p1-3']);
@@ -133,63 +139,67 @@ void main() {
       expect(list(h).items[3].lastMessage, 'mới');
     });
 
-    test('hội thoại mới được giao khi đã cuộn tới trang 2: gộp, không co '
-        'danh sách', () async {
-      final h = await loaded(pagesLoaded: 2);
-      expect(list(h).items, hasLength(40));
-      // GET theo id: hội thoại khớp bộ lọc và mới nhất — chèn lên đầu, không
-      // phải hỏi lại trang 1.
-      h.api.onGet = (id) => _conv(id, at: DateTime.utc(2026, 1, 2));
-
-      h.emit(
-        channel: 'private-tenant.tenant-1.inbox',
-        event: 'conversation.updated',
-        data: {
-          'conversation_id': 'moi',
-          'conversation_ids': ['moi'],
-          'reason': 'assigned',
-        },
-      );
-      await wait(700);
-
-      expect(h.api.listCalls, 2, reason: 'Không tải lại trang 1.');
-      expect(list(h).items.first.id, 'moi');
-      expect(list(h).items, hasLength(41));
-      expect(list(h).pagination.currentPage, 2, reason: 'Giữ trang đã tải.');
-    });
-
-    // Fix vòng 2 (RI8): dòng vá xong phải được xét lại theo bộ lọc đang chọn.
-    test(
-      'tab "Chưa gán": hội thoại vừa được giao rời danh sách ngay',
-      () async {
-        final h = _Harness();
-        h.api.pages = (page) => _page(page);
-        h.api.onGet = (id) => _conv(id, assignee: 'u-9');
-        h.container.listen(inboxListProvider, (_, _) {});
-        h.container
-            .read(inboxFilterProvider.notifier)
-            .setQuick(InboxQuickFilter.unassigned);
-        await h.container.read(inboxListProvider.future);
-        await h.handshake();
+    testWidgets(
+      'hội thoại mới được giao khi đã cuộn tới trang 2: gộp, không co '
+      'danh sách',
+      (tester) async {
+        final h = await loaded(tester, pagesLoaded: 2);
+        expect(list(h).items, hasLength(40));
+        // GET theo id: hội thoại khớp bộ lọc và mới nhất — chèn lên đầu, không
+        // phải hỏi lại trang 1.
+        h.api.onGet = (id) => _conv(id, at: DateTime.utc(2026, 1, 2));
 
         h.emit(
           channel: 'private-tenant.tenant-1.inbox',
           event: 'conversation.updated',
           data: {
-            'conversation_id': 'p1-3',
-            'conversation_ids': ['p1-3'],
+            'conversation_id': 'moi',
+            'conversation_ids': ['moi'],
             'reason': 'assigned',
           },
         );
-        await wait(700);
+        await tester.pump(const Duration(milliseconds: 700));
 
-        expect(list(h).items.map((c) => c.id), isNot(contains('p1-3')));
-        expect(list(h).items, hasLength(19));
+        expect(h.api.listCalls, 2, reason: 'Không tải lại trang 1.');
+        expect(list(h).items.first.id, 'moi');
+        expect(list(h).items, hasLength(41));
+        expect(list(h).pagination.currentPage, 2, reason: 'Giữ trang đã tải.');
       },
     );
 
-    test('tab "Tất cả": hội thoại vừa đóng rời danh sách', () async {
-      final h = await loaded();
+    // Fix vòng 2 (RI8): dòng vá xong phải được xét lại theo bộ lọc đang chọn.
+    testWidgets('tab "Chưa gán": hội thoại vừa được giao rời danh sách ngay', (
+      tester,
+    ) async {
+      final h = _Harness();
+      h.api.pages = (page) => _page(page);
+      h.api.onGet = (id) => _conv(id, assignee: 'u-9');
+      h.container.listen(inboxListProvider, (_, _) {});
+      h.container
+          .read(inboxFilterProvider.notifier)
+          .setQuick(InboxQuickFilter.unassigned);
+      await h.container.read(inboxListProvider.future);
+      await h.handshakeFake(tester);
+
+      h.emit(
+        channel: 'private-tenant.tenant-1.inbox',
+        event: 'conversation.updated',
+        data: {
+          'conversation_id': 'p1-3',
+          'conversation_ids': ['p1-3'],
+          'reason': 'assigned',
+        },
+      );
+      await tester.pump(const Duration(milliseconds: 700));
+
+      expect(list(h).items.map((c) => c.id), isNot(contains('p1-3')));
+      expect(list(h).items, hasLength(19));
+    });
+
+    testWidgets('tab "Tất cả": hội thoại vừa đóng rời danh sách', (
+      tester,
+    ) async {
+      final h = await loaded(tester);
       h.api.onGet = (id) => _conv(id, status: 'closed');
 
       h.emit(
@@ -201,19 +211,21 @@ void main() {
           'reason': 'updated',
         },
       );
-      await wait(700);
+      await tester.pump(const Duration(milliseconds: 700));
 
       expect(list(h).items.map((c) => c.id), isNot(contains('p1-0')));
     });
 
-    test('đang tìm kiếm (không tự xét được): vá rồi hỏi lại trang 1', () async {
+    testWidgets('đang tìm kiếm (không tự xét được): vá rồi hỏi lại trang 1', (
+      tester,
+    ) async {
       final h = _Harness();
       h.api.pages = (page) => _page(page);
       h.api.onGet = (id) => _conv(id, last: 'mới');
       h.container.listen(inboxListProvider, (_, _) {});
       h.container.read(inboxFilterProvider.notifier).setSearch('nguyen');
       await h.container.read(inboxListProvider.future);
-      await h.handshake();
+      await h.handshakeFake(tester);
       final before = h.api.listCalls;
 
       h.emit(
@@ -225,13 +237,15 @@ void main() {
           'reason': 'labels',
         },
       );
-      await wait(700);
+      await tester.pump(const Duration(milliseconds: 700));
 
       expect(h.api.listCalls, before + 1);
     });
 
-    test('read của hội thoại không có trên màn: không hỏi gì', () async {
-      final h = await loaded();
+    testWidgets('read của hội thoại không có trên màn: không hỏi gì', (
+      tester,
+    ) async {
+      final h = await loaded(tester);
       h.emit(
         channel: 'private-tenant.tenant-1.inbox',
         event: 'conversation.updated',
@@ -241,18 +255,20 @@ void main() {
           'reason': 'read',
         },
       );
-      await wait(700);
+      await tester.pump(const Duration(milliseconds: 700));
 
       expect(h.api.listCalls, 1);
       expect(h.api.getCalls, isEmpty);
     });
   });
 
-  test('sự kiện dồn liên tục: vẫn tải lại sau tối đa ~2 giây', () async {
+  testWidgets('sự kiện dồn liên tục: vẫn tải lại sau tối đa ~2 giây', (
+    tester,
+  ) async {
     final h = _Harness();
     h.container.listen(inboxListProvider, (_, _) {});
     await h.container.read(inboxListProvider.future);
-    await h.handshake();
+    await h.handshakeFake(tester);
 
     // Cách nhau 150ms suốt 2,7 giây: debounce 400ms thuần không bao giờ bắn.
     for (var i = 0; i < 18; i++) {
@@ -261,20 +277,24 @@ void main() {
         event: 'message.created',
         data: {'conversation_id': 'c$i', 'message_id': 'm$i'},
       );
-      await wait(150);
+      await tester.pump(const Duration(milliseconds: 150));
     }
 
     expect(h.api.listCalls, greaterThanOrEqualTo(2));
+    // Đồng hồ giả: cho Timer gộp nhịp còn dở chạy hết trước khi test kết thúc.
+    await tester.pump(const Duration(seconds: 3));
   });
 
-  test('sự kiện của hội thoại A không đụng tín hiệu của hội thoại B', () async {
+  testWidgets('sự kiện của hội thoại A không đụng tín hiệu của hội thoại B', (
+    tester,
+  ) async {
     final h = _Harness();
     var bumpsA = 0;
     var bumpsB = 0;
     h.container.listen(threadSignalProvider('A'), (_, _) => bumpsA++);
     h.container.listen(threadSignalProvider('B'), (_, _) => bumpsB++);
 
-    await h.handshake();
+    await h.handshakeFake(tester);
     expect(
       h.subscribedChannels,
       containsAll(['private-conversation.A', 'private-conversation.B']),
@@ -286,7 +306,7 @@ void main() {
       event: 'message.created',
       data: {'conversation_id': 'A', 'message_id': 'm1'},
     );
-    await wait(700);
+    await tester.pump(const Duration(milliseconds: 700));
 
     expect(bumpsA, 1);
     expect(
@@ -296,7 +316,9 @@ void main() {
     );
   });
 
-  test('message.status vá trạng thái tại chỗ, không hỏi lại API', () async {
+  testWidgets('message.status vá trạng thái tại chỗ, không hỏi lại API', (
+    tester,
+  ) async {
     final h = _Harness();
     h.api.history = [_serverMessage('m1', 'Dạ em gửi ạ', status: 'sent')];
     var bumps = 0;
@@ -305,13 +327,13 @@ void main() {
     await h.container.read(threadProvider('A').future);
     expect(h.api.messagesCalls, 1);
 
-    await h.handshake();
+    await h.handshakeFake(tester);
     h.emit(
       channel: 'private-conversation.A',
       event: 'message.status',
       data: {'conversation_id': 'A', 'message_id': 'm1', 'status': 'read'},
     );
-    await wait(700);
+    await tester.pump(const Duration(milliseconds: 700));
 
     final thread = h.container.read(threadProvider('A')).requireValue;
     expect(thread.messages.single.status, DeliveryStatus.read);
@@ -325,9 +347,9 @@ void main() {
     expect(bumps, 0);
   });
 
-  test(
+  testWidgets(
     'message.status của tin CHƯA có trên màn thì tải lại như thường',
-    () async {
+    (tester) async {
       final h = _Harness();
       h.api.history = [_serverMessage('m1', 'a', status: 'sent')];
       h.container.listen(threadProvider('A'), (_, _) {});
@@ -335,41 +357,40 @@ void main() {
       h.container.listen(threadSignalProvider('A'), (_, _) => bumps++);
       await h.container.read(threadProvider('A').future);
 
-      await h.handshake();
+      await h.handshakeFake(tester);
       h.emit(
         channel: 'private-conversation.A',
         event: 'message.status',
         data: {'conversation_id': 'A', 'message_id': 'm-la', 'status': 'read'},
       );
-      await wait(700);
+      await tester.pump(const Duration(milliseconds: 700));
 
       expect(bumps, 1, reason: 'Không vá được thì không được im lặng.');
     },
   );
 
-  test(
-    'tín hiệu FCM vẫn tới cả danh sách lẫn màn chat, cũng gộp nhịp',
-    () async {
-      // `inboxRealtimeSignalProvider` là thứ module notifications bấm khi có
-      // thông báo đẩy ở nền trước. Nó phải còn nguyên chỗ, và phải chảy vào hai
-      // tín hiệu mới — không thì FCM hiện banner mà màn hình đứng im.
-      final h = _Harness();
-      var threadBumps = 0;
-      h.container.listen(inboxListProvider, (_, _) {});
-      h.container.listen(threadSignalProvider('A'), (_, _) => threadBumps++);
-      await h.container.read(inboxListProvider.future);
-      expect(h.api.listCalls, 1);
+  testWidgets('tín hiệu FCM vẫn tới cả danh sách lẫn màn chat, cũng gộp nhịp', (
+    tester,
+  ) async {
+    // `inboxRealtimeSignalProvider` là thứ module notifications bấm khi có
+    // thông báo đẩy ở nền trước. Nó phải còn nguyên chỗ, và phải chảy vào hai
+    // tín hiệu mới — không thì FCM hiện banner mà màn hình đứng im.
+    final h = _Harness();
+    var threadBumps = 0;
+    h.container.listen(inboxListProvider, (_, _) {});
+    h.container.listen(threadSignalProvider('A'), (_, _) => threadBumps++);
+    await h.container.read(inboxListProvider.future);
+    expect(h.api.listCalls, 1);
 
-      final fcm = h.container.read(inboxRealtimeSignalProvider.notifier);
-      fcm.state = fcm.state + 1;
-      fcm.state = fcm.state + 1;
-      await wait(700);
-      await h.container.read(inboxListProvider.future);
+    final fcm = h.container.read(inboxRealtimeSignalProvider.notifier);
+    fcm.state = fcm.state + 1;
+    fcm.state = fcm.state + 1;
+    await tester.pump(const Duration(milliseconds: 700));
+    await h.container.read(inboxListProvider.future);
 
-      expect(h.api.listCalls, 2);
-      expect(threadBumps, 1);
-    },
-  );
+    expect(h.api.listCalls, 2);
+    expect(threadBumps, 1);
+  });
 }
 
 class _Harness {
@@ -408,6 +429,18 @@ class _Harness {
   late final ProviderContainer container;
 
   static Future<void> _settle() => Future<void>.delayed(Duration.zero);
+
+  /// Như [handshake] nhưng trong testWidgets (đồng hồ giả): Timer 0ms chỉ
+  /// chạy khi `pump`.
+  Future<void> handshakeFake(WidgetTester tester) async {
+    await tester.pump();
+    socket.emit({
+      'event': 'pusher:connection_established',
+      'data': jsonEncode({'socket_id': '1.1'}),
+    });
+    await tester.pump();
+    await tester.pump();
+  }
 
   /// Chỉ sau bắt tay client mới có socket id để ký đăng ký kênh riêng.
   Future<void> handshake() async {
