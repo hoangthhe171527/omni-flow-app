@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -249,6 +250,47 @@ void main() {
 
     await closeThread(tester);
   });
+
+  testWidgets(
+    'ảnh hết hạn (link ký 12 giờ, MS-I24) → tải lại tin ĐÚNG một lần cho cả loạt ảnh hỏng',
+    (tester) async {
+      api.history = [
+        _serverMessage('m1', 'Ảnh đàn', images: ['a.jpg', 'b.jpg']),
+        _serverMessage('m2', 'Thêm ảnh', images: ['c.jpg']),
+      ];
+
+      await openThread(tester);
+      final before = api.messagesCalls;
+
+      // Môi trường test không tải ảnh thật: gọi thẳng errorListener của mọi
+      // ảnh đang dựng, như khi server trả 403 cho link đã quá hạn.
+      void failAll() {
+        for (final image in tester.widgetList<CachedNetworkImage>(
+          find.byType(CachedNetworkImage),
+        )) {
+          image.errorListener!(Exception('HTTP 403'));
+        }
+      }
+
+      expect(find.byType(CachedNetworkImage), findsWidgets);
+      failAll();
+      await tester.pump();
+      await tester.pump();
+      expect(api.messagesCalls - before, 1);
+
+      // URL mới (ký lại) cũng hỏng → không thành vòng lặp tải lại.
+      api.history = [
+        _serverMessage('m1', 'Ảnh đàn', images: ['a.jpg', 'b.jpg'], sig: 'v2'),
+        _serverMessage('m2', 'Thêm ảnh', images: ['c.jpg'], sig: 'v2'),
+      ];
+      failAll();
+      await tester.pump();
+      await tester.pump();
+      expect(api.messagesCalls - before, 1);
+
+      await closeThread(tester);
+    },
+  );
 }
 
 typedef _ReplyTo = ({String id, String text, String author});
@@ -258,6 +300,8 @@ Message _serverMessage(
   String text, {
   String from = 'customer',
   _ReplyTo? replyTo,
+  List<String> images = const [],
+  String sig = 'v1',
 }) {
   final minute = int.parse(id.replaceAll(RegExp(r'\D'), ''));
   return Message.fromJson({
@@ -266,6 +310,15 @@ Message _serverMessage(
     'text': text,
     'status': from == 'agent' ? 'sent' : null,
     'sent_at': DateTime.utc(2026, 1, 1, 8, minute).toIso8601String(),
+    if (images.isNotEmpty)
+      'attachments': [
+        for (final name in images)
+          {
+            'url':
+                'https://api.khac.vn/api/v1/inbox/media/t1/$name?expires=1&signature=$sig',
+            'type': 'image/jpeg',
+          },
+      ],
     if (replyTo != null) ...{
       'reply_to_message_id': replyTo.id,
       'reply_to_text': replyTo.text,
@@ -292,6 +345,7 @@ class _FakeInboxApi extends InboxApi {
   Completer<void>? holdSend;
 
   final markReadCalls = <String>[];
+  int messagesCalls = 0;
   final sendCalls = <_SendCall>[];
   int _sent = 0;
 
@@ -301,6 +355,7 @@ class _FakeInboxApi extends InboxApi {
     String? before,
     int perPage = AppConfig.messagePageSize,
   }) async {
+    messagesCalls++;
     return MessagePage(
       // The API answers newest-first; the controller reverses it.
       messages: history.reversed.toList(),

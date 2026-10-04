@@ -25,6 +25,7 @@ import 'widgets/assign_sheet.dart';
 import 'widgets/conversation_context_sheet.dart';
 import 'widgets/message_bubble.dart';
 import 'widgets/message_composer.dart';
+import 'widgets/message_images.dart';
 
 class ThreadPage extends ConsumerStatefulWidget {
   const ThreadPage({super.key, required this.conversationId});
@@ -50,6 +51,9 @@ class _ThreadPageState extends ConsumerState<ThreadPage>
   bool _searchMode = false;
   List<Message> _searchResults = const [];
   int _searchIndex = 0;
+
+  /// Lần gần nhất tải lại tin vì ảnh lỗi (link ký hết hạn, MS-I24).
+  DateTime? _lastMediaReload;
 
   @override
   void initState() {
@@ -149,6 +153,26 @@ class _ThreadPageState extends ConsumerState<ThreadPage>
     ref.invalidate(inboxFacetsProvider);
   }
 
+  /// Ảnh trong tin không tải được — thường là link ký đã quá 12 giờ. Tải lại
+  /// tin để lấy URL ký mới, đúng MỘT lần cho cả loạt ảnh hỏng cùng lúc; ảnh vẫn
+  /// hỏng sau đó (tệp đã xoá, mất mạng) không kéo thành vòng lặp tải lại.
+  void _onMediaLoadError() {
+    final now = DateTime.now();
+    final last = _lastMediaReload;
+    if (last != null && now.difference(last) < const Duration(minutes: 10)) {
+      return;
+    }
+    _lastMediaReload = now;
+    unawaited(
+      ref
+          .read(threadProvider(widget.conversationId).notifier)
+          .reloadMedia()
+          .catchError((_) {
+            // Giữ nguyên thứ đang hiện; ảnh còn nút tải lại riêng.
+          }),
+    );
+  }
+
   void _onScroll() {
     // The list is reversed, so "older" is at the far end of the scroll extent.
     if (_scrollController.position.extentAfter < 200) {
@@ -236,24 +260,27 @@ class _ThreadPageState extends ConsumerState<ThreadPage>
                   title: 'Chưa có tin nhắn',
                   message: 'Gửi tin đầu tiên để bắt đầu cuộc trò chuyện.',
                 ),
-                data: (state) => _MessageList(
-                  state: state,
-                  controller: _scrollController,
-                  isGroup: conversation.valueOrNull?.isGroup ?? false,
-                  // retry(), not send(): a fresh send would drop the reply the
-                  // rep was answering, leave the failed bubble sitting below the
-                  // new one, and — because it would carry a new idempotency key —
-                  // deliver a second copy whenever the first attempt had in fact
-                  // reached the server.
-                  onRetry: (message) => ref
-                      .read(threadProvider(widget.conversationId).notifier)
-                      .retry(message),
-                  onDiscard: (message) => ref
-                      .read(threadProvider(widget.conversationId).notifier)
-                      .discard(message.id),
-                  onReply: (message) => setState(() => _replyingTo = message),
-                  onPin: _togglePin,
-                  keyForMessage: _keyForMessage,
+                data: (state) => MediaReloadScope(
+                  onLoadError: _onMediaLoadError,
+                  child: _MessageList(
+                    state: state,
+                    controller: _scrollController,
+                    isGroup: conversation.valueOrNull?.isGroup ?? false,
+                    // retry(), not send(): a fresh send would drop the reply the
+                    // rep was answering, leave the failed bubble sitting below the
+                    // new one, and — because it would carry a new idempotency key —
+                    // deliver a second copy whenever the first attempt had in fact
+                    // reached the server.
+                    onRetry: (message) => ref
+                        .read(threadProvider(widget.conversationId).notifier)
+                        .retry(message),
+                    onDiscard: (message) => ref
+                        .read(threadProvider(widget.conversationId).notifier)
+                        .discard(message.id),
+                    onReply: (message) => setState(() => _replyingTo = message),
+                    onPin: _togglePin,
+                    keyForMessage: _keyForMessage,
+                  ),
                 ),
               ),
             ),
