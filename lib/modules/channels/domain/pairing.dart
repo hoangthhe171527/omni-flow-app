@@ -8,6 +8,10 @@ const pairingAgentHintTicks = 16;
 /// của nó, poll dày hơn không nhận được sớm hơn, chỉ tốn pin và data.
 const pairingPollInterval = Duration(milliseconds: 2500);
 
+/// Trần số lần poll một phiên: 720 × 2,5 giây = 30 phút, bằng web. Quá trần
+/// mà vẫn chỉ gặp lỗi mạng thì coi như phiên đã hết hạn.
+const pairingMaxPolls = 720;
+
 /// Kết quả `POST /channels/pair/start`.
 class PairingStart {
   const PairingStart({
@@ -29,14 +33,26 @@ class PairingStart {
 
 /// Kết quả `GET /channels/pair/{id}/status`, nguyên như server trả.
 class PairingStatus {
-  const PairingStatus({required this.status, this.qr, this.stage, this.note});
+  const PairingStatus({
+    required this.status,
+    this.qr,
+    this.stage,
+    this.note,
+    this.connectionId,
+  });
 
   factory PairingStatus.fromJson(Map<String, dynamic> json) => PairingStatus(
     status: json.strOr('status', 'pending'),
     qr: json.str('qr'),
     stage: json.str('stage'),
     note: json.str('note'),
+    connectionId: json.str('connection_id'),
   );
+
+  /// Id kết nối đích (Đợt 6 A1). Khác id phiên khi tài khoản được gộp vào một
+  /// kết nối có sẵn — lúc đó [status] là `connected`. API cũ không gửi khoá
+  /// này, và trả 404 cho phiên đã gộp.
+  final String? connectionId;
 
   /// `pending` | `connected` | `expired` | `error` | `disconnected`.
   final String status;
@@ -84,6 +100,15 @@ PairingSnapshot resolvePairing(PairingStatus status) {
   }
   if (status.status == 'expired') {
     return const PairingSnapshot(view: PairingView.expired);
+  }
+  // Kết nối thành `error` (vd agent báo `running:false` — phiên hỏng): ghép
+  // nối đã kết thúc, chờ tiếp chỉ quay tới trần 30 phút.
+  if (status.status == 'error') {
+    return PairingSnapshot(
+      view: PairingView.failed,
+      stage: status.stage,
+      note: status.note,
+    );
   }
   if (stage == 'error') {
     return PairingSnapshot(

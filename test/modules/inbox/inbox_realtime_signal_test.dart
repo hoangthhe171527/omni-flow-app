@@ -13,6 +13,7 @@ import 'package:omni_app/modules/inbox/application/inbox_realtime.dart';
 import 'package:omni_app/modules/inbox/application/thread_controller.dart';
 import 'package:omni_app/modules/inbox/data/inbox_api.dart';
 import 'package:omni_app/modules/inbox/domain/conversation.dart';
+import 'package:omni_app/modules/inbox/domain/inbox_filter.dart';
 import 'package:omni_app/modules/inbox/domain/message.dart';
 import 'package:omni_app/security/session/session.dart';
 import 'package:omni_app/security/session/session_controller.dart';
@@ -67,6 +68,203 @@ void main() {
 
     await wait(500);
     expect(h.api.listCalls, 2, reason: 'Không có lượt tải lại nào rơi rớt.');
+  });
+
+  // Đợt 6 P1 (INB-I7): admin giao hội thoại cho sale mà không có tin mới thì
+  // API chỉ phát `conversation.updated` (chỉ id) — danh sách của sale phải tự
+  // hỏi lại, không chờ nhịp poll 2 phút.
+  test('conversation.updated → danh sách tải lại', () async {
+    final h = _Harness();
+    h.container.listen(inboxListProvider, (_, _) {});
+    await h.container.read(inboxListProvider.future);
+    expect(h.api.listCalls, 1);
+
+    await h.handshake();
+    h.emit(
+      channel: 'private-tenant.tenant-1.inbox',
+      event: 'conversation.updated',
+      data: {
+        'conversation_id': 'c1',
+        'conversation_ids': ['c1'],
+        'reason': 'assigned',
+      },
+    );
+
+    await wait(700);
+    await h.container.read(inboxListProvider.future);
+    expect(h.api.listCalls, 2);
+  });
+
+  // Fix vòng 1 (I2): `read`/`sent` tới mọi máy trong tenant. Tải lại trang 1
+  // cho mỗi sự kiện vừa tốn vừa làm danh sách đang cuộn co về 20 dòng.
+  group('conversation.updated vá theo id', () {
+    Future<_Harness> loaded({int pagesLoaded = 1}) async {
+      final h = _Harness();
+      h.api.pages = (page) => _page(page);
+      h.api.onGet = (id) => _conv(id, last: 'mới');
+      h.container.listen(inboxListProvider, (_, _) {});
+      await h.container.read(inboxListProvider.future);
+      for (var i = 1; i < pagesLoaded; i++) {
+        await h.container.read(inboxListProvider.notifier).loadMore();
+      }
+      await h.handshake();
+      return h;
+    }
+
+    ConversationListState list(_Harness h) =>
+        h.container.read(inboxListProvider).requireValue;
+
+    test('dòng đang hiện: hỏi đúng hội thoại đó, vá tại chỗ', () async {
+      final h = await loaded();
+      h.emit(
+        channel: 'private-tenant.tenant-1.inbox',
+        event: 'conversation.updated',
+        data: {
+          'conversation_id': 'p1-3',
+          'conversation_ids': ['p1-3'],
+          'reason': 'labels',
+        },
+      );
+      await wait(700);
+
+      expect(h.api.listCalls, 1, reason: 'Không tải lại trang.');
+      expect(h.api.getCalls, ['p1-3']);
+      expect(list(h).items[3].id, 'p1-3');
+      expect(list(h).items[3].lastMessage, 'mới');
+    });
+
+    test('hội thoại mới được giao khi đã cuộn tới trang 2: gộp, không co '
+        'danh sách', () async {
+      final h = await loaded(pagesLoaded: 2);
+      expect(list(h).items, hasLength(40));
+      // GET theo id: hội thoại khớp bộ lọc và mới nhất — chèn lên đầu, không
+      // phải hỏi lại trang 1.
+      h.api.onGet = (id) => _conv(id, at: DateTime.utc(2026, 1, 2));
+
+      h.emit(
+        channel: 'private-tenant.tenant-1.inbox',
+        event: 'conversation.updated',
+        data: {
+          'conversation_id': 'moi',
+          'conversation_ids': ['moi'],
+          'reason': 'assigned',
+        },
+      );
+      await wait(700);
+
+      expect(h.api.listCalls, 2, reason: 'Không tải lại trang 1.');
+      expect(list(h).items.first.id, 'moi');
+      expect(list(h).items, hasLength(41));
+      expect(list(h).pagination.currentPage, 2, reason: 'Giữ trang đã tải.');
+    });
+
+    // Fix vòng 2 (RI8): dòng vá xong phải được xét lại theo bộ lọc đang chọn.
+    test(
+      'tab "Chưa gán": hội thoại vừa được giao rời danh sách ngay',
+      () async {
+        final h = _Harness();
+        h.api.pages = (page) => _page(page);
+        h.api.onGet = (id) => _conv(id, assignee: 'u-9');
+        h.container.listen(inboxListProvider, (_, _) {});
+        h.container
+            .read(inboxFilterProvider.notifier)
+            .setQuick(InboxQuickFilter.unassigned);
+        await h.container.read(inboxListProvider.future);
+        await h.handshake();
+
+        h.emit(
+          channel: 'private-tenant.tenant-1.inbox',
+          event: 'conversation.updated',
+          data: {
+            'conversation_id': 'p1-3',
+            'conversation_ids': ['p1-3'],
+            'reason': 'assigned',
+          },
+        );
+        await wait(700);
+
+        expect(list(h).items.map((c) => c.id), isNot(contains('p1-3')));
+        expect(list(h).items, hasLength(19));
+      },
+    );
+
+    test('tab "Tất cả": hội thoại vừa đóng rời danh sách', () async {
+      final h = await loaded();
+      h.api.onGet = (id) => _conv(id, status: 'closed');
+
+      h.emit(
+        channel: 'private-tenant.tenant-1.inbox',
+        event: 'conversation.updated',
+        data: {
+          'conversation_id': 'p1-0',
+          'conversation_ids': ['p1-0'],
+          'reason': 'updated',
+        },
+      );
+      await wait(700);
+
+      expect(list(h).items.map((c) => c.id), isNot(contains('p1-0')));
+    });
+
+    test('đang tìm kiếm (không tự xét được): vá rồi hỏi lại trang 1', () async {
+      final h = _Harness();
+      h.api.pages = (page) => _page(page);
+      h.api.onGet = (id) => _conv(id, last: 'mới');
+      h.container.listen(inboxListProvider, (_, _) {});
+      h.container.read(inboxFilterProvider.notifier).setSearch('nguyen');
+      await h.container.read(inboxListProvider.future);
+      await h.handshake();
+      final before = h.api.listCalls;
+
+      h.emit(
+        channel: 'private-tenant.tenant-1.inbox',
+        event: 'conversation.updated',
+        data: {
+          'conversation_id': 'p1-3',
+          'conversation_ids': ['p1-3'],
+          'reason': 'labels',
+        },
+      );
+      await wait(700);
+
+      expect(h.api.listCalls, before + 1);
+    });
+
+    test('read của hội thoại không có trên màn: không hỏi gì', () async {
+      final h = await loaded();
+      h.emit(
+        channel: 'private-tenant.tenant-1.inbox',
+        event: 'conversation.updated',
+        data: {
+          'conversation_id': 'khac',
+          'conversation_ids': ['khac'],
+          'reason': 'read',
+        },
+      );
+      await wait(700);
+
+      expect(h.api.listCalls, 1);
+      expect(h.api.getCalls, isEmpty);
+    });
+  });
+
+  test('sự kiện dồn liên tục: vẫn tải lại sau tối đa ~2 giây', () async {
+    final h = _Harness();
+    h.container.listen(inboxListProvider, (_, _) {});
+    await h.container.read(inboxListProvider.future);
+    await h.handshake();
+
+    // Cách nhau 150ms suốt 2,7 giây: debounce 400ms thuần không bao giờ bắn.
+    for (var i = 0; i < 18; i++) {
+      h.emit(
+        channel: 'private-tenant.tenant-1.inbox',
+        event: 'message.created',
+        data: {'conversation_id': 'c$i', 'message_id': 'm$i'},
+      );
+      await wait(150);
+    }
+
+    expect(h.api.listCalls, greaterThanOrEqualTo(2));
   });
 
   test('sự kiện của hội thoại A không đụng tín hiệu của hội thoại B', () async {
@@ -260,6 +458,11 @@ class _FakeInboxApi extends InboxApi {
   int messagesCalls = 0;
   List<Message> history = const [];
 
+  /// Trang server trả theo số trang; null = danh sách rỗng như cũ.
+  Paged<Conversation> Function(int page)? pages;
+  final List<String> getCalls = [];
+  Conversation Function(String id)? onGet;
+
   @override
   Future<Paged<Conversation>> list({
     required Map<String, dynamic> query,
@@ -267,7 +470,13 @@ class _FakeInboxApi extends InboxApi {
     int perPage = AppConfig.defaultPerPage,
   }) async {
     listCalls++;
-    return const Paged.empty();
+    return pages?.call(page) ?? const Paged.empty();
+  }
+
+  @override
+  Future<Conversation> get(String id) async {
+    getCalls.add(id);
+    return onGet!(id);
   }
 
   @override
@@ -315,3 +524,34 @@ class _FakeSink implements WebSocketSink {
   @override
   noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
+
+Conversation _conv(
+  String id, {
+  String last = '',
+  DateTime? at,
+  String? assignee,
+  String status = 'open',
+}) => Conversation.fromJson({
+  'id': id,
+  'channel': 'zalo',
+  'last_message': last,
+  'status': status,
+  if (at != null) 'last_message_at': at.toIso8601String(),
+  'assignee': ?assignee,
+});
+
+Paged<Conversation> _page(int page) => Paged(
+  items: [
+    for (var i = 0; i < 20; i++)
+      _conv(
+        'p$page-$i',
+        at: DateTime.utc(2026).subtract(Duration(minutes: page * 100 + i)),
+      ),
+  ],
+  pagination: ApiPagination(
+    currentPage: page,
+    lastPage: 3,
+    perPage: 20,
+    total: 60,
+  ),
+);

@@ -16,12 +16,17 @@ class ChannelTile extends StatelessWidget {
     required this.canWrite,
     required this.onReconnect,
     required this.onDisconnect,
+    this.canReconnect,
   });
 
   final ChannelConnection connection;
   final bool canWrite;
   final VoidCallback onReconnect;
   final VoidCallback onDisconnect;
+
+  /// Nút "Kết nối lại" riêng: kênh công ty nối lại qua OAuth chỉ cho admin.
+  /// Null thì theo [canWrite].
+  final bool? canReconnect;
 
   /// (nhãn, icon, sắc thái) cho mỗi trạng thái kênh.
   ///
@@ -105,7 +110,7 @@ class ChannelTile extends StatelessWidget {
                 if (_needsReconnect) ...[
                   const SizedBox(height: OmniSpacing.sm),
                   TextButton.icon(
-                    onPressed: canWrite ? onReconnect : null,
+                    onPressed: (canReconnect ?? canWrite) ? onReconnect : null,
                     icon: const Icon(Icons.refresh_rounded, size: 18),
                     label: const Text('Kết nối lại'),
                     style: TextButton.styleFrom(

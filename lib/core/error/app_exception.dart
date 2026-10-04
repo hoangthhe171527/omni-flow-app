@@ -44,10 +44,17 @@ class NotFoundException extends AppException {
 
 /// 422 — field-level validation errors keyed by field name.
 class ValidationException extends AppException {
-  const ValidationException(super.message, {this.errors = const {}})
-    : super(code: '422');
+  const ValidationException(
+    super.message, {
+    this.errors = const {},
+    this.reason,
+  }) : super(code: '422');
 
   final Map<String, List<String>> errors;
+
+  /// Mã nghiệp vụ API gửi kèm (`code`, vd `personal_thread_not_reassignable`),
+  /// để phân biệt các 422 cùng rơi vào một trường. Null khi API không gửi.
+  final String? reason;
 
   String? firstFor(String field) => errors[field]?.firstOrNull;
 }

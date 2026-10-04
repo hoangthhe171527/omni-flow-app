@@ -64,7 +64,10 @@ class _ChannelsPageState extends ConsumerState<ChannelsPage> {
   }
 
   Future<void> _pickChannel() async {
-    final channel = await showConnectSheet(context);
+    final channel = await showConnectSheet(
+      context,
+      access: ref.read(accessProvider),
+    );
     if (channel == null || !mounted) return;
     switch (ConnectableChannels.methodFor(channel)) {
       case ConnectMethod.oauth:
@@ -144,11 +147,16 @@ class _ChannelsPageState extends ConsumerState<ChannelsPage> {
   @override
   Widget build(BuildContext context) {
     final channels = ref.watch(channelsProvider);
-    final canWrite = ref.watch(accessProvider).can(ChannelPermissions.write);
+    final access = ref.watch(accessProvider);
+    final canWrite = access.can(ChannelPermissions.write);
+    // Page/OA chỉ admin kết nối (quyết định 2026-10-04 #3).
+    final canConnectCompany = ChannelPermissions.canConnectCompany(access);
+    final canPick =
+        canConnectCompany || (canWrite && ConnectableChannels.pair.isNotEmpty);
     return Scaffold(
       appBar: const OmniAppBar(title: 'Kết nối kênh'),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: _connecting ? null : (canWrite ? _pickChannel : null),
+        onPressed: _connecting ? null : (canPick ? _pickChannel : null),
         icon: const Icon(Icons.add_link_rounded),
         label: const Text('Kết nối kênh'),
       ),
@@ -189,6 +197,7 @@ class _ChannelsPageState extends ConsumerState<ChannelsPage> {
                     ChannelTile(
                       connection: connection,
                       canWrite: canWrite,
+                      canReconnect: canConnectCompany,
                       onReconnect: () => _startOauth(connection.channel),
                       onDisconnect: () => _disconnect(connection),
                     ),

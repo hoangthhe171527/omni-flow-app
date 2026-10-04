@@ -1,5 +1,6 @@
 import '../../../core/domain/channel.dart';
 import '../../../core/utils/json.dart';
+import 'conversation.dart';
 
 /// The quick filters along the top of the inbox.
 enum InboxQuickFilter {
@@ -72,7 +73,10 @@ class InboxFilter {
         InboxQuickFilter.mine => {'status': 'open', 'assignee': currentUserId},
         InboxQuickFilter.unassigned => const {
           'status': 'open',
-          'assignee': 'none',
+          // Sentinel server hiểu là "chưa ai phụ trách"
+          // (`MongoInboxRepository::applyFilters`). `none` bị so như một id
+          // người dùng — tab "Chưa gán" luôn rỗng.
+          'assignee': 'unassigned',
         },
         InboxQuickFilter.urgent => const {
           'status': 'open',
@@ -80,6 +84,36 @@ class InboxFilter {
         },
         InboxQuickFilter.closed => const {'status': 'closed'},
       },
+    };
+  }
+
+  /// Hội thoại [c] có thuộc danh sách của bộ lọc này không — cùng vị từ với
+  /// [toQuery] mà server áp (`MongoInboxRepository::applyFilters`).
+  ///
+  /// Dùng khi vá một dòng theo `conversation.updated`: hội thoại vừa được giao
+  /// phải rời tab "Chưa gán" ngay, không đợi lượt tải lại sau.
+  ///
+  /// Null khi client không tự đánh giá được — ô tìm kiếm (server so theo
+  /// `search_tokens`), hay "Của tôi" khi chưa biết người dùng. Chỗ gọi khi đó
+  /// hỏi lại server.
+  bool? matches(Conversation c, {required String? currentUserId}) {
+    if (search.isNotEmpty) return null;
+    if (channel != null && c.channel != channel) return false;
+    if (connectionId != null && c.connectionId != connectionId) return false;
+    if (label != null && !c.tags.contains(label)) return false;
+
+    final open = c.status == ConversationStatus.open;
+    final assignee = c.assigneeId ?? '';
+    return switch (quick) {
+      InboxQuickFilter.all => open,
+      InboxQuickFilter.unread => open && c.unread > 0,
+      InboxQuickFilter.mine =>
+        (currentUserId == null || currentUserId.isEmpty)
+            ? null
+            : open && assignee == currentUserId,
+      InboxQuickFilter.unassigned => open && assignee.isEmpty,
+      InboxQuickFilter.urgent => open && c.urgent,
+      InboxQuickFilter.closed => c.status == ConversationStatus.closed,
     };
   }
 

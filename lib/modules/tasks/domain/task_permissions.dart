@@ -57,8 +57,8 @@ class TaskAccess extends ResourceAccess {
     final canRead = policy.can(TaskPermissions.read);
 
     return TaskAccess._(
-      // The API narrows by project membership rather than by an `.own` scope,
-      // so from the client's side a reader simply sees what it is served.
+      // Người có `tasks.read` thấy mọi việc; xem hàng việc của người khác theo
+      // `assignee_id` cần `tasks.projects.manage.all` (API trả 403).
       readScope: canRead ? AccessScope.all : AccessScope.none,
       canWrite: policy.can(TaskPermissions.write),
       isAssigner: policy.can(TaskPermissions.manageAllProjects),
