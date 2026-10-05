@@ -109,6 +109,7 @@ class TasksModule extends OmniModule {
       weight: NavWeight.primary,
       order: 10,
       access: const AccessRequirement.any(TaskPermissions.anyRead),
+      feature: 'tasks',
       // Chỉ việc trễ, server đếm. Badge hiện 40 là giấy dán tường; hiện 3
       // là một lời nhắc.
       badge: taskBadgeProvider,

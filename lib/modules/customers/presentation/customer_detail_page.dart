@@ -7,6 +7,7 @@ import '../../../core/domain/channel.dart';
 import '../../../core/utils/formatters.dart';
 import '../../../design/components/components.dart';
 import '../../../design/tokens/tokens.dart';
+import '../../../security/session/session_controller.dart';
 import '../../opportunities/routes.dart';
 import '../application/customers_providers.dart';
 import '../customers_module.dart';
@@ -218,13 +219,18 @@ class _Header extends StatelessWidget {
   }
 }
 
-class _QuickActions extends StatelessWidget {
+class _QuickActions extends ConsumerWidget {
   const _QuickActions({required this.customer});
 
   final Customer customer;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    // Workspace tắt module Cơ hội thì không mời tạo (API trả 403
+    // FEATURE_DISABLED) — MS-I33.
+    final opportunitiesOn = ref
+        .watch(sessionProvider)
+        .featureEnabled('opportunities');
     return Row(
       children: [
         Expanded(
@@ -249,17 +255,19 @@ class _QuickActions extends StatelessWidget {
             ),
           ),
         ),
-        const SizedBox(width: OmniSpacing.sm),
-        Expanded(
-          child: _ActionTile(
-            icon: Icons.trending_up_rounded,
-            label: 'Tạo cơ hội',
-            onTap: () => context.pushNamed(
-              OpportunityRoutes.create,
-              queryParameters: {'customer': customer.id},
+        if (opportunitiesOn) ...[
+          const SizedBox(width: OmniSpacing.sm),
+          Expanded(
+            child: _ActionTile(
+              icon: Icons.trending_up_rounded,
+              label: 'Tạo cơ hội',
+              onTap: () => context.pushNamed(
+                OpportunityRoutes.create,
+                queryParameters: {'customer': customer.id},
+              ),
             ),
           ),
-        ),
+        ],
       ],
     );
   }

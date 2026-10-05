@@ -73,6 +73,7 @@ class PlansModule extends OmniModule {
       // toàn cảnh sau, rồi mới tới dòng thời gian.
       order: 30,
       access: AccessRequirement.any(TaskPermissions.anyRead),
+      feature: 'tasks',
     ),
     ModuleNavEntry(
       moduleId: 'plans',
@@ -86,6 +87,7 @@ class PlansModule extends OmniModule {
       // Sau "Việc của tôi" (10). Thợ mở hàng đợi của mình trước, toàn cảnh sau.
       order: 20,
       access: AccessRequirement.any(TaskPermissions.anyRead),
+      feature: 'tasks',
     ),
   ];
 }

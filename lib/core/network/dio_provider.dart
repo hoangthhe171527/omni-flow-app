@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math';
 
 import 'package:dio/dio.dart';
@@ -9,6 +10,7 @@ import '../storage/storage_keys.dart';
 import '../storage/token_store.dart';
 import 'active_tenant.dart';
 import 'api_exception_mapper.dart' show parseRetryAfter;
+import 'feature_disabled.dart';
 
 /// Chờ trước lượt refresh thứ hai sau 429. Test override bằng hàm trả ngay.
 final refreshBackoffProvider = Provider<Future<void> Function(Duration)>(
@@ -164,6 +166,11 @@ final dioProvider = Provider<Dio>((ref) {
             // A rejected refresh token is authoritative; forward the original
             // business 401 so session state can expire it.
           }
+        }
+        // Module vừa bị tắt ở workspace (MS-I33): đọc lại cờ để menu ẩn nó.
+        // Không chặn lỗi — màn vẫn hiện câu của API qua trạng thái lỗi sẵn có.
+        if (isFeatureDisabledResponse(error.response)) {
+          unawaited(ref.read(featureFlagRefresherProvider).request());
         }
         handler.next(error);
       },

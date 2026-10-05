@@ -74,6 +74,7 @@ class CustomersModule extends OmniModule {
       weight: NavWeight.primary,
       order: 10,
       access: AccessRequirement.any(CustomerPermissions.anyRead),
+      feature: 'customers',
     ),
   ];
 }

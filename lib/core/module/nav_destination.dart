@@ -64,7 +64,13 @@ class ModuleNavEntry {
     this.access = const AccessRequirement.open(),
     this.badge,
     this.badgeTone = NavBadgeTone.unread,
+    this.feature,
   });
+
+  /// Khoá cờ tính năng của workspace (`inbox`, `tasks`…, như web
+  /// `feature-flags.ts`). Cờ tắt thì mục ẩn như khi thiếu quyền. Null = luôn
+  /// bật (Cài đặt, Nhân viên, Thông báo: tắt thì mất lối vào tài khoản).
+  final String? feature;
 
   final String moduleId;
   final String label;
