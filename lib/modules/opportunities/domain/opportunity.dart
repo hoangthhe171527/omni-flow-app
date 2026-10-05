@@ -267,11 +267,15 @@ class Opportunity {
   double weightedValue([PipelineDef? pipeline]) =>
       value * effectiveProbability(pipeline) / 100;
 
-  bool get isOverdue {
+  /// Quá hạn = ngày chốt (ngày VN) trước hôm nay theo giờ VN — như web
+  /// (`due.ts`), không theo múi giờ của máy (APP-I14).
+  bool isOverdueAt([DateTime? clock]) {
     final due = expectedCloseAt;
     if (due == null || isClosed) return false;
-    return due.isBefore(DateUtilsX.startOfDay(DateTime.now()));
+    return VnTime.day(due).isBefore(VnTime.today(clock));
   }
+
+  bool get isOverdue => isOverdueAt();
 
   /// `PUT`/`POST` body.
   ///
