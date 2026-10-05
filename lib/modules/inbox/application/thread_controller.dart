@@ -156,6 +156,54 @@ class ThreadController
     );
   }
 
+  /// Lấy lại bản mới của MỌI tin đang giữ, khi link media đã ký hết hạn
+  /// (MS-I24: server ký URL ảnh 12 giờ lúc trả tin).
+  ///
+  /// [refresh] chỉ gộp trang mới nhất — ảnh hết hạn lại nằm ở các trang cũ đã
+  /// tải từ lâu. Còn `ref.invalidate` dựng lại từ đầu: mất outbox (tin gửi hỏng
+  /// đang chờ gửi lại) và các trang cũ đang xem. Nên ở đây đi từ trang mới
+  /// nhất lùi dần tới trang chứa tin cũ nhất đang giữ, bản mới thắng; outbox
+  /// và con trỏ phân trang giữ nguyên.
+  Future<void> reloadMedia() async {
+    final current = state.valueOrNull;
+    if (current == null || current.messages.isEmpty) return;
+    final oldest = current.messages.first;
+    final api = ref.read(inboxApiProvider);
+
+    final fresh = <Message>[];
+    String? before;
+    // Trần số trang: cửa sổ giữ trên máy không bao giờ lớn tới mức này.
+    for (var pages = 0; pages < 20; pages++) {
+      final page = await api.messages(arg, before: before);
+      if (_disposed) return;
+      fresh.addAll(page.messages);
+      // Tới tin cũ nhất đang giữ — theo id, hoặc theo giờ khi tin đó đã bị
+      // xoá phía server (không thì đi hết trần trang mới dừng).
+      final reachedOldest = page.messages.any(
+        (m) => m.id == oldest.id || compareMessages(m, oldest) <= 0,
+      );
+      if (reachedOldest ||
+          !page.cursor.hasMore ||
+          page.cursor.nextBefore == null) {
+        break;
+      }
+      before = page.cursor.nextBefore;
+    }
+
+    // Đọc state SAU khi tải, như refresh(): một lượt gửi có thể đã xong.
+    final latest = state.valueOrNull ?? current;
+    // Không nới cửa sổ về phía cũ: tin cũ hơn tin cũ nhất đang giữ để
+    // loadOlder() lấy theo con trỏ như thường, khỏi lặp hay hở.
+    final byId = <String, Message>{
+      for (final message in latest.messages) message.id: message,
+      for (final message in fresh)
+        if (compareMessages(message, oldest) >= 0) message.id: message,
+    };
+    state = AsyncData(
+      latest.copyWith(messages: byId.values.toList()..sort(compareMessages)),
+    );
+  }
+
   Future<void> loadOlder() async {
     final current = state.valueOrNull;
     if (current == null ||

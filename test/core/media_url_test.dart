@@ -105,4 +105,40 @@ void main() {
           .toString(),
     );
   });
+
+  test(
+    'link ký có hạn (MS-I24): giữ nguyên expires + signature khi đổi host',
+    () {
+      final out = resolveMediaUrl(
+        'https://api.khac.vn/api/v1/inbox/media/t-1/a.jpg?expires=1&signature=ab',
+      );
+      final parsed = Uri.parse(out);
+      expect(parsed.host, api.host);
+      expect(parsed.path, '/api/v1/inbox/media/t-1/a.jpg');
+      expect(parsed.queryParameters, {'expires': '1', 'signature': 'ab'});
+      expect(out, endsWith('?expires=1&signature=ab'));
+      // Resolve lần nữa (bong bóng vẽ lại) không đổi gì.
+      expect(resolveMediaUrl(out), out);
+    },
+  );
+
+  test('mediaCacheKey bỏ expires/signature, giữ tham số khác', () {
+    expect(
+      mediaCacheKey(
+        'https://a.vn/api/v1/inbox/media/t-1/a.jpg?expires=1&signature=ab',
+      ),
+      'https://a.vn/api/v1/inbox/media/t-1/a.jpg',
+    );
+    expect(
+      mediaCacheKey(
+        'https://a.vn/api/v1/inbox/media/t-1/a.jpg?expires=1&signature=ab&v=2',
+      ),
+      'https://a.vn/api/v1/inbox/media/t-1/a.jpg?v=2',
+    );
+    expect(
+      mediaCacheKey('https://cdn.vn/a.jpg?v=2'),
+      'https://cdn.vn/a.jpg?v=2',
+    );
+    expect(mediaCacheKey('https://cdn.vn/a.jpg'), 'https://cdn.vn/a.jpg');
+  });
 }

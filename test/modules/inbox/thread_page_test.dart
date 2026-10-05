@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -249,6 +250,133 @@ void main() {
 
     await closeThread(tester);
   });
+
+  group('ảnh hết hạn (link ký 12 giờ, MS-I24)', () {
+    late DateTime now;
+    setUp(() {
+      now = DateTime(2026, 10, 4, 8);
+      mediaReloadClock = () => now;
+    });
+    tearDown(() => mediaReloadClock = DateTime.now);
+
+    List<Message> history(String sig) => [
+      _serverMessage('m1', 'Ảnh đàn', images: ['a.jpg'], sig: sig),
+      _serverMessage('m2', 'Thêm ảnh', images: ['b.jpg'], sig: sig),
+    ];
+
+    // Môi trường test không tải ảnh thật: gọi thẳng errorListener của ảnh
+    // đang dựng, như khi server trả 403 cho link đã quá hạn.
+    void fail(WidgetTester tester, {int? only}) {
+      final images = tester
+          .widgetList<CachedNetworkImage>(find.byType(CachedNetworkImage))
+          .toList();
+      for (var i = 0; i < images.length; i++) {
+        if (only == null || only == i) {
+          images[i].errorListener!(Exception('HTTP 403'));
+        }
+      }
+    }
+
+    /// Màn cao để mọi ảnh cùng được dựng (danh sách chỉ dựng phần đang thấy).
+    Future<void> openTall(WidgetTester tester) async {
+      tester.view.physicalSize = const Size(800, 3000);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      await openThread(tester);
+      expect(find.byType(CachedNetworkImage), findsNWidgets(2));
+    }
+
+    Future<void> settle(WidgetTester tester) async {
+      await tester.pump();
+      await tester.pump();
+      await tester.pump();
+    }
+
+    testWidgets('cả loạt ảnh hỏng → tải lại tin ĐÚNG một lần; URL ký mới '
+        'cũng hỏng trong 10 phút → không tải lại nữa; quá 10 phút thì có', (
+      tester,
+    ) async {
+      api.history = history('v1');
+      await openTall(tester);
+      final before = api.messagesCalls;
+      expect(find.byType(CachedNetworkImage), findsWidgets);
+
+      // Lượt tải lại sẽ mang URL ký MỚI về — ảnh dựng lại với URL mới.
+      api.history = history('v2');
+      fail(tester);
+      await settle(tester);
+      expect(api.messagesCalls - before, 1);
+      expect(
+        tester
+            .widgetList<CachedNetworkImage>(find.byType(CachedNetworkImage))
+            .every((i) => i.imageUrl.contains('signature=v2')),
+        isTrue,
+        reason: 'Ảnh đã mang URL mới, được báo lỗi lại.',
+      );
+
+      // URL mới cũng hỏng (tệp đã xoá): trong thời gian nghỉ → không lặp.
+      api.history = history('v3');
+      fail(tester, only: 0);
+      await settle(tester);
+      expect(api.messagesCalls - before, 1);
+
+      // Đối chứng: qua 10 phút, ảnh kia hỏng thì được tải lại lần nữa.
+      now = now.add(const Duration(minutes: 11));
+      fail(tester, only: 1);
+      await settle(tester);
+      expect(api.messagesCalls - before, 2);
+
+      await closeThread(tester);
+    });
+
+    testWidgets('lượt tải lại hỏng (mất mạng) không tiêu thời gian nghỉ', (
+      tester,
+    ) async {
+      api.history = history('v1');
+      await openTall(tester);
+      final before = api.messagesCalls;
+
+      api.failNextMessages = true;
+      fail(tester, only: 0);
+      await settle(tester);
+      expect(api.messagesCalls - before, 1);
+
+      // Ảnh khác hỏng ngay sau đó (mạng đã về): vẫn được tải lại.
+      fail(tester, only: 1);
+      await settle(tester);
+      expect(api.messagesCalls - before, 2);
+
+      await closeThread(tester);
+    });
+
+    testWidgets(
+      'bấm "Tải lại ảnh" → lấy URL ký mới (kể cả trong thời gian nghỉ)',
+      (tester) async {
+        api.history = history('v1');
+        await openTall(tester);
+        final before = api.messagesCalls;
+
+        fail(tester);
+        await settle(tester);
+        expect(api.messagesCalls - before, 1);
+
+        // Ảnh hiện nút tải lại (errorWidget của CachedNetworkImage); người dùng
+        // bấm — trong thời gian nghỉ vẫn phải lấy URL ký mới.
+        final finder = find.byType(CachedNetworkImage).first;
+        final image = tester.widget<CachedNetworkImage>(finder);
+        final errorBox =
+            image.errorWidget!(tester.element(finder), image.imageUrl, Object())
+                as ColoredBox;
+        final button = (errorBox.child! as Center).child! as IconButton;
+        expect(button.tooltip, 'Tải lại ảnh');
+        button.onPressed!();
+        await settle(tester);
+        expect(api.messagesCalls - before, 2);
+
+        await closeThread(tester);
+      },
+    );
+  });
 }
 
 typedef _ReplyTo = ({String id, String text, String author});
@@ -258,6 +386,8 @@ Message _serverMessage(
   String text, {
   String from = 'customer',
   _ReplyTo? replyTo,
+  List<String> images = const [],
+  String sig = 'v1',
 }) {
   final minute = int.parse(id.replaceAll(RegExp(r'\D'), ''));
   return Message.fromJson({
@@ -266,6 +396,15 @@ Message _serverMessage(
     'text': text,
     'status': from == 'agent' ? 'sent' : null,
     'sent_at': DateTime.utc(2026, 1, 1, 8, minute).toIso8601String(),
+    if (images.isNotEmpty)
+      'attachments': [
+        for (final name in images)
+          {
+            'url':
+                'https://api.khac.vn/api/v1/inbox/media/t1/$name?expires=1&signature=$sig',
+            'type': 'image/jpeg',
+          },
+      ],
     if (replyTo != null) ...{
       'reply_to_message_id': replyTo.id,
       'reply_to_text': replyTo.text,
@@ -292,6 +431,10 @@ class _FakeInboxApi extends InboxApi {
   Completer<void>? holdSend;
 
   final markReadCalls = <String>[];
+  int messagesCalls = 0;
+
+  /// Lượt gọi `messages` kế tiếp ném lỗi mạng.
+  bool failNextMessages = false;
   final sendCalls = <_SendCall>[];
   int _sent = 0;
 
@@ -301,6 +444,11 @@ class _FakeInboxApi extends InboxApi {
     String? before,
     int perPage = AppConfig.messagePageSize,
   }) async {
+    messagesCalls++;
+    if (failNextMessages) {
+      failNextMessages = false;
+      throw const NetworkException('offline');
+    }
     return MessagePage(
       // The API answers newest-first; the controller reverses it.
       messages: history.reversed.toList(),
