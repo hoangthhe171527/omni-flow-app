@@ -12,6 +12,7 @@ import 'package:omni_app/core/error/app_exception.dart';
 import 'package:omni_app/core/network/api_client.dart';
 import 'package:omni_app/core/network/api_envelope.dart';
 import 'package:omni_app/core/realtime/realtime_client.dart';
+import 'package:omni_app/core/utils/formatters.dart';
 import 'package:omni_app/design/theme/omni_theme.dart';
 import 'package:omni_app/modules/inbox/application/thread_controller.dart';
 import 'package:omni_app/modules/inbox/data/inbox_api.dart';
@@ -252,6 +253,32 @@ void main() {
       ),
       findsOneWidget,
     );
+
+    await closeThread(tester);
+  });
+
+  // Đợt 7 P2: dải ngày tách theo NGÀY VN, không theo ngày UTC. 23:30 và 00:30
+  // giờ VN cùng một ngày UTC (16:30Z, 17:30Z) nhưng là hai ngày ở VN.
+  testWidgets('tin 23:30 và 00:30 giờ VN nằm ở hai ngày khác nhau', (
+    tester,
+  ) async {
+    Message at(String id, DateTime utc) => Message.fromJson({
+      'id': id,
+      'from': 'customer',
+      'text': 'Tin $id',
+      'sent_at': utc.toIso8601String(),
+    });
+    final late = at('m1', DateTime.utc(2026, 1, 1, 16, 30)); // 23:30 VN 1/1
+    final early = at('m2', DateTime.utc(2026, 1, 1, 17, 30)); // 00:30 VN 2/1
+    api.history = [late, early];
+
+    await openThread(tester);
+
+    final first = Formatters.dayHeader(late.sentAt!);
+    final second = Formatters.dayHeader(early.sentAt!);
+    expect(first, isNot(second));
+    expect(find.text(first), findsOneWidget);
+    expect(find.text(second), findsOneWidget);
 
     await closeThread(tester);
   });

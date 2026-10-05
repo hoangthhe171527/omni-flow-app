@@ -836,8 +836,9 @@ class _MessageList extends StatelessWidget {
     );
   }
 
-  bool _sameDay(DateTime a, DateTime b) =>
-      a.year == b.year && a.month == b.month && a.day == b.day;
+  /// Ngày theo giờ VN như tiêu đề dải ngày (`Formatters.dayHeader`), không
+  /// theo ngày UTC hay múi máy (APP-I14).
+  bool _sameDay(DateTime a, DateTime b) => VnTime.day(a) == VnTime.day(b);
 }
 
 class _DaySeparator extends StatelessWidget {
