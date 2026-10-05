@@ -71,6 +71,9 @@ class _ThreadPageState extends ConsumerState<ThreadPage>
     _startRealtimeFallback();
     // Opening a thread is the act of reading it.
     Future.microtask(() async {
+      // `/read` cần `inbox.write` (routes.php:49). Người chỉ đọc không gọi:
+      // số chưa đọc là của hội thoại, giữ cho người phụ trách (INB-I28, Q3).
+      if (!ref.read(inboxAccessProvider).canSend) return;
       try {
         await ref.read(inboxApiProvider).markRead(widget.conversationId);
         // Patch the ROW too, not just the filter counts. patch()'s own
@@ -302,7 +305,8 @@ class _ThreadPageState extends ConsumerState<ThreadPage>
                         .read(threadProvider(widget.conversationId).notifier)
                         .discard(message.id),
                     onReply: (message) => setState(() => _replyingTo = message),
-                    onPin: _togglePin,
+                    // `/pin` cần `inbox.write`; null thì menu ẩn mục "Ghim".
+                    onPin: access.canSend ? _togglePin : null,
                     keyForMessage: _keyForMessage,
                   ),
                 ),
@@ -735,7 +739,7 @@ class _MessageList extends StatelessWidget {
   final void Function(Message message) onRetry;
   final void Function(Message message) onDiscard;
   final void Function(Message message) onReply;
-  final void Function(Message message) onPin;
+  final void Function(Message message)? onPin;
   final GlobalKey Function(String id) keyForMessage;
 
   @override
@@ -818,7 +822,7 @@ class _MessageList extends StatelessWidget {
                     ? () => onDiscard(message)
                     : null,
                 onReply: () => onReply(message),
-                onPin: () => onPin(message),
+                onPin: onPin == null ? null : () => onPin!(message),
               ),
             ],
           ),

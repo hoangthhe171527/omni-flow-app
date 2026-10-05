@@ -41,7 +41,9 @@ void main() {
 
   setUp(() => api = _FakeInboxApi());
 
-  Widget host() => ProviderScope(
+  Widget host({
+    Set<String> permissions = const {'inbox.read', 'inbox.write'},
+  }) => ProviderScope(
     overrides: [
       inboxApiProvider.overrideWithValue(api),
       // Không realtime: tín hiệu của hội thoại vẫn dựng được mà không mở socket.
@@ -52,11 +54,11 @@ void main() {
         ),
       ),
       sessionProvider.overrideWithValue(
-        const Session(
+        Session(
           status: SessionStatus.authenticated,
-          user: SessionUser(id: 'u1', fullName: 'Kiệt', email: 'k@x.vn'),
-          tenant: SessionTenant(id: 't1', name: 'Xưởng đàn'),
-          policy: AccessPolicy({'inbox.read', 'inbox.write'}),
+          user: const SessionUser(id: 'u1', fullName: 'Kiệt', email: 'k@x.vn'),
+          tenant: const SessionTenant(id: 't1', name: 'Xưởng đàn'),
+          policy: AccessPolicy(permissions),
         ),
       ),
       // SurfaceBackdrop đọc provider nền; provider thật cần SharedPreferences.
@@ -70,8 +72,11 @@ void main() {
 
   /// Dựng trang và để lịch sử về. Không pumpAndSettle: nút gửi quay vòng và
   /// biên nhận chuyển cảnh, còn poll dự phòng là Timer.periodic.
-  Future<void> openThread(WidgetTester tester) async {
-    await tester.pumpWidget(host());
+  Future<void> openThread(
+    WidgetTester tester, {
+    Set<String> permissions = const {'inbox.read', 'inbox.write'},
+  }) async {
+    await tester.pumpWidget(host(permissions: permissions));
     await tester.pump();
     await tester.pump();
   }
@@ -249,6 +254,44 @@ void main() {
     );
 
     await closeThread(tester);
+  });
+
+  // Đợt 7 P2 (INB-I28): `/read` và `/pin` cần `inbox.write` (routes.php:47,49).
+  // Người chỉ đọc mở hội thoại thì không gọi `/read` (403 bị nuốt), và menu
+  // tin không mời ghim.
+  group('quyền đọc/ghim', () {
+    Future<void> openActions(WidgetTester tester) async {
+      await tester.longPress(inBubble('Chào shop'));
+      await tester.pumpAndSettle(const Duration(milliseconds: 100));
+    }
+
+    testWidgets('chỉ inbox.read: không gọi /read, menu không có Ghim', (
+      tester,
+    ) async {
+      api.history = [_serverMessage('m1', 'Chào shop')];
+      await openThread(tester, permissions: const {'inbox.read'});
+
+      expect(api.markReadCalls, isEmpty);
+
+      await openActions(tester);
+      expect(find.text('Ghim hoặc bỏ ghim'), findsNothing);
+
+      await closeThread(tester);
+    });
+
+    testWidgets('inbox.read + inbox.write: gọi /read, menu có Ghim', (
+      tester,
+    ) async {
+      api.history = [_serverMessage('m1', 'Chào shop')];
+      await openThread(tester);
+
+      expect(api.markReadCalls, ['c1']);
+
+      await openActions(tester);
+      expect(find.text('Ghim hoặc bỏ ghim'), findsOneWidget);
+
+      await closeThread(tester);
+    });
   });
 
   group('ảnh hết hạn (link ký 12 giờ, MS-I24)', () {

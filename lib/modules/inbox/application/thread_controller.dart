@@ -44,8 +44,30 @@ class ThreadState {
   /// lấy đúng một lần sort cho mỗi lần state đổi. Unmodifiable để không ai sửa
   /// tại chỗ thứ đã được cache.
   late final List<Message> visible = List<Message>.unmodifiable(
-    <Message>[...messages, ...pending]..sort(ThreadController.compareMessages),
+    _withQuotes(<Message>[...messages, ...pending])
+      ..sort(ThreadController.compareMessages),
   );
+
+  /// API chỉ trả `reply_to_message_id`; câu trích dẫn lấy từ tin gốc nếu nó
+  /// đang có trên màn (backlog report #2). Tin gốc chưa tải thì không có câu —
+  /// như web.
+  static List<Message> _withQuotes(List<Message> all) {
+    final byId = {for (final m in all) m.id: m};
+    return [
+      for (final m in all)
+        if (m.replyToMessageId != null &&
+            (m.replyToText ?? '').isEmpty &&
+            byId[m.replyToMessageId] != null)
+          m.copyWith(
+            replyToText: byId[m.replyToMessageId]!.text,
+            replyToAuthorName:
+                byId[m.replyToMessageId]!.senderName ??
+                byId[m.replyToMessageId]!.agentName,
+          )
+        else
+          m,
+    ];
+  }
 
   bool get isEmpty => messages.isEmpty && pending.isEmpty;
 

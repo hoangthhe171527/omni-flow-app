@@ -166,7 +166,8 @@ class InboxApi {
           'conversation_id': conversationId,
       },
     );
-    return InboxChanges.fromJson(response.object, response.list);
+    // `cursor` nằm NGANG `data`: `{success, data:[…], cursor, has_more}` (INB-I19).
+    return InboxChanges.fromJson(response.raw, response.list);
   }
 
   Future<List<String>> labels() async {
@@ -221,7 +222,8 @@ class InboxApi {
     final response = await _client.post(
       '$_base/$conversationId/messages/$messageId/pin',
     );
-    return response.object['pinned'] == true;
+    // API trả `{success, pinned}` ở gốc (INB-I21).
+    return (response.raw['pinned'] ?? response.object['pinned']) == true;
   }
 
   /// [clientMessageId] is the send's idempotency key. A retry MUST reuse the key

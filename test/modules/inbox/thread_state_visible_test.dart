@@ -64,4 +64,70 @@ void main() {
     expect(state.visible, isEmpty);
     expect(state.isEmpty, isTrue);
   });
+
+  // Đợt 7 P2 (backlog report #2): API chỉ trả `reply_to_message_id`, không có
+  // câu trích dẫn — sau lượt làm mới đầu tiên khối trích dẫn biến mất.
+  group('trích dẫn lấy từ tin gốc đã tải', () {
+    test('tin trả lời thiếu câu → lấy text và tên từ tin gốc', () {
+      final state = ThreadState(
+        messages: [
+          Message.fromJson({
+            'id': 'm1',
+            'from': 'customer',
+            'text': 'Giá bao nhiêu?',
+            'sender_name': 'Thuý Phạm',
+            'sent_at': DateTime.utc(2026, 1, 1, 8, 1).toIso8601String(),
+          }),
+          Message.fromJson({
+            'id': 'm2',
+            'from': 'agent',
+            'text': 'Dạ 3 triệu ạ',
+            'reply_to_message_id': 'm1',
+            'sent_at': DateTime.utc(2026, 1, 1, 8, 2).toIso8601String(),
+          }),
+        ],
+      );
+
+      final reply = state.visible.firstWhere((m) => m.id == 'm2');
+      expect(reply.replyToText, 'Giá bao nhiêu?');
+      expect(reply.replyToAuthorName, 'Thuý Phạm');
+    });
+
+    test('tin gốc chưa tải → không có câu (như web)', () {
+      final state = ThreadState(
+        messages: [
+          Message.fromJson({
+            'id': 'm2',
+            'from': 'agent',
+            'text': 'Dạ 3 triệu ạ',
+            'reply_to_message_id': 'm0',
+            'sent_at': DateTime.utc(2026, 1, 1, 8, 2).toIso8601String(),
+          }),
+        ],
+      );
+
+      expect(state.visible.single.replyToText, isNull);
+    });
+
+    test('câu đã có (bản nháp gửi đi) thì giữ nguyên', () {
+      final state = ThreadState(
+        messages: [at('m1', 1)],
+        pending: [
+          Message.fromJson({
+            'id': 'p2',
+            'from': 'agent',
+            'text': 'Dạ',
+            'reply_to_message_id': 'm1',
+            'reply_to_text': 'Câu đã chép lúc gửi',
+            'sent_at': DateTime.utc(2026, 1, 1, 8, 2).toIso8601String(),
+          }),
+        ],
+      );
+
+      expect(
+        state.visible.firstWhere((m) => m.id == 'p2').replyToText,
+        'Câu đã chép lúc gửi',
+      );
+    });
+  });
 }
