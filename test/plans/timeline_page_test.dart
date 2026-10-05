@@ -52,7 +52,8 @@ void main() {
     kind: kind,
     taskId: 't1',
     taskTitle: taskTitle,
-    at: DateTime(2026, 9, 10, 9, 35),
+    // Mốc thật từ API luôn là UTC: 02:35Z = 09:35 giờ VN, trên máy ở múi nào cũng vậy.
+    at: DateTime.utc(2026, 9, 10, 2, 35),
     userName: userName,
     detail: detail,
     planName: planName,
