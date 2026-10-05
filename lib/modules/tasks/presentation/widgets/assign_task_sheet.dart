@@ -125,7 +125,8 @@ class _AssignTaskSheetState extends ConsumerState<_AssignTaskSheet> {
     );
   }
 
-  /// Lọc theo ô tìm kiếm, và chỉ những người còn hoạt động.
+  /// Lọc theo ô tìm kiếm, và chỉ những người còn hoạt động VÀ đã nhận lời mời
+  /// (APP-I10).
   ///
   /// Giao việc cho một tài khoản đã ngừng hoạt động là giao vào chỗ không ai
   /// nhận — nhưng người ĐANG được gán vẫn hiện, để còn gỡ họ ra.
@@ -133,7 +134,7 @@ class _AssignTaskSheetState extends ConsumerState<_AssignTaskSheet> {
     final needle = _search.trim().toLowerCase();
 
     return members
-        .where((m) => m.isActive || _picked.contains(m.userId))
+        .where((m) => m.isSelectable || _picked.contains(m.userId))
         .where((m) => needle.isEmpty || m.name.toLowerCase().contains(needle))
         .toList();
   }

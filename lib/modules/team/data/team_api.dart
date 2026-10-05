@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/config/app_config.dart';
+import '../../../core/error/app_exception.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/utils/json.dart';
 import '../domain/team_member.dart';
@@ -29,24 +30,47 @@ class TeamApi {
   Future<void> setZaloUserId(String membershipId, String zaloUserId) => _client
       .put('/memberships/$membershipId', body: {'zalo_user_id': zaloUserId});
 
+  /// Trần đọc danh bạ: 60 trang × 100 = 6.000 người, như `fetchAllPages` của
+  /// web. Hiện không tenant nào gần mức này (TK-20).
+  static const _maxPages = 60;
+
+  /// Danh bạ ĐẦY ĐỦ của workspace — như `teamApi.listDirectory` của web
+  /// (APP-I10, NT-I14, MS-I34).
+  ///
+  /// - Mọi trang `/memberships`, MỌI trạng thái: người đã nghỉ vẫn phải tra
+  ///   được tên trong lịch sử (việc, hội thoại cũ). Màn danh sách và bộ chọn
+  ///   tự lọc ([TeamMember.isActive], [TeamMember.isSelectable]).
+  /// - Tên tra theo ĐÚNG tập `user_id` bằng `/identity/users?ids=` từng lô
+  ///   100, tuần tự. Bản cũ lấy một trang users không cùng tập với trang
+  ///   memberships: người thứ 101 mất khỏi bộ chọn, người lệch trang mang tên
+  ///   "Thành viên".
+  /// - Tra tên lỗi thì vẫn trả thành viên với tên dự phòng.
   Future<List<TeamMember>> members({String? search}) async {
-    final responses = await Future.wait([
-      _client.get(
+    final memberships = <Map<String, dynamic>>[];
+    for (var page = 1; page <= _maxPages; page++) {
+      final response = await _client.get(
         '/memberships',
         query: {
           'per_page': AppConfig.maxPerPage,
-          'status': 'active',
+          'page': page,
           if (search != null && search.isNotEmpty) 'search': search,
         },
-      ),
-      _client.get('/identity/users', query: {'per_page': AppConfig.maxPerPage}),
+      );
+      memberships.addAll(response.list);
+      final pagination = response.pagination;
+      if (pagination == null ||
+          response.list.isEmpty ||
+          pagination.currentPage >= pagination.lastPage) {
+        break;
+      }
+    }
+
+    final users = await _usersByIds([
+      for (final m in memberships)
+        if (m.str('user_id') case final id? when id.isNotEmpty) id,
     ]);
 
-    final users = {
-      for (final user in responses[1].list) user.strOr('id', ''): user,
-    };
-
-    return responses[0].list
+    return memberships
         .map(
           (membership) => TeamMember.fromJson(
             membership,
@@ -55,6 +79,34 @@ class TeamApi {
         )
         .where((member) => member.userId.isNotEmpty)
         .toList();
+  }
+
+  /// `/identity/users?ids=` theo lô 100. Một lô lỗi thì bỏ lô đó (tên dự
+  /// phòng), không làm hỏng cả danh bạ.
+  Future<Map<String, Map<String, dynamic>>> _usersByIds(
+    List<String> ids,
+  ) async {
+    final unique = ids.toSet().toList();
+    final users = <String, Map<String, dynamic>>{};
+    const chunk = AppConfig.maxPerPage;
+    for (var start = 0; start < unique.length; start += chunk) {
+      final batch = unique.sublist(
+        start,
+        start + chunk > unique.length ? unique.length : start + chunk,
+      );
+      try {
+        final response = await _client.get(
+          '/identity/users',
+          query: {'ids': batch.join(','), 'per_page': AppConfig.maxPerPage},
+        );
+        for (final user in response.list) {
+          users[user.strOr('id', '')] = user;
+        }
+      } on AppException {
+        // Tên dự phòng cho lô này.
+      }
+    }
+    return users;
   }
 }
 

@@ -68,14 +68,17 @@ class _PersonFilterSheet extends ConsumerWidget {
                 padding: EdgeInsets.zero,
                 children: [
                   for (final member in list)
-                    _Row(
-                      icon: Icons.person_outline_rounded,
-                      label: member.name,
-                      selected: current.userId == member.userId,
-                      onTap: () => Navigator.of(
-                        context,
-                      ).pop(BoardPerson.person(member.userId, member.name)),
-                    ),
+                    // Người đang làm, đã nhận lời mời (APP-I10); người đang
+                    // lọc vẫn hiện để thấy mình đang lọc ai.
+                    if (member.isSelectable || current.userId == member.userId)
+                      _Row(
+                        icon: Icons.person_outline_rounded,
+                        label: member.name,
+                        selected: current.userId == member.userId,
+                        onTap: () => Navigator.of(
+                          context,
+                        ).pop(BoardPerson.person(member.userId, member.name)),
+                      ),
                 ],
               ),
               loading: () => const Padding(

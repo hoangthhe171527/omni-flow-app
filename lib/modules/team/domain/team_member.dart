@@ -13,6 +13,7 @@ class TeamMember {
     this.status = 'active',
     this.zaloUserId,
     this.openConversations = 0,
+    this.accepted = true,
   });
 
   final String membershipId;
@@ -33,7 +34,18 @@ class TeamMember {
   /// isn't handed to whoever happens to be at the top of the list.
   final int openConversations;
 
+  /// `accepted` của membership: false = được mời nhưng chưa nhận lời. Chưa là
+  /// thành viên — không chọn làm người phụ trách được (APP-I10). API cũ không
+  /// gửi khoá này → coi là đã nhận.
+  final bool accepted;
+
   bool get isActive => status == 'active';
+
+  /// Lời mời chưa nhận — nhãn "Đang chờ" như web.
+  bool get isPending => status == 'active' && !accepted;
+
+  /// Có trong bộ chọn người: đang làm VÀ đã nhận lời mời.
+  bool get isSelectable => status == 'active' && accepted;
 
   String get roleLabel => jobTitle ?? 'Nhân viên';
 
@@ -47,6 +59,7 @@ class TeamMember {
     avatarUrl: avatarUrl,
     status: status,
     openConversations: count,
+    accepted: accepted,
   );
 
   static TeamMember fromJson(
@@ -60,13 +73,17 @@ class TeamMember {
       name:
           user?.str('full_name') ??
           metadata.str('name') ??
+          // Lời mời chưa nhận: hồ sơ người dùng bị che, email đã gõ lúc mời
+          // là thứ duy nhất nhận ra được họ (như web).
+          membership.str('invite_email') ??
           membership.str('job_title') ??
           'Thành viên',
-      email: user?.str('email'),
+      email: user?.str('email') ?? membership.str('invite_email'),
       jobTitle: membership.str('job_title') ?? membership.str('member_type'),
       zaloUserId: membership.str('zalo_user_id'),
       avatarUrl: user?.str('avatar'),
       status: membership.strOr('status', 'active'),
+      accepted: membership['accepted'] != false,
     );
   }
 }

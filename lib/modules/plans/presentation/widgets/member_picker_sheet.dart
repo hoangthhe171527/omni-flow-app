@@ -64,11 +64,16 @@ class _MemberPickerSheetState extends ConsumerState<_MemberPickerSheet> {
             Flexible(
               child: members.when(
                 data: (all) {
-                  final shown = _query.isEmpty
-                      ? all
-                      : all
-                            .where((m) => m.name.toLowerCase().contains(_query))
-                            .toList();
+                  // Chỉ người đang làm và đã nhận lời mời (APP-I10); người
+                  // đã chọn sẵn vẫn hiện để còn bỏ chọn.
+                  final shown = all
+                      .where(
+                        (m) =>
+                            (m.isSelectable || _selected.contains(m.userId)) &&
+                            (_query.isEmpty ||
+                                m.name.toLowerCase().contains(_query)),
+                      )
+                      .toList();
 
                   if (shown.isEmpty) {
                     return OmniEmptyState(

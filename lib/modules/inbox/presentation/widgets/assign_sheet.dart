@@ -74,8 +74,10 @@ class _AssignSheetState extends ConsumerState<AssignSheet> {
                 final filtered = list
                     .where(
                       (member) =>
-                          _search.isEmpty ||
-                          member.name.toLowerCase().contains(_search),
+                          // Chỉ người đang làm và đã nhận lời mời (APP-I10).
+                          member.isSelectable &&
+                          (_search.isEmpty ||
+                              member.name.toLowerCase().contains(_search)),
                     )
                     .toList();
 
