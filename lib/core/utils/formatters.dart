@@ -111,6 +111,11 @@ abstract final class VnTime {
   ///   không lệch ngày ở múi nào.
   /// - Giá trị cục bộ khác (vd `DateTime.now()` của bản nháp) là một mốc thật:
   ///   quy về UTC rồi cộng 7 giờ.
+  ///
+  /// Quy ước cho chỗ gọi: MỐC THẬT phải đưa vào ở dạng UTC (ISO có `Z`) hoặc
+  /// `DateTime.now()`, không qua `toLocal()`/`fromMillisecondsSinceEpoch`
+  /// cục bộ — một mốc cục bộ rơi đúng nửa đêm máy sẽ bị đọc thành ngày lịch.
+  /// Chuỗi ngày giờ KHÔNG múi bị coi là giờ của máy (review M4).
   static DateTime of(DateTime value) {
     if (value.isUtc) return value.add(offset);
     if (_isCalendarDate(value)) {

@@ -21,6 +21,36 @@ void main() {
   });
 
   group('ngày giờ theo giờ VN', () {
+    // Kỳ vọng tính từ UTC, nên đúng ở MỌI múi máy (review M5). Dart không đặt
+    // được múi giờ trong test; máy dev UTC+7 thì toLocal() cũ cũng ra đúng.
+    DateTime vnOf(DateTime instant) =>
+        instant.toUtc().add(const Duration(hours: 7));
+
+    test('giá trị cục bộ khác 00:00 là mốc thật: quy về UTC rồi +7 (M4)', () {
+      final local = DateTime(2026, 10, 5, 10, 15);
+      expect(VnTime.of(local), vnOf(local));
+      expect(VnTime.of(local).isUtc, isTrue);
+      final vn = vnOf(local);
+      final hh = vn.hour.toString().padLeft(2, '0');
+      final mm = vn.minute.toString().padLeft(2, '0');
+      expect(Formatters.time(local), '$hh:$mm');
+    });
+
+    test('mốc UTC sát nửa đêm VN: ngày theo VN, không theo múi máy', () {
+      // 16:59Z = 23:59 ngày 4 VN; 17:01Z = 00:01 ngày 5 VN.
+      expect(Formatters.date(DateTime.utc(2026, 10, 4, 16, 59)), '04/10/2026');
+      expect(Formatters.date(DateTime.utc(2026, 10, 4, 17, 1)), '05/10/2026');
+      expect(Formatters.time(DateTime.utc(2026, 10, 4, 17, 1)), '00:01');
+    });
+
+    test('ngày lịch cục bộ 00:00 giữ nguyên ngày', () {
+      expect(VnTime.of(DateTime(2026, 10, 5)), DateTime.utc(2026, 10, 5));
+      expect(
+        VnTime.day(DateTime.parse('2026-10-05')),
+        DateTime.utc(2026, 10, 5),
+      );
+    });
+
     test('mốc UTC 18:30 ngày 4 là 01:30 ngày 5 ở VN', () {
       final at = DateTime.utc(2026, 10, 4, 18, 30);
       expect(Formatters.date(at), '05/10/2026');
@@ -79,6 +109,19 @@ void main() {
 
     test('23:59 ngày 4 VN thì chưa quá hạn', () {
       expect(opp.isOverdueAt(DateTime.utc(2026, 10, 4, 16, 59)), isFalse);
+    });
+
+    // Dạng API thật trả (`datetime` cast → ISO UTC nửa đêm), như JSON thật.
+    test('expected_end_date dạng API thật cho cùng kết quả', () {
+      final real = Opportunity.fromJson({
+        'id': 'o2',
+        'title': 'Piano',
+        'opportunity_stage': 'new',
+        'opportunity_status': 'OPEN',
+        'expected_end_date': '2026-10-04T00:00:00.000000Z',
+      });
+      expect(real.isOverdueAt(DateTime.utc(2026, 10, 4, 17, 1)), isTrue);
+      expect(real.isOverdueAt(DateTime.utc(2026, 10, 4, 16, 59)), isFalse);
     });
   });
 }
