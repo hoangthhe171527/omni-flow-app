@@ -7,7 +7,12 @@ import 'package:omni_app/modules/plans/application/plans_providers.dart';
 import 'package:omni_app/modules/plans/domain/plan.dart';
 import 'package:omni_app/modules/plans/presentation/plan_board_page.dart';
 import 'package:omni_app/modules/settings/application/appearance_providers.dart';
+import 'package:omni_app/modules/tasks/application/tasks_providers.dart';
 import 'package:omni_app/modules/tasks/domain/task.dart';
+import 'package:omni_app/modules/tasks/domain/task_permissions.dart';
+import 'package:omni_app/security/permissions/access_policy.dart';
+import 'package:omni_app/security/session/session.dart';
+import 'package:omni_app/security/session/session_controller.dart';
 
 import '../support/fixed_background.dart';
 
@@ -287,5 +292,57 @@ void main() {
       tester.getRect(pill('Công đoạn số 8')).right,
       lessThanOrEqualTo(width),
     );
+  });
+
+  // API cho chủ/quản lý DỰ ÁN sửa nhóm việc, không chỉ người có
+  // `tasks.projects.manage.all` (CV-I14).
+  group('nút Sửa nhóm việc', () {
+    Widget board(String role) => ProviderScope(
+      overrides: [
+        planProvider(planId).overrideWith(
+          (ref) async => Plan.fromJson({
+            'id': planId,
+            'name': 'Đàn cơ',
+            'owner_id': 'u-owner',
+            'member_ids': ['u-me'],
+            'member_roles': {'u-me': role},
+            'sections': [
+              {'id': 's1', 'name': 'Nhập xưởng', 'order': 0},
+            ],
+          }),
+        ),
+        planTasksProvider(
+          planId,
+        ).overrideWith((ref) async => (tasks: <Task>[], truncated: false)),
+        backgroundProvider.overrideWith(FixedBackground.new),
+        sessionProvider.overrideWithValue(
+          const Session(
+            status: SessionStatus.authenticated,
+            user: SessionUser(id: 'u-me', fullName: 'Tôi', email: 'me@x.vn'),
+          ),
+        ),
+        taskAccessProvider.overrideWithValue(
+          TaskAccess.of(const AccessPolicy({'tasks.read', 'tasks.write'})),
+        ),
+      ],
+      child: MaterialApp(
+        theme: OmniTheme.light(TargetPlatform.android),
+        home: const PlanBoardPage(planId: planId),
+      ),
+    );
+
+    testWidgets('quản lý dự án (không có manage.all) thấy nút', (tester) async {
+      await tester.pumpWidget(board('manager'));
+      await tester.pumpAndSettle();
+
+      expect(find.byTooltip('Sửa nhóm việc'), findsOneWidget);
+    });
+
+    testWidgets('thành viên thường không thấy nút', (tester) async {
+      await tester.pumpWidget(board('member'));
+      await tester.pumpAndSettle();
+
+      expect(find.byTooltip('Sửa nhóm việc'), findsNothing);
+    });
   });
 }

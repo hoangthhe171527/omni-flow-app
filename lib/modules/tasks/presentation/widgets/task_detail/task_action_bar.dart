@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 
+import '../../../../../core/error/app_exception.dart';
 import '../../../../../design/tokens/tokens.dart';
 import '../../../application/task_controller.dart';
 import '../../../application/tasks_providers.dart';
@@ -112,14 +113,21 @@ class _TaskActionBarState extends ConsumerState<TaskActionBar> {
     try {
       await ref
           .read(taskDetailProvider(widget.taskId).notifier)
-          .setStatus(done ? 'done' : 'in_progress');
+          // `doing` — mã chuẩn của server; `in_progress` bị lưu nguyên và không
+          // bảng nào có cột đó (CV-I15). API A2 còn chuẩn hoá cho dự án có bộ
+          // trạng thái riêng.
+          .setStatus(done ? 'done' : 'doing');
       // The list behind this screen is showing the old progress until told.
       ref.read(myTasksProvider.notifier).refresh();
       if (mounted && done) {
         _say('Đã báo hoàn thành. Quản lý sẽ nhận thông báo.');
       }
+    } on AppException catch (error) {
+      if (mounted) {
+        _say(_failureText(error, 'Chưa lưu được. Kiểm tra mạng rồi thử lại.'));
+      }
     } on Object {
-      if (mounted) _say('Chưa lưu được. Kiểm tra mạng rồi thử lại.');
+      if (mounted) _say('Chưa lưu được. Vui lòng thử lại.');
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -145,8 +153,12 @@ class _TaskActionBarState extends ConsumerState<TaskActionBar> {
       await ref.read(tasksApiProvider).attach(widget.taskId, photo.path);
       await ref.read(taskDetailProvider(widget.taskId).notifier).refresh();
       if (mounted) _say('Đã đính kèm ảnh.');
+    } on AppException catch (error) {
+      if (mounted) {
+        _say(_failureText(error, 'Chưa gửi được ảnh. Thử lại khi có mạng.'));
+      }
     } on Object {
-      if (mounted) _say('Chưa gửi được ảnh. Thử lại khi có mạng.');
+      if (mounted) _say('Chưa gửi được ảnh. Vui lòng thử lại.');
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -175,6 +187,15 @@ class _TaskActionBarState extends ConsumerState<TaskActionBar> {
       ),
     ),
   );
+
+  /// Lỗi mạng thì nhắc mạng; mọi lỗi khác là lời của API (422 phụ thuộc, 403
+  /// chỉ xem, ảnh quá 25 MB…) — thợ cần biết VÌ SAO, không phải thử lại mãi
+  /// (CV-I6). `NetworkException` có `code` (vd `file_unreadable`) là lỗi có
+  /// lời riêng, không phải mất mạng.
+  static String _failureText(AppException e, String networkText) =>
+      (e is TimeoutException || (e is NetworkException && e.code == null))
+      ? networkText
+      : e.message;
 
   void _say(String message) {
     ScaffoldMessenger.of(

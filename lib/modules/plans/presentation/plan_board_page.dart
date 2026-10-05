@@ -130,7 +130,11 @@ class _PlanBoardPageState extends ConsumerState<PlanBoardPage> {
           // Sửa các cột của chính cái bảng đang nhìn. Nhóm việc trước đây
           // chỉ khai được lúc tạo dự án, nên một cái tên gõ nhầm là phải
           // tạo lại cả dự án — mà công việc thì đã nằm trong đó rồi.
-          if (loaded != null && taskAccess.isAssigner)
+          // Chủ/quản lý DỰ ÁN cũng sửa được, đúng quyền API (CV-I14).
+          if (loaded != null &&
+              (taskAccess.isAssigner ||
+                  (currentUserId != null &&
+                      loaded.roleOf(currentUserId).canManagePlan)))
             IconButton(
               onPressed: _editSections,
               icon: const Icon(Icons.view_column_outlined),

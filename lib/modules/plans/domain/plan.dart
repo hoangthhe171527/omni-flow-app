@@ -181,10 +181,13 @@ class Plan {
   final int overdueCount;
 
   /// Vai của một người trong dự án này. Không có tên trong bảng thì là
-  /// người xem — cùng lý do với [PlanRole.parse].
+  /// người xem — cùng lý do với [PlanRole.parse]. Có trong `member_ids` mà
+  /// không có vai riêng là `member`, như API (`ProjectAccessService::
+  /// roleFromAttributes`, CV-I14).
   PlanRole roleOf(String userId) => ownerId == userId
       ? PlanRole.owner
-      : memberRoles[userId] ?? PlanRole.viewer;
+      : memberRoles[userId] ??
+            (memberIds.contains(userId) ? PlanRole.member : PlanRole.viewer);
 
   /// 0.0–1.0, và 0 chứ không phải NaN khi chưa có việc nào.
   double get progress => taskCount == 0 ? 0 : doneCount / taskCount;
