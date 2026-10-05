@@ -157,6 +157,17 @@ void main() {
     await pollOnce();
     expect(api.statusCalls, calls);
   });
+
+  // Đợt 7 P1 (APP-I9): màn hiện lời của API, không phải `toString()`.
+  test('pairStart bị từ chối: errorMessage là lời của API', () async {
+    api.onStart = () =>
+        throw const ValidationException('Không có máy nào đang chạy agent.');
+
+    await controller().start();
+
+    expect(state().snapshot.view, PairingView.failed);
+    expect(state().errorMessage, 'Không có máy nào đang chạy agent.');
+  });
 }
 
 class _FakeChannelsApi extends ChannelsApi {
@@ -170,11 +181,19 @@ class _FakeChannelsApi extends ChannelsApi {
   String nextConnectionId = 'pend-1';
   int statusCalls = 0;
 
+  /// Khi đặt, `pairStart` gọi nó trước (để ném lỗi).
+  void Function()? onStart;
+
   @override
   Future<PairingStart> pairStart(
     Channel channel, {
     bool forceRelogin = false,
-  }) async => PairingStart(
+  }) async {
+    onStart?.call();
+    return _started();
+  }
+
+  PairingStart _started() => PairingStart(
     connectionId: nextConnectionId,
     pairingCode: 'code',
     expiresAt: '',

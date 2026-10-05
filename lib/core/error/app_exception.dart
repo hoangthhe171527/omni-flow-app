@@ -68,3 +68,26 @@ class ServerException extends AppException {
 class RequestBlockedException extends AppException {
   const RequestBlockedException(super.message) : super(code: 'blocked');
 }
+
+/// 429 — server bảo chậm lại. [retryAfter] lấy từ header `Retry-After`.
+class RateLimitedException extends AppException {
+  const RateLimitedException(super.message, {this.retryAfter})
+    : super(code: '429');
+
+  final Duration? retryAfter;
+}
+
+/// Mã 4xx khác (409, 410, 413…) mà API không gửi câu cho người đọc.
+class RequestRejectedException extends AppException {
+  const RequestRejectedException(super.message, {super.code});
+}
+
+/// Câu cho NGƯỜI đọc từ một lỗi bất kỳ: lời của API khi có, không thì câu chung.
+/// Không bao giờ là `toString()` — `'ValidationException(422): …'` là chữ cho
+/// lập trình viên (APP-I9).
+String humanError(
+  Object error, {
+  String fallback = 'Đã có lỗi xảy ra. Vui lòng thử lại.',
+}) => error is AppException && error.message.trim().isNotEmpty
+    ? error.message
+    : fallback;
