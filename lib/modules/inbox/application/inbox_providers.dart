@@ -81,15 +81,34 @@ final conversationAssetsProvider = FutureProvider.autoDispose
 class ConversationListState {
   const ConversationListState({
     this.items = const [],
-    this.pagination = const ApiPagination.empty(),
+    this.cursor = const CursorPage.empty(),
+    this.loadedBeyondFirstPage = false,
     this.loadingMore = false,
   });
 
   final List<Conversation> items;
-  final ApiPagination pagination;
+
+  /// Con trỏ của trang CUỐI đã tải — `loadMore` đi tiếp từ đây.
+  final CursorPage cursor;
+
+  /// Đã cuộn quá trang 1: tin mới thì GỘP trang 1 lên đầu, không thay cả
+  /// danh sách (APP-I3).
+  final bool loadedBeyondFirstPage;
   final bool loadingMore;
 
-  bool get hasMore => pagination.hasMore;
+  bool get hasMore => cursor.hasMore;
+
+  ConversationListState copyWith({
+    List<Conversation>? items,
+    CursorPage? cursor,
+    bool? loadedBeyondFirstPage,
+    bool? loadingMore,
+  }) => ConversationListState(
+    items: items ?? this.items,
+    cursor: cursor ?? this.cursor,
+    loadedBeyondFirstPage: loadedBeyondFirstPage ?? this.loadedBeyondFirstPage,
+    loadingMore: loadingMore ?? this.loadingMore,
+  );
 }
 
 /// The conversation list. Rebuilds whenever the filter changes; exposes
@@ -102,8 +121,13 @@ class InboxListController
   @override
   Future<ConversationListState> build() async {
     _generation++;
-    // Theo dõi tín hiệu là ĐỦ — nó tự mở kênh tenant và gộp nhịp 400ms.
-    ref.watch(inboxListSignalProvider);
+    // `message.created` (đã gộp nhịp 400ms) KHÔNG dựng lại danh sách về trang
+    // 1 — đang cuộn tới trang 3 mà nhảy về 30 dòng đầu là mất chỗ đang đọc
+    // (APP-I3). Chỉ gộp trang 1 lên đầu. `listen` cũng giữ tín hiệu sống, nên
+    // kênh tenant vẫn tự mở như khi `watch`.
+    ref.listen<int>(inboxListSignalProvider, (previous, next) {
+      if (previous != next) unawaited(_mergeFirstPage());
+    });
     // `conversation.updated` KHÔNG dựng lại danh sách: chỉ vá đúng dòng đổi.
     ref.listen<ConversationUpdateBatch?>(inboxConversationUpdatesProvider, (
       _,
@@ -113,15 +137,29 @@ class InboxListController
     });
     final query = ref.watch(_inboxQueryProvider);
     final page = await ref.watch(inboxApiProvider).list(query: query);
-    return ConversationListState(
-      items: page.items,
-      pagination: page.pagination,
-    );
+    return ConversationListState(items: page.items, cursor: page.cursor);
   }
 
+  /// Kéo để làm mới / quay lại app: về trang 1 như một lượt tải mới.
+  ///
+  /// Không gọi lại [build]: mỗi lần gọi `build` ngoài vòng dựng là thêm một
+  /// bộ `ref.listen` nữa, và một tín hiệu sau đó chạy gộp trang hai lần.
   Future<void> refresh() async {
     ref.invalidate(inboxFacetsProvider);
-    state = await AsyncValue.guard(build);
+    _generation++;
+    state = await AsyncValue.guard(() async {
+      final page = await ref
+          .read(inboxApiProvider)
+          .list(query: ref.read(_inboxQueryProvider));
+      return ConversationListState(items: page.items, cursor: page.cursor);
+    });
+  }
+
+  /// Nhịp poll dự phòng thấy có thay đổi: gộp trang 1 lên đầu, giữ các trang
+  /// đã cuộn (cùng đường với tin mới qua realtime).
+  Future<void> mergeLatest() {
+    ref.invalidate(inboxFacetsProvider);
+    return _mergeFirstPage();
   }
 
   Future<void> loadMore() async {
@@ -129,20 +167,14 @@ class InboxListController
     if (current == null || !current.hasMore || current.loadingMore) return;
     final generation = _generation;
 
-    state = AsyncData(
-      ConversationListState(
-        items: current.items,
-        pagination: current.pagination,
-        loadingMore: true,
-      ),
-    );
+    state = AsyncData(current.copyWith(loadingMore: true));
 
     try {
       final next = await ref
           .read(inboxApiProvider)
           .list(
             query: ref.read(_inboxQueryProvider),
-            page: current.pagination.nextPage,
+            before: current.cursor.nextBefore,
           );
       // The list was rebuilt while this page was in flight (filter change,
       // realtime signal, pull-to-refresh): its page 2 belongs to a list that
@@ -160,7 +192,8 @@ class InboxListController
             for (final c in next.items)
               if (!shown.contains(c.id)) c,
           ],
-          pagination: next.pagination,
+          cursor: next.cursor,
+          loadedBeyondFirstPage: true,
         ),
       );
     } catch (_) {
@@ -168,10 +201,7 @@ class InboxListController
       final latest = state.valueOrNull ?? current;
       // Keep what's on screen; the footer shows a retry.
       state = AsyncData(
-        ConversationListState(
-          items: latest.items,
-          pagination: current.pagination,
-        ),
+        latest.copyWith(cursor: current.cursor, loadingMore: false),
       );
     }
   }
@@ -181,16 +211,14 @@ class InboxListController
   void patch(Conversation updated) {
     final current = state.valueOrNull;
     if (current == null) return;
+    // copyWith: a page in flight stays in flight — dropping the flag would let
+    // a second scroll request the same page again.
     state = AsyncData(
-      ConversationListState(
+      current.copyWith(
         items: [
           for (final item in current.items)
             if (item.id == updated.id) updated else item,
         ],
-        pagination: current.pagination,
-        // A page in flight stays in flight — dropping the flag would let a
-        // second scroll request the same page again.
-        loadingMore: current.loadingMore,
       ),
     );
   }
@@ -298,18 +326,14 @@ class InboxListController
       index = current.items.length;
     }
     state = AsyncData(
-      ConversationListState(
-        items: [...current.items]..insert(index, c),
-        pagination: current.pagination,
-        loadingMore: current.loadingMore,
-      ),
+      current.copyWith(items: [...current.items]..insert(index, c)),
     );
   }
 
   /// Lấy trang 1 và đặt lên đầu, GIỮ các trang đã cuộn phía sau.
   Future<void> _mergeFirstPage() async {
     final generation = _generation;
-    final Paged<Conversation> page;
+    final CursorPaged<Conversation> page;
     try {
       page = await ref
           .read(inboxApiProvider)
@@ -322,23 +346,22 @@ class InboxListController
     if (latest == null) return;
 
     // Mới có trang 1 trên màn: thay hẳn, như một lượt tải lại thường.
-    if (latest.pagination.currentPage <= 1 && !latest.loadingMore) {
+    if (!latest.loadedBeyondFirstPage && !latest.loadingMore) {
       state = AsyncData(
-        ConversationListState(items: page.items, pagination: page.pagination),
+        ConversationListState(items: page.items, cursor: page.cursor),
       );
       return;
     }
 
+    // Giữ con trỏ của trang đã cuộn: `loadMore` đi tiếp từ chỗ cũ.
     final freshIds = {for (final c in page.items) c.id};
     state = AsyncData(
-      ConversationListState(
+      latest.copyWith(
         items: [
           ...page.items,
           for (final c in latest.items)
             if (!freshIds.contains(c.id)) c,
         ],
-        pagination: latest.pagination,
-        loadingMore: latest.loadingMore,
       ),
     );
   }
@@ -347,13 +370,11 @@ class InboxListController
     final current = state.valueOrNull;
     if (current == null) return;
     state = AsyncData(
-      ConversationListState(
+      current.copyWith(
         items: [
           for (final c in current.items)
             if (!ids.contains(c.id)) c,
         ],
-        pagination: current.pagination,
-        loadingMore: current.loadingMore,
       ),
     );
   }

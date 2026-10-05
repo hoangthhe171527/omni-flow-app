@@ -106,3 +106,20 @@ class Paged<T> {
 
   bool get hasMore => pagination.hasMore;
 }
+
+/// Một trang theo con trỏ (`pagination: {per_page, has_more, next_before}`).
+class CursorPaged<T> {
+  const CursorPaged({
+    required this.items,
+    this.cursor = const CursorPage.empty(),
+  });
+
+  const CursorPaged.empty()
+    : items = const [],
+      cursor = const CursorPage.empty();
+
+  final List<T> items;
+  final CursorPage cursor;
+
+  bool get hasMore => cursor.hasMore;
+}

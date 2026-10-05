@@ -521,11 +521,11 @@ class _FakeInboxApi extends InboxApi {
       const InboxFacets();
 
   @override
-  Future<Paged<Conversation>> list({
+  Future<CursorPaged<Conversation>> list({
     required Map<String, dynamic> query,
-    int page = 1,
+    String? before,
     int perPage = AppConfig.defaultPerPage,
-  }) async => const Paged.empty();
+  }) async => const CursorPaged.empty();
 
   @override
   Future<Message> send(

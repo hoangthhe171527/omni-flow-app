@@ -163,7 +163,7 @@ void main() {
         expect(h.api.listCalls, 2, reason: 'Không tải lại trang 1.');
         expect(list(h).items.first.id, 'moi');
         expect(list(h).items, hasLength(41));
-        expect(list(h).pagination.currentPage, 2, reason: 'Giữ trang đã tải.');
+        expect(list(h).cursor.nextBefore, 'p3', reason: 'Giữ trang đã tải.');
       },
     );
 
@@ -492,18 +492,20 @@ class _FakeInboxApi extends InboxApi {
   List<Message> history = const [];
 
   /// Trang server trả theo số trang; null = danh sách rỗng như cũ.
-  Paged<Conversation> Function(int page)? pages;
+  CursorPaged<Conversation> Function(int page)? pages;
   final List<String> getCalls = [];
   Conversation Function(String id)? onGet;
 
   @override
-  Future<Paged<Conversation>> list({
+  Future<CursorPaged<Conversation>> list({
     required Map<String, dynamic> query,
-    int page = 1,
+    String? before,
     int perPage = AppConfig.defaultPerPage,
   }) async {
     listCalls++;
-    return pages?.call(page) ?? const Paged.empty();
+    // Con trỏ giả `p<N>` = trang N.
+    final page = before == null ? 1 : int.parse(before.substring(1));
+    return pages?.call(page) ?? const CursorPaged.empty();
   }
 
   @override
@@ -573,7 +575,7 @@ Conversation _conv(
   'assignee': ?assignee,
 });
 
-Paged<Conversation> _page(int page) => Paged(
+CursorPaged<Conversation> _page(int page) => CursorPaged(
   items: [
     for (var i = 0; i < 20; i++)
       _conv(
@@ -581,10 +583,9 @@ Paged<Conversation> _page(int page) => Paged(
         at: DateTime.utc(2026).subtract(Duration(minutes: page * 100 + i)),
       ),
   ],
-  pagination: ApiPagination(
-    currentPage: page,
-    lastPage: 3,
+  cursor: CursorPage(
     perPage: 20,
-    total: 60,
+    hasMore: page < 3,
+    nextBefore: page < 3 ? 'p${page + 1}' : null,
   ),
 );

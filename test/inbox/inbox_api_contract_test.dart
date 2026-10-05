@@ -28,6 +28,42 @@ void main() {
     expect(adapter.requests.single.uri.path, '/api/v1/inbox/changes');
   });
 
+  // Đợt 7 P4 (APP-I3): danh sách theo con trỏ (`cursor=1`, rồi `before=`)
+  // như web; API trả `pagination: {per_page, has_more, next_before}`.
+  group('list theo con trỏ', () {
+    const body =
+        '{"success":true,"data":[{"id":"c1","channel":"zalo"}],'
+        '"pagination":{"per_page":30,"has_more":true,"next_before":"abc"}}';
+
+    test('trang đầu gửi cursor=1, không gửi page', () async {
+      final adapter = _JsonAdapter(body);
+      final api = InboxApi(ApiClient(Dio()..httpClientAdapter = adapter));
+
+      final page = await api.list(query: const {'status': 'open'});
+
+      final q = adapter.requests.single.uri.queryParameters;
+      expect(q['cursor'], '1');
+      expect(q.containsKey('page'), isFalse);
+      expect(q.containsKey('before'), isFalse);
+      expect(q['status'], 'open');
+      expect(page.items.single.id, 'c1');
+      expect(page.cursor.hasMore, isTrue);
+      expect(page.cursor.nextBefore, 'abc');
+    });
+
+    test('trang sau gửi before, không gửi cursor/page', () async {
+      final adapter = _JsonAdapter(body);
+      final api = InboxApi(ApiClient(Dio()..httpClientAdapter = adapter));
+
+      await api.list(query: const {}, before: 'abc');
+
+      final q = adapter.requests.single.uri.queryParameters;
+      expect(q['before'], 'abc');
+      expect(q.containsKey('cursor'), isFalse);
+      expect(q.containsKey('page'), isFalse);
+    });
+  });
+
   test('togglePin đọc pinned ở gốc phản hồi', () async {
     final api = InboxApi(
       ApiClient(

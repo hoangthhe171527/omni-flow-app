@@ -134,18 +134,26 @@ class InboxApi {
 
   final ApiClient _client;
 
-  Future<Paged<Conversation>> list({
+  /// Phân trang theo con trỏ như web (APP-I3): trang đầu `cursor=1`, trang
+  /// sau `before=<next_before>`. Một hội thoại có tin mới giữa hai lượt tải
+  /// nhảy lên đầu mà không đẩy lệch các dòng sau con trỏ, nên cuộn không lặp
+  /// cũng không sót (`InboxController::index`).
+  Future<CursorPaged<Conversation>> list({
     required Map<String, dynamic> query,
-    int page = 1,
+    String? before,
     int perPage = AppConfig.defaultPerPage,
   }) async {
     final response = await _client.get(
       _base,
-      query: {...query, 'page': page, 'per_page': perPage},
+      query: {
+        ...query,
+        'per_page': perPage,
+        if (before == null) 'cursor': '1' else 'before': before,
+      },
     );
-    return Paged(
+    return CursorPaged(
       items: response.list.map(Conversation.fromJson).toList(),
-      pagination: response.pagination ?? const ApiPagination.empty(),
+      cursor: response.cursor ?? const CursorPage.empty(),
     );
   }
 
