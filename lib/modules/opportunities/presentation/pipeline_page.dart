@@ -37,6 +37,15 @@ class _PipelinePageState extends ConsumerState<PipelinePage> {
   void initState() {
     super.initState();
     _scrollController.addListener(_loadMore);
+    // Danh mục quy trình đã nạp từ lần mở trước: đọc lại, vì web có thể vừa
+    // thêm/đổi giai đoạn (APP-I12). Lần mở đầu thì provider đang nạp rồi, không
+    // gọi hai lượt. FutureProvider giữ giá trị cũ trong lúc làm mới, nên bảng
+    // không nháy.
+    if (ref.exists(pipelineCatalogProvider)) {
+      Future.microtask(() {
+        if (mounted) ref.invalidate(pipelineCatalogProvider);
+      });
+    }
   }
 
   void _loadMore() {

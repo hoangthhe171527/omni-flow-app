@@ -212,4 +212,70 @@ void main() {
     expect(o.isCancelled, isTrue);
     expect(o.isWon, isFalse);
   });
+
+  // Web ghi `metadata.notes` dạng CHUỖI; app từng chỉ đọc mảng mục nên ghi chú
+  // nhập trên web biến mất trên app (OPP-X7, APP-I6).
+  group('ghi chú', () {
+    test('notes dạng chuỗi (web) → một ghi chú', () {
+      final o = Opportunity.fromJson(
+        json(metadata: {'notes': 'Khách hẹn tuần sau'}),
+      );
+      expect(o.notes.single.content, 'Khách hẹn tuần sau');
+    });
+
+    test('notes dạng mảng (bản app cũ) vẫn đọc như trước', () {
+      final o = Opportunity.fromJson(
+        json(
+          metadata: {
+            'notes': [
+              {'content': 'Gọi lại', 'author': 'Lan'},
+              {'content': 'Báo giá'},
+            ],
+          },
+        ),
+      );
+      expect(o.notes.map((n) => n.content), ['Gọi lại', 'Báo giá']);
+    });
+
+    test('notes chuỗi rỗng → không có ghi chú', () {
+      final o = Opportunity.fromJson(json(metadata: {'notes': '  '}));
+      expect(o.notes, isEmpty);
+    });
+  });
+
+  // Ngân sách trống không được thành 0: `value ?? 0` rồi luôn gửi
+  // `estimated_budget` là ghi 0 lên cơ hội web để trống (OPP-X8).
+  group('ngân sách', () {
+    Map<String, dynamic> noBudget() => {...json()}..remove('estimated_budget');
+
+    test('không có ngân sách, sửa tên → không gửi estimated_budget', () {
+      final o = Opportunity.fromJson(noBudget());
+      final p = o.copyWith(title: 'Tên mới').toPayload();
+      expect(p.containsKey('estimated_budget'), isFalse);
+    });
+
+    test('xoá ngân sách đang có → gửi null', () {
+      final o = Opportunity.fromJson({...json(), 'estimated_budget': 5e6});
+      final p = o
+          .applyForm(title: o.title, stageCode: o.stageCode, value: null)
+          .toPayload();
+      expect(p.containsKey('estimated_budget'), isTrue);
+      expect(p['estimated_budget'], isNull);
+    });
+
+    test('đổi ngân sách → gửi giá trị mới', () {
+      final o = Opportunity.fromJson({...json(), 'estimated_budget': 5e6});
+      final p = o
+          .applyForm(title: o.title, stageCode: o.stageCode, value: 7e6)
+          .toPayload();
+      expect(p['estimated_budget'], 7e6);
+    });
+
+    test('tạo mới có ngân sách → gửi', () {
+      final p = Opportunity.blank()
+          .applyForm(title: 'Đàn', stageCode: 'new', value: 3e6)
+          .toPayload();
+      expect(p['estimated_budget'], 3e6);
+    });
+  });
 }

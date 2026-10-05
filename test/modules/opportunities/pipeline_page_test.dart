@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:omni_app/core/config/app_config.dart';
+import 'package:omni_app/core/error/app_exception.dart';
 import 'package:omni_app/core/network/api_client.dart';
 import 'package:omni_app/core/network/api_envelope.dart';
 import 'package:omni_app/design/theme/omni_theme.dart';
@@ -150,6 +151,67 @@ void main() {
     expect(api.created.single['pipeline'], 'standard');
     expect(api.created.single['opportunity_stage'], 'new');
   });
+
+  // Danh mục quy trình từng giữ suốt phiên: web thêm giai đoạn thì app không
+  // thấy cho tới khi khởi động lại (APP-I12).
+  testWidgets('mở bảng lần hai → đọc lại danh mục quy trình', (tester) async {
+    final show = ValueNotifier(true);
+    addTearDown(show.dispose);
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          opportunitiesApiProvider.overrideWithValue(api),
+          opportunityAccessProvider.overrideWithValue(
+            const ResourceAccess(readScope: AccessScope.all),
+          ),
+        ],
+        child: MaterialApp(
+          theme: OmniTheme.light(TargetPlatform.android),
+          home: ValueListenableBuilder<bool>(
+            valueListenable: show,
+            builder: (_, visible, _) =>
+                visible ? const PipelinePage() : const Text('khác'),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(api.pipelineCalls, 1);
+
+    show.value = false;
+    await tester.pumpAndSettle();
+    show.value = true;
+    await tester.pumpAndSettle();
+
+    expect(api.pipelineCalls, 2);
+    expect(find.textContaining('Liên hệ'), findsOneWidget);
+  });
+
+  test('đổi giai đoạn bị 422 opportunity_stage → đọc lại danh mục', () async {
+    final container = ProviderContainer(
+      overrides: [
+        opportunitiesApiProvider.overrideWithValue(api),
+        opportunityAccessProvider.overrideWithValue(
+          const ResourceAccess(readScope: AccessScope.all),
+        ),
+      ],
+    );
+    addTearDown(container.dispose);
+    await container.read(pipelineCatalogProvider.future);
+    expect(api.pipelineCalls, 1);
+
+    api.rejectStage = true;
+    final opp = Opportunity.fromJson({
+      'id': 'o1',
+      'opportunity_stage': 'lien_he',
+    });
+    await expectLater(
+      container.read(opportunityActionsProvider).moveStage(opp, 'cu'),
+      throwsA(isA<ValidationException>()),
+    );
+    await container.read(pipelineCatalogProvider.future);
+    expect(api.pipelineCalls, 2);
+  });
 }
 
 typedef _Call = ({String? stageCode, String? pipeline, bool mine, int page});
@@ -161,6 +223,21 @@ class _FakeApi extends OpportunitiesApi {
   final calls = <_Call>[];
   final summaryMine = <bool>[];
   final created = <Map<String, dynamic>>[];
+  int pipelineCalls = 0;
+  bool rejectStage = false;
+
+  @override
+  Future<Opportunity> moveStage(String id, {required String stageCode}) async {
+    if (rejectStage) {
+      throw const ValidationException(
+        'Giai đoạn không thuộc quy trình.',
+        errors: {
+          'opportunity_stage': ['Giai đoạn không thuộc quy trình.'],
+        },
+      );
+    }
+    return Opportunity.fromJson({'id': id, 'opportunity_stage': stageCode});
+  }
 
   @override
   Future<Opportunity> create(Opportunity draft) async {
@@ -169,7 +246,12 @@ class _FakeApi extends OpportunitiesApi {
   }
 
   @override
-  Future<PipelineCatalog> pipelines() async => PipelineCatalog.fromJson({
+  Future<PipelineCatalog> pipelines() async {
+    pipelineCalls++;
+    return _catalog;
+  }
+
+  static final _catalog = PipelineCatalog.fromJson({
     'default': 'ban_le',
     'pipelines': [
       {

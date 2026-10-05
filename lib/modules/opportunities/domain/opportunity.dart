@@ -111,6 +111,8 @@ class Opportunity {
     this.customerId,
     this.customerName,
     this.value = 0,
+    this.budget,
+    this.loadedBudget,
     this.probability,
     this.product,
     this.expectedCloseAt,
@@ -148,6 +150,7 @@ class Opportunity {
       json.str('opportunity_stage') ?? '',
     );
     final expectedCloseAt = DateUtilsX.parse(json['expected_end_date']);
+    final budget = json.dbl('estimated_budget');
 
     return Opportunity(
       id: json.strOr('id', ''),
@@ -162,7 +165,9 @@ class Opportunity {
       outcome: outcome == null ? null : StageOutcome.parse(outcome),
       customerId: json.str('customer_id'),
       customerName: customerName,
-      value: json.dbl('estimated_budget') ?? 0,
+      value: budget ?? 0,
+      budget: budget,
+      loadedBudget: budget,
       probability: probability,
       product: product,
       expectedCloseAt: expectedCloseAt,
@@ -170,7 +175,7 @@ class Opportunity {
       ownerName: metadata.str('owner_name'),
       source: source,
       tags: tags,
-      notes: metadata.mapList('notes').map(OpportunityNote.fromJson).toList(),
+      notes: _notesOf(metadata),
       metadata: metadata,
       loadedMetadata: _ownMetadata(
         customerName: customerName,
@@ -204,7 +209,17 @@ class Opportunity {
 
   final String? customerId;
   final String? customerName;
+
+  /// [budget] hoặc 0 — cho phép cộng/tính dự báo. Không gửi lên server.
   final double value;
+
+  /// `estimated_budget` như người dùng đặt; null = để trống (web cho phép).
+  /// [toPayload] chỉ gửi khi nó khác [loadedBudget] — trống không thành 0
+  /// (OPP-X8).
+  final double? budget;
+
+  /// `estimated_budget` lúc nạp.
+  final double? loadedBudget;
   final int? probability;
   final String? product;
   final DateTime? expectedCloseAt;
@@ -310,7 +325,8 @@ class Opportunity {
       'title': title,
       if (customerId != null) 'customer_id': customerId,
       if (ownerId != null) 'owner_user_id': ownerId,
-      'estimated_budget': value,
+      if (id.isEmpty ? budget != null : budget != loadedBudget)
+        'estimated_budget': budget,
       if (stageChanged) 'opportunity_stage': stageCode,
       if (pipelineCode != null) 'pipeline': pipelineCode,
       if (expectedCloseAt != null)
@@ -329,10 +345,11 @@ class Opportunity {
   /// editing ([Opportunity.blank] when creating), so everything the form
   /// doesn't show (tags, channel, notes, the pipeline) survives. [product] and
   /// [expectedCloseAt] are applied AS GIVEN: an emptied box clears the value.
+  /// [value] cũng vậy: null = ngân sách để trống (OPP-X8).
   Opportunity applyForm({
     required String title,
     required String stageCode,
-    required double value,
+    required double? value,
     String? customerId,
     String? customerName,
     String? product,
@@ -340,7 +357,7 @@ class Opportunity {
   }) => _copy(
     title: title,
     stageCode: stageCode,
-    value: value,
+    budget: value,
     customerId: customerId ?? this.customerId,
     customerName: customerName ?? this.customerName,
     product: product,
@@ -365,7 +382,7 @@ class Opportunity {
     pipelineCode: pipelineCode ?? this.pipelineCode,
     customerId: customerId ?? this.customerId,
     customerName: customerName ?? this.customerName,
-    value: value ?? this.value,
+    budget: value ?? budget,
     probability: probability ?? this.probability,
     product: product ?? this.product,
     expectedCloseAt: expectedCloseAt ?? this.expectedCloseAt,
@@ -383,7 +400,7 @@ class Opportunity {
     String? pipelineCode,
     String? customerId,
     String? customerName,
-    double? value,
+    required double? budget,
     int? probability,
     String? ownerId,
     List<String>? tags,
@@ -398,7 +415,9 @@ class Opportunity {
       outcome: outcome,
       customerId: customerId ?? this.customerId,
       customerName: customerName ?? this.customerName,
-      value: value ?? this.value,
+      value: budget ?? 0,
+      budget: budget,
+      loadedBudget: loadedBudget,
       probability: probability ?? this.probability,
       product: product,
       expectedCloseAt: expectedCloseAt,
@@ -435,6 +454,18 @@ class Opportunity {
 
   static bool _sameValue(Object? a, Object? b) =>
       a is List && b is List ? listEquals(a, b) : a == b;
+
+  /// Web ghi `metadata.notes` dạng CHUỖI (một ghi chú); bản app cũ ghi MẢNG mục
+  /// (OPP-X7, APP-I6).
+  static List<OpportunityNote> _notesOf(Map<String, dynamic> metadata) {
+    final raw = metadata['notes'];
+    if (raw is String) {
+      return raw.trim().isEmpty
+          ? const []
+          : [OpportunityNote(content: raw.trim())];
+    }
+    return metadata.mapList('notes').map(OpportunityNote.fromJson).toList();
+  }
 }
 
 /// Per-stage totals, computed server-side by `/sales-opportunities/summary`.

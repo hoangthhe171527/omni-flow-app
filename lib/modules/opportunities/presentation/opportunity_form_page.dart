@@ -57,9 +57,9 @@ class _OpportunityFormPageState extends ConsumerState<OpportunityFormPage> {
     _prefilled = true;
     _original = opportunity;
     _title.text = opportunity.title;
-    _value.text = opportunity.value == 0
+    _value.text = opportunity.budget == null
         ? ''
-        : opportunity.value.toStringAsFixed(0);
+        : opportunity.budget!.toStringAsFixed(0);
     _product.text = opportunity.product ?? '';
     _stageCode = opportunity.stageCode;
     _expectedClose = opportunity.expectedCloseAt;
@@ -126,8 +126,8 @@ class _OpportunityFormPageState extends ConsumerState<OpportunityFormPage> {
       stageCode: _effectiveStageCode,
       customerId: _customer?.id ?? widget.customerId,
       customerName: _customer?.name,
-      value:
-          double.tryParse(_value.text.replaceAll(RegExp(r'[^0-9]'), '')) ?? 0,
+      // Ô trống = ngân sách để trống (null), không phải 0 (OPP-X8).
+      value: double.tryParse(_value.text.replaceAll(RegExp(r'[^0-9]'), '')),
       product: _product.text.trim().isEmpty ? null : _product.text.trim(),
       expectedCloseAt: _expectedClose,
     );
