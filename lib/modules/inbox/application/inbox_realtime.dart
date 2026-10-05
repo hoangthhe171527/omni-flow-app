@@ -245,6 +245,7 @@ class ThreadRealtimeSignal extends AutoDisposeFamilyNotifier<int, String> {
             if (!_patchStatus(event.data)) coalescer.schedule();
             return;
           }
+          if (event.event == 'message.sent' && _absorbSent(event.data)) return;
           if (_refetchEvents.contains(event.event)) coalescer.schedule();
         },
       );
@@ -254,6 +255,25 @@ class ThreadRealtimeSignal extends AutoDisposeFamilyNotifier<int, String> {
     ref.listen(inboxRealtimeSignalProvider, (_, _) => coalescer.schedule());
 
     return 0;
+  }
+
+  /// Một tin gửi phát HAI `message.sent` (Đợt 7, review M7): API phát lúc
+  /// nhận tin (`{message_id, direction:'out'}`), worker phát lúc giao xong
+  /// (`{message_id, status}`), thường cách nhau quá cửa sổ gộp nhịp. True khi
+  /// sự kiện đã được xử lý mà không cần tải lại cả luồng:
+  /// - bản của worker: vá trạng thái như `message.status` — trừ `failed`, vì
+  ///   lý do lỗi chỉ có khi tải lại;
+  /// - bản của API cho một tin đã có trên màn (người gửi đã nhận nó từ phản
+  ///   hồi POST): không có gì mới.
+  bool _absorbSent(Map<String, dynamic> data) {
+    final status = data['status'];
+    if (status is String) {
+      return status != 'failed' && _patchStatus(data);
+    }
+    final messageId = data['message_id'];
+    if (messageId is! String || !ref.exists(threadProvider(arg))) return false;
+    final thread = ref.read(threadProvider(arg)).valueOrNull;
+    return thread?.messages.any((m) => m.id == messageId) ?? false;
   }
 
   /// True when the receipt landed on a message already on screen.

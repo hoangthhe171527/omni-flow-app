@@ -369,6 +369,89 @@ void main() {
     },
   );
 
+  // Fix vòng 1 (M7): một tin gửi phát HAI `message.sent` — A4 lúc API nhận
+  // (`{message_id, direction:'out'}`) và worker lúc giao xong (`{message_id,
+  // status}`), thường cách nhau quá cửa sổ 400 ms. Mỗi cái từng tải lại cả
+  // luồng.
+  group('message.sent', () {
+    Future<(_Harness, int Function())> opened(WidgetTester tester) async {
+      final h = _Harness();
+      h.api.history = [_serverMessage('m1', 'Dạ em gửi ạ', status: 'queued')];
+      h.container.listen(threadProvider('A'), (_, _) {});
+      var bumps = 0;
+      h.container.listen(threadSignalProvider('A'), (_, _) => bumps++);
+      await h.container.read(threadProvider('A').future);
+      await h.handshakeFake(tester);
+      return (h, () => bumps);
+    }
+
+    testWidgets('bản của worker (có status) vá tại chỗ, không tải lại', (
+      tester,
+    ) async {
+      final (h, bumps) = await opened(tester);
+      h.emit(
+        channel: 'private-conversation.A',
+        event: 'message.sent',
+        data: {'conversation_id': 'A', 'message_id': 'm1', 'status': 'sent'},
+      );
+      await tester.pump(const Duration(milliseconds: 700));
+
+      final thread = h.container.read(threadProvider('A')).requireValue;
+      expect(thread.messages.single.status, DeliveryStatus.sent);
+      expect(bumps(), 0);
+    });
+
+    testWidgets('bản của API cho tin ĐÃ có trên màn: không tải lại', (
+      tester,
+    ) async {
+      final (h, bumps) = await opened(tester);
+      h.emit(
+        channel: 'private-conversation.A',
+        event: 'message.sent',
+        data: {'conversation_id': 'A', 'message_id': 'm1', 'direction': 'out'},
+      );
+      await tester.pump(const Duration(milliseconds: 700));
+
+      expect(bumps(), 0, reason: 'Người gửi đã có tin này từ phản hồi POST.');
+    });
+
+    testWidgets('tin của đồng nghiệp (chưa có trên màn): tải lại MỘT lần cho '
+        'cả hai sự kiện', (tester) async {
+      final (h, bumps) = await opened(tester);
+      h.emit(
+        channel: 'private-conversation.A',
+        event: 'message.sent',
+        data: {'conversation_id': 'A', 'message_id': 'm9', 'direction': 'out'},
+      );
+      await tester.pump(const Duration(milliseconds: 100));
+      h.emit(
+        channel: 'private-conversation.A',
+        event: 'message.sent',
+        data: {'conversation_id': 'A', 'message_id': 'm9', 'status': 'sent'},
+      );
+      await tester.pump(const Duration(milliseconds: 700));
+
+      expect(bumps(), 1);
+    });
+
+    testWidgets('worker báo failed: tải lại để có lý do lỗi', (tester) async {
+      final (h, bumps) = await opened(tester);
+      h.emit(
+        channel: 'private-conversation.A',
+        event: 'message.sent',
+        data: {
+          'conversation_id': 'A',
+          'message_id': 'm1',
+          'status': 'failed',
+          'error': 'Zalo từ chối',
+        },
+      );
+      await tester.pump(const Duration(milliseconds: 700));
+
+      expect(bumps(), 1);
+    });
+  });
+
   testWidgets('tín hiệu FCM vẫn tới cả danh sách lẫn màn chat, cũng gộp nhịp', (
     tester,
   ) async {

@@ -126,7 +126,7 @@ class InboxListController
     // (APP-I3). Chỉ gộp trang 1 lên đầu. `listen` cũng giữ tín hiệu sống, nên
     // kênh tenant vẫn tự mở như khi `watch`.
     ref.listen<int>(inboxListSignalProvider, (previous, next) {
-      if (previous != next) unawaited(_mergeFirstPage());
+      if (previous != next) unawaited(_catchUp());
     });
     // `conversation.updated` KHÔNG dựng lại danh sách: chỉ vá đúng dòng đổi.
     ref.listen<ConversationUpdateBatch?>(inboxConversationUpdatesProvider, (
@@ -144,21 +144,34 @@ class InboxListController
   ///
   /// Không gọi lại [build]: mỗi lần gọi `build` ngoài vòng dựng là thêm một
   /// bộ `ref.listen` nữa, và một tín hiệu sau đó chạy gộp trang hai lần.
+  ///
+  /// Kết quả về khi danh sách đã được dựng lại (đổi bộ lọc, một lượt làm mới
+  /// khác) thì bỏ: nó thuộc một danh sách không còn nữa (review M3).
   Future<void> refresh() async {
     ref.invalidate(inboxFacetsProvider);
-    _generation++;
-    state = await AsyncValue.guard(() async {
+    final generation = ++_generation;
+    final result = await AsyncValue.guard(() async {
       final page = await ref
           .read(inboxApiProvider)
           .list(query: ref.read(_inboxQueryProvider));
       return ConversationListState(items: page.items, cursor: page.cursor);
     });
+    if (generation != _generation) return;
+    state = result;
   }
 
   /// Nhịp poll dự phòng thấy có thay đổi: gộp trang 1 lên đầu, giữ các trang
   /// đã cuộn (cùng đường với tin mới qua realtime).
   Future<void> mergeLatest() {
     ref.invalidate(inboxFacetsProvider);
+    return _catchUp();
+  }
+
+  /// Tín hiệu hay nhịp poll: gộp trang 1. Danh sách đang LỖI (chưa có giá trị
+  /// nào, vd lượt đầu rơi lúc mạng chập chờn) thì tải lại trang 1 — không thì
+  /// màn đứng ở trạng thái lỗi tới khi người dùng tự bấm "Thử lại" (review M2).
+  Future<void> _catchUp() {
+    if (state.hasError && state.valueOrNull == null) return refresh();
     return _mergeFirstPage();
   }
 
@@ -353,18 +366,71 @@ class InboxListController
       return;
     }
 
+    // Hơn một trang hội thoại có tin mới từ lượt gộp trước (vd socket chết
+    // lặng, poll 2 phút): trang 1 chưa chạm tới phần đã tải, và một hội thoại
+    // chưa từng tải mà nằm ngoài trang 1 sẽ không bao giờ hiện — `loadMore`
+    // đi tiếp từ con trỏ cũ, sau chỗ nó (review M1). Tải tiếp tới khi gặp một
+    // dòng đã có trên màn và chưa đổi; quá trần thì thay hẳn cửa sổ bằng phần
+    // vừa tải (con trỏ theo trang cuối vừa tải), như một lượt làm mới.
+    final known = {for (final c in latest.items) c.id: c.lastMessageAt};
+    bool reachesKnown(List<Conversation> items) => items.any(
+      (c) => known.containsKey(c.id) && known[c.id] == c.lastMessageAt,
+    );
+    final fetched = [...page.items];
+    var tail = page;
+    var pages = 1;
+    while (!reachesKnown(tail.items) &&
+        tail.cursor.hasMore &&
+        pages < _maxMergePages) {
+      try {
+        tail = await ref
+            .read(inboxApiProvider)
+            .list(
+              query: ref.read(_inboxQueryProvider),
+              before: tail.cursor.nextBefore,
+            );
+      } catch (_) {
+        return;
+      }
+      if (generation != _generation) return;
+      fetched.addAll(tail.items);
+      pages++;
+    }
+    final current = state.valueOrNull;
+    if (current == null) return;
+
+    final seen = <String>{};
+    final fresh = [
+      for (final c in fetched)
+        if (seen.add(c.id)) c,
+    ];
+    if (!reachesKnown(tail.items)) {
+      // Trang đang tải dở (nếu có) thuộc cửa sổ cũ: bỏ nó.
+      _generation++;
+      state = AsyncData(
+        ConversationListState(
+          items: fresh,
+          cursor: tail.cursor,
+          loadedBeyondFirstPage: true,
+        ),
+      );
+      return;
+    }
+
     // Giữ con trỏ của trang đã cuộn: `loadMore` đi tiếp từ chỗ cũ.
-    final freshIds = {for (final c in page.items) c.id};
     state = AsyncData(
-      latest.copyWith(
+      current.copyWith(
         items: [
-          ...page.items,
-          for (final c in latest.items)
-            if (!freshIds.contains(c.id)) c,
+          ...fresh,
+          for (final c in current.items)
+            if (!seen.contains(c.id)) c,
         ],
       ),
     );
   }
+
+  /// Trần số trang một lượt gộp được tải (xem [_mergeFirstPage]).
+  static const _maxMergePages = 4;
 
   void _remove(Set<String> ids) {
     final current = state.valueOrNull;

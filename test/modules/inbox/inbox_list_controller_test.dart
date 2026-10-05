@@ -275,6 +275,129 @@ void main() {
 
       expect(ids(), ['moi', 'a0', 'a1']);
     });
+
+    void bump() =>
+        (container.read(inboxListSignalProvider.notifier) as _ManualSignal)
+            .bump();
+
+    // Fix vòng 1 (M1): 35 hội thoại có tin mới giữa hai lượt gộp, người dùng
+    // đã cuộn tới trang 2. Năm hội thoại cũ nhất nằm ngoài trang 1 mới.
+    test(
+      'hơn một trang tin mới → tải tiếp tới phần đã có, không sót',
+      () async {
+        api.pages = {1: rows('a', 30), 2: rows('b', 30), 3: rows('c', 30)};
+        await open();
+        await controller().loadMore();
+        final before = api.calls.length;
+
+        final news = rows('n', 35);
+        api.pages = {
+          1: news.sublist(0, 30),
+          2: [...news.sublist(30), ...rows('a', 25)],
+          3: [...rows('a', 30).sublist(25), ...rows('b', 25)],
+          4: rows('c', 30),
+        };
+        bump();
+        await pumpEventQueue();
+
+        expect(api.calls.length, before + 2, reason: 'Trang 1 rồi trang 2.');
+        expect(ids().take(35), news);
+        expect(ids(), containsAll(rows('b', 30)), reason: 'Giữ phần đã cuộn.');
+        expect(ids().toSet().length, read().items.length);
+        expect(read().cursor.nextBefore, 'p3', reason: 'Giữ con trỏ đã cuộn.');
+      },
+    );
+
+    test('tin mới vượt trần số trang → thay hẳn cửa sổ, con trỏ theo phần '
+        'vừa tải', () async {
+      api.pages = {1: rows('a', 30), 2: rows('b', 30), 3: rows('c', 30)};
+      await open();
+      await controller().loadMore();
+
+      api.pages = {
+        for (var p = 1; p <= 6; p++) p: rows('n${p}x', 30),
+        7: rows('a', 30),
+      };
+      bump();
+      await pumpEventQueue();
+
+      expect(ids().first, 'n1x0');
+      expect(ids(), isNot(contains('b0')), reason: 'Cửa sổ cũ đã bị thay.');
+      expect(ids().toSet().length, read().items.length);
+      expect(read().cursor.hasMore, isTrue);
+      expect(read().loadedBeyondFirstPage, isTrue);
+      final next = read().cursor.nextBefore;
+      await controller().loadMore();
+      expect(api.calls.last.before, next, reason: 'Cuộn tiếp từ phần mới.');
+    });
+
+    // Fix vòng 1 (M2): lượt đầu lỗi, mạng có lại — tín hiệu hay poll phải
+    // cứu được màn, không bắt người dùng tự bấm "Thử lại".
+    test('danh sách đang lỗi: tín hiệu tải lại trang 1', () async {
+      api.pages = {1: rows('a', 3)};
+      api.failNextList = true;
+      container.listen(inboxListProvider, (_, _) {});
+      await expectLater(
+        container.read(inboxListProvider.future),
+        throwsA(anything),
+      );
+      expect(container.read(inboxListProvider).hasError, isTrue);
+
+      bump();
+      await pumpEventQueue();
+
+      expect(ids(), rows('a', 3));
+    });
+
+    test('danh sách đang lỗi: mergeLatest (poll) tải lại trang 1', () async {
+      api.pages = {1: rows('a', 3)};
+      api.failNextList = true;
+      container.listen(inboxListProvider, (_, _) {});
+      await expectLater(
+        container.read(inboxListProvider.future),
+        throwsA(anything),
+      );
+
+      await controller().mergeLatest();
+
+      expect(ids(), rows('a', 3));
+    });
+
+    // Fix vòng 1 (M3): kết quả `refresh()` về sau khi đã đổi bộ lọc thì bỏ.
+    test('refresh về muộn sau khi đổi bộ lọc không ghi đè', () async {
+      api.pages = {1: rows('a', 3)};
+      await open();
+
+      final gate = api.holdNext = Completer<void>();
+      final refreshing = controller().refresh();
+      await Future<void>.delayed(Duration.zero);
+
+      api.pages = {1: rows('u', 2)};
+      container
+          .read(inboxFilterProvider.notifier)
+          .setQuick(InboxQuickFilter.unread);
+      await container.read(inboxListProvider.future);
+      expect(ids(), rows('u', 2));
+
+      gate.complete();
+      await refreshing;
+
+      expect(ids(), rows('u', 2), reason: 'Danh sách cũ không được quay lại.');
+    });
+
+    // Fix vòng 1 (M8): `refresh()` không gọi lại `build` — gọi lại là thêm một
+    // bộ `ref.listen`, và mỗi tín hiệu sau đó gộp trang hai lần.
+    test('sau refresh, một tín hiệu chỉ gây MỘT lượt tải', () async {
+      api.pages = {1: rows('a', 3)};
+      await open();
+      await controller().refresh();
+      final before = api.calls.length;
+
+      bump();
+      await pumpEventQueue();
+
+      expect(api.calls.length, before + 1);
+    });
   });
 }
 
@@ -304,6 +427,9 @@ class _FakeInboxApi extends InboxApi {
   /// Trang nào đang bị giữ lại (mạng chậm) cho tới khi completer xong.
   final holds = <int, Completer<void>>{};
 
+  /// Giữ đúng MỘT lượt gọi kế tiếp (bất kể trang) tới khi completer xong.
+  Completer<void>? holdNext;
+
   @override
   Future<CursorPaged<Conversation>> list({
     required Map<String, dynamic> query,
@@ -315,6 +441,11 @@ class _FakeInboxApi extends InboxApi {
     // Trả dữ liệu của LÚC HỎI — trang về muộn mang dữ liệu cũ.
     final pages = this.pages;
     await holds[page]?.future;
+    final once = holdNext;
+    if (once != null) {
+      holdNext = null;
+      await once.future;
+    }
     if (failNextList) {
       failNextList = false;
       throw const NetworkException('Không có kết nối mạng.');
