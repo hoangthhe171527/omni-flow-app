@@ -70,7 +70,7 @@ class _AssignTaskSheetState extends ConsumerState<_AssignTaskSheet> {
         Flexible(
           child: OmniAsyncView(
             value: members,
-            onRetry: () => ref.invalidate(teamMembersProvider),
+            onRetry: () => ref.invalidate(teamDirectoryProvider),
             isEmpty: (rows) => _visible(rows).isEmpty,
             empty: const OmniEmptyState(
               icon: Icons.person_search_outlined,
@@ -133,8 +133,12 @@ class _AssignTaskSheetState extends ConsumerState<_AssignTaskSheet> {
   List<TeamMember> _visible(List<TeamMember> members) {
     final needle = _search.trim().toLowerCase();
 
-    return members
-        .where((m) => m.isSelectable || _picked.contains(m.userId))
+    // `members` chỉ có người chọn được (`teamMembersProvider`).
+    return withPickedMembers(
+          members,
+          _picked,
+          ref.watch(teamMemberByIdProvider),
+        )
         .where((m) => needle.isEmpty || m.name.toLowerCase().contains(needle))
         .toList();
   }

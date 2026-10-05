@@ -91,7 +91,7 @@ void main() {
     ];
     await tester.pumpWidget(
       ProviderScope(
-        overrides: [teamMembersProvider.overrideWith((ref) async => members)],
+        overrides: [teamDirectoryProvider.overrideWith((ref) async => members)],
         child: MaterialApp(
           theme: OmniTheme.light(TargetPlatform.android),
           home: Scaffold(
@@ -112,6 +112,120 @@ void main() {
     expect(find.text('Lan'), findsOneWidget);
     expect(find.text('Khách mời'), findsNothing);
   });
+
+  // Review I2: trần 60 trang (6.000 người) phải giữ dù server báo nhiều hơn,
+  // và các lượt đọc chạy song song có giới hạn, không tuần tự 120 vòng mạng.
+  test('dừng ở trần 60 trang; tối đa 4 lượt cùng lúc', () async {
+    final counting = _CountingAdapter(lastPage: 100);
+    final members = await TeamApi(
+      ApiClient(Dio()..httpClientAdapter = counting),
+    ).members();
+
+    expect(counting.membershipPages.toSet(), {
+      for (var p = 1; p <= TeamApi.maxPages; p++) p,
+    });
+    expect(counting.membershipPages, hasLength(TeamApi.maxPages));
+    expect(members, hasLength(TeamApi.maxPages));
+    expect(counting.maxInFlight, lessThanOrEqualTo(TeamApi.parallelism));
+    expect(counting.maxInFlight, greaterThan(1));
+  });
+
+  // Review I1: một người có hai membership (dòng cũ đã nghỉ, dòng mới) →
+  // một dòng: dòng đang làm, không có thì dòng mới nhất.
+  test(
+    'hai membership của một người: ưu tiên dòng đang làm, rồi dòng mới',
+    () async {
+      adapter = _DirectoryAdapter(
+        pages: [
+          [
+            {
+              'id': 'm-new-off',
+              'user_id': 'u1',
+              'status': 'inactive',
+              'created_at': '2026-09-01T00:00:00.000000Z',
+            },
+            {
+              'id': 'm-old-on',
+              'user_id': 'u1',
+              'status': 'active',
+              'created_at': '2025-01-01T00:00:00.000000Z',
+            },
+            {
+              'id': 'm-old-off',
+              'user_id': 'u2',
+              'status': 'inactive',
+              'created_at': '2024-01-01T00:00:00.000000Z',
+            },
+            {
+              'id': 'm-new-off2',
+              'user_id': 'u2',
+              'status': 'inactive',
+              'created_at': '2026-01-01T00:00:00.000000Z',
+            },
+          ],
+        ],
+      );
+      final members = await TeamApi(
+        ApiClient(Dio()..httpClientAdapter = adapter),
+      ).members();
+
+      expect(members.map((m) => m.membershipId), ['m-old-on', 'm-new-off2']);
+    },
+  );
+}
+
+/// `/memberships` có [lastPage] trang, mỗi trang một người; đo số lượt đang
+/// bay cùng lúc.
+class _CountingAdapter implements HttpClientAdapter {
+  _CountingAdapter({required this.lastPage});
+
+  final int lastPage;
+  final membershipPages = <int>[];
+  int _inFlight = 0;
+  int maxInFlight = 0;
+
+  @override
+  Future<ResponseBody> fetch(
+    RequestOptions options,
+    Stream<Uint8List>? requestStream,
+    Future<void>? cancelFuture,
+  ) async {
+    _inFlight++;
+    if (_inFlight > maxInFlight) maxInFlight = _inFlight;
+    await Future<void>.delayed(const Duration(milliseconds: 2));
+    _inFlight--;
+
+    final query = options.uri.queryParameters;
+    final Map<String, dynamic> body;
+    if (options.uri.path.endsWith('/memberships')) {
+      final page = int.parse(query['page'] ?? '1');
+      membershipPages.add(page);
+      body = {
+        'success': true,
+        'data': [
+          {'id': 'm$page', 'user_id': 'u$page', 'status': 'active'},
+        ],
+        'pagination': {
+          'current_page': page,
+          'last_page': lastPage,
+          'per_page': 100,
+          'total': lastPage,
+        },
+      };
+    } else {
+      body = {'success': true, 'data': <Object>[]};
+    }
+    return ResponseBody.fromString(
+      jsonEncode(body),
+      200,
+      headers: {
+        Headers.contentTypeHeader: [Headers.jsonContentType],
+      },
+    );
+  }
+
+  @override
+  void close({bool force = false}) {}
 }
 
 class _DirectoryAdapter implements HttpClientAdapter {

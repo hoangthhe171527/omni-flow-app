@@ -56,7 +56,7 @@ void main() {
       planTasksProvider.overrideWith(
         (ref, id) async => (tasks: tasks, truncated: false),
       ),
-      teamMembersProvider.overrideWith(
+      teamDirectoryProvider.overrideWith(
         (ref) async => const [
           TeamMember(membershipId: 'm1', userId: 'u-hang-ni', name: 'Hằng Ni'),
           TeamMember(membershipId: 'm2', userId: 'u-luan', name: 'Luận'),

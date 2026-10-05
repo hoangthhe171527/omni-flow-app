@@ -69,15 +69,15 @@ class _AssignSheetState extends ConsumerState<AssignSheet> {
             child: OmniAsyncView(
               value: members,
               loading: const OmniSkeletonList(count: 4, height: 56),
-              onRetry: () => ref.invalidate(teamMembersProvider),
+              onRetry: () => ref.invalidate(teamDirectoryProvider),
               data: (list) {
                 final filtered = list
                     .where(
                       (member) =>
-                          // Chỉ người đang làm và đã nhận lời mời (APP-I10).
-                          member.isSelectable &&
-                          (_search.isEmpty ||
-                              member.name.toLowerCase().contains(_search)),
+                          // `teamMembersProvider` chỉ có người chọn được
+                          // (đang làm, đã nhận lời mời — APP-I10).
+                          _search.isEmpty ||
+                          member.name.toLowerCase().contains(_search),
                     )
                     .toList();
 

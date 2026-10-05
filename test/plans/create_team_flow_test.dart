@@ -25,7 +25,7 @@ void main() {
       ProviderScope(
         overrides: [
           plansApiProvider.overrideWithValue(api),
-          teamMembersProvider.overrideWith(
+          teamDirectoryProvider.overrideWith(
             (ref) async => [
               TeamMember.fromJson(
                 const {'id': 'm-1', 'user_id': 'u-1'},

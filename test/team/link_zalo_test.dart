@@ -44,7 +44,7 @@ void main() {
         teamApiProvider.overrideWithValue(
           TeamApi(ApiClient(Dio()..httpClientAdapter = adapter)),
         ),
-        teamMembersProvider.overrideWith((ref) async => members),
+        teamDirectoryProvider.overrideWith((ref) async => members),
         sessionProvider.overrideWithValue(
           Session(
             status: SessionStatus.authenticated,

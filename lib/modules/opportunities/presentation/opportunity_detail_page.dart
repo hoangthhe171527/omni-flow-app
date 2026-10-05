@@ -246,7 +246,8 @@ class OpportunityDetailPage extends ConsumerWidget {
   static String _ownerLabel(WidgetRef ref, Opportunity data) {
     final ownerId = data.ownerId;
     if (ownerId == null || ownerId.isEmpty) return data.ownerName ?? 'Chưa gán';
-    return ref.watch(teamMemberByIdProvider)[ownerId]?.name ??
+    // Tra MỘT tên (`teamUserNameProvider`), không kéo cả danh bạ (review I2).
+    return ref.watch(teamUserNameProvider(ownerId)).valueOrNull ??
         data.ownerName ??
         '—';
   }

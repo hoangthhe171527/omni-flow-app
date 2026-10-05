@@ -8,6 +8,9 @@ import 'package:omni_app/modules/opportunities/domain/opportunity.dart';
 import 'package:omni_app/modules/opportunities/domain/pipeline_catalog.dart';
 import 'package:omni_app/modules/opportunities/presentation/opportunity_detail_page.dart';
 import 'package:omni_app/security/permissions/access_scope.dart';
+import 'package:dio/dio.dart';
+import 'package:omni_app/core/network/api_client.dart';
+import 'package:omni_app/modules/team/data/team_api.dart';
 import 'package:omni_app/modules/team/team.dart';
 import 'package:omni_app/security/permissions/resource_access.dart';
 
@@ -19,6 +22,8 @@ import 'package:omni_app/security/permissions/resource_access.dart';
 /// đoạn được — đó là đường mở lại cơ hội.
 void main() {
   setUpAll(() => initializeDateFormatting('vi_VN'));
+
+  late _FakeTeamApi teamApi;
 
   Widget host(
     String? status, {
@@ -41,7 +46,7 @@ void main() {
         opportunityAccessProvider.overrideWithValue(
           const ResourceAccess(readScope: AccessScope.all, canUpdate: true),
         ),
-        teamMembersProvider.overrideWith((ref) async => members),
+        teamApiProvider.overrideWithValue(teamApi = _FakeTeamApi(members)),
         pipelineCatalogProvider.overrideWith(
           (ref) async => const PipelineCatalog(defaultCode: '', pipelines: []),
         ),
@@ -100,6 +105,8 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Lan'), findsOneWidget);
+    // Một cái tên — không kéo cả danh bạ (review I2).
+    expect(teamApi.directoryLoads, 0);
     expect(find.text('Chưa gán'), findsNothing);
   });
 
@@ -132,4 +139,26 @@ void main() {
     expect(find.textContaining('tạo đơn hàng'), findsOneWidget);
     expect(find.textContaining('tính vào doanh thu'), findsNothing);
   });
+}
+
+/// Tra tên theo id; đếm số lần bị kéo cả danh bạ.
+class _FakeTeamApi extends TeamApi {
+  _FakeTeamApi(this._members) : super(ApiClient(Dio()));
+
+  final List<TeamMember> _members;
+  int directoryLoads = 0;
+
+  @override
+  Future<List<TeamMember>> members({String? search}) async {
+    directoryLoads++;
+    return _members;
+  }
+
+  @override
+  Future<String?> userName(String userId) async {
+    for (final member in _members) {
+      if (member.userId == userId) return member.name;
+    }
+    return null;
+  }
 }
