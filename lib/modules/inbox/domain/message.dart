@@ -215,6 +215,7 @@ class Message {
     String? replyToText,
     String? replyToAuthorName,
     bool? pinned,
+    List<MessageAttachment>? attachments,
   }) {
     return Message(
       id: id ?? this.id,
@@ -233,7 +234,7 @@ class Message {
       replyToMessageId: replyToMessageId ?? this.replyToMessageId,
       replyToText: replyToText ?? this.replyToText,
       replyToAuthorName: replyToAuthorName ?? this.replyToAuthorName,
-      attachments: attachments,
+      attachments: attachments ?? this.attachments,
     );
   }
 }

@@ -192,6 +192,82 @@ void main() {
       expect(read().messages.map((m) => m.id), ['m1', 'm2']);
     });
   });
+
+  // Đợt 7 P3 (INB-I22): tải ảnh lỗi nghĩa là CHƯA gửi gì. Trước đây bản nháp
+  // không có ảnh, lỗi upload bị `_dispatch` nuốt: composer tưởng đã gửi và xoá
+  // khay, còn "Gửi lại" gửi body rỗng và nhận 422 mãi.
+  group('gửi kèm ảnh', () {
+    const photo = MessageAttachment(
+      url: 'https://api.x/inbox/media/t1/a.jpg',
+      type: 'image',
+      name: 'a.jpg',
+    );
+
+    test('upload lỗi → ném lại, không bong bóng, không gửi chữ', () async {
+      api.history = [_serverMessage('m1', 'Chào shop')];
+      await open();
+
+      await expectLater(
+        controller().sendAfterUpload(
+          'Ảnh đây',
+          attachments: Future<List<MessageAttachment>>.error(
+            const ValidationException('Ảnh quá lớn.'),
+          ),
+        ),
+        throwsA(isA<ValidationException>()),
+      );
+
+      expect(read().pending, isEmpty);
+      expect(
+        api.sendCalls,
+        isEmpty,
+        reason: 'Không gửi nửa vời chữ không ảnh.',
+      );
+    });
+
+    test(
+      'upload xong, gửi lỗi → bong bóng failed mang đủ ảnh; Gửi lại gửi ảnh',
+      () async {
+        api.history = [_serverMessage('m1', 'Chào shop')];
+        await open();
+
+        api.failNextSendWith = const ServerException('Máy chủ đang gặp sự cố.');
+        await controller().sendAfterUpload(
+          'Ảnh đây',
+          attachments: Future.value(const [photo]),
+        );
+
+        final failed = read().pending.single;
+        expect(failed.status, DeliveryStatus.failed);
+        expect(failed.attachments.map((a) => a.url), [photo.url]);
+
+        await controller().retry(failed);
+
+        expect(api.sendCalls.last.map((a) => a.url), [photo.url]);
+        expect(read().pending, isEmpty);
+      },
+    );
+  });
+
+  // Đợt 7 P3 (A4): `message.sent` làm luồng tải lại TRƯỚC phản hồi POST → cùng
+  // một tin vừa trong lịch sử vừa trong hộp gửi đi.
+  test('tin server trùng clientId với bản đang gửi → hiện một lần', () {
+    final state = ThreadState(
+      messages: [
+        Message.fromJson({
+          'id': 'srv-1',
+          'client_message_id': 'k1',
+          'from': 'agent',
+          'text': 'Dạ em chào anh',
+          'sent_at': DateTime.utc(2026, 1, 1, 9).toIso8601String(),
+        }),
+      ],
+      pending: [Message.optimistic(text: 'Dạ em chào anh', clientId: 'k1')],
+    );
+
+    expect(state.visible, hasLength(1));
+    expect(state.visible.single.id, 'srv-1');
+  });
 }
 
 /// Server messages are minute-stamped from the digits in their id, so `m1`
@@ -217,6 +293,12 @@ class _FakeInboxApi extends InboxApi {
   List<Message> older = const [];
   bool hasMore = false;
   bool failNextSend = false;
+
+  /// Khi đặt, lượt `send` kế tiếp ném lỗi này (một lần).
+  AppException? failNextSendWith;
+
+  /// Ảnh của từng lượt `send` đã tới "server".
+  final sendCalls = <List<MessageAttachment>>[];
 
   /// Blocks the next history fetch until completed, so a test can interleave.
   Completer<void>? holdNextFetch;
@@ -254,15 +336,25 @@ class _FakeInboxApi extends InboxApi {
     String? replyToMessageId,
     String? clientMessageId,
   }) async {
+    sendCalls.add(attachments);
     if (failNextSend) {
       failNextSend = false;
       throw const NetworkException('Không có kết nối mạng.');
+    }
+    final failure = failNextSendWith;
+    if (failure != null) {
+      failNextSendWith = null;
+      throw failure;
     }
     return Message.fromJson({
       'id': 'srv-${++_sent}',
       'client_message_id': clientMessageId,
       'from': 'agent',
       'text': text,
+      'attachments': [
+        for (final a in attachments)
+          {'url': a.url, 'type': a.type, 'name': a.name},
+      ],
       'status': 'sent',
       'sent_at': DateTime.utc(2026, 1, 1, 9, _sent).toIso8601String(),
     });

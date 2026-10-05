@@ -343,6 +343,11 @@ class _ThreadPageState extends ConsumerState<ThreadPage>
                     } on AppException catch (error) {
                       _toast(error.message);
                       rethrow;
+                    } on Object {
+                      // Lỗi ngoài API (đọc tệp hỏng…): vẫn báo, và ném lại để
+                      // composer giữ chữ và khay ảnh (INB-I22).
+                      _toast('Không tải ảnh lên được. Vui lòng thử lại.');
+                      rethrow;
                     }
                   }
                   if (mounted) setState(() => _replyingTo = null);
