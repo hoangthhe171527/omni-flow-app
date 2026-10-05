@@ -92,7 +92,9 @@ class CustomerDetailPage extends ConsumerWidget {
                       Expanded(
                         child: OmniStatTile(
                           label: 'Tương tác',
-                          value: Formatters.relative(data.lastInteractionAt),
+                          value: data.lastInteractionAt == null
+                              ? '—'
+                              : Formatters.relative(data.lastInteractionAt),
                         ),
                       ),
                     ],

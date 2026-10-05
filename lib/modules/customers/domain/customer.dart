@@ -40,7 +40,7 @@ class Customer {
     this.taxCode = '',
     this.source = Channel.web,
     this.tags = const [],
-    this.lifetimeValue = 0,
+    this.lifetimeValue,
     this.status = CustomerStatus.fresh,
     this.customerType = 'DIRECT_CLIENT',
     this.ownerId,
@@ -78,20 +78,20 @@ class Customer {
       // `source` is the web's key; `channel` is what older app builds wrote.
       source: Channel.parse(metadata.str('source') ?? metadata.str('channel')),
       tags: metadata.strList('tags'),
-      // `orders_total` (sum of orders) only comes from `/customers/accounts`;
-      // `/customers` carries the stored `lifetime_booking_value`.
-      lifetimeValue:
-          json.dbl('orders_total') ?? json.dbl('lifetime_booking_value') ?? 0,
+      // `orders_total` = tổng đơn không huỷ, API trả ở `/customers` và
+      // `/customers/{id}` từ Đợt 7 (A1). API cũ chưa có khoá này → null ("—"):
+      // `lifetime_booking_value` là số nhập cũ không ai cập nhật, hiện nó là
+      // hiện số sai (GD-I11, APP-I4).
+      lifetimeValue: json.dbl('orders_total'),
       status: CustomerStatus.parse(json.str('customer_status')),
       rawStatus: json.str('customer_status'),
       customerType: json.strOr('customer_type', 'DIRECT_CLIENT'),
       ownerId: json.str('assigned_sales_rep_id'),
       ownerName: json.str('assigned_sales_rep_name'),
       note: _noteOf(metadata),
-      lastInteractionAt:
-          DateUtilsX.parse(json['last_interaction_at']) ??
-          DateUtilsX.parse(json['last_booking_date']) ??
-          DateUtilsX.parse(json['updated_at']),
+      // Chỉ `last_interaction_at` (API A1). Sửa thông tin khách không phải là
+      // liên hệ, nên không rơi về `updated_at`/`last_booking_date` (Q8a).
+      lastInteractionAt: DateUtilsX.parse(json['last_interaction_at']),
       createdAt: DateUtilsX.parse(json['created_at']),
       metadata: metadata,
     );
@@ -114,7 +114,7 @@ class Customer {
   final String taxCode;
   final Channel source;
   final List<String> tags;
-  final double lifetimeValue;
+  final double? lifetimeValue;
   final CustomerStatus status;
   final String customerType;
   final String? ownerId;

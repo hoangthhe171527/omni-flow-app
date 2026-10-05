@@ -7,11 +7,20 @@ import '../../../core/utils/json.dart';
 import '../domain/customer.dart';
 
 class DuplicateMatch {
-  const DuplicateMatch({required this.id, required this.name, this.phone});
+  const DuplicateMatch({
+    required this.id,
+    required this.name,
+    this.phone,
+    this.inScope = true,
+  });
 
   final String id;
   final String name;
   final String? phone;
+
+  /// `in_scope` của `check-duplicate`: false = hồ sơ do người khác phụ trách,
+  /// mọi khoá liên hệ bị che và mở ra là 403 — không có nút "Xem".
+  final bool inScope;
 }
 
 class CustomersApi {
@@ -71,11 +80,16 @@ class CustomersApi {
 
     final id = match.str('id');
     if (id == null) return null;
+    // API cũ không có khoá `in_scope` → coi như trong phạm vi, như trước.
+    final inScope = match['in_scope'] != false;
     return DuplicateMatch(
       id: id,
-      name:
-          match.str('display_name') ?? match.strOr('legal_name', 'Khách hàng'),
+      name: inScope
+          ? match.str('display_name') ?? match.strOr('legal_name', 'Khách hàng')
+          // Cùng câu với 422 của `/convert` (Đợt 6).
+          : 'Hồ sơ do người khác phụ trách',
       phone: match.str('primary_contact_phone'),
+      inScope: inScope,
     );
   }
 }

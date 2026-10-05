@@ -259,7 +259,7 @@ class CustomerCard extends StatelessWidget {
                         // Lifetime value is the one number worth scanning a
                         // customer list for, so it keeps its place — right
                         // aligned and tabular so the column reads straight down.
-                        if (customer.lifetimeValue > 0) ...[
+                        if ((customer.lifetimeValue ?? 0) > 0) ...[
                           const SizedBox(width: 8),
                           Text(
                             Formatters.vndCompact(customer.lifetimeValue),

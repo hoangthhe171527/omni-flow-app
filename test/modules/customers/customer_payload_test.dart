@@ -242,23 +242,29 @@ void main() {
   });
 
   group('số liệu', () {
-    test('giá trị trọn đời đọc orders_total, rồi lifetime_booking_value', () {
+    // Tổng giá trị = tổng đơn không huỷ (`orders_total`, API Đợt 7 A1). API cũ
+    // chưa có khoá này thì hiện "—": `lifetime_booking_value` là số adcanvas cũ
+    // không ai cập nhật (GD-I11, APP-I4, Review Focus #1).
+    test('giá trị trọn đời chỉ đọc orders_total', () {
       expect(
         Customer.fromJson({
           'id': 'c1',
-          'orders_total': 1500000.0,
+          'orders_total': 3200000,
           'lifetime_booking_value': '9',
         }).lifetimeValue,
-        1500000,
+        3200000,
       );
       expect(
         Customer.fromJson({
           'id': 'c1',
-          'lifetime_booking_value': '2500000',
+          'lifetime_booking_value': 9e6,
         }).lifetimeValue,
-        2500000,
+        isNull,
       );
-      expect(Customer.fromJson({'id': 'c1'}).lifetimeValue, 0);
+      expect(
+        Customer.fromJson({'id': 'c1', 'orders_total': 0}).lifetimeValue,
+        0,
+      );
     });
 
     test('tương tác gần nhất: last_interaction_at trước updated_at', () {
@@ -268,6 +274,17 @@ void main() {
         'updated_at': '2026-09-30T03:00:00Z',
       });
       expect(c.lastInteractionAt!.toUtc().day, 20);
+    });
+
+    // Sửa thông tin khách không phải là "liên hệ": thiếu `last_interaction_at`
+    // thì không có mốc, không rơi về `updated_at`/`last_booking_date` (Q8a).
+    test('không có last_interaction_at → không có mốc tương tác', () {
+      final c = Customer.fromJson({
+        'id': 'c1',
+        'updated_at': '2026-09-30T03:00:00Z',
+        'last_booking_date': '2026-09-29T03:00:00Z',
+      });
+      expect(c.lastInteractionAt, isNull);
     });
   });
 }

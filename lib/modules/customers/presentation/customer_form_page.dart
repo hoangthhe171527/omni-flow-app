@@ -229,10 +229,13 @@ class _CustomerFormPageState extends ConsumerState<CustomerFormPage> {
               const SizedBox(height: OmniSpacing.sm),
               _DuplicateNotice(
                 name: _duplicate!.name,
-                onOpen: () => context.pushReplacementNamed(
-                  CustomersModule.detail,
-                  pathParameters: {'id': _duplicate!.id},
-                ),
+                // Hồ sơ ngoài phạm vi: mở ra là 403, nên không có "Xem".
+                onOpen: _duplicate!.inScope
+                    ? () => context.pushReplacementNamed(
+                        CustomersModule.detail,
+                        pathParameters: {'id': _duplicate!.id},
+                      )
+                    : null,
               ),
             ],
             const SizedBox(height: OmniSpacing.lg),
@@ -356,10 +359,12 @@ class _CustomerFormPageState extends ConsumerState<CustomerFormPage> {
 
 /// "Số điện thoại này đã tồn tại — Nguyễn Thị Lan · Xem" trên nền vàng nhạt.
 class _DuplicateNotice extends StatelessWidget {
-  const _DuplicateNotice({required this.name, required this.onOpen});
+  const _DuplicateNotice({required this.name, this.onOpen});
 
   final String name;
-  final VoidCallback onOpen;
+
+  /// null = hồ sơ do người khác phụ trách: không dựng nút "Xem".
+  final VoidCallback? onOpen;
 
   @override
   Widget build(BuildContext context) {
@@ -387,11 +392,15 @@ class _DuplicateNotice extends StatelessWidget {
               style: OmniType.body.copyWith(color: foreground),
             ),
           ),
-          TextButton(
-            onPressed: onOpen,
-            style: TextButton.styleFrom(foregroundColor: foreground),
-            child: const Text('Xem'),
-          ),
+          if (onOpen != null)
+            TextButton(
+              onPressed: onOpen,
+              style: TextButton.styleFrom(foregroundColor: foreground),
+              child: const Text('Xem'),
+            )
+          else
+            // Giữ chiều cao dải như khi có nút.
+            const SizedBox(width: 10, height: 40),
         ],
       ),
     );
