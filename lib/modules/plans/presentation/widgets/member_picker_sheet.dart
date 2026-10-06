@@ -64,11 +64,20 @@ class _MemberPickerSheetState extends ConsumerState<_MemberPickerSheet> {
             Flexible(
               child: members.when(
                 data: (all) {
-                  final shown = _query.isEmpty
-                      ? all
-                      : all
-                            .where((m) => m.name.toLowerCase().contains(_query))
-                            .toList();
+                  // `all` chỉ có người chọn được (APP-I10); người đã chọn
+                  // sẵn mà nay không chọn được vẫn hiện để còn bỏ chọn.
+                  final shown =
+                      withPickedMembers(
+                            all,
+                            _selected,
+                            ref.watch(teamMemberByIdProvider),
+                          )
+                          .where(
+                            (m) =>
+                                _query.isEmpty ||
+                                m.name.toLowerCase().contains(_query),
+                          )
+                          .toList();
 
                   if (shown.isEmpty) {
                     return OmniEmptyState(
@@ -117,7 +126,7 @@ class _MemberPickerSheetState extends ConsumerState<_MemberPickerSheet> {
                 ),
                 error: (e, _) => OmniErrorView(
                   error: e,
-                  onRetry: () => ref.invalidate(teamMembersProvider),
+                  onRetry: () => ref.invalidate(teamDirectoryProvider),
                 ),
               ),
             ),

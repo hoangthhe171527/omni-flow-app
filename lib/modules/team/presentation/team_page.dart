@@ -19,7 +19,7 @@ class TeamPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final members = ref.watch(teamMembersProvider);
+    final members = ref.watch(teamDirectoryProvider);
     final scheme = Theme.of(context).colorScheme;
     // Liên kết Zalo là thao tác của người có thẩm quyền — xem doc của
     // `TeamMember.zaloUserId`. Ai không có quyền thì thẻ chỉ đọc như cũ.
@@ -34,8 +34,10 @@ class TeamPage extends ConsumerWidget {
     return Scaffold(
       appBar: const OmniAppBar(title: 'Nhân viên'),
       body: OmniAsyncView(
-        value: members,
-        onRetry: () => ref.invalidate(teamMembersProvider),
+        // Danh bạ nạp cả người đã nghỉ (để tra tên trong lịch sử); màn này giữ
+        // như trước: người đang làm, kể cả lời mời chưa nhận ("Đang chờ").
+        value: members.whenData((all) => all.where((m) => m.isActive).toList()),
+        onRetry: () => ref.invalidate(teamDirectoryProvider),
         isEmpty: (list) => list.isEmpty,
         empty: const OmniEmptyState(
           icon: Icons.group_outlined,
@@ -109,10 +111,14 @@ class TeamPage extends ConsumerWidget {
                             ),
                           const SizedBox(height: 4),
                           OmniBadge(
-                            label: member.isActive
+                            label: member.isPending
+                                ? 'Đang chờ'
+                                : member.isActive
                                 ? member.roleLabel
                                 : 'Ngừng hoạt động',
-                            tone: member.isActive
+                            tone: member.isPending
+                                ? OmniTone.warning
+                                : member.isActive
                                 ? OmniTone.info
                                 : OmniTone.neutral,
                           ),
@@ -175,7 +181,7 @@ Future<void> _linkZalo(
 
   try {
     await ref.read(teamApiProvider).setZaloUserId(member.membershipId, saved);
-    ref.invalidate(teamMembersProvider);
+    ref.invalidate(teamDirectoryProvider);
   } on AppException catch (e) {
     messenger.showSnackBar(SnackBar(content: Text(e.message)));
   }

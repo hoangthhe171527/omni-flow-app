@@ -71,6 +71,9 @@ class _ThreadPageState extends ConsumerState<ThreadPage>
     _startRealtimeFallback();
     // Opening a thread is the act of reading it.
     Future.microtask(() async {
+      // `/read` cần `inbox.write` (routes.php:49). Người chỉ đọc không gọi:
+      // số chưa đọc là của hội thoại, giữ cho người phụ trách (INB-I28, Q3).
+      if (!ref.read(inboxAccessProvider).canSend) return;
       try {
         await ref.read(inboxApiProvider).markRead(widget.conversationId);
         // Patch the ROW too, not just the filter counts. patch()'s own
@@ -302,7 +305,8 @@ class _ThreadPageState extends ConsumerState<ThreadPage>
                         .read(threadProvider(widget.conversationId).notifier)
                         .discard(message.id),
                     onReply: (message) => setState(() => _replyingTo = message),
-                    onPin: _togglePin,
+                    // `/pin` cần `inbox.write`; null thì menu ẩn mục "Ghim".
+                    onPin: access.canSend ? _togglePin : null,
                     keyForMessage: _keyForMessage,
                   ),
                 ),
@@ -338,6 +342,11 @@ class _ThreadPageState extends ConsumerState<ThreadPage>
                       );
                     } on AppException catch (error) {
                       _toast(error.message);
+                      rethrow;
+                    } on Object {
+                      // Lỗi ngoài API (đọc tệp hỏng…): vẫn báo, và ném lại để
+                      // composer giữ chữ và khay ảnh (INB-I22).
+                      _toast('Không tải ảnh lên được. Vui lòng thử lại.');
                       rethrow;
                     }
                   }
@@ -735,7 +744,7 @@ class _MessageList extends StatelessWidget {
   final void Function(Message message) onRetry;
   final void Function(Message message) onDiscard;
   final void Function(Message message) onReply;
-  final void Function(Message message) onPin;
+  final void Function(Message message)? onPin;
   final GlobalKey Function(String id) keyForMessage;
 
   @override
@@ -818,7 +827,7 @@ class _MessageList extends StatelessWidget {
                     ? () => onDiscard(message)
                     : null,
                 onReply: () => onReply(message),
-                onPin: () => onPin(message),
+                onPin: onPin == null ? null : () => onPin!(message),
               ),
             ],
           ),
@@ -827,8 +836,9 @@ class _MessageList extends StatelessWidget {
     );
   }
 
-  bool _sameDay(DateTime a, DateTime b) =>
-      a.year == b.year && a.month == b.month && a.day == b.day;
+  /// Ngày theo giờ VN như tiêu đề dải ngày (`Formatters.dayHeader`), không
+  /// theo ngày UTC hay múi máy (APP-I14).
+  bool _sameDay(DateTime a, DateTime b) => VnTime.day(a) == VnTime.day(b);
 }
 
 class _DaySeparator extends StatelessWidget {

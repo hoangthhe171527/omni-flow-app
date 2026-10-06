@@ -9,6 +9,7 @@ import '../../../core/utils/formatters.dart';
 import '../../../design/components/components.dart';
 import '../../../design/tokens/tokens.dart';
 import '../../customers/routes.dart';
+import '../../team/team.dart';
 import '../application/opportunities_providers.dart';
 import '../domain/opportunity.dart';
 import '../domain/pipeline_catalog.dart';
@@ -125,7 +126,7 @@ class OpportunityDetailPage extends ConsumerWidget {
                       ),
                       OmniDetailRow(
                         label: 'Phụ trách',
-                        value: data.ownerName ?? 'Chưa gán',
+                        value: _ownerLabel(ref, data),
                       ),
                       OmniDetailRow(
                         label: 'Giá trị kỳ vọng',
@@ -239,11 +240,24 @@ class OpportunityDetailPage extends ConsumerWidget {
     }
   }
 
+  /// Người phụ trách là `owner_user_id`, tên tra trong danh bạ. `metadata.
+  /// owner_name` không ai ghi (OPP-X7) — chỉ còn là dự phòng cho bản ghi cũ.
+  /// Có người phụ trách mà không tra được tên thì "—", không nói "Chưa gán".
+  static String _ownerLabel(WidgetRef ref, Opportunity data) {
+    final ownerId = data.ownerId;
+    if (ownerId == null || ownerId.isEmpty) return data.ownerName ?? 'Chưa gán';
+    // Tra MỘT tên (`teamUserNameProvider`), không kéo cả danh bạ (review I2).
+    return ref.watch(teamUserNameProvider(ownerId)).valueOrNull ??
+        data.ownerName ??
+        '—';
+  }
+
   Future<void> _markWon(BuildContext context, WidgetRef ref) async {
     final confirmed = await showOmniConfirm(
       context: context,
       title: 'Đánh dấu thắng?',
-      message: 'Cơ hội sẽ chuyển sang giai đoạn Thắng và tính vào doanh thu.',
+      message:
+          'Cơ hội sẽ chuyển sang Thắng và tạo đơn hàng. Doanh thu chỉ tính khi ghi nhận thu tiền.',
       confirmLabel: 'Xác nhận',
     );
     if (!confirmed) return;

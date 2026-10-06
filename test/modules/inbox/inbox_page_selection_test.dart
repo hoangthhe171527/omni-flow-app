@@ -157,13 +157,13 @@ class _FakeInboxApi extends InboxApi {
   final labelCalls = <_LabelCall>[];
 
   @override
-  Future<Paged<Conversation>> list({
+  Future<CursorPaged<Conversation>> list({
     required Map<String, dynamic> query,
-    int page = 1,
+    String? before,
     int perPage = AppConfig.defaultPerPage,
   }) async {
     listCalls++;
-    return Paged(items: conversations, pagination: const ApiPagination.empty());
+    return CursorPaged(items: conversations);
   }
 
   @override

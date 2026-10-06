@@ -96,6 +96,12 @@ class AuthApi implements AuthGateway {
         );
       }).toList(),
       policy: AccessPolicy(context.strList('permissions').toSet()),
+      // Đợt 7 P5 (MS-I33): `{khoá: bool}` từ 6b B3; giá trị không phải bool
+      // bỏ qua (coi như thiếu → bật).
+      features: {
+        for (final e in context.child('features').entries)
+          if (e.value is bool) e.key: e.value as bool,
+      },
     );
   }
 

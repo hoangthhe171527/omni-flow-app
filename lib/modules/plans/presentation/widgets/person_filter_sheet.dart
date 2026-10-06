@@ -67,7 +67,11 @@ class _PersonFilterSheet extends ConsumerWidget {
                 shrinkWrap: true,
                 padding: EdgeInsets.zero,
                 children: [
-                  for (final member in list)
+                  // `list` chỉ có người chọn được (APP-I10); người đang lọc
+                  // mà nay không chọn được vẫn hiện để thấy mình lọc ai.
+                  for (final member in withPickedMembers(list, [
+                    ?current.userId,
+                  ], ref.watch(teamMemberByIdProvider)))
                     _Row(
                       icon: Icons.person_outline_rounded,
                       label: member.name,

@@ -1,3 +1,5 @@
+import 'dart:io' show HttpDate, HttpException;
+
 import 'package:dio/dio.dart';
 
 import '../error/app_exception.dart';
@@ -44,16 +46,49 @@ AppException mapDioException(DioException error) {
       errors: _fieldErrors(map['errors']),
       reason: _reason(map),
     ),
+    429 => _rateLimited(message, error.response?.headers.value('retry-after')),
     _ when status != null && status >= 500 => ServerException(
       message ?? 'Máy chủ đang gặp sự cố.',
       code: '$status',
     ),
-    _ => NetworkException(
-      message ?? error.message ?? 'Đã có lỗi xảy ra.',
-      code: status?.toString(),
+    // Không dùng `error.message` của Dio: đó là câu tiếng Anh cho lập trình
+    // viên ("This exception was thrown because the response has a status
+    // code of 409…") — APP-I7.
+    null => const NetworkException('Không kết nối được máy chủ.'),
+    _ => RequestRejectedException(
+      message ?? 'Yêu cầu không thực hiện được (mã $status).',
+      code: '$status',
     ),
   };
 }
+
+RateLimitedException _rateLimited(String? message, String? retryAfter) {
+  final retry = parseRetryAfter(retryAfter);
+  return RateLimitedException(
+    message ?? _rateLimitText(retry),
+    retryAfter: retry,
+  );
+}
+
+/// `Retry-After`: số giây, hoặc ngày giờ HTTP. Hỏng/thiếu → null.
+Duration? parseRetryAfter(String? value, {DateTime? now}) {
+  if (value == null || value.trim().isEmpty) return null;
+  final seconds = int.tryParse(value.trim());
+  if (seconds != null) return Duration(seconds: seconds < 0 ? 0 : seconds);
+  try {
+    final at = HttpDate.parse(value.trim());
+    final diff = at.difference(now ?? DateTime.now().toUtc());
+    return diff.isNegative ? Duration.zero : diff;
+  } on FormatException {
+    return null;
+  } on HttpException {
+    return null;
+  }
+}
+
+String _rateLimitText(Duration? retry) => retry == null || retry.inSeconds <= 0
+    ? 'Bạn thao tác quá nhanh. Vui lòng thử lại sau ít phút.'
+    : 'Bạn thao tác quá nhanh. Vui lòng thử lại sau ${retry.inSeconds} giây.';
 
 /// Những mẩu chỉ xuất hiện trong lời của KHUNG, không phải lời của sản phẩm.
 ///

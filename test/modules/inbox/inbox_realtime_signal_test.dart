@@ -163,7 +163,7 @@ void main() {
         expect(h.api.listCalls, 2, reason: 'Không tải lại trang 1.');
         expect(list(h).items.first.id, 'moi');
         expect(list(h).items, hasLength(41));
-        expect(list(h).pagination.currentPage, 2, reason: 'Giữ trang đã tải.');
+        expect(list(h).cursor.nextBefore, 'p3', reason: 'Giữ trang đã tải.');
       },
     );
 
@@ -369,6 +369,89 @@ void main() {
     },
   );
 
+  // Fix vòng 1 (M7): một tin gửi phát HAI `message.sent` — A4 lúc API nhận
+  // (`{message_id, direction:'out'}`) và worker lúc giao xong (`{message_id,
+  // status}`), thường cách nhau quá cửa sổ 400 ms. Mỗi cái từng tải lại cả
+  // luồng.
+  group('message.sent', () {
+    Future<(_Harness, int Function())> opened(WidgetTester tester) async {
+      final h = _Harness();
+      h.api.history = [_serverMessage('m1', 'Dạ em gửi ạ', status: 'queued')];
+      h.container.listen(threadProvider('A'), (_, _) {});
+      var bumps = 0;
+      h.container.listen(threadSignalProvider('A'), (_, _) => bumps++);
+      await h.container.read(threadProvider('A').future);
+      await h.handshakeFake(tester);
+      return (h, () => bumps);
+    }
+
+    testWidgets('bản của worker (có status) vá tại chỗ, không tải lại', (
+      tester,
+    ) async {
+      final (h, bumps) = await opened(tester);
+      h.emit(
+        channel: 'private-conversation.A',
+        event: 'message.sent',
+        data: {'conversation_id': 'A', 'message_id': 'm1', 'status': 'sent'},
+      );
+      await tester.pump(const Duration(milliseconds: 700));
+
+      final thread = h.container.read(threadProvider('A')).requireValue;
+      expect(thread.messages.single.status, DeliveryStatus.sent);
+      expect(bumps(), 0);
+    });
+
+    testWidgets('bản của API cho tin ĐÃ có trên màn: không tải lại', (
+      tester,
+    ) async {
+      final (h, bumps) = await opened(tester);
+      h.emit(
+        channel: 'private-conversation.A',
+        event: 'message.sent',
+        data: {'conversation_id': 'A', 'message_id': 'm1', 'direction': 'out'},
+      );
+      await tester.pump(const Duration(milliseconds: 700));
+
+      expect(bumps(), 0, reason: 'Người gửi đã có tin này từ phản hồi POST.');
+    });
+
+    testWidgets('tin của đồng nghiệp (chưa có trên màn): tải lại MỘT lần cho '
+        'cả hai sự kiện', (tester) async {
+      final (h, bumps) = await opened(tester);
+      h.emit(
+        channel: 'private-conversation.A',
+        event: 'message.sent',
+        data: {'conversation_id': 'A', 'message_id': 'm9', 'direction': 'out'},
+      );
+      await tester.pump(const Duration(milliseconds: 100));
+      h.emit(
+        channel: 'private-conversation.A',
+        event: 'message.sent',
+        data: {'conversation_id': 'A', 'message_id': 'm9', 'status': 'sent'},
+      );
+      await tester.pump(const Duration(milliseconds: 700));
+
+      expect(bumps(), 1);
+    });
+
+    testWidgets('worker báo failed: tải lại để có lý do lỗi', (tester) async {
+      final (h, bumps) = await opened(tester);
+      h.emit(
+        channel: 'private-conversation.A',
+        event: 'message.sent',
+        data: {
+          'conversation_id': 'A',
+          'message_id': 'm1',
+          'status': 'failed',
+          'error': 'Zalo từ chối',
+        },
+      );
+      await tester.pump(const Duration(milliseconds: 700));
+
+      expect(bumps(), 1);
+    });
+  });
+
   testWidgets('tín hiệu FCM vẫn tới cả danh sách lẫn màn chat, cũng gộp nhịp', (
     tester,
   ) async {
@@ -492,18 +575,20 @@ class _FakeInboxApi extends InboxApi {
   List<Message> history = const [];
 
   /// Trang server trả theo số trang; null = danh sách rỗng như cũ.
-  Paged<Conversation> Function(int page)? pages;
+  CursorPaged<Conversation> Function(int page)? pages;
   final List<String> getCalls = [];
   Conversation Function(String id)? onGet;
 
   @override
-  Future<Paged<Conversation>> list({
+  Future<CursorPaged<Conversation>> list({
     required Map<String, dynamic> query,
-    int page = 1,
+    String? before,
     int perPage = AppConfig.defaultPerPage,
   }) async {
     listCalls++;
-    return pages?.call(page) ?? const Paged.empty();
+    // Con trỏ giả `p<N>` = trang N.
+    final page = before == null ? 1 : int.parse(before.substring(1));
+    return pages?.call(page) ?? const CursorPaged.empty();
   }
 
   @override
@@ -573,7 +658,7 @@ Conversation _conv(
   'assignee': ?assignee,
 });
 
-Paged<Conversation> _page(int page) => Paged(
+CursorPaged<Conversation> _page(int page) => CursorPaged(
   items: [
     for (var i = 0; i < 20; i++)
       _conv(
@@ -581,10 +666,9 @@ Paged<Conversation> _page(int page) => Paged(
         at: DateTime.utc(2026).subtract(Duration(minutes: page * 100 + i)),
       ),
   ],
-  pagination: ApiPagination(
-    currentPage: page,
-    lastPage: 3,
+  cursor: CursorPage(
     perPage: 20,
-    total: 60,
+    hasMore: page < 3,
+    nextBefore: page < 3 ? 'p${page + 1}' : null,
   ),
 );

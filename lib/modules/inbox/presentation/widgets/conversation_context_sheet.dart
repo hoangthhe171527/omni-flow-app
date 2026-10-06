@@ -9,6 +9,7 @@ import '../../../../core/error/app_exception.dart';
 import '../../../../core/utils/formatters.dart';
 import '../../../../design/components/components.dart';
 import '../../../../design/tokens/tokens.dart';
+import '../../../../security/session/session_controller.dart';
 import '../../../customers/customers.dart';
 import '../../../opportunities/opportunities.dart';
 import '../../application/inbox_providers.dart';
@@ -27,6 +28,9 @@ class ConversationContextSheet extends ConsumerWidget {
     final contextData = ref.watch(conversationContextProvider(conversationId));
     final assets = ref.watch(conversationAssetsProvider(conversationId));
     final access = ref.watch(inboxAccessProvider);
+    final opportunitiesOn = ref
+        .watch(sessionProvider)
+        .featureEnabled('opportunities');
     final scheme = Theme.of(context).colorScheme;
 
     return OmniAsyncView(
@@ -96,24 +100,27 @@ class ConversationContextSheet extends ConsumerWidget {
                     onTap: () => _convert(context, ref),
                   ),
                 ),
-              const SizedBox(width: OmniSpacing.sm),
-              Expanded(
-                child: _QuickAction(
-                  icon: Icons.trending_up_rounded,
-                  label: 'Tạo cơ hội',
-                  caption: 'Gắn sẵn khách này',
-                  onTap: () {
-                    Navigator.pop(context);
-                    context.pushNamed(
-                      OpportunityRoutes.create,
-                      queryParameters: {
-                        if (threadInfo.customerId != null)
-                          'customer': threadInfo.customerId!,
-                      },
-                    );
-                  },
+              // Workspace tắt module Cơ hội thì không mời tạo (MS-I33).
+              if (opportunitiesOn) ...[
+                const SizedBox(width: OmniSpacing.sm),
+                Expanded(
+                  child: _QuickAction(
+                    icon: Icons.trending_up_rounded,
+                    label: 'Tạo cơ hội',
+                    caption: 'Gắn sẵn khách này',
+                    onTap: () {
+                      Navigator.pop(context);
+                      context.pushNamed(
+                        OpportunityRoutes.create,
+                        queryParameters: {
+                          if (threadInfo.customerId != null)
+                            'customer': threadInfo.customerId!,
+                        },
+                      );
+                    },
+                  ),
                 ),
-              ),
+              ],
             ],
           ),
           const OmniSectionHeader(title: 'Nhãn hội thoại'),

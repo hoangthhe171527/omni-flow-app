@@ -10,16 +10,27 @@ Future<void> saveQrToGallery(String dataUrl) async {
     final payload = dataUrl.contains(',') ? dataUrl.split(',').last : dataUrl;
     bytes = base64Decode(payload);
   } catch (_) {
-    throw Exception('Ảnh QR hỏng, thử lấy mã mới.');
+    throw const QrSaveException('Ảnh QR hỏng, thử lấy mã mới.');
   }
 
   try {
     await Gal.putImageBytes(bytes, name: 'viomni-qr');
   } on GalException catch (error) {
-    throw Exception(switch (error.type) {
+    throw QrSaveException(switch (error.type) {
       GalExceptionType.accessDenied =>
         'Chưa cho phép lưu ảnh. Mở Cài đặt › Quyền để bật.',
       _ => 'Không lưu được ảnh QR.',
     });
   }
+}
+
+/// Lỗi lưu QR, mang câu cho NGƯỜI đọc (`Exception('…').toString()` thêm tiền
+/// tố "Exception: " lên màn hình).
+class QrSaveException implements Exception {
+  const QrSaveException(this.message);
+
+  final String message;
+
+  @override
+  String toString() => message;
 }

@@ -55,7 +55,7 @@ void main() {
 
     return ProviderScope(
       overrides: [
-        teamMembersProvider.overrideWith((ref) async => members),
+        teamDirectoryProvider.overrideWith((ref) async => members),
         sessionProvider.overrideWithValue(
           Session(
             status: SessionStatus.authenticated,

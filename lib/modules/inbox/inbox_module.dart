@@ -59,6 +59,7 @@ class InboxModule extends OmniModule {
       weight: NavWeight.primary,
       order: 10,
       access: const AccessRequirement.any(InboxPermissions.anyRead),
+      feature: 'inbox',
       badge: inboxUnreadBadgeProvider,
     ),
   ];

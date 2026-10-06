@@ -12,6 +12,7 @@ import 'package:omni_app/core/error/app_exception.dart';
 import 'package:omni_app/core/network/api_client.dart';
 import 'package:omni_app/core/network/api_envelope.dart';
 import 'package:omni_app/core/realtime/realtime_client.dart';
+import 'package:omni_app/core/utils/formatters.dart';
 import 'package:omni_app/design/theme/omni_theme.dart';
 import 'package:omni_app/modules/inbox/application/thread_controller.dart';
 import 'package:omni_app/modules/inbox/data/inbox_api.dart';
@@ -41,7 +42,9 @@ void main() {
 
   setUp(() => api = _FakeInboxApi());
 
-  Widget host() => ProviderScope(
+  Widget host({
+    Set<String> permissions = const {'inbox.read', 'inbox.write'},
+  }) => ProviderScope(
     overrides: [
       inboxApiProvider.overrideWithValue(api),
       // Không realtime: tín hiệu của hội thoại vẫn dựng được mà không mở socket.
@@ -52,11 +55,11 @@ void main() {
         ),
       ),
       sessionProvider.overrideWithValue(
-        const Session(
+        Session(
           status: SessionStatus.authenticated,
-          user: SessionUser(id: 'u1', fullName: 'Kiệt', email: 'k@x.vn'),
-          tenant: SessionTenant(id: 't1', name: 'Xưởng đàn'),
-          policy: AccessPolicy({'inbox.read', 'inbox.write'}),
+          user: const SessionUser(id: 'u1', fullName: 'Kiệt', email: 'k@x.vn'),
+          tenant: const SessionTenant(id: 't1', name: 'Xưởng đàn'),
+          policy: AccessPolicy(permissions),
         ),
       ),
       // SurfaceBackdrop đọc provider nền; provider thật cần SharedPreferences.
@@ -70,8 +73,11 @@ void main() {
 
   /// Dựng trang và để lịch sử về. Không pumpAndSettle: nút gửi quay vòng và
   /// biên nhận chuyển cảnh, còn poll dự phòng là Timer.periodic.
-  Future<void> openThread(WidgetTester tester) async {
-    await tester.pumpWidget(host());
+  Future<void> openThread(
+    WidgetTester tester, {
+    Set<String> permissions = const {'inbox.read', 'inbox.write'},
+  }) async {
+    await tester.pumpWidget(host(permissions: permissions));
     await tester.pump();
     await tester.pump();
   }
@@ -249,6 +255,70 @@ void main() {
     );
 
     await closeThread(tester);
+  });
+
+  // Đợt 7 P2: dải ngày tách theo NGÀY VN, không theo ngày UTC. 23:30 và 00:30
+  // giờ VN cùng một ngày UTC (16:30Z, 17:30Z) nhưng là hai ngày ở VN.
+  testWidgets('tin 23:30 và 00:30 giờ VN nằm ở hai ngày khác nhau', (
+    tester,
+  ) async {
+    Message at(String id, DateTime utc) => Message.fromJson({
+      'id': id,
+      'from': 'customer',
+      'text': 'Tin $id',
+      'sent_at': utc.toIso8601String(),
+    });
+    final late = at('m1', DateTime.utc(2026, 1, 1, 16, 30)); // 23:30 VN 1/1
+    final early = at('m2', DateTime.utc(2026, 1, 1, 17, 30)); // 00:30 VN 2/1
+    api.history = [late, early];
+
+    await openThread(tester);
+
+    final first = Formatters.dayHeader(late.sentAt!);
+    final second = Formatters.dayHeader(early.sentAt!);
+    expect(first, isNot(second));
+    expect(find.text(first), findsOneWidget);
+    expect(find.text(second), findsOneWidget);
+
+    await closeThread(tester);
+  });
+
+  // Đợt 7 P2 (INB-I28): `/read` và `/pin` cần `inbox.write` (routes.php:47,49).
+  // Người chỉ đọc mở hội thoại thì không gọi `/read` (403 bị nuốt), và menu
+  // tin không mời ghim.
+  group('quyền đọc/ghim', () {
+    Future<void> openActions(WidgetTester tester) async {
+      await tester.longPress(inBubble('Chào shop'));
+      await tester.pumpAndSettle(const Duration(milliseconds: 100));
+    }
+
+    testWidgets('chỉ inbox.read: không gọi /read, menu không có Ghim', (
+      tester,
+    ) async {
+      api.history = [_serverMessage('m1', 'Chào shop')];
+      await openThread(tester, permissions: const {'inbox.read'});
+
+      expect(api.markReadCalls, isEmpty);
+
+      await openActions(tester);
+      expect(find.text('Ghim hoặc bỏ ghim'), findsNothing);
+
+      await closeThread(tester);
+    });
+
+    testWidgets('inbox.read + inbox.write: gọi /read, menu có Ghim', (
+      tester,
+    ) async {
+      api.history = [_serverMessage('m1', 'Chào shop')];
+      await openThread(tester);
+
+      expect(api.markReadCalls, ['c1']);
+
+      await openActions(tester);
+      expect(find.text('Ghim hoặc bỏ ghim'), findsOneWidget);
+
+      await closeThread(tester);
+    });
   });
 
   group('ảnh hết hạn (link ký 12 giờ, MS-I24)', () {
@@ -478,11 +548,11 @@ class _FakeInboxApi extends InboxApi {
       const InboxFacets();
 
   @override
-  Future<Paged<Conversation>> list({
+  Future<CursorPaged<Conversation>> list({
     required Map<String, dynamic> query,
-    int page = 1,
+    String? before,
     int perPage = AppConfig.defaultPerPage,
-  }) async => const Paged.empty();
+  }) async => const CursorPaged.empty();
 
   @override
   Future<Message> send(

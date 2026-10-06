@@ -162,7 +162,7 @@ class OmniErrorView extends StatelessWidget {
     if (error is AppException) {
       return (Icons.error_outline_rounded, 'Đã có lỗi', error.message, true);
     }
-    return (Icons.error_outline_rounded, 'Đã có lỗi', '$error', true);
+    return (Icons.error_outline_rounded, 'Đã có lỗi', humanError(error), true);
   }
 }
 

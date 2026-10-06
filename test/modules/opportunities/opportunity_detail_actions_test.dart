@@ -8,6 +8,10 @@ import 'package:omni_app/modules/opportunities/domain/opportunity.dart';
 import 'package:omni_app/modules/opportunities/domain/pipeline_catalog.dart';
 import 'package:omni_app/modules/opportunities/presentation/opportunity_detail_page.dart';
 import 'package:omni_app/security/permissions/access_scope.dart';
+import 'package:dio/dio.dart';
+import 'package:omni_app/core/network/api_client.dart';
+import 'package:omni_app/modules/team/data/team_api.dart';
+import 'package:omni_app/modules/team/team.dart';
 import 'package:omni_app/security/permissions/resource_access.dart';
 
 /// Thanh hành động của chi tiết cơ hội theo trạng thái (Đợt 5, OPP-X2).
@@ -19,7 +23,14 @@ import 'package:omni_app/security/permissions/resource_access.dart';
 void main() {
   setUpAll(() => initializeDateFormatting('vi_VN'));
 
-  Widget host(String? status, {String stage = 'consulting'}) {
+  late _FakeTeamApi teamApi;
+
+  Widget host(
+    String? status, {
+    String stage = 'consulting',
+    String? owner,
+    List<TeamMember> members = const [],
+  }) {
     return ProviderScope(
       overrides: [
         opportunityProvider('o1').overrideWith(
@@ -29,11 +40,13 @@ void main() {
             'opportunity_stage': stage,
             'opportunity_status': ?status,
             'expected_value': 10000000,
+            'owner_user_id': ?owner,
           }),
         ),
         opportunityAccessProvider.overrideWithValue(
           const ResourceAccess(readScope: AccessScope.all, canUpdate: true),
         ),
+        teamApiProvider.overrideWithValue(teamApi = _FakeTeamApi(members)),
         pipelineCatalogProvider.overrideWith(
           (ref) async => const PipelineCatalog(defaultCode: '', pipelines: []),
         ),
@@ -76,4 +89,76 @@ void main() {
       }
     },
   );
+
+  // Phụ trách là `owner_user_id`, tra tên trong danh bạ. `metadata.owner_name`
+  // không ai ghi nên app luôn hiện "Chưa gán" (OPP-X7).
+  testWidgets('phụ trách: tên tra theo owner_user_id', (tester) async {
+    await tester.pumpWidget(
+      host(
+        'OPEN',
+        owner: 'u1',
+        members: const [
+          TeamMember(membershipId: 'm1', userId: 'u1', name: 'Lan'),
+        ],
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Lan'), findsOneWidget);
+    // Một cái tên — không kéo cả danh bạ (review I2).
+    expect(teamApi.directoryLoads, 0);
+    expect(find.text('Chưa gán'), findsNothing);
+  });
+
+  testWidgets('phụ trách không có trong danh bạ → "—", không phải Chưa gán', (
+    tester,
+  ) async {
+    await tester.pumpWidget(host('OPEN', owner: 'u9'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Chưa gán'), findsNothing);
+  });
+
+  testWidgets('chưa gán ai → Chưa gán', (tester) async {
+    await tester.pumpWidget(host('OPEN'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Chưa gán'), findsOneWidget);
+  });
+
+  // Thắng tạo đơn; doanh thu chỉ tính khi ghi nhận thu tiền (APP-I13).
+  testWidgets('hộp xác nhận Thắng nói tạo đơn, không nói tính doanh thu', (
+    tester,
+  ) async {
+    await tester.pumpWidget(host('OPEN'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Đánh dấu thắng'));
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('tạo đơn hàng'), findsOneWidget);
+    expect(find.textContaining('tính vào doanh thu'), findsNothing);
+  });
+}
+
+/// Tra tên theo id; đếm số lần bị kéo cả danh bạ.
+class _FakeTeamApi extends TeamApi {
+  _FakeTeamApi(this._members) : super(ApiClient(Dio()));
+
+  final List<TeamMember> _members;
+  int directoryLoads = 0;
+
+  @override
+  Future<List<TeamMember>> members({String? search}) async {
+    directoryLoads++;
+    return _members;
+  }
+
+  @override
+  Future<String?> userName(String userId) async {
+    for (final member in _members) {
+      if (member.userId == userId) return member.name;
+    }
+    return null;
+  }
 }

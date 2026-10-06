@@ -88,8 +88,9 @@ class _InboxPageState extends ConsumerState<InboxPage>
       if (!mounted) return;
       _syncCursor = changes.cursor.isEmpty ? _syncCursor : changes.cursor;
       if (changes.count > 0) {
-        await ref.read(inboxListProvider.notifier).refresh();
-        ref.invalidate(inboxFacetsProvider);
+        // Gộp trang 1, không dựng lại: đang cuộn thì không nhảy về đầu
+        // (APP-I3). `mergeLatest` cũng làm mới số đếm.
+        await ref.read(inboxListProvider.notifier).mergeLatest();
       }
     } catch (_) {
       // The next interval retries; a temporary network failure must not blank
@@ -121,8 +122,8 @@ class _InboxPageState extends ConsumerState<InboxPage>
 
   @override
   Widget build(BuildContext context) {
-    // Một tín hiệu gộp nhịp cho cả danh sách lẫn số đếm. Danh sách tự tải lại
-    // vì `InboxListController` theo dõi tín hiệu này; ở đây chỉ còn số đếm.
+    // Một tín hiệu gộp nhịp cho cả danh sách lẫn số đếm. Danh sách tự gộp
+    // trang 1 vì `InboxListController` nghe tín hiệu này; ở đây chỉ còn số đếm.
     // Trước đây chỗ này gọi thêm `refresh()` trong khi controller cũng đang
     // dựng lại — hai lượt tải cho một sự kiện.
     ref.listen<int>(inboxListSignalProvider, (previous, next) {

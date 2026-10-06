@@ -44,7 +44,7 @@ class _CustomerFormPageState extends ConsumerState<CustomerFormPage> {
   Customer? _original;
   DuplicateMatch? _duplicate;
   Timer? _duplicateTimer;
-  Map<String, List<String>> _fieldErrors = const {};
+  Map<String, String> _fieldErrors = const {};
 
   @override
   void dispose() {
@@ -135,10 +135,19 @@ class _CustomerFormPageState extends ConsumerState<CustomerFormPage> {
         );
       }
     } on ValidationException catch (error) {
+      // Khoá có ô → chữ đỏ dưới ô; khoá không có ô → snackbar. Không lỗi nào
+      // được im lặng (CRM-X6, APP-I8).
+      final split = splitCustomerFormErrors(error);
       setState(() {
         _saving = false;
-        _fieldErrors = error.errors;
+        _fieldErrors = split.fields;
       });
+      final banner = split.banner;
+      if (banner != null && mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(banner)));
+      }
     } on AppException catch (error) {
       setState(() => _saving = false);
       if (!mounted) return;
@@ -183,7 +192,7 @@ class _CustomerFormPageState extends ConsumerState<CustomerFormPage> {
             OmniField(
               label: 'Tên khách hàng',
               required: true,
-              error: _fieldErrors['legal_name']?.firstOrNull,
+              error: _fieldErrors['name'],
               child: TextFormField(
                 controller: _name,
                 textCapitalization: TextCapitalization.words,
@@ -197,6 +206,7 @@ class _CustomerFormPageState extends ConsumerState<CustomerFormPage> {
             const SizedBox(height: OmniSpacing.lg),
             OmniField(
               label: 'Người liên hệ',
+              error: _fieldErrors['contact'],
               child: TextFormField(
                 controller: _contact,
                 decoration: const InputDecoration(
@@ -212,7 +222,7 @@ class _CustomerFormPageState extends ConsumerState<CustomerFormPage> {
             OmniField(
               label: 'Số điện thoại',
               required: true,
-              error: _fieldErrors['primary_contact_phone']?.firstOrNull,
+              error: _fieldErrors['phone'],
               child: TextFormField(
                 controller: _phone,
                 keyboardType: TextInputType.phone,
@@ -229,16 +239,19 @@ class _CustomerFormPageState extends ConsumerState<CustomerFormPage> {
               const SizedBox(height: OmniSpacing.sm),
               _DuplicateNotice(
                 name: _duplicate!.name,
-                onOpen: () => context.pushReplacementNamed(
-                  CustomersModule.detail,
-                  pathParameters: {'id': _duplicate!.id},
-                ),
+                // Hồ sơ ngoài phạm vi: mở ra là 403, nên không có "Xem".
+                onOpen: _duplicate!.inScope
+                    ? () => context.pushReplacementNamed(
+                        CustomersModule.detail,
+                        pathParameters: {'id': _duplicate!.id},
+                      )
+                    : null,
               ),
             ],
             const SizedBox(height: OmniSpacing.lg),
             OmniField(
               label: 'Email',
-              error: _fieldErrors['primary_contact_email']?.firstOrNull,
+              error: _fieldErrors['email'],
               child: TextFormField(
                 controller: _email,
                 keyboardType: TextInputType.emailAddress,
@@ -253,6 +266,7 @@ class _CustomerFormPageState extends ConsumerState<CustomerFormPage> {
             const SizedBox(height: OmniSpacing.lg),
             OmniField(
               label: 'Địa chỉ',
+              error: _fieldErrors['address'],
               child: TextFormField(
                 controller: _address,
                 maxLines: 2,
@@ -318,6 +332,7 @@ class _CustomerFormPageState extends ConsumerState<CustomerFormPage> {
             const SizedBox(height: OmniSpacing.lg),
             OmniField(
               label: 'Ghi chú',
+              error: _fieldErrors['note'],
               child: TextFormField(
                 controller: _note,
                 maxLines: 3,
@@ -356,10 +371,12 @@ class _CustomerFormPageState extends ConsumerState<CustomerFormPage> {
 
 /// "Số điện thoại này đã tồn tại — Nguyễn Thị Lan · Xem" trên nền vàng nhạt.
 class _DuplicateNotice extends StatelessWidget {
-  const _DuplicateNotice({required this.name, required this.onOpen});
+  const _DuplicateNotice({required this.name, this.onOpen});
 
   final String name;
-  final VoidCallback onOpen;
+
+  /// null = hồ sơ do người khác phụ trách: không dựng nút "Xem".
+  final VoidCallback? onOpen;
 
   @override
   Widget build(BuildContext context) {
@@ -387,13 +404,55 @@ class _DuplicateNotice extends StatelessWidget {
               style: OmniType.body.copyWith(color: foreground),
             ),
           ),
-          TextButton(
-            onPressed: onOpen,
-            style: TextButton.styleFrom(foregroundColor: foreground),
-            child: const Text('Xem'),
-          ),
+          if (onOpen != null)
+            TextButton(
+              onPressed: onOpen,
+              style: TextButton.styleFrom(foregroundColor: foreground),
+              child: const Text('Xem'),
+            )
+          else
+            // Giữ chiều cao dải như khi có nút.
+            const SizedBox(width: 10, height: 40),
         ],
       ),
     );
   }
+}
+
+/// Khoá lỗi API → ô của form. Khoá không có ô thì gom vào snackbar (CRM-X6,
+/// APP-I8). Tên nhận cả `display_name` (app gửi khi sửa) lẫn `legal_name`
+/// (gửi khi tạo).
+const customerFormFieldOfError = {
+  'display_name': 'name',
+  'legal_name': 'name',
+  'primary_contact_name': 'contact',
+  'primary_contact_phone': 'phone',
+  'primary_contact_email': 'email',
+  'address': 'address',
+  'metadata.notes': 'note',
+  'metadata.note': 'note',
+};
+
+/// Tách lỗi 422 thành chữ cho từng ô và MỘT câu cho snackbar (câu đầu của
+/// khoá không có ô; không khoá nào có ô thì câu chung của API).
+@visibleForTesting
+({Map<String, String> fields, String? banner}) splitCustomerFormErrors(
+  ValidationException error,
+) {
+  final fields = <String, String>{};
+  final rest = <String>[];
+  error.errors.forEach((key, messages) {
+    final message = messages.firstOrNull;
+    if (message == null) return;
+    final field = customerFormFieldOfError[key];
+    if (field != null) {
+      fields.putIfAbsent(field, () => message);
+    } else {
+      rest.add(message);
+    }
+  });
+  final banner = rest.isNotEmpty
+      ? rest.first
+      : (fields.isEmpty ? error.message : null);
+  return (fields: fields, banner: banner);
 }

@@ -88,7 +88,10 @@ class PairingController
       if (session != _session) return null;
       state = PairingState(
         snapshot: const PairingSnapshot(view: PairingView.failed),
-        errorMessage: '$error',
+        errorMessage: humanError(
+          error,
+          fallback: 'Không bắt đầu ghép nối được.',
+        ),
       );
       return null;
     }

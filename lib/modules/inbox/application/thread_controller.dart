@@ -43,9 +43,48 @@ class ThreadState {
   /// frame để ra cùng một kết quả. Vì thế constructor không còn `const`; đổi
   /// lấy đúng một lần sort cho mỗi lần state đổi. Unmodifiable để không ai sửa
   /// tại chỗ thứ đã được cache.
+  ///
+  /// Bản đang gửi có `clientId` trùng một tin đã có trong lịch sử thì bỏ: luồng
+  /// tải lại (realtime `message.sent`) có thể về TRƯỚC phản hồi POST, và cùng
+  /// một tin không được hiện hai bong bóng (Đợt 7 P3).
   late final List<Message> visible = List<Message>.unmodifiable(
-    <Message>[...messages, ...pending]..sort(ThreadController.compareMessages),
+    _withQuotes(<Message>[...messages, ..._notYetInHistory(messages, pending)])
+      ..sort(ThreadController.compareMessages),
   );
+
+  static Iterable<Message> _notYetInHistory(
+    List<Message> messages,
+    List<Message> pending,
+  ) {
+    if (pending.isEmpty) return pending;
+    final settled = {
+      for (final m in messages)
+        if (m.clientId != null && m.clientId!.isNotEmpty) m.clientId,
+    };
+    if (settled.isEmpty) return pending;
+    return pending.where((m) => !settled.contains(m.clientId));
+  }
+
+  /// API chỉ trả `reply_to_message_id`; câu trích dẫn lấy từ tin gốc nếu nó
+  /// đang có trên màn (backlog report #2). Tin gốc chưa tải thì không có câu —
+  /// như web.
+  static List<Message> _withQuotes(List<Message> all) {
+    final byId = {for (final m in all) m.id: m};
+    return [
+      for (final m in all)
+        if (m.replyToMessageId != null &&
+            (m.replyToText ?? '').isEmpty &&
+            byId[m.replyToMessageId] != null)
+          m.copyWith(
+            replyToText: byId[m.replyToMessageId]!.text,
+            replyToAuthorName:
+                byId[m.replyToMessageId]!.senderName ??
+                byId[m.replyToMessageId]!.agentName,
+          )
+        else
+          m,
+    ];
+  }
 
   bool get isEmpty => messages.isEmpty && pending.isEmpty;
 
@@ -303,20 +342,36 @@ class ThreadController
   /// Shows the outgoing bubble immediately while large attachments upload.
   /// The resolved server message replaces the temporary bubble once the upload
   /// URLs are ready, so the composer never feels frozen behind network I/O.
+  ///
+  /// Hai bước (INB-I22). Upload lỗi nghĩa là CHƯA gửi gì: rút bong bóng và ném
+  /// lại, để composer giữ chữ lẫn khay ảnh và trang chat báo lý do. Trước đây
+  /// bản nháp không có ảnh và lỗi upload bị [_dispatch] nuốt: composer xoá
+  /// khay, còn "Gửi lại" gửi body rỗng và nhận 422 mãi. Lỗi ở bước GỬI (sau
+  /// khi upload xong) vẫn thành bong bóng `failed` như cũ — lúc đó bong bóng
+  /// mang URL ảnh thật của server, nên "Gửi lại" gửi đủ ảnh.
   Future<void> sendAfterUpload(
     String text, {
     required Future<List<MessageAttachment>> attachments,
     Message? replyTo,
-  }) {
+  }) async {
     final draft = Message.optimistic(text: text, replyTo: replyTo);
+    _enqueue(draft); // bong bóng "đang gửi" hiện ngay như trước
+    final List<MessageAttachment> uploaded;
+    try {
+      uploaded = await attachments;
+    } on Object {
+      discard(draft.id);
+      rethrow;
+    }
     return _dispatch(
-      draft: draft,
-      call: () async => ref
+      draft: draft.copyWith(attachments: uploaded),
+      replacing: draft.id,
+      call: () => ref
           .read(inboxApiProvider)
           .send(
             arg,
             text: text,
-            attachments: await attachments,
+            attachments: uploaded,
             replyToMessageId: replyTo?.id,
             clientMessageId: draft.clientId,
           ),
@@ -424,23 +479,7 @@ class ThreadController
     required Future<Message> Function() call,
     String? replacing,
   }) async {
-    final current = state.valueOrNull ?? ThreadState();
-    final superseded = replacing ?? draft.id;
-    state = AsyncData(
-      current.copyWith(
-        pending: [
-          for (final message in current.pending)
-            if (message.id != superseded) message,
-          draft,
-        ],
-        // A retry of a message the server had already stored and rejected drops
-        // the settled failure from history; the new attempt stands in for it.
-        messages: [
-          for (final message in current.messages)
-            if (message.id != superseded) message,
-        ],
-      ),
-    );
+    _enqueue(draft, replacing: replacing);
 
     try {
       _settle(draft.id, await call());
@@ -459,6 +498,28 @@ class ThreadController
         reason: 'inbox: sending a message',
       );
     }
+  }
+
+  /// Đưa [draft] vào hộp gửi đi (phần đầu của [_dispatch]), thay bản có id
+  /// [replacing] nếu có.
+  void _enqueue(Message draft, {String? replacing}) {
+    final current = state.valueOrNull ?? ThreadState();
+    final superseded = replacing ?? draft.id;
+    state = AsyncData(
+      current.copyWith(
+        pending: [
+          for (final message in current.pending)
+            if (message.id != superseded) message,
+          draft,
+        ],
+        // A retry of a message the server had already stored and rejected drops
+        // the settled failure from history; the new attempt stands in for it.
+        messages: [
+          for (final message in current.messages)
+            if (message.id != superseded) message,
+        ],
+      ),
+    );
   }
 
   /// The send succeeded: move the bubble out of the outbox and into history.

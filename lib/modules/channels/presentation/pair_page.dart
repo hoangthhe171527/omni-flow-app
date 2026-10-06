@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/domain/channel.dart';
+import '../../../core/error/app_exception.dart';
 import '../../../design/components/components.dart';
 import '../../../design/tokens/tokens.dart';
 import '../application/channels_providers.dart';
@@ -268,9 +269,13 @@ class _PairPageState extends ConsumerState<PairPage>
       );
     } catch (error) {
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('$error')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            error is QrSaveException ? error.message : humanError(error),
+          ),
+        ),
+      );
     }
   }
 }

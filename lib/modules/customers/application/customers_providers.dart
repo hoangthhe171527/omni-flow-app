@@ -46,8 +46,14 @@ class CustomerFilter {
       CustomerQuickFilter.all => const {},
       CustomerQuickFilter.mine => {'assigned_sales_rep_id': currentUserId},
       CustomerQuickFilter.vip => const {'customer_status': 'WARM'},
-      CustomerQuickFilter.fresh => const {'sort': '-created_at'},
-      CustomerQuickFilter.inactive => const {'customer_status': 'INACTIVE'},
+      // Khách tạo trong tháng (giờ VN) — API Đợt 7 A1; `sort=-created_at` cũ
+      // không có trong whitelist sort nên pill ra như "Tất cả" (CRM-X4).
+      CustomerQuickFilter.fresh => const {'tab': 'new_month'},
+      // Khớp nhãn `CustomerStatus.parse`: cả ba mã đều hiện "Ngưng hoạt
+      // động". API A1 nhận nhiều giá trị cách bằng dấu phẩy (CRM-X5).
+      CustomerQuickFilter.inactive => const {
+        'customer_status': 'INACTIVE,AT_RISK,LOST',
+      },
     },
   };
 

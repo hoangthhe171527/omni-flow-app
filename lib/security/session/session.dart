@@ -66,6 +66,7 @@ class Session {
     this.membershipId,
     this.roles = const [],
     this.policy = const AccessPolicy.empty(),
+    this.features = const {},
   });
 
   const Session.restoring() : this(status: SessionStatus.restoring);
@@ -80,6 +81,13 @@ class Session {
   final String? membershipId;
   final List<SessionRole> roles;
   final AccessPolicy policy;
+
+  /// Cờ tính năng của workspace (`/auth/context` → `features`, MS-I33).
+  /// Khoá THIẾU nghĩa là bật — API cũ không gửi khoá này thì mọi module hiện.
+  final Map<String, bool> features;
+
+  /// [key] null = mục không gắn cờ, luôn bật.
+  bool featureEnabled(String? key) => key == null || features[key] != false;
 
   bool get isRestoring => status == SessionStatus.restoring;
 
@@ -102,6 +110,7 @@ class Session {
     String? membershipId,
     List<SessionRole>? roles,
     AccessPolicy? policy,
+    Map<String, bool>? features,
   }) {
     return Session(
       status: status ?? this.status,
@@ -110,6 +119,7 @@ class Session {
       membershipId: membershipId ?? this.membershipId,
       roles: roles ?? this.roles,
       policy: policy ?? this.policy,
+      features: features ?? this.features,
     );
   }
 }

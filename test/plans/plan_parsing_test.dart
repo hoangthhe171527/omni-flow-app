@@ -210,4 +210,18 @@ void main() {
       expect(plan.endDate?.year, 2026);
     });
   });
+
+  // API coi người trong `member_ids` mà không có vai là `member`
+  // (`ProjectAccessService::roleFromAttributes`), không phải người xem (CV-I14).
+  test('thành viên không có vai riêng là member, không phải viewer', () {
+    final plan = Plan.fromJson({
+      'id': 'p',
+      'name': 'X',
+      'owner_id': 'u1',
+      'member_ids': ['u2'],
+    });
+
+    expect(plan.roleOf('u2'), PlanRole.member);
+    expect(plan.roleOf('u9'), PlanRole.viewer);
+  });
 }

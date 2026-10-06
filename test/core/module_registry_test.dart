@@ -1,8 +1,11 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:omni_app/bootstrap.dart';
 import 'package:omni_app/core/module/module_registry.dart';
+import 'package:omni_app/core/module/module_route.dart';
 import 'package:omni_app/core/module/nav_destination.dart';
+import 'package:omni_app/core/module/omni_module.dart';
 import 'package:omni_app/modules/customers/domain/customer_permissions.dart';
 import 'package:omni_app/modules/inbox/domain/inbox_permissions.dart';
 import 'package:omni_app/modules/tasks/domain/task_permissions.dart';
@@ -128,6 +131,98 @@ void main() {
     expect(withoutTeam.read(directoryGroupsProvider)[NavArea.admin], isNull);
   });
 
+  // Đợt 7 P5 (MS-I33): module bị tắt ở workspace thì menu ẩn, dù đủ quyền.
+  group('cờ tính năng', () {
+    test('mục có feature bị tắt thì ẩn; mục không khai feature thì giữ', () {
+      final container = ProviderContainer(
+        overrides: [
+          modulesProvider.overrideWithValue(const [_FlagModule()]),
+          sessionProvider.overrideWithValue(
+            const Session(
+              status: SessionStatus.authenticated,
+              policy: AccessPolicy({'inbox.read'}),
+              features: {'inbox': false},
+            ),
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      expect(container.read(visibleNavEntriesProvider).map((e) => e.label), [
+        'Nhân viên',
+      ]);
+      // Branch của router KHÔNG co theo cờ (như theo quyền).
+      expect(container.read(declaredNavEntriesProvider), hasLength(2));
+    });
+
+    test('module thật khai đúng khoá: tắt inbox/tasks thì mất các tab đó', () {
+      final container = ProviderContainer(
+        overrides: [
+          modulesProvider.overrideWithValue(appModules),
+          sessionProvider.overrideWithValue(
+            Session(
+              status: SessionStatus.authenticated,
+              policy: AccessPolicy({
+                InboxPermissions.read,
+                TaskPermissions.read,
+                CustomerPermissions.read,
+              }),
+              features: const {'inbox': false, 'tasks': false},
+            ),
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      expect(container.read(primaryNavEntriesProvider).map((e) => e.label), [
+        'Khách hàng',
+      ]);
+    });
+
+    test('tắt customers, opportunities, channels thì mất các mục đó', () {
+      final permissions = {
+        InboxPermissions.read,
+        CustomerPermissions.read,
+        'crm.sales_opportunities.read',
+        'channels.read',
+        'membership.members.read',
+      };
+      Set<String> labels(Map<String, bool> features) {
+        final container = ProviderContainer(
+          overrides: [
+            modulesProvider.overrideWithValue(appModules),
+            sessionProvider.overrideWithValue(
+              Session(
+                status: SessionStatus.authenticated,
+                policy: AccessPolicy(permissions),
+                features: features,
+              ),
+            ),
+          ],
+        );
+        addTearDown(container.dispose);
+        return container
+            .read(visibleNavEntriesProvider)
+            .map((e) => e.moduleId)
+            .toSet();
+      }
+
+      final on = labels(const {});
+      final off = labels(const {
+        'customers': false,
+        'opportunities': false,
+        'channels': false,
+      });
+
+      expect(on, containsAll(['customers', 'opportunities', 'channels']));
+      expect(off, isNot(contains('customers')));
+      expect(off, isNot(contains('opportunities')));
+      expect(off, isNot(contains('channels')));
+      // Không ẩn Nhân viên/Cài đặt theo cờ.
+      expect(off, containsAll(['team', 'settings']));
+    });
+  });
+
   test('route names are unique across modules', () {
     final container = _containerFor({});
     addTearDown(container.dispose);
@@ -138,4 +233,38 @@ void main() {
         .toList();
     expect(names.toSet().length, names.length);
   });
+}
+
+class _FlagModule extends OmniModule {
+  const _FlagModule();
+
+  @override
+  String get id => 'flag';
+
+  @override
+  String get title => 'Flag';
+
+  @override
+  List<ModuleRoute> routes() => const [];
+
+  @override
+  List<ModuleNavEntry> navEntries() => const [
+    ModuleNavEntry(
+      moduleId: 'inbox',
+      label: 'Hộp thư',
+      icon: Icons.inbox,
+      selectedIcon: Icons.inbox,
+      routeName: 'flag-inbox',
+      area: NavArea.communication,
+      feature: 'inbox',
+    ),
+    ModuleNavEntry(
+      moduleId: 'team',
+      label: 'Nhân viên',
+      icon: Icons.people,
+      selectedIcon: Icons.people,
+      routeName: 'flag-team',
+      area: NavArea.admin,
+    ),
+  ];
 }

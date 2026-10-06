@@ -71,6 +71,7 @@ class ChannelsModule extends OmniModule {
       weight: NavWeight.secondary,
       order: 30,
       access: AccessRequirement.any(ChannelPermissions.anyRead),
+      feature: 'channels',
     ),
   ];
 }

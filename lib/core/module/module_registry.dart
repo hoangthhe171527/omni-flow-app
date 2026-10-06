@@ -50,13 +50,18 @@ final branchNavEntriesProvider = Provider<List<ModuleNavEntry>>((ref) {
 });
 
 /// Mục phiên hiện tại được phép thấy. Tính lại khi quyền đổi (chuyển tenant,
-/// hoặc vai trò được sửa và nạp lại).
+/// hoặc vai trò được sửa và nạp lại), và khi cờ tính năng đổi (MS-I33).
 final visibleNavEntriesProvider = Provider<List<ModuleNavEntry>>((ref) {
-  final policy = ref.watch(accessProvider);
+  final session = ref.watch(sessionProvider);
+  final policy = session.policy;
 
   return ref
       .watch(declaredNavEntriesProvider)
-      .where((entry) => entry.access.isSatisfiedBy(policy))
+      .where(
+        (entry) =>
+            entry.access.isSatisfiedBy(policy) &&
+            session.featureEnabled(entry.feature),
+      )
       .toList();
 });
 

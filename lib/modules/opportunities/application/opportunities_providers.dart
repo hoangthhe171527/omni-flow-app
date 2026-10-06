@@ -14,7 +14,9 @@ final opportunityAccessProvider = Provider<ResourceAccess>((ref) {
   return OpportunityPermissions.of(ref.watch(accessProvider));
 });
 
-/// The tenant's pipelines and stages. Kept for the session (columns don't
+/// The tenant's pipelines and stages. Đọc lại mỗi lần mở bảng cơ hội và khi
+/// đổi giai đoạn bị 422 `opportunity_stage` (APP-I12); giữa hai lần đó dùng
+/// bản đã nạp (columns don't
 /// change minute to minute); rebuilt on a workspace switch because
 /// [opportunitiesApiProvider] follows the active tenant.
 final pipelineCatalogProvider = FutureProvider<PipelineCatalog>((ref) {
@@ -202,6 +204,13 @@ class OpportunityActions {
         );
       }
       return updated;
+    } on ValidationException catch (error) {
+      // Giai đoạn không còn trong quy trình: web vừa sửa quy trình mà app còn
+      // giữ danh mục cũ — đọc lại để lần chọn sau đúng (APP-I12).
+      if (error.errors.containsKey('opportunity_stage')) {
+        _ref.invalidate(pipelineCatalogProvider);
+      }
+      rethrow;
     } finally {
       _refresh(opportunity.id);
     }

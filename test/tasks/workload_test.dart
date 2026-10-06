@@ -20,7 +20,7 @@ void main() {
       ProviderScope(
         overrides: [
           tasksApiProvider.overrideWithValue(api),
-          teamMembersProvider.overrideWith((ref) async => roster),
+          teamDirectoryProvider.overrideWith((ref) async => roster),
         ],
         child: MaterialApp(
           theme: OmniTheme.light(TargetPlatform.android),

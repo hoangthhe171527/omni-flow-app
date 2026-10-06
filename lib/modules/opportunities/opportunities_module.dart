@@ -85,6 +85,7 @@ class OpportunitiesModule extends OmniModule {
       weight: NavWeight.primary,
       order: 20,
       access: AccessRequirement.any(OpportunityPermissions.anyRead),
+      feature: 'opportunities',
     ),
   ];
 }

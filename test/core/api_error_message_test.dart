@@ -97,4 +97,97 @@ void main() {
       expect(e.message, 'Zalo session expired, scan QR again');
     });
   });
+
+  // Đợt 7 P1 (APP-I7): 429 và mã lạ không được rơi về câu tiếng Anh của Dio.
+  group('429 và mã lạ', () {
+    AppException mapWithHeaders(
+      int status,
+      Object? body,
+      Map<String, List<String>> headers,
+    ) => mapDioException(
+      DioException(
+        requestOptions: RequestOptions(path: '/x'),
+        response: Response(
+          requestOptions: RequestOptions(path: '/x'),
+          statusCode: status,
+          data: body,
+          headers: Headers.fromMap(headers),
+        ),
+        type: DioExceptionType.badResponse,
+      ),
+    );
+
+    test('429 kèm Retry-After → "thử lại sau N giây"', () {
+      final e = mapWithHeaders(
+        429,
+        {'message': 'Too Many Attempts.'},
+        {
+          'retry-after': ['12'],
+        },
+      );
+
+      expect(e, isA<RateLimitedException>());
+      expect(
+        e.message,
+        'Bạn thao tác quá nhanh. Vui lòng thử lại sau 12 giây.',
+      );
+      expect(
+        (e as RateLimitedException).retryAfter,
+        const Duration(seconds: 12),
+      );
+    });
+
+    test('409 không body → câu tiếng Việt, giữ mã', () {
+      final e = mapOf(409, null);
+
+      expect(e, isA<RequestRejectedException>());
+      expect(e.code, '409');
+      expect(e.message, isNot(contains('status code')));
+      expect(e.message, isNot(contains('DioException')));
+    });
+
+    test('410 có lời của API → giữ nguyên', () {
+      final e = mapOf(410, {'message': 'Liên kết đã hết hạn.'});
+
+      expect(e.message, 'Liên kết đã hết hạn.');
+    });
+  });
+
+  group('parseRetryAfter', () {
+    test('số giây', () {
+      expect(parseRetryAfter('0'), Duration.zero);
+      expect(parseRetryAfter('7'), const Duration(seconds: 7));
+    });
+
+    test('ngày giờ HTTP', () {
+      expect(
+        parseRetryAfter(
+          'Wed, 21 Oct 2026 07:28:00 GMT',
+          now: DateTime.utc(2026, 10, 21, 7, 27, 30),
+        ),
+        const Duration(seconds: 30),
+      );
+    });
+
+    test('hỏng hoặc thiếu → null', () {
+      expect(parseRetryAfter('abc'), isNull);
+      expect(parseRetryAfter(null), isNull);
+      expect(parseRetryAfter(''), isNull);
+    });
+  });
+
+  group('humanError', () {
+    test('AppException → lời của nó, không phải toString()', () {
+      expect(
+        humanError(
+          const ValidationException('Không có máy nào đang chạy agent.'),
+        ),
+        'Không có máy nào đang chạy agent.',
+      );
+    });
+
+    test('lỗi lạ → câu chung', () {
+      expect(humanError(StateError('boom'), fallback: 'Lỗi.'), 'Lỗi.');
+    });
+  });
 }

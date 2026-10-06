@@ -91,7 +91,10 @@ class _ChannelsPageState extends ConsumerState<ChannelsPage> {
     setState(() => _connecting = true);
     try {
       final url = await ref.read(channelsApiProvider).oauthUrl(channel);
-      if (url.isEmpty) throw Exception('Nền tảng chưa cấu hình OAuth.');
+      if (url.isEmpty) {
+        _snack('Nền tảng chưa cấu hình OAuth.');
+        return;
+      }
       final before = {
         for (final connection
             in ref.read(channelsProvider).valueOrNull ??
@@ -102,7 +105,10 @@ class _ChannelsPageState extends ConsumerState<ChannelsPage> {
         Uri.parse(url),
         mode: LaunchMode.externalApplication,
       );
-      if (!opened) throw Exception('Không mở được trình duyệt.');
+      if (!opened) {
+        _snack('Không mở được trình duyệt.');
+        return;
+      }
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -112,13 +118,17 @@ class _ChannelsPageState extends ConsumerState<ChannelsPage> {
       );
       _watchForConnection(before);
     } catch (error) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('$error')));
+      _snack(humanError(error));
     } finally {
       if (mounted) setState(() => _connecting = false);
     }
+  }
+
+  void _snack(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
   }
 
   void _watchForConnection(Set<String> before) {

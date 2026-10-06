@@ -1,3 +1,6 @@
+import 'dart:async';
+import 'dart:math';
+
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -6,6 +9,15 @@ import '../storage/preferences_store.dart';
 import '../storage/storage_keys.dart';
 import '../storage/token_store.dart';
 import 'active_tenant.dart';
+import 'api_exception_mapper.dart' show parseRetryAfter;
+import 'feature_disabled.dart';
+
+/// Chờ trước lượt refresh thứ hai sau 429. Test override bằng hàm trả ngay.
+final refreshBackoffProvider = Provider<Future<void> Function(Duration)>(
+  (ref) => Future<void>.delayed,
+);
+
+final _jitter = Random();
 
 final dioProvider = Provider<Dio>((ref) {
   final dio = Dio(
@@ -42,11 +54,32 @@ final dioProvider = Provider<Dio>((ref) {
         );
       }
 
-      final response = await dio.post<Map<String, dynamic>>(
-        '${AppConfig.apiPrefix}/auth/refresh',
-        data: {'refresh_token': refreshToken},
-        options: Options(extra: const {'skipSessionRefresh': true}),
-      );
+      Future<Response<Map<String, dynamic>>> post() =>
+          dio.post<Map<String, dynamic>>(
+            '${AppConfig.apiPrefix}/auth/refresh',
+            data: {'refresh_token': refreshToken},
+            options: Options(extra: const {'skipSessionRefresh': true}),
+          );
+
+      Response<Map<String, dynamic>> response;
+      try {
+        response = await post();
+      } on DioException catch (error) {
+        // 429 ở refresh là "chậm lại", không phải phiên hỏng (APP-I7): chờ
+        // theo `Retry-After` (mặc định 5 giây, trần 30 giây, cộng 0–2 giây
+        // ngẫu nhiên để các máy không cùng quay lại một lúc) rồi thử lại MỘT
+        // lần. Lần hai lỗi thì ném như cũ.
+        if (error.response?.statusCode != 429) rethrow;
+        final hinted =
+            parseRetryAfter(error.response?.headers.value('retry-after')) ??
+            const Duration(seconds: 5);
+        final capped = hinted > const Duration(seconds: 30)
+            ? const Duration(seconds: 30)
+            : hinted;
+        final jitter = Duration(milliseconds: _jitter.nextInt(2001));
+        await ref.read(refreshBackoffProvider)(capped + jitter);
+        response = await post();
+      }
       final payload = response.data?['data'];
       if (payload is! Map || payload['access_token'] is! String) {
         throw DioException(
@@ -133,6 +166,11 @@ final dioProvider = Provider<Dio>((ref) {
             // A rejected refresh token is authoritative; forward the original
             // business 401 so session state can expire it.
           }
+        }
+        // Module vừa bị tắt ở workspace (MS-I33): đọc lại cờ để menu ẩn nó.
+        // Không chặn lỗi — màn vẫn hiện câu của API qua trạng thái lỗi sẵn có.
+        if (isFeatureDisabledResponse(error.response)) {
+          unawaited(ref.read(featureFlagRefresherProvider).request());
         }
         handler.next(error);
       },

@@ -62,7 +62,7 @@ void main() {
         taskAccessProvider.overrideWithValue(
           TaskAccess.of(AccessPolicy(permissions)),
         ),
-        teamMembersProvider.overrideWith((ref) async => members),
+        teamDirectoryProvider.overrideWith((ref) async => members),
       ],
       child: MaterialApp(
         theme: OmniTheme.light(TargetPlatform.android),

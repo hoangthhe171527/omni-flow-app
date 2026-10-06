@@ -39,7 +39,7 @@ void main() {
         tasksApiProvider.overrideWithValue(
           TasksApi(ApiClient(Dio()..httpClientAdapter = adapter)),
         ),
-        teamMembersProvider.overrideWith(
+        teamDirectoryProvider.overrideWith(
           (ref) async => [
             TeamMember(membershipId: 'm1', userId: 'u1', name: 'Hằng Ni'),
           ],
