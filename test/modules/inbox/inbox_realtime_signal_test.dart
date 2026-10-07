@@ -487,6 +487,11 @@ class _Harness {
       ),
       socketFactory: (_) => socket,
       authorizer: (channel, socketId) async => 'key:sig-for-$channel',
+      // Những bài ở đây cố ý giữ socket sống tới cuối bài (chúng nói về tín
+      // hiệu, không về watchdog), mà một `Timer.periodic` còn chạy lúc đó là
+      // lỗi "A Timer is still pending" của flutter_test. Watchdog có bài kiểm
+      // riêng: `test/core/realtime_watchdog_test.dart`.
+      enableWatchdog: false,
     );
     container = ProviderContainer(
       overrides: [

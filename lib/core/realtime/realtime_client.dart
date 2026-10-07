@@ -94,7 +94,9 @@ class RealtimeClient {
     RealtimeSocketFactory? socketFactory,
     @visibleForTesting Duration? watchdogPeriod,
     @visibleForTesting Duration? silenceLimit,
-  }) : _config = config,
+    @visibleForTesting bool enableWatchdog = true,
+  }) : _enableWatchdog = enableWatchdog,
+       _config = config,
        _authorize = authorizer,
        _openSocket = socketFactory ?? WebSocketChannel.connect,
        _watchdogPeriod = watchdogPeriod ?? defaultWatchdogPeriod,
@@ -113,6 +115,12 @@ class RealtimeClient {
   /// thật.
   final Duration _watchdogPeriod;
   final Duration _silenceLimit;
+
+  /// Chỉ bài kiểm đặt `false`, và chỉ bài kiểm KHÔNG nói về watchdog: một
+  /// `Timer.periodic` còn chạy lúc bài kiểm kết thúc là lỗi "A Timer is still
+  /// pending" của flutter_test, và những bài đó cố ý giữ socket sống tới cuối.
+  /// Mã chạy thật không bao giờ tắt nó — tắt là quay lại đúng C2.
+  final bool _enableWatchdog;
 
   final ValueNotifier<RealtimeStatus> _status;
 
@@ -250,7 +258,7 @@ class RealtimeClient {
   /// ở `connected` — và từ P1, `connected` nghĩa là KHÔNG còn lượt poll nào:
   /// hộp thư đứng im vô hạn, im lặng.
   void _startWatchdog() {
-    if (_watchdog?.isActive ?? false) return;
+    if (!_enableWatchdog || (_watchdog?.isActive ?? false)) return;
     _watchdog = Timer.periodic(_watchdogPeriod, (_) {
       if (_status.value != RealtimeStatus.connected) return;
       final last = _lastFrameAt;

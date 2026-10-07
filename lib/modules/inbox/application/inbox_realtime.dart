@@ -106,10 +106,16 @@ class InboxRealtime {
     return _withJitter(_fallback * (1 << _step));
   }
 
-  /// Có đang cần lượt poll nào không — `connecting` và `disconnected` là CÙNG
-  /// một chế độ về phía hẹn giờ.
-  static bool _polls(RealtimeStatus status) =>
-      status != RealtimeStatus.connected;
+  /// Chế độ hẹn giờ của một trạng thái: không poll (`connected`), poll nhịp
+  /// gốc cố định (`disabled`), hay poll nhịp giãn kèm nhiễu (còn lại).
+  ///
+  /// `connecting` và `disconnected` là CÙNG một chế độ — đó là cả điểm của
+  /// hàm này.
+  static int _timerMode(RealtimeStatus status) => switch (status) {
+    RealtimeStatus.connected => 0,
+    RealtimeStatus.disabled => 1,
+    RealtimeStatus.connecting || RealtimeStatus.disconnected => 2,
+  };
 
   /// Ghi nhận trạng thái kênh mới; trả `true` khi người gọi cần dựng lại hẹn
   /// giờ của mình (chu kỳ của một `Timer` là cố định lúc tạo).
@@ -124,7 +130,7 @@ class InboxRealtime {
   bool setState(RealtimeStatus next) {
     if (next == _status) return false;
     final wasConnected = _status == RealtimeStatus.connected;
-    final modeChanged = _polls(_status) != _polls(next);
+    final modeChanged = _timerMode(_status) != _timerMode(next);
     _status = next;
     // Nối được, hay vừa rớt khỏi một kênh đang sống, thì đếm lại từ đầu. Một
     // lượt thử nối lại KHÔNG thành (`connecting` → `disconnected`) thì giữ
