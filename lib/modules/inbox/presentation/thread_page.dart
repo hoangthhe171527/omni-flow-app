@@ -7,6 +7,7 @@ import 'package:image_picker/image_picker.dart';
 
 import '../../../core/error/app_exception.dart';
 import '../../../core/utils/formatters.dart';
+import '../../../core/utils/media_url.dart';
 import '../../../design/components/components.dart';
 import '../../../design/platform/omni_motion_scope.dart';
 import '../../../design/tokens/tokens.dart';
@@ -16,6 +17,7 @@ import '../../opportunities/opportunities.dart';
 import '../../settings/settings.dart';
 import '../application/inbox_providers.dart';
 import '../application/inbox_realtime.dart';
+import '../application/media_url_resolver.dart';
 import '../application/thread_controller.dart';
 import '../data/inbox_api.dart';
 import '../domain/conversation.dart';
@@ -27,10 +29,9 @@ import 'widgets/message_bubble.dart';
 import 'widgets/message_composer.dart';
 import 'widgets/message_images.dart';
 
-/// Nghỉ giữa hai lượt tự tải lại tin vì ảnh lỗi (MS-I24).
-const mediaReloadCooldown = Duration(minutes: 10);
+export '../application/media_url_resolver.dart' show mediaReloadCooldown;
 
-/// Đồng hồ của thời gian nghỉ trên — test thay để khỏi chờ 10 phút thật.
+/// Đồng hồ của [mediaReloadCooldown] — test thay để khỏi chờ 10 phút thật.
 @visibleForTesting
 DateTime Function() mediaReloadClock = DateTime.now;
 
@@ -49,8 +50,9 @@ class _ThreadPageState extends ConsumerState<ThreadPage>
   final _searchController = TextEditingController();
   final _searchFocusNode = FocusNode();
   Timer? _syncTimer;
-  Duration? _syncPeriod;
-  bool _realtimeLive = false;
+
+  /// Nhịp poll dự phòng theo trạng thái socket thật (MS-I38).
+  final _realtime = InboxRealtime.thread();
   String? _syncCursor;
   bool _syncing = false;
   Timer? _searchDebounce;
@@ -59,9 +61,16 @@ class _ThreadPageState extends ConsumerState<ThreadPage>
   List<Message> _searchResults = const [];
   int _searchIndex = 0;
 
-  /// Lần gần nhất tải lại tin THÀNH CÔNG vì ảnh lỗi (link ký hết hạn, MS-I24).
-  DateTime? _lastMediaReload;
-  bool _mediaReloadInFlight = false;
+  /// Xin URL ký mới khi media hết hạn (MS-I24 + việc dồn từ Đợt 7 cho video).
+  ///
+  /// MỘT cái cho cả màn: nó là chỗ giữ "đã xin cho tệp nào rồi", thời gian
+  /// nghỉ, và việc gộp cả loạt tệp hết hạn vào một lượt tải lại.
+  late final MediaUrlResolver _mediaResolver = MediaUrlResolver(
+    onReload: () =>
+        ref.read(threadProvider(widget.conversationId).notifier).reloadMedia(),
+    lookup: _freshMediaUrl,
+    clock: () => mediaReloadClock(),
+  );
 
   @override
   void initState() {
@@ -117,13 +126,22 @@ class _ThreadPageState extends ConsumerState<ThreadPage>
   }
 
   /// The catch-up poll, at whichever interval the socket's health calls for.
-  /// Rebuilt rather than adjusted, because a Timer's period is fixed once made.
+  ///
+  /// Hẹn giờ một lượt rồi tự đặt lại — xem ghi chú ở `inbox_page.dart`.
   void _startRealtimeFallback() {
-    final period = RealtimePolling.thread(live: _realtimeLive);
-    if (_syncTimer != null && _syncPeriod == period) return;
     _syncTimer?.cancel();
-    _syncPeriod = period;
-    _syncTimer = Timer.periodic(period, (_) => _catchUpChanges());
+    _syncTimer = null;
+    final period = _realtime.pollInterval;
+    if (period == null) return;
+    _syncTimer = Timer(period, _pollTick);
+  }
+
+  Future<void> _pollTick() async {
+    _syncTimer = null;
+    await _catchUpChanges();
+    if (!mounted) return;
+    _realtime.tickBackoff();
+    _startRealtimeFallback();
   }
 
   Future<void> _catchUpChanges() async {
@@ -176,27 +194,22 @@ class _ThreadPageState extends ConsumerState<ThreadPage>
   /// lượt, không thể thành vòng lặp), vẫn không chồng lượt đang chạy.
   void _onMediaUserRetry() => _reloadMedia(userInitiated: true);
 
-  void _reloadMedia({required bool userInitiated}) {
-    if (_mediaReloadInFlight) return;
-    final last = _lastMediaReload;
-    if (!userInitiated &&
-        last != null &&
-        mediaReloadClock().difference(last) < mediaReloadCooldown) {
-      return;
+  void _reloadMedia({required bool userInitiated}) =>
+      unawaited(_mediaResolver.reloadAll(force: userInitiated));
+
+  /// URL ký mới của đúng tệp này sau lượt tải lại, tra theo khoá cache (bỏ
+  /// `expires`/`signature`) nên bản cũ và bản mới là MỘT tệp.
+  String? _freshMediaUrl(String url) {
+    final key = mediaCacheKey(resolveMediaUrl(url));
+    final state = ref.read(threadProvider(widget.conversationId)).valueOrNull;
+    if (state == null) return null;
+    for (final message in state.messages) {
+      for (final attachment in message.attachments) {
+        final candidate = resolveMediaUrl(attachment.url);
+        if (mediaCacheKey(candidate) == key) return candidate;
+      }
     }
-    _mediaReloadInFlight = true;
-    unawaited(
-      ref
-          .read(threadProvider(widget.conversationId).notifier)
-          .reloadMedia()
-          .then((_) {
-            _lastMediaReload = mediaReloadClock();
-          })
-          .catchError((_) {
-            // Giữ nguyên thứ đang hiện; ảnh còn nút tải lại riêng.
-          })
-          .whenComplete(() => _mediaReloadInFlight = false),
-    );
+    return null;
   }
 
   void _onScroll() {
@@ -230,11 +243,10 @@ class _ThreadPageState extends ConsumerState<ThreadPage>
       if (state != null) _pruneMessageKeys(state);
     });
 
-    final live =
-        ref.watch(realtimeStatusProvider).valueOrNull ==
-        RealtimeStatus.connected;
-    if (live != _realtimeLive) {
-      _realtimeLive = live;
+    final status =
+        ref.watch(realtimeStatusProvider).valueOrNull ??
+        RealtimeStatus.disabled;
+    if (_realtime.setState(status)) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) _startRealtimeFallback();
       });
@@ -289,6 +301,7 @@ class _ThreadPageState extends ConsumerState<ThreadPage>
                 data: (state) => MediaReloadScope(
                   onLoadError: _onMediaLoadError,
                   onUserRetry: _onMediaUserRetry,
+                  resolver: _mediaResolver,
                   child: _MessageList(
                     state: state,
                     controller: _scrollController,

@@ -34,8 +34,9 @@ class _InboxPageState extends ConsumerState<InboxPage>
   final Set<String> _selected = {};
   bool _selectionMode = false;
   Timer? _syncTimer;
-  Duration? _syncPeriod;
-  bool _realtimeLive = false;
+
+  /// Nhịp poll dự phòng theo trạng thái socket thật (MS-I38).
+  final _realtime = InboxRealtime.inbox();
   String? _syncCursor;
   bool _syncing = false;
 
@@ -69,15 +70,24 @@ class _InboxPageState extends ConsumerState<InboxPage>
 
   /// The catch-up poll, at whichever interval the socket's health calls for.
   ///
-  /// Restarted rather than adjusted when that changes: a Timer's period is
-  /// fixed at construction, so a socket that drops has to rebuild the timer to
-  /// tighten the interval back up.
+  /// Hẹn giờ MỘT lượt rồi tự đặt lại, không `Timer.periodic`: chu kỳ của một
+  /// `Timer` là cố định lúc tạo, mà nhịp ở đây giãn dần sau mỗi lượt và mang
+  /// nhiễu riêng từng lượt. Kênh còn sống thì không có lượt nào cả.
   void _startRealtimeFallback() {
-    final period = RealtimePolling.inbox(live: _realtimeLive);
-    if (_syncTimer != null && _syncPeriod == period) return;
     _syncTimer?.cancel();
-    _syncPeriod = period;
-    _syncTimer = Timer.periodic(period, (_) => _catchUpChanges());
+    _syncTimer = null;
+    final period = _realtime.pollInterval;
+    if (period == null) return;
+    _syncTimer = Timer(period, _pollTick);
+  }
+
+  Future<void> _pollTick() async {
+    _syncTimer = null;
+    await _catchUpChanges();
+    if (!mounted) return;
+    // Vẫn chưa có socket sau lượt này: lượt sau giãn ra.
+    _realtime.tickBackoff();
+    _startRealtimeFallback();
   }
 
   Future<void> _catchUpChanges() async {
@@ -132,12 +142,11 @@ class _InboxPageState extends ConsumerState<InboxPage>
     });
 
     // A socket that drops has to put the poll back on its tight interval, and a
-    // socket that comes up has to relax it again.
-    final live =
-        ref.watch(realtimeStatusProvider).valueOrNull ==
-        RealtimeStatus.connected;
-    if (live != _realtimeLive) {
-      _realtimeLive = live;
+    // socket that comes up has to stop it again.
+    final status =
+        ref.watch(realtimeStatusProvider).valueOrNull ??
+        RealtimeStatus.disabled;
+    if (_realtime.setState(status)) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) _startRealtimeFallback();
       });

@@ -1,35 +1,157 @@
 import 'dart:async';
+import 'dart:math';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/realtime/realtime_client.dart';
 import '../../../security/session/session_controller.dart';
 import 'thread_controller.dart';
 
-/// How often a screen polls `/inbox/changes` as a safety net.
+/// Nhịp gốc của lượt poll `/inbox/changes` khi KHÔNG có kênh realtime sống.
 ///
-/// Polling is deliberately not deleted along with the arrival of realtime. A
-/// WebSocket can die quietly — a proxy idle-timeout, a captive portal, a carrier
-/// dropping long-lived connections — and the failure mode is a rep staring at an
-/// inbox that stopped updating without saying so. So the poll stays; it just
-/// stops being the mechanism.
+/// Poll không bị xoá cùng lúc realtime tới. Một WebSocket có thể chết lặng —
+/// proxy hết hạn chờ, cổng wifi khách sạn, nhà mạng cắt kết nối dài — và kiểu
+/// hỏng đó (nhân viên ngồi nhìn hộp thư đã ngừng cập nhật mà không ai nói) tệ
+/// hơn số lượt gọi. Nên poll còn lại; nó chỉ không còn là cơ chế.
 ///
-/// The old intervals (5s inbox, 8s thread) were the *only* way a new message
-/// arrived, which is why they were so tight. With a live socket they are a
-/// heartbeat instead, and the request rate per rep drops by roughly 95%.
+/// Hai con số 5s/8s là nhịp CỦA LÚC MẤT KÊNH. Khi kênh sống thì
+/// [InboxRealtime.pollInterval] trả `null`: không poll chút nào.
 class RealtimePolling {
   const RealtimePolling._();
 
-  static const inboxLive = Duration(minutes: 2);
   static const inboxFallback = Duration(seconds: 5);
-  static const threadLive = Duration(minutes: 2);
   static const threadFallback = Duration(seconds: 8);
+}
 
-  static Duration inbox({required bool live}) =>
-      live ? inboxLive : inboxFallback;
+/// Nhịp poll dự phòng, tính từ trạng thái THẬT của kênh realtime (MS-I38).
+///
+/// Trước đợt này nhịp chỉ có hai giá trị cố định và cả hai luôn chạy: kênh
+/// sống vẫn gõ cửa mỗi 2 phút, kênh rớt thì mọi máy trong tenant quay lại 5
+/// giây một lượt — cùng một giây, vì tất cả rớt cùng lúc khi server khởi động
+/// lại. Hai thay đổi ở đây:
+///
+/// - **Kênh sống thì không poll** ([pollInterval] trả `null`). Sự kiện đã tới
+///   qua socket; lượt poll chỉ để xác nhận là không có gì mới.
+/// - **Kênh rớt thì giãn dần** 1 → 2 → 4 (trần 4, khớp web) kèm nhiễu ±20%, nên
+///   mất kết nối hàng loạt dàn ra chứ không dồn vào một nhịp.
+///
+/// Đây là một giá trị có trạng thái, không phải hàm thuần: nó nhớ đã giãn tới
+/// nhịp nào. Màn hình giữ MỘT cái cho cả vòng đời của mình.
+class InboxRealtime {
+  InboxRealtime({
+    required Duration fallback,
+    RealtimeStatus status = RealtimeStatus.disconnected,
+    Random? random,
+  }) : _fallback = fallback,
+       _status = status,
+       _random = random ?? Random();
 
-  static Duration thread({required bool live}) =>
-      live ? threadLive : threadFallback;
+  /// Nhịp của danh sách hộp thư (gốc 5 giây).
+  InboxRealtime.inbox({
+    RealtimeStatus status = RealtimeStatus.disconnected,
+    Random? random,
+  }) : this(
+         fallback: RealtimePolling.inboxFallback,
+         status: status,
+         random: random,
+       );
+
+  /// Nhịp của một hội thoại đang mở (gốc 8 giây).
+  InboxRealtime.thread({
+    RealtimeStatus status = RealtimeStatus.disconnected,
+    Random? random,
+  }) : this(
+         fallback: RealtimePolling.threadFallback,
+         status: status,
+         random: random,
+       );
+
+  @visibleForTesting
+  InboxRealtime.forTest({required RealtimeStatus state, Random? random})
+    : this.inbox(status: state, random: random);
+
+  /// Trần của nhịp giãn: 2^2 = 4 lần nhịp gốc (20 giây ở hộp thư, 32 giây ở
+  /// màn chat).
+  ///
+  /// Có trần vì không có trần thì một máy để quên trong ngăn kéo sẽ thôi không
+  /// bao giờ phát hiện ra là mạng đã về. Con số là 4 chứ không phải 8 để khớp
+  /// plan ("backoff 1 → 2 → 4") và khớp web (`use-inbox.ts` `MAX_BACKOFF = 4`):
+  /// ở 8× thì tin khách tới trong lúc socket chết có thể chậm thêm tới 64 giây
+  /// ở màn chat.
+  static const maxBackoffSteps = 2;
+
+  /// Nhiễu ±20% quanh nhịp đã tính.
+  static const jitterRatio = 0.2;
+
+  final Duration _fallback;
+  final Random _random;
+  RealtimeStatus _status;
+  int _step = 0;
+
+  RealtimeStatus get status => _status;
+
+  @visibleForTesting
+  int get backoffStep => _step;
+
+  /// Bao lâu nữa thì gọi `/inbox/changes`, hay `null` khi không cần gọi.
+  ///
+  /// Mỗi lần ĐỌC là một giá trị nhiễu khác — người gọi phải đọc đúng một lần
+  /// cho mỗi lượt hẹn giờ, đừng so hai lượt đọc với nhau.
+  Duration? get pollInterval {
+    if (_status == RealtimeStatus.connected) return null;
+    // Bản dựng không cấu hình realtime: không có kênh nào để chờ, cũng không
+    // có đợt nối lại đồng loạt nào để dàn ra. Nhịp gốc, cố định, như trước.
+    if (_status == RealtimeStatus.disabled) return _fallback;
+    return _withJitter(_fallback * (1 << _step));
+  }
+
+  /// Chế độ hẹn giờ của một trạng thái: không poll (`connected`), poll nhịp
+  /// gốc cố định (`disabled`), hay poll nhịp giãn kèm nhiễu (còn lại).
+  ///
+  /// `connecting` và `disconnected` là CÙNG một chế độ — đó là cả điểm của
+  /// hàm này.
+  static int _timerMode(RealtimeStatus status) => switch (status) {
+    RealtimeStatus.connected => 0,
+    RealtimeStatus.disabled => 1,
+    RealtimeStatus.connecting || RealtimeStatus.disconnected => 2,
+  };
+
+  /// Ghi nhận trạng thái kênh mới; trả `true` khi người gọi cần dựng lại hẹn
+  /// giờ của mình (chu kỳ của một `Timer` là cố định lúc tạo).
+  ///
+  /// Chỉ trả `true` khi CHẾ ĐỘ đổi (`connected` ↔ không-`connected`). Vòng nối
+  /// lại sinh hai lần đổi trạng thái mỗi lượt thử (`disconnected` →
+  /// `connecting` → `disconnected`) ở t ≈ 0, 2, 6, 14, 30 s; người gọi
+  /// `cancel()` rồi dựng lại hẹn giờ từ 0 cho mỗi lần đổi, nên nếu
+  /// `connecting` cũng tính thì nhịp 4–6 giây không bao giờ chạy tới và lượt
+  /// poll ĐẦU TIÊN chỉ rơi vào khoảng t ≈ 19 s — đúng 19 giây đầu của một đợt
+  /// mất kết nối thì lưới an toàn không tồn tại. Càng chập chờn càng dài.
+  bool setState(RealtimeStatus next) {
+    if (next == _status) return false;
+    final wasConnected = _status == RealtimeStatus.connected;
+    final modeChanged = _timerMode(_status) != _timerMode(next);
+    _status = next;
+    // Nối được, hay vừa rớt khỏi một kênh đang sống, thì đếm lại từ đầu. Một
+    // lượt thử nối lại KHÔNG thành (`connecting` → `disconnected`) thì giữ
+    // nguyên: đó đúng là lúc không nên gõ cửa dày hơn.
+    if (next == RealtimeStatus.connected || wasConnected) _step = 0;
+    return modeChanged;
+  }
+
+  /// Một lượt poll đã chạy mà kênh vẫn chưa về: lượt sau giãn ra.
+  void tickBackoff() {
+    if (_status == RealtimeStatus.connected ||
+        _status == RealtimeStatus.disabled) {
+      return;
+    }
+    if (_step < maxBackoffSteps) _step++;
+  }
+
+  Duration _withJitter(Duration value) {
+    final spread = 1 + (_random.nextDouble() * 2 - 1) * jitterRatio;
+    return Duration(milliseconds: (value.inMilliseconds * spread).round());
+  }
 }
 
 /// Bumped by a foreground FCM notification.
