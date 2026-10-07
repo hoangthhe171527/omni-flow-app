@@ -102,17 +102,31 @@ class InboxRealtime {
     return _withJitter(_fallback * (1 << _step));
   }
 
+  /// Có đang cần lượt poll nào không — `connecting` và `disconnected` là CÙNG
+  /// một chế độ về phía hẹn giờ.
+  static bool _polls(RealtimeStatus status) =>
+      status != RealtimeStatus.connected;
+
   /// Ghi nhận trạng thái kênh mới; trả `true` khi người gọi cần dựng lại hẹn
   /// giờ của mình (chu kỳ của một `Timer` là cố định lúc tạo).
+  ///
+  /// Chỉ trả `true` khi CHẾ ĐỘ đổi (`connected` ↔ không-`connected`). Vòng nối
+  /// lại sinh hai lần đổi trạng thái mỗi lượt thử (`disconnected` →
+  /// `connecting` → `disconnected`) ở t ≈ 0, 2, 6, 14, 30 s; người gọi
+  /// `cancel()` rồi dựng lại hẹn giờ từ 0 cho mỗi lần đổi, nên nếu
+  /// `connecting` cũng tính thì nhịp 4–6 giây không bao giờ chạy tới và lượt
+  /// poll ĐẦU TIÊN chỉ rơi vào khoảng t ≈ 19 s — đúng 19 giây đầu của một đợt
+  /// mất kết nối thì lưới an toàn không tồn tại. Càng chập chờn càng dài.
   bool setState(RealtimeStatus next) {
     if (next == _status) return false;
     final wasConnected = _status == RealtimeStatus.connected;
+    final modeChanged = _polls(_status) != _polls(next);
     _status = next;
     // Nối được, hay vừa rớt khỏi một kênh đang sống, thì đếm lại từ đầu. Một
     // lượt thử nối lại KHÔNG thành (`connecting` → `disconnected`) thì giữ
     // nguyên: đó đúng là lúc không nên gõ cửa dày hơn.
     if (next == RealtimeStatus.connected || wasConnected) _step = 0;
-    return true;
+    return modeChanged;
   }
 
   /// Một lượt poll đã chạy mà kênh vẫn chưa về: lượt sau giãn ra.

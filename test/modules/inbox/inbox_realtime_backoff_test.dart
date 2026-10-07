@@ -140,5 +140,20 @@ void main() {
       expect(realtime.setState(RealtimeStatus.disconnected), isFalse);
       expect(realtime.setState(RealtimeStatus.connected), isTrue);
     });
+
+    test('connecting ↔ disconnected KHÔNG đòi dựng lại hẹn giờ', () {
+      // Hai lần đổi mỗi lượt nối lại, mà người gọi `cancel()` + dựng lại từ 0
+      // cho mỗi lần đổi, thì nhịp 4–6 giây không bao giờ chạy tới: lượt poll
+      // đầu của một đợt mất kết nối lùi tới t ≈ 19 giây.
+      final realtime = InboxRealtime.forTest(
+        state: RealtimeStatus.disconnected,
+      );
+
+      expect(realtime.setState(RealtimeStatus.connecting), isFalse);
+      expect(realtime.setState(RealtimeStatus.disconnected), isFalse);
+      // Rời/vào `connected` là đổi CHẾ ĐỘ: có poll hay không poll.
+      expect(realtime.setState(RealtimeStatus.connected), isTrue);
+      expect(realtime.setState(RealtimeStatus.connecting), isTrue);
+    });
   });
 }
