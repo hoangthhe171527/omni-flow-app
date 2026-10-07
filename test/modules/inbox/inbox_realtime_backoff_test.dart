@@ -96,7 +96,7 @@ void main() {
       );
     });
 
-    test('nhịp giãn có trần: 8 lần nhịp gốc', () {
+    test('nhịp giãn có trần: 4 lần nhịp gốc, khớp plan và khớp web', () {
       final realtime = InboxRealtime.forTest(
         state: RealtimeStatus.disconnected,
       );
@@ -105,9 +105,11 @@ void main() {
       }
 
       expect(realtime.backoffStep, InboxRealtime.maxBackoffSteps);
+      // Plan và web nói trần là 4× (`use-inbox.ts MAX_BACKOFF = 4`). Ở 8× thì
+      // tin khách tới lúc socket chết chậm thêm tới 64 giây ở màn chat.
       expect(
         realtime.pollInterval!.inMilliseconds,
-        inInclusiveRange(32000, 48000),
+        inInclusiveRange(16000, 24000),
       );
     });
 

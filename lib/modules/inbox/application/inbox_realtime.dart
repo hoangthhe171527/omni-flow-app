@@ -33,7 +33,7 @@ class RealtimePolling {
 ///
 /// - **Kênh sống thì không poll** ([pollInterval] trả `null`). Sự kiện đã tới
 ///   qua socket; lượt poll chỉ để xác nhận là không có gì mới.
-/// - **Kênh rớt thì giãn dần** 1 → 2 → 4 (trần 8) kèm nhiễu ±20%, nên một đợt
+/// - **Kênh rớt thì giãn dần** 1 → 2 → 4 (trần 4, khớp web) kèm nhiễu ±20%, nên
 ///   mất kết nối hàng loạt dàn ra chứ không dồn vào một nhịp.
 ///
 /// Đây là một giá trị có trạng thái, không phải hàm thuần: nó nhớ đã giãn tới
@@ -71,11 +71,15 @@ class InboxRealtime {
   InboxRealtime.forTest({required RealtimeStatus state, Random? random})
     : this.inbox(status: state, random: random);
 
-  /// Trần của nhịp giãn: 2^3 = 8 lần nhịp gốc (40 giây ở hộp thư).
+  /// Trần của nhịp giãn: 2^2 = 4 lần nhịp gốc (20 giây ở hộp thư, 32 giây ở
+  /// màn chat).
   ///
   /// Có trần vì không có trần thì một máy để quên trong ngăn kéo sẽ thôi không
-  /// bao giờ phát hiện ra là mạng đã về.
-  static const maxBackoffSteps = 3;
+  /// bao giờ phát hiện ra là mạng đã về. Con số là 4 chứ không phải 8 để khớp
+  /// plan ("backoff 1 → 2 → 4") và khớp web (`use-inbox.ts` `MAX_BACKOFF = 4`):
+  /// ở 8× thì tin khách tới trong lúc socket chết có thể chậm thêm tới 64 giây
+  /// ở màn chat.
+  static const maxBackoffSteps = 2;
 
   /// Nhiễu ±20% quanh nhịp đã tính.
   static const jitterRatio = 0.2;
