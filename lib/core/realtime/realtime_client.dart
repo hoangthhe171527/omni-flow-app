@@ -92,9 +92,13 @@ class RealtimeClient {
     required RealtimeConfig config,
     required RealtimeAuthorizer authorizer,
     RealtimeSocketFactory? socketFactory,
+    @visibleForTesting Duration? watchdogPeriod,
+    @visibleForTesting Duration? silenceLimit,
   }) : _config = config,
        _authorize = authorizer,
        _openSocket = socketFactory ?? WebSocketChannel.connect,
+       _watchdogPeriod = watchdogPeriod ?? defaultWatchdogPeriod,
+       _silenceLimit = silenceLimit ?? defaultSilenceLimit,
        _status = ValueNotifier<RealtimeStatus>(
          config.isEnabled
              ? RealtimeStatus.disconnected
@@ -104,6 +108,12 @@ class RealtimeClient {
   final RealtimeConfig _config;
   final RealtimeAuthorizer _authorize;
   final RealtimeSocketFactory _openSocket;
+
+  /// Nhịp và hạn im lặng của watchdog. Tiêm vào để bài kiểm khỏi chờ 90 giây
+  /// thật.
+  final Duration _watchdogPeriod;
+  final Duration _silenceLimit;
+
   final ValueNotifier<RealtimeStatus> _status;
 
   WebSocketChannel? _socket;
@@ -113,11 +123,22 @@ class RealtimeClient {
   Timer? _reconnectTimer;
   Duration _reconnectBackoff = _initialBackoff;
   bool _closedDeliberately = false;
+  DateTime? _lastFrameAt;
+  Timer? _watchdog;
 
   /// Reconnect delay: 2s doubling to 60s. A server restart brings every client
   /// back at once, so the ceiling matters as much as the growth.
   static const _initialBackoff = Duration(seconds: 2);
   static const _maxBackoff = Duration(seconds: 60);
+
+  /// Nhịp hỏi "còn sống không". Một hẹn giờ duy nhất cho cả client.
+  static const defaultWatchdogPeriod = Duration(seconds: 30);
+
+  /// Im lặng bấy lâu thì coi kết nối là đã chết.
+  ///
+  /// ~1,5× nhịp ping của Reverb (60 giây), nên một kết nối còn tốt mà không có
+  /// sự kiện nghiệp vụ nào vẫn luôn có frame trong cửa sổ này.
+  static const defaultSilenceLimit = Duration(seconds: 90);
 
   /// Listeners per channel. A channel is subscribed once however many parts of
   /// the app want it, and dropped when the last one leaves.
@@ -143,6 +164,8 @@ class RealtimeClient {
   Future<void> _open() async {
     _closedDeliberately = false;
     _status.value = RealtimeStatus.connecting;
+    _lastFrameAt = DateTime.now();
+    _startWatchdog();
 
     try {
       final socket = _openSocket(
@@ -166,6 +189,9 @@ class RealtimeClient {
   }
 
   void _onFrame(dynamic raw) {
+    // MỌI frame, kể cả `pusher:ping` và một frame không đọc được, là dấu hiệu
+    // kết nối còn sống.
+    _lastFrameAt = DateTime.now();
     final frame = PusherProtocol.parse(raw);
     if (frame == null) return;
 
@@ -215,9 +241,40 @@ class RealtimeClient {
     }
   }
 
+  /// Đóng một kết nối đã chết lặng, để `_onClosed` bật lại nhịp poll và vòng
+  /// nối lại.
+  ///
+  /// Vì sao cần: client chỉ TRẢ LỜI ping của server, nó không tự ping và không
+  /// có `activity_timeout`. Một socket bị NAT/proxy bỏ giữa đường không sinh
+  /// `onDone` hay `onError` nào, nên nếu không có cái này thì `_status` nằm mãi
+  /// ở `connected` — và từ P1, `connected` nghĩa là KHÔNG còn lượt poll nào:
+  /// hộp thư đứng im vô hạn, im lặng.
+  void _startWatchdog() {
+    if (_watchdog?.isActive ?? false) return;
+    _watchdog = Timer.periodic(_watchdogPeriod, (_) {
+      if (_status.value != RealtimeStatus.connected) return;
+      final last = _lastFrameAt;
+      if (last == null || DateTime.now().difference(last) <= _silenceLimit) {
+        return;
+      }
+      debugPrint(
+        'Realtime: không frame nào trong $_silenceLimit, đóng socket.',
+      );
+      // `sink.close()` → `onDone` → `_onClosed`: trạng thái, nhịp poll và vòng
+      // nối lại đều đi qua đúng một đường như mọi lần rớt khác.
+      unawaited(_socket?.sink.close());
+    });
+  }
+
+  void _stopWatchdog() {
+    _watchdog?.cancel();
+    _watchdog = null;
+  }
+
   void _onClosed(Object? error) {
     if (error != null) debugPrint('Realtime socket closed: $error');
 
+    _stopWatchdog();
     unawaited(_frames?.cancel());
     _frames = null;
     _socket = null;
@@ -327,6 +384,7 @@ class RealtimeClient {
   /// the next sign-in.
   Future<void> disconnect() async {
     _closedDeliberately = true;
+    _stopWatchdog();
     _reconnectTimer?.cancel();
     _reconnectTimer = null;
     _reconnectBackoff = _initialBackoff;
