@@ -3,12 +3,25 @@
 /// Tách khỏi `message_bubble.dart` — xem ghi chú trong `message_link_preview.dart`.
 library;
 
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:video_player/video_player.dart';
 
+import '../../../../core/utils/media_url.dart';
 import '../../../../design/tokens/tokens.dart';
 import '../../domain/message.dart';
+import 'message_images.dart';
+
+/// Cách dựng `VideoPlayerController` — bài kiểm thay để đếm số lượt dựng.
+@visibleForTesting
+VideoPlayerController Function(Uri url) videoControllerFactory =
+    VideoPlayerController.networkUrl;
+
+@visibleForTesting
+void resetVideoControllerFactory() =>
+    videoControllerFactory = VideoPlayerController.networkUrl;
 
 class MessageFileAttachments extends StatelessWidget {
   const MessageFileAttachments({super.key, required this.attachments});
@@ -107,27 +120,135 @@ class _InlineVideo extends StatefulWidget {
 }
 
 class _InlineVideoState extends State<_InlineVideo> {
-  late final VideoPlayerController _controller =
-      VideoPlayerController.networkUrl(Uri.parse(widget.url));
+  VideoPlayerController? _controller;
+
+  /// URL đang dùng — có thể là bản ký mới, khác `widget.url`.
+  String _url = '';
+
+  /// Đã xin URL ký mới cho tệp này chưa. Đúng MỘT lần: lần hỏng thứ hai là
+  /// trạng thái lỗi, không phải một lượt gọi API nữa.
+  bool _refreshed = false;
+  bool _failed = false;
 
   @override
   void initState() {
     super.initState();
-    _controller.initialize().then((_) {
-      if (mounted) setState(() {});
+    // Không setState: build đầu chưa chạy.
+    _open(resolveMediaUrl(widget.url));
+  }
+
+  @override
+  void didUpdateWidget(covariant _InlineVideo oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.url == widget.url) return;
+    // Tin đã được tải lại với URL ký mới: coi như một tệp mới, có quyền xin
+    // lại nếu URL này cũng hỏng.
+    setState(() {
+      _refreshed = false;
+      _failed = false;
+      _open(resolveMediaUrl(widget.url));
     });
+  }
+
+  /// Dựng controller cho [url] và bắt đầu mở. Phần đồng bộ; gọi trong
+  /// `setState` ở mọi chỗ trừ `initState`.
+  void _open(String url) {
+    _url = url;
+    final previous = _controller;
+    _controller = null;
+    _disposeSafely(previous);
+
+    if (url.isEmpty) {
+      _failed = true;
+      return;
+    }
+    final uri = Uri.tryParse(url);
+    if (uri == null) {
+      _failed = true;
+      return;
+    }
+    final controller = videoControllerFactory(uri);
+    _controller = controller;
+    unawaited(_initialize(controller));
+  }
+
+  Future<void> _initialize(VideoPlayerController controller) async {
+    try {
+      await controller.initialize();
+    } catch (_) {
+      // Link ký hết hạn (403), tệp đã xoá (404), hay mạng hỏng — cùng một
+      // đường: xin URL mới một lần, rồi mới chịu hiện lỗi.
+      await _onOpenFailed(controller);
+      return;
+    }
+    if (!mounted || controller != _controller) return;
+    setState(() {});
+  }
+
+  Future<void> _onOpenFailed(VideoPlayerController controller) async {
+    if (!mounted || controller != _controller) return;
+    if (_refreshed) {
+      setState(() => _failed = true);
+      return;
+    }
+    _refreshed = true;
+    final fresh = await MediaReloadScope.resolverOf(context)?.refresh(_url);
+    if (!mounted || controller != _controller) return;
+    if (fresh == null || fresh.isEmpty) {
+      setState(() => _failed = true);
+      return;
+    }
+    setState(() => _open(resolveMediaUrl(fresh)));
+  }
+
+  /// Nút "Tải lại video": bỏ qua thời gian nghỉ, một lần bấm là một lượt.
+  Future<void> _retry() async {
+    final resolver = MediaReloadScope.resolverOf(context);
+    final fresh = await resolver?.refresh(_url, force: true);
+    if (!mounted) return;
+    setState(() {
+      _refreshed = true;
+      _failed = false;
+      _open(resolveMediaUrl(fresh == null || fresh.isEmpty ? _url : fresh));
+    });
+  }
+
+  void _disposeSafely(VideoPlayerController? controller) {
+    if (controller == null) return;
+    try {
+      unawaited(controller.dispose());
+    } catch (_) {
+      // Controller chưa mở được thì không có gì để giải phóng.
+    }
   }
 
   @override
   void dispose() {
-    _controller.dispose();
+    _disposeSafely(_controller);
+    _controller = null;
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    if (!_controller.value.isInitialized) {
+    final controller = _controller;
+    if (_failed || controller == null) {
+      return AspectRatio(
+        aspectRatio: 16 / 9,
+        child: ColoredBox(
+          color: scheme.onSurface.withValues(alpha: 0.08),
+          child: Center(
+            child: IconButton(
+              tooltip: 'Tải lại video',
+              onPressed: _retry,
+              icon: Icon(Icons.refresh_rounded, color: scheme.onSurfaceVariant),
+            ),
+          ),
+        ),
+      );
+    }
+    if (!controller.value.isInitialized) {
       return AspectRatio(
         aspectRatio: 16 / 9,
         child: ColoredBox(
@@ -142,11 +263,11 @@ class _InlineVideoState extends State<_InlineVideo> {
         alignment: Alignment.bottomCenter,
         children: [
           AspectRatio(
-            aspectRatio: _controller.value.aspectRatio,
-            child: VideoPlayer(_controller),
+            aspectRatio: controller.value.aspectRatio,
+            child: VideoPlayer(controller),
           ),
           VideoProgressIndicator(
-            _controller,
+            controller,
             allowScrubbing: true,
             colors: VideoProgressColors(
               playedColor: OmniColors.chatPrimary,
@@ -156,14 +277,14 @@ class _InlineVideoState extends State<_InlineVideo> {
           ),
           Center(
             child: IconButton.filled(
-              tooltip: _controller.value.isPlaying ? 'Tạm dừng' : 'Phát video',
+              tooltip: controller.value.isPlaying ? 'Tạm dừng' : 'Phát video',
               onPressed: () => setState(() {
-                _controller.value.isPlaying
-                    ? _controller.pause()
-                    : _controller.play();
+                controller.value.isPlaying
+                    ? controller.pause()
+                    : controller.play();
               }),
               icon: Icon(
-                _controller.value.isPlaying
+                controller.value.isPlaying
                     ? Icons.pause_rounded
                     : Icons.play_arrow_rounded,
               ),

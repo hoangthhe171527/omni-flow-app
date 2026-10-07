@@ -1,14 +1,21 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/device/installation_id.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/utils/json.dart';
 
 /// Registers this app installation with the API; the FCM token is not trusted
 /// until it is bound to the authenticated user and active tenant server-side.
 class PushApi {
-  PushApi(this._client);
+  PushApi(this._client, this._installationId);
 
   final ApiClient _client;
+
+  /// Bắt buộc, không `null` được: `device_id` thiếu thì server rơi về hành vi
+  /// cũ (xoá token theo platform) và một người có hai máy chỉ nhận thông báo ở
+  /// MỘT máy — im lặng. Đúng kiểu lỗi lệch trường client↔server mà dự án này
+  /// đã gặp chín lần, nên nó là tham số bắt buộc chứ không phải tuỳ chọn.
+  final InstallationId _installationId;
 
   Future<void> register(String token, String platform, {String? deviceName}) {
     final normalizedDeviceName = deviceName?.trim();
@@ -17,6 +24,10 @@ class PushApi {
       body: {
         'token': token,
         'platform': platform,
+        // Khoá nhận dạng MÁY, bên cạnh `device_name` (nhãn người đọc, có thể
+        // trùng nhau giữa hai máy). API cũ bỏ qua trường lạ nên gửi sớm là an
+        // toàn — xem plan Đợt 8, B2.
+        'device_id': _installationId.value,
         if (normalizedDeviceName != null && normalizedDeviceName.isNotEmpty)
           'device_name': normalizedDeviceName,
       },
@@ -51,5 +62,6 @@ class PushApi {
 }
 
 final pushApiProvider = Provider<PushApi>(
-  (ref) => PushApi(ref.watch(apiClientProvider)),
+  (ref) =>
+      PushApi(ref.watch(apiClientProvider), ref.watch(installationIdProvider)),
 );

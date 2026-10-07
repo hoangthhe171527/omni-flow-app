@@ -2,17 +2,24 @@ import 'dart:typed_data';
 
 import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:omni_app/core/device/installation_id.dart';
 import 'package:omni_app/core/network/api_client.dart';
 import 'package:omni_app/modules/notifications/data/push_api.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
   late _RecordingAdapter adapter;
   late PushApi api;
+  late String deviceId;
 
-  setUp(() {
+  setUp(() async {
+    SharedPreferences.setMockInitialValues({});
+    final prefs = await SharedPreferences.getInstance();
+    final installationId = InstallationId(prefs);
+    deviceId = installationId.value;
     adapter = _RecordingAdapter();
     final dio = Dio()..httpClientAdapter = adapter;
-    api = PushApi(ApiClient(dio));
+    api = PushApi(ApiClient(dio), installationId);
   });
 
   test(
@@ -23,7 +30,11 @@ void main() {
       final request = adapter.singleRequest;
       expect(request.method, 'POST');
       expect(request.uri.path, '/api/v1/devices/push-tokens');
-      expect(request.data, {'token': 'android-token', 'platform': 'android'});
+      expect(request.data, {
+        'token': 'android-token',
+        'platform': 'android',
+        'device_id': deviceId,
+      });
     },
   );
 
@@ -33,6 +44,7 @@ void main() {
     expect(adapter.singleRequest.data, {
       'token': 'ios-token',
       'platform': 'ios',
+      'device_id': deviceId,
       'device_name': 'iPhone của Linh',
     });
   });

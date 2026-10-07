@@ -10,6 +10,7 @@ import 'package:flutter/material.dart';
 
 import '../../../../design/tokens/tokens.dart';
 import '../../../../core/utils/media_url.dart';
+import '../../application/media_url_resolver.dart';
 import '../../domain/message.dart';
 
 /// Nơi ảnh trong tin báo "tải không được" (MS-I24).
@@ -23,6 +24,7 @@ class MediaReloadScope extends InheritedWidget {
     super.key,
     required this.onLoadError,
     this.onUserRetry,
+    this.resolver,
     required super.child,
   });
 
@@ -32,6 +34,16 @@ class MediaReloadScope extends InheritedWidget {
   /// Người dùng bấm "Tải lại ảnh": lấy URL ký mới ngay, không chờ thời gian
   /// nghỉ. Không đặt thì dùng [onLoadError].
   final VoidCallback? onUserRetry;
+
+  /// Xin URL ký mới cho ĐÚNG một tệp rồi trả về.
+  ///
+  /// Ảnh không cần nó: `CachedNetworkImage` nhận URL mới qua `didUpdateWidget`
+  /// khi tin được tải lại. Video thì cần — `VideoPlayerController` nhận URL
+  /// lúc dựng, nên nó phải có URL mới TRONG TAY mới dựng lại được.
+  final MediaUrlResolver? resolver;
+
+  static MediaUrlResolver? resolverOf(BuildContext context) =>
+      context.getInheritedWidgetOfExactType<MediaReloadScope>()?.resolver;
 
   /// Không đăng ký phụ thuộc: chỉ gọi lúc ảnh lỗi, không cần vẽ lại theo.
   static VoidCallback? maybeOf(BuildContext context) =>
