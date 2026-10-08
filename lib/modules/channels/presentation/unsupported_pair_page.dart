@@ -27,7 +27,7 @@ class UnsupportedPairPage extends StatelessWidget {
       body: const OmniEmptyState(
         icon: Icons.phonelink_off_rounded,
         title: 'Kênh này chưa hỗ trợ trên điện thoại',
-        message: 'Kết nối kênh này từ OmniCRM trên máy tính.',
+        message: 'Kết nối kênh này từ Viomni trên máy tính.',
       ),
     );
   }

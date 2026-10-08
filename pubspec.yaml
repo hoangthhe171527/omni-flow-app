@@ -82,7 +82,7 @@ flutter:
   # Đóng gói chứ không tải lúc chạy: xưởng hay mất sóng, và chữ không được
   # nháy khi mở app.
   #
-  # Be Vietnam Pro chỉ còn bản 800 cho chữ "OmniCRM" ở màn mở app — nhận diện
+  # Be Vietnam Pro chỉ còn bản 800 cho chữ "Viomni" ở màn mở app — nhận diện
   # thương hiệu đã duyệt. Tải từ github.com/google/fonts (ofl/bevietnampro),
   # giấy phép SIL OFL 1.1: assets/fonts/BeVietnamPro-OFL.txt.
   fonts:

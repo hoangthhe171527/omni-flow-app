@@ -61,7 +61,7 @@ class _WorkspacePageState extends ConsumerState<WorkspacePage> {
                   ),
                   child: Row(
                     children: [
-                      const OmniBrandMark(semanticLabel: 'OmniCRM'),
+                      const OmniBrandMark(semanticLabel: 'Viomni'),
                       const Spacer(),
                       TextButton(
                         onPressed: () => ref

@@ -20,12 +20,10 @@ void main() {
     final handle = tester.ensureSemantics();
 
     await tester.pumpWidget(wrap(const OmniBrandMark()));
-    expect(find.bySemanticsLabel('OmniCRM'), findsNothing);
+    expect(find.bySemanticsLabel('Viomni'), findsNothing);
 
-    await tester.pumpWidget(
-      wrap(const OmniBrandMark(semanticLabel: 'OmniCRM')),
-    );
-    expect(find.bySemanticsLabel('OmniCRM'), findsOneWidget);
+    await tester.pumpWidget(wrap(const OmniBrandMark(semanticLabel: 'Viomni')));
+    expect(find.bySemanticsLabel('Viomni'), findsOneWidget);
 
     handle.dispose();
   });
@@ -74,16 +72,16 @@ void main() {
     }
   });
 
-  testWidgets('chữ OmniCRM: "CRM" mang màu chính trên nền sáng', (
+  testWidgets('chữ Viomni: "omni" mang màu chính trên nền sáng', (
     tester,
   ) async {
     await tester.pumpWidget(wrap(const OmniWordmark()));
 
     final rich = tester.widget<Text>(find.byType(Text)).textSpan! as TextSpan;
-    final crm = rich.children!.single as TextSpan;
+    final omni = rich.children!.single as TextSpan;
 
-    expect(rich.text, 'Omni');
-    expect(crm.text, 'CRM');
-    expect(crm.style!.color, OmniColors.primary);
+    expect(rich.text, 'Vi');
+    expect(omni.text, 'omni');
+    expect(omni.style!.color, OmniColors.primary);
   });
 }

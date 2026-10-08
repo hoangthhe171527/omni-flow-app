@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../tokens/tokens.dart';
 
-/// Logo OmniCRM: hành tinh‑bong bóng chat trên quỹ đạo, chấm vàng là "tin mới".
+/// Logo Viomni: hành tinh‑bong bóng chat trên quỹ đạo, chấm vàng là "tin mới".
 ///
 /// Vẽ bằng [CustomPainter] theo đúng SVG của artifact giao diện
 /// (`Main.dc.html`, viewBox 0 0 100 100) chứ không nạp một tệp ảnh: app chưa
@@ -52,14 +52,14 @@ class OmniBrandMark extends StatelessWidget {
   }
 }
 
-/// Chữ "Omni" + "CRM" đặt cạnh logo.
+/// Chữ "Vi" + "omni" đặt cạnh logo.
 class OmniWordmark extends StatelessWidget {
   const OmniWordmark({super.key, this.fontSize = 22, this.onInk = false});
 
   final double fontSize;
 
-  /// Trên nền mực: "Omni" trắng, "CRM" quỹ đạo sáng. Trên nền sáng: "Omni"
-  /// mực, "CRM" màu chính.
+  /// Trên nền mực: "Vi" trắng, "omni" quỹ đạo sáng. Trên nền sáng: "Vi"
+  /// mực, "omni" màu chính.
   final bool onInk;
 
   @override
@@ -73,10 +73,10 @@ class OmniWordmark extends StatelessWidget {
 
     return Text.rich(
       TextSpan(
-        text: 'Omni',
+        text: 'Vi',
         children: [
           TextSpan(
-            text: 'CRM',
+            text: 'omni',
             style: TextStyle(
               color: dark ? OmniColors.orbit : OmniColors.primary,
             ),

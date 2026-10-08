@@ -274,7 +274,7 @@ class _LoginHero extends StatelessWidget {
                     const OmniBrandMark(
                       size: 56,
                       onInk: true,
-                      semanticLabel: 'OmniCRM',
+                      semanticLabel: 'Viomni',
                     ),
                     const SizedBox(height: OmniSpacing.xl),
                     Text(
