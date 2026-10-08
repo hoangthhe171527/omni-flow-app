@@ -15,6 +15,19 @@ class _FailedLogin extends LoginController {
       const LoginState(error: 'Email hoặc mật khẩu không đúng.');
 }
 
+class _RecordingGoogleLogin extends LoginController {
+  bool called = false;
+
+  @override
+  LoginState build() => const LoginState();
+
+  @override
+  Future<bool> submitWithGoogle() async {
+    called = true;
+    return true;
+  }
+}
+
 void main() {
   Future<void> pump(WidgetTester tester, Widget page, List<Override> o) async {
     tester.view.physicalSize = const Size(390, 844);
@@ -42,7 +55,22 @@ void main() {
       expect(find.text('Email làm việc'), findsOneWidget);
       expect(find.text('Mật khẩu'), findsOneWidget);
       expect(find.widgetWithText(FilledButton, 'Đăng nhập'), findsOneWidget);
+      expect(find.text('Tiếp tục với Google'), findsOneWidget);
+      expect(find.text('hoặc'), findsOneWidget);
       expect(find.text('Quên mật khẩu'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('nút Google gọi đúng luồng đăng nhập riêng', (tester) async {
+      final controller = _RecordingGoogleLogin();
+      await pump(tester, const LoginPage(), [
+        loginControllerProvider.overrideWith(() => controller),
+      ]);
+
+      await tester.tap(find.byKey(const ValueKey('google-sign-in')));
+      await tester.pump();
+
+      expect(controller.called, isTrue);
       expect(tester.takeException(), isNull);
     });
 

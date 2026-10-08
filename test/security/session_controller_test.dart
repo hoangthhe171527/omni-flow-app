@@ -392,6 +392,10 @@ class _RecordingAuthGateway implements AuthGateway {
       throw UnimplementedError();
 
   @override
+  Future<AuthTokens> loginWithGoogle(String credential) =>
+      throw UnimplementedError();
+
+  @override
   Future<AuthTokens> refresh(String refreshToken) async {
     if (restoreFailure case final failure?) throw failure;
     return const AuthTokens(

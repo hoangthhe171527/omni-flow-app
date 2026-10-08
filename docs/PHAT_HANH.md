@@ -70,6 +70,20 @@ thư mục dự án. Trình quản lý mật khẩu, hoặc một USB cất két
 **omnicrm-mobile** → thêm ứng dụng Android với mã `vn.app.sunriseieco.viomni`
 → tải `google-services.json`.
 
+`google-services.json` chỉ phục vụ Firebase/FCM. Đăng nhập Google của Viomni
+không dùng Firebase Authentication: app lấy Google ID token rồi gửi tới API.
+
+Các OAuth client nằm trong Google Cloud/Firebase project **omnicrm-mobile**,
+cùng project với Web client mà API dùng làm audience:
+
+- Web client: `858803204032-i3lv9du7r7dgcsd57e0r82emie00r8i3.apps.googleusercontent.com`.
+- Android client: package `vn.app.sunriseieco.viomni` và SHA-1 của chứng thư ký.
+  Client cho debug đã tạo. Trước khi phát hành, tạo thêm client cho SHA-1 của
+  khoá upload và SHA-1 **App signing key certificate** trong Play Console.
+
+`GOOGLE_SSO_CLIENT_ID` trên API phải giữ nguyên bằng Web client ở trên. OAuth
+client ID là định danh công khai, không phải secret.
+
 Bản dựng release **dừng** nếu thiếu tệp này (`verifyReleaseGoogleServices`
 trong `android/app/build.gradle.kts`). Cố ý: thiếu nó thì thông báo đẩy im
 lặng không tới máy nào cả, và §B2/§B3 dựa vào thông báo.
@@ -167,7 +181,7 @@ một cặp mới sinh ra trên máy CI.
 | `APPSTORE_API_KEY_ID` | Key ID (10 ký tự) |
 | `APPSTORE_API_ISSUER_ID` | Issuer ID (dạng UUID) |
 | `APPSTORE_API_KEY_P8` | nội dung tệp `.p8`, dán nguyên |
-| `IOS_GOOGLE_SERVICE_INFO_PLIST` | *không bắt buộc* — bản trong repo đang dùng được |
+| `IOS_GOOGLE_SERVICE_INFO_PLIST` | không bắt buộc; chỉ ghi đè cấu hình Firebase/FCM khi đổi Firebase project |
 
 ### 3.3 Chạy
 
@@ -176,6 +190,11 @@ muốn hai bên khớp nhau.
 
 Workflow tự tải lên TestFlight khi có `APPSTORE_API_KEY_ID`; thiếu thì nó vẫn
 để lại `.ipa` trong artifact để nộp bằng Transporter.
+
+OAuth iOS đã được đăng ký trong project **omnicrm-mobile** với bundle ID
+`vn.app.sunriseieco.viomni` và Team ID `PN827425A2`. `GIDClientID`,
+`GIDServerClientID` cùng URL scheme đã nằm trực tiếp trong `Info.plist` nên bản
+iOS dùng cùng project với cấu hình Firebase/FCM.
 
 > **Chưa chạy thử lần nào.** Máy phát triển là Windows, nên phần iOS của
 > workflow được viết theo cách chuẩn nhưng chưa có ai chạy nó lần nào. Lần đầu

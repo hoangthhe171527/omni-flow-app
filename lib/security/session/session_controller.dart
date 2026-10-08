@@ -120,9 +120,23 @@ class SessionController extends Notifier<Session> {
   }
 
   Future<void> login({required String email, required String password}) async {
+    await _completePrimaryAuthentication(
+      () => _gateway.login(email: email, password: password),
+    );
+  }
+
+  Future<void> loginWithGoogle(String credential) async {
+    await _completePrimaryAuthentication(
+      () => _gateway.loginWithGoogle(credential),
+    );
+  }
+
+  Future<void> _completePrimaryAuthentication(
+    Future<AuthTokens> Function() authenticate,
+  ) async {
     state = const Session.restoring();
     try {
-      final tokens = await _gateway.login(email: email, password: password);
+      final tokens = await authenticate();
       await _tokens.save(
         accessToken: tokens.accessToken,
         refreshToken: tokens.refreshToken,
