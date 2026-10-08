@@ -13,7 +13,7 @@ API mặc định: `https://omni-api.app.sunriseieco.vn` (trong `.env`, và là 
 ```bash
 flutter pub get
 flutter run -d chrome
-flutter run --dart-define=API_BASE_URL=https://omni-api.test.evovi.vn
+flutter run --dart-define=API_BASE_URL=https://omni-api.app.sunriseieco.vn
 ```
 
 ```bash
