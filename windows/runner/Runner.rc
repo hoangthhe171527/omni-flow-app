@@ -89,11 +89,11 @@ BEGIN
     BEGIN
         BLOCK "040904e4"
         BEGIN
-            VALUE "CompanyName", "vn.evovi" "\0"
+            VALUE "CompanyName", "Viomni" "\0"
             VALUE "FileDescription", "omni_app" "\0"
             VALUE "FileVersion", VERSION_AS_STRING "\0"
             VALUE "InternalName", "omni_app" "\0"
-            VALUE "LegalCopyright", "Copyright (C) 2026 vn.evovi. All rights reserved." "\0"
+            VALUE "LegalCopyright", "Copyright (C) 2026 Viomni. All rights reserved." "\0"
             VALUE "OriginalFilename", "omni_app.exe" "\0"
             VALUE "ProductName", "omni_app" "\0"
             VALUE "ProductVersion", VERSION_AS_STRING "\0"

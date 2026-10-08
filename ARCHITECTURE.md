@@ -302,7 +302,7 @@ Chiều sâu đến từ khoảng cách và thứ bậc, **không** từ đổ b
 
 ```bash
 flutter pub get
-flutter run --dart-define=API_BASE_URL=https://omni-api.test.evovi.vn
+flutter run --dart-define=API_BASE_URL=https://omni-api.app.sunriseieco.vn
 
 flutter analyze
 flutter test
@@ -311,6 +311,6 @@ flutter test
 `.env` (tuỳ chọn, `--dart-define` được ưu tiên hơn):
 
 ```
-API_BASE_URL=https://omni-api.test.evovi.vn
+API_BASE_URL=https://omni-api.app.sunriseieco.vn
 APP_NAME=Viomni
 ```
