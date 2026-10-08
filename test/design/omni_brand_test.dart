@@ -22,9 +22,7 @@ void main() {
     await tester.pumpWidget(wrap(const OmniBrandMark()));
     expect(find.bySemanticsLabel('Viomni'), findsNothing);
 
-    await tester.pumpWidget(
-      wrap(const OmniBrandMark(semanticLabel: 'Viomni')),
-    );
+    await tester.pumpWidget(wrap(const OmniBrandMark(semanticLabel: 'Viomni')));
     expect(find.bySemanticsLabel('Viomni'), findsOneWidget);
 
     handle.dispose();
