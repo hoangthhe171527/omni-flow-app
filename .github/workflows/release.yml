@@ -215,6 +215,9 @@ jobs:
             printf '%s' "$GOOGLE_SERVICE_INFO_PLIST" > ios/Runner/GoogleService-Info.plist
           fi
 
+          # Firebase/FCM và OAuth đều thuộc project omnicrm-mobile. GID client
+          # cùng URL scheme được khai báo trực tiếp trong Info.plist.
+
       - run: flutter pub get
 
       - name: Đóng gói IPA

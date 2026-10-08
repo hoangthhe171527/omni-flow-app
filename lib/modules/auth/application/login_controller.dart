@@ -3,17 +3,22 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/error/app_exception.dart';
 import '../../../security/session/auth_gateway.dart';
 import '../../../security/session/session_controller.dart';
+import 'google_identity_gateway.dart';
+
+enum LoginMethod { password, google }
 
 class LoginState {
   const LoginState({
-    this.submitting = false,
+    this.submittingMethod,
     this.error,
     this.fieldErrors = const {},
   });
 
-  final bool submitting;
+  final LoginMethod? submittingMethod;
   final String? error;
   final Map<String, List<String>> fieldErrors;
+
+  bool get submitting => submittingMethod != null;
 
   String? errorFor(String field) => fieldErrors[field]?.firstOrNull;
 }
@@ -23,7 +28,7 @@ class LoginController extends Notifier<LoginState> {
   LoginState build() => const LoginState();
 
   Future<bool> submit({required String email, required String password}) async {
-    state = const LoginState(submitting: true);
+    state = const LoginState(submittingMethod: LoginMethod.password);
     try {
       await ref
           .read(sessionControllerProvider.notifier)
@@ -38,6 +43,41 @@ class LoginController extends Notifier<LoginState> {
       return false;
     } on AppException catch (error) {
       state = LoginState(error: error.message);
+      return false;
+    }
+  }
+
+  Future<bool> submitWithGoogle() async {
+    state = const LoginState(submittingMethod: LoginMethod.google);
+    try {
+      final credential = await ref
+          .read(googleIdentityGatewayProvider)
+          .authenticate();
+      if (credential == null) {
+        state = const LoginState();
+        return false;
+      }
+      await ref
+          .read(sessionControllerProvider.notifier)
+          .loginWithGoogle(credential);
+      state = const LoginState();
+      return true;
+    } on GoogleIdentityException catch (error) {
+      state = LoginState(error: error.message);
+      return false;
+    } on UnauthorizedException {
+      state = const LoginState(
+        error:
+            'Không thể đăng nhập bằng Google. Liên hệ quản trị viên nếu bạn cần được cấp quyền.',
+      );
+      return false;
+    } on AppException catch (error) {
+      state = LoginState(error: error.message);
+      return false;
+    } catch (_) {
+      state = const LoginState(
+        error: 'Không thể đăng nhập bằng Google. Vui lòng thử lại.',
+      );
       return false;
     }
   }

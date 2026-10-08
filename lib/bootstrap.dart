@@ -11,7 +11,9 @@ import 'core/module/module_registry.dart';
 import 'core/module/omni_module.dart';
 import 'core/storage/preferences_store.dart';
 import 'modules/auth/auth_module.dart';
+import 'modules/auth/application/google_identity_gateway.dart';
 import 'modules/auth/data/auth_api.dart';
+import 'modules/auth/data/google_identity_service.dart';
 import 'modules/channels/channels_module.dart';
 import 'modules/customers/customers_module.dart';
 import 'modules/inbox/inbox_module.dart';
@@ -73,6 +75,9 @@ Future<Widget> bootstrap() async {
       // Dependency inversion: `security` declares the gateway, `modules/auth`
       // implements it, and they meet here.
       authGatewayProvider.overrideWith((ref) => ref.watch(authApiProvider)),
+      googleIdentityGatewayProvider.overrideWith(
+        (ref) => ref.watch(googleIdentityServiceProvider),
+      ),
     ],
     child: const OmniApp(),
   );

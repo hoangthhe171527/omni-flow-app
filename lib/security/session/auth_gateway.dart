@@ -27,6 +27,8 @@ class TenantOption {
 abstract interface class AuthGateway {
   Future<AuthTokens> login({required String email, required String password});
 
+  Future<AuthTokens> loginWithGoogle(String credential);
+
   Future<List<TenantOption>> tenants();
 
   /// Exchanges the current token for one scoped to [tenantId].

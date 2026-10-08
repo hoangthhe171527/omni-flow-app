@@ -25,6 +25,15 @@ class AuthApi implements AuthGateway {
   }
 
   @override
+  Future<AuthTokens> loginWithGoogle(String credential) async {
+    final response = await _client.post(
+      '/auth/sso/google',
+      body: {'credential': credential, 'client_type': 'mobile'},
+    );
+    return _tokens(response.object);
+  }
+
+  @override
   Future<List<TenantOption>> tenants() async {
     final response = await _client.get('/auth/tenants');
     return response.list

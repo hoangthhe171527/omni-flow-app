@@ -39,6 +39,13 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     // status and the redirect takes the user to their first visible tab.
   }
 
+  Future<void> _submitGoogle() async {
+    FocusScope.of(context).unfocus();
+    await ref.read(loginControllerProvider.notifier).submitWithGoogle();
+    // As with password login, SessionController drives the router after the
+    // token is accepted and a workspace is selected (or needs selecting).
+  }
+
   Future<void> _openLink(Uri url) async {
     final opened = await launchUrl(url, mode: LaunchMode.externalApplication);
     if (opened || !mounted) return;
@@ -80,6 +87,22 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
+                        OutlinedButton.icon(
+                          key: const ValueKey('google-sign-in'),
+                          onPressed: state.submitting ? null : _submitGoogle,
+                          icon: state.submittingMethod == LoginMethod.google
+                              ? const SizedBox.square(
+                                  dimension: 20,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                  ),
+                                )
+                              : const _GoogleGlyph(),
+                          label: const Text('Tiếp tục với Google'),
+                        ),
+                        const SizedBox(height: 18),
+                        const _LoginDivider(),
+                        const SizedBox(height: 18),
                         OmniField(
                           label: 'Email làm việc',
                           error: state.errorFor('email'),
@@ -161,7 +184,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                               fontWeight: FontWeight.w600,
                             ),
                           ),
-                          child: state.submitting
+                          child: state.submittingMethod == LoginMethod.password
                               ? SizedBox(
                                   width: 20,
                                   height: 20,
@@ -221,6 +244,49 @@ class _LoginPageState extends ConsumerState<LoginPage> {
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class _LoginDivider extends StatelessWidget {
+  const _LoginDivider();
+
+  @override
+  Widget build(BuildContext context) {
+    final color = Theme.of(context).colorScheme.outlineVariant;
+    return Row(
+      children: [
+        Expanded(child: Divider(color: color)),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: OmniSpacing.md),
+          child: Text(
+            'hoặc',
+            style: OmniType.caption.copyWith(
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+            ),
+          ),
+        ),
+        Expanded(child: Divider(color: color)),
+      ],
+    );
+  }
+}
+
+class _GoogleGlyph extends StatelessWidget {
+  const _GoogleGlyph();
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      excludeSemantics: true,
+      child: Text(
+        'G',
+        style: OmniType.title.copyWith(
+          color: const Color(0xFF4285F4),
+          fontWeight: FontWeight.w600,
+          height: 1,
         ),
       ),
     );
