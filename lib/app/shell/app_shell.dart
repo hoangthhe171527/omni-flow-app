@@ -175,7 +175,7 @@ class _ShellNavigationRail extends ConsumerWidget {
       ),
       leading: const Padding(
         padding: EdgeInsets.only(top: OmniSpacing.lg),
-        child: OmniBrandMark(size: 44, semanticLabel: 'OmniCRM'),
+        child: OmniBrandMark(size: 44, semanticLabel: 'Viomni'),
       ),
       destinations: [
         for (final destination in tabs)

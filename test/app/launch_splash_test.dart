@@ -75,7 +75,7 @@ void main() {
     );
 
     expect(find.text(OmniSplash.tagline), findsOneWidget);
-    expect(find.bySemanticsLabel('Logo OmniCRM'), findsOneWidget);
+    expect(find.bySemanticsLabel('Logo Viomni'), findsOneWidget);
     expect(find.byType(LinearProgressIndicator), findsOneWidget);
   });
 }

@@ -9,7 +9,7 @@ abstract final class OmniType {
   /// `type_scale_test.dart` giữ trần này cho cả thang lẫn mã trong `lib/`.
   static const String family = 'Inter';
 
-  /// Be Vietnam Pro chỉ còn cho chữ "OmniCRM" cạnh logo ở màn mở app — nhận
+  /// Be Vietnam Pro chỉ còn cho chữ "Viomni" cạnh logo ở màn mở app — nhận
   /// diện thương hiệu đã duyệt, không phải chữ để đọc. Chỉ đóng gói bản 800.
   static const String brandFamily = 'Be Vietnam Pro';
 
@@ -48,7 +48,7 @@ abstract final class OmniType {
     height: 24 / 17,
   );
 
-  /// Chữ "OmniCRM" cạnh logo. Cỡ do chỗ đặt quyết định (22 ở thanh bên, 34 ở
+  /// Chữ "Viomni" cạnh logo. Cỡ do chỗ đặt quyết định (22 ở thanh bên, 34 ở
   /// màn mở app) qua `copyWith(fontSize:)` bên trong `lib/design`.
   static const TextStyle wordmark = TextStyle(
     fontFamily: brandFamily,

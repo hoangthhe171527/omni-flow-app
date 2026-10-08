@@ -7,7 +7,7 @@ import 'omni_brand.dart';
 
 /// Màn mở app "quỹ đạo" (`Splash.dc.html`): nền mực, vòng tròn vẽ ra, đuôi
 /// bong bóng, hai nửa quỹ đạo, chấm vàng quay vào chỗ rồi bật sáng, chữ
-/// "OmniCRM" và câu khẩu hiệu nổi lên.
+/// "Viomni" và câu khẩu hiệu nổi lên.
 ///
 /// [progress] = null là khung hình CUỐI (tĩnh) — màn chờ khôi phục phiên dùng
 /// đúng khung này, để khi lớp hiệu ứng mờ đi thì bên dưới là cùng một hình và
@@ -89,7 +89,7 @@ class OmniSplash extends StatelessWidget {
                                 size: _tileSize,
                                 onInk: true,
                                 frame: s.mark,
-                                semanticLabel: 'Logo OmniCRM',
+                                semanticLabel: 'Logo Viomni',
                               ),
                             ],
                           ),

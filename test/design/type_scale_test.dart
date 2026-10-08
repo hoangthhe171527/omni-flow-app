@@ -86,7 +86,7 @@ void main() {
     }
 
     expect(heavy, [
-      // `OmniType.wordmark` — Be Vietnam Pro 800, chỉ cho chữ "OmniCRM".
+      // `OmniType.wordmark` — Be Vietnam Pro 800, chỉ cho chữ "Viomni".
       'lib/design/tokens/omni_typography.dart:56',
     ]);
   });

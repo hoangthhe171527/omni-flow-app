@@ -366,7 +366,7 @@ Future<void> _loadAppFont() async {
   }
   await loader.load();
 
-  // Be Vietnam Pro chỉ còn cho chữ "OmniCRM" ở màn mở app.
+  // Be Vietnam Pro chỉ còn cho chữ "Viomni" ở màn mở app.
   final brand = FontLoader('Be Vietnam Pro');
   final brandBytes = File(
     'assets/fonts/BeVietnamPro-ExtraBold.ttf',
