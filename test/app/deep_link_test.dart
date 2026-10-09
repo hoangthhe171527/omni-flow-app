@@ -172,7 +172,7 @@ class _FakeModule extends OmniModule {
   List<ModuleRoute> routes() => [
     ModuleRoute(
       path: '/tasks',
-      name: 'tasks.list',
+      name: 'plans.teams', // tên route của tab "Việc"
       builder: (_, _) => const Scaffold(body: Text('danh sách')),
     ),
     ModuleRoute(
@@ -191,7 +191,7 @@ class _FakeModule extends OmniModule {
       label: 'Việc của tôi',
       icon: Icons.checklist_outlined,
       selectedIcon: Icons.checklist_rounded,
-      routeName: 'tasks.list',
+      routeName: 'plans.teams',
       area: NavArea.work,
       weight: NavWeight.primary,
     ),

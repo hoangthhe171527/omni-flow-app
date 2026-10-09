@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../core/module/module_registry.dart';
 import '../../core/module/module_route.dart';
+import '../../core/nav/tab_order.dart';
 import '../../modules/auth/auth_module.dart';
 import '../../security/session/session.dart';
 import '../../security/session/session_controller.dart';
@@ -142,18 +143,19 @@ String? _redirect(Ref ref, GoRouterState state, _PendingDestination pending) {
 /// dùng không hề bấm gì liên quan.
 String _afterSignIn(Ref ref, _PendingDestination pending) {
   final destination = pending.value;
-  if (destination == null) return _homePath(ref);
+  if (destination == null) return landingPath(ref);
 
   pending.value = null;
 
   return destination;
 }
 
-/// Landing screen after sign-in: the first tab this user can actually see. A
+/// Landing screen after sign-in: the first TAB (fixed order, see tab_order.dart) this user can actually see. A
 /// rep with only inbox rights lands in the inbox; a finance-only user does not
 /// land on a blank permission wall.
-String _homePath(Ref ref) {
-  final visible = ref.read(primaryNavEntriesProvider);
+@visibleForTesting
+String landingPath(Ref ref) {
+  final visible = ref.read(tabEntriesProvider);
   if (visible.isEmpty) return ShellRoutes.morePath;
 
   final routes = ref.read(moduleRoutesProvider);

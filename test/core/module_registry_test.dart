@@ -66,7 +66,7 @@ void main() {
     // quyền thấy "Việc của tôi" trước "Hộp thư". Đổi lại là đổi thứ tự các
     // hằng trong enum NavArea — một dòng, một chỗ.
     //
-    // "Dự án" đứng ngay sau "Việc của tôi" vì cùng NavArea.work và order 20 so
+    // "Việc" (mục teams) đứng ngay sau "Việc của tôi" vì cùng NavArea.work và order 20 so
     // với 10: thợ mở hàng đợi của mình trước, toàn cảnh xưởng sau.
     // Ba mục của NavArea.work đứng trước, theo order 10/20/30: thợ mở hàng
     // đợi của mình trước, toàn cảnh xưởng sau, rồi mới tới dòng thời gian.
