@@ -71,7 +71,8 @@ void main() {
     });
   }
 
-  // Giữ trần 600 cho thang chữ (Be Vietnam Pro có 700 nhưng thang không dùng). Xin 700 hay 800 là để máy tự chọn
+  // Giữ trần 600 cho thang chữ (Be Vietnam Pro có 700 nhưng thang không
+  // dùng). Xin 700 hay 800 là để máy tự chọn
   // bản gần nhất hoặc tô đậm giả — chữ đậm không đều giữa các máy.
   test('không chữ nào trong lib/ đậm hơn 600 (trừ chữ thương hiệu)', () {
     final heavy = <String>[];
