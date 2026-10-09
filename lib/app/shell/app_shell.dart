@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/module/module_registry.dart';
-import '../../core/nav/pinned_tabs.dart';
+import '../../core/nav/tab_order.dart';
 import '../../core/module/nav_destination.dart';
 import '../../design/components/components.dart';
 import '../../design/platform/omni_motion_scope.dart';

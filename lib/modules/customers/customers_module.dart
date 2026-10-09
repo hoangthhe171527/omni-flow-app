@@ -65,7 +65,7 @@ class CustomersModule extends OmniModule {
   List<ModuleNavEntry> navEntries() => const [
     ModuleNavEntry(
       moduleId: 'customers',
-      label: 'Khách hàng',
+      label: 'Khách',
       subtitle: 'Danh bạ và lịch sử liên hệ',
       icon: Icons.people_outline_rounded,
       selectedIcon: Icons.people_rounded,

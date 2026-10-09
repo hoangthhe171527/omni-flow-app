@@ -7,14 +7,11 @@ import '../../core/config/app_config.dart';
 import '../../core/error/app_exception.dart';
 import '../../core/module/module_registry.dart';
 import '../../core/module/nav_destination.dart';
-import '../../core/nav/pinned_tabs.dart';
 import '../../core/theme/theme_mode_controller.dart';
 import '../../design/components/components.dart';
 import '../../design/tokens/tokens.dart';
 import '../../modules/auth/application/login_controller.dart';
 import '../../security/session/session_controller.dart';
-import '../router/shell_routes.dart';
-import 'app_shell.dart';
 
 /// Danh bạ "Tất cả": hồ sơ người dùng, rồi MỌI tính năng họ có quyền dùng,
 /// gom theo nhóm và tìm được bằng từ khoá.
@@ -39,21 +36,12 @@ class _DirectoryPageState extends ConsumerState<DirectoryPage> {
   @override
   Widget build(BuildContext context) {
     final groups = _filtered(ref.watch(directoryGroupsProvider), _query);
-    final tabCount = ref
-        .watch(tabEntriesProvider)
-        .take(AppShell.maxTabs)
-        .length;
     final accountEntries = groups[NavArea.account] ?? const <ModuleNavEntry>[];
 
     // Hai dòng cố định của "Cá nhân" cũng tìm được, như mọi mục khác.
     final showTheme = matchesQuery(
       label: 'Giao diện',
       subtitle: 'Sáng tối',
-      query: _query,
-    );
-    final showPinTabs = matchesQuery(
-      label: 'Chọn tab',
-      subtitle: 'Thanh dưới',
       query: _query,
     );
 
@@ -64,11 +52,7 @@ class _DirectoryPageState extends ConsumerState<DirectoryPage> {
         if (groups[area] case final entries?) (area.label, entries),
       ?_merged(groups),
     ];
-    final nothing =
-        sections.isEmpty &&
-        accountEntries.isEmpty &&
-        !showTheme &&
-        !showPinTabs;
+    final nothing = sections.isEmpty && accountEntries.isEmpty && !showTheme;
 
     return Scaffold(
       appBar: const OmniAppBar(title: 'Tất cả'),
@@ -108,17 +92,11 @@ class _DirectoryPageState extends ConsumerState<DirectoryPage> {
                 _TileGrid(entries: entries),
               ],
 
-              if (showTheme || showPinTabs || accountEntries.isNotEmpty) ...[
+              if (showTheme || accountEntries.isNotEmpty) ...[
                 const _GroupLabel('Cá nhân'),
                 _ListCard(
                   children: [
                     if (showTheme) const _ThemeRow(),
-                    if (showPinTabs)
-                      _ListRow(
-                        label: 'Chọn tab',
-                        subtitle: '$tabCount mục hiện ở thanh dưới',
-                        onTap: () => context.pushNamed(ShellRoutes.pinTabs),
-                      ),
                     for (final entry in accountEntries)
                       _ListRow(
                         label: entry.label,

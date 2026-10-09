@@ -6,7 +6,6 @@ import 'package:omni_app/core/module/module_registry.dart';
 import 'package:omni_app/core/module/module_route.dart';
 import 'package:omni_app/core/module/nav_destination.dart';
 import 'package:omni_app/core/module/omni_module.dart';
-import 'package:omni_app/core/nav/pinned_tabs.dart';
 import 'package:omni_app/core/storage/preferences_store.dart';
 import 'package:omni_app/design/components/components.dart';
 import 'package:omni_app/design/theme/omni_theme.dart';
@@ -104,7 +103,6 @@ void main() {
           modulesProvider.overrideWithValue(const [_FakeModule()]),
           sharedPreferencesProvider.overrideWithValue(prefs),
           sessionControllerProvider.overrideWith(() => controller),
-          pinnedTabsProvider.overrideWith(_NoPins.new),
           tenantOptionsProvider.overrideWith(
             (ref) async => [
               for (var i = 0; i < tenantCount; i++)
@@ -194,9 +192,4 @@ void main() {
     expect(find.bySemanticsLabel('Tối'), findsOneWidget);
     handle.dispose();
   });
-}
-
-class _NoPins extends PinnedTabs {
-  @override
-  Future<List<String>> build() async => const [];
 }

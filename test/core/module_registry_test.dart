@@ -70,13 +70,7 @@ void main() {
     // với 10: thợ mở hàng đợi của mình trước, toàn cảnh xưởng sau.
     // Ba mục của NavArea.work đứng trước, theo order 10/20/30: thợ mở hàng
     // đợi của mình trước, toàn cảnh xưởng sau, rồi mới tới dòng thời gian.
-    expect(labels, [
-      'Việc của tôi',
-      'Dự án',
-      'Dòng việc',
-      'Hộp thư',
-      'Khách hàng',
-    ]);
+    expect(labels, ['Việc của tôi', 'Việc', 'Dòng việc', 'Hộp thư', 'Khách']);
   });
 
   test('người chỉ có quyền bán hàng vẫn được tab của mình', () {
@@ -175,7 +169,7 @@ void main() {
       addTearDown(container.dispose);
 
       expect(container.read(primaryNavEntriesProvider).map((e) => e.label), [
-        'Khách hàng',
+        'Khách',
       ]);
     });
 

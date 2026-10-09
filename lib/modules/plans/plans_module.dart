@@ -77,7 +77,7 @@ class PlansModule extends OmniModule {
     ),
     ModuleNavEntry(
       moduleId: 'plans',
-      label: 'Dự án',
+      label: 'Việc',
       subtitle: 'Mọi dự án của xưởng, xếp theo tổ',
       icon: Icons.workspaces_outline,
       selectedIcon: Icons.workspaces_rounded,
