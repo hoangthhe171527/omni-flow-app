@@ -1,5 +1,3 @@
-import 'dart:math' as math;
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -10,6 +8,8 @@ import '../../../design/platform/omni_motion_scope.dart';
 import '../../../design/tokens/tokens.dart';
 import '../application/login_controller.dart';
 import '../auth_module.dart';
+import 'widgets/auth_field.dart';
+import 'widgets/auth_widgets.dart';
 
 /// Màn đăng nhập (khung `Auth`): logo trên vòng tròn nhạt, lời chào, hai ô,
 /// nút chính, rồi Google, liên kết đăng ký ở đáy.
@@ -123,7 +123,7 @@ class _LoginPageState extends ConsumerState<LoginPage>
                         ),
                       ),
                       const SizedBox(height: 32),
-                      _LoginField(
+                      AuthField(
                         controller: _email,
                         hint: 'Email làm việc',
                         icon: Icons.mail_outline_rounded,
@@ -144,7 +144,7 @@ class _LoginPageState extends ConsumerState<LoginPage>
                         },
                       ),
                       const SizedBox(height: 14),
-                      _LoginField(
+                      AuthField(
                         controller: _password,
                         hint: 'Mật khẩu',
                         icon: Icons.lock_outline_rounded,
@@ -186,65 +186,22 @@ class _LoginPageState extends ConsumerState<LoginPage>
                       ),
                       if (state.error != null) ...[
                         const SizedBox(height: 4),
-                        _LoginError(message: state.error!),
+                        AuthErrorBox(message: state.error!),
                         const SizedBox(height: 12),
                       ],
                       const SizedBox(height: 8),
-                      DecoratedBox(
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(10),
-                          boxShadow: [
-                            BoxShadow(
-                              color: scheme.primary.withValues(alpha: 0.25),
-                              blurRadius: 14,
-                              offset: const Offset(0, 6),
-                            ),
-                          ],
-                        ),
-                        child: FilledButton(
-                          onPressed: state.submitting ? null : _submit,
-                          style: FilledButton.styleFrom(
-                            minimumSize: const Size.fromHeight(50),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                            textStyle: OmniType.input.copyWith(
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                          child: state.submittingMethod == LoginMethod.password
-                              ? SizedBox(
-                                  width: 20,
-                                  height: 20,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                    color: scheme.onPrimary,
-                                  ),
-                                )
-                              : const Text('Đăng nhập'),
-                        ),
+                      AuthPrimaryButton(
+                        label: 'Đăng nhập',
+                        onPressed: state.submitting ? null : _submit,
+                        busy: state.submittingMethod == LoginMethod.password,
                       ),
                       const SizedBox(height: 20),
-                      const _LoginDivider(),
+                      const AuthDivider(),
                       const SizedBox(height: 20),
-                      OutlinedButton.icon(
-                        key: const ValueKey('google-sign-in'),
+                      AuthGoogleButton(
+                        label: 'Tiếp tục với Google',
                         onPressed: state.submitting ? null : _submitGoogle,
-                        style: OutlinedButton.styleFrom(
-                          minimumSize: const Size.fromHeight(50),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                        ),
-                        icon: state.submittingMethod == LoginMethod.google
-                            ? const SizedBox.square(
-                                dimension: 20,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                ),
-                              )
-                            : const _GoogleGlyph(),
-                        label: const Text('Tiếp tục với Google'),
+                        busy: state.submittingMethod == LoginMethod.google,
                       ),
                       const SizedBox(height: 32),
                       Wrap(
@@ -282,259 +239,6 @@ class _LoginPageState extends ConsumerState<LoginPage>
               ),
             ),
           ),
-        ),
-      ),
-    );
-  }
-}
-
-/// Ô nhập một dòng: cao 50, bo 10, viền thường / viền `primary` + vầng 3px khi
-/// focus / viền đỏ + rung + chữ lỗi dưới ô.
-class _LoginField extends StatefulWidget {
-  const _LoginField({
-    required this.controller,
-    required this.hint,
-    required this.icon,
-    required this.shake,
-    required this.validator,
-    required this.style,
-    this.serverError,
-    this.obscure = false,
-    this.keyboardType,
-    this.textInputAction,
-    this.onSubmitted,
-    this.suffix,
-    this.autofillHints,
-  });
-
-  final TextEditingController controller;
-  final String hint;
-  final IconData icon;
-  final Animation<double> shake;
-  final String? Function(String?) validator;
-  final TextStyle style;
-  final String? serverError;
-  final bool obscure;
-  final TextInputType? keyboardType;
-  final TextInputAction? textInputAction;
-  final ValueChanged<String>? onSubmitted;
-  final Widget? suffix;
-  final Iterable<String>? autofillHints;
-
-  @override
-  State<_LoginField> createState() => _LoginFieldState();
-}
-
-class _LoginFieldState extends State<_LoginField> {
-  final _focus = FocusNode();
-
-  @override
-  void initState() {
-    super.initState();
-    _focus.addListener(() => setState(() {}));
-  }
-
-  @override
-  void dispose() {
-    _focus.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final muted = scheme.onSurfaceVariant;
-
-    return FormField<String>(
-      validator: (_) => widget.validator(widget.controller.text),
-      builder: (field) {
-        final error = field.errorText ?? widget.serverError;
-        final focused = _focus.hasFocus;
-        final border = error != null
-            ? OmniColors.destructive
-            : focused
-            ? scheme.primary
-            : OmniColors.byBrightness(
-                context,
-                const Color(0xFFE3E8EF),
-                OmniColors.darkBorder,
-              );
-
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            AnimatedBuilder(
-              animation: widget.shake,
-              builder: (_, child) {
-                final t = widget.shake.value;
-                final dx = error == null
-                    ? 0.0
-                    : math.sin(t * math.pi * 6) * 6 * (1 - t);
-                return Transform.translate(offset: Offset(dx, 0), child: child);
-              },
-              child: Container(
-                height: 50,
-                decoration: BoxDecoration(
-                  color: scheme.surface,
-                  borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: border),
-                  boxShadow: focused && error == null
-                      ? [
-                          BoxShadow(
-                            color: scheme.primary.withValues(alpha: 0.14),
-                            spreadRadius: 3,
-                          ),
-                        ]
-                      : null,
-                ),
-                child: Row(
-                  children: [
-                    const SizedBox(width: 14),
-                    Icon(widget.icon, size: OmniIconSize.md, color: muted),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Semantics(
-                        label: widget.hint,
-                        textField: true,
-                        child: TextField(
-                          autofillHints: widget.autofillHints,
-                          controller: widget.controller,
-                          focusNode: _focus,
-                          obscureText: widget.obscure,
-                          keyboardType: widget.keyboardType,
-                          textInputAction: widget.textInputAction,
-                          autocorrect: false,
-                          enableSuggestions: !widget.obscure,
-                          onSubmitted: widget.onSubmitted,
-                          onChanged: (_) {
-                            if (field.hasError) field.reset();
-                          },
-                          style: widget.style,
-                          decoration: InputDecoration(
-                            hintText: widget.hint,
-                            hintStyle: widget.style.copyWith(color: muted),
-                            border: InputBorder.none,
-                            enabledBorder: InputBorder.none,
-                            focusedBorder: InputBorder.none,
-                            filled: false,
-                            isDense: true,
-                            contentPadding: EdgeInsets.zero,
-                          ),
-                        ),
-                      ),
-                    ),
-                    widget.suffix ?? const SizedBox(width: 14),
-                  ],
-                ),
-              ),
-            ),
-            if (error != null)
-              Padding(
-                padding: const EdgeInsets.only(top: 6, left: 4),
-                child: Semantics(
-                  liveRegion: true,
-                  child: Text(
-                    error,
-                    style: OmniType.caption.copyWith(
-                      color: OmniColors.dangerTextOf(context),
-                    ),
-                  ),
-                ),
-              ),
-          ],
-        );
-      },
-    );
-  }
-}
-
-class _LoginDivider extends StatelessWidget {
-  const _LoginDivider();
-
-  @override
-  Widget build(BuildContext context) {
-    final color = Theme.of(context).colorScheme.outlineVariant;
-    return Row(
-      children: [
-        Expanded(child: Divider(color: color)),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: OmniSpacing.md),
-          child: Text(
-            'hoặc',
-            style: OmniType.caption.copyWith(
-              color: Theme.of(context).colorScheme.onSurfaceVariant,
-            ),
-          ),
-        ),
-        Expanded(child: Divider(color: color)),
-      ],
-    );
-  }
-}
-
-class _GoogleGlyph extends StatelessWidget {
-  const _GoogleGlyph();
-
-  @override
-  Widget build(BuildContext context) {
-    return Semantics(
-      excludeSemantics: true,
-      child: Text(
-        'G',
-        style: OmniType.title.copyWith(
-          color: const Color(0xFF4285F4),
-          fontWeight: FontWeight.w600,
-          height: 1,
-        ),
-      ),
-    );
-  }
-}
-
-/// Hộp báo lỗi: nền đỏ nhạt, chữ đỏ đậm, đọc được bởi trình đọc màn hình ngay
-/// khi hiện ra (`role="alert"` trong thiết kế).
-class _LoginError extends StatelessWidget {
-  const _LoginError({required this.message});
-
-  final String message;
-
-  @override
-  Widget build(BuildContext context) {
-    final dark = Theme.of(context).brightness == Brightness.dark;
-    final fg = OmniColors.dangerTextOf(context);
-
-    return Semantics(
-      liveRegion: true,
-      child: Container(
-        padding: const EdgeInsets.symmetric(
-          horizontal: 14,
-          vertical: OmniSpacing.md,
-        ),
-        decoration: BoxDecoration(
-          color: dark
-              ? OmniColors.dangerTextDark.withValues(alpha: 0.12)
-              : OmniColors.dangerSoft,
-          borderRadius: OmniRadius.mdAll,
-        ),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Padding(
-              padding: const EdgeInsets.only(top: 1),
-              child: Icon(
-                Icons.error_outline_rounded,
-                size: OmniIconSize.md,
-                color: fg,
-              ),
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Text(
-                message,
-                style: OmniType.body.copyWith(height: 20 / 14, color: fg),
-              ),
-            ),
-          ],
         ),
       ),
     );

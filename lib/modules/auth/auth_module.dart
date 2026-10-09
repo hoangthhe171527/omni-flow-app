@@ -1,6 +1,8 @@
 import '../../core/module/module_route.dart';
 import '../../core/module/omni_module.dart';
+import 'presentation/forgot_password_page.dart';
 import 'presentation/login_page.dart';
+import 'presentation/register_page.dart';
 import 'presentation/workspace_page.dart';
 
 /// Sign-in and workspace selection. Contributes no tab and no menu entry: the
@@ -35,6 +37,16 @@ class AuthModule extends OmniModule {
       path: workspacePath,
       name: workspace,
       builder: (_, _) => const WorkspacePage(),
+    ),
+    ModuleRoute(
+      path: registerPath,
+      name: register,
+      builder: (_, _) => const RegisterPage(),
+    ),
+    ModuleRoute(
+      path: forgotPath,
+      name: forgot,
+      builder: (_, _) => const ForgotPasswordPage(),
     ),
   ];
 }

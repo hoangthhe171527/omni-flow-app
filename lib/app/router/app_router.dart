@@ -117,9 +117,13 @@ String? _redirect(Ref ref, GoRouterState state, _PendingDestination pending) {
   final isSplash = location == ShellRoutes.splashPath;
   final isLogin = location == AuthModule.loginPath;
   final isWorkspace = location == AuthModule.workspacePath;
-  // Ba màn này là TRẠM DỪNG của chính luồng đăng nhập. Nhớ chúng làm đích đến
+  // Các màn này là TRẠM DỪNG của chính luồng đăng nhập. Nhớ chúng làm đích đến
   // sẽ tạo ra một vòng: đăng nhập xong lại quay về màn đăng nhập.
-  final isWayStation = isSplash || isLogin || isWorkspace;
+  // Đăng ký và quên mật khẩu là trạm của người CHƯA có tài khoản: mở được khi
+  // chưa đăng nhập, và cũng không được nhớ làm đích đến.
+  final isOnboarding =
+      location == AuthModule.registerPath || location == AuthModule.forgotPath;
+  final isWayStation = isSplash || isLogin || isWorkspace || isOnboarding;
 
   if (!isWayStation && session.status != SessionStatus.authenticated) {
     pending.value = state.uri.toString();
@@ -127,8 +131,8 @@ String? _redirect(Ref ref, GoRouterState state, _PendingDestination pending) {
 
   return switch (session.status) {
     SessionStatus.restoring => isSplash ? null : ShellRoutes.splashPath,
-    SessionStatus.unauthenticated ||
-    SessionStatus.expired => isLogin ? null : AuthModule.loginPath,
+    SessionStatus.unauthenticated || SessionStatus.expired =>
+      (isLogin || isOnboarding) ? null : AuthModule.loginPath,
     SessionStatus.tenantPending =>
       isWorkspace ? null : AuthModule.workspacePath,
     SessionStatus.authenticated =>
