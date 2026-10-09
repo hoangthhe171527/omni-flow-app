@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<title>Dự án – Sửa chữa đàn</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#0A7D76}a:hover{color:#075E59}
+@keyframes rise{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+@keyframes sheet{from{transform:translateY(100%)}to{transform:none}}
+@keyframes fade{from{opacity:0}to{opacity:1}}
+@keyframes drop{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:none}}
+button,a{transition:transform .2s cubic-bezier(.2,.8,.2,1),background-color .2s,color .2s;-webkit-tap-highlight-color:transparent}
+button:active,a:active{transform:scale(.97)}
+.bar{background:rgba(245,247,250,.82);backdrop-filter:blur(20px) saturate(180%);-webkit-backdrop-filter:blur(20px) saturate(180%)}
+.hb{width:36px;height:36px;border:0;background:transparent;color:#0B1A33;display:flex;align-items:center;justify-content:center;cursor:pointer;position:relative;border-radius:6px}
+.hb.on{background:#0B1A33;color:#fff}
+.st{flex-shrink:0;height:34px;border:0;background:transparent;padding:0 12px;font:600 12px 'Be Vietnam Pro',sans-serif;color:#56637A;cursor:pointer;white-space:nowrap;display:flex;align-items:center;gap:6px}
+.st.on{color:#0B1A33}
+.st i{font-style:normal;font-size:11px;font-weight:700;min-width:18px;height:18px;padding:0 5px;box-sizing:border-box;border-radius:9px;background:#EEF1F5;color:#56637A;display:flex;align-items:center;justify-content:center}
+.st.on i{background:#0A7D76;color:#fff}
+.tc{display:block;background:#fff;border:1px solid #E3E8EF;border-radius:8px;padding:10px 12px;text-decoration:none;color:#0B1A33}
+.chip{font-size:11px;font-weight:600;padding:2px 6px;border-radius:4px;white-space:nowrap}
+.av{width:20px;height:20px;border-radius:10px;border:2px solid #fff;margin-left:-6px;font-size:8px;font-weight:700;display:flex;align-items:center;justify-content:center;color:#fff}
+.prog{height:4px;border-radius:2px;background:#EEF1F5;overflow:hidden;flex-grow:1}
+.prog span{display:block;height:100%;border-radius:2px;background:#0A7D76}
+.op{width:100%;height:48px;border:0;border-top:1px solid #EEF1F5;background:#fff;display:flex;align-items:center;gap:10px;padding:0 4px;font:500 15px 'Be Vietnam Pro',sans-serif;color:#0B1A33;cursor:pointer;text-align:left}
+.op:first-of-type{border-top:0}
+</style>
+</helmet>
+<div style="width:390px;height:844px;position:relative;overflow:hidden;font-family:'Be Vietnam Pro',system-ui,sans-serif;color:#0B1A33;background:#F5F7FA;font-size:14px" onPointerMove="{{move}}" onPointerUp="{{up}}" onPointerLeave="{{up}}">
+  <header class="bar" style="position:absolute;top:0;left:0;right:0;z-index:3;padding:50px 6px 0;border-bottom:1px solid rgba(11,26,51,.06)">
+    <div style="display:flex;align-items:center;gap:2px">
+      <a href="Tasks.dc.html" aria-label="Quay lại" style="width:36px;height:36px;display:flex;align-items:center;justify-content:center;color:#0B1A33"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 5-7 7 7 7"></path></svg></a>
+      <span style="width:26px;height:26px;border-radius:6px;background:#CFE7E5;margin:0 6px 0 2px;flex-shrink:0"></span>
+      <span style="flex-grow:1;min-width:0"><span style="display:block;font-weight:700;font-size:15px;line-height:1.2">Sửa chữa đàn</span><span style="display:block;font-size:11px;color:#56637A">Tổ kỹ thuật · {{total}} việc</span></span>
+      <button class="{{fCls}}" aria-label="Lọc theo người" onClick="{{openF}}"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"></circle><path d="M4 21c1-4 4-6 8-6s7 2 8 6"></path></svg></button>
+      <button class="hb" aria-label="Tuỳ chọn dự án"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.8"></circle><circle cx="12" cy="12" r="1.8"></circle><circle cx="19" cy="12" r="1.8"></circle></svg></button>
+    </div>
+    <div style="position:relative;display:flex;margin-top:6px;overflow:hidden">
+      <sc-for list="{{secs}}" as="g" hint-placeholder-count="4"><button class="{{g.cls}}" style="width:{{g.w}};justify-content:center;padding:0" onClick="{{g.pick}}">{{g.l}}<i>{{g.n}}</i></button></sc-for>
+    </div>
+    <div style="height:2px;position:relative"><span style="position:absolute;left:{{ulL}};width:{{ulW}};height:2px;border-radius:2px;background:#0A7D76;transition:left .35s cubic-bezier(.2,.8,.2,1),width .35s cubic-bezier(.2,.8,.2,1)"></span></div>
+  </header>
+
+  <sc-if value="{{fName}}" hint-placeholder-val="{{false}}">
+    <div style="position:absolute;top:142px;left:16px;right:16px;z-index:2;margin-top:10px;display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:8px;background:#E6F3F2;color:#075E59;font-size:13px;animation:drop .3s both">
+      <span style="flex-grow:1">Đang lọc: <b>{{fName}}</b></span>
+      <button onClick="{{clearF}}" style="border:0;background:transparent;font:600 13px 'Be Vietnam Pro',sans-serif;color:#075E59;cursor:pointer">Bỏ lọc</button>
+    </div>
+  </sc-if>
+
+  <main style="position:absolute;top:{{mainTop}};left:0;right:0;bottom:0;overflow:hidden;transition:top .3s cubic-bezier(.2,.8,.2,1)">
+    <div style="display:flex;width:{{trackW}};height:100%;transform:translateX({{trackX}});transition:{{trackTr}};touch-action:pan-y" onPointerDown="{{down}}">
+      <sc-for list="{{pages}}" as="pg" hint-placeholder-count="4">
+        <div style="width:390px;flex-shrink:0;box-sizing:border-box;padding:12px 16px 120px;display:flex;flex-direction:column;gap:8px">
+          <sc-for list="{{pg.cards}}" as="c" hint-placeholder-count="3">
+            <a class="tc" href="TaskDetail.dc.html" onClick="{{guard}}" onDragStart="{{noDrag}}" style="animation:rise .4s cubic-bezier(.2,.8,.2,1) both;animation-delay:{{c.delay}}">
+              <span style="display:block;font-weight:600;line-height:1.35">{{c.title}}</span>
+              <span style="display:flex;align-items:center;gap:6px;margin-top:8px">
+                <span class="chip" style="background:{{c.dueBg}};color:{{c.dueC}}">{{c.due}}</span>
+                <sc-if value="{{c.pri}}" hint-placeholder-val="{{false}}"><span class="chip" style="background:#FDE8E8;color:#B42318">Ưu tiên cao</span></sc-if>
+                <span style="margin-left:auto;display:flex;padding-left:6px"><sc-for list="{{c.avs}}" as="v" hint-placeholder-count="1"><span class="av" style="background:{{v.c}}">{{v.i}}</span></sc-for><sc-if value="{{c.none}}" hint-placeholder-val="{{false}}"><span style="font-size:11px;color:#8A95A8">Chưa gán</span></sc-if></span>
+              </span>
+              <span style="display:flex;align-items:center;gap:8px;margin-top:8px"><span class="prog"><span style="width:{{c.pct}}"></span></span><span style="font-size:11px;font-weight:600;color:#56637A">{{c.sub}}</span></span>
+            </a>
+          </sc-for>
+          <sc-if value="{{pg.empty}}" hint-placeholder-val="{{false}}">
+            <div style="text-align:center;padding:60px 16px;color:#56637A"><div style="font-weight:600;color:#0B1A33">{{pg.emptyT}}</div><div style="font-size:13px;margin-top:4px">Việc chuyển sang nhóm việc này sẽ hiện ở đây.</div></div>
+          </sc-if>
+        </div>
+      </sc-for>
+    </div>
+  </main>
+
+  <button style="position:absolute;right:16px;bottom:34px;z-index:4;height:48px;padding:0 16px 0 14px;border-radius:14px;border:0;background:#0A7D76;color:#fff;display:flex;align-items:center;gap:6px;font:600 14px 'Be Vietnam Pro',sans-serif;cursor:pointer;box-shadow:0 8px 22px rgba(10,125,118,.4)"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"></path></svg>Việc mới</button>
+
+  <sc-if value="{{fOpen}}" hint-placeholder-val="{{false}}">
+    <button aria-label="Đóng" onClick="{{closeF}}" style="position:absolute;inset:0;z-index:7;border:0;padding:0;cursor:default;background:rgba(11,26,51,.3);backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px);animation:fade .25s both"></button>
+    <div style="position:absolute;left:0;right:0;bottom:0;z-index:8;background:#fff;border-radius:12px 12px 0 0;padding:8px 16px 34px;box-shadow:0 -8px 30px rgba(11,26,51,.15);animation:sheet .38s cubic-bezier(.2,.9,.25,1) both">
+      <div style="width:36px;height:4px;border-radius:2px;background:#C9D2DE;margin:0 auto 10px"></div>
+      <div style="font-weight:700;font-size:16px;margin-bottom:4px">Lọc theo người</div>
+      <sc-for list="{{people}}" as="p" hint-placeholder-count="5">
+        <button class="op" onClick="{{p.pick}}"><span style="width:28px;height:28px;border-radius:14px;background:{{p.c}};color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center">{{p.i}}</span><span style="flex-grow:1">{{p.l}}</span><sc-if value="{{p.on}}" hint-placeholder-val="{{false}}"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#0A7D76" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 4.5 4.5L19 7"></path></svg></sc-if></button>
+      </sc-for>
+    </div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+constructor(p) { super(p); this.state = { sec: 1, who: null, fOpen: false, drag: false, dx: 0 }; }
+renderVals() {
+const s = this.state;
+const P = { H: ['H', '#0B1A33', 'Hoàng'], M: ['M', '#0A7D76', 'Minh'], T: ['T', '#2563EB', 'Tuấn'] };
+const DK = { today: ['#E6F3F2', '#075E59'], late: ['#FDECE3', '#9A3412'], up: ['#EEF1F5', '#3D4A60'], none: ['#EEF1F5', '#8A95A8'] };
+const SEC = ['Tiếp nhận', 'Đang sửa', 'Chờ linh kiện', 'Chờ duyệt'];
+const T = [
+[0, 'Đàn Kawai – khách mang tới cửa hàng', 'Chưa đặt hạn', 'none', 0, [], 0, 2],
+[0, 'Khảo sát đàn cơ tại nhà – Q3', 'Hạn 12/10', 'up', 0, ['T'], 0, 1],
+[1, 'Lên dây đàn Yamaha U3 – số máy 4521', 'Hạn hôm nay', 'today', 1, ['H', 'M'], 2, 5],
+[1, 'Thay nỉ búa Yamaha C3', 'Hạn 11/10', 'up', 0, ['M'], 1, 3],
+[1, 'Sửa pedal đàn Roland', 'Quá hạn 1 ngày', 'late', 0, ['T'], 0, 2],
+[2, 'Thay phím đàn Kawai K300 – chị Lan', 'Quá hạn 2 ngày', 'late', 1, ['T'], 1, 3],
+[3, 'Đánh bóng vỏ đàn Steinway', 'Hạn 10/10', 'up', 0, ['H'], 4, 4]
+];
+const vis = T.filter(t => !s.who || (s.who === '-' ? t[5].length === 0 : t[5].includes(s.who)));
+const fName = s.who ? (s.who === '-' ? 'Chưa giao ai' : P[s.who][2]) : false;
+const pages = SEC.map((n, si) => { const cards = vis.filter(t => t[0] === si).map((t, i) => ({ title: t[1], due: t[2], dueBg: DK[t[3]][0], dueC: DK[t[3]][1], pri: !!t[4],
+  avs: t[5].map(k => ({ i: P[k][0], c: P[k][1] })), none: t[5].length === 0, pct: Math.round(t[6] / t[7] * 100) + '%', sub: t[6] + '/' + t[7], delay: (i * 0.05) + 's' }));
+  return { cards, empty: cards.length === 0, emptyT: fName ? 'Không có việc nào của ' + fName + ' ở “' + n + '”' : 'Chưa có việc ở “' + n + '”' }; });
+const W = [86, 86, 114, 92];
+let L = 0; for (let i = 0; i < s.sec; i++) L += W[i];
+const go = i => this.setState({ sec: Math.max(0, Math.min(SEC.length - 1, i)) });
+return {
+total: vis.length,
+secs: SEC.map((l, i) => ({ l, n: vis.filter(t => t[0] === i).length, cls: i === s.sec ? 'st on' : 'st', w: W[i] + 'px', pick: () => go(i) })),
+ulL: (L + 12) + 'px', ulW: (W[s.sec] - 24) + 'px',
+pages, trackW: (SEC.length * 390) + 'px',
+trackX: (-s.sec * 390 + (s.drag ? s.dx : 0)) + 'px', trackTr: s.drag ? 'none' : 'transform .45s cubic-bezier(.2,.8,.2,1)',
+down: e => { this.x0 = e.clientX; this.moved = false; this.setState({ drag: true, dx: 0 }); },
+move: e => { if (!this.state.drag) return; const dx = e.clientX - this.x0; if (Math.abs(dx) > 6) this.moved = true; this.setState({ dx }); },
+up: () => { if (!this.state.drag) return; const dx = this.state.dx; this.setState({ drag: false, dx: 0 }); if (dx < -70) go(this.state.sec + 1); else if (dx > 70) go(this.state.sec - 1); },
+guard: e => { if (this.moved) { e.preventDefault(); this.moved = false; } }, noDrag: e => e.preventDefault(),
+fName, fCls: s.who ? 'hb on' : 'hb', mainTop: s.who ? '192px' : '142px',
+fOpen: s.fOpen, openF: () => this.setState({ fOpen: true }), closeF: () => this.setState({ fOpen: false }), clearF: () => this.setState({ who: null }),
+people: [[null, 'Tất cả mọi người', '#56637A', '∗'], ['-', 'Chưa giao ai', '#C9D2DE', '–'], ['H', 'Hoàng', '#0B1A33', 'H'], ['M', 'Minh', '#0A7D76', 'M'], ['T', 'Tuấn', '#2563EB', 'T']]
+  .map(p => ({ l: p[1], c: p[2], i: p[3], on: s.who === p[0], pick: () => this.setState({ who: p[0], fOpen: false }) }))
+};
+}
+}
+</script>
+</body>
+</html>

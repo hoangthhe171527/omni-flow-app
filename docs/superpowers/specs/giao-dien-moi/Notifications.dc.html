@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<title>Thông báo</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#0A7D76}a:hover{color:#075E59}
+@keyframes rise{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+button,a{transition:transform .2s cubic-bezier(.2,.8,.2,1),background-color .3s,color .2s,opacity .3s;-webkit-tap-highlight-color:transparent}
+button:active,a:active{transform:scale(.97)}
+.bar{background:rgba(245,247,250,.82);backdrop-filter:blur(20px) saturate(180%);-webkit-backdrop-filter:blur(20px) saturate(180%)}
+.card{background:#fff;border:1px solid #E3E8EF;border-radius:8px;overflow:hidden}
+.sec{font-size:11px;font-weight:600;letter-spacing:.5px;text-transform:uppercase;color:#56637A;padding:0 4px 6px}
+.seg{flex:1;height:30px;border:0;background:transparent;font:600 13px 'Be Vietnam Pro',sans-serif;color:#56637A;cursor:pointer;position:relative;z-index:1}
+.seg.on{color:#0B1A33}
+.n{position:relative;display:flex;gap:10px;padding:10px 12px 10px 18px;border-top:1px solid #EEF1F5;text-decoration:none;color:#0B1A33;width:100%;box-sizing:border-box;border-left:0;border-right:0;border-bottom:0;font:inherit;text-align:left;cursor:pointer}
+.n:first-child{border-top:0}
+.n:hover{filter:brightness(.98)}
+.ico{width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+</style>
+</helmet>
+<div style="width:390px;height:844px;position:relative;overflow:hidden;font-family:'Be Vietnam Pro',system-ui,sans-serif;color:#0B1A33;background:#F5F7FA;font-size:14px">
+  <header class="bar" style="position:absolute;top:0;left:0;right:0;z-index:3;padding:50px 10px 10px;border-bottom:1px solid rgba(11,26,51,.06);display:flex;flex-direction:column;gap:10px">
+    <div style="display:flex;align-items:center">
+      <a href="Main.dc.html" aria-label="Quay lại" style="width:36px;height:36px;display:flex;align-items:center;justify-content:center;color:#0B1A33"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 5-7 7 7 7"></path></svg></a>
+      <span style="flex-grow:1;text-align:center;font-weight:700;font-size:15px">Thông báo</span>
+      <button onClick="{{readAll}}" style="height:36px;padding:0 6px;border:0;background:transparent;font:600 13px 'Be Vietnam Pro',sans-serif;color:#0A7D76;cursor:pointer;opacity:{{raOp}}">Đọc hết</button>
+    </div>
+    <div style="position:relative;display:flex;background:#EEF1F5;border-radius:6px;padding:3px;margin:0 6px">
+      <span style="position:absolute;top:3px;bottom:3px;left:3px;width:calc((100% - 6px) / 2);border-radius:4px;background:#fff;box-shadow:0 1px 3px rgba(11,26,51,.12);transform:{{segX}};transition:transform .35s cubic-bezier(.2,.8,.2,1)"></span>
+      <button class="{{s0}}" onClick="{{toAll}}">Tất cả</button>
+      <button class="{{s1}}" onClick="{{toUn}}">Chưa đọc · {{unN}}</button>
+    </div>
+  </header>
+
+  <main style="position:absolute;top:142px;left:0;right:0;bottom:0;padding:14px 16px 30px;display:flex;flex-direction:column;gap:14px;overflow:hidden">
+    <sc-for list="{{groups}}" as="g" hint-placeholder-count="2">
+      <div style="animation:rise .45s cubic-bezier(.2,.8,.2,1) both">
+        <div class="sec">{{g.l}}</div>
+        <div class="card">
+          <sc-for list="{{g.items}}" as="x" hint-placeholder-count="3">
+            <button class="n" style="background:{{x.bg}}" onClick="{{x.open}}">
+              <sc-if value="{{x.un}}" hint-placeholder-val="{{false}}"><span style="position:absolute;left:7px;top:22px;width:6px;height:6px;border-radius:50%;background:#0A7D76"></span></sc-if>
+              <span class="ico" style="background:{{x.ib}};color:{{x.ic}}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="{{x.d}}"></path></svg></span>
+              <span style="flex-grow:1;min-width:0">
+                <span style="display:block;font-size:13px;line-height:1.4;font-weight:{{x.w}}">{{x.t}}</span>
+                <span style="display:block;font-size:11px;color:#8A95A8;margin-top:2px">{{x.when}}</span>
+              </span>
+            </button>
+          </sc-for>
+        </div>
+      </div>
+    </sc-for>
+    <sc-if value="{{empty}}" hint-placeholder-val="{{false}}">
+      <div style="text-align:center;color:#56637A;padding:60px 20px;animation:rise .4s both">Bạn đã đọc hết thông báo</div>
+    </sc-if>
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+constructor(p) { super(p); this.state = { seg: 0, read: {} }; }
+renderVals() {
+const s = this.state;
+const K = {
+msg: ['M4 5h16v11H8l-4 4z', '#E6F3F2', '#075E59'],
+task: ['M4 4h16v16H4zM8.5 12l2.5 2.5 4.5-5', '#E3EAFD', '#1D4ED8'],
+deal: ['M3 17l6-6 4 4 8-8', '#FDECE3', '#9A3412'],
+warn: ['M12 9v4M12 17h.01M10.3 3.9 2 18a2 2 0 0 0 1.7 3h16.6a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z', '#FDE8E8', '#B42318']
+};
+const N = [
+[0, 'msg', 1, 'Lan Anh nhắn qua OA Trung Nguyên: “Bên mình còn lịch chiều nay không ạ?”', '4 phút', 'Thread.dc.html'],
+[0, 'warn', 1, 'Việc “Gọi lại chị Hạnh – báo giá gói Pro” đã quá hạn 1 ngày', '1 giờ', 'TaskDetail.dc.html'],
+[0, 'task', 1, 'Ngọc Lan giao cho bạn việc “Chuẩn bị demo cho Hoàng Long”', '2 giờ', 'TaskDetail.dc.html'],
+[0, 'deal', 0, 'Cơ hội “Gia hạn năm 2026” chuyển sang Chốt · 36tr', '09:12', 'Customers.dc.html'],
+[1, 'msg', 0, 'Bạn được gán hội thoại với Vũ Khánh (Web · shop.viomni.vn)', 'Hôm qua 17:40', 'Thread.dc.html'],
+[1, 'task', 0, 'Minh Tú bình luận trong “Triển khai chi nhánh 2”: “@Hoàng xem giúp lịch nhé”', 'Hôm qua 10:02', 'TaskDetail.dc.html']
+];
+const isUn = (n, i) => n[2] && !s.read[i];
+const list = N.map((n, i) => ({ n, i })).filter(x => s.seg === 0 || isUn(x.n, x.i));
+const groups = ['Hôm nay', 'Trước đó'].map((l, gi) => ({ l, items: list.filter(x => x.n[0] === gi).map(({ n, i }) => { const un = isUn(n, i), k = K[n[1]];
+  return { t: n[3], when: n[4], un, w: un ? 600 : 400, bg: un ? '#F3FAF9' : '#fff', d: k[0], ib: k[1], ic: k[2],
+    open: () => this.setState({ read: { ...s.read, [i]: true } }) }; }) })).filter(g => g.items.length);
+const unN = N.filter((n, i) => isUn(n, i)).length;
+return {
+groups, empty: groups.length === 0, unN, raOp: unN ? 1 : .35,
+readAll: () => this.setState({ read: Object.fromEntries(N.map((n, i) => [i, true])) }),
+segX: s.seg ? 'translateX(100%)' : 'none', s0: s.seg ? 'seg' : 'seg on', s1: s.seg ? 'seg on' : 'seg',
+toAll: () => this.setState({ seg: 0 }), toUn: () => this.setState({ seg: 1 })
+};
+}
+}
+</script>
+</body>
+</html>

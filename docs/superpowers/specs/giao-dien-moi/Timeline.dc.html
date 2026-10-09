@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<title>Dòng việc</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#0A7D76}a:hover{color:#075E59}
+@keyframes rise{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+@keyframes swapL{from{opacity:0;transform:translateX(16px)}to{opacity:1;transform:none}}
+button,a{transition:transform .2s cubic-bezier(.2,.8,.2,1),background-color .2s,color .2s,opacity .2s;-webkit-tap-highlight-color:transparent}
+button:active,a:active{transform:scale(.96)}
+.bar{background:rgba(245,247,250,.82);backdrop-filter:blur(20px) saturate(180%);-webkit-backdrop-filter:blur(20px) saturate(180%)}
+.card{background:#fff;border:1px solid #E3E8EF;border-radius:8px;overflow:hidden}
+.nb{width:32px;height:32px;border-radius:6px;border:1px solid #E3E8EF;background:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;color:#0B1A33;padding:0}
+.day{font-size:11px;font-weight:600;letter-spacing:.5px;text-transform:uppercase;color:#56637A;padding:0 2px 6px;display:flex;justify-content:space-between}
+.row{display:flex;align-items:center;gap:10px;padding:9px 12px;border-top:1px solid #EEF1F5;text-decoration:none;color:#0B1A33}
+.row:first-child{border-top:0}
+.row:hover{background:#FAFBFC}
+.av{width:28px;height:28px;border-radius:14px;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;color:#fff;flex-shrink:0}
+</style>
+</helmet>
+<div style="width:390px;height:844px;position:relative;overflow:hidden;font-family:'Be Vietnam Pro',system-ui,sans-serif;color:#0B1A33;background:#F5F7FA;font-size:14px">
+  <header class="bar" style="position:absolute;top:0;left:0;right:0;z-index:3;padding:50px 6px 6px;display:flex;align-items:center;border-bottom:1px solid rgba(11,26,51,.06)">
+    <a href="Tasks.dc.html" aria-label="Quay lại" style="width:36px;height:36px;display:flex;align-items:center;justify-content:center;color:#0B1A33"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 5-7 7 7 7"></path></svg></a>
+    <span style="flex-grow:1;text-align:center;font-weight:700;font-size:15px;margin-right:36px">Dòng việc</span>
+  </header>
+
+  <main style="position:absolute;top:94px;left:0;right:0;bottom:0;padding:14px 16px 30px;display:flex;flex-direction:column;gap:14px;overflow:hidden">
+    <div class="card" style="padding:12px;animation:rise .45s cubic-bezier(.2,.8,.2,1) both">
+      <div style="display:flex;align-items:center;gap:8px">
+        <button class="nb" aria-label="Tháng trước" onClick="{{prev}}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 6-6 6 6 6"></path></svg></button>
+        <span style="flex-grow:1;text-align:center;font-weight:700">Tháng {{m.label}}</span>
+        <button class="nb" aria-label="Tháng sau" onClick="{{next}}" style="opacity:{{nextOp}}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"></path></svg></button>
+      </div>
+      <div style="display:flex;align-items:flex-end;gap:12px;margin-top:12px;animation:swapL .35s cubic-bezier(.2,.8,.2,1) both">
+        <div style="flex-grow:1">
+          <div style="font-size:32px;font-weight:700;letter-spacing:-.5px;line-height:1">{{m.done}}</div>
+          <div style="font-size:12px;color:#56637A;margin-top:4px">việc xong trong tháng</div>
+        </div>
+        <span style="font-size:12px;font-weight:600;padding:3px 8px;border-radius:4px;background:{{m.dBg}};color:{{m.dC}}">{{m.delta}}</span>
+      </div>
+      <div style="margin-top:12px">
+        <div style="position:relative;height:8px;border-radius:4px;background:#EEF1F5">
+          <span style="position:absolute;left:0;top:0;bottom:0;width:{{m.pct}};border-radius:4px;background:#0A7D76;transition:width .6s cubic-bezier(.2,.8,.2,1)"></span>
+          <sc-for list="{{m.marks}}" as="k" hint-placeholder-count="3"><span style="position:absolute;top:-3px;left:{{k.at}};width:2px;height:14px;border-radius:1px;background:{{k.c}};transition:left .6s"></span></sc-for>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:11px;color:#8A95A8;margin-top:6px"><span>{{m.pace}}</span><span>{{m.goal}}</span></div>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:10px;padding-top:10px;border-top:1px solid #EEF1F5;font-size:12px">
+        <span style="flex:1;color:#56637A">Mốc thưởng tiếp: <b style="color:#0B1A33">{{m.bonus}}</b></span>
+        <span style="color:{{m.rwC}};font-weight:600">{{m.rework}} lần làm lại</span>
+      </div>
+    </div>
+
+    <sc-for list="{{days}}" as="d" hint-placeholder-count="3">
+      <div style="animation:rise .45s cubic-bezier(.2,.8,.2,1) both;animation-delay:{{d.delay}}">
+        <div class="day"><span>{{d.l}}</span><span>{{d.n}} việc</span></div>
+        <div class="card">
+          <sc-for list="{{d.rows}}" as="r" hint-placeholder-count="2">
+            <a class="row" href="TaskDetail.dc.html">
+              <span class="av" style="background:{{r.c}}">{{r.i}}</span>
+              <span style="flex-grow:1;min-width:0">
+                <sc-if value="{{r.big}}" hint-placeholder-val="{{false}}"><span style="display:block;font-size:10px;font-weight:700;letter-spacing:.5px;color:#0A7D76">{{r.who}} ĐÃ XONG</span></sc-if>
+                <span style="display:block;font-size:13px;font-weight:{{r.w}};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{r.t}}</span>
+                <span style="display:block;font-size:11px;color:#8A95A8">{{r.meta}}</span>
+              </span>
+            </a>
+          </sc-for>
+        </div>
+      </div>
+    </sc-for>
+    <div style="text-align:center;font-size:11px;color:#8A95A8">Chỉ hiện 7 ngày gần nhất.</div>
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+constructor(p) { super(p); this.state = { mi: 1 }; }
+renderVals() {
+const s = this.state;
+const M = [
+{ label: '9/2026', done: 58, delta: 'Bằng tháng 8', dBg: '#EEF1F5', dC: '#3D4A60', pace: 'Đã hết tháng', goal: 'Mốc 80 việc', bonus: 'Còn 22 việc tới mốc 80 · thưởng 3 triệu', rework: 4, rwC: '#C2410C', pct: '72%', marks: [50, 80, 100] },
+{ label: '10/2026', done: 64, delta: '+6 so với tháng 9', dBg: '#E6F3F2', dC: '#075E59', pace: '2,1 việc/ngày · còn 22 ngày', goal: 'Mốc 80 việc', bonus: 'Còn 16 việc tới mốc 80 · thưởng 3 triệu', rework: 1, rwC: '#56637A', pct: '80%', marks: [50, 80, 100] }
+];
+const m = M[s.mi], mx = 100;
+const C = { H: '#0B1A33', M: '#0A7D76', T: '#2563EB', L: '#7C3AED' };
+const D = [
+['Hôm nay', [['M', 'Minh', 'Thay búa La 4 – Yamaha U3', 'Sửa chữa đàn · 09:20', 0], ['H', 'Hoàng', 'Đánh bóng vỏ đàn Steinway', 'Sửa chữa đàn · 08:45', 1]]],
+['Hôm qua', [['T', 'Tuấn', 'Giao đàn cho trường Âm nhạc', 'Giao nhận · 16:10', 1], ['L', 'Ngọc Lan', 'Báo giá phục hồi đàn cơ', 'Kinh doanh · 11:02', 0], ['M', 'Minh', 'Lên dây đàn Kawai – Q3', 'Bảo dưỡng · 09:30', 0]]],
+['Thứ Tư 07/10', [['H', 'Hoàng', 'Sửa pedal Roland FP-30', 'Sửa chữa đàn · 15:40', 0]]]
+];
+return {
+m: { ...m, marks: m.marks.map(v => ({ at: (v / mx * 100) + '%', c: v <= m.done ? '#0A7D76' : '#C9D2DE' })) },
+prev: () => this.setState({ mi: Math.max(0, s.mi - 1) }), next: () => this.setState({ mi: Math.min(1, s.mi + 1) }), nextOp: s.mi === 1 ? .35 : 1,
+days: D.map((d, i) => ({ l: d[0], n: d[1].length, delay: (0.08 + i * 0.06) + 's', rows: d[1].map(r => ({ i: r[0], c: C[r[0]], who: r[1].toUpperCase(), big: !!r[4], w: r[4] ? 600 : 500,
+  t: r[4] ? r[2] : r[1] + ' · ' + r[2], meta: r[3] })) }))
+};
+}
+}
+</script>
+</body>
+</html>
