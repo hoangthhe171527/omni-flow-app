@@ -12,8 +12,6 @@ import '../../../design/components/components.dart';
 import '../../../design/platform/omni_motion_scope.dart';
 import '../../../design/tokens/tokens.dart';
 import '../../../core/realtime/realtime_client.dart';
-import '../../../security/session/session_controller.dart';
-import '../../opportunities/opportunities.dart';
 import '../../settings/settings.dart';
 import '../application/inbox_providers.dart';
 import '../application/inbox_realtime.dart';
@@ -22,12 +20,15 @@ import '../application/thread_controller.dart';
 import '../data/inbox_api.dart';
 import '../domain/conversation.dart';
 import '../domain/message.dart';
+import '../inbox_module.dart';
 import 'message_key_registry.dart';
+import 'thread_info_page.dart';
 import 'widgets/assign_sheet.dart';
-import 'widgets/conversation_context_sheet.dart';
 import 'widgets/message_bubble.dart';
 import 'widgets/message_composer.dart';
 import 'widgets/message_images.dart';
+import 'widgets/thread_header.dart';
+import 'widgets/thread_intro.dart';
 
 export '../application/media_url_resolver.dart' show mediaReloadCooldown;
 
@@ -266,16 +267,14 @@ class _ThreadPageState extends ConsumerState<ThreadPage>
         OmniColors.chatCanvas,
         OmniColors.chatCanvasDark,
       ),
-      appBar: _ThreadAppBar(
+      appBar: ThreadHeader(
         conversation: conversation.valueOrNull,
-        onAssign: access.canAssign ? _assign : null,
-        onInfo: _showContext,
+        onInfo: _openInfo,
         searchMode: _searchMode,
         searchController: _searchController,
         searchFocusNode: _searchFocusNode,
         searchResultCount: _searchResults.length,
         searchResultIndex: _searchResults.isEmpty ? 0 : _searchIndex,
-        onSearch: _openSearch,
         onSearchChanged: _search,
         onSearchPrevious: () => _moveSearch(-1),
         onSearchNext: () => _moveSearch(1),
@@ -284,7 +283,6 @@ class _ThreadPageState extends ConsumerState<ThreadPage>
       body: SurfaceBackdrop(
         child: Column(
           children: [
-            _OpportunityStrip(conversationId: widget.conversationId),
             Expanded(
               // No tint layer over the canvas: it fought the chat background and
               // washed the bubbles back down into the page.
@@ -305,7 +303,7 @@ class _ThreadPageState extends ConsumerState<ThreadPage>
                   child: _MessageList(
                     state: state,
                     controller: _scrollController,
-                    isGroup: conversation.valueOrNull?.isGroup ?? false,
+                    conversation: conversation.valueOrNull,
                     // retry(), not send(): a fresh send would drop the reply the
                     // rep was answering, leave the failed bubble sitting below the
                     // new one, and — because it would carry a new idempotency key —
@@ -327,8 +325,9 @@ class _ThreadPageState extends ConsumerState<ThreadPage>
             ),
             if (access.canSend)
               MessageComposer(
-                canNote: access.canNote,
-                suggestions: _suggestions(conversation.valueOrNull),
+                // Không còn nút gạt ghi chú và hàng trả lời nhanh (GĐ3); composer
+                // mới dựng ở Task 7.
+                canNote: false,
                 replyTo: _replyingTo,
                 onCancelReply: () => setState(() => _replyingTo = null),
                 onPickImages: _pickImages,
@@ -464,21 +463,6 @@ class _ThreadPageState extends ConsumerState<ThreadPage>
     });
   }
 
-  /// Rule-based, not generated: openers a rep would type anyway, offered as one
-  /// tap. Deliberately generic — a wrong "smart" suggestion costs more trust
-  /// than no suggestion.
-  List<String> _suggestions(Conversation? conversation) {
-    if (conversation == null) return const [];
-    return const [
-      'Dạ em chào anh/chị ạ!',
-      'Em gửi báo giá ạ',
-      'Em gọi lại ngay',
-      'Cảm ơn anh/chị đã quan tâm.',
-      'Anh/chị cho em xin số điện thoại để tư vấn nhé.',
-      'Bên em đang có chương trình ưu đãi ạ.',
-    ];
-  }
-
   void _scrollToBottom() {
     if (!_scrollController.hasClients) return;
     _scrollController.animateTo(
@@ -507,6 +491,9 @@ class _ThreadPageState extends ConsumerState<ThreadPage>
   Future<XFile?> _takePhoto() =>
       ImagePicker().pickImage(source: ImageSource.camera, imageQuality: 85);
 
+  // Giữ cho tới Task 9 (chuyển sang ConversationActions.assign ở trang Thông
+  // tin); header không còn nút Gán.
+  // ignore: unused_element
   Future<void> _assign() async {
     final conversation = ref
         .read(conversationProvider(widget.conversationId))
@@ -530,13 +517,12 @@ class _ThreadPageState extends ConsumerState<ThreadPage>
     }
   }
 
-  void _showContext() {
-    showOmniSheet(
-      context: context,
-      expand: true,
-      builder: (_) =>
-          ConversationContextSheet(conversationId: widget.conversationId),
+  Future<void> _openInfo() async {
+    final result = await context.pushNamed<ThreadInfoResult>(
+      InboxModule.threadInfo,
+      pathParameters: {'id': widget.conversationId},
     );
+    if (result == ThreadInfoResult.search && mounted) _openSearch();
   }
 
   void _toast(String message) {
@@ -547,203 +533,11 @@ class _ThreadPageState extends ConsumerState<ThreadPage>
   }
 }
 
-class _ThreadAppBar extends StatelessWidget implements PreferredSizeWidget {
-  const _ThreadAppBar({
-    required this.conversation,
-    required this.onInfo,
-    required this.searchMode,
-    required this.searchController,
-    required this.searchFocusNode,
-    required this.searchResultCount,
-    required this.searchResultIndex,
-    required this.onSearch,
-    required this.onSearchChanged,
-    required this.onSearchPrevious,
-    required this.onSearchNext,
-    required this.onCloseSearch,
-    this.onAssign,
-  });
-
-  final Conversation? conversation;
-  final VoidCallback onInfo;
-  final bool searchMode;
-  final TextEditingController searchController;
-  final FocusNode searchFocusNode;
-  final int searchResultCount;
-  final int searchResultIndex;
-  final VoidCallback onSearch;
-  final ValueChanged<String> onSearchChanged;
-  final VoidCallback onSearchPrevious;
-  final VoidCallback onSearchNext;
-  final VoidCallback onCloseSearch;
-  final VoidCallback? onAssign;
-
-  @override
-  Size get preferredSize => const Size.fromHeight(72);
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-
-    return AppBar(
-      toolbarHeight: 64,
-      leadingWidth: 48,
-      titleSpacing: (ModalRoute.of(context)?.canPop ?? false) ? 0 : 16,
-      backgroundColor: scheme.surface,
-      surfaceTintColor: Colors.transparent,
-      elevation: 0,
-      shape: Border(bottom: BorderSide(color: scheme.outlineVariant)),
-      title: searchMode
-          ? TextField(
-              controller: searchController,
-              focusNode: searchFocusNode,
-              autofocus: true,
-              onChanged: onSearchChanged,
-              textInputAction: TextInputAction.search,
-              decoration: InputDecoration(
-                hintText: 'Tìm trong hội thoại',
-                border: InputBorder.none,
-                isDense: true,
-                suffixText: searchResultCount == 0
-                    ? null
-                    : '${searchResultIndex + 1}/$searchResultCount',
-              ),
-            )
-          : conversation == null
-          ? const SizedBox.shrink()
-          : Row(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                conversation!.isGroup
-                    ? OmniGroupAvatar(
-                        names: conversation!.groupMembers
-                            .map((m) => m.name ?? '?')
-                            .toList(),
-                        size: 40,
-                      )
-                    : OmniAvatar(
-                        name: conversation!.title,
-                        imageUrl: conversation!.customerAvatar,
-                        size: 40,
-                      ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        conversation!.title,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: OmniChatType.peer.copyWith(
-                          color: scheme.onSurface,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Row(
-                        children: [
-                          Flexible(
-                            child: Align(
-                              alignment: Alignment.centerLeft,
-                              child: OmniSourcePill(
-                                channel: conversation!.channel,
-                                accountName: conversation!.accountName,
-                              ),
-                            ),
-                          ),
-                          if (conversation!.lastMessageAt != null) ...[
-                            const SizedBox(width: 8),
-                            Flexible(
-                              child: Text(
-                                Formatters.relative(
-                                  conversation!.lastMessageAt,
-                                ),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: OmniChatType.meta.copyWith(
-                                  color: scheme.onSurfaceVariant,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-      actions: [
-        if (searchMode) ...[
-          IconButton(
-            tooltip: 'Kết quả trước',
-            onPressed: searchResultCount == 0 ? null : onSearchPrevious,
-            icon: const Icon(Icons.keyboard_arrow_up_rounded, size: 22),
-          ),
-          IconButton(
-            tooltip: 'Kết quả sau',
-            onPressed: searchResultCount == 0 ? null : onSearchNext,
-            icon: const Icon(Icons.keyboard_arrow_down_rounded, size: 22),
-          ),
-          IconButton(
-            tooltip: 'Đóng tìm kiếm',
-            onPressed: onCloseSearch,
-            icon: const Icon(Icons.close_rounded, size: 21),
-          ),
-          const SizedBox(width: 8),
-        ] else ...[
-          IconButton(
-            tooltip: 'Tìm trong hội thoại',
-            onPressed: onSearch,
-            style: IconButton.styleFrom(
-              foregroundColor: scheme.onSurfaceVariant,
-              minimumSize: const Size(40, 40),
-              maximumSize: const Size(40, 40),
-              padding: EdgeInsets.zero,
-              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-            ),
-            icon: const Icon(Icons.search_rounded, size: 21),
-          ),
-          // The phone number lives on the customer record, not the thread, so
-          // "gọi" is offered in the context sheet where that data is loaded.
-          if (onAssign != null)
-            IconButton(
-              tooltip: 'Gán nhân viên',
-              onPressed: onAssign,
-              style: IconButton.styleFrom(
-                foregroundColor: scheme.onSurfaceVariant,
-                minimumSize: const Size(40, 40),
-                maximumSize: const Size(40, 40),
-                padding: EdgeInsets.zero,
-                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-              ),
-              icon: const Icon(Icons.person_add_alt_outlined, size: 21),
-            ),
-          IconButton(
-            tooltip: 'Thông tin khách hàng',
-            onPressed: onInfo,
-            style: IconButton.styleFrom(
-              foregroundColor: scheme.onSurfaceVariant,
-              minimumSize: const Size(40, 40),
-              maximumSize: const Size(40, 40),
-              padding: EdgeInsets.zero,
-              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-            ),
-            icon: const Icon(Icons.info_outline_rounded, size: 21),
-          ),
-          const SizedBox(width: 8),
-        ],
-      ],
-    );
-  }
-}
-
 class _MessageList extends StatelessWidget {
   const _MessageList({
     required this.state,
     required this.controller,
-    required this.isGroup,
+    required this.conversation,
     required this.onRetry,
     required this.onDiscard,
     required this.onReply,
@@ -753,7 +547,7 @@ class _MessageList extends StatelessWidget {
 
   final ThreadState state;
   final ScrollController controller;
-  final bool isGroup;
+  final Conversation? conversation;
   final void Function(Message message) onRetry;
   final void Function(Message message) onDiscard;
   final void Function(Message message) onReply;
@@ -768,7 +562,13 @@ class _MessageList extends StatelessWidget {
     // send is not in `messages` and would otherwise never render. It is sorted
     // once per state; indexing it from the end instead of `.reversed.toList()`
     // means this build copies nothing.
-    final visible = state.visible;
+    final visible = state.visible
+        .where((m) => !m.isNote)
+        .toList(growable: false);
+    final conversation = this.conversation;
+    final showIntro =
+        !state.hasMore && conversation != null && !conversation.isGroup;
+    final isGroup = conversation?.isGroup ?? false;
     final count = visible.length;
     // The list runs newest→oldest: reversed index i is visible[count - 1 - i].
     Message? at(int reversedIndex) =>
@@ -782,9 +582,10 @@ class _MessageList extends StatelessWidget {
       // Tight gutters: Zalo lets bubbles run close to both edges, which is what
       // makes the left/right split read at a glance.
       padding: const EdgeInsets.fromLTRB(8, OmniSpacing.lg, 8, OmniSpacing.md),
-      itemCount: count + (state.hasMore ? 1 : 0),
+      itemCount: count + (state.hasMore ? 1 : 0) + (showIntro ? 1 : 0),
       itemBuilder: (context, index) {
         if (index >= count) {
+          if (showIntro) return ThreadIntro(conversation: conversation);
           return const Padding(
             padding: EdgeInsets.all(OmniSpacing.lg),
             child: Center(
@@ -811,13 +612,9 @@ class _MessageList extends StatelessWidget {
         final grouped =
             !needsDayHeader &&
             earlier != null &&
-            earlier.isOutbound == message.isOutbound &&
-            !earlier.isNote &&
-            !message.isNote;
+            earlier.isOutbound == message.isOutbound;
         final isLastInGroup =
-            later == null ||
-            later.isOutbound != message.isOutbound ||
-            later.isNote;
+            later == null || later.isOutbound != message.isOutbound;
 
         return KeyedSubtree(
           key: keyForMessage(message.id),
@@ -863,20 +660,22 @@ class _DaySeparator extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
 
-    // Bare centred text, like Zalo. The bordered pill was a third framed object
-    // in a thread that had just had its frames removed, and at fontSize 10 the
-    // label inside it was below every platform's readable floor.
-    //
-    // 20 above, 12 below: the gap belongs to the day that is STARTING, so the
-    // separator sits closer to what it introduces than to what it closes.
+    // Mốc giờ trần, giữa: "09:40, HÔM NAY". Cỡ 12 (sàn đọc được của design
+    // system; bản thiết kế ghi 10) w600 giãn chữ .5, lề trên 10 dưới 6.
+    final color = OmniColors.byBrightness(
+      context,
+      const Color(0xFF8A95A8),
+      scheme.onSurfaceVariant,
+    );
     return Padding(
-      padding: const EdgeInsets.only(top: 20, bottom: 12),
+      padding: const EdgeInsets.only(top: 10, bottom: 6),
       child: Center(
         child: Text(
-          Formatters.dayHeader(date),
-          style: OmniChatType.meta.copyWith(
-            color: scheme.onSurfaceVariant,
-            letterSpacing: 0.2,
+          Formatters.threadStamp(date),
+          style: OmniType.micro.copyWith(
+            fontWeight: FontWeight.w600,
+            letterSpacing: 0.5,
+            color: color,
           ),
         ),
       ),
@@ -920,122 +719,3 @@ class _ReadOnlyBar extends StatelessWidget {
     );
   }
 }
-
-/// Dải cơ hội đang gắn với hội thoại, ngay dưới thanh trên (`MThread.dc.html`).
-///
-/// Đọc từ `conversationContextProvider` — cùng provider tấm thông tin khách
-/// dùng, nên mở tấm đó sau không tải lại. Hội thoại không kèm cơ hội trong dữ
-/// liệu của chính nó, nên đây là MỘT lượt gọi `/context` khi mở hội thoại.
-/// Chỉ gọi khi người dùng có quyền xem cơ hội; không có cơ hội đang mở thì
-/// không vẽ gì, lỗi mạng cũng không vẽ gì — dải này là lối tắt, không phải
-/// nội dung chính.
-class _OpportunityStrip extends ConsumerWidget {
-  const _OpportunityStrip({required this.conversationId});
-
-  final String conversationId;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final canRead = ref
-        .watch(accessProvider)
-        .canAny(OpportunityPermissions.anyRead);
-    if (!canRead) return const SizedBox.shrink();
-
-    final data = ref.watch(conversationContextProvider(conversationId));
-    final opportunities = data.valueOrNull?.opportunities ?? const [];
-    final open = opportunities.where(
-      (o) => o.status == null || o.status == 'open',
-    );
-    if (open.isEmpty) return const SizedBox.shrink();
-
-    final opportunity = open.first;
-    final scheme = Theme.of(context).colorScheme;
-    final budget = opportunity.budget;
-    final title = budget == null || budget <= 0
-        ? opportunity.title
-        : '${opportunity.title} · ${Formatters.vndCompact(budget)}';
-
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(12, 10, 12, 0),
-      child: Material(
-        color: scheme.surface,
-        borderRadius: OmniRadius.mdAll,
-        elevation: 0,
-        shadowColor: Colors.transparent,
-        child: InkWell(
-          borderRadius: OmniRadius.mdAll,
-          onTap: opportunity.id.isEmpty
-              ? null
-              : () => context.pushNamed(
-                  OpportunityRoutes.detail,
-                  pathParameters: {'id': opportunity.id},
-                ),
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-            decoration: BoxDecoration(
-              borderRadius: OmniRadius.mdAll,
-              // Viền thay bóng: thẻ nằm yên trên nền chat, không nổi.
-              border: Border.all(color: scheme.outlineVariant),
-            ),
-            child: Row(
-              children: [
-                Container(
-                  width: 32,
-                  height: 32,
-                  decoration: BoxDecoration(
-                    color: scheme.primaryContainer,
-                    borderRadius: OmniRadius.smAll,
-                  ),
-                  child: Icon(
-                    Icons.trending_up_rounded,
-                    size: OmniIconSize.md,
-                    color: scheme.onPrimaryContainer,
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        title,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: OmniType.caption.copyWith(
-                          fontWeight: FontWeight.w600,
-                          color: scheme.onSurface,
-                          fontFeatures: OmniType.tabular,
-                        ),
-                      ),
-                      if (opportunity.stage != null)
-                        Text(
-                          'Giai đoạn: ${_stageLabel(ref, opportunity.stage!)}',
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: OmniType.micro.copyWith(
-                            fontWeight: FontWeight.w400,
-                            color: scheme.onSurfaceVariant,
-                          ),
-                        ),
-                    ],
-                  ),
-                ),
-                Icon(
-                  Icons.chevron_right_rounded,
-                  size: OmniIconSize.md,
-                  color: scheme.outline,
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-/// Nhãn giai đoạn theo quy trình của tenant (`da_mua` → "Đã mua"). Ngữ cảnh
-/// hội thoại không gửi quy trình, nên tra mọi quy trình; danh mục chưa về thì
-/// hiện mã.
-String _stageLabel(WidgetRef ref, String code) =>
-    ref.watch(pipelineCatalogProvider).valueOrNull?.stageLabel(code) ?? code;

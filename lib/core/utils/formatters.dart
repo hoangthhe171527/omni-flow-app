@@ -61,6 +61,9 @@ abstract final class Formatters {
   static String date(DateTime? value) =>
       value == null ? '—' : _dayMonthYear.format(VnTime.of(value));
 
+  /// `14/03` — ngày-tháng theo giờ VN, không năm.
+  static String dayMonth(DateTime value) => _dayMonth.format(VnTime.of(value));
+
   static String time(DateTime? value) =>
       value == null ? '' : _time.format(VnTime.of(value));
 

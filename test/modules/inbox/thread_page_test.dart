@@ -125,8 +125,8 @@ void main() {
     expect(api.markReadCalls, ['c1'], reason: 'Mở là đọc.');
     expect(
       find.text('Thuý Phạm'),
-      findsOneWidget,
-      reason: 'Tên khách trên bar.',
+      findsWidgets,
+      reason: 'Tên khách trên header (và khối giới thiệu).',
     );
 
     await closeThread(tester);
@@ -274,8 +274,8 @@ void main() {
 
     await openThread(tester);
 
-    final first = Formatters.dayHeader(late.sentAt!);
-    final second = Formatters.dayHeader(early.sentAt!);
+    final first = Formatters.threadStamp(late.sentAt!);
+    final second = Formatters.threadStamp(early.sentAt!);
     expect(first, isNot(second));
     expect(find.text(first), findsOneWidget);
     expect(find.text(second), findsOneWidget);

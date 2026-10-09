@@ -61,6 +61,7 @@ class TasksModule extends OmniModule {
           planId: args.planId,
           sectionId: args.sectionId,
           sections: args.sections,
+          initialTitle: args.initialTitle,
         );
       },
     ),

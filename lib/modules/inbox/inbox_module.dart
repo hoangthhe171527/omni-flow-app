@@ -7,6 +7,7 @@ import '../../security/guard/access_requirement.dart';
 import 'application/inbox_providers.dart';
 import 'domain/inbox_permissions.dart';
 import 'presentation/inbox_page.dart';
+import 'presentation/thread_info_page.dart';
 import 'presentation/thread_page.dart';
 
 /// The omnichannel inbox: Zalo OA and personal, Facebook Page and personal,
@@ -16,6 +17,7 @@ class InboxModule extends OmniModule {
 
   static const list = 'inbox.list';
   static const thread = 'inbox.thread';
+  static const threadInfo = 'inbox.threadInfo';
 
   @override
   String get id => 'inbox';
@@ -43,6 +45,14 @@ class InboxModule extends OmniModule {
       access: const AccessRequirement.any(InboxPermissions.anyRead),
       builder: (_, state) =>
           ThreadPage(conversationId: state.pathParameters['id']!),
+    ),
+    ModuleRoute(
+      path: '/inbox/:id/info',
+      name: threadInfo,
+      rootNavigator: true,
+      access: const AccessRequirement.any(InboxPermissions.anyRead),
+      builder: (_, state) =>
+          ThreadInfoPage(conversationId: state.pathParameters['id']!),
     ),
   ];
 

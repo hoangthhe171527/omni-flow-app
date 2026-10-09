@@ -63,7 +63,7 @@ class MessageBubble extends StatelessWidget {
         : outbound
         ? OmniColors.chat(
             context,
-            OmniColors.chatOutbound,
+            OmniColors.primary,
             OmniColors.chatOutboundDark,
           )
         : OmniColors.chat(
@@ -71,15 +71,38 @@ class MessageBubble extends StatelessWidget {
             OmniColors.chatInbound,
             OmniColors.chatInboundDark,
           );
-    // Dark mode carries white text on both sides; light mode is dark-on-pale.
+    // Tin ra sáng là nền primary chữ trắng; dark mode trắng cả hai phía; tin
+    // vào sáng là chữ tối trên nền trắng.
     final onBubble = failed
         ? scheme.onErrorContainer
-        : dark
+        : dark || outbound
         ? Colors.white
         : scheme.onSurface;
     final metaColor = dark
         ? Colors.white.withValues(alpha: 0.55)
+        : outbound && !failed
+        ? Colors.white.withValues(alpha: 0.75)
         : OmniColors.chatMeta;
+    // Góc ngoài 18; phía "đuôi" (phải với tin ra, trái với tin vào) chỉ bo 4
+    // khi tin nằm trong một nhóm: đầu nhóm giữ 18 ở trên, cuối nhóm giữ 18 ở
+    // dưới, tin giữa nhóm cả hai góc 4.
+    final onPrimaryBubble = outbound && !dark && !failed;
+    final tailTop = Radius.circular(groupedWithPrevious ? 4 : 18);
+    final tailBottom = Radius.circular(isLastInGroup ? 18 : 4);
+    const round = Radius.circular(18);
+    final bubbleRadius = outbound
+        ? BorderRadius.only(
+            topLeft: round,
+            bottomLeft: round,
+            topRight: tailTop,
+            bottomRight: tailBottom,
+          )
+        : BorderRadius.only(
+            topRight: round,
+            bottomRight: round,
+            topLeft: tailTop,
+            bottomLeft: tailBottom,
+          );
 
     final images = message.recalled
         ? const <MessageAttachment>[]
@@ -116,6 +139,7 @@ class MessageBubble extends StatelessWidget {
             status: message.status,
             fallbackColor: color,
             showLabel: isLastInGroup,
+            onPrimary: onPrimaryBubble,
           ),
         ],
         if (message.pinned) ...[
@@ -134,19 +158,38 @@ class MessageBubble extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
       decoration: BoxDecoration(
         color: bubbleColor,
-        borderRadius: BorderRadius.circular(18),
-        // No shadow at all. The tinted canvas already separates the bubbles by
-        // value, so the drop shadow was doing no work — it only fuzzed every
-        // edge in the thread, which is what reads as cheap at this scale.
-        boxShadow: null,
+        borderRadius: bubbleRadius,
+        // Chỉ tin vào (sáng) có bóng nhẹ `0 1 2 rgba(11,26,51,.08)` để nổi
+        // khỏi nền; tin ra đã đủ tương phản bằng màu.
+        boxShadow: !outbound && !dark && !failed
+            ? const [
+                BoxShadow(
+                  color: Color(0x140B1A33),
+                  blurRadius: 2,
+                  offset: Offset(0, 1),
+                ),
+              ]
+            : null,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           if (message.replyToMessageId != null)
-            _QuotedMessage(message: message),
+            _QuotedMessage(message: message, onPrimary: onPrimaryBubble),
           if (files.isNotEmpty) ...[
-            MessageFileAttachments(attachments: files),
+            if (onPrimaryBubble)
+              // Tệp trên nền primary: đảo sang chữ trắng.
+              Theme(
+                data: Theme.of(context).copyWith(
+                  colorScheme: scheme.copyWith(
+                    onSurface: Colors.white,
+                    onSurfaceVariant: Colors.white.withValues(alpha: 0.8),
+                  ),
+                ),
+                child: MessageFileAttachments(attachments: files),
+              )
+            else
+              MessageFileAttachments(attachments: files),
             if (message.text.isNotEmpty) const SizedBox(height: OmniSpacing.sm),
           ],
           if (message.recalled)
@@ -158,7 +201,11 @@ class MessageBubble extends StatelessWidget {
               ),
             )
           else if (message.text.isNotEmpty)
-            _MessageText(text: message.text, color: onBubble),
+            _MessageText(
+              text: message.text,
+              color: onBubble,
+              linkColor: onPrimaryBubble ? Colors.white : null,
+            ),
           if (message.text.isNotEmpty && _urlPattern.hasMatch(message.text))
             MessageLinkPreview(
               url: _urlPattern.firstMatch(message.text)!.group(0)!,
@@ -301,10 +348,13 @@ final _urlPattern = RegExp(
 );
 
 class _MessageText extends StatefulWidget {
-  const _MessageText({required this.text, required this.color});
+  const _MessageText({required this.text, required this.color, this.linkColor});
 
   final String text;
   final Color color;
+
+  /// Màu liên kết; null = xanh kênh chat. Tin ra nền primary dùng trắng.
+  final Color? linkColor;
 
   @override
   State<_MessageText> createState() => _MessageTextState();
@@ -324,7 +374,10 @@ class _MessageTextState extends State<_MessageText> {
   @override
   void didUpdateWidget(covariant _MessageText oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.text != widget.text) _spans = _buildSpans();
+    if (oldWidget.text != widget.text ||
+        oldWidget.linkColor != widget.linkColor) {
+      _spans = _buildSpans();
+    }
   }
 
   @override
@@ -366,10 +419,10 @@ class _MessageTextState extends State<_MessageText> {
         TextSpan(
           text: url,
           recognizer: recognizer,
-          style: const TextStyle(
-            color: OmniColors.chatPrimary,
+          style: TextStyle(
+            color: widget.linkColor ?? OmniColors.chatPrimary,
             decoration: TextDecoration.underline,
-            decorationColor: OmniColors.chatPrimary,
+            decorationColor: widget.linkColor ?? OmniColors.chatPrimary,
           ),
         ),
       );
@@ -562,13 +615,20 @@ class _ReplySwipeState extends State<_ReplySwipe>
 }
 
 class _QuotedMessage extends StatelessWidget {
-  const _QuotedMessage({required this.message});
+  const _QuotedMessage({required this.message, this.onPrimary = false});
 
   final Message message;
+
+  /// Nằm trong bong bóng tin ra nền primary: màu phải đảo sang trắng.
+  final bool onPrimary;
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final accent = onPrimary ? Colors.white : OmniColors.chatPrimary;
+    final bodyColor = onPrimary
+        ? Colors.white.withValues(alpha: 0.85)
+        : scheme.onSurfaceVariant;
     final author = message.replyToAuthorName ?? 'Tin nhắn trước đó';
     final text = message.replyToText?.trim();
     return Container(
@@ -576,13 +636,12 @@ class _QuotedMessage extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 7),
       padding: const EdgeInsets.fromLTRB(8, 5, 8, 5),
       decoration: BoxDecoration(
-        color: scheme.onSurface.withValues(alpha: 0.06),
+        color: onPrimary
+            ? Colors.white.withValues(alpha: 0.16)
+            : scheme.onSurface.withValues(alpha: 0.06),
         borderRadius: BorderRadius.circular(8),
         border: Border(
-          left: BorderSide(
-            color: OmniColors.chatPrimary.withValues(alpha: 0.85),
-            width: 3,
-          ),
+          left: BorderSide(color: accent.withValues(alpha: 0.85), width: 3),
         ),
       ),
       child: Column(
@@ -593,7 +652,7 @@ class _QuotedMessage extends StatelessWidget {
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: OmniChatType.meta.copyWith(
-              color: OmniColors.chatPrimary,
+              color: accent,
               fontWeight: FontWeight.w600,
             ),
           ),
@@ -602,7 +661,7 @@ class _QuotedMessage extends StatelessWidget {
             text == null || text.isEmpty ? 'Tin nhắn được trích dẫn' : text,
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
-            style: OmniChatType.meta.copyWith(color: scheme.onSurfaceVariant),
+            style: OmniChatType.meta.copyWith(color: bodyColor),
           ),
         ],
       ),
@@ -688,18 +747,22 @@ class _DeliveryReceipt extends StatelessWidget {
     required this.status,
     required this.fallbackColor,
     required this.showLabel,
+    this.onPrimary = false,
   });
 
   final DeliveryStatus status;
   final Color fallbackColor;
   final bool showLabel;
 
+  /// Trên bong bóng nền primary: "đã xem" là trắng, không phải xanh kênh.
+  final bool onPrimary;
+
   @override
   Widget build(BuildContext context) {
     final read = status == DeliveryStatus.read;
     final failed = status == DeliveryStatus.failed;
     final color = read
-        ? OmniColors.chatPrimary
+        ? (onPrimary ? Colors.white : OmniColors.chatPrimary)
         : failed
         ? Theme.of(context).colorScheme.error
         : fallbackColor;
