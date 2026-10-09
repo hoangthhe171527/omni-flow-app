@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -42,9 +44,25 @@ class ConversationRow extends StatefulWidget {
 
 class _ConversationRowState extends State<ConversationRow> {
   bool _holding = false;
+  Timer? _pressTimer;
+
+  @override
+  void dispose() {
+    _pressTimer?.cancel();
+    super.dispose();
+  }
 
   void _setHolding(bool value) {
-    if (_holding != value && mounted) setState(() => _holding = value);
+    _pressTimer?.cancel();
+    _pressTimer = null;
+    if (value) {
+      // Chỉ co sau kPressTimeout: chạm lướt qua (cuộn) không làm dòng giật.
+      _pressTimer = Timer(kPressTimeout, () {
+        if (mounted) setState(() => _holding = true);
+      });
+    } else if (_holding && mounted) {
+      setState(() => _holding = false);
+    }
   }
 
   @override
@@ -85,7 +103,7 @@ class _ConversationRowState extends State<ConversationRow> {
                 ),
         },
         child: AnimatedScale(
-          scale: _holding ? .965 : 1,
+          scale: motion && _holding ? .965 : 1,
           duration: motion
               ? (_holding
                     ? ConversationRow.peekDelay
@@ -304,6 +322,7 @@ class _AssigneeBox extends StatelessWidget {
     final hasName =
         !conversation.isUnassigned && name != null && name.trim().isNotEmpty;
     final text = hasName ? Formatters.initials(name) : '–';
+    final scheme = Theme.of(context).colorScheme;
 
     return Semantics(
       label: hasName ? 'Phụ trách: $name' : 'Chưa gán',
@@ -313,14 +332,20 @@ class _AssigneeBox extends StatelessWidget {
         height: 20,
         alignment: Alignment.center,
         decoration: BoxDecoration(
-          color: hasName ? const Color(0xFF0B1A33) : const Color(0xFFEEF1F5),
+          color: hasName
+              ? scheme.onSurface
+              : OmniColors.byBrightness(
+                  context,
+                  const Color(0xFFEEF1F5),
+                  scheme.surfaceContainerHighest,
+                ),
           borderRadius: BorderRadius.circular(4),
         ),
         child: Text(
           text,
           style: OmniType.micro.copyWith(
             fontWeight: FontWeight.w600,
-            color: hasName ? Colors.white : const Color(0xFF8A95A8),
+            color: hasName ? scheme.surface : scheme.onSurfaceVariant,
           ),
         ),
       ),

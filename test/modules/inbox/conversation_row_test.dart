@@ -80,6 +80,8 @@ void main() {
       await gesture.up();
       await tester.pump();
       expect(peeks, 0);
+      expect(taps, 1, reason: 'thả sau 300ms vẫn là một chạm');
+      taps = 0;
 
       final hold = await tester.startGesture(
         tester.getCenter(find.text('Lan Anh')),
@@ -90,7 +92,58 @@ void main() {
       await hold.up();
       await tester.pumpAndSettle();
       expect(peeks, 1);
-      expect(taps, 1, reason: 'lần thả sau 300ms vẫn là một chạm');
+      expect(taps, 0, reason: 'giữ đủ 450ms không phát onTap');
     },
   );
+
+  double scaleOf(WidgetTester tester) =>
+      tester.widget<AnimatedScale>(find.byType(AnimatedScale)).scale;
+
+  testWidgets('kéo/cuộn bắt đầu trên dòng: không co, không peek', (
+    tester,
+  ) async {
+    var peeks = 0;
+    await pump(tester, onPeek: () => peeks++);
+    final g = await tester.startGesture(tester.getCenter(find.text('Lan Anh')));
+    await tester.pump(const Duration(milliseconds: 50));
+    await g.moveBy(const Offset(0, -60));
+    await tester.pump(const Duration(milliseconds: 200));
+    expect(scaleOf(tester), 1);
+    await g.up();
+    await tester.pumpAndSettle();
+    expect(scaleOf(tester), 1);
+    expect(peeks, 0);
+  });
+
+  testWidgets('giữ quá 100ms thì co; thả thì trả lại', (tester) async {
+    await pump(tester, onPeek: () {});
+    final g = await tester.startGesture(tester.getCenter(find.text('Lan Anh')));
+    await tester.pump(const Duration(milliseconds: 50));
+    expect(scaleOf(tester), 1);
+    await tester.pump(const Duration(milliseconds: 100));
+    expect(scaleOf(tester), lessThan(1));
+    await g.up();
+    await tester.pumpAndSettle();
+    expect(scaleOf(tester), 1);
+  });
+
+  testWidgets('giảm chuyển động: không co', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: OmniTheme.light(TargetPlatform.android),
+        builder: (context, child) => MediaQuery(
+          data: MediaQuery.of(context).copyWith(disableAnimations: true),
+          child: child!,
+        ),
+        home: Scaffold(
+          body: ConversationRow(conversation: lan, onTap: () {}, onPeek: () {}),
+        ),
+      ),
+    );
+    final g = await tester.startGesture(tester.getCenter(find.text('Lan Anh')));
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(scaleOf(tester), 1);
+    await g.up();
+    await tester.pumpAndSettle();
+  });
 }
