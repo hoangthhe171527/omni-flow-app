@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 
+import '../../../../core/config/app_config.dart';
 import '../../../../design/tokens/tokens.dart';
 
 class AuthDivider extends StatelessWidget {
@@ -176,6 +178,46 @@ class AuthGoogleButton extends StatelessWidget {
             )
           : const AuthGoogleGlyph(),
       label: Text(label),
+    );
+  }
+}
+
+/// Liên kết "Chính sách bảo mật" ở chân màn đăng nhập/đăng ký — cửa hàng ứng
+/// dụng đòi chính sách luôn mở được từ màn đầu tiên người dùng thấy.
+class AuthPrivacyLink extends StatelessWidget {
+  const AuthPrivacyLink({super.key});
+
+  Future<void> _open(BuildContext context) async {
+    final opened = await launchUrl(
+      AppConfig.privacyPolicyUrl,
+      mode: LaunchMode.externalApplication,
+    );
+    if (opened || !context.mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Không mở được liên kết. Vui lòng thử lại.'),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: InkWell(
+        key: const ValueKey('privacy-link'),
+        onTap: () => _open(context),
+        borderRadius: BorderRadius.circular(4),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
+          child: Text(
+            'Chính sách bảo mật',
+            style: OmniType.micro.copyWith(
+              fontWeight: FontWeight.w400,
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+            ),
+          ),
+        ),
+      ),
     );
   }
 }

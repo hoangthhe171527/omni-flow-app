@@ -25,8 +25,14 @@ String _landing(Set<String> permissions) {
 }
 
 void main() {
-  test('chỉ có mục không thuộc thanh tab thì vào /more', () {
-    expect(_landing({'crm.sales_opportunities.read'}), '/more');
+  test('không có tab nhưng có mục chính thì vào mục chính đầu tiên', () {
+    final path = _landing({'crm.sales_opportunities.read'});
+    expect(path, isNot('/more'));
+    expect(path, contains('opportunit'));
+  });
+
+  test('không có mục chính nào thì vào /more', () {
+    expect(_landing(<String>{}), '/more');
   });
 
   test('có Hộp thư và Việc thì vào Hộp thư', () {

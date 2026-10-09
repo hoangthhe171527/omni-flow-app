@@ -154,16 +154,20 @@ String _afterSignIn(Ref ref, _PendingDestination pending) {
   return destination;
 }
 
-/// Landing screen after sign-in: the first TAB (fixed order, see tab_order.dart) this user can actually see. A
-/// rep with only inbox rights lands in the inbox; a finance-only user does not
-/// land on a blank permission wall.
+/// Landing screen after sign-in: the first TAB (fixed order, see tab_order.dart)
+/// this user can actually see. A rep with only inbox rights lands in the inbox.
+/// With no tab at all, the first permitted primary entry (e.g. opportunities)
+/// is used; only a user with nothing to show lands on "More".
 @visibleForTesting
 String landingPath(Ref ref) {
-  final visible = ref.read(tabEntriesProvider);
-  if (visible.isEmpty) return ShellRoutes.morePath;
+  final tabs = ref.read(tabEntriesProvider);
+  final candidates = tabs.isNotEmpty
+      ? tabs
+      : ref.read(primaryNavEntriesProvider).take(1).toList();
+  if (candidates.isEmpty) return ShellRoutes.morePath;
 
   final routes = ref.read(moduleRoutesProvider);
-  for (final entry in visible) {
+  for (final entry in candidates) {
     for (final route in routes) {
       if (route.name == entry.routeName) return route.path;
     }

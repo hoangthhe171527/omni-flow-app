@@ -53,12 +53,15 @@ class TeamsPage extends ConsumerWidget {
           value: groups,
           onRetry: () => ref.invalidate(teamsWithPlansProvider),
           isEmpty: (list) => list.isEmpty,
-          empty: OmniEmptyState(
-            icon: Icons.workspaces_outline,
-            title: 'Chưa có team nào',
-            message: isAssigner
-                ? 'Tạo một team để nhóm các dự án lại.'
-                : 'Khi bạn được thêm vào một dự án, nó sẽ hiện ở đây.',
+          empty: Padding(
+            padding: const EdgeInsets.only(bottom: OmniSpacing.bottomSafe),
+            child: OmniEmptyState(
+              icon: Icons.workspaces_outline,
+              title: 'Chưa có team nào',
+              message: isAssigner
+                  ? 'Tạo một team để nhóm các dự án lại.'
+                  : 'Khi bạn được thêm vào một dự án, nó sẽ hiện ở đây.',
+            ),
           ),
           data: (list) => ListView.separated(
             padding: const EdgeInsets.fromLTRB(

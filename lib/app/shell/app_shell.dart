@@ -232,7 +232,7 @@ class _ShellNavBar extends StatelessWidget {
           child: SafeArea(
             top: false,
             child: SizedBox(
-              height: 62,
+              height: ShellBarInset.barHeight,
               child: Row(
                 children: [
                   for (var i = 0; i < tabs.length; i++)

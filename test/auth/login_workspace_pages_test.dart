@@ -83,6 +83,7 @@ void main() {
       expect(find.text('hoặc'), findsOneWidget);
       expect(find.text('Quên mật khẩu?'), findsOneWidget);
       expect(find.text('Đăng ký'), findsOneWidget);
+      expect(find.text('Chính sách bảo mật'), findsOneWidget);
       expect(find.text('Quyền riêng tư'), findsNothing);
       expect(find.text('Hỗ trợ'), findsNothing);
       expect(find.textContaining('xử lý công việc'), findsNothing);

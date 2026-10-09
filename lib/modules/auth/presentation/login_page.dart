@@ -233,6 +233,7 @@ class _LoginPageState extends ConsumerState<LoginPage>
                           ),
                         ],
                       ),
+                      const AuthPrivacyLink(),
                     ],
                   ),
                 ),

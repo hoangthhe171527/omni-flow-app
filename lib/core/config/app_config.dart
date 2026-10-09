@@ -7,9 +7,6 @@ abstract final class AppConfig {
   static final Uri supportUrl = Uri.parse(
     'https://omni.app.sunriseieco.vn/support',
   );
-  static final Uri forgotPasswordUrl = Uri.parse(
-    'https://omni.app.sunriseieco.vn/forgot-password',
-  );
 
   static const Duration connectTimeout = Duration(seconds: 20);
   static const Duration receiveTimeout = Duration(seconds: 30);

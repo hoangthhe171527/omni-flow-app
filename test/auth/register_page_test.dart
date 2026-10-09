@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:omni_app/core/error/app_exception.dart';
 import 'package:omni_app/design/theme/omni_theme.dart';
 import 'package:omni_app/modules/auth/application/password_strength.dart';
+import 'package:omni_app/modules/auth/application/login_controller.dart';
 import 'package:omni_app/modules/auth/data/auth_onboarding_api.dart';
 import 'package:omni_app/modules/auth/presentation/register_page.dart';
 import 'package:omni_app/security/session/session_controller.dart';
@@ -38,6 +39,18 @@ class _FakeSession extends SessionController {
   @override
   Future<void> login({required String email, required String password}) async {
     signedInAs = email;
+  }
+}
+
+/// Lỗi Google còn sót từ màn đăng nhập: chỉ lần dựng đầu có lỗi.
+class _StaleGoogleError extends LoginController {
+  static bool seeded = false;
+
+  @override
+  LoginState build() {
+    if (seeded) return const LoginState();
+    seeded = true;
+    return const LoginState(error: 'Không thể đăng nhập bằng Google.');
   }
 }
 
@@ -91,6 +104,42 @@ void main() {
   double submitOpacity(WidgetTester tester) => tester
       .widget<AnimatedOpacity>(find.byKey(const ValueKey('register-opacity')))
       .opacity;
+
+  testWidgets('lỗi Google còn sót từ màn đăng nhập không hiện ở màn đăng ký', (
+    tester,
+  ) async {
+    _StaleGoogleError.seeded = false;
+    tester.view.physicalSize = const Size(390, 1000);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    final container = ProviderContainer(
+      overrides: [
+        authOnboardingApiProvider.overrideWithValue(_FakeApi()),
+        sessionControllerProvider.overrideWith(_FakeSession.new),
+        loginControllerProvider.overrideWith(_StaleGoogleError.new),
+      ],
+    );
+    addTearDown(container.dispose);
+    expect(
+      container.read(loginControllerProvider).error,
+      'Không thể đăng nhập bằng Google.',
+    );
+
+    await tester.pumpWidget(
+      UncontrolledProviderScope(
+        container: container,
+        child: MaterialApp(
+          theme: OmniTheme.light(),
+          home: const RegisterPage(),
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.pump();
+
+    expect(find.text('Không thể đăng nhập bằng Google.'), findsNothing);
+    expect(find.text('Chính sách bảo mật'), findsOneWidget);
+  });
 
   testWidgets('nút mờ .45 khi thiếu; đủ + tích thì rõ', (tester) async {
     await open(tester);

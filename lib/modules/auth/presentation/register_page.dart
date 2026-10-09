@@ -47,6 +47,11 @@ class _RegisterPageState extends ConsumerState<RegisterPage>
   void initState() {
     super.initState();
     _inputs.addListener(_refresh);
+    // loginControllerProvider is shared with the login page: a Google error left
+    // there must not greet the user here.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) ref.invalidate(loginControllerProvider);
+    });
   }
 
   @override
@@ -294,6 +299,7 @@ class _RegisterPageState extends ConsumerState<RegisterPage>
                           ),
                         ],
                       ),
+                      const AuthPrivacyLink(),
                     ],
                   ),
                 ),
