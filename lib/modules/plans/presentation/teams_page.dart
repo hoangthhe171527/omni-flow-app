@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/error/app_exception.dart';
+import '../../../core/nav/shell_bar_inset.dart';
 import '../../../design/components/components.dart';
 import '../../../design/tokens/tokens.dart';
 import '../../../security/session/session_controller.dart';
@@ -38,10 +39,12 @@ class TeamsPage extends ConsumerWidget {
     return Scaffold(
       appBar: const OmniAppBar(title: 'Dự án'),
       floatingActionButton: isAssigner
-          ? FloatingActionButton.extended(
-              onPressed: () => _create(context, canCreateTeam: canCreateTeam),
-              icon: const Icon(Icons.add_rounded),
-              label: const Text('Tạo mới'),
+          ? ShellFabLift(
+              child: FloatingActionButton.extended(
+                onPressed: () => _create(context, canCreateTeam: canCreateTeam),
+                icon: const Icon(Icons.add_rounded),
+                label: const Text('Tạo mới'),
+              ),
             )
           : null,
       body: RefreshIndicator(

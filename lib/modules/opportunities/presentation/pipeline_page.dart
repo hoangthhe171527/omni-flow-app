@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/nav/shell_bar_inset.dart';
 import '../../../core/utils/formatters.dart';
 import '../../../design/components/components.dart';
 import '../../../design/tokens/tokens.dart';
@@ -148,10 +149,12 @@ class _PipelinePageState extends ConsumerState<PipelinePage> {
         ),
       ),
       floatingActionButton: access.canCreate
-          ? FloatingActionButton.extended(
-              onPressed: () => context.pushNamed(OpportunitiesModule.create),
-              icon: const Icon(Icons.add_rounded),
-              label: const Text('Cơ hội mới'),
+          ? ShellFabLift(
+              child: FloatingActionButton.extended(
+                onPressed: () => context.pushNamed(OpportunitiesModule.create),
+                icon: const Icon(Icons.add_rounded),
+                label: const Text('Cơ hội mới'),
+              ),
             )
           : null,
       body: stage == null

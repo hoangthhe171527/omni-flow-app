@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/module/module_registry.dart';
+import '../../core/nav/shell_bar_inset.dart';
 import '../../core/nav/tab_order.dart';
 import '../../core/module/nav_destination.dart';
 import '../../design/components/components.dart';
@@ -78,14 +79,17 @@ class AppShell extends ConsumerWidget {
           );
         }
 
-        return Scaffold(
-          // Body vẽ dưới thanh kính mờ; màn danh sách tự chừa chỗ ở đáy.
-          extendBody: true,
-          body: navigationShell,
-          bottomNavigationBar: _ShellNavBar(
-            tabs: tabs,
-            selectedIndex: selectedIndex,
-            onSelected: select,
+        return ShellBarInset(
+          height: ShellBarInset.barHeight,
+          child: Scaffold(
+            // Body vẽ dưới thanh kính mờ; màn danh sách tự chừa chỗ ở đáy.
+            extendBody: true,
+            body: navigationShell,
+            bottomNavigationBar: _ShellNavBar(
+              tabs: tabs,
+              selectedIndex: selectedIndex,
+              onSelected: select,
+            ),
           ),
         );
       },
