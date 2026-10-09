@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -26,6 +28,23 @@ class _RecordingGoogleLogin extends LoginController {
   @override
   Future<bool> submitWithGoogle() async {
     called = true;
+    return true;
+  }
+}
+
+class _SlowLogin extends LoginController {
+  int submits = 0;
+  final finish = Completer<void>();
+
+  @override
+  LoginState build() => const LoginState();
+
+  @override
+  Future<bool> submit({required String email, required String password}) async {
+    submits++;
+    state = const LoginState(submittingMethod: LoginMethod.password);
+    await finish.future;
+    state = const LoginState();
     return true;
   }
 }
@@ -166,6 +185,59 @@ void main() {
       await tester.tap(find.text('Quên mật khẩu?'));
       await tester.pumpAndSettle();
       expect(find.text('trang-quen'), findsOneWidget);
+    });
+
+    testWidgets('ô giữ tên truy cập được khi đã có chữ', (tester) async {
+      final handle = tester.ensureSemantics();
+      await pump(tester, const LoginPage(), const []);
+
+      await tester.enterText(find.byType(TextField).first, 'a@b.vn');
+      await tester.enterText(find.byType(TextField).last, 'matkhau');
+      await tester.pump();
+
+      expect(find.bySemanticsLabel('Email làm việc'), findsWidgets);
+      expect(
+        tester.getSemantics(find.byType(TextField).first).label,
+        contains('Email làm việc'),
+      );
+      expect(find.bySemanticsLabel('Mật khẩu'), findsWidgets);
+      expect(
+        tester.getSemantics(find.byType(TextField).last).label,
+        contains('Mật khẩu'),
+      );
+      handle.dispose();
+    });
+
+    testWidgets('hai ô khai báo gợi ý tự điền trong một nhóm', (tester) async {
+      await pump(tester, const LoginPage(), const []);
+
+      expect(find.byType(AutofillGroup), findsOneWidget);
+      final fields = tester
+          .widgetList<TextField>(find.byType(TextField))
+          .toList();
+      expect(fields.first.autofillHints, contains(AutofillHints.username));
+      expect(fields.first.autofillHints, contains(AutofillHints.email));
+      expect(fields.last.autofillHints, contains(AutofillHints.password));
+    });
+
+    testWidgets('bấm Xong trên bàn phím khi đang gửi không gửi lần hai', (
+      tester,
+    ) async {
+      final controller = _SlowLogin();
+      await pump(tester, const LoginPage(), [
+        loginControllerProvider.overrideWith(() => controller),
+      ]);
+      await tester.enterText(find.byType(TextField).first, 'a@b.vn');
+      await tester.enterText(find.byType(TextField).last, 'matkhau');
+
+      await tester.testTextInput.receiveAction(TextInputAction.done);
+      await tester.pump();
+      await tester.testTextInput.receiveAction(TextInputAction.done);
+      await tester.pump();
+
+      expect(controller.submits, 1);
+      controller.finish.complete();
+      await tester.pump();
     });
 
     testWidgets('nút Google gọi đúng luồng đăng nhập riêng', (tester) async {
