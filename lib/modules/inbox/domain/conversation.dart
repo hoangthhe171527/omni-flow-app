@@ -63,6 +63,29 @@ class Conversation {
     this.groupMembers = const [],
   });
 
+  /// Bản sao với trạng thái / số tin chưa đọc đổi (các trường còn lại giữ).
+  Conversation copyWith({ConversationStatus? status, int? unread}) =>
+      Conversation(
+        id: id,
+        channel: channel,
+        status: status ?? this.status,
+        customerId: customerId,
+        customerName: customerName,
+        customerAvatar: customerAvatar,
+        lastMessage: lastMessage,
+        lastMessageAt: lastMessageAt,
+        unread: unread ?? this.unread,
+        urgent: urgent,
+        assigneeId: assigneeId,
+        assigneeName: assigneeName,
+        tags: tags,
+        connectionId: connectionId,
+        sourceName: sourceName,
+        isGroup: isGroup,
+        groupName: groupName,
+        groupMembers: groupMembers,
+      );
+
   /// The same thread with its unread counter cleared.
   ///
   /// Opening a thread marks it read on the server, but the list held the old

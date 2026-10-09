@@ -73,6 +73,10 @@ final inboxLabelsProvider = FutureProvider.autoDispose<List<String>>((ref) {
   return ref.watch(inboxApiProvider).labels();
 });
 
+final quickRepliesProvider = FutureProvider.autoDispose<List<QuickReply>?>(
+  (ref) => ref.watch(inboxApiProvider).quickReplies(),
+);
+
 final conversationAssetsProvider = FutureProvider.autoDispose
     .family<ConversationAssets, String>((ref, id) {
       return ref.watch(inboxApiProvider).assets(id);
@@ -234,6 +238,20 @@ class InboxListController
         ],
       ),
     );
+  }
+
+  /// Áp một thay đổi tự mình vừa làm (đóng, đọc, gán, nhãn) và XÉT LẠI theo
+  /// bộ lọc — cùng vị từ với server ([InboxFilter.matches]). Hội thoại vừa
+  /// lưu trữ rời tab "Tất cả" ngay; không tự xét được (đang tìm) thì vá.
+  void reconcile(Conversation updated) {
+    final filter = ref.read(inboxFilterProvider);
+    final userId = ref.read(sessionProvider).user?.id;
+    if (filter.matches(updated, currentUserId: userId) == false) {
+      _remove({updated.id});
+    } else {
+      patch(updated);
+    }
+    ref.invalidate(inboxFacetsProvider);
   }
 
   /// Vá theo id tối đa bấy nhiêu dòng mỗi loạt; nhiều hơn (gán hàng loạt)

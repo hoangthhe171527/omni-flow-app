@@ -127,6 +127,21 @@ class InboxChanges {
   ) => InboxChanges(cursor: json.strOr('cursor', ''), count: data.length);
 }
 
+/// Mẫu trả lời nhanh của tenant (`GET /inbox/quick-replies`).
+class QuickReply {
+  const QuickReply({required this.id, required this.title, required this.body});
+
+  factory QuickReply.fromJson(Map<String, dynamic> json) => QuickReply(
+    id: json.strOr('id', ''),
+    title: json.strOr('title', ''),
+    body: json.strOr('body', ''),
+  );
+
+  final String id;
+  final String title;
+  final String body;
+}
+
 class InboxApi {
   InboxApi(this._client);
 
@@ -301,6 +316,23 @@ class InboxApi {
   Future<Conversation> update(String id, Map<String, dynamic> body) async {
     final response = await _client.put('$_base/$id', body: body);
     return Conversation.fromJson(response.object);
+  }
+
+  /// "Lưu trữ" trên app = đóng hội thoại (`status: closed`); "Mở lại" =
+  /// `open`. Máy chủ không có trạng thái lưu trữ riêng (UpdateInboxRequest).
+  Future<Conversation> setStatus(String id, ConversationStatus status) =>
+      update(id, {'status': status.name});
+
+  /// Mẫu trả lời của tenant; `null` khi tenant chưa cài bộ nào.
+  Future<List<QuickReply>?> quickReplies() async {
+    final response = await _client.get('/inbox/quick-replies');
+    final data = response.raw['data'];
+    if (data is! List) return null;
+    return data
+        .whereType<Map>()
+        .map((e) => QuickReply.fromJson(e.cast<String, dynamic>()))
+        .where((r) => r.body.isNotEmpty)
+        .toList();
   }
 
   /// Materialises the contact into a CRM customer server-side (lead-first, with

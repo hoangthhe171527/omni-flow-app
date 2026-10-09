@@ -399,6 +399,25 @@ void main() {
       expect(api.calls.length, before + 1);
     });
   });
+
+  test(
+    'reconcile: hội thoại vừa đóng rời tab Tất cả; còn mở thì vá tại chỗ',
+    () async {
+      api.pages = {
+        1: ['c1', 'c2'],
+      };
+      await open();
+      final items = read().items;
+
+      controller().reconcile(
+        items[0].copyWith(status: ConversationStatus.closed),
+      );
+      controller().reconcile(items[1].copyWith(unread: 0));
+
+      expect(ids(), ['c2']);
+      expect(read().items.single.unread, 0);
+    },
+  );
 }
 
 Conversation _conversation(String id, {int unread = 3}) => Conversation(

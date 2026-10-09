@@ -4,6 +4,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:omni_app/core/network/api_client.dart';
 import 'package:omni_app/modules/inbox/data/inbox_api.dart';
+import 'package:omni_app/modules/inbox/domain/conversation.dart';
 
 /// Hợp đồng Hộp thư, dựng từ JSON THẬT của API (Đợt 7 P2).
 ///
@@ -84,6 +85,41 @@ void main() {
     );
 
     expect(await api.togglePin('c1', 'm1'), isFalse);
+  });
+
+  test('setStatus gửi PUT status=closed và đọc hội thoại về', () async {
+    final adapter = _JsonAdapter(
+      '{"success":true,"data":{"id":"c1","channel":"zalo","status":"closed"}}',
+    );
+    final api = InboxApi(ApiClient(Dio()..httpClientAdapter = adapter));
+
+    final updated = await api.setStatus('c1', ConversationStatus.closed);
+
+    final request = adapter.requests.single;
+    expect(request.method, 'PUT');
+    expect(request.uri.path, '/api/v1/inbox/conversations/c1');
+    expect(request.data, {'status': 'closed'});
+    expect(updated.status, ConversationStatus.closed);
+  });
+
+  test('quickReplies: data null (tenant chưa cài) → null', () async {
+    final api = InboxApi(
+      ApiClient(
+        Dio()..httpClientAdapter = _JsonAdapter('{"success":true,"data":null}'),
+      ),
+    );
+    expect(await api.quickReplies(), isNull);
+  });
+
+  test('quickReplies đọc title/body', () async {
+    final adapter = _JsonAdapter(
+      '{"success":true,"data":[{"id":"q1","title":"Chào","body":"Dạ em chào chị ạ"}]}',
+    );
+    final api = InboxApi(ApiClient(Dio()..httpClientAdapter = adapter));
+    final replies = await api.quickReplies();
+    expect(adapter.requests.single.uri.path, '/api/v1/inbox/quick-replies');
+    expect(replies!.single.title, 'Chào');
+    expect(replies.single.body, 'Dạ em chào chị ạ');
   });
 }
 
