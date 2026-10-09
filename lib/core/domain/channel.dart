@@ -47,6 +47,19 @@ enum Channel {
     Channel.unknown => 'unknown',
   };
 
+  /// Chữ đậm tô màu kênh trên dòng nguồn: "**OA** · Trung Nguyên".
+  String get sourceKind => switch (this) {
+    Channel.zalo => 'OA',
+    Channel.zaloPersonal => 'Zalo',
+    Channel.facebook => 'Page',
+    Channel.facebookPersonal => 'FB',
+    Channel.tiktok => 'TikTok',
+    Channel.web => 'Web',
+    Channel.instagram => 'IG',
+    Channel.whatsapp => 'WA',
+    Channel.unknown => 'Khác',
+  };
+
   ChannelMeta get meta => ChannelMeta.of(this);
 }
 

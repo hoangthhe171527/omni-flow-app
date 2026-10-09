@@ -59,6 +59,13 @@ class InboxFilter {
 
   static const _unset = Object();
 
+  /// Số trên nút bộ lọc. Ô tìm có chỗ riêng nên không tính.
+  int get activeCount =>
+      (quick == InboxQuickFilter.all ? 0 : 1) +
+      (channel == null ? 0 : 1) +
+      (connectionId == null ? 0 : 1) +
+      (label == null ? 0 : 1);
+
   /// Translated into the query the API understands. `mine` needs the caller's
   /// user id, which the filter itself doesn't know.
   Map<String, dynamic> toQuery({required String? currentUserId}) {

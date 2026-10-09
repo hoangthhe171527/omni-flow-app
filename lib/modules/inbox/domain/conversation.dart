@@ -168,6 +168,17 @@ class Conversation {
     return source.split('·').last.trim();
   }
 
+  /// Tên tài khoản kênh trên dòng nguồn ("Trung Nguyên"). `sourceName` có
+  /// dạng "Zalo OA · Trung Nguyên" hoặc chỉ "Trung Nguyên".
+  String? get sourceAccount {
+    final source = sourceName?.trim();
+    if (source == null || source.isEmpty) return null;
+    final account = source.contains('·')
+        ? source.split('·').last.trim()
+        : source;
+    return account.isEmpty ? null : account;
+  }
+
   /// How long the customer has been waiting on an unanswered thread. Drives the
   /// SLA warning; null when nothing is pending.
   Duration? get waiting {
