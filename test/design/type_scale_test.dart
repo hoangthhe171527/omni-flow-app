@@ -71,7 +71,7 @@ void main() {
     });
   }
 
-  // App chỉ đóng gói Inter 400/500/600. Xin 700 hay 800 là để máy tự chọn
+  // Giữ trần 600 cho thang chữ (Be Vietnam Pro có 700 nhưng thang không dùng). Xin 700 hay 800 là để máy tự chọn
   // bản gần nhất hoặc tô đậm giả — chữ đậm không đều giữa các máy.
   test('không chữ nào trong lib/ đậm hơn 600 (trừ chữ thương hiệu)', () {
     final heavy = <String>[];
@@ -87,13 +87,13 @@ void main() {
 
     expect(heavy, [
       // `OmniType.wordmark` — Be Vietnam Pro 800, chỉ cho chữ "Viomni".
-      'lib/design/tokens/omni_typography.dart:56',
+      'lib/design/tokens/omni_typography.dart:55',
     ]);
   });
 
-  test('font giao diện là Inter, chữ thương hiệu giữ Be Vietnam Pro', () {
-    expect(OmniType.family, 'Inter');
-    expect(OmniType.body.fontFamily, 'Inter');
+  test('font giao diện là Be Vietnam Pro', () {
+    expect(OmniType.family, 'Be Vietnam Pro');
+    expect(OmniType.body.fontFamily, 'Be Vietnam Pro');
     expect(OmniType.wordmark.fontFamily, 'Be Vietnam Pro');
   });
 }

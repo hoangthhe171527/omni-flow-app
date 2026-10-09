@@ -1,13 +1,12 @@
 import 'package:flutter/material.dart';
 
 abstract final class OmniType {
-  /// Inter — font giao diện của mọi màn làm việc (đề xuất "Chuẩn hoá phong
-  /// cách", `SFonts.dc.html`): trung tính, rõ ở 13–15px, có số đều cột.
+  /// Be Vietnam Pro — font giao diện của mọi màn (giao diện mới GĐ1), thiết kế
+  /// cho tiếng Việt nên dấu xếp gọn ở mọi cỡ chữ.
   ///
-  /// Đóng gói đúng ba độ đậm 400/500/600 trong `assets/fonts`, nên app KHÔNG
-  /// có chữ nào đậm hơn 600: xin w700 là để máy tự chọn hoặc tô đậm giả.
-  /// `type_scale_test.dart` giữ trần này cho cả thang lẫn mã trong `lib/`.
-  static const String family = 'Inter';
+  /// Đóng gói các độ đậm 400/500/600/700/800 trong `assets/fonts`. Khối Inter
+  /// vẫn còn trong pubspec cho golden cũ; xoá ở GĐ6 khi không còn ai dùng.
+  static const String family = 'Be Vietnam Pro';
 
   /// Be Vietnam Pro chỉ còn cho chữ "Viomni" cạnh logo ở màn mở app — nhận
   /// diện thương hiệu đã duyệt, không phải chữ để đọc. Chỉ đóng gói bản 800.
