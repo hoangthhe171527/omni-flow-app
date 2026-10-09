@@ -12,6 +12,10 @@ final brandAnchorProvider = StateProvider<GlobalKey?>((ref) => null);
 /// Đánh dấu một logo là "đích" của hiệu ứng bay. Khi dựng xong khung đầu nó ghi
 /// khoá của mình vào [brandAnchorProvider]; khi gỡ, nó chỉ xoá nếu khoá đó vẫn
 /// là của nó — một neo mới hơn (màn khác vừa dựng) không bị xoá nhầm.
+///
+/// Chỉ neo đang HIỆN mới ghi: các tab gốc sống chung trong một `IndexedStack`,
+/// nên nhiều neo cùng được dựng một lúc. Tab bị ẩn có `Visibility.of` (hoặc
+/// `TickerMode`) tắt — neo ở đó không ghi; khi tab đổi thì neo ghi lại / tự gỡ.
 class BrandAnchor extends StatefulWidget {
   const BrandAnchor({super.key, required this.child});
 
@@ -24,14 +28,25 @@ class BrandAnchor extends StatefulWidget {
 class _BrandAnchorState extends State<BrandAnchor> {
   final _key = GlobalKey(debugLabel: 'BrandAnchor');
   ProviderContainer? _container;
+  bool? _active;
 
   @override
-  void initState() {
-    super.initState();
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final active =
+        TickerMode.valuesOf(context).enabled && Visibility.of(context);
+    if (active == _active) return;
+    _active = active;
+    // Sau khung hình: đang dựng, mà người nghe provider có thể cũng đang dựng.
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-      _container = ProviderScope.containerOf(context, listen: false);
-      _container!.read(brandAnchorProvider.notifier).state = _key;
+      if (!mounted || _active != active) return;
+      _container ??= ProviderScope.containerOf(context, listen: false);
+      final notifier = _container!.read(brandAnchorProvider.notifier);
+      if (active) {
+        notifier.state = _key;
+      } else if (identical(notifier.state, _key)) {
+        notifier.state = null;
+      }
     });
   }
 

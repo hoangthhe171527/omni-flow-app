@@ -16,15 +16,17 @@ class SplashPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Scaffold(
-      backgroundColor: OmniColors.ink,
+    // Nền và màu vạch theo theme, khớp với khung cuối của [OmniSplash].
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    return Scaffold(
+      backgroundColor: dark ? OmniColors.ink : OmniColors.background,
       body: OmniSplash(
         footer: SizedBox(
           width: 120,
           child: LinearProgressIndicator(
             minHeight: 3,
-            color: OmniColors.orbit,
-            backgroundColor: OmniColors.inkRaised,
+            color: dark ? OmniColors.orbit : OmniColors.primary,
+            backgroundColor: dark ? OmniColors.inkRaised : OmniColors.border,
             borderRadius: OmniRadius.pillAll,
           ),
         ),
