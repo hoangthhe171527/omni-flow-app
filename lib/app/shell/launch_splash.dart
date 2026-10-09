@@ -52,9 +52,6 @@ class _LaunchSplashState extends State<LaunchSplash>
   AnimationController? _controller;
   bool _visible = false;
 
-  /// Đích đã đọc lúc bắt đầu bay (đọc MỘT lần). Null trước mốc bay.
-  _Targets? _targets;
-
   @override
   void initState() {
     super.initState();
@@ -87,39 +84,37 @@ class _LaunchSplashState extends State<LaunchSplash>
     super.dispose();
   }
 
-  /// Đọc rect của logo đang neo trên màn đích. Null nếu không có neo, neo chưa
-  /// bố cục, hoặc app chạy không có `ProviderScope` (vài bài kiểm).
-  Rect? _anchorRect() {
+  /// Đọc logo đang neo trên màn đích: rect trên màn hình và neo có kèm chữ
+  /// không. Null nếu không có neo, neo chưa bố cục, hoặc app chạy không có
+  /// `ProviderScope` (vài bài kiểm).
+  ({Rect rect, bool withWordmark})? _anchor() {
     final ProviderContainer container;
     try {
       container = ProviderScope.containerOf(context, listen: false);
     } on StateError {
       return null;
     }
-    final box = container
-        .read(brandAnchorProvider)
-        ?.currentContext
-        ?.findRenderObject();
+    final anchorContext = container.read(brandAnchorProvider)?.currentContext;
+    final box = anchorContext?.findRenderObject();
     if (box is! RenderBox || !box.attached || !box.hasSize) return null;
     if (box.size.isEmpty) return null;
-    return box.localToGlobal(Offset.zero) & box.size;
+    final widget = anchorContext!.findAncestorWidgetOfExactType<BrandAnchor>();
+    return (
+      rect: box.localToGlobal(Offset.zero) & box.size,
+      withWordmark: widget?.withWordmark ?? false,
+    );
   }
 
   _Targets _readTargets() {
-    final anchor = _anchorRect();
+    final anchor = _anchor();
     if (anchor == null) return const _Targets(null, null);
-    // Logo là ô vuông bên trái neo. Neo rộng hẳn hơn cao là header (logo 30 +
-    // khoảng 8 + chữ): phần còn lại bên phải là chỗ của chữ.
-    final side = anchor.height;
-    final logo = Rect.fromLTWH(anchor.left, anchor.top, side, side);
-    final hasWord = anchor.width > side * 1.5;
-    final word = hasWord
-        ? Rect.fromLTRB(
-            anchor.left + side + 8 * side / 30,
-            anchor.top,
-            anchor.right,
-            anchor.bottom,
-          )
+    // Logo là ô vuông bên trái neo. Neo có chữ (header: logo 30 + khoảng 8 +
+    // chữ) thì phần còn lại bên phải là chỗ của chữ.
+    final a = anchor.rect;
+    final side = a.height;
+    final logo = Rect.fromLTWH(a.left, a.top, side, side);
+    final word = anchor.withWordmark
+        ? Rect.fromLTRB(a.left + side + 8 * side / 30, a.top, a.right, a.bottom)
         : null;
     return _Targets(logo, word);
   }
@@ -146,7 +141,8 @@ class _LaunchSplashState extends State<LaunchSplash>
               final progress = ms / splashMs;
               if (ms < flyStart) return OmniSplash(progress: progress);
 
-              final targets = _targets ??= _readTargets();
+              // Đọc lại MỖI khung: neo có thể dựng muộn, dời chỗ, hoặc biến mất.
+              final targets = _readTargets();
               final linear = ((ms - flyStart) / (totalMs - flyStart)).clamp(
                 0.0,
                 1.0,

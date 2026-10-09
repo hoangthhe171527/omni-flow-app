@@ -17,7 +17,15 @@ final brandAnchorProvider = StateProvider<GlobalKey?>((ref) => null);
 /// nên nhiều neo cùng được dựng một lúc. Tab bị ẩn có `Visibility.of` (hoặc
 /// `TickerMode`) tắt — neo ở đó không ghi; khi tab đổi thì neo ghi lại / tự gỡ.
 class BrandAnchor extends StatefulWidget {
-  const BrandAnchor({super.key, required this.child});
+  const BrandAnchor({
+    super.key,
+    this.withWordmark = false,
+    required this.child,
+  });
+
+  /// Neo gồm logo VÀ chữ "Viomni" bên phải (header các tab gốc). Màn mở app
+  /// dựa vào đây để cho chữ bay theo; false (màn đăng nhập) thì chữ mờ đi.
+  final bool withWordmark;
 
   final Widget child;
 

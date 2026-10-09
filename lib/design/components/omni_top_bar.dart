@@ -90,6 +90,7 @@ class OmniTopBar extends ConsumerWidget implements PreferredSizeWidget {
                     child: Row(
                       children: [
                         BrandAnchor(
+                          withWordmark: true,
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [

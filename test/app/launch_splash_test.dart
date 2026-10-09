@@ -179,6 +179,7 @@ void main() {
               body: Align(
                 alignment: Alignment.topLeft,
                 child: BrandAnchor(
+                  withWordmark: true,
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
@@ -202,5 +203,104 @@ void main() {
     final target = tester.getRect(find.byKey(const ValueKey('header-logo')));
     expect((logo.center - target.center).distance, lessThan(1.5));
     expect(logo.width, closeTo(30, 1));
+  });
+
+  /// Màn đích đổi theo [where]: null = chưa có neo; khác null = neo ở đó.
+  Widget movable(ValueNotifier<Alignment?> where) {
+    return ProviderScope(
+      child: MaterialApp(
+        home: LaunchSplash(
+          child: Scaffold(
+            body: ValueListenableBuilder<Alignment?>(
+              valueListenable: where,
+              builder: (context, a, _) => a == null
+                  ? const SizedBox.expand()
+                  : Align(
+                      alignment: a,
+                      child: const BrandAnchor(
+                        child: SizedBox.square(dimension: 30),
+                      ),
+                    ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> pumpTo(WidgetTester tester, int fromMs, int toMs) async {
+    for (var ms = fromMs; ms < toMs; ms += 20) {
+      await tester.pump(const Duration(milliseconds: 20));
+    }
+  }
+
+  testWidgets('neo dựng muộn (1900ms) vẫn được bay tới', (tester) async {
+    final where = ValueNotifier<Alignment?>(null);
+    await tester.pumpWidget(movable(where));
+    await tester.pump(const Duration(milliseconds: 1900));
+    where.value = Alignment.topLeft;
+    await pumpTo(tester, 1900, 2440);
+    final logo = tester.getRect(find.byKey(const ValueKey('splash-logo')));
+    final anchor = tester.getRect(find.byType(BrandAnchor));
+    expect((logo.center - anchor.center).distance, lessThan(1.5));
+  });
+
+  testWidgets('neo dời chỗ giữa lúc bay: khung cuối ở chỗ mới', (tester) async {
+    final where = ValueNotifier<Alignment?>(Alignment.topLeft);
+    await tester.pumpWidget(movable(where));
+    await tester.pump(const Duration(milliseconds: 2000));
+    where.value = Alignment.bottomRight;
+    await pumpTo(tester, 2000, 2440);
+    final logo = tester.getRect(find.byKey(const ValueKey('splash-logo')));
+    final anchor = tester.getRect(find.byType(BrandAnchor));
+    expect((logo.center - anchor.center).distance, lessThan(1.5));
+  });
+
+  testWidgets('neo biến mất giữa lúc bay: chuyển sang mờ dần, không lỗi', (
+    tester,
+  ) async {
+    final where = ValueNotifier<Alignment?>(Alignment.topLeft);
+    await tester.pumpWidget(movable(where));
+    await tester.pump(const Duration(milliseconds: 2000));
+    where.value = null;
+    await pumpTo(tester, 2000, 2200);
+    expect(
+      find.ancestor(
+        of: find.byType(OmniSplash),
+        matching: find.byType(Opacity),
+      ),
+      findsWidgets,
+    );
+    await tester.pump(const Duration(milliseconds: 400));
+    expect(find.byType(OmniSplash), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('neo có chữ: chữ "Viomni" của splash bay vào sau logo', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        child: MaterialApp(
+          home: LaunchSplash(
+            child: const Scaffold(
+              body: Align(
+                alignment: Alignment.topLeft,
+                child: BrandAnchor(
+                  withWordmark: true,
+                  child: SizedBox(width: 110, height: 30),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pump(const Duration(milliseconds: 2440));
+    final v = tester.getRect(
+      find.descendant(of: find.byType(OmniSplash), matching: find.text('V')),
+    );
+    expect(v.left, closeTo(38, 2));
+    expect(v.center.dy, closeTo(15, 3));
   });
 }
