@@ -25,9 +25,23 @@ final peekMessagesProvider = FutureProvider.autoDispose
       return visible.take(_peekMessageCount).toList().reversed.toList();
     });
 
-const _ink = Color(0xFF0B1A33);
-const _muted = Color(0xFF56637A);
-const _danger = Color(0xFFB42318);
+Color _ink(BuildContext context) => OmniColors.byBrightness(
+  context,
+  const Color(0xFF0B1A33),
+  Theme.of(context).colorScheme.onSurface,
+);
+
+Color _muted(BuildContext context) => OmniColors.byBrightness(
+  context,
+  const Color(0xFF56637A),
+  Theme.of(context).colorScheme.onSurfaceVariant,
+);
+
+Color _danger(BuildContext context) => OmniColors.byBrightness(
+  context,
+  const Color(0xFFB42318),
+  OmniColors.dangerTextDark,
+);
 
 /// Bấm giữ một dòng → khung xem trước tin gần nhất + menu thao tác, theo
 /// `InboxPeek.dc.html`. Bấm khung mở hội thoại ([onOpen]); bấm ra ngoài đóng.
@@ -151,112 +165,132 @@ class _PeekCard extends ConsumerWidget {
       child: ClipRRect(
         borderRadius: BorderRadius.circular(12),
         child: Material(
-          color: const Color(0xFFF5F7FA),
-          child: InkWell(
-            onTap: onOpen,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 14,
-                    vertical: 12,
-                  ),
-                  decoration: const BoxDecoration(
-                    color: Colors.white,
-                    border: Border(
-                      bottom: BorderSide(color: Color(0xFFE3E8EF)),
+          color: OmniColors.byBrightness(
+            context,
+            const Color(0xFFF5F7FA),
+            Theme.of(context).colorScheme.surface,
+          ),
+          child: Semantics(
+            button: true,
+            label: 'Mở hội thoại',
+            child: InkWell(
+              onTap: onOpen,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  // Ink, không phải Container: nền đặc của Container che vệt
+                  // chạm của InkWell phía trên.
+                  Ink(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 12,
                     ),
-                  ),
-                  child: Row(
-                    children: [
-                      OmniAvatar(
-                        name: conversation.title,
-                        imageUrl: conversation.customerAvatar,
-                        size: 34,
-                        borderRadius: 6,
+                    decoration: BoxDecoration(
+                      color: OmniColors.byBrightness(
+                        context,
+                        Colors.white,
+                        Theme.of(context).colorScheme.surfaceContainer,
                       ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              conversation.title,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: OmniType.body.copyWith(
-                                color: _ink,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                            Text.rich(
-                              TextSpan(
-                                children: [
-                                  TextSpan(
-                                    text: conversation.channel.sourceKind,
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.w600,
-                                      color: meta.color,
-                                    ),
-                                  ),
-                                  if (account != null)
-                                    TextSpan(text: ' · $account'),
-                                  TextSpan(
-                                    text:
-                                        ' · ${Formatters.relative(conversation.lastMessageAt)}',
-                                  ),
-                                ],
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: OmniType.micro.copyWith(color: _muted),
-                            ),
-                          ],
+                      border: Border(
+                        bottom: BorderSide(
+                          color: Theme.of(context).colorScheme.outlineVariant,
                         ),
                       ),
-                      if (tag != null)
-                        Semantics(
-                          label: 'Nhãn: $tag',
-                          container: true,
-                          child: Container(
-                            width: 8,
-                            height: 8,
-                            decoration: BoxDecoration(
-                              color: OmniLabelColors.of(tag),
-                              shape: BoxShape.circle,
-                            ),
-                          ),
-                        ),
-                    ],
-                  ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.all(14),
-                  child: messages.when(
-                    loading: () => const _PeekSkeleton(),
-                    error: (_, _) => Text(
-                      'Không tải được tin.',
-                      style: OmniType.chip.copyWith(color: _muted),
                     ),
-                    data: (list) => list.isEmpty
-                        ? Text(
-                            'Chưa có tin nhắn.',
-                            style: OmniType.chip.copyWith(color: _muted),
-                          )
-                        : Column(
-                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                    child: Row(
+                      children: [
+                        OmniAvatar(
+                          name: conversation.title,
+                          imageUrl: conversation.customerAvatar,
+                          size: 34,
+                          borderRadius: 6,
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              for (var i = 0; i < list.length; i++) ...[
-                                if (i > 0) const SizedBox(height: 6),
-                                _PeekBubble(message: list[i]),
-                              ],
+                              Text(
+                                conversation.title,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: OmniType.body.copyWith(
+                                  color: _ink(context),
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                              Text.rich(
+                                TextSpan(
+                                  children: [
+                                    TextSpan(
+                                      text: conversation.channel.sourceKind,
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.w600,
+                                        color: meta.color,
+                                      ),
+                                    ),
+                                    if (account != null)
+                                      TextSpan(text: ' · $account'),
+                                    TextSpan(
+                                      text:
+                                          ' · ${Formatters.relative(conversation.lastMessageAt)}',
+                                    ),
+                                  ],
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: OmniType.micro.copyWith(
+                                  color: _muted(context),
+                                ),
+                              ),
                             ],
                           ),
+                        ),
+                        if (tag != null)
+                          Semantics(
+                            label: 'Nhãn: $tag',
+                            container: true,
+                            child: Container(
+                              width: 8,
+                              height: 8,
+                              decoration: BoxDecoration(
+                                color: OmniLabelColors.of(tag),
+                                shape: BoxShape.circle,
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
                   ),
-                ),
-              ],
+                  Padding(
+                    padding: const EdgeInsets.all(14),
+                    child: messages.when(
+                      loading: () => const _PeekSkeleton(),
+                      error: (_, _) => Text(
+                        'Không tải được tin.',
+                        style: OmniType.chip.copyWith(color: _muted(context)),
+                      ),
+                      data: (list) => list.isEmpty
+                          ? Text(
+                              'Chưa có tin nhắn.',
+                              style: OmniType.chip.copyWith(
+                                color: _muted(context),
+                              ),
+                            )
+                          : Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                for (var i = 0; i < list.length; i++) ...[
+                                  if (i > 0) const SizedBox(height: 6),
+                                  _PeekBubble(message: list[i]),
+                                ],
+                              ],
+                            ),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ),
@@ -288,7 +322,13 @@ class _PeekBubble extends StatelessWidget {
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
           decoration: BoxDecoration(
-            color: out ? Theme.of(context).colorScheme.primary : Colors.white,
+            color: out
+                ? Theme.of(context).colorScheme.primary
+                : OmniColors.byBrightness(
+                    context,
+                    Colors.white,
+                    Theme.of(context).colorScheme.surfaceContainerHighest,
+                  ),
             borderRadius: BorderRadius.only(
               topLeft: const Radius.circular(14),
               topRight: const Radius.circular(14),
@@ -300,7 +340,9 @@ class _PeekBubble extends StatelessWidget {
             text,
             style: OmniType.chip.copyWith(
               height: 1.4,
-              color: out ? Colors.white : _ink,
+              color: out
+                  ? Theme.of(context).colorScheme.onPrimary
+                  : _ink(context),
               fontWeight: FontWeight.w400,
             ),
           ),
@@ -321,7 +363,7 @@ class _PeekSkeleton extends StatelessWidget {
         width: width,
         height: 30,
         decoration: BoxDecoration(
-          color: const Color(0xFFE3E8EF),
+          color: Theme.of(context).colorScheme.outlineVariant,
           borderRadius: BorderRadius.circular(14),
         ),
       ),
@@ -367,20 +409,29 @@ class _PeekMenu extends StatelessWidget {
           filter: ImageFilter.blur(sigmaX: 24, sigmaY: 24),
           child: Container(
             width: 230,
-            color: Colors.white.withValues(alpha: .88),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                for (var i = 0; i < items.length; i++) ...[
-                  if (i > 0)
-                    const Divider(
-                      height: 1,
-                      thickness: 1,
-                      color: Color(0x140B1A33),
-                    ),
-                  _PeekMenuRow(item: items[i], onTap: onAction),
+            color: OmniColors.byBrightness(
+              context,
+              Colors.white,
+              Theme.of(context).colorScheme.surfaceContainerHigh,
+            ).withValues(alpha: .88),
+            // Material trong suốt nằm TRÊN nền kính: vệt chạm của InkWell
+            // vẽ lên nó thì mới thấy được.
+            child: Material(
+              type: MaterialType.transparency,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  for (var i = 0; i < items.length; i++) ...[
+                    if (i > 0)
+                      Divider(
+                        height: 1,
+                        thickness: 1,
+                        color: Theme.of(context).colorScheme.outlineVariant,
+                      ),
+                    _PeekMenuRow(item: items[i], onTap: onAction),
+                  ],
                 ],
-              ],
+              ),
             ),
           ),
         ),
@@ -397,7 +448,7 @@ class _PeekMenuRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = item.destructive ? _danger : _ink;
+    final color = item.destructive ? _danger(context) : _ink(context);
     return InkWell(
       onTap: () => onTap(item.action),
       child: SizedBox(

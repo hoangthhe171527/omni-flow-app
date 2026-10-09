@@ -44,16 +44,37 @@ Future<String?> showLabelDialog(BuildContext context) {
 /// dòng trong danh sách ([InboxListController.reconcile]) → làm mới hội thoại
 /// đang mở → báo kết quả. Lỗi thì chỉ báo, không vá — không có thành công giả.
 class ConversationActions {
-  ConversationActions(this.ref, this.context);
+  /// Mọi thứ cần SAU `await` được lấy ngay ở đây, khi trang còn sống: `ref`
+  /// của widget đã huỷ không dùng được, còn container / messenger thì sống
+  /// lâu hơn trang (thao tác xong sau khi người dùng đã rời hộp thư vẫn phải
+  /// cập nhật danh sách và báo kết quả, không ném lỗi).
+  ConversationActions(this.ref, this.context)
+    : _container = ProviderScope.containerOf(context, listen: false),
+      _messenger = ScaffoldMessenger.of(context);
 
   final WidgetRef ref;
   final BuildContext context;
+  final ProviderContainer _container;
+  final ScaffoldMessengerState _messenger;
 
-  InboxApi get _api => ref.read(inboxApiProvider);
+  InboxApi get _api => _container.read(inboxApiProvider);
 
   Future<void> markRead(Conversation c) => _run(() async {
     await _api.markRead(c.id);
-    return c.copyWith(unread: 0);
+    // Bản MỚI NHẤT trong danh sách (tin có thể đã đổi trong lúc chờ), không
+    // phải bản `c` chụp lúc bấm giữ.
+    Conversation? latest;
+    try {
+      latest = _container
+          .read(inboxListProvider)
+          .valueOrNull
+          ?.items
+          .where((item) => item.id == c.id)
+          .firstOrNull;
+    } catch (_) {
+      // Container đã huỷ: dùng bản chụp, phần cập nhật phía dưới cũng bỏ qua.
+    }
+    return (latest ?? c).copyWith(unread: 0);
   }, 'Đã đánh dấu đã đọc.');
 
   /// "Lưu trữ" = đóng hội thoại; máy chủ không có trạng thái lưu trữ riêng.
@@ -88,15 +109,28 @@ class ConversationActions {
   }
 
   Future<void> _run(Future<Conversation> Function() call, String done) async {
-    final messenger = ScaffoldMessenger.of(context);
+    final Conversation updated;
     try {
-      final updated = await call();
-      ref.read(inboxListProvider.notifier).reconcile(updated);
-      ref.invalidate(conversationProvider(updated.id));
-      messenger.showSnackBar(SnackBar(content: Text(done)));
+      updated = await call();
     } on AppException catch (error) {
-      messenger.showSnackBar(SnackBar(content: Text(error.message)));
+      _say(error.message);
+      return;
+    } catch (_) {
+      _say('Không thực hiện được. Vui lòng thử lại.');
+      return;
     }
+    // Máy chủ đã nhận: phần cập nhật giao diện dưới đây có thể gặp container
+    // đã bị huỷ (đóng cả ứng dụng) — không được biến nó thành lỗi thao tác.
+    try {
+      _container.read(inboxListProvider.notifier).reconcile(updated);
+      _container.invalidate(conversationProvider(updated.id));
+    } catch (_) {}
+    _say(done);
+  }
+
+  void _say(String text) {
+    if (!_messenger.mounted) return;
+    _messenger.showSnackBar(SnackBar(content: Text(text)));
   }
 }
 

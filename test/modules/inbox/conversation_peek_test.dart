@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -17,6 +19,7 @@ import 'package:omni_app/modules/inbox/domain/inbox_permissions.dart';
 import 'package:omni_app/modules/inbox/domain/message.dart';
 import 'package:omni_app/modules/inbox/presentation/inbox_page.dart';
 import 'package:omni_app/modules/inbox/presentation/widgets/conversation_actions.dart';
+import 'package:omni_app/modules/inbox/presentation/widgets/conversation_peek.dart';
 import 'package:omni_app/modules/inbox/presentation/widgets/conversation_row.dart';
 import 'package:omni_app/security/permissions/access_policy.dart';
 import 'package:omni_app/security/session/session.dart';
@@ -177,6 +180,103 @@ void main() {
     await closePage(tester);
   });
 
+  testWidgets('bấm ra ngoài (nền mờ) đóng xem trước', (tester) async {
+    api.conversations = [_conversation('c1', 'Lan Anh')];
+    await open(tester);
+    await holdRow(tester, 'Lan Anh');
+    expect(find.text('Lưu trữ'), findsOneWidget);
+    await tester.tapAt(const Offset(200, 580));
+    await tester.pumpAndSettle(const Duration(milliseconds: 50));
+    expect(find.text('Lưu trữ'), findsNothing);
+    expect(api.statusCalls, isEmpty);
+    await closePage(tester);
+  });
+
+  testWidgets('bấm khung xem trước → đóng và gọi onOpen', (tester) async {
+    final opened = <String>[];
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          inboxApiProvider.overrideWithValue(api),
+          sessionProvider.overrideWithValue(
+            const Session(
+              status: SessionStatus.authenticated,
+              user: SessionUser(id: 'u1', fullName: 'K', email: 'k@x.vn'),
+              tenant: SessionTenant(id: 't1', name: 'X'),
+              policy: AccessPolicy({'inbox.read', 'inbox.write'}),
+            ),
+          ),
+        ],
+        child: MaterialApp(
+          theme: OmniTheme.light(TargetPlatform.android),
+          home: Builder(
+            builder: (context) => TextButton(
+              onPressed: () => showConversationPeek(
+                context: context,
+                conversation: _conversation('c1', 'Lan Anh'),
+                onOpen: () => opened.add('c1'),
+                onAction: (_) {},
+              ),
+              child: const Text('mở'),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.tap(find.text('mở'));
+    await tester.pumpAndSettle(const Duration(milliseconds: 50));
+    await tester.tap(find.text('Dạ em chào chị'));
+    await tester.pumpAndSettle(const Duration(milliseconds: 50));
+    expect(opened, ['c1']);
+    expect(find.text('Dạ em chào chị'), findsNothing);
+  });
+
+  testWidgets('tải tin lỗi → "Không tải được tin." mà menu vẫn dùng được', (
+    tester,
+  ) async {
+    api.conversations = [_conversation('c1', 'Lan Anh')];
+    api.failMessages = true;
+    await open(tester);
+    await holdRow(tester, 'Lan Anh');
+    expect(find.text('Không tải được tin.'), findsOneWidget);
+    await tester.tap(find.text('Lưu trữ'));
+    await tester.pumpAndSettle(const Duration(milliseconds: 50));
+    expect(api.statusCalls, [('c1', ConversationStatus.closed)]);
+    await closePage(tester);
+  });
+
+  testWidgets('Mở lại trên hội thoại đã đóng → setStatus(open)', (
+    tester,
+  ) async {
+    api.conversations = [
+      _conversation('c1', 'Lan Anh', status: ConversationStatus.closed),
+    ];
+    await open(tester);
+    await holdRow(tester, 'Lan Anh');
+    expect(find.text('Lưu trữ'), findsNothing);
+    await tester.tap(find.text('Mở lại'));
+    await tester.pumpAndSettle(const Duration(milliseconds: 50));
+    expect(api.statusCalls, [('c1', ConversationStatus.open)]);
+    expect(find.text('Đã mở lại hội thoại.'), findsOneWidget);
+    await closePage(tester);
+  });
+
+  testWidgets('thao tác xong SAU khi trang đã gỡ → không ném lỗi', (
+    tester,
+  ) async {
+    api.conversations = [_conversation('c1', 'Lan Anh', unread: 2)];
+    api.markReadGate = Completer<void>();
+    await open(tester);
+    await holdRow(tester, 'Lan Anh');
+    await tester.tap(find.text('Đánh dấu đã đọc'));
+    await tester.pump();
+    await closePage(tester); // trang + ProviderScope bị gỡ khi API còn chờ
+    api.markReadGate!.complete();
+    await tester.pump(const Duration(milliseconds: 50));
+    expect(tester.takeException(), isNull);
+    expect(api.markReadCalls, ['c1']);
+  });
+
   group('peekMenuFor', () {
     final full = InboxAccess.of(
       const AccessPolicy({'inbox.read', 'inbox.write'}),
@@ -221,6 +321,8 @@ class _FakeInboxApi extends InboxApi {
   final markReadCalls = <String>[];
   final statusCalls = <(String, ConversationStatus)>[];
   bool failNextStatus = false;
+  bool failMessages = false;
+  Completer<void>? markReadGate;
 
   @override
   Future<CursorPaged<Conversation>> list({
@@ -245,7 +347,12 @@ class _FakeInboxApi extends InboxApi {
     String id, {
     String? before,
     int perPage = AppConfig.messagePageSize,
-  }) async => MessagePage(
+  }) async {
+    if (failMessages) throw const NetworkException('Mất mạng');
+    return _page;
+  }
+
+  final _page = MessagePage(
     messages: [
       Message(
         id: 'm2',
@@ -264,7 +371,10 @@ class _FakeInboxApi extends InboxApi {
   );
 
   @override
-  Future<void> markRead(String id) async => markReadCalls.add(id);
+  Future<void> markRead(String id) async {
+    await markReadGate?.future;
+    markReadCalls.add(id);
+  }
 
   @override
   Future<Conversation> setStatus(String id, ConversationStatus status) async {
