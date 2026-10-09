@@ -20,6 +20,10 @@ import '../application/thread_controller.dart';
 import '../data/inbox_api.dart';
 import '../domain/conversation.dart';
 import '../domain/message.dart';
+import '../../../security/session/session_controller.dart';
+import '../../tasks/domain/task_permissions.dart';
+import '../../tasks/routes.dart';
+import '../../tasks/tasks.dart';
 import '../inbox_module.dart';
 import 'message_key_registry.dart';
 import 'thread_info_page.dart';
@@ -35,6 +39,18 @@ export '../application/media_url_resolver.dart' show mediaReloadCooldown;
 /// Đồng hồ của [mediaReloadCooldown] — test thay để khỏi chờ 10 phút thật.
 @visibleForTesting
 DateTime Function() mediaReloadClock = DateTime.now;
+
+/// Rule-based, not generated: openers a rep would type anyway, offered as one
+/// tap. Deliberately generic — a wrong "smart" suggestion costs more trust
+/// than no suggestion.
+const _defaultTemplates = <String>[
+  'Dạ em chào anh/chị ạ!',
+  'Em gửi báo giá ạ',
+  'Em gọi lại ngay',
+  'Cảm ơn anh/chị đã quan tâm.',
+  'Anh/chị cho em xin số điện thoại để tư vấn nhé.',
+  'Bên em đang có chương trình ưu đãi ạ.',
+];
 
 class ThreadPage extends ConsumerStatefulWidget {
   const ThreadPage({super.key, required this.conversationId});
@@ -256,6 +272,7 @@ class _ThreadPageState extends ConsumerState<ThreadPage>
     final conversation = ref.watch(conversationProvider(widget.conversationId));
     final thread = ref.watch(threadProvider(widget.conversationId));
     final access = ref.watch(inboxAccessProvider);
+    final canCreateTask = ref.watch(accessProvider).can(TaskPermissions.write);
 
     return Scaffold(
       // Bubbles can only read as raised against a tinted canvas. On white the
@@ -325,42 +342,44 @@ class _ThreadPageState extends ConsumerState<ThreadPage>
             ),
             if (access.canSend)
               MessageComposer(
-                // Không còn nút gạt ghi chú và hàng trả lời nhanh (GĐ3); composer
-                // mới dựng ở Task 7.
-                canNote: false,
                 replyTo: _replyingTo,
                 onCancelReply: () => setState(() => _replyingTo = null),
                 onPickImages: _pickImages,
                 onTakePhoto: _takePhoto,
-                onSend: (text, mode, images, replyTo) async {
+                onCreateTask: canCreateTask
+                    ? () => context.pushNamed(
+                        TaskRoutes.create,
+                        extra: CreateTaskArgs(
+                          initialTitle: 'Liên hệ ${_customerName()}'.trim(),
+                        ),
+                      )
+                    : null,
+                loadTemplates: _loadTemplates,
+                onSend: (text, images, replyTo) async {
                   final controller = ref.read(
                     threadProvider(widget.conversationId).notifier,
                   );
-                  if (mode == ComposeMode.note) {
-                    await controller.addNote(text);
-                  } else {
-                    try {
-                      final upload = Future.wait(
-                        images.map(
-                          (image) => ref
-                              .read(inboxApiProvider)
-                              .uploadMedia(image.path, filename: image.name),
-                        ),
-                      );
-                      await controller.sendAfterUpload(
-                        text,
-                        attachments: upload,
-                        replyTo: replyTo,
-                      );
-                    } on AppException catch (error) {
-                      _toast(error.message);
-                      rethrow;
-                    } on Object {
-                      // Lỗi ngoài API (đọc tệp hỏng…): vẫn báo, và ném lại để
-                      // composer giữ chữ và khay ảnh (INB-I22).
-                      _toast('Không tải ảnh lên được. Vui lòng thử lại.');
-                      rethrow;
-                    }
+                  try {
+                    final upload = Future.wait(
+                      images.map(
+                        (image) => ref
+                            .read(inboxApiProvider)
+                            .uploadMedia(image.path, filename: image.name),
+                      ),
+                    );
+                    await controller.sendAfterUpload(
+                      text,
+                      attachments: upload,
+                      replyTo: replyTo,
+                    );
+                  } on AppException catch (error) {
+                    _toast(error.message);
+                    rethrow;
+                  } on Object {
+                    // Lỗi ngoài API (đọc tệp hỏng…): vẫn báo, và ném lại để
+                    // composer giữ chữ và khay ảnh (INB-I22).
+                    _toast('Không tải ảnh lên được. Vui lòng thử lại.');
+                    rethrow;
                   }
                   if (mounted) setState(() => _replyingTo = null);
                   _scrollToBottom();
@@ -483,6 +502,24 @@ class _ThreadPageState extends ConsumerState<ThreadPage>
     } on AppException catch (error) {
       _toast(error.message);
     }
+  }
+
+  String _customerName() =>
+      ref
+          .read(conversationProvider(widget.conversationId))
+          .valueOrNull
+          ?.title ??
+      '';
+
+  /// Mẫu trả lời của tenant; chưa có (hoặc lỗi mạng) thì dùng bộ câu mở đầu
+  /// mặc định — đừng để khay trống chỉ vì máy chủ chưa cấu hình.
+  Future<List<String>> _loadTemplates() async {
+    final replies = await ref
+        .read(quickRepliesProvider.future)
+        .catchError((_) => null);
+    return replies == null || replies.isEmpty
+        ? _defaultTemplates
+        : [for (final q in replies) q.body];
   }
 
   Future<List<XFile>> _pickImages() =>

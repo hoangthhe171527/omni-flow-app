@@ -98,7 +98,7 @@ void main() {
     expect(dotColor(tester), OmniColors.sla);
   });
 
-  testWidgets('trả lời nhanh: chạm là chèn vào ô, không gửi', (tester) async {
+  testWidgets('mẫu trả lời: chọn là chèn vào ô, không gửi', (tester) async {
     var sent = 0;
     await tester.pumpWidget(
       host(
@@ -106,8 +106,8 @@ void main() {
           children: [
             const Expanded(child: SizedBox()),
             MessageComposer(
-              suggestions: const ['Em gửi báo giá ạ'],
-              onSend: (text, mode, images, replyTo) async => sent++,
+              loadTemplates: () async => const ['Em gửi báo giá ạ'],
+              onSend: (text, images, replyTo) async => sent++,
               onPickImages: () async => const [],
             ),
           ],
@@ -115,8 +115,12 @@ void main() {
       ),
     );
 
-    await tester.tap(find.widgetWithText(ActionChip, 'Em gửi báo giá ạ'));
-    await tester.pump();
+    await tester.tap(find.byTooltip('Thêm'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Mẫu trả lời'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Em gửi báo giá ạ'));
+    await tester.pumpAndSettle();
 
     final field = tester.widget<TextField>(find.byType(TextField));
     expect(field.controller!.text, 'Em gửi báo giá ạ');

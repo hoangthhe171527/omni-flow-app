@@ -24,7 +24,7 @@ void main() {
               const Expanded(child: SizedBox.expand()),
               MessageComposer(
                 onPickImages: () async => [XFile('khong-co-that.jpg')],
-                onSend: (text, mode, images, replyTo) async {
+                onSend: (text, images, replyTo) async {
                   sends.add(images.length);
                   if (fail) {
                     throw const ValidationException('Ảnh quá lớn.');
@@ -37,7 +37,7 @@ void main() {
       ),
     );
 
-    await tester.tap(find.byTooltip('Thêm ảnh'));
+    await tester.tap(find.byTooltip('Ảnh'));
     await tester.pump();
     await tester.enterText(find.byType(TextField), 'Ảnh đây');
     await tester.pump();
