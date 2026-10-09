@@ -17,6 +17,9 @@ import '../application/inbox_realtime.dart';
 import '../data/inbox_api.dart';
 import '../domain/inbox_filter.dart';
 import '../inbox_module.dart';
+import '../domain/conversation.dart';
+import 'widgets/conversation_actions.dart';
+import 'widgets/conversation_peek.dart';
 import 'widgets/conversation_row.dart';
 import 'widgets/inbox_bulk_bar.dart';
 import 'widgets/inbox_filter_bar.dart';
@@ -122,6 +125,23 @@ class _InboxPageState extends ConsumerState<InboxPage>
       _selectionMode = true;
       if (!_selected.remove(id)) _selected.add(id);
     });
+  }
+
+  Future<void> _openPeek(Conversation c) async {
+    final actions = ConversationActions(ref, context);
+    await showConversationPeek(
+      context: context,
+      conversation: c,
+      onOpen: () =>
+          context.pushNamed(InboxModule.thread, pathParameters: {'id': c.id}),
+      onAction: (action) => switch (action) {
+        PeekAction.markRead => actions.markRead(c),
+        PeekAction.assign => actions.assign(c),
+        PeekAction.label => actions.addLabel(c),
+        PeekAction.archive => actions.setArchived(c, true),
+        PeekAction.reopen => actions.setArchived(c, false),
+      },
+    );
   }
 
   void _clearSelection() {
@@ -281,7 +301,7 @@ class _InboxPageState extends ConsumerState<InboxPage>
                             conversation: conversation,
                             selectionMode: selecting,
                             selected: _selected.contains(conversation.id),
-                            onPeek: null,
+                            onPeek: () => _openPeek(conversation),
                             onTap: () {
                               if (selecting) {
                                 _toggleSelection(conversation.id);
