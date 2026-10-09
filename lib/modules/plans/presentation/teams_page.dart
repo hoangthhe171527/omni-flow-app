@@ -37,7 +37,7 @@ class TeamsPage extends ConsumerWidget {
         ref.watch(accessProvider).can('organization.org_units.delete');
 
     return Scaffold(
-      appBar: const OmniAppBar(title: 'Dự án'),
+      appBar: const OmniTopBar(),
       floatingActionButton: isAssigner
           ? ShellFabLift(
               child: FloatingActionButton.extended(

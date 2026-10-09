@@ -3,6 +3,7 @@
 /// either in the module itself or, if a second module needs it too, here.
 library;
 
+export 'brand_anchor.dart';
 export 'omni_app_bar.dart';
 export 'omni_avatar.dart';
 export 'omni_backdrop.dart';
@@ -14,6 +15,7 @@ export 'omni_pills.dart';
 export 'omni_splash.dart';
 export 'omni_states.dart';
 export 'omni_tabs.dart';
+export 'omni_top_bar.dart';
 
 /// Lớp nền tảng đi kèm barrel này: module gọi showOmniConfirm mà không phải
 /// biết iOS hay Android, và cũng không được phép biết — xem

@@ -15,7 +15,11 @@ import '../inbox_page.dart';
 /// for the other active filters — tapping a pill can never surface a different
 /// count than it promised.
 class InboxFilterBar extends ConsumerWidget {
-  const InboxFilterBar({super.key});
+  const InboxFilterBar({super.key, this.trailing = const []});
+
+  /// Nút riêng của màn (kết nối kênh, chọn nhiều) xếp sau nút lọc, cùng hàng
+  /// với ô tìm — chúng từng nằm ở thanh tiêu đề.
+  final List<Widget> trailing;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -103,6 +107,7 @@ class InboxFilterBar extends ConsumerWidget {
                 active: filter.channel != null || filter.label != null,
                 onTap: () => _openChannelMenu(context, ref),
               ),
+              ...trailing,
             ],
           ),
         ),

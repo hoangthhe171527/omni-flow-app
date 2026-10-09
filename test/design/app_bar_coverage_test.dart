@@ -43,7 +43,10 @@ void main() {
       );
 
       expect(
-        file.readAsStringSync().contains('OmniAppBar'),
+        (() {
+          final src = file.readAsStringSync();
+          return src.contains('OmniAppBar') || src.contains('OmniTopBar');
+        })(),
         isTrue,
         reason:
             '$path là màn gốc của một tab — thiếu OmniAppBar thì góc trên bên '

@@ -19,7 +19,11 @@ import '../../settings_module.dart';
 /// Menu gộp luôn hai màn tài khoản đang nằm trong tab "Thêm" (Thông báo, Quyền
 /// của tôi): chúng là màn tài khoản, và đây là chỗ người ta đi tìm chúng.
 class AccountMenuButton extends ConsumerStatefulWidget {
-  const AccountMenuButton({super.key});
+  const AccountMenuButton({super.key, this.tile = false});
+
+  /// Ô vuông 36 bo 6 nền mực, chữ cái đầu tên — kiểu của [OmniTopBar]. Mặc
+  /// định vẫn là ảnh tròn của [OmniAppBar].
+  final bool tile;
 
   @override
   ConsumerState<AccountMenuButton> createState() => _AccountMenuButtonState();
@@ -32,6 +36,8 @@ class _AccountMenuButtonState extends ConsumerState<AccountMenuButton> {
   Widget build(BuildContext context) {
     final user = ref.watch(sessionProvider).user;
     final name = user?.fullName ?? 'Tài khoản';
+
+    if (widget.tile) return _buildTile(name);
 
     return Padding(
       // Đệm đều hai bên: nút giờ đứng ở `leading` (góc trái) của OmniAppBar,
@@ -64,6 +70,51 @@ class _AccountMenuButtonState extends ConsumerState<AccountMenuButton> {
                 child: CircularProgressIndicator(strokeWidth: 2),
               ),
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTile(String name) {
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    final words = name.trim().split(RegExp(r'\s+'));
+    // Chữ cái đầu của tên gọi (từ cuối), như các avatar chữ khác trong app.
+    final initial = words.last.isEmpty
+        ? '?'
+        : String.fromCharCode(words.last.runes.first).toUpperCase();
+
+    return Semantics(
+      button: true,
+      label: 'Tài khoản $name',
+      excludeSemantics: true,
+      onTap: _busy ? null : _open,
+      child: Material(
+        color: dark ? OmniColors.inkRaised : OmniColors.ink,
+        borderRadius: BorderRadius.circular(6),
+        child: InkWell(
+          onTap: _busy ? null : _open,
+          borderRadius: BorderRadius.circular(6),
+          child: SizedBox.square(
+            dimension: 36,
+            child: Center(
+              child: _busy
+                  ? const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
+                    )
+                  : Text(
+                      initial,
+                      style: OmniType.caption.copyWith(
+                        fontWeight: FontWeight.w600,
+                        color: Colors.white,
+                      ),
+                    ),
+            ),
+          ),
         ),
       ),
     );

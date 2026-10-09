@@ -16,10 +16,18 @@ class OmniAccountSlot extends InheritedWidget {
   const OmniAccountSlot({
     super.key,
     required this.builder,
+    this.tileBuilder,
     required super.child,
   });
 
   final WidgetBuilder builder;
+
+  /// Biến thể ô vuông 36 chữ cái đầu, dành cho [OmniTopBar].
+  final WidgetBuilder? tileBuilder;
+
+  static WidgetBuilder? maybeTileOf(BuildContext context) => context
+      .dependOnInheritedWidgetOfExactType<OmniAccountSlot>()
+      ?.tileBuilder;
 
   /// Null khi chưa ai cắm gì — đúng trong bài kiểm widget của một màn lẻ, và
   /// [OmniAppBar] chỉ đơn giản không vẽ nút. Không ném lỗi: một AppBar không
@@ -29,7 +37,7 @@ class OmniAccountSlot extends InheritedWidget {
 
   @override
   bool updateShouldNotify(OmniAccountSlot oldWidget) =>
-      oldWidget.builder != builder;
+      oldWidget.builder != builder || oldWidget.tileBuilder != tileBuilder;
 }
 
 /// AppBar của app, với nút tài khoản ở góc phải là MẶC ĐỊNH.

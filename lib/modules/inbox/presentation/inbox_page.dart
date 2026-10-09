@@ -165,49 +165,46 @@ class _InboxPageState extends ConsumerState<InboxPage>
       // read as a tinted panel framing itself — the "khung mờ" around the search
       // field was that seam, not a border on the field.
       backgroundColor: scheme.surface,
-      appBar: OmniAppBar(
-        backgroundColor: scheme.surface,
-        title: 'Hộp thư',
-        titleSpacing: OmniSpacing.lg,
-        toolbarHeight: 56,
-        actions: [
-          if (canConnectChannels)
-            IconButton(
-              tooltip: 'Kết nối kênh',
-              onPressed: () => context.pushNamed(ChannelsModule.list),
-              style: IconButton.styleFrom(
-                foregroundColor: scheme.onSurfaceVariant,
+      appBar: OmniTopBar(
+        // Search line + pill row + the rule under them. "Kết nối kênh" and
+        // "Chọn nhiều" moved here from the old AppBar actions, on the search
+        // row after the filter button.
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(105),
+          child: InboxFilterBar(
+            trailing: [
+              if (canConnectChannels)
+                IconButton(
+                  tooltip: 'Kết nối kênh',
+                  onPressed: () => context.pushNamed(ChannelsModule.list),
+                  style: IconButton.styleFrom(
+                    fixedSize: const Size(40, 44),
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    foregroundColor: scheme.onSurfaceVariant,
+                  ),
+                  icon: const Icon(Icons.hub_outlined),
+                ),
+              IconButton(
+                tooltip: 'Chọn nhiều',
+                onPressed: access.canLabel
+                    ? () => setState(() {
+                        _selectionMode = !_selectionMode;
+                        if (!_selectionMode) _selected.clear();
+                      })
+                    : null,
+                style: IconButton.styleFrom(
+                  fixedSize: const Size(40, 44),
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  foregroundColor: selecting
+                      ? OmniColors.chatPrimary
+                      : scheme.onSurfaceVariant,
+                ),
+                icon: Icon(
+                  selecting ? Icons.close_rounded : Icons.checklist_rounded,
+                ),
               ),
-              icon: const Icon(Icons.hub_outlined),
-            ),
-          IconButton(
-            tooltip: 'Chọn nhiều',
-            onPressed: access.canLabel
-                ? () => setState(() {
-                    _selectionMode = !_selectionMode;
-                    if (!_selectionMode) _selected.clear();
-                  })
-                : null,
-            // A bare icon. The filled circle behind it was a button drawn twice
-            // — the icon already reads as tappable, and the disc only added a
-            // grey blob to the corner of an otherwise clean bar.
-            style: IconButton.styleFrom(
-              foregroundColor: selecting
-                  ? OmniColors.chatPrimary
-                  : scheme.onSurfaceVariant,
-            ),
-            icon: Icon(
-              selecting ? Icons.close_rounded : Icons.checklist_rounded,
-            ),
+            ],
           ),
-          const SizedBox(width: OmniSpacing.sm),
-        ],
-        // Was 112 for three stacked filter bands; the header is now a search
-        // line plus one pill row, and the stale number left a dead white gap.
-        bottom: const PreferredSize(
-          // Search line + pill row + the rule under them.
-          preferredSize: Size.fromHeight(105),
-          child: InboxFilterBar(),
         ),
       ),
       body: Column(
