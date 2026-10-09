@@ -9,6 +9,7 @@ import '../../../../design/tokens/tokens.dart';
 import '../../../../security/session/session_controller.dart';
 import '../../../customers/customers.dart';
 import '../../../opportunities/opportunities.dart';
+import '../../../tasks/domain/task_permissions.dart';
 import '../../../tasks/routes.dart';
 import '../../../tasks/tasks.dart';
 import '../../application/inbox_providers.dart';
@@ -34,6 +35,10 @@ class ThreadIntro extends ConsumerWidget {
     final opportunitiesOn = ref
         .watch(sessionProvider)
         .featureEnabled('opportunities');
+    final policy = ref.watch(accessProvider);
+    final canOpenCustomer = policy.canAny(CustomerPermissions.anyRead);
+    final canCreateOpportunity = policy.can(OpportunityPermissions.create);
+    final canCreateTask = policy.can(TaskPermissions.write);
     final linked = conversation.isLinkedToCustomer;
     final customer = linked
         ? ref.watch(customerProvider(conversation.customerId!)).valueOrNull
@@ -97,7 +102,7 @@ class ThreadIntro extends ConsumerWidget {
             spacing: 18,
             runSpacing: 8,
             children: [
-              if (linked)
+              if (linked && canOpenCustomer)
                 _IntroAction(
                   icon: Icons.person_outline_rounded,
                   label: 'Hồ sơ',
@@ -106,13 +111,13 @@ class ThreadIntro extends ConsumerWidget {
                     pathParameters: {'id': conversation.customerId!},
                   ),
                 )
-              else if (access.canConvert)
+              else if (!linked && access.canConvert)
                 _IntroAction(
                   icon: Icons.person_add_alt_rounded,
                   label: 'Chuyển KH',
                   onTap: () => _convert(context),
                 ),
-              if (opportunitiesOn)
+              if (opportunitiesOn && canCreateOpportunity)
                 _IntroAction(
                   icon: Icons.trending_up_rounded,
                   label: 'Cơ hội',
@@ -123,16 +128,17 @@ class ThreadIntro extends ConsumerWidget {
                     },
                   ),
                 ),
-              _IntroAction(
-                icon: Icons.task_alt_rounded,
-                label: 'Việc',
-                onTap: () => context.pushNamed(
-                  TaskRoutes.create,
-                  extra: CreateTaskArgs(
-                    initialTitle: 'Liên hệ ${conversation.title}',
+              if (canCreateTask)
+                _IntroAction(
+                  icon: Icons.task_alt_rounded,
+                  label: 'Việc',
+                  onTap: () => context.pushNamed(
+                    TaskRoutes.create,
+                    extra: CreateTaskArgs(
+                      initialTitle: 'Liên hệ ${conversation.title}',
+                    ),
                   ),
                 ),
-              ),
             ],
           ),
         ],

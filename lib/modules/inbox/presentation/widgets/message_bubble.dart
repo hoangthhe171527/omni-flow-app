@@ -81,7 +81,7 @@ class MessageBubble extends StatelessWidget {
     final metaColor = dark
         ? Colors.white.withValues(alpha: 0.55)
         : outbound && !failed
-        ? Colors.white.withValues(alpha: 0.75)
+        ? Colors.white.withValues(alpha: 0.9)
         : OmniColors.chatMeta;
     // Góc ngoài 18; phía "đuôi" (phải với tin ra, trái với tin vào) chỉ bo 4
     // khi tin nằm trong một nhóm: đầu nhóm giữ 18 ở trên, cuối nhóm giữ 18 ở

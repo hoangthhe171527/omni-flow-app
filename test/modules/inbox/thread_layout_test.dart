@@ -33,7 +33,10 @@ void main() {
 
   setUp(() => api = _FakeInboxApi());
 
-  Widget host({List<Override> overrides = const []}) => ProviderScope(
+  Widget host({
+    List<Override> overrides = const [],
+    Set<String> extra = const {'tasks.write'},
+  }) => ProviderScope(
     overrides: [
       inboxApiProvider.overrideWithValue(api),
       realtimeClientProvider.overrideWithValue(
@@ -47,10 +50,11 @@ void main() {
           status: SessionStatus.authenticated,
           user: const SessionUser(id: 'u1', fullName: 'Kiệt', email: 'k@x.vn'),
           tenant: const SessionTenant(id: 't1', name: 'Xưởng đàn'),
-          policy: AccessPolicy(const {
+          policy: AccessPolicy({
             'inbox.read',
             'inbox.write',
             'inbox.convert',
+            ...extra,
           }),
         ),
       ),
@@ -66,8 +70,9 @@ void main() {
   Future<void> openThread(
     WidgetTester tester, {
     List<Override> overrides = const [],
+    Set<String> extra = const {'tasks.write'},
   }) async {
-    await tester.pumpWidget(host(overrides: overrides));
+    await tester.pumpWidget(host(overrides: overrides, extra: extra));
     await tester.pump();
     await tester.pump();
   }
@@ -107,6 +112,7 @@ void main() {
     api.history = [_serverMessage('m1', 'Chào shop')];
     await openThread(
       tester,
+      extra: const {'tasks.write', 'crm.customers.read'},
       overrides: [
         customerProvider('cu1').overrideWith(
           (ref) async => Customer(
@@ -121,6 +127,50 @@ void main() {
     expect(find.text('Hồ sơ'), findsOneWidget);
     expect(find.text('Chuyển KH'), findsNothing);
     expect(find.text('Khách từ 14/03 · 3,6 tr'), findsOneWidget);
+    await closeThread(tester);
+  });
+
+  testWidgets('không có quyền tạo việc: không có nút Việc', (tester) async {
+    api.history = [_serverMessage('m1', 'Chào shop')];
+    await openThread(tester, extra: const {});
+    expect(find.byType(ThreadIntro), findsOneWidget);
+    expect(find.text('Việc'), findsNothing);
+    await closeThread(tester);
+  });
+
+  testWidgets('đã gắn khách nhưng không có quyền xem khách: không có Hồ sơ', (
+    tester,
+  ) async {
+    api.customerId = 'cu1';
+    api.history = [_serverMessage('m1', 'Chào shop')];
+    await openThread(tester, overrides: [_customerOverride]);
+    expect(find.text('Hồ sơ'), findsNothing);
+    expect(find.text('Chuyển KH'), findsNothing);
+    await closeThread(tester);
+  });
+
+  testWidgets('có quyền xem khách: có Hồ sơ', (tester) async {
+    api.customerId = 'cu1';
+    api.history = [_serverMessage('m1', 'Chào shop')];
+    await openThread(
+      tester,
+      overrides: [_customerOverride],
+      extra: const {'tasks.write', 'crm.customers.read'},
+    );
+    expect(find.text('Hồ sơ'), findsOneWidget);
+    await closeThread(tester);
+  });
+
+  testWidgets('quyền tạo cơ hội quyết định nút Cơ hội', (tester) async {
+    api.history = [_serverMessage('m1', 'Chào shop')];
+    await openThread(tester);
+    expect(find.text('Cơ hội'), findsNothing);
+    await closeThread(tester);
+    await openThread(
+      tester,
+      extra: const {'tasks.write', 'crm.sales_opportunities.create'},
+    );
+    expect(find.text('Cơ hội'), findsOneWidget);
     await closeThread(tester);
   });
 
@@ -274,3 +324,7 @@ class _FakeInboxApi extends InboxApi {
     int perPage = AppConfig.defaultPerPage,
   }) async => const CursorPaged.empty();
 }
+
+final _customerOverride = customerProvider(
+  'cu1',
+).overrideWith((ref) async => Customer(id: 'cu1', name: 'Thuý Phạm'));
