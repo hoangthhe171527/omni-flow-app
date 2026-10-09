@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 import 'package:omni_app/design/components/components.dart';
 import 'package:omni_app/design/theme/omni_theme.dart';
 import 'package:omni_app/design/tokens/tokens.dart';
 import 'package:omni_app/modules/auth/application/login_controller.dart';
+import 'package:omni_app/modules/auth/auth_module.dart';
 import 'package:omni_app/modules/auth/presentation/login_page.dart';
 import 'package:omni_app/modules/auth/presentation/workspace_page.dart';
 import 'package:omni_app/security/session/auth_gateway.dart';
@@ -44,21 +46,126 @@ void main() {
   }
 
   group('đăng nhập', () {
-    testWidgets('khối mực mang logo và lời chào, biểu mẫu bên dưới', (
+    testWidgets('logo neo cho màn mở app, lời chào, hai ô và nút', (
       tester,
     ) async {
       await pump(tester, const LoginPage(), const []);
 
       final mark = tester.widget<OmniBrandMark>(find.byType(OmniBrandMark));
-      expect(mark.onInk, isTrue);
+      expect(mark.size, 64);
+      expect(mark.onInk, isNull);
+      final anchor = tester.widget<BrandAnchor>(find.byType(BrandAnchor));
+      expect(anchor.withWordmark, isFalse);
       expect(find.text('Chào mừng trở lại'), findsOneWidget);
       expect(find.text('Email làm việc'), findsOneWidget);
       expect(find.text('Mật khẩu'), findsOneWidget);
       expect(find.widgetWithText(FilledButton, 'Đăng nhập'), findsOneWidget);
       expect(find.text('Tiếp tục với Google'), findsOneWidget);
       expect(find.text('hoặc'), findsOneWidget);
-      expect(find.text('Quên mật khẩu'), findsOneWidget);
+      expect(find.text('Quên mật khẩu?'), findsOneWidget);
+      expect(find.text('Đăng ký'), findsOneWidget);
+      expect(find.text('Quyền riêng tư'), findsNothing);
+      expect(find.text('Hỗ trợ'), findsNothing);
+      expect(find.textContaining('xử lý công việc'), findsNothing);
       expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('Google nằm dưới nút Đăng nhập', (tester) async {
+      await pump(tester, const LoginPage(), const []);
+
+      final login = find.widgetWithText(FilledButton, 'Đăng nhập');
+      final google = find.byKey(const ValueKey('google-sign-in'));
+      expect(
+        tester.getTopLeft(google).dy > tester.getTopLeft(login).dy,
+        isTrue,
+      );
+    });
+
+    testWidgets('để trống rồi bấm Đăng nhập hiện lỗi dưới ô', (tester) async {
+      await pump(tester, const LoginPage(), const []);
+
+      await tester.tap(find.widgetWithText(FilledButton, 'Đăng nhập'));
+      await tester.pump();
+
+      expect(find.text('Vui lòng nhập email'), findsOneWidget);
+      expect(find.text('Vui lòng nhập mật khẩu'), findsOneWidget);
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull);
+    });
+
+    Future<double> shakeDx(WidgetTester tester, {required bool reduced}) async {
+      tester.view.physicalSize = const Size(390, 844);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      await tester.pumpWidget(
+        ProviderScope(
+          child: MaterialApp(
+            theme: OmniTheme.light(),
+            builder: (context, child) => MediaQuery(
+              data: MediaQuery.of(context).copyWith(disableAnimations: reduced),
+              child: child!,
+            ),
+            home: const LoginPage(),
+          ),
+        ),
+      );
+      final before = tester.getTopLeft(find.text('Email làm việc')).dx;
+      await tester.tap(find.widgetWithText(FilledButton, 'Đăng nhập'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 40));
+      final after = tester.getTopLeft(find.text('Email làm việc')).dx;
+      await tester.pumpAndSettle();
+      return after - before;
+    }
+
+    testWidgets('lỗi làm ô rung khi chuyển động bật', (tester) async {
+      expect(await shakeDx(tester, reduced: false), isNot(0));
+    });
+
+    testWidgets('tắt chuyển động thì lỗi không rung', (tester) async {
+      expect(await shakeDx(tester, reduced: true), 0);
+    });
+
+    testWidgets('Quên mật khẩu và Đăng ký điều hướng theo tên route', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(390, 844);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      final router = GoRouter(
+        routes: [
+          GoRoute(path: '/', builder: (_, _) => const LoginPage()),
+          GoRoute(
+            path: '/register',
+            name: AuthModule.register,
+            builder: (_, _) => const Text('trang-dang-ky'),
+          ),
+          GoRoute(
+            path: '/forgot-password',
+            name: AuthModule.forgot,
+            builder: (_, _) => const Text('trang-quen'),
+          ),
+        ],
+      );
+      await tester.pumpWidget(
+        ProviderScope(
+          child: MaterialApp.router(
+            theme: OmniTheme.light(),
+            routerConfig: router,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Đăng ký'));
+      await tester.pumpAndSettle();
+      expect(find.text('trang-dang-ky'), findsOneWidget);
+
+      router.pop();
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Quên mật khẩu?'));
+      await tester.pumpAndSettle();
+      expect(find.text('trang-quen'), findsOneWidget);
     });
 
     testWidgets('nút Google gọi đúng luồng đăng nhập riêng', (tester) async {

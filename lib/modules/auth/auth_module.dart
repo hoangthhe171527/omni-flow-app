@@ -10,9 +10,13 @@ class AuthModule extends OmniModule {
 
   static const login = 'auth.login';
   static const workspace = 'auth.workspace';
+  static const register = 'auth.register';
+  static const forgot = 'auth.forgot';
 
   static const loginPath = '/login';
   static const workspacePath = '/workspace';
+  static const registerPath = '/register';
+  static const forgotPath = '/forgot-password';
 
   @override
   String get id => 'auth';
