@@ -75,8 +75,10 @@ void main() {
     expect(find.text('Thuý Phạm'), findsOneWidget);
     expect(find.text('Đã chọn 1'), findsNothing);
 
-    // Giữ một hàng là vào chế độ chọn với hàng đó đã chọn.
-    await tester.longPress(find.text('Thuý Phạm'));
+    // "Chọn nhiều" vào chế độ chọn; chạm một hàng là chọn hàng đó.
+    await tester.tap(find.byTooltip('Chọn nhiều'));
+    await tester.pump();
+    await tester.tap(find.text('Thuý Phạm'));
     await tester.pump();
     expect(find.text('Đã chọn 1'), findsOneWidget);
 
@@ -124,7 +126,9 @@ void main() {
     await tester.pump();
     await tester.pump();
 
-    await tester.longPress(find.text('Thuý Phạm'));
+    await tester.tap(find.byTooltip('Chọn nhiều'));
+    await tester.pump();
+    await tester.tap(find.text('Thuý Phạm'));
     await tester.pump();
     await tester.tap(find.text('Minh Trần'));
     await tester.pump();

@@ -281,9 +281,7 @@ class _InboxPageState extends ConsumerState<InboxPage>
                             conversation: conversation,
                             selectionMode: selecting,
                             selected: _selected.contains(conversation.id),
-                            onLongPress: access.canLabel
-                                ? () => _toggleSelection(conversation.id)
-                                : null,
+                            onPeek: null,
                             onTap: () {
                               if (selecting) {
                                 _toggleSelection(conversation.id);

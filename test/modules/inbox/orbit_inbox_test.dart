@@ -48,7 +48,7 @@ void main() {
     return dots.isEmpty ? null : dots.first.color;
   }
 
-  testWidgets('chưa đọc: huy hiệu vàng chữ mực', (tester) async {
+  testWidgets('chưa đọc: huy hiệu nền màu chính', (tester) async {
     await tester.pumpWidget(
       host(
         ConversationRow(conversation: conversation(unread: 3), onTap: () {}),
@@ -58,8 +58,13 @@ void main() {
 
     final badge = tester.widget<OmniCountBadge>(find.byType(OmniCountBadge));
     expect(badge.count, 3);
-    expect(badge.color, OmniColors.sun);
-    expect(badge.foreground, OmniColors.ink);
+    expect(badge.color, OmniColors.primary);
+    expect(
+      badge.foreground,
+      Theme.of(
+        tester.element(find.byType(ConversationRow)),
+      ).colorScheme.onPrimary,
+    );
   });
 
   testWidgets('khẩn: chấm đỏ', (tester) async {
