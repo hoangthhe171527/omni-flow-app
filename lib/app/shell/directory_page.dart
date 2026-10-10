@@ -7,11 +7,14 @@ import '../../core/config/app_config.dart';
 import '../../core/error/app_exception.dart';
 import '../../core/module/module_registry.dart';
 import '../../core/module/nav_destination.dart';
+import '../../core/utils/text_search.dart';
 import '../../core/theme/theme_mode_controller.dart';
 import '../../design/components/components.dart';
 import '../../design/tokens/tokens.dart';
 import '../../modules/auth/application/login_controller.dart';
 import '../../security/session/session_controller.dart';
+
+export '../../core/utils/text_search.dart' show foldDiacritics, matchesQuery;
 
 /// Danh bạ "Tất cả": hồ sơ người dùng, rồi MỌI tính năng họ có quyền dùng,
 /// gom theo nhóm và tìm được bằng từ khoá.
@@ -851,61 +854,6 @@ class _ThemeSegment extends StatelessWidget {
       ),
     );
   }
-}
-
-/// Bỏ dấu để "kenh" tìm ra "Kết nối kênh".
-///
-/// Người dùng gõ trên bàn phím điện thoại, giữa lúc làm việc, và sẽ không bật
-/// bộ gõ tiếng Việt lên chỉ để tìm một màn hình.
-String foldDiacritics(String input) {
-  // Hai chuỗi này phải khớp từng ký tự một. Lệch một là mọi chữ sau đó ánh xạ
-  // sai — âm thầm, không lỗi, chỉ là tìm không ra. Nhóm theo nguyên âm để đếm
-  // được bằng mắt: a×17, e×11, i×5, o×17, u×11, y×5, đ×1 = 67.
-  const marks =
-      'àáạảãâầấậẩẫăằắặẳẵ' // a
-      'èéẹẻẽêềếệểễ' // e
-      'ìíịỉĩ' // i
-      'òóọỏõôồốộổỗơờớợởỡ' // o
-      'ùúụủũưừứựửữ' // u
-      'ỳýỵỷỹ' // y
-      'đ';
-  const plain =
-      'aaaaaaaaaaaaaaaaa'
-      'eeeeeeeeeee'
-      'iiiii'
-      'ooooooooooooooooo'
-      'uuuuuuuuuuu'
-      'yyyyy'
-      'd';
-  assert(
-    marks.length == plain.length,
-    'bảng bỏ dấu lệch: ${marks.length} vs ${plain.length}',
-  );
-
-  final buffer = StringBuffer();
-  for (final rune in input.toLowerCase().runes) {
-    final char = String.fromCharCode(rune);
-    final index = marks.indexOf(char);
-    buffer.write(index >= 0 ? plain[index] : char);
-  }
-
-  return buffer.toString();
-}
-
-/// Một mục có khớp từ khoá không.
-///
-/// Khớp cả dòng phụ: người dùng nhớ "zalo" chứ không nhớ tính năng tên là
-/// "Kết nối kênh".
-bool matchesQuery({
-  required String label,
-  required String? subtitle,
-  required String query,
-}) {
-  final needle = foldDiacritics(query.trim());
-  if (needle.isEmpty) return true;
-
-  return foldDiacritics(label).contains(needle) ||
-      foldDiacritics(subtitle ?? '').contains(needle);
 }
 
 /// Lọc trước khi dựng, để nhóm không còn mục nào thì biến mất luôn cả tiêu đề —

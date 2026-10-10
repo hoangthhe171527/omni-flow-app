@@ -13,7 +13,6 @@ import 'package:omni_app/modules/tasks/data/tasks_api.dart';
 import 'package:omni_app/modules/tasks/domain/task.dart';
 import 'package:omni_app/modules/tasks/domain/task_permissions.dart';
 import 'package:omni_app/modules/tasks/presentation/task_detail_page.dart';
-import 'package:omni_app/modules/tasks/presentation/widgets/subtask_row.dart';
 import 'package:omni_app/security/permissions/access_policy.dart';
 
 /// Dựng checklist ngay trên điện thoại.
@@ -64,6 +63,8 @@ void main() {
 
   RequestOptions sent() => adapter.singleRequest;
 
+  final addField = find.widgetWithText(TextField, 'Thêm việc con');
+
   /// Khung mặc định của flutter_test là 800×600 — thấp hơn một màn điện thoại,
   /// nên nút cuối danh sách việc con nằm ngoài vùng chạm được và mọi tap đều
   /// trượt. Đặt khung cao như máy thật.
@@ -77,16 +78,8 @@ void main() {
   }
 
   Future<void> openActions(WidgetTester tester) async {
-    // Hàng thứ hai ("Body ngaoi") — cái gõ nhầm.
-    // Chỉ tìm trong các hàng việc con: header màn cũng có ⋯ (Tuỳ chọn công việc).
-    await tester.tap(
-      find
-          .descendant(
-            of: find.byType(SubtaskRow),
-            matching: find.byIcon(Icons.more_horiz_rounded),
-          )
-          .last,
-    );
+    // Hàng thứ hai ("Body ngaoi") — cái gõ nhầm. Chạm TÊN để mở menu sửa.
+    await tester.tap(find.text('Body ngaoi'));
     await tester.pumpAndSettle();
   }
 
@@ -94,11 +87,8 @@ void main() {
     testWidgets('thêm được một việc con mới', (tester) async {
       await pumpApp(tester, host());
 
-      await tester.tap(find.text('Thêm việc con'));
-      await tester.pumpAndSettle();
-      await tester.enterText(sheetField, 'Lên dây');
-      await tester.pump();
-      await tester.tap(find.text('Lưu'));
+      await tester.enterText(addField, 'Lên dây');
+      await tester.testTextInput.receiveAction(TextInputAction.done);
       await tester.pumpAndSettle();
 
       expect(sent().method, 'POST');
@@ -109,13 +99,11 @@ void main() {
     testWidgets('không cho thêm việc con không tên', (tester) async {
       await pumpApp(tester, host());
 
-      await tester.tap(find.text('Thêm việc con'));
+      await tester.enterText(addField, '   ');
+      await tester.testTextInput.receiveAction(TextInputAction.done);
       await tester.pumpAndSettle();
 
-      final save = tester.widget<FilledButton>(
-        find.widgetWithText(FilledButton, 'Lưu'),
-      );
-      expect(save.onPressed, isNull);
+      expect(adapter.requests, isEmpty);
     });
   });
 
@@ -165,7 +153,7 @@ void main() {
       await pumpApp(tester, host(permissions: worker));
 
       expect(find.text('Tháo máy'), findsOneWidget);
-      expect(find.text('Thêm việc con'), findsNothing);
+      expect(addField, findsNothing);
       expect(find.byIcon(Icons.more_horiz_rounded), findsNothing);
     });
   });

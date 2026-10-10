@@ -24,7 +24,7 @@ import 'widgets/task_detail/section_title.dart';
 import 'widgets/task_detail/task_action_bar.dart';
 import 'widgets/task_detail/task_attachments.dart';
 import 'widgets/task_detail/task_description.dart';
-import 'widgets/task_detail/task_stage_list.dart';
+import 'widgets/task_detail/subtask_card.dart';
 import 'widgets/task_detail/task_title_block.dart';
 import 'widgets/task_detail/task_viewers.dart';
 
@@ -394,15 +394,16 @@ class _Loaded extends ConsumerWidget {
                 // Người thợ vẫn không thấy gì khi trống — họ tick chứ không
                 // dựng danh sách.
                 if (isAssigner || task.hasSubtasks)
-                  SliverPadding(
-                    padding: const EdgeInsets.only(top: OmniSpacing.sm),
-                    sliver: TaskStageList(
-                      task: task,
-                      state: state,
-                      enabled: canComplete,
-                      controller: controller,
-                      canEdit: isAssigner,
-                      currentUserId: myUserId,
+                  SliverToBoxAdapter(
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 14, 16, 0),
+                      child: SubtaskCard(
+                        task: task,
+                        state: state,
+                        controller: controller,
+                        canTick: canComplete,
+                        canEdit: isAssigner,
+                      ),
                     ),
                   ),
                 // Ảnh đính kèm đứng NGAY TRƯỚC điểm chấm: người kiểm nhìn ảnh

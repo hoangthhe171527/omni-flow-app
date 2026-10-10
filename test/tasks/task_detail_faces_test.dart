@@ -93,7 +93,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('KAWAI HAT-5 · 2308512'), findsOneWidget);
-      expect(find.textContaining('1/2'), findsOneWidget);
+      expect(find.text('Đã xong 1/2 việc con'), findsOneWidget);
     });
   });
 
