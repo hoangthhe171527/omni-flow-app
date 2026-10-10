@@ -98,4 +98,16 @@ void main() {
     expect(c.unread, 1);
     expect(c.customerName, full.customerName);
   });
+
+  test('unassigned() xoá người phụ trách — copyWith không xoá được null', () {
+    expect(full.copyWith(assigneeId: null).assigneeId, 'u-2'); // đúng thiết kế
+    final u = full.unassigned();
+    expect(u.assigneeId, isNull);
+    expect(u.assigneeName, isNull);
+    // Mọi trường khác giữ nguyên (#10 assigneeId, #11 assigneeName bị xoá).
+    final expected = _fields(full)
+      ..[10] = null
+      ..[11] = null;
+    expect(_fields(u), expected);
+  });
 }

@@ -158,10 +158,3 @@ class _StageTile extends StatelessWidget {
     );
   }
 }
-
-/// Phần trăm hiển thị trên vòng của một cơ hội: giai đoạn thắng = 100; còn lại
-/// xác suất đặt trên cơ hội, rồi mặc định của giai đoạn, rồi 0.
-int opportunityPercent(Opportunity opportunity, PipelineStageDef? stage) {
-  if (opportunity.isWon) return 100;
-  return opportunity.probability ?? stage?.probability ?? 0;
-}

@@ -57,7 +57,7 @@ class OpportunityRow extends ConsumerWidget {
             child: Row(
               children: [
                 OmniProgressRing(
-                  percent: opportunityPercent(opportunity, stage),
+                  percent: opportunity.displayPercent(pipeline),
                   color: arcColor,
                 ),
                 const SizedBox(width: 12),

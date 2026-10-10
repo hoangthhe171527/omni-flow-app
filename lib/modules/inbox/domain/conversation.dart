@@ -106,6 +106,29 @@ class Conversation {
     groupMembers: groupMembers ?? this.groupMembers,
   );
 
+  /// Bỏ người phụ trách. `copyWith(assigneeId: null)` GIỮ giá trị cũ (null =
+  /// "không đổi") — muốn xoá thì gọi hàm này, đừng thêm cờ vào copyWith.
+  Conversation unassigned() => Conversation(
+    id: id,
+    channel: channel,
+    status: status,
+    customerId: customerId,
+    customerName: customerName,
+    customerAvatar: customerAvatar,
+    lastMessage: lastMessage,
+    lastMessageAt: lastMessageAt,
+    unread: unread,
+    urgent: urgent,
+    assigneeId: null,
+    assigneeName: null,
+    tags: tags,
+    connectionId: connectionId,
+    sourceName: sourceName,
+    isGroup: isGroup,
+    groupName: groupName,
+    groupMembers: groupMembers,
+  );
+
   /// The same thread with its unread counter cleared.
   ///
   /// Opening a thread marks it read on the server, but the list held the old

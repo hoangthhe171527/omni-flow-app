@@ -153,13 +153,6 @@ void main() {
     expect(container.read(pipelineMineProvider), isFalse);
   });
 
-  test('đổi quy trình → cột chọn trở về giai đoạn mở đầu tiên', () async {
-    await container.read(pipelineCatalogProvider.future);
-    container.read(selectedStageProvider.notifier).state = 'tu_van';
-    container.read(selectedPipelineProvider.notifier).state = 'standard';
-    expect(container.read(selectedStageProvider), isNull);
-  });
-
   group('chuyển giai đoạn', () {
     final opp = Opportunity.fromJson({
       'id': 'o1',

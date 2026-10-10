@@ -30,14 +30,6 @@ final selectedPipelineProvider = StateProvider<String?>((ref) {
   return null;
 });
 
-/// The stage tab shown on the board, as a raw code; null = the first open
-/// stage of the pipeline. Reset whenever the pipeline changes — `tu_van` of
-/// one pipeline means nothing in another.
-final selectedStageProvider = StateProvider<String?>((ref) {
-  ref.watch(selectedPipelineProvider);
-  return null;
-});
-
 final pipelineSearchProvider = StateProvider<String>((ref) => '');
 
 /// "Của tôi": only deals the current user owns (`owner=me`). On by default

@@ -53,6 +53,7 @@ class _InlineEditRowState extends State<InlineEditRow> {
   TextEditingController? _controller;
   final _focus = FocusNode();
   bool _saving = false;
+  int _saveToken = 0;
   bool _flash = false;
   String? _error;
   Timer? _flashTimer;
@@ -80,6 +81,7 @@ class _InlineEditRowState extends State<InlineEditRow> {
   }
 
   void _close() {
+    _saveToken++; // lượt lưu đang bay không còn được chạm vào trạng thái
     _controller?.dispose();
     _controller = null;
     _error = null;
@@ -112,6 +114,7 @@ class _InlineEditRowState extends State<InlineEditRow> {
       widget.onEndEdit?.call();
       return;
     }
+    final token = ++_saveToken;
     setState(() {
       _saving = true;
       _error = null;
@@ -119,7 +122,7 @@ class _InlineEditRowState extends State<InlineEditRow> {
     try {
       await widget.onSave(draft);
     } catch (e) {
-      if (!mounted) return;
+      if (!mounted || token != _saveToken) return;
       setState(() {
         _saving = false;
         _error = _messageFor(e);
@@ -129,7 +132,7 @@ class _InlineEditRowState extends State<InlineEditRow> {
       });
       return;
     }
-    if (!mounted) return;
+    if (!mounted || token != _saveToken) return;
     setState(() => _saving = false);
     if (widget.isEditing) widget.onEndEdit?.call();
     _startFlash();
