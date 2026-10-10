@@ -188,17 +188,16 @@ class Message {
     required String text,
     String? clientId,
     List<MessageAttachment> attachments = const [],
-    bool asNote = false,
     Message? replyTo,
   }) {
     final key = clientId ?? newClientId();
     return Message(
       id: key,
       clientId: key,
-      author: asNote ? MessageAuthor.note : MessageAuthor.agent,
+      author: MessageAuthor.agent,
       text: text,
       sentAt: DateTime.now(),
-      status: asNote ? DeliveryStatus.none : DeliveryStatus.queued,
+      status: DeliveryStatus.queued,
       replyToMessageId: replyTo?.id,
       replyToText: replyTo?.text,
       replyToAuthorName: replyTo?.senderName,

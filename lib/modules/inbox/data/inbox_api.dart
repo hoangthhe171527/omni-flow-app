@@ -281,24 +281,6 @@ class InboxApi {
     return Message.fromJson(response.object);
   }
 
-  /// Internal note — stored on the thread, never delivered to the platform.
-  /// Idempotent on [clientMessageId], same contract as [send].
-  Future<Message> addNote(
-    String id,
-    String text, {
-    String? clientMessageId,
-  }) async {
-    final response = await _client.post(
-      '$_base/$id/notes',
-      body: {
-        'text': text,
-        if (clientMessageId != null && clientMessageId.isNotEmpty)
-          'client_message_id': clientMessageId,
-      },
-    );
-    return Message.fromJson(response.object);
-  }
-
   Future<void> markRead(String id) => _client.post('$_base/$id/read');
 
   Future<Conversation> assign(

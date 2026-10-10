@@ -315,15 +315,6 @@ class ThreadController
   /// see it for why that is not unconditional.
   Future<void> retry(Message failed) {
     final draft = failed.requeued();
-    if (draft.isNote) {
-      return _dispatch(
-        draft: draft,
-        replacing: failed.id,
-        call: () => ref
-            .read(inboxApiProvider)
-            .addNote(arg, draft.text, clientMessageId: draft.clientId),
-      );
-    }
     return _dispatch(
       draft: draft,
       replacing: failed.id,
@@ -375,16 +366,6 @@ class ThreadController
             replyToMessageId: replyTo?.id,
             clientMessageId: draft.clientId,
           ),
-    );
-  }
-
-  Future<void> addNote(String text) {
-    final draft = Message.optimistic(text: text, asNote: true);
-    return _dispatch(
-      draft: draft,
-      call: () => ref
-          .read(inboxApiProvider)
-          .addNote(arg, text, clientMessageId: draft.clientId),
     );
   }
 
