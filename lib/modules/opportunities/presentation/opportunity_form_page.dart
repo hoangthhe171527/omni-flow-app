@@ -140,6 +140,9 @@ class _OpportunityFormPageState extends ConsumerState<OpportunityFormPage> {
 
       ref.invalidate(pipelineSummaryProvider);
       ref.invalidate(stageOpportunitiesProvider);
+      if (ref.exists(segmentOpportunitiesProvider)) {
+        ref.invalidate(segmentOpportunitiesProvider);
+      }
       if (widget.isEdit) {
         ref.invalidate(opportunityProvider(widget.opportunityId!));
       }

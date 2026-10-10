@@ -1,13 +1,23 @@
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:intl/date_symbol_data_local.dart';
+import 'package:omni_app/core/config/app_config.dart';
+import 'package:omni_app/core/network/api_client.dart';
+import 'package:omni_app/core/module/extra_segment.dart';
 import 'package:omni_app/core/network/api_envelope.dart';
+import 'package:omni_app/design/components/components.dart';
 import 'package:omni_app/design/theme/omni_theme.dart';
 import 'package:omni_app/modules/customers/application/customers_providers.dart';
 import 'package:omni_app/modules/customers/data/customers_api.dart';
 import 'package:omni_app/modules/customers/domain/customer.dart';
 import 'package:omni_app/modules/customers/presentation/customers_page.dart';
+import 'package:omni_app/modules/opportunities/application/opportunities_providers.dart';
+import 'package:omni_app/modules/opportunities/data/opportunities_api.dart';
+import 'package:omni_app/modules/opportunities/domain/opportunity.dart';
+import 'package:omni_app/modules/opportunities/domain/pipeline_catalog.dart';
+import 'package:omni_app/modules/opportunities/presentation/opportunities_segment.dart';
 import 'package:omni_app/modules/settings/application/appearance_providers.dart';
 import 'package:omni_app/security/permissions/access_policy.dart';
 import 'package:omni_app/security/permissions/access_scope.dart';
@@ -37,7 +47,12 @@ class _FakeApi implements CustomersApi {
             'metadata': {'source': 'zalo'},
           }),
       ],
-      pagination: const ApiPagination.empty(),
+      pagination: const ApiPagination(
+        currentPage: 1,
+        lastPage: 1,
+        perPage: 20,
+        total: 2,
+      ),
     );
   }
 
@@ -51,9 +66,18 @@ void main() {
   late _FakeApi api;
   setUp(() => api = _FakeApi());
 
-  Widget host({bool canCreate = true}) => ProviderScope(
+  Widget host({
+    bool canCreate = true,
+    ResourceAccess? oppAccess,
+    Map<String, bool> features = const {},
+    int initialSegment = 0,
+  }) => ProviderScope(
     overrides: [
       customersApiProvider.overrideWithValue(api),
+      khachExtraSegmentProvider.overrideWithValue(opportunitiesKhachSegment),
+      opportunitiesApiProvider.overrideWithValue(_FakeOppApi()),
+      if (oppAccess != null)
+        opportunityAccessProvider.overrideWithValue(oppAccess),
       customerAccessProvider.overrideWithValue(
         ResourceAccess(readScope: AccessScope.own, canCreate: canCreate),
       ),
@@ -64,14 +88,66 @@ void main() {
           user: const SessionUser(id: 'u1', fullName: 'K', email: 'k@x.vn'),
           tenant: const SessionTenant(id: 't1', name: 'X'),
           policy: AccessPolicy(const {'tasks.write'}),
+          features: features,
         ),
       ),
     ],
     child: MaterialApp(
       theme: OmniTheme.light(TargetPlatform.android),
-      home: const CustomersPage(),
+      home: CustomersPage(initialSegment: initialSegment),
     ),
   );
+
+  const readAll = ResourceAccess(readScope: AccessScope.all);
+
+  testWidgets('có quyền + cờ bật → thanh đoạn với số; chạm "Cơ hội" → dải giai '
+      'đoạn', (t) async {
+    await t.pumpWidget(host(oppAccess: readAll));
+    await t.pumpAndSettle();
+    expect(find.byType(OmniSegmented), findsOneWidget);
+    expect(find.text('Khách hàng · 2'), findsOneWidget);
+    expect(find.text('Cơ hội · 7'), findsOneWidget);
+    expect(find.text('An Nguyễn'), findsOneWidget);
+
+    await t.tap(find.text('Cơ hội · 7'));
+    await t.pumpAndSettle();
+    expect(find.text('Báo giá'), findsOneWidget);
+    expect(find.text('Đang mở · 7'), findsOneWidget);
+    expect(find.text('An Nguyễn'), findsNothing);
+    // Hàng tìm đổi theo đoạn.
+    expect(find.byTooltip('Thêm khách'), findsNothing);
+
+    await t.tap(find.text('Khách hàng · 2'));
+    await t.pumpAndSettle();
+    expect(find.text('An Nguyễn'), findsOneWidget);
+    expect(find.text('Báo giá'), findsNothing);
+  });
+
+  testWidgets('initialSegment=1 (?seg=co-hoi) mở thẳng đoạn Cơ hội', (t) async {
+    await t.pumpWidget(host(oppAccess: readAll, initialSegment: 1));
+    await t.pumpAndSettle();
+    expect(find.text('Báo giá'), findsOneWidget);
+  });
+
+  testWidgets('cờ opportunities tắt → không có thanh đoạn', (t) async {
+    await t.pumpWidget(
+      host(oppAccess: readAll, features: const {'opportunities': false}),
+    );
+    await t.pumpAndSettle();
+    expect(find.byType(OmniSegmented), findsNothing);
+    expect(find.text('An Nguyễn'), findsOneWidget);
+  });
+
+  testWidgets('không có quyền đọc cơ hội → không có thanh đoạn, kể cả '
+      '?seg=co-hoi', (t) async {
+    await t.pumpWidget(
+      host(oppAccess: ResourceAccess.denied, initialSegment: 1),
+    );
+    await t.pumpAndSettle();
+    expect(find.byType(OmniSegmented), findsNothing);
+    expect(find.text('An Nguyễn'), findsOneWidget);
+    expect(find.text('Báo giá'), findsNothing);
+  });
 
   testWidgets('mặc định phạm vi own → gọi API với assigned_sales_rep_id', (
     t,
@@ -155,4 +231,74 @@ void main() {
     expect(all.activeCountFor(AccessScope.all), 0);
     expect(all.activeCountFor(AccessScope.own), 1);
   });
+}
+
+class _FakeOppApi extends OpportunitiesApi {
+  _FakeOppApi() : super(ApiClient(Dio()));
+
+  @override
+  Future<PipelineCatalog> pipelines() async => PipelineCatalog.fromJson({
+    'default': 'ban_le',
+    'pipelines': [
+      {
+        'code': 'ban_le',
+        'label': 'Bán lẻ',
+        'is_default': true,
+        'stages': [
+          {
+            'code': 'tu_van',
+            'label': 'Tư vấn',
+            'outcome': 'open',
+            'sort_order': 1,
+          },
+          {
+            'code': 'bao_gia',
+            'label': 'Báo giá',
+            'outcome': 'open',
+            'sort_order': 2,
+          },
+          {
+            'code': 'da_mua',
+            'label': 'Đã mua',
+            'outcome': 'won',
+            'sort_order': 3,
+          },
+        ],
+      },
+    ],
+  });
+
+  @override
+  Future<PipelineSummary> summary({
+    String? pipeline,
+    bool mine = false,
+  }) async => PipelineSummary.fromJson({
+    'count_by_stage': {'tu_van': 4, 'bao_gia': 3, 'da_mua': 5},
+    'value_by_stage': {'bao_gia': 1000000},
+  });
+
+  @override
+  Future<Paged<Opportunity>> list({
+    String? stageCode,
+    String? pipeline,
+    bool mine = false,
+    String? search,
+    int page = 1,
+    int perPage = AppConfig.defaultPerPage,
+  }) async => Paged(
+    items: [
+      Opportunity.fromJson({
+        'id': 'o1',
+        'title': 'Đàn U3',
+        'opportunity_stage': 'tu_van',
+        'opportunity_status': 'OPEN',
+      }),
+    ],
+    pagination: const ApiPagination(
+      currentPage: 1,
+      lastPage: 1,
+      perPage: 20,
+      total: 7,
+    ),
+  );
 }

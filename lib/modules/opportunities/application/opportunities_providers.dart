@@ -173,6 +173,93 @@ final stageOpportunitiesProvider = AsyncNotifierProvider.autoDispose
       StageOpportunitiesController.new,
     );
 
+/// Ô giai đoạn đang lọc ở đoạn "Cơ hội" của tab Khách; null = mọi giai đoạn
+/// mở. Về null khi đổi quy trình — mã của quy trình này vô nghĩa ở quy trình
+/// khác.
+final segmentStageProvider = StateProvider<String?>((ref) {
+  ref.watch(selectedPipelineProvider);
+  return null;
+});
+
+/// Danh sách của đoạn "Cơ hội": như [StageOpportunitiesController] nhưng giai
+/// đoạn lấy từ [segmentStageProvider]; null → không gửi `stage`, máy chủ trả
+/// mọi giai đoạn mở.
+class SegmentOpportunitiesController
+    extends AutoDisposeAsyncNotifier<StageListState> {
+  int _generation = 0;
+
+  @override
+  Future<StageListState> build() async {
+    _generation++;
+    final stageCode = ref.watch(segmentStageProvider);
+    final query = await ref.watch(boardQueryProvider.future);
+    final page = await ref
+        .watch(opportunitiesApiProvider)
+        .list(
+          stageCode: stageCode,
+          pipeline: query.pipeline,
+          mine: query.mine,
+          search: query.search.isEmpty ? null : query.search,
+        );
+    return StageListState(items: page.items, pagination: page.pagination);
+  }
+
+  Future<void> refresh() async {
+    ref.invalidate(pipelineSummaryProvider);
+    state = await AsyncValue.guard(build);
+  }
+
+  Future<void> loadMore() async {
+    final current = state.valueOrNull;
+    if (current == null || !current.hasMore || current.loadingMore) return;
+    final generation = _generation;
+    final stageCode = ref.read(segmentStageProvider);
+
+    state = AsyncData(
+      StageListState(
+        items: current.items,
+        pagination: current.pagination,
+        loadingMore: true,
+      ),
+    );
+
+    try {
+      final query = await ref.read(boardQueryProvider.future);
+      final next = await ref
+          .read(opportunitiesApiProvider)
+          .list(
+            stageCode: stageCode,
+            pipeline: query.pipeline,
+            mine: query.mine,
+            search: query.search.isEmpty ? null : query.search,
+            page: current.pagination.nextPage,
+          );
+      if (generation != _generation) return;
+      final seen = {for (final item in current.items) item.id};
+      state = AsyncData(
+        StageListState(
+          items: [
+            ...current.items,
+            ...next.items.where((item) => !seen.contains(item.id)),
+          ],
+          pagination: next.pagination,
+        ),
+      );
+    } catch (_) {
+      if (generation != _generation) return;
+      state = AsyncData(
+        StageListState(items: current.items, pagination: current.pagination),
+      );
+    }
+  }
+}
+
+final segmentOpportunitiesProvider =
+    AsyncNotifierProvider.autoDispose<
+      SegmentOpportunitiesController,
+      StageListState
+    >(SegmentOpportunitiesController.new);
+
 final opportunityProvider = FutureProvider.autoDispose
     .family<Opportunity, String>((ref, id) {
       return ref.watch(opportunitiesApiProvider).get(id);
@@ -235,6 +322,10 @@ class OpportunityActions {
     _ref.invalidate(pipelineSummaryProvider);
     // Every column: the one it left and the one it joined.
     _ref.invalidate(stageOpportunitiesProvider);
+    // Chưa dựng (đoạn Cơ hội chưa từng mở) thì invalidate sẽ dựng nó và gọi API.
+    if (_ref.exists(segmentOpportunitiesProvider)) {
+      _ref.invalidate(segmentOpportunitiesProvider);
+    }
     _ref.invalidate(opportunityProvider(id));
   }
 }
