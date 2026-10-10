@@ -59,8 +59,10 @@ class _NotificationsPageState extends ConsumerState<NotificationsPage> {
     ref.watch(notificationRealtimeProvider);
     final notifications = ref.watch(notificationsProvider);
     final unreadOnly = ref.watch(notificationUnreadOnlyProvider);
-    // Đếm ở server, qua mọi trang — không phải số dòng đang trên màn.
-    final unread = ref.watch(unreadNotificationBadgeProvider);
+    // Đếm ở server, qua mọi trang — không phải số dòng đang trên màn. Null =
+    // chưa về: thanh chọn không kèm số, thay vì "· 0" như thể đã đọc hết.
+    final unreadCount = ref.watch(unreadNotificationCountProvider).valueOrNull;
+    final unread = unreadCount ?? 0;
 
     return Scaffold(
       backgroundColor: scheme.surface,
@@ -88,7 +90,10 @@ class _NotificationsPageState extends ConsumerState<NotificationsPage> {
           child: Padding(
             padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
             child: OmniSegmented(
-              labels: ['Tất cả', 'Chưa đọc · $unread'],
+              labels: [
+                'Tất cả',
+                unreadCount == null ? 'Chưa đọc' : 'Chưa đọc · $unreadCount',
+              ],
               index: unreadOnly ? 1 : 0,
               onChanged: (i) =>
                   ref.read(notificationUnreadOnlyProvider.notifier).state =

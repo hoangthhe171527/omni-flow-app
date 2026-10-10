@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -10,10 +12,19 @@ import 'package:omni_app/security/session/session.dart';
 import 'package:omni_app/security/session/session_controller.dart';
 
 class _FakeApi implements NotificationsApi {
-  _FakeApi({required this.unread, this.emptyWhenUnreadOnly = false});
+  _FakeApi({
+    required this.unread,
+    this.emptyWhenUnreadOnly = false,
+    this.countPending = false,
+  });
 
   final int unread;
   final bool emptyWhenUnreadOnly;
+
+  /// Số chưa đọc chưa về (đang tải).
+  final bool countPending;
+
+  final marked = <String>[];
 
   @override
   Future<Paged<AppNotification>> list({
@@ -64,18 +75,22 @@ class _FakeApi implements NotificationsApi {
   }
 
   @override
-  Future<void> markRead(String id) async {}
+  Future<void> markRead(String id) async => marked.add(id);
 
   @override
   Future<void> markAllRead() async {}
 
   @override
-  Future<int> unreadCount() async => unread;
+  Future<int> unreadCount() async {
+    if (countPending) return Completer<int>().future;
+    return unread;
+  }
 }
 
 void main() {
   final tasks = <String>[];
   final convs = <String>[];
+  late _FakeApi api;
 
   setUp(() {
     tasks.clear();
@@ -87,6 +102,7 @@ void main() {
     int unread = 2,
     bool emptyWhenUnreadOnly = false,
     bool reducedMotion = false,
+    bool countPending = false,
   }) async {
     t.view.physicalSize = const Size(390, 844);
     t.view.devicePixelRatio = 1;
@@ -95,7 +111,11 @@ void main() {
       ProviderScope(
         overrides: [
           notificationsApiProvider.overrideWithValue(
-            _FakeApi(unread: unread, emptyWhenUnreadOnly: emptyWhenUnreadOnly),
+            api = _FakeApi(
+              unread: unread,
+              emptyWhenUnreadOnly: emptyWhenUnreadOnly,
+              countPending: countPending,
+            ),
           ),
           sessionProvider.overrideWithValue(const Session.unauthenticated()),
         ],
@@ -137,6 +157,29 @@ void main() {
       expect(tasks, ['t1']);
     },
   );
+
+  // Số chưa về mà hiện "· 0" là nói dối "không có gì chưa đọc".
+  testWidgets('đang tải số chưa đọc → "Chưa đọc" không kèm số', (t) async {
+    await pump(t, countPending: true);
+    expect(find.text('Chưa đọc'), findsOneWidget);
+    expect(find.textContaining('Chưa đọc ·'), findsNothing);
+  });
+
+  testWidgets('bấm thông báo chưa đọc → gọi markRead, dòng thành đã đọc', (
+    t,
+  ) async {
+    final handle = t.ensureSemantics();
+    await pump(t);
+    expect(find.bySemanticsLabel('Chưa đọc, tn2, bn2'), findsOneWidget);
+
+    await t.tap(find.text('tn2'));
+    await t.pumpAndSettle();
+
+    expect(api.marked, ['n2']);
+    expect(find.bySemanticsLabel('Chưa đọc, tn2, bn2'), findsNothing);
+    expect(find.bySemanticsLabel('tn2, bn2'), findsOneWidget);
+    handle.dispose();
+  });
 
   testWidgets('dòng là nút có nhãn "Chưa đọc, …" và nhận onTap ngữ nghĩa', (
     t,
