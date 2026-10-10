@@ -125,9 +125,13 @@ class _AssetSegments extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: thumb,
                   borderRadius: BorderRadius.circular(4),
-                  boxShadow: const [
+                  boxShadow: [
                     BoxShadow(
-                      color: Color(0x1F0B1A33),
+                      color: OmniColors.byBrightness(
+                        context,
+                        OmniColors.ink.withAlpha(0x1F),
+                        Colors.black.withAlpha(0x52),
+                      ),
                       blurRadius: 3,
                       offset: Offset(0, 1),
                     ),

@@ -353,12 +353,13 @@ class _CustomerFormPageState extends ConsumerState<CustomerFormPage> {
           FilledButton(
             onPressed: _saving ? null : _save,
             child: _saving
-                ? const SizedBox(
+                ? SizedBox(
                     width: 18,
                     height: 18,
+                    // Nút đang tắt khi lưu: nền là onSurface 12%, không phải primary.
                     child: CircularProgressIndicator(
                       strokeWidth: 2,
-                      color: Colors.white,
+                      color: scheme.onSurfaceVariant,
                     ),
                   )
                 : Text(widget.isEdit ? 'Lưu thay đổi' : 'Lưu khách hàng'),

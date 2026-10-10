@@ -178,9 +178,13 @@ class _GlassMenu extends StatelessWidget {
     return DecoratedBox(
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(14),
-        boxShadow: const [
+        boxShadow: [
           BoxShadow(
-            color: Color(0x400B1A33),
+            color: OmniColors.byBrightness(
+              context,
+              OmniColors.ink.withAlpha(0x40),
+              Colors.black.withAlpha(0x80),
+            ),
             offset: Offset(0, 16),
             blurRadius: 40,
           ),

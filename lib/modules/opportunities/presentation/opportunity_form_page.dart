@@ -327,12 +327,13 @@ class _OpportunityFormPageState extends ConsumerState<OpportunityFormPage> {
           FilledButton(
             onPressed: _saving ? null : _save,
             child: _saving
-                ? const SizedBox(
+                ? SizedBox(
                     width: 18,
                     height: 18,
+                    // Nút đang tắt khi lưu: nền là onSurface 12%, không phải primary.
                     child: CircularProgressIndicator(
                       strokeWidth: 2,
-                      color: Colors.white,
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
                     ),
                   )
                 : Text(widget.isEdit ? 'Lưu thay đổi' : 'Tạo cơ hội'),

@@ -254,9 +254,9 @@ class _InboxPageState extends ConsumerState<InboxPage>
               padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
               child: DecoratedBox(
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: scheme.surface,
                   borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: OmniColors.border),
+                  border: Border.all(color: scheme.outlineVariant),
                 ),
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(7),

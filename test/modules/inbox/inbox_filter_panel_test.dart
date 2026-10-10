@@ -32,6 +32,7 @@ void main() {
   Widget host({
     Set<String> permissions = const {'inbox.read', 'inbox.write'},
     bool reduceMotion = false,
+    bool dark = false,
   }) => ProviderScope(
     overrides: [
       inboxApiProvider.overrideWithValue(api),
@@ -51,7 +52,9 @@ void main() {
       ),
     ],
     child: MaterialApp(
-      theme: OmniTheme.light(TargetPlatform.android),
+      theme: dark
+          ? OmniTheme.dark(TargetPlatform.android)
+          : OmniTheme.light(TargetPlatform.android),
       builder: reduceMotion
           ? (c, child) => MediaQuery(
               data: MediaQuery.of(c).copyWith(disableAnimations: true),
@@ -216,10 +219,12 @@ void main() {
   );
 
   /// Mọi màu nền / viền / bóng mà thanh lọc tự vẽ.
-  List<Color> surfaceColors(WidgetTester tester) {
-    final roots = find.byWidgetPredicate(
-      (w) => w is InboxSearchRow || w is InboxFilterPanel,
-    );
+  List<Color> surfaceColors(WidgetTester tester, {Finder? within}) {
+    final roots =
+        within ??
+        find.byWidgetPredicate(
+          (w) => w is InboxSearchRow || w is InboxFilterPanel,
+        );
     final colors = <Color>[];
     void decoration(Decoration? d) {
       if (d is! BoxDecoration) return;
@@ -242,6 +247,11 @@ void main() {
 
     for (final w in tester.widgetList<Container>(
       find.descendant(of: roots, matching: find.byType(Container)),
+    )) {
+      decoration(w.decoration);
+    }
+    for (final w in tester.widgetList<DecoratedBox>(
+      find.descendant(of: roots, matching: find.byType(DecoratedBox)),
     )) {
       decoration(w.decoration);
     }
@@ -279,6 +289,25 @@ void main() {
     expect(colors, isNot(contains(OmniColors.accent)));
     final field = tester.widget<TextField>(find.byType(TextField));
     expect(field.style!.color, OmniColors.darkForeground);
+  });
+
+  testWidgets('giao diện tối: thẻ danh sách của InboxPage không trắng', (
+    tester,
+  ) async {
+    await tester.pumpWidget(host(dark: true, reduceMotion: true));
+    await tester.pump();
+    await tester.pump();
+    final colors = surfaceColors(tester, within: find.byType(InboxPage));
+    expect(colors, isNotEmpty);
+    expect(
+      colors.where((c) => c.toARGB32() == 0xFFFFFFFF),
+      isEmpty,
+      reason: 'nền trắng tinh lọt vào giao diện tối',
+    );
+    expect(colors, isNot(contains(OmniColors.border)));
+    expect(colors, contains(OmniColors.darkCard));
+    expect(colors, contains(OmniColors.darkBorder));
+    await closePage(tester);
   });
 
   testWidgets('giao diện sáng giữ nguyên màu cũ', (tester) async {
