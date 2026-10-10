@@ -64,12 +64,26 @@ class _SearchFieldState extends ConsumerState<_SearchField> {
   late final TextEditingController _controller;
   Timer? _debounce;
 
+  /// Giá trị ô này đã đẩy lên bộ lọc gần nhất. `search` đổi thành giá trị khác
+  /// nghĩa là bị đặt từ nơi khác (bộ lọc dựng lại khi quyền đổi).
+  late String _sent;
+
   @override
   void initState() {
     super.initState();
-    _controller = TextEditingController(
-      text: ref.read(customerFilterProvider).search,
-    );
+    _sent = ref.read(customerFilterProvider).search;
+    _controller = TextEditingController(text: _sent);
+  }
+
+  /// Huỷ lượt gõ đang chờ (không thì hẹn giờ cũ đặt lại chữ vừa bị xoá) và
+  /// cho ô theo giá trị mới.
+  void _external(String search) {
+    _debounce?.cancel();
+    _sent = search;
+    if (_controller.text != search) {
+      _controller.text = search;
+      setState(() {});
+    }
   }
 
   @override
@@ -83,7 +97,9 @@ class _SearchFieldState extends ConsumerState<_SearchField> {
     setState(() {});
     _debounce?.cancel();
     _debounce = Timer(const Duration(milliseconds: 300), () {
-      if (mounted) ref.read(customerFilterProvider.notifier).setSearch(value);
+      if (!mounted) return;
+      _sent = value;
+      ref.read(customerFilterProvider.notifier).setSearch(value);
     });
   }
 
@@ -91,11 +107,18 @@ class _SearchFieldState extends ConsumerState<_SearchField> {
     _debounce?.cancel();
     _controller.clear();
     setState(() {});
+    _sent = '';
     ref.read(customerFilterProvider.notifier).setSearch('');
   }
 
   @override
   Widget build(BuildContext context) {
+    ref.listen<String>(customerFilterProvider.select((f) => f.search), (
+      _,
+      next,
+    ) {
+      if (next != _sent) _external(next);
+    });
     final scheme = Theme.of(context).colorScheme;
     final meta = scheme.onSurfaceVariant;
 

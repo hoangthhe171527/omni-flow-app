@@ -79,12 +79,15 @@ class _SearchFieldState extends ConsumerState<_SearchField> {
   late final TextEditingController _controller;
   Timer? _debounce;
 
+  /// Giá trị ô này đã đẩy lên bộ lọc gần nhất. `search` đổi thành giá trị khác
+  /// nghĩa là bị đặt từ nơi khác.
+  late String _sent;
+
   @override
   void initState() {
     super.initState();
-    _controller = TextEditingController(
-      text: ref.read(inboxFilterProvider).search,
-    );
+    _sent = ref.read(inboxFilterProvider).search;
+    _controller = TextEditingController(text: _sent);
   }
 
   @override
@@ -98,7 +101,9 @@ class _SearchFieldState extends ConsumerState<_SearchField> {
     setState(() {});
     _debounce?.cancel();
     _debounce = Timer(const Duration(milliseconds: 300), () {
-      if (mounted) ref.read(inboxFilterProvider.notifier).setSearch(value);
+      if (!mounted) return;
+      _sent = value;
+      ref.read(inboxFilterProvider.notifier).setSearch(value);
     });
   }
 
@@ -106,18 +111,29 @@ class _SearchFieldState extends ConsumerState<_SearchField> {
     _debounce?.cancel();
     _controller.clear();
     setState(() {});
+    _sent = '';
     ref.read(inboxFilterProvider.notifier).setSearch('');
+  }
+
+  /// Bộ lọc bị đặt từ nơi khác: huỷ lượt gõ đang chờ (không thì hẹn giờ cũ
+  /// đặt lại chữ vừa bị xoá) và cho ô theo giá trị mới.
+  void _external(String search) {
+    _debounce?.cancel();
+    _sent = search;
+    if (_controller.text != search) {
+      _controller.text = search;
+      setState(() {});
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    // Bộ lọc bị đặt lại từ nơi khác (nút "Xoá bộ lọc") thì ô tìm theo về rỗng.
     ref.listen<String>(inboxFilterProvider.select((f) => f.search), (_, next) {
-      if (next != _controller.text && next.isEmpty) {
-        _controller.clear();
-        setState(() {});
-      }
+      if (next != _sent) _external(next);
     });
+    // "Xoá bộ lọc" đặt lại cả khi `search` vốn rỗng — lúc đó listener trên
+    // không chạy mà vẫn có thể còn lượt gõ đang chờ.
+    ref.listen<int>(inboxFilterResetsProvider, (_, _) => _external(''));
 
     return Container(
       height: 36,
@@ -386,6 +402,18 @@ class _PanelBody extends ConsumerWidget {
               ),
             ],
           ),
+          // Gỡ MỌI thứ huy hiệu đếm — cả tài khoản kênh và nhãn, vốn không có
+          // chip riêng trong panel.
+          if (filter.activeCount > 0)
+            Align(
+              alignment: Alignment.centerRight,
+              child: TextButton(
+                key: const Key('inbox-filter-clear'),
+                onPressed: controller.clearFilters,
+                style: TextButton.styleFrom(minimumSize: const Size(44, 44)),
+                child: const Text('Xoá bộ lọc'),
+              ),
+            ),
         ],
       ),
     );

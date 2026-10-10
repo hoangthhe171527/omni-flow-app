@@ -44,8 +44,20 @@ class InboxFilterController extends Notifier<InboxFilter> {
 
   void setLabel(String? label) => state = state.copyWith(label: label);
 
-  void reset() => state = const InboxFilter();
+  /// Đặt lại toàn bộ, kể cả ô tìm. Báo qua [inboxFilterResetsProvider] để ô
+  /// tìm huỷ lượt gõ đang chờ — kể cả khi `search` vốn đã rỗng nên không đổi.
+  void reset() {
+    state = const InboxFilter();
+    ref.read(inboxFilterResetsProvider.notifier).state++;
+  }
+
+  /// Gỡ mọi bộ lọc được đếm trong [InboxFilter.activeCount]; giữ ô tìm (ô tìm
+  /// có nút xoá riêng).
+  void clearFilters() => state = InboxFilter(search: state.search);
 }
+
+/// Tăng mỗi lần [InboxFilterController.reset] chạy.
+final inboxFilterResetsProvider = StateProvider<int>((ref) => 0);
 
 /// Query the current filter resolves to, including the caller's user id for the
 /// "Của tôi" filter.

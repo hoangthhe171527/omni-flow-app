@@ -4,11 +4,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:omni_app/core/config/app_config.dart';
+import 'package:omni_app/core/domain/channel.dart';
 import 'package:omni_app/core/network/api_client.dart';
 import 'package:omni_app/core/network/api_envelope.dart';
 import 'package:omni_app/core/realtime/realtime_client.dart';
 import 'package:omni_app/design/theme/omni_theme.dart';
+import 'package:omni_app/modules/inbox/application/inbox_providers.dart';
 import 'package:omni_app/modules/inbox/data/inbox_api.dart';
+import 'package:omni_app/modules/inbox/presentation/widgets/inbox_filter_bar.dart';
 import 'package:omni_app/modules/inbox/domain/conversation.dart';
 import 'package:omni_app/modules/inbox/domain/inbox_filter.dart';
 import 'package:omni_app/modules/inbox/presentation/inbox_page.dart';
@@ -120,6 +123,68 @@ void main() {
     expect(find.text('Chưa gán'), findsOneWidget);
     await closePage(tester);
     semantics.dispose();
+  });
+
+  ProviderContainer containerOf(WidgetTester tester) =>
+      ProviderScope.containerOf(tester.element(find.byType(InboxPage)));
+
+  // Số trên nút đếm cả tài khoản kênh và nhãn; panel phải xoá được mọi thứ
+  // nó đếm, không thì huy hiệu kẹt mãi một con số không gỡ được.
+  testWidgets('Xoá bộ lọc trong panel đưa mọi mục được đếm về mặc định', (
+    tester,
+  ) async {
+    final semantics = tester.ensureSemantics();
+    await tester.pumpWidget(host(reduceMotion: true));
+    await tester.pump();
+    await tester.pump();
+    await tester.tap(find.bySemanticsLabel('Bộ lọc'));
+    await tester.pump();
+    final clear = find.byKey(const Key('inbox-filter-clear'));
+    expect(clear, findsNothing, reason: 'chưa bật bộ lọc nào');
+
+    final container = containerOf(tester);
+    container.read(inboxFilterProvider.notifier)
+      ..setQuick(InboxQuickFilter.urgent)
+      ..setChannel(Channel.zalo)
+      ..setConnection('conn-1')
+      ..setLabel('vip')
+      ..setSearch('lan');
+    await tester.pump();
+    expect(container.read(inboxFilterProvider).activeCount, 4);
+
+    await tester.tap(clear);
+    await tester.pump();
+    final filter = container.read(inboxFilterProvider);
+    expect(filter.activeCount, 0);
+    expect(filter, const InboxFilter(search: 'lan'), reason: 'giữ ô tìm');
+    expect(find.byKey(const Key('inbox-filter-count')), findsNothing);
+    expect(clear, findsNothing);
+
+    await closePage(tester);
+    semantics.dispose();
+  });
+
+  // Gõ rồi bấm "Xoá bộ lọc" (đặt lại từ ngoài) trước khi hết 300ms: hẹn giờ
+  // cũ không được đặt lại chữ vừa bị xoá.
+  testWidgets('đặt lại từ ngoài huỷ lượt tìm đang chờ', (tester) async {
+    await tester.pumpWidget(host(reduceMotion: true));
+    await tester.pump();
+    await tester.pump();
+
+    final field = find.descendant(
+      of: find.byType(InboxSearchRow),
+      matching: find.byType(TextField),
+    );
+    await tester.enterText(field, 'lan');
+    await tester.pump(const Duration(milliseconds: 100));
+    containerOf(tester).read(inboxFilterProvider.notifier).reset();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+
+    expect(containerOf(tester).read(inboxFilterProvider).search, '');
+    expect(tester.widget<TextField>(field).controller!.text, '');
+
+    await closePage(tester);
   });
 }
 
