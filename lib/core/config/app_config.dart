@@ -24,5 +24,5 @@ abstract final class AppConfig {
 
   /// Tên phiên bản hiển thị ở cuối màn Tài khoản. Không có package_info:
   /// `test/settings/app_version_test.dart` giữ hằng này khớp `pubspec.yaml`.
-  static const String appVersion = '0.1.4';
+  static const String appVersion = '0.1.5';
 }
