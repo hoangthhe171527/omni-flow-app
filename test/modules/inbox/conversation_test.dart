@@ -68,6 +68,51 @@ void main() {
     },
   );
 
+  // Lưới thứ hai, không phụ thuộc _fields: constructor, copyWith và
+  // unassigned() chép tay từng trường, nên đếm thẳng trong mã nguồn — thêm
+  // trường mà quên một chỗ thì đỏ ở đây.
+  test('constructor, copyWith, unassigned đều mang đủ mọi trường', () {
+    final src = File(
+      'lib/modules/inbox/domain/conversation.dart',
+    ).readAsStringSync();
+    final body = src.substring(src.indexOf('class Conversation {'));
+    final declared = RegExp(
+      r'^  final [^\n]*;',
+      multiLine: true,
+    ).allMatches(body).length;
+
+    String section(String start, String end) {
+      final from = body.indexOf(start);
+      expect(from, isNot(-1), reason: 'không thấy "$start"');
+      return body.substring(from, body.indexOf(end, from));
+    }
+
+    final ctor = section('const Conversation({', '});');
+    expect(
+      RegExp(r'this\.\w+').allMatches(ctor).length,
+      declared,
+      reason: 'constructor',
+    );
+    final copyParams = section('Conversation copyWith({', '})');
+    expect(
+      RegExp(r'\?\s+\w+,').allMatches(copyParams).length,
+      declared,
+      reason: 'tham số copyWith',
+    );
+    final copyBody = section('}) => Conversation(', ');');
+    expect(
+      RegExp(r'^\s+\w+:', multiLine: true).allMatches(copyBody).length,
+      declared,
+      reason: 'thân copyWith',
+    );
+    final unassigned = section('Conversation unassigned() =>', ');');
+    expect(
+      RegExp(r'^\s+\w+:', multiLine: true).allMatches(unassigned).length,
+      declared,
+      reason: 'unassigned()',
+    );
+  });
+
   test('mọi trường đều khác giá trị mặc định (để phát hiện rơi trường)', () {
     const bare = Conversation(
       id: '',
