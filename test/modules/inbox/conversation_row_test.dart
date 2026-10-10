@@ -51,6 +51,29 @@ void main() {
     expect(find.text('2'), findsOneWidget);
   });
 
+  test(
+    'màu chữ nguồn Facebook đạt 4.5:1 (sáng trên trắng, tối trên nền tối)',
+    () {
+      double contrast(Color a, Color b) {
+        final x = a.computeLuminance(), y = b.computeLuminance();
+        final hi = x > y ? x : y, lo = x > y ? y : x;
+        return (hi + 0.05) / (lo + 0.05);
+      }
+
+      for (final ch in [Channel.facebook]) {
+        final m = ch.meta;
+        expect(
+          contrast(m.textColorOf(Brightness.light), Colors.white),
+          greaterThanOrEqualTo(4.5),
+        );
+        expect(
+          contrast(m.textColorOf(Brightness.dark), const Color(0xFF0B1220)),
+          greaterThanOrEqualTo(4.5),
+        );
+      }
+    },
+  );
+
   testWidgets('không nhãn → không chấm; chưa gán → –', (tester) async {
     await pump(
       tester,

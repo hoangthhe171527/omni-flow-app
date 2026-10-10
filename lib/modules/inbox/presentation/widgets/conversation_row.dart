@@ -293,7 +293,7 @@ class _SourceLine extends StatelessWidget {
           maxLines: 1,
           style: OmniType.micro.copyWith(
             fontWeight: FontWeight.w600,
-            color: meta.color,
+            color: meta.textColorOf(Theme.of(context).brightness),
           ),
         ),
         if (account != null)

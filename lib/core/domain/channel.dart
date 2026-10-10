@@ -71,6 +71,8 @@ class ChannelMeta {
     required this.color,
     required this.tint,
     required this.icon,
+    this.textColor,
+    this.textColorDark,
   });
 
   /// Full label — filters, settings, empty states.
@@ -90,6 +92,18 @@ class ChannelMeta {
 
   final IconData icon;
 
+  /// Màu CHỮ 12px của dòng nguồn khi [color] không đạt 4.5:1 trên nền trắng
+  /// (Facebook #1877F2 chỉ ~4.2:1). Null = dùng [color].
+  final Color? textColor;
+
+  /// Bản sáng của [textColor] cho chế độ tối. Null = dùng [color].
+  final Color? textColorDark;
+
+  /// Màu chữ nguồn theo chế độ sáng/tối đang bật.
+  Color textColorOf(Brightness brightness) => brightness == Brightness.dark
+      ? (textColorDark ?? color)
+      : (textColor ?? color);
+
   static ChannelMeta of(Channel channel) => switch (channel) {
     // "Facebook" alone read as "some Facebook thing" next to "Facebook cá
     // nhân"; name the asset so a Page and a personal inbox can't be confused.
@@ -100,6 +114,8 @@ class ChannelMeta {
       color: Color(0xFF1877F2),
       tint: Color(0xFFE7F0FE),
       icon: Icons.facebook_rounded,
+      textColor: Color(0xFF1565D8),
+      textColorDark: Color(0xFF6AA6FF),
     ),
     Channel.facebookPersonal => const ChannelMeta(
       name: 'Facebook cá nhân',

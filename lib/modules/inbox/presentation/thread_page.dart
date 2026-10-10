@@ -25,7 +25,7 @@ import '../../opportunities/opportunities.dart';
 import '../../tasks/domain/task_permissions.dart';
 import '../../tasks/routes.dart';
 import '../../tasks/tasks.dart';
-import '../inbox_module.dart';
+import '../inbox_routes.dart';
 import 'message_key_registry.dart';
 import 'thread_info_page.dart';
 import 'widgets/message_bubble.dart';
@@ -568,7 +568,7 @@ class _ThreadPageState extends ConsumerState<ThreadPage>
 
   Future<void> _openInfo() async {
     final result = await context.pushNamed<ThreadInfoResult>(
-      InboxModule.threadInfo,
+      InboxRoutes.threadInfo,
       pathParameters: {'id': widget.conversationId},
     );
     if (result == ThreadInfoResult.search && mounted) _openSearch();

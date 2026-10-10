@@ -10,7 +10,7 @@ import '../core/realtime/realtime_client.dart';
 import '../core/theme/theme_mode_controller.dart';
 import '../design/components/components.dart';
 import '../design/theme/omni_theme.dart';
-import '../modules/inbox/inbox_module.dart';
+import '../modules/inbox/inbox_routes.dart';
 import '../modules/notifications/application/notifications_providers.dart';
 import '../modules/notifications/application/push_notifications.dart';
 import '../modules/notifications/routes.dart';
@@ -144,7 +144,7 @@ class _OmniAppState extends ConsumerState<OmniApp> with WidgetsBindingObserver {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       final route = switch (intent.target) {
-        PushTarget.conversation => InboxModule.thread,
+        PushTarget.conversation => InboxRoutes.thread,
         PushTarget.task => TasksModule.detail,
       };
       ref

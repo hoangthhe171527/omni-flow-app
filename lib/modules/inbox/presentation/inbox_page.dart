@@ -16,7 +16,7 @@ import '../application/inbox_providers.dart';
 import '../application/inbox_realtime.dart';
 import '../data/inbox_api.dart';
 import '../domain/inbox_filter.dart';
-import '../inbox_module.dart';
+import '../inbox_routes.dart';
 import '../domain/conversation.dart';
 import 'widgets/conversation_actions.dart';
 import 'widgets/conversation_peek.dart';
@@ -133,7 +133,7 @@ class _InboxPageState extends ConsumerState<InboxPage>
       context: context,
       conversation: c,
       onOpen: () =>
-          context.pushNamed(InboxModule.thread, pathParameters: {'id': c.id}),
+          context.pushNamed(InboxRoutes.thread, pathParameters: {'id': c.id}),
       onAction: (action) => switch (action) {
         PeekAction.markRead => actions.markRead(c),
         PeekAction.assign => actions.assign(c),
@@ -308,7 +308,7 @@ class _InboxPageState extends ConsumerState<InboxPage>
                                 return;
                               }
                               context.pushNamed(
-                                InboxModule.thread,
+                                InboxRoutes.thread,
                                 pathParameters: {'id': conversation.id},
                               );
                             },

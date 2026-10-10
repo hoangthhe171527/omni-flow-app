@@ -20,7 +20,7 @@ import 'package:omni_app/modules/inbox/data/inbox_api.dart';
 import 'package:omni_app/modules/inbox/domain/conversation.dart';
 import 'package:omni_app/modules/inbox/domain/inbox_filter.dart';
 import 'package:omni_app/modules/inbox/domain/message.dart';
-import 'package:omni_app/modules/inbox/inbox_module.dart';
+import 'package:omni_app/modules/inbox/inbox_routes.dart';
 import 'package:omni_app/modules/inbox/presentation/thread_page.dart';
 import 'package:omni_app/modules/inbox/presentation/thread_info_page.dart';
 import 'package:omni_app/modules/inbox/presentation/widgets/message_bubble.dart';
@@ -317,7 +317,7 @@ void main() {
         ),
         GoRoute(
           path: '/inbox/:id/info',
-          name: InboxModule.threadInfo,
+          name: InboxRoutes.threadInfo,
           builder: (context, _) => Builder(
             builder: (context) {
               WidgetsBinding.instance.addPostFrameCallback(

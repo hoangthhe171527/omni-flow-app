@@ -227,7 +227,9 @@ class _PeekCard extends ConsumerWidget {
                                       text: conversation.channel.sourceKind,
                                       style: TextStyle(
                                         fontWeight: FontWeight.w600,
-                                        color: meta.color,
+                                        color: meta.textColorOf(
+                                          Theme.of(context).brightness,
+                                        ),
                                       ),
                                     ),
                                     if (account != null)

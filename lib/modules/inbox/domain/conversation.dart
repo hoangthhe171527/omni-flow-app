@@ -63,28 +63,48 @@ class Conversation {
     this.groupMembers = const [],
   });
 
-  /// Bản sao với trạng thái / số tin chưa đọc đổi (các trường còn lại giữ).
-  Conversation copyWith({ConversationStatus? status, int? unread}) =>
-      Conversation(
-        id: id,
-        channel: channel,
-        status: status ?? this.status,
-        customerId: customerId,
-        customerName: customerName,
-        customerAvatar: customerAvatar,
-        lastMessage: lastMessage,
-        lastMessageAt: lastMessageAt,
-        unread: unread ?? this.unread,
-        urgent: urgent,
-        assigneeId: assigneeId,
-        assigneeName: assigneeName,
-        tags: tags,
-        connectionId: connectionId,
-        sourceName: sourceName,
-        isGroup: isGroup,
-        groupName: groupName,
-        groupMembers: groupMembers,
-      );
+  /// Bản sao với các trường đổi (trường không truyền giữ nguyên). Mọi trường
+  /// của constructor PHẢI có mặt ở đây — `conversation_test.dart` giữ điều đó.
+  /// Trường nullable không xoá được về null bằng copyWith.
+  Conversation copyWith({
+    String? id,
+    Channel? channel,
+    ConversationStatus? status,
+    String? customerId,
+    String? customerName,
+    String? customerAvatar,
+    String? lastMessage,
+    DateTime? lastMessageAt,
+    int? unread,
+    bool? urgent,
+    String? assigneeId,
+    String? assigneeName,
+    List<String>? tags,
+    String? connectionId,
+    String? sourceName,
+    bool? isGroup,
+    String? groupName,
+    List<GroupMember>? groupMembers,
+  }) => Conversation(
+    id: id ?? this.id,
+    channel: channel ?? this.channel,
+    status: status ?? this.status,
+    customerId: customerId ?? this.customerId,
+    customerName: customerName ?? this.customerName,
+    customerAvatar: customerAvatar ?? this.customerAvatar,
+    lastMessage: lastMessage ?? this.lastMessage,
+    lastMessageAt: lastMessageAt ?? this.lastMessageAt,
+    unread: unread ?? this.unread,
+    urgent: urgent ?? this.urgent,
+    assigneeId: assigneeId ?? this.assigneeId,
+    assigneeName: assigneeName ?? this.assigneeName,
+    tags: tags ?? this.tags,
+    connectionId: connectionId ?? this.connectionId,
+    sourceName: sourceName ?? this.sourceName,
+    isGroup: isGroup ?? this.isGroup,
+    groupName: groupName ?? this.groupName,
+    groupMembers: groupMembers ?? this.groupMembers,
+  );
 
   /// The same thread with its unread counter cleared.
   ///
@@ -92,26 +112,7 @@ class Conversation {
   /// count until the next full refetch — so a rep came back from a conversation
   /// they had just read and it was still bold with a red badge. Nothing on the
   /// screen could tell them what they had and had not read.
-  Conversation asRead() => Conversation(
-    id: id,
-    channel: channel,
-    status: status,
-    customerId: customerId,
-    customerName: customerName,
-    customerAvatar: customerAvatar,
-    lastMessage: lastMessage,
-    lastMessageAt: lastMessageAt,
-    unread: 0,
-    urgent: urgent,
-    assigneeId: assigneeId,
-    assigneeName: assigneeName,
-    tags: tags,
-    connectionId: connectionId,
-    sourceName: sourceName,
-    isGroup: isGroup,
-    groupName: groupName,
-    groupMembers: groupMembers,
-  );
+  Conversation asRead() => copyWith(unread: 0);
 
   factory Conversation.fromJson(Map<String, dynamic> json) {
     return Conversation(
