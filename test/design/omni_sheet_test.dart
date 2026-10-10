@@ -63,4 +63,37 @@ void main() {
     expect(sheet(tester).showDragHandle, isFalse);
     expect(topRadius(tester), greaterThan(14));
   });
+
+  testWidgets('giảm chuyển động: sheet hiện ngay, không hoạt ảnh', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        builder: (context, child) => MediaQuery(
+          data: MediaQuery.of(context).copyWith(disableAnimations: true),
+          child: child!,
+        ),
+        home: Scaffold(
+          // GestureDetector chứ không TextButton: gợn sóng của nút là một hoạt
+          // ảnh riêng, sẽ làm phép đo "sheet không trượt" sai.
+          body: Builder(
+            builder: (context) => GestureDetector(
+              onTap: () => showOmniSheet<void>(
+                context: context,
+                builder: (_) =>
+                    const SizedBox(height: 200, child: Text('nội dung')),
+              ),
+              child: const Text('mở'),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.tap(find.text('mở'));
+    await tester.pump();
+    await tester.pump();
+
+    expect(find.text('nội dung'), findsOneWidget);
+    expect(tester.hasRunningAnimations, isFalse);
+  });
 }

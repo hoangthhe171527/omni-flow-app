@@ -247,6 +247,10 @@ Future<T?> showOmniSheet<T>({
     context: context,
     isScrollControlled: true,
     useSafeArea: true,
+    // Giảm chuyển động: sheet hiện ngay, không trượt lên.
+    sheetAnimationStyle: OmniMotion.enabled(context)
+        ? null
+        : AnimationStyle.noAnimation,
     // iOS bo góc rõ hơn Material và luôn có thanh kéo — đó là dấu hiệu người
     // dùng iPhone đọc để biết sheet này kéo xuống đóng được. Trên Android thì
     // nút back của hệ thống đã nói điều đó rồi.

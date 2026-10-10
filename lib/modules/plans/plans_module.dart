@@ -84,7 +84,9 @@ class PlansModule extends OmniModule {
       routeName: teams,
       area: NavArea.work,
       weight: NavWeight.primary,
-      // Sau "Việc của tôi" (10). Thợ mở hàng đợi của mình trước, toàn cảnh sau.
+      // Thanh tab (tab_order.dart) chọn mục này theo tên route, không theo
+      // `order`; `order` chỉ còn quyết định thứ tự trong "Tất cả". Sau "Việc của
+      // tôi" (10): thợ mở hàng đợi của mình trước, toàn cảnh sau.
       order: 20,
       access: AccessRequirement.any(TaskPermissions.anyRead),
       feature: 'tasks',

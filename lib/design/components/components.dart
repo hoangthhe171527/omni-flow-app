@@ -17,6 +17,7 @@ export 'omni_segmented.dart';
 export 'omni_splash.dart';
 export 'omni_states.dart';
 export 'omni_tabs.dart';
+export 'omni_task_chip.dart';
 export 'omni_top_bar.dart';
 
 /// Lớp nền tảng đi kèm barrel này: module gọi showOmniConfirm mà không phải

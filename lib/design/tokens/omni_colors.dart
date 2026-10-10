@@ -88,6 +88,14 @@ abstract final class OmniColors {
   static Color controlBorderOf(BuildContext context) =>
       _byBrightness(context, controlBorder, darkBorderInteractive);
 
+  /// Rãnh của thanh tiến độ mảnh (#EEF1F5 / tối: darkMuted).
+  static Color trackOf(BuildContext context) =>
+      _byBrightness(context, muted, darkMuted);
+
+  /// Đoạn "còn lại" của thanh tiến độ (#C9D2DE / tối: darkBorderInteractive).
+  static Color mutedBarOf(BuildContext context) =>
+      _byBrightness(context, controlBorder, darkBorderInteractive);
+
   /// Ranh giới của thành phần TƯƠNG TÁC: ô nhập, nút viền, chip chưa chọn.
   ///
   /// Thiết kế ghi #8A97AB, nhưng giá trị đó chỉ đạt 2.96:1 trên thẻ và 2.76:1

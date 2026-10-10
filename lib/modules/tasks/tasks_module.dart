@@ -15,10 +15,11 @@ import 'presentation/workload_page.dart';
 
 /// Work assigned to the signed-in person.
 ///
-/// This takes a permanent tab rather than a slot in "Thêm" because for a
-/// workshop worker it is the reason the app is open at all. The tab it takes is
-/// the one Cơ hội used to hold — four is the ceiling, and a sales pipeline is
-/// not what the floor needs at arm's reach.
+/// "Việc của tôi" KHÔNG còn là tab dưới: tab Việc là danh sách dự án theo team
+/// (xem `PlansModule`, `core/nav/tab_order.dart`). Nó sống trong "Tất cả",
+/// nhóm Công việc, và mọi route `/tasks*` vẫn nguyên — với thợ xưởng đây vẫn
+/// là lý do app được mở, nên `test/tasks/my_tasks_reachable_test.dart` canh
+/// đường vào này.
 class TasksModule extends OmniModule {
   const TasksModule();
 
