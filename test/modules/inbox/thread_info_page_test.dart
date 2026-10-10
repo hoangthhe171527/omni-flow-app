@@ -1,15 +1,20 @@
 import 'dart:async';
 
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:intl/date_symbol_data_local.dart';
+import 'package:omni_app/core/config/app_config.dart';
 import 'package:omni_app/core/domain/channel.dart';
+import 'package:omni_app/core/network/api_client.dart';
+import 'package:omni_app/core/network/api_envelope.dart';
 import 'package:omni_app/modules/customers/customers.dart';
 import 'package:omni_app/modules/inbox/application/inbox_providers.dart';
 import 'package:omni_app/modules/opportunities/opportunities.dart';
 import 'package:omni_app/modules/inbox/data/inbox_api.dart';
 import 'package:omni_app/modules/inbox/domain/conversation.dart';
+import 'package:omni_app/modules/inbox/domain/inbox_filter.dart';
 import 'package:omni_app/modules/inbox/presentation/thread_info_page.dart';
 import 'package:omni_app/security/permissions/access_policy.dart';
 import 'package:omni_app/security/session/session.dart';
@@ -27,6 +32,10 @@ void main() {
     source: Channel.zalo,
   );
 
+  const rw = {'inbox.read', 'inbox.write'};
+  const withCustomer = {...rw, CustomerPermissions.read};
+  const withOpp = {...rw, OpportunityPermissions.create};
+
   void tall(WidgetTester tester) {
     tester.view.physicalSize = const Size(400, 2400);
     tester.view.devicePixelRatio = 1;
@@ -39,9 +48,12 @@ void main() {
     required Widget home,
     Customer? customer,
     String status = 'open',
+    InboxApi? api,
+    bool contextFails = false,
   }) {
     return ProviderScope(
       overrides: [
+        if (api != null) inboxApiProvider.overrideWithValue(api),
         sessionProvider.overrideWithValue(
           Session(
             status: SessionStatus.authenticated,
@@ -69,9 +81,10 @@ void main() {
         ),
         if (customer != null)
           customerProvider('k1').overrideWith((ref) async => customer),
-        conversationContextProvider(
-          'c1',
-        ).overrideWith((ref) async => const ConversationContext()),
+        conversationContextProvider('c1').overrideWith((ref) async {
+          if (contextFails) throw Exception('offline');
+          return const ConversationContext();
+        }),
         conversationAssetsProvider(
           'c1',
         ).overrideWith((ref) async => const ConversationAssets()),
@@ -86,6 +99,8 @@ void main() {
     Customer? customer,
     Set<String> permissions = const {'inbox.read', 'inbox.write'},
     String status = 'open',
+    InboxApi? api,
+    bool contextFails = false,
   }) async {
     tall(tester);
     await tester.pumpWidget(
@@ -94,6 +109,8 @@ void main() {
         permissions: permissions,
         customer: customer,
         status: status,
+        api: api,
+        contextFails: contextFails,
         home: const ThreadInfoPage(conversationId: 'c1'),
       ),
     );
@@ -150,7 +167,7 @@ void main() {
   testWidgets('cơ hội bật: có Tạo cơ hội; tắt: không có thẻ Bán hàng', (
     tester,
   ) async {
-    await pump(tester, const {'opportunities': true});
+    await pump(tester, const {'opportunities': true}, permissions: withOpp);
     expect(find.text('Tạo cơ hội'), findsOneWidget);
     expect(find.text('BÁN HÀNG'), findsOneWidget);
     await pump(tester, const {'opportunities': false});
@@ -165,7 +182,12 @@ void main() {
   });
 
   testWidgets('đã gắn khách có số: Gọi + số điện thoại hiện', (tester) async {
-    await pump(tester, const {}, customer: baseCustomer);
+    await pump(
+      tester,
+      const {},
+      customer: baseCustomer,
+      permissions: withCustomer,
+    );
     expect(find.text('Gọi'), findsOneWidget);
     expect(find.text('0912345468'), findsOneWidget);
     expect(find.text('Hồ sơ'), findsOneWidget);
@@ -242,4 +264,109 @@ void main() {
     );
     expect(opacity.opacity, 1);
   });
+
+  testWidgets('Hồ sơ ẩn khi không có quyền đọc khách; hiện khi có', (
+    tester,
+  ) async {
+    await pump(tester, const {}, customer: baseCustomer);
+    expect(find.text('Hồ sơ'), findsNothing);
+    expect(find.text('Chuyển KH'), findsNothing);
+    await pump(
+      tester,
+      const {},
+      customer: baseCustomer,
+      permissions: withCustomer,
+    );
+    expect(find.text('Hồ sơ'), findsOneWidget);
+  });
+
+  testWidgets('Tạo cơ hội ẩn khi thiếu quyền tạo; thẻ Bán hàng ẩn theo', (
+    tester,
+  ) async {
+    await pump(tester, const {'opportunities': true});
+    expect(find.text('Tạo cơ hội'), findsNothing);
+    expect(find.text('BÁN HÀNG'), findsNothing);
+    await pump(tester, const {'opportunities': true}, permissions: withOpp);
+    expect(find.text('Tạo cơ hội'), findsOneWidget);
+  });
+
+  testWidgets('lỗi tải cơ hội: báo lỗi + Thử lại, không mời Tạo cơ hội', (
+    tester,
+  ) async {
+    await pump(
+      tester,
+      const {'opportunities': true},
+      permissions: withOpp,
+      contextFails: true,
+    );
+    expect(find.text('Không tải được cơ hội. Thử lại'), findsOneWidget);
+    expect(find.text('Tạo cơ hội'), findsNothing);
+  });
+
+  testWidgets('Phụ trách và Nhãn không bấm được khi thiếu quyền', (
+    tester,
+  ) async {
+    VoidCallback? onTapOf(String label) => tester
+        .widget<InkWell>(
+          find
+              .ancestor(of: find.text(label), matching: find.byType(InkWell))
+              .first,
+        )
+        .onTap;
+
+    await pump(tester, const {}, permissions: const {'inbox.read'});
+    expect(onTapOf('Phụ trách'), isNull);
+    expect(onTapOf('Nhãn'), isNull);
+
+    await pump(tester, const {});
+    expect(onTapOf('Phụ trách'), isNotNull);
+    expect(onTapOf('Nhãn'), isNotNull);
+    await tester.tap(find.text('Nhãn'));
+    await tester.pumpAndSettle();
+    expect(find.text('Gắn nhãn'), findsOneWidget);
+  });
+
+  testWidgets('bấm Lưu trữ hội thoại → setStatus(closed)', (tester) async {
+    final api = _RecordingApi();
+    await pump(tester, const {}, api: api);
+    await tester.tap(find.text('Lưu trữ hội thoại'));
+    await tester.pumpAndSettle();
+    expect(api.statuses, [('c1', ConversationStatus.closed)]);
+  });
+
+  testWidgets('bấm Mở lại hội thoại → setStatus(open)', (tester) async {
+    final api = _RecordingApi();
+    await pump(tester, const {}, api: api, status: 'closed');
+    await tester.tap(find.text('Mở lại hội thoại'));
+    await tester.pumpAndSettle();
+    expect(api.statuses, [('c1', ConversationStatus.open)]);
+  });
+}
+
+class _RecordingApi extends InboxApi {
+  _RecordingApi() : super(ApiClient(Dio()));
+
+  final statuses = <(String, ConversationStatus)>[];
+
+  @override
+  Future<Conversation> setStatus(String id, ConversationStatus status) async {
+    statuses.add((id, status));
+    return Conversation(
+      id: id,
+      channel: Channel.zalo,
+      status: status,
+      customerName: 'Thuý Phạm',
+    );
+  }
+
+  @override
+  Future<InboxFacets> facets(Map<String, dynamic> query) async =>
+      const InboxFacets();
+
+  @override
+  Future<CursorPaged<Conversation>> list({
+    required Map<String, dynamic> query,
+    String? before,
+    int perPage = AppConfig.defaultPerPage,
+  }) async => const CursorPaged.empty();
 }

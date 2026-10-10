@@ -317,6 +317,17 @@ class _AssetTile extends StatelessWidget {
             size: OmniIconSize.lg,
           ),
         ),
+        Positioned(
+          left: 4,
+          right: 4,
+          bottom: 3,
+          child: Text(
+            item.name ?? 'Video',
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: OmniType.micro.copyWith(color: Colors.white),
+          ),
+        ),
       ],
     );
   }

@@ -5,6 +5,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:omni_app/core/config/app_config.dart';
 import 'package:omni_app/core/domain/channel.dart';
@@ -19,8 +20,11 @@ import 'package:omni_app/modules/inbox/data/inbox_api.dart';
 import 'package:omni_app/modules/inbox/domain/conversation.dart';
 import 'package:omni_app/modules/inbox/domain/inbox_filter.dart';
 import 'package:omni_app/modules/inbox/domain/message.dart';
+import 'package:omni_app/modules/inbox/inbox_module.dart';
 import 'package:omni_app/modules/inbox/presentation/thread_page.dart';
+import 'package:omni_app/modules/inbox/presentation/thread_info_page.dart';
 import 'package:omni_app/modules/inbox/presentation/widgets/message_bubble.dart';
+import 'package:omni_app/modules/inbox/presentation/widgets/thread_header.dart';
 import 'package:omni_app/modules/settings/application/appearance_providers.dart';
 import 'package:omni_app/security/permissions/access_policy.dart';
 import 'package:omni_app/security/session/session.dart';
@@ -288,6 +292,93 @@ void main() {
     await closeThread(tester);
   });
 
+  testWidgets('tìm tin từ trang Thông tin: kết quả không gồm ghi chú nội bộ', (
+    tester,
+  ) async {
+    api.searchResult = [
+      Message(
+        id: 'n1',
+        author: MessageAuthor.note,
+        text: 'ghi chú kín',
+        sentAt: DateTime.utc(2026, 1, 1, 9),
+      ),
+      Message(
+        id: 'm9',
+        author: MessageAuthor.customer,
+        text: 'đàn piano',
+        sentAt: DateTime.utc(2026, 1, 1, 9, 5),
+      ),
+    ];
+    final router = GoRouter(
+      routes: [
+        GoRoute(
+          path: '/',
+          builder: (_, _) => const ThreadPage(conversationId: 'c1'),
+        ),
+        GoRoute(
+          path: '/inbox/:id/info',
+          name: InboxModule.threadInfo,
+          builder: (context, _) => Builder(
+            builder: (context) {
+              WidgetsBinding.instance.addPostFrameCallback(
+                (_) => Navigator.of(context).pop(ThreadInfoResult.search),
+              );
+              return const Scaffold();
+            },
+          ),
+        ),
+      ],
+    );
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          inboxApiProvider.overrideWithValue(api),
+          realtimeClientProvider.overrideWithValue(
+            RealtimeClient(
+              config: const RealtimeConfig.disabled(),
+              authorizer: (_, _) async => '',
+            ),
+          ),
+          sessionProvider.overrideWithValue(
+            Session(
+              status: SessionStatus.authenticated,
+              user: const SessionUser(
+                id: 'u1',
+                fullName: 'Kiệt',
+                email: 'k@x.vn',
+              ),
+              tenant: const SessionTenant(id: 't1', name: 'Xưởng đàn'),
+              policy: const AccessPolicy({'inbox.read', 'inbox.write'}),
+            ),
+          ),
+          backgroundProvider.overrideWith(FixedBackground.new),
+        ],
+        child: MaterialApp.router(
+          theme: OmniTheme.light(TargetPlatform.android),
+          routerConfig: router,
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.pump();
+    await tester.tap(find.text('Thuý Phạm').first);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+    await tester.pump(const Duration(milliseconds: 400));
+    final field = find.descendant(
+      of: find.byType(ThreadHeader),
+      matching: find.byType(TextField),
+    );
+    await tester.enterText(field, 'đàn');
+    await tester.pump(const Duration(milliseconds: 400));
+    await tester.pump();
+
+    final ids = state(tester).messages.map((m) => m.id);
+    expect(ids, contains('m9'));
+    expect(ids, isNot(contains('n1')));
+    await closeThread(tester);
+  });
+
   // Đợt 7 P2: dải ngày tách theo NGÀY VN, không theo ngày UTC. 23:30 và 00:30
   // giờ VN cùng một ngày UTC (16:30Z, 17:30Z) nhưng là hai ngày ở VN.
   testWidgets('tin 23:30 và 00:30 giờ VN nằm ở hai ngày khác nhau', (
@@ -526,6 +617,7 @@ class _FakeInboxApi extends InboxApi {
   _FakeInboxApi() : super(ApiClient(Dio()));
 
   List<Message> history = const [];
+  List<Message> searchResult = const [];
   bool failNextSend = false;
 
   /// Holds the next send open so a test can look at the optimistic bubble.
@@ -560,6 +652,10 @@ class _FakeInboxApi extends InboxApi {
       cursor: const CursorPage.empty(),
     );
   }
+
+  @override
+  Future<List<Message>> searchMessages(String id, String query) async =>
+      searchResult;
 
   @override
   Future<Conversation> get(String id) async => Conversation(

@@ -127,11 +127,26 @@ class _InfoBody extends ConsumerWidget {
     final customer = c.isLinkedToCustomer
         ? ref.watch(customerProvider(c.customerId!)).valueOrNull
         : null;
+    final policy = ref.watch(accessProvider);
+    final canOpenCustomer = policy.canAny(CustomerPermissions.anyRead);
+    final canCreateOpportunity =
+        opportunitiesOn && policy.can(OpportunityPermissions.create);
     final phone = customer?.phone.trim() ?? '';
     final assets = ref.watch(conversationAssetsProvider(c.id));
     final closed = c.status == ConversationStatus.closed;
 
-    Future<void> call() => launchUrl(Uri(scheme: 'tel', path: phone));
+    Future<void> call() async {
+      final messenger = ScaffoldMessenger.of(context);
+      var opened = false;
+      try {
+        opened = await launchUrl(Uri(scheme: 'tel', path: phone));
+      } catch (_) {}
+      if (!opened && messenger.mounted) {
+        messenger.showSnackBar(
+          const SnackBar(content: Text('Không mở được ứng dụng gọi điện.')),
+        );
+      }
+    }
 
     return Align(
       alignment: Alignment.topCenter,
@@ -156,7 +171,7 @@ class _InfoBody extends ConsumerWidget {
                       label: 'Gọi',
                       onTap: call,
                     ),
-                  if (c.isLinkedToCustomer)
+                  if (c.isLinkedToCustomer && canOpenCustomer)
                     _QuickAction(
                       icon: Icons.person_outline_rounded,
                       label: 'Hồ sơ',
@@ -165,7 +180,7 @@ class _InfoBody extends ConsumerWidget {
                         pathParameters: {'id': c.customerId!},
                       ),
                     )
-                  else if (access.canConvert)
+                  else if (!c.isLinkedToCustomer && access.canConvert)
                     _QuickAction(
                       icon: Icons.person_add_alt_rounded,
                       label: 'Chuyển KH',
@@ -218,13 +233,12 @@ class _InfoBody extends ConsumerWidget {
                 ],
               ),
             ),
-            if (opportunitiesOn) ...[
-              const SizedBox(height: 16),
-              _Rise(
-                index: 2,
-                child: _SalesCard(conversation: c, customer: customer),
+            if (opportunitiesOn)
+              _SalesCard(
+                conversation: c,
+                customer: customer,
+                canCreate: canCreateOpportunity,
               ),
-            ],
             const SizedBox(height: 16),
             _Rise(
               index: 3,
@@ -488,6 +502,12 @@ class _InfoRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final labelText = Text(
+      label,
+      style: OmniType.body.copyWith(
+        color: plainLabel ? scheme.onSurface : _muted(context),
+      ),
+    );
     return InkWell(
       onTap: onTap,
       child: ConstrainedBox(
@@ -496,19 +516,13 @@ class _InfoRow extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 12),
           child: Row(
             children: [
-              Text(
-                label,
-                style: OmniType.body.copyWith(
-                  color: plainLabel ? scheme.onSurface : _muted(context),
-                ),
-              ),
+              if (value == null) Expanded(child: labelText) else labelText,
               if (value != null) ...[
                 const SizedBox(width: 10),
                 Expanded(
                   child: Align(alignment: Alignment.centerRight, child: value),
                 ),
-              ] else
-                const Spacer(),
+              ],
               if (onTap != null && !plainLabel) ...[
                 const SizedBox(width: 6),
                 Icon(
@@ -516,7 +530,7 @@ class _InfoRow extends StatelessWidget {
                   size: 16,
                   color: OmniColors.byBrightness(
                     context,
-                    const Color(0xFFA9B2C1),
+                    OmniColors.mutedForeground,
                     OmniColors.darkMutedForeground,
                   ),
                 ),
@@ -570,14 +584,22 @@ class _Assignee extends StatelessWidget {
           height: 20,
           alignment: Alignment.center,
           decoration: BoxDecoration(
-            color: OmniColors.ink,
+            color: OmniColors.byBrightness(
+              context,
+              OmniColors.ink,
+              OmniColors.darkMuted,
+            ),
             borderRadius: BorderRadius.circular(4),
           ),
           child: Text(
             initials,
             style: OmniType.micro.copyWith(
               fontWeight: FontWeight.w600,
-              color: Colors.white,
+              color: OmniColors.byBrightness(
+                context,
+                Colors.white,
+                OmniColors.darkForeground,
+              ),
               height: 1,
             ),
           ),
@@ -654,10 +676,15 @@ class _LabelDot extends StatelessWidget {
 
 /// Thẻ "BÁN HÀNG": cơ hội của khách, tổng đã mua, hoặc lối tạo cơ hội.
 class _SalesCard extends ConsumerWidget {
-  const _SalesCard({required this.conversation, required this.customer});
+  const _SalesCard({
+    required this.conversation,
+    required this.customer,
+    required this.canCreate,
+  });
 
   final Conversation conversation;
   final Customer? customer;
+  final bool canCreate;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -666,11 +693,23 @@ class _SalesCard extends ConsumerWidget {
     final catalog = ref.watch(pipelineCatalogProvider).valueOrNull;
     final opportunities = contextData.valueOrNull?.opportunities ?? const [];
     final loaded = !contextData.isLoading;
+    final failed = contextData.hasError;
     final bought = customer?.lifetimeValue ?? 0;
+    final showCreate = canCreate && loaded && !failed && opportunities.isEmpty;
+    if (opportunities.isEmpty && bought <= 0 && !showCreate && !failed) {
+      return const SizedBox.shrink();
+    }
 
-    return _Section(
+    final card = _Section(
       title: 'BÁN HÀNG',
       children: [
+        if (failed)
+          _InfoRow(
+            label: 'Không tải được cơ hội. Thử lại',
+            plainLabel: true,
+            onTap: () =>
+                ref.invalidate(conversationContextProvider(conversation.id)),
+          ),
         for (final o in opportunities)
           InkWell(
             onTap: () => context.pushNamed(
@@ -732,7 +771,7 @@ class _SalesCard extends ConsumerWidget {
               style: _valueStyle(context),
             ),
           ),
-        if (loaded && opportunities.isEmpty)
+        if (showCreate)
           _InfoRow(
             label: 'Tạo cơ hội',
             plainLabel: true,
@@ -745,6 +784,10 @@ class _SalesCard extends ConsumerWidget {
             ),
           ),
       ],
+    );
+    return Padding(
+      padding: const EdgeInsets.only(top: 16),
+      child: _Rise(index: 2, child: card),
     );
   }
 }
