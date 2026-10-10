@@ -150,7 +150,7 @@ class _PlanBoardPageState extends ConsumerState<PlanBoardPage> {
         // Dải tab nhóm việc nằm ngay dưới tên dự án và ĐỌC cùng rổ đã chia với
         // bảng, nên số trên tab đi theo bộ lọc.
         bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(SectionTabs.height + 1),
+          preferredSize: const Size.fromHeight(SectionTabs.height),
           child: _BoardTabs(
             planId: widget.planId,
             person: _person,
@@ -167,7 +167,7 @@ class _PlanBoardPageState extends ConsumerState<PlanBoardPage> {
           // Bảng là route gốc (rootNavigator) nên thanh kính mờ của shell
           // không phủ lên đây — nút không cần nâng lên khỏi nó.
           : FloatingActionButtonTheme(
-              data: const FloatingActionButtonThemeData(
+              data: Theme.of(context).floatingActionButtonTheme.copyWith(
                 extendedSizeConstraints: BoxConstraints.tightFor(height: 48),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.all(Radius.circular(14)),
@@ -407,7 +407,7 @@ class _BoardTabs extends ConsumerWidget {
       child: SizedBox(
         height: SectionTabs.height,
         width: double.infinity,
-        child: board == null
+        child: board == null || board.columns.isEmpty
             ? null
             // Chỉ dải tab dựng lại khi lướt trang; các cột đứng yên.
             : ValueListenableBuilder<int>(

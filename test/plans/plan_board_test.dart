@@ -368,6 +368,25 @@ void main() {
       expect(find.text('Xoá dự án'), findsOneWidget);
     });
 
+    testWidgets('Xoá dự án từ ⋯ mở hộp xác nhận', (tester) async {
+      await tester.pumpWidget(
+        board(
+          'member',
+          perms: const {
+            'tasks.read',
+            'tasks.write',
+            'tasks.projects.manage.all',
+          },
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.byTooltip('Tuỳ chọn dự án'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Xoá dự án'));
+      await tester.pumpAndSettle();
+      expect(find.text('Xoá dự án “Đàn cơ”?'), findsOneWidget);
+    });
+
     testWidgets('thành viên thường không thấy ⋯', (tester) async {
       await tester.pumpWidget(board('member'));
       await tester.pumpAndSettle();
@@ -458,6 +477,20 @@ void main() {
       expect(
         tester.getSize(find.byType(FloatingActionButton)).height,
         greaterThanOrEqualTo(48),
+      );
+      final context = tester.element(find.byType(FloatingActionButton));
+      final material = tester.widget<Material>(
+        find
+            .descendant(
+              of: find.byType(FloatingActionButton),
+              matching: find.byType(Material),
+            )
+            .first,
+      );
+      expect(
+        material.color,
+        Theme.of(context).colorScheme.primary,
+        reason: 'theme FAB của app phải còn nguyên, không bị thay mất',
       );
     });
   });

@@ -83,4 +83,25 @@ void main() {
     final second = t.getTopLeft(find.byKey(const Key('section-underline'))).dx;
     expect(second, greaterThan(first));
   });
+  testWidgets('nhiều nhóm: dải cuộn và tab được chọn nằm trong vùng nhìn', (
+    t,
+  ) async {
+    Widget tabs(int i) => wrap(
+      SizedBox(
+        width: 360,
+        child: SectionTabs(
+          sections: [for (var k = 0; k < 12; k++) s('$k', 'Công đoạn số $k')],
+          current: i,
+          onSelected: (_) {},
+        ),
+      ),
+    );
+    await t.pumpWidget(tabs(0));
+    await t.pumpAndSettle();
+    final last = find.text('Công đoạn số 11', skipOffstage: false);
+    expect(t.getRect(last).left, greaterThan(360));
+    await t.pumpWidget(tabs(11));
+    await t.pumpAndSettle();
+    expect(t.getRect(last).right, lessThanOrEqualTo(360));
+  });
 }
