@@ -51,6 +51,7 @@ class _InlineEditRowState extends State<InlineEditRow> {
   static const _genericError = 'Không lưu được. Thử lại.';
 
   TextEditingController? _controller;
+  final _focus = FocusNode();
   bool _saving = false;
   bool _flash = false;
   String? _error;
@@ -89,6 +90,7 @@ class _InlineEditRowState extends State<InlineEditRow> {
   void dispose() {
     _flashTimer?.cancel();
     _controller?.dispose();
+    _focus.dispose();
     super.dispose();
   }
 
@@ -100,8 +102,13 @@ class _InlineEditRowState extends State<InlineEditRow> {
   Future<void> _save() async {
     final controller = _controller;
     if (_saving || controller == null) return;
-    final draft = controller.text.trim();
-    if (draft == widget.value.trim()) {
+    final draft = widget.multiline
+        ? controller.text.trimRight()
+        : controller.text.trim();
+    final old = widget.multiline
+        ? widget.value.trimRight()
+        : widget.value.trim();
+    if (draft == old) {
       widget.onEndEdit?.call();
       return;
     }
@@ -117,11 +124,14 @@ class _InlineEditRowState extends State<InlineEditRow> {
         _saving = false;
         _error = _messageFor(e);
       });
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && widget.isEditing) _focus.requestFocus();
+      });
       return;
     }
     if (!mounted) return;
     setState(() => _saving = false);
-    widget.onEndEdit?.call();
+    if (widget.isEditing) widget.onEndEdit?.call();
     _startFlash();
   }
 
@@ -155,7 +165,7 @@ class _InlineEditRowState extends State<InlineEditRow> {
           ? const Duration(milliseconds: 600)
           : Duration.zero,
       decoration: BoxDecoration(
-        color: _flash ? flashColor : Colors.transparent,
+        color: _flash ? flashColor : flashColor.withValues(alpha: 0),
         borderRadius: BorderRadius.circular(8),
       ),
       constraints: const BoxConstraints(minHeight: 44),
@@ -272,8 +282,12 @@ class _InlineEditRowState extends State<InlineEditRow> {
               },
               child: TextField(
                 controller: controller,
+                focusNode: _focus,
                 autofocus: true,
-                enabled: !_saving,
+                readOnly: _saving,
+                onChanged: (_) {
+                  if (_error != null) setState(() => _error = null);
+                },
                 keyboardType:
                     widget.keyboardType ??
                     (widget.multiline ? TextInputType.multiline : null),

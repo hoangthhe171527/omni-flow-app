@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -74,9 +76,9 @@ void main() {
     await t.pump();
     expect(saved, '0901');
     expect(find.byType(TextField), findsNothing);
-    expect(_bg(t), isNot(Colors.transparent));
+    expect(_bg(t)!.a, greaterThan(0));
     await t.pump(const Duration(milliseconds: 800));
-    expect(_bg(t), Colors.transparent);
+    expect(_bg(t)!.a, 0);
     await t.pumpAndSettle();
   });
 
@@ -133,18 +135,22 @@ void main() {
   });
 
   testWidgets('lỗi 422: ô vẫn mở, giữ chữ, hiện lỗi, không chớp', (t) async {
+    var calls = 0;
     await t.pumpWidget(
       host(
         (e, s, n) => _row(
           editing: e,
           start: s,
           end: n,
-          onSave: (d) async => throw const ValidationException(
-            'Dữ liệu không hợp lệ',
-            errors: {
-              'email': ['Email không hợp lệ'],
-            },
-          ),
+          onSave: (d) async {
+            calls++;
+            throw const ValidationException(
+              'Dữ liệu không hợp lệ',
+              errors: {
+                'email': ['Email không hợp lệ'],
+              },
+            );
+          },
         ),
       ),
     );
@@ -158,7 +164,12 @@ void main() {
       t.widget<TextField>(find.byType(TextField)).controller!.text,
       'sai@',
     );
-    expect(_bg(t), Colors.transparent);
+    expect(_bg(t)!.a, 0);
+    // Vẫn còn focus: Enter lưu lại ngay, không cần chạm lại.
+    await t.testTextInput.receiveAction(TextInputAction.done);
+    await t.pump();
+    expect(calls, 2);
+    expect(find.text('Email không hợp lệ'), findsOneWidget);
   });
 
   testWidgets('lỗi không phải 422: câu chung', (t) async {
@@ -251,10 +262,10 @@ void main() {
     await t.enterText(find.byType(TextField), '0901');
     await t.testTextInput.receiveAction(TextInputAction.done);
     await t.pump();
-    expect(_bg(t), isNot(Colors.transparent));
+    expect(_bg(t)!.a, greaterThan(0));
     expect(t.hasRunningAnimations, isFalse);
     await t.pump(const Duration(milliseconds: 700));
-    expect(_bg(t), Colors.transparent);
+    expect(_bg(t)!.a, 0);
   });
 
   testWidgets('nút ✕/✓ có vùng chạm ≥ 44', (t) async {
@@ -278,5 +289,52 @@ void main() {
         greaterThanOrEqualTo(44),
       );
     }
+  });
+
+  testWidgets('chống lưu đôi: Enter/✓ lúc đang chờ chỉ gọi một lần', (t) async {
+    var calls = 0;
+    final gate = Completer<void>();
+    await t.pumpWidget(
+      host(
+        (e, s, n) => _row(
+          editing: e,
+          start: s,
+          end: n,
+          onSave: (d) {
+            calls++;
+            return gate.future;
+          },
+        ),
+      ),
+    );
+    await t.tap(find.text('a@b.vn'));
+    await t.pump();
+    await t.enterText(find.byType(TextField), 'c@d.vn');
+    await t.testTextInput.receiveAction(TextInputAction.done);
+    await t.pump();
+    await t.testTextInput.receiveAction(TextInputAction.done);
+    await t.pump();
+    expect(calls, 1);
+    gate.complete();
+    await t.pump();
+    await t.pump(const Duration(milliseconds: 800));
+    await t.pumpAndSettle();
+  });
+
+  testWidgets('✕ huỷ: đóng ô, không gọi onSave', (t) async {
+    var calls = 0;
+    await t.pumpWidget(
+      host(
+        (e, s, n) =>
+            _row(editing: e, start: s, end: n, onSave: (d) async => calls++),
+      ),
+    );
+    await t.tap(find.text('a@b.vn'));
+    await t.pump();
+    await t.enterText(find.byType(TextField), 'x@y.vn');
+    await t.tap(find.bySemanticsLabel('Huỷ'));
+    await t.pump();
+    expect(calls, 0);
+    expect(find.byType(TextField), findsNothing);
   });
 }
