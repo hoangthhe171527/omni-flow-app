@@ -317,6 +317,7 @@ class _FakeOpportunitiesApi extends OpportunitiesApi {
     String? pipeline,
     bool mine = false,
     String? search,
+    String? customerId,
     int page = 1,
     int perPage = AppConfig.defaultPerPage,
   }) async {

@@ -377,3 +377,12 @@ Future<Opportunity> moveOpportunityStage(
   Opportunity opportunity,
   String stageCode,
 ) => ref.read(opportunityActionsProvider).moveStage(opportunity, stageCode);
+
+/// Cơ hội của một khách (`customer_id`), mọi trạng thái, tối đa 50.
+final customerOpportunitiesProvider = FutureProvider.autoDispose
+    .family<List<Opportunity>, String>((ref, customerId) async {
+      final page = await ref
+          .watch(opportunitiesApiProvider)
+          .list(customerId: customerId, perPage: 50);
+      return page.items;
+    });

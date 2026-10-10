@@ -6,6 +6,8 @@ import '../../../security/permissions/resource_access.dart';
 import '../../../security/session/session_controller.dart';
 import '../data/customers_api.dart';
 import '../domain/customer.dart';
+import '../domain/customer_activity.dart';
+import '../domain/customer_summary.dart';
 import '../domain/customer_permissions.dart';
 
 final customerAccessProvider = Provider<ResourceAccess>((ref) {
@@ -162,3 +164,25 @@ final customerProvider = FutureProvider.autoDispose.family<Customer, String>((
 ) {
   return ref.watch(customersApiProvider).get(id);
 });
+
+/// Thẻ tổng hợp của hồ sơ khách. Lỗi (403 ngoài phạm vi, API cũ chưa có
+/// endpoint) → `null`: trang vẫn mở, các ô tiền/đơn hiện "—".
+final customerSummaryProvider = FutureProvider.autoDispose
+    .family<CustomerSummary?, String>((ref, id) async {
+      try {
+        return await ref.watch(customersApiProvider).summary(id);
+      } catch (_) {
+        return null;
+      }
+    });
+
+/// Người dùng có đọc được nhật ký (`crm.interaction_logs.read`) — không thì
+/// đoạn hoạt động bị ẩn thay vì gọi API rồi nhận 403.
+final customerActivityAccessProvider = Provider<bool>((ref) {
+  return ref.watch(accessProvider).crud('crm.interaction_logs').canRead;
+});
+
+final customerActivityProvider = FutureProvider.autoDispose
+    .family<List<CustomerActivity>, String>((ref, id) {
+      return ref.watch(customersApiProvider).activities(id);
+    });

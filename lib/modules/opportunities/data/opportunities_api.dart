@@ -47,6 +47,7 @@ class OpportunitiesApi {
     String? pipeline,
     bool mine = false,
     String? search,
+    String? customerId,
     int page = 1,
     int perPage = AppConfig.defaultPerPage,
   }) => {
@@ -56,6 +57,7 @@ class OpportunitiesApi {
     'status': ?status,
     if (mine) 'owner': 'me',
     if (search != null && search.isNotEmpty) 'search': search,
+    if (customerId != null && customerId.isNotEmpty) 'customer_id': customerId,
     'page': page,
     'per_page': perPage,
   };
@@ -66,6 +68,7 @@ class OpportunitiesApi {
     String? pipeline,
     bool mine = false,
     String? search,
+    String? customerId,
     int page = 1,
     int perPage = AppConfig.defaultPerPage,
   }) async {
@@ -77,6 +80,7 @@ class OpportunitiesApi {
         pipeline: pipeline,
         mine: mine,
         search: search,
+        customerId: customerId,
         page: page,
         perPage: perPage,
       ),
