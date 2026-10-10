@@ -18,6 +18,7 @@ import '../application/customers_providers.dart';
 import '../domain/customer.dart';
 import '../domain/customer_field.dart';
 import '../routes.dart';
+import 'customers_page.dart' show customerStatusBadge;
 import 'widgets/customer_activity_list.dart';
 import 'widgets/customer_row.dart';
 import 'widgets/inline_edit_row.dart';
@@ -46,6 +47,13 @@ class _CustomerDetailPageState extends ConsumerState<CustomerDetailPage> {
 
   /// Bản máy chủ vừa trả sau khi lưu, hiện ngay trong lúc tải lại hồ sơ.
   Customer? _saved;
+
+  /// Bản tải từ máy chủ mà [_saved] được ghi đè lên; hồ sơ tải lại là một
+  /// đối tượng khác nên [_saved] tự hết hiệu lực (không cần xoá trong build).
+  Customer? _savedBase;
+
+  /// Bản hồ sơ đang hiển thị lấy từ máy chủ (gán trong build, không setState).
+  Customer? _lastLoaded;
 
   String get _id => widget.customerId;
 
@@ -119,7 +127,12 @@ class _CustomerDetailPageState extends ConsumerState<CustomerDetailPage> {
           .read(customerOpportunitiesSectionProvider)
           ?.invalidate(container, c.id);
     }
-    if (mounted) setState(() => _saved = saved);
+    if (mounted) {
+      setState(() {
+        _saved = saved;
+        _savedBase = _lastLoaded;
+      });
+    }
   }
 
   Future<void> _savePicked(
@@ -178,9 +191,6 @@ class _CustomerDetailPageState extends ConsumerState<CustomerDetailPage> {
   @override
   Widget build(BuildContext context) {
     final customer = ref.watch(customerProvider(_id));
-    ref.listen(customerProvider(_id), (_, next) {
-      if (next is AsyncData<Customer> && !next.isLoading) _saved = null;
-    });
     final access = ref.watch(customerAccessProvider);
     final activityOn = ref.watch(customerActivityAccessProvider);
     final taskWrite = ref.watch(accessProvider).can(TaskPermissions.write);
@@ -198,15 +208,31 @@ class _CustomerDetailPageState extends ConsumerState<CustomerDetailPage> {
       if (oppsOn) _Tab.opportunities,
     ];
     final tab = tabs.contains(_tab) ? _tab : _Tab.overview;
-    final oppCount = oppStats?.count ?? summary?.opportunitiesCount;
+    final oppCount = summary?.opportunitiesCount ?? oppStats?.count;
 
     return Scaffold(
-      appBar: const OmniTopBar(bottom: _BackBar()),
+      appBar: OmniTopBar(
+        bottom: _BackBar(
+          onFullEdit: access.canUpdate
+              ? () async {
+                  await context.pushNamed(
+                    CustomerRoutes.edit,
+                    pathParameters: {'id': _id},
+                  );
+                  if (!mounted) return;
+                  _invalidateDetail(activity: activityOn, opps: oppsOn);
+                }
+              : null,
+        ),
+      ),
       body: OmniAsyncView(
         value: customer,
         onRetry: () => ref.invalidate(customerProvider(_id)),
         data: (loaded) {
-          final data = _saved ?? loaded;
+          _lastLoaded = loaded;
+          final data = _saved != null && identical(_savedBase, loaded)
+              ? _saved!
+              : loaded;
           final canUpdate = access.canUpdate;
           Future<void> save(CustomerField f, String draft) =>
               _save(data, f, draft, activity: activityOn, opps: oppsOn);
@@ -276,7 +302,10 @@ class _CustomerDetailPageState extends ConsumerState<CustomerDetailPage> {
 
 /// Nút ‹ "Khách hàng" dưới thanh kính (bản mẫu: không nút Sửa).
 class _BackBar extends StatelessWidget implements PreferredSizeWidget {
-  const _BackBar();
+  const _BackBar({this.onFullEdit});
+
+  /// Có khi được sửa: mục "Sửa đầy đủ thông tin" trong nút ⋯.
+  final VoidCallback? onFullEdit;
 
   @override
   Size get preferredSize => const Size.fromHeight(44);
@@ -286,26 +315,39 @@ class _BackBar extends StatelessWidget implements PreferredSizeWidget {
     final scheme = Theme.of(context).colorScheme;
     return SizedBox(
       height: 44,
-      child: Align(
-        alignment: Alignment.centerLeft,
-        child: Padding(
-          padding: const EdgeInsets.only(left: 8),
-          child: TextButton.icon(
-            onPressed: () {
-              if (context.canPop()) {
-                context.pop();
-              } else {
-                context.goNamed(CustomerRoutes.list);
-              }
-            },
-            icon: const Icon(Icons.chevron_left_rounded, size: 24),
-            label: const Text('Khách hàng'),
-            style: TextButton.styleFrom(
-              minimumSize: const Size(44, 44),
-              foregroundColor: scheme.primary,
+      child: Row(
+        children: [
+          Padding(
+            padding: const EdgeInsets.only(left: 8),
+            child: TextButton.icon(
+              onPressed: () {
+                if (context.canPop()) {
+                  context.pop();
+                } else {
+                  context.goNamed(CustomerRoutes.list);
+                }
+              },
+              icon: const Icon(Icons.chevron_left_rounded, size: 24),
+              label: const Text('Khách hàng'),
+              style: TextButton.styleFrom(
+                minimumSize: const Size(44, 44),
+                foregroundColor: scheme.primary,
+              ),
             ),
           ),
-        ),
+          const Spacer(),
+          if (onFullEdit != null)
+            PopupMenuButton<int>(
+              tooltip: 'Thêm',
+              icon: const Icon(Icons.more_horiz_rounded),
+              style: IconButton.styleFrom(minimumSize: const Size(44, 44)),
+              onSelected: (_) => onFullEdit!(),
+              itemBuilder: (_) => const [
+                PopupMenuItem(value: 0, child: Text('Sửa đầy đủ thông tin')),
+              ],
+            ),
+          const SizedBox(width: 8),
+        ],
       ),
     );
   }
@@ -337,14 +379,25 @@ class _Header extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  customer.name,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: theme.textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.w600,
-                    color: scheme.onSurface,
-                  ),
+                Row(
+                  children: [
+                    Flexible(
+                      child: Text(
+                        customer.name,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: theme.textTheme.titleLarge?.copyWith(
+                          fontWeight: FontWeight.w600,
+                          color: scheme.onSurface,
+                        ),
+                      ),
+                    ),
+                    if (customerStatusBadge(customer.status)
+                        case final badge?) ...[
+                      const SizedBox(width: 8),
+                      badge,
+                    ],
+                  ],
                 ),
                 const SizedBox(height: 2),
                 Text.rich(

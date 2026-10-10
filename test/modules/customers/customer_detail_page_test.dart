@@ -15,6 +15,7 @@ import 'package:omni_app/design/tokens/contrast.dart';
 import 'package:omni_app/modules/customers/data/customers_api.dart';
 import 'package:omni_app/modules/customers/domain/customer_activity.dart';
 import 'package:omni_app/modules/customers/presentation/customer_detail_page.dart';
+import 'package:omni_app/modules/customers/routes.dart';
 import 'package:omni_app/modules/customers/presentation/widgets/customer_activity_list.dart';
 import 'package:omni_app/modules/opportunities/data/opportunities_api.dart';
 import 'package:omni_app/modules/settings/application/appearance_providers.dart';
@@ -188,6 +189,11 @@ void main() {
           builder: (_, _) => const Scaffold(body: Text('LIST')),
         ),
         GoRoute(
+          path: '/customers/:id/edit',
+          name: CustomerRoutes.edit,
+          builder: (_, _) => const Scaffold(body: Text('EDIT')),
+        ),
+        GoRoute(
           path: '/customers/:id',
           builder: (_, state) =>
               CustomerDetailPage(customerId: state.pathParameters['id']!),
@@ -357,6 +363,53 @@ void main() {
     });
   });
 
+  group('sửa đầy đủ và huy hiệu', () {
+    testWidgets(
+      'canUpdate: nút ⋯ → Sửa đầy đủ thông tin → mở form, về thì tải lại',
+      (tester) async {
+        await open(tester);
+        final before = server.count('/customers/c1');
+        await tester.tap(find.byIcon(Icons.more_horiz_rounded));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Sửa đầy đủ thông tin'));
+        await tester.pumpAndSettle();
+        expect(find.text('EDIT'), findsOneWidget);
+
+        router.pop();
+        await tester.pumpAndSettle();
+        expect(find.text('Chú Đức'), findsOneWidget);
+        expect(server.count('/customers/c1'), greaterThan(before));
+        expect(server.count('/customers/c1/summary'), greaterThan(1));
+      },
+    );
+
+    testWidgets('không canUpdate: không có nút ⋯', (tester) async {
+      await open(tester, permissions: {_read});
+      expect(find.byIcon(Icons.more_horiz_rounded), findsNothing);
+    });
+
+    testWidgets(
+      'huy hiệu trạng thái cạnh tên: VIP, Mới; Đang hoạt động không có',
+      (tester) async {
+        server.customer['customer_status'] = 'WARM';
+        await open(tester);
+        expect(find.text('VIP'), findsOneWidget);
+      },
+    );
+
+    testWidgets('khách mới → huy hiệu Mới', (tester) async {
+      await open(tester);
+      expect(find.text('Mới'), findsOneWidget);
+    });
+
+    testWidgets('khách đang hoạt động → không huy hiệu', (tester) async {
+      server.customer['customer_status'] = 'ACTIVE';
+      await open(tester);
+      expect(find.text('Mới'), findsNothing);
+      expect(find.text('VIP'), findsNothing);
+    });
+  });
+
   group('tab', () {
     testWidgets('Hoạt động: dòng thời gian; lỗi hiện tại chỗ', (tester) async {
       await open(tester);
@@ -434,7 +487,7 @@ void main() {
         tester,
         permissions: {_read, _update, _logs, _oppRead, _oppCreate},
       );
-      await tester.tap(find.text('Cơ hội · 0'));
+      await tester.tap(find.text('Cơ hội · 2'));
       await tester.pumpAndSettle();
       expect(find.text('Chưa có cơ hội'), findsOneWidget);
       expect(find.text('Tạo cơ hội'), findsOneWidget);
