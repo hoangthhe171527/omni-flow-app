@@ -8,3 +8,20 @@ import '../domain/channel_connection.dart';
 final channelsProvider = FutureProvider<List<ChannelConnection>>((ref) {
   return ref.watch(channelsApiProvider).list();
 });
+
+/// Số kênh đang chạy / đang lỗi cho dòng "Kênh kết nối" ở màn Tài khoản.
+/// null khi danh sách đang tải hoặc lỗi — màn không vẽ số bịa.
+final channelHealthProvider = Provider<({int running, int failing})?>((ref) {
+  final list = ref.watch(channelsProvider).valueOrNull;
+  if (list == null) return null;
+  var running = 0, failing = 0;
+  for (final c in list) {
+    if (c.status == ChannelStatus.connected) running++;
+    if (c.status == ChannelStatus.error) failing++;
+  }
+  return (running: running, failing: failing);
+});
+
+final channelErrorCountProvider = Provider<int>(
+  (ref) => ref.watch(channelHealthProvider)?.failing ?? 0,
+);

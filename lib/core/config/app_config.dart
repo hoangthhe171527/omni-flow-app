@@ -21,4 +21,8 @@ abstract final class AppConfig {
   static String get apiBaseUrl => Env.apiBaseUrl;
   static String get apiPrefix => '/api/v1';
   static String get appName => Env.appName;
+
+  /// Tên phiên bản hiển thị ở cuối màn Tài khoản. Không có package_info:
+  /// `test/settings/app_version_test.dart` giữ hằng này khớp `pubspec.yaml`.
+  static const String appVersion = '0.1.4';
 }
