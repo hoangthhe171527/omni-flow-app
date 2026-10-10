@@ -387,13 +387,10 @@ class TaskController
   Future<void> renameSubtask(String subtaskId, String title) =>
       _apply((api) => api.renameSubtask(arg, subtaskId, title));
 
-  /// Nhận một việc con đang trống về mình (§3).
-  ///
-  /// Chờ server như [setAssignees], KHÔNG lạc quan: nhận việc là lời hứa với cả
-  /// tổ, và một cái tên hiện lên rồi biến mất vì mạng hỏng còn tệ hơn một giây
-  /// chờ. Tick thì ngược lại, và nó đã có đường riêng.
-  Future<void> claimSubtask(String subtaskId, String userId) =>
-      _apply((api) => api.claimSubtask(arg, subtaskId, userId));
+  /// Giao/gỡ người làm một việc con. Không lạc quan: hiện lại đúng cái máy
+  /// chủ trả về (tên người do server tra), lỗi thì ném cho chỗ gọi báo.
+  Future<void> assignSubtask(String subtaskId, String? userId) =>
+      _apply((api) => api.assignSubtask(arg, subtaskId, userId));
 
   /// Xoá một việc con.
   ///

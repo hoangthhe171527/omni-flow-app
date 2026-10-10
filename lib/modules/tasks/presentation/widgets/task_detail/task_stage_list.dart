@@ -113,14 +113,14 @@ class TaskStageList extends StatelessWidget {
 
   /// Nhận công đoạn này về mình.
   ///
-  /// Bắt lỗi tại chỗ: [TaskController.claimSubtask] chờ server và NÉM khi hỏng,
+  /// Bắt lỗi tại chỗ: [TaskController.assignSubtask] chờ server và NÉM khi hỏng,
   /// mà một Future ném ra từ callback của nút thì không ai bắt — bấm xong không
   /// có gì xảy ra và cũng không có gì báo, đúng kiểu hỏng im lặng đã lặp lại
   /// nhiều lần ở dự án này.
   Future<void> _claim(BuildContext context, String subtaskId) async {
     final messenger = ScaffoldMessenger.of(context);
     try {
-      await controller.claimSubtask(subtaskId, currentUserId!);
+      await controller.assignSubtask(subtaskId, currentUserId!);
     } on AppException catch (e) {
       messenger.showSnackBar(SnackBar(content: Text(e.message)));
     }

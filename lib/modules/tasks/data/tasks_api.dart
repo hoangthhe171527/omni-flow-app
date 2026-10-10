@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/config/app_config.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/network/api_envelope.dart';
+import '../../../core/utils/json.dart';
 import '../domain/task.dart';
 
 /// Which slice of a person's work to show.
@@ -211,26 +212,41 @@ class TasksApi {
     return Task.fromJson(response.object);
   }
 
-  /// Tự nhận một việc con đang trống.
+  /// Giao (hoặc gỡ, khi [userId] null) người làm MỘT việc con.
   ///
-  /// §3: xưởng chạy kiểu pull — ai rảnh thì nhận công đoạn kế tiếp, không ai
-  /// đứng ra phân. Server bắn "Công đoạn đang trống" cho cả tổ; đây là đường
-  /// duy nhất trong app trả lời được cái thông báo đó.
+  /// Khoá `assignee_id` LUÔN có mặt: máy chủ hỏi `has('assignee_id')`, và null
+  /// là "gỡ người" có chủ ý (`UpdateChecklistItem` dùng array_key_exists).
+  /// Server chỉ nhận thành viên đang làm của workspace — người khác → 422.
   ///
-  /// Cùng một lệnh PATCH với tick, KHÔNG phải PUT cả mảng checklist: nhận việc
-  /// và tick xảy ra cùng lúc ở xưởng, nên một bản chụp cả mảng gửi lúc nhận
-  /// việc sẽ xoá mất dấu tick người khác vừa đánh — im lặng.
-  Future<Task> claimSubtask(
+  /// Cùng một lệnh PATCH với tick, KHÔNG phải PUT cả mảng checklist: giao việc
+  /// và tick xảy ra cùng lúc ở xưởng, nên một bản chụp cả mảng sẽ xoá mất dấu
+  /// tick người khác vừa đánh — im lặng.
+  Future<Task> assignSubtask(
     String taskId,
     String subtaskId,
-    String userId,
+    String? userId,
   ) async {
     final response = await _client.patch(
       '$_base/$taskId/checklist/$subtaskId',
-      body: {'assignee_id': userId},
+      body: <String, dynamic>{'assignee_id': userId},
     );
 
     return Task.fromJson(response.object);
+  }
+
+  /// Ai thuộc dự án: `member_ids` ∪ `owner_id` từ `GET /projects/{id}`.
+  ///
+  /// Đọc thẳng ở đây chứ không qua `PlansApi`: plans đã import tasks, và
+  /// tasks import ngược lại là một chu trình (`module_cycle_test.dart`).
+  Future<List<String>> projectMemberIds(String projectId) async {
+    final response = await _client.get('/projects/$projectId');
+    final json = response.object;
+    final ids = <String>[...json.strList('member_ids')];
+    final owner = json.str('owner_id');
+    if (owner != null && owner.isNotEmpty && !ids.contains(owner)) {
+      ids.add(owner);
+    }
+    return ids;
   }
 
   Future<Task> removeSubtask(String taskId, String subtaskId) async {

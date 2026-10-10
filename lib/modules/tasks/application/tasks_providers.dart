@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/network/api_envelope.dart';
 import '../../../core/realtime/realtime_client.dart';
 import '../../../security/session/session_controller.dart';
+import '../../team/team.dart';
 import '../data/tasks_api.dart';
 import '../domain/task.dart';
 import '../domain/task_permissions.dart';
@@ -255,3 +256,18 @@ final taskOverdueCountProvider = FutureProvider.autoDispose<int>((ref) async {
 final taskBadgeProvider = Provider.autoDispose<int>((ref) {
   return ref.watch(taskOverdueCountProvider).valueOrNull ?? 0;
 });
+
+/// Người chọn được cho một việc con: thành viên dự án, theo thứ tự danh sách
+/// workspace. Dự án tạo trước khi có `member_ids` → cả workspace (server cũng
+/// chỉ kiểm thành viên workspace).
+final projectMembersProvider = FutureProvider.autoDispose
+    .family<List<TeamMember>, String>((ref, projectId) async {
+      final all = await ref.watch(teamMembersProvider.future);
+      final ids = await ref.watch(tasksApiProvider).projectMemberIds(projectId);
+      if (ids.isEmpty) return all;
+      final wanted = ids.toSet();
+      return [
+        for (final m in all)
+          if (wanted.contains(m.userId)) m,
+      ];
+    });
