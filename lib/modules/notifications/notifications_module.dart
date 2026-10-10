@@ -5,7 +5,9 @@ import 'package:go_router/go_router.dart';
 import '../../core/module/module_route.dart';
 import '../../core/module/nav_destination.dart';
 import '../../core/module/omni_module.dart';
+import '../inbox/inbox_routes.dart';
 import '../tasks/routes.dart';
+import 'application/notifications_providers.dart';
 import 'presentation/notifications_page.dart';
 
 /// The bell.
@@ -41,13 +43,16 @@ class NotificationsModule extends OmniModule {
           TaskRoutes.detail,
           pathParameters: {'id': taskId},
         ),
+        onOpenConversation: (id) =>
+            context.pushNamed(InboxRoutes.thread, pathParameters: {'id': id}),
       ),
     ),
   ];
 
   @override
-  List<ModuleNavEntry> navEntries() => const [
+  List<ModuleNavEntry> navEntries() => [
     ModuleNavEntry(
+      badge: unreadNotificationBadgeProvider,
       moduleId: 'notifications',
       label: 'Thông báo',
       subtitle: 'Việc được giao, việc đã xong',

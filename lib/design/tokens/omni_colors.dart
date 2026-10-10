@@ -209,6 +209,10 @@ abstract final class OmniColors {
   static const darkInfoText = Color(0xFF9DB6F5);
   static const darkWarningSoft = Color(0xFF3A2E12);
 
+  /// Nền dòng thông báo chưa đọc (`Notifications.dc.html`); tối dùng primary
+  /// alpha .08.
+  static const unreadRow = Color(0xFFF3FAF9);
+
   /// Chọn bản sáng/tối của một cặp màu theo chế độ đang bật.
   static Color byBrightness(BuildContext context, Color light, Color dark) =>
       _byBrightness(context, light, dark);
