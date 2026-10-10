@@ -103,6 +103,8 @@ class _PeekOverlay extends ConsumerWidget {
   final VoidCallback onOpen;
   final ValueChanged<PeekAction> onAction;
 
+  static const double _top = 110;
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final items = peekMenuFor(conversation, ref.watch(inboxAccessProvider));
@@ -120,16 +122,31 @@ class _PeekOverlay extends ConsumerWidget {
           Positioned(
             left: 16,
             right: 16,
-            top: 110,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _PeekCard(conversation: conversation, onOpen: onOpen),
-                if (items.isNotEmpty) ...[
-                  const SizedBox(height: 10),
-                  _PeekMenu(items: items, onAction: onAction),
-                ],
-              ],
+            top: _top,
+            // Menu tới 8 mục không vừa màn thấp (800×600): cuộn được, mục
+            // cuối luôn chạm được. Khung cuộn chỉ cao bằng nội dung, nên phần
+            // trống bên dưới vẫn là rào chắn — chạm ra ngoài vẫn đóng.
+            child: ConstrainedBox(
+              constraints: BoxConstraints(
+                maxHeight:
+                    (MediaQuery.sizeOf(context).height -
+                            _top -
+                            16 -
+                            MediaQuery.paddingOf(context).bottom)
+                        .clamp(0, double.infinity),
+              ),
+              child: SingleChildScrollView(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _PeekCard(conversation: conversation, onOpen: onOpen),
+                    if (items.isNotEmpty) ...[
+                      const SizedBox(height: 10),
+                      _PeekMenu(items: items, onAction: onAction),
+                    ],
+                  ],
+                ),
+              ),
             ),
           ),
         ],

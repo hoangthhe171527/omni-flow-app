@@ -110,8 +110,6 @@ void main() {
     expect(find.text('Gán cho…'), findsOneWidget);
     expect(find.text('Thêm nhãn'), findsOneWidget);
     expect(find.text('Lưu trữ'), findsOneWidget);
-    expect(find.text('Tắt thông báo'), findsNothing, reason: 'API chưa có');
-    expect(find.text('Đánh dấu chưa đọc'), findsNothing, reason: 'API chưa có');
     await closePage(tester);
   });
 
@@ -317,6 +315,244 @@ void main() {
     expect(api.markReadCalls, ['c1']);
   });
 
+  group('Hộp thư mobile: chưa đọc · ghim · tắt TB · chặn', () {
+    testWidgets('đủ quyền, đã đọc → Chưa đọc, Ghim, Tắt thông báo, Chặn', (
+      tester,
+    ) async {
+      api.conversations = [_conversation('c1', 'Lan Anh')];
+      await open(tester);
+      await holdRow(tester, 'Lan Anh');
+      for (final l in [
+        'Đánh dấu chưa đọc',
+        'Ghim',
+        'Tắt thông báo',
+        'Chặn hội thoại',
+      ]) {
+        expect(find.text(l), findsOneWidget, reason: l);
+      }
+      expect(find.text('Đánh dấu đã đọc'), findsNothing);
+      await closePage(tester);
+    });
+
+    testWidgets('chỉ inbox.read → Ghim + Tắt TB; không Chưa đọc, không Chặn', (
+      tester,
+    ) async {
+      api.conversations = [_conversation('c1', 'Lan Anh')];
+      await open(tester, permissions: const {'inbox.read'});
+      await holdRow(tester, 'Lan Anh');
+      expect(find.text('Ghim'), findsOneWidget);
+      expect(find.text('Tắt thông báo'), findsOneWidget);
+      expect(find.text('Đánh dấu chưa đọc'), findsNothing);
+      expect(find.text('Chặn hội thoại'), findsNothing);
+      await closePage(tester);
+    });
+
+    testWidgets('sale .own có ghi → Chưa đọc có, Chặn KHÔNG', (tester) async {
+      api.conversations = [_conversation('c1', 'Lan Anh')];
+      await open(tester, permissions: const {'inbox.read.own', 'inbox.write'});
+      await holdRow(tester, 'Lan Anh');
+      expect(find.text('Đánh dấu chưa đọc'), findsOneWidget);
+      expect(find.text('Chặn hội thoại'), findsNothing);
+      await closePage(tester);
+    });
+
+    testWidgets('Ghim → POST pin; dòng rời danh sách chính, vào "Đã ghim"', (
+      tester,
+    ) async {
+      api.conversations = [
+        _conversation('c1', 'Lan Anh'),
+        _conversation('c2', 'Minh Tú'),
+      ];
+      await open(tester);
+      expect(find.text('Đã ghim'), findsNothing);
+      await holdRow(tester, 'Lan Anh');
+      await tester.tap(find.text('Ghim'));
+      await tester.pumpAndSettle(const Duration(milliseconds: 50));
+
+      expect(api.pinCalls, [('c1', true)]);
+      expect(find.text('Đã ghim hội thoại.'), findsOneWidget);
+      expect(find.text('Đã ghim'), findsOneWidget);
+      expect(find.text('Lan Anh'), findsOneWidget, reason: 'không hiện 2 lần');
+      final y = tester.getTopLeft;
+      expect(
+        y(find.text('Lan Anh')).dy,
+        lessThan(y(find.text('Hội thoại')).dy),
+      );
+      expect(
+        y(find.text('Minh Tú')).dy,
+        greaterThan(y(find.text('Hội thoại')).dy),
+      );
+
+      // Menu lần sau: "Bỏ ghim" → DELETE, dòng về danh sách chính.
+      ScaffoldMessenger.of(
+        tester.element(find.byType(InboxPage)),
+      ).removeCurrentSnackBar();
+      await holdRow(tester, 'Lan Anh');
+      await tester.tap(find.text('Bỏ ghim'));
+      await tester.pumpAndSettle(const Duration(milliseconds: 50));
+      expect(api.pinCalls, [('c1', true), ('c1', false)]);
+      expect(find.text('Đã bỏ ghim.'), findsOneWidget);
+      expect(find.text('Đã ghim'), findsNothing);
+      expect(find.text('Lan Anh'), findsOneWidget);
+      await closePage(tester);
+    });
+
+    testWidgets('Ghim bị 422 pin_limit_reached → câu server, dòng giữ nguyên', (
+      tester,
+    ) async {
+      api.conversations = [_conversation('c1', 'Lan Anh')];
+      api.pinLimit = true;
+      await open(tester);
+      await holdRow(tester, 'Lan Anh');
+      await tester.tap(find.text('Ghim'));
+      await tester.pumpAndSettle(const Duration(milliseconds: 50));
+      expect(find.text(_pinLimitMessage), findsOneWidget);
+      expect(find.text('Đã ghim hội thoại.'), findsNothing);
+      expect(find.text('Đã ghim'), findsNothing);
+      expect(find.text('Lan Anh'), findsOneWidget);
+      await closePage(tester);
+    });
+
+    testWidgets('Chặn hội thoại → hỏi lại; Huỷ thì không gọi API', (
+      tester,
+    ) async {
+      api.conversations = [_conversation('c1', 'Lan Anh')];
+      await open(tester);
+      await holdRow(tester, 'Lan Anh');
+      await tester.tap(find.text('Chặn hội thoại'));
+      await tester.pumpAndSettle(const Duration(milliseconds: 50));
+      expect(find.text('Chặn hội thoại này?'), findsOneWidget);
+      expect(find.textContaining('không chặn khách trên Zalo'), findsOneWidget);
+      await tester.tap(find.text('Huỷ'));
+      await tester.pumpAndSettle(const Duration(milliseconds: 50));
+      expect(api.blockCalls, isEmpty);
+      expect(find.text('Lan Anh'), findsOneWidget);
+      await closePage(tester);
+    });
+
+    testWidgets('Chặn hội thoại → xác nhận → POST block, dòng rời danh sách', (
+      tester,
+    ) async {
+      api.conversations = [
+        _conversation('c1', 'Lan Anh'),
+        _conversation('c2', 'Minh Tú'),
+      ];
+      await open(tester);
+      await holdRow(tester, 'Lan Anh');
+      await tester.tap(find.text('Chặn hội thoại'));
+      await tester.pumpAndSettle(const Duration(milliseconds: 50));
+      await tester.tap(find.text('Chặn'));
+      await tester.pumpAndSettle(const Duration(milliseconds: 50));
+      expect(api.blockCalls, [('c1', true)]);
+      expect(find.text('Lan Anh'), findsNothing);
+      expect(find.text('Minh Tú'), findsOneWidget);
+      expect(find.text('Đã chặn hội thoại.'), findsOneWidget);
+      await closePage(tester);
+    });
+
+    testWidgets('Đánh dấu chưa đọc → POST unread; dòng có huy hiệu', (
+      tester,
+    ) async {
+      api.conversations = [_conversation('c1', 'Lan Anh')];
+      await open(tester);
+      expect(find.text('1'), findsNothing);
+      await holdRow(tester, 'Lan Anh');
+      await tester.tap(find.text('Đánh dấu chưa đọc'));
+      await tester.pumpAndSettle(const Duration(milliseconds: 50));
+      expect(api.unreadCalls, ['c1']);
+      expect(find.text('1'), findsOneWidget);
+      expect(find.text('Đã đánh dấu chưa đọc.'), findsOneWidget);
+      await closePage(tester);
+    });
+
+    testWidgets('Tắt thông báo → POST mute; chuông gạch; lần sau "Bật"', (
+      tester,
+    ) async {
+      final semantics = tester.ensureSemantics();
+      api.conversations = [_conversation('c1', 'Lan Anh')];
+      await open(tester);
+      await holdRow(tester, 'Lan Anh');
+      await tester.tap(find.text('Tắt thông báo'));
+      await tester.pumpAndSettle(const Duration(milliseconds: 50));
+      expect(api.muteCalls, [('c1', true)]);
+      expect(find.text('Đã tắt thông báo.'), findsOneWidget);
+      expect(find.bySemanticsLabel('Đã tắt thông báo'), findsOneWidget);
+
+      ScaffoldMessenger.of(
+        tester.element(find.byType(InboxPage)),
+      ).removeCurrentSnackBar();
+      await holdRow(tester, 'Lan Anh');
+      expect(find.text('Bật thông báo'), findsOneWidget);
+      await tester.tap(find.text('Bật thông báo'));
+      await tester.pumpAndSettle(const Duration(milliseconds: 50));
+      expect(api.muteCalls, [('c1', true), ('c1', false)]);
+      expect(find.text('Đã bật thông báo.'), findsOneWidget);
+      await closePage(tester);
+      semantics.dispose();
+    });
+
+    testWidgets('API lỗi 500 → không có snackbar thành công', (tester) async {
+      api.conversations = [_conversation('c1', 'Lan Anh')];
+      api.failActions = true;
+      await open(tester);
+      for (final (label, done) in [
+        ('Ghim', 'Đã ghim hội thoại.'),
+        ('Tắt thông báo', 'Đã tắt thông báo.'),
+        ('Đánh dấu chưa đọc', 'Đã đánh dấu chưa đọc.'),
+      ]) {
+        await holdRow(tester, 'Lan Anh');
+        await tester.tap(find.text(label));
+        await tester.pumpAndSettle(const Duration(milliseconds: 50));
+        expect(find.text(done), findsNothing, reason: label);
+        expect(find.text('Máy chủ bận'), findsOneWidget, reason: label);
+        ScaffoldMessenger.of(
+          tester.element(find.byType(InboxPage)),
+        ).removeCurrentSnackBar();
+        await tester.pumpAndSettle(const Duration(milliseconds: 50));
+      }
+      expect(find.text('Đã ghim'), findsNothing);
+      await closePage(tester);
+    });
+
+    testWidgets('ghim xong SAU khi trang đã gỡ → không ném', (tester) async {
+      api.conversations = [_conversation('c1', 'Lan Anh')];
+      api.gate = Completer<void>();
+      await open(tester);
+      await holdRow(tester, 'Lan Anh');
+      await tester.tap(find.text('Ghim'));
+      await tester.pump();
+      await closePage(tester);
+      api.gate!.complete();
+      await tester.pump(const Duration(milliseconds: 50));
+      expect(tester.takeException(), isNull);
+      expect(api.pinCalls, [('c1', true)]);
+    });
+
+    for (final size in const [Size(800, 600), Size(390, 844)]) {
+      testWidgets('menu đủ mục chạm được ở ${size.width}×${size.height}', (
+        tester,
+      ) async {
+        tester.view.physicalSize = size;
+        tester.view.devicePixelRatio = 1;
+        addTearDown(tester.view.reset);
+        api.conversations = [_conversation('c1', 'Lan Anh', unread: 2)];
+        await open(tester);
+        await holdRow(tester, 'Lan Anh');
+        expect(tester.takeException(), isNull);
+        final last = find.text('Chặn hội thoại');
+        await tester.ensureVisible(last);
+        await tester.pumpAndSettle(const Duration(milliseconds: 50));
+        expect(tester.getRect(last).bottom, lessThanOrEqualTo(size.height));
+        await tester.tap(last);
+        await tester.pumpAndSettle(const Duration(milliseconds: 50));
+        expect(find.text('Chặn hội thoại này?'), findsOneWidget);
+        await tester.tap(find.text('Huỷ'));
+        await tester.pumpAndSettle(const Duration(milliseconds: 50));
+        await closePage(tester);
+      });
+    }
+  });
+
   group('peekMenuFor', () {
     final full = InboxAccess.of(
       const AccessPolicy({'inbox.read', 'inbox.write'}),
@@ -330,15 +566,30 @@ void main() {
       expect(actions, isNot(contains(PeekAction.markRead)));
     });
 
-    test('chỉ Lưu trữ mới là mục đỏ', () {
+    test('đã chặn → Bỏ chặn hội thoại, không Chưa đọc (API 422)', () {
+      final c = _conversation(
+        'c1',
+        'A',
+      ).copyWith(blockedAt: DateTime.utc(2026, 10, 10));
+      final actions = peekMenuFor(c, full).map((i) => i.action).toList();
+      expect(actions, contains(PeekAction.unblock));
+      expect(actions, isNot(contains(PeekAction.block)));
+      expect(actions, isNot(contains(PeekAction.markUnread)));
+    });
+
+    test('chỉ Lưu trữ và Chặn hội thoại là mục đỏ', () {
       final c = _conversation('c1', 'A', unread: 1);
       final items = peekMenuFor(c, full);
       expect(items.where((i) => i.destructive).map((i) => i.action), [
         PeekAction.archive,
+        PeekAction.block,
       ]);
     });
   });
 }
+
+const _pinLimitMessage =
+    'Bạn đã ghim tối đa 50 hội thoại — bỏ ghim bớt rồi ghim lại.';
 
 Conversation _conversation(
   String id,
@@ -370,7 +621,78 @@ class _FakeInboxApi extends InboxApi {
     String? before,
     int perPage = AppConfig.defaultPerPage,
     bool? pinned,
-  }) async => CursorPaged(items: conversations);
+  }) async => CursorPaged(
+    // Như server: `pinned=1` chỉ dòng tôi ghim, `pinned=0` loại chúng; dòng
+    // đã chặn ẩn khỏi mọi danh sách mặc định.
+    items: [
+      for (final c in conversations)
+        if (!c.isBlocked && (pinned == null || c.isPinned == pinned)) c,
+    ],
+  );
+
+  final unreadCalls = <String>[];
+  final pinCalls = <(String, bool)>[];
+  final muteCalls = <(String, bool)>[];
+  final blockCalls = <(String, bool)>[];
+  bool pinLimit = false;
+  bool failActions = false;
+
+  /// Giữ lượt ghim tới khi completer xong (trang gỡ giữa chừng).
+  Completer<void>? gate;
+
+  void _replace(Conversation c) => conversations = [
+    for (final x in conversations)
+      if (x.id == c.id) c else x,
+  ];
+
+  Conversation _byId(String id) => conversations.firstWhere((c) => c.id == id);
+
+  @override
+  Future<int> markUnread(String id) async {
+    if (failActions) throw const ServerException('Máy chủ bận');
+    unreadCalls.add(id);
+    _replace(_byId(id).copyWith(unread: 1));
+    return 1;
+  }
+
+  @override
+  Future<bool> setPinned(String id, bool on) async {
+    await gate?.future;
+    if (failActions) throw const ServerException('Máy chủ bận');
+    if (on && pinLimit) {
+      throw const ValidationException(
+        _pinLimitMessage,
+        reason: 'pin_limit_reached',
+      );
+    }
+    pinCalls.add((id, on));
+    _replace(_byId(id).copyWith(isPinned: on));
+    return on;
+  }
+
+  @override
+  Future<bool> setMuted(String id, bool on) async {
+    if (failActions) throw const ServerException('Máy chủ bận');
+    muteCalls.add((id, on));
+    _replace(_byId(id).copyWith(isMuted: on));
+    return on;
+  }
+
+  @override
+  Future<Conversation> setBlocked(String id, bool on) async {
+    if (failActions) throw const ServerException('Máy chủ bận');
+    blockCalls.add((id, on));
+    final c = _byId(id);
+    final updated = on
+        ? c.copyWith(blockedAt: DateTime.utc(2026, 10, 10), unread: 0)
+        : Conversation.fromJson({
+            'id': c.id,
+            'channel': 'zalo',
+            'customer_name': c.customerName,
+          });
+    _replace(updated);
+    return updated;
+  }
 
   @override
   Future<InboxFacets> facets(Map<String, dynamic> query) async =>

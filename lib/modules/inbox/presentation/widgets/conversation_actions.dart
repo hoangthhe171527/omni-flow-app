@@ -82,22 +82,9 @@ class ConversationActions {
 
   InboxApi get _api => _container.read(inboxApiProvider);
 
-  Future<void> markRead(Conversation c) => _run(() async {
+  Future<bool> markRead(Conversation c) => _run(() async {
     await _api.markRead(c.id);
-    // Bản MỚI NHẤT trong danh sách (tin có thể đã đổi trong lúc chờ), không
-    // phải bản `c` chụp lúc bấm giữ.
-    Conversation? latest;
-    try {
-      latest = _container
-          .read(inboxListProvider)
-          .valueOrNull
-          ?.items
-          .where((item) => item.id == c.id)
-          .firstOrNull;
-    } catch (_) {
-      // Container đã huỷ: dùng bản chụp, phần cập nhật phía dưới cũng bỏ qua.
-    }
-    return (latest ?? c).copyWith(unread: 0);
+    return _latest(c).copyWith(unread: 0);
   }, 'Đã đánh dấu đã đọc.');
 
   /// "Lưu trữ" = đóng hội thoại; máy chủ không có trạng thái lưu trữ riêng.
@@ -108,6 +95,70 @@ class ConversationActions {
     ),
     archived ? 'Đã lưu trữ hội thoại.' : 'Đã mở lại hội thoại.',
   );
+
+  /// Đánh dấu chưa đọc (dùng chung cả đội). Trả `true` khi server đã nhận.
+  Future<bool> markUnread(Conversation c) => _run(() async {
+    final count = await _api.markUnread(c.id);
+    return _latest(c).copyWith(unread: count < 1 ? 1 : count);
+  }, 'Đã đánh dấu chưa đọc.');
+
+  /// Ghim / bỏ ghim cho riêng mình. Vượt trần → 422 `pin_limit_reached`, báo
+  /// đúng câu của server (qua [AppException.message]).
+  Future<bool> setPinned(Conversation c, bool on) => _run(() async {
+    final pinned = await _api.setPinned(c.id, on);
+    return _latest(c).copyWith(isPinned: pinned);
+  }, on ? 'Đã ghim hội thoại.' : 'Đã bỏ ghim.');
+
+  /// Tắt (`on`) / bật thông báo cho riêng mình.
+  Future<bool> setMuted(Conversation c, bool on) => _run(() async {
+    final muted = await _api.setMuted(c.id, on);
+    return _latest(c).copyWith(isMuted: muted);
+  }, on ? 'Đã tắt thông báo.' : 'Đã bật thông báo.');
+
+  /// "Chặn hội thoại" — CHỈ trong CRM: hội thoại ẩn khỏi Hộp thư của cả đội,
+  /// tin mới vẫn lưu nhưng không báo. Không chặn khách trên nền tảng. Chặn
+  /// luôn hỏi lại; bỏ chặn thì không. Trả `true` khi server đã nhận.
+  Future<bool> setBlocked(Conversation c, bool on) async {
+    if (on) {
+      final ok = await showOmniConfirm(
+        context: context,
+        title: 'Chặn hội thoại này?',
+        message:
+            'Hội thoại sẽ ẩn khỏi Hộp thư của cả đội. Tin mới vẫn được lưu '
+            'nhưng không báo, không tính chưa đọc. Thao tác này chỉ trong CRM '
+            '— không chặn khách trên Zalo hay Facebook.',
+        confirmLabel: 'Chặn',
+        destructive: true,
+      );
+      if (!ok) return false;
+    }
+    return _run(
+      () => _api.setBlocked(c.id, on),
+      on ? 'Đã chặn hội thoại.' : 'Đã bỏ chặn hội thoại.',
+    );
+  }
+
+  /// Bản MỚI NHẤT của [c] trên màn (danh sách chính hoặc mục ghim) — tin có
+  /// thể đã đổi trong lúc chờ — không phải bản chụp lúc bấm giữ.
+  Conversation _latest(Conversation c) {
+    try {
+      bool same(Conversation x) => x.id == c.id;
+      // `exists`: không dựng hộ danh sách (một lượt tải) khi gọi từ trang
+      // Thông tin mở thẳng bằng liên kết.
+      final main = _container.exists(inboxListProvider)
+          ? _container.read(inboxListProvider).valueOrNull?.items
+          : null;
+      final pinned = _container.exists(pinnedConversationsProvider)
+          ? _container.read(pinnedConversationsProvider).valueOrNull
+          : null;
+      return main?.where(same).firstOrNull ??
+          pinned?.where(same).firstOrNull ??
+          c;
+    } catch (_) {
+      // Container đã huỷ: dùng bản chụp, phần cập nhật phía sau cũng bỏ qua.
+      return c;
+    }
+  }
 
   Future<void> assign(Conversation c) async {
     final result = await showOmniSheet<AssignResult>(
@@ -131,24 +182,33 @@ class ConversationActions {
     }, 'Đã gắn nhãn.');
   }
 
-  Future<void> _run(Future<Conversation> Function() call, String done) async {
+  /// Gọi API → vá cả hai mục (danh sách chính + "Đã ghim") → làm mới hội
+  /// thoại đang mở → báo. `true` khi server đã nhận; lỗi thì chỉ báo lỗi.
+  Future<bool> _run(Future<Conversation> Function() call, String done) async {
     final Conversation updated;
     try {
       updated = await call();
     } on AppException catch (error) {
       _say(error.message);
-      return;
+      return false;
     } catch (_) {
       _say('Không thực hiện được. Vui lòng thử lại.');
-      return;
+      return false;
     }
     // Máy chủ đã nhận: phần cập nhật giao diện dưới đây có thể gặp container
     // đã bị huỷ (đóng cả ứng dụng) — không được biến nó thành lỗi thao tác.
     try {
-      _container.read(inboxListProvider.notifier).reconcile(updated);
+      // Danh sách chính XÉT LẠI: ghim → rời, bỏ ghim → chèn, chặn → rời.
+      if (_container.exists(inboxListProvider)) {
+        _container.read(inboxListProvider.notifier).reconcile(updated);
+      }
+      if (_container.exists(pinnedConversationsProvider)) {
+        _container.read(pinnedConversationsProvider.notifier).upsert(updated);
+      }
       _container.invalidate(conversationProvider(updated.id));
     } catch (_) {}
     _say(done);
+    return true;
   }
 
   void _say(String text) {
@@ -157,7 +217,20 @@ class ConversationActions {
   }
 }
 
-enum PeekAction { markRead, assign, label, archive, reopen }
+enum PeekAction {
+  markRead,
+  markUnread,
+  assign,
+  label,
+  pin,
+  unpin,
+  mute,
+  unmute,
+  archive,
+  reopen,
+  block,
+  unblock,
+}
 
 class PeekMenuItem {
   const PeekMenuItem({
@@ -173,8 +246,14 @@ class PeekMenuItem {
   final PeekAction action;
 }
 
-/// Các mục menu xem trước, theo quyền của người xem. Chỉ có mục mà máy chủ
-/// làm được: chưa có API đánh dấu chưa đọc / tắt thông báo / ghim / chặn.
+/// Các mục menu xem trước, theo thứ tự README, mỗi mục tự xét quyền (đối
+/// chiếu `routes.php` của API):
+/// - Đã đọc / Chưa đọc: `inbox.write`;
+/// - Gán, Nhãn: `inbox.write`;
+/// - Ghim, Tắt thông báo: sở thích riêng, quyền ĐỌC là đủ — luôn hiện;
+/// - Lưu trữ / Mở lại: `inbox.write`;
+/// - Chặn / Bỏ chặn hội thoại: `inbox.write` + đọc toàn tenant
+///   ([InboxAccess.canBlock]); sale `.own` bị 403 nên ẩn.
 List<PeekMenuItem> peekMenuFor(Conversation c, InboxAccess access) {
   final closed = c.status == ConversationStatus.closed;
   return [
@@ -183,6 +262,13 @@ List<PeekMenuItem> peekMenuFor(Conversation c, InboxAccess access) {
         label: 'Đánh dấu đã đọc',
         icon: Icons.mark_email_read_outlined,
         action: PeekAction.markRead,
+      ),
+    // Đã chặn: API trả 422 `conversation_blocked` cho /unread.
+    if (!c.isUnread && !c.isBlocked && access.canUpdate)
+      const PeekMenuItem(
+        label: 'Đánh dấu chưa đọc',
+        icon: Icons.mark_email_unread_outlined,
+        action: PeekAction.markUnread,
       ),
     if (access.canAssign)
       const PeekMenuItem(
@@ -196,6 +282,30 @@ List<PeekMenuItem> peekMenuFor(Conversation c, InboxAccess access) {
         icon: Icons.sell_outlined,
         action: PeekAction.label,
       ),
+    if (c.isPinned)
+      const PeekMenuItem(
+        label: 'Bỏ ghim',
+        icon: Icons.push_pin_outlined,
+        action: PeekAction.unpin,
+      )
+    else
+      const PeekMenuItem(
+        label: 'Ghim',
+        icon: Icons.push_pin_outlined,
+        action: PeekAction.pin,
+      ),
+    if (c.isMuted)
+      const PeekMenuItem(
+        label: 'Bật thông báo',
+        icon: Icons.notifications_active_outlined,
+        action: PeekAction.unmute,
+      )
+    else
+      const PeekMenuItem(
+        label: 'Tắt thông báo',
+        icon: Icons.notifications_off_outlined,
+        action: PeekAction.mute,
+      ),
     if (access.canUpdate && !closed)
       const PeekMenuItem(
         label: 'Lưu trữ',
@@ -208,6 +318,19 @@ List<PeekMenuItem> peekMenuFor(Conversation c, InboxAccess access) {
         label: 'Mở lại',
         icon: Icons.unarchive_outlined,
         action: PeekAction.reopen,
+      ),
+    if (access.canBlock && !c.isBlocked)
+      const PeekMenuItem(
+        label: 'Chặn hội thoại',
+        icon: Icons.block_rounded,
+        action: PeekAction.block,
+        destructive: true,
+      ),
+    if (access.canBlock && c.isBlocked)
+      const PeekMenuItem(
+        label: 'Bỏ chặn hội thoại',
+        icon: Icons.block_rounded,
+        action: PeekAction.unblock,
       ),
   ];
 }

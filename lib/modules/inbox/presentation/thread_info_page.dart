@@ -14,6 +14,7 @@ import '../../customers/customers.dart';
 import '../../opportunities/opportunities.dart';
 import '../application/inbox_providers.dart';
 import '../domain/conversation.dart';
+import '../inbox_routes.dart';
 import 'widgets/conversation_actions.dart';
 import 'widgets/conversation_assets_section.dart';
 
@@ -21,10 +22,9 @@ import 'widgets/conversation_assets_section.dart';
 enum ThreadInfoResult { search }
 
 /// Trang Thông tin hội thoại (`ThreadInfo.dc.html`), thay sheet ngữ cảnh cũ:
-/// khách, phụ trách, nhãn, bán hàng, ảnh / tệp / liên kết, lưu trữ.
-///
-/// Chỉ có thao tác máy chủ làm được — không tắt thông báo / ghim hội thoại /
-/// chặn khách.
+/// khách, phụ trách, nhãn, bán hàng, ảnh / tệp / liên kết; tắt thông báo,
+/// ghim, chưa đọc, lưu trữ, chặn hội thoại (chỉ trong CRM) — API
+/// `feat/hop-thu-mobile`.
 class ThreadInfoPage extends ConsumerWidget {
   const ThreadInfoPage({super.key, required this.conversationId});
 
@@ -186,6 +186,17 @@ class _InfoBody extends ConsumerWidget {
                       label: 'Chuyển KH',
                       onTap: () => convertConversation(context, ref, c.id),
                     ),
+                  // Sở thích riêng, quyền đọc là đủ. Đổi theo phản hồi
+                  // server (trang dựng lại từ `conversationProvider`).
+                  _QuickAction(
+                    icon: Icons.notifications_off_outlined,
+                    label: c.isMuted ? 'Đã tắt' : 'Tắt TB',
+                    active: c.isMuted,
+                    onTap: () => ConversationActions(
+                      ref,
+                      context,
+                    ).setMuted(c, !c.isMuted),
+                  ),
                   _QuickAction(
                     icon: Icons.search_rounded,
                     label: 'Tìm tin',
@@ -248,12 +259,39 @@ class _InfoBody extends ConsumerWidget {
                 children: [ConversationAssetsSection(assets: assets)],
               ),
             ),
-            if (access.canUpdate) ...[
-              const SizedBox(height: 16),
-              _Rise(
-                index: 4,
-                child: _Section(
-                  children: [
+            // Mọi người đọc đều thấy (Ghim là sở thích riêng); từng dòng còn
+            // lại tự xét quyền.
+            const SizedBox(height: 16),
+            _Rise(
+              index: 4,
+              child: _Section(
+                children: [
+                  _InfoRow(
+                    label: 'Ghim hội thoại',
+                    plainLabel: true,
+                    onTap: () => ConversationActions(
+                      ref,
+                      context,
+                    ).setPinned(c, !c.isPinned),
+                    value: _PinSwitch(
+                      value: c.isPinned,
+                      onChanged: (on) =>
+                          ConversationActions(ref, context).setPinned(c, on),
+                    ),
+                  ),
+                  // Đã chặn: API trả 422 `conversation_blocked` cho /unread.
+                  if (access.canUpdate && !c.isUnread && !c.isBlocked)
+                    _InfoRow(
+                      label: 'Đánh dấu chưa đọc',
+                      plainLabel: true,
+                      // Ở lại hội thoại là đang đọc: dấu "chưa đọc" mất
+                      // nghĩa, nên xong thì về Hộp thư (như Messenger).
+                      onTap: () => _thenInbox(
+                        context,
+                        ConversationActions(ref, context).markUnread(c),
+                      ),
+                    ),
+                  if (access.canUpdate)
                     _InfoRow(
                       label: closed ? 'Mở lại hội thoại' : 'Lưu trữ hội thoại',
                       plainLabel: true,
@@ -262,10 +300,29 @@ class _InfoBody extends ConsumerWidget {
                         context,
                       ).setArchived(c, !closed),
                     ),
-                  ],
-                ),
+                  if (access.canBlock && !c.isBlocked)
+                    _InfoRow(
+                      label: 'Chặn hội thoại',
+                      plainLabel: true,
+                      labelColor: _danger(context),
+                      // Hội thoại đã chặn ẩn khỏi Hộp thư: về đó luôn.
+                      onTap: () => _thenInbox(
+                        context,
+                        ConversationActions(ref, context).setBlocked(c, true),
+                      ),
+                    ),
+                  if (access.canBlock && c.isBlocked)
+                    _InfoRow(
+                      label: 'Bỏ chặn hội thoại',
+                      plainLabel: true,
+                      onTap: () => ConversationActions(
+                        ref,
+                        context,
+                      ).setBlocked(c, false),
+                    ),
+                ],
               ),
-            ],
+            ),
           ],
         ),
       ),
@@ -283,6 +340,54 @@ Color _muted(BuildContext context) => OmniColors.byBrightness(
   OmniColors.mutedForeground,
   OmniColors.darkMutedForeground,
 );
+
+/// Chữ nguy hiểm (#B42318 sáng / dangerTextDark tối), như menu xem trước.
+Color _danger(BuildContext context) => OmniColors.byBrightness(
+  context,
+  OmniFeatureTones.light(OmniHue.red).foreground,
+  OmniColors.dangerTextDark,
+);
+
+/// Chờ thao tác xong rồi về Hộp thư — chỉ khi server đã nhận. Router lấy
+/// TRƯỚC `await`: trang có thể đã bị gỡ khi lượt gọi về.
+Future<void> _thenInbox(BuildContext context, Future<bool> action) async {
+  final router = GoRouter.of(context);
+  if (await action) router.goNamed(InboxRoutes.list);
+}
+
+/// Công tắc "Ghim hội thoại" (`ThreadInfo.dc.html` `.sw`): bật màu chính,
+/// tắt xám. Giá trị theo server — không đổi trước khi API trả lời.
+class _PinSwitch extends StatelessWidget {
+  const _PinSwitch({required this.value, required this.onChanged});
+
+  final bool value;
+  final ValueChanged<bool> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Semantics(
+      label: 'Ghim hội thoại',
+      child: Switch(
+        value: value,
+        onChanged: onChanged,
+        activeThumbColor: scheme.surface,
+        activeTrackColor: OmniColors.byBrightness(
+          context,
+          OmniColors.primary,
+          OmniColors.darkPrimary,
+        ),
+        inactiveThumbColor: scheme.surface,
+        inactiveTrackColor: OmniColors.byBrightness(
+          context,
+          const Color(0xFFC9D2DE),
+          scheme.outline,
+        ),
+        trackOutlineColor: const WidgetStatePropertyAll(Colors.transparent),
+      ),
+    );
+  }
+}
 
 /// Avatar 72, tên (title) w600 + chấm nhãn đầu tiên, dòng nguồn, hàng nút tròn.
 class _Hero extends StatelessWidget {
@@ -367,55 +472,72 @@ class _QuickAction extends StatelessWidget {
     required this.icon,
     required this.label,
     required this.onTap,
+    this.active = false,
   });
 
   final IconData icon;
   final String label;
   final VoidCallback onTap;
 
+  /// Nút đang bật (vd "Đã tắt" thông báo): nền mực, biểu tượng nền —
+  /// `muteBg`/`muteFg` của bản mẫu, đảo đúng ở giao diện tối.
+  final bool active;
+
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(12),
-      child: SizedBox(
-        width: 64,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: OmniColors.byBrightness(
-                  context,
-                  OmniColors.card,
-                  OmniColors.darkCard,
-                ),
-                border: Border.all(
-                  color: OmniColors.byBrightness(
-                    context,
-                    OmniColors.border,
-                    OmniColors.darkBorder,
+    return Semantics(
+      button: true,
+      toggled: active ? true : null,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+        child: SizedBox(
+          width: 64,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: active
+                      ? scheme.onSurface
+                      : OmniColors.byBrightness(
+                          context,
+                          OmniColors.card,
+                          OmniColors.darkCard,
+                        ),
+                  border: Border.all(
+                    color: active
+                        ? scheme.onSurface
+                        : OmniColors.byBrightness(
+                            context,
+                            OmniColors.border,
+                            OmniColors.darkBorder,
+                          ),
                   ),
                 ),
+                child: Icon(
+                  icon,
+                  size: 18,
+                  color: active ? scheme.surface : scheme.onSurface,
+                ),
               ),
-              child: Icon(icon, size: 18, color: scheme.onSurface),
-            ),
-            const SizedBox(height: 5),
-            Text(
-              label,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: OmniType.micro.copyWith(
-                fontWeight: FontWeight.w600,
-                color: scheme.onSurface,
+              const SizedBox(height: 5),
+              Text(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: OmniType.micro.copyWith(
+                  fontWeight: FontWeight.w600,
+                  color: scheme.onSurface,
+                ),
               ),
-            ),
-            const SizedBox(height: 4),
-          ],
+              const SizedBox(height: 4),
+            ],
+          ),
         ),
       ),
     );
@@ -492,6 +614,7 @@ class _InfoRow extends StatelessWidget {
     this.value,
     this.onTap,
     this.plainLabel = false,
+    this.labelColor,
   });
 
   final String label;
@@ -501,13 +624,16 @@ class _InfoRow extends StatelessWidget {
   /// Nhãn là chữ chính (màu mực) — dòng hành động không có giá trị.
   final bool plainLabel;
 
+  /// Màu chữ nhãn riêng (vd chữ nguy hiểm của "Chặn hội thoại").
+  final Color? labelColor;
+
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final labelText = Text(
       label,
       style: OmniType.body.copyWith(
-        color: plainLabel ? scheme.onSurface : _muted(context),
+        color: labelColor ?? (plainLabel ? scheme.onSurface : _muted(context)),
       ),
     );
     return InkWell(

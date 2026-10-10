@@ -137,10 +137,17 @@ class _InboxPageState extends ConsumerState<InboxPage>
           context.pushNamed(InboxRoutes.thread, pathParameters: {'id': c.id}),
       onAction: (action) => switch (action) {
         PeekAction.markRead => actions.markRead(c),
+        PeekAction.markUnread => actions.markUnread(c),
         PeekAction.assign => actions.assign(c),
         PeekAction.label => actions.addLabel(c),
+        PeekAction.pin => actions.setPinned(c, true),
+        PeekAction.unpin => actions.setPinned(c, false),
+        PeekAction.mute => actions.setMuted(c, true),
+        PeekAction.unmute => actions.setMuted(c, false),
         PeekAction.archive => actions.setArchived(c, true),
         PeekAction.reopen => actions.setArchived(c, false),
+        PeekAction.block => actions.setBlocked(c, true),
+        PeekAction.unblock => actions.setBlocked(c, false),
       },
     );
   }

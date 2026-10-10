@@ -4,9 +4,11 @@ import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:omni_app/core/config/app_config.dart';
 import 'package:omni_app/core/domain/channel.dart';
+import 'package:omni_app/core/error/app_exception.dart';
 import 'package:omni_app/core/network/api_client.dart';
 import 'package:omni_app/core/network/api_envelope.dart';
 import 'package:omni_app/modules/customers/customers.dart';
@@ -15,7 +17,10 @@ import 'package:omni_app/modules/opportunities/opportunities.dart';
 import 'package:omni_app/modules/inbox/data/inbox_api.dart';
 import 'package:omni_app/modules/inbox/domain/conversation.dart';
 import 'package:omni_app/modules/inbox/domain/inbox_filter.dart';
+import 'package:omni_app/modules/inbox/inbox_routes.dart';
 import 'package:omni_app/modules/inbox/presentation/thread_info_page.dart';
+import 'package:omni_app/design/theme/omni_theme.dart';
+import 'package:omni_app/design/tokens/tokens.dart';
 import 'package:omni_app/security/permissions/access_policy.dart';
 import 'package:omni_app/security/session/session.dart';
 import 'package:omni_app/security/session/session_controller.dart';
@@ -149,7 +154,7 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  testWidgets('đủ mục theo thiết kế, không có mục API chưa hỗ trợ', (
+  testWidgets('đủ mục theo thiết kế, gồm các mục Hộp thư mobile', (
     tester,
   ) async {
     await pump(tester, const {'opportunities': true});
@@ -159,8 +164,13 @@ void main() {
     expect(find.text('Nhãn'), findsOneWidget);
     expect(find.text('Đặt lịch'), findsOneWidget);
     expect(find.text('Lưu trữ hội thoại'), findsOneWidget);
-    for (final l in ['Tắt TB', 'Ghim hội thoại', 'Chặn khách này']) {
-      expect(find.text(l), findsNothing);
+    for (final l in [
+      'Tắt TB',
+      'Ghim hội thoại',
+      'Đánh dấu chưa đọc',
+      'Chặn hội thoại',
+    ]) {
+      expect(find.text(l), findsOneWidget, reason: l);
     }
   });
 
@@ -341,12 +351,318 @@ void main() {
     await tester.pumpAndSettle();
     expect(api.statuses, [('c1', ConversationStatus.open)]);
   });
+
+  group('Hộp thư mobile: tắt TB · ghim · chưa đọc · chặn', () {
+    Conversation base({
+      bool pinned = false,
+      bool muted = false,
+      DateTime? blockedAt,
+      int unread = 0,
+    }) => Conversation(
+      id: 'c1',
+      channel: Channel.zalo,
+      status: ConversationStatus.open,
+      customerName: 'Thuý Phạm',
+      lastMessage: 'Còn đàn không',
+      sourceName: 'Zalo OA · Trung Nguyên',
+      unread: unread,
+      isPinned: pinned,
+      isMuted: muted,
+      blockedAt: blockedAt,
+    );
+
+    /// Trang Thông tin trong GoRouter thật (cần cho "về Hộp thư"), hội thoại
+    /// lấy từ [api] — nên `invalidate` sau thao tác dựng lại theo "server".
+    Future<void> pumpRouted(
+      WidgetTester tester,
+      _RecordingApi api, {
+      Set<String> permissions = const {'inbox.read', 'inbox.write'},
+      bool dark = false,
+    }) async {
+      tall(tester);
+      final router = GoRouter(
+        initialLocation: '/inbox/c1/info',
+        routes: [
+          GoRoute(
+            name: InboxRoutes.list,
+            path: InboxRoutes.listPath,
+            builder: (_, _) => const Scaffold(body: Text('HỘP THƯ')),
+            routes: [
+              GoRoute(
+                path: ':id/info',
+                builder: (_, state) =>
+                    ThreadInfoPage(conversationId: state.pathParameters['id']!),
+              ),
+            ],
+          ),
+        ],
+      );
+      addTearDown(router.dispose);
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            inboxApiProvider.overrideWithValue(api),
+            sessionProvider.overrideWithValue(
+              Session(
+                status: SessionStatus.authenticated,
+                user: const SessionUser(
+                  id: 'u1',
+                  fullName: 'Kiệt',
+                  email: 'k@x',
+                ),
+                tenant: const SessionTenant(id: 't1', name: 'Xưởng'),
+                policy: AccessPolicy(permissions),
+              ),
+            ),
+            conversationProvider('c1').overrideWith((ref) async => api.current),
+            pipelineCatalogProvider.overrideWith(
+              (ref) => Completer<PipelineCatalog>().future,
+            ),
+            conversationContextProvider(
+              'c1',
+            ).overrideWith((ref) async => const ConversationContext()),
+            conversationAssetsProvider(
+              'c1',
+            ).overrideWith((ref) async => const ConversationAssets()),
+          ],
+          child: MaterialApp.router(
+            theme: dark
+                ? OmniTheme.dark(TargetPlatform.android)
+                : OmniTheme.light(TargetPlatform.android),
+            routerConfig: router,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('có Tắt TB, Ghim hội thoại, Chưa đọc, Chặn hội thoại', (
+      tester,
+    ) async {
+      final api = _RecordingApi()..current = base();
+      await pumpRouted(tester, api);
+      expect(find.text('Tắt TB'), findsOneWidget);
+      expect(find.text('Ghim hội thoại'), findsOneWidget);
+      expect(find.byType(Switch), findsOneWidget);
+      expect(find.text('Đánh dấu chưa đọc'), findsOneWidget);
+      expect(find.text('Chặn hội thoại'), findsOneWidget);
+    });
+
+    testWidgets('sale .own: có Ghim + Tắt TB + Chưa đọc, KHÔNG có Chặn', (
+      tester,
+    ) async {
+      final api = _RecordingApi()..current = base();
+      await pumpRouted(
+        tester,
+        api,
+        permissions: const {'inbox.read.own', 'inbox.write'},
+      );
+      expect(find.text('Ghim hội thoại'), findsOneWidget);
+      expect(find.text('Tắt TB'), findsOneWidget);
+      expect(find.text('Đánh dấu chưa đọc'), findsOneWidget);
+      expect(find.text('Chặn hội thoại'), findsNothing);
+    });
+
+    testWidgets('chỉ inbox.read: Ghim + Tắt TB; không Chưa đọc/Chặn/Lưu trữ', (
+      tester,
+    ) async {
+      final api = _RecordingApi()..current = base();
+      await pumpRouted(tester, api, permissions: const {'inbox.read'});
+      expect(find.text('Ghim hội thoại'), findsOneWidget);
+      expect(find.text('Tắt TB'), findsOneWidget);
+      expect(find.text('Đánh dấu chưa đọc'), findsNothing);
+      expect(find.text('Chặn hội thoại'), findsNothing);
+      expect(find.text('Lưu trữ hội thoại'), findsNothing);
+    });
+
+    testWidgets('công tắc Ghim: POST rồi DELETE, đổi theo phản hồi', (
+      tester,
+    ) async {
+      final api = _RecordingApi()..current = base();
+      await pumpRouted(tester, api);
+      expect(tester.widget<Switch>(find.byType(Switch)).value, isFalse);
+
+      await tester.tap(find.text('Ghim hội thoại'));
+      await tester.pumpAndSettle();
+      expect(api.pins, [true]);
+      expect(tester.widget<Switch>(find.byType(Switch)).value, isTrue);
+
+      await tester.tap(find.byType(Switch));
+      await tester.pumpAndSettle();
+      expect(api.pins, [true, false]);
+      expect(tester.widget<Switch>(find.byType(Switch)).value, isFalse);
+    });
+
+    testWidgets('công tắc Ghim không đổi trước khi server trả lời', (
+      tester,
+    ) async {
+      final api = _RecordingApi()
+        ..current = base()
+        ..gate = Completer<void>();
+      await pumpRouted(tester, api);
+      await tester.tap(find.byType(Switch));
+      await tester.pump();
+      expect(tester.widget<Switch>(find.byType(Switch)).value, isFalse);
+      api.gate!.complete();
+      await tester.pumpAndSettle();
+      expect(tester.widget<Switch>(find.byType(Switch)).value, isTrue);
+    });
+
+    testWidgets('Tắt TB → POST mute, nút thành "Đã tắt"; bấm lại → DELETE', (
+      tester,
+    ) async {
+      final api = _RecordingApi()..current = base();
+      await pumpRouted(tester, api);
+      await tester.tap(find.text('Tắt TB'));
+      await tester.pumpAndSettle();
+      expect(api.mutes, [true]);
+      expect(find.text('Đã tắt'), findsOneWidget);
+      await tester.tap(find.text('Đã tắt'));
+      await tester.pumpAndSettle();
+      expect(api.mutes, [true, false]);
+      expect(find.text('Tắt TB'), findsOneWidget);
+    });
+
+    testWidgets('Đánh dấu chưa đọc → POST unread rồi về Hộp thư', (
+      tester,
+    ) async {
+      final api = _RecordingApi()..current = base();
+      await pumpRouted(tester, api);
+      await tester.tap(find.text('Đánh dấu chưa đọc'));
+      await tester.pumpAndSettle();
+      expect(api.unreads, ['c1']);
+      expect(find.text('HỘP THƯ'), findsOneWidget);
+    });
+
+    testWidgets('đang chưa đọc → không có mục "Đánh dấu chưa đọc"', (
+      tester,
+    ) async {
+      final api = _RecordingApi()..current = base(unread: 3);
+      await pumpRouted(tester, api);
+      expect(find.text('Đánh dấu chưa đọc'), findsNothing);
+    });
+
+    testWidgets('Chặn hội thoại → xác nhận → POST block rồi về Hộp thư', (
+      tester,
+    ) async {
+      final api = _RecordingApi()..current = base();
+      await pumpRouted(tester, api);
+      await tester.tap(find.text('Chặn hội thoại'));
+      await tester.pumpAndSettle();
+      expect(find.text('Chặn hội thoại này?'), findsOneWidget);
+      await tester.tap(find.text('Chặn'));
+      await tester.pumpAndSettle();
+      expect(api.blocks, [true]);
+      expect(find.text('HỘP THƯ'), findsOneWidget);
+    });
+
+    testWidgets('đã chặn → "Bỏ chặn hội thoại" → DELETE, ở lại trang', (
+      tester,
+    ) async {
+      final api = _RecordingApi()
+        ..current = base(blockedAt: DateTime.utc(2026, 10, 10));
+      await pumpRouted(tester, api);
+      expect(find.text('Chặn hội thoại'), findsNothing);
+      // API trả 422 conversation_blocked cho /unread trên hội thoại đã chặn.
+      expect(find.text('Đánh dấu chưa đọc'), findsNothing);
+      await tester.tap(find.text('Bỏ chặn hội thoại'));
+      await tester.pumpAndSettle();
+      expect(find.text('Chặn hội thoại này?'), findsNothing);
+      expect(api.blocks, [false]);
+      expect(find.text('HỘP THƯ'), findsNothing);
+      expect(find.text('Chặn hội thoại'), findsOneWidget);
+    });
+
+    testWidgets('giao diện tối: "Chặn hội thoại" dùng màu nguy hiểm tối', (
+      tester,
+    ) async {
+      final api = _RecordingApi()..current = base();
+      await pumpRouted(tester, api, dark: true);
+      final text = tester.widget<Text>(find.text('Chặn hội thoại'));
+      expect(text.style!.color, OmniColors.dangerTextDark);
+    });
+
+    testWidgets('API lỗi → không báo thành công, không rời trang', (
+      tester,
+    ) async {
+      final api = _RecordingApi()
+        ..current = base()
+        ..fail = true;
+      await pumpRouted(tester, api);
+      await tester.tap(find.text('Đánh dấu chưa đọc'));
+      await tester.pumpAndSettle();
+      expect(find.text('HỘP THƯ'), findsNothing);
+      expect(find.text('Máy chủ bận'), findsOneWidget);
+      expect(find.text('Đã đánh dấu chưa đọc.'), findsNothing);
+    });
+  });
 }
 
 class _RecordingApi extends InboxApi {
   _RecordingApi() : super(ApiClient(Dio()));
 
   final statuses = <(String, ConversationStatus)>[];
+  final pins = <bool>[];
+  final mutes = <bool>[];
+  final blocks = <bool>[];
+  final unreads = <String>[];
+  bool fail = false;
+
+  /// Hội thoại "trên server" — `conversationProvider` đọc lại sau thao tác.
+  Conversation current = const Conversation(
+    id: 'c1',
+    channel: Channel.zalo,
+    status: ConversationStatus.open,
+  );
+
+  /// Giữ lượt ghim tới khi completer xong.
+  Completer<void>? gate;
+
+  void _check() {
+    if (fail) throw const ServerException('Máy chủ bận');
+  }
+
+  @override
+  Future<bool> setPinned(String id, bool on) async {
+    await gate?.future;
+    _check();
+    pins.add(on);
+    current = current.copyWith(isPinned: on);
+    return on;
+  }
+
+  @override
+  Future<bool> setMuted(String id, bool on) async {
+    _check();
+    mutes.add(on);
+    current = current.copyWith(isMuted: on);
+    return on;
+  }
+
+  @override
+  Future<int> markUnread(String id) async {
+    _check();
+    unreads.add(id);
+    current = current.copyWith(unread: 1);
+    return 1;
+  }
+
+  @override
+  Future<Conversation> setBlocked(String id, bool on) async {
+    _check();
+    blocks.add(on);
+    current = on
+        ? current.copyWith(blockedAt: DateTime.utc(2026, 10, 10))
+        : Conversation(
+            id: current.id,
+            channel: current.channel,
+            status: current.status,
+            customerName: current.customerName,
+            isPinned: current.isPinned,
+            isMuted: current.isMuted,
+          );
+    return current;
+  }
 
   @override
   Future<Conversation> setStatus(String id, ConversationStatus status) async {
