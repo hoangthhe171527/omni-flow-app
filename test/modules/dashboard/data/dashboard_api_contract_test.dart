@@ -7,7 +7,7 @@ import 'package:omni_app/core/network/api_client.dart';
 import 'package:omni_app/modules/dashboard/data/dashboard_api.dart';
 import 'package:omni_app/modules/dashboard/domain/revenue_period.dart';
 
-import '../../../helpers/fake_http_adapter.dart';
+import '../../../support/fake_http_adapter.dart';
 
 /// Hợp đồng với omni-flow-api feat/revenue-series:
 /// `GET /sales-overview/revenue-series` → `{success, data: {bucket, current,

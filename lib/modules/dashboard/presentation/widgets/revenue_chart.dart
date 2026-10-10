@@ -20,6 +20,7 @@ class RevenueChart extends StatefulWidget {
     required this.series,
     required this.onScrub,
     this.scrubIndex,
+    this.ringColor,
   });
 
   static const double height = 112;
@@ -27,6 +28,9 @@ class RevenueChart extends StatefulWidget {
   final RevenueSeries series;
   final ValueChanged<int?> onScrub;
   final int? scrubIndex;
+
+  /// Màu vòng quanh điểm cuối — nên là nền thẻ chứa biểu đồ (mặc định surface).
+  final Color? ringColor;
 
   @override
   State<RevenueChart> createState() => _RevenueChartState();
@@ -58,7 +62,7 @@ class _RevenueChartState extends State<RevenueChart>
   @override
   void didUpdateWidget(RevenueChart old) {
     super.didUpdateWidget(old);
-    if (!identical(old.series, widget.series)) _run();
+    if (old.series != widget.series) _run();
   }
 
   void _run() {
@@ -96,6 +100,7 @@ class _RevenueChartState extends State<RevenueChart>
     return Semantics(
       container: true,
       label: s.summary(),
+      hint: 'Vuốt lên/xuống để xem từng ngày',
       // Có value thì Flutter đòi cả increasedValue/decreasedValue.
       value: i == null ? null : _tipLine(s, i),
       increasedValue: i == null ? null : _tipLine(s, math.min(_n - 1, i + 1)),
@@ -108,6 +113,8 @@ class _RevenueChartState extends State<RevenueChart>
           return GestureDetector(
             behavior: HitTestBehavior.opaque,
             onTapDown: (d) => widget.onScrub(_indexAt(d.localPosition.dx, w)),
+            onTapUp: (_) => widget.onScrub(null),
+            onTapCancel: () => widget.onScrub(null),
             onHorizontalDragStart: (d) =>
                 widget.onScrub(_indexAt(d.localPosition.dx, w)),
             onHorizontalDragUpdate: (d) =>
@@ -136,7 +143,7 @@ class _RevenueChartState extends State<RevenueChart>
                             OmniColors.warningTextDark,
                           ),
                           guideColor: scheme.onSurface.withValues(alpha: .25),
-                          surfaceColor: scheme.surface,
+                          surfaceColor: widget.ringColor ?? scheme.surface,
                         ),
                       ),
                     ),
@@ -337,7 +344,7 @@ class RevenueChartPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(RevenueChartPainter o) =>
-      !identical(o.series, series) ||
+      o.series != series ||
       o.progress != progress ||
       o.scrubIndex != scrubIndex ||
       o.lineColor != lineColor ||

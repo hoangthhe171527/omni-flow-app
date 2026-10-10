@@ -138,4 +138,89 @@ void main() {
     await t.pumpAndSettle();
     expect(painterOf(t).lineColor, dark.colorScheme.primary);
   });
+
+  testWidgets('chạm rồi cuộn dọc → onScrub(null), không kẹt', (t) async {
+    final got = <int?>[];
+    await t.pumpWidget(
+      MaterialApp(
+        theme: OmniTheme.light(),
+        home: Scaffold(
+          body: ListView(
+            children: [
+              SizedBox(
+                width: 310,
+                child: RevenueChart(series: series(), onScrub: got.add),
+              ),
+              const SizedBox(height: 2000),
+            ],
+          ),
+        ),
+      ),
+    );
+    await t.pumpAndSettle();
+    final r = t.getRect(find.byType(RevenueChart));
+    final g = await t.startGesture(r.center);
+    await t.pump(const Duration(milliseconds: 200));
+    await g.moveBy(const Offset(0, -40));
+    await g.moveBy(const Offset(0, -40));
+    await g.up();
+    await t.pumpAndSettle();
+    expect(got, isNotEmpty);
+    expect(got.last, isNull);
+  });
+
+  testWidgets('chạm nhả → onScrub(null)', (t) async {
+    final got = <int?>[];
+    await t.pumpWidget(host(series(), onScrub: got.add, animations: false));
+    await t.tap(find.byType(RevenueChart));
+    await t.pump();
+    expect(got.last, isNull);
+  });
+
+  testWidgets('chuỗi mới bằng giá trị → không vẽ lại từ đầu', (t) async {
+    await t.pumpWidget(host(series()));
+    await t.pumpAndSettle();
+    expect(painterOf(t).progress, 1.0);
+    await t.pumpWidget(host(series()));
+    await t.pump(const Duration(milliseconds: 100));
+    expect(painterOf(t).progress, 1.0);
+  });
+
+  test('RevenueSeries so sánh theo giá trị', () {
+    expect(series(), series());
+    expect(series().hashCode, series().hashCode);
+    expect(series() == series(target: null), isFalse);
+  });
+
+  testWidgets('Semantics có gợi ý vuốt', (t) async {
+    final h = t.ensureSemantics();
+    final s = series();
+    await t.pumpWidget(host(s, animations: false));
+    await t.pump();
+    final data = t
+        .getSemantics(find.bySemanticsLabel(s.summary()))
+        .getSemanticsData();
+    expect(data.hint, 'Vuốt lên/xuống để xem từng ngày');
+    h.dispose();
+  });
+
+  testWidgets('ringColor dùng cho vòng điểm cuối', (t) async {
+    await t.pumpWidget(
+      MaterialApp(
+        theme: OmniTheme.light(),
+        home: Scaffold(
+          body: SizedBox(
+            width: 310,
+            child: RevenueChart(
+              series: series(),
+              onScrub: (_) {},
+              ringColor: const Color(0xFF123456),
+            ),
+          ),
+        ),
+      ),
+    );
+    await t.pumpAndSettle();
+    expect(painterOf(t).surfaceColor, const Color(0xFF123456));
+  });
 }

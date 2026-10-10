@@ -2,6 +2,8 @@
 /// `current` đã cắt tới ô chứa `now`, nên k = current.length - 1.
 library;
 
+import 'package:flutter/foundation.dart' show listEquals;
+
 import 'revenue_period.dart';
 
 class RevenueSeries {
@@ -26,6 +28,25 @@ class RevenueSeries {
     var acc = 0.0;
     return List.unmodifiable([for (final x in xs) acc += x]);
   }
+
+  /// So theo giá trị: provider tải lại ra chuỗi y hệt thì biểu đồ không vẽ lại.
+  @override
+  bool operator ==(Object other) =>
+      other is RevenueSeries &&
+      other.range == range &&
+      other.target == target &&
+      other.slots == slots &&
+      listEquals(other.current, current) &&
+      listEquals(other.previous, previous);
+
+  @override
+  int get hashCode => Object.hash(
+    range,
+    target,
+    slots,
+    Object.hashAll(current),
+    Object.hashAll(previous),
+  );
 
   double get headline => cumCurrent.isEmpty ? 0 : cumCurrent.last;
 
