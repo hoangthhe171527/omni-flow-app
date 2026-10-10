@@ -24,6 +24,8 @@ import 'package:omni_app/modules/inbox/presentation/widgets/message_actions_over
 import 'package:omni_app/modules/inbox/presentation/widgets/message_bubble.dart';
 import 'package:omni_app/modules/opportunities/domain/opportunity_permissions.dart';
 import 'package:omni_app/modules/tasks/domain/task_permissions.dart';
+import 'package:omni_app/modules/team/data/team_api.dart';
+import 'package:omni_app/modules/team/team.dart';
 import 'package:omni_app/modules/settings/application/appearance_providers.dart';
 import 'package:omni_app/security/permissions/access_policy.dart';
 import 'package:omni_app/security/session/session.dart';
@@ -53,9 +55,15 @@ void main() {
   /// Bật "giảm chuyển động" của hệ điều hành cho bài đang chạy.
   var reduceMotion = false;
 
+  /// Danh bạ đội giả: chỉ nạp khi có ai đọc `teamDirectoryProvider`.
+  var teamApi = _FakeTeamApi(const []);
+  var userId = 'u1';
+
   setUp(() {
     api = _FakeInboxApi();
     reduceMotion = false;
+    teamApi = _FakeTeamApi(const []);
+    userId = 'u1';
   });
 
   Widget host({
@@ -64,6 +72,7 @@ void main() {
   }) => ProviderScope(
     overrides: [
       inboxApiProvider.overrideWithValue(api),
+      teamApiProvider.overrideWithValue(teamApi),
       // Không realtime: tín hiệu của hội thoại vẫn dựng được mà không mở socket.
       realtimeClientProvider.overrideWithValue(
         RealtimeClient(
@@ -74,7 +83,7 @@ void main() {
       sessionProvider.overrideWithValue(
         Session(
           status: SessionStatus.authenticated,
-          user: const SessionUser(id: 'u1', fullName: 'Kiệt', email: 'k@x.vn'),
+          user: SessionUser(id: userId, fullName: 'Kiệt', email: 'k@x.vn'),
           tenant: const SessionTenant(id: 't1', name: 'Xưởng đàn'),
           policy: AccessPolicy(permissions),
           features: features,
@@ -456,6 +465,177 @@ void main() {
     await closeThread(tester);
   });
 
+  group('review Task 4', () {
+    testWidgets('nút trên thanh cảm xúc giữ hành động chạm cho trình đọc '
+        'màn hình', (tester) async {
+      final handle = tester.ensureSemantics();
+      api.history = [_serverMessage('m1', 'Chào shop')];
+      await openThread(tester);
+      await holdBubble(tester, 'Chào shop');
+      expect(
+        tester.getSemantics(find.byKey(const ValueKey('reaction-choice-👍'))),
+        isSemantics(
+          label: 'Thả cảm xúc 👍',
+          isButton: true,
+          hasTapAction: true,
+        ),
+      );
+      handle.dispose();
+      await closeThread(tester);
+    });
+
+    testWidgets('hàng viên cảm xúc nội bộ giữ hành động chạm', (tester) async {
+      final handle = tester.ensureSemantics();
+      api.history = [
+        _serverMessage(
+          'm1',
+          'Chào shop',
+          teamReactions: [
+            {'user_id': 'u2', 'user_name': 'Lan', 'emoji': '❤️'},
+          ],
+        ),
+      ];
+      await openThread(tester);
+      expect(
+        tester.getSemantics(find.byKey(const ValueKey('team-reactions-tap'))),
+        isSemantics(isButton: true, hasTapAction: true),
+      );
+      handle.dispose();
+      await closeThread(tester);
+    });
+
+    testWidgets('cảm xúc của tôi mà server chưa có user_name → tên phiên', (
+      tester,
+    ) async {
+      final handle = tester.ensureSemantics();
+      api.history = [
+        _serverMessage(
+          'm1',
+          'Chào shop',
+          teamReactions: [
+            {'user_id': 'u1', 'user_name': null, 'emoji': '❤️'},
+            {'user_id': 'u2', 'user_name': null, 'emoji': '👍'},
+          ],
+        ),
+      ];
+      await openThread(tester);
+      expect(
+        find.bySemanticsLabel(
+          RegExp(r'Cảm xúc nội bộ: ❤️ Kiệt; 👍 Thành viên'),
+        ),
+        findsOneWidget,
+      );
+      handle.dispose();
+      await closeThread(tester);
+    });
+
+    testWidgets('danh bạ đội nạp SAU khi mở hội thoại → tên cập nhật', (
+      tester,
+    ) async {
+      final handle = tester.ensureSemantics();
+      teamApi = _FakeTeamApi(const [
+        TeamMember(membershipId: 'ms2', userId: 'u2', name: 'Lan Nguyễn'),
+      ]);
+      api.history = [
+        _serverMessage(
+          'm1',
+          'Chào shop',
+          teamReactions: [
+            {'user_id': 'u2', 'user_name': 'Lan', 'emoji': '❤️'},
+          ],
+        ),
+      ];
+      await openThread(tester);
+      expect(
+        teamApi.directoryLoads,
+        0,
+        reason: 'mở hội thoại không kéo danh bạ',
+      );
+      expect(
+        find.bySemanticsLabel(RegExp(r'Cảm xúc nội bộ: ❤️ Lan$')),
+        findsOneWidget,
+      );
+
+      // Một màn khác (sheet Gán…) nạp danh bạ.
+      final container = ProviderScope.containerOf(
+        tester.element(find.byType(ThreadPage)),
+      );
+      await container.read(teamDirectoryProvider.future);
+      await tester.pump();
+      await tester.pump();
+      expect(
+        find.bySemanticsLabel(RegExp(r'Cảm xúc nội bộ: ❤️ Lan Nguyễn')),
+        findsOneWidget,
+      );
+      handle.dispose();
+      await closeThread(tester);
+    });
+
+    testWidgets('phiên không có id người dùng → bấm đúp không gửi', (
+      tester,
+    ) async {
+      userId = '';
+      api.history = [_serverMessage('m1', 'Chào shop')];
+      await openThread(tester);
+      await doubleTap(tester, 'Chào shop');
+      expect(api.reactCalls, isEmpty);
+      await closeThread(tester);
+    });
+
+    testWidgets('bấm đúp ngoài bong bóng (phần trống của hàng) → không thả', (
+      tester,
+    ) async {
+      api.history = [_serverMessage('m1', 'Chào shop')];
+      await openThread(tester);
+      final bubble = tester.getCenter(inBubble('Chào shop'));
+      final empty = Offset(
+        tester.getSize(find.byType(ThreadPage)).width - 30,
+        bubble.dy,
+      );
+      await tester.tapAt(empty);
+      await tester.pump(const Duration(milliseconds: 50));
+      await tester.tapAt(empty);
+      await tester.pump(const Duration(milliseconds: 900));
+      expect(api.reactCalls, isEmpty);
+      await closeThread(tester);
+    });
+
+    testWidgets('viên mới "nảy" vào (pop .35s), tắt khi giảm chuyển động', (
+      tester,
+    ) async {
+      api.history = [_serverMessage('m1', 'Chào shop')];
+      await openThread(tester);
+      await doubleTap(tester, 'Chào shop', settle: false);
+      await tester.pump(const Duration(milliseconds: 60));
+      final scale = tester.widget<ScaleTransition>(
+        find
+            .ancestor(
+              of: find.byKey(const ValueKey('team-reaction-❤️')),
+              matching: find.byType(ScaleTransition),
+            )
+            .first,
+      );
+      expect(scale.scale.value, lessThan(1));
+      await tester.pump(const Duration(milliseconds: 900));
+      await closeThread(tester);
+
+      reduceMotion = true;
+      api = _FakeInboxApi()..history = [_serverMessage('m1', 'Chào shop')];
+      await openThread(tester);
+      await doubleTap(tester, 'Chào shop', settle: false);
+      await tester.pump();
+      expect(
+        find.ancestor(
+          of: find.byKey(const ValueKey('team-reaction-❤️')),
+          matching: find.byType(ScaleTransition),
+        ),
+        findsNothing,
+      );
+      await tester.pump(const Duration(milliseconds: 900));
+      await closeThread(tester);
+    });
+  });
+
   testWidgets('cảm xúc khách 😮 + ❤️ của đội → hiện cả hai', (tester) async {
     api.history = [
       _serverMessage(
@@ -680,5 +860,19 @@ class _FakeInboxApi extends InboxApi {
       'reply_to_message_id': replyToMessageId,
       'sent_at': DateTime.utc(2026, 1, 1, 9, _sent).toIso8601String(),
     });
+  }
+}
+
+/// Danh bạ đội giả; đếm số lần bị kéo cả danh bạ.
+class _FakeTeamApi extends TeamApi {
+  _FakeTeamApi(this._members) : super(ApiClient(Dio()));
+
+  final List<TeamMember> _members;
+  int directoryLoads = 0;
+
+  @override
+  Future<List<TeamMember>> members({String? search}) async {
+    directoryLoads++;
+    return _members;
   }
 }

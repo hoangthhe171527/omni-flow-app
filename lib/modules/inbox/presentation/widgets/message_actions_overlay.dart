@@ -341,6 +341,8 @@ class _ReactionButton extends StatelessWidget {
       button: true,
       selected: selected,
       label: selected ? 'Bỏ cảm xúc $emoji' : 'Thả cảm xúc $emoji',
+      // excludeSemantics bỏ cả hành động chạm của con: khai lại ở đây.
+      onTap: onTap,
       excludeSemantics: true,
       child: InkResponse(
         key: ValueKey('reaction-choice-$emoji'),

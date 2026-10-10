@@ -10,9 +10,18 @@ import '../domain/team_member.dart';
 /// lọc). Danh sách để CHỌN người thì đọc [teamMembersProvider]. Làm mới (sau
 /// khi mời, ngừng hoạt động, liên kết Zalo, bấm "Thử lại") thì invalidate
 /// provider NÀY — hai provider kia dựng lại theo.
-final teamDirectoryProvider = FutureProvider<List<TeamMember>>((ref) {
-  return ref.watch(teamApiProvider).members();
+final teamDirectoryProvider = FutureProvider<List<TeamMember>>((ref) async {
+  final members = await ref.watch(teamApiProvider).members();
+  // Sau `await`: không phải lúc khởi tạo, nên đổi provider khác được.
+  ref.read(teamDirectoryLoadedProvider.notifier).state = true;
+  return members;
 });
+
+/// Danh bạ đội ĐÃ được nạp ở đâu đó trong phiên chưa. Màn chỉ muốn DÙNG danh
+/// bạ sẵn có (không tự kéo về, vd tên người thả cảm xúc trong hội thoại) theo
+/// dõi cờ này: `ref.exists(teamDirectoryProvider)` chỉ đúng lúc gọi, không báo
+/// khi danh bạ được nạp sau đó (review Task 4).
+final teamDirectoryLoadedProvider = StateProvider<bool>((ref) => false);
 
 /// Người CHỌN ĐƯỢC: đang làm và đã nhận lời mời ([TeamMember.isSelectable]).
 ///

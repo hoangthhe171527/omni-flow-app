@@ -32,6 +32,7 @@ class MessageBubble extends StatelessWidget {
     this.onCreateOpportunity,
     this.onReact,
     this.myUserId,
+    this.myName,
     this.memberNames = const {},
   });
 
@@ -64,6 +65,9 @@ class MessageBubble extends StatelessWidget {
 
   /// Người đang xem — để biết viên nào là của tôi và bấm đúp là thả hay bỏ.
   final String? myUserId;
+
+  /// Tên của tôi trong phiên — cho viên của tôi khi server chưa có `user_name`.
+  final String? myName;
 
   /// Tên theo `user_id` từ danh bạ đội (khi đã nạp), ưu tiên hơn tên server
   /// chụp lại lúc thả.
@@ -359,7 +363,9 @@ class MessageBubble extends StatelessWidget {
                   Stack(
                     clipBehavior: Clip.none,
                     children: [
-                      content,
+                      onReact == null
+                          ? content
+                          : _BubbleDoubleTap(child: content),
                       // Cảm xúc của KHÁCH: vòng tròn ở góc bong bóng. Cảm xúc
                       // nội bộ của đội là viên riêng bên dưới — hai thứ không
                       // bao giờ đè nhau.
@@ -387,14 +393,16 @@ class MessageBubble extends StatelessWidget {
                         ),
                     ],
                   ),
-                  if (message.teamReactions.isNotEmpty)
-                    TeamReactionChips(
-                      reactions: message.teamReactions,
-                      myUserId: myUserId,
-                      memberNames: memberNames,
-                      alignEnd: outbound,
-                      lift: !hasCustomerReaction,
-                    ),
+                  // Luôn dựng (rỗng thì không vẽ gì): giữ state qua các lần
+                  // đổi cảm xúc, để viên MỚI nảy vào còn viên cũ thì không.
+                  TeamReactionChips(
+                    reactions: message.teamReactions,
+                    myUserId: myUserId,
+                    myName: myName,
+                    memberNames: memberNames,
+                    alignEnd: outbound,
+                    lift: !hasCustomerReaction,
+                  ),
                   _MetaLine(
                     message: message,
                     onRetry: onRetry,
@@ -512,6 +520,23 @@ class _MessageTextState extends State<_MessageText> {
       ),
     );
   }
+}
+
+/// Bấm đúp lên CHÍNH bong bóng = thả / bỏ ❤️ (review Task 4: trước đây cả
+/// hàng rộng hết màn, viên cảm xúc và "Gửi lại" cũng bắt bấm đúp). Tim bay vẫn
+/// do [_ReplySwipe] vẽ. Chỉ được dựng khi có `onReact`: nhận dạng bấm đúp làm
+/// chạm đơn (mở ảnh, mở link) trễ tới 300ms, nên người chỉ đọc không phải chịu.
+class _BubbleDoubleTap extends StatelessWidget {
+  const _BubbleDoubleTap({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) => GestureDetector(
+    onDoubleTap: () =>
+        context.findAncestorStateOfType<_ReplySwipeState>()?._onDoubleTap(),
+    child: child,
+  );
 }
 
 class _ReplySwipe extends StatefulWidget {
@@ -701,14 +726,9 @@ class _ReplySwipeState extends State<_ReplySwipe>
                   ..onUpdate = _onDragUpdate
                   ..onEnd = _onDragEnd,
               ),
-        // Chỉ khi thả được cảm xúc: nhận dạng bấm đúp làm chạm đơn (mở ảnh,
-        // mở link) trễ tới 300ms, nên người chỉ đọc không phải chịu.
-        if (widget.onReact != null)
-          DoubleTapGestureRecognizer:
-              GestureRecognizerFactoryWithHandlers<DoubleTapGestureRecognizer>(
-                DoubleTapGestureRecognizer.new,
-                (recognizer) => recognizer.onDoubleTap = _onDoubleTap,
-              ),
+        // Bấm đúp KHÔNG bắt ở đây (cả hàng rộng hết màn): chỉ bong bóng mới
+        // nhận — xem [_BubbleDoubleTap]. Viên cảm xúc và "Gửi lại" giữ chạm
+        // đơn tức thì.
       },
       child: Stack(
         clipBehavior: Clip.none,

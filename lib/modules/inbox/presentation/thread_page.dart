@@ -292,7 +292,12 @@ class _ThreadPageState extends ConsumerState<ThreadPage>
     final capabilities = conversation.valueOrNull?.outboundCapabilities;
     // Tên người thả cảm xúc: danh bạ đội nếu ĐÃ nạp ở nơi khác (không kéo cả
     // danh bạ chỉ để mở một hội thoại), không thì tên server chụp lúc thả.
-    final memberNames = ref.exists(teamDirectoryProvider)
+    // Theo dõi cờ "đã nạp": danh bạ nạp SAU khi mở (sheet Gán…) thì tên đổi
+    // theo ngay. `exists` giữ cho trường hợp provider bị override.
+    final directoryLoaded =
+        ref.watch(teamDirectoryLoadedProvider) ||
+        ref.exists(teamDirectoryProvider);
+    final memberNames = directoryLoaded
         ? {
             for (final entry in ref.watch(teamMemberByIdProvider).entries)
               entry.key: entry.value.name,
@@ -364,7 +369,10 @@ class _ThreadPageState extends ConsumerState<ThreadPage>
                         : null,
                     // `team-reactions` cần `inbox.write`; cần biết tôi là ai
                     // để đảo đúng mục của mình.
-                    onReact: access.canReact && myUserId != null
+                    onReact:
+                        access.canReact &&
+                            myUserId != null &&
+                            myUserId.isNotEmpty
                         ? (message, emoji) => _react(
                             message,
                             emoji,
@@ -373,6 +381,7 @@ class _ThreadPageState extends ConsumerState<ThreadPage>
                           )
                         : null,
                     myUserId: myUserId,
+                    myName: session.user?.fullName,
                     memberNames: memberNames,
                     keyForMessage: _keyForMessage,
                   ),
@@ -750,6 +759,7 @@ class _MessageList extends StatelessWidget {
     required this.onCreateOpportunity,
     required this.onReact,
     required this.myUserId,
+    required this.myName,
     required this.memberNames,
     required this.keyForMessage,
   });
@@ -765,6 +775,7 @@ class _MessageList extends StatelessWidget {
   final void Function(Message message)? onCreateOpportunity;
   final void Function(Message message, String emoji)? onReact;
   final String? myUserId;
+  final String? myName;
   final Map<String, String> memberNames;
   final GlobalKey Function(String id) keyForMessage;
 
@@ -870,6 +881,7 @@ class _MessageList extends StatelessWidget {
                     ? null
                     : (emoji) => onReact!(message, emoji),
                 myUserId: myUserId,
+                myName: myName,
                 memberNames: memberNames,
               ),
             ],

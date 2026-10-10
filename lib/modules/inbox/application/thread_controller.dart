@@ -534,6 +534,10 @@ class ThreadController
           at: DateTime.now(),
         ),
     ];
+    // Số thứ tự lượt bấm theo tin: phản hồi (hay lỗi) của lượt CŨ về sau một
+    // lượt mới thì bỏ — không đè trạng thái mới hơn.
+    final seq = (_reactionSeq[messageId] ?? 0) + 1;
+    _reactionSeq[messageId] = seq;
     applyTeamReactions(messageId, optimistic);
 
     final List<TeamReaction> saved;
@@ -542,11 +546,29 @@ class ThreadController
           .read(inboxApiProvider)
           .toggleTeamReaction(arg, messageId, emoji);
     } on Object {
-      if (!_disposed) applyTeamReactions(messageId, before);
+      if (!_disposed && _reactionSeq[messageId] == seq) {
+        // Chỉ trả lại mục CỦA TÔI: cảm xúc người khác về qua realtime trong
+        // lúc chờ vẫn giữ.
+        _restoreMine(messageId, myUserId, mine);
+      }
       rethrow;
     }
-    if (_disposed) return;
+    if (_disposed || _reactionSeq[messageId] != seq) return;
     applyTeamReactions(messageId, saved);
+  }
+
+  final _reactionSeq = <String, int>{};
+
+  void _restoreMine(String messageId, String myUserId, TeamReaction? mine) {
+    final current = state.valueOrNull?.messages
+        .where((m) => m.id == messageId)
+        .firstOrNull;
+    if (current == null) return;
+    applyTeamReactions(messageId, [
+      for (final r in current.teamReactions)
+        if (r.userId != myUserId) r,
+      ?mine,
+    ]);
   }
 
   /// Thay cảm xúc nội bộ của một tin đang có trên màn (phản hồi POST hoặc

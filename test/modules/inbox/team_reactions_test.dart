@@ -179,7 +179,9 @@ void main() {
           ),
         ),
       );
-      expect(find.byType(TeamReactionChips), findsNothing);
+      // Viên luôn được dựng (giữ state cho hiệu ứng nảy) nhưng rỗng thì không
+      // vẽ gì, không có vùng chạm.
+      expect(find.byKey(const ValueKey('team-reactions-tap')), findsNothing);
     });
   });
 
@@ -267,6 +269,126 @@ void main() {
         throwsA(isA<ServerException>()),
       );
       expect(reactionsOf('m1').map((r) => r.userId), ['u2']);
+    });
+
+    test(
+      'realtime về GIỮA lạc quan và phản hồi: áp ngay, phản hồi thay sau',
+      () async {
+        api.history = [
+          message(team: const [lan]),
+        ];
+        container.listen(threadProvider('c1'), (_, _) {});
+        await container.read(threadProvider('c1').future);
+        final notifier = container.read(threadProvider('c1').notifier);
+        final gate = Completer<List<TeamReaction>>();
+        api.answer = gate;
+
+        final done = notifier.toggleTeamReaction('m1', '👍', myUserId: 'u1');
+        // Sự kiện `message.team_reaction` của chính lượt này + Minh vừa thả.
+        notifier.applyTeamReactions('m1', const [lan, minh, me]);
+        expect(reactionsOf('m1').map((r) => r.userId), ['u2', 'u3', 'u1']);
+
+        gate.complete(const [lan, minh, me]);
+        await done;
+        expect(reactionsOf('m1').map((r) => '${r.userId}:${r.emoji}'), [
+          'u2:❤️',
+          'u3:❤️',
+          'u1:👍',
+        ]);
+      },
+    );
+
+    test('lỗi sau khi realtime đã về → chỉ trả lại mục CỦA TÔI, giữ của người '
+        'khác', () async {
+      api.history = [
+        message(team: const [lan]),
+      ];
+      container.listen(threadProvider('c1'), (_, _) {});
+      await container.read(threadProvider('c1').future);
+      final notifier = container.read(threadProvider('c1').notifier);
+      final gate = Completer<List<TeamReaction>>();
+      api.answer = gate;
+
+      final done = notifier.toggleTeamReaction('m1', '👍', myUserId: 'u1');
+      // Minh thả trong lúc chờ (realtime).
+      notifier.applyTeamReactions('m1', const [
+        lan,
+        minh,
+        TeamReaction(userId: 'u1', emoji: '👍'),
+      ]);
+      gate.completeError(const ServerException('Lỗi máy chủ.'));
+      await expectLater(done, throwsA(isA<ServerException>()));
+      expect(reactionsOf('m1').map((r) => '${r.userId}:${r.emoji}'), [
+        'u2:❤️',
+        'u3:❤️',
+      ]);
+    });
+
+    test('lỗi khi trước đó tôi đã có emoji → trả lại đúng emoji cũ', () async {
+      api.history = [
+        message(team: const [lan, me]),
+      ];
+      container.listen(threadProvider('c1'), (_, _) {});
+      await container.read(threadProvider('c1').future);
+      api.fail = true;
+      await expectLater(
+        container
+            .read(threadProvider('c1').notifier)
+            .toggleTeamReaction('m1', '❤️', myUserId: 'u1'),
+        throwsA(isA<ServerException>()),
+      );
+      expect(reactionsOf('m1').map((r) => '${r.userId}:${r.emoji}'), [
+        'u2:❤️',
+        'u1:👍',
+      ]);
+    });
+
+    test(
+      'hai lượt nhanh: phản hồi CŨ về sau không đè trạng thái mới',
+      () async {
+        api.history = [
+          message(team: const [lan]),
+        ];
+        container.listen(threadProvider('c1'), (_, _) {});
+        await container.read(threadProvider('c1').future);
+        final notifier = container.read(threadProvider('c1').notifier);
+
+        final first = Completer<List<TeamReaction>>();
+        api.answer = first;
+        final one = notifier.toggleTeamReaction('m1', '👍', myUserId: 'u1');
+        final second = Completer<List<TeamReaction>>();
+        api.answer = second;
+        final two = notifier.toggleTeamReaction('m1', '❤️', myUserId: 'u1');
+        expect(reactionsOf('m1').last.emoji, '❤️');
+
+        // Lượt 2 về trước, lượt 1 (cũ) về sau.
+        second.complete(const [lan, TeamReaction(userId: 'u1', emoji: '❤️')]);
+        await two;
+        first.complete(const [lan, TeamReaction(userId: 'u1', emoji: '👍')]);
+        await one;
+        expect(reactionsOf('m1').last.emoji, '❤️');
+      },
+    );
+
+    test('lượt cũ lỗi sau khi lượt mới đã xong → không hoàn tác gì', () async {
+      api.history = [
+        message(team: const [lan]),
+      ];
+      container.listen(threadProvider('c1'), (_, _) {});
+      await container.read(threadProvider('c1').future);
+      final notifier = container.read(threadProvider('c1').notifier);
+
+      final first = Completer<List<TeamReaction>>();
+      api.answer = first;
+      final one = notifier.toggleTeamReaction('m1', '👍', myUserId: 'u1');
+      final second = Completer<List<TeamReaction>>();
+      api.answer = second;
+      final two = notifier.toggleTeamReaction('m1', '❤️', myUserId: 'u1');
+      second.complete(const [lan, TeamReaction(userId: 'u1', emoji: '❤️')]);
+      await two;
+      first.completeError(const ServerException('x'));
+      await expectLater(one, throwsA(isA<ServerException>()));
+      expect(reactionsOf('m1').last.emoji, '❤️');
     });
 
     test('tin không có trên màn → bỏ qua, không gọi API', () async {
