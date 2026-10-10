@@ -320,6 +320,7 @@ class _FakeOppApi extends OpportunitiesApi {
   Future<PipelineSummary> summary({
     String? pipeline,
     bool mine = false,
+    String? search,
   }) async => PipelineSummary.fromJson({
     'count_by_stage': {'tu_van': 4, 'bao_gia': 3, 'da_mua': 5},
     'value_by_stage': {'bao_gia': 1000000},

@@ -27,13 +27,24 @@ void main() {
   late _FakeApi api;
   setUp(() => api = _FakeApi());
 
-  Widget host({bool canUpdate = true, bool canCreate = false}) {
+  Widget host({
+    bool canUpdate = true,
+    bool canCreate = false,
+    bool withSearch = false,
+  }) {
     final router = GoRouter(
       routes: [
         GoRoute(
           path: '/',
-          builder: (_, _) =>
-              const Scaffold(body: OpportunitiesSegment(filtersOpen: true)),
+          builder: (_, _) => Scaffold(
+            appBar: withSearch
+                ? OpportunitySearchRow(
+                    filtersOpen: true,
+                    onToggleFilters: () {},
+                  )
+                : null,
+            body: const OpportunitiesSegment(filtersOpen: true),
+          ),
         ),
         GoRoute(
           path: '/opportunities/:id',
@@ -242,6 +253,7 @@ final _column = find.byWidgetPredicate(
 );
 
 typedef _Call = ({
+  String? search,
   String? stageCode,
   String? status,
   String? pipeline,
@@ -255,6 +267,7 @@ class _FakeApi extends OpportunitiesApi {
   int total = 7;
   final calls = <_Call>[];
   final summaryMine = <bool>[];
+  final summarySearch = <String?>[];
   final moved = <(String, String)>[];
 
   @override
@@ -306,8 +319,13 @@ class _FakeApi extends OpportunitiesApi {
   });
 
   @override
-  Future<PipelineSummary> summary({String? pipeline, bool mine = false}) async {
+  Future<PipelineSummary> summary({
+    String? pipeline,
+    bool mine = false,
+    String? search,
+  }) async {
     summaryMine.add(mine);
+    summarySearch.add(search);
     return PipelineSummary.fromJson({
       'count_by_stage': {
         'lien_he': 1,
@@ -332,6 +350,7 @@ class _FakeApi extends OpportunitiesApi {
     int perPage = AppConfig.defaultPerPage,
   }) async {
     calls.add((
+      search: search,
       stageCode: stageCode,
       status: status,
       pipeline: pipeline,

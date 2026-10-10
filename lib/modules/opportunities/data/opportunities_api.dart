@@ -87,13 +87,30 @@ class OpportunitiesApi {
     );
   }
 
+  /// Query của `GET /sales-opportunities/summary`: cùng `pipeline`/`owner`/
+  /// `search` với [list] (`applyListFilters` + `stringFilters`), để số và tiền
+  /// khớp với danh sách đang lọc.
+  @visibleForTesting
+  static Map<String, dynamic> summaryQuery({
+    String? pipeline,
+    bool mine = false,
+    String? search,
+  }) => {
+    'pipeline': ?pipeline,
+    if (mine) 'owner': 'me',
+    if (search != null && search.isNotEmpty) 'search': search,
+  };
+
   /// Per-stage counts and totals without pulling the records. Takes the same
-  /// `pipeline`/`owner` filters as [list] (`applyListFilters`), so the tab
-  /// counts match the columns.
-  Future<PipelineSummary> summary({String? pipeline, bool mine = false}) async {
+  /// filters as [list], so the tab counts match the columns.
+  Future<PipelineSummary> summary({
+    String? pipeline,
+    bool mine = false,
+    String? search,
+  }) async {
     final response = await _client.get(
       '$_base/summary',
-      query: {'pipeline': ?pipeline, if (mine) 'owner': 'me'},
+      query: summaryQuery(pipeline: pipeline, mine: mine, search: search),
     );
     return PipelineSummary.fromJson(response.object);
   }

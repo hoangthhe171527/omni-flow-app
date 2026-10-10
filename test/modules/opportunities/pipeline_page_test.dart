@@ -291,7 +291,11 @@ class _FakeApi extends OpportunitiesApi {
   });
 
   @override
-  Future<PipelineSummary> summary({String? pipeline, bool mine = false}) async {
+  Future<PipelineSummary> summary({
+    String? pipeline,
+    bool mine = false,
+    String? search,
+  }) async {
     summaryMine.add(mine);
     return PipelineSummary.fromJson({
       'count_by_stage': {'lien_he': total, 'da_mua': 2},

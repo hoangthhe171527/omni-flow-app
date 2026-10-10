@@ -358,7 +358,11 @@ class _FakeOpportunitiesApi extends OpportunitiesApi {
   }
 
   @override
-  Future<PipelineSummary> summary({String? pipeline, bool mine = false}) async {
+  Future<PipelineSummary> summary({
+    String? pipeline,
+    bool mine = false,
+    String? search,
+  }) async {
     summaryCalls++;
     return const PipelineSummary();
   }

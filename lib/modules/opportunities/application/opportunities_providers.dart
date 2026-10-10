@@ -72,7 +72,11 @@ final pipelineSummaryProvider = FutureProvider<PipelineSummary>((ref) async {
   final query = await ref.watch(boardQueryProvider.future);
   return ref
       .watch(opportunitiesApiProvider)
-      .summary(pipeline: query.pipeline, mine: query.mine);
+      .summary(
+        pipeline: query.pipeline,
+        mine: query.mine,
+        search: query.search.isEmpty ? null : query.search,
+      );
 });
 
 class StageListState {
