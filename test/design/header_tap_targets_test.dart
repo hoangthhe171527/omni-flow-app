@@ -95,54 +95,68 @@ void main() {
     await t.pump();
   }
 
-  testWidgets('nút vuông header của Hộp thư đủ 44', (t) async {
-    final handle = t.ensureSemantics();
-    t.view.physicalSize = const Size(600, 900);
-    t.view.devicePixelRatio = 1;
-    addTearDown(t.view.reset);
-    await t.pumpWidget(
-      ProviderScope(
-        overrides: [
-          inboxApiProvider.overrideWithValue(_InboxApi()),
-          realtimeClientProvider.overrideWithValue(
-            RealtimeClient(
-              config: const RealtimeConfig.disabled(),
-              authorizer: (_, _) async => '',
+  for (final width in [600.0, 360.0]) {
+    testWidgets('nút vuông header của Hộp thư đủ 44 ở rộng $width', (t) async {
+      final handle = t.ensureSemantics();
+      t.view.physicalSize = Size(width, 900);
+      t.view.devicePixelRatio = 1;
+      addTearDown(t.view.reset);
+      await t.pumpWidget(
+        ProviderScope(
+          overrides: [
+            inboxApiProvider.overrideWithValue(_InboxApi()),
+            realtimeClientProvider.overrideWithValue(
+              RealtimeClient(
+                config: const RealtimeConfig.disabled(),
+                authorizer: (_, _) async => '',
+              ),
             ),
+            sessionProvider.overrideWithValue(session()),
+          ],
+          child: MaterialApp(
+            theme: OmniTheme.light(TargetPlatform.android),
+            home: const InboxPage(),
           ),
-          sessionProvider.overrideWithValue(session()),
-        ],
-        child: MaterialApp(
-          theme: OmniTheme.light(TargetPlatform.android),
-          home: const InboxPage(),
         ),
-      ),
-    );
-    await t.pump();
-    await t.pump();
+      );
+      await t.pump();
+      await t.pump();
 
-    for (final tip in ['Kết nối kênh', 'Chọn nhiều']) {
-      expect(find.byTooltip(tip), findsOneWidget, reason: tip);
-      final s = hitSize(t, tip);
-      expect(s.width, greaterThanOrEqualTo(44), reason: tip);
-      expect(s.height, greaterThanOrEqualTo(44), reason: tip);
-    }
-    expect(t.getSize(find.bySemanticsLabel('Bộ lọc')), const Size(44, 44));
-    // Phần vẽ vẫn 36.
-    expect(
-      t.getSize(
-        find
-            .ancestor(
-              of: find.byIcon(Icons.tune_rounded),
-              matching: find.byType(Material),
-            )
-            .first,
-      ),
-      const Size(36, 36),
-    );
-    await closePage(t);
-    handle.dispose();
-  });
+      for (final tip in ['Kết nối kênh', 'Chọn nhiều']) {
+        expect(find.byTooltip(tip), findsOneWidget, reason: tip);
+        final s = hitSize(t, tip);
+        expect(s.width, greaterThanOrEqualTo(44), reason: tip);
+        expect(s.height, greaterThanOrEqualTo(44), reason: tip);
+      }
+      expect(t.getSize(find.bySemanticsLabel('Bộ lọc')), const Size(44, 44));
+      // Phần vẽ vẫn 36.
+      expect(
+        t.getSize(
+          find
+              .ancestor(
+                of: find.byIcon(Icons.tune_rounded),
+                matching: find.byType(Material),
+              )
+              .first,
+        ),
+        const Size(36, 36),
+      );
+      // Không tràn ngang: mọi nút nằm trong màn và ô tìm còn chỗ.
+      for (final tip in ['Kết nối kênh', 'Chọn nhiều']) {
+        final r = t.getRect(
+          find.ancestor(
+            of: find.byTooltip(tip),
+            matching: find.byType(IconButton),
+          ),
+        );
+        expect(r.right, lessThanOrEqualTo(width), reason: tip);
+      }
+      expect(t.getSize(find.byType(TextField)).width, greaterThan(60));
+      expect(t.takeException(), isNull);
+      await closePage(t);
+      handle.dispose();
+    });
+  }
 
   testWidgets('nút vuông header của Khách đủ 44', (t) async {
     final handle = t.ensureSemantics();

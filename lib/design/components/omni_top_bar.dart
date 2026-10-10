@@ -95,36 +95,44 @@ class OmniTopBar extends ConsumerWidget implements PreferredSizeWidget {
                   ),
                   child: SizedBox(
                     height: _rowHeight,
-                    child: Row(
+                    child: Stack(
                       children: [
+                        // Phủ cả hàng: một nút ngữ nghĩa rỗng (0x0) bị bỏ khỏi
+                        // cây, nên tiêu đề phải có hình chữ nhật thật.
                         if (semanticsTitle != null)
-                          Semantics(
-                            header: true,
-                            container: true,
-                            label: semanticsTitle,
-                            child: const SizedBox.shrink(),
+                          Positioned.fill(
+                            child: Semantics(
+                              header: true,
+                              container: true,
+                              label: semanticsTitle,
+                              child: const SizedBox.expand(),
+                            ),
                           ),
-                        BrandAnchor(
-                          withWordmark: true,
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              const OmniBrandMark(size: 30),
-                              const SizedBox(width: 8),
-                              OmniWordmark(fontSize: 19, onInk: dark),
-                            ],
-                          ),
+                        Row(
+                          children: [
+                            BrandAnchor(
+                              withWordmark: true,
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const OmniBrandMark(size: 30),
+                                  const SizedBox(width: 8),
+                                  OmniWordmark(fontSize: 19, onInk: dark),
+                                ],
+                              ),
+                            ),
+                            const Spacer(),
+                            _BellButton(
+                              unread: unread,
+                              onTap: slot == null
+                                  ? null
+                                  : () => slot.onBell(context),
+                            ),
+                            // Hai ô 44 kề nhau: khoảng 8 giữa hai hình 36 đã nằm
+                            // trong đệm của chúng.
+                            if (account != null) account(context),
+                          ],
                         ),
-                        const Spacer(),
-                        _BellButton(
-                          unread: unread,
-                          onTap: slot == null
-                              ? null
-                              : () => slot.onBell(context),
-                        ),
-                        // Hai ô 44 kề nhau: khoảng 8 giữa hai hình 36 đã nằm
-                        // trong đệm của chúng.
-                        if (account != null) account(context),
                       ],
                     ),
                   ),

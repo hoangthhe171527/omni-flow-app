@@ -94,15 +94,9 @@ void main() {
       ),
       const Size(36, 36),
     );
-    expect(
-      find.byWidgetPredicate(
-        (w) =>
-            w is Semantics &&
-            w.properties.header == true &&
-            w.properties.label == 'Hộp thư',
-      ),
-      findsOneWidget,
-    );
+    final node = t.getSemantics(find.bySemanticsLabel('Hộp thư'));
+    expect(node.flagsCollection.isHeader, isTrue);
+    expect(node.rect.isEmpty, isFalse);
     expect(t.getSize(find.byKey(const ValueKey('tile'))).width, 36);
     handle.dispose();
   });

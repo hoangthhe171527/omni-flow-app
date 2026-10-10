@@ -212,6 +212,7 @@ class _CustomerDetailPageState extends ConsumerState<CustomerDetailPage> {
 
     return Scaffold(
       appBar: OmniTopBar(
+        semanticsTitle: 'Khách hàng',
         bottom: _BackBar(
           onFullEdit: access.canUpdate
               ? () async {
