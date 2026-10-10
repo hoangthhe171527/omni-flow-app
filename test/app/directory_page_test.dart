@@ -254,6 +254,24 @@ void main() {
     expect(t.hasRunningAnimations, isFalse);
   });
 
+  testWidgets('gõ tìm không phát lại hoạt ảnh hiện ô', (t) async {
+    await pump(t);
+    await t.enterText(find.byType(TextField), 'hop');
+    await t.pump(const Duration(milliseconds: 400));
+    await t.pump(const Duration(milliseconds: 16));
+    final fade = t.widget<FadeTransition>(
+      find
+          .ancestor(
+            of: find.text('Hộp thư'),
+            matching: find.byType(FadeTransition),
+          )
+          .first,
+    );
+    expect(fade.opacity.value, 1.0);
+  });
+
+  _searchFieldTests();
+
   test('hueOfArea theo bản mẫu', () {
     expect(hueOfArea(NavArea.communication), OmniHue.teal);
     expect(hueOfArea(NavArea.sales), OmniHue.orange);
@@ -261,4 +279,45 @@ void main() {
     expect(hueOfArea(NavArea.admin), OmniHue.violet);
     expect(hueOfArea(NavArea.account), OmniHue.neutral);
   });
+}
+
+void _searchFieldTests() {
+  for (final (width, scale) in [(360.0, 1.0), (360.0, 1.3)]) {
+    testWidgets('ô tìm cao 44, gõ chữ không tràn ($width, x$scale)', (t) async {
+      t.view.physicalSize = Size(width, 800);
+      t.view.devicePixelRatio = 1;
+      addTearDown(t.view.reset);
+      SharedPreferences.setMockInitialValues({});
+      final prefs = await SharedPreferences.getInstance();
+      await t.pumpWidget(
+        ProviderScope(
+          overrides: [
+            modulesProvider.overrideWithValue(const [_FakeModule()]),
+            sharedPreferencesProvider.overrideWithValue(prefs),
+            sessionControllerProvider.overrideWith(_FakeSession.new),
+          ],
+          child: MaterialApp.router(
+            theme: OmniTheme.light(),
+            routerConfig: GoRouter(
+              routes: [
+                GoRoute(path: '/', builder: (_, _) => const DirectoryPage()),
+              ],
+            ),
+            builder: (context, child) => MediaQuery(
+              data: MediaQuery.of(
+                context,
+              ).copyWith(textScaler: TextScaler.linear(scale)),
+              child: child!,
+            ),
+          ),
+        ),
+      );
+      await t.pumpAndSettle();
+      expect(t.getSize(find.byType(TextField)).height, 44);
+      await t.enterText(find.byType(TextField), 'Việc của tôi');
+      await t.pump(const Duration(milliseconds: 400));
+      await t.pumpAndSettle();
+      expect(t.takeException(), isNull);
+    });
+  }
 }

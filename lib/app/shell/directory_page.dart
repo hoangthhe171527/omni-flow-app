@@ -24,7 +24,11 @@ class DirectoryTile {
     required this.onTap,
     this.badge,
     this.badgeTone = NavBadgeTone.unread,
+    this.id,
   });
+
+  /// Khoá ổn định của ô (tên route); mặc định là nhãn.
+  final String? id;
 
   final String label;
   final String? subtitle;
@@ -62,6 +66,7 @@ List<DirectorySection> buildDirectorySections(
     onTap: () => open(e.routeName),
     badge: e.badge,
     badgeTone: e.badgeTone,
+    id: e.routeName,
   );
   List<DirectoryTile> of(List<NavArea> areas) => [
     for (final a in areas) ...?groups[a]?.map(fromEntry),
@@ -105,6 +110,9 @@ class DirectoryPage extends ConsumerStatefulWidget {
 
 class _DirectoryPageState extends ConsumerState<DirectoryPage> {
   String _query = '';
+
+  /// Ô đã từng hiện: chỉ lần dựng đầu tiên mới chạy hoạt ảnh, gõ tìm không phát lại.
+  final _seen = <String>{};
 
   Future<void> _openSupport() async {
     // Chụp trước khi await: màn có thể đã bị đóng khi trình duyệt trả về.
@@ -156,6 +164,12 @@ class _DirectoryPageState extends ConsumerState<DirectoryPage> {
       open: (name) => context.pushNamed(name),
       query: _query,
     );
+    // Đánh dấu "đã hiện" SAU khung này (ô được dựng sau build của trang).
+    final ids = [
+      for (final s in sections)
+        for (final t in s.tiles) t.id ?? t.label,
+    ];
+    WidgetsBinding.instance.addPostFrameCallback((_) => _seen.addAll(ids));
     final scheme = Theme.of(context).colorScheme;
     // Chỉ số hoạt ảnh chạy liên tục qua các nhóm.
     final starts = <int>[];
@@ -211,6 +225,7 @@ class _DirectoryPageState extends ConsumerState<DirectoryPage> {
                 _TileGrid(
                   tiles: section.tiles,
                   firstIndex: starts[sections.indexOf(section)],
+                  seen: _seen,
                 ),
               ],
             ],
@@ -221,24 +236,25 @@ class _DirectoryPageState extends ConsumerState<DirectoryPage> {
   }
 }
 
-/// Ô tìm dưới thanh trên: cao 36, đệm `16, 0, 16, 10`.
+/// Ô tìm dưới thanh trên: cao 44 (gọn mắt), đệm `16, 0, 16, 10`.
 class _SearchBottom extends StatelessWidget implements PreferredSizeWidget {
   const _SearchBottom({required this.onChanged});
 
   final ValueChanged<String> onChanged;
 
   @override
-  Size get preferredSize => const Size.fromHeight(46);
+  Size get preferredSize => const Size.fromHeight(54);
 
   @override
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
       child: SizedBox(
-        height: 36,
+        height: 44,
         child: OmniSearchField(
           hint: 'Tìm tính năng…',
           outlined: true,
+          dense: true,
           onChanged: onChanged,
         ),
       ),
@@ -250,7 +266,13 @@ class _SearchBottom extends StatelessWidget implements PreferredSizeWidget {
 /// cao bằng nhau theo ô có nhãn dài nhất trong hàng, và nhãn tiếng Việt hay
 /// xuống hai dòng.
 class _TileGrid extends StatelessWidget {
-  const _TileGrid({required this.tiles, required this.firstIndex});
+  const _TileGrid({
+    required this.tiles,
+    required this.firstIndex,
+    required this.seen,
+  });
+
+  final Set<String> seen;
 
   final List<DirectoryTile> tiles;
   final int firstIndex;
@@ -274,8 +296,11 @@ class _TileGrid extends StatelessWidget {
                 Expanded(
                   child: c < slice.length
                       ? _FeatureTile(
-                          key: ValueKey(slice[c].label),
+                          key: ValueKey(slice[c].id ?? slice[c].label),
                           tile: slice[c],
+                          animate: !seen.contains(
+                            slice[c].id ?? slice[c].label,
+                          ),
                           index: firstIndex + i + c,
                         )
                       : const SizedBox.shrink(),
@@ -309,7 +334,14 @@ class _TileGrid extends StatelessWidget {
 }
 
 class _FeatureTile extends ConsumerWidget {
-  const _FeatureTile({super.key, required this.tile, required this.index});
+  const _FeatureTile({
+    super.key,
+    required this.tile,
+    required this.index,
+    required this.animate,
+  });
+
+  final bool animate;
 
   final DirectoryTile tile;
   final int index;
@@ -380,13 +412,19 @@ class _FeatureTile extends ConsumerWidget {
 
     if (!OmniMotion.enabled(context)) return content;
 
-    return _PopIn(delayMs: 50 + 20 * index, child: content);
+    return _PopIn(play: animate, delayMs: 50 + 20 * index, child: content);
   }
 }
 
 /// Ô hiện dần: scale .85→1 cùng mờ→rõ trong 300ms, trễ theo thứ tự ô.
 class _PopIn extends StatefulWidget {
-  const _PopIn({required this.delayMs, required this.child});
+  const _PopIn({
+    required this.play,
+    required this.delayMs,
+    required this.child,
+  });
+
+  final bool play;
 
   final int delayMs;
   final Widget child;
@@ -401,7 +439,13 @@ class _PopInState extends State<_PopIn> with SingleTickerProviderStateMixin {
   late final AnimationController _controller = AnimationController(
     vsync: this,
     duration: Duration(milliseconds: widget.delayMs + _animMs),
-  )..forward();
+  )..value = widget.play ? 0 : 1;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.play) _controller.forward();
+  }
 
   late final Animation<double> _t = CurvedAnimation(
     parent: _controller,

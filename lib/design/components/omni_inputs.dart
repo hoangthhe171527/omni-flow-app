@@ -17,6 +17,7 @@ class OmniSearchField extends StatefulWidget {
     this.debounce = const Duration(milliseconds: 350),
     this.trailing,
     this.outlined = false,
+    this.dense = false,
   });
 
   final ValueChanged<String> onChanged;
@@ -25,6 +26,9 @@ class OmniSearchField extends StatefulWidget {
   /// khách hàng, gán người) và ô trắng viền mảnh đặt trên nền xám (danh bạ
   /// "Tất cả").
   final bool outlined;
+
+  /// Gọn mắt nhưng vẫn cao 44 (vùng chạm): đệm dọc nhỏ, icon 36.
+  final bool dense;
   final String hint;
   final String? initialValue;
   final Duration debounce;
@@ -72,6 +76,7 @@ class _OmniSearchFieldState extends State<OmniSearchField> {
       onChanged: _onChanged,
       textInputAction: TextInputAction.search,
       style: OmniType.body.copyWith(color: scheme.onSurface),
+      textAlignVertical: TextAlignVertical.center,
       decoration: InputDecoration(
         hintText: widget.hint,
         prefixIcon: Icon(
@@ -79,9 +84,19 @@ class _OmniSearchFieldState extends State<OmniSearchField> {
           color: scheme.onSurfaceVariant,
           size: OmniIconSize.lg,
         ),
+        prefixIconConstraints: widget.dense
+            ? const BoxConstraints(minWidth: 36, minHeight: 36)
+            : null,
+        suffixIconConstraints: widget.dense
+            ? const BoxConstraints(minWidth: 36, minHeight: 36)
+            : null,
         suffixIcon: _controller.text.isEmpty
             ? widget.trailing
             : IconButton(
+                padding: widget.dense ? EdgeInsets.zero : null,
+                constraints: widget.dense
+                    ? const BoxConstraints(minWidth: 36, minHeight: 36)
+                    : null,
                 tooltip: 'Xoá nội dung tìm',
                 icon: Icon(
                   Icons.close_rounded,
@@ -94,7 +109,7 @@ class _OmniSearchFieldState extends State<OmniSearchField> {
                 },
               ),
         isDense: true,
-        contentPadding: const EdgeInsets.symmetric(vertical: 12),
+        contentPadding: EdgeInsets.symmetric(vertical: widget.dense ? 10 : 12),
         filled: true,
         fillColor: widget.outlined
             ? scheme.surface
