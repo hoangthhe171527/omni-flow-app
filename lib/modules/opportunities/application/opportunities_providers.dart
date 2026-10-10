@@ -173,17 +173,40 @@ final stageOpportunitiesProvider = AsyncNotifierProvider.autoDispose
       StageOpportunitiesController.new,
     );
 
+/// Đoạn "Cơ hội" đang xem cơ hội ĐÃ ĐÓNG (thắng/thua) thay vì đang mở. Về false
+/// khi đổi quy trình.
+final segmentClosedProvider = StateProvider<bool>((ref) {
+  ref.watch(selectedPipelineProvider);
+  return false;
+});
+
 /// Ô giai đoạn đang lọc ở đoạn "Cơ hội" của tab Khách; null = mọi giai đoạn
-/// mở. Về null khi đổi quy trình — mã của quy trình này vô nghĩa ở quy trình
-/// khác.
+/// mở (hoặc, ở chế độ đã đóng, giai đoạn đóng đầu tiên). Về null khi đổi quy
+/// trình hay đổi chế độ — mã của quy trình này vô nghĩa ở quy trình khác.
 final segmentStageProvider = StateProvider<String?>((ref) {
   ref.watch(selectedPipelineProvider);
+  ref.watch(segmentClosedProvider);
   return null;
 });
 
+/// Bộ lọc gửi đi của đoạn: `stage` và `status`. Không có `stage` thì máy chủ
+/// trả MỌI trạng thái, nên "đang mở" phải gửi `status=OPEN`; chế độ đã đóng
+/// luôn nhắm một giai đoạn đóng cụ thể (mặc định cái đầu tiên).
+({String? stage, String? status}) _segmentFilter({
+  required String? stage,
+  required bool closed,
+  required PipelineDef? pipeline,
+}) {
+  if (closed) {
+    final closedStages = pipeline?.stages.where((s) => s.isClosed);
+    return (stage: stage ?? closedStages?.firstOrNull?.code, status: null);
+  }
+  return (stage: stage, status: stage == null ? 'OPEN' : null);
+}
+
 /// Danh sách của đoạn "Cơ hội": như [StageOpportunitiesController] nhưng giai
-/// đoạn lấy từ [segmentStageProvider]; null → không gửi `stage`, máy chủ trả
-/// mọi giai đoạn mở.
+/// đoạn lấy từ [segmentStageProvider]; null → gửi `status=OPEN` (xem
+/// [_segmentFilter]).
 class SegmentOpportunitiesController
     extends AutoDisposeAsyncNotifier<StageListState> {
   int _generation = 0;
@@ -191,12 +214,17 @@ class SegmentOpportunitiesController
   @override
   Future<StageListState> build() async {
     _generation++;
-    final stageCode = ref.watch(segmentStageProvider);
+    final filter = _segmentFilter(
+      stage: ref.watch(segmentStageProvider),
+      closed: ref.watch(segmentClosedProvider),
+      pipeline: ref.watch(boardPipelineProvider),
+    );
     final query = await ref.watch(boardQueryProvider.future);
     final page = await ref
         .watch(opportunitiesApiProvider)
         .list(
-          stageCode: stageCode,
+          stageCode: filter.stage,
+          status: filter.status,
           pipeline: query.pipeline,
           mine: query.mine,
           search: query.search.isEmpty ? null : query.search,
@@ -213,7 +241,11 @@ class SegmentOpportunitiesController
     final current = state.valueOrNull;
     if (current == null || !current.hasMore || current.loadingMore) return;
     final generation = _generation;
-    final stageCode = ref.read(segmentStageProvider);
+    final filter = _segmentFilter(
+      stage: ref.read(segmentStageProvider),
+      closed: ref.read(segmentClosedProvider),
+      pipeline: ref.read(boardPipelineProvider),
+    );
 
     state = AsyncData(
       StageListState(
@@ -228,7 +260,8 @@ class SegmentOpportunitiesController
       final next = await ref
           .read(opportunitiesApiProvider)
           .list(
-            stageCode: stageCode,
+            stageCode: filter.stage,
+            status: filter.status,
             pipeline: query.pipeline,
             mine: query.mine,
             search: query.search.isEmpty ? null : query.search,

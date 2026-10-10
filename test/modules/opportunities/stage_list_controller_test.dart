@@ -313,6 +313,7 @@ class _FakeOpportunitiesApi extends OpportunitiesApi {
   @override
   Future<Paged<Opportunity>> list({
     String? stageCode,
+    String? status,
     String? pipeline,
     bool mine = false,
     String? search,

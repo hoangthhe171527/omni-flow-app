@@ -111,7 +111,7 @@ class _CustomersPageState extends ConsumerState<CustomersPage> {
                             context.pushNamed(CustomersModule.create),
                         style: IconButton.styleFrom(
                           fixedSize: const Size(36, 36),
-                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                          tapTargetSize: MaterialTapTargetSize.padded,
                           foregroundColor: scheme.onSurface,
                           side: BorderSide(color: scheme.outlineVariant),
                           shape: RoundedRectangleBorder(

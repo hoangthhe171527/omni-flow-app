@@ -2,6 +2,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:omni_app/core/config/app_config.dart';
 import 'package:omni_app/core/network/api_client.dart';
@@ -11,6 +12,7 @@ import 'package:omni_app/design/components/components.dart';
 import 'package:omni_app/design/theme/omni_theme.dart';
 import 'package:omni_app/modules/customers/application/customers_providers.dart';
 import 'package:omni_app/modules/customers/data/customers_api.dart';
+import 'package:omni_app/modules/customers/customers_module.dart';
 import 'package:omni_app/modules/customers/domain/customer.dart';
 import 'package:omni_app/modules/customers/presentation/customers_page.dart';
 import 'package:omni_app/modules/opportunities/application/opportunities_providers.dart';
@@ -71,6 +73,7 @@ void main() {
     ResourceAccess? oppAccess,
     Map<String, bool> features = const {},
     int initialSegment = 0,
+    GoRouter? router,
   }) => ProviderScope(
     overrides: [
       customersApiProvider.overrideWithValue(api),
@@ -92,10 +95,15 @@ void main() {
         ),
       ),
     ],
-    child: MaterialApp(
-      theme: OmniTheme.light(TargetPlatform.android),
-      home: CustomersPage(initialSegment: initialSegment),
-    ),
+    child: router != null
+        ? MaterialApp.router(
+            theme: OmniTheme.light(TargetPlatform.android),
+            routerConfig: router,
+          )
+        : MaterialApp(
+            theme: OmniTheme.light(TargetPlatform.android),
+            home: CustomersPage(initialSegment: initialSegment),
+          ),
   );
 
   const readAll = ResourceAccess(readScope: AccessScope.all);
@@ -112,7 +120,7 @@ void main() {
     await t.tap(find.text('Cơ hội · 7'));
     await t.pumpAndSettle();
     expect(find.text('Báo giá'), findsOneWidget);
-    expect(find.text('Đang mở · 7'), findsOneWidget);
+    expect(find.textContaining('Đang mở · 7'), findsOneWidget);
     expect(find.text('An Nguyễn'), findsNothing);
     // Hàng tìm đổi theo đoạn.
     expect(find.byTooltip('Thêm khách'), findsNothing);
@@ -127,6 +135,46 @@ void main() {
     await t.pumpWidget(host(oppAccess: readAll, initialSegment: 1));
     await t.pumpAndSettle();
     expect(find.text('Báo giá'), findsOneWidget);
+  });
+
+  // Route thật của module: `?seg=co-hoi` phải tới đoạn Cơ hội.
+  testWidgets('route /customers?seg=co-hoi mở đoạn Cơ hội, không có seg thì '
+      'mở Khách hàng', (t) async {
+    final route = const CustomersModule().routes().firstWhere(
+      (r) => r.path == '/customers',
+    );
+    for (final (location, expectOpp) in [
+      ('/customers?seg=co-hoi', true),
+      ('/customers', false),
+      ('/customers?seg=khac', false),
+    ]) {
+      final router = GoRouter(
+        initialLocation: location,
+        routes: [GoRoute(path: route.path, builder: route.builder)],
+      );
+      addTearDown(router.dispose);
+      await t.pumpWidget(host(oppAccess: readAll, router: router));
+      await t.pumpAndSettle();
+      expect(find.text('Báo giá'), expectOpp ? findsOneWidget : findsNothing);
+      await t.pumpWidget(const SizedBox());
+    }
+  });
+
+  testWidgets('nút lọc và "Thêm khách" có vùng chạm 44 dù hình 36', (t) async {
+    await t.pumpWidget(host());
+    await t.pumpAndSettle();
+    final icon = t.getCenter(find.byIcon(Icons.tune_rounded));
+    // 20px lệch tâm: ngoài hình 36 (bán kính 18), trong vùng chạm 44.
+    await t.tapAt(icon + const Offset(20, 0));
+    await t.pumpAndSettle();
+    expect(find.text('VIP'), findsOneWidget);
+    final add = t.getSize(
+      find.ancestor(
+        of: find.byIcon(Icons.person_add_alt_rounded),
+        matching: find.byType(IconButton),
+      ),
+    );
+    expect(add.shortestSide, greaterThanOrEqualTo(44));
   });
 
   testWidgets('cờ opportunities tắt → không có thanh đoạn', (t) async {
@@ -280,6 +328,7 @@ class _FakeOppApi extends OpportunitiesApi {
   @override
   Future<Paged<Opportunity>> list({
     String? stageCode,
+    String? status,
     String? pipeline,
     bool mine = false,
     String? search,

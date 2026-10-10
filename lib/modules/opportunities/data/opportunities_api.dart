@@ -38,10 +38,12 @@ class OpportunitiesApi {
   /// Query of `GET /sales-opportunities` (`SalesOpportunityController::index`):
   /// `opportunity_stage` is the raw code, `pipeline` scopes it (the default
   /// pipeline also matches records with no `pipeline`), `owner=me` is the
-  /// current user.
+  /// current user, `status` is OPEN / WON / LOST (no `opportunity_stage` and no
+  /// `status` = every record, closed ones included).
   @visibleForTesting
   static Map<String, dynamic> listQuery({
     String? stageCode,
+    String? status,
     String? pipeline,
     bool mine = false,
     String? search,
@@ -51,6 +53,7 @@ class OpportunitiesApi {
     if (stageCode != null && stageCode.isNotEmpty)
       'opportunity_stage': stageCode,
     'pipeline': ?pipeline,
+    'status': ?status,
     if (mine) 'owner': 'me',
     if (search != null && search.isNotEmpty) 'search': search,
     'page': page,
@@ -59,6 +62,7 @@ class OpportunitiesApi {
 
   Future<Paged<Opportunity>> list({
     String? stageCode,
+    String? status,
     String? pipeline,
     bool mine = false,
     String? search,
@@ -69,6 +73,7 @@ class OpportunitiesApi {
       _base,
       query: listQuery(
         stageCode: stageCode,
+        status: status,
         pipeline: pipeline,
         mine: mine,
         search: search,

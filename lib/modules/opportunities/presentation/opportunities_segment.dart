@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/module/extra_segment.dart';
+import '../../../core/utils/formatters.dart';
 import '../../../design/components/components.dart';
 import '../../../design/platform/omni_motion_scope.dart';
 import '../../../design/tokens/tokens.dart';
@@ -97,7 +98,13 @@ class _Body extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final scheme = Theme.of(context).colorScheme;
-    final stageCode = ref.watch(segmentStageProvider);
+    final closed = ref.watch(segmentClosedProvider);
+    final picked = ref.watch(segmentStageProvider);
+    final closedStages = pipeline.stages.where((s) => s.isClosed).toList();
+    // Chế độ đã đóng luôn nhắm một giai đoạn đóng (mặc định cái đầu).
+    final stageCode = closed
+        ? (picked ?? closedStages.firstOrNull?.code)
+        : picked;
     final summary = ref.watch(pipelineSummaryProvider).valueOrNull;
     final list = ref.watch(segmentOpportunitiesProvider);
     final access = ref.watch(opportunityAccessProvider);
@@ -111,6 +118,12 @@ class _Body extends ConsumerWidget {
             ? summary?.openCount(pipeline)
             : summary?.totalFor(stage.code).count) ??
         0;
+    // Tổng tiền: của giai đoạn đang lọc, hoặc của mọi giai đoạn mở.
+    final value = summary == null
+        ? 0.0
+        : (stage == null
+              ? summary.openValue(pipeline)
+              : summary.totalFor(stage.code).value);
 
     final Widget? status;
     if (data == null) {
@@ -154,17 +167,24 @@ class _Body extends ConsumerWidget {
         itemBuilder: (context, index) {
           if (index == 0) {
             return StageStrip(
-              stages: pipeline.openStages,
+              stages: closed ? closedStages : pipeline.openStages,
               summary: summary,
               selected: stageCode,
-              onSelected: (code) =>
-                  ref.read(segmentStageProvider.notifier).state = code,
+              onSelected: (code) {
+                // Đã đóng: luôn có một giai đoạn được chọn, chạm lại không bỏ.
+                if (closed && code == null) return;
+                ref.read(segmentStageProvider.notifier).state = code;
+              },
             );
           }
           if (index == 1) {
             return _SectionLine(
-              title: '${stage?.label ?? 'Đang mở'} · $total',
-              filtered: stageCode != null,
+              title: [
+                stage?.label ?? 'Đang mở',
+                '$total',
+                if (value > 0) Formatters.vndCompact(value),
+              ].join(' · '),
+              filtered: !closed && stageCode != null,
               onClear: () =>
                   ref.read(segmentStageProvider.notifier).state = null,
               color: scheme.onSurfaceVariant,
@@ -268,7 +288,13 @@ class OpportunitySearchRow extends ConsumerWidget
     final mine = ref.watch(pipelineMineProvider);
     final pipelineChosen = ref.watch(selectedPipelineProvider) != null;
     final defaultMine = access.readScope == AccessScope.own;
-    final count = (mine != defaultMine ? 1 : 0) + (pipelineChosen ? 1 : 0);
+    final closed = ref.watch(segmentClosedProvider);
+    final searching = ref.watch(pipelineSearchProvider).isNotEmpty;
+    final count =
+        (mine != defaultMine ? 1 : 0) +
+        (pipelineChosen ? 1 : 0) +
+        (closed ? 1 : 0) +
+        (searching ? 1 : 0);
 
     return SizedBox(
       height: 46,
@@ -290,7 +316,7 @@ class OpportunitySearchRow extends ConsumerWidget
                 onPressed: () => context.pushNamed(OpportunitiesModule.create),
                 style: IconButton.styleFrom(
                   fixedSize: const Size(36, 36),
-                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  tapTargetSize: MaterialTapTargetSize.padded,
                   foregroundColor: scheme.onSurface,
                   side: BorderSide(color: scheme.outlineVariant),
                   shape: RoundedRectangleBorder(
@@ -415,70 +441,84 @@ class _FilterButton extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     final motion = OmniMotion.enabled(context);
 
+    // Hình 36, vùng chạm 44.
     return Semantics(
       button: true,
       label: 'Bộ lọc',
       expanded: open,
       excludeSemantics: true,
       onTap: onTap,
-      child: Stack(
-        clipBehavior: Clip.none,
-        children: [
-          Material(
-            animationDuration: motion ? kThemeChangeDuration : Duration.zero,
-            color: open ? scheme.onSurface : scheme.surface,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(6),
-              side: BorderSide(
-                color: open ? scheme.onSurface : scheme.outlineVariant,
-              ),
-            ),
-            child: InkWell(
-              splashFactory: motion ? null : NoSplash.splashFactory,
-              highlightColor: motion ? null : Colors.transparent,
-              onTap: onTap,
-              customBorder: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(6),
-              ),
-              child: SizedBox.square(
-                dimension: 36,
-                child: Icon(
-                  Icons.tune_rounded,
-                  size: OmniIconSize.md,
-                  color: open ? scheme.surface : scheme.onSurface,
-                ),
-              ),
-            ),
-          ),
-          Positioned(
-            right: -4,
-            top: -4,
-            child: IgnorePointer(
-              child: Container(
-                key: const Key('opportunity-filter-count'),
-                constraints: const BoxConstraints(minWidth: 16),
-                height: 16,
-                padding: const EdgeInsets.symmetric(horizontal: 4),
-                alignment: Alignment.center,
-                decoration: BoxDecoration(
-                  color: count > 0
-                      ? OmniColors.destructive
-                      : scheme.surfaceContainerHighest,
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: scheme.surface, width: 1.5),
-                ),
-                child: Text(
-                  '$count',
-                  style: OmniType.micro.copyWith(
-                    color: count > 0 ? Colors.white : scheme.onSurfaceVariant,
-                    height: 1,
-                    fontWeight: FontWeight.w600,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: onTap,
+        child: SizedBox.square(
+          dimension: 44,
+          child: Center(
+            child: Stack(
+              clipBehavior: Clip.none,
+              children: [
+                Material(
+                  animationDuration: motion
+                      ? kThemeChangeDuration
+                      : Duration.zero,
+                  color: open ? scheme.onSurface : scheme.surface,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(6),
+                    side: BorderSide(
+                      color: open ? scheme.onSurface : scheme.outlineVariant,
+                    ),
+                  ),
+                  child: InkWell(
+                    splashFactory: motion ? null : NoSplash.splashFactory,
+                    highlightColor: motion ? null : Colors.transparent,
+                    onTap: onTap,
+                    customBorder: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: SizedBox.square(
+                      dimension: 36,
+                      child: Icon(
+                        Icons.tune_rounded,
+                        size: OmniIconSize.md,
+                        color: open ? scheme.surface : scheme.onSurface,
+                      ),
+                    ),
                   ),
                 ),
-              ),
+                Positioned(
+                  right: -4,
+                  top: -4,
+                  child: IgnorePointer(
+                    child: Container(
+                      key: const Key('opportunity-filter-count'),
+                      constraints: const BoxConstraints(minWidth: 16),
+                      height: 16,
+                      padding: const EdgeInsets.symmetric(horizontal: 4),
+                      alignment: Alignment.center,
+                      decoration: BoxDecoration(
+                        color: count > 0
+                            ? OmniColors.destructive
+                            : scheme.surfaceContainerHighest,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: scheme.surface, width: 1.5),
+                      ),
+                      child: Text(
+                        '$count',
+                        style: OmniType.micro.copyWith(
+                          color: count > 0
+                              ? Colors.white
+                              : scheme.onSurfaceVariant,
+                          height: 1,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
-        ],
+        ),
       ),
     );
   }
@@ -524,6 +564,8 @@ class _PanelBody extends ConsumerWidget {
         ref.watch(pipelineCatalogProvider).valueOrNull?.pipelines ??
         const <PipelineDef>[];
     final mine = ref.watch(pipelineMineProvider);
+    final closed = ref.watch(segmentClosedProvider);
+    final hasClosedStage = pipeline?.stages.any((s) => s.isClosed) ?? false;
 
     return Container(
       width: double.infinity,
@@ -548,6 +590,14 @@ class _PanelBody extends ConsumerWidget {
             selected: mine,
             onTap: () => ref.read(pipelineMineProvider.notifier).state = !mine,
           ),
+          // Xem cơ hội đã thắng/thua thay vì đang mở.
+          if (hasClosedStage)
+            OmniFilterPill(
+              label: 'Đã đóng',
+              selected: closed,
+              onTap: () =>
+                  ref.read(segmentClosedProvider.notifier).state = !closed,
+            ),
         ],
       ),
     );

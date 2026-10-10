@@ -32,7 +32,10 @@ class OpportunityRow extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final scheme = Theme.of(context).colorScheme;
     final stage = pipeline?.stage(opportunity.stageCode);
-    final stageColor = stageColorOf(stage, scheme);
+    final rawColor = stageColorOf(stage, scheme);
+    // Cung vòng cần 3:1, chữ tên giai đoạn cần 4.5:1 trên nền dòng.
+    final arcColor = readableStageColor(rawColor, scheme.surface, minRatio: 3);
+    final textColor = readableStageColor(rawColor, scheme.surface);
     final overdue = opportunity.isOverdue;
     final due = opportunity.expectedCloseAt;
 
@@ -55,7 +58,7 @@ class OpportunityRow extends ConsumerWidget {
               children: [
                 OmniProgressRing(
                   percent: opportunityPercent(opportunity, stage),
-                  color: stageColor,
+                  color: arcColor,
                 ),
                 const SizedBox(width: 12),
                 Expanded(
@@ -106,7 +109,7 @@ class OpportunityRow extends ConsumerWidget {
                       stage?.label ?? opportunity.stageCode,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: OmniType.micro.copyWith(color: stageColor),
+                      style: OmniType.micro.copyWith(color: textColor),
                     ),
                   ],
                 ),

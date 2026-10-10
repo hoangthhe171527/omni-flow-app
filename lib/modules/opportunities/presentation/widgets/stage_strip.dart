@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../../design/platform/omni_motion_scope.dart';
+import '../../../../design/tokens/contrast.dart';
 import '../../../../design/tokens/tokens.dart';
 import '../../domain/opportunity.dart';
 import '../../domain/pipeline_catalog.dart';
@@ -11,6 +12,22 @@ Color stageColorOf(PipelineStageDef? stage, ColorScheme scheme) {
   if (hex == null || hex.length != 6) return scheme.primary;
   final value = int.tryParse(hex, radix: 16);
   return value == null ? scheme.primary : Color(0xFF000000 | value);
+}
+
+/// [color] pha dần về đen (nền sáng) hoặc trắng (nền tối) cho tới khi đạt
+/// [minRatio] so với [surface]: 4.5 cho chữ, 3 cho cung vòng và vạch đáy
+/// (WCAG 1.4.3 / 1.4.11). Màu đã đủ tương phản thì giữ nguyên — màu web cấu
+/// hình như vàng #FACC15 sẽ không đọc được trên nền trắng nếu dùng thô.
+Color readableStageColor(Color color, Color surface, {double minRatio = 4.5}) {
+  if (contrastRatio(color, surface) >= minRatio) return color;
+  final toward = surface.computeLuminance() > 0.5
+      ? const Color(0xFF000000)
+      : const Color(0xFFFFFFFF);
+  for (var t = 0.05; t <= 1.0001; t += 0.05) {
+    final mixed = Color.lerp(color, toward, t)!;
+    if (contrastRatio(mixed, surface) >= minRatio) return mixed;
+  }
+  return toward;
 }
 
 /// Dải ô giai đoạn (`Customers.dc.html`): mỗi ô một số đếm, nhãn và vạch đáy
@@ -124,7 +141,11 @@ class _StageTile extends StatelessWidget {
                   child: Container(
                     height: 3,
                     decoration: BoxDecoration(
-                      color: stageColorOf(stage, scheme),
+                      color: readableStageColor(
+                        stageColorOf(stage, scheme),
+                        scheme.surface,
+                        minRatio: 3,
+                      ),
                       borderRadius: BorderRadius.circular(2),
                     ),
                   ),

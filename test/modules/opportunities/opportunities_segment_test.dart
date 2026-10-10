@@ -66,8 +66,11 @@ void main() {
     await t.pumpWidget(host());
     await t.pumpAndSettle();
     expect(api.calls.last.stageCode, isNull);
+    // Không có stage thì máy chủ trả cả cơ hội đã đóng: phải gửi status=OPEN.
+    expect(api.calls.last.status, 'OPEN');
     expect(find.textContaining('Đang mở ·'), findsOneWidget);
-    expect(find.text('Đang mở · 7'), findsOneWidget);
+    // Tổng tiền các giai đoạn mở (chỉ Báo giá có 3 triệu).
+    expect(find.text('Đang mở · 7 · 3 tr'), findsOneWidget);
   });
 
   testWidgets('chạm ô "Báo giá" → lọc stage=bao_gia; chạm lại → bỏ lọc', (
@@ -80,8 +83,9 @@ void main() {
     await t.tap(find.text('Báo giá').first);
     await t.pumpAndSettle();
     expect(api.calls.last.stageCode, 'bao_gia');
+    expect(api.calls.last.status, isNull);
     expect(find.text('Bỏ lọc'), findsOneWidget);
-    expect(find.text('Báo giá · 2'), findsOneWidget);
+    expect(find.text('Báo giá · 2 · 3 tr'), findsOneWidget);
 
     await t.tap(find.text('Bỏ lọc'));
     await t.pumpAndSettle();
@@ -94,6 +98,29 @@ void main() {
     await t.tap(find.text('Báo giá').first);
     await t.pumpAndSettle();
     expect(api.calls.last.stageCode, isNull);
+  });
+
+  testWidgets('"Đã đóng" → liệt kê giai đoạn thắng/thua, dải đổi sang ô đóng', (
+    t,
+  ) async {
+    await t.pumpWidget(host());
+    await t.pumpAndSettle();
+
+    await t.tap(find.text('Đã đóng'));
+    await t.pumpAndSettle();
+    // Giai đoạn đóng đầu tiên được chọn sẵn; không gửi status=OPEN.
+    expect(api.calls.last.stageCode, 'da_mua');
+    expect(api.calls.last.status, isNull);
+    expect(find.text('Đã mua'), findsWidgets);
+    expect(find.text('Tư vấn'), findsNothing);
+    expect(find.text('Bỏ lọc'), findsNothing);
+    expect(find.textContaining('Đã mua · 2'), findsOneWidget);
+
+    await t.tap(find.text('Đã đóng'));
+    await t.pumpAndSettle();
+    expect(api.calls.last.stageCode, isNull);
+    expect(api.calls.last.status, 'OPEN');
+    expect(find.text('Báo giá'), findsWidgets);
   });
 
   testWidgets('đổi quy trình đưa lọc giai đoạn về null', (t) async {
@@ -201,13 +228,26 @@ void main() {
       Axis.horizontal,
     );
   });
+  test(
+    'hợp đồng: status đi lên bằng khoá `status`, không status thì không gửi',
+    () {
+      expect(OpportunitiesApi.listQuery(status: 'OPEN')['status'], 'OPEN');
+      expect(OpportunitiesApi.listQuery().containsKey('status'), isFalse);
+    },
+  );
 }
 
 final _column = find.byWidgetPredicate(
   (w) => w is ListView && w.scrollDirection == Axis.vertical,
 );
 
-typedef _Call = ({String? stageCode, String? pipeline, bool mine, int page});
+typedef _Call = ({
+  String? stageCode,
+  String? status,
+  String? pipeline,
+  bool mine,
+  int page,
+});
 
 class _FakeApi extends OpportunitiesApi {
   _FakeApi() : super(ApiClient(Dio()));
@@ -284,6 +324,7 @@ class _FakeApi extends OpportunitiesApi {
   @override
   Future<Paged<Opportunity>> list({
     String? stageCode,
+    String? status,
     String? pipeline,
     bool mine = false,
     String? search,
@@ -292,6 +333,7 @@ class _FakeApi extends OpportunitiesApi {
   }) async {
     calls.add((
       stageCode: stageCode,
+      status: status,
       pipeline: pipeline,
       mine: mine,
       page: page,

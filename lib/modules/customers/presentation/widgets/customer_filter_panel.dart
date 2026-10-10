@@ -163,71 +163,85 @@ class _FilterButton extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     final motion = OmniMotion.enabled(context);
 
+    // Hình 36, vùng chạm 44.
     return Semantics(
       button: true,
       label: 'Bộ lọc',
       expanded: open,
       excludeSemantics: true,
       onTap: onTap,
-      child: Stack(
-        clipBehavior: Clip.none,
-        children: [
-          Material(
-            animationDuration: motion ? kThemeChangeDuration : Duration.zero,
-            color: open ? scheme.onSurface : scheme.surface,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(6),
-              side: BorderSide(
-                color: open ? scheme.onSurface : scheme.outlineVariant,
-              ),
-            ),
-            child: InkWell(
-              splashFactory: motion ? null : NoSplash.splashFactory,
-              highlightColor: motion ? null : Colors.transparent,
-              onTap: onTap,
-              customBorder: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(6),
-              ),
-              child: SizedBox.square(
-                dimension: 36,
-                child: Icon(
-                  Icons.tune_rounded,
-                  size: OmniIconSize.md,
-                  color: open ? scheme.surface : scheme.onSurface,
-                ),
-              ),
-            ),
-          ),
-          // Số luôn hiện (kể cả 0) để người dùng thấy bộ lọc đang ở mặc định.
-          Positioned(
-            right: -4,
-            top: -4,
-            child: IgnorePointer(
-              child: Container(
-                key: const Key('customer-filter-count'),
-                constraints: const BoxConstraints(minWidth: 16),
-                height: 16,
-                padding: const EdgeInsets.symmetric(horizontal: 4),
-                alignment: Alignment.center,
-                decoration: BoxDecoration(
-                  color: count > 0
-                      ? OmniColors.destructive
-                      : scheme.surfaceContainerHighest,
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: scheme.surface, width: 1.5),
-                ),
-                child: Text(
-                  '$count',
-                  style: OmniType.micro.copyWith(
-                    color: count > 0 ? Colors.white : scheme.onSurfaceVariant,
-                    height: 1,
-                    fontWeight: FontWeight.w600,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: onTap,
+        child: SizedBox.square(
+          dimension: 44,
+          child: Center(
+            child: Stack(
+              clipBehavior: Clip.none,
+              children: [
+                Material(
+                  animationDuration: motion
+                      ? kThemeChangeDuration
+                      : Duration.zero,
+                  color: open ? scheme.onSurface : scheme.surface,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(6),
+                    side: BorderSide(
+                      color: open ? scheme.onSurface : scheme.outlineVariant,
+                    ),
+                  ),
+                  child: InkWell(
+                    splashFactory: motion ? null : NoSplash.splashFactory,
+                    highlightColor: motion ? null : Colors.transparent,
+                    onTap: onTap,
+                    customBorder: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: SizedBox.square(
+                      dimension: 36,
+                      child: Icon(
+                        Icons.tune_rounded,
+                        size: OmniIconSize.md,
+                        color: open ? scheme.surface : scheme.onSurface,
+                      ),
+                    ),
                   ),
                 ),
-              ),
+                // Số luôn hiện (kể cả 0) để người dùng thấy bộ lọc đang ở mặc định.
+                Positioned(
+                  right: -4,
+                  top: -4,
+                  child: IgnorePointer(
+                    child: Container(
+                      key: const Key('customer-filter-count'),
+                      constraints: const BoxConstraints(minWidth: 16),
+                      height: 16,
+                      padding: const EdgeInsets.symmetric(horizontal: 4),
+                      alignment: Alignment.center,
+                      decoration: BoxDecoration(
+                        color: count > 0
+                            ? OmniColors.destructive
+                            : scheme.surfaceContainerHighest,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: scheme.surface, width: 1.5),
+                      ),
+                      child: Text(
+                        '$count',
+                        style: OmniType.micro.copyWith(
+                          color: count > 0
+                              ? Colors.white
+                              : scheme.onSurfaceVariant,
+                          height: 1,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
-        ],
+        ),
       ),
     );
   }
