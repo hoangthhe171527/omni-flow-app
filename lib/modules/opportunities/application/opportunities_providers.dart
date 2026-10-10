@@ -356,6 +356,8 @@ class OpportunityActions {
       _ref.invalidate(segmentOpportunitiesProvider);
     }
     _ref.invalidate(opportunityProvider(id));
+    // Đoạn Cơ hội của hồ sơ khách — đổi giai đoạn được cả từ đó.
+    _ref.invalidate(customerOpportunitiesProvider);
   }
 }
 

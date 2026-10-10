@@ -47,8 +47,9 @@ class CustomerOpportunitiesTab extends ConsumerWidget {
     final scheme = Theme.of(context).colorScheme;
     final opps = ref.watch(customerOpportunitiesProvider(customerId));
     final catalog = ref.watch(pipelineCatalogProvider).valueOrNull;
+    final access = ref.watch(opportunityAccessProvider);
     final canCreate =
-        ref.watch(opportunityAccessProvider).canCreate &&
+        access.canCreate &&
         ref.watch(sessionProvider).featureEnabled('opportunities');
 
     if (opps.isLoading && !opps.hasValue) {
@@ -89,6 +90,8 @@ class CustomerOpportunitiesTab extends ConsumerWidget {
           OpportunityRow(
             opportunity: o,
             pipeline: catalog?.pipelineOf(o.pipelineCode),
+            // Cùng quyền với danh sách cơ hội (giữ dòng → đổi giai đoạn).
+            canMove: access.canUpdate,
           ),
       ],
     );
