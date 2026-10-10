@@ -5,16 +5,28 @@ import 'package:omni_app/core/network/api_client.dart';
 import 'package:omni_app/modules/dashboard/application/dashboard_providers.dart';
 import 'package:omni_app/modules/dashboard/domain/revenue_period.dart';
 import 'package:omni_app/security/permissions/access_policy.dart';
+import 'package:omni_app/security/session/session.dart';
 import 'package:omni_app/security/session/session_controller.dart';
 
 import '../../../support/fake_http_adapter.dart';
 
 void main() {
-  ProviderContainer make(FakeAdapter adapter, Set<String> perms) {
+  ProviderContainer make(
+    FakeAdapter adapter,
+    Set<String> perms, {
+    Map<String, bool> features = const {},
+  }) {
     final c = ProviderContainer(
       overrides: [
         apiClientProvider.overrideWithValue(
           ApiClient(Dio()..httpClientAdapter = adapter),
+        ),
+        sessionProvider.overrideWithValue(
+          Session(
+            status: SessionStatus.authenticated,
+            policy: AccessPolicy(perms),
+            features: features,
+          ),
         ),
         accessProvider.overrideWithValue(AccessPolicy(perms)),
       ],
@@ -29,6 +41,20 @@ void main() {
       envelope({'current': <num>[], 'previous': <num>[]}),
     );
     final c = make(adapter, {'tasks.read', 'inbox.read'});
+    expect(await c.read(revenueSeriesProvider.future), isNull);
+    expect(adapter.requests, isEmpty);
+  });
+
+  test('cờ crm_overview tắt → null, không gọi mạng dù đủ quyền', () async {
+    final adapter = FakeAdapter(
+      200,
+      envelope({'current': <num>[], 'previous': <num>[]}),
+    );
+    final c = make(
+      adapter,
+      {'crm.sales_overview.read.all'},
+      features: {'crm_overview': false},
+    );
     expect(await c.read(revenueSeriesProvider.future), isNull);
     expect(adapter.requests, isEmpty);
   });

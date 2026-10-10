@@ -3,11 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../design/components/components.dart';
 import '../../../design/tokens/tokens.dart';
-import '../../../security/session/session_controller.dart';
-import '../../inbox/domain/inbox_permissions.dart';
-import '../../tasks/domain/task_permissions.dart';
 import '../application/dashboard_providers.dart';
-import '../domain/dashboard_permissions.dart';
 import 'widgets/awaiting_reply_card.dart';
 import 'widgets/my_tasks_card.dart';
 import 'widgets/revenue_card.dart';
@@ -18,8 +14,10 @@ import 'widgets/revenue_card.dart';
 class DashboardPage extends ConsumerWidget {
   const DashboardPage({super.key});
 
+  static const emptyMessage = 'Chưa có mục nào để hiển thị ở Tổng quan';
+
   Future<void> _refresh(WidgetRef ref) {
-    final access = ref.read(accessProvider);
+    final cards = ref.read(dashboardCardsProvider);
     ref
       ..invalidate(revenueSeriesProvider)
       ..invalidate(dashboardMyTasksProvider)
@@ -28,18 +26,17 @@ class DashboardPage extends ConsumerWidget {
     // mạng thay cho người không có quyền.
     Future<void> settle(Future<Object?> f) => f.then((_) {}, onError: (_) {});
     return Future.wait([
-      if (access.canAny(DashboardPermissions.revenue))
-        settle(ref.read(revenueSeriesProvider.future)),
-      if (access.canAny(TaskPermissions.anyRead))
-        settle(ref.read(dashboardMyTasksProvider.future)),
-      if (access.canAny(InboxPermissions.anyRead))
-        settle(ref.read(dashboardAwaitingReplyProvider.future)),
+      if (cards.revenue) settle(ref.read(revenueSeriesProvider.future)),
+      if (cards.tasks) settle(ref.read(dashboardMyTasksProvider.future)),
+      if (cards.inbox) settle(ref.read(dashboardAwaitingReplyProvider.future)),
     ]);
   }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final scheme = Theme.of(context).colorScheme;
+    // Mọi thẻ đều ẩn (thiếu quyền / cờ tắt) → báo trống thay cho trang trắng.
+    final none = ref.watch(dashboardCardsProvider).none;
     return Scaffold(
       backgroundColor: scheme.surfaceContainerLowest,
       appBar: const OmniTopBar(semanticsTitle: 'Tổng quan'),
@@ -53,13 +50,20 @@ class DashboardPage extends ConsumerWidget {
             OmniSpacing.lg,
             OmniSpacing.bottomSafe,
           ),
-          children: const [
-            RevenueCard(),
-            _Gap(),
-            MyTasksCard(),
-            _Gap(),
-            AwaitingReplyCard(),
-          ],
+          children: none
+              ? const [
+                  OmniEmptyState(
+                    icon: Icons.dashboard_outlined,
+                    title: emptyMessage,
+                  ),
+                ]
+              : const [
+                  RevenueCard(),
+                  _Gap(),
+                  MyTasksCard(),
+                  _Gap(),
+                  AwaitingReplyCard(),
+                ],
         ),
       ),
     );

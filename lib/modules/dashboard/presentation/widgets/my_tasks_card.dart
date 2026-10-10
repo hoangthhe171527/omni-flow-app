@@ -7,9 +7,7 @@ import 'package:go_router/go_router.dart';
 import 'package:omni_app/design/components/components.dart';
 import 'package:omni_app/design/tokens/omni_typography.dart';
 
-import '../../../../security/session/session_controller.dart';
 import '../../../tasks/domain/task.dart';
-import '../../../tasks/domain/task_permissions.dart';
 import '../../../tasks/routes.dart';
 import '../../../tasks/tasks.dart' show DueChip;
 import '../../application/dashboard_providers.dart';
@@ -22,9 +20,9 @@ class MyTasksCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // Thiếu quyền đọc việc → thẻ không tồn tại (và không gọi mạng), không
-    // phải một thẻ báo lỗi 403.
-    if (!ref.watch(accessProvider).canAny(TaskPermissions.anyRead)) {
+    // Thiếu quyền đọc việc hoặc cờ `tasks` tắt → thẻ không tồn tại (và không
+    // gọi mạng), không phải một thẻ báo lỗi 403.
+    if (!ref.watch(dashboardCardsProvider).tasks) {
       return const SizedBox.shrink();
     }
     final async = ref.watch(dashboardMyTasksProvider);

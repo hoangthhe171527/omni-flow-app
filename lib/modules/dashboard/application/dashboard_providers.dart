@@ -5,12 +5,48 @@ import '../../../security/session/session_controller.dart';
 import '../../inbox/application/inbox_realtime.dart';
 import '../../inbox/data/inbox_api.dart';
 import '../../inbox/domain/conversation.dart';
+import '../../inbox/domain/inbox_permissions.dart';
+import '../../tasks/domain/task_permissions.dart';
 import '../../tasks/data/tasks_api.dart';
 import '../../tasks/domain/task.dart';
 import '../data/dashboard_api.dart';
 import '../domain/dashboard_permissions.dart';
 import '../domain/revenue_period.dart';
 import '../domain/revenue_series.dart';
+
+/// Thẻ nào của Tổng quan được dựng: đủ quyền **và** cờ tính năng của tenant
+/// còn bật (tên cờ khớp middleware `feature:` của server — `crm_overview` cho
+/// `/sales-overview/*`, `tasks` cho `/tasks`, `inbox` cho `/inbox`). Thẻ ẩn thì
+/// provider dữ liệu của nó không bị watch → không gọi mạng.
+class DashboardCards {
+  const DashboardCards({
+    required this.revenue,
+    required this.tasks,
+    required this.inbox,
+  });
+
+  final bool revenue;
+  final bool tasks;
+  final bool inbox;
+
+  bool get none => !revenue && !tasks && !inbox;
+}
+
+final dashboardCardsProvider = Provider<DashboardCards>((ref) {
+  final session = ref.watch(sessionProvider);
+  final access = ref.watch(accessProvider);
+  return DashboardCards(
+    revenue:
+        access.canAny(DashboardPermissions.revenue) &&
+        session.featureEnabled('crm_overview'),
+    tasks:
+        access.canAny(TaskPermissions.anyRead) &&
+        session.featureEnabled('tasks'),
+    inbox:
+        access.canAny(InboxPermissions.anyRead) &&
+        session.featureEnabled('inbox'),
+  );
+});
 
 final revenueRangeProvider = StateProvider<RevenueRange>(
   (_) => RevenueRange.month,
@@ -20,8 +56,7 @@ final revenueRangeProvider = StateProvider<RevenueRange>(
 final revenueSeriesProvider = FutureProvider.autoDispose<RevenueSeries?>((
   ref,
 ) async {
-  final access = ref.watch(accessProvider);
-  if (!access.canAny(DashboardPermissions.revenue)) return null;
+  if (!ref.watch(dashboardCardsProvider).revenue) return null;
   final range = ref.watch(revenueRangeProvider);
   return ref.watch(dashboardApiProvider).revenueSeries(range);
 });

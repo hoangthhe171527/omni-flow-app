@@ -43,6 +43,7 @@ Future<Counts> pumpPage(
   WidgetTester t,
   Set<String> perms, {
   bool dark = false,
+  Map<String, bool> features = const {},
 }) async {
   t.view.physicalSize = const Size(390, 844);
   t.view.devicePixelRatio = 1;
@@ -51,6 +52,13 @@ Future<Counts> pumpPage(
   await t.pumpWidget(
     ProviderScope(
       overrides: [
+        sessionProvider.overrideWithValue(
+          Session(
+            status: SessionStatus.authenticated,
+            policy: AccessPolicy(perms),
+            features: features,
+          ),
+        ),
         accessProvider.overrideWithValue(AccessPolicy(perms)),
         backgroundProvider.overrideWith(FixedBackground.new),
         dashboardApiProvider.overrideWithValue(c.api),
@@ -173,6 +181,46 @@ void main() {
     expect(find.text('Chờ phản hồi'), findsOneWidget);
     expect(find.text('Việc của tôi'), findsNothing);
     expect(c.api.calls, 0);
+  });
+
+  group('cờ tính năng tắt → thẻ ẩn, không gọi mạng', () {
+    const all = {'crm.sales_overview.read', 'tasks.read', 'inbox.read'};
+
+    testWidgets('tasks tắt', (t) async {
+      final c = await pumpPage(t, all, features: {'tasks': false});
+      expect(find.text('Việc của tôi'), findsNothing);
+      expect(find.text('Chờ phản hồi'), findsOneWidget);
+      expect([c.api.calls, c.tasks, c.awaiting], [1, 0, 1]);
+    });
+
+    testWidgets('inbox tắt', (t) async {
+      final c = await pumpPage(t, all, features: {'inbox': false});
+      expect(find.text('Chờ phản hồi'), findsNothing);
+      expect(find.text('Việc của tôi'), findsOneWidget);
+      expect([c.api.calls, c.tasks, c.awaiting], [1, 1, 0]);
+    });
+
+    testWidgets('crm_overview tắt', (t) async {
+      final c = await pumpPage(t, all, features: {'crm_overview': false});
+      expect([c.api.calls, c.tasks, c.awaiting], [0, 1, 1]);
+      expect(find.text(DashboardPage.emptyMessage), findsNothing);
+    });
+
+    testWidgets('tắt hết → trạng thái trống; kéo tải lại không gọi gì', (
+      t,
+    ) async {
+      final c = await pumpPage(
+        t,
+        all,
+        features: {'tasks': false, 'inbox': false, 'crm_overview': false},
+      );
+      expect(find.text(DashboardPage.emptyMessage), findsOneWidget);
+      expect(find.text('Việc của tôi'), findsNothing);
+      expect(find.text('Chờ phản hồi'), findsNothing);
+      await t.fling(find.byType(ListView), const Offset(0, 400), 1000);
+      await t.pumpAndSettle();
+      expect([c.api.calls, c.tasks, c.awaiting], [0, 0, 0]);
+    });
   });
 
   testWidgets('kéo xuống tải lại cả ba nguồn', (t) async {
