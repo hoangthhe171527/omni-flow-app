@@ -110,41 +110,52 @@ class _MessageActionsOverlay extends StatelessWidget {
             ),
           ),
           Positioned.fill(
-            child: SafeArea(
-              child: SingleChildScrollView(
-                padding: EdgeInsets.fromLTRB(8, top, 8, 16),
-                child: Column(
-                  crossAxisAlignment: outbound
-                      ? CrossAxisAlignment.end
-                      : CrossAxisAlignment.start,
-                  children: [
-                    // Bong bóng chỉ để nhìn: chạm vào nó không mở ảnh hay liên
-                    // kết phía sau lớp mờ.
-                    IgnorePointer(
-                      child: DecoratedBox(
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(18),
-                          boxShadow: [
-                            BoxShadow(
-                              color: const Color(
-                                0xFF0B1A33,
-                              ).withValues(alpha: dark ? .5 : .3),
-                              offset: const Offset(0, 14),
-                              blurRadius: 34,
+            // Bọc NGOÀI vùng cuộn: vùng cuộn phủ cả màn nên nuốt chạm trước cả
+            // rào chắn của route; bấm vào khoảng trống phải tự đóng.
+            child: GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: () => Navigator.of(context).maybePop(),
+              child: SafeArea(
+                child: SingleChildScrollView(
+                  padding: EdgeInsets.fromLTRB(8, top, 8, 16),
+                  child: Column(
+                    crossAxisAlignment: outbound
+                        ? CrossAxisAlignment.end
+                        : CrossAxisAlignment.start,
+                    children: [
+                      // Bong bóng chỉ để nhìn: chạm vào nó không mở ảnh hay liên
+                      // kết phía sau lớp mờ.
+                      ExcludeSemantics(
+                        child: IgnorePointer(
+                          child: DecoratedBox(
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(18),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: const Color(
+                                    0xFF0B1A33,
+                                  ).withValues(alpha: dark ? .5 : .3),
+                                  offset: const Offset(0, 14),
+                                  blurRadius: 34,
+                                ),
+                              ],
                             ),
-                          ],
+                            child: bubble,
+                          ),
                         ),
-                        child: bubble,
                       ),
-                    ),
-                    if (items.isNotEmpty) ...[
-                      const SizedBox(height: 12),
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 8),
-                        child: _GlassMenu(items: items, onSelected: onSelected),
-                      ),
+                      if (items.isNotEmpty) ...[
+                        const SizedBox(height: 12),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 8),
+                          child: _GlassMenu(
+                            items: items,
+                            onSelected: onSelected,
+                          ),
+                        ),
+                      ],
                     ],
-                  ],
+                  ),
                 ),
               ),
             ),

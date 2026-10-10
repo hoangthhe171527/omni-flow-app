@@ -53,10 +53,16 @@ class MessageBubble extends StatelessWidget {
   final VoidCallback? onCreateOpportunity;
 
   Future<void> _copy(BuildContext context) async {
-    if (!context.mounted) return;
+    // Lấy messenger TRƯỚC khi chờ: sau await, context có thể đã gỡ.
     final messenger = ScaffoldMessenger.maybeOf(context);
-    await Clipboard.setData(ClipboardData(text: message.text));
-    messenger?.showSnackBar(const SnackBar(content: Text('Đã sao chép.')));
+    var notice = 'Đã sao chép.';
+    try {
+      await Clipboard.setData(ClipboardData(text: message.text));
+    } on PlatformException {
+      notice = 'Không sao chép được. Vui lòng thử lại.';
+    }
+    if (!context.mounted) return;
+    messenger?.showSnackBar(SnackBar(content: Text(notice)));
   }
 
   @override
@@ -277,6 +283,7 @@ class MessageBubble extends StatelessWidget {
       outbound: outbound,
       onReply: onReply,
       onPin: onPin,
+      pinned: message.pinned,
       onCopy: message.text.isEmpty || message.recalled
           ? null
           : () => _copy(context),
@@ -472,6 +479,7 @@ class _ReplySwipe extends StatefulWidget {
     this.onReply,
     this.onPin,
     this.onCopy,
+    this.pinned = false,
     this.onCreateTask,
     this.onCreateOpportunity,
   });
@@ -482,6 +490,7 @@ class _ReplySwipe extends StatefulWidget {
   final VoidCallback? onReply;
   final VoidCallback? onPin;
   final VoidCallback? onCopy;
+  final bool pinned;
   final VoidCallback? onCreateTask;
   final VoidCallback? onCreateOpportunity;
 
@@ -563,7 +572,7 @@ class _ReplySwipeState extends State<_ReplySwipe>
           ),
         if (widget.onPin != null)
           MessageActionItem(
-            label: 'Ghim tin',
+            label: widget.pinned ? 'Bỏ ghim' : 'Ghim tin',
             icon: Icons.push_pin_outlined,
             onTap: _guarded(widget.onPin),
           ),

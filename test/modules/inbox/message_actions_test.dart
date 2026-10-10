@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -202,6 +203,106 @@ void main() {
     await closeThread(tester);
   });
 
+  testWidgets('bấm vùng trống quanh menu → đóng menu', (tester) async {
+    api.history = [_serverMessage('m1', 'Chào shop')];
+    await openThread(tester);
+    await holdBubble(tester, 'Chào shop');
+    expect(find.text('Sao chép'), findsOneWidget);
+    await tester.tapAt(const Offset(790, 590));
+    await tester.pumpAndSettle(const Duration(milliseconds: 50));
+    expect(find.text('Sao chép'), findsNothing);
+    await closeThread(tester);
+  });
+
+  testWidgets('nút Back → đóng menu, vẫn ở trang chat', (tester) async {
+    api.history = [_serverMessage('m1', 'Chào shop')];
+    await openThread(tester);
+    await holdBubble(tester, 'Chào shop');
+    await tester.binding.handlePopRoute();
+    await tester.pumpAndSettle(const Duration(milliseconds: 50));
+    expect(find.text('Sao chép'), findsNothing);
+    expect(find.byType(ThreadPage), findsOneWidget);
+    await closeThread(tester);
+  });
+
+  testWidgets('vuốt ngang tin vẫn trả lời (không mở menu)', (tester) async {
+    api.history = [_serverMessage('m1', 'Chào shop')];
+    await openThread(tester);
+    await tester.drag(inBubble('Chào shop'), const Offset(200, 0));
+    await tester.pumpAndSettle(const Duration(milliseconds: 50));
+    expect(find.text('Sao chép'), findsNothing);
+    // Bong bóng + khung trả lời trên thanh nhập.
+    expect(find.text('Chào shop'), findsNWidgets(2));
+    await closeThread(tester);
+  });
+
+  testWidgets('bấm ảnh vẫn mở trình xem ảnh', (tester) async {
+    api.history = [
+      _serverMessage('m1', 'Ảnh đàn', images: ['a.jpg']),
+    ];
+    await openThread(tester);
+    await tester.tap(find.byType(CachedNetworkImage));
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1));
+    expect(find.byTooltip('Đóng'), findsOneWidget);
+    await closeThread(tester);
+  });
+
+  testWidgets('tin đã thu hồi → không có Sao chép', (tester) async {
+    api.history = [_serverMessage('m1', 'Chào shop', recalled: true)];
+    await openThread(tester);
+    await tester.longPress(find.byType(MessageBubble));
+    await tester.pumpAndSettle(const Duration(milliseconds: 50));
+    expect(find.text('Trả lời'), findsOneWidget);
+    expect(find.text('Sao chép'), findsNothing);
+    await closeThread(tester);
+  });
+
+  testWidgets('tin đã ghim → mục "Bỏ ghim"', (tester) async {
+    api.history = [_serverMessage('m1', 'Chào shop', pinned: true)];
+    await openThread(tester);
+    await holdBubble(tester, 'Chào shop');
+    expect(find.text('Bỏ ghim'), findsOneWidget);
+    expect(find.text('Ghim tin'), findsNothing);
+    await closeThread(tester);
+  });
+
+  testWidgets('ghim lỗi → báo lỗi', (tester) async {
+    api.history = [_serverMessage('m1', 'Chào shop')];
+    api.failPin = true;
+    await openThread(tester);
+    await holdBubble(tester, 'Chào shop');
+    await tester.tap(find.text('Ghim tin'));
+    await tester.pumpAndSettle(const Duration(milliseconds: 50));
+    expect(find.text('Không có kết nối mạng.'), findsOneWidget);
+    await closeThread(tester);
+  });
+
+  testWidgets('chép vào clipboard lỗi → báo lỗi, không ném', (tester) async {
+    tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+      SystemChannels.platform,
+      (call) async {
+        if (call.method == 'Clipboard.setData') {
+          throw PlatformException(code: 'denied');
+        }
+        return null;
+      },
+    );
+    addTearDown(
+      () => tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+        SystemChannels.platform,
+        null,
+      ),
+    );
+    api.history = [_serverMessage('m1', 'Chào shop')];
+    await openThread(tester);
+    await holdBubble(tester, 'Chào shop');
+    await tester.tap(find.text('Sao chép'));
+    await tester.pumpAndSettle(const Duration(milliseconds: 50));
+    expect(find.text('Không sao chép được. Vui lòng thử lại.'), findsOneWidget);
+    await closeThread(tester);
+  });
+
   testWidgets('bấm đúp tin không làm gì (chưa có API cảm xúc)', (tester) async {
     api.history = [_serverMessage('m1', 'Chào shop')];
     await openThread(tester);
@@ -238,12 +339,16 @@ Message _serverMessage(
   _ReplyTo? replyTo,
   List<String> images = const [],
   String sig = 'v1',
+  bool recalled = false,
+  bool pinned = false,
 }) {
   final minute = int.parse(id.replaceAll(RegExp(r'\D'), ''));
   return Message.fromJson({
     'id': id,
     'from': from,
     'text': text,
+    if (recalled) 'recalled': true,
+    if (pinned) 'pinned': true,
     'status': from == 'agent' ? 'sent' : null,
     'sent_at': DateTime.utc(2026, 1, 1, 8, minute).toIso8601String(),
     if (images.isNotEmpty)
@@ -276,6 +381,7 @@ class _FakeInboxApi extends InboxApi {
 
   List<Message> history = const [];
   bool failNextSend = false;
+  bool failPin = false;
 
   /// Holds the next send open so a test can look at the optimistic bubble.
   Completer<void>? holdSend;
@@ -319,6 +425,12 @@ class _FakeInboxApi extends InboxApi {
     lastMessage: 'Còn đàn không',
     unread: 2,
   );
+
+  @override
+  Future<bool> togglePin(String conversationId, String messageId) async {
+    if (failPin) throw const NetworkException('Không có kết nối mạng.');
+    return true;
+  }
 
   @override
   Future<void> markRead(String id) async => markReadCalls.add(id);
