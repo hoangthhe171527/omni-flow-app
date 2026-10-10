@@ -167,7 +167,8 @@ class _FakeInboxApi extends InboxApi {
     int perPage = AppConfig.defaultPerPage,
     bool? pinned,
   }) async {
-    listCalls++;
+    // Đếm danh sách CHÍNH; mục "Đã ghim" (pinned=1) tải theo nhịp riêng.
+    if (pinned != true) listCalls++;
     return CursorPaged(items: conversations);
   }
 

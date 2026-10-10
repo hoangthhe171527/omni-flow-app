@@ -23,6 +23,7 @@ import 'widgets/conversation_peek.dart';
 import 'widgets/conversation_row.dart';
 import 'widgets/inbox_bulk_bar.dart';
 import 'widgets/inbox_filter_bar.dart';
+import 'widgets/inbox_pinned_section.dart';
 
 class InboxPage extends ConsumerStatefulWidget {
   const InboxPage({super.key});
@@ -144,6 +145,24 @@ class _InboxPageState extends ConsumerState<InboxPage>
     );
   }
 
+  Widget _row(Conversation conversation, bool selecting) => ConversationRow(
+    key: ValueKey('row-${conversation.id}'),
+    conversation: conversation,
+    selectionMode: selecting,
+    selected: _selected.contains(conversation.id),
+    onPeek: () => _openPeek(conversation),
+    onTap: () {
+      if (selecting) {
+        _toggleSelection(conversation.id);
+        return;
+      }
+      context.pushNamed(
+        InboxRoutes.thread,
+        pathParameters: {'id': conversation.id},
+      );
+    },
+  );
+
   void _clearSelection() {
     setState(() {
       _selected.clear();
@@ -174,6 +193,11 @@ class _InboxPageState extends ConsumerState<InboxPage>
     }
     final access = ref.watch(inboxAccessProvider);
     final list = ref.watch(inboxListProvider);
+    // Mục ghim lỗi hay đang tải thì ẩn — danh sách chính vẫn hiện.
+    final pinned =
+        ref.watch(pinnedConversationsProvider).valueOrNull ??
+        const <Conversation>[];
+    final lead = pinned.isEmpty ? 0 : 1;
     final scheme = Theme.of(context).colorScheme;
     final selecting = _selectionMode;
     final canConnectChannels = ref
@@ -266,14 +290,19 @@ class _InboxPageState extends ConsumerState<InboxPage>
                     child: OmniAsyncView(
                       value: list,
                       onRetry: () => ref.invalidate(inboxListProvider),
-                      isEmpty: (state) => state.items.isEmpty,
+                      // Rỗng chỉ khi CẢ HAI mục rỗng.
+                      isEmpty: (state) => state.items.isEmpty && pinned.isEmpty,
                       empty: _empty(),
                       data: (state) => ListView.separated(
                         controller: _scrollController,
                         padding: const EdgeInsets.only(
                           bottom: OmniSpacing.bottomSafe,
                         ),
-                        itemCount: state.items.length + (state.hasMore ? 1 : 0),
+                        // Mục "Đã ghim" (nếu có) là dòng đầu của CÙNG danh
+                        // sách: một ScrollController, `loadMore` vẫn theo
+                        // `extentAfter`.
+                        itemCount:
+                            lead + state.items.length + (state.hasMore ? 1 : 0),
                         // Zalo separates rows with a hairline indented past the
                         // avatar, not a gap. Gaps between bordered cards were what
                         // made the list read as a table of records.
@@ -284,7 +313,14 @@ class _InboxPageState extends ConsumerState<InboxPage>
                           endIndent: 0,
                           color: OmniColors.divider,
                         ),
-                        itemBuilder: (context, index) {
+                        itemBuilder: (context, rawIndex) {
+                          if (rawIndex < lead) {
+                            return InboxPinnedSection(
+                              items: pinned,
+                              rowBuilder: (c) => _row(c, selecting),
+                            );
+                          }
+                          final index = rawIndex - lead;
                           if (index >= state.items.length) {
                             return const Padding(
                               padding: EdgeInsets.all(OmniSpacing.lg),
@@ -299,23 +335,7 @@ class _InboxPageState extends ConsumerState<InboxPage>
                               ),
                             );
                           }
-                          final conversation = state.items[index];
-                          return ConversationRow(
-                            conversation: conversation,
-                            selectionMode: selecting,
-                            selected: _selected.contains(conversation.id),
-                            onPeek: () => _openPeek(conversation),
-                            onTap: () {
-                              if (selecting) {
-                                _toggleSelection(conversation.id);
-                                return;
-                              }
-                              context.pushNamed(
-                                InboxRoutes.thread,
-                                pathParameters: {'id': conversation.id},
-                              );
-                            },
-                          );
+                          return _row(state.items[index], selecting);
                         },
                       ),
                     ),
@@ -327,9 +347,12 @@ class _InboxPageState extends ConsumerState<InboxPage>
           if (selecting)
             InboxBulkBar(
               selectedIds: _selected.toList(),
-              allIds:
-                  list.valueOrNull?.items.map((item) => item.id).toList() ??
-                  const [],
+              allIds: [
+                for (final c in pinned) c.id,
+                for (final c
+                    in list.valueOrNull?.items ?? const <Conversation>[])
+                  c.id,
+              ],
               onSelectAll: (ids) => setState(() {
                 _selected
                   ..clear()

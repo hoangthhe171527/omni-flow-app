@@ -403,6 +403,18 @@ class _PanelBody extends ConsumerWidget {
                       : InboxQuickFilter.closed,
                 ),
               ),
+              // Đường duy nhất tới "Bỏ chặn": hội thoại đã chặn ẩn khỏi mọi
+              // danh sách khác. Không có số — facet không đếm hội thoại chặn.
+              if (access.canBlock)
+                _Chip(
+                  label: InboxQuickFilter.blocked.label,
+                  selected: filter.quick == InboxQuickFilter.blocked,
+                  onTap: () => controller.setQuick(
+                    filter.quick == InboxQuickFilter.blocked
+                        ? InboxQuickFilter.all
+                        : InboxQuickFilter.blocked,
+                  ),
+                ),
             ],
           ),
           // Gỡ MỌI thứ huy hiệu đếm — cả tài khoản kênh và nhãn, vốn không có

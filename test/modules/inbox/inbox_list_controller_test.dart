@@ -418,6 +418,163 @@ void main() {
       expect(read().items.single.unread, 0);
     },
   );
+
+  group('Hộp thư mobile: ghim + chặn', () {
+    late _ManualUpdates updates;
+
+    setUp(() {
+      container = ProviderContainer(
+        overrides: [
+          inboxApiProvider.overrideWithValue(api),
+          inboxListSignalProvider.overrideWith(_ManualSignal.new),
+          inboxConversationUpdatesProvider.overrideWith(_ManualUpdates.new),
+          realtimeClientProvider.overrideWithValue(
+            RealtimeClient(
+              config: const RealtimeConfig.disabled(),
+              authorizer: (_, _) async => '',
+            ),
+          ),
+          sessionProvider.overrideWithValue(
+            const Session(
+              status: SessionStatus.authenticated,
+              user: SessionUser(id: 'u1', fullName: 'Kiệt', email: 'k@x.vn'),
+              tenant: SessionTenant(id: 't1', name: 'Xưởng đàn'),
+            ),
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+      updates =
+          container.read(inboxConversationUpdatesProvider.notifier)
+              as _ManualUpdates;
+    });
+
+    Future<void> flush() async {
+      for (var i = 0; i < 5; i++) {
+        await Future<void>.delayed(Duration.zero);
+      }
+    }
+
+    test('build, loadMore, gộp trang 1 đều gửi pinned=0', () async {
+      api.pages = {
+        1: ['c1'],
+        2: ['c2'],
+      };
+      await open();
+      await controller().loadMore();
+      (container.read(inboxListSignalProvider.notifier) as _ManualSignal)
+          .bump();
+      await flush();
+      await controller().refresh();
+      await controller().mergeLatest();
+      final main = api.calls.where((c) => c.pinned != true).toList();
+      expect(main.length, greaterThanOrEqualTo(5));
+      for (final call in main) {
+        expect(call.pinned, isFalse, reason: 'trang ${call.page}');
+      }
+    });
+
+    test('tab "Đã chặn": danh sách chính KHÔNG gửi pinned', () async {
+      api.pages = {
+        1: ['c1'],
+      };
+      container
+          .read(inboxFilterProvider.notifier)
+          .setQuick(InboxQuickFilter.blocked);
+      await open();
+      expect(api.calls.single.pinned, isNull);
+      expect(api.calls.single.query['blocked'], '1');
+    });
+
+    test(
+      'conversation.updated: GET trả is_pinned → không chèn, bỏ nếu đang có',
+      () async {
+        api.pages = {
+          1: ['c1', 'c2'],
+        };
+        await open();
+        api.byId['c2'] = _conversation('c2').copyWith(isPinned: true);
+        api.byId['c9'] = _conversation('c9').copyWith(isPinned: true);
+        updates.push({
+          'c2': {'updated'},
+          'c9': {'assigned'},
+        });
+        await flush();
+        expect(ids(), ['c1']);
+      },
+    );
+
+    test(
+      'reconcile bỏ ghim một dòng chưa hiện → chèn theo lastMessageAt',
+      () async {
+        api.pages = {
+          1: ['c1', 'c2'],
+        };
+        api.lastAt = {
+          'c1': DateTime.utc(2026, 10, 10, 9),
+          'c2': DateTime.utc(2026, 10, 10, 7),
+        };
+        await open();
+        final unpinned = _conversation(
+          'c5',
+        ).copyWith(lastMessageAt: DateTime.utc(2026, 10, 10, 8));
+        controller().reconcile(unpinned);
+        expect(ids(), ['c1', 'c5', 'c2']);
+        // Ghim lại → rời danh sách chính.
+        controller().reconcile(unpinned.copyWith(isPinned: true));
+        expect(ids(), ['c1', 'c2']);
+      },
+    );
+
+    test('GET trả blocked_at → bỏ dòng', () async {
+      api.pages = {
+        1: ['c1', 'c2'],
+      };
+      await open();
+      api.byId['c1'] = _conversation(
+        'c1',
+      ).copyWith(blockedAt: DateTime.utc(2026, 10, 10));
+      updates.push({
+        'c1': {'updated'},
+      });
+      await flush();
+      expect(ids(), ['c2']);
+    });
+
+    test('reason=blocked → bỏ dòng NGAY, không hỏi lại server', () async {
+      api.pages = {
+        1: ['c1', 'c2'],
+        2: ['c3'],
+      };
+      await open();
+      await controller().loadMore();
+      expect(ids(), ['c1', 'c2', 'c3']);
+      api.calls.clear();
+      // Dòng ở trang 2: gộp trang 1 không bao giờ chạm tới nó.
+      updates.push({
+        'c3': {'blocked'},
+      });
+      await flush();
+      expect(ids(), ['c1', 'c2']);
+      expect(api.getCalls, isEmpty);
+    });
+
+    test('reason=unblocked ở tab thường → hỏi lại và chèn', () async {
+      api.pages = {
+        1: ['c1'],
+      };
+      api.lastAt = {'c1': DateTime.utc(2026, 10, 10, 7)};
+      await open();
+      api.byId['c4'] = _conversation(
+        'c4',
+      ).copyWith(lastMessageAt: DateTime.utc(2026, 10, 10, 9));
+      updates.push({
+        'c4': {'unblocked'},
+      });
+      await flush();
+      expect(ids(), ['c4', 'c1']);
+    });
+  });
 }
 
 Conversation _conversation(String id, {int unread = 3}) => Conversation(
@@ -429,7 +586,12 @@ Conversation _conversation(String id, {int unread = 3}) => Conversation(
   unread: unread,
 );
 
-typedef _ListCall = ({Map<String, dynamic> query, String? before, int page});
+typedef _ListCall = ({
+  Map<String, dynamic> query,
+  String? before,
+  int page,
+  bool? pinned,
+});
 
 /// Stands in for the HTTP layer. Subclasses the real client because the app
 /// wires a concrete [InboxApi]; the [ApiClient] handed to `super` is never used.
@@ -449,6 +611,21 @@ class _FakeInboxApi extends InboxApi {
   /// Giữ đúng MỘT lượt gọi kế tiếp (bất kể trang) tới khi completer xong.
   Completer<void>? holdNext;
 
+  /// `GET {id}` (vá theo `conversation.updated`); thiếu id → 404.
+  final byId = <String, Conversation>{};
+  final getCalls = <String>[];
+
+  /// `last_message_at` theo id cho các dòng trang.
+  Map<String, DateTime> lastAt = const {};
+
+  @override
+  Future<Conversation> get(String id) async {
+    getCalls.add(id);
+    final c = byId[id];
+    if (c == null) throw const NotFoundException('Không tìm thấy.');
+    return c;
+  }
+
   @override
   Future<CursorPaged<Conversation>> list({
     required Map<String, dynamic> query,
@@ -457,7 +634,7 @@ class _FakeInboxApi extends InboxApi {
     bool? pinned,
   }) async {
     final page = before == null ? 1 : int.parse(before.substring(1));
-    calls.add((query: query, before: before, page: page));
+    calls.add((query: query, before: before, page: page, pinned: pinned));
     // Trả dữ liệu của LÚC HỎI — trang về muộn mang dữ liệu cũ.
     final pages = this.pages;
     await holds[page]?.future;
@@ -472,7 +649,9 @@ class _FakeInboxApi extends InboxApi {
     }
     final last = pages.isEmpty ? 1 : pages.keys.reduce((a, b) => a > b ? a : b);
     return CursorPaged(
-      items: (pages[page] ?? const []).map(_conversation).toList(),
+      items: (pages[page] ?? const <String>[])
+          .map((id) => _conversation(id).copyWith(lastMessageAt: lastAt[id]))
+          .toList(),
       cursor: CursorPage(
         perPage: perPage,
         hasMore: page < last,
@@ -488,4 +667,13 @@ class _ManualSignal extends InboxListSignal {
   int build() => 0;
 
   void bump() => state = state + 1;
+}
+
+/// `conversation.updated` mà bài kiểm tự đẩy (thay socket).
+class _ManualUpdates extends InboxConversationUpdates {
+  @override
+  ConversationUpdateBatch? build() => null;
+
+  void push(Map<String, Set<String>> reasonsById) => state =
+      ConversationUpdateBatch(reasonsById: reasonsById, unscoped: false);
 }

@@ -206,6 +206,20 @@ class _ConversationRowState extends State<ConversationRow> {
               const SizedBox(width: 6),
               Expanded(child: _SourceLine(conversation: conversation)),
               const SizedBox(width: 6),
+              if (conversation.isMuted) ...[
+                Semantics(
+                  label: 'Đã tắt thông báo',
+                  // Nút riêng: InkWell của dòng không nuốt vào nhãn gộp.
+                  container: true,
+                  excludeSemantics: true,
+                  child: Icon(
+                    Icons.notifications_off_outlined,
+                    size: 14,
+                    color: muted,
+                  ),
+                ),
+                const SizedBox(width: 4),
+              ],
               Text(
                 Formatters.relative(conversation.lastMessageAt),
                 style: OmniType.micro.copyWith(

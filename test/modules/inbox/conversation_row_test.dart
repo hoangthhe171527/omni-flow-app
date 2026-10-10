@@ -77,6 +77,32 @@ void main() {
     },
   );
 
+  testWidgets('tắt thông báo → chuông gạch "Đã tắt thông báo"; bật thì không', (
+    tester,
+  ) async {
+    await pump(tester, c: lan.copyWith(isMuted: true));
+    expect(find.bySemanticsLabel('Đã tắt thông báo'), findsOneWidget);
+    expect(find.byIcon(Icons.notifications_off_outlined), findsOneWidget);
+
+    await pump(tester);
+    expect(find.bySemanticsLabel('Đã tắt thông báo'), findsNothing);
+    expect(find.byIcon(Icons.notifications_off_outlined), findsNothing);
+  });
+
+  testWidgets('chuông gạch ở 360 rộng không tràn', (tester) async {
+    tester.view.physicalSize = const Size(360, 700);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    await pump(
+      tester,
+      c: lan.copyWith(
+        isMuted: true,
+        customerName: 'Nguyễn Thị Phương Thảo Một Cái Tên Rất Dài',
+      ),
+    );
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('không nhãn → không chấm; chưa gán → –', (tester) async {
     await pump(
       tester,

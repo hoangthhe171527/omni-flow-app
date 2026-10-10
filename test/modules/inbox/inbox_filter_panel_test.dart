@@ -328,12 +328,62 @@ void main() {
     final field = tester.widget<TextField>(find.byType(TextField));
     expect(field.style!.color, OmniColors.ink);
   });
+  group('chip "Đã chặn" (Hộp thư mobile)', () {
+    Future<void> openPanel(WidgetTester tester, Set<String> permissions) async {
+      await tester.pumpWidget(host(permissions: permissions));
+      await tester.pump();
+      await tester.tap(find.bySemanticsLabel('Bộ lọc'));
+      await tester.pumpAndSettle(const Duration(milliseconds: 50));
+    }
+
+    testWidgets(
+      'inbox.read + inbox.write: có chip, không số; chọn → blocked=1',
+      (tester) async {
+        final semantics = tester.ensureSemantics();
+        await openPanel(tester, const {'inbox.read', 'inbox.write'});
+        expect(find.text('Đã chặn'), findsOneWidget);
+        expect(find.textContaining('Đã chặn ·'), findsNothing);
+
+        api.listCalls.clear();
+        await tester.tap(find.text('Đã chặn'));
+        await tester.pump();
+        await tester.pump();
+        expect(api.listCalls, isNotEmpty);
+        // Danh sách chính: chỉ blocked=1, không status, KHÔNG lọc pinned (mục
+        // ghim ẩn ở tab này, nên hội thoại ghim đã chặn phải hiện ở đây).
+        for (final call in api.listCalls) {
+          expect(call.query['blocked'], '1');
+          expect(call.query.containsKey('status'), isFalse);
+          expect(call.pinned, isNull);
+        }
+        await closePage(tester);
+        semantics.dispose();
+      },
+    );
+
+    testWidgets('sale .own có ghi: không có chip', (tester) async {
+      final semantics = tester.ensureSemantics();
+      await openPanel(tester, const {'inbox.read.own', 'inbox.write'});
+      expect(find.text('Đã chặn'), findsNothing);
+      await closePage(tester);
+      semantics.dispose();
+    });
+
+    testWidgets('chỉ đọc: không có chip', (tester) async {
+      final semantics = tester.ensureSemantics();
+      await openPanel(tester, const {'inbox.read'});
+      expect(find.text('Đã chặn'), findsNothing);
+      await closePage(tester);
+      semantics.dispose();
+    });
+  });
 }
 
 class _FakeInboxApi extends InboxApi {
   _FakeInboxApi() : super(ApiClient(Dio()));
 
   Map<String, dynamic> lastListQuery = const {};
+  final listCalls = <({Map<String, dynamic> query, bool? pinned})>[];
 
   @override
   Future<CursorPaged<Conversation>> list({
@@ -343,6 +393,7 @@ class _FakeInboxApi extends InboxApi {
     bool? pinned,
   }) async {
     lastListQuery = query;
+    listCalls.add((query: query, pinned: pinned));
     return const CursorPaged(items: []);
   }
 
