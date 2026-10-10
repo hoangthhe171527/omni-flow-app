@@ -82,6 +82,7 @@ class _CustomersPageState extends ConsumerState<CustomersPage> {
       // Header và danh sách cùng một mặt phẳng.
       backgroundColor: scheme.surface,
       appBar: OmniTopBar(
+        semanticsTitle: 'Khách',
         bottom: _KhachHeaderBottom(
           showSegments: showSegments,
           segment: segment,
@@ -104,7 +105,6 @@ class _CustomersPageState extends ConsumerState<CustomersPage> {
                   trailing: [
                     // Thanh tab không có "+": Thêm khách là nút vuông ở hàng tìm.
                     if (access.canCreate) ...[
-                      const SizedBox(width: 8),
                       IconButton(
                         tooltip: 'Thêm khách',
                         onPressed: () =>
@@ -112,6 +112,7 @@ class _CustomersPageState extends ConsumerState<CustomersPage> {
                         style: IconButton.styleFrom(
                           fixedSize: const Size(36, 36),
                           tapTargetSize: MaterialTapTargetSize.padded,
+                          visualDensity: VisualDensity.standard,
                           foregroundColor: scheme.onSurface,
                           side: BorderSide(color: scheme.outlineVariant),
                           shape: RoundedRectangleBorder(

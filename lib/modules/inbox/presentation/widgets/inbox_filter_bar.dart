@@ -49,11 +49,12 @@ class InboxSearchRow extends ConsumerWidget implements PreferredSizeWidget {
     return SizedBox(
       height: 46,
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
+        padding: const EdgeInsets.fromLTRB(16, 0, 16, 2),
         child: Row(
           children: [
             const Expanded(child: _SearchField()),
-            const SizedBox(width: 8),
+            // Ô lọc rộng 44 mà vẽ 36: 4 mỗi bên đã nằm trong ô.
+            const SizedBox(width: 4),
             _FilterButton(
               open: filtersOpen,
               count: count,
@@ -192,61 +193,71 @@ class _FilterButton extends StatelessWidget {
       expanded: open,
       excludeSemantics: true,
       onTap: onTap,
-      child: Stack(
-        clipBehavior: Clip.none,
-        children: [
-          Material(
-            animationDuration: _fade(context),
-            color: open ? _ink : Colors.white,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(6),
-              side: BorderSide(color: open ? _ink : _line),
-            ),
-            child: InkWell(
-              splashFactory: _splash(context),
-              highlightColor: _highlight(context),
-              onTap: onTap,
-              customBorder: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(6),
-              ),
-              child: SizedBox.square(
-                dimension: 36,
-                child: Icon(
-                  Icons.tune_rounded,
-                  size: OmniIconSize.md,
-                  color: open ? Colors.white : _ink,
-                ),
-              ),
-            ),
-          ),
-          if (count > 0)
-            Positioned(
-              right: -4,
-              top: -4,
-              child: IgnorePointer(
-                child: Container(
-                  key: const Key('inbox-filter-count'),
-                  constraints: const BoxConstraints(minWidth: 16),
-                  height: 16,
-                  padding: const EdgeInsets.symmetric(horizontal: 4),
-                  alignment: Alignment.center,
-                  decoration: BoxDecoration(
-                    color: OmniColors.destructive,
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: Colors.white, width: 1.5),
+      // Hình 36, vùng chạm 44: lớp ngoài bắt chạm cả phần đệm.
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: onTap,
+        child: SizedBox.square(
+          dimension: 44,
+          child: Center(
+            child: Stack(
+              clipBehavior: Clip.none,
+              children: [
+                Material(
+                  animationDuration: _fade(context),
+                  color: open ? _ink : Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(6),
+                    side: BorderSide(color: open ? _ink : _line),
                   ),
-                  child: Text(
-                    '$count',
-                    style: OmniType.micro.copyWith(
-                      color: Colors.white,
-                      height: 1,
-                      fontWeight: FontWeight.w600,
+                  child: InkWell(
+                    splashFactory: _splash(context),
+                    highlightColor: _highlight(context),
+                    onTap: onTap,
+                    customBorder: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: SizedBox.square(
+                      dimension: 36,
+                      child: Icon(
+                        Icons.tune_rounded,
+                        size: OmniIconSize.md,
+                        color: open ? Colors.white : _ink,
+                      ),
                     ),
                   ),
                 ),
-              ),
+                if (count > 0)
+                  Positioned(
+                    right: -4,
+                    top: -4,
+                    child: IgnorePointer(
+                      child: Container(
+                        key: const Key('inbox-filter-count'),
+                        constraints: const BoxConstraints(minWidth: 16),
+                        height: 16,
+                        padding: const EdgeInsets.symmetric(horizontal: 4),
+                        alignment: Alignment.center,
+                        decoration: BoxDecoration(
+                          color: OmniColors.destructive,
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: Colors.white, width: 1.5),
+                        ),
+                        child: Text(
+                          '$count',
+                          style: OmniType.micro.copyWith(
+                            color: Colors.white,
+                            height: 1,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
             ),
-        ],
+          ),
+        ),
       ),
     );
   }

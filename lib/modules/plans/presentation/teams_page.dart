@@ -73,7 +73,7 @@ class _TeamsPageState extends ConsumerState<TeamsPage> {
     ).isSatisfiedBy(access);
 
     return Scaffold(
-      appBar: const OmniTopBar(),
+      appBar: const OmniTopBar(semanticsTitle: 'Việc'),
       floatingActionButton: isAssigner
           ? ShellFabLift(
               child: CreateSquareButton(

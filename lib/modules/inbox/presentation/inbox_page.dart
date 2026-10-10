@@ -187,6 +187,7 @@ class _InboxPageState extends ConsumerState<InboxPage>
       // field was that seam, not a border on the field.
       backgroundColor: OmniColors.background,
       appBar: OmniTopBar(
+        semanticsTitle: 'Hộp thư',
         // Search line + pill row + the rule under them. "Kết nối kênh" and
         // "Chọn nhiều" moved here from the old AppBar actions, on the search
         // row after the filter button.
@@ -200,7 +201,8 @@ class _InboxPageState extends ConsumerState<InboxPage>
                 onPressed: () => context.pushNamed(ChannelsModule.list),
                 style: IconButton.styleFrom(
                   fixedSize: const Size(36, 36),
-                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  tapTargetSize: MaterialTapTargetSize.padded,
+                  visualDensity: VisualDensity.standard,
                   foregroundColor: scheme.onSurfaceVariant,
                 ),
                 icon: const Icon(Icons.hub_outlined),
@@ -215,7 +217,8 @@ class _InboxPageState extends ConsumerState<InboxPage>
                   : null,
               style: IconButton.styleFrom(
                 fixedSize: const Size(36, 36),
-                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                tapTargetSize: MaterialTapTargetSize.padded,
+                visualDensity: VisualDensity.standard,
                 foregroundColor: selecting
                     ? OmniColors.chatPrimary
                     : scheme.onSurfaceVariant,

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart' show PlatformException;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
@@ -132,10 +133,12 @@ class _AccountPageState extends ConsumerState<AccountPage> {
                       children: [
                         _AccountRow(
                           label: 'Trung tâm hỗ trợ',
+                          external: true,
                           onTap: () => _openLink(AppConfig.supportUrl),
                         ),
                         _AccountRow(
                           label: 'Chính sách quyền riêng tư',
+                          external: true,
                           onTap: () => _openLink(AppConfig.privacyPolicyUrl),
                         ),
                         _AccountRow(
@@ -289,7 +292,14 @@ class _AccountPageState extends ConsumerState<AccountPage> {
 
   Future<void> _openLink(Uri url) async {
     final messenger = ScaffoldMessenger.of(context);
-    final opened = await launchUrl(url, mode: LaunchMode.externalApplication);
+    // `launchUrl` có thể ném PlatformException (không có ứng dụng xử lý, bị
+    // chính sách chặn) chứ không chỉ trả false; cả hai đều là "không mở được".
+    var opened = false;
+    try {
+      opened = await launchUrl(url, mode: LaunchMode.externalApplication);
+    } on PlatformException {
+      opened = false;
+    }
     if (opened) return;
     messenger.showSnackBar(
       const SnackBar(
@@ -425,6 +435,7 @@ class _AccountRow extends StatelessWidget {
     this.icon,
     this.value,
     this.destructive = false,
+    this.external = false,
   });
 
   final String label;
@@ -432,6 +443,9 @@ class _AccountRow extends StatelessWidget {
   final IconData? icon;
   final Widget? value;
   final bool destructive;
+
+  /// Mở ra ngoài app (trình duyệt): mũi tên chéo thay cho chevron.
+  final bool external;
 
   @override
   Widget build(BuildContext context) {
@@ -462,7 +476,9 @@ class _AccountRow extends StatelessWidget {
               if (!destructive) ...[
                 const SizedBox(width: 6),
                 Icon(
-                  Icons.chevron_right_rounded,
+                  external
+                      ? Icons.open_in_new_rounded
+                      : Icons.chevron_right_rounded,
                   size: 16,
                   // Task 6 thay bằng OmniTaskTones.chevron.
                   color: scheme.outline,
@@ -557,21 +573,28 @@ class _ChannelsRow extends ConsumerWidget {
       label: 'Kênh kết nối',
       value: health == null
           ? null
-          : Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                _Dot(scheme.primary),
-                const SizedBox(width: 6),
-                _ValueText('${health.running}'),
-                if (health.failing > 0) ...[
+          // Chấm màu và số rời nhau không có nghĩa với trình đọc màn hình:
+          // gộp thành một câu.
+          : Semantics(
+              container: true,
+              excludeSemantics: true,
+              label: '${health.running} chạy, ${health.failing} lỗi',
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _Dot(scheme.primary),
                   const SizedBox(width: 6),
-                  const _ValueText('·'),
-                  const SizedBox(width: 6),
-                  _Dot(scheme.error),
-                  const SizedBox(width: 6),
-                  _ValueText('${health.failing} lỗi'),
+                  _ValueText('${health.running}'),
+                  if (health.failing > 0) ...[
+                    const SizedBox(width: 6),
+                    const _ValueText('·'),
+                    const SizedBox(width: 6),
+                    _Dot(scheme.error),
+                    const SizedBox(width: 6),
+                    _ValueText('${health.failing} lỗi'),
+                  ],
                 ],
-              ],
+              ),
             ),
       onTap: () => context.pushNamed(ChannelsModule.list),
     );

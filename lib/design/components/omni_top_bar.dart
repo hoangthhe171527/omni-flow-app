@@ -36,14 +36,20 @@ class OmniTopBarSlot extends InheritedWidget {
 /// Header chung của ba tab gốc: logo bên trái, chuông + tài khoản bên phải, và
 /// (tuỳ màn) ô tìm / bộ lọc xếp dưới. Nền kính mờ như thanh tab dưới.
 class OmniTopBar extends ConsumerWidget implements PreferredSizeWidget {
-  const OmniTopBar({super.key, this.bottom});
+  const OmniTopBar({super.key, this.bottom, this.semanticsTitle});
 
   /// Ô tìm, bộ lọc, nút riêng của màn. Cần biết chiều cao để Scaffold chừa chỗ.
   final PreferredSizeWidget? bottom;
 
-  static const double _rowHeight = 36;
-  static const double _topPad = 8;
-  static const double _bottomPad = 10;
+  /// Tên trang cho trình đọc màn hình ("Hộp thư", "Khách"…). Logo luôn đọc là
+  /// "Viomni", nên không có nó thì tiêu đề trang không tồn tại với người dùng
+  /// TalkBack/VoiceOver. Vô hình: chỉ thêm một nút `header` vào cây ngữ nghĩa.
+  final String? semanticsTitle;
+
+  // Hàng 1 cao 44 để chuông/avatar (vẽ 36) có vùng chạm 44; tổng 54 như cũ.
+  static const double _rowHeight = 44;
+  static const double _topPad = 4;
+  static const double _bottomPad = 6;
 
   @override
   Size get preferredSize => Size.fromHeight(
@@ -79,16 +85,25 @@ class OmniTopBar extends ConsumerWidget implements PreferredSizeWidget {
               mainAxisSize: MainAxisSize.min,
               children: [
                 Padding(
+                  // Phải 12 chứ không 16: ô avatar rộng 44 mà vẽ 36, 4dp đệm
+                  // trong ô giữ mép vẽ ở đúng 16.
                   padding: const EdgeInsets.fromLTRB(
                     16,
                     _topPad,
-                    16,
+                    12,
                     _bottomPad,
                   ),
                   child: SizedBox(
                     height: _rowHeight,
                     child: Row(
                       children: [
+                        if (semanticsTitle != null)
+                          Semantics(
+                            header: true,
+                            container: true,
+                            label: semanticsTitle,
+                            child: const SizedBox.shrink(),
+                          ),
                         BrandAnchor(
                           withWordmark: true,
                           child: Row(
@@ -107,10 +122,9 @@ class OmniTopBar extends ConsumerWidget implements PreferredSizeWidget {
                               ? null
                               : () => slot.onBell(context),
                         ),
-                        if (account != null) ...[
-                          const SizedBox(width: 8),
-                          account(context),
-                        ],
+                        // Hai ô 44 kề nhau: khoảng 8 giữa hai hình 36 đã nằm
+                        // trong đệm của chúng.
+                        if (account != null) account(context),
                       ],
                     ),
                   ),
@@ -140,42 +154,52 @@ class _BellButton extends StatelessWidget {
       label: unread > 0 ? 'Thông báo, $unread chưa đọc' : 'Thông báo',
       excludeSemantics: true,
       onTap: onTap,
-      child: Material(
-        color: scheme.surface.withValues(alpha: 0.9),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(6),
-          side: BorderSide(color: scheme.outline),
-        ),
-        child: InkWell(
-          onTap: onTap,
-          customBorder: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(6),
-          ),
-          child: SizedBox.square(
-            dimension: 36,
-            child: Stack(
-              alignment: Alignment.center,
-              children: [
-                Icon(
-                  Icons.notifications_none_rounded,
-                  size: OmniIconSize.md,
-                  color: scheme.onSurface,
+      // Hình 36, vùng chạm 44: lớp ngoài bắt chạm cả phần đệm.
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: onTap,
+        child: SizedBox.square(
+          dimension: 44,
+          child: Center(
+            child: Material(
+              color: scheme.surface.withValues(alpha: 0.9),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(6),
+                side: BorderSide(color: scheme.outline),
+              ),
+              child: InkWell(
+                onTap: onTap,
+                customBorder: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(6),
                 ),
-                if (unread > 0)
-                  Positioned(
-                    right: 8,
-                    top: 8,
-                    child: Container(
-                      key: const ValueKey('omni-top-bar-bell-dot'),
-                      width: 7,
-                      height: 7,
-                      decoration: BoxDecoration(
-                        color: scheme.error,
-                        shape: BoxShape.circle,
+                child: SizedBox.square(
+                  dimension: 36,
+                  child: Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      Icon(
+                        Icons.notifications_none_rounded,
+                        size: OmniIconSize.md,
+                        color: scheme.onSurface,
                       ),
-                    ),
+                      if (unread > 0)
+                        Positioned(
+                          right: 8,
+                          top: 8,
+                          child: Container(
+                            key: const ValueKey('omni-top-bar-bell-dot'),
+                            width: 7,
+                            height: 7,
+                            decoration: BoxDecoration(
+                              color: scheme.error,
+                              shape: BoxShape.circle,
+                            ),
+                          ),
+                        ),
+                    ],
                   ),
-              ],
+                ),
+              ),
             ),
           ),
         ),

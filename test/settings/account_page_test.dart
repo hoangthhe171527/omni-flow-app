@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
@@ -297,6 +298,87 @@ void main() {
           .height,
       greaterThanOrEqualTo(44),
     );
+  });
+
+  testWidgets('Kênh kết nối: trình đọc màn hình nghe "4 chạy, 1 lỗi"', (
+    t,
+  ) async {
+    final handle = t.ensureSemantics();
+    await pump(t, policy: const AccessPolicy({'channels.read'}));
+    expect(find.bySemanticsLabel('4 chạy, 1 lỗi'), findsOneWidget);
+    handle.dispose();
+  });
+
+  testWidgets(
+    'Hỗ trợ và Chính sách có mũi tên ra ngoài, Xóa tài khoản thì không',
+    (t) async {
+      await pump(t);
+      await t.scrollUntilVisible(find.text('Xóa tài khoản'), 200);
+      for (final label in ['Trung tâm hỗ trợ', 'Chính sách quyền riêng tư']) {
+        expect(
+          find.descendant(
+            of: find
+                .ancestor(of: find.text(label), matching: find.byType(InkWell))
+                .first,
+            matching: find.byIcon(Icons.open_in_new_rounded),
+          ),
+          findsOneWidget,
+          reason: label,
+        );
+      }
+      expect(find.byIcon(Icons.open_in_new_rounded), findsNWidgets(2));
+    },
+  );
+
+  group('mở liên kết ngoài', () {
+    const channel = MethodChannel('plugins.flutter.io/url_launcher');
+    final calls = <MethodCall>[];
+
+    void mock(Future<Object?> Function(MethodCall) handler) {
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(channel, (call) {
+            calls.add(call);
+            return handler(call);
+          });
+    }
+
+    setUp(calls.clear);
+    tearDown(
+      () => TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(channel, null),
+    );
+
+    for (final (label, expected) in [
+      ('Trung tâm hỗ trợ', AppConfig.supportUrl),
+      ('Chính sách quyền riêng tư', AppConfig.privacyPolicyUrl),
+    ]) {
+      testWidgets('$label: nền tảng ném PlatformException → snackbar lỗi', (
+        t,
+      ) async {
+        mock((_) async => throw PlatformException(code: 'ACTIVITY_NOT_FOUND'));
+        await pump(t);
+        await t.scrollUntilVisible(find.text(label), 200);
+        await t.tap(find.text(label));
+        await t.pumpAndSettle();
+        expect(
+          find.text('Không mở được liên kết. Vui lòng thử lại.'),
+          findsOneWidget,
+        );
+        expect(calls.single.arguments['url'], expected.toString());
+      });
+    }
+
+    testWidgets('trả false → vẫn snackbar lỗi', (t) async {
+      mock((_) async => false);
+      await pump(t);
+      await t.scrollUntilVisible(find.text('Trung tâm hỗ trợ'), 200);
+      await t.tap(find.text('Trung tâm hỗ trợ'));
+      await t.pumpAndSettle();
+      expect(
+        find.text('Không mở được liên kết. Vui lòng thử lại.'),
+        findsOneWidget,
+      );
+    });
   });
 
   testWidgets('đổi ảnh đại diện có nhãn và vùng chạm ≥ 44', (t) async {

@@ -20,6 +20,7 @@ class _PipelinePageState extends State<PipelinePage> {
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.surface,
       appBar: OmniTopBar(
+        semanticsTitle: 'Cơ hội',
         bottom: OpportunitySearchRow(
           filtersOpen: _filtersOpen,
           onToggleFilters: () => setState(() => _filtersOpen = !_filtersOpen),

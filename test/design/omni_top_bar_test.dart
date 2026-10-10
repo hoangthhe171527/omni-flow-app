@@ -9,6 +9,7 @@ Widget _host(
   void Function(BuildContext)? onBell,
   PreferredSizeWidget? bottom,
   bool tile = true,
+  String? semanticsTitle,
 }) {
   return UncontrolledProviderScope(
     container: c,
@@ -22,7 +23,9 @@ Widget _host(
         child: OmniTopBarSlot(
           unreadOf: (_) => unread,
           onBell: onBell ?? (_) {},
-          child: Scaffold(appBar: OmniTopBar(bottom: bottom)),
+          child: Scaffold(
+            appBar: OmniTopBar(bottom: bottom, semanticsTitle: semanticsTitle),
+          ),
         ),
       ),
     ),
@@ -67,7 +70,57 @@ void main() {
     expect(taps, 1);
   });
 
-  testWidgets('chiều cao gồm hàng 36 và phần bottom; bottom được vẽ', (
+  testWidgets('chuông vẽ 36 nhưng vùng chạm 44; tiêu đề trang là header', (
+    t,
+  ) async {
+    final handle = t.ensureSemantics();
+    final c = ProviderContainer();
+    addTearDown(c.dispose);
+    await t.pumpWidget(_host(c, semanticsTitle: 'Hộp thư'));
+    await t.pump();
+
+    final bell = find.bySemanticsLabel(RegExp('^Thông báo'));
+    expect(t.getSize(bell).width, greaterThanOrEqualTo(44));
+    expect(t.getSize(bell).height, greaterThanOrEqualTo(44));
+    // Phần vẽ vẫn 36.
+    expect(
+      t.getSize(
+        find
+            .ancestor(
+              of: find.byIcon(Icons.notifications_none_rounded),
+              matching: find.byType(Material),
+            )
+            .first,
+      ),
+      const Size(36, 36),
+    );
+    expect(
+      find.byWidgetPredicate(
+        (w) =>
+            w is Semantics &&
+            w.properties.header == true &&
+            w.properties.label == 'Hộp thư',
+      ),
+      findsOneWidget,
+    );
+    expect(t.getSize(find.byKey(const ValueKey('tile'))).width, 36);
+    handle.dispose();
+  });
+
+  testWidgets('không có semanticsTitle thì không có header', (t) async {
+    final c = ProviderContainer();
+    addTearDown(c.dispose);
+    await t.pumpWidget(_host(c));
+    await t.pump();
+    expect(
+      find.byWidgetPredicate(
+        (w) => w is Semantics && w.properties.header == true,
+      ),
+      findsNothing,
+    );
+  });
+
+  testWidgets('chiều cao gồm hàng 44 và phần bottom; bottom được vẽ', (
     tester,
   ) async {
     final c = ProviderContainer();
@@ -79,7 +132,7 @@ void main() {
         child: SizedBox(key: ValueKey('bottom'), height: 40),
       ),
     );
-    expect(bar.preferredSize.height, 8 + 36 + 10 + 40);
+    expect(bar.preferredSize.height, 4 + 44 + 6 + 40);
 
     await tester.pumpWidget(
       _host(

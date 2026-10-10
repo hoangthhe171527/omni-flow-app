@@ -310,13 +310,13 @@ class OpportunitySearchRow extends ConsumerWidget
               onTap: onToggleFilters,
             ),
             if (access.canCreate) ...[
-              const SizedBox(width: 8),
               IconButton(
                 tooltip: 'Cơ hội mới',
                 onPressed: () => context.pushNamed(OpportunitiesModule.create),
                 style: IconButton.styleFrom(
                   fixedSize: const Size(36, 36),
                   tapTargetSize: MaterialTapTargetSize.padded,
+                  visualDensity: VisualDensity.standard,
                   foregroundColor: scheme.onSurface,
                   side: BorderSide(color: scheme.outlineVariant),
                   shape: RoundedRectangleBorder(
