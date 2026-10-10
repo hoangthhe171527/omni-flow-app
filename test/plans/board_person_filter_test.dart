@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:omni_app/design/components/components.dart';
+import 'package:omni_app/modules/plans/presentation/widgets/section_pager.dart';
 import 'package:omni_app/design/theme/omni_theme.dart';
 import 'package:omni_app/modules/plans/application/plans_providers.dart';
 import 'package:omni_app/modules/plans/domain/plan.dart';
@@ -114,7 +114,7 @@ void main() {
     // Ngược lại thì cột ghi "3 việc" mà chỉ vẽ ra 1 — và người đọc tin con số.
     // Số việc nằm TRONG tab của nhóm trên dải, cạnh tên nhóm.
     Finder countIn(int n) => find.descendant(
-      of: find.widgetWithText(OmniTabItem, 'Đang làm'),
+      of: find.widgetWithText(SectionTabItem, 'Đang làm'),
       matching: find.text('$n'),
     );
 
