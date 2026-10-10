@@ -191,8 +191,10 @@ class _QuickActions extends StatelessWidget {
               icon: Icons.chat_bubble_outline_rounded,
               label: 'Nhắn',
               onTap: customer.hasPhone
-                  ? () => launchUrl(
-                      Uri.parse('https://zalo.me/$phone'),
+                  ? () => _launch(
+                      context,
+                      Uri.parse('https://zalo.me/${zaloNumber(phone)}'),
+                      'Không mở được Zalo.',
                       mode: LaunchMode.externalApplication,
                     )
                   : null,
@@ -203,7 +205,11 @@ class _QuickActions extends StatelessWidget {
               icon: Icons.call_outlined,
               label: 'Gọi',
               onTap: customer.hasPhone
-                  ? () => launchUrl(Uri.parse('tel:$phone'))
+                  ? () => _launch(
+                      context,
+                      Uri(scheme: 'tel', path: dialNumber(phone)),
+                      'Không mở được ứng dụng gọi điện.',
+                    )
                   : null,
             ),
           ),
@@ -234,6 +240,36 @@ class _QuickActions extends StatelessWidget {
       ),
     );
   }
+}
+
+/// Số để quay: bỏ mọi ký tự không phải chữ số, trừ dấu `+` đứng đầu.
+String dialNumber(String raw) {
+  final trimmed = raw.trim();
+  final digits = trimmed.replaceAll(RegExp(r'\D'), '');
+  return trimmed.startsWith('+') ? '+$digits' : digits;
+}
+
+/// Số cho zalo.me: chỉ chữ số, đầu 0 → 84, bỏ `+`.
+String zaloNumber(String raw) {
+  final digits = raw.replaceAll(RegExp(r'\D'), '');
+  return digits.startsWith('0') ? '84${digits.substring(1)}' : digits;
+}
+
+Future<void> _launch(
+  BuildContext context,
+  Uri url,
+  String failure, {
+  LaunchMode mode = LaunchMode.platformDefault,
+}) async {
+  final messenger = ScaffoldMessenger.of(context);
+  var opened = false;
+  try {
+    opened = await launchUrl(url, mode: mode);
+  } catch (_) {
+    opened = false;
+  }
+  if (opened || !context.mounted) return;
+  messenger.showSnackBar(SnackBar(content: Text(failure)));
 }
 
 /// Vòng 34 viền + nhãn 12 w600; `onTap` null = tắt (không số điện thoại).

@@ -35,7 +35,7 @@ class CustomerSearchRow extends ConsumerWidget implements PreferredSizeWidget {
     return SizedBox(
       height: 46,
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
+        padding: const EdgeInsets.fromLTRB(16, 0, 16, 2),
         child: Row(
           children: [
             const Expanded(child: _SearchField()),
@@ -100,7 +100,7 @@ class _SearchFieldState extends ConsumerState<_SearchField> {
     final meta = scheme.onSurfaceVariant;
 
     return Container(
-      height: 36,
+      height: 44,
       padding: const EdgeInsets.only(left: 10),
       decoration: BoxDecoration(
         color: scheme.surface,
@@ -134,7 +134,7 @@ class _SearchFieldState extends ConsumerState<_SearchField> {
               tooltip: 'Xoá tìm kiếm',
               onPressed: _clear,
               padding: EdgeInsets.zero,
-              constraints: const BoxConstraints.tightFor(width: 32, height: 36),
+              constraints: const BoxConstraints.tightFor(width: 44, height: 44),
               iconSize: OmniIconSize.md,
               color: meta,
               icon: const Icon(Icons.close_rounded),

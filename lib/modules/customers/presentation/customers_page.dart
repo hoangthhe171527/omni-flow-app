@@ -47,6 +47,11 @@ class _CustomersPageState extends ConsumerState<CustomersPage> {
     final access = ref.watch(customerAccessProvider);
     final scheme = Theme.of(context).colorScheme;
 
+    // Đổi lọc/tìm kiếm là danh sách khác: dòng đang mở không còn nghĩa.
+    ref.listen(customerFilterProvider, (_, _) {
+      if (_openId != null) setState(() => _openId = null);
+    });
+
     return Scaffold(
       // Header và danh sách cùng một mặt phẳng.
       backgroundColor: scheme.surface,
@@ -81,8 +86,10 @@ class _CustomersPageState extends ConsumerState<CustomersPage> {
           CustomerFilterPanel(open: _filtersOpen),
           Expanded(
             child: RefreshIndicator(
-              onRefresh: () =>
-                  ref.read(customerListProvider.notifier).refresh(),
+              onRefresh: () {
+                setState(() => _openId = null);
+                return ref.read(customerListProvider.notifier).refresh();
+              },
               child: OmniAsyncView(
                 value: list,
                 onRetry: () => ref.invalidate(customerListProvider),

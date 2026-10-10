@@ -127,6 +127,20 @@ void main() {
     expect(find.byTooltip('Thêm khách'), findsNothing);
   });
 
+  testWidgets('đổi bộ lọc thì dòng đang mở đóng lại', (t) async {
+    await t.pumpWidget(host());
+    await t.pumpAndSettle();
+    await t.tap(find.text('An Nguyễn'));
+    await t.pumpAndSettle();
+    expect(find.text('Hồ sơ'), findsOneWidget);
+
+    await t.tap(find.bySemanticsLabel('Bộ lọc'));
+    await t.pumpAndSettle();
+    await t.tap(find.text('VIP'));
+    await t.pumpAndSettle();
+    expect(find.text('Hồ sơ'), findsNothing);
+  });
+
   testWidgets('canCreate=true → có nút Thêm khách', (t) async {
     await t.pumpWidget(host());
     await t.pumpAndSettle();

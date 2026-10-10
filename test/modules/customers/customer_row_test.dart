@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:intl/date_symbol_data_local.dart';
@@ -40,7 +41,7 @@ Widget host(Widget child, {bool reduce = false, bool canTask = true}) =>
         theme: _theme,
         home: MediaQuery(
           data: MediaQueryData(disableAnimations: reduce),
-          child: Material(child: SingleChildScrollView(child: child)),
+          child: Scaffold(body: SingleChildScrollView(child: child)),
         ),
       ),
     );
@@ -149,4 +150,64 @@ void main() {
       expect(find.text('Gọi'), findsOneWidget);
     },
   );
+
+  test('chuẩn hoá số: tel giữ + đầu, zalo đổi 0 → 84', () {
+    expect(dialNumber(' 0901 234.567 '), '0901234567');
+    expect(dialNumber('+84 901-234-567'), '+84901234567');
+    expect(zaloNumber('0901 234 567'), '84901234567');
+    expect(zaloNumber('+84 901 234 567'), '84901234567');
+  });
+
+  group('mở ứng dụng ngoài', () {
+    const channel = MethodChannel('plugins.flutter.io/url_launcher');
+    final calls = <MethodCall>[];
+
+    setUp(() {
+      calls.clear();
+      TestWidgetsFlutterBinding.ensureInitialized();
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(channel, (call) async {
+            calls.add(call);
+            return false;
+          });
+    });
+    tearDown(
+      () => TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(channel, null),
+    );
+
+    testWidgets('Gọi thất bại → SnackBar; số được chuẩn hoá', (t) async {
+      await t.pumpWidget(
+        host(
+          CustomerRow(
+            customer: c(phone: '0901 234 567'),
+            expanded: true,
+            onTap: () {},
+          ),
+        ),
+      );
+      await t.pumpAndSettle();
+      await t.tap(find.text('Gọi'));
+      await t.pumpAndSettle();
+      expect(find.text('Không mở được ứng dụng gọi điện.'), findsOneWidget);
+      expect(calls.single.arguments['url'], 'tel:0901234567');
+    });
+
+    testWidgets('Nhắn thất bại → SnackBar; zalo.me dùng 84', (t) async {
+      await t.pumpWidget(
+        host(
+          CustomerRow(
+            customer: c(phone: '0901 234 567'),
+            expanded: true,
+            onTap: () {},
+          ),
+        ),
+      );
+      await t.pumpAndSettle();
+      await t.tap(find.text('Nhắn'));
+      await t.pumpAndSettle();
+      expect(find.text('Không mở được Zalo.'), findsOneWidget);
+      expect(calls.single.arguments['url'], 'https://zalo.me/84901234567');
+    });
+  });
 }
