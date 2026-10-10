@@ -9,7 +9,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:omni_app/design/components/omni_card.dart';
 import 'package:omni_app/design/components/omni_segmented.dart';
 import 'package:omni_app/design/components/omni_states.dart';
+import 'package:omni_app/design/platform/omni_motion_scope.dart';
 import 'package:omni_app/design/tokens/omni_colors.dart';
+import 'package:omni_app/design/tokens/omni_motion.dart';
 import 'package:omni_app/design/tokens/omni_typography.dart';
 
 import '../../application/dashboard_providers.dart';
@@ -39,8 +41,24 @@ class _RevenueCardState extends ConsumerState<RevenueCard> {
     // Một thể hiện chuỗi duy nhất: lấy thẳng từ provider, không dựng lại.
     final s = async.valueOrNull;
     final Widget body;
-    if (s != null) {
-      body = _content(context, s);
+    // Lỗi xét trước: AsyncError giữ giá trị cũ, nếu không thì đổi kỳ thất bại
+    // sẽ hiện số của kỳ trước mà không có nút thử lại.
+    if (async.hasError && !async.isLoading) {
+      body = OmniErrorView(
+        error: async.error!,
+        onRetry: () => ref.invalidate(revenueSeriesProvider),
+      );
+    } else if (s != null) {
+      // Đang tải kỳ mới → số cũ mờ đi cho tới khi có số đúng kỳ.
+      final stale = s.range != range;
+      body = AnimatedOpacity(
+        key: const ValueKey('revenue-stale'),
+        opacity: stale ? .4 : 1,
+        duration: OmniMotion.enabled(context)
+            ? OmniDuration.fast
+            : Duration.zero,
+        child: IgnorePointer(ignoring: stale, child: _content(context, s)),
+      );
     } else if (async.hasError) {
       body = OmniErrorView(
         error: async.error!,

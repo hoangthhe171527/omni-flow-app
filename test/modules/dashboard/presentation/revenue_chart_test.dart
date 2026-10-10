@@ -165,8 +165,10 @@ void main() {
     await g.moveBy(const Offset(0, -40));
     await g.up();
     await t.pumpAndSettle();
-    expect(got, isNotEmpty);
-    expect(got.last, isNull);
+    // Cả onTapCancel lẫn onHorizontalDragCancel đều phải báo null: mỗi cái
+    // một mình cũng đủ gỡ kẹt, nên chỉ đếm đúng hai null mới bắt được việc
+    // lỡ tay xoá một trong hai.
+    expect(got, [15, null, null]);
   });
 
   testWidgets('chạm nhả → onScrub(null)', (t) async {

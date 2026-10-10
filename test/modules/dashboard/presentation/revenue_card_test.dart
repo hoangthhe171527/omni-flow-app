@@ -188,4 +188,47 @@ void main() {
     expect(identical(chart.series, s), isTrue);
     expect(chart.ringColor, OmniTheme.light().colorScheme.surface);
   });
+
+  testWidgets('Tháng OK, đổi sang Năm lỗi → Thử lại, không giữ số cũ', (
+    t,
+  ) async {
+    await t.pumpWidget(
+      host((ref) async {
+        final r = ref.watch(revenueRangeProvider);
+        if (r == RevenueRange.year) {
+          throw const ServerException('Lỗi máy chủ', code: '500');
+        }
+        return series(r);
+      }),
+    );
+    await t.pumpAndSettle();
+    expect(find.text('1 tỷ'), findsOneWidget);
+    await t.tap(find.text('Năm'));
+    await t.pumpAndSettle();
+    expect(find.text('Thử lại'), findsOneWidget);
+    expect(find.text('1 tỷ'), findsNothing);
+  });
+
+  testWidgets('đang tải kỳ mới → nội dung cũ mờ đi', (t) async {
+    final year = Completer<RevenueSeries?>();
+    await t.pumpWidget(
+      host((ref) {
+        final r = ref.watch(revenueRangeProvider);
+        if (r == RevenueRange.year) return year.future;
+        return Future.value(series(r));
+      }),
+    );
+    await t.pumpAndSettle();
+    double dim() => t
+        .widget<AnimatedOpacity>(find.byKey(const ValueKey('revenue-stale')))
+        .opacity;
+    expect(dim(), 1.0);
+    await t.tap(find.text('Năm'));
+    await t.pump();
+    expect(dim(), lessThan(1.0));
+    year.complete(series(RevenueRange.year));
+    await t.pumpAndSettle();
+    expect(dim(), 1.0);
+    expect(find.text('Doanh thu năm nay'), findsOneWidget);
+  });
 }
