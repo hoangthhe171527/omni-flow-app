@@ -88,6 +88,7 @@ class SubtaskRow extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             _TickButton(
+              title: subtask.title,
               done: subtask.done,
               inFlight: _inFlight,
               failed: _failed,
@@ -129,6 +130,7 @@ class SubtaskRow extends StatelessWidget {
             ),
             Semantics(
               button: onAssign != null,
+              onTap: onAssign,
               label: hasAssignee
                   ? 'Đổi người làm: ${displayName ?? 'người khác'}'
                   : 'Giao việc con',
@@ -164,12 +166,14 @@ class _TickButton extends StatefulWidget {
     required this.done,
     required this.inFlight,
     required this.failed,
+    required this.title,
     required this.onTap,
   });
 
   final bool done;
   final bool inFlight;
   final bool failed;
+  final String title;
   final VoidCallback? onTap;
 
   @override
@@ -246,6 +250,8 @@ class _TickButtonState extends State<_TickButton>
 
     return Semantics(
       label: 'Xong',
+      value: widget.title,
+      onTap: widget.onTap,
       checked: widget.done,
       button: true,
       excludeSemantics: true,

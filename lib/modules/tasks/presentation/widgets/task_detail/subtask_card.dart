@@ -174,15 +174,20 @@ class _SubtaskCardState extends ConsumerState<SubtaskCard> {
 
   /// Enter → thêm. Xoá ô khi thành công; giữ chữ + báo lỗi khi hỏng, để người
   /// dùng không phải gõ lại.
+  bool _adding = false;
+
   Future<void> _submitAdd(BuildContext context, String value) async {
     final title = value.trim();
-    if (title.isEmpty) return;
+    if (title.isEmpty || _adding) return;
+    _adding = true;
     final messenger = ScaffoldMessenger.of(context);
     try {
       await controller.addSubtask(title);
       if (mounted) _add.clear();
     } on AppException catch (e) {
       messenger.showSnackBar(SnackBar(content: Text(e.message)));
+    } finally {
+      _adding = false;
     }
   }
 

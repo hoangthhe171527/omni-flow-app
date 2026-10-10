@@ -45,6 +45,7 @@ void main() {
     AppException? assignThrows,
     bool reduceMotion = false,
     SessionUser? me,
+    Duration addDelay = Duration.zero,
   }) {
     final task = Task(
       id: 't1',
@@ -60,6 +61,7 @@ void main() {
             TaskDetailState(task: task),
             recorded,
             assignThrows,
+            addDelay,
           ),
         ),
         taskAccessProvider.overrideWithValue(
@@ -271,6 +273,54 @@ void main() {
     expect(recorded.last, ('addSubtask', 'Lên dây lần 2', null));
   });
 
+  testWidgets('Enter hai lần khi đang thêm: chỉ thêm MỘT việc con', (t) async {
+    phone(t);
+    await t.pumpWidget(
+      host(
+        subtasks: const [],
+        perms: assigner,
+        addDelay: const Duration(milliseconds: 200),
+      ),
+    );
+    await t.pumpAndSettle();
+    await t.enterText(find.widgetWithText(TextField, 'Thêm việc con'), 'Lắp');
+    await t.testTextInput.receiveAction(TextInputAction.done);
+    await t.pump(const Duration(milliseconds: 50));
+    await t.testTextInput.receiveAction(TextInputAction.done);
+    await t.pump(const Duration(milliseconds: 400));
+    await t.pumpAndSettle();
+    expect(recorded.where((r) => r.$1 == 'addSubtask'), hasLength(1));
+  });
+
+  testWidgets('trình đọc màn hình: ô tick và nút người làm kích hoạt được', (
+    t,
+  ) async {
+    phone(t);
+    final handle = t.ensureSemantics();
+    await t.pumpWidget(host(subtasks: [sub('c1', 'Vệ sinh')], perms: worker));
+    await t.pumpAndSettle();
+    final tick = find.bySemanticsLabel('Xong');
+    expect(t.getSemantics(tick).getSemanticsData().value, 'Vệ sinh');
+    expect(
+      t.getSemantics(tick),
+      matchesSemantics(
+        hasTapAction: true,
+        isButton: true,
+        hasCheckedState: true,
+        label: 'Xong',
+        value: 'Vệ sinh',
+      ),
+    );
+    t.semantics.tap(find.semantics.byLabel('Xong'));
+    await t.pump();
+    expect(recorded.last, ('toggleSubtask', 'c1', 'true'));
+
+    t.semantics.tap(find.semantics.byLabel('Giao việc con'));
+    await t.pumpAndSettle();
+    expect(find.text('Ai làm việc này'), findsOneWidget);
+    handle.dispose();
+  });
+
   testWidgets('thêm việc con: chuỗi trống bị bỏ qua', (t) async {
     phone(t);
     await t.pumpWidget(host(subtasks: const [], perms: assigner));
@@ -327,11 +377,12 @@ void main() {
 }
 
 class _RecordingDetail extends TaskController {
-  _RecordingDetail(this._state, this._log, this._assignThrows);
+  _RecordingDetail(this._state, this._log, this._assignThrows, this._addDelay);
 
   final TaskDetailState _state;
   final List<(String, String, String?)> _log;
   final AppException? _assignThrows;
+  final Duration _addDelay;
 
   @override
   Future<TaskDetailState> build(String taskId) async => _state;
@@ -346,6 +397,7 @@ class _RecordingDetail extends TaskController {
   @override
   Future<void> addSubtask(String title) async {
     _log.add(('addSubtask', title, null));
+    await Future<void>.delayed(_addDelay);
   }
 
   @override
