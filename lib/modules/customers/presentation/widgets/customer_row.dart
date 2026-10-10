@@ -242,17 +242,28 @@ class _QuickActions extends StatelessWidget {
   }
 }
 
-/// Số để quay: bỏ mọi ký tự không phải chữ số, trừ dấu `+` đứng đầu.
+/// Số để quay: bỏ mọi ký tự không phải chữ số, giữ dấu `+` đứng đầu; tiền tố
+/// quốc tế `00` đổi thành `+`.
 String dialNumber(String raw) {
   final trimmed = raw.trim();
   final digits = trimmed.replaceAll(RegExp(r'\D'), '');
-  return trimmed.startsWith('+') ? '+$digits' : digits;
+  if (trimmed.startsWith('+')) return '+$digits';
+  if (digits.startsWith('00')) return '+${digits.substring(2)}';
+  return digits;
 }
 
-/// Số cho zalo.me: chỉ chữ số, đầu 0 → 84, bỏ `+`.
+/// Số cho zalo.me: chỉ chữ số kèm mã nước, không `+`. Tiền tố quốc tế `00`
+/// bỏ đi, đầu `0` trong nước → `84`, và `84 0…` (gõ thừa số 0 sau mã nước)
+/// → `84…`.
 String zaloNumber(String raw) {
-  final digits = raw.replaceAll(RegExp(r'\D'), '');
-  return digits.startsWith('0') ? '84${digits.substring(1)}' : digits;
+  var digits = raw.replaceAll(RegExp(r'\D'), '');
+  if (digits.startsWith('00')) {
+    digits = digits.substring(2);
+  } else if (digits.startsWith('0')) {
+    digits = '84${digits.substring(1)}';
+  }
+  if (digits.startsWith('840')) digits = '84${digits.substring(3)}';
+  return digits;
 }
 
 Future<void> launchWithToast(

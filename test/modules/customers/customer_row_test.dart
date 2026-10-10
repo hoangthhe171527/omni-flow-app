@@ -158,6 +158,22 @@ void main() {
     expect(zaloNumber('+84 901 234 567'), '84901234567');
   });
 
+  test('tiền tố quốc tế 00 → +; zalo bỏ 00', () {
+    expect(dialNumber('0084 901 234 567'), '+84901234567');
+    expect(dialNumber('001 555 0100'), '+15550100');
+    expect(zaloNumber('0084 901 234 567'), '84901234567');
+    expect(zaloNumber('+84 0901 234 567'), '84901234567');
+  });
+
+  test('hasPhone cần có chữ số', () {
+    Customer withPhone(String phone) =>
+        Customer.fromJson({'id': 'c1', 'primary_contact_phone': phone});
+    expect(withPhone('0901 234 567').hasPhone, isTrue);
+    expect(withPhone('  ').hasPhone, isFalse);
+    expect(withPhone('chưa có').hasPhone, isFalse);
+    expect(withPhone('-').hasPhone, isFalse);
+  });
+
   group('mở ứng dụng ngoài', () {
     const channel = MethodChannel('plugins.flutter.io/url_launcher');
     final calls = <MethodCall>[];

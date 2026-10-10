@@ -150,7 +150,8 @@ class Customer {
     };
   }
 
-  bool get hasPhone => phone.trim().isNotEmpty;
+  /// Có ít nhất một chữ số — "chưa có", "-" không quay/nhắn được.
+  bool get hasPhone => phone.contains(RegExp(r'\d'));
   bool get hasEmail => email.trim().isNotEmpty;
 
   /// The web's "Cá nhân / Doanh nghiệp" (`metadata.party_type`); a record
