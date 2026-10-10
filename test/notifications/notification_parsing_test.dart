@@ -119,4 +119,40 @@ void main() {
       expect(unknown.taskId, isNull);
     });
   });
+
+  test('tin nhắn trỏ về hội thoại; thiếu id thì không trỏ đâu cả', () {
+    AppNotification inbox(Map<String, dynamic> extra) =>
+        AppNotification.fromJson({
+          'id': 'n1',
+          'notification_type': 'INBOX_MESSAGE',
+          'title': 'x',
+          'content': 'y',
+          ...extra,
+        });
+    expect(
+      inbox({
+        'related_entity_type': 'conversation',
+        'related_entity_id': 'c9',
+      }).conversationId,
+      'c9',
+    );
+    expect(
+      inbox({'related_entity_type': 'conversation'}).conversationId,
+      isNull,
+    );
+    expect(
+      inbox({
+        'related_entity_type': 'task',
+        'related_entity_id': 'c9',
+      }).conversationId,
+      isNull,
+    );
+    expect(
+      inbox({
+        'related_entity_type': 'conversation',
+        'related_entity_id': 'c9',
+      }).taskId,
+      isNull,
+    );
+  });
 }

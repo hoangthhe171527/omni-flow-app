@@ -86,6 +86,16 @@ class AppNotification {
       ? entityId
       : null;
 
+  /// Hội thoại mà tin nhắn này báo về. Server ghi `INBOX_MESSAGE` với
+  /// `related_entity_type = 'conversation'` (CreateInboundNotification.php).
+  /// Thiếu một nửa thì null — không điều hướng tới `/inbox/` rỗng.
+  String? get conversationId =>
+      (kind == NotificationKind.inboxMessage &&
+          entityType == 'conversation' &&
+          (entityId ?? '').isNotEmpty)
+      ? entityId
+      : null;
+
   AppNotification markedRead() => AppNotification(
     id: id,
     kind: kind,

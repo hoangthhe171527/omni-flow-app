@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/network/api_envelope.dart';
 import '../../../core/realtime/realtime_client.dart';
+import '../../../core/utils/formatters.dart';
 import '../../../security/session/session_controller.dart';
 import '../data/notifications_api.dart';
 import '../domain/app_notification.dart';
@@ -35,6 +36,10 @@ final notificationRealtimeProvider = Provider<void>((ref) {
   ref.onDispose(unsubscribe);
 });
 
+/// Thanh chọn "Tất cả / Chưa đọc". Lọc ở SERVER (`?unread=1`): lọc trên trang
+/// đầu sẽ bỏ sót dòng chưa đọc nằm ở trang hai.
+final notificationUnreadOnlyProvider = StateProvider<bool>((ref) => false);
+
 class NotificationListState {
   const NotificationListState({
     this.items = const [],
@@ -54,7 +59,10 @@ class NotificationsController
   @override
   Future<NotificationListState> build() async {
     ref.watch(notificationSignalProvider);
-    final page = await ref.watch(notificationsApiProvider).list();
+    final unreadOnly = ref.watch(notificationUnreadOnlyProvider);
+    final page = await ref
+        .watch(notificationsApiProvider)
+        .list(unreadOnly: unreadOnly);
 
     return NotificationListState(
       items: page.items,
@@ -73,7 +81,10 @@ class NotificationsController
     try {
       final next = await ref
           .read(notificationsApiProvider)
-          .list(page: current.pagination.nextPage);
+          .list(
+            page: current.pagination.nextPage,
+            unreadOnly: ref.read(notificationUnreadOnlyProvider),
+          );
       state = AsyncData(
         NotificationListState(
           items: [...current.items, ...next.items],
@@ -99,11 +110,12 @@ class NotificationsController
     final target = current.items.where((item) => item.id == id).firstOrNull;
     if (target == null || !target.isUnread) return;
 
+    final unreadOnly = ref.read(notificationUnreadOnlyProvider);
     state = AsyncData(
       NotificationListState(
         items: [
           for (final item in current.items)
-            if (item.id == id) item.markedRead() else item,
+            if (item.id != id) item else if (!unreadOnly) item.markedRead(),
         ],
         pagination: current.pagination,
       ),
@@ -159,3 +171,27 @@ final unreadNotificationCountProvider = FutureProvider.autoDispose<int>((ref) {
 
   return ref.watch(notificationsApiProvider).unreadCount();
 });
+
+final unreadNotificationBadgeProvider = Provider.autoDispose<int>(
+  (ref) => ref.watch(unreadNotificationCountProvider).valueOrNull ?? 0,
+);
+
+typedef NotificationGroup = ({String label, List<AppNotification> items});
+
+/// "Hôm nay" theo ngày VN, còn lại "Trước đó" — như `Notifications.dc.html`.
+List<NotificationGroup> groupNotificationsByDay(
+  List<AppNotification> items, {
+  DateTime? clock,
+}) {
+  final today = VnTime.today(clock);
+  final now = <AppNotification>[];
+  final earlier = <AppNotification>[];
+  for (final item in items) {
+    final at = item.createdAt;
+    (at != null && VnTime.day(at) == today ? now : earlier).add(item);
+  }
+  return [
+    if (now.isNotEmpty) (label: 'Hôm nay', items: now),
+    if (earlier.isNotEmpty) (label: 'Trước đó', items: earlier),
+  ];
+}
