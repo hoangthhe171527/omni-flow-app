@@ -95,4 +95,84 @@ void main() {
     expect(tester.hasRunningAnimations, isFalse);
     expect(find.text('Tạo việc'), findsOneWidget);
   });
+
+  testWidgets('gõ 👍 rồi bấm Gửi: gửi đúng chữ và xoá ô', (tester) async {
+    await tester.pumpWidget(host());
+    await tester.enterText(find.byType(TextField), '👍');
+    await tester.pump();
+    await tester.tap(find.byTooltip('Gửi'));
+    await tester.pumpAndSettle();
+
+    expect(sent, ['👍']);
+    expect(
+      tester.widget<TextField>(find.byType(TextField)).controller!.text,
+      isEmpty,
+    );
+  });
+
+  testWidgets('khay ẩn Tạo việc khi không có onCreateTask', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: OmniTheme.light(TargetPlatform.android),
+        home: Scaffold(
+          body: Column(
+            children: [
+              const Expanded(child: SizedBox()),
+              MessageComposer(
+                onSend: (text, images, replyTo) async {},
+                onPickImages: () async => const [],
+                loadTemplates: () async => const ['x'],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+    await tester.tap(find.byTooltip('Thêm'));
+    await tester.pumpAndSettle();
+    expect(find.text('Tạo việc'), findsNothing);
+    expect(find.text('Mẫu trả lời'), findsOneWidget);
+  });
+
+  testWidgets('chạm ô nhập thì khay đóng', (tester) async {
+    await tester.pumpWidget(host());
+    await tester.tap(find.byTooltip('Thêm'));
+    await tester.pumpAndSettle();
+    expect(find.text('Tạo việc'), findsOneWidget);
+
+    await tester.tap(find.byType(TextField));
+    await tester.pumpAndSettle();
+    expect(find.text('Tạo việc'), findsNothing);
+  });
+
+  testWidgets('360px: không tràn, nút công cụ cuối không đè ô nhập, chạm 44', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(360, 640);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+
+    await tester.pumpWidget(host());
+    expect(tester.takeException(), isNull);
+
+    final lastTool = tester.getRect(find.byTooltip('Ảnh'));
+    final input = tester.getRect(find.byType(TextField));
+    expect(lastTool.right, lessThanOrEqualTo(input.left));
+    for (final tip in ['Thêm', 'Chụp ảnh', 'Ảnh', 'Gửi like']) {
+      final r = tester.getRect(find.byTooltip(tip));
+      expect(r.width, greaterThanOrEqualTo(44), reason: tip);
+      expect(r.height, greaterThanOrEqualTo(44), reason: tip);
+    }
+    final emoji = tester.getRect(find.byTooltip('Biểu tượng cảm xúc'));
+    expect(emoji.width, greaterThanOrEqualTo(44));
+    expect(emoji.right, lessThanOrEqualTo(360));
+
+    await tester.enterText(find.byType(TextField), 'chào');
+    await tester.pumpAndSettle();
+    final send = tester.getRect(find.byTooltip('Gửi'));
+    expect(send.width, greaterThanOrEqualTo(44));
+    expect(send.height, greaterThanOrEqualTo(44));
+    expect(send.right, lessThanOrEqualTo(360));
+    expect(tester.takeException(), isNull);
+  });
 }

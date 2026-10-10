@@ -514,12 +514,13 @@ class _ThreadPageState extends ConsumerState<ThreadPage>
   /// Mẫu trả lời của tenant; chưa có (hoặc lỗi mạng) thì dùng bộ câu mở đầu
   /// mặc định — đừng để khay trống chỉ vì máy chủ chưa cấu hình.
   Future<List<String>> _loadTemplates() async {
-    final replies = await ref
-        .read(quickRepliesProvider.future)
-        .catchError((_) => null);
-    return replies == null || replies.isEmpty
-        ? _defaultTemplates
-        : [for (final q in replies) q.body];
+    try {
+      final replies = await ref.read(quickRepliesProvider.future);
+      if (replies == null || replies.isEmpty) return _defaultTemplates;
+      return [for (final q in replies) q.body];
+    } catch (_) {
+      return _defaultTemplates;
+    }
   }
 
   Future<List<XFile>> _pickImages() =>

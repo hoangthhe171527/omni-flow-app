@@ -105,6 +105,37 @@ void main() {
     await tester.pump();
   }
 
+  testWidgets('Mẫu trả lời: máy chủ lỗi → vẫn có bộ câu mặc định', (
+    tester,
+  ) async {
+    api.failQuickReplies = true;
+    await openThread(tester);
+
+    await tester.tap(find.byTooltip('Thêm'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Mẫu trả lời'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Em gửi báo giá ạ'), findsOneWidget);
+    await closeThread(tester);
+  });
+
+  testWidgets('Mẫu trả lời: có mẫu của tenant thì dùng mẫu đó', (tester) async {
+    api.quickReplyList = const [
+      QuickReply(id: 'q1', title: 'Chào', body: 'Dạ em chào chị ạ'),
+    ];
+    await openThread(tester);
+
+    await tester.tap(find.byTooltip('Thêm'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Mẫu trả lời'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Dạ em chào chị ạ'), findsOneWidget);
+    expect(find.text('Em gửi báo giá ạ'), findsNothing);
+    await closeThread(tester);
+  });
+
   testWidgets('dựng 3 tin theo thứ tự thời gian; mở là đánh dấu đã đọc', (
     tester,
   ) async {
@@ -505,6 +536,10 @@ class _FakeInboxApi extends InboxApi {
 
   /// Lượt gọi `messages` kế tiếp ném lỗi mạng.
   bool failNextMessages = false;
+
+  /// `quickReplies` ném (mất mạng) khi đặt; ngược lại trả `quickReplyList`.
+  bool failQuickReplies = false;
+  List<QuickReply>? quickReplyList;
   final sendCalls = <_SendCall>[];
   int _sent = 0;
 
@@ -538,6 +573,12 @@ class _FakeInboxApi extends InboxApi {
 
   @override
   Future<void> markRead(String id) async => markReadCalls.add(id);
+
+  @override
+  Future<List<QuickReply>?> quickReplies() async {
+    if (failQuickReplies) throw const NetworkException('offline');
+    return quickReplyList;
+  }
 
   @override
   Future<InboxChanges> changes(String? after, {String? conversationId}) async =>

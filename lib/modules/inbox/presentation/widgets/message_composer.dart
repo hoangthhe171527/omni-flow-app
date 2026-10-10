@@ -55,7 +55,7 @@ class MessageComposer extends StatefulWidget {
 }
 
 const _likeText = '👍';
-const _toolWidth = 34.0;
+const _toolWidth = 44.0;
 const _slowMotion = Duration(milliseconds: 350);
 
 class _MessageComposerState extends State<MessageComposer> {
@@ -71,14 +71,27 @@ class _MessageComposerState extends State<MessageComposer> {
   void initState() {
     super.initState();
     _controller.addListener(_onTextChanged);
+    _focus.addListener(_onFocusChanged);
   }
 
   @override
   void dispose() {
     _controller.removeListener(_onTextChanged);
+    _focus.removeListener(_onFocusChanged);
     _controller.dispose();
     _focus.dispose();
     super.dispose();
+  }
+
+  /// Gõ chữ là bỏ qua khay: ô nhập lấy tiêu điểm thì đóng khay `+`.
+  void _onFocusChanged() {
+    if (_focus.hasFocus && _trayOpen) setState(() => _trayOpen = false);
+  }
+
+  @override
+  void didUpdateWidget(MessageComposer old) {
+    super.didUpdateWidget(old);
+    if (!widget.enabled && _trayOpen) _trayOpen = false;
   }
 
   /// Ô trống trở lại thì cụm công cụ về trạng thái thu/bung mặc định.
@@ -91,7 +104,7 @@ class _MessageComposerState extends State<MessageComposer> {
   Future<void> _send() async {
     final text = _controller.text.trim();
     if ((text.isEmpty && _pendingImages.isEmpty) || _sending) return;
-    await _dispatch(text);
+    await _dispatch(text, fromField: true);
   }
 
   /// Ô trống và không ảnh: gửi 👍 như Messenger.
@@ -100,13 +113,13 @@ class _MessageComposerState extends State<MessageComposer> {
     await _dispatch(_likeText);
   }
 
-  Future<void> _dispatch(String text) async {
+  Future<void> _dispatch(String text, {bool fromField = false}) async {
     setState(() => _sending = true);
     try {
       await widget.onSend(text, _pendingImages, widget.replyTo);
       if (!mounted) return;
       setState(() {
-        if (text != _likeText) _controller.clear();
+        if (fromField) _controller.clear();
         _pendingImages.clear();
         _toolsForced = false;
         _trayOpen = false;
@@ -272,21 +285,24 @@ class _MessageComposerState extends State<MessageComposer> {
                         return Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            ExcludeSemantics(
+                            ExcludeFocus(
                               excluding: collapsed,
-                              child: IgnorePointer(
-                                ignoring: collapsed,
-                                child: AnimatedContainer(
-                                  duration: duration,
-                                  curve: OmniCurves.standard,
-                                  width: collapsed ? 0 : toolsWidth,
-                                  height: _toolWidth + 4,
-                                  child: ClipRect(
-                                    child: OverflowBox(
-                                      alignment: Alignment.centerLeft,
-                                      minWidth: 0,
-                                      maxWidth: toolsWidth,
-                                      child: Row(children: _tools()),
+                              child: ExcludeSemantics(
+                                excluding: collapsed,
+                                child: IgnorePointer(
+                                  ignoring: collapsed,
+                                  child: AnimatedContainer(
+                                    duration: duration,
+                                    curve: OmniCurves.standard,
+                                    width: collapsed ? 0 : toolsWidth,
+                                    height: _toolWidth,
+                                    child: ClipRect(
+                                      child: OverflowBox(
+                                        alignment: Alignment.centerLeft,
+                                        minWidth: 0,
+                                        maxWidth: toolsWidth,
+                                        child: Row(children: _tools()),
+                                      ),
                                     ),
                                   ),
                                 ),
@@ -306,7 +322,7 @@ class _MessageComposerState extends State<MessageComposer> {
                     Expanded(
                       child: ConstrainedBox(
                         constraints: const BoxConstraints(
-                          minHeight: 36,
+                          minHeight: 44,
                           maxHeight: 120,
                         ),
                         child: TextField(
@@ -338,14 +354,18 @@ class _MessageComposerState extends State<MessageComposer> {
                               8,
                             ),
                             suffixIconConstraints: const BoxConstraints(
-                              minWidth: 36,
-                              minHeight: 36,
+                              minWidth: 44,
+                              minHeight: 44,
                             ),
                             suffixIcon: IconButton(
                               onPressed: widget.enabled ? _openEmoji : null,
                               tooltip: 'Biểu tượng cảm xúc',
                               padding: EdgeInsets.zero,
-                              visualDensity: VisualDensity.compact,
+                              style: IconButton.styleFrom(
+                                fixedSize: const Size(44, 44),
+                                minimumSize: const Size(44, 44),
+                                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                              ),
                               icon: Icon(
                                 Icons.emoji_emotions_outlined,
                                 size: OmniIconSize.xl,
@@ -642,8 +662,8 @@ class _ComposerIcon extends StatelessWidget {
       tooltip: tooltip,
       padding: EdgeInsets.zero,
       style: IconButton.styleFrom(
-        minimumSize: const Size(_toolWidth, _toolWidth + 4),
-        fixedSize: const Size(_toolWidth, _toolWidth + 4),
+        minimumSize: const Size(_toolWidth, _toolWidth),
+        fixedSize: const Size(_toolWidth, _toolWidth),
         padding: EdgeInsets.zero,
         tapTargetSize: MaterialTapTargetSize.shrinkWrap,
         // Giảm chuyển động: bỏ cả gợn mực lẫn lớp sáng khi chạm.
@@ -750,7 +770,11 @@ class _LikeButton extends StatelessWidget {
       onPressed: onTap,
       tooltip: 'Gửi like',
       padding: EdgeInsets.zero,
-      constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
+      style: IconButton.styleFrom(
+        fixedSize: const Size(44, 44),
+        minimumSize: const Size(44, 44),
+        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+      ),
       icon: const Text(_likeText, style: OmniChatType.emoji),
     );
   }
@@ -765,36 +789,46 @@ class _SendButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-
-    return Padding(
-      padding: const EdgeInsets.only(left: 4, bottom: 1),
-      child: Tooltip(
-        message: 'Gửi',
-        child: SizedBox(
-          width: 34,
-          height: 34,
-          child: FilledButton(
-            onPressed: sending ? null : onTap,
-            style: FilledButton.styleFrom(
-              padding: EdgeInsets.zero,
-              minimumSize: Size.zero,
-              backgroundColor: scheme.primary,
-              shape: const CircleBorder(),
+    final enabled = !sending && onTap != null;
+    // Hộp chạm 44x44, nút vẽ 34 (giữ kích thước biểu tượng của thiết kế).
+    return Tooltip(
+      message: 'Gửi',
+      child: Semantics(
+        button: true,
+        enabled: enabled,
+        child: InkResponse(
+          onTap: enabled ? onTap : null,
+          radius: 22,
+          child: SizedBox(
+            width: 44,
+            height: 44,
+            child: Center(
+              child: Container(
+                width: 34,
+                height: 34,
+                decoration: BoxDecoration(
+                  color: enabled
+                      ? scheme.primary
+                      : scheme.primary.withValues(alpha: 0.5),
+                  shape: BoxShape.circle,
+                ),
+                alignment: Alignment.center,
+                child: sending
+                    ? SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: scheme.onPrimary,
+                        ),
+                      )
+                    : Icon(
+                        Icons.send_rounded,
+                        size: OmniIconSize.md,
+                        color: scheme.onPrimary,
+                      ),
+              ),
             ),
-            child: sending
-                ? SizedBox(
-                    width: 16,
-                    height: 16,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      color: scheme.onPrimary,
-                    ),
-                  )
-                : Icon(
-                    Icons.send_rounded,
-                    size: OmniIconSize.md,
-                    color: scheme.onPrimary,
-                  ),
           ),
         ),
       ),
