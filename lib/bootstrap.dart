@@ -7,6 +7,7 @@ import 'package:intl/date_symbol_data_local.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'app/omni_app.dart';
+import 'core/module/customer_opportunities_section.dart';
 import 'core/module/extra_segment.dart';
 import 'core/module/module_registry.dart';
 import 'core/module/omni_module.dart';
@@ -20,7 +21,7 @@ import 'modules/customers/customers_module.dart';
 import 'modules/inbox/inbox_module.dart';
 import 'modules/notifications/notifications_module.dart';
 import 'modules/opportunities/opportunities.dart'
-    show opportunitiesKhachSegment;
+    show opportunitiesCustomerSection, opportunitiesKhachSegment;
 import 'modules/opportunities/opportunities_module.dart';
 import 'modules/plans/plans_module.dart';
 import 'modules/settings/settings_module.dart';
@@ -78,6 +79,9 @@ Future<Widget> bootstrap() async {
       // Đoạn Cơ hội của tab Khách: customers không import opportunities (sẽ
       // đóng vòng), nên đoạn được cắm vào đây.
       khachExtraSegmentProvider.overrideWithValue(opportunitiesKhachSegment),
+      customerOpportunitiesSectionProvider.overrideWithValue(
+        opportunitiesCustomerSection,
+      ),
       // Dependency inversion: `security` declares the gateway, `modules/auth`
       // implements it, and they meet here.
       authGatewayProvider.overrideWith((ref) => ref.watch(authApiProvider)),

@@ -191,7 +191,7 @@ class _QuickActions extends StatelessWidget {
               icon: Icons.chat_bubble_outline_rounded,
               label: 'Nhắn',
               onTap: customer.hasPhone
-                  ? () => _launch(
+                  ? () => launchWithToast(
                       context,
                       Uri.parse('https://zalo.me/${zaloNumber(phone)}'),
                       'Không mở được Zalo.',
@@ -205,7 +205,7 @@ class _QuickActions extends StatelessWidget {
               icon: Icons.call_outlined,
               label: 'Gọi',
               onTap: customer.hasPhone
-                  ? () => _launch(
+                  ? () => launchWithToast(
                       context,
                       Uri(scheme: 'tel', path: dialNumber(phone)),
                       'Không mở được ứng dụng gọi điện.',
@@ -255,7 +255,7 @@ String zaloNumber(String raw) {
   return digits.startsWith('0') ? '84${digits.substring(1)}' : digits;
 }
 
-Future<void> _launch(
+Future<void> launchWithToast(
   BuildContext context,
   Uri url,
   String failure, {
