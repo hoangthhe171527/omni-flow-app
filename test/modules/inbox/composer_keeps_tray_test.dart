@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:image_picker/image_picker.dart';
+import 'package:omni_app/modules/inbox/domain/pending_attachment.dart';
 import 'package:omni_app/core/error/app_exception.dart';
 import 'package:omni_app/design/theme/omni_theme.dart';
 import 'package:omni_app/modules/inbox/presentation/widgets/message_composer.dart';
@@ -23,7 +23,13 @@ void main() {
             children: [
               const Expanded(child: SizedBox.expand()),
               MessageComposer(
-                onPickImages: () async => [XFile('khong-co-that.jpg')],
+                onPickImages: (_) async => const [
+                  PendingAttachment(
+                    path: 'khong-co-that.jpg',
+                    name: 'khong-co-that.jpg',
+                    kind: PendingKind.image,
+                  ),
+                ],
                 onSend: (text, images, replyTo) async {
                   sends.add(images.length);
                   if (fail) {

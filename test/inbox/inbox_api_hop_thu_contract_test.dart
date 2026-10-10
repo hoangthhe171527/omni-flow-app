@@ -472,6 +472,99 @@ void main() {
     ]);
   });
 
+  test(
+    'gửi 1 ảnh + 1 tệp: type lấy từ phản hồi upload, không từ đuôi',
+    () async {
+      // `InboxController::uploadMedia`: `{url, type, name}`, type theo MIME DÒ
+      // được (image|video|audio|file). Một `.xlsx` bị dò thành gì thì gửi đúng
+      // cái đó — Facebook dùng nó làm loại attachment.
+      final image = MessageAttachment.fromUpload(const {
+        'url': 'https://x/api/v1/inbox/media/t1/a.jpg?signature=s',
+        'type': 'image',
+        'name': 'a.png',
+      });
+      final doc = MessageAttachment.fromUpload(const {
+        'url': 'https://x/api/v1/inbox/media/t1/b.xlsx?signature=s',
+        'type': 'file',
+        'name': 'bang-gia.xlsx',
+      });
+      final (a, h) = api({'id': 'm9', 'direction': 'out', 'status': 'queued'});
+      await a.send('c1', text: 'Báo giá', attachments: [image, doc]);
+      final body = h.requests.single.data as Map;
+      expect(body['attachments'], [
+        {
+          'url': 'https://x/api/v1/inbox/media/t1/a.jpg?signature=s',
+          'type': 'image',
+          'name': 'a.png',
+        },
+        {
+          'url': 'https://x/api/v1/inbox/media/t1/b.xlsx?signature=s',
+          'type': 'file',
+          'name': 'bang-gia.xlsx',
+        },
+      ]);
+    },
+  );
+
+  group('gửi lại: POST …/messages/{mid}/resend (API 0cd1713)', () {
+    test('200 → tin được mở lại, body rỗng', () async {
+      final (a, h) = api({
+        'id': 'm2',
+        'direction': 'out',
+        'status': 'queued',
+        'text': 'Dạ em gửi ạ',
+      });
+      final m = await a.resend('c1', 'm2');
+      expect(m.id, 'm2');
+      expect(m.status, DeliveryStatus.queued);
+      final r = h.requests.single;
+      expect(r.method, 'POST');
+      expect(r.uri.path, '/api/v1/inbox/conversations/c1/messages/m2/resend');
+      expect(r.data, isNull);
+    });
+
+    test('422 message_too_old_to_resend → reason', () async {
+      final (a, _) = api(
+        const {},
+        status: 422,
+        raw: jsonEncode({
+          'success': false,
+          'code': 'message_too_old_to_resend',
+          'message': 'Tin này đã quá lâu để gửi lại — hãy gửi một tin mới.',
+        }),
+      );
+      await expectLater(
+        a.resend('c1', 'm2'),
+        throwsA(
+          isA<ValidationException>().having(
+            (e) => e.reason,
+            'reason',
+            'message_too_old_to_resend',
+          ),
+        ),
+      );
+    });
+
+    test('409 message_not_failed → RequestRejectedException 409', () async {
+      final (a, _) = api(
+        const {},
+        status: 409,
+        raw: jsonEncode({
+          'success': false,
+          'code': 'message_not_failed',
+          'message':
+              'Tin này không ở trạng thái gửi lỗi nên không gửi lại được.',
+        }),
+      );
+      await expectLater(
+        a.resend('c1', 'm2'),
+        throwsA(
+          isA<RequestRejectedException>().having((e) => e.code, 'code', '409'),
+        ),
+      );
+    });
+  });
+
   test('gửi tin vào kênh không gửi được → 422 mang mã nghiệp vụ', () async {
     final (a, _) = api(
       const {},

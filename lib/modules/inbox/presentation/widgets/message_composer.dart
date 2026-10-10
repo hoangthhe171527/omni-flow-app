@@ -2,11 +2,14 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:image_picker/image_picker.dart';
 
+import '../../../../design/components/components.dart';
 import '../../../../design/platform/omni_motion_scope.dart';
 import '../../../../design/tokens/tokens.dart';
+import '../../data/inbox_api.dart';
 import '../../domain/message.dart';
+import '../../domain/outbound_capabilities.dart';
+import '../../domain/pending_attachment.dart';
 
 /// Thanh nhập kiểu Messenger (`Thread.dc.html`): một hàng gồm cụm công cụ
 /// (`+`, chụp ảnh, ảnh), ô nhập bo tròn có mặt cười, và nút cuối.
@@ -23,6 +26,9 @@ class MessageComposer extends StatefulWidget {
     required this.onSend,
     required this.onPickImages,
     this.onTakePhoto,
+    this.onPickFiles,
+    this.capabilities,
+    this.errorText,
     this.onCreateTask,
     this.loadTemplates,
     this.enabled = true,
@@ -30,15 +36,32 @@ class MessageComposer extends StatefulWidget {
     this.onCancelReply,
   });
 
-  final Future<void> Function(String text, List<XFile> images, Message? replyTo)
+  final Future<void> Function(
+    String text,
+    List<PendingAttachment> attachments,
+    Message? replyTo,
+  )
   onSend;
 
   /// Picks every image selected from the gallery. Keeping selection in the
   /// composer lets a rep add a caption, remove a mistake, then send one batch.
-  final Future<List<XFile>> Function() onPickImages;
+  /// Nhận số chỗ còn lại (trần [InboxApi.maxAttachmentsPerMessage]); composer
+  /// vẫn tự cắt vì có trình chọn bỏ qua `limit`.
+  final Future<List<PendingAttachment>> Function(int remaining) onPickImages;
 
   /// Take a photo. Null hides the entry rather than offering a dead button.
-  final Future<XFile?> Function()? onTakePhoto;
+  final Future<PendingAttachment?> Function()? onTakePhoto;
+
+  /// Chọn tài liệu. Null (hoặc kênh không gửi tệp) ẩn mục "Tệp" trong khay.
+  final Future<List<PendingAttachment>> Function(int remaining)? onPickFiles;
+
+  /// Kênh gửi được gì (`outbound_capabilities`). Null = API cũ: giữ chữ + ảnh,
+  /// ẩn Tệp.
+  final OutboundCapabilities? capabilities;
+
+  /// Lỗi gửi của server (vd 422 `channel_send_unsupported`), hiện ngay trên
+  /// ô nhập — nháp vẫn giữ nguyên.
+  final String? errorText;
 
   /// Mở màn tạo việc. Null ẩn mục "Tạo việc" trong khay (không đủ quyền).
   final VoidCallback? onCreateTask;
@@ -65,7 +88,20 @@ class _MessageComposerState extends State<MessageComposer> {
   bool _trayOpen = false;
   bool _toolsForced = false;
   bool _loadingTemplates = false;
-  final List<XFile> _pendingImages = [];
+
+  /// Ảnh và tệp đang chờ gửi, theo thứ tự chọn.
+  final List<PendingAttachment> _pendingImages = [];
+
+  int get _remaining =>
+      InboxApi.maxAttachmentsPerMessage - _pendingImages.length;
+
+  bool get _full => _remaining <= 0;
+
+  bool get _showImages => widget.capabilities?.canSendImages ?? true;
+
+  bool get _showFiles =>
+      widget.onPickFiles != null &&
+      (widget.capabilities?.canSendFiles ?? false);
 
   @override
   void initState() {
@@ -133,15 +169,68 @@ class _MessageComposerState extends State<MessageComposer> {
   }
 
   Future<void> _pickImages() async {
-    final images = await widget.onPickImages();
-    if (!mounted || images.isEmpty) return;
-    setState(() => _pendingImages.addAll(images));
+    if (_full) return;
+    await _accept(await widget.onPickImages(_remaining));
   }
 
   Future<void> _takePhoto() async {
+    if (_full) return;
     final image = await widget.onTakePhoto?.call();
-    if (!mounted || image == null) return;
-    setState(() => _pendingImages.add(image));
+    if (image != null) await _accept([image]);
+  }
+
+  Future<void> _pickFiles() async {
+    final pick = widget.onPickFiles;
+    if (pick == null || _full) return;
+    setState(() => _trayOpen = false);
+    await _accept(await pick(_remaining));
+  }
+
+  /// Nhận tệp vừa chọn: bỏ tệp quá 25MB, cắt theo trần 10, hỏi trước khi thêm
+  /// tệp/ảnh mà kênh sẽ gửi thành đường link (hoặc không nhận). Không bao giờ
+  /// lặng lẽ bỏ: mọi tệp bị bỏ đều được báo.
+  Future<void> _accept(List<PendingAttachment> picked) async {
+    if (!mounted || picked.isEmpty) return;
+    final messenger = ScaffoldMessenger.maybeOf(context);
+    final notes = <String>[];
+
+    var items = [
+      for (final a in picked)
+        if ((a.size ?? 0) <= InboxApi.maxUploadBytes) a,
+    ];
+    if (items.length < picked.length) {
+      notes.add('Tệp vượt 25MB, không gửi được.');
+    }
+    final room = _remaining;
+    if (items.length > room) {
+      notes.add(
+        'Mỗi tin tối đa ${InboxApi.maxAttachmentsPerMessage} tệp — '
+        'đã bỏ ${items.length - room} tệp.',
+      );
+      items = items.take(room).toList();
+    }
+
+    final warning = _channelWarning(items, widget.capabilities);
+    if (warning != null) {
+      final ok = await showOmniConfirm(
+        context: context,
+        title: warning.title,
+        message: warning.message,
+        confirmLabel: 'Vẫn gửi',
+      );
+      if (!mounted) return;
+      if (!ok) {
+        items = [
+          for (final a in items)
+            if (!warning.affected.contains(a)) a,
+        ];
+      }
+    }
+
+    if (items.isNotEmpty) setState(() => _pendingImages.addAll(items));
+    if (notes.isNotEmpty) {
+      messenger?.showSnackBar(SnackBar(content: Text(notes.join(' '))));
+    }
   }
 
   /// Insert at the caret rather than appending: an emoji picked mid-sentence
@@ -203,25 +292,32 @@ class _MessageComposerState extends State<MessageComposer> {
           ? () => setState(() => _trayOpen = !_trayOpen)
           : null,
     ),
-    if (widget.onTakePhoto != null)
+    // Đủ 10 tệp: nút vẫn hiện nhưng khoá, nói rõ vì sao.
+    if (_showImages && widget.onTakePhoto != null)
       _ComposerIcon(
         icon: Icons.photo_camera_rounded,
-        tooltip: 'Chụp ảnh',
-        onTap: widget.enabled && !_sending ? _takePhoto : null,
+        tooltip: _full ? _fullLabel : 'Chụp ảnh',
+        onTap: widget.enabled && !_sending && !_full ? _takePhoto : null,
       ),
-    _ComposerIcon(
-      icon: Icons.image_rounded,
-      tooltip: 'Ảnh',
-      onTap: widget.enabled && !_sending ? _pickImages : null,
-    ),
+    if (_showImages)
+      _ComposerIcon(
+        icon: Icons.image_rounded,
+        tooltip: _full ? _fullLabel : 'Ảnh',
+        onTap: widget.enabled && !_sending && !_full ? _pickImages : null,
+      ),
   ];
+
+  int get _toolCount =>
+      1 +
+      (_showImages && widget.onTakePhoto != null ? 1 : 0) +
+      (_showImages ? 1 : 0);
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final motion = OmniMotion.enabled(context);
     final duration = motion ? _slowMotion : Duration.zero;
-    final toolsWidth = _toolWidth * (widget.onTakePhoto != null ? 3 : 2);
+    final toolsWidth = _toolWidth * _toolCount;
     final fieldFill = OmniColors.byBrightness(
       context,
       OmniColors.muted,
@@ -236,6 +332,8 @@ class _MessageComposerState extends State<MessageComposer> {
                     widget.onCreateTask!();
                   },
             onTemplates: widget.loadTemplates == null ? null : _openTemplates,
+            showFiles: _showFiles,
+            onFiles: _full || _sending ? null : _pickFiles,
           )
         : const SizedBox(width: double.infinity);
     const border = OutlineInputBorder(
@@ -269,6 +367,8 @@ class _MessageComposerState extends State<MessageComposer> {
                   onRemove: (image) =>
                       setState(() => _pendingImages.remove(image)),
                 ),
+              if (widget.errorText != null)
+                _ComposerError(text: widget.errorText!),
               Padding(
                 padding: const EdgeInsets.fromLTRB(6, 6, 6, 6),
                 child: Row(
@@ -418,14 +518,31 @@ class _MessageComposerState extends State<MessageComposer> {
 
 /// Khay `+`: lưới 4 cột, chỉ những mục có việc thật phía sau.
 class _Tray extends StatelessWidget {
-  const _Tray({required this.onCreateTask, required this.onTemplates});
+  const _Tray({
+    required this.onCreateTask,
+    required this.onTemplates,
+    this.showFiles = false,
+    this.onFiles,
+  });
 
   final VoidCallback? onCreateTask;
   final VoidCallback? onTemplates;
 
+  /// Mục "Tệp" hiện (kênh gửi được tệp); [onFiles] null = khoá (đủ 10 tệp).
+  final bool showFiles;
+  final VoidCallback? onFiles;
+
   @override
   Widget build(BuildContext context) {
     final items = <Widget>[
+      if (showFiles)
+        _TrayItem(
+          icon: Icons.attach_file_rounded,
+          label: 'Tệp',
+          hue: OmniHue.neutral,
+          onTap: onFiles,
+          disabledLabel: _fullLabel,
+        ),
       if (onCreateTask != null)
         _TrayItem(
           icon: Icons.task_alt_rounded,
@@ -462,21 +579,40 @@ class _TrayItem extends StatelessWidget {
     required this.label,
     required this.hue,
     required this.onTap,
+    this.disabledLabel,
   });
 
   final IconData icon;
   final String label;
   final OmniHue hue;
-  final VoidCallback onTap;
+  final VoidCallback? onTap;
+
+  /// Semantics khi [onTap] null (vd "Đã đủ 10 tệp").
+  final String? disabledLabel;
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     // Cặp nền/chữ theo sắc của tính năng, có bản tối.
     final tone = OmniFeatureTones.of(context, hue);
+    final enabled = onTap != null;
     final bg = tone.background;
-    final fg = tone.foreground;
+    final fg = enabled ? tone.foreground : Theme.of(context).disabledColor;
 
+    return Semantics(
+      button: true,
+      enabled: enabled,
+      hint: enabled ? null : disabledLabel,
+      child: _trayInk(context, scheme, bg, fg),
+    );
+  }
+
+  Widget _trayInk(
+    BuildContext context,
+    ColorScheme scheme,
+    Color bg,
+    Color fg,
+  ) {
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(12),
@@ -680,8 +816,8 @@ class _ComposerIcon extends StatelessWidget {
 class _ImageTray extends StatelessWidget {
   const _ImageTray({required this.images, required this.onRemove});
 
-  final List<XFile> images;
-  final ValueChanged<XFile> onRemove;
+  final List<PendingAttachment> images;
+  final ValueChanged<PendingAttachment> onRemove;
 
   @override
   Widget build(BuildContext context) {
@@ -703,6 +839,9 @@ class _ImageTray extends StatelessWidget {
         separatorBuilder: (_, _) => const SizedBox(width: 8),
         itemBuilder: (context, index) {
           final image = images[index];
+          if (!image.isImage) {
+            return _FileTile(file: image, onRemove: () => onRemove(image));
+          }
           return Stack(
             clipBehavior: Clip.none,
             children: [
@@ -752,6 +891,197 @@ class _ImageTray extends StatelessWidget {
       ),
     );
   }
+}
+
+const _fullLabel = 'Đã đủ ${InboxApi.maxAttachmentsPerMessage} tệp';
+
+/// Tệp (không phải ảnh) trong khay chờ: ô 56 có đuôi, tên một dòng, nút ✕ 44.
+class _FileTile extends StatelessWidget {
+  const _FileTile({required this.file, required this.onRemove});
+
+  final PendingAttachment file;
+  final VoidCallback onRemove;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final ext = file.extension.toUpperCase();
+    return Container(
+      width: 208,
+      padding: const EdgeInsets.only(left: 6),
+      decoration: BoxDecoration(
+        color: scheme.surface,
+        borderRadius: OmniRadius.smAll,
+        border: Border.all(color: scheme.outlineVariant),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 56,
+            height: 56,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: scheme.surfaceContainerHighest,
+              borderRadius: OmniRadius.smAll,
+            ),
+            child: ext.isEmpty
+                ? Icon(
+                    Icons.insert_drive_file_outlined,
+                    color: scheme.onSurfaceVariant,
+                  )
+                : Text(
+                    ext,
+                    maxLines: 1,
+                    overflow: TextOverflow.clip,
+                    style: OmniType.micro.copyWith(
+                      fontWeight: FontWeight.w600,
+                      color: scheme.onSurface,
+                    ),
+                  ),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              file.name,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: OmniType.caption.copyWith(color: scheme.onSurface),
+            ),
+          ),
+          IconButton(
+            onPressed: onRemove,
+            tooltip: 'Bỏ tệp',
+            padding: EdgeInsets.zero,
+            style: IconButton.styleFrom(
+              fixedSize: const Size(44, 44),
+              minimumSize: const Size(44, 44),
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            ),
+            icon: Icon(
+              Icons.close_rounded,
+              size: OmniIconSize.md,
+              color: scheme.onSurfaceVariant,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Lỗi gửi của server ngay trên ô nhập (nháp vẫn giữ).
+class _ComposerError extends StatelessWidget {
+  const _ComposerError({required this.text});
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Semantics(
+      liveRegion: true,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(14, 8, 14, 0),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(
+              Icons.error_outline_rounded,
+              size: OmniIconSize.sm,
+              color: scheme.error,
+            ),
+            const SizedBox(width: 6),
+            Expanded(
+              child: Text(
+                text,
+                style: OmniType.caption.copyWith(color: scheme.error),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Cảnh báo trước khi thêm tệp/ảnh mà kênh không gửi thành tệp thật.
+typedef _ChannelWarning = ({
+  String title,
+  String message,
+  List<PendingAttachment> affected,
+});
+
+String _mb(int? bytes) =>
+    bytes == null ? '' : ' dưới ${(bytes / (1024 * 1024)).round()}MB';
+
+String _exts(List<String> exts) => exts.map((e) => e.toUpperCase()).join(', ');
+
+/// Null = không có gì cần hỏi. Ảnh và tệp được chọn ở hai lối riêng nên một
+/// lượt chỉ có một loại.
+_ChannelWarning? _channelWarning(
+  List<PendingAttachment> items,
+  OutboundCapabilities? caps,
+) {
+  if (caps == null || items.isEmpty) return null;
+
+  final images = items.where((a) => a.isImage).toList();
+  final files = items.where((a) => a.kind == PendingKind.file).toList();
+
+  // Ảnh: `image_constraints` (Zalo OA: JPG/PNG ≤ 1MB). Ngoài ràng buộc thì
+  // server gửi thành link (`fallback: link`) hoặc nền tảng từ chối (`failed`).
+  final ic = caps.imageConstraints;
+  if (ic != null) {
+    final off = [
+      for (final a in images)
+        if (!ic.allows(a.name, a.size ?? 0)) a,
+    ];
+    if (off.isNotEmpty) {
+      final rule = '${_exts(ic.nativeExtensions)}${_mb(ic.nativeMaxBytes)}';
+      final these = off.length == 1 ? 'Ảnh này' : '${off.length} ảnh này';
+      return ic.failsOutside
+          ? (
+              title: 'Ảnh có thể không tới khách',
+              message:
+                  'Kênh này không nhận ảnh ngoài $rule — $these có thể bị '
+                  'từ chối và tin báo lỗi.',
+              affected: off,
+            )
+          : (
+              title: 'Gửi thành đường link?',
+              message:
+                  'Kênh này chỉ gửi ảnh $rule thành ảnh — $these sẽ gửi dưới '
+                  'dạng đường link, khách bấm để xem.',
+              affected: off,
+            );
+    }
+  }
+
+  if (files.isEmpty) return null;
+  if (caps.file == OutboundMode.link) {
+    return (
+      title: 'Gửi thành đường link?',
+      message:
+          'Kênh này gửi tệp dưới dạng đường link — khách bấm vào link để tải.',
+      affected: files,
+    );
+  }
+  if (caps.file == OutboundMode.docsOnly) {
+    final off = [
+      for (final a in files)
+        if (!caps.sendsFileNatively(a.name, a.size ?? 0)) a,
+    ];
+    if (off.isEmpty) return null;
+    final fc = caps.fileConstraints ?? FileConstraints.zaloOaFallback;
+    final these = off.length == 1 ? 'tệp này' : '${off.length} tệp này';
+    return (
+      title: 'Gửi thành đường link?',
+      message:
+          'Zalo OA chỉ gửi ${_exts(fc.nativeExtensions)}${_mb(fc.nativeMaxBytes)} '
+          'thành tệp — $these sẽ gửi dưới dạng đường link.',
+      affected: off,
+    );
+  }
+  return null;
 }
 
 class _LikeButton extends StatelessWidget {

@@ -525,7 +525,9 @@ void main() {
       expect(bumps(), 1);
     });
 
-    testWidgets('worker báo failed: tải lại để có lý do lỗi', (tester) async {
+    testWidgets('worker báo failed KÈM lý do: vá tại chỗ, không tải lại', (
+      tester,
+    ) async {
       final (h, bumps) = await opened(tester);
       h.emit(
         channel: 'private-conversation.A',
@@ -534,8 +536,27 @@ void main() {
           'conversation_id': 'A',
           'message_id': 'm1',
           'status': 'failed',
-          'error': 'Zalo từ chối',
+          'error': 'Kênh này chưa hỗ trợ gửi tin đi từ Hộp thư.',
+          'error_code': 'channel_send_unsupported',
         },
+      );
+      await tester.pump(const Duration(milliseconds: 700));
+
+      final m = h.container.read(threadProvider('A')).requireValue.messages;
+      expect(m.single.status, DeliveryStatus.failed);
+      expect(m.single.error, 'Kênh này chưa hỗ trợ gửi tin đi từ Hộp thư.');
+      expect(m.single.isChannelUnsupported, isTrue);
+      expect(bumps(), 0);
+    });
+
+    testWidgets('worker báo failed KHÔNG lý do (API cũ): tải lại', (
+      tester,
+    ) async {
+      final (h, bumps) = await opened(tester);
+      h.emit(
+        channel: 'private-conversation.A',
+        event: 'message.sent',
+        data: {'conversation_id': 'A', 'message_id': 'm1', 'status': 'failed'},
       );
       await tester.pump(const Duration(milliseconds: 700));
 

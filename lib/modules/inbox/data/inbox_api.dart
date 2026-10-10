@@ -285,6 +285,17 @@ class InboxApi {
     return Message.fromJson(response.object);
   }
 
+  /// "Gửi lại" một tin đi ĐÃ có trên server mà `failed`: mở lại chính tin đó,
+  /// server chỉ gửi các phần chưa tới khách (`ResendOutboundMessage`, API
+  /// 0cd1713). 409 `message_not_failed` (tin không còn hỏng) và 422
+  /// `message_too_old_to_resend` (quá hạn — gửi tin mới) đi ra như lỗi API.
+  Future<Message> resend(String id, String messageId) async {
+    final response = await _client.post(
+      '$_base/$id/messages/$messageId/resend',
+    );
+    return Message.fromJson(response.object);
+  }
+
   Future<void> markRead(String id) => _client.post('$_base/$id/read');
 
   // ── Hộp thư mobile (API `feat/hop-thu-mobile`) ─────────────────────────

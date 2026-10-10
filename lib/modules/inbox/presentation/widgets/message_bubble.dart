@@ -827,6 +827,8 @@ class _MetaLine extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final failed = message.status == DeliveryStatus.failed;
+    // Kênh không có đường gửi đi: "Gửi lại" không bao giờ thành công.
+    final onRetry = message.isChannelUnsupported ? null : this.onRetry;
 
     if (failed) {
       return Column(
@@ -843,7 +845,10 @@ class _MetaLine extends StatelessWidget {
               const SizedBox(width: 5),
               Expanded(
                 child: Text(
-                  message.error ?? 'Gửi lỗi',
+                  message.error ??
+                      (message.isChannelUnsupported
+                          ? kChannelUnsupportedText
+                          : 'Gửi lỗi'),
                   style: OmniType.micro.copyWith(color: scheme.error),
                 ),
               ),

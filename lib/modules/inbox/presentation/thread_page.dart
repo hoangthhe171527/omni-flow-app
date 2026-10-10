@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -20,6 +21,8 @@ import '../application/thread_controller.dart';
 import '../data/inbox_api.dart';
 import '../domain/conversation.dart';
 import '../domain/message.dart';
+import '../domain/outbound_capabilities.dart';
+import '../domain/pending_attachment.dart';
 import '../../../security/session/session_controller.dart';
 import '../../opportunities/opportunities.dart';
 import '../../tasks/domain/task_permissions.dart';
@@ -29,6 +32,7 @@ import '../../team/team.dart';
 import '../inbox_routes.dart';
 import 'message_key_registry.dart';
 import 'thread_info_page.dart';
+import 'widgets/attachment_picking.dart';
 import 'widgets/message_bubble.dart';
 import 'widgets/message_composer.dart';
 import 'widgets/message_images.dart';
@@ -75,6 +79,10 @@ class _ThreadPageState extends ConsumerState<ThreadPage>
   bool _syncing = false;
   Timer? _searchDebounce;
   Message? _replyingTo;
+
+  /// Câu 422 của server khi gửi (`channel_send_unsupported`), hiện trong
+  /// composer tới lượt gửi sau.
+  String? _sendError;
   bool _searchMode = false;
   List<Message> _searchResults = const [];
   int _searchIndex = 0;
@@ -280,6 +288,8 @@ class _ThreadPageState extends ConsumerState<ThreadPage>
         session.featureEnabled('opportunities') &&
         policy.can(OpportunityPermissions.create);
     final myUserId = session.user?.id;
+    // Null = API cũ thiếu khoá: giữ chữ + ảnh, ẩn Tệp.
+    final capabilities = conversation.valueOrNull?.outboundCapabilities;
     // Tên người thả cảm xúc: danh bạ đội nếu ĐÃ nạp ở nơi khác (không kéo cả
     // danh bạ chỉ để mở một hội thoại), không thì tên server chụp lúc thả.
     final memberNames = ref.exists(teamDirectoryProvider)
@@ -341,9 +351,7 @@ class _ThreadPageState extends ConsumerState<ThreadPage>
                     // new one, and — because it would carry a new idempotency key —
                     // deliver a second copy whenever the first attempt had in fact
                     // reached the server.
-                    onRetry: (message) => ref
-                        .read(threadProvider(widget.conversationId).notifier)
-                        .retry(message),
+                    onRetry: _retry,
                     onDiscard: (message) => ref
                         .read(threadProvider(widget.conversationId).notifier)
                         .discard(message.id),
@@ -371,12 +379,18 @@ class _ThreadPageState extends ConsumerState<ThreadPage>
                 ),
               ),
             ),
-            if (access.canSend)
+            if (access.canSend && capabilities?.canSendText == false)
+              const _ChannelCannotSendBar()
+            else if (access.canSend)
               MessageComposer(
                 replyTo: _replyingTo,
                 onCancelReply: () => setState(() => _replyingTo = null),
-                onPickImages: _pickImages,
-                onTakePhoto: _takePhoto,
+                capabilities: capabilities,
+                errorText: _sendError,
+                onPickImages: (remaining) =>
+                    _pickImages(remaining, capabilities),
+                onTakePhoto: () => _takePhoto(capabilities),
+                onPickFiles: _pickFiles,
                 onCreateTask: canCreateTask
                     ? () => context.pushNamed(
                         TaskRoutes.create,
@@ -386,16 +400,19 @@ class _ThreadPageState extends ConsumerState<ThreadPage>
                       )
                     : null,
                 loadTemplates: _loadTemplates,
-                onSend: (text, images, replyTo) async {
+                onSend: (text, attachments, replyTo) async {
                   final controller = ref.read(
                     threadProvider(widget.conversationId).notifier,
                   );
+                  if (_sendError != null) setState(() => _sendError = null);
                   try {
+                    // `type` của tệp đính kèm là cái server trả từ upload
+                    // (MIME dò được), không đoán theo đuôi.
                     final upload = Future.wait(
-                      images.map(
-                        (image) => ref
+                      attachments.map(
+                        (a) => ref
                             .read(inboxApiProvider)
-                            .uploadMedia(image.path, filename: image.name),
+                            .uploadMedia(a.path, filename: a.name),
                       ),
                     );
                     await controller.sendAfterUpload(
@@ -404,12 +421,19 @@ class _ThreadPageState extends ConsumerState<ThreadPage>
                       replyTo: replyTo,
                     );
                   } on AppException catch (error) {
-                    _toast(error.message);
+                    if (error is ValidationException &&
+                        error.reason == kChannelSendUnsupported) {
+                      // Server không tạo tin: báo NGAY trong composer, nháp
+                      // giữ nguyên (composer giữ khi onSend ném).
+                      if (mounted) setState(() => _sendError = error.message);
+                    } else {
+                      _toast(error.message);
+                    }
                     rethrow;
                   } on Object {
                     // Lỗi ngoài API (đọc tệp hỏng…): vẫn báo, và ném lại để
                     // composer giữ chữ và khay ảnh (INB-I22).
-                    _toast('Không tải ảnh lên được. Vui lòng thử lại.');
+                    _toast('Không tải tệp lên được. Vui lòng thử lại.');
                     rethrow;
                   }
                   if (mounted) setState(() => _replyingTo = null);
@@ -610,11 +634,92 @@ class _ThreadPageState extends ConsumerState<ThreadPage>
     }
   }
 
-  Future<List<XFile>> _pickImages() =>
-      ImagePicker().pickMultiImage(imageQuality: 85);
+  /// "Gửi lại": tin đã có id server đi qua `/resend` (bộ điều khiển quyết).
+  /// Quá hạn thì chỉ gửi thành tin MỚI khi người dùng đồng ý — khách có thể
+  /// nhận lại phần đã tới.
+  void _retry(Message message) {
+    final controller = ref.read(threadProvider(widget.conversationId).notifier);
+    unawaited(
+      controller.retry(
+        message,
+        confirmNewSend: (serverMessage) async {
+          if (!mounted) return false;
+          return showOmniConfirm(
+            context: context,
+            title: 'Gửi thành tin mới?',
+            message:
+                '$serverMessage Gửi tin mới thì khách có thể nhận lại '
+                'những phần đã tới.',
+            confirmLabel: 'Gửi tin mới',
+          );
+        },
+      ),
+    );
+  }
 
-  Future<XFile?> _takePhoto() =>
-      ImagePicker().pickImage(source: ImageSource.camera, imageQuality: 85);
+  Future<List<PendingAttachment>> _pickImages(
+    int remaining,
+    OutboundCapabilities? capabilities,
+  ) async {
+    final options = inboxImagePickOptions(capabilities);
+    final picked = await ImagePicker().pickMultiImage(
+      imageQuality: options.quality,
+      maxWidth: options.maxDimension,
+      maxHeight: options.maxDimension,
+      // `limit` phải ≥ 2; composer vẫn tự cắt (có trình chọn bỏ qua nó).
+      limit: remaining >= 2 ? remaining : null,
+    );
+    return [for (final x in picked) await _imageFrom(x)];
+  }
+
+  Future<PendingAttachment?> _takePhoto(
+    OutboundCapabilities? capabilities,
+  ) async {
+    final options = inboxImagePickOptions(capabilities);
+    final x = await ImagePicker().pickImage(
+      source: ImageSource.camera,
+      imageQuality: options.quality,
+      maxWidth: options.maxDimension,
+      maxHeight: options.maxDimension,
+    );
+    return x == null ? null : _imageFrom(x);
+  }
+
+  static Future<PendingAttachment> _imageFrom(XFile x) async {
+    int? size;
+    try {
+      size = await x.length();
+    } on Object {
+      size = null; // không đọc được cỡ: để upload báo lỗi nếu có
+    }
+    return PendingAttachment(
+      path: x.path,
+      name: x.name,
+      size: size,
+      kind: PendingKind.image,
+    );
+  }
+
+  /// Tài liệu qua `file_picker` (SAF trên Android, UIDocumentPicker trên iOS —
+  /// không cần quyền bộ nhớ). Tệp không có đường dẫn (nhà cung cấp ảo) bị bỏ.
+  Future<List<PendingAttachment>> _pickFiles(int remaining) async {
+    final result = await FilePicker.pickFiles(
+      allowMultiple: true,
+      type: FileType.custom,
+      allowedExtensions: kInboxFileExtensions,
+    );
+    if (result == null) return const [];
+    return [
+      for (final f in result.files)
+        if (f.path != null)
+          PendingAttachment(
+            path: f.path!,
+            name: f.name,
+            size: f.size,
+            kind: PendingKind.file,
+          ),
+    ];
+  }
 
   Future<void> _openInfo() async {
     final result = await context.pushNamed<ThreadInfoResult>(
@@ -739,7 +844,10 @@ class _MessageList extends StatelessWidget {
                 showSender: isGroup && !message.isOutbound && !grouped,
                 groupedWithPrevious: grouped,
                 isLastInGroup: isLastInGroup,
-                onRetry: message.status == DeliveryStatus.failed
+                // Kênh không có đường gửi đi: gửi lại không bao giờ được.
+                onRetry:
+                    message.status == DeliveryStatus.failed &&
+                        !message.isChannelUnsupported
                     ? () => onRetry(message)
                     : null,
                 onDiscard: message.status == DeliveryStatus.failed
@@ -808,7 +916,34 @@ class _DaySeparator extends StatelessWidget {
   }
 }
 
+/// Kênh của hội thoại không gửi tin đi được (`can_send:false` hoặc `text:
+/// none`, vd TikTok): thay composer, cùng chỗ với [_ReadOnlyBar].
+class _ChannelCannotSendBar extends StatelessWidget {
+  const _ChannelCannotSendBar();
+
+  @override
+  Widget build(BuildContext context) => const _NoComposerBar(
+    icon: Icons.block_rounded,
+    text:
+        'Kênh này chưa gửi tin được từ Hộp thư — hãy trả lời trên ứng dụng '
+        'của kênh.',
+  );
+}
+
 class _ReadOnlyBar extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) => const _NoComposerBar(
+    icon: Icons.lock_outline_rounded,
+    text: 'Bạn chỉ có quyền xem hội thoại này.',
+  );
+}
+
+class _NoComposerBar extends StatelessWidget {
+  const _NoComposerBar({required this.icon, required this.text});
+
+  final IconData icon;
+  final String text;
+
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
@@ -827,15 +962,11 @@ class _ReadOnlyBar extends StatelessWidget {
       ),
       child: Row(
         children: [
-          Icon(
-            Icons.lock_outline_rounded,
-            size: OmniIconSize.sm,
-            color: scheme.onSurfaceVariant,
-          ),
+          Icon(icon, size: OmniIconSize.sm, color: scheme.onSurfaceVariant),
           const SizedBox(width: OmniSpacing.sm),
           Expanded(
             child: Text(
-              'Bạn chỉ có quyền xem hội thoại này.',
+              text,
               style: OmniType.caption.copyWith(color: scheme.onSurfaceVariant),
             ),
           ),

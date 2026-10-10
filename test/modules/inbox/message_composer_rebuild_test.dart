@@ -24,7 +24,7 @@ void main() {
             const Expanded(child: SizedBox.expand()),
             MessageComposer(
               onSend: (text, images, replyTo) async {},
-              onPickImages: () async => const [],
+              onPickImages: (_) async => const [],
             ),
           ],
         ),

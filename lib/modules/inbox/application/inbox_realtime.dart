@@ -397,9 +397,8 @@ class ThreadRealtimeSignal extends AutoDisposeFamilyNotifier<int, String> {
   ///   hồi POST): không có gì mới.
   bool _absorbSent(Map<String, dynamic> data) {
     final status = data['status'];
-    if (status is String) {
-      return status != 'failed' && _patchStatus(data);
-    }
+    if (status == 'failed') return _patchFailure(data);
+    if (status is String) return _patchStatus(data);
     final messageId = data['message_id'];
     if (messageId is! String || !ref.exists(threadProvider(arg))) return false;
     final thread = ref.read(threadProvider(arg)).valueOrNull;
@@ -419,6 +418,25 @@ class ThreadRealtimeSignal extends AutoDisposeFamilyNotifier<int, String> {
     ref
         .read(threadProvider(arg).notifier)
         .applyTeamReactions(messageId, reactions);
+  }
+
+  /// Worker báo `failed`: nay sự kiện mang `error`/`error_code`
+  /// (`DeliverOutboundMessage::broadcastStatus`), vá tại chỗ. Không mang lý do
+  /// (API cũ) thì false — tải lại để lấy lý do như trước.
+  bool _patchFailure(Map<String, dynamic> data) {
+    final messageId = data['message_id'];
+    final error = data['error'];
+    final code = data['error_code'];
+    if (messageId is! String) return false;
+    if (error is! String && code is! String) return false;
+    if (!ref.exists(threadProvider(arg))) return false;
+    return ref
+        .read(threadProvider(arg).notifier)
+        .applyFailure(
+          messageId,
+          error is String ? error : null,
+          code is String ? code : null,
+        );
   }
 
   /// True when the receipt landed on a message already on screen.

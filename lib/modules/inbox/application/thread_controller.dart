@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/error/app_exception.dart';
@@ -294,6 +296,7 @@ class ThreadController
     );
     return _dispatch(
       draft: draft,
+      surfaceUnsupported: true,
       call: () => ref
           .read(inboxApiProvider)
           .send(
@@ -308,12 +311,117 @@ class ThreadController
 
   /// Sends a failed bubble again.
   ///
-  /// The retried bubble replaces the failed one in place rather than being
-  /// appended: two bubbles for one message is exactly the confusion a rep cannot
-  /// afford, and the old one carried a failure reason that no longer applies.
-  /// [Message.requeued] decides whether the original idempotency key is reused —
-  /// see it for why that is not unconditional.
-  Future<void> retry(Message failed) {
+  /// Tin server ĐÃ lưu rồi mới hỏng (id server, nằm trong lịch sử) đi qua
+  /// `POST …/resend`: server mở lại chính tin đó và chỉ gửi phần chưa tới
+  /// khách — gửi một tin mới sẽ gửi lại cả những tệp khách đã nhận. Quá hạn
+  /// (`message_too_old_to_resend`) hay server không còn tin đó thì lùi về
+  /// đường cũ.
+  ///
+  /// Đường cũ (bong bóng chưa từng có id server): the retried bubble replaces
+  /// the failed one in place rather than being appended: two bubbles for one
+  /// message is exactly the confusion a rep cannot afford, and the old one
+  /// carried a failure reason that no longer applies. [Message.requeued]
+  /// decides whether the original idempotency key is reused — see it for why
+  /// that is not unconditional.
+  ///
+  /// [confirmNewSend] chỉ được hỏi khi `/resend` trả 422
+  /// `message_too_old_to_resend`: gửi thành tin MỚI thì khách có thể nhận lại
+  /// những phần đã tới, nên phải có người đồng ý. Null hoặc trả false → tin
+  /// vẫn `failed` với câu của server.
+  Future<void> retry(
+    Message failed, {
+    Future<bool> Function(String serverMessage)? confirmNewSend,
+  }) {
+    final stored =
+        !failed.isPending &&
+        (state.valueOrNull?.messages.any((m) => m.id == failed.id) ?? false);
+    if (stored) return _resend(failed, confirmNewSend);
+    return _sendAgain(failed);
+  }
+
+  Future<void> _resend(
+    Message failed,
+    Future<bool> Function(String serverMessage)? confirmNewSend,
+  ) async {
+    _replaceStored(failed.id, failed.copyWith(status: DeliveryStatus.queued));
+    try {
+      final reopened = await ref.read(inboxApiProvider).resend(arg, failed.id);
+      if (_disposed) return;
+      _replaceStored(failed.id, reopened);
+    } on ValidationException catch (error) {
+      if (_disposed) return;
+      // 422 `channel_send_unsupported` cũng rơi vào đây: tin mang mã đó nên
+      // bong bóng không còn "Gửi lại".
+      _replaceStored(failed.id, _failedAgain(failed, error));
+      if (error.reason != kResendTooOld || confirmNewSend == null) return;
+      final ok = await confirmNewSend(error.message);
+      if (!ok || _disposed) return;
+      // Tin cũ (đã hỏng, quá hạn) rời lịch sử; tin mới thay chỗ nó.
+      return _sendAgain(failed);
+    } on AppException catch (error) {
+      if (_disposed) return;
+      // 409 `message_not_failed`: một lượt khác vừa mở lại (hay đã gửi được)
+      // tin này — trạng thái thật nằm ở server, tải lại. KHÔNG BAO GIỜ gửi tin
+      // mới ở đây: đó là gửi trùng.
+      if (error.code == '409') {
+        try {
+          await refresh();
+        } on Object {
+          // Lượt poll sau sẽ đồng bộ; vẫn không gửi gì thêm.
+        }
+        return;
+      }
+      _replaceStored(failed.id, _failedAgain(failed, error));
+    }
+  }
+
+  static Message _failedAgain(Message failed, AppException error) =>
+      failed.copyWith(
+        status: DeliveryStatus.failed,
+        error: error.message,
+        errorCode: error is ValidationException ? error.reason : null,
+      );
+
+  /// Thay tại chỗ một tin trong lịch sử (không đụng hộp gửi đi).
+  void _replaceStored(String id, Message next) {
+    if (_disposed) return;
+    final current = state.valueOrNull;
+    if (current == null) return;
+    state = AsyncData(
+      current.copyWith(
+        messages: [
+          for (final item in current.messages) item.id == id ? next : item,
+        ],
+      ),
+    );
+  }
+
+  /// Tin [messageId] trên màn thành `failed` với lý do từ realtime
+  /// (`message.sent` của worker mang `error`/`error_code`). False khi tin
+  /// chưa tải — lượt tải sau đã mang lý do.
+  bool applyFailure(String messageId, String? error, String? errorCode) {
+    if (_disposed) return false;
+    final current = state.valueOrNull;
+    if (current == null) return false;
+    if (!current.messages.any((m) => m.id == messageId)) return false;
+    state = AsyncData(
+      current.copyWith(
+        messages: [
+          for (final item in current.messages)
+            item.id == messageId
+                ? item.copyWith(
+                    status: DeliveryStatus.failed,
+                    error: error,
+                    errorCode: errorCode,
+                  )
+                : item,
+        ],
+      ),
+    );
+    return true;
+  }
+
+  Future<void> _sendAgain(Message failed) {
     final draft = failed.requeued();
     return _dispatch(
       draft: draft,
@@ -357,6 +465,7 @@ class ThreadController
     return _dispatch(
       draft: draft.copyWith(attachments: uploaded),
       replacing: draft.id,
+      surfaceUnsupported: true,
       call: () => ref
           .read(inboxApiProvider)
           .send(
@@ -523,15 +632,33 @@ class ThreadController
   ///
   /// [replacing] is the id of an outbox entry this attempt supersedes (a failed
   /// one being retried); leave it null to add a new entry.
+  ///
+  /// [surfaceUnsupported] (tin MỚI): 422 `channel_send_unsupported` nghĩa là
+  /// server không tạo tin — rút bong bóng và ném lại, để composer giữ nháp và
+  /// hiện câu của server. Bong bóng "Gửi lại" không bao giờ thành công thì
+  /// không có ích gì.
   Future<void> _dispatch({
     required Message draft,
     required Future<Message> Function() call,
     String? replacing,
+    bool surfaceUnsupported = false,
   }) async {
     _enqueue(draft, replacing: replacing);
 
     try {
       _settle(draft.id, await call());
+    } on ValidationException catch (error) {
+      if (surfaceUnsupported && error.reason == kChannelSendUnsupported) {
+        discard(draft.id);
+        rethrow;
+      }
+      _fail(
+        draft.id,
+        error.message,
+        errorCode: error.reason == kChannelSendUnsupported
+            ? kChannelSendUnsupported
+            : null,
+      );
     } on AppException catch (error) {
       _fail(draft.id, error.message);
     } on Object catch (error, stackTrace) {
@@ -608,7 +735,7 @@ class ThreadController
   }
 
   /// The send failed: keep the bubble in the outbox, carrying the reason.
-  void _fail(String draftId, String reason) {
+  void _fail(String draftId, String reason, {String? errorCode}) {
     if (_disposed) return;
     final current = state.valueOrNull;
     if (current == null) return;
@@ -618,7 +745,11 @@ class ThreadController
         pending: [
           for (final message in current.pending)
             if (message.id == draftId)
-              message.copyWith(status: DeliveryStatus.failed, error: reason)
+              message.copyWith(
+                status: DeliveryStatus.failed,
+                error: reason,
+                errorCode: errorCode,
+              )
             else
               message,
         ],

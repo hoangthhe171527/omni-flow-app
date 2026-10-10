@@ -59,6 +59,10 @@ dependencies:
   # native plugin to configure per platform, and a client that is unit-testable
   # against a fake socket.
   web_socket_channel: ^3.0.3
+  # Hộp thư: gửi tài liệu (PDF, Office, CSV…). Android dùng Storage Access
+  # Framework (không quyền bộ nhớ); iOS chỉ bật trình chọn tài liệu — xem
+  # ios/Podfile (PICKER_MEDIA/PICKER_AUDIO = false).
+  file_picker: ^11.0.3
 
 dev_dependencies:
   flutter_test:

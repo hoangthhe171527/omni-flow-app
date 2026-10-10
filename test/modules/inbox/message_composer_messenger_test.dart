@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:image_picker/image_picker.dart';
+import 'package:omni_app/modules/inbox/domain/pending_attachment.dart';
 import 'package:omni_app/design/theme/omni_theme.dart';
 import 'package:omni_app/modules/inbox/domain/message.dart';
 import 'package:omni_app/modules/inbox/presentation/widgets/message_composer.dart';
@@ -20,9 +20,13 @@ void main() {
         children: [
           const Expanded(child: SizedBox()),
           MessageComposer(
-            onSend: (String text, List<XFile> images, Message? replyTo) async =>
-                sent.add(text),
-            onPickImages: () async => const [],
+            onSend:
+                (
+                  String text,
+                  List<PendingAttachment> images,
+                  Message? replyTo,
+                ) async => sent.add(text),
+            onPickImages: (_) async => const [],
             onTakePhoto: () async => null,
             onCreateTask: () => tasks++,
             loadTemplates: () async => const ['Dạ còn 15:00 và 16:30 ạ'],
@@ -58,26 +62,27 @@ void main() {
     expect(find.byTooltip('Ảnh').hitTestable(), findsOneWidget);
   });
 
-  testWidgets('+ mở khay Tạo việc · Mẫu trả lời; không Báo giá/Tệp/Ghi âm', (
-    tester,
-  ) async {
-    await tester.pumpWidget(host());
-    await tester.tap(find.byTooltip('Thêm'));
-    await tester.pumpAndSettle();
-    expect(find.text('Tạo việc'), findsOneWidget);
-    expect(find.text('Mẫu trả lời'), findsOneWidget);
-    expect(find.text('Báo giá'), findsNothing);
-    expect(find.text('Tệp'), findsNothing);
-    expect(find.byTooltip('Ghi âm'), findsNothing);
+  testWidgets(
+    '+ mở khay Tạo việc · Mẫu trả lời; API cũ: không Báo giá/Tệp/Ghi âm',
+    (tester) async {
+      await tester.pumpWidget(host());
+      await tester.tap(find.byTooltip('Thêm'));
+      await tester.pumpAndSettle();
+      expect(find.text('Tạo việc'), findsOneWidget);
+      expect(find.text('Mẫu trả lời'), findsOneWidget);
+      expect(find.text('Báo giá'), findsNothing);
+      expect(find.text('Tệp'), findsNothing);
+      expect(find.byTooltip('Ghi âm'), findsNothing);
 
-    await tester.tap(find.text('Mẫu trả lời'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Dạ còn 15:00 và 16:30 ạ'));
-    await tester.pumpAndSettle();
-    final field = tester.widget<TextField>(find.byType(TextField));
-    expect(field.controller!.text, 'Dạ còn 15:00 và 16:30 ạ');
-    expect(sent, isEmpty, reason: 'chèn vào ô, không gửi luôn');
-  });
+      await tester.tap(find.text('Mẫu trả lời'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Dạ còn 15:00 và 16:30 ạ'));
+      await tester.pumpAndSettle();
+      final field = tester.widget<TextField>(find.byType(TextField));
+      expect(field.controller!.text, 'Dạ còn 15:00 và 16:30 ạ');
+      expect(sent, isEmpty, reason: 'chèn vào ô, không gửi luôn');
+    },
+  );
 
   testWidgets('Tạo việc gọi onCreateTask', (tester) async {
     await tester.pumpWidget(host());
@@ -120,7 +125,7 @@ void main() {
               const Expanded(child: SizedBox()),
               MessageComposer(
                 onSend: (text, images, replyTo) async {},
-                onPickImages: () async => const [],
+                onPickImages: (_) async => const [],
                 loadTemplates: () async => const ['x'],
               ),
             ],

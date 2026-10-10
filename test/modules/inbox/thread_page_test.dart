@@ -20,10 +20,12 @@ import 'package:omni_app/modules/inbox/data/inbox_api.dart';
 import 'package:omni_app/modules/inbox/domain/conversation.dart';
 import 'package:omni_app/modules/inbox/domain/inbox_filter.dart';
 import 'package:omni_app/modules/inbox/domain/message.dart';
+import 'package:omni_app/modules/inbox/domain/outbound_capabilities.dart';
 import 'package:omni_app/modules/inbox/inbox_routes.dart';
 import 'package:omni_app/modules/inbox/presentation/thread_page.dart';
 import 'package:omni_app/modules/inbox/presentation/thread_info_page.dart';
 import 'package:omni_app/modules/inbox/presentation/widgets/message_bubble.dart';
+import 'package:omni_app/modules/inbox/presentation/widgets/message_composer.dart';
 import 'package:omni_app/modules/inbox/presentation/widgets/thread_header.dart';
 import 'package:omni_app/modules/settings/application/appearance_providers.dart';
 import 'package:omni_app/security/permissions/access_policy.dart';
@@ -569,6 +571,229 @@ void main() {
       },
     );
   });
+
+  group('Task 5: khả năng gửi của kênh, tin lỗi, gửi lại qua /resend', () {
+    Message failedOnServer(String id, {String? code}) => Message.fromJson({
+      'id': id,
+      'from': 'agent',
+      'direction': 'out',
+      'text': 'Dạ em gửi ạ',
+      'status': 'failed',
+      'error': code == null ? 'Zalo từ chối' : 'Kênh này chưa hỗ trợ gửi.',
+      'error_code': ?code,
+      'sent_at': DateTime.utc(2026, 1, 1, 8, 2).toIso8601String(),
+    });
+
+    testWidgets('can_send:false (TikTok) → không composer, có dòng báo', (
+      tester,
+    ) async {
+      api.capabilities = const {
+        'can_send': false,
+        'text': 'none',
+        'image': 'none',
+        'file': 'none',
+        'audio': 'none',
+        'video': 'none',
+      };
+      await openThread(tester);
+      await tester.pump();
+      expect(find.byType(MessageComposer), findsNothing);
+      expect(
+        find.textContaining('Kênh này chưa gửi tin được từ Hộp thư'),
+        findsOneWidget,
+      );
+      await closeThread(tester);
+    });
+
+    testWidgets('API cũ (thiếu outbound_capabilities) → vẫn có composer', (
+      tester,
+    ) async {
+      await openThread(tester);
+      expect(find.byType(MessageComposer), findsOneWidget);
+      await closeThread(tester);
+    });
+
+    testWidgets('422 channel_send_unsupported khi gửi → câu server trong '
+        'composer, giữ nháp, không bong bóng lỗi', (tester) async {
+      await openThread(tester);
+      api.sendError = const ValidationException(
+        'Kênh này chưa hỗ trợ gửi tin đi từ Hộp thư.',
+        reason: 'channel_send_unsupported',
+      );
+      await typeAndSend(tester, 'Dạ em gửi ạ');
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
+
+      expect(
+        find.descendant(
+          of: find.byType(MessageComposer),
+          matching: find.text('Kênh này chưa hỗ trợ gửi tin đi từ Hộp thư.'),
+        ),
+        findsOneWidget,
+      );
+      expect(
+        tester.widget<TextField>(find.byType(TextField)).controller!.text,
+        'Dạ em gửi ạ',
+      );
+      expect(state(tester).pending, isEmpty);
+      expect(find.text('Gửi lại'), findsNothing);
+      await closeThread(tester);
+    });
+
+    testWidgets('tin server failed + channel_send_unsupported → không "Gửi '
+        'lại"', (tester) async {
+      api.history = [
+        _serverMessage('m1', 'Chào shop'),
+        failedOnServer('m2', code: 'channel_send_unsupported'),
+      ];
+      await openThread(tester);
+      expect(find.text('Kênh này chưa hỗ trợ gửi.'), findsOneWidget);
+      expect(find.text('Gửi lại'), findsNothing);
+      await closeThread(tester);
+    });
+
+    testWidgets('Gửi lại tin ĐÃ có id server → POST …/resend, không gửi tin '
+        'mới', (tester) async {
+      api.history = [_serverMessage('m1', 'Chào shop'), failedOnServer('m2')];
+      await openThread(tester);
+      expect(find.text('Gửi lại'), findsOneWidget);
+
+      await tester.tap(find.text('Gửi lại'));
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
+
+      expect(api.resendCalls, ['m2']);
+      expect(api.sendCalls, isEmpty);
+      expect(find.text('Gửi lại'), findsNothing);
+      final m2 = state(tester).messages.firstWhere((m) => m.id == 'm2');
+      expect(m2.status, DeliveryStatus.queued);
+      expect(state(tester).pending, isEmpty);
+      expect(find.byType(MessageBubble), findsNWidgets(2));
+      await closeThread(tester);
+    });
+
+    const tooOld = ValidationException(
+      'Tin này đã quá lâu để gửi lại — hãy gửi một tin mới.',
+      reason: 'message_too_old_to_resend',
+    );
+
+    testWidgets('/resend 422 quá hạn → HỎI; đồng ý → gửi tin mới', (
+      tester,
+    ) async {
+      api.history = [_serverMessage('m1', 'Chào shop'), failedOnServer('m2')];
+      api.resendError = tooOld;
+      await openThread(tester);
+      await tester.tap(find.text('Gửi lại'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400));
+
+      expect(api.resendCalls, ['m2']);
+      expect(api.sendCalls, isEmpty, reason: 'chưa đồng ý thì chưa gửi');
+      expect(find.byType(AlertDialog), findsOneWidget);
+      expect(
+        find.descendant(
+          of: find.byType(AlertDialog),
+          matching: find.textContaining('quá lâu để gửi lại'),
+        ),
+        findsOneWidget,
+      );
+
+      await tester.tap(find.text('Gửi tin mới'));
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
+      expect(api.sendCalls.single.text, 'Dạ em gửi ạ');
+      expect(find.text('Gửi lại'), findsNothing);
+      expect(find.byType(MessageBubble), findsNWidgets(2), reason: 'thay chỗ');
+      await closeThread(tester);
+    });
+
+    testWidgets('/resend 422 quá hạn → Huỷ: không gửi, vẫn failed', (
+      tester,
+    ) async {
+      api.history = [_serverMessage('m1', 'Chào shop'), failedOnServer('m2')];
+      api.resendError = tooOld;
+      await openThread(tester);
+      await tester.tap(find.text('Gửi lại'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400));
+      await tester.tap(find.text('Huỷ'));
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
+
+      expect(api.sendCalls, isEmpty);
+      final m2 = state(tester).messages.firstWhere((m) => m.id == 'm2');
+      expect(m2.status, DeliveryStatus.failed);
+      expect(
+        find.text('Tin này đã quá lâu để gửi lại — hãy gửi một tin mới.'),
+        findsOneWidget,
+      );
+      await closeThread(tester);
+    });
+
+    testWidgets('/resend 409 message_not_failed → tải lại, KHÔNG gửi tin mới', (
+      tester,
+    ) async {
+      api.history = [_serverMessage('m1', 'Chào shop'), failedOnServer('m2')];
+      api.resendError = const RequestRejectedException(
+        'Tin này không ở trạng thái gửi lỗi nên không gửi lại được.',
+        code: '409',
+      );
+      await openThread(tester);
+      final before = api.messagesCalls;
+      // Server: tin đã đi (một lượt khác gửi lại xong).
+      api.history = [
+        _serverMessage('m1', 'Chào shop'),
+        _serverMessage('m2', 'Dạ em gửi ạ', from: 'agent'),
+      ];
+      await tester.tap(find.text('Gửi lại'));
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
+
+      expect(api.sendCalls, isEmpty);
+      expect(api.messagesCalls, greaterThan(before));
+      final m2 = state(tester).messages.firstWhere((m) => m.id == 'm2');
+      expect(m2.status, DeliveryStatus.sent);
+      expect(find.text('Gửi lại'), findsNothing);
+      await closeThread(tester);
+    });
+
+    testWidgets('/resend 422 channel_send_unsupported → hiện lỗi, hết "Gửi '
+        'lại"', (tester) async {
+      api.history = [_serverMessage('m1', 'Chào shop'), failedOnServer('m2')];
+      api.resendError = const ValidationException(
+        'Kênh này chưa hỗ trợ gửi tin đi từ Hộp thư.',
+        reason: 'channel_send_unsupported',
+      );
+      await openThread(tester);
+      await tester.tap(find.text('Gửi lại'));
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
+
+      expect(api.sendCalls, isEmpty);
+      expect(find.byType(AlertDialog), findsNothing);
+      expect(
+        find.text('Kênh này chưa hỗ trợ gửi tin đi từ Hộp thư.'),
+        findsOneWidget,
+      );
+      expect(find.text('Gửi lại'), findsNothing);
+      await closeThread(tester);
+    });
+
+    testWidgets('/resend lỗi mạng → vẫn failed, còn "Gửi lại"', (tester) async {
+      api.history = [_serverMessage('m1', 'Chào shop'), failedOnServer('m2')];
+      api.resendError = const NetworkException('Không có kết nối mạng.');
+      await openThread(tester);
+      await tester.tap(find.text('Gửi lại'));
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
+
+      expect(api.sendCalls, isEmpty);
+      final m2 = state(tester).messages.firstWhere((m) => m.id == 'm2');
+      expect(m2.status, DeliveryStatus.failed);
+      expect(find.text('Gửi lại'), findsOneWidget);
+      await closeThread(tester);
+    });
+  });
 }
 
 typedef _ReplyTo = ({String id, String text, String author});
@@ -657,6 +882,15 @@ class _FakeInboxApi extends InboxApi {
   Future<List<Message>> searchMessages(String id, String query) async =>
       searchResult;
 
+  /// `outbound_capabilities` của hội thoại; null = API cũ thiếu khoá.
+  Map<String, dynamic>? capabilities;
+
+  /// Lỗi của lượt `send` kế tiếp (vd 422 `channel_send_unsupported`).
+  AppException? sendError;
+
+  final resendCalls = <String>[];
+  AppException? resendError;
+
   @override
   Future<Conversation> get(String id) async => Conversation(
     id: id,
@@ -665,7 +899,26 @@ class _FakeInboxApi extends InboxApi {
     customerName: 'Thuý Phạm',
     lastMessage: 'Còn đàn không',
     unread: 2,
+    outboundCapabilities: OutboundCapabilities.fromJson(capabilities),
   );
+
+  @override
+  Future<Message> resend(String id, String messageId) async {
+    resendCalls.add(messageId);
+    final error = resendError;
+    if (error != null) {
+      resendError = null;
+      throw error;
+    }
+    return Message.fromJson({
+      'id': messageId,
+      'from': 'agent',
+      'direction': 'out',
+      'text': 'Dạ em gửi ạ',
+      'status': 'queued',
+      'sent_at': DateTime.utc(2026, 1, 1, 8, 2).toIso8601String(),
+    });
+  }
 
   @override
   Future<void> markRead(String id) async => markReadCalls.add(id);
@@ -713,6 +966,11 @@ class _FakeInboxApi extends InboxApi {
     if (failNextSend) {
       failNextSend = false;
       throw const NetworkException('Không có kết nối mạng.');
+    }
+    final error = sendError;
+    if (error != null) {
+      sendError = null;
+      throw error;
     }
     return Message.fromJson({
       'id': 'srv-${++_sent}',

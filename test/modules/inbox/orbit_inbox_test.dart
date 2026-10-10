@@ -108,7 +108,7 @@ void main() {
             MessageComposer(
               loadTemplates: () async => const ['Em gửi báo giá ạ'],
               onSend: (text, images, replyTo) async => sent++,
-              onPickImages: () async => const [],
+              onPickImages: (_) async => const [],
             ),
           ],
         ),

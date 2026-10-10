@@ -3,6 +3,19 @@ import '../../../core/utils/formatters.dart';
 import '../../../core/utils/json.dart';
 import '../../../core/utils/media_url.dart';
 
+/// `error_code` (tin `failed`) và `code` (422 khi gửi) của kênh không có
+/// đường gửi đi — gửi lại không bao giờ thành công
+/// (`OutboundCapabilities::ERROR_SEND_UNSUPPORTED`).
+const kChannelSendUnsupported = 'channel_send_unsupported';
+
+/// Câu dự phòng khi tin lỗi `channel_send_unsupported` không mang `error`.
+const kChannelUnsupportedText =
+    'Kênh này chưa hỗ trợ gửi tin đi từ Hộp thư — tin chưa đến khách.';
+
+/// 422 của `POST …/resend` khi tin đã quá hạn chờ gửi
+/// (`ResendOutboundMessage::TOO_OLD`).
+const kResendTooOld = 'message_too_old_to_resend';
+
 enum MessageAuthor { customer, agent, note }
 
 /// Outbound delivery state. Reps chase these — a silently failed send is worse
@@ -138,7 +151,7 @@ class Message {
   final String? errorCode;
 
   /// Tin lỗi vì kênh không có đường gửi đi: gửi lại không bao giờ thành công.
-  bool get isChannelUnsupported => errorCode == 'channel_send_unsupported';
+  bool get isChannelUnsupported => errorCode == kChannelSendUnsupported;
 
   bool get isOutbound => author == MessageAuthor.agent;
   bool get isNote => author == MessageAuthor.note;

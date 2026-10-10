@@ -16,7 +16,7 @@ void main() {
             children: [
               const Expanded(child: SizedBox.expand()),
               MessageComposer(
-                onPickImages: () async => const [],
+                onPickImages: (_) async => const [],
                 onSend: (_, _, _) async {},
                 onCreateTask: () {},
                 loadTemplates: () async => const [],
