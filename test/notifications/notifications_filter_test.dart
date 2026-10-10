@@ -21,6 +21,7 @@ class _Api implements NotificationsApi {
   final calls = <bool>[];
   bool failMark = false;
   int counted = 0;
+  final marked = <String>{};
 
   @override
   Future<Paged<AppNotification>> list({
@@ -30,7 +31,7 @@ class _Api implements NotificationsApi {
   }) async {
     calls.add(unreadOnly);
     return Paged(
-      items: [n('1'), n('2')],
+      items: [n('1'), n('2')].where((e) => !marked.contains(e.id)).toList(),
       pagination: const ApiPagination.empty(),
     );
   }
@@ -41,6 +42,7 @@ class _Api implements NotificationsApi {
   @override
   Future<void> markRead(String id) async {
     if (failMark) throw Exception('x');
+    marked.add(id);
   }
 
   @override

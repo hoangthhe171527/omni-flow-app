@@ -38,7 +38,12 @@ final notificationRealtimeProvider = Provider<void>((ref) {
 
 /// Thanh chọn "Tất cả / Chưa đọc". Lọc ở SERVER (`?unread=1`): lọc trên trang
 /// đầu sẽ bỏ sót dòng chưa đọc nằm ở trang hai.
-final notificationUnreadOnlyProvider = StateProvider<bool>((ref) => false);
+///
+/// autoDispose: [notificationsProvider] theo dõi nó, nên rời màn thì cả hai
+/// cùng huỷ và lần mở sau luôn bắt đầu ở "Tất cả".
+final notificationUnreadOnlyProvider = StateProvider.autoDispose<bool>(
+  (ref) => false,
+);
 
 class NotificationListState {
   const NotificationListState({
@@ -125,6 +130,13 @@ class NotificationsController
       await ref.read(notificationsApiProvider).markRead(id);
       // Chuông đếm ở server; server vừa đổi, nên hỏi lại nó.
       ref.invalidate(unreadNotificationCountProvider);
+      if (unreadOnly) {
+        // Tập chưa đọc ở server vừa co lại: các trang sau dồn lên, nên
+        // `nextPage` cũ sẽ nhảy qua dòng. Nạp lại từ trang một; nạp hỏng thì
+        // giữ danh sách đã bỏ dòng.
+        final fresh = await AsyncValue.guard(build);
+        if (fresh.hasValue) state = fresh;
+      }
     } catch (_) {
       state = AsyncData(current);
     }
@@ -134,11 +146,14 @@ class NotificationsController
     final current = state.valueOrNull;
     if (current == null || current.unreadCount == 0) return;
 
+    // Ở Chưa đọc, "đọc hết" làm tập rỗng: bỏ cả các trang chưa nạp.
     state = AsyncData(
-      NotificationListState(
-        items: [for (final item in current.items) item.markedRead()],
-        pagination: current.pagination,
-      ),
+      ref.read(notificationUnreadOnlyProvider)
+          ? const NotificationListState()
+          : NotificationListState(
+              items: [for (final item in current.items) item.markedRead()],
+              pagination: current.pagination,
+            ),
     );
 
     try {
