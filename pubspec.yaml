@@ -63,6 +63,8 @@ dependencies:
   # Framework (không quyền bộ nhớ); iOS chỉ bật trình chọn tài liệu — xem
   # ios/Podfile (PICKER_MEDIA/PICKER_AUDIO = false).
   file_picker: ^11.0.3
+  record: ^7.1.2
+  path_provider: ^2.1.6
 
 dev_dependencies:
   flutter_test:

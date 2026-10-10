@@ -18,6 +18,7 @@ import '../application/inbox_providers.dart';
 import '../application/inbox_realtime.dart';
 import '../application/media_url_resolver.dart';
 import '../application/thread_controller.dart';
+import '../application/voice_recorder.dart';
 import '../data/inbox_api.dart';
 import '../domain/conversation.dart';
 import '../domain/message.dart';
@@ -33,6 +34,7 @@ import '../inbox_routes.dart';
 import 'message_key_registry.dart';
 import 'thread_info_page.dart';
 import 'widgets/attachment_picking.dart';
+import 'widgets/composer_snack_bar.dart';
 import 'widgets/message_bubble.dart';
 import 'widgets/message_composer.dart';
 import 'widgets/message_images.dart';
@@ -290,6 +292,9 @@ class _ThreadPageState extends ConsumerState<ThreadPage>
     final myUserId = session.user?.id;
     // Null = API cũ thiếu khoá: giữ chữ + ảnh, ẩn Tệp.
     final capabilities = conversation.valueOrNull?.outboundCapabilities;
+    // Ghi âm chỉ khi kênh gửi được audio; API cũ (null) thì ẩn. Máy ghi chỉ
+    // được tạo (và giữ) khi nút mic có mặt.
+    final canVoice = access.canSend && (capabilities?.canSendVoice ?? false);
     // Tên người thả cảm xúc: danh bạ đội nếu ĐÃ nạp ở nơi khác (không kéo cả
     // danh bạ chỉ để mở một hội thoại), không thì tên server chụp lúc thả.
     // Theo dõi cờ "đã nạp": danh bạ nạp SAU khi mở (sheet Gán…) thì tên đổi
@@ -328,133 +333,155 @@ class _ThreadPageState extends ConsumerState<ThreadPage>
         onCloseSearch: _closeSearch,
       ),
       body: SurfaceBackdrop(
-        child: Column(
-          children: [
-            Expanded(
-              // No tint layer over the canvas: it fought the chat background and
-              // washed the bubbles back down into the page.
-              child: OmniAsyncView(
-                value: thread,
-                onRetry: () =>
-                    ref.invalidate(threadProvider(widget.conversationId)),
-                isEmpty: (state) => state.isEmpty,
-                empty: const OmniEmptyState(
-                  icon: Icons.chat_bubble_outline_rounded,
-                  title: 'Chưa có tin nhắn',
-                  message: 'Gửi tin đầu tiên để bắt đầu cuộc trò chuyện.',
-                ),
-                data: (state) => MediaReloadScope(
-                  onLoadError: _onMediaLoadError,
-                  onUserRetry: _onMediaUserRetry,
-                  resolver: _mediaResolver,
-                  child: _MessageList(
-                    state: state,
-                    controller: _scrollController,
-                    conversation: conversation.valueOrNull,
-                    // retry(), not send(): a fresh send would drop the reply the
-                    // rep was answering, leave the failed bubble sitting below the
-                    // new one, and — because it would carry a new idempotency key —
-                    // deliver a second copy whenever the first attempt had in fact
-                    // reached the server.
-                    onRetry: _retry,
-                    onDiscard: (message) => ref
-                        .read(threadProvider(widget.conversationId).notifier)
-                        .discard(message.id),
-                    onReply: (message) => setState(() => _replyingTo = message),
-                    // `/pin` cần `inbox.write`; null thì menu ẩn mục "Ghim".
-                    onPin: access.canSend ? _togglePin : null,
-                    onCreateTask: canCreateTask ? _createTaskFrom : null,
-                    onCreateOpportunity: canCreateOpportunity
-                        ? _createOpportunityFrom
-                        : null,
-                    // `team-reactions` cần `inbox.write`; cần biết tôi là ai
-                    // để đảo đúng mục của mình.
-                    onReact:
-                        access.canReact &&
-                            myUserId != null &&
-                            myUserId.isNotEmpty
-                        ? (message, emoji) => _react(
-                            message,
-                            emoji,
-                            myUserId: myUserId,
-                            myName: session.user?.fullName,
-                          )
-                        : null,
-                    myUserId: myUserId,
-                    myName: session.user?.fullName,
-                    memberNames: memberNames,
-                    keyForMessage: _keyForMessage,
+        child: ComposerSnackBarScope(
+          barKey: _bottomBarKey,
+          child: Column(
+            children: [
+              Expanded(
+                // No tint layer over the canvas: it fought the chat background and
+                // washed the bubbles back down into the page.
+                child: OmniAsyncView(
+                  value: thread,
+                  onRetry: () =>
+                      ref.invalidate(threadProvider(widget.conversationId)),
+                  isEmpty: (state) => state.isEmpty,
+                  empty: const OmniEmptyState(
+                    icon: Icons.chat_bubble_outline_rounded,
+                    title: 'Chưa có tin nhắn',
+                    message: 'Gửi tin đầu tiên để bắt đầu cuộc trò chuyện.',
+                  ),
+                  data: (state) => MediaReloadScope(
+                    onLoadError: _onMediaLoadError,
+                    onUserRetry: _onMediaUserRetry,
+                    resolver: _mediaResolver,
+                    child: _MessageList(
+                      state: state,
+                      controller: _scrollController,
+                      conversation: conversation.valueOrNull,
+                      // retry(), not send(): a fresh send would drop the reply the
+                      // rep was answering, leave the failed bubble sitting below the
+                      // new one, and — because it would carry a new idempotency key —
+                      // deliver a second copy whenever the first attempt had in fact
+                      // reached the server.
+                      onRetry: _retry,
+                      onDiscard: (message) => ref
+                          .read(threadProvider(widget.conversationId).notifier)
+                          .discard(message.id),
+                      onReply: (message) =>
+                          setState(() => _replyingTo = message),
+                      // `/pin` cần `inbox.write`; null thì menu ẩn mục "Ghim".
+                      onPin: access.canSend ? _togglePin : null,
+                      onCreateTask: canCreateTask ? _createTaskFrom : null,
+                      onCreateOpportunity: canCreateOpportunity
+                          ? _createOpportunityFrom
+                          : null,
+                      // `team-reactions` cần `inbox.write`; cần biết tôi là ai
+                      // để đảo đúng mục của mình.
+                      onReact:
+                          access.canReact &&
+                              myUserId != null &&
+                              myUserId.isNotEmpty
+                          ? (message, emoji) => _react(
+                              message,
+                              emoji,
+                              myUserId: myUserId,
+                              myName: session.user?.fullName,
+                            )
+                          : null,
+                      myUserId: myUserId,
+                      myName: session.user?.fullName,
+                      memberNames: memberNames,
+                      keyForMessage: _keyForMessage,
+                    ),
                   ),
                 ),
               ),
-            ),
-            if (access.canSend && capabilities?.canSendText == false)
-              const _ChannelCannotSendBar()
-            else if (access.canSend)
-              MessageComposer(
-                replyTo: _replyingTo,
-                onCancelReply: () => setState(() => _replyingTo = null),
-                capabilities: capabilities,
-                errorText: _sendError,
-                onPickImages: (remaining) =>
-                    _pickImages(remaining, capabilities),
-                onTakePhoto: () => _takePhoto(capabilities),
-                onPickFiles: _pickFiles,
-                onCreateTask: canCreateTask
-                    ? () => context.pushNamed(
-                        TaskRoutes.create,
-                        extra: CreateTaskArgs(
-                          initialTitle: 'Liên hệ ${_customerName()}'.trim(),
-                        ),
+              KeyedSubtree(
+                key: _bottomBarKey,
+                child: access.canSend && capabilities?.canSendText == false
+                    ? const _ChannelCannotSendBar()
+                    : access.canSend
+                    ? MessageComposer(
+                        replyTo: _replyingTo,
+                        onCancelReply: () => setState(() => _replyingTo = null),
+                        capabilities: capabilities,
+                        errorText: _sendError,
+                        onPickImages: (remaining) =>
+                            _pickImages(remaining, capabilities),
+                        onTakePhoto: () => _takePhoto(capabilities),
+                        onPickFiles: _pickFiles,
+                        onCreateTask: canCreateTask
+                            ? () => context.pushNamed(
+                                TaskRoutes.create,
+                                extra: CreateTaskArgs(
+                                  initialTitle: 'Liên hệ ${_customerName()}'
+                                      .trim(),
+                                ),
+                              )
+                            : null,
+                        loadTemplates: _loadTemplates,
+                        onSend: _sendWithAttachments,
+                        voiceRecorder: canVoice
+                            ? ref.watch(voiceRecorderProvider)
+                            : null,
+                        onSendVoice: canVoice
+                            ? (voice) =>
+                                  _sendWithAttachments('', [voice], _replyingTo)
+                            : null,
+                        warnVoiceAsLink:
+                            capabilities?.audio == OutboundMode.link,
                       )
-                    : null,
-                loadTemplates: _loadTemplates,
-                onSend: (text, attachments, replyTo) async {
-                  final controller = ref.read(
-                    threadProvider(widget.conversationId).notifier,
-                  );
-                  if (_sendError != null) setState(() => _sendError = null);
-                  try {
-                    // `type` của tệp đính kèm là cái server trả từ upload
-                    // (MIME dò được), không đoán theo đuôi.
-                    final upload = Future.wait(
-                      attachments.map(
-                        (a) => ref
-                            .read(inboxApiProvider)
-                            .uploadMedia(a.path, filename: a.name),
-                      ),
-                    );
-                    await controller.sendAfterUpload(
-                      text,
-                      attachments: upload,
-                      replyTo: replyTo,
-                    );
-                  } on AppException catch (error) {
-                    if (error is ValidationException &&
-                        error.reason == kChannelSendUnsupported) {
-                      // Server không tạo tin: báo NGAY trong composer, nháp
-                      // giữ nguyên (composer giữ khi onSend ném).
-                      if (mounted) setState(() => _sendError = error.message);
-                    } else {
-                      _toast(error.message);
-                    }
-                    rethrow;
-                  } on Object {
-                    // Lỗi ngoài API (đọc tệp hỏng…): vẫn báo, và ném lại để
-                    // composer giữ chữ và khay ảnh (INB-I22).
-                    _toast('Không tải tệp lên được. Vui lòng thử lại.');
-                    rethrow;
-                  }
-                  if (mounted) setState(() => _replyingTo = null);
-                  _scrollToBottom();
-                },
-              )
-            else
-              _ReadOnlyBar(),
-          ],
+                    : _ReadOnlyBar(),
+              ),
+            ],
+          ),
         ),
       ),
     );
+  }
+
+  /// Thanh dưới đáy (composer / dòng chỉ xem): snackbar nổi phía trên nó.
+  final _bottomBarKey = GlobalKey(debugLabel: 'thread-bottom-bar');
+
+  /// Tải từng tệp lên `POST /inbox/media` rồi gửi tin. Dùng cho cả composer
+  /// (chữ + ảnh + tệp) lẫn ghi âm (một tệp `voice`, không chữ). `type` của
+  /// tệp là cái server trả từ upload (MIME dò được), không đoán theo đuôi —
+  /// bản ghi WAV về thành `audio`.
+  Future<void> _sendWithAttachments(
+    String text,
+    List<PendingAttachment> attachments,
+    Message? replyTo,
+  ) async {
+    final controller = ref.read(threadProvider(widget.conversationId).notifier);
+    final api = ref.read(inboxApiProvider);
+    if (_sendError != null) setState(() => _sendError = null);
+    try {
+      final upload = Future.wait(
+        attachments.map((a) => api.uploadMedia(a.path, filename: a.name)),
+      );
+      await controller.sendAfterUpload(
+        text,
+        attachments: upload,
+        replyTo: replyTo,
+      );
+    } on AppException catch (error) {
+      if (error is ValidationException &&
+          error.reason == kChannelSendUnsupported) {
+        // Server không tạo tin: báo NGAY trong composer, nháp giữ nguyên
+        // (composer giữ khi onSend ném).
+        if (mounted) setState(() => _sendError = error.message);
+      } else {
+        _toast(error.message);
+      }
+      rethrow;
+    } on Object {
+      // Lỗi ngoài API (đọc tệp hỏng…): vẫn báo, và ném lại để composer giữ
+      // chữ và khay ảnh (INB-I22).
+      _toast('Không tải tệp lên được. Vui lòng thử lại.');
+      rethrow;
+    }
+    if (mounted) setState(() => _replyingTo = null);
+    _scrollToBottom();
   }
 
   /// Dọn theo cửa sổ đang hiển thị mỗi khi state đổi (xem [_pruneMessageKeys]);
@@ -590,8 +617,9 @@ class _ThreadPageState extends ConsumerState<ThreadPage>
     } on Object {
       if (!mounted) return;
       messenger?.showSnackBar(
-        const SnackBar(
-          content: Text('Không thả được cảm xúc. Vui lòng thử lại.'),
+        snackAboveBar(
+          const Text('Không thả được cảm xúc. Vui lòng thử lại.'),
+          barKey: _bottomBarKey,
         ),
       );
     }
@@ -742,7 +770,7 @@ class _ThreadPageState extends ConsumerState<ThreadPage>
     if (!mounted) return;
     ScaffoldMessenger.of(
       context,
-    ).showSnackBar(SnackBar(content: Text(message)));
+    ).showSnackBar(snackAboveBar(Text(message), barKey: _bottomBarKey));
   }
 }
 

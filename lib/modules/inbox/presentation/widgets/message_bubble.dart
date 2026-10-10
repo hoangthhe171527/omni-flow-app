@@ -13,6 +13,7 @@ import '../../domain/message.dart';
 import 'message_attachments.dart';
 import 'message_images.dart';
 import 'message_actions_overlay.dart';
+import 'composer_snack_bar.dart';
 import 'heart_burst.dart';
 import 'message_link_preview.dart';
 import 'team_reactions.dart';
@@ -83,7 +84,7 @@ class MessageBubble extends StatelessWidget {
       notice = 'Không sao chép được. Vui lòng thử lại.';
     }
     if (!context.mounted) return;
-    messenger?.showSnackBar(SnackBar(content: Text(notice)));
+    messenger?.showSnackBar(composerSnackBar(context, notice));
   }
 
   @override

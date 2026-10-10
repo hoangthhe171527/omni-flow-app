@@ -4,6 +4,25 @@ import 'package:omni_app/modules/inbox/domain/pending_attachment.dart';
 import 'package:omni_app/design/theme/omni_theme.dart';
 import 'package:omni_app/modules/inbox/domain/message.dart';
 import 'package:omni_app/modules/inbox/presentation/widgets/message_composer.dart';
+import 'package:omni_app/modules/inbox/application/voice_recorder.dart';
+import 'package:omni_app/modules/inbox/domain/outbound_capabilities.dart';
+
+class _NoopRecorder implements VoiceRecorder {
+  @override
+  Future<bool> ensurePermission() async => true;
+  @override
+  Future<String> newRecordingPath() async => '/tmp/a.wav';
+  @override
+  Future<void> start(String path) async {}
+  @override
+  Future<String?> stop() async => '/tmp/a.wav';
+  @override
+  Future<void> cancel() async {}
+  @override
+  Stream<Duration> get elapsed => const Stream.empty();
+  @override
+  Future<void> dispose() async {}
+}
 
 void main() {
   late List<String> sent;
@@ -63,7 +82,8 @@ void main() {
   });
 
   testWidgets(
-    '+ mở khay Tạo việc · Mẫu trả lời; API cũ: không Báo giá/Tệp/Ghi âm',
+    '+ mở khay Tạo việc · Mẫu trả lời; API cũ thiếu khoá: không Báo giá/'
+    'Tệp/Ghi âm',
     (tester) async {
       await tester.pumpWidget(host());
       await tester.tap(find.byTooltip('Thêm'));
@@ -83,6 +103,62 @@ void main() {
       expect(sent, isEmpty, reason: 'chèn vào ô, không gửi luôn');
     },
   );
+
+  group('nút Ghi âm theo khả năng gửi của kênh', () {
+    OutboundCapabilities caps(String audio) => OutboundCapabilities.fromJson({
+      'can_send': true,
+      'text': 'native',
+      'image': 'native',
+      'file': 'native',
+      'audio': audio,
+      'video': 'native',
+    })!;
+
+    Widget voiceHost(OutboundCapabilities? capabilities) => MaterialApp(
+      theme: OmniTheme.light(TargetPlatform.android),
+      home: Scaffold(
+        body: Column(
+          children: [
+            const Expanded(child: SizedBox()),
+            MessageComposer(
+              capabilities: capabilities,
+              onSend: (text, images, replyTo) async {},
+              onPickImages: (_) async => const [],
+              onTakePhoto: () async => null,
+              voiceRecorder: _NoopRecorder(),
+              onSendVoice: (_) async {},
+            ),
+          ],
+        ),
+      ),
+    );
+
+    testWidgets('audio native + onSendVoice → có, sau nút Ảnh', (tester) async {
+      await tester.pumpWidget(voiceHost(caps('native')));
+      expect(find.byTooltip('Ghi âm'), findsOneWidget);
+      expect(
+        tester.getRect(find.byTooltip('Ghi âm')).left,
+        greaterThanOrEqualTo(tester.getRect(find.byTooltip('Ảnh')).right),
+      );
+    });
+
+    testWidgets('audio link (Zalo OA) → vẫn có', (tester) async {
+      await tester.pumpWidget(voiceHost(caps('link')));
+      expect(find.byTooltip('Ghi âm'), findsOneWidget);
+    });
+
+    testWidgets('audio none → không có', (tester) async {
+      await tester.pumpWidget(voiceHost(caps('none')));
+      expect(find.byTooltip('Ghi âm'), findsNothing);
+    });
+
+    testWidgets('API cũ thiếu khoá (capabilities null) → không có', (
+      tester,
+    ) async {
+      await tester.pumpWidget(voiceHost(null));
+      expect(find.byTooltip('Ghi âm'), findsNothing);
+    });
+  });
 
   testWidgets('Tạo việc gọi onCreateTask', (tester) async {
     await tester.pumpWidget(host());

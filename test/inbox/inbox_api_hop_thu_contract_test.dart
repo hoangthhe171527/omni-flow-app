@@ -506,6 +506,30 @@ void main() {
     },
   );
 
+  test('gửi ghi âm: một tệp audio từ upload, không có khoá text', () async {
+    // Bản ghi WAV dò ra `audio/x-wav` → upload trả `type: audio`.
+    final voice = MessageAttachment.fromUpload(const {
+      'url': 'https://x/api/v1/inbox/media/t1/v.wav?signature=s',
+      'type': 'audio',
+      'name': 'ghi-am-20261010-090507.wav',
+    });
+    final (a, h) = api({'id': 'm9', 'direction': 'out', 'status': 'queued'});
+    // ThreadController.sendAfterUpload gửi chữ rỗng cho tin ghi âm.
+    await a.send('c1', text: '', attachments: [voice]);
+    final r = h.requests.single;
+    expect(r.method, 'POST');
+    expect(r.uri.path, '/api/v1/inbox/conversations/c1/messages');
+    final body = r.data as Map;
+    expect(body.containsKey('text'), isFalse);
+    expect(body['attachments'], [
+      {
+        'url': 'https://x/api/v1/inbox/media/t1/v.wav?signature=s',
+        'type': 'audio',
+        'name': 'ghi-am-20261010-090507.wav',
+      },
+    ]);
+  });
+
   group('gửi lại: POST …/messages/{mid}/resend (API 0cd1713)', () {
     test('200 → tin được mở lại, body rỗng', () async {
       final (a, h) = api({
