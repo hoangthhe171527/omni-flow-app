@@ -8,9 +8,9 @@ abstract final class OmniType {
   /// lúc chạy.
   static const String family = 'Be Vietnam Pro';
 
-  /// Be Vietnam Pro chỉ còn cho chữ "Viomni" cạnh logo ở màn mở app — nhận
-  /// diện thương hiệu đã duyệt, không phải chữ để đọc. Dùng bản 800 (ExtraBold) của cùng họ phông giao diện.
-  static const String brandFamily = 'Be Vietnam Pro';
+  /// Phông của chữ "Viomni" cạnh logo ([wordmark]): nay trùng [family], chỉ
+  /// khác chữ thường ở độ đậm 800. Tên riêng để thương hiệu đổi độc lập.
+  static const String brandFamily = family;
 
   /// Counts and money use tabular figures so numbers never jitter as they
   /// update in place (unread badges, pipeline totals, message timestamps).
