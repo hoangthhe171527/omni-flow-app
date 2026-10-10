@@ -224,7 +224,7 @@ class _MessageComposerState extends State<MessageComposer> {
     final toolsWidth = _toolWidth * (widget.onTakePhoto != null ? 3 : 2);
     final fieldFill = OmniColors.byBrightness(
       context,
-      const Color(0xFFEEF1F5),
+      OmniColors.muted,
       scheme.surfaceContainerHighest,
     );
     final tray = _trayOpen && widget.enabled
@@ -430,16 +430,14 @@ class _Tray extends StatelessWidget {
         _TrayItem(
           icon: Icons.task_alt_rounded,
           label: 'Tạo việc',
-          background: const Color(0xFFFFF7E0),
-          foreground: const Color(0xFF8A5A00),
+          hue: OmniHue.orange,
           onTap: onCreateTask!,
         ),
       if (onTemplates != null)
         _TrayItem(
           icon: Icons.bolt_rounded,
           label: 'Mẫu trả lời',
-          background: const Color(0xFFE6F3F2),
-          foreground: const Color(0xFF075E59),
+          hue: OmniHue.teal,
           onTap: onTemplates!,
         ),
     ];
@@ -462,25 +460,22 @@ class _TrayItem extends StatelessWidget {
   const _TrayItem({
     required this.icon,
     required this.label,
-    required this.background,
-    required this.foreground,
+    required this.hue,
     required this.onTap,
   });
 
   final IconData icon;
   final String label;
-  final Color background;
-  final Color foreground;
+  final OmniHue hue;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    // Nền pastel của thiết kế chỉ đúng với giao diện sáng; tối thì dùng nền
-    // thẻ của theme và chữ theo màu chủ đề.
-    final dark = Theme.of(context).brightness == Brightness.dark;
-    final bg = dark ? scheme.surfaceContainerHighest : background;
-    final fg = dark ? scheme.onSurface : foreground;
+    // Cặp nền/chữ theo sắc của tính năng, có bản tối.
+    final tone = OmniFeatureTones.of(context, hue);
+    final bg = tone.background;
+    final fg = tone.foreground;
 
     return InkWell(
       onTap: onTap,

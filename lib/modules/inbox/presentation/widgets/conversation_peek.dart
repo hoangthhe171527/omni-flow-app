@@ -27,21 +27,18 @@ final peekMessagesProvider = FutureProvider.autoDispose
 
 Color _ink(BuildContext context) => OmniColors.byBrightness(
   context,
-  const Color(0xFF0B1A33),
+  OmniColors.ink,
   Theme.of(context).colorScheme.onSurface,
 );
 
 Color _muted(BuildContext context) => OmniColors.byBrightness(
   context,
-  const Color(0xFF56637A),
+  OmniColors.mutedForeground,
   Theme.of(context).colorScheme.onSurfaceVariant,
 );
 
-Color _danger(BuildContext context) => OmniColors.byBrightness(
-  context,
-  const Color(0xFFB42318),
-  OmniColors.dangerTextDark,
-);
+Color _danger(BuildContext context) =>
+    OmniFeatureTones.of(context, OmniHue.red).foreground;
 
 /// Bấm giữ một dòng → khung xem trước tin gần nhất + menu thao tác, theo
 /// `InboxPeek.dc.html`. Bấm khung mở hội thoại ([onOpen]); bấm ra ngoài đóng.
@@ -56,7 +53,7 @@ Future<void> showConversationPeek({
     context: context,
     barrierDismissible: true,
     barrierLabel: 'Đóng xem trước',
-    barrierColor: const Color(0x590B1A33),
+    barrierColor: OmniColors.ink.withValues(alpha: 0.35),
     transitionDuration: motion
         ? const Duration(milliseconds: 420)
         : Duration.zero,
@@ -154,9 +151,9 @@ class _PeekCard extends ConsumerWidget {
     return DecoratedBox(
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(12),
-        boxShadow: const [
+        boxShadow: [
           BoxShadow(
-            color: Color(0x590B1A33),
+            color: OmniColors.ink.withValues(alpha: 0.35),
             offset: Offset(0, 24),
             blurRadius: 60,
           ),
@@ -167,7 +164,7 @@ class _PeekCard extends ConsumerWidget {
         child: Material(
           color: OmniColors.byBrightness(
             context,
-            const Color(0xFFF5F7FA),
+            OmniColors.background,
             Theme.of(context).colorScheme.surface,
           ),
           child: Semantics(
@@ -269,9 +266,26 @@ class _PeekCard extends ConsumerWidget {
                     padding: const EdgeInsets.all(14),
                     child: messages.when(
                       loading: () => const _PeekSkeleton(),
-                      error: (_, _) => Text(
-                        'Không tải được tin.',
-                        style: OmniType.chip.copyWith(color: _muted(context)),
+                      error: (_, _) => Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              'Không tải được tin.',
+                              style: OmniType.chip.copyWith(
+                                color: _muted(context),
+                              ),
+                            ),
+                          ),
+                          TextButton(
+                            onPressed: () => ref.invalidate(
+                              peekMessagesProvider(conversation.id),
+                            ),
+                            style: TextButton.styleFrom(
+                              minimumSize: const Size(44, 44),
+                            ),
+                            child: const Text('Thử lại'),
+                          ),
+                        ],
                       ),
                       data: (list) => list.isEmpty
                           ? Text(
@@ -397,9 +411,9 @@ class _PeekMenu extends StatelessWidget {
     return DecoratedBox(
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(12),
-        boxShadow: const [
+        boxShadow: [
           BoxShadow(
-            color: Color(0x400B1A33),
+            color: OmniColors.ink.withValues(alpha: 0.25),
             offset: Offset(0, 16),
             blurRadius: 40,
           ),

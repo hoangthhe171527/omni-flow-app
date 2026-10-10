@@ -245,6 +245,23 @@ void main() {
     await closePage(tester);
   });
 
+  testWidgets('tải tin lỗi → Thử lại tải lại tin, không mở hội thoại', (
+    tester,
+  ) async {
+    api.conversations = [_conversation('c1', 'Lan Anh')];
+    api.failMessages = true;
+    await open(tester);
+    await holdRow(tester, 'Lan Anh');
+    expect(find.text('Không tải được tin.'), findsOneWidget);
+
+    api.failMessages = false;
+    await tester.tap(find.text('Thử lại'));
+    await tester.pumpAndSettle(const Duration(milliseconds: 50));
+    expect(find.text('Không tải được tin.'), findsNothing);
+    expect(find.text('Dạ em chào chị'), findsOneWidget);
+    await closePage(tester);
+  });
+
   testWidgets('Mở lại trên hội thoại đã đóng → setStatus(open)', (
     tester,
   ) async {
