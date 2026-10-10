@@ -12,6 +12,8 @@ export 'omni_card.dart';
 export 'omni_inputs.dart';
 export 'omni_status_chip.dart';
 export 'omni_pills.dart';
+export 'omni_progress_ring.dart';
+export 'omni_segmented.dart';
 export 'omni_splash.dart';
 export 'omni_states.dart';
 export 'omni_tabs.dart';
