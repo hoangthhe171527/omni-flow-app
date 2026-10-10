@@ -221,4 +221,16 @@ abstract final class OmniChatType {
   /// để đọc, nên nằm ngoài thang trên. Cỡ này vừa một ô của lưới 8 cột trên
   /// màn 360dp mà vẫn chạm được.
   static const TextStyle emoji = TextStyle(fontSize: 26, height: 1.2);
+
+  /// Emoji trên thanh cảm xúc của menu bấm giữ (`Thread.dc.html` `.rx`): một
+  /// glyph trong nút 44×44.
+  static const TextStyle reaction = TextStyle(fontSize: 20, height: 1.2);
+
+  /// Viên cảm xúc nội bộ dưới bong bóng ("❤️ 2"): sàn đọc được 12.
+  static const TextStyle reactionChip = TextStyle(
+    fontFamily: OmniType.family,
+    fontSize: 12,
+    fontWeight: FontWeight.w500,
+    height: 1.4,
+  );
 }

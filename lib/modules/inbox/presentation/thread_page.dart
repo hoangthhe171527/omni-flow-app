@@ -25,6 +25,7 @@ import '../../opportunities/opportunities.dart';
 import '../../tasks/domain/task_permissions.dart';
 import '../../tasks/routes.dart';
 import '../../tasks/tasks.dart';
+import '../../team/team.dart';
 import '../inbox_routes.dart';
 import 'message_key_registry.dart';
 import 'thread_info_page.dart';
@@ -274,9 +275,19 @@ class _ThreadPageState extends ConsumerState<ThreadPage>
     final access = ref.watch(inboxAccessProvider);
     final policy = ref.watch(accessProvider);
     final canCreateTask = policy.can(TaskPermissions.write);
+    final session = ref.watch(sessionProvider);
     final canCreateOpportunity =
-        ref.watch(sessionProvider).featureEnabled('opportunities') &&
+        session.featureEnabled('opportunities') &&
         policy.can(OpportunityPermissions.create);
+    final myUserId = session.user?.id;
+    // Tên người thả cảm xúc: danh bạ đội nếu ĐÃ nạp ở nơi khác (không kéo cả
+    // danh bạ chỉ để mở một hội thoại), không thì tên server chụp lúc thả.
+    final memberNames = ref.exists(teamDirectoryProvider)
+        ? {
+            for (final entry in ref.watch(teamMemberByIdProvider).entries)
+              entry.key: entry.value.name,
+          }
+        : const <String, String>{};
 
     return Scaffold(
       // Bubbles can only read as raised against a tinted canvas. On white the
@@ -343,6 +354,18 @@ class _ThreadPageState extends ConsumerState<ThreadPage>
                     onCreateOpportunity: canCreateOpportunity
                         ? _createOpportunityFrom
                         : null,
+                    // `team-reactions` cần `inbox.write`; cần biết tôi là ai
+                    // để đảo đúng mục của mình.
+                    onReact: access.canReact && myUserId != null
+                        ? (message, emoji) => _react(
+                            message,
+                            emoji,
+                            myUserId: myUserId,
+                            myName: session.user?.fullName,
+                          )
+                        : null,
+                    myUserId: myUserId,
+                    memberNames: memberNames,
                     keyForMessage: _keyForMessage,
                   ),
                 ),
@@ -514,6 +537,33 @@ class _ThreadPageState extends ConsumerState<ThreadPage>
     }
   }
 
+  /// Thả / bỏ cảm xúc nội bộ. Bộ điều khiển cập nhật lạc quan và tự hoàn tác
+  /// khi lỗi; ở đây chỉ báo. Messenger lấy TRƯỚC khi chờ.
+  Future<void> _react(
+    Message message,
+    String emoji, {
+    required String myUserId,
+    String? myName,
+  }) async {
+    final messenger = ScaffoldMessenger.maybeOf(context);
+    final controller = ref.read(threadProvider(widget.conversationId).notifier);
+    try {
+      await controller.toggleTeamReaction(
+        message.id,
+        emoji,
+        myUserId: myUserId,
+        myName: myName,
+      );
+    } on Object {
+      if (!mounted) return;
+      messenger?.showSnackBar(
+        const SnackBar(
+          content: Text('Không thả được cảm xúc. Vui lòng thử lại.'),
+        ),
+      );
+    }
+  }
+
   /// Tiêu đề việc từ một tin: dòng đầu, tối đa 80 ký tự. Tin không có chữ
   /// (chỉ ảnh/tệp) thì để trống cho người dùng tự đặt.
   void _createTaskFrom(Message message) {
@@ -593,6 +643,9 @@ class _MessageList extends StatelessWidget {
     required this.onPin,
     required this.onCreateTask,
     required this.onCreateOpportunity,
+    required this.onReact,
+    required this.myUserId,
+    required this.memberNames,
     required this.keyForMessage,
   });
 
@@ -605,6 +658,9 @@ class _MessageList extends StatelessWidget {
   final void Function(Message message)? onPin;
   final void Function(Message message)? onCreateTask;
   final void Function(Message message)? onCreateOpportunity;
+  final void Function(Message message, String emoji)? onReact;
+  final String? myUserId;
+  final Map<String, String> memberNames;
   final GlobalKey Function(String id) keyForMessage;
 
   @override
@@ -697,6 +753,16 @@ class _MessageList extends StatelessWidget {
                 onCreateOpportunity: onCreateOpportunity == null
                     ? null
                     : () => onCreateOpportunity!(message),
+                // Chỉ tin đã có id server: tin nháp chưa có gì để thả lên.
+                onReact:
+                    onReact == null ||
+                        message.isPending ||
+                        message.isNote ||
+                        message.id.isEmpty
+                    ? null
+                    : (emoji) => onReact!(message, emoji),
+                myUserId: myUserId,
+                memberNames: memberNames,
               ),
             ],
           ),

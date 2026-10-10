@@ -129,6 +129,10 @@ abstract final class OmniColors {
   /// Nguy — đồ hoạ và viền lỗi của ô nhập (5.32:1 trên thẻ).
   static const destructive = Color(0xFFC8322A);
 
+  /// Tim bay lên khi bấm đúp tin (`Thread.dc.html` `burst`). Đồ hoạ thuần,
+  /// không mang chữ; đủ nổi trên cả nền sáng lẫn tối nên không đổi theo chế độ.
+  static const heart = Color(0xFFE5484D);
+
   /// Thông tin — đồ hoạ.
   static const info = Color(0xFF2456D6);
 

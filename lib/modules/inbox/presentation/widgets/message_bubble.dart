@@ -7,12 +7,15 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../../../core/utils/formatters.dart';
 import '../../../../design/components/components.dart';
+import '../../../../design/platform/omni_motion_scope.dart';
 import '../../../../design/tokens/tokens.dart';
 import '../../domain/message.dart';
 import 'message_attachments.dart';
 import 'message_images.dart';
 import 'message_actions_overlay.dart';
+import 'heart_burst.dart';
 import 'message_link_preview.dart';
+import 'team_reactions.dart';
 
 class MessageBubble extends StatelessWidget {
   const MessageBubble({
@@ -27,6 +30,9 @@ class MessageBubble extends StatelessWidget {
     this.onPin,
     this.onCreateTask,
     this.onCreateOpportunity,
+    this.onReact,
+    this.myUserId,
+    this.memberNames = const {},
   });
 
   final Message message;
@@ -51,6 +57,17 @@ class MessageBubble extends StatelessWidget {
   /// Menu bấm giữ: ẩn mục tương ứng khi null (thiếu quyền / tính năng tắt).
   final VoidCallback? onCreateTask;
   final VoidCallback? onCreateOpportunity;
+
+  /// Thả / bỏ cảm xúc NỘI BỘ (`team_reactions`). null = không có thanh cảm xúc
+  /// trong menu và không bắt bấm đúp (thiếu quyền, tin nháp, ghi chú).
+  final ValueChanged<String>? onReact;
+
+  /// Người đang xem — để biết viên nào là của tôi và bấm đúp là thả hay bỏ.
+  final String? myUserId;
+
+  /// Tên theo `user_id` từ danh bạ đội (khi đã nạp), ưu tiên hơn tên server
+  /// chụp lại lúc thả.
+  final Map<String, String> memberNames;
 
   Future<void> _copy(BuildContext context) async {
     // Lấy messenger TRƯỚC khi chờ: sau await, context có thể đã gỡ.
@@ -143,6 +160,8 @@ class MessageBubble extends StatelessWidget {
         message.text.isNotEmpty ||
         files.isNotEmpty ||
         videos.isNotEmpty;
+    final hasCustomerReaction =
+        message.reaction != null && message.reaction!.isNotEmpty;
     final mediaHeroPrefix = message.id.isNotEmpty
         ? message.id
         : 'local-${identityHashCode(message)}';
@@ -279,10 +298,19 @@ class MessageBubble extends StatelessWidget {
                 : const SizedBox(width: 32),
           );
 
+    final myReaction = myUserId == null
+        ? null
+        : message.teamReactions
+              .where((r) => r.userId == myUserId)
+              .firstOrNull
+              ?.emoji;
+
     return _ReplySwipe(
-      enabled: onReply != null,
+      enabled: onReply != null || onReact != null,
       outbound: outbound,
       onReply: onReply,
+      onReact: onReact,
+      myReaction: myReaction,
       onPin: onPin,
       pinned: message.pinned,
       onCopy: message.text.isEmpty || message.recalled
@@ -332,27 +360,41 @@ class MessageBubble extends StatelessWidget {
                     clipBehavior: Clip.none,
                     children: [
                       content,
-                      if (message.reaction != null &&
-                          message.reaction!.isNotEmpty)
+                      // Cảm xúc của KHÁCH: vòng tròn ở góc bong bóng. Cảm xúc
+                      // nội bộ của đội là viên riêng bên dưới — hai thứ không
+                      // bao giờ đè nhau.
+                      if (hasCustomerReaction)
                         Positioned(
                           right: outbound ? null : -6,
                           left: outbound ? -6 : null,
                           bottom: -8,
-                          child: Container(
-                            padding: const EdgeInsets.all(3),
-                            decoration: BoxDecoration(
-                              color: scheme.surface,
-                              shape: BoxShape.circle,
-                              border: Border.all(color: scheme.outline),
-                            ),
-                            child: Text(
-                              message.reaction!,
-                              style: OmniChatType.meta,
+                          child: Semantics(
+                            label: 'Cảm xúc của khách: ${message.reaction}',
+                            excludeSemantics: true,
+                            child: Container(
+                              padding: const EdgeInsets.all(3),
+                              decoration: BoxDecoration(
+                                color: scheme.surface,
+                                shape: BoxShape.circle,
+                                border: Border.all(color: scheme.outline),
+                              ),
+                              child: Text(
+                                message.reaction!,
+                                style: OmniChatType.meta,
+                              ),
                             ),
                           ),
                         ),
                     ],
                   ),
+                  if (message.teamReactions.isNotEmpty)
+                    TeamReactionChips(
+                      reactions: message.teamReactions,
+                      myUserId: myUserId,
+                      memberNames: memberNames,
+                      alignEnd: outbound,
+                      lift: !hasCustomerReaction,
+                    ),
                   _MetaLine(
                     message: message,
                     onRetry: onRetry,
@@ -483,12 +525,18 @@ class _ReplySwipe extends StatefulWidget {
     this.pinned = false,
     this.onCreateTask,
     this.onCreateOpportunity,
+    this.onReact,
+    this.myReaction,
   });
 
   final Widget child;
   final bool outbound;
   final bool enabled;
   final VoidCallback? onReply;
+  final ValueChanged<String>? onReact;
+
+  /// Emoji nội bộ tôi đang thả trên tin này (null = chưa thả).
+  final String? myReaction;
   final VoidCallback? onPin;
   final VoidCallback? onCopy;
   final bool pinned;
@@ -552,12 +600,42 @@ class _ReplySwipeState extends State<_ReplySwipe>
     if (mounted) action?.call();
   };
 
+  /// Tăng mỗi lần thả tim để tim bay mới thay hẳn tim đang bay (key mới).
+  int _burst = 0;
+  bool _bursting = false;
+
+  /// Bấm đúp = thả / bỏ ❤️ của tôi (server tự đảo). Tim chỉ bay khi THẢ, và
+  /// chỉ khi được phép chuyển động.
+  void _onDoubleTap() {
+    final react = widget.onReact;
+    if (react == null) return;
+    final adding = widget.myReaction != _heart;
+    if (adding) {
+      HapticFeedback.lightImpact();
+      if (OmniMotion.enabled(context)) {
+        setState(() {
+          _burst++;
+          _bursting = true;
+        });
+      }
+    }
+    react(_heart);
+  }
+
+  static const _heart = '❤️';
+
   void _showActions() {
     HapticFeedback.selectionClick();
     showMessageActions(
       context: context,
       bubble: widget.child,
       outbound: widget.outbound,
+      myReaction: widget.myReaction,
+      onReact: widget.onReact == null
+          ? null
+          : (emoji) {
+              if (mounted) widget.onReact?.call(emoji);
+            },
       items: [
         if (widget.onReply != null)
           MessageActionItem(
@@ -613,15 +691,24 @@ class _ReplySwipeState extends State<_ReplySwipe>
               ),
               (recognizer) => recognizer.onLongPress = _showActions,
             ),
-        HorizontalDragGestureRecognizer:
-            GestureRecognizerFactoryWithHandlers<
-              HorizontalDragGestureRecognizer
-            >(
-              HorizontalDragGestureRecognizer.new,
-              (recognizer) => recognizer
-                ..onUpdate = _onDragUpdate
-                ..onEnd = _onDragEnd,
-            ),
+        if (widget.onReply != null)
+          HorizontalDragGestureRecognizer:
+              GestureRecognizerFactoryWithHandlers<
+                HorizontalDragGestureRecognizer
+              >(
+                HorizontalDragGestureRecognizer.new,
+                (recognizer) => recognizer
+                  ..onUpdate = _onDragUpdate
+                  ..onEnd = _onDragEnd,
+              ),
+        // Chỉ khi thả được cảm xúc: nhận dạng bấm đúp làm chạm đơn (mở ảnh,
+        // mở link) trễ tới 300ms, nên người chỉ đọc không phải chịu.
+        if (widget.onReact != null)
+          DoubleTapGestureRecognizer:
+              GestureRecognizerFactoryWithHandlers<DoubleTapGestureRecognizer>(
+                DoubleTapGestureRecognizer.new,
+                (recognizer) => recognizer.onDoubleTap = _onDoubleTap,
+              ),
       },
       child: Stack(
         clipBehavior: Clip.none,
@@ -651,6 +738,23 @@ class _ReplySwipeState extends State<_ReplySwipe>
             offset: Offset(direction * _distance, 0),
             child: widget.child,
           ),
+          // Tim bay TRÊN tin, giữa chiều dọc, cách mép trong 24
+          // (`Thread.dc.html`).
+          if (_bursting)
+            Positioned(
+              top: 0,
+              bottom: 0,
+              right: widget.outbound ? 24 : null,
+              left: widget.outbound ? null : 24,
+              child: Center(
+                child: HeartBurst(
+                  key: ValueKey('heart-burst-$_burst'),
+                  onDone: () {
+                    if (mounted) setState(() => _bursting = false);
+                  },
+                ),
+              ),
+            ),
         ],
       ),
     );

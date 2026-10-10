@@ -369,6 +369,97 @@ void main() {
     },
   );
 
+  // Hộp thư Task 4: cảm xúc NỘI BỘ đi sự kiện riêng và được vá tại chỗ —
+  // không tải lại, kể cả khi tin chưa có trên màn.
+  testWidgets('message.team_reaction vá tại chỗ, không tải lại', (
+    tester,
+  ) async {
+    final h = _Harness();
+    h.api.history = [_serverMessage('m1', 'Dạ em gửi ạ')];
+    var bumps = 0;
+    h.container.listen(threadProvider('A'), (_, _) {});
+    h.container.listen(threadSignalProvider('A'), (_, _) => bumps++);
+    await h.container.read(threadProvider('A').future);
+    expect(h.api.messagesCalls, 1);
+
+    await h.handshakeFake(tester);
+    h.emit(
+      channel: 'private-conversation.A',
+      event: 'message.team_reaction',
+      data: {
+        'conversation_id': 'A',
+        'message_id': 'm1',
+        'team_reactions': [
+          {
+            'user_id': 'u9',
+            'user_name': 'Lan',
+            'emoji': '❤️',
+            'at': '2026-10-10T03:00:00.000Z',
+          },
+        ],
+      },
+    );
+    await tester.pump(const Duration(milliseconds: 700));
+
+    final thread = h.container.read(threadProvider('A')).requireValue;
+    final reactions = thread.messages.single.teamReactions;
+    expect(reactions.single.userId, 'u9');
+    expect(reactions.single.emoji, '❤️');
+    expect(h.api.messagesCalls, 1);
+    expect(bumps, 0);
+  });
+
+  testWidgets(
+    'message.team_reaction cho tin chưa tải → không tải lại, không ném',
+    (tester) async {
+      final h = _Harness();
+      h.api.history = [_serverMessage('m1', 'a')];
+      var bumps = 0;
+      h.container.listen(threadProvider('A'), (_, _) {});
+      h.container.listen(threadSignalProvider('A'), (_, _) => bumps++);
+      await h.container.read(threadProvider('A').future);
+
+      await h.handshakeFake(tester);
+      h.emit(
+        channel: 'private-conversation.A',
+        event: 'message.team_reaction',
+        data: {
+          'conversation_id': 'A',
+          'message_id': 'm-la',
+          'team_reactions': [
+            {'user_id': 'u9', 'emoji': '👍'},
+          ],
+        },
+      );
+      await tester.pump(const Duration(milliseconds: 700));
+
+      expect(h.api.messagesCalls, 1);
+      expect(bumps, 0);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets('message.reaction (của khách) vẫn tải lại như cũ', (
+    tester,
+  ) async {
+    final h = _Harness();
+    h.api.history = [_serverMessage('m1', 'a')];
+    var bumps = 0;
+    h.container.listen(threadProvider('A'), (_, _) {});
+    h.container.listen(threadSignalProvider('A'), (_, _) => bumps++);
+    await h.container.read(threadProvider('A').future);
+
+    await h.handshakeFake(tester);
+    h.emit(
+      channel: 'private-conversation.A',
+      event: 'message.reaction',
+      data: {'conversation_id': 'A', 'message_id': 'm1', 'reaction': '😮'},
+    );
+    await tester.pump(const Duration(milliseconds: 700));
+
+    expect(bumps, 1);
+  });
+
   // Fix vòng 1 (M7): một tin gửi phát HAI `message.sent` — A4 lúc API nhận
   // (`{message_id, direction:'out'}`) và worker lúc giao xong (`{message_id,
   // status}`), thường cách nhau quá cửa sổ 400 ms. Mỗi cái từng tải lại cả

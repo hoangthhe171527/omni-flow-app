@@ -393,6 +393,74 @@ class ThreadController
     return pinned;
   }
 
+  /// Thả / bỏ / đổi cảm xúc NỘI BỘ của tôi trên một tin (không gửi cho khách).
+  ///
+  /// Lạc quan: bỏ mục của tôi, rồi thêm [emoji] nếu nó khác emoji cũ của tôi
+  /// (server cũng đảo y như vậy). Server trả lời thì danh sách server THAY
+  /// danh sách lạc quan; lỗi thì trả lại danh sách cũ rồi ném tiếp để màn
+  /// báo. Tin nháp (chưa có id server) hay không có trên màn thì bỏ qua.
+  Future<void> toggleTeamReaction(
+    String messageId,
+    String emoji, {
+    required String myUserId,
+    String? myName,
+  }) async {
+    final current = state.valueOrNull;
+    if (current == null) return;
+    final message = current.messages
+        .where((item) => item.id == messageId)
+        .firstOrNull;
+    if (message == null || message.isPending) return;
+
+    final before = message.teamReactions;
+    final mine = before.where((r) => r.userId == myUserId).firstOrNull;
+    final optimistic = [
+      for (final r in before)
+        if (r.userId != myUserId) r,
+      if (mine?.emoji != emoji)
+        TeamReaction(
+          userId: myUserId,
+          userName: myName,
+          emoji: emoji,
+          at: DateTime.now(),
+        ),
+    ];
+    applyTeamReactions(messageId, optimistic);
+
+    final List<TeamReaction> saved;
+    try {
+      saved = await ref
+          .read(inboxApiProvider)
+          .toggleTeamReaction(arg, messageId, emoji);
+    } on Object {
+      if (!_disposed) applyTeamReactions(messageId, before);
+      rethrow;
+    }
+    if (_disposed) return;
+    applyTeamReactions(messageId, saved);
+  }
+
+  /// Thay cảm xúc nội bộ của một tin đang có trên màn (phản hồi POST hoặc
+  /// realtime `message.team_reaction`). Tin chưa tải thì trả `false`: lượt
+  /// tải lịch sử sau đã mang sẵn danh sách mới.
+  bool applyTeamReactions(String messageId, List<TeamReaction> reactions) {
+    if (_disposed) return false;
+    final current = state.valueOrNull;
+    if (current == null) return false;
+    if (!current.messages.any((item) => item.id == messageId)) return false;
+    state = AsyncData(
+      current.copyWith(
+        messages: [
+          for (final item in current.messages)
+            item.id == messageId
+                ? item.copyWith(teamReactions: reactions)
+                : item,
+        ],
+      ),
+    );
+    return true;
+  }
+
   /// Applies a realtime delivery receipt (`message.status`) in place.
   ///
   /// A receipt changes one field of one message already on screen; refetching

@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/realtime/realtime_client.dart';
 import '../../../security/session/session_controller.dart';
+import '../domain/message.dart';
 import 'thread_controller.dart';
 
 /// Nhịp gốc của lượt poll `/inbox/changes` khi KHÔNG có kênh realtime sống.
@@ -367,6 +368,13 @@ class ThreadRealtimeSignal extends AutoDisposeFamilyNotifier<int, String> {
             if (!_patchStatus(event.data)) coalescer.schedule();
             return;
           }
+          // Cảm xúc NỘI BỘ: vá tại chỗ, không bao giờ tải lại — kể cả khi
+          // tin chưa có trên màn (lượt tải lịch sử sau đã mang sẵn). Tách khỏi
+          // `message.reaction` (cảm xúc của khách), vẫn tải lại như cũ.
+          if (event.event == 'message.team_reaction') {
+            _patchTeamReactions(event.data);
+            return;
+          }
           if (event.event == 'message.sent' && _absorbSent(event.data)) return;
           if (_refetchEvents.contains(event.event)) coalescer.schedule();
         },
@@ -396,6 +404,21 @@ class ThreadRealtimeSignal extends AutoDisposeFamilyNotifier<int, String> {
     if (messageId is! String || !ref.exists(threadProvider(arg))) return false;
     final thread = ref.read(threadProvider(arg)).valueOrNull;
     return thread?.messages.any((m) => m.id == messageId) ?? false;
+  }
+
+  void _patchTeamReactions(Map<String, dynamic> data) {
+    final messageId = data['message_id'];
+    final raw = data['team_reactions'];
+    if (messageId is! String || raw is! List) return;
+    if (!ref.exists(threadProvider(arg))) return;
+    final reactions = [
+      for (final entry in raw)
+        if (entry is Map)
+          TeamReaction.fromJson(Map<String, dynamic>.from(entry)),
+    ];
+    ref
+        .read(threadProvider(arg).notifier)
+        .applyTeamReactions(messageId, reactions);
   }
 
   /// True when the receipt landed on a message already on screen.

@@ -288,6 +288,35 @@ void main() {
       );
       expect(changed.teamReactions.single.userId, 'u2');
     });
+
+    // Biên nhận realtime đổi `failed` → `sent`: mã lỗi cũ không được ở lại,
+    // nếu không bong bóng đã gửi được vẫn bị coi là "kênh không gửi được".
+    test('copyWith: status rời failed → errorCode về null', () {
+      final m = Message.fromJson({
+        'id': 'm4',
+        'direction': 'out',
+        'status': 'failed',
+        'error_code': 'channel_not_configured',
+      });
+      expect(m.copyWith(status: DeliveryStatus.sent).errorCode, isNull);
+      expect(m.copyWith(status: DeliveryStatus.read).errorCode, isNull);
+      // Vẫn failed (hoặc không đổi status) thì giữ mã.
+      expect(
+        m.copyWith(status: DeliveryStatus.failed).errorCode,
+        'channel_not_configured',
+      );
+      expect(m.copyWith(pinned: true).errorCode, 'channel_not_configured');
+      // Truyền rõ mã mới cùng status failed thì lấy mã mới.
+      expect(
+        m
+            .copyWith(
+              status: DeliveryStatus.failed,
+              errorCode: 'channel_send_unsupported',
+            )
+            .errorCode,
+        'channel_send_unsupported',
+      );
+    });
   });
 
   test('POST …/unread → data.unread_count', () async {

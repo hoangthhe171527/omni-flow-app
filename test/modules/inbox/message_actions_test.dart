@@ -19,6 +19,8 @@ import 'package:omni_app/modules/inbox/domain/conversation.dart';
 import 'package:omni_app/modules/inbox/domain/inbox_filter.dart';
 import 'package:omni_app/modules/inbox/domain/message.dart';
 import 'package:omni_app/modules/inbox/presentation/thread_page.dart';
+import 'package:omni_app/modules/inbox/presentation/widgets/heart_burst.dart';
+import 'package:omni_app/modules/inbox/presentation/widgets/message_actions_overlay.dart';
 import 'package:omni_app/modules/inbox/presentation/widgets/message_bubble.dart';
 import 'package:omni_app/modules/opportunities/domain/opportunity_permissions.dart';
 import 'package:omni_app/modules/tasks/domain/task_permissions.dart';
@@ -48,7 +50,13 @@ void main() {
 
   late _FakeInboxApi api;
 
-  setUp(() => api = _FakeInboxApi());
+  /// Bật "giảm chuyển động" của hệ điều hành cho bài đang chạy.
+  var reduceMotion = false;
+
+  setUp(() {
+    api = _FakeInboxApi();
+    reduceMotion = false;
+  });
 
   Widget host({
     Set<String> permissions = _allPermissions,
@@ -77,6 +85,10 @@ void main() {
     ],
     child: MaterialApp(
       theme: OmniTheme.light(TargetPlatform.android),
+      builder: (context, child) => MediaQuery(
+        data: MediaQuery.of(context).copyWith(disableAnimations: reduceMotion),
+        child: child!,
+      ),
       home: const ThreadPage(conversationId: 'c1'),
     ),
   );
@@ -105,6 +117,18 @@ void main() {
     matching: find.text(text),
   );
 
+  Future<void> doubleTap(
+    WidgetTester tester,
+    String text, {
+    bool settle = true,
+  }) async {
+    await tester.tap(inBubble(text));
+    await tester.pump(const Duration(milliseconds: 50));
+    await tester.tap(inBubble(text));
+    await tester.pump();
+    if (settle) await tester.pump(const Duration(milliseconds: 900));
+  }
+
   Future<void> holdBubble(WidgetTester tester, String text) async {
     final g = await tester.startGesture(tester.getCenter(inBubble(text)));
     await tester.pump(const Duration(milliseconds: 430));
@@ -112,7 +136,7 @@ void main() {
     await tester.pumpAndSettle(const Duration(milliseconds: 50));
   }
 
-  testWidgets('giữ tin → menu đủ mục, không có thanh cảm xúc', (tester) async {
+  testWidgets('giữ tin → thanh 6 cảm xúc + menu', (tester) async {
     api.history = [_serverMessage('m1', 'Chào shop')];
     await openThread(tester);
     await holdBubble(tester, 'Chào shop');
@@ -124,7 +148,110 @@ void main() {
     ]) {
       expect(find.text(l), findsOneWidget);
     }
+    expect(kTeamReactionChoices, ['👍', '❤️', '😂', '😮', '🙏', '✅']);
+    for (final e in kTeamReactionChoices) {
+      final button = find.byKey(ValueKey('reaction-choice-$e'));
+      expect(button, findsOneWidget, reason: e);
+      final size = tester.getSize(button);
+      expect(size.width, greaterThanOrEqualTo(44), reason: e);
+      expect(size.height, greaterThanOrEqualTo(44), reason: e);
+    }
+    expect(find.text('❤️'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+    await closeThread(tester);
+  });
+
+  testWidgets('thanh cảm xúc vừa màn 360', (tester) async {
+    tester.view.physicalSize = const Size(360, 640);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    api.history = [_serverMessage('m1', 'Chào shop', from: 'agent')];
+    await openThread(tester);
+    await holdBubble(tester, 'Chào shop');
+    expect(find.byKey(const ValueKey('reaction-choice-👍')), findsOneWidget);
+    expect(tester.takeException(), isNull);
+    await closeThread(tester);
+  });
+
+  testWidgets('{inbox.read} → không thanh cảm xúc, bấm đúp không gửi', (
+    tester,
+  ) async {
+    api.history = [_serverMessage('m1', 'Chào shop')];
+    await openThread(tester, permissions: const {'inbox.read'});
+    await doubleTap(tester, 'Chào shop');
+    expect(api.reactCalls, isEmpty);
+    expect(find.byType(HeartBurst), findsNothing);
+    await holdBubble(tester, 'Chào shop');
+    expect(find.text('Trả lời'), findsOneWidget);
+    expect(find.text('👍'), findsNothing);
     expect(find.text('❤️'), findsNothing);
+    await closeThread(tester);
+  });
+
+  testWidgets('chọn 👍 trên thanh → POST {emoji:👍}, viên 👍 viền màu chính', (
+    tester,
+  ) async {
+    api.history = [_serverMessage('m1', 'Chào shop')];
+    await openThread(tester);
+    await holdBubble(tester, 'Chào shop');
+    await tester.tap(find.byKey(const ValueKey('reaction-choice-👍')));
+    await tester.pumpAndSettle(const Duration(milliseconds: 50));
+    expect(api.reactCalls, [(messageId: 'm1', emoji: '👍')]);
+    expect(find.text('Sao chép'), findsNothing, reason: 'chọn xong thì đóng');
+    final chip = find.byKey(const ValueKey('team-reaction-👍'));
+    expect(chip, findsOneWidget);
+    final border =
+        (tester.widget<Container>(chip).decoration! as BoxDecoration).border!
+            as Border;
+    expect(
+      border.top.color,
+      Theme.of(tester.element(chip)).colorScheme.primary,
+    );
+    await closeThread(tester);
+  });
+
+  testWidgets('API lỗi → viên trở lại như cũ + báo lỗi', (tester) async {
+    api.history = [_serverMessage('m1', 'Chào shop')];
+    api.failReact = true;
+    await openThread(tester);
+    await holdBubble(tester, 'Chào shop');
+    await tester.tap(find.byKey(const ValueKey('reaction-choice-👍')));
+    await tester.pumpAndSettle(const Duration(milliseconds: 50));
+    expect(api.reactCalls, hasLength(1));
+    expect(find.byKey(const ValueKey('team-reaction-👍')), findsNothing);
+    expect(
+      find.text('Không thả được cảm xúc. Vui lòng thử lại.'),
+      findsOneWidget,
+    );
+    await closeThread(tester);
+  });
+
+  testWidgets('giảm chuyển động → bấm đúp không có tim bay', (tester) async {
+    api.history = [_serverMessage('m1', 'Chào shop')];
+    reduceMotion = true;
+    await openThread(tester);
+    await doubleTap(tester, 'Chào shop', settle: false);
+    expect(find.byType(HeartBurst), findsNothing);
+    await tester.pump(const Duration(milliseconds: 50));
+    expect(api.reactCalls, [(messageId: 'm1', emoji: '❤️')]);
+    expect(find.byKey(const ValueKey('team-reaction-❤️')), findsOneWidget);
+    await closeThread(tester);
+  });
+
+  testWidgets('tin nháp (đang gửi) → bấm đúp không gửi', (tester) async {
+    api.history = const [];
+    final gate = Completer<void>();
+    api.holdSend = gate;
+    await openThread(tester);
+    await tester.enterText(find.byType(TextField), 'Đang đi');
+    await tester.pump();
+    await tester.tap(find.byIcon(Icons.send_rounded));
+    await tester.pump();
+    await doubleTap(tester, 'Đang đi');
+    expect(api.reactCalls, isEmpty);
+    expect(find.byType(HeartBurst), findsNothing);
+    gate.complete();
+    await tester.pump();
     await closeThread(tester);
   });
 
@@ -242,6 +369,8 @@ void main() {
     ];
     await openThread(tester);
     await tester.tap(find.byType(CachedNetworkImage));
+    // Trễ do nhận dạng bấm đúp (≤300ms) trước khi chạm đơn được nhận.
+    await tester.pump(const Duration(milliseconds: 350));
     await tester.pump();
     await tester.pump(const Duration(seconds: 1));
     expect(find.byTooltip('Đóng'), findsOneWidget);
@@ -303,15 +432,44 @@ void main() {
     await closeThread(tester);
   });
 
-  testWidgets('bấm đúp tin không làm gì (chưa có API cảm xúc)', (tester) async {
+  testWidgets('bấm đúp → POST ❤️, ❤️ dưới tin, tim bay; lần nữa → bỏ', (
+    tester,
+  ) async {
     api.history = [_serverMessage('m1', 'Chào shop')];
     await openThread(tester);
-    await tester.tap(inBubble('Chào shop'));
-    await tester.pump(const Duration(milliseconds: 50));
-    await tester.tap(inBubble('Chào shop'));
-    await tester.pumpAndSettle(const Duration(milliseconds: 50));
-    expect(find.text('❤️'), findsNothing);
+    await doubleTap(tester, 'Chào shop', settle: false);
+    expect(find.byType(HeartBurst), findsOneWidget);
+    await tester.pump(const Duration(milliseconds: 900));
+    expect(find.byType(HeartBurst), findsNothing, reason: 'bay xong thì gỡ');
+    expect(api.reactCalls, [(messageId: 'm1', emoji: '❤️')]);
+    expect(find.byKey(const ValueKey('team-reaction-❤️')), findsOneWidget);
     expect(find.text('Sao chép'), findsNothing);
+
+    await doubleTap(tester, 'Chào shop', settle: false);
+    expect(find.byType(HeartBurst), findsNothing, reason: 'bỏ thì không bay');
+    await tester.pump(const Duration(milliseconds: 900));
+    expect(api.reactCalls, [
+      (messageId: 'm1', emoji: '❤️'),
+      (messageId: 'm1', emoji: '❤️'),
+    ]);
+    expect(find.byKey(const ValueKey('team-reaction-❤️')), findsNothing);
+    await closeThread(tester);
+  });
+
+  testWidgets('cảm xúc khách 😮 + ❤️ của đội → hiện cả hai', (tester) async {
+    api.history = [
+      _serverMessage(
+        'm1',
+        'Chào shop',
+        reaction: '😮',
+        teamReactions: const [
+          {'user_id': 'u2', 'user_name': 'Lan', 'emoji': '❤️'},
+        ],
+      ),
+    ];
+    await openThread(tester);
+    expect(find.text('😮'), findsOneWidget);
+    expect(find.byKey(const ValueKey('team-reaction-❤️')), findsOneWidget);
     await closeThread(tester);
   });
 
@@ -341,6 +499,8 @@ Message _serverMessage(
   String sig = 'v1',
   bool recalled = false,
   bool pinned = false,
+  String? reaction,
+  List<Map<String, dynamic>> teamReactions = const [],
 }) {
   final minute = int.parse(id.replaceAll(RegExp(r'\D'), ''));
   return Message.fromJson({
@@ -349,6 +509,8 @@ Message _serverMessage(
     'text': text,
     if (recalled) 'recalled': true,
     if (pinned) 'pinned': true,
+    'reaction': ?reaction,
+    'team_reactions': teamReactions,
     'status': from == 'agent' ? 'sent' : null,
     'sent_at': DateTime.utc(2026, 1, 1, 8, minute).toIso8601String(),
     if (images.isNotEmpty)
@@ -397,6 +559,36 @@ class _FakeInboxApi extends InboxApi {
   List<QuickReply>? quickReplyList;
   final sendCalls = <_SendCall>[];
   int _sent = 0;
+
+  /// Lượt POST team-reactions; server giả đảo như thật (cùng emoji = bỏ).
+  final reactCalls = <({String messageId, String emoji})>[];
+  bool failReact = false;
+  final _teamReactions = <String, List<TeamReaction>>{};
+
+  @override
+  Future<List<TeamReaction>> toggleTeamReaction(
+    String conversationId,
+    String messageId,
+    String emoji,
+  ) async {
+    reactCalls.add((messageId: messageId, emoji: emoji));
+    if (failReact) throw const ServerException('Lỗi máy chủ.');
+    final current =
+        _teamReactions[messageId] ??
+        [
+          for (final m in history)
+            if (m.id == messageId) ...m.teamReactions,
+        ];
+    final mine = current.where((r) => r.userId == 'u1').firstOrNull;
+    final next = [
+      for (final r in current)
+        if (r.userId != 'u1') r,
+      if (mine?.emoji != emoji)
+        TeamReaction(userId: 'u1', userName: 'Kiệt', emoji: emoji),
+    ];
+    _teamReactions[messageId] = next;
+    return next;
+  }
 
   @override
   Future<MessagePage> messages(

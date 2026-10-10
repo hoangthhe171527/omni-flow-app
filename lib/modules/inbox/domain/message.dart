@@ -255,7 +255,14 @@ class Message {
       replyToAuthorName: replyToAuthorName ?? this.replyToAuthorName,
       attachments: attachments ?? this.attachments,
       teamReactions: teamReactions ?? this.teamReactions,
-      errorCode: errorCode ?? this.errorCode,
+      // Mã lỗi chỉ có nghĩa với tin `failed`: biên nhận đổi sang trạng thái
+      // khác (gửi lại thành công) thì bỏ mã cũ, không thì tin đã gửi được vẫn
+      // bị coi là "kênh không gửi được".
+      errorCode:
+          errorCode ??
+          (status != null && status != DeliveryStatus.failed
+              ? null
+              : this.errorCode),
     );
   }
 }
