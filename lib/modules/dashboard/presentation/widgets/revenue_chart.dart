@@ -207,7 +207,8 @@ class _RevenueChartState extends State<RevenueChart>
   }
 }
 
-String _slotLabel(RevenueRange r, int i) => switch (r) {
+/// Nhãn một ô của kỳ: T2…CN (tuần), "Ngày n" (tháng), T1…T12 (năm).
+String revenueSlotLabel(RevenueRange r, int i) => switch (r) {
   RevenueRange.week => const ['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'][i % 7],
   RevenueRange.month => 'Ngày ${i + 1}',
   RevenueRange.year => 'T${i + 1}',
@@ -216,7 +217,7 @@ String _slotLabel(RevenueRange r, int i) => switch (r) {
 String _tipLine(RevenueSeries s, int i) {
   final v = s.valueAt(i);
   return '${v == null ? 'Chưa tới' : formatCompactVnd(v)} · '
-      '${_slotLabel(s.range, i)}';
+      '${revenueSlotLabel(s.range, i)}';
 }
 
 class RevenueChartPainter extends CustomPainter {
