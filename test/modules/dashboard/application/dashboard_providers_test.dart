@@ -63,6 +63,7 @@ void main() {
     final adapter = FakeAdapter(
       200,
       envelope({
+        'bucket': 'month',
         'current': [1],
         'previous': <num>[],
         'target': null,

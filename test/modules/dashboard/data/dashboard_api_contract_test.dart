@@ -55,7 +55,12 @@ void main() {
     for (final r in [RevenueRange.week, RevenueRange.year]) {
       final adapter = FakeAdapter(
         200,
-        envelope({'current': <num>[], 'previous': <num>[], 'target': null}),
+        envelope({
+          'bucket': r == RevenueRange.year ? 'month' : 'day',
+          'current': <num>[],
+          'previous': <num>[],
+          'target': null,
+        }),
       );
       await apiWith(adapter).revenueSeries(r, now: now);
       expect(adapter.requests.single.uri.queryParameters['range'], r.name);

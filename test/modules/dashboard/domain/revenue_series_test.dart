@@ -76,7 +76,7 @@ void main() {
     expect(x.target, 150);
     expect(x.slots, 31);
     final y = RevenueSeries.fromJson(
-      {'current': [], 'previous': [], 'target': null},
+      {'bucket': 'day', 'current': [], 'previous': [], 'target': null},
       RevenueRange.week,
       7,
     );
@@ -96,6 +96,38 @@ void main() {
       ),
       throwsFormatException,
     );
+  });
+
+  test('fromJson kiểm bucket: year → month, week/month → day', () {
+    Map<String, dynamic> body(Object? bucket) => {
+      'bucket': ?bucket,
+      'current': <num>[],
+      'previous': <num>[],
+      'target': null,
+    };
+    expect(
+      RevenueSeries.fromJson(body('month'), RevenueRange.year, 12).slots,
+      12,
+    );
+    expect(RevenueSeries.fromJson(body('day'), RevenueRange.week, 7).slots, 7);
+    expect(
+      RevenueSeries.fromJson(body('day'), RevenueRange.month, 31).slots,
+      31,
+    );
+    for (final (bucket, r) in [
+      ('day', RevenueRange.year),
+      ('month', RevenueRange.week),
+      ('month', RevenueRange.month),
+      ('week', RevenueRange.week),
+      (null, RevenueRange.month),
+      (1, RevenueRange.year),
+    ]) {
+      expect(
+        () => RevenueSeries.fromJson(body(bucket), r, 7),
+        throwsFormatException,
+        reason: '$bucket / $r',
+      );
+    }
   });
 
   test('formatCompactVnd', () {

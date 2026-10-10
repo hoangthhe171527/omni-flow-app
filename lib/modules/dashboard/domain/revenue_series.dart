@@ -111,6 +111,13 @@ class RevenueSeries {
       ];
     }
 
+    // Server: year → 'month', week/month → 'day'. Lệch là hiểu sai trục x.
+    final want = r == RevenueRange.year ? 'month' : 'day';
+    if (j['bucket'] != want) {
+      throw FormatException(
+        'revenue-series: "bucket" phải là "$want" cho ${r.name}',
+      );
+    }
     final t = j['target'];
     if (t != null && t is! num) {
       throw const FormatException('revenue-series: "target" không phải số');

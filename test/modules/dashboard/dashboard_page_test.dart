@@ -223,6 +223,15 @@ void main() {
     });
   });
 
+  testWidgets('chỉ quyền doanh thu, server từ chối (null) → trạng thái trống', (
+    t,
+  ) async {
+    final c = await pumpPage(t, {'crm.sales_overview.read'});
+    expect(c.api.calls, 1);
+    expect(find.text(DashboardPage.emptyMessage), findsOneWidget);
+    expect([c.tasks, c.awaiting], [0, 0]);
+  });
+
   testWidgets('kéo xuống tải lại cả ba nguồn', (t) async {
     final c = await pumpPage(t, {
       'crm.sales_overview.read',

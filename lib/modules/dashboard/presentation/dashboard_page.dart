@@ -35,8 +35,16 @@ class DashboardPage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final scheme = Theme.of(context).colorScheme;
-    // Mọi thẻ đều ẩn (thiếu quyền / cờ tắt) → báo trống thay cho trang trắng.
-    final none = ref.watch(dashboardCardsProvider).none;
+    // Mọi thẻ đều ẩn (thiếu quyền / cờ tắt, hoặc server từ chối doanh thu →
+    // provider trả null) → báo trống thay cho trang trắng. Chỉ watch doanh
+    // thu khi thẻ được phép, để không gọi mạng thay người không có quyền.
+    final cards = ref.watch(dashboardCardsProvider);
+    var revenueVisible = cards.revenue;
+    if (revenueVisible) {
+      final rev = ref.watch(revenueSeriesProvider);
+      revenueVisible = !(rev.hasValue && rev.value == null && !rev.isLoading);
+    }
+    final none = !revenueVisible && !cards.tasks && !cards.inbox;
     return Scaffold(
       backgroundColor: scheme.surfaceContainerLowest,
       appBar: const OmniTopBar(semanticsTitle: 'Tổng quan'),
