@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../../core/error/app_exception.dart';
 import '../../../../core/utils/formatters.dart';
 import '../../../../design/components/components.dart';
 import '../../../../design/tokens/tokens.dart';
@@ -13,8 +12,8 @@ import '../../../tasks/domain/task_permissions.dart';
 import '../../../tasks/routes.dart';
 import '../../../tasks/tasks.dart';
 import '../../application/inbox_providers.dart';
-import '../../data/inbox_api.dart';
 import '../../domain/conversation.dart';
+import 'conversation_actions.dart';
 
 /// Khối giới thiệu khách ở đầu hội thoại 1-1 (`Thread.dc.html`): avatar, tên,
 /// nguồn, "Khách từ…", và ba lối tắt tròn Hồ sơ / Cơ hội / Việc.
@@ -115,7 +114,8 @@ class ThreadIntro extends ConsumerWidget {
                 _IntroAction(
                   icon: Icons.person_add_alt_rounded,
                   label: 'Chuyển KH',
-                  onTap: () => _convert(context),
+                  onTap: () =>
+                      convertConversation(context, ref, conversation.id),
                 ),
               if (opportunitiesOn && canCreateOpportunity)
                 _IntroAction(
@@ -144,30 +144,6 @@ class ThreadIntro extends ConsumerWidget {
         ],
       ),
     );
-  }
-
-  /// Chuyển thành khách hàng. Mọi thứ cần sau `await` được lấy TRƯỚC nó:
-  /// khối này có thể đã bị gỡ khi lượt gọi về (người dùng rời hội thoại).
-  Future<void> _convert(BuildContext context) async {
-    final container = ProviderScope.containerOf(context);
-    final messenger = ScaffoldMessenger.of(context);
-    try {
-      final result = await container
-          .read(inboxApiProvider)
-          .convert(conversation.id);
-      container.invalidate(conversationProvider(conversation.id));
-      messenger.showSnackBar(
-        SnackBar(
-          content: Text(
-            result.linkedExisting
-                ? 'Đã liên kết với khách hàng có sẵn.'
-                : 'Đã tạo khách hàng mới.',
-          ),
-        ),
-      );
-    } on AppException catch (error) {
-      messenger.showSnackBar(SnackBar(content: Text(error.message)));
-    }
   }
 }
 

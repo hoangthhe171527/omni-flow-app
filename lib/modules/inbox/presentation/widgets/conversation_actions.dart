@@ -188,3 +188,36 @@ List<PeekMenuItem> peekMenuFor(Conversation c, InboxAccess access) {
       ),
   ];
 }
+
+/// Chuyển hội thoại thành khách hàng (hoặc liên kết với khách có sẵn). Dùng ở
+/// khối giới thiệu đầu hội thoại và trang Thông tin. Mọi thứ cần SAU `await`
+/// được lấy trước nó: màn gọi có thể đã bị gỡ khi lượt gọi về.
+Future<void> convertConversation(
+  BuildContext context,
+  WidgetRef ref,
+  String conversationId,
+) async {
+  final container = ProviderScope.containerOf(context, listen: false);
+  final messenger = ScaffoldMessenger.of(context);
+  try {
+    final result = await container
+        .read(inboxApiProvider)
+        .convert(conversationId);
+    try {
+      container.invalidate(conversationProvider(conversationId));
+    } catch (_) {}
+    if (!messenger.mounted) return;
+    messenger.showSnackBar(
+      SnackBar(
+        content: Text(
+          result.linkedExisting
+              ? 'Đã liên kết với khách hàng có sẵn.'
+              : 'Đã tạo khách hàng mới.',
+        ),
+      ),
+    );
+  } on AppException catch (error) {
+    if (!messenger.mounted) return;
+    messenger.showSnackBar(SnackBar(content: Text(error.message)));
+  }
+}

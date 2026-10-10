@@ -67,7 +67,8 @@ class MessageBubble extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (message.isNote) return _NoteBubble(message: message);
+    // Ghi chú nội bộ không hiện trong hội thoại (danh sách đã lọc).
+    if (message.isNote) return const SizedBox.shrink();
 
     final scheme = Theme.of(context).colorScheme;
     final outbound = message.isOutbound;
@@ -851,71 +852,6 @@ class _DeliveryReceipt extends StatelessWidget {
               ),
             ],
           ],
-        ),
-      ),
-    );
-  }
-}
-
-/// Internal note. Deliberately unlike a message bubble — full width, amber,
-/// labelled — so it can never be mistaken for something the customer saw.
-class _NoteBubble extends StatelessWidget {
-  const _NoteBubble({required this.message});
-
-  final Message message;
-
-  @override
-  Widget build(BuildContext context) {
-    final dark = Theme.of(context).brightness == Brightness.dark;
-    final amber = OmniColors.warningTextOf(context);
-
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: OmniSpacing.sm),
-      child: FractionallySizedBox(
-        widthFactor: 0.88,
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-          decoration: BoxDecoration(
-            color: dark ? OmniColors.darkWarningSoft : OmniColors.noteSurface,
-            borderRadius: OmniRadius.lgAll,
-            border: Border.all(
-              color: dark
-                  ? OmniColors.warningTextDark.withValues(alpha: 0.4)
-                  : OmniColors.noteBorder,
-            ),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Icon(
-                    Icons.sticky_note_2_outlined,
-                    size: OmniIconSize.xs,
-                    color: amber,
-                  ),
-                  const SizedBox(width: 5),
-                  Text(
-                    'GHI CHÚ NỘI BỘ',
-                    style: OmniChatType.meta.copyWith(
-                      color: amber,
-                      // The one place bold is right: this label is the guard
-                      // against a note being mistaken for a customer message.
-                      fontWeight: FontWeight.w600,
-                      letterSpacing: 0.6,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: OmniSpacing.sm),
-              Text(message.text, style: OmniChatType.message),
-              const SizedBox(height: OmniSpacing.sm),
-              Text(
-                'Bởi ${message.agentName ?? "bạn"} · ${Formatters.time(message.sentAt)}',
-                style: OmniChatType.meta.copyWith(color: amber),
-              ),
-            ],
-          ),
         ),
       ),
     );

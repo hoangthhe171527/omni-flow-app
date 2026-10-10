@@ -28,7 +28,6 @@ import '../../tasks/tasks.dart';
 import '../inbox_module.dart';
 import 'message_key_registry.dart';
 import 'thread_info_page.dart';
-import 'widgets/assign_sheet.dart';
 import 'widgets/message_bubble.dart';
 import 'widgets/message_composer.dart';
 import 'widgets/message_images.dart';
@@ -447,9 +446,11 @@ class _ThreadPageState extends ConsumerState<ThreadPage>
     }
     _searchDebounce = Timer(const Duration(milliseconds: 280), () async {
       try {
-        final found = await ref
+        final all = await ref
             .read(inboxApiProvider)
             .searchMessages(widget.conversationId, query);
+        // Ghi chú nội bộ ẩn khỏi danh sách tin nên không có đích để cuộn tới.
+        final found = all.where((m) => !m.isNote).toList();
         if (!mounted || _searchController.text.trim() != query) return;
         ref
             .read(threadProvider(widget.conversationId).notifier)
@@ -564,32 +565,6 @@ class _ThreadPageState extends ConsumerState<ThreadPage>
 
   Future<XFile?> _takePhoto() =>
       ImagePicker().pickImage(source: ImageSource.camera, imageQuality: 85);
-
-  // Giữ cho tới Task 9 (chuyển sang ConversationActions.assign ở trang Thông
-  // tin); header không còn nút Gán.
-  // ignore: unused_element
-  Future<void> _assign() async {
-    final conversation = ref
-        .read(conversationProvider(widget.conversationId))
-        .valueOrNull;
-    final result = await showOmniSheet<AssignResult>(
-      context: context,
-      expand: true,
-      builder: (_) => AssignSheet(currentAssigneeId: conversation?.assigneeId),
-    );
-    if (result == null) return;
-
-    try {
-      final updated = await ref
-          .read(inboxApiProvider)
-          .assign(widget.conversationId, result.assigneeId, note: result.note);
-      ref.read(inboxListProvider.notifier).patch(updated);
-      ref.invalidate(conversationProvider(widget.conversationId));
-      _toast(result.assigneeId == null ? 'Đã bỏ gán.' : 'Đã gán hội thoại.');
-    } on AppException catch (error) {
-      _toast(error.message);
-    }
-  }
 
   Future<void> _openInfo() async {
     final result = await context.pushNamed<ThreadInfoResult>(
