@@ -22,11 +22,9 @@ import 'widgets/task_detail/coordination_card.dart';
 import 'widgets/task_detail/option_sheet.dart';
 import 'widgets/task_detail/section_title.dart';
 import 'widgets/task_detail/task_action_bar.dart';
-import 'widgets/task_detail/task_attachments.dart';
 import 'widgets/task_detail/task_description.dart';
 import 'widgets/task_detail/subtask_card.dart';
 import 'widgets/task_detail/task_title_block.dart';
-import 'widgets/task_detail/task_viewers.dart';
 
 /// One task, and the two things a worker does with it: tick stages, and say it
 /// is finished.
@@ -406,33 +404,32 @@ class _Loaded extends ConsumerWidget {
                       ),
                     ),
                   ),
-                // Ảnh đính kèm đứng NGAY TRƯỚC điểm chấm: người kiểm nhìn ảnh
-                // rồi mới chấm, còn người bị trả việc về xem lại chính tấm
-                // mình đã gửi.
+                // Điểm kiểm tra (trái) và tệp đính kèm (phải) chung một lưới:
+                // người kiểm nhìn ảnh rồi mới chấm, còn người bị trả việc về
+                // xem lại chính tấm mình đã gửi.
                 SliverToBoxAdapter(
-                  child: TaskAttachments(attachments: task.attachments),
-                ),
-                // Điểm kiểm đứng ngay sau công việc và TRƯỚC trao đổi: nó là
-                // kết luận, còn trao đổi là lý do phía sau kết luận đó.
-                SliverToBoxAdapter(
-                  child: RatingRow(
-                    task: task,
-                    taskId: taskId,
-                    canRate: isAssigner,
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 14, 16, 0),
+                    child: ScoreAndFilesRow(
+                      task: task,
+                      taskId: taskId,
+                      canRate: isAssigner,
+                    ),
                   ),
                 ),
-                // Trao đổi đứng TRÊN "đã xem": lý do một cây bị trả về là
-                // thứ người thợ cần đọc, còn ai đã mở việc là câu hỏi của
-                // quản đốc.
+                // Trao đổi đứng sau điểm: nó là lý do phía sau kết luận. Dải
+                // "Đã xem" nằm ngay tiêu đề của nó — ai đã mở việc là câu hỏi
+                // của quản đốc, không chen giữa người thợ và công đoạn.
                 SliverToBoxAdapter(
-                  child: CommentSection(
-                    task: task,
-                    taskId: taskId,
-                    canWrite: canComplete,
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 14, 16, 0),
+                    child: CommentSection(
+                      task: task,
+                      taskId: taskId,
+                      canWrite: canComplete,
+                    ),
                   ),
                 ),
-                if (task.viewers.isNotEmpty)
-                  SliverToBoxAdapter(child: TaskViewers(viewers: task.viewers)),
                 // Cuối cùng, và GẤP lại: nhật ký là thứ người ta tra khi có
                 // nghi vấn, không phải thứ đọc mỗi lần mở việc.
                 SliverToBoxAdapter(child: ActivityLog(task: task)),

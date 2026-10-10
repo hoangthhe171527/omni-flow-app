@@ -554,7 +554,7 @@ void main() {
         ],
       ),
       '03b-chi-tiet-viec-trao-doi',
-      scrollTo: find.text('Trao đổi'),
+      scrollTo: find.text('TRAO ĐỔI'),
     ),
   );
   testWidgets(

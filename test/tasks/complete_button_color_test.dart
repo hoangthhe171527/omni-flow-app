@@ -48,13 +48,17 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    final finder = find.widgetWithText(FilledButton, 'Hoàn thành công việc');
-    expect(finder, findsOneWidget);
+    final label = find.text('Hoàn thành công việc');
+    expect(label, findsOneWidget);
 
-    final button = tester.widget<FilledButton>(finder);
-    final scheme = Theme.of(tester.element(finder)).colorScheme;
-    final bg = button.style?.backgroundColor?.resolve({});
-    final fg = button.style?.foregroundColor?.resolve({});
+    // Nút là AnimatedContainer 46 (không còn FilledButton): nền ở decoration,
+    // chữ mang màu trong style của chính nó.
+    final surface = tester.widget<AnimatedContainer>(
+      find.ancestor(of: label, matching: find.byType(AnimatedContainer)).first,
+    );
+    final scheme = Theme.of(tester.element(label)).colorScheme;
+    final bg = (surface.decoration! as BoxDecoration).color;
+    final fg = tester.widget<Text>(label).style?.color;
 
     expect(
       bg,

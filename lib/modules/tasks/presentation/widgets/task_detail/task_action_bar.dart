@@ -1,20 +1,26 @@
+import 'dart:async';
+import 'dart:math' as math;
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../../../../../core/error/app_exception.dart';
+import '../../../../../design/platform/omni_motion_scope.dart';
 import '../../../../../design/tokens/tokens.dart';
 import '../../../application/task_controller.dart';
 import '../../../application/tasks_providers.dart';
 import '../../../data/tasks_api.dart';
 import '../../../domain/task.dart';
 
-/// The bar that stays put while the stages scroll.
+/// Thanh đáy kính mờ (`TaskDetail.dc.html`) đứng yên trong khi các khối cuộn.
 ///
-/// It sits above the home indicator rather than under it, and its buttons are
-/// 52dp tall — this is the last thing a worker taps with a dirty thumb before
-/// putting the phone down.
+/// Nó nằm TRÊN thanh home chứ không dưới, và nút cao 46 — đây là thứ cuối cùng
+/// người thợ chạm bằng ngón tay bẩn trước khi đặt máy xuống. Nút máy ảnh vuông
+/// 46 bên trái, nút chính chiếm phần còn lại: "Hoàn thành công việc" khi chưa
+/// xong, "Mở lại công việc" khi đã xong (đổi màu 350ms).
 class TaskActionBar extends ConsumerStatefulWidget {
   const TaskActionBar({
     super.key,
@@ -44,61 +50,38 @@ class _TaskActionBarState extends ConsumerState<TaskActionBar> {
     }
 
     final done = widget.task.isDone;
+    final glass = OmniColors.byBrightness(
+      context,
+      OmniColors.background.withValues(alpha: 0.82),
+      OmniColors.darkBackground.withValues(alpha: 0.82),
+    );
+    final bottom = math.max(8.0, MediaQuery.viewPaddingOf(context).bottom);
 
-    return Container(
-      decoration: BoxDecoration(
-        color: scheme.surface,
-        border: Border(top: BorderSide(color: scheme.outlineVariant)),
-      ),
-      child: SafeArea(
-        top: false,
-        child: Padding(
-          padding: const EdgeInsets.all(OmniSpacing.lg),
-          child: Row(
-            children: [
-              if (widget.canAttach) ...[
-                _SquareButton(
-                  icon: Icons.photo_camera_outlined,
-                  tooltip: 'Chụp ảnh đính kèm',
-                  onPressed: _busy ? null : _attachPhoto,
-                ),
-                const SizedBox(width: OmniSpacing.md),
-              ],
-              if (widget.canComplete)
-                Expanded(
-                  child: SizedBox(
-                    height: 52,
-                    child: FilledButton.icon(
-                      onPressed: _busy ? null : () => _setStatus(!done),
-                      // Màu THƯƠNG HIỆU, không phải màu "thành công".
-                      //
-                      // Chữ trắng trên xanh lá #10B981 chỉ đạt 2,5:1 — trượt
-                      // chuẩn 4,5:1 trên đúng cái nút được bấm nhiều nhất trong
-                      // ngày, ngoài xưởng ánh sáng xấu. Và đó là màu xanh THỨ
-                      // HAI đứng cạnh mòng két thương hiệu: hai xanh cạnh tranh
-                      // nhau, không cái nào thắng. Trắng trên primary ≈ 7:1.
-                      // `test/design/contrast_test.dart` giữ cặp này.
-                      style: FilledButton.styleFrom(
-                        backgroundColor: done
-                            ? scheme.surfaceContainerHighest
-                            : scheme.primary,
-                        foregroundColor: done
-                            ? scheme.onSurface
-                            : scheme.onPrimary,
-                      ),
-                      icon: Icon(
-                        done
-                            ? Icons.undo_rounded
-                            : Icons.check_circle_outline_rounded,
-                      ),
-                      label: Text(
-                        done ? 'Mở lại công việc' : 'Hoàn thành công việc',
-                        style: OmniType.bodyStrong,
-                      ),
+    return ClipRect(
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            color: glass,
+            border: Border(top: BorderSide(color: scheme.outlineVariant)),
+          ),
+          child: Padding(
+            padding: EdgeInsets.fromLTRB(16, 8, 16, bottom),
+            child: Row(
+              children: [
+                if (widget.canAttach) ...[
+                  _CameraButton(onTap: _busy ? null : _attachPhoto),
+                  const SizedBox(width: 10),
+                ],
+                if (widget.canComplete)
+                  Expanded(
+                    child: _MainButton(
+                      done: done,
+                      onTap: _busy ? null : () => _setStatus(!done),
                     ),
                   ),
-                ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
@@ -106,9 +89,12 @@ class _TaskActionBarState extends ConsumerState<TaskActionBar> {
   }
 
   Future<void> _setStatus(bool done) async {
+    // Lấy trước khi await: sau đó màn có thể đã rời cây widget.
+    final messenger = ScaffoldMessenger.of(context);
+    final container = ProviderScope.containerOf(context);
     // Finishing a whole task is a heavier act than ticking one stage, so it
     // gets the heavier haptic.
-    await HapticFeedback.mediumImpact();
+    unawaited(HapticFeedback.mediumImpact());
     setState(() => _busy = true);
     try {
       await ref
@@ -118,16 +104,22 @@ class _TaskActionBarState extends ConsumerState<TaskActionBar> {
           // trạng thái riêng.
           .setStatus(done ? 'done' : 'doing');
       // The list behind this screen is showing the old progress until told.
-      ref.read(myTasksProvider.notifier).refresh();
-      if (mounted && done) {
-        _say('Đã báo hoàn thành. Quản lý sẽ nhận thông báo.');
-      }
+      unawaited(container.read(myTasksProvider.notifier).refresh());
+      // Báo SAU khi server đã nhận, không trước: "đã báo quản lý" mà chưa ghi
+      // được là một lời nói dối.
+      _say(
+        messenger,
+        done
+            ? 'Đã báo hoàn thành. Quản lý sẽ nhận thông báo.'
+            : 'Đã mở lại công việc.',
+      );
     } on AppException catch (error) {
-      if (mounted) {
-        _say(_failureText(error, 'Chưa lưu được. Kiểm tra mạng rồi thử lại.'));
-      }
+      _say(
+        messenger,
+        _failureText(error, 'Chưa lưu được. Kiểm tra mạng rồi thử lại.'),
+      );
     } on Object {
-      if (mounted) _say('Chưa lưu được. Vui lòng thử lại.');
+      _say(messenger, 'Chưa lưu được. Vui lòng thử lại.');
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -139,6 +131,7 @@ class _TaskActionBarState extends ConsumerState<TaskActionBar> {
   /// vừa gửi trong nhóm Zalo, hoặc chụp lúc tháo máy nửa tiếng trước — và bắt
   /// chụp lại một cây đàn đã lắp xong thì đơn giản là không làm được.
   Future<void> _attachPhoto() async {
+    final messenger = ScaffoldMessenger.of(context);
     final source = await _pickSource();
     if (source == null) return;
 
@@ -146,19 +139,21 @@ class _TaskActionBarState extends ConsumerState<TaskActionBar> {
       source: source,
       imageQuality: 85,
     );
-    if (photo == null) return;
+    if (photo == null || !mounted) return;
 
     setState(() => _busy = true);
     try {
       await ref.read(tasksApiProvider).attach(widget.taskId, photo.path);
+      if (!mounted) return;
       await ref.read(taskDetailProvider(widget.taskId).notifier).refresh();
-      if (mounted) _say('Đã đính kèm ảnh.');
+      _say(messenger, 'Đã đính kèm ảnh.');
     } on AppException catch (error) {
-      if (mounted) {
-        _say(_failureText(error, 'Chưa gửi được ảnh. Thử lại khi có mạng.'));
-      }
+      _say(
+        messenger,
+        _failureText(error, 'Chưa gửi được ảnh. Thử lại khi có mạng.'),
+      );
     } on Object {
-      if (mounted) _say('Chưa gửi được ảnh. Vui lòng thử lại.');
+      _say(messenger, 'Chưa gửi được ảnh. Vui lòng thử lại.');
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -171,8 +166,8 @@ class _TaskActionBarState extends ConsumerState<TaskActionBar> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // Chụp đứng trước: ở xưởng thì phần lớn là chụp ngay tại chỗ, và
-          // mục đầu tiên là mục ngón tay bẩn chạm trúng.
+          // Chụp đứng trước: ở xưởng thì phần lớn là chụp ngay tại chỗ, và mục
+          // đầu tiên là mục ngón tay bẩn chạm trúng.
           ListTile(
             leading: const Icon(Icons.photo_camera_outlined),
             title: const Text('Chụp ảnh'),
@@ -197,44 +192,116 @@ class _TaskActionBarState extends ConsumerState<TaskActionBar> {
       ? networkText
       : e.message;
 
-  void _say(String message) {
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text(message)));
+  /// Messenger lấy TRƯỚC khi await, nên báo được cả khi màn đã đóng.
+  void _say(ScaffoldMessengerState messenger, String message) {
+    messenger.showSnackBar(SnackBar(content: Text(message)));
   }
 }
 
-class _SquareButton extends StatelessWidget {
-  const _SquareButton({
-    required this.icon,
-    required this.tooltip,
-    required this.onPressed,
-  });
+/// Nút máy ảnh vuông 46, bo 8, viền.
+class _CameraButton extends StatelessWidget {
+  const _CameraButton({required this.onTap});
 
-  final IconData icon;
-  final String tooltip;
-  final VoidCallback? onPressed;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
 
-    return Tooltip(
-      message: tooltip,
-      child: SizedBox(
-        width: 52,
-        height: 52,
-        child: OutlinedButton(
-          onPressed: onPressed,
-          style: OutlinedButton.styleFrom(
-            padding: EdgeInsets.zero,
-            side: BorderSide(color: scheme.outlineVariant),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(OmniRadius.md),
+    return Semantics(
+      label: 'Chụp ảnh',
+      button: true,
+      enabled: onTap != null,
+      child: Material(
+        color: scheme.surface,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(8),
+          side: BorderSide(color: OmniColors.controlBorderOf(context)),
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: onTap,
+          child: SizedBox(
+            width: 46,
+            height: 46,
+            child: Icon(
+              Icons.photo_camera_outlined,
+              color: scheme.onSurfaceVariant,
             ),
           ),
-          // Never icon-only to a screen reader: the tooltip names it aloud.
-          child: Icon(icon, color: scheme.onSurfaceVariant),
+        ),
+      ),
+    );
+  }
+}
+
+/// Nút chính cao 46, bo 8. MÀU THƯƠNG HIỆU, không phải màu "thành công".
+///
+/// Chữ trắng trên xanh lá #10B981 chỉ đạt 2,5:1 — trượt chuẩn 4,5:1 trên đúng
+/// cái nút được bấm nhiều nhất trong ngày, ngoài xưởng ánh sáng xấu. Và đó là
+/// màu xanh THỨ HAI đứng cạnh mòng két thương hiệu: hai xanh cạnh tranh nhau,
+/// không cái nào thắng. Trắng trên primary ≈ 7:1; `test/design/contrast_test`
+/// giữ cặp này. Đã xong thì nút lùi thành nền `surface` có viền, để "Mở lại"
+/// không kêu to như "Hoàn thành".
+class _MainButton extends StatelessWidget {
+  const _MainButton({required this.done, required this.onTap});
+
+  final bool done;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final duration = OmniMotion.enabled(context)
+        ? const Duration(milliseconds: 350)
+        : Duration.zero;
+    final foreground = done ? scheme.onSurface : scheme.onPrimary;
+
+    return Semantics(
+      button: true,
+      enabled: onTap != null,
+      child: AnimatedContainer(
+        duration: duration,
+        curve: Curves.easeOut,
+        height: 46,
+        decoration: BoxDecoration(
+          color: done ? scheme.surface : scheme.primary,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(
+            color: done ? OmniColors.controlBorderOf(context) : scheme.primary,
+          ),
+        ),
+        child: Material(
+          type: MaterialType.transparency,
+          child: InkWell(
+            onTap: onTap,
+            borderRadius: BorderRadius.circular(8),
+            child: Center(
+              child: TweenAnimationBuilder<Color?>(
+                tween: ColorTween(end: foreground),
+                duration: duration,
+                builder: (context, color, _) => Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      done ? Icons.undo_rounded : Icons.check_rounded,
+                      size: 20,
+                      color: color,
+                    ),
+                    const SizedBox(width: 8),
+                    Flexible(
+                      child: Text(
+                        done ? 'Mở lại công việc' : 'Hoàn thành công việc',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: OmniType.bodyStrong.copyWith(color: color),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
         ),
       ),
     );

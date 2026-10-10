@@ -5,11 +5,54 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/error/app_exception.dart';
+import '../../../../design/platform/omni_motion_scope.dart';
 import '../../../../design/tokens/tokens.dart';
 import '../../application/task_controller.dart';
 import '../../domain/task.dart';
+import 'task_detail/section_title.dart';
+import 'task_detail/task_attachments.dart';
 
-/// Điểm QC, 0–5 sao (§4, §B3).
+/// Lưới 2 cột của nửa dưới màn chi tiết (`TaskDetail.dc.html`): trái
+/// "ĐIỂM KIỂM TRA", phải "TỆP ĐÍNH KÈM (n)", cách nhau 10.
+///
+/// Ảnh đứng cạnh điểm: người kiểm nhìn ảnh rồi mới chấm, còn người bị trả việc
+/// về xem lại chính tấm mình đã gửi.
+class ScoreAndFilesRow extends StatelessWidget {
+  const ScoreAndFilesRow({
+    super.key,
+    required this.task,
+    required this.taskId,
+    required this.canRate,
+  });
+
+  final Task task;
+  final String taskId;
+  final bool canRate;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Expanded(
+          child: RatingRow(task: task, taskId: taskId, canRate: canRate),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              DetailSectionTitle('TỆP ĐÍNH KÈM (${task.attachments.length})'),
+              TaskAttachments(attachments: task.attachments),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// Điểm QC, 0–5 sao (§4, §B3): tiêu đề "ĐIỂM KIỂM TRA" + thẻ 5 sao.
 ///
 /// §B3: QC đạt thì "up ảnh sau, chấm sao, kéo sang Hoàn thiện (đạt)". Web đã
 /// chấm được từ lâu; app thì chưa — mà QC đứng ở xưởng với cây đàn trước mặt,
@@ -48,8 +91,7 @@ class _RatingRowState extends ConsumerState<RatingRow> {
 
     // KHÔNG await: rung là phản hồi, không phải một bước của thao tác. Chờ nó
     // là để người dùng đợi một cái rung trước khi việc thật bắt đầu — và trong
-    // môi trường test thì lời gọi này không bao giờ hoàn tất, nên chờ nó cũng
-    // là tự bịt mắt mình.
+    // môi trường test thì lời gọi này không bao giờ hoàn tất.
     unawaited(HapticFeedback.selectionClick());
     setState(() => _busy = true);
     try {
@@ -75,45 +117,104 @@ class _RatingRowState extends ConsumerState<RatingRow> {
     // Chưa chấm và cũng không được chấm: không có gì để nói.
     if (!widget.canRate && rating == 0) return const SizedBox.shrink();
 
-    return Container(
-      width: double.infinity,
-      margin: const EdgeInsets.only(top: OmniSpacing.sm),
-      color: scheme.surface,
-      padding: const EdgeInsets.all(OmniSpacing.lg),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Điểm kiểm tra',
-            style: OmniType.overline.copyWith(color: scheme.onSurfaceVariant),
+    final tones = OmniTaskTones.of(context);
+    final motion = OmniMotion.enabled(context);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const DetailSectionTitle('ĐIỂM KIỂM TRA'),
+        Material(
+          color: scheme.surface,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(8),
+            side: BorderSide(color: scheme.outlineVariant),
           ),
-          const SizedBox(height: OmniSpacing.sm),
-          Row(
-            children: [
-              for (var star = 1; star <= 5; star++)
-                IconButton(
-                  // Vùng chạm mặc định của IconButton là 48dp — đúng thứ cần
-                  // khi người bấm đang đứng cạnh cây đàn.
-                  onPressed: widget.canRate && !_busy
-                      ? () => _rate(star)
-                      : null,
-                  tooltip: widget.canRate ? '$star sao' : null,
-                  icon: Icon(
-                    star <= rating
-                        ? Icons.star_rounded
-                        : Icons.star_outline_rounded,
-                    color: star <= rating
-                        ? OmniColors.warning
-                        : scheme.onSurfaceVariant,
+          clipBehavior: Clip.antiAlias,
+          // 5 ô 44 = 220 rộng, hơn nửa màn điện thoại (≈ 170). Thu cả hàng lại
+          // (FittedBox) sẽ thu luôn vùng chạm dưới 44, nên hàng sao CUỘN ngang
+          // khi không đủ chỗ.
+          child: SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+            child: Row(
+              children: [
+                for (var star = 1; star <= 5; star++)
+                  _Star(
+                    star: star,
+                    rating: rating,
+                    // Sao đã chọn: cam #E8890C; chưa chọn: xám nhạt.
+                    selectedColor: tones.priorityNormal,
+                    idleColor: OmniColors.mutedBarOf(context),
+                    motion: motion,
+                    onTap: widget.canRate && !_busy ? () => _rate(star) : null,
+                    interactive: widget.canRate,
                   ),
-                ),
-              if (rating > 0) ...[
-                const SizedBox(width: OmniSpacing.sm),
-                Text('$rating/5', style: OmniType.bodyStrong),
+                if (rating > 0)
+                  Padding(
+                    padding: const EdgeInsets.only(left: 4, right: 8),
+                    child: Text('$rating/5', style: OmniType.bodyStrong),
+                  ),
               ],
-            ],
+            ),
           ),
-        ],
+        ),
+      ],
+    );
+  }
+}
+
+/// Một ngôi sao vẽ 30, vùng chạm 44×44.
+class _Star extends StatelessWidget {
+  const _Star({
+    required this.star,
+    required this.rating,
+    required this.selectedColor,
+    required this.idleColor,
+    required this.motion,
+    required this.onTap,
+    required this.interactive,
+  });
+
+  final int star;
+  final int rating;
+  final Color selectedColor;
+  final Color idleColor;
+  final bool motion;
+  final VoidCallback? onTap;
+
+  /// Người chấm được (khác với đang bận): chỉ ảnh hưởng nhãn "nút" cho trình
+  /// đọc màn hình.
+  final bool interactive;
+
+  @override
+  Widget build(BuildContext context) {
+    final on = star <= rating;
+
+    return Semantics(
+      label: '$star điểm',
+      button: interactive,
+      selected: on,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(8),
+        child: SizedBox(
+          width: 44,
+          height: 44,
+          child: Center(
+            child: AnimatedScale(
+              scale: star == rating ? 1.2 : 1,
+              duration: motion
+                  ? const Duration(milliseconds: 200)
+                  : Duration.zero,
+              child: Icon(
+                on ? Icons.star_rounded : Icons.star_outline_rounded,
+                size: 30,
+                color: on ? selectedColor : idleColor,
+              ),
+            ),
+          ),
+        ),
       ),
     );
   }
