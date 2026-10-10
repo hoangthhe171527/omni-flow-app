@@ -55,7 +55,7 @@ void main() {
     id: id,
     kind: kind,
     taskId: 't1',
-    taskTitle: title,
+    taskTitle: kind == FeedKind.subtaskCompleted ? 'Steinway D' : title,
     at: at,
     userName: user,
     detail: kind == FeedKind.subtaskCompleted ? title : null,
@@ -182,7 +182,7 @@ void main() {
     expect(find.text('HOÀNG ĐÃ XONG'), findsOneWidget);
     expect(find.text('Đánh bóng vỏ đàn Steinway'), findsOneWidget);
     expect(find.text('Sửa chữa đàn · 08:45'), findsOneWidget);
-    expect(find.text('Minh · Thay búa La 4'), findsOneWidget);
+    expect(find.text('Minh · Thay búa La 4 – Steinway D'), findsOneWidget);
     expect(find.text('Chỉ hiện 7 ngày gần nhất.'), findsOneWidget);
   });
 
@@ -223,7 +223,7 @@ void main() {
 
     await host(t, feed: feed);
     await t.pumpAndSettle();
-    await t.tap(find.text('Minh · Thay búa La 4'));
+    await t.tap(find.text('Minh · Thay búa La 4 – Steinway D'));
     await t.pumpAndSettle();
     expect(find.text('chi tiết t1'), findsOneWidget);
   });

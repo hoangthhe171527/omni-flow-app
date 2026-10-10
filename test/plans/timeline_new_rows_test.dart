@@ -62,7 +62,7 @@ void main() {
     for (final id in ids)
       if (find
           .ancestor(
-            of: find.text('Hằng Ni · $id'),
+            of: find.text('Hằng Ni · $id – KAWAI HAT-5'),
             matching: find.byType(Opacity),
           )
           .evaluate()

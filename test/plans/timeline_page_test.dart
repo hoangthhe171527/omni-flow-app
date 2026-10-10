@@ -192,7 +192,7 @@ void main() {
   testWidgets('câu nói rõ AI và LÀM GÌ', (tester) async {
     await show(tester, feed: [entry()]);
 
-    expect(find.text('Hằng Ni · Body ngoài'), findsOneWidget);
+    expect(find.text('Hằng Ni · Body ngoài – KAWAI HAT-5'), findsOneWidget);
   });
 
   testWidgets('rỗng thì nói đúng cái đang rỗng', (tester) async {
@@ -249,7 +249,7 @@ void main() {
     );
     expect(find.text('Đánh dấu nhóm việc đích'), findsOneWidget);
     // Dòng việc vẫn ở đó, không bị đẩy xuống dưới màn hình.
-    expect(find.text('Hằng Ni · Body ngoài'), findsOneWidget);
+    expect(find.text('Hằng Ni · Body ngoài – KAWAI HAT-5'), findsOneWidget);
   });
 
   testWidgets('giờ hiện TUYỆT ĐỐI, không phải "2 giờ trước"', (tester) async {
@@ -268,6 +268,8 @@ void main() {
     );
 
     expect(find.text('Hằng Ni đã gửi mau.jpg'), findsOneWidget);
+    // Tên cây đàn nằm ở dòng meta.
+    expect(find.text('KAWAI HAT-5 · Phục chế T9 · 09:35'), findsOneWidget);
   });
 
   testWidgets('tải lần đầu hiện KHUNG XƯƠNG dòng việc, không phải vòng xoay', (

@@ -12,7 +12,8 @@ import '../../domain/feed_entry.dart';
 ///
 /// Giờ TUYỆT ĐỐI, không phải "2 giờ trước": quản đốc đối chiếu dòng này với ca
 /// làm và với lời thợ nói, và "09:35" là thứ so được.
-String feedMeta(FeedEntry entry) => [
+String feedMeta(FeedEntry entry, {bool withTask = false}) => [
+  if (withTask) entry.taskTitle,
   if (entry.planName != null) entry.planName!,
   Formatters.time(entry.at),
 ].join(' · ');
@@ -37,9 +38,12 @@ class CompletionRow extends StatelessWidget {
     // Việc con xong: "Minh · Thay búa La 4". Các loại khác (ảnh gửi lẻ...) giữ
     // câu đầy đủ "Hằng Ni đã gửi mau.jpg" vì không có việc nào để gọi tên.
     final isDone = entry.kind == FeedKind.subtaskCompleted;
-    final done = (entry.detail ?? '').trim().isNotEmpty
-        ? entry.detail!.trim()
-        : entry.taskTitle;
+    final detail = (entry.detail ?? '').trim();
+    // Luôn có tên cây đàn: việc con "Body ngoài" của cây nào là thứ quản đốc
+    // cần biết. Không lặp khi việc con trùng tên cây.
+    final done = detail.isEmpty || detail == entry.taskTitle
+        ? entry.taskTitle
+        : '$detail – ${entry.taskTitle}';
 
     return InkWell(
       onTap: onTap,
@@ -84,7 +88,7 @@ class CompletionRow extends StatelessWidget {
                       ),
                     const SizedBox(height: 2),
                     Text(
-                      feedMeta(entry),
+                      feedMeta(entry, withTask: !isDone),
                       style: text.labelSmall?.copyWith(
                         fontWeight: FontWeight.w400,
                         color: scheme.onSurfaceVariant,

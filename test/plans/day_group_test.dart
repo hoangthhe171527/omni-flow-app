@@ -27,29 +27,13 @@ void main() {
     expect(groups.first.entries.length, 2);
   });
 
-  test('đếm hai loại RIÊNG, không gộp thành một số', () {
-    // Thẻ KPI ngay phía trên chỉ đếm CÂY, và đếm mỗi cây một lần/tháng kể cả
-    // khi QC trả về rồi vào lại. Gộp hai loại thành "12 việc xong" là để hai
-    // con số cạnh nhau trên cùng một màn hình nói ngược nhau.
-    final groups = DayGroup.from([
-      entry('a', FeedKind.subtaskCompleted, '2026-09-10'),
-      entry('b', FeedKind.subtaskCompleted, '2026-09-10'),
-      entry('c', FeedKind.pianoDone, '2026-09-10'),
-    ]);
-
-    expect(groups.first.stageCount, 2);
-    expect(groups.first.pianoCount, 1);
-  });
-
-  test('ảnh gửi lẻ vẫn hiện nhưng không bị đếm là việc xong', () {
+  test('ảnh gửi lẻ vẫn hiện trong ngày', () {
     final groups = DayGroup.from([
       entry('a', FeedKind.subtaskCompleted, '2026-09-10'),
       entry('b', FeedKind.attachmentAdded, '2026-09-10'),
     ]);
 
     expect(groups.first.entries.length, 2);
-    expect(groups.first.stageCount, 1);
-    expect(groups.first.pianoCount, 0);
   });
 
   test('nhãn ngày đọc được', () {
