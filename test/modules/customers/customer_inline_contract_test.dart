@@ -170,6 +170,37 @@ void main() {
       },
     );
   });
+  test(
+    'Bỏ gán khách chỉ có metadata.owner_name (không id) → null + xoá khoá cũ',
+    () {
+      final nameOnly = Customer.fromJson({
+        'id': 'c4',
+        'display_name': 'C',
+        'assigned_sales_rep_name': 'Cũ',
+        'metadata': {'owner_name': 'Cũ'},
+      });
+      expect(nameOnly.ownerId, isNull);
+      expect(nameOnly.ownerName, 'Cũ');
+      expect(
+        nameOnly.patch(CustomerField.owner, (id: null, name: null)).toPayload(),
+        {
+          'assigned_sales_rep_id': null,
+          'metadata': {'owner_name': null},
+        },
+      );
+    },
+  );
+  test('khách chỉ có owner_name: sửa trường khác KHÔNG bỏ gán', () {
+    final nameOnly = Customer.fromJson({
+      'id': 'c4',
+      'display_name': 'C',
+      'assigned_sales_rep_name': 'Cũ',
+      'metadata': {'owner_name': 'Cũ'},
+    });
+    expect(nameOnly.patch(CustomerField.phone, '0901').toPayload(), {
+      'primary_contact_phone': '0901',
+    });
+  });
   test('Bỏ gán khi vốn không có người → body rỗng', () {
     final none = Customer.fromJson({'id': 'c3', 'display_name': 'B'});
     expect(

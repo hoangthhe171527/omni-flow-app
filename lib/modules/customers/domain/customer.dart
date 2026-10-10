@@ -209,7 +209,14 @@ class Customer {
     }
     // Bỏ gán: tên người phụ trách còn rơi về `metadata.owner_name` (web đọc cả
     // `sales_account`) — không xoá thì nhãn cũ hiện lại sau khi lưu (như web).
-    if (ownerId == null && origin.ownerId != null) {
+    // Khách chỉ có tên (metadata.owner_name, không có id) cũng là "có người":
+    // bản nháp đã xoá cả id lẫn tên mới là bỏ gán (sửa phụ trường khác của
+    // khách đó giữ nguyên tên, không bị coi là bỏ gán).
+    final unassign =
+        ownerId == null &&
+        ownerName == null &&
+        (origin.ownerId != null || origin.ownerName != null);
+    if (unassign) {
       for (final legacy in const ['owner_name', 'sales_account']) {
         final old = origin.metadata[legacy];
         if (old != null && '$old'.trim().isNotEmpty) changedMeta[legacy] = null;
@@ -222,6 +229,7 @@ class Customer {
       for (final entry in fields.entries)
         if (!_same(entry.value, loadedFields[entry.key]))
           entry.key: entry.value,
+      if (unassign && origin.ownerId == null) 'assigned_sales_rep_id': null,
       if (changedMeta.isNotEmpty) 'metadata': changedMeta,
     };
   }
