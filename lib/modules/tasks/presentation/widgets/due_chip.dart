@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/utils/formatters.dart';
 import '../../../../design/components/omni_task_chip.dart';
 import '../../domain/task.dart';
 
@@ -14,12 +15,13 @@ enum DueTone { today, late, upcoming, none }
 ({String label, DueTone tone}) dueToneOf(Task task, {DateTime? now}) {
   final due = task.dueDate;
   if (due == null) return (label: 'Chưa đặt hạn', tone: DueTone.none);
-  final n = now ?? DateTime.now();
-  final today = DateTime(n.year, n.month, n.day);
-  final day = DateTime(due.year, due.month, due.day);
+  // Ngày VN (không theo múi giờ máy), như web và API.
+  final today = VnTime.today(now);
+  final day = VnTime.day(due);
   final diff = today.difference(day).inDays;
-  if (diff == 0) return (label: 'Hạn hôm nay', tone: DueTone.today);
-  if (diff > 0 && task.status != 'done') {
+  final done = task.status == 'done';
+  if (diff == 0 && !done) return (label: 'Hạn hôm nay', tone: DueTone.today);
+  if (diff > 0 && !done) {
     return (label: 'Quá hạn $diff ngày', tone: DueTone.late);
   }
   final dd = day.day.toString().padLeft(2, '0');

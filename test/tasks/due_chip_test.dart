@@ -5,7 +5,8 @@ import 'package:omni_app/modules/tasks/domain/task.dart';
 import 'package:omni_app/modules/tasks/presentation/widgets/due_chip.dart';
 
 void main() {
-  final now = DateTime(2026, 10, 10, 9);
+  // 02:00Z = 09:00 giờ VN — không phụ thuộc múi giờ máy chạy test.
+  final now = DateTime.utc(2026, 10, 10, 2);
 
   // Khoá của API là `due_date` (Task.fromJson), không phải `due_at`.
   Task t({DateTime? due, String status = 'todo'}) => Task.fromJson({
@@ -21,14 +22,14 @@ void main() {
       tone: DueTone.none,
     ));
     expect(
-      dueToneOf(t(due: DateTime(2026, 10, 10)), now: now).tone,
+      dueToneOf(t(due: DateTime.utc(2026, 10, 10)), now: now).tone,
       DueTone.today,
     );
-    expect(dueToneOf(t(due: DateTime(2026, 10, 8)), now: now), (
+    expect(dueToneOf(t(due: DateTime.utc(2026, 10, 8)), now: now), (
       label: 'Quá hạn 2 ngày',
       tone: DueTone.late,
     ));
-    expect(dueToneOf(t(due: DateTime(2026, 10, 15)), now: now), (
+    expect(dueToneOf(t(due: DateTime.utc(2026, 10, 15)), now: now), (
       label: 'Hạn 15/10',
       tone: DueTone.upcoming,
     ));
@@ -37,10 +38,28 @@ void main() {
   test('việc đã xong không bị tô quá hạn', () {
     expect(
       dueToneOf(
-        t(due: DateTime(2026, 10, 1), status: 'done'),
+        t(due: DateTime.utc(2026, 10, 1), status: 'done'),
         now: now,
       ).tone,
       isNot(DueTone.late),
+    );
+  });
+
+  test('hạn tính theo ngày VN, không theo múi giờ máy', () {
+    // 18:00Z ngày 10 = 01:00 ngày 11 giờ VN → còn hạn, không phải hôm nay.
+    expect(dueToneOf(t(due: DateTime.utc(2026, 10, 10, 18)), now: now), (
+      label: 'Hạn 11/10',
+      tone: DueTone.upcoming,
+    ));
+  });
+
+  test('việc đã xong có hạn hôm nay không tô "Hạn hôm nay"', () {
+    expect(
+      dueToneOf(
+        t(due: DateTime.utc(2026, 10, 10), status: 'done'),
+        now: now,
+      ),
+      (label: 'Hạn 10/10', tone: DueTone.upcoming),
     );
   });
 
@@ -49,7 +68,7 @@ void main() {
       MaterialApp(
         theme: OmniTheme.light(TargetPlatform.android),
         home: Scaffold(
-          body: DueChip(task: t(due: DateTime(2020, 1, 1))),
+          body: DueChip(task: t(due: DateTime.utc(2020, 1, 1))),
         ),
       ),
     );

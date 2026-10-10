@@ -480,8 +480,7 @@ class _AccountRow extends StatelessWidget {
                       ? Icons.open_in_new_rounded
                       : Icons.chevron_right_rounded,
                   size: 16,
-                  // Task 6 thay bằng OmniTaskTones.chevron.
-                  color: scheme.outline,
+                  color: OmniTaskTones.of(context).chevron,
                 ),
               ],
             ],

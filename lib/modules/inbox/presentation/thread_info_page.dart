@@ -337,7 +337,9 @@ class _Hero extends StatelessWidget {
                 text: c.channel.sourceKind,
                 style: TextStyle(
                   fontWeight: FontWeight.w600,
-                  color: c.channel.meta.color,
+                  color: c.channel.meta.textColorOf(
+                    Theme.of(context).brightness,
+                  ),
                 ),
               ),
               if (account != null) TextSpan(text: ' · $account'),

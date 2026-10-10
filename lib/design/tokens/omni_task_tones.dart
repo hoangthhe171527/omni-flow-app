@@ -25,6 +25,7 @@ class OmniTaskTones {
     required this.priorityNormal,
     required this.priorityLow,
     required this.dueSoonBar,
+    required this.chevron,
     required List<Color> sectionColors,
   }) : _sectionColors = sectionColors;
 
@@ -53,6 +54,9 @@ class OmniTaskTones {
   /// Đoạn "trễ" của thanh tiến độ dự án.
   final Color dueSoonBar;
 
+  /// Mũi tên chỉ dẫn ở cuối dòng (Điều phối, Tài khoản).
+  final Color chevron;
+
   final List<Color> _sectionColors;
 
   /// Ô vuông màu của nhóm việc thứ [index] trong bảng chọn "Chuyển nhóm việc"
@@ -60,7 +64,7 @@ class OmniTaskTones {
   Color sectionColor(int index) =>
       _sectionColors[index % _sectionColors.length];
 
-  static const _dueSoonBar = Color(0xFFE8890C);
+  static const _dueSoonBar = Color(0xFFD97706);
 
   static const _light = OmniTaskTones._(
     today: OmniTaskTone(
@@ -77,7 +81,7 @@ class OmniTaskTones {
     ),
     none: OmniTaskTone(
       background: Color(0xFFEEF1F5),
-      foreground: Color(0xFF8A95A8),
+      foreground: Color(0xFF5B6678),
     ),
     highPriority: OmniTaskTone(
       background: Color(0xFFFDE8E8),
@@ -91,6 +95,7 @@ class OmniTaskTones {
     priorityNormal: _dueSoonBar,
     priorityLow: Color(0xFF8A95A8),
     dueSoonBar: _dueSoonBar,
+    chevron: Color(0xFFC9D2DE),
     sectionColors: [
       Color(0xFF8A95A8),
       Color(0xFF2563EB),
@@ -122,6 +127,7 @@ class OmniTaskTones {
       priorityNormal: const Color(0xFFF0A23C),
       priorityLow: const Color(0xFF9AA8BD),
       dueSoonBar: const Color(0xFFF0A23C),
+      chevron: const Color(0xFF5B6678),
       sectionColors: const [
         Color(0xFF9AA8BD),
         Color(0xFF60A5FA),

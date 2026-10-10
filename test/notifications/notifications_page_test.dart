@@ -143,10 +143,16 @@ void main() {
   ) async {
     final handle = t.ensureSemantics();
     await pump(t);
-    final node = t.getSemantics(find.bySemanticsLabel('Chưa đọc, tn2'));
+    final node = t.getSemantics(find.bySemanticsLabel('Chưa đọc, tn2, bn2'));
     expect(node, isSemantics(isButton: true, hasTapAction: true));
-    expect(find.bySemanticsLabel('tn3'), findsOneWidget);
+    expect(find.bySemanticsLabel('tn3, bn3'), findsOneWidget);
     handle.dispose();
+  });
+
+  testWidgets('danh sách ngắn vẫn kéo-để-tải-lại được', (t) async {
+    await pump(t);
+    final list = t.widget<ListView>(find.byType(ListView).first);
+    expect(list.physics, isA<AlwaysScrollableScrollPhysics>());
   });
 
   testWidgets('Chưa đọc trống → "Bạn đã đọc hết thông báo"', (t) async {

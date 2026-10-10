@@ -132,11 +132,7 @@ class _Line extends StatelessWidget {
             Icon(
               Icons.chevron_right_rounded,
               size: 18,
-              color: OmniColors.byBrightness(
-                context,
-                const Color(0xFFC9D2DE),
-                scheme.outline,
-              ),
+              color: OmniTaskTones.of(context).chevron,
             ),
           ],
         ],

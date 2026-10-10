@@ -73,7 +73,9 @@ class ThreadIntro extends ConsumerWidget {
                 conversation.channel.sourceKind,
                 style: OmniType.micro.copyWith(
                   fontWeight: FontWeight.w600,
-                  color: conversation.channel.meta.color,
+                  color: conversation.channel.meta.textColorOf(
+                    Theme.of(context).brightness,
+                  ),
                 ),
               ),
               if (account != null)

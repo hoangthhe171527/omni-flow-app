@@ -115,6 +115,7 @@ class _NotificationsPageState extends ConsumerState<NotificationsPage> {
             final groups = groupNotificationsByDay(state.items);
 
             return ListView(
+              physics: const AlwaysScrollableScrollPhysics(),
               controller: _scrollController,
               padding: const EdgeInsets.fromLTRB(
                 16,
@@ -285,7 +286,11 @@ class NotificationRow extends StatelessWidget {
 
     return Semantics(
       button: true,
-      label: '${unread ? 'Chưa đọc, ' : ''}${notification.title}',
+      label: [
+        if (unread) 'Chưa đọc',
+        notification.title,
+        if (notification.body.isNotEmpty) notification.body,
+      ].join(', '),
       onTap: onTap,
       excludeSemantics: true,
       child: Material(
