@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'dart:math' as math;
-import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -50,39 +49,33 @@ class _TaskActionBarState extends ConsumerState<TaskActionBar> {
     }
 
     final done = widget.task.isDone;
-    final glass = OmniColors.byBrightness(
-      context,
-      OmniColors.background.withValues(alpha: 0.82),
-      OmniColors.darkBackground.withValues(alpha: 0.82),
-    );
-    final bottom = math.max(8.0, MediaQuery.viewPaddingOf(context).bottom);
+    // `padding` (đã trừ phần bàn phím che), không phải `viewPadding`: bàn phím
+    // mở thì thanh nằm sát nó, không để thêm một khoảng hở bằng thanh home.
+    final bottom = math.max(8.0, MediaQuery.paddingOf(context).bottom);
 
-    return ClipRect(
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-        child: DecoratedBox(
-          decoration: BoxDecoration(
-            color: glass,
-            border: Border(top: BorderSide(color: scheme.outlineVariant)),
-          ),
-          child: Padding(
-            padding: EdgeInsets.fromLTRB(16, 8, 16, bottom),
-            child: Row(
-              children: [
-                if (widget.canAttach) ...[
-                  _CameraButton(onTap: _busy ? null : _attachPhoto),
-                  const SizedBox(width: 10),
-                ],
-                if (widget.canComplete)
-                  Expanded(
-                    child: _MainButton(
-                      done: done,
-                      onTap: _busy ? null : () => _setStatus(!done),
-                    ),
-                  ),
-              ],
-            ),
-          ),
+    // Nền đặc: mặt sau là danh sách cuộn, làm mờ nó không có gì để mờ đẹp mà
+    // vẫn tốn một lớp BackdropFilter mỗi khung hình.
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: scheme.surface,
+        border: Border(top: BorderSide(color: scheme.outlineVariant)),
+      ),
+      child: Padding(
+        padding: EdgeInsets.fromLTRB(16, 8, 16, bottom),
+        child: Row(
+          children: [
+            if (widget.canAttach) ...[
+              _CameraButton(onTap: _busy ? null : _attachPhoto),
+              const SizedBox(width: 10),
+            ],
+            if (widget.canComplete)
+              Expanded(
+                child: _MainButton(
+                  done: done,
+                  onTap: _busy ? null : () => _setStatus(!done),
+                ),
+              ),
+          ],
         ),
       ),
     );

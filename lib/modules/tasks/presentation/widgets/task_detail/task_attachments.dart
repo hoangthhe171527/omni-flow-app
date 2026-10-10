@@ -57,33 +57,38 @@ class TaskAttachments extends StatelessWidget {
               )
             : LayoutBuilder(
                 builder: (context, box) {
+                  // Sàn 44: ô nhỏ hơn không chạm được. Không đủ chỗ cho 3 ô 44
+                  // thì hàng cuộn ngang.
                   final tile = ((box.maxWidth - 2 * _gap) / _visible).clamp(
-                    0.0,
+                    44.0,
                     _maxTile,
                   );
                   final extra = attachments.length - _visible;
 
-                  return Row(
-                    children: [
-                      for (
-                        var i = 0;
-                        i < attachments.length && i < _visible;
-                        i++
-                      )
-                        Padding(
-                          padding: EdgeInsets.only(
-                            right: i < _visible - 1 ? _gap : 0,
+                  return SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Row(
+                      children: [
+                        for (
+                          var i = 0;
+                          i < attachments.length && i < _visible;
+                          i++
+                        )
+                          Padding(
+                            padding: EdgeInsets.only(
+                              right: i < _visible - 1 ? _gap : 0,
+                            ),
+                            child: AttachmentThumb(
+                              attachment: attachments[i],
+                              size: tile,
+                              overflow: i == _visible - 1 && extra > 0
+                                  ? extra
+                                  : 0,
+                              onOverflow: () => _showAll(context, attachments),
+                            ),
                           ),
-                          child: AttachmentThumb(
-                            attachment: attachments[i],
-                            size: tile,
-                            overflow: i == _visible - 1 && extra > 0
-                                ? extra
-                                : 0,
-                            onOverflow: () => _showAll(context, attachments),
-                          ),
-                        ),
-                    ],
+                      ],
+                    ),
                   );
                 },
               ),
@@ -147,7 +152,10 @@ class AttachmentThumb extends StatelessWidget {
 
     return Semantics(
       button: true,
-      label: more ? 'Xem thêm $overflow tệp' : null,
+      // Ảnh không có chữ nào nên nhãn là TÊN tệp; tệp khác đã có tên trong ô.
+      label: more
+          ? 'Xem thêm $overflow tệp'
+          : (attachment.isImage ? attachment.name : null),
       child: SizedBox(
         width: size,
         height: size,

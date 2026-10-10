@@ -105,8 +105,8 @@ void main() {
     );
   }
 
-  Future<void> pump(WidgetTester t, Widget app) async {
-    t.view.physicalSize = const Size(390, 844);
+  Future<void> pump(WidgetTester t, Widget app, {double width = 390}) async {
+    t.view.physicalSize = Size(width, 844);
     t.view.devicePixelRatio = 1;
     addTearDown(t.view.reset);
 
@@ -300,6 +300,89 @@ void main() {
     await t.pumpAndSettle();
     expect(find.text('Chụp ảnh'), findsOneWidget);
     expect(find.text('Chọn ảnh có sẵn'), findsOneWidget);
+  });
+  for (final width in [360.0, 390.0]) {
+    tw('rộng $width: đủ 5 sao trong màn không cần cuộn, thấy "3/5"', (t) async {
+      await pump(
+        t,
+        host(task: task(rating: 3), perms: assigner),
+        width: width,
+      );
+      for (var n = 1; n <= 5; n++) {
+        final r = t.getRect(find.bySemanticsLabel('$n điểm'));
+        expect(r.left, greaterThanOrEqualTo(0), reason: '$n điểm');
+        expect(r.right, lessThanOrEqualTo(width), reason: '$n điểm');
+        expect(r.width, greaterThanOrEqualTo(44));
+        expect(r.height, greaterThanOrEqualTo(44));
+      }
+      final label = t.getRect(find.text('3/5'));
+      expect(label.right, lessThanOrEqualTo(width));
+      // Không bị cắt bởi vùng cuộn: sao 5 nằm bên trái nhãn.
+      expect(
+        t.getRect(find.bySemanticsLabel('5 điểm')).right,
+        lessThanOrEqualTo(label.left),
+      );
+    });
+
+    tw('rộng $width: ô tệp >= 44 và ảnh mang nhãn là tên tệp', (t) async {
+      await pump(
+        t,
+        host(task: task(attachments: 3), perms: worker),
+        width: width,
+      );
+      final tile = find.bySemanticsLabel('anh-0.jpg');
+      expect(tile, findsOneWidget);
+      final s = t.getSize(tile);
+      expect(s.width, greaterThanOrEqualTo(44));
+      expect(s.height, greaterThanOrEqualTo(44));
+    });
+  }
+
+  tw('bàn phím mở: thanh đáy sát bàn phím, không chừa thêm khoảng home', (
+    t,
+  ) async {
+    await pump(t, host(task: task(), perms: worker));
+    t.view.viewPadding = const FakeViewPadding(bottom: 34);
+    t.view.padding = const FakeViewPadding(bottom: 34);
+    await t.pumpAndSettle();
+    final withHome = t.getRect(find.text('Hoàn thành công việc')).bottom;
+    expect(844 - withHome, greaterThan(34), reason: 'có thanh home');
+
+    // Nền tảng báo padding đã trừ phần bàn phím che; viewPadding thì không.
+    t.view.viewInsets = const FakeViewPadding(bottom: 300);
+    t.view.padding = FakeViewPadding.zero;
+    await t.pumpAndSettle();
+    final button = t.getRect(
+      find
+          .ancestor(
+            of: find.text('Hoàn thành công việc'),
+            matching: find.byType(InkWell),
+          )
+          .first,
+    );
+    // 844 - bàn phím 300 = đáy thân; nút cách đáy đúng đệm 8.
+    expect(544 - button.bottom, closeTo(8, 1.01)); // +1: viền của nút
+  });
+
+  tw('thanh đáy là nền đặc, không BackdropFilter', (t) async {
+    await pump(t, host(task: task(), perms: worker));
+    expect(
+      find.descendant(
+        of: find.ancestor(
+          of: find.text('Hoàn thành công việc'),
+          matching: find.byType(Padding),
+        ),
+        matching: find.byType(BackdropFilter),
+      ),
+      findsNothing,
+    );
+    expect(
+      find.ancestor(
+        of: find.text('Hoàn thành công việc'),
+        matching: find.byType(BackdropFilter),
+      ),
+      findsNothing,
+    );
   });
 }
 

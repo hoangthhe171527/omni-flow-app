@@ -29,25 +29,44 @@ class ScoreAndFilesRow extends StatelessWidget {
   final String taskId;
   final bool canRate;
 
+  /// Cạnh chạm 5 sao (5x44) + đệm + nhãn "n/5": ô điểm hẹp hơn mức này thì
+  /// xếp điểm TRÊN tệp (mỗi ô một hàng) để đủ 5 sao không phải cuộn. Thu sao
+  /// lại sẽ thu luôn vùng chạm dưới 44.
+  static const _scoreCellMin = 280.0;
+
   @override
   Widget build(BuildContext context) {
-    return Row(
+    final files = Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Expanded(
-          child: RatingRow(task: task, taskId: taskId, canRate: canRate),
-        ),
-        const SizedBox(width: 10),
-        Expanded(
-          child: Column(
+        DetailSectionTitle('TỆP ĐÍNH KÈM (${task.attachments.length})'),
+        TaskAttachments(attachments: task.attachments),
+      ],
+    );
+    final score = RatingRow(task: task, taskId: taskId, canRate: canRate);
+
+    return LayoutBuilder(
+      builder: (context, box) {
+        if ((box.maxWidth - 10) / 2 < _scoreCellMin) {
+          return Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              DetailSectionTitle('TỆP ĐÍNH KÈM (${task.attachments.length})'),
-              TaskAttachments(attachments: task.attachments),
+              score,
+              if (canRate || task.rating > 0) const SizedBox(height: 14),
+              files,
             ],
-          ),
-        ),
-      ],
+          );
+        }
+
+        return Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(child: score),
+            const SizedBox(width: 10),
+            Expanded(child: files),
+          ],
+        );
+      },
     );
   }
 }
@@ -131,32 +150,41 @@ class _RatingRowState extends ConsumerState<RatingRow> {
             side: BorderSide(color: scheme.outlineVariant),
           ),
           clipBehavior: Clip.antiAlias,
-          // 5 ô 44 = 220 rộng, hơn nửa màn điện thoại (≈ 170). Thu cả hàng lại
-          // (FittedBox) sẽ thu luôn vùng chạm dưới 44, nên hàng sao CUỘN ngang
-          // khi không đủ chỗ.
-          child: SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
-            child: Row(
-              children: [
-                for (var star = 1; star <= 5; star++)
-                  _Star(
-                    star: star,
-                    rating: rating,
-                    // Sao đã chọn: cam #E8890C; chưa chọn: xám nhạt.
-                    selectedColor: tones.priorityNormal,
-                    idleColor: OmniColors.mutedBarOf(context),
-                    motion: motion,
-                    onTap: widget.canRate && !_busy ? () => _rate(star) : null,
-                    interactive: widget.canRate,
+          // Màn hẹp xếp điểm cả hàng (ScoreAndFilesRow) nên 5 ô 44 = 220 vừa;
+          // phòng khi vẫn thiếu chỗ thì hàng sao CUỘN ngang chứ không thu
+          // (thu sao là thu luôn vùng chạm dưới 44). Nhãn "n/5" đứng NGOÀI
+          // vùng cuộn để không bao giờ trôi khỏi màn.
+          child: Row(
+            children: [
+              Expanded(
+                child: SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  padding: const EdgeInsets.all(4),
+                  child: Row(
+                    children: [
+                      for (var star = 1; star <= 5; star++)
+                        _Star(
+                          star: star,
+                          rating: rating,
+                          // Sao đã chọn: cam #E8890C; chưa chọn: xám nhạt.
+                          selectedColor: tones.priorityNormal,
+                          idleColor: OmniColors.mutedBarOf(context),
+                          motion: motion,
+                          onTap: widget.canRate && !_busy
+                              ? () => _rate(star)
+                              : null,
+                          interactive: widget.canRate,
+                        ),
+                    ],
                   ),
-                if (rating > 0)
-                  Padding(
-                    padding: const EdgeInsets.only(left: 4, right: 8),
-                    child: Text('$rating/5', style: OmniType.bodyStrong),
-                  ),
-              ],
-            ),
+                ),
+              ),
+              if (rating > 0)
+                Padding(
+                  padding: const EdgeInsets.only(left: 4, right: 12),
+                  child: Text('$rating/5', style: OmniType.bodyStrong),
+                ),
+            ],
           ),
         ),
       ],
