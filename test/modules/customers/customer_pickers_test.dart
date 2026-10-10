@@ -129,4 +129,43 @@ void main() {
     await tester.pumpAndSettle();
     expect(result, isNull);
   });
+
+  testWidgets('chỉ có currentName (không id) vẫn có "Bỏ gán"', (tester) async {
+    ({String? id, String? name})? result = (id: 'x', name: 'x');
+    await _open(
+      tester,
+      (c) async => result = await showOwnerPicker(c, currentName: 'Cũ'),
+    );
+    await tester.tap(find.text('Bỏ gán'));
+    await tester.pumpAndSettle();
+    expect(result, (id: null, name: null));
+  });
+
+  testWidgets('ô tìm lọc danh sách thành viên', (tester) async {
+    await _open(tester, (c) async => showOwnerPicker(c));
+    expect(find.text('Hoàng'), findsOneWidget);
+    expect(find.text('Lan'), findsOneWidget);
+    await tester.enterText(find.byType(TextField), ' lan ');
+    await tester.pumpAndSettle();
+    expect(find.text('Hoàng'), findsNothing);
+    expect(find.text('Lan'), findsOneWidget);
+    await tester.enterText(find.byType(TextField), 'zzz');
+    await tester.pumpAndSettle();
+    expect(find.text('Không tìm thấy ai'), findsOneWidget);
+  });
+
+  testWidgets('current ["báo giá"] gập về "Báo giá", không hai dòng', (
+    tester,
+  ) async {
+    List<String>? result;
+    await _open(
+      tester,
+      (c) async => result = await showTagPicker(c, current: ['báo giá']),
+    );
+    expect(find.text('Báo giá'), findsOneWidget);
+    expect(find.text('báo giá'), findsNothing);
+    await tester.tap(find.text('Xong'));
+    await tester.pumpAndSettle();
+    expect(result, ['Báo giá']);
+  });
 }

@@ -13,19 +13,22 @@ import '../../../team/application/team_providers.dart';
 Future<({String? id, String? name})?> showOwnerPicker(
   BuildContext context, {
   String? currentId,
+  String? currentName,
 }) {
   return showModalBottomSheet<({String? id, String? name})>(
     context: context,
     isScrollControlled: true,
     showDragHandle: true,
-    builder: (_) => _OwnerPickerSheet(currentId: currentId),
+    builder: (_) =>
+        _OwnerPickerSheet(currentId: currentId, currentName: currentName),
   );
 }
 
 class _OwnerPickerSheet extends ConsumerStatefulWidget {
-  const _OwnerPickerSheet({required this.currentId});
+  const _OwnerPickerSheet({required this.currentId, this.currentName});
 
   final String? currentId;
+  final String? currentName;
 
   @override
   ConsumerState<_OwnerPickerSheet> createState() => _OwnerPickerSheetState();
@@ -63,7 +66,8 @@ class _OwnerPickerSheetState extends ConsumerState<_OwnerPickerSheet> {
                     setState(() => _query = v.trim().toLowerCase()),
               ),
             ),
-            if (widget.currentId != null)
+            if (widget.currentId != null ||
+                (widget.currentName?.trim().isNotEmpty ?? false))
               ListTile(
                 minTileHeight: 48,
                 leading: const Icon(Icons.person_off_outlined),

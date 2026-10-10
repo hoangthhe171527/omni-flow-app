@@ -30,12 +30,30 @@ class _TagPickerSheet extends StatefulWidget {
 }
 
 class _TagPickerSheetState extends State<_TagPickerSheet> {
-  late final List<String> _selected = [...widget.current];
-  late final List<String> _options = [
+  // Nhãn hiện có khớp nhãn chuẩn không phân biệt hoa thường thì gập về cách
+  // viết của nhãn chuẩn (không hiện hai dòng "Báo giá" / "báo giá").
+  static String _canon(String tag) {
+    final lower = tag.trim().toLowerCase();
+    for (final s in kStandardCustomerTags) {
+      if (s.toLowerCase() == lower) return s;
+    }
+    return tag;
+  }
+
+  late final List<String> _selected = _dedupe(widget.current.map(_canon));
+  late final List<String> _options = _dedupe([
     ...kStandardCustomerTags,
-    for (final tag in widget.current)
-      if (!kStandardCustomerTags.contains(tag)) tag,
-  ];
+    ..._selected,
+  ]);
+
+  static List<String> _dedupe(Iterable<String> tags) {
+    final seen = <String>{};
+    return [
+      for (final t in tags)
+        if (seen.add(t.toLowerCase())) t,
+    ];
+  }
+
   final _input = TextEditingController();
   String? _bumped;
 
