@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/semantics.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 import 'package:omni_app/app/shell/directory_page.dart';
 import 'package:omni_app/core/module/module_registry.dart';
 import 'package:omni_app/core/module/module_route.dart';
@@ -10,9 +12,8 @@ import 'package:omni_app/core/storage/preferences_store.dart';
 import 'package:omni_app/design/components/components.dart';
 import 'package:omni_app/design/theme/omni_theme.dart';
 import 'package:omni_app/design/tokens/tokens.dart';
-import 'package:omni_app/modules/auth/application/login_controller.dart';
+import 'package:omni_app/modules/settings/settings_module.dart';
 import 'package:omni_app/security/permissions/access_policy.dart';
-import 'package:omni_app/security/session/auth_gateway.dart';
 import 'package:omni_app/security/session/session.dart';
 import 'package:omni_app/security/session/session_controller.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -69,6 +70,16 @@ class _FakeModule extends OmniModule {
   ];
 }
 
+class _NoAdminModule extends _FakeModule {
+  const _NoAdminModule();
+
+  @override
+  List<ModuleNavEntry> navEntries() => [
+    for (final e in super.navEntries())
+      if (e.area != NavArea.admin) e,
+  ];
+}
+
 const _session = Session(
   status: SessionStatus.authenticated,
   user: SessionUser(id: 'u', fullName: 'Trần Huy Hoàng', email: 'h@x.vn'),
@@ -77,76 +88,104 @@ const _session = Session(
 );
 
 class _FakeSession extends SessionController {
-  int chooseCalls = 0;
-
   @override
   Session build() => _session;
-
-  @override
-  void chooseWorkspace() => chooseCalls++;
 }
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  Future<_FakeSession> pump(WidgetTester tester, {int tenantCount = 1}) async {
+  Future<void> pump(
+    WidgetTester tester, {
+    OmniModule module = const _FakeModule(),
+    bool reducedMotion = false,
+    bool settle = true,
+  }) async {
     tester.view.physicalSize = const Size(390, 1600);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.reset);
 
     SharedPreferences.setMockInitialValues({});
     final prefs = await SharedPreferences.getInstance();
-    final controller = _FakeSession();
+    final router = GoRouter(
+      routes: [
+        GoRoute(path: '/', builder: (_, _) => const DirectoryPage()),
+        GoRoute(
+          path: '/account',
+          name: SettingsModule.account,
+          builder: (_, _) => const Text('ACCOUNT'),
+        ),
+      ],
+    );
+    addTearDown(router.dispose);
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
-          modulesProvider.overrideWithValue(const [_FakeModule()]),
+          modulesProvider.overrideWithValue([module]),
           sharedPreferencesProvider.overrideWithValue(prefs),
-          sessionControllerProvider.overrideWith(() => controller),
-          tenantOptionsProvider.overrideWith(
-            (ref) async => [
-              for (var i = 0; i < tenantCount; i++)
-                TenantOption(id: 't-$i', name: 'Không gian $i'),
-            ],
-          ),
+          sessionControllerProvider.overrideWith(_FakeSession.new),
         ],
-        child: MaterialApp(
+        child: MaterialApp.router(
           theme: OmniTheme.light(),
-          home: const DirectoryPage(),
+          routerConfig: router,
+          builder: (context, child) => MediaQuery(
+            data: MediaQuery.of(
+              context,
+            ).copyWith(disableAnimations: reducedMotion),
+            child: child!,
+          ),
         ),
       ),
     );
-    await tester.pumpAndSettle();
-    return controller;
+    if (settle) await tester.pumpAndSettle();
   }
 
-  testWidgets('thẻ hồ sơ và không gian làm việc ở đầu màn', (tester) async {
-    await pump(tester);
-
-    expect(find.text('Trần Huy Hoàng'), findsOneWidget);
-    expect(find.text('Xưởng đàn Hoàng Gia'), findsOneWidget);
+  testWidgets('nhóm theo bản mẫu: Bán hàng gộp Trao đổi + Bán hàng', (t) async {
+    await pump(t);
+    final labels = t
+        .widgetList<Text>(
+          find.descendant(
+            of: find.byWidgetPredicate(
+              (w) => w is Semantics && w.properties.header == true,
+            ),
+            matching: find.byType(Text),
+          ),
+        )
+        .map((e) => e.data)
+        .toList();
+    expect(labels, ['Bán hàng', 'Công việc', 'Đội & quản trị', 'Cá nhân']);
   });
 
-  testWidgets('nhóm theo khu, Bán hàng và Quản trị chung một lưới', (
-    tester,
-  ) async {
-    await pump(tester);
-
-    expect(find.text('Công việc'), findsOneWidget);
-    expect(find.text('Trao đổi'), findsOneWidget);
-    expect(find.text('Bán hàng · Quản trị'), findsOneWidget);
-    expect(find.text('Cá nhân'), findsOneWidget);
-    expect(find.text('Pháp lý & hỗ trợ'), findsOneWidget);
-    // Mục khu Tài khoản nằm trong "Cá nhân", có dòng phụ.
-    expect(find.text('Xem những gì bạn được phép làm'), findsOneWidget);
+  testWidgets('lưới 4 cột: 4 ô Cá nhân nằm cùng một hàng', (t) async {
+    await pump(t);
+    final ys = [
+      'Quyền của tôi',
+      'Tài khoản',
+      'Giao diện',
+      'Hỗ trợ',
+    ].map((l) => t.getCenter(find.text(l)).dy).toSet();
+    expect(ys.length, 1);
   });
 
-  testWidgets('tin chưa đọc là huy hiệu vàng, việc trễ là huy hiệu đỏ', (
-    tester,
-  ) async {
-    await pump(tester);
+  testWidgets('ô có màu theo nhóm (tím cho Quản trị, sáng)', (t) async {
+    await pump(t);
+    final box = t.widget<Container>(
+      find
+          .ancestor(
+            of: find.byIcon(Icons.circle_outlined).at(3), // 'Nhân viên'
+            matching: find.byType(Container),
+          )
+          .first,
+    );
+    expect(
+      (box.decoration! as BoxDecoration).color,
+      OmniFeatureTones.light(OmniHue.violet).background,
+    );
+  });
 
-    final badges = tester
+  testWidgets('huy hiệu: tin chưa đọc vàng, việc trễ đỏ', (t) async {
+    await pump(t);
+    final badges = t
         .widgetList<OmniCountBadge>(find.byType(OmniCountBadge))
         .toList();
     final unread = badges.singleWhere((b) => b.count == 12);
@@ -157,39 +196,69 @@ void main() {
     expect(overdue.color, OmniColors.dangerSurface);
   });
 
-  testWidgets('chỉ một không gian thì KHÔNG có nút Đổi', (tester) async {
-    await pump(tester);
-
-    expect(find.widgetWithText(TextButton, 'Đổi'), findsNothing);
+  testWidgets('không còn thẻ hồ sơ / không gian / đăng xuất / xoá tài khoản', (
+    t,
+  ) async {
+    await pump(t);
+    expect(find.text('Trần Huy Hoàng'), findsNothing);
+    expect(find.text('Không gian làm việc'), findsNothing);
+    expect(find.text('Đăng xuất'), findsNothing);
+    expect(find.text('Xóa tài khoản'), findsNothing);
   });
 
-  testWidgets('nhiều không gian: nút Đổi đưa về màn chọn', (tester) async {
-    final controller = await pump(tester, tenantCount: 2);
-
-    await tester.tap(find.widgetWithText(TextButton, 'Đổi'));
-    await tester.pump();
-
-    expect(controller.chooseCalls, 1);
+  testWidgets('tìm không dấu "tai khoan" chỉ còn nhóm Cá nhân', (t) async {
+    await pump(t);
+    await t.enterText(find.byType(TextField), 'tai khoan');
+    await t.pump(const Duration(milliseconds: 400)); // debounce của ô tìm
+    await t.pumpAndSettle();
+    expect(find.text('Tài khoản'), findsOneWidget);
+    expect(find.text('Bán hàng'), findsNothing);
   });
 
-  testWidgets('tìm kiếm lọc ô, nhóm trống biến mất cả tiêu đề', (tester) async {
-    await pump(tester);
-
-    await tester.enterText(find.byType(TextField), 'hop thu');
-    await tester.pump(const Duration(milliseconds: 400));
-
-    expect(find.text('Hộp thư'), findsOneWidget);
-    expect(find.text('Khách hàng'), findsNothing);
-    expect(find.text('Công việc'), findsNothing);
+  testWidgets('không khớp → Không tìm thấy tính năng “…”', (t) async {
+    await pump(t);
+    await t.enterText(find.byType(TextField), 'zzz');
+    await t.pump(const Duration(milliseconds: 400)); // debounce của ô tìm
+    await t.pumpAndSettle();
+    expect(find.text('Không tìm thấy tính năng “zzz”'), findsOneWidget);
   });
 
-  testWidgets('chọn giao diện bằng ba nút có nhãn đọc được', (tester) async {
-    final handle = tester.ensureSemantics();
-    await pump(tester);
+  testWidgets('Tài khoản mở route settings.account', (t) async {
+    await pump(t);
+    await t.tap(find.text('Tài khoản'));
+    await t.pumpAndSettle();
+    expect(find.text('ACCOUNT'), findsOneWidget);
+  });
 
-    expect(find.bySemanticsLabel('Theo hệ thống'), findsOneWidget);
-    expect(find.bySemanticsLabel('Sáng'), findsOneWidget);
-    expect(find.bySemanticsLabel('Tối'), findsOneWidget);
+  testWidgets('ô là nút ngữ nghĩa có onTap, nhãn kèm số huy hiệu', (t) async {
+    final handle = t.ensureSemantics();
+    await pump(t);
+    final node = t.getSemantics(find.bySemanticsLabel('Hộp thư, 12'));
+    expect(node.label, 'Hộp thư, 12');
+    expect(node.getSemanticsData().hasAction(SemanticsAction.tap), isTrue);
     handle.dispose();
+  });
+
+  testWidgets('module không khai mục nào cho khu Quản trị → không có nhóm đó', (
+    t,
+  ) async {
+    await pump(t, module: const _NoAdminModule());
+    expect(find.text('Đội & quản trị'), findsNothing);
+  });
+
+  testWidgets('giảm chuyển động: không còn khung hoạt ảnh sau một pump', (
+    t,
+  ) async {
+    await pump(t, reducedMotion: true, settle: false);
+    await t.pump();
+    expect(t.hasRunningAnimations, isFalse);
+  });
+
+  test('hueOfArea theo bản mẫu', () {
+    expect(hueOfArea(NavArea.communication), OmniHue.teal);
+    expect(hueOfArea(NavArea.sales), OmniHue.orange);
+    expect(hueOfArea(NavArea.work), OmniHue.blue);
+    expect(hueOfArea(NavArea.admin), OmniHue.violet);
+    expect(hueOfArea(NavArea.account), OmniHue.neutral);
   });
 }
