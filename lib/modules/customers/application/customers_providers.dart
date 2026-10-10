@@ -40,6 +40,15 @@ class CustomerFilter {
   CustomerFilter copyWith({CustomerQuickFilter? quick, String? search}) =>
       CustomerFilter(quick: quick ?? this.quick, search: search ?? this.search);
 
+  /// Số bộ lọc đang bật trên nút lọc: viên lọc nhanh khác mặc định của phạm vi
+  /// (`own` mặc định "Của tôi", còn lại "Tất cả") tính 1.
+  int activeCountFor(AccessScope scope) {
+    final base = scope == AccessScope.own
+        ? CustomerQuickFilter.mine
+        : CustomerQuickFilter.all;
+    return quick == base ? 0 : 1;
+  }
+
   Map<String, dynamic> toQuery({String? currentUserId}) => {
     if (search.isNotEmpty) 'search': search,
     ...switch (quick) {
