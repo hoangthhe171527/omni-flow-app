@@ -9,6 +9,7 @@ export 'omni_avatar.dart';
 export 'omni_backdrop.dart';
 export 'omni_brand.dart';
 export 'omni_card.dart';
+export 'omni_collapsible_card.dart';
 export 'omni_dashed_circle.dart';
 export 'omni_inputs.dart';
 export 'omni_status_chip.dart';
