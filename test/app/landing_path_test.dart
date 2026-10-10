@@ -35,9 +35,9 @@ void main() {
     expect(_landing(<String>{}), '/more');
   });
 
-  test('có Hộp thư và Việc thì vào Hộp thư', () {
+  test('có Hộp thư và Việc thì vào Tổng quan (tab đầu)', () {
     final path = _landing({'tasks.read', 'inbox.read'});
     expect(path, isNot('/more'));
-    expect(path, contains('inbox'));
+    expect(path, '/home');
   });
 }

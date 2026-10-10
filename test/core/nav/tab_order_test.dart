@@ -34,6 +34,13 @@ void main() {
     ]);
   });
 
+  test('Tổng quan đứng đầu khi được phép', () {
+    expect(
+      orderTabs([e('inbox.list'), e('dashboard.home')]).map((x) => x.routeName),
+      ['dashboard.home', 'inbox.list'],
+    );
+  });
+
   test('chỉ có quyền Hộp thư thì chỉ một tab', () {
     expect(orderTabs([e('inbox.list')]).map((x) => x.routeName), [
       'inbox.list',

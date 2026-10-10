@@ -18,6 +18,7 @@ import 'modules/auth/data/auth_api.dart';
 import 'modules/auth/data/google_identity_service.dart';
 import 'modules/channels/channels_module.dart';
 import 'modules/customers/customers_module.dart';
+import 'modules/dashboard/dashboard_module.dart';
 import 'modules/inbox/inbox_module.dart';
 import 'modules/notifications/notifications_module.dart';
 import 'modules/opportunities/opportunities.dart'
@@ -36,6 +37,7 @@ import 'security/session/auth_gateway.dart';
 /// central permission map, and nothing to remember in a second file.
 const List<OmniModule> appModules = [
   AuthModule(),
+  DashboardModule(),
   InboxModule(),
   TasksModule(),
   PlansModule(),
