@@ -46,12 +46,14 @@ void main() {
     await tester.pumpWidget(host());
     await tester.pumpAndSettle();
 
-    expect(find.textContaining('Liên hệ'), findsOneWidget);
-    expect(find.textContaining('Đã mua'), findsOneWidget);
+    expect(find.text('Liên hệ'), findsOneWidget);
+    // Dải chỉ có giai đoạn mở: "Đã mua" (Thắng) không phải ô.
+    expect(find.text('Đã mua'), findsNothing);
     expect(find.text('Đàm phán'), findsNothing);
-    expect(find.text('Của tôi'), findsOneWidget);
-    // Cột mặc định là giai đoạn mở đầu tiên.
-    expect(api.calls.first.stageCode, 'lien_he');
+    // "Của tôi" nằm trong panel lọc, đóng cho tới khi chạm nút lọc.
+    expect(find.text('Của tôi'), findsNothing);
+    // Mặc định: mọi giai đoạn mở, không gửi `stage`.
+    expect(api.calls.first.stageCode, isNull);
     expect(api.calls.first.pipeline, 'ban_le');
     expect(find.text('Cơ hội 0'), findsOneWidget);
   });
@@ -60,6 +62,8 @@ void main() {
     await tester.pumpWidget(host());
     await tester.pumpAndSettle();
 
+    await tester.tap(find.bySemanticsLabel('Bộ lọc'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Của tôi'));
     await tester.pumpAndSettle();
 
@@ -67,7 +71,7 @@ void main() {
     expect(api.summaryMine.last, isTrue);
   });
 
-  testWidgets('cuộn tới cuối cột → tải trang 2', (tester) async {
+  testWidgets('cuộn tới cuối danh sách → tải trang 2', (tester) async {
     api.total = 45;
     await tester.pumpWidget(host());
     await tester.pumpAndSettle();
@@ -86,6 +90,8 @@ void main() {
     await tester.pumpWidget(host());
     await tester.pumpAndSettle();
 
+    await tester.tap(find.bySemanticsLabel('Bộ lọc'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Bán lẻ'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Bán hàng chuẩn'));
@@ -94,7 +100,7 @@ void main() {
     expect(find.text('Liên hệ'), findsNothing);
     expect(find.text('Mới'), findsOneWidget);
     expect(api.calls.last.pipeline, 'standard');
-    expect(api.calls.last.stageCode, 'new');
+    expect(api.calls.last.stageCode, isNull);
   });
 
   testWidgets('tạo cơ hội khi đang xem quy trình khác mặc định → vào đúng '
@@ -285,7 +291,11 @@ class _FakeApi extends OpportunitiesApi {
   });
 
   @override
-  Future<PipelineSummary> summary({String? pipeline, bool mine = false}) async {
+  Future<PipelineSummary> summary({
+    String? pipeline,
+    bool mine = false,
+    String? search,
+  }) async {
     summaryMine.add(mine);
     return PipelineSummary.fromJson({
       'count_by_stage': {'lien_he': total, 'da_mua': 2},
@@ -296,9 +306,11 @@ class _FakeApi extends OpportunitiesApi {
   @override
   Future<Paged<Opportunity>> list({
     String? stageCode,
+    String? status,
     String? pipeline,
     bool mine = false,
     String? search,
+    String? customerId,
     int page = 1,
     int perPage = AppConfig.defaultPerPage,
   }) async {

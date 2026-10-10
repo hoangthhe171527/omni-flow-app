@@ -1,17 +1,16 @@
 import 'package:flutter/material.dart';
 
 abstract final class OmniType {
-  /// Inter — font giao diện của mọi màn làm việc (đề xuất "Chuẩn hoá phong
-  /// cách", `SFonts.dc.html`): trung tính, rõ ở 13–15px, có số đều cột.
+  /// Be Vietnam Pro — font giao diện của mọi màn (giao diện mới GĐ1), thiết kế
+  /// cho tiếng Việt nên dấu xếp gọn ở mọi cỡ chữ.
   ///
-  /// Đóng gói đúng ba độ đậm 400/500/600 trong `assets/fonts`, nên app KHÔNG
-  /// có chữ nào đậm hơn 600: xin w700 là để máy tự chọn hoặc tô đậm giả.
-  /// `type_scale_test.dart` giữ trần này cho cả thang lẫn mã trong `lib/`.
-  static const String family = 'Inter';
+  /// Đóng gói các độ đậm 400/500/600/700/800 trong `assets/fonts`, không tải
+  /// lúc chạy.
+  static const String family = 'Be Vietnam Pro';
 
-  /// Be Vietnam Pro chỉ còn cho chữ "Viomni" cạnh logo ở màn mở app — nhận
-  /// diện thương hiệu đã duyệt, không phải chữ để đọc. Chỉ đóng gói bản 800.
-  static const String brandFamily = 'Be Vietnam Pro';
+  /// Phông của chữ "Viomni" cạnh logo ([wordmark]): nay trùng [family], chỉ
+  /// khác chữ thường ở độ đậm 800. Tên riêng để thương hiệu đổi độc lập.
+  static const String brandFamily = family;
 
   /// Counts and money use tabular figures so numbers never jitter as they
   /// update in place (unread badges, pipeline totals, message timestamps).
@@ -222,4 +221,16 @@ abstract final class OmniChatType {
   /// để đọc, nên nằm ngoài thang trên. Cỡ này vừa một ô của lưới 8 cột trên
   /// màn 360dp mà vẫn chạm được.
   static const TextStyle emoji = TextStyle(fontSize: 26, height: 1.2);
+
+  /// Emoji trên thanh cảm xúc của menu bấm giữ (`Thread.dc.html` `.rx`): một
+  /// glyph trong nút 44×44.
+  static const TextStyle reaction = TextStyle(fontSize: 20, height: 1.2);
+
+  /// Viên cảm xúc nội bộ dưới bong bóng ("❤️ 2"): sàn đọc được 12.
+  static const TextStyle reactionChip = TextStyle(
+    fontFamily: OmniType.family,
+    fontSize: 12,
+    fontWeight: FontWeight.w500,
+    height: 1.4,
+  );
 }

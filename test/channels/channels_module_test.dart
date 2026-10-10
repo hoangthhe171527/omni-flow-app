@@ -3,6 +3,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:omni_app/bootstrap.dart';
 import 'package:omni_app/core/module/module_registry.dart';
 import 'package:omni_app/core/module/nav_destination.dart';
+import 'package:omni_app/modules/channels/application/channels_providers.dart';
+import 'package:omni_app/modules/channels/channels_module.dart';
 import 'package:omni_app/modules/channels/domain/channel_permissions.dart';
 import 'package:omni_app/security/permissions/access_policy.dart';
 import 'package:omni_app/security/session/session.dart';
@@ -34,25 +36,25 @@ List<String> _menuLabels(ProviderContainer container) => container
     .toList();
 
 void main() {
-  test('người có channels.read thấy mục Kết nối kênh', () {
+  test('người có channels.read thấy mục Kênh kết nối', () {
     final container = _containerFor({ChannelPermissions.read});
     addTearDown(container.dispose);
 
-    expect(_menuLabels(container), contains('Kết nối kênh'));
+    expect(_menuLabels(container), contains('Kênh kết nối'));
   });
 
   test('nhân viên chỉ có channels.read.own vẫn vào được', () {
     final container = _containerFor({ChannelPermissions.readOwn});
     addTearDown(container.dispose);
 
-    expect(_menuLabels(container), contains('Kết nối kênh'));
+    expect(_menuLabels(container), contains('Kênh kết nối'));
   });
 
   test('không có quyền kênh thì không thấy mục nào', () {
     final container = _containerFor({});
     addTearDown(container.dispose);
 
-    expect(_menuLabels(container), isNot(contains('Kết nối kênh')));
+    expect(_menuLabels(container), isNot(contains('Kênh kết nối')));
   });
 
   test('mục này nằm trong nhóm Hộp thư để dễ tìm từ mobile', () {
@@ -61,7 +63,7 @@ void main() {
 
     final group =
         container.read(directoryGroupsProvider)[NavArea.communication] ?? [];
-    expect(group.map((e) => e.label), contains('Kết nối kênh'));
+    expect(group.map((e) => e.label), contains('Kênh kết nối'));
   });
 
   test('kênh không chiếm tab dưới', () {
@@ -71,6 +73,13 @@ void main() {
     final labels = container
         .read(primaryNavEntriesProvider)
         .map((e) => e.label);
-    expect(labels, isNot(contains('Kết nối kênh')));
+    expect(labels, isNot(contains('Kênh kết nối')));
+  });
+
+  test('mục Kênh kết nối mang huy hiệu lỗi kênh, giọng cảnh báo', () {
+    final entry = const ChannelsModule().navEntries().single;
+
+    expect(entry.badge, same(channelErrorCountProvider));
+    expect(entry.badgeTone, NavBadgeTone.alert);
   });
 }

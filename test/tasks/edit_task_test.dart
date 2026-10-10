@@ -71,6 +71,14 @@ void main() {
     await tester.pumpAndSettle();
   }
 
+  /// Đổi tên đi qua ⋯ "Tuỳ chọn công việc" → "Đổi tên việc".
+  Future<void> openRename(WidgetTester tester) async {
+    await tester.tap(find.byTooltip('Tuỳ chọn công việc'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Đổi tên việc'));
+    await tester.pumpAndSettle();
+  }
+
   Map<String, dynamic> sentBody() =>
       Map<String, dynamic>.from(adapter.singleRequest.data as Map);
 
@@ -104,7 +112,7 @@ void main() {
       await pumpApp(tester, host(task: taskWith({'due_date': '2026-12-31'})));
       await tester.pumpAndSettle();
 
-      await tester.tap(find.textContaining('31/12/2026'));
+      await tester.tap(find.text('31/12'));
       await tester.pumpAndSettle();
       await tester.tap(find.text('Xoá hạn'));
       await tester.pumpAndSettle();
@@ -144,11 +152,11 @@ void main() {
   });
 
   group('tên việc', () {
-    testWidgets('sửa được bằng cách chạm vào chính cái tên', (tester) async {
+    testWidgets('sửa được qua ⋯ → Đổi tên việc', (tester) async {
       await pumpApp(tester, host());
       await tester.pumpAndSettle();
 
-      await tester.tap(find.text('KAWAI HAT-5'));
+      await openRename(tester);
       await tester.pumpAndSettle();
       await tester.enterText(sheetField, 'KAWAI HAT-5 — SN 2308512');
       await tester.pump();
@@ -163,7 +171,7 @@ void main() {
       await pumpApp(tester, host());
       await tester.pumpAndSettle();
 
-      await tester.tap(find.text('KAWAI HAT-5'));
+      await openRename(tester);
       await tester.pumpAndSettle();
       await tester.enterText(sheetField, '   ');
       await tester.pump();
@@ -180,7 +188,7 @@ void main() {
       await pumpApp(tester, host());
       await tester.pumpAndSettle();
 
-      await tester.tap(find.text('KAWAI HAT-5'));
+      await openRename(tester);
       await tester.pumpAndSettle();
 
       final save = tester.widget<FilledButton>(
@@ -196,7 +204,7 @@ void main() {
       await pumpApp(tester, host());
       await tester.pumpAndSettle();
 
-      expect(find.text('Thêm mô tả…'), findsOneWidget);
+      expect(find.text('Thêm mô tả'), findsOneWidget);
     });
 
     testWidgets('xoá sạch mô tả là lựa chọn hợp lệ', (tester) async {
@@ -223,10 +231,10 @@ void main() {
       await pumpApp(tester, host(permissions: worker));
       await tester.pumpAndSettle();
 
-      // Thợ VẪN thấy hạn — dưới dạng chip chỉ đọc ở đầu màn, vì đó là thứ họ
+      // Thợ VẪN thấy khối ĐIỀU PHỐI ở dạng chỉ đọc, vì đó là thứ họ
       // cần biết để làm việc. Thứ họ không có là cách đổi nó.
-      expect(find.text('Điều phối'), findsNothing);
-      expect(find.text('Thêm mô tả…'), findsNothing);
+      expect(find.byTooltip('Tuỳ chọn công việc'), findsNothing);
+      expect(find.text('Thêm mô tả'), findsNothing);
       expect(find.byIcon(Icons.edit_outlined), findsNothing);
       expect(find.byIcon(Icons.chevron_right_rounded), findsNothing);
     });

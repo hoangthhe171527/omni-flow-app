@@ -4,28 +4,103 @@ import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/config/app_config.dart';
-import '../../core/error/app_exception.dart';
 import '../../core/module/module_registry.dart';
 import '../../core/module/nav_destination.dart';
-import '../../core/nav/pinned_tabs.dart';
-import '../../core/theme/theme_mode_controller.dart';
+import '../../core/utils/text_search.dart';
 import '../../design/components/components.dart';
+import '../../design/platform/omni_motion_scope.dart';
 import '../../design/tokens/tokens.dart';
-import '../../modules/auth/application/login_controller.dart';
-import '../../security/session/session_controller.dart';
-import '../router/shell_routes.dart';
-import 'app_shell.dart';
+import '../../modules/settings/settings_module.dart';
 
-/// Danh bạ "Tất cả": hồ sơ người dùng, rồi MỌI tính năng họ có quyền dùng,
-/// gom theo nhóm và tìm được bằng từ khoá.
+export '../../core/utils/text_search.dart' show foldDiacritics, matchesQuery;
+
+/// Một ô trong lưới "Tất cả".
+class DirectoryTile {
+  const DirectoryTile({
+    required this.label,
+    this.subtitle,
+    required this.icon,
+    required this.hue,
+    required this.onTap,
+    this.badge,
+    this.badgeTone = NavBadgeTone.unread,
+    this.id,
+  });
+
+  /// Khoá ổn định của ô (tên route); mặc định là nhãn.
+  final String? id;
+
+  final String label;
+  final String? subtitle;
+  final IconData icon;
+  final OmniHue hue;
+  final VoidCallback onTap;
+  final ProviderListenable<int>? badge;
+  final NavBadgeTone badgeTone;
+}
+
+typedef DirectorySection = ({String label, List<DirectoryTile> tiles});
+
+/// Sắc ô icon theo khu — `All.dc.html`.
+OmniHue hueOfArea(NavArea area) => switch (area) {
+  NavArea.communication => OmniHue.teal,
+  NavArea.sales => OmniHue.orange,
+  NavArea.work => OmniHue.blue,
+  NavArea.admin => OmniHue.violet,
+  NavArea.account => OmniHue.neutral,
+};
+
+/// Gom mục của module thành bốn nhóm theo bản mẫu và lọc theo từ khoá. Nhóm
+/// rỗng bị bỏ, để không còn tiêu đề trơ trọi.
+List<DirectorySection> buildDirectorySections(
+  Map<NavArea, List<ModuleNavEntry>> groups, {
+  required List<DirectoryTile> personal,
+  required void Function(String routeName) open,
+  required String query,
+}) {
+  DirectoryTile fromEntry(ModuleNavEntry e) => DirectoryTile(
+    label: e.label,
+    subtitle: e.subtitle,
+    icon: e.icon,
+    hue: hueOfArea(e.area),
+    onTap: () => open(e.routeName),
+    badge: e.badge,
+    badgeTone: e.badgeTone,
+    id: e.routeName,
+  );
+  List<DirectoryTile> of(List<NavArea> areas) => [
+    for (final a in areas) ...?groups[a]?.map(fromEntry),
+  ];
+  bool keep(DirectoryTile t) =>
+      matchesQuery(label: t.label, subtitle: t.subtitle, query: query);
+
+  final raw = <(String, List<DirectoryTile>)>[
+    ('Bán hàng', of([NavArea.communication, NavArea.sales])),
+    ('Công việc', of([NavArea.work])),
+    ('Đội & quản trị', of([NavArea.admin])),
+    (
+      'Cá nhân',
+      [
+        ...of([NavArea.account]),
+        ...personal,
+      ],
+    ),
+  ];
+
+  return [
+    for (final (label, tiles) in raw)
+      if (tiles.where(keep).toList() case final kept when kept.isNotEmpty)
+        (label: label, tiles: kept),
+  ];
+}
+
+/// Danh bạ "Tất cả": MỌI tính năng người dùng có quyền dùng, gom theo nhóm,
+/// tìm được bằng từ khoá (không cần gõ dấu).
 ///
 /// Không có gì viết cứng theo module — module khai báo mục, registry lọc theo
-/// quyền, màn này dựng bất cứ thứ gì nhận được. Một module ra mắt ngày mai xuất
-/// hiện ở đây mà file này không đổi một dòng.
-///
-/// Bố cục theo `MDirectory.dc.html`: thẻ hồ sơ nền mực, thẻ không gian làm
-/// việc, ô tìm, lưới ô tính năng theo nhóm, rồi "Cá nhân", "Pháp lý & hỗ trợ"
-/// và nút đăng xuất.
+/// quyền và cờ tính năng, màn này dựng bất cứ thứ gì nhận được. Hồ sơ, không
+/// gian làm việc, giao diện, pháp lý, đăng xuất và xoá tài khoản nằm ở màn
+/// Tài khoản; ở đây chỉ có ô lối vào.
 class DirectoryPage extends ConsumerStatefulWidget {
   const DirectoryPage({super.key});
 
@@ -36,358 +111,124 @@ class DirectoryPage extends ConsumerStatefulWidget {
 class _DirectoryPageState extends ConsumerState<DirectoryPage> {
   String _query = '';
 
-  @override
-  Widget build(BuildContext context) {
-    final groups = _filtered(ref.watch(directoryGroupsProvider), _query);
-    final tabCount = ref
-        .watch(tabEntriesProvider)
-        .take(AppShell.maxTabs)
-        .length;
-    final accountEntries = groups[NavArea.account] ?? const <ModuleNavEntry>[];
+  /// Ô đã từng hiện: chỉ lần dựng đầu tiên mới chạy hoạt ảnh, gõ tìm không phát lại.
+  final _seen = <String>{};
 
-    // Hai dòng cố định của "Cá nhân" cũng tìm được, như mọi mục khác.
-    final showTheme = matchesQuery(
-      label: 'Giao diện',
-      subtitle: 'Sáng tối',
-      query: _query,
-    );
-    final showPinTabs = matchesQuery(
-      label: 'Chọn tab',
-      subtitle: 'Thanh dưới',
-      query: _query,
-    );
-
-    // "Bán hàng" và "Quản trị" chung một lưới như thiết kế: mỗi nhóm thường
-    // chỉ vài ô, tách ra là hai hàng lẻ loi.
-    final sections = <(String, List<ModuleNavEntry>)>[
-      for (final area in [NavArea.work, NavArea.communication])
-        if (groups[area] case final entries?) (area.label, entries),
-      ?_merged(groups),
-    ];
-    final nothing =
-        sections.isEmpty &&
-        accountEntries.isEmpty &&
-        !showTheme &&
-        !showPinTabs;
-
-    return Scaffold(
-      appBar: const OmniAppBar(title: 'Tất cả'),
-      body: Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 720),
-          child: ListView(
-            padding: const EdgeInsets.fromLTRB(
-              OmniSpacing.xl,
-              OmniSpacing.sm,
-              OmniSpacing.xl,
-              OmniSpacing.bottomSafe,
-            ),
-            children: [
-              const _ProfileCard(),
-              const SizedBox(height: OmniSpacing.lg),
-              const _WorkspaceCard(),
-              const SizedBox(height: OmniSpacing.lg),
-              OmniSearchField(
-                hint: 'Tìm tính năng…',
-                outlined: true,
-                onChanged: (value) => setState(() => _query = value),
-              ),
-
-              if (nothing)
-                const Padding(
-                  padding: EdgeInsets.only(top: OmniSpacing.section),
-                  child: OmniEmptyState(
-                    icon: Icons.search_off_rounded,
-                    title: 'Không tìm thấy',
-                    message: 'Thử một từ khác, hoặc xoá ô tìm kiếm.',
-                  ),
-                ),
-
-              for (final (title, entries) in sections) ...[
-                _GroupLabel(title),
-                _TileGrid(entries: entries),
-              ],
-
-              if (showTheme || showPinTabs || accountEntries.isNotEmpty) ...[
-                const _GroupLabel('Cá nhân'),
-                _ListCard(
-                  children: [
-                    if (showTheme) const _ThemeRow(),
-                    if (showPinTabs)
-                      _ListRow(
-                        label: 'Chọn tab',
-                        subtitle: '$tabCount mục hiện ở thanh dưới',
-                        onTap: () => context.pushNamed(ShellRoutes.pinTabs),
-                      ),
-                    for (final entry in accountEntries)
-                      _ListRow(
-                        label: entry.label,
-                        subtitle: entry.subtitle,
-                        onTap: () => context.pushNamed(entry.routeName),
-                      ),
-                  ],
-                ),
-              ],
-
-              const _GroupLabel('Pháp lý & hỗ trợ'),
-              _ListCard(
-                children: [
-                  _ListRow(
-                    label: 'Chính sách quyền riêng tư',
-                    external: true,
-                    onTap: () => _openLink(context, AppConfig.privacyPolicyUrl),
-                  ),
-                  _ListRow(
-                    label: 'Hỗ trợ',
-                    subtitle: 'Liên hệ hỗ trợ và yêu cầu về dữ liệu',
-                    external: true,
-                    onTap: () => _openLink(context, AppConfig.supportUrl),
-                  ),
-                  _ListRow(
-                    label: 'Xóa tài khoản',
-                    subtitle:
-                        'Vô hiệu hóa ngay và xóa dữ liệu trong vòng 7 ngày',
-                    destructive: true,
-                    onTap: () => _requestAccountDeletion(context, ref),
-                  ),
-                ],
-              ),
-
-              const SizedBox(height: 22),
-              _LogoutButton(onPressed: () => _confirmLogout(context, ref)),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  (String, List<ModuleNavEntry>)? _merged(
-    Map<NavArea, List<ModuleNavEntry>> groups,
-  ) {
-    final sales = groups[NavArea.sales] ?? const <ModuleNavEntry>[];
-    final admin = groups[NavArea.admin] ?? const <ModuleNavEntry>[];
-    if (sales.isEmpty && admin.isEmpty) return null;
-    if (admin.isEmpty) return (NavArea.sales.label, sales);
-    if (sales.isEmpty) return (NavArea.admin.label, admin);
-
-    return (
-      '${NavArea.sales.label} · ${NavArea.admin.label}',
-      [...sales, ...admin],
-    );
-  }
-
-  Future<void> _openLink(BuildContext context, Uri url) async {
-    final opened = await launchUrl(url, mode: LaunchMode.externalApplication);
-    if (opened || !context.mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
+  Future<void> _openSupport() async {
+    // Chụp trước khi await: màn có thể đã bị đóng khi trình duyệt trả về.
+    final messenger = ScaffoldMessenger.of(context);
+    var opened = false;
+    try {
+      opened = await launchUrl(
+        AppConfig.supportUrl,
+        mode: LaunchMode.externalApplication,
+      );
+    } on Object {
+      opened = false;
+    }
+    if (opened) return;
+    messenger.showSnackBar(
       const SnackBar(
         content: Text('Không mở được liên kết. Vui lòng thử lại.'),
       ),
     );
   }
 
-  Future<void> _requestAccountDeletion(
-    BuildContext context,
-    WidgetRef ref,
-  ) async {
-    final password = await showDialog<String>(
-      context: context,
-      builder: (dialogContext) => const _DeleteAccountDialog(),
-    );
-    if (password == null || !context.mounted) return;
-
-    try {
-      await ref
-          .read(sessionControllerProvider.notifier)
-          .requestAccountDeletion(password: password);
-    } on ValidationException catch (error) {
-      if (!context.mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(error.message)));
-    } on AppException catch (error) {
-      if (!context.mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(error.message)));
-    }
-  }
-
-  Future<void> _confirmLogout(BuildContext context, WidgetRef ref) async {
-    final confirmed = await showOmniConfirm(
-      context: context,
-      title: 'Đăng xuất?',
-      message: 'Bạn sẽ cần đăng nhập lại để tiếp tục làm việc.',
-      confirmLabel: 'Đăng xuất',
-      destructive: true,
-    );
-    if (confirmed) {
-      await ref.read(sessionControllerProvider.notifier).logout();
-    }
-  }
-}
-
-/// Thẻ hồ sơ nền mực — mặt tối của thương hiệu.
-class _ProfileCard extends ConsumerWidget {
-  const _ProfileCard();
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    // `select` từng trường: màn này vẽ tên, ảnh và vai — không phải cả phiên.
-    // Theo dõi cả Session là dựng lại toàn bộ danh bạ mỗi khi phiên đổi bất
-    // kỳ trường nào (token xoay, quyền tải lại).
-    final displayName = ref.watch(sessionProvider.select((s) => s.displayName));
-    final avatarUrl = ref.watch(
-      sessionProvider.select((s) => s.user?.avatarUrl),
-    );
-    final roleLabel = ref.watch(sessionProvider.select((s) => s.roleLabel));
-
-    return Container(
-      padding: const EdgeInsets.all(OmniSpacing.lg),
-      decoration: BoxDecoration(
-        // Mặt mực trên nền tối gần như biến mất — nâng lên một bậc.
-        color: Theme.of(context).brightness == Brightness.dark
-            ? OmniColors.darkMuted
-            : OmniColors.ink,
-        borderRadius: OmniRadius.xlAll,
-      ),
-      child: Row(
-        children: [
-          // Không còn vành quỹ đạo sáng quanh ảnh: màu đó chỉ cho logo. Đệm 4
-          // giữ nguyên chỗ của vành cũ để hàng không xê dịch.
-          Padding(
-            padding: const EdgeInsets.all(4),
-            child: OmniAvatar(name: displayName, imageUrl: avatarUrl, size: 48),
-          ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  displayName,
-                  style: OmniType.section.copyWith(
-                    fontWeight: FontWeight.w600,
-                    color: Colors.white,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  roleLabel,
-                  style: OmniType.caption.copyWith(
-                    fontWeight: FontWeight.w400,
-                    color: OmniColors.inkMutedForeground,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-/// Không gian làm việc hiện tại, và nút "Đổi" khi tài khoản thuộc nhiều hơn
-/// một không gian.
-///
-/// Nút chỉ hiện khi danh sách không gian đã về và có từ hai trở lên: bấm "Đổi"
-/// để rồi thấy đúng một lựa chọn là lừa người dùng.
-class _WorkspaceCard extends ConsumerWidget {
-  const _WorkspaceCard();
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final scheme = Theme.of(context).colorScheme;
-    final tenantName = ref.watch(sessionProvider.select((s) => s.tenant?.name));
-    final canSwitch =
-        (ref.watch(tenantOptionsProvider).valueOrNull?.length ?? 0) > 1;
-
-    return _Surface(
-      padding: const EdgeInsets.fromLTRB(
-        OmniSpacing.lg,
-        OmniSpacing.md,
-        OmniSpacing.sm,
-        OmniSpacing.md,
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 36,
-            height: 36,
-            decoration: BoxDecoration(
-              color: scheme.surfaceContainerHighest,
-              borderRadius: OmniRadius.smAll,
-            ),
-            child: Icon(
-              Icons.work_outline_rounded,
-              size: OmniIconSize.md,
-              color: scheme.onSurface,
-            ),
-          ),
-          const SizedBox(width: OmniSpacing.md),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Không gian làm việc',
-                  style: OmniType.micro.copyWith(
-                    fontWeight: FontWeight.w400,
-                    color: scheme.onSurfaceVariant,
-                  ),
-                ),
-                Text(
-                  tenantName ?? '—',
-                  style: OmniType.bodyStrong.copyWith(
-                    fontWeight: FontWeight.w600,
-                    color: scheme.onSurface,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          if (canSwitch)
-            TextButton(
-              onPressed: () {
-                // Danh sách có thể đã cũ (vừa được thêm vào một công ty mới).
-                ref.invalidate(tenantOptionsProvider);
-                ref.read(sessionControllerProvider.notifier).chooseWorkspace();
-              },
-              style: TextButton.styleFrom(
-                minimumSize: const Size(48, 44),
-                textStyle: OmniType.body.copyWith(fontWeight: FontWeight.w600),
-              ),
-              child: const Text('Đổi'),
-            ),
-        ],
-      ),
-    );
-  }
-}
-
-/// Nhãn nhóm 13/600 chữ phụ, viết thường.
-class _GroupLabel extends StatelessWidget {
-  const _GroupLabel(this.text);
-
-  final String text;
-
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(
-        OmniSpacing.xs,
-        22,
-        OmniSpacing.xs,
-        OmniSpacing.sm,
+    final groups = ref.watch(directoryGroupsProvider);
+    final sections = buildDirectorySections(
+      groups,
+      personal: [
+        DirectoryTile(
+          label: 'Tài khoản',
+          icon: Icons.person_outline_rounded,
+          hue: OmniHue.neutral,
+          onTap: () => context.pushNamed(SettingsModule.account),
+        ),
+        DirectoryTile(
+          label: 'Giao diện',
+          subtitle: 'Sáng tối',
+          icon: Icons.light_mode_outlined,
+          hue: OmniHue.neutral,
+          onTap: () => context.pushNamed(SettingsModule.account),
+        ),
+        DirectoryTile(
+          label: 'Hỗ trợ',
+          subtitle: 'Liên hệ hỗ trợ',
+          icon: Icons.help_outline_rounded,
+          hue: OmniHue.neutral,
+          onTap: _openSupport,
+        ),
+      ],
+      open: (name) => context.pushNamed(name),
+      query: _query,
+    );
+    // Đánh dấu "đã hiện" SAU khung này (ô được dựng sau build của trang).
+    final ids = [
+      for (final s in sections)
+        for (final t in s.tiles) t.id ?? t.label,
+    ];
+    WidgetsBinding.instance.addPostFrameCallback((_) => _seen.addAll(ids));
+    final scheme = Theme.of(context).colorScheme;
+    // Chỉ số hoạt ảnh chạy liên tục qua các nhóm.
+    final starts = <int>[];
+    var running = 0;
+    for (final s in sections) {
+      starts.add(running);
+      running += s.tiles.length;
+    }
+
+    return Scaffold(
+      appBar: OmniTopBar(
+        semanticsTitle: 'Tất cả',
+        bottom: _SearchBottom(
+          onChanged: (value) => setState(() => _query = value),
+        ),
       ),
-      child: Semantics(
-        header: true,
-        child: Text(
-          text,
-          style: OmniType.overline.copyWith(
-            color: Theme.of(context).colorScheme.onSurfaceVariant,
+      body: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 720),
+          child: ListView(
+            padding: const EdgeInsets.fromLTRB(
+              OmniSpacing.xl,
+              14,
+              OmniSpacing.xl,
+              OmniSpacing.bottomSafe,
+            ),
+            children: [
+              if (sections.isEmpty)
+                Padding(
+                  padding: const EdgeInsets.only(top: 40),
+                  child: Text(
+                    'Không tìm thấy tính năng “$_query”',
+                    textAlign: TextAlign.center,
+                    style: OmniType.body.copyWith(
+                      color: scheme.onSurfaceVariant,
+                    ),
+                  ),
+                ),
+              for (final section in sections) ...[
+                if (section != sections.first) const SizedBox(height: 16),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(4, 0, 4, 8),
+                  child: Semantics(
+                    header: true,
+                    child: Text(
+                      section.label,
+                      style: OmniType.overline.copyWith(
+                        color: scheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ),
+                ),
+                _TileGrid(
+                  tiles: section.tiles,
+                  firstIndex: starts[sections.indexOf(section)],
+                  seen: _seen,
+                ),
+              ],
+            ],
           ),
         ),
       ),
@@ -395,55 +236,56 @@ class _GroupLabel extends StatelessWidget {
   }
 }
 
-/// Mặt trắng viền mảnh, bo 16 — nền chung của các thẻ trên màn này.
-class _Surface extends StatelessWidget {
-  const _Surface({required this.child, this.padding = EdgeInsets.zero});
+/// Ô tìm dưới thanh trên: cao 44 (gọn mắt), đệm `16, 0, 16, 10`.
+class _SearchBottom extends StatelessWidget implements PreferredSizeWidget {
+  const _SearchBottom({required this.onChanged});
 
-  final Widget child;
-  final EdgeInsets padding;
+  final ValueChanged<String> onChanged;
+
+  @override
+  Size get preferredSize => const Size.fromHeight(54);
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-
-    // Material chứ không DecoratedBox: dòng bên trong vẽ gợn sóng lên
-    // Material gần nhất, và một nền tô giữa hai bên sẽ che mất nó.
-    return Material(
-      color: scheme.surface,
-      shape: RoundedRectangleBorder(
-        borderRadius: OmniRadius.xlAll,
-        side: BorderSide(color: scheme.outlineVariant),
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
+      child: SizedBox(
+        height: 44,
+        child: OmniSearchField(
+          hint: 'Tìm tính năng…',
+          outlined: true,
+          dense: true,
+          onChanged: onChanged,
+        ),
       ),
-      clipBehavior: Clip.antiAlias,
-      child: Padding(padding: padding, child: child),
     );
   }
 }
 
-/// Màu ô icon: trung tính cho MỌI nhóm. Bản cũ tô theo nhóm (Công việc mòng
-/// két, Trao đổi xanh dương, Bán hàng vàng đất) — bốn giọng màu cho một lưới
-/// lối tắt là trang trí; nhóm đã có tên nhóm đứng trên.
-({Color background, Color foreground}) _tileTone(BuildContext context) {
-  final (foreground, background) = OmniTone.neutral.of(context);
-
-  return (background: background, foreground: foreground);
-}
-
-/// Lưới 3 cột. Dựng bằng hàng chứ không bằng GridView: ô phải cao bằng nhau
-/// theo ô có nhãn dài nhất trong hàng, và nhãn tiếng Việt hay xuống hai dòng.
+/// Lưới 4 cột trong một thẻ. Dựng bằng hàng chứ không bằng GridView: ô phải
+/// cao bằng nhau theo ô có nhãn dài nhất trong hàng, và nhãn tiếng Việt hay
+/// xuống hai dòng.
 class _TileGrid extends StatelessWidget {
-  const _TileGrid({required this.entries});
+  const _TileGrid({
+    required this.tiles,
+    required this.firstIndex,
+    required this.seen,
+  });
 
-  final List<ModuleNavEntry> entries;
+  final Set<String> seen;
 
-  static const _columns = 3;
-  static const _gap = 10.0;
+  final List<DirectoryTile> tiles;
+  final int firstIndex;
+
+  static const _columns = 4;
+  static const _gap = 4.0;
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
     final rows = <Widget>[];
-    for (var i = 0; i < entries.length; i += _columns) {
-      final slice = entries.skip(i).take(_columns).toList();
+    for (var i = 0; i < tiles.length; i += _columns) {
+      final slice = tiles.skip(i).take(_columns).toList();
       rows.add(
         IntrinsicHeight(
           child: Row(
@@ -453,7 +295,14 @@ class _TileGrid extends StatelessWidget {
                 if (c > 0) const SizedBox(width: _gap),
                 Expanded(
                   child: c < slice.length
-                      ? _FeatureTile(entry: slice[c])
+                      ? _FeatureTile(
+                          key: ValueKey(slice[c].id ?? slice[c].label),
+                          tile: slice[c],
+                          animate: !seen.contains(
+                            slice[c].id ?? slice[c].label,
+                          ),
+                          index: firstIndex + i + c,
+                        )
                       : const SizedBox.shrink(),
                 ),
               ],
@@ -463,70 +312,83 @@ class _TileGrid extends StatelessWidget {
       );
     }
 
-    return Column(
-      children: [
-        for (var r = 0; r < rows.length; r++) ...[
-          if (r > 0) const SizedBox(height: _gap),
-          rows[r],
-        ],
-      ],
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: scheme.surface,
+        borderRadius: OmniRadius.lgAll,
+        border: Border.all(color: scheme.outlineVariant),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+        child: Column(
+          children: [
+            for (var r = 0; r < rows.length; r++) ...[
+              if (r > 0) const SizedBox(height: _gap),
+              rows[r],
+            ],
+          ],
+        ),
+      ),
     );
   }
 }
 
 class _FeatureTile extends ConsumerWidget {
-  const _FeatureTile({required this.entry});
+  const _FeatureTile({
+    super.key,
+    required this.tile,
+    required this.index,
+    required this.animate,
+  });
 
-  final ModuleNavEntry entry;
+  final bool animate;
+
+  final DirectoryTile tile;
+  final int index;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final scheme = Theme.of(context).colorScheme;
-    final tone = _tileTone(context);
-    final badgeProvider = entry.badge;
+    final tone = OmniFeatureTones.of(context, tile.hue);
+    final badgeProvider = tile.badge;
     final count = badgeProvider == null ? 0 : ref.watch(badgeProvider);
 
-    return Semantics(
+    final content = Semantics(
       button: true,
-      label: count > 0 ? '${entry.label}, $count' : entry.label,
-      hint: entry.subtitle,
+      label: count > 0 ? '${tile.label}, $count' : tile.label,
+      hint: tile.subtitle,
+      onTap: tile.onTap,
       excludeSemantics: true,
       child: Material(
-        color: scheme.surface,
-        shape: RoundedRectangleBorder(
-          borderRadius: OmniRadius.xlAll,
-          side: BorderSide(color: scheme.outlineVariant),
-        ),
+        color: Colors.transparent,
+        borderRadius: OmniRadius.lgAll,
         clipBehavior: Clip.antiAlias,
         child: InkWell(
-          onTap: () => context.pushNamed(entry.routeName),
+          onTap: tile.onTap,
           child: Stack(
             children: [
               Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 14,
-                ),
+                padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 2),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Container(
-                      width: 44,
-                      height: 44,
+                      width: 40,
+                      height: 40,
                       decoration: BoxDecoration(
                         color: tone.background,
-                        borderRadius: OmniRadius.lgAll,
+                        borderRadius: OmniRadius.xlAll,
                       ),
-                      child: Icon(entry.icon, size: 22, color: tone.foreground),
+                      child: Icon(tile.icon, size: 20, color: tone.foreground),
                     ),
-                    const SizedBox(height: OmniSpacing.sm),
+                    const SizedBox(height: 6),
                     Text(
-                      entry.label,
+                      tile.label,
                       textAlign: TextAlign.center,
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                       style: OmniType.caption.copyWith(
-                        fontWeight: FontWeight.w600,
+                        fontWeight: FontWeight.w500,
                         color: scheme.onSurface,
                       ),
                     ),
@@ -535,9 +397,9 @@ class _FeatureTile extends ConsumerWidget {
               ),
               if (count > 0)
                 Positioned(
-                  top: 10,
+                  top: 4,
                   right: 12,
-                  child: switch (entry.badgeTone) {
+                  child: switch (tile.badgeTone) {
                     NavBadgeTone.unread => OmniCountBadge.unread(count: count),
                     NavBadgeTone.alert => OmniCountBadge.alert(count: count),
                   },
@@ -547,408 +409,67 @@ class _FeatureTile extends ConsumerWidget {
         ),
       ),
     );
+
+    if (!OmniMotion.enabled(context)) return content;
+
+    return _PopIn(play: animate, delayMs: 50 + 20 * index, child: content);
   }
 }
 
-/// Thẻ chứa các dòng, vạch ngăn giữa chúng.
-class _ListCard extends StatelessWidget {
-  const _ListCard({required this.children});
-
-  final List<Widget> children;
-
-  @override
-  Widget build(BuildContext context) {
-    return _Surface(
-      child: Column(
-        children: [
-          for (var i = 0; i < children.length; i++) ...[
-            if (i > 0) const Divider(height: 1),
-            children[i],
-          ],
-        ],
-      ),
-    );
-  }
-}
-
-/// Một dòng: nhãn, dòng phụ, mũi tên (vào màn khác) hoặc mũi tên chéo (mở
-/// ra ngoài app). Dòng nguy hiểm tô đỏ và không có mũi tên.
-class _ListRow extends StatelessWidget {
-  const _ListRow({
-    required this.label,
-    required this.onTap,
-    this.subtitle,
-    this.external = false,
-    this.destructive = false,
+/// Ô hiện dần: scale .85→1 cùng mờ→rõ trong 300ms, trễ theo thứ tự ô.
+class _PopIn extends StatefulWidget {
+  const _PopIn({
+    required this.play,
+    required this.delayMs,
+    required this.child,
   });
 
-  final String label;
-  final String? subtitle;
-  final bool external;
-  final bool destructive;
-  final VoidCallback onTap;
+  final bool play;
+
+  final int delayMs;
+  final Widget child;
 
   @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final danger = OmniColors.dangerTextOf(context);
-    final foreground = destructive ? danger : scheme.onSurface;
+  State<_PopIn> createState() => _PopInState();
+}
 
-    return InkWell(
-      onTap: onTap,
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(minHeight: 52),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(
-            horizontal: OmniSpacing.lg,
-            vertical: 14,
-          ),
-          child: Row(
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      label,
-                      style: OmniType.bodyStrong.copyWith(
-                        fontWeight: destructive
-                            ? FontWeight.w600
-                            : FontWeight.w500,
-                        color: foreground,
-                      ),
-                    ),
-                    if (subtitle != null)
-                      Text(
-                        subtitle!,
-                        style: OmniType.caption.copyWith(
-                          fontWeight: FontWeight.w400,
-                          color: destructive ? danger : scheme.onSurfaceVariant,
-                        ),
-                      ),
-                  ],
-                ),
-              ),
-              if (!destructive)
-                Icon(
-                  external
-                      ? Icons.north_east_rounded
-                      : Icons.chevron_right_rounded,
-                  size: OmniIconSize.md,
-                  color: scheme.outline,
-                ),
-            ],
-          ),
-        ),
-      ),
-    );
+class _PopInState extends State<_PopIn> with SingleTickerProviderStateMixin {
+  static const _animMs = 300;
+
+  late final AnimationController _controller = AnimationController(
+    vsync: this,
+    duration: Duration(milliseconds: widget.delayMs + _animMs),
+  )..value = widget.play ? 0 : 1;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.play) _controller.forward();
   }
-}
 
-class _LogoutButton extends StatelessWidget {
-  const _LogoutButton({required this.onPressed});
-
-  final VoidCallback onPressed;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final danger = OmniColors.dangerTextOf(context);
-    final dark = Theme.of(context).brightness == Brightness.dark;
-
-    return OutlinedButton(
-      onPressed: onPressed,
-      style: OutlinedButton.styleFrom(
-        foregroundColor: danger,
-        backgroundColor: scheme.surface,
-        minimumSize: const Size.fromHeight(52),
-        side: BorderSide(
-          color: dark ? danger : OmniColors.dangerBorder,
-          width: 1.5,
-        ),
-        shape: const RoundedRectangleBorder(borderRadius: OmniRadius.lgAll),
-        textStyle: OmniType.input.copyWith(fontWeight: FontWeight.w600),
-      ),
-      child: const Text('Đăng xuất'),
-    );
-  }
-}
-
-class _DeleteAccountDialog extends StatefulWidget {
-  const _DeleteAccountDialog();
-
-  @override
-  State<_DeleteAccountDialog> createState() => _DeleteAccountDialogState();
-}
-
-class _DeleteAccountDialogState extends State<_DeleteAccountDialog> {
-  final _password = TextEditingController();
-  bool _obscure = true;
-  bool _confirmed = false;
+  late final Animation<double> _t = CurvedAnimation(
+    parent: _controller,
+    curve: Interval(
+      widget.delayMs / (widget.delayMs + _animMs),
+      1,
+      curve: Curves.easeOutCubic,
+    ),
+  );
 
   @override
   void dispose() {
-    _password.dispose();
+    _controller.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    // Không dùng showOmniConfirm: hộp thoại này có ô mật khẩu và một ô tick
-    // xác nhận, tức là một biểu mẫu chứ không phải câu hỏi có/không. Đây cũng
-    // đúng là chỗ nên bắt người dùng chậm lại — xoá tài khoản không được dễ
-    // như bấm "Đồng ý".
-    return AlertDialog(
-      title: const Text('Xóa tài khoản?'),
-      content: SingleChildScrollView(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Tài khoản sẽ bị vô hiệu hóa ngay. Yêu cầu xóa tài khoản và dữ liệu cá nhân sẽ được hoàn tất trong vòng 7 ngày.',
-            ),
-            const SizedBox(height: OmniSpacing.lg),
-            TextField(
-              controller: _password,
-              obscureText: _obscure,
-              autofocus: true,
-              decoration: InputDecoration(
-                labelText: 'Mật khẩu hiện tại',
-                suffixIcon: IconButton(
-                  // Nhãn nói cả trạng thái — xem login_page.dart.
-                  tooltip: _obscure ? 'Hiện mật khẩu' : 'Ẩn mật khẩu',
-                  onPressed: () => setState(() => _obscure = !_obscure),
-                  icon: Icon(
-                    _obscure
-                        ? Icons.visibility_outlined
-                        : Icons.visibility_off_outlined,
-                  ),
-                ),
-              ),
-              onChanged: (_) => setState(() {}),
-            ),
-            const SizedBox(height: OmniSpacing.md),
-            CheckboxListTile(
-              contentPadding: EdgeInsets.zero,
-              value: _confirmed,
-              controlAffinity: ListTileControlAffinity.leading,
-              title: const Text(
-                'Tôi hiểu đây là yêu cầu xóa toàn bộ tài khoản, không phải tạm khóa.',
-              ),
-              onChanged: (value) => setState(() {
-                _confirmed = value ?? false;
-              }),
-            ),
-          ],
-        ),
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: const Text('Hủy'),
-        ),
-        FilledButton(
-          onPressed: _confirmed && _password.text.isNotEmpty
-              ? () => Navigator.pop(context, _password.text)
-              : null,
-          style: FilledButton.styleFrom(
-            backgroundColor: Theme.of(context).colorScheme.error,
-          ),
-          child: const Text('Xác nhận xóa'),
-        ),
-      ],
-    );
-  }
-}
-
-/// Light / dark / follow-the-system, matching what the web app offers.
-///
-/// Ba lựa chọn chứ không phải công tắc: "theo hệ thống" là lựa chọn thứ ba
-/// thật, và một công tắc hai trạng thái không diễn đạt được nó. Vẽ theo thiết
-/// kế: rãnh xám, phần đang chọn là viên trắng nổi nhẹ.
-class _ThemeRow extends ConsumerWidget {
-  const _ThemeRow();
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final scheme = Theme.of(context).colorScheme;
-    final mode = ref.watch(themeModeProvider);
-
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(
-        OmniSpacing.lg,
-        OmniSpacing.md,
-        OmniSpacing.lg,
-        OmniSpacing.md,
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: Text(
-              'Giao diện',
-              style: OmniType.bodyStrong.copyWith(
-                fontWeight: FontWeight.w500,
-                color: scheme.onSurface,
-              ),
-            ),
-          ),
-          Container(
-            padding: const EdgeInsets.all(3),
-            decoration: BoxDecoration(
-              color: scheme.surfaceContainerHighest,
-              borderRadius: OmniRadius.smAll,
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                for (final (value, label) in const [
-                  (ThemeMode.system, 'Tự động'),
-                  (ThemeMode.light, 'Sáng'),
-                  (ThemeMode.dark, 'Tối'),
-                ])
-                  _ThemeSegment(
-                    label: label,
-                    tooltip: themeModeDisplay(value).label,
-                    selected: mode == value,
-                    onTap: () =>
-                        ref.read(themeModeProvider.notifier).set(value),
-                  ),
-              ],
-            ),
-          ),
-        ],
+    return FadeTransition(
+      opacity: _t,
+      child: ScaleTransition(
+        scale: Tween<double>(begin: 0.85, end: 1).animate(_t),
+        child: widget.child,
       ),
     );
   }
-}
-
-class _ThemeSegment extends StatelessWidget {
-  const _ThemeSegment({
-    required this.label,
-    required this.tooltip,
-    required this.selected,
-    required this.onTap,
-  });
-
-  final String label;
-  final String tooltip;
-  final bool selected;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-
-    return Semantics(
-      button: true,
-      selected: selected,
-      label: tooltip,
-      excludeSemantics: true,
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTap: onTap,
-        child: ConstrainedBox(
-          // Rãnh 30dp trông gọn như thiết kế; vùng chạm vẫn đủ cao nhờ hàng.
-          constraints: const BoxConstraints(minHeight: 32),
-          child: Container(
-            alignment: Alignment.center,
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-            decoration: BoxDecoration(
-              color: selected ? scheme.surface : Colors.transparent,
-              borderRadius: OmniRadius.xsAll,
-              border: selected
-                  ? Border.all(color: scheme.outlineVariant)
-                  : null,
-            ),
-            child: Text(
-              label,
-              style: OmniType.micro.copyWith(
-                fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
-                color: selected ? scheme.onSurface : scheme.onSurfaceVariant,
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-/// Bỏ dấu để "kenh" tìm ra "Kết nối kênh".
-///
-/// Người dùng gõ trên bàn phím điện thoại, giữa lúc làm việc, và sẽ không bật
-/// bộ gõ tiếng Việt lên chỉ để tìm một màn hình.
-String foldDiacritics(String input) {
-  // Hai chuỗi này phải khớp từng ký tự một. Lệch một là mọi chữ sau đó ánh xạ
-  // sai — âm thầm, không lỗi, chỉ là tìm không ra. Nhóm theo nguyên âm để đếm
-  // được bằng mắt: a×17, e×11, i×5, o×17, u×11, y×5, đ×1 = 67.
-  const marks =
-      'àáạảãâầấậẩẫăằắặẳẵ' // a
-      'èéẹẻẽêềếệểễ' // e
-      'ìíịỉĩ' // i
-      'òóọỏõôồốộổỗơờớợởỡ' // o
-      'ùúụủũưừứựửữ' // u
-      'ỳýỵỷỹ' // y
-      'đ';
-  const plain =
-      'aaaaaaaaaaaaaaaaa'
-      'eeeeeeeeeee'
-      'iiiii'
-      'ooooooooooooooooo'
-      'uuuuuuuuuuu'
-      'yyyyy'
-      'd';
-  assert(
-    marks.length == plain.length,
-    'bảng bỏ dấu lệch: ${marks.length} vs ${plain.length}',
-  );
-
-  final buffer = StringBuffer();
-  for (final rune in input.toLowerCase().runes) {
-    final char = String.fromCharCode(rune);
-    final index = marks.indexOf(char);
-    buffer.write(index >= 0 ? plain[index] : char);
-  }
-
-  return buffer.toString();
-}
-
-/// Một mục có khớp từ khoá không.
-///
-/// Khớp cả dòng phụ: người dùng nhớ "zalo" chứ không nhớ tính năng tên là
-/// "Kết nối kênh".
-bool matchesQuery({
-  required String label,
-  required String? subtitle,
-  required String query,
-}) {
-  final needle = foldDiacritics(query.trim());
-  if (needle.isEmpty) return true;
-
-  return foldDiacritics(label).contains(needle) ||
-      foldDiacritics(subtitle ?? '').contains(needle);
-}
-
-/// Lọc trước khi dựng, để nhóm không còn mục nào thì biến mất luôn cả tiêu đề —
-/// một tiêu đề nhóm trống trông như lỗi tải dữ liệu.
-Map<NavArea, List<ModuleNavEntry>> _filtered(
-  Map<NavArea, List<ModuleNavEntry>> groups,
-  String query,
-) {
-  final result = <NavArea, List<ModuleNavEntry>>{};
-  for (final area in NavArea.values) {
-    final kept = (groups[area] ?? const <ModuleNavEntry>[])
-        .where(
-          (entry) => matchesQuery(
-            label: entry.label,
-            subtitle: entry.subtitle,
-            query: query,
-          ),
-        )
-        .toList();
-    if (kept.isNotEmpty) result[area] = kept;
-  }
-
-  return result;
 }

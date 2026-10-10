@@ -1,0 +1,213 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<title>Khách</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#0A7D76}a:hover{color:#075E59}
+@keyframes rise{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+@keyframes slideL{from{opacity:0;transform:translateX(24px)}to{opacity:1;transform:none}}
+@keyframes slideR{from{opacity:0;transform:translateX(-24px)}to{opacity:1;transform:none}}
+@keyframes bub{from{opacity:0;transform:scale(.7)}to{opacity:1;transform:none}}
+@keyframes spin{to{transform:rotate(360deg)}}
+button,a{transition:transform .2s cubic-bezier(.2,.8,.2,1),background-color .2s,color .2s,box-shadow .2s,border-color .2s;-webkit-tap-highlight-color:transparent}
+button:active,a:active{transform:scale(.96)}
+.bar{background:rgba(245,247,250,.8);backdrop-filter:blur(20px) saturate(180%);-webkit-backdrop-filter:blur(20px) saturate(180%)}
+.card{background:#fff;border:1px solid #E3E8EF;border-radius:8px;overflow:hidden}
+.ib{width:36px;height:36px;border-radius:6px;border:1px solid #E3E8EF;background:#fff;display:flex;align-items:center;justify-content:center;padding:0;cursor:pointer;color:#0B1A33;position:relative;text-decoration:none;flex-shrink:0}
+.search{height:36px;border-radius:6px;border:1px solid #E3E8EF;background:#fff;display:flex;align-items:center;gap:6px;padding:0 9px;box-sizing:border-box;cursor:text}
+.search input{border:0;outline:0;background:transparent;font:400 14px 'Be Vietnam Pro',sans-serif;color:#0B1A33;min-width:0;flex-grow:1}
+.seg{flex:1;height:30px;border:0;background:transparent;font:600 13px 'Be Vietnam Pro',sans-serif;color:#56637A;cursor:pointer;position:relative;z-index:1}
+.seg.on{color:#0B1A33}
+.sec{font-size:11px;font-weight:600;letter-spacing:.5px;text-transform:uppercase;color:#56637A;padding:0 2px 8px;display:flex;justify-content:space-between}
+.story{display:flex;flex-direction:column;align-items:center;gap:5px;width:64px;flex-shrink:0;text-decoration:none;color:#0B1A33;border:0;background:transparent;padding:0;cursor:pointer;font-family:inherit}
+.ring{width:56px;height:56px;border-radius:28px;padding:2.5px;box-sizing:border-box;position:relative}
+.ring .in{width:100%;height:100%;border-radius:50%;border:2.5px solid #F5F7FA;box-sizing:border-box;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:15px}
+.why{position:absolute;bottom:-4px;left:50%;transform:translateX(-50%);white-space:nowrap;font-size:9px;font-weight:700;padding:1px 5px;border-radius:6px;color:#fff;border:2px solid #F5F7FA}
+.letter{font-size:11px;font-weight:700;color:#0A7D76;padding:8px 12px 4px;background:#FAFBFC;border-top:1px solid #EEF1F5}
+.letter:first-child{border-top:0}
+.row{position:relative;display:flex;align-items:center;gap:10px;padding:9px 12px 9px 18px;border:0;border-top:1px solid #EEF1F5;width:100%;box-sizing:border-box;background:#fff;font:inherit;color:#0B1A33;text-align:left;cursor:pointer}
+.row:first-child{border-top:0}
+.row:hover{background:#FAFBFC}
+.qa{display:flex;flex-direction:column;align-items:center;gap:4px;flex:1;padding:6px 0;border:0;border-radius:8px;background:transparent;font:600 11px 'Be Vietnam Pro',sans-serif;color:#0B1A33;cursor:pointer;text-decoration:none}
+.qa:hover{background:#fff}
+.qa .c{width:34px;height:34px;border-radius:17px;background:#fff;border:1px solid #E3E8EF;display:flex;align-items:center;justify-content:center;color:#0A7D76}
+.az{position:absolute;right:2px;top:340px;display:flex;flex-direction:column;gap:1px;z-index:1}
+.az button{width:16px;height:15px;border:0;background:transparent;padding:0;font:700 9px 'Be Vietnam Pro',sans-serif;color:#0A7D76;cursor:pointer;border-radius:3px}
+.az button:hover{background:#E6F3F2}
+.fun{display:flex;align-items:center;gap:10px;width:100%;border:0;background:transparent;padding:5px 0;font:inherit;color:#0B1A33;cursor:pointer;text-align:left}
+.fun .b{height:30px;border-radius:5px;display:flex;align-items:center;padding:0 10px;box-sizing:border-box;color:#fff;font-size:12px;font-weight:700;white-space:nowrap;transition:width .55s cubic-bezier(.2,.8,.2,1),opacity .3s,box-shadow .3s}
+.deal{display:flex;align-items:center;gap:10px;padding:10px 12px;border-top:1px solid #EEF1F5;text-decoration:none;color:#0B1A33}
+.deal:first-child{border-top:0}
+.deal:hover{background:#FAFBFC}
+.pr{width:36px;height:36px;flex-shrink:0;position:relative}
+.tab{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;font-size:10px;font-weight:600;color:#56637A;text-decoration:none;padding-top:9px;position:relative}
+.tab.on{color:#0A7D76}
+.tab.on::before{content:"";position:absolute;top:0;width:22px;height:2px;border-radius:2px;background:#0A7D76}
+</style>
+</helmet>
+<div style="width:390px;height:844px;position:relative;overflow:hidden;font-family:'Be Vietnam Pro',system-ui,sans-serif;color:#0B1A33;background:#F5F7FA;font-size:14px">
+  <header class="bar" style="position:absolute;top:0;left:0;right:0;z-index:2;padding:52px 16px 10px;border-bottom:1px solid rgba(11,26,51,.06);display:flex;flex-direction:column;gap:10px">
+    <div style="display:flex;align-items:center;gap:8px">
+      <span style="display:flex;align-items:center;gap:8px;flex-shrink:0"><svg width="30" height="30" viewBox="0 0 100 100" aria-hidden="true"><rect x="1.5" y="1.5" width="97" height="97" rx="23" fill="#FFFFFF" stroke="#E3E8EF" stroke-width="3"></rect><path d="M12.5 58.2 A40 11 -20 0 1 87.5 29.8" fill="none" stroke="#0A7D76" stroke-width="6" stroke-linecap="round"></path><circle cx="49" cy="45" r="21" fill="#FFFFFF" stroke="#0A7D76" stroke-width="6"></circle><path d="M37 62 L33.5 75 L46 66.5" fill="none" stroke="#0A7D76" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"></path><path d="M12.5 58.2 A40 11 -20 0 0 87.5 29.8" fill="none" stroke="#0A7D76" stroke-width="6" stroke-linecap="round"></path><circle cx="73" cy="26" r="7" fill="#FFC43D" stroke="#FFFFFF" stroke-width="3"></circle></svg><span style="font-size:19px;font-weight:700;letter-spacing:-.4px">Vi<span style="color:#0A7D76">omni</span></span></span>
+      <span style="flex-grow:1"></span>
+      <a class="ib" href="Notifications.dc.html" aria-label="Thông báo, 3 mới"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M6 8a6 6 0 1 1 12 0c0 7 3 8 3 8H3s3-1 3-8"></path><path d="M10 20a2 2 0 0 0 4 0"></path></svg><span style="position:absolute;top:5px;right:6px;width:7px;height:7px;border-radius:4px;background:#E5484D"></span></a>
+      <a href="Me.dc.html" aria-label="Tài khoản" style="width:36px;height:36px;border-radius:6px;background:#0B1A33;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:600;font-size:13px;text-decoration:none;flex-shrink:0">HT</a>
+    </div>
+    <div style="display:flex;align-items:center;gap:8px">
+      <label class="search" style="flex-grow:1;min-width:0">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#56637A" stroke-width="2" stroke-linecap="round" style="flex-shrink:0"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-3.5-3.5"></path></svg>
+        <input aria-label="{{ph}}" placeholder="{{ph}}">
+      </label>
+      <button class="ib" aria-label="Bộ lọc"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 6h16M7 12h10M10 18h4"></path></svg></button>
+    </div>
+    <div style="position:relative;display:flex;background:#EEF1F5;border-radius:6px;padding:3px">
+      <span style="position:absolute;top:3px;bottom:3px;left:3px;width:calc((100% - 6px) / 2);border-radius:4px;background:#fff;box-shadow:0 1px 3px rgba(11,26,51,.12);transform:{{segX}};transition:transform .35s cubic-bezier(.2,.8,.2,1)"></span>
+      <button class="{{s0}}" onClick="{{toC}}">Khách hàng · 128</button>
+      <button class="{{s1}}" onClick="{{toO}}">Cơ hội · 24</button>
+    </div>
+  </header>
+
+  <main style="position:absolute;top:190px;left:0;right:0;bottom:84px;overflow:hidden">
+    <sc-if value="{{isC}}" hint-placeholder-val="{{true}}">
+      <div style="display:flex;flex-direction:column;gap:14px;padding:12px 0;animation:slideR .4s cubic-bezier(.2,.8,.2,1) both">
+
+        <div style="padding:0 16px">
+
+          <div class="card">
+            <sc-for list="{{book}}" as="c" hint-placeholder-count="8">
+                <button class="row" aria-expanded="{{c.openP}}" onClick="{{c.toggle}}">
+                  <sc-if value="{{c.tagC}}" hint-placeholder-val="{{false}}"><span title="{{c.tag}}" style="position:absolute;left:6px;top:50%;width:7px;height:7px;margin-top:-3.5px;border-radius:50%;background:{{c.tagC}}"></span></sc-if>
+                  <span style="width:36px;height:36px;border-radius:18px;background:{{c.bg}};color:{{c.fg}};display:flex;align-items:center;justify-content:center;font-weight:600;font-size:12px;flex-shrink:0">{{c.i}}</span>
+                  <span style="flex-grow:1;min-width:0">
+                    <span style="display:block;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{c.n}}</span>
+                    <span style="display:block;font-size:12px;color:#56637A;white-space:nowrap;overflow:hidden;text-overflow:ellipsis"><span style="font-weight:700;color:{{c.chC}}">{{c.srcK}}</span> · {{c.last}}</span>
+                  </span>
+                </button>
+                <div style="display:grid;grid-template-rows:{{c.rows}};transition:grid-template-rows .38s cubic-bezier(.2,.8,.2,1)">
+                  <div style="overflow:hidden">
+                    <div style="display:flex;gap:4px;padding:6px 10px 10px;background:#F5F7FA;opacity:{{c.o}};transform:{{c.ty}};transition:opacity .3s,transform .38s cubic-bezier(.2,.8,.2,1)">
+                      <a class="qa" href="Thread.dc.html"><span class="c"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16v11H8l-4 4z"></path></svg></span>Nhắn</a>
+                      <button class="qa"><span class="c"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2"></path></svg></span>Gọi</button>
+                      <a class="qa" href="Tasks.dc.html"><span class="c"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="3"></rect><path d="m8.5 12 2.5 2.5 4.5-5"></path></svg></span>Tạo việc</a>
+                      <a class="qa" href="CustomerDetail.dc.html"><span class="c"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"></circle><path d="M4 21c1-4 4-6 8-6s7 2 8 6"></path></svg></span>Hồ sơ</a>
+                    </div>
+                  </div>
+                </div>
+            </sc-for>
+          </div>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{isO}}" hint-placeholder-val="{{false}}">
+      <div style="display:flex;flex-direction:column;gap:14px;padding:14px 16px;animation:slideL .4s cubic-bezier(.2,.8,.2,1) both">
+        <div class="card" style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr))">
+          <sc-for list="{{funnel}}" as="f" hint-placeholder-count="4">
+            <button aria-pressed="{{f.on}}" onClick="{{f.pick}}" style="position:relative;border:0;border-left:{{f.bl}};background:{{f.bg}};padding:8px 8px 10px;text-align:left;cursor:pointer;font-family:inherit;opacity:{{f.o}};transition:opacity .3s,background-color .3s">
+              <span style="display:block;font-size:17px;font-weight:700;color:#0B1A33">{{f.n}}</span>
+              <span style="display:block;font-size:11px;color:#56637A;white-space:nowrap">{{f.l}}</span>
+              <span style="position:absolute;left:8px;right:8px;bottom:0;height:3px;border-radius:2px 2px 0 0;background:{{f.c}};transform:scaleX({{f.sx}});transition:transform .35s cubic-bezier(.2,.8,.2,1)"></span>
+            </button>
+          </sc-for>
+        </div>
+
+        <div>
+          <div class="sec"><span>{{listLabel}} · {{total}}</span><button onClick="{{clear}}" style="border:0;background:transparent;font:600 11px 'Be Vietnam Pro',sans-serif;color:#0A7D76;cursor:pointer;padding:0;opacity:{{clearOp}}">Bỏ lọc</button></div>
+          <div class="card">
+            <sc-for list="{{deals}}" as="d" hint-placeholder-count="4">
+              <a class="deal" href="ThreadInfo.dc.html" style="animation:rise .35s cubic-bezier(.2,.8,.2,1) both;animation-delay:{{d.delay}}">
+                <span class="pr"><svg width="36" height="36" viewBox="0 0 36 36"><circle cx="18" cy="18" r="15" fill="none" stroke="#EEF1F5" stroke-width="3.5"></circle><circle cx="18" cy="18" r="15" fill="none" stroke="{{d.c}}" stroke-width="3.5" stroke-linecap="round" stroke-dasharray="{{d.dash}}" transform="rotate(-90 18 18)"></circle></svg><span style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700">{{d.p}}</span></span>
+                <span style="flex-grow:1;min-width:0">
+                  <span style="display:block;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{d.n}}</span>
+                  <span style="display:block;font-size:12px;color:#56637A;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{d.cust}} · <span style="color:{{d.dueC}};font-weight:600">{{d.due}}</span></span>
+                </span>
+                <span style="text-align:right;flex-shrink:0"><span style="display:block;font-weight:700">{{d.v}}</span><span style="display:block;font-size:10px;font-weight:600;color:{{d.c}}">{{d.s}}</span></span>
+              </a>
+            </sc-for>
+          </div>
+        </div>
+      </div>
+    </sc-if>
+  </main>
+
+  <nav class="bar" style="position:absolute;left:0;right:0;bottom:0;height:84px;border-top:1px solid rgba(11,26,51,.07);display:flex;align-items:flex-start;padding:0 6px;z-index:4">
+    <a class="tab" href="Main.dc.html"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"></path></svg>Tổng quan</a>
+    <a class="tab" href="Inbox.dc.html"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16v11H8l-4 4z"></path></svg>Hộp thư</a>
+    <a class="tab on" href="Customers.dc.html"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.5"></circle><path d="M2.5 20c.8-3.6 3.4-5.5 6.5-5.5s5.7 1.9 6.5 5.5"></path><path d="M16 4.5a3.5 3.5 0 0 1 0 7M18 14.8c1.8.7 3 2.4 3.5 5.2"></path></svg>Khách</a>
+    <a class="tab" href="Tasks.dc.html"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="3"></rect><path d="m8.5 12 2.5 2.5 4.5-5"></path></svg>Việc</a>
+    <a class="tab" href="All.dc.html"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="3.5" width="7" height="7" rx="1.5"></rect><rect x="13.5" y="3.5" width="7" height="7" rx="1.5"></rect><rect x="3.5" y="13.5" width="7" height="7" rx="1.5"></rect><rect x="13.5" y="13.5" width="7" height="7" rx="1.5"></rect></svg>Tất cả</a>
+  </nav>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+constructor(p) { super(p); this.state = { seg: 0, stage: 0, open: null }; }
+renderVals() {
+const s = this.state;
+const CH = { OA: '#0068FF', Page: '#5B4BDB', Web: '#0A7D76', Mail: '#C2410C' };
+const TC = { 'Đặt lịch': '#0A7D76', 'Báo giá': '#E8890C', 'Hợp đồng': '#2563EB', 'Khiếu nại': '#DC2626' };
+const care = [
+['LA','#E6F3F2','#075E59','Lan Anh','Chờ trả lời','#C2410C','conic-gradient(#E8890C,#DC2626,#E8890C)'],
+['SH','#E3EAFD','#1D4ED8','Spa Hạnh Phúc','Quá hạn','#DC2626','conic-gradient(#DC2626,#E8890C,#DC2626)'],
+['HL','#E6F3F2','#075E59','Hoàng Long','Hẹn demo','#2563EB','conic-gradient(#2563EB,#0A7D76,#2563EB)'],
+['TQ','#FFF4D6','#7A5200','Trần Quang','Sinh nhật','#0A7D76','conic-gradient(#0A7D76,#14D3C8,#0A7D76)'],
+['NM','#EEF1F5','#0B1A33','Ngọc Mai','30 ngày','#56637A','conic-gradient(#8A95A8,#C9D2DE,#8A95A8)']
+].map((c, i) => ({ i: c[0], bg: c[1], fg: c[2], n: c[3], why: c[4], wc: c[5], ring: c[6], delay: (i * 0.05) + 's' }));
+const C = [
+['HL','#E6F3F2','#075E59','Hoàng Long','OA','Gặp 30/09','22tr','Hợp đồng'],
+['LA','#E6F3F2','#075E59','Lan Anh','OA','Nhắn 4 phút trước','3,6tr','Đặt lịch'],
+['MT','#FDECE3','#9A3412','Minh Tú','Page','Nhắn 12 phút trước','12tr','Báo giá'],
+['NM','#EEF1F5','#0B1A33','Ngọc Mai','Page','Thanh toán hôm qua','5,2tr',''],
+['PD','#EEF1F5','#0B1A33','Phạm Duy','Web','Hỏi giá 35 phút trước','—',''],
+['SH','#E3EAFD','#1D4ED8','Spa Hạnh Phúc','OA','Gửi hợp đồng 09:12','48tr','Hợp đồng'],
+['TQ','#FFF4D6','#7A5200','Trần Quang','Mail','Email hôm qua','36tr',''],
+['VK','#FDECE3','#9A3412','Vũ Khánh','Web','Khiếu nại thứ Tư','1,8tr','Khiếu nại']
+];
+const letters = {};
+C.forEach((c, i) => { const L = c[3][0].normalize('NFD')[0]; (letters[L] = letters[L] || []).push({ c, i }); });
+const book = C.map((c, i) => { const op = s.open === i; return {
+  i: c[0], bg: c[1], fg: c[2], n: c[3], srcK: c[4], chC: CH[c[4]], last: c[5], val: c[6], tag: c[7], tagC: TC[c[7]] || false,
+  openP: op ? 'true' : 'false', rows: op ? '1fr' : '0fr', o: op ? 1 : 0, ty: op ? 'none' : 'translateY(-6px)',
+  toggle: () => this.setState({ open: op ? null : i }) }; });
+const ST = [['Mới', '#2563EB'], ['Báo giá', '#E8890C'], ['Thương lượng', '#7C3AED'], ['Chốt', '#0A7D76']];
+const D = [
+['Gói Pro 12 tháng', 48, 2, 'Spa Hạnh Phúc', 'Trễ 1 ngày', 1, 60],
+['Liệu trình 2 người', 2.4, 2, 'Lan Anh', 'Hôm nay', 0, 55],
+['Triển khai chi nhánh 2', 120, 1, 'Minh Tú', '20/10', 0, 20],
+['Gói tháng', 1.2, 1, 'Phạm Duy', '15/10', 0, 15],
+['Combo đào tạo nhân viên', 15, 3, 'Hoàng Long', '31/10', 0, 75],
+['Gia hạn năm 2026', 36, 4, 'Trần Quang', 'Đã chốt', 0, 100]
+];
+const fmt = v => (Math.round(v * 10) / 10).toString().replace('.', ',') + 'tr';
+const counts = [8, 6, 4, 6];
+const widths = ['100%', '78%', '56%', '38%'];
+const funnel = ST.map((g, i) => { const k = i + 1, on = s.stage === k, dim = s.stage && !on;
+  const v = D.filter(d => d[2] === k).reduce((a, d) => a + d[1], 0);
+  return { l: g[0], c: g[1], n: counts[i], v: fmt(v), w: widths[i], o: dim ? .45 : 1, lc: dim ? '#A9B2C1' : '#0B1A33',
+    sh: 'none', bl: i ? '1px solid #EEF1F5' : '0', bg: on ? '#FAFBFC' : '#fff', sx: on ? 1 : .35, on: on ? 'true' : 'false', pick: () => this.setState({ stage: on ? 0 : k }) }; });
+const list = D.filter(d => !s.stage || d[2] === s.stage);
+const C2 = 2 * Math.PI * 15;
+return {
+ph: s.seg ? 'Tìm cơ hội…' : 'Tìm tên, SĐT, email…',
+segX: s.seg ? 'translateX(100%)' : 'none', s0: s.seg ? 'seg' : 'seg on', s1: s.seg ? 'seg on' : 'seg',
+toC: () => this.setState({ seg: 0 }), toO: () => this.setState({ seg: 1 }), isC: s.seg === 0, isO: s.seg === 1,
+care, book, az: ['A','B','C','D','H','L','M','N','P','S','T','V','#'],
+funnel, total: fmt(list.reduce((a, d) => a + d[1], 0)),
+listLabel: s.stage ? ST[s.stage - 1][0] + ' · ' + list.length : 'Tất cả · ' + list.length,
+clearOp: s.stage ? 1 : 0, clear: () => this.setState({ stage: 0 }),
+deals: list.map((d, i) => { const g = ST[d[2] - 1]; return { n: d[0], v: fmt(d[1]), s: g[0], c: g[1], cust: d[3], due: d[4], dueC: d[5] ? '#C2410C' : '#56637A',
+  p: d[6] + '%', dash: (C2 * d[6] / 100).toFixed(1) + ' ' + C2.toFixed(1), delay: (i * 0.04) + 's' }; })
+};
+}
+}
+</script>
+</body>
+</html>

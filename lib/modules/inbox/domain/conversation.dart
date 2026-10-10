@@ -1,6 +1,7 @@
 import '../../../core/domain/channel.dart';
 import '../../../core/utils/formatters.dart';
 import '../../../core/utils/json.dart';
+import 'outbound_capabilities.dart';
 
 enum ConversationStatus {
   open,
@@ -61,15 +62,69 @@ class Conversation {
     this.isGroup = false,
     this.groupName,
     this.groupMembers = const [],
+    this.isPinned = false,
+    this.isMuted = false,
+    this.blockedAt,
+    this.outboundCapabilities,
   });
 
-  /// The same thread with its unread counter cleared.
-  ///
-  /// Opening a thread marks it read on the server, but the list held the old
-  /// count until the next full refetch — so a rep came back from a conversation
-  /// they had just read and it was still bold with a red badge. Nothing on the
-  /// screen could tell them what they had and had not read.
-  Conversation asRead() => Conversation(
+  /// Bản sao với các trường đổi (trường không truyền giữ nguyên). Mọi trường
+  /// của constructor PHẢI có mặt ở đây — `conversation_test.dart` giữ điều đó.
+  /// Trường nullable không xoá được về null bằng copyWith — kể cả
+  /// [blockedAt]: `copyWith(blockedAt: null)` GIỮ thời điểm chặn. Bỏ chặn
+  /// không cần cờ: `InboxApi.setBlocked(id, false)` trả hội thoại đầy đủ từ
+  /// server (`blocked_at` null hoặc vắng), dùng nguyên bản đó.
+  Conversation copyWith({
+    String? id,
+    Channel? channel,
+    ConversationStatus? status,
+    String? customerId,
+    String? customerName,
+    String? customerAvatar,
+    String? lastMessage,
+    DateTime? lastMessageAt,
+    int? unread,
+    bool? urgent,
+    String? assigneeId,
+    String? assigneeName,
+    List<String>? tags,
+    String? connectionId,
+    String? sourceName,
+    bool? isGroup,
+    String? groupName,
+    List<GroupMember>? groupMembers,
+    bool? isPinned,
+    bool? isMuted,
+    DateTime? blockedAt,
+    OutboundCapabilities? outboundCapabilities,
+  }) => Conversation(
+    id: id ?? this.id,
+    channel: channel ?? this.channel,
+    status: status ?? this.status,
+    customerId: customerId ?? this.customerId,
+    customerName: customerName ?? this.customerName,
+    customerAvatar: customerAvatar ?? this.customerAvatar,
+    lastMessage: lastMessage ?? this.lastMessage,
+    lastMessageAt: lastMessageAt ?? this.lastMessageAt,
+    unread: unread ?? this.unread,
+    urgent: urgent ?? this.urgent,
+    assigneeId: assigneeId ?? this.assigneeId,
+    assigneeName: assigneeName ?? this.assigneeName,
+    tags: tags ?? this.tags,
+    connectionId: connectionId ?? this.connectionId,
+    sourceName: sourceName ?? this.sourceName,
+    isGroup: isGroup ?? this.isGroup,
+    groupName: groupName ?? this.groupName,
+    groupMembers: groupMembers ?? this.groupMembers,
+    isPinned: isPinned ?? this.isPinned,
+    isMuted: isMuted ?? this.isMuted,
+    blockedAt: blockedAt ?? this.blockedAt,
+    outboundCapabilities: outboundCapabilities ?? this.outboundCapabilities,
+  );
+
+  /// Bỏ người phụ trách. `copyWith(assigneeId: null)` GIỮ giá trị cũ (null =
+  /// "không đổi") — muốn xoá thì gọi hàm này, đừng thêm cờ vào copyWith.
+  Conversation unassigned() => Conversation(
     id: id,
     channel: channel,
     status: status,
@@ -78,17 +133,29 @@ class Conversation {
     customerAvatar: customerAvatar,
     lastMessage: lastMessage,
     lastMessageAt: lastMessageAt,
-    unread: 0,
+    unread: unread,
     urgent: urgent,
-    assigneeId: assigneeId,
-    assigneeName: assigneeName,
+    assigneeId: null,
+    assigneeName: null,
     tags: tags,
     connectionId: connectionId,
     sourceName: sourceName,
     isGroup: isGroup,
     groupName: groupName,
     groupMembers: groupMembers,
+    isPinned: isPinned,
+    isMuted: isMuted,
+    blockedAt: blockedAt,
+    outboundCapabilities: outboundCapabilities,
   );
+
+  /// The same thread with its unread counter cleared.
+  ///
+  /// Opening a thread marks it read on the server, but the list held the old
+  /// count until the next full refetch — so a rep came back from a conversation
+  /// they had just read and it was still bold with a red badge. Nothing on the
+  /// screen could tell them what they had and had not read.
+  Conversation asRead() => copyWith(unread: 0);
 
   factory Conversation.fromJson(Map<String, dynamic> json) {
     return Conversation(
@@ -124,6 +191,14 @@ class Conversation {
           .mapList('group_members')
           .map(GroupMember.fromJson)
           .toList(),
+      // Hộp thư mobile: cờ THEO NGƯỜI XEM do server tính (`InboxDTO::forViewer`).
+      // Mảng thô `pinned_by`/`muted_by` không bao giờ ra ngoài — đừng đọc chúng.
+      isPinned: json.flag('is_pinned'),
+      isMuted: json.flag('is_muted'),
+      blockedAt: DateUtilsX.parse(json['blocked_at']),
+      outboundCapabilities: OutboundCapabilities.fromJson(
+        json['outbound_capabilities'],
+      ),
     );
   }
 
@@ -151,6 +226,20 @@ class Conversation {
   final String? groupName;
   final List<GroupMember> groupMembers;
 
+  /// Người xem đang ghim hội thoại này (mục "Đã ghim").
+  final bool isPinned;
+
+  /// Người xem đã tắt thông báo hội thoại này.
+  final bool isMuted;
+
+  /// Đã chặn khách (cờ CHUNG của cả đội, chỉ trong CRM — không chặn trên nền
+  /// tảng). Hội thoại đã chặn bị ẩn khỏi danh sách/facet mặc định.
+  final DateTime? blockedAt;
+
+  /// Kênh gửi đi được gì; null = API cũ chưa có khoá.
+  final OutboundCapabilities? outboundCapabilities;
+
+  bool get isBlocked => blockedAt != null;
   bool get isUnassigned => assigneeId == null || assigneeId!.isEmpty;
   bool get isUnread => unread > 0;
   bool get isLinkedToCustomer => customerId != null && customerId!.isNotEmpty;
@@ -166,6 +255,17 @@ class Conversation {
     final source = sourceName;
     if (source == null || !source.contains('·')) return null;
     return source.split('·').last.trim();
+  }
+
+  /// Tên tài khoản kênh trên dòng nguồn ("Trung Nguyên"). `sourceName` có
+  /// dạng "Zalo OA · Trung Nguyên" hoặc chỉ "Trung Nguyên".
+  String? get sourceAccount {
+    final source = sourceName?.trim();
+    if (source == null || source.isEmpty) return null;
+    final account = source.contains('·')
+        ? source.split('·').last.trim()
+        : source;
+    return account.isEmpty ? null : account;
   }
 
   /// How long the customer has been waiting on an unanswered thread. Drives the

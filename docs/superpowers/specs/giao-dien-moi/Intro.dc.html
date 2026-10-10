@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<title>Màn mở app</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#0A7D76}
+:root{--ez:cubic-bezier(.65,0,.35,1);--out:cubic-bezier(.16,1,.3,1)}
+@keyframes tileIn{0%{opacity:0;transform:scale(.9);filter:blur(10px)}100%{opacity:1;transform:none;filter:blur(0)}}
+@keyframes draw{to{stroke-dashoffset:0}}
+@keyframes orbit{from{transform:rotate(-220deg)}to{transform:rotate(0)}}
+@keyframes dotPop{0%{opacity:0;transform:scale(0)}60%{opacity:1;transform:scale(1.35)}100%{opacity:1;transform:scale(1)}}
+@keyframes glow{0%{opacity:0;transform:scale(.5)}40%{opacity:.5}100%{opacity:0;transform:scale(1.8)}}
+@keyframes letter{from{opacity:0;transform:translateY(14px);filter:blur(6px)}to{opacity:1;transform:none;filter:blur(0)}}
+@keyframes rise{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+@keyframes fadeOut{to{opacity:0}}
+@keyframes haloIn{from{opacity:0;transform:scale(.7)}to{opacity:1;transform:none}}
+@keyframes landLogo{to{transform:translate(-164px,-327px) scale(.25)}}
+@keyframes landWord{to{transform:translate(-109px,-437px) scale(.56)}}
+@keyframes bgOut{to{background-color:rgba(245,247,250,0)}}
+@keyframes skel{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:none}}
+.ring,.tail,.back,.front{fill:none;stroke:#0A7D76;stroke-width:6;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:1;stroke-dashoffset:1}
+.ring{animation:draw .62s var(--ez) .12s forwards}
+.tail{animation:draw .5s var(--ez) .38s forwards}
+.back{animation:draw .6s var(--ez) .52s forwards}
+.front{animation:draw .6s var(--ez) .62s forwards}
+.orb{transform-box:view-box;transform-origin:49px 45px;animation:orbit .8s var(--out) .62s both}
+.dot{transform-box:fill-box;transform-origin:center;animation:dotPop .42s cubic-bezier(.3,1.6,.5,1) 1.2s both}
+.glow{transform-box:fill-box;transform-origin:center;animation:glow .9s ease-out 1.24s both}
+.ch{display:inline-block;animation:letter .5s var(--out) both}
+.rp{height:36px;padding:0 14px;border-radius:18px;border:1px solid #E3E8EF;background:#fff;font:600 13px 'Be Vietnam Pro',sans-serif;color:#0B1A33;cursor:pointer;display:flex;align-items:center;gap:6px}
+.sk{background:#fff;border:1px solid #E3E8EF;border-radius:8px;animation:skel .6s var(--out) both}
+.bl{background:#EEF1F5;border-radius:4px}
+</style>
+</helmet>
+<div style="width:390px;height:844px;position:relative;overflow:hidden;font-family:'Be Vietnam Pro',system-ui,sans-serif;color:#0B1A33;background:#F5F7FA">
+  <sc-if value="{{show}}" hint-placeholder-val="{{true}}">
+    <div style="position:absolute;inset:0">
+      <div style="position:absolute;left:0;right:0;top:0;height:98px;border-bottom:1px solid rgba(11,26,51,.06);display:flex;align-items:flex-end;justify-content:flex-end;gap:8px;padding:0 16px 10px;box-sizing:border-box;animation:rise .5s var(--out) 2.05s both">
+        <span style="width:36px;height:36px;border-radius:6px;border:1px solid #E3E8EF;background:#fff"></span>
+        <span style="width:36px;height:36px;border-radius:6px;background:#0B1A33"></span>
+      </div>
+      <div style="position:absolute;left:16px;right:16px;top:156px;display:flex;flex-direction:column;gap:12px">
+        <div class="sk" style="height:150px;padding:12px;animation-delay:2.1s"><div class="bl" style="width:40%;height:10px"></div><div class="bl" style="width:28%;height:22px;margin-top:8px"></div><div style="display:flex;align-items:flex-end;gap:6px;height:70px;margin-top:14px"><span class="bl" style="flex:1;height:30%"></span><span class="bl" style="flex:1;height:50%"></span><span class="bl" style="flex:1;height:70%"></span><span class="bl" style="flex:1;height:55%"></span><span class="bl" style="flex:1;height:85%;background:#BFE0DD"></span><span class="bl" style="flex:1;height:100%;background:#0A7D76"></span></div></div>
+        <div class="sk" style="height:200px;animation-delay:2.18s"></div>
+        <div class="sk" style="height:150px;animation-delay:2.26s"></div>
+      </div>
+      <div style="position:absolute;left:0;right:0;bottom:0;height:84px;border-top:1px solid rgba(11,26,51,.07);background:rgba(245,247,250,.9);animation:rise .5s var(--out) 2.1s both"></div>
+
+      <div style="position:absolute;inset:0;background:#F5F7FA;animation:bgOut .55s var(--ez) 1.85s forwards"></div>
+      <div style="position:absolute;left:50%;top:50%;width:560px;height:560px;margin:-207px 0 0 -280px;border-radius:50%;background:#EAF4F3;animation:haloIn 1s var(--out) both,fadeOut .45s ease 1.8s forwards"></div>
+      <div style="position:absolute;left:50%;top:50%;width:400px;height:400px;margin:-127px 0 0 -200px;border-radius:50%;background:#E1F0EE;animation:haloIn 1s var(--out) .08s both,fadeOut .45s ease 1.8s forwards"></div>
+
+      <div style="position:absolute;left:135px;top:337px;width:120px;height:120px;animation:landLogo .62s var(--ez) 1.85s forwards">
+        <svg width="120" height="120" viewBox="0 0 100 100" aria-label="Logo Viomni" role="img" style="overflow:visible;animation:tileIn .55s var(--out) both">
+          <rect x="1.5" y="1.5" width="97" height="97" rx="23" fill="#FFFFFF" stroke="#E3E8EF" stroke-width="2"></rect>
+          <circle class="glow" cx="73" cy="26" r="16" fill="#FFC43D"></circle>
+          <path class="back" pathLength="1" d="M12.5 58.2 A40 11 -20 0 1 87.5 29.8"></path>
+          <circle class="ring" pathLength="1" cx="49" cy="45" r="21" style="fill:#fff"></circle>
+          <path class="tail" pathLength="1" d="M37 62 L33.5 75 L46 66.5"></path>
+          <path class="front" pathLength="1" d="M12.5 58.2 A40 11 -20 0 0 87.5 29.8"></path>
+          <g class="orb"><circle class="dot" cx="73" cy="26" r="7" fill="#FFC43D" stroke="#FFFFFF" stroke-width="3"></circle></g>
+        </svg>
+      </div>
+
+      <div style="position:absolute;left:0;right:0;top:485px;text-align:center;animation:landWord .62s var(--ez) 1.85s forwards">
+        <div style="font-size:34px;font-weight:700;letter-spacing:-.8px">
+          <sc-for list="{{letters}}" as="l" hint-placeholder-count="6"><span class="ch" style="color:{{l.c}};animation-delay:{{l.d}}">{{l.t}}</span></sc-for>
+        </div>
+      </div>
+      <div style="position:absolute;left:0;right:0;top:536px;text-align:center;font-size:15px;color:#56637A;animation:rise .5s var(--out) 1.25s both,fadeOut .3s ease 1.8s forwards">Mọi khách hàng, một quỹ đạo</div>
+    </div>
+  </sc-if>
+
+  <a href="Main.dc.html" aria-label="Vào app" style="position:absolute;inset:0;z-index:5;cursor:pointer"></a>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+constructor(p) { super(p); this.state = { show: true }; }
+renderVals() {
+const L = 'Viomni'.split('');
+return {
+show: this.state.show,
+letters: L.map((t, i) => ({ t, c: i < 2 ? '#0B1A33' : '#0A7D76', d: (0.95 + i * 0.045) + 's' })),
+replay: () => { this.setState({ show: false }); setTimeout(() => this.setState({ show: true }), 40); }
+};
+}
+}
+</script>
+</body>
+</html>

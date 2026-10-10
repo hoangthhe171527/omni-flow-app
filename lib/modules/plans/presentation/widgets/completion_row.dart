@@ -8,10 +8,21 @@ import '../../../../design/platform/omni_motion_scope.dart';
 import '../../../../design/tokens/tokens.dart';
 import '../../domain/feed_entry.dart';
 
+/// Dòng meta dưới tên: "{dự án} · HH:mm".
+///
+/// Giờ TUYỆT ĐỐI, không phải "2 giờ trước": quản đốc đối chiếu dòng này với ca
+/// làm và với lời thợ nói, và "09:35" là thứ so được.
+String feedMeta(FeedEntry entry, {bool withTask = false}) => [
+  if (withTask) entry.taskTitle,
+  if (entry.planName != null) entry.planName!,
+  Formatters.time(entry.at),
+].join(' · ');
+
 /// Một công đoạn vừa xong, kèm ảnh bằng chứng.
 ///
-/// Ba thứ người đọc cần, theo đúng thứ tự mắt đi: AI, LÀM GÌ, và BẰNG CHỨNG.
-/// Giờ nằm bên phải vì nó là thứ được đối chiếu chứ không phải thứ được đọc.
+/// Dòng PHẲNG: thẻ bo 8 bọc cả ngày do màn Dòng việc dựng, dòng này chỉ có
+/// đệm 9/12 và cao tối thiểu 44. Ba thứ người đọc cần, theo đúng thứ tự mắt
+/// đi: AI, LÀM GÌ, và BẰNG CHỨNG.
 class CompletionRow extends StatelessWidget {
   const CompletionRow({super.key, required this.entry, this.onTap});
 
@@ -24,33 +35,41 @@ class CompletionRow extends StatelessWidget {
     final text = Theme.of(context).textTheme;
     final who = entry.userName ?? 'Ai đó';
 
-    // Thẻ trắng viền mảnh bo 16 (`MTimeline.dc.html`).
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6),
-      child: Material(
-        color: scheme.surface,
-        shape: RoundedRectangleBorder(
-          borderRadius: OmniRadius.xlAll,
-          side: BorderSide(color: scheme.outlineVariant),
-        ),
-        clipBehavior: Clip.antiAlias,
-        child: InkWell(
-          onTap: onTap,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                OmniAvatar(name: who, imageUrl: entry.userAvatar, size: 36),
-                const SizedBox(width: OmniSpacing.md),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
+    // Việc con xong: "Minh · Thay búa La 4". Các loại khác (ảnh gửi lẻ...) giữ
+    // câu đầy đủ "Hằng Ni đã gửi mau.jpg" vì không có việc nào để gọi tên.
+    final isDone = entry.kind == FeedKind.subtaskCompleted;
+    final detail = (entry.detail ?? '').trim();
+    // Luôn có tên cây đàn: việc con "Body ngoài" của cây nào là thứ quản đốc
+    // cần biết. Không lặp khi việc con trùng tên cây.
+    final done = detail.isEmpty || detail == entry.taskTitle
+        ? entry.taskTitle
+        : '$detail – ${entry.taskTitle}';
+
+    return InkWell(
+      onTap: onTap,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(minHeight: 44),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              OmniAvatar(name: who, imageUrl: entry.userAvatar, size: 28),
+              const SizedBox(width: OmniSpacing.md),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    if (isDone)
+                      Text(
+                        '$who · $done',
+                        style: text.bodySmall?.copyWith(
+                          fontWeight: FontWeight.w400,
+                          color: scheme.onSurface,
+                        ),
+                      )
+                    else
                       Text.rich(
-                        // Tên người đứng trước hành động: "Hằng Ni đã xong Body
-                        // ngoài" đọc như một câu, còn "đã xong Body ngoài — Hằng
-                        // Ni" đọc như một bản ghi. Tên in đậm như thiết kế.
                         TextSpan(
                           children: [
                             TextSpan(
@@ -62,42 +81,30 @@ class CompletionRow extends StatelessWidget {
                             TextSpan(text: ' ${entry.summary}'),
                           ],
                         ),
-                        style: OmniType.bodyStrong.copyWith(
+                        style: text.bodySmall?.copyWith(
                           fontWeight: FontWeight.w400,
                           color: scheme.onSurface,
                         ),
                       ),
-                      const SizedBox(height: 2),
-                      Text(
-                        [
-                          entry.taskTitle,
-                          if (entry.planName != null) entry.planName!,
-                        ].join(' · '),
-                        style: text.labelSmall?.copyWith(
-                          color: scheme.onSurfaceVariant,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
+                    const SizedBox(height: 2),
+                    Text(
+                      feedMeta(entry, withTask: !isDone),
+                      style: text.labelSmall?.copyWith(
+                        fontWeight: FontWeight.w400,
+                        color: scheme.onSurfaceVariant,
+                        fontFeatures: OmniType.tabular,
                       ),
-                      if (entry.photos.isNotEmpty) ...[
-                        const SizedBox(height: OmniSpacing.sm),
-                        _Photos(urls: entry.photos),
-                      ],
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    if (entry.photos.isNotEmpty) ...[
+                      const SizedBox(height: OmniSpacing.sm),
+                      _Photos(urls: entry.photos),
                     ],
-                  ),
+                  ],
                 ),
-                const SizedBox(width: OmniSpacing.sm),
-                // Giờ TUYỆT ĐỐI, không phải "2 giờ trước": quản đốc đối chiếu dòng
-                // này với ca làm và với lời thợ nói, và "09:35" là thứ so được.
-                Text(
-                  Formatters.time(entry.at),
-                  style: text.labelSmall?.copyWith(
-                    color: scheme.onSurfaceVariant,
-                    fontFeatures: OmniType.tabular,
-                  ),
-                ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
       ),

@@ -4,12 +4,12 @@ import 'package:go_router/go_router.dart';
 
 import '../../core/module/module_registry.dart';
 import '../../core/module/module_route.dart';
+import '../../core/nav/tab_order.dart';
 import '../../modules/auth/auth_module.dart';
 import '../../security/session/session.dart';
 import '../../security/session/session_controller.dart';
 import '../shell/app_shell.dart';
 import '../shell/directory_page.dart';
-import '../shell/pin_tabs_page.dart';
 import '../shell/splash_page.dart';
 import 'access_boundary.dart';
 import 'session_refresh.dart';
@@ -71,14 +71,6 @@ final routerProvider = Provider<GoRouter>((ref) {
           ),
         ],
       ),
-      // Màn chọn tab thuộc về shell, không thuộc module nào — nó nói về chính
-      // thanh dưới. Phủ lên shell vì mở ra rồi đóng lại, không giữ trạng thái.
-      GoRoute(
-        path: ShellRoutes.pinTabsPath,
-        name: ShellRoutes.pinTabs,
-        parentNavigatorKey: rootKey,
-        builder: (_, _) => const PinTabsPage(),
-      ),
       for (final route in overlayRoutes) _toGoRoute(route, rootKey),
     ],
   );
@@ -125,9 +117,13 @@ String? _redirect(Ref ref, GoRouterState state, _PendingDestination pending) {
   final isSplash = location == ShellRoutes.splashPath;
   final isLogin = location == AuthModule.loginPath;
   final isWorkspace = location == AuthModule.workspacePath;
-  // Ba màn này là TRẠM DỪNG của chính luồng đăng nhập. Nhớ chúng làm đích đến
+  // Các màn này là TRẠM DỪNG của chính luồng đăng nhập. Nhớ chúng làm đích đến
   // sẽ tạo ra một vòng: đăng nhập xong lại quay về màn đăng nhập.
-  final isWayStation = isSplash || isLogin || isWorkspace;
+  // Đăng ký và quên mật khẩu là trạm của người CHƯA có tài khoản: mở được khi
+  // chưa đăng nhập, và cũng không được nhớ làm đích đến.
+  final isOnboarding =
+      location == AuthModule.registerPath || location == AuthModule.forgotPath;
+  final isWayStation = isSplash || isLogin || isWorkspace || isOnboarding;
 
   if (!isWayStation && session.status != SessionStatus.authenticated) {
     pending.value = state.uri.toString();
@@ -135,8 +131,8 @@ String? _redirect(Ref ref, GoRouterState state, _PendingDestination pending) {
 
   return switch (session.status) {
     SessionStatus.restoring => isSplash ? null : ShellRoutes.splashPath,
-    SessionStatus.unauthenticated ||
-    SessionStatus.expired => isLogin ? null : AuthModule.loginPath,
+    SessionStatus.unauthenticated || SessionStatus.expired =>
+      (isLogin || isOnboarding) ? null : AuthModule.loginPath,
     SessionStatus.tenantPending =>
       isWorkspace ? null : AuthModule.workspacePath,
     SessionStatus.authenticated =>
@@ -151,22 +147,27 @@ String? _redirect(Ref ref, GoRouterState state, _PendingDestination pending) {
 /// dùng không hề bấm gì liên quan.
 String _afterSignIn(Ref ref, _PendingDestination pending) {
   final destination = pending.value;
-  if (destination == null) return _homePath(ref);
+  if (destination == null) return landingPath(ref);
 
   pending.value = null;
 
   return destination;
 }
 
-/// Landing screen after sign-in: the first tab this user can actually see. A
-/// rep with only inbox rights lands in the inbox; a finance-only user does not
-/// land on a blank permission wall.
-String _homePath(Ref ref) {
-  final visible = ref.read(primaryNavEntriesProvider);
-  if (visible.isEmpty) return ShellRoutes.morePath;
+/// Landing screen after sign-in: the first TAB (fixed order, see tab_order.dart)
+/// this user can actually see. A rep with only inbox rights lands in the inbox.
+/// With no tab at all, the first permitted primary entry (e.g. opportunities)
+/// is used; only a user with nothing to show lands on "More".
+@visibleForTesting
+String landingPath(Ref ref) {
+  final tabs = ref.read(tabEntriesProvider);
+  final candidates = tabs.isNotEmpty
+      ? tabs
+      : ref.read(primaryNavEntriesProvider).take(1).toList();
+  if (candidates.isEmpty) return ShellRoutes.morePath;
 
   final routes = ref.read(moduleRoutesProvider);
-  for (final entry in visible) {
+  for (final entry in candidates) {
     for (final route in routes) {
       if (route.name == entry.routeName) return route.path;
     }

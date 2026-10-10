@@ -3,7 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:omni_app/app/shell/app_shell.dart';
 import 'package:omni_app/bootstrap.dart';
 import 'package:omni_app/core/module/module_registry.dart';
-import 'package:omni_app/core/nav/pinned_tabs.dart';
+import 'package:omni_app/core/nav/tab_order.dart';
 import 'package:omni_app/security/permissions/access_policy.dart';
 import 'package:omni_app/security/session/session.dart';
 import 'package:omni_app/security/session/session_controller.dart';
@@ -30,9 +30,9 @@ void main() {
     // 5 là giới hạn một thanh dưới còn bấm được bằng ngón cái.
     expect(AppShell.maxTabs, 4);
     expect(
-      maxPinnedTabs,
+      tabRouteOrder.length,
       AppShell.maxTabs,
-      reason: 'lệch nhau là người dùng ghim được 5 mục rồi chỉ thấy 4',
+      reason: 'lệch nhau là có tab được khai báo mà không bao giờ hiện',
     );
   });
 

@@ -47,6 +47,19 @@ enum Channel {
     Channel.unknown => 'unknown',
   };
 
+  /// Chữ đậm tô màu kênh trên dòng nguồn: "**OA** · Trung Nguyên".
+  String get sourceKind => switch (this) {
+    Channel.zalo => 'OA',
+    Channel.zaloPersonal => 'Zalo',
+    Channel.facebook => 'Page',
+    Channel.facebookPersonal => 'FB',
+    Channel.tiktok => 'TikTok',
+    Channel.web => 'Web',
+    Channel.instagram => 'IG',
+    Channel.whatsapp => 'WA',
+    Channel.unknown => 'Khác',
+  };
+
   ChannelMeta get meta => ChannelMeta.of(this);
 }
 
@@ -58,6 +71,8 @@ class ChannelMeta {
     required this.color,
     required this.tint,
     required this.icon,
+    this.textColor,
+    this.textColorDark,
   });
 
   /// Full label — filters, settings, empty states.
@@ -77,6 +92,18 @@ class ChannelMeta {
 
   final IconData icon;
 
+  /// Màu CHỮ 12px của dòng nguồn khi [color] không đạt 4.5:1 trên nền trắng
+  /// (Facebook #1877F2 chỉ ~4.2:1). Null = dùng [color].
+  final Color? textColor;
+
+  /// Bản sáng của [textColor] cho chế độ tối. Null = dùng [color].
+  final Color? textColorDark;
+
+  /// Màu chữ nguồn theo chế độ sáng/tối đang bật.
+  Color textColorOf(Brightness brightness) => brightness == Brightness.dark
+      ? (textColorDark ?? color)
+      : (textColor ?? color);
+
   static ChannelMeta of(Channel channel) => switch (channel) {
     // "Facebook" alone read as "some Facebook thing" next to "Facebook cá
     // nhân"; name the asset so a Page and a personal inbox can't be confused.
@@ -87,6 +114,8 @@ class ChannelMeta {
       color: Color(0xFF1877F2),
       tint: Color(0xFFE7F0FE),
       icon: Icons.facebook_rounded,
+      textColor: Color(0xFF1565D8),
+      textColorDark: Color(0xFF6AA6FF),
     ),
     Channel.facebookPersonal => const ChannelMeta(
       name: 'Facebook cá nhân',
@@ -95,6 +124,8 @@ class ChannelMeta {
       color: Color(0xFF1D4ED8),
       tint: Color(0xFFE7F0FE),
       icon: Icons.facebook_rounded,
+      textColor: Color(0xFF1D4ED8),
+      textColorDark: Color(0xFF8AB0FF),
     ),
     Channel.zalo => const ChannelMeta(
       name: 'Zalo OA',
@@ -103,6 +134,8 @@ class ChannelMeta {
       color: Color(0xFF0EA5E9),
       tint: Color(0xFFE0F2FE),
       icon: Icons.chat_bubble_rounded,
+      textColor: Color(0xFF0777B8),
+      textColorDark: Color(0xFF56BFF5),
     ),
     Channel.zaloPersonal => const ChannelMeta(
       name: 'Zalo cá nhân',
@@ -111,6 +144,8 @@ class ChannelMeta {
       color: Color(0xFF0369A1),
       tint: Color(0xFFE0F2FE),
       icon: Icons.chat_bubble_rounded,
+      textColor: Color(0xFF0369A1),
+      textColorDark: Color(0xFF5BB8EE),
     ),
     Channel.tiktok => const ChannelMeta(
       name: 'TikTok',
@@ -119,6 +154,8 @@ class ChannelMeta {
       color: Color(0xFF0F172A),
       tint: Color(0xFFF1F5F9),
       icon: Icons.music_note_rounded,
+      textColor: Color(0xFF0F172A),
+      textColorDark: Color(0xFFE2E8F0),
     ),
     Channel.web => const ChannelMeta(
       name: 'Website Chat',
@@ -127,6 +164,8 @@ class ChannelMeta {
       color: OmniColors.success,
       tint: Color(0xFFD1FAE5),
       icon: Icons.language_rounded,
+      textColor: Color(0xFF047857),
+      textColorDark: Color(0xFF34D399),
     ),
     Channel.instagram => const ChannelMeta(
       name: 'Instagram',
@@ -135,6 +174,8 @@ class ChannelMeta {
       color: Color(0xFFEC4899),
       tint: Color(0xFFFCE7F3),
       icon: Icons.camera_alt_rounded,
+      textColor: Color(0xFFBE185D),
+      textColorDark: Color(0xFFF472B6),
     ),
     Channel.whatsapp => const ChannelMeta(
       name: 'WhatsApp',
@@ -143,6 +184,8 @@ class ChannelMeta {
       color: Color(0xFF22C55E),
       tint: Color(0xFFDCFCE7),
       icon: Icons.chat_rounded,
+      textColor: Color(0xFF15803D),
+      textColorDark: Color(0xFF4ADE80),
     ),
     Channel.unknown => const ChannelMeta(
       name: 'Khác',
@@ -151,6 +194,8 @@ class ChannelMeta {
       color: OmniColors.mutedForeground,
       tint: OmniColors.muted,
       icon: Icons.forum_rounded,
+      textColor: OmniColors.mutedForeground,
+      textColorDark: Color(0xFF9AA8BD),
     ),
   };
 }

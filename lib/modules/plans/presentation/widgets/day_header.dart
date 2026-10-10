@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../../design/tokens/tokens.dart';
 import '../../domain/day_group.dart';
 
-/// `HÔM NAY · 12 công đoạn · 2 cây xong`
+/// `HÔM NAY ………………………………… 2 việc`
 ///
 /// Dính khi cuộn: một ngày bận có thể dài hơn màn hình, và mất tiêu đề nghĩa là
 /// đang đọc một danh sách không biết thuộc ngày nào.
@@ -17,6 +17,11 @@ class DayHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final style = Theme.of(context).textTheme.labelSmall?.copyWith(
+      fontWeight: FontWeight.w600,
+      color: scheme.onSurfaceVariant,
+      fontFeatures: OmniType.tabular,
+    );
 
     return Container(
       height: height,
@@ -24,12 +29,18 @@ class DayHeader extends StatelessWidget {
       // Nền ĐẶC, không trong suốt: tiêu đề dính mà để lộ nội dung trôi phía sau
       // thì hai dòng chữ chồng lên nhau.
       color: Theme.of(context).scaffoldBackgroundColor,
-      child: Text(
-        group.summary,
-        style: OmniType.overline.copyWith(
-          color: scheme.onSurfaceVariant,
-          fontFeatures: OmniType.tabular,
-        ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              group.label.toUpperCase(),
+              style: style?.copyWith(letterSpacing: 0.5),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          Text('${group.entries.length} việc', style: style),
+        ],
       ),
     );
   }
@@ -54,6 +65,5 @@ class DayHeaderDelegate extends SliverPersistentHeaderDelegate {
   @override
   bool shouldRebuild(covariant DayHeaderDelegate old) =>
       old.group.day != group.day ||
-      old.group.stageCount != group.stageCount ||
-      old.group.pianoCount != group.pianoCount;
+      old.group.entries.length != group.entries.length;
 }

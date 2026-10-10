@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:omni_app/design/components/components.dart';
+import 'package:omni_app/modules/plans/presentation/widgets/section_pager.dart';
 import 'package:omni_app/design/theme/omni_theme.dart';
 import 'package:omni_app/modules/plans/application/plans_providers.dart';
 import 'package:omni_app/modules/plans/domain/plan.dart';
@@ -10,6 +10,7 @@ import 'package:omni_app/modules/settings/application/appearance_providers.dart'
 import 'package:omni_app/modules/tasks/application/tasks_providers.dart';
 import 'package:omni_app/modules/tasks/domain/task.dart';
 import 'package:omni_app/modules/tasks/domain/task_permissions.dart';
+import 'package:omni_app/modules/team/team.dart';
 import 'package:omni_app/security/permissions/access_policy.dart';
 import 'package:omni_app/security/session/session.dart';
 import 'package:omni_app/security/session/session_controller.dart';
@@ -52,6 +53,7 @@ void main() {
         planId,
       ).overrideWith((ref) async => (tasks: tasks, truncated: false)),
       backgroundProvider.overrideWith(FixedBackground.new),
+      teamDirectoryProvider.overrideWith((ref) async => const <TeamMember>[]),
     ],
     child: MaterialApp(
       theme: OmniTheme.light(TargetPlatform.android),
@@ -217,7 +219,7 @@ void main() {
 
   /// Tab của một nhóm việc trên dải, kể cả khi đã cuộn khuất.
   Finder pill(String section) =>
-      find.widgetWithText(OmniTabItem, section, skipOffstage: false);
+      find.widgetWithText(SectionTabItem, section, skipOffstage: false);
 
   /// Số việc hiện TRONG tab của nhóm đó.
   Finder countIn(String section, int n) =>
@@ -295,9 +297,12 @@ void main() {
   });
 
   // API cho chủ/quản lý DỰ ÁN sửa nhóm việc, không chỉ người có
-  // `tasks.projects.manage.all` (CV-I14).
-  group('nút Sửa nhóm việc', () {
-    Widget board(String role) => ProviderScope(
+  // `tasks.projects.manage.all` (CV-I14). Giờ nằm trong menu ⋯.
+  group('menu ⋯ Tuỳ chọn dự án', () {
+    Widget board(
+      String role, {
+      Set<String> perms = const {'tasks.read', 'tasks.write'},
+    }) => ProviderScope(
       overrides: [
         planProvider(planId).overrideWith(
           (ref) async => Plan.fromJson({
@@ -308,6 +313,7 @@ void main() {
             'member_roles': {'u-me': role},
             'sections': [
               {'id': 's1', 'name': 'Nhập xưởng', 'order': 0},
+              {'id': 's2', 'name': 'Đang sửa', 'order': 1},
             ],
           }),
         ),
@@ -322,7 +328,7 @@ void main() {
           ),
         ),
         taskAccessProvider.overrideWithValue(
-          TaskAccess.of(const AccessPolicy({'tasks.read', 'tasks.write'})),
+          TaskAccess.of(AccessPolicy(perms)),
         ),
       ],
       child: MaterialApp(
@@ -331,18 +337,161 @@ void main() {
       ),
     );
 
-    testWidgets('quản lý dự án (không có manage.all) thấy nút', (tester) async {
+    testWidgets('quản lý dự án thấy "Sửa nhóm việc" trong ⋯', (tester) async {
       await tester.pumpWidget(board('manager'));
       await tester.pumpAndSettle();
 
-      expect(find.byTooltip('Sửa nhóm việc'), findsOneWidget);
+      expect(find.byTooltip('Sửa nhóm việc'), findsNothing);
+      await tester.tap(find.byTooltip('Tuỳ chọn dự án'));
+      await tester.pumpAndSettle();
+      expect(find.text('Sửa nhóm việc'), findsOneWidget);
+      expect(find.text('Xoá dự án'), findsNothing);
     });
 
-    testWidgets('thành viên thường không thấy nút', (tester) async {
+    testWidgets('người giao việc có đủ Sửa nhóm việc + Xoá dự án', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        board(
+          'member',
+          perms: const {
+            'tasks.read',
+            'tasks.write',
+            'tasks.projects.manage.all',
+          },
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.byTooltip('Tuỳ chọn dự án'));
+      await tester.pumpAndSettle();
+      expect(find.text('Sửa nhóm việc'), findsOneWidget);
+      expect(find.text('Xoá dự án'), findsOneWidget);
+    });
+
+    testWidgets('Xoá dự án từ ⋯ mở hộp xác nhận', (tester) async {
+      await tester.pumpWidget(
+        board(
+          'member',
+          perms: const {
+            'tasks.read',
+            'tasks.write',
+            'tasks.projects.manage.all',
+          },
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.byTooltip('Tuỳ chọn dự án'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Xoá dự án'));
+      await tester.pumpAndSettle();
+      expect(find.text('Xoá dự án “Đàn cơ”?'), findsOneWidget);
+    });
+
+    testWidgets('thành viên thường không thấy ⋯', (tester) async {
       await tester.pumpWidget(board('member'));
       await tester.pumpAndSettle();
 
-      expect(find.byTooltip('Sửa nhóm việc'), findsNothing);
+      expect(find.byTooltip('Tuỳ chọn dự án'), findsNothing);
+    });
+  });
+
+  group('đầu bảng', () {
+    final team = Plan.fromJson({
+      'id': planId,
+      'name': 'Sửa chữa đàn',
+      'team_name': 'Tổ kỹ thuật',
+      'sections': [
+        {'id': 'a', 'name': 'Tiếp nhận', 'order': 0},
+        {'id': 'b', 'name': 'Đang sửa', 'order': 1},
+      ],
+    });
+
+    testWidgets('tên, "team · N việc"; lọc → thanh Đang lọc + Bỏ lọc', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        host(
+          plan: team,
+          tasks: [
+            Task.fromJson(const {
+              'id': 't1',
+              'title': 'Một',
+              'section_id': 'a',
+              'assignee_ids': ['u1'],
+            }),
+            Task.fromJson(const {
+              'id': 't2',
+              'title': 'Hai',
+              'section_id': 'a',
+            }),
+          ],
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('Sửa chữa đàn'), findsOneWidget);
+      expect(find.text('Tổ kỹ thuật · 2 việc'), findsOneWidget);
+
+      await tester.tap(find.byTooltip('Lọc theo người'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Chưa giao ai'));
+      await tester.pumpAndSettle();
+      expect(find.text('Tổ kỹ thuật · 1 việc'), findsOneWidget);
+      expect(find.text('Bỏ lọc'), findsOneWidget);
+
+      await tester.tap(find.text('Bỏ lọc'));
+      await tester.pumpAndSettle();
+      expect(find.text('Bỏ lọc'), findsNothing);
+      expect(find.text('Tổ kỹ thuật · 2 việc'), findsOneWidget);
+    });
+
+    testWidgets('vuốt ngang sang nhóm việc kế, tab theo', (tester) async {
+      await tester.pumpWidget(host(plan: team, tasks: const []));
+      await tester.pumpAndSettle();
+      await tester.fling(find.byType(PageView), const Offset(-300, 0), 1000);
+      await tester.pumpAndSettle();
+      final tabs = tester.widget<SectionTabs>(find.byType(SectionTabs));
+      expect(tabs.current, 1);
+    });
+
+    testWidgets('nút Việc mới cao ≥ 48 khi được phép tạo', (tester) async {
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            planProvider(planId).overrideWith((ref) async => team),
+            planTasksProvider(
+              planId,
+            ).overrideWith((ref) async => (tasks: <Task>[], truncated: false)),
+            backgroundProvider.overrideWith(FixedBackground.new),
+            taskAccessProvider.overrideWithValue(
+              TaskAccess.of(const AccessPolicy({'tasks.read', 'tasks.write'})),
+            ),
+          ],
+          child: MaterialApp(
+            theme: OmniTheme.light(TargetPlatform.android),
+            home: const PlanBoardPage(planId: planId),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('Việc mới'), findsOneWidget);
+      expect(
+        tester.getSize(find.byType(FloatingActionButton)).height,
+        greaterThanOrEqualTo(48),
+      );
+      final context = tester.element(find.byType(FloatingActionButton));
+      final material = tester.widget<Material>(
+        find
+            .descendant(
+              of: find.byType(FloatingActionButton),
+              matching: find.byType(Material),
+            )
+            .first,
+      );
+      expect(
+        material.color,
+        Theme.of(context).colorScheme.primary,
+        reason: 'theme FAB của app phải còn nguyên, không bị thay mất',
+      );
     });
   });
 }

@@ -1,15 +1,39 @@
 import 'package:flutter/material.dart';
 
-import '../../../../design/components/omni_status_chip.dart';
+import '../../../../core/utils/formatters.dart';
+import '../../../../design/components/omni_task_chip.dart';
 import '../../domain/task.dart';
+
+/// Bốn tông của ô hạn (`Tasks.dc.html`): hôm nay, trễ, sắp tới, chưa đặt.
+enum DueTone { today, late, upcoming, none }
+
+/// Nhãn + tông hạn của một việc, tính theo NGÀY LỊCH.
+///
+/// Tự tính từ `task.dueDate` và [now] thay vì đọc `Task.daysOverdue` (vốn đọc
+/// `DateTime.now()` trực tiếp) để test dựng được ở một thời điểm cố định.
+/// Việc đã xong không bị tô trễ: nó rơi về "Hạn dd/MM".
+({String label, DueTone tone}) dueToneOf(Task task, {DateTime? now}) {
+  final due = task.dueDate;
+  if (due == null) return (label: 'Chưa đặt hạn', tone: DueTone.none);
+  // Ngày VN (không theo múi giờ máy), như web và API.
+  final today = VnTime.today(now);
+  final day = VnTime.day(due);
+  final diff = today.difference(day).inDays;
+  final done = task.status == 'done';
+  if (diff == 0 && !done) return (label: 'Hạn hôm nay', tone: DueTone.today);
+  if (diff > 0 && !done) {
+    return (label: 'Quá hạn $diff ngày', tone: DueTone.late);
+  }
+  final dd = day.day.toString().padLeft(2, '0');
+  final mm = day.month.toString().padLeft(2, '0');
+
+  return (label: 'Hạn $dd/$mm', tone: DueTone.upcoming);
+}
 
 /// Hạn của một công việc, bằng CHỮ chứ không chỉ bằng màu.
 ///
-/// Trước đây widget này tồn tại hai bản gần giống hệt nhau — một trong
-/// `task_card.dart`, một trong `task_detail_page.dart` — và cả hai đều tô chữ
-/// bằng `OmniColors.destructive` (3.76:1) và `OmniColors.warning` (2.15:1).
-/// Hai màu đó là màu ĐỒ HOẠ; làm chữ thì không đọc được. Gộp về một chỗ để
-/// lần sửa tiếp theo chỉ phải sửa một lần.
+/// Một chỗ duy nhất cho thẻ việc, bảng dự án và đầu trang chi tiết. Màu lấy
+/// từ [OmniTaskChip] (token theo chế độ sáng / tối).
 class DueChip extends StatelessWidget {
   const DueChip({super.key, required this.task});
 
@@ -17,22 +41,13 @@ class DueChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final overdue = task.daysOverdue;
+    final d = dueToneOf(task);
 
-    // Thứ tự các nhánh LÀ thứ tự ưu tiên: quá hạn nói to hơn hạn hôm nay, và
-    // hạn hôm nay nói to hơn một ngày trong tương lai.
-    // Bộ Orbit: viên bo tròn chữ đậm, không icon — CHỮ đã nói trạng thái,
-    // màu chỉ nhắc lại. Quá hạn đỏ, hôm nay xanh dương, còn lại trung tính.
-    final (label, tone) = switch (task) {
-      _ when overdue != null => ('Quá hạn $overdue ngày', OmniTone.danger),
-      _ when task.isDueToday => ('Hạn hôm nay', OmniTone.info),
-      _ when task.dueDate != null => (
-        'Hạn ${task.dueDate!.day}/${task.dueDate!.month}',
-        OmniTone.neutral,
-      ),
-      _ => ('Chưa đặt hạn', OmniTone.neutral),
+    return switch (d.tone) {
+      DueTone.today => OmniTaskChip.today(d.label),
+      DueTone.late => OmniTaskChip.late(d.label),
+      DueTone.upcoming => OmniTaskChip.upcoming(d.label),
+      DueTone.none => OmniTaskChip.none(d.label),
     };
-
-    return OmniBadge(label: label, tone: tone, large: true);
   }
 }

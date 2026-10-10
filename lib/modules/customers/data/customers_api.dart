@@ -5,6 +5,8 @@ import '../../../core/network/api_client.dart';
 import '../../../core/network/api_envelope.dart';
 import '../../../core/utils/json.dart';
 import '../domain/customer.dart';
+import '../domain/customer_activity.dart';
+import '../domain/customer_summary.dart';
 
 class DuplicateMatch {
   const DuplicateMatch({
@@ -48,6 +50,29 @@ class CustomersApi {
   Future<Customer> get(String id) async {
     final response = await _client.get('$_base/$id');
     return Customer.fromJson(response.object);
+  }
+
+  /// `GET /customers/{id}/summary`.
+  Future<CustomerSummary> summary(String id) async {
+    final response = await _client.get('$_base/$id/summary');
+    return CustomerSummary.fromJson(response.object);
+  }
+
+  /// Nhật ký của khách (`GET /interaction-logs?customer_id=`). `VIEW` (tự ghi
+  /// mỗi lần mở hồ sơ) không phải hoạt động: máy chủ bỏ qua nhờ `exclude_types`
+  /// để nó không ăn chỗ của `per_page`, và app lọc lại phòng API cũ.
+  Future<List<CustomerActivity>> activities(
+    String id, {
+    int perPage = 20,
+  }) async {
+    final response = await _client.get(
+      '/interaction-logs',
+      query: {'customer_id': id, 'exclude_types': 'VIEW', 'per_page': perPage},
+    );
+    return response.list
+        .where((row) => row['interaction_type'] != 'VIEW')
+        .map(CustomerActivity.fromJson)
+        .toList();
   }
 
   Future<Customer> create(Customer draft) async {

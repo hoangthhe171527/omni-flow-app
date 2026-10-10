@@ -73,7 +73,7 @@ class _PersonFilterSheet extends ConsumerWidget {
                     ?current.userId,
                   ], ref.watch(teamMemberByIdProvider)))
                     _Row(
-                      icon: Icons.person_outline_rounded,
+                      avatarName: member.name,
                       label: member.name,
                       selected: current.userId == member.userId,
                       onTap: () => Navigator.of(
@@ -111,13 +111,18 @@ class _PersonFilterSheet extends ConsumerWidget {
 
 class _Row extends StatelessWidget {
   const _Row({
-    required this.icon,
+    this.icon,
+    this.avatarName,
     required this.label,
     required this.selected,
     required this.onTap,
   });
 
-  final IconData icon;
+  final IconData? icon;
+
+  /// Có tên thì vẽ ảnh đại diện 28 thay cho biểu tượng — một người, không
+  /// phải một lựa chọn chung như "Chưa giao ai".
+  final String? avatarName;
   final String label;
   final bool selected;
   final VoidCallback onTap;
@@ -127,7 +132,9 @@ class _Row extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
 
     return ListTile(
-      leading: Icon(icon, color: scheme.onSurfaceVariant),
+      leading: avatarName != null
+          ? OmniAvatar(name: avatarName!, size: 28)
+          : Icon(icon, color: scheme.onSurfaceVariant),
       title: Text(label),
       // Dấu tick chứ không chỉ đổi màu chữ: trong ánh sáng xưởng và với người
       // mù màu, một sắc độ khác đi không phải là một tín hiệu.

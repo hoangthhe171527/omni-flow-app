@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/config/app_config.dart';
+import '../../../core/error/app_exception.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/network/api_envelope.dart';
 import '../../../core/utils/formatters.dart';
@@ -127,6 +128,21 @@ class InboxChanges {
   ) => InboxChanges(cursor: json.strOr('cursor', ''), count: data.length);
 }
 
+/// Mẫu trả lời nhanh của tenant (`GET /inbox/quick-replies`).
+class QuickReply {
+  const QuickReply({required this.id, required this.title, required this.body});
+
+  factory QuickReply.fromJson(Map<String, dynamic> json) => QuickReply(
+    id: json.strOr('id', ''),
+    title: json.strOr('title', ''),
+    body: json.strOr('body', ''),
+  );
+
+  final String id;
+  final String title;
+  final String body;
+}
+
 class InboxApi {
   InboxApi(this._client);
 
@@ -142,12 +158,16 @@ class InboxApi {
     required Map<String, dynamic> query,
     String? before,
     int perPage = AppConfig.defaultPerPage,
+    bool? pinned,
   }) async {
     final response = await _client.get(
       _base,
       query: {
         ...query,
         'per_page': perPage,
+        // Hộp thư mobile: `pinned` theo NGƯỜI XEM — `1` = mục "Đã ghim",
+        // `0` = danh sách chính (loại hội thoại tôi ghim). Null = không lọc.
+        if (pinned != null) 'pinned': pinned ? '1' : '0',
         if (before == null) 'cursor': '1' else 'before': before,
       },
     );
@@ -266,25 +286,86 @@ class InboxApi {
     return Message.fromJson(response.object);
   }
 
-  /// Internal note — stored on the thread, never delivered to the platform.
-  /// Idempotent on [clientMessageId], same contract as [send].
-  Future<Message> addNote(
-    String id,
-    String text, {
-    String? clientMessageId,
-  }) async {
-    final response = await _client.post(
-      '$_base/$id/notes',
-      body: {
-        'text': text,
-        if (clientMessageId != null && clientMessageId.isNotEmpty)
-          'client_message_id': clientMessageId,
-      },
-    );
-    return Message.fromJson(response.object);
+  /// "Gửi lại" một tin đi ĐÃ có trên server mà `failed`: mở lại chính tin đó,
+  /// server chỉ gửi các phần chưa tới khách (`ResendOutboundMessage`, API
+  /// 0cd1713). 409 `message_not_failed` (tin không còn hỏng) thành
+  /// [MessageNotFailedException] mang tin HIỆN TẠI server gửi kèm; 422
+  /// `message_too_old_to_resend` (quá hạn — gửi tin mới) đi ra như lỗi API.
+  Future<Message> resend(String id, String messageId) async {
+    try {
+      final response = await _client.post(
+        '$_base/$id/messages/$messageId/resend',
+      );
+      return Message.fromJson(response.object);
+    } on RequestRejectedException catch (error) {
+      if (error.code != '409' || error.reason != kResendNotFailed) rethrow;
+      final data = error.data;
+      throw MessageNotFailedException(
+        error.message,
+        current: data is Map
+            ? Message.fromJson(Map<String, dynamic>.from(data))
+            : null,
+      );
+    }
   }
 
   Future<void> markRead(String id) => _client.post('$_base/$id/read');
+
+  // ── Hộp thư mobile (API `feat/hop-thu-mobile`) ─────────────────────────
+
+  /// Mỗi tin tối đa 10 tệp (ảnh + tệp). Server đã BỎ trần này
+  /// (`SendMessageRequest`); app giữ làm giới hạn UX cho khay đính kèm.
+  static const maxAttachmentsPerMessage = 10;
+
+  /// `POST /inbox/media` `max:25600` (KB) — từ chối trước khi tải lên.
+  static const maxUploadBytes = 25 * 1024 * 1024;
+
+  /// Đánh dấu chưa đọc (dùng chung cả đội). Trả `unread_count` mới (≥ 1).
+  Future<int> markUnread(String id) async {
+    final response = await _client.post('$_base/$id/unread');
+    return response.object.intOr('unread_count', 1);
+  }
+
+  /// Ghim/bỏ ghim cho RIÊNG người gọi. Trả trạng thái thật server ghi.
+  /// Vượt trần → 422 `ValidationException.reason == 'pin_limit_reached'`.
+  Future<bool> setPinned(String id, bool on) async {
+    final path = '$_base/$id/pin';
+    final response = on ? await _client.post(path) : await _client.delete(path);
+    return response.object.flag('is_pinned');
+  }
+
+  /// Tắt (`on`) / bật thông báo cho riêng người gọi.
+  Future<bool> setMuted(String id, bool on) async {
+    final path = '$_base/$id/mute';
+    final response = on ? await _client.post(path) : await _client.delete(path);
+    return response.object.flag('is_muted');
+  }
+
+  /// "Chặn hội thoại" — chỉ trong CRM (ẩn khỏi Hộp thư cả đội, tin đến không
+  /// báo), KHÔNG chặn trên nền tảng. Idempotent; trả hội thoại đầy đủ như
+  /// `GET {id}`.
+  Future<Conversation> setBlocked(String id, bool on) async {
+    final path = '$_base/$id/block';
+    final response = on ? await _client.post(path) : await _client.delete(path);
+    return Conversation.fromJson(response.object);
+  }
+
+  /// Thả/bỏ/đổi cảm xúc nội bộ của tôi trên tin. Cùng emoji = bỏ, khác = thay.
+  /// Trả danh sách cảm xúc nội bộ mới của tin.
+  Future<List<TeamReaction>> toggleTeamReaction(
+    String conversationId,
+    String messageId,
+    String emoji,
+  ) async {
+    final response = await _client.post(
+      '$_base/$conversationId/messages/$messageId/team-reactions',
+      body: {'emoji': emoji},
+    );
+    return response.object
+        .mapList('team_reactions')
+        .map(TeamReaction.fromJson)
+        .toList();
+  }
 
   Future<Conversation> assign(
     String id,
@@ -301,6 +382,23 @@ class InboxApi {
   Future<Conversation> update(String id, Map<String, dynamic> body) async {
     final response = await _client.put('$_base/$id', body: body);
     return Conversation.fromJson(response.object);
+  }
+
+  /// "Lưu trữ" trên app = đóng hội thoại (`status: closed`); "Mở lại" =
+  /// `open`. Máy chủ không có trạng thái lưu trữ riêng (UpdateInboxRequest).
+  Future<Conversation> setStatus(String id, ConversationStatus status) =>
+      update(id, {'status': status.name});
+
+  /// Mẫu trả lời của tenant; `null` khi tenant chưa cài bộ nào.
+  Future<List<QuickReply>?> quickReplies() async {
+    final response = await _client.get('/inbox/quick-replies');
+    final data = response.raw['data'];
+    if (data is! List) return null;
+    return data
+        .whereType<Map>()
+        .map((e) => QuickReply.fromJson(e.cast<String, dynamic>()))
+        .where((r) => r.body.isNotEmpty)
+        .toList();
   }
 
   /// Materialises the contact into a CRM customer server-side (lead-first, with

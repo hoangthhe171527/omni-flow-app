@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<title>Quên mật khẩu</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#0A7D76;text-decoration:none}a:hover{color:#075E59}
+:root{--out:cubic-bezier(.16,1,.3,1)}
+@keyframes inR{from{opacity:0;transform:translateX(36px)}to{opacity:1;transform:none}}
+@keyframes inL{from{opacity:0;transform:translateX(-36px)}to{opacity:1;transform:none}}
+@keyframes rise{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+@keyframes shake{0%,100%{transform:none}20%{transform:translateX(-6px)}40%{transform:translateX(5px)}60%{transform:translateX(-3px)}80%{transform:translateX(2px)}}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes pop{0%{opacity:0;transform:scale(.5)}60%{opacity:1;transform:scale(1.12)}100%{transform:scale(1)}}
+@keyframes fly{0%{transform:translate(0,0) rotate(0)}100%{transform:translate(0,0) rotate(0)}}
+@keyframes draw{to{stroke-dashoffset:0}}
+button,a{transition:transform .2s cubic-bezier(.2,.8,.2,1),background-color .2s,color .2s,border-color .2s,opacity .2s;-webkit-tap-highlight-color:transparent}
+button:active,a:active{transform:scale(.98)}
+.lbl{display:block;font-size:13px;font-weight:600;margin-bottom:6px}
+.inp{height:50px;border-radius:10px;border:1px solid #E3E8EF;background:#fff;box-shadow:0 1px 2px rgba(11,26,51,.04);display:flex;align-items:center;padding:0 12px;transition:border-color .2s,box-shadow .2s}
+.inp:focus-within{border-color:#0A7D76;box-shadow:0 0 0 3px rgba(10,125,118,.14)}
+.inp.err{border-color:#DC2626;box-shadow:0 0 0 3px rgba(220,38,38,.1);animation:shake .4s both}
+.inp input{flex-grow:1;min-width:0;border:0;outline:0;background:transparent;font:400 15px 'Be Vietnam Pro',sans-serif;color:#0B1A33}
+.em{font-size:12px;color:#B42318;margin-top:5px;animation:rise .25s both}
+.pri{height:50px;border-radius:10px;box-shadow:0 6px 16px rgba(10,125,118,.25);border:0;background:#0A7D76;color:#fff;font:600 15px 'Be Vietnam Pro',sans-serif;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;width:100%}
+.pri:hover{background:#075E59;color:#fff}
+.sec{height:50px;border-radius:10px;border:1px solid #E3E8EF;background:#fff;color:#0B1A33;font:600 15px 'Be Vietnam Pro',sans-serif;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;width:100%}
+.or{display:flex;align-items:center;gap:10px;font-size:12px;color:#8A95A8}
+.or::before,.or::after{content:"";flex:1;height:1px;background:#E3E8EF}
+.eye{border:0;background:transparent;padding:4px;cursor:pointer;color:#8A95A8;display:flex}
+.back{width:36px;height:36px;border:0;background:transparent;border-radius:6px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:#0B1A33;margin-left:-8px}
+.ck{width:20px;height:20px;border-radius:5px;border:1.5px solid #C9D2DE;background:#fff;display:flex;align-items:center;justify-content:center;flex-shrink:0;cursor:pointer;padding:0}
+.ck.on{background:#0A7D76;border-color:#0A7D76;animation:pop .3s both}
+.st{flex:1;height:4px;border-radius:2px;background:#EEF1F5;overflow:hidden}
+.st span{display:block;height:100%;border-radius:2px;transition:width .4s cubic-bezier(.2,.8,.2,1),background-color .3s}
+</style>
+</helmet>
+<div style="width:390px;height:844px;position:relative;overflow:hidden;font-family:'Be Vietnam Pro',system-ui,sans-serif;color:#0B1A33;background:#F5F7FA;font-size:14px">
+
+  <sc-if value="{{isLogin}}" hint-placeholder-val="{{true}}">
+    <div style="position:absolute;inset:0;padding:96px 24px 28px;display:flex;flex-direction:column;animation:{{anim}}">
+      <div style="display:flex;flex-direction:column;align-items:center">
+        <span style="position:relative;display:flex"><span style="position:absolute;inset:-22px;border-radius:50%;background:#E6F3F2;opacity:.7"></span><span style="position:relative"><svg width="64" height="64" viewBox="0 0 100 100" aria-hidden="true"><rect x="1.5" y="1.5" width="97" height="97" rx="23" fill="#FFFFFF" stroke="#E3E8EF" stroke-width="3"></rect><path d="M12.5 58.2 A40 11 -20 0 1 87.5 29.8" fill="none" stroke="#0A7D76" stroke-width="6" stroke-linecap="round"></path><circle cx="49" cy="45" r="21" fill="#FFFFFF" stroke="#0A7D76" stroke-width="6"></circle><path d="M37 62 L33.5 75 L46 66.5" fill="none" stroke="#0A7D76" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"></path><path d="M12.5 58.2 A40 11 -20 0 0 87.5 29.8" fill="none" stroke="#0A7D76" stroke-width="6" stroke-linecap="round"></path><circle cx="73" cy="26" r="7" fill="#FFC43D" stroke="#FFFFFF" stroke-width="3"></circle></svg></span></span>
+        <h1 style="margin:22px 0 0;font-size:24px;font-weight:700;letter-spacing:-.4px">Chào mừng trở lại</h1>
+      </div>
+      <div style="margin-top:32px;display:flex;flex-direction:column;gap:10px">
+        <div><div class="{{eCls}}"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#8A95A8" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;margin-right:10px"><rect x="3" y="5" width="18" height="14" rx="2"></rect><path d="m3 7 9 6 9-6"></path></svg><input type="email" aria-label="Email làm việc" placeholder="Email làm việc" value="{{email}}" onInput="{{typeEmail}}"></div><sc-if value="{{eErr}}" hint-placeholder-val="{{false}}"><div class="em">{{eErr}}</div></sc-if></div>
+        <div><div class="{{pCls}}"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#8A95A8" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;margin-right:10px"><rect x="5" y="11" width="14" height="10" rx="2"></rect><path d="M8 11V8a4 4 0 0 1 8 0v3"></path></svg><input type="{{pType}}" aria-label="Mật khẩu" placeholder="Mật khẩu" value="{{pass}}" onInput="{{typePass}}"><button class="eye" aria-label="{{eyeL}}" onClick="{{toggleEye}}"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"></path><circle cx="12" cy="12" r="3"></circle><sc-if value="{{hidden}}" hint-placeholder-val="{{true}}"><path d="M3 3l18 18"></path></sc-if></svg></button></div><sc-if value="{{pErr}}" hint-placeholder-val="{{false}}"><div class="em">{{pErr}}</div></sc-if></div>
+      </div>
+      <button onClick="{{toForgot}}" style="align-self:flex-end;margin-top:10px;border:0;background:transparent;padding:0;font:600 13px 'Be Vietnam Pro',sans-serif;color:#0A7D76;cursor:pointer">Quên mật khẩu?</button>
+      <a class="pri" href="Main.dc.html" onClick="{{login}}" style="margin-top:18px">Đăng nhập</a>
+      <div class="or" style="margin:20px 0">hoặc</div>
+      <button class="sec"><svg width="18" height="18" viewBox="0 0 48 48" aria-hidden="true"><path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9 3.5l6.7-6.7C35.6 2.4 30.2 0 24 0 14.6 0 6.6 5.4 2.6 13.2l7.8 6.1C12.3 13.6 17.7 9.5 24 9.5z"></path><path fill="#4285F4" d="M46.5 24.5c0-1.6-.1-3.1-.4-4.5H24v9h12.7c-.6 3-2.3 5.5-4.8 7.2l7.5 5.8c4.4-4 7.1-10 7.1-17.5z"></path><path fill="#FBBC05" d="M10.4 28.7A14.5 14.5 0 0 1 9.5 24c0-1.6.3-3.2.9-4.7l-7.8-6.1A24 24 0 0 0 0 24c0 3.9.9 7.5 2.6 10.8l7.8-6.1z"></path><path fill="#34A853" d="M24 48c6.5 0 11.9-2.1 15.9-5.8l-7.5-5.8c-2.1 1.4-4.8 2.3-8.4 2.3-6.3 0-11.7-4.1-13.6-9.8l-7.8 6.1C6.6 42.6 14.6 48 24 48z"></path></svg>Tiếp tục với Google</button>
+      <div style="flex-grow:1"></div>
+      <div style="text-align:center;font-size:14px;color:#56637A">Chưa có tài khoản? <button onClick="{{toReg}}" style="border:0;background:transparent;padding:0;font:600 14px 'Be Vietnam Pro',sans-serif;color:#0A7D76;cursor:pointer">Đăng ký</button></div>
+    </div>  </sc-if>
+
+  <sc-if value="{{isReg}}" hint-placeholder-val="{{false}}">
+    <div style="position:absolute;inset:0;padding:54px 24px 28px;display:flex;flex-direction:column;animation:{{anim}}">
+      <button class="back" aria-label="Quay lại" onClick="{{toLogin}}"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 5-7 7 7 7"></path></svg></button>
+      <sc-if value="{{regForm}}" hint-placeholder-val="{{true}}">
+        <h1 style="margin:14px 0 24px;font-size:24px;font-weight:700;letter-spacing:-.4px">Tạo tài khoản</h1>
+        <div style="display:flex;flex-direction:column;gap:10px">
+          <div class="inp"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#8A95A8" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;margin-right:10px"><circle cx="12" cy="8" r="4"></circle><path d="M4 21c1-4 4-6 8-6s7 2 8 6"></path></svg><input aria-label="Họ tên" placeholder="Họ tên" value="{{rn}}" onInput="{{typeRn}}"></div>
+          <div class="inp"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#8A95A8" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;margin-right:10px"><rect x="3" y="5" width="18" height="14" rx="2"></rect><path d="m3 7 9 6 9-6"></path></svg><input type="email" aria-label="Email làm việc" placeholder="Email làm việc" value="{{re}}" onInput="{{typeRe}}"></div>
+          <div class="inp"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#8A95A8" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;margin-right:10px"><path d="M4 21V5l8-2v18M12 9h8v12M8 8h.01M8 12h.01M8 16h.01M16 13h.01M16 17h.01"></path></svg><input aria-label="Tên công ty" placeholder="Tên công ty" value="{{rc}}" onInput="{{typeRc}}"></div>
+          <div class="inp"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#8A95A8" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;margin-right:10px"><rect x="5" y="11" width="14" height="10" rx="2"></rect><path d="M8 11V8a4 4 0 0 1 8 0v3"></path></svg><input type="{{pType}}" aria-label="Mật khẩu" placeholder="Mật khẩu (8+ ký tự)" value="{{rp}}" onInput="{{typeRp}}"><button class="eye" aria-label="{{eyeL}}" onClick="{{toggleEye}}"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"></path><circle cx="12" cy="12" r="3"></circle><sc-if value="{{hidden}}" hint-placeholder-val="{{true}}"><path d="M3 3l18 18"></path></sc-if></svg></button></div>
+        </div>
+        <div style="display:flex;align-items:center;gap:4px;margin-top:8px;height:14px">
+          <sc-for list="{{bars}}" as="b" hint-placeholder-count="4"><span class="st"><span style="width:{{b.w}};background:{{b.c}}"></span></span></sc-for>
+          <span style="font-size:11px;font-weight:600;color:{{strC}};width:44px;text-align:right">{{strL}}</span>
+        </div>
+        <div style="display:flex;gap:10px;align-items:center;margin-top:14px;font-size:13px;color:#56637A"><button class="{{agreeCls}}" aria-pressed="{{agreeP}}" aria-label="Đồng ý điều khoản" onClick="{{toggleAgree}}"><sc-if value="{{agree}}" hint-placeholder-val="{{false}}"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 4.5 4.5L19 7"></path></svg></sc-if></button><span>Đồng ý <a href="#">Điều khoản sử dụng</a></span></div>
+        <button class="pri" onClick="{{register}}" style="margin-top:18px;opacity:{{regOp}}"><sc-if value="{{loading}}" hint-placeholder-val="{{false}}"><span style="width:18px;height:18px;border-radius:9px;border:2.5px solid rgba(255,255,255,.35);border-top-color:#fff;animation:spin .7s linear infinite"></span></sc-if>Tạo tài khoản</button>
+        <div class="or" style="margin:20px 0">hoặc</div>
+        <button class="sec"><svg width="18" height="18" viewBox="0 0 48 48" aria-hidden="true"><path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9 3.5l6.7-6.7C35.6 2.4 30.2 0 24 0 14.6 0 6.6 5.4 2.6 13.2l7.8 6.1C12.3 13.6 17.7 9.5 24 9.5z"></path><path fill="#4285F4" d="M46.5 24.5c0-1.6-.1-3.1-.4-4.5H24v9h12.7c-.6 3-2.3 5.5-4.8 7.2l7.5 5.8c4.4-4 7.1-10 7.1-17.5z"></path><path fill="#FBBC05" d="M10.4 28.7A14.5 14.5 0 0 1 9.5 24c0-1.6.3-3.2.9-4.7l-7.8-6.1A24 24 0 0 0 0 24c0 3.9.9 7.5 2.6 10.8l7.8-6.1z"></path><path fill="#34A853" d="M24 48c6.5 0 11.9-2.1 15.9-5.8l-7.5-5.8c-2.1 1.4-4.8 2.3-8.4 2.3-6.3 0-11.7-4.1-13.6-9.8l-7.8 6.1C6.6 42.6 14.6 48 24 48z"></path></svg>Đăng ký với Google</button>
+        <div style="flex-grow:1"></div>
+        <div style="text-align:center;font-size:14px;color:#56637A">Đã có tài khoản? <button onClick="{{toLogin}}" style="border:0;background:transparent;padding:0;font:600 14px 'Be Vietnam Pro',sans-serif;color:#0A7D76;cursor:pointer">Đăng nhập</button></div>
+      </sc-if>      <sc-if value="{{regDone}}" hint-placeholder-val="{{false}}">
+        <div style="flex-grow:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding-bottom:80px">
+          <span style="width:84px;height:84px;border-radius:42px;background:#E6F3F2;display:flex;align-items:center;justify-content:center;animation:pop .5s cubic-bezier(.3,1.5,.5,1) both"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#0A7D76" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 4.5 4.5L19 7" pathLength="1" style="stroke-dasharray:1;stroke-dashoffset:1;animation:draw .45s ease .3s forwards"></path></svg></span>
+          <h1 style="margin:22px 0 8px;font-size:22px;font-weight:700;animation:rise .45s .2s both">Tài khoản đã sẵn sàng</h1>
+          <div style="font-size:14px;color:#56637A;line-height:1.55;animation:rise .45s .28s both">Xác nhận đã gửi tới <b style="color:#0B1A33">{{reShow}}</b></div>
+          <a class="pri" href="Main.dc.html" style="margin-top:28px;animation:rise .45s .36s both">Vào {{rcShow}}</a>
+        </div>
+      </sc-if>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{isForgot}}" hint-placeholder-val="{{false}}">
+    <div style="position:absolute;inset:0;padding:54px 24px 28px;display:flex;flex-direction:column;animation:{{anim}}">
+      <button class="back" aria-label="Quay lại" onClick="{{toLogin}}"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 5-7 7 7 7"></path></svg></button>
+      <sc-if value="{{fForm}}" hint-placeholder-val="{{true}}">
+        <h1 style="margin:14px 0 6px;font-size:24px;font-weight:700;letter-spacing:-.4px">Quên mật khẩu?</h1>
+        <div style="font-size:14px;color:#56637A">Nhận liên kết đặt lại qua email.</div>
+        <div style="margin-top:24px"><div class="{{fCls}}"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#8A95A8" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;margin-right:10px"><rect x="3" y="5" width="18" height="14" rx="2"></rect><path d="m3 7 9 6 9-6"></path></svg><input type="email" aria-label="Email làm việc" placeholder="Email làm việc" value="{{fe}}" onInput="{{typeFe}}" onKeyDown="{{fEnter}}"></div><sc-if value="{{fErr}}" hint-placeholder-val="{{false}}"><div class="em">{{fErr}}</div></sc-if></div>
+        <button class="pri" onClick="{{sendReset}}" style="margin-top:16px"><sc-if value="{{loading}}" hint-placeholder-val="{{false}}"><span style="width:18px;height:18px;border-radius:9px;border:2.5px solid rgba(255,255,255,.35);border-top-color:#fff;animation:spin .7s linear infinite"></span></sc-if>Gửi liên kết</button>
+      </sc-if>      <sc-if value="{{fSent}}" hint-placeholder-val="{{false}}">
+        <div style="flex-grow:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding-bottom:80px">
+          <span style="width:84px;height:84px;border-radius:20px;background:#fff;border:1px solid #E3E8EF;display:flex;align-items:center;justify-content:center;animation:pop .5s cubic-bezier(.3,1.5,.5,1) both;box-shadow:0 10px 30px rgba(10,125,118,.15)"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#0A7D76" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"></rect><path d="m3 7 9 6 9-6"></path></svg></span>
+          <h1 style="margin:22px 0 8px;font-size:22px;font-weight:700;animation:rise .45s .2s both">Kiểm tra email</h1>
+          <div style="font-size:14px;color:#56637A;line-height:1.55;animation:rise .45s .28s both">Đã gửi tới <b style="color:#0B1A33">{{fe}}</b></div>
+          <button class="pri" style="margin-top:28px;animation:rise .45s .36s both">Mở ứng dụng email</button>
+          <button onClick="{{resend}}" style="margin-top:14px;border:0;background:transparent;font:600 13px 'Be Vietnam Pro',sans-serif;color:{{rsC}};cursor:pointer;animation:rise .45s .44s both">{{rsL}}</button>
+        </div>
+      </sc-if>
+    </div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+constructor(p) { super(p); this.state = { scr: 'forgot', dir: 1, email: '', pass: '', hide: true, err: {}, loading: false, rn: '', re: '', rc: '', rp: '', agree: false, regDone: false, fe: '', fSent: false, cd: 0 }; }
+componentWillUnmount() { clearInterval(this.iv); clearTimeout(this.lt); }
+go(scr, dir) { this.setState({ scr, dir, err: {}, loading: false }); }
+renderVals() {
+const s = this.state, okE = v => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.trim());
+const eye = { pType: s.hide ? 'password' : 'text', hidden: s.hide, eyeL: s.hide ? 'Hiện mật khẩu' : 'Ẩn mật khẩu', toggleEye: () => this.setState({ hide: !s.hide }) };
+const spin = (after) => { this.setState({ loading: true }); clearTimeout(this.lt); this.lt = setTimeout(after, 900); };
+let sc = 0; const p = s.rp; if (p.length >= 8) sc++; if (/[A-Z]/.test(p) && /[a-z]/.test(p)) sc++; if (/\d/.test(p)) sc++; if (/[^A-Za-z0-9]/.test(p)) sc++;
+const SC = [['', '#C9D2DE'], ['Yếu', '#DC2626'], ['Tạm', '#E8890C'], ['Khá', '#2563EB'], ['Mạnh', '#0A7D76']][p ? Math.max(1, sc) : 0];
+const regOk = s.rn.trim() && okE(s.re) && s.rc.trim() && p.length >= 8 && s.agree;
+return {
+...eye, anim: (s.dir > 0 ? 'inR' : 'inL') + ' .45s cubic-bezier(.16,1,.3,1) both',
+isLogin: s.scr === 'login', isReg: s.scr === 'reg', isForgot: s.scr === 'forgot',
+toReg: () => this.go('reg', 1), toForgot: () => this.go('forgot', 1), toLogin: () => this.go('login', -1),
+email: s.email, pass: s.pass, typeEmail: e => this.setState({ email: e.target.value, err: { ...s.err, e: null } }), typePass: e => this.setState({ pass: e.target.value, err: { ...s.err, p: null } }),
+eErr: s.err.e || false, pErr: s.err.p || false, eCls: s.err.e ? 'inp err' : 'inp', pCls: s.err.p ? 'inp err' : 'inp',
+loading: s.loading, loginL: s.loading ? 'Đang đăng nhập' : 'Đăng nhập',
+login: e => { const er = {}; if (!s.email.trim()) er.e = 'Vui lòng nhập email'; else if (!okE(s.email)) er.e = 'Email chưa hợp lệ'; if (!s.pass) er.p = 'Vui lòng nhập mật khẩu';
+  if (er.e || er.p) { e.preventDefault(); this.setState({ err: er }); } },
+enter: e => { if (e.key === 'Enter') e.target.blur(); },
+rn: s.rn, re: s.re, rc: s.rc, rp: s.rp,
+typeRn: e => this.setState({ rn: e.target.value }), typeRe: e => this.setState({ re: e.target.value }), typeRc: e => this.setState({ rc: e.target.value }), typeRp: e => this.setState({ rp: e.target.value }),
+bars: [1, 2, 3, 4].map(i => ({ w: p && i <= Math.max(1, sc) ? '100%' : '0%', c: SC[1] })), strL: SC[0], strC: SC[1],
+agree: s.agree, agreeP: s.agree ? 'true' : 'false', agreeCls: s.agree ? 'ck on' : 'ck', toggleAgree: () => this.setState({ agree: !s.agree }),
+regOp: regOk ? 1 : .45, register: () => { if (regOk) spin(() => this.setState({ loading: false, regDone: true })); },
+regForm: !s.regDone, regDone: s.regDone, reShow: s.re || 'ten@congty.vn', rcShow: s.rc || 'workspace',
+fe: s.fe, typeFe: e => this.setState({ fe: e.target.value, err: {} }), fErr: s.err.f || false, fCls: s.err.f ? 'inp err' : 'inp',
+fForm: !s.fSent, fSent: s.fSent,
+sendReset: () => { if (!okE(s.fe)) { this.setState({ err: { f: s.fe.trim() ? 'Email chưa hợp lệ' : 'Vui lòng nhập email' } }); return; }
+  spin(() => { this.setState({ loading: false, fSent: true, cd: 30 }); clearInterval(this.iv); this.iv = setInterval(() => { const c = this.state.cd - 1; this.setState({ cd: Math.max(0, c) }); if (c <= 0) clearInterval(this.iv); }, 1000); }); },
+fEnter: e => { if (e.key === 'Enter') e.target.blur(); },
+rsL: s.cd > 0 ? 'Gửi lại sau ' + s.cd + ' giây' : 'Gửi lại email', rsC: s.cd > 0 ? '#8A95A8' : '#0A7D76',
+resend: () => { if (this.state.cd > 0) return; this.setState({ cd: 30 }); clearInterval(this.iv); this.iv = setInterval(() => { const c = this.state.cd - 1; this.setState({ cd: Math.max(0, c) }); if (c <= 0) clearInterval(this.iv); }, 1000); }
+};
+}
+}
+</script>
+</body>
+</html>

@@ -71,13 +71,11 @@ void main() {
     await tester.pumpWidget(host());
     await tester.pumpAndSettle();
 
-    expect(find.text('Thêm việc con'), findsOneWidget);
+    final addField = find.widgetWithText(TextField, 'Thêm việc con');
+    expect(addField, findsOneWidget);
 
-    await tester.tap(find.text('Thêm việc con'));
-    await tester.pumpAndSettle();
-    await tester.enterText(sheetField, 'Tháo máy');
-    await tester.pump();
-    await tester.tap(find.text('Lưu'));
+    await tester.enterText(addField, 'Tháo máy');
+    await tester.testTextInput.receiveAction(TextInputAction.done);
     await tester.pumpAndSettle();
 
     final sent = adapter.singleRequest;

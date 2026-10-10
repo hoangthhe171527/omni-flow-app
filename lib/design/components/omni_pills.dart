@@ -173,7 +173,7 @@ class OmniSourcePill extends StatelessWidget {
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
         style: OmniType.micro.copyWith(
-          color: meta.color,
+          color: meta.textColorOf(Theme.of(context).brightness),
           fontSize: 9.5,
           letterSpacing: 0.4,
         ),

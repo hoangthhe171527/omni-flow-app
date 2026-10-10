@@ -18,6 +18,23 @@ abstract final class Formatters {
   /// và `RegExp(...)` inline là biên dịch lại biểu thức cho mỗi khung hình.
   static final _whitespace = RegExp(r'\s+');
 
+  /// Mốc giờ giữa cuộc trò chuyện: `21:02, THỨ 5`, `09:40, HÔM NAY`,
+  /// `21:02, HÔM QUA`; quá 6 ngày thì `21:02, 20/09`. Giờ VN (APP-I14).
+  static String threadStamp(DateTime value, {DateTime? clock}) {
+    final local = VnTime.of(value);
+    final diff = VnTime.today(clock).difference(VnTime.day(value)).inDays;
+    final day = switch (diff) {
+      0 => 'HÔM NAY',
+      1 => 'HÔM QUA',
+      >= 2 && <= 6 =>
+        local.weekday == DateTime.sunday
+            ? 'CHỦ NHẬT'
+            : 'THỨ ${local.weekday + 1}',
+      _ => _dayMonth.format(local),
+    };
+    return '${_time.format(local)}, $day';
+  }
+
   /// `34990000` → `34.990.000đ`
   static String vnd(num? amount) {
     if (amount == null) return '—';
@@ -43,6 +60,9 @@ abstract final class Formatters {
 
   static String date(DateTime? value) =>
       value == null ? '—' : _dayMonthYear.format(VnTime.of(value));
+
+  /// `14/03` — ngày-tháng theo giờ VN, không năm.
+  static String dayMonth(DateTime value) => _dayMonth.format(VnTime.of(value));
 
   static String time(DateTime? value) =>
       value == null ? '' : _time.format(VnTime.of(value));

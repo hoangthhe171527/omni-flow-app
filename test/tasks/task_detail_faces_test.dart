@@ -8,6 +8,7 @@ import 'package:omni_app/modules/tasks/application/tasks_providers.dart';
 import 'package:omni_app/modules/tasks/domain/task.dart';
 import 'package:omni_app/modules/tasks/domain/task_permissions.dart';
 import 'package:omni_app/modules/tasks/presentation/task_detail_page.dart';
+import 'package:omni_app/modules/tasks/presentation/widgets/task_detail/coordination_card.dart';
 import 'package:omni_app/security/permissions/access_policy.dart';
 
 /// Một màn, hai bộ mặt.
@@ -56,12 +57,27 @@ void main() {
   );
 
   group('người nhận việc', () {
-    testWidgets('không thấy bảng điều phối', (tester) async {
+    testWidgets('thấy bảng điều phối nhưng chỉ đọc', (tester) async {
       await tester.pumpWidget(host());
       await tester.pumpAndSettle();
 
-      expect(find.text('Điều phối'), findsNothing);
-      expect(find.text('Nhóm việc'), findsNothing);
+      expect(find.text('ĐIỀU PHỐI'), findsOneWidget);
+      expect(find.text('Nhóm việc'), findsOneWidget);
+      // Chỉ đọc: không dòng nào bấm được, không mũi tên.
+      expect(
+        find.descendant(
+          of: find.byType(CoordinationCard),
+          matching: find.byType(InkWell),
+        ),
+        findsNothing,
+      );
+      expect(
+        find.descendant(
+          of: find.byType(CoordinationCard),
+          matching: find.byIcon(Icons.chevron_right_rounded),
+        ),
+        findsNothing,
+      );
     });
 
     testWidgets('VẪN thấy và tick được công đoạn', (tester) async {
@@ -77,7 +93,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('KAWAI HAT-5 · 2308512'), findsOneWidget);
-      expect(find.textContaining('1/2'), findsOneWidget);
+      expect(find.text('Đã xong 1/2 việc con'), findsOneWidget);
     });
   });
 
@@ -86,7 +102,7 @@ void main() {
       await tester.pumpWidget(host(permissions: assigner));
       await tester.pumpAndSettle();
 
-      expect(find.text('Điều phối'), findsOneWidget);
+      expect(find.text('ĐIỀU PHỐI'), findsOneWidget);
     });
 
     testWidgets('thấy ai đang làm', (tester) async {
@@ -145,10 +161,10 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(
-        find.text('Chưa gán ai'),
+        find.text('Chưa giao ai'),
         findsOneWidget,
         reason:
-            'Một ô trống ở chỗ tên người đọc như lỗi tải. "Chưa gán ai" là '
+            'Một ô trống ở chỗ tên người đọc như lỗi tải. "Chưa giao ai" là '
             'câu trả lời, và nó cũng là việc cần làm.',
       );
     });

@@ -2,9 +2,11 @@ import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/error/app_exception.dart';
 import '../../../core/network/api_envelope.dart';
 import '../../../core/realtime/realtime_client.dart';
 import '../../../security/session/session_controller.dart';
+import '../../team/team.dart';
 import '../data/tasks_api.dart';
 import '../domain/task.dart';
 import '../domain/task_permissions.dart';
@@ -255,3 +257,30 @@ final taskOverdueCountProvider = FutureProvider.autoDispose<int>((ref) async {
 final taskBadgeProvider = Provider.autoDispose<int>((ref) {
   return ref.watch(taskOverdueCountProvider).valueOrNull ?? 0;
 });
+
+/// Người chọn được cho một việc con: thành viên dự án, theo thứ tự danh sách
+/// workspace. Rơi về CẢ workspace (server cũng chỉ kiểm thành viên workspace)
+/// khi không lọc được một cách đáng tin:
+///  * dự án tạo trước khi có `member_ids` (rỗng);
+///  * `member_ids` không khớp ai còn chọn được (người đã nghỉ hết) — một bảng
+///    trống thì không ai giao được việc;
+///  * `GET /projects/{id}` trả 404 / 403 (thợ không đọc được dự án).
+/// Lỗi khác (mạng, 5xx) vẫn ném ra để bảng hiện "Thử lại".
+final projectMembersProvider = FutureProvider.autoDispose
+    .family<List<TeamMember>, String>((ref, projectId) async {
+      final all = await ref.watch(teamMembersProvider.future);
+      final List<String> ids;
+      try {
+        ids = await ref.watch(tasksApiProvider).projectMemberIds(projectId);
+      } on NotFoundException {
+        return all;
+      } on ForbiddenException {
+        return all;
+      }
+      final wanted = ids.toSet();
+      final filtered = [
+        for (final m in all)
+          if (wanted.contains(m.userId)) m,
+      ];
+      return filtered.isEmpty ? all : filtered;
+    });

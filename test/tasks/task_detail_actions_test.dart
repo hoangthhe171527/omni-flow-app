@@ -109,6 +109,22 @@ void main() {
       expect(controller.calls, isEmpty);
     });
 
+    test('server trả "medium", chọn lại "med" thì không ghi', () async {
+      final medium = Task.fromJson({
+        'id': 't1',
+        'title': 'x',
+        'priority': 'medium',
+      });
+      await actions.editPriority(medium, 'med');
+      await actions.editPriority(medium, 'medium');
+
+      expect(controller.calls, isEmpty);
+
+      await actions.editPriority(medium, 'high');
+
+      expect(controller.calls, [('setPriority', 'high')]);
+    });
+
     test('mức khác thì ghi mã API', () async {
       await actions.editPriority(task, 'high');
 

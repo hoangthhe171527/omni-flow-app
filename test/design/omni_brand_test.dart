@@ -31,11 +31,13 @@ void main() {
   test('ô logo đổi sang mực sáng hơn khi nằm trên nền mực', () {
     final light = OmniBrandMarkPainter(
       tile: OmniColors.ink,
+      stroke: OmniColors.orbit,
       strokeWidth: 5.5,
       dotRadius: 6.5,
     );
     final onInk = OmniBrandMarkPainter(
       tile: OmniColors.inkRaised,
+      stroke: OmniColors.orbit,
       strokeWidth: 5.5,
       dotRadius: 6.5,
     );
@@ -46,6 +48,7 @@ void main() {
   test('khung hình khác nhau thì vẽ lại, giống nhau thì không', () {
     OmniBrandMarkPainter at(OmniBrandFrame frame) => OmniBrandMarkPainter(
       tile: OmniColors.ink,
+      stroke: OmniColors.orbit,
       strokeWidth: 5.5,
       dotRadius: 6.5,
       frame: frame,

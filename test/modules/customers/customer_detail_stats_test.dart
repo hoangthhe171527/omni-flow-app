@@ -2,88 +2,99 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:intl/date_symbol_data_local.dart';
+import 'package:omni_app/core/module/customer_opportunities_section.dart';
 import 'package:omni_app/design/theme/omni_theme.dart';
+import 'package:omni_app/modules/opportunities/presentation/customer_opportunities_section.dart';
 import 'package:omni_app/modules/customers/application/customers_providers.dart';
 import 'package:omni_app/modules/customers/domain/customer.dart';
+import 'package:omni_app/modules/customers/domain/customer_summary.dart';
 import 'package:omni_app/modules/customers/presentation/customer_detail_page.dart';
-import 'package:omni_app/security/permissions/access_scope.dart';
-import 'package:omni_app/security/permissions/resource_access.dart';
+import 'package:omni_app/security/permissions/access_policy.dart';
 import 'package:omni_app/security/session/session.dart';
 import 'package:omni_app/security/session/session_controller.dart';
 
-/// Ô "Tổng giá trị" và "Tương tác" của hồ sơ khách (GD-I11, APP-I4, Q8a).
+/// Dải số "Đã mua" / "Đơn hàng" của hồ sơ khách (GD-I11, APP-I4, Q8a).
 ///
-/// API cũ (chưa có A1) không có `orders_total`/`last_interaction_at`: hai ô
-/// hiện "—", không hiện `lifetime_booking_value` cũ hay mốc sửa hồ sơ.
+/// Con số lấy từ `GET /customers/{id}/summary` (đơn không huỷ do máy chủ
+/// cộng), KHÔNG từ `lifetime_booking_value` cũ — số nhập tay không ai cập nhật.
 void main() {
   setUpAll(() => initializeDateFormatting('vi_VN'));
 
-  Widget host(Map<String, dynamic> json) => ProviderScope(
-    overrides: [
-      customerProvider(
-        'c1',
-      ).overrideWith((ref) async => Customer.fromJson(json)),
-      customerAccessProvider.overrideWithValue(
-        const ResourceAccess(readScope: AccessScope.all),
-      ),
-      sessionProvider.overrideWithValue(
-        const Session(status: SessionStatus.authenticated),
-      ),
-    ],
-    child: MaterialApp(
-      theme: OmniTheme.light(TargetPlatform.android),
-      home: const CustomerDetailPage(customerId: 'c1'),
-    ),
+  Widget host(CustomerSummary? summary, {Map<String, dynamic>? extra}) =>
+      ProviderScope(
+        overrides: [
+          customerOpportunitiesSectionProvider.overrideWithValue(
+            opportunitiesCustomerSection,
+          ),
+          customerOpportunitiesSectionProvider.overrideWithValue(
+            opportunitiesCustomerSection,
+          ),
+          customerProvider('c1').overrideWith(
+            (ref) async => Customer.fromJson({
+              'id': 'c1',
+              'display_name': 'Chú Đức',
+              ...?extra,
+            }),
+          ),
+          customerSummaryProvider('c1').overrideWith((ref) async => summary),
+          sessionProvider.overrideWithValue(
+            const Session(
+              status: SessionStatus.authenticated,
+              policy: AccessPolicy({'crm.customers.read'}),
+            ),
+          ),
+        ],
+        child: MaterialApp(
+          theme: OmniTheme.light(TargetPlatform.android),
+          home: const CustomerDetailPage(customerId: 'c1'),
+        ),
+      );
+
+  testWidgets(
+    'Đã mua theo summary máy chủ, không theo lifetime_booking_value',
+    (tester) async {
+      await tester.pumpWidget(
+        host(
+          const CustomerSummary(ordersTotal: 3200000, ordersCount: 7),
+          extra: {'lifetime_booking_value': 9000000},
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Đã mua'), findsOneWidget);
+      expect(find.text('3,2 tr'), findsOneWidget);
+      expect(find.text('9 tr'), findsNothing);
+      expect(find.text('Đơn hàng'), findsOneWidget);
+      expect(find.text('7'), findsOneWidget);
+      // Không đọc được cơ hội → không có ô "Đang mở".
+      expect(find.text('Đang mở'), findsNothing);
+    },
   );
 
-  /// Chữ của ô thống kê có nhãn [label].
-  String statValue(WidgetTester tester, String label) {
-    final tile = find.ancestor(
-      of: find.text(label),
-      matching: find.byWidgetPredicate(
-        (w) => w.runtimeType.toString() == 'OmniStatTile',
-      ),
-    );
-    final texts = tester
-        .widgetList<Text>(
-          find.descendant(of: tile, matching: find.byType(Text)),
-        )
-        .map((t) => t.data)
-        .where((s) => s != label)
-        .toList();
-    return texts.single!;
-  }
-
-  testWidgets('API cũ: Tổng giá trị và Tương tác đều là —', (tester) async {
+  testWidgets('summary không có (API cũ / 403) → không dải số', (tester) async {
     await tester.pumpWidget(
-      host({
-        'id': 'c1',
-        'display_name': 'Chú Đức',
-        'lifetime_booking_value': 9000000,
-        'updated_at': '2026-09-30T03:00:00Z',
-      }),
+      host(null, extra: {'lifetime_booking_value': 9000000}),
     );
     await tester.pumpAndSettle();
 
-    expect(statValue(tester, 'Tổng giá trị'), '—');
-    expect(statValue(tester, 'Tương tác'), '—');
+    expect(find.text('Chú Đức'), findsOneWidget);
+    expect(find.text('Đã mua'), findsNothing);
+    expect(find.text('9 tr'), findsNothing);
   });
 
-  testWidgets('API mới: tổng đơn và mốc tương tác có thật', (tester) async {
-    await tester.pumpWidget(
-      host({
-        'id': 'c1',
-        'display_name': 'Chú Đức',
-        'orders_total': 3200000,
-        'last_interaction_at': DateTime.now()
-            .toUtc()
-            .subtract(const Duration(days: 3))
-            .toIso8601String(),
-      }),
-    );
+  testWidgets('summary chưa có đơn: tổng null hiện —', (tester) async {
+    await tester.pumpWidget(host(const CustomerSummary()));
     await tester.pumpAndSettle();
 
-    expect(statValue(tester, 'Tổng giá trị'), '3,2 tr');
-    expect(statValue(tester, 'Tương tác'), '3 ngày');
+    expect(find.text('Đã mua'), findsOneWidget);
+    final stat = find.ancestor(
+      of: find.text('Đã mua'),
+      matching: find.byType(Column),
+    );
+    expect(
+      find.descendant(of: stat.first, matching: find.text('—')),
+      findsOneWidget,
+    );
+    expect(find.text('0'), findsOneWidget);
   });
 }

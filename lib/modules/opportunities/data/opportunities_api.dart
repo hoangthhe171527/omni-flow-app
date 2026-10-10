@@ -38,30 +38,37 @@ class OpportunitiesApi {
   /// Query of `GET /sales-opportunities` (`SalesOpportunityController::index`):
   /// `opportunity_stage` is the raw code, `pipeline` scopes it (the default
   /// pipeline also matches records with no `pipeline`), `owner=me` is the
-  /// current user.
+  /// current user, `status` is OPEN / WON / LOST (no `opportunity_stage` and no
+  /// `status` = every record, closed ones included).
   @visibleForTesting
   static Map<String, dynamic> listQuery({
     String? stageCode,
+    String? status,
     String? pipeline,
     bool mine = false,
     String? search,
+    String? customerId,
     int page = 1,
     int perPage = AppConfig.defaultPerPage,
   }) => {
     if (stageCode != null && stageCode.isNotEmpty)
       'opportunity_stage': stageCode,
     'pipeline': ?pipeline,
+    'status': ?status,
     if (mine) 'owner': 'me',
     if (search != null && search.isNotEmpty) 'search': search,
+    if (customerId != null && customerId.isNotEmpty) 'customer_id': customerId,
     'page': page,
     'per_page': perPage,
   };
 
   Future<Paged<Opportunity>> list({
     String? stageCode,
+    String? status,
     String? pipeline,
     bool mine = false,
     String? search,
+    String? customerId,
     int page = 1,
     int perPage = AppConfig.defaultPerPage,
   }) async {
@@ -69,9 +76,11 @@ class OpportunitiesApi {
       _base,
       query: listQuery(
         stageCode: stageCode,
+        status: status,
         pipeline: pipeline,
         mine: mine,
         search: search,
+        customerId: customerId,
         page: page,
         perPage: perPage,
       ),
@@ -82,13 +91,30 @@ class OpportunitiesApi {
     );
   }
 
+  /// Query của `GET /sales-opportunities/summary`: cùng `pipeline`/`owner`/
+  /// `search` với [list] (`applyListFilters` + `stringFilters`), để số và tiền
+  /// khớp với danh sách đang lọc.
+  @visibleForTesting
+  static Map<String, dynamic> summaryQuery({
+    String? pipeline,
+    bool mine = false,
+    String? search,
+  }) => {
+    'pipeline': ?pipeline,
+    if (mine) 'owner': 'me',
+    if (search != null && search.isNotEmpty) 'search': search,
+  };
+
   /// Per-stage counts and totals without pulling the records. Takes the same
-  /// `pipeline`/`owner` filters as [list] (`applyListFilters`), so the tab
-  /// counts match the columns.
-  Future<PipelineSummary> summary({String? pipeline, bool mine = false}) async {
+  /// filters as [list], so the tab counts match the columns.
+  Future<PipelineSummary> summary({
+    String? pipeline,
+    bool mine = false,
+    String? search,
+  }) async {
     final response = await _client.get(
       '$_base/summary',
-      query: {'pipeline': ?pipeline, if (mine) 'owner': 'me'},
+      query: summaryQuery(pipeline: pipeline, mine: mine, search: search),
     );
     return PipelineSummary.fromJson(response.object);
   }

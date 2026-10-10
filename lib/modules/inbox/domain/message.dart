@@ -3,6 +3,41 @@ import '../../../core/utils/formatters.dart';
 import '../../../core/utils/json.dart';
 import '../../../core/utils/media_url.dart';
 
+/// `error_code` (tin `failed`) và `code` (422 khi gửi) của kênh không có
+/// đường gửi đi — gửi lại không bao giờ thành công
+/// (`OutboundCapabilities::ERROR_SEND_UNSUPPORTED`).
+const kChannelSendUnsupported = 'channel_send_unsupported';
+
+/// Câu dự phòng khi tin lỗi `channel_send_unsupported` không mang `error`.
+const kChannelUnsupportedText =
+    'Kênh này chưa hỗ trợ gửi tin đi từ Hộp thư — tin chưa đến khách.';
+
+/// 422 của `POST …/resend` khi tin đã quá hạn chờ gửi
+/// (`ResendOutboundMessage::TOO_OLD`).
+const kResendTooOld = 'message_too_old_to_resend';
+
+/// 409 của `POST …/resend`: tin không còn ở trạng thái `failed`
+/// (`ResendOutboundMessage::NOT_FAILED`).
+const kResendNotFailed = 'message_not_failed';
+
+/// `/resend` 404 thật (tin không còn trên server): server chỉ nói
+/// "Message not found." bằng tiếng Anh.
+const kResendMessageGone =
+    'Không tìm thấy tin này trên máy chủ nên không gửi lại được.';
+
+/// 409 `message_not_failed` của `/resend`: một lượt khác đã mở lại (hay đã
+/// gửi được) tin này. [current] là tin HIỆN TẠI server gửi kèm (`data`) để
+/// thay bong bóng; null khi server không còn tin đó.
+class MessageNotFailedException implements Exception {
+  const MessageNotFailedException(this.message, {this.current});
+
+  final String message;
+  final Message? current;
+
+  @override
+  String toString() => 'MessageNotFailedException: $message';
+}
+
 enum MessageAuthor { customer, agent, note }
 
 /// Outbound delivery state. Reps chase these — a silently failed send is worse
@@ -59,6 +94,8 @@ class Message {
     this.replyToText,
     this.replyToAuthorName,
     this.attachments = const [],
+    this.teamReactions = const [],
+    this.errorCode,
   });
 
   factory Message.fromJson(Map<String, dynamic> json) {
@@ -74,6 +111,7 @@ class Message {
           DateUtilsX.parse(json['created_at']),
       status: parseStatus(json.str('status')),
       error: json.str('error'),
+      errorCode: json.str('error_code'),
       recalled: json.flag('recalled'),
       pinned: json.flag('pinned'),
       reaction: json.str('reaction'),
@@ -88,6 +126,10 @@ class Message {
       attachments: json
           .mapList('attachments')
           .map(MessageAttachment.fromJson)
+          .toList(),
+      teamReactions: json
+          .mapList('team_reactions')
+          .map(TeamReaction.fromJson)
           .toList(),
     );
   }
@@ -123,6 +165,16 @@ class Message {
 
   final List<MessageAttachment> attachments;
 
+  /// Cảm xúc NỘI BỘ của đội (không gửi ra nền tảng). Tách khỏi [reaction] —
+  /// cảm xúc của KHÁCH.
+  final List<TeamReaction> teamReactions;
+
+  /// Mã máy của lỗi gửi (`channel_send_unsupported`…); null khi không lỗi.
+  final String? errorCode;
+
+  /// Tin lỗi vì kênh không có đường gửi đi: gửi lại không bao giờ thành công.
+  bool get isChannelUnsupported => errorCode == kChannelSendUnsupported;
+
   bool get isOutbound => author == MessageAuthor.agent;
   bool get isNote => author == MessageAuthor.note;
   bool get hasAttachments => attachments.isNotEmpty;
@@ -151,7 +203,8 @@ class Message {
       author: author,
       text: text,
       sentAt: DateTime.now(),
-      status: isNote ? DeliveryStatus.none : DeliveryStatus.queued,
+      // Ghi chú không bao giờ hiện trong luồng tin nên không có nút gửi lại.
+      status: DeliveryStatus.queued,
       replyToMessageId: replyToMessageId,
       replyToText: replyToText,
       replyToAuthorName: replyToAuthorName,
@@ -188,17 +241,16 @@ class Message {
     required String text,
     String? clientId,
     List<MessageAttachment> attachments = const [],
-    bool asNote = false,
     Message? replyTo,
   }) {
     final key = clientId ?? newClientId();
     return Message(
       id: key,
       clientId: key,
-      author: asNote ? MessageAuthor.note : MessageAuthor.agent,
+      author: MessageAuthor.agent,
       text: text,
       sentAt: DateTime.now(),
-      status: asNote ? DeliveryStatus.none : DeliveryStatus.queued,
+      status: DeliveryStatus.queued,
       replyToMessageId: replyTo?.id,
       replyToText: replyTo?.text,
       replyToAuthorName: replyTo?.senderName,
@@ -216,6 +268,8 @@ class Message {
     String? replyToAuthorName,
     bool? pinned,
     List<MessageAttachment>? attachments,
+    List<TeamReaction>? teamReactions,
+    String? errorCode,
   }) {
     return Message(
       id: id ?? this.id,
@@ -235,6 +289,37 @@ class Message {
       replyToText: replyToText ?? this.replyToText,
       replyToAuthorName: replyToAuthorName ?? this.replyToAuthorName,
       attachments: attachments ?? this.attachments,
+      teamReactions: teamReactions ?? this.teamReactions,
+      // Mã lỗi chỉ có nghĩa với tin `failed`: biên nhận đổi sang trạng thái
+      // khác (gửi lại thành công) thì bỏ mã cũ, không thì tin đã gửi được vẫn
+      // bị coi là "kênh không gửi được".
+      errorCode:
+          errorCode ??
+          (status != null && status != DeliveryStatus.failed
+              ? null
+              : this.errorCode),
     );
   }
+}
+
+/// Một cảm xúc nội bộ (`team_reactions[]`): mỗi người tối đa một emoji.
+class TeamReaction {
+  const TeamReaction({
+    required this.userId,
+    required this.emoji,
+    this.userName,
+    this.at,
+  });
+
+  factory TeamReaction.fromJson(Map<String, dynamic> json) => TeamReaction(
+    userId: json.strOr('user_id', ''),
+    userName: json.str('user_name'),
+    emoji: json.strOr('emoji', ''),
+    at: DateUtilsX.parse(json['at']),
+  );
+
+  final String userId;
+  final String? userName;
+  final String emoji;
+  final DateTime? at;
 }

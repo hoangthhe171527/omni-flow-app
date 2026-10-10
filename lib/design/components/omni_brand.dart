@@ -14,7 +14,7 @@ class OmniBrandMark extends StatelessWidget {
   const OmniBrandMark({
     super.key,
     this.size = 36,
-    this.onInk = false,
+    this.onInk,
     this.frame = OmniBrandFrame.complete,
     this.semanticLabel,
   });
@@ -22,9 +22,9 @@ class OmniBrandMark extends StatelessWidget {
   /// Cạnh của ô vuông, dp.
   final double size;
 
-  /// Logo nằm trên một mặt [OmniColors.ink] (màn đăng nhập, màn mở app): ô
-  /// logo dùng [OmniColors.inkRaised] để còn tách được khỏi nền.
-  final bool onInk;
+  /// null = theo độ sáng theme; true = ô mực [OmniColors.inkRaised] (logo trên
+  /// mặt mực: đăng nhập, mở app); false = ô sáng.
+  final bool? onInk;
 
   /// Từng nét đã vẽ tới đâu. Mặc định là logo hoàn chỉnh.
   final OmniBrandFrame frame;
@@ -35,10 +35,15 @@ class OmniBrandMark extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final dark = onInk ?? Theme.of(context).brightness == Brightness.dark;
     final mark = CustomPaint(
       size: Size.square(size),
       painter: OmniBrandMarkPainter(
-        tile: onInk ? OmniColors.inkRaised : OmniColors.ink,
+        tile: dark
+            ? (onInk == true ? OmniColors.inkRaised : OmniColors.ink)
+            : Colors.white,
+        tileBorder: dark ? null : const Color(0xFFE3E8EF),
+        stroke: dark ? OmniColors.orbit : OmniColors.primary,
         // Ở cỡ nhỏ thiết kế làm nét dày hơn một chút để logo không mảnh đi.
         strokeWidth: size <= 40 ? 6 : 5.5,
         dotRadius: size <= 40 ? 7 : 6.5,
@@ -137,12 +142,16 @@ class OmniBrandFrame {
 class OmniBrandMarkPainter extends CustomPainter {
   OmniBrandMarkPainter({
     required this.tile,
+    required this.stroke,
+    this.tileBorder,
     required this.strokeWidth,
     required this.dotRadius,
     this.frame = OmniBrandFrame.complete,
   });
 
   final Color tile;
+  final Color stroke;
+  final Color? tileBorder;
   final double strokeWidth;
   final double dotRadius;
   final OmniBrandFrame frame;
@@ -192,23 +201,40 @@ class OmniBrandMarkPainter extends CustomPainter {
       ),
       Paint()..color = tile,
     );
+    if (tileBorder != null) {
+      canvas.drawRRect(
+        RRect.fromRectAndRadius(
+          const Rect.fromLTWH(1.5, 1.5, 97, 97),
+          const Radius.circular(22.5),
+        ),
+        Paint()
+          ..color = tileBorder!
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 3,
+      );
+    }
 
-    final stroke = Paint()
-      ..color = OmniColors.orbit
+    final strokePaint = Paint()
+      ..color = stroke
       ..style = PaintingStyle.stroke
       ..strokeWidth = strokeWidth
       ..strokeCap = StrokeCap.round
       ..strokeJoin = StrokeJoin.round;
 
-    _drawPartial(canvas, _backArc, frame.backArc, stroke);
+    _drawPartial(canvas, _backArc, frame.backArc, strokePaint);
 
     // Mặt hành tinh luôn đặc — nó che nửa sau của quỹ đạo ngay từ đầu, kể cả
     // khi viền của nó còn chưa vẽ xong.
     canvas.drawCircle(const Offset(49, 45), 21, Paint()..color = tile);
-    _drawPartial(canvas, _ring, frame.ring, stroke..strokeCap = StrokeCap.butt);
-    stroke.strokeCap = StrokeCap.round;
-    _drawPartial(canvas, _tail, frame.tail, stroke);
-    _drawPartial(canvas, _frontArc, frame.frontArc, stroke);
+    _drawPartial(
+      canvas,
+      _ring,
+      frame.ring,
+      strokePaint..strokeCap = StrokeCap.butt,
+    );
+    strokePaint.strokeCap = StrokeCap.round;
+    _drawPartial(canvas, _tail, frame.tail, strokePaint);
+    _drawPartial(canvas, _frontArc, frame.frontArc, strokePaint);
 
     if (frame.dotOpacity > 0 && frame.dotScale > 0) {
       canvas.save();
@@ -255,6 +281,8 @@ class OmniBrandMarkPainter extends CustomPainter {
   @override
   bool shouldRepaint(OmniBrandMarkPainter oldDelegate) =>
       oldDelegate.tile != tile ||
+      oldDelegate.stroke != stroke ||
+      oldDelegate.tileBorder != tileBorder ||
       oldDelegate.strokeWidth != strokeWidth ||
       oldDelegate.dotRadius != dotRadius ||
       oldDelegate.frame != frame;

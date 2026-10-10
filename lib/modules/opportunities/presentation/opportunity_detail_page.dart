@@ -115,7 +115,7 @@ class OpportunityDetailPage extends ConsumerWidget {
                       OmniDetailRow(
                         label: 'Xác suất',
                         value:
-                            '${data.effectiveProbability(catalog?.pipelineOf(data.pipelineCode))}%',
+                            '${data.displayPercent(catalog?.pipelineOf(data.pipelineCode))}%',
                       ),
                       OmniDetailRow(
                         label: 'Dự kiến chốt',

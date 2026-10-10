@@ -52,7 +52,7 @@ void main() {
     );
   });
 
-  testWidgets('công đoạn: chip người phụ trách mang ảnh', (tester) async {
+  testWidgets('công đoạn: avatar người phụ trách mang ảnh', (tester) async {
     final step = Subtask.fromJson({
       'id': 's1',
       'title': 'Nắp phím',
@@ -75,7 +75,7 @@ void main() {
     );
 
     expect(avatarWith(url), findsOneWidget);
-    expect(find.text('Hằng Ni'), findsOneWidget);
+    expect(find.bySemanticsLabel('Đổi người làm: Hằng Ni'), findsOneWidget);
   });
 
   testWidgets('bình luận: người viết mang ảnh', (tester) async {
@@ -142,7 +142,7 @@ void main() {
     await tester.pumpAndSettle();
 
     await tester.scrollUntilVisible(
-      find.text('Thành viên đã xem'),
+      find.text('Đã xem'),
       200,
       scrollable: find.byType(Scrollable).first,
     );

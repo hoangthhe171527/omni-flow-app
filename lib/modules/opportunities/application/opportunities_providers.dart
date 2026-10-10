@@ -30,14 +30,6 @@ final selectedPipelineProvider = StateProvider<String?>((ref) {
   return null;
 });
 
-/// The stage tab shown on the board, as a raw code; null = the first open
-/// stage of the pipeline. Reset whenever the pipeline changes — `tu_van` of
-/// one pipeline means nothing in another.
-final selectedStageProvider = StateProvider<String?>((ref) {
-  ref.watch(selectedPipelineProvider);
-  return null;
-});
-
 final pipelineSearchProvider = StateProvider<String>((ref) => '');
 
 /// "Của tôi": only deals the current user owns (`owner=me`). On by default
@@ -72,7 +64,11 @@ final pipelineSummaryProvider = FutureProvider<PipelineSummary>((ref) async {
   final query = await ref.watch(boardQueryProvider.future);
   return ref
       .watch(opportunitiesApiProvider)
-      .summary(pipeline: query.pipeline, mine: query.mine);
+      .summary(
+        pipeline: query.pipeline,
+        mine: query.mine,
+        search: query.search.isEmpty ? null : query.search,
+      );
 });
 
 class StageListState {
@@ -173,6 +169,126 @@ final stageOpportunitiesProvider = AsyncNotifierProvider.autoDispose
       StageOpportunitiesController.new,
     );
 
+/// Đoạn "Cơ hội" đang xem cơ hội ĐÃ ĐÓNG (thắng/thua) thay vì đang mở. Về false
+/// khi đổi quy trình.
+final segmentClosedProvider = StateProvider<bool>((ref) {
+  ref.watch(selectedPipelineProvider);
+  return false;
+});
+
+/// Ô giai đoạn đang lọc ở đoạn "Cơ hội" của tab Khách; null = mọi giai đoạn
+/// mở (hoặc, ở chế độ đã đóng, giai đoạn đóng đầu tiên). Về null khi đổi quy
+/// trình hay đổi chế độ — mã của quy trình này vô nghĩa ở quy trình khác.
+final segmentStageProvider = StateProvider<String?>((ref) {
+  ref.watch(selectedPipelineProvider);
+  ref.watch(segmentClosedProvider);
+  return null;
+});
+
+/// Bộ lọc gửi đi của đoạn: `stage` và `status`. Không có `stage` thì máy chủ
+/// trả MỌI trạng thái, nên "đang mở" phải gửi `status=OPEN`; chế độ đã đóng
+/// luôn nhắm một giai đoạn đóng cụ thể (mặc định cái đầu tiên).
+({String? stage, String? status}) _segmentFilter({
+  required String? stage,
+  required bool closed,
+  required PipelineDef? pipeline,
+}) {
+  if (closed) {
+    final closedStages = pipeline?.stages.where((s) => s.isClosed);
+    return (stage: stage ?? closedStages?.firstOrNull?.code, status: null);
+  }
+  return (stage: stage, status: stage == null ? 'OPEN' : null);
+}
+
+/// Danh sách của đoạn "Cơ hội": như [StageOpportunitiesController] nhưng giai
+/// đoạn lấy từ [segmentStageProvider]; null → gửi `status=OPEN` (xem
+/// [_segmentFilter]).
+class SegmentOpportunitiesController
+    extends AutoDisposeAsyncNotifier<StageListState> {
+  int _generation = 0;
+
+  @override
+  Future<StageListState> build() async {
+    _generation++;
+    final filter = _segmentFilter(
+      stage: ref.watch(segmentStageProvider),
+      closed: ref.watch(segmentClosedProvider),
+      pipeline: ref.watch(boardPipelineProvider),
+    );
+    final query = await ref.watch(boardQueryProvider.future);
+    final page = await ref
+        .watch(opportunitiesApiProvider)
+        .list(
+          stageCode: filter.stage,
+          status: filter.status,
+          pipeline: query.pipeline,
+          mine: query.mine,
+          search: query.search.isEmpty ? null : query.search,
+        );
+    return StageListState(items: page.items, pagination: page.pagination);
+  }
+
+  Future<void> refresh() async {
+    ref.invalidate(pipelineSummaryProvider);
+    state = await AsyncValue.guard(build);
+  }
+
+  Future<void> loadMore() async {
+    final current = state.valueOrNull;
+    if (current == null || !current.hasMore || current.loadingMore) return;
+    final generation = _generation;
+    final filter = _segmentFilter(
+      stage: ref.read(segmentStageProvider),
+      closed: ref.read(segmentClosedProvider),
+      pipeline: ref.read(boardPipelineProvider),
+    );
+
+    state = AsyncData(
+      StageListState(
+        items: current.items,
+        pagination: current.pagination,
+        loadingMore: true,
+      ),
+    );
+
+    try {
+      final query = await ref.read(boardQueryProvider.future);
+      final next = await ref
+          .read(opportunitiesApiProvider)
+          .list(
+            stageCode: filter.stage,
+            status: filter.status,
+            pipeline: query.pipeline,
+            mine: query.mine,
+            search: query.search.isEmpty ? null : query.search,
+            page: current.pagination.nextPage,
+          );
+      if (generation != _generation) return;
+      final seen = {for (final item in current.items) item.id};
+      state = AsyncData(
+        StageListState(
+          items: [
+            ...current.items,
+            ...next.items.where((item) => !seen.contains(item.id)),
+          ],
+          pagination: next.pagination,
+        ),
+      );
+    } catch (_) {
+      if (generation != _generation) return;
+      state = AsyncData(
+        StageListState(items: current.items, pagination: current.pagination),
+      );
+    }
+  }
+}
+
+final segmentOpportunitiesProvider =
+    AsyncNotifierProvider.autoDispose<
+      SegmentOpportunitiesController,
+      StageListState
+    >(SegmentOpportunitiesController.new);
+
 final opportunityProvider = FutureProvider.autoDispose
     .family<Opportunity, String>((ref, id) {
       return ref.watch(opportunitiesApiProvider).get(id);
@@ -235,7 +351,13 @@ class OpportunityActions {
     _ref.invalidate(pipelineSummaryProvider);
     // Every column: the one it left and the one it joined.
     _ref.invalidate(stageOpportunitiesProvider);
+    // Chưa dựng (đoạn Cơ hội chưa từng mở) thì invalidate sẽ dựng nó và gọi API.
+    if (_ref.exists(segmentOpportunitiesProvider)) {
+      _ref.invalidate(segmentOpportunitiesProvider);
+    }
     _ref.invalidate(opportunityProvider(id));
+    // Đoạn Cơ hội của hồ sơ khách — đổi giai đoạn được cả từ đó.
+    _ref.invalidate(customerOpportunitiesProvider);
   }
 }
 
@@ -249,3 +371,12 @@ Future<Opportunity> moveOpportunityStage(
   Opportunity opportunity,
   String stageCode,
 ) => ref.read(opportunityActionsProvider).moveStage(opportunity, stageCode);
+
+/// Cơ hội của một khách (`customer_id`), mọi trạng thái, tối đa 50.
+final customerOpportunitiesProvider = FutureProvider.autoDispose
+    .family<List<Opportunity>, String>((ref, customerId) async {
+      final page = await ref
+          .watch(opportunitiesApiProvider)
+          .list(customerId: customerId, perPage: 50);
+      return page.items;
+    });

@@ -153,13 +153,6 @@ void main() {
     expect(container.read(pipelineMineProvider), isFalse);
   });
 
-  test('đổi quy trình → cột chọn trở về giai đoạn mở đầu tiên', () async {
-    await container.read(pipelineCatalogProvider.future);
-    container.read(selectedStageProvider.notifier).state = 'tu_van';
-    container.read(selectedPipelineProvider.notifier).state = 'standard';
-    expect(container.read(selectedStageProvider), isNull);
-  });
-
   group('chuyển giai đoạn', () {
     final opp = Opportunity.fromJson({
       'id': 'o1',
@@ -313,9 +306,11 @@ class _FakeOpportunitiesApi extends OpportunitiesApi {
   @override
   Future<Paged<Opportunity>> list({
     String? stageCode,
+    String? status,
     String? pipeline,
     bool mine = false,
     String? search,
+    String? customerId,
     int page = 1,
     int perPage = AppConfig.defaultPerPage,
   }) async {
@@ -357,7 +352,11 @@ class _FakeOpportunitiesApi extends OpportunitiesApi {
   }
 
   @override
-  Future<PipelineSummary> summary({String? pipeline, bool mine = false}) async {
+  Future<PipelineSummary> summary({
+    String? pipeline,
+    bool mine = false,
+    String? search,
+  }) async {
     summaryCalls++;
     return const PipelineSummary();
   }

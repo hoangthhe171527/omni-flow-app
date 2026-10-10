@@ -3,14 +3,17 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:go_router/go_router.dart';
 
 import '../core/config/app_config.dart';
 import '../core/realtime/realtime_client.dart';
 import '../core/theme/theme_mode_controller.dart';
 import '../design/components/components.dart';
 import '../design/theme/omni_theme.dart';
-import '../modules/inbox/inbox_module.dart';
+import '../modules/inbox/inbox_routes.dart';
+import '../modules/notifications/application/notifications_providers.dart';
 import '../modules/notifications/application/push_notifications.dart';
+import '../modules/notifications/routes.dart';
 import '../modules/plans/application/plans_providers.dart';
 import '../modules/settings/presentation/widgets/account_menu_button.dart';
 import '../modules/tasks/application/tasks_providers.dart';
@@ -117,9 +120,18 @@ class _OmniAppState extends ConsumerState<OmniApp> with WidgetsBindingObserver {
           // một import thẳng từ design lên module.
           child: OmniAccountSlot(
             builder: (_) => const AccountMenuButton(),
-            // Hiệu ứng mở app phủ lên router, không nằm trong nó — xem
-            // docblock của LaunchSplash về lý do không làm chậm điều hướng.
-            child: LaunchSplash(child: child ?? const SizedBox.shrink()),
+            tileBuilder: (_) => const AccountMenuButton(tile: true),
+            // Chuông của OmniTopBar: số chưa đọc và đích đến đều thuộc về
+            // module thông báo, nên cắm ở đây thay vì import ngược từ design.
+            child: OmniTopBarSlot(
+              unreadOf: (ref) =>
+                  ref.watch(unreadNotificationCountProvider).valueOrNull ?? 0,
+              onBell: (context) =>
+                  GoRouter.of(context).pushNamed(NotificationRoutes.centre),
+              // Hiệu ứng mở app phủ lên router, không nằm trong nó — xem
+              // docblock của LaunchSplash về lý do không làm chậm điều hướng.
+              child: LaunchSplash(child: child ?? const SizedBox.shrink()),
+            ),
           ),
         );
       },
@@ -132,7 +144,7 @@ class _OmniAppState extends ConsumerState<OmniApp> with WidgetsBindingObserver {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       final route = switch (intent.target) {
-        PushTarget.conversation => InboxModule.thread,
+        PushTarget.conversation => InboxRoutes.thread,
         PushTarget.task => TasksModule.detail,
       };
       ref
