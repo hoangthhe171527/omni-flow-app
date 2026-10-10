@@ -16,6 +16,28 @@ const kChannelUnsupportedText =
 /// (`ResendOutboundMessage::TOO_OLD`).
 const kResendTooOld = 'message_too_old_to_resend';
 
+/// 409 của `POST …/resend`: tin không còn ở trạng thái `failed`
+/// (`ResendOutboundMessage::NOT_FAILED`).
+const kResendNotFailed = 'message_not_failed';
+
+/// `/resend` 404 thật (tin không còn trên server): server chỉ nói
+/// "Message not found." bằng tiếng Anh.
+const kResendMessageGone =
+    'Không tìm thấy tin này trên máy chủ nên không gửi lại được.';
+
+/// 409 `message_not_failed` của `/resend`: một lượt khác đã mở lại (hay đã
+/// gửi được) tin này. [current] là tin HIỆN TẠI server gửi kèm (`data`) để
+/// thay bong bóng; null khi server không còn tin đó.
+class MessageNotFailedException implements Exception {
+  const MessageNotFailedException(this.message, {this.current});
+
+  final String message;
+  final Message? current;
+
+  @override
+  String toString() => 'MessageNotFailedException: $message';
+}
+
 enum MessageAuthor { customer, agent, note }
 
 /// Outbound delivery state. Reps chase these — a silently failed send is worse

@@ -391,6 +391,65 @@ void main() {
       expect(reactionsOf('m1').last.emoji, '❤️');
     });
 
+    for (final secondFailsFirst in [true, false]) {
+      test('hai lượt cùng lỗi (lượt ${secondFailsFirst ? 'mới' : 'cũ'} lỗi '
+          'trước) → về đúng trạng thái TRƯỚC lượt đầu', () async {
+        api.history = [
+          message(team: const [lan]),
+        ];
+        container.listen(threadProvider('c1'), (_, _) {});
+        await container.read(threadProvider('c1').future);
+        final notifier = container.read(threadProvider('c1').notifier);
+
+        final first = Completer<List<TeamReaction>>();
+        api.answer = first;
+        final one = notifier.toggleTeamReaction('m1', '👍', myUserId: 'u1');
+        final second = Completer<List<TeamReaction>>();
+        api.answer = second;
+        final two = notifier.toggleTeamReaction('m1', '❤️', myUserId: 'u1');
+
+        Future<void> fail(
+          Completer<List<TeamReaction>> c,
+          Future<void> f,
+        ) async {
+          c.completeError(const ServerException('x'));
+          await expectLater(f, throwsA(isA<ServerException>()));
+        }
+
+        if (secondFailsFirst) {
+          await fail(second, two);
+          await fail(first, one);
+        } else {
+          await fail(first, one);
+          await fail(second, two);
+        }
+        expect(reactionsOf('m1').map((r) => r.userId), [lan.userId]);
+      });
+    }
+
+    test('lượt mới lỗi trước, lượt cũ thành công sau → theo kết quả server '
+        'của lượt cũ', () async {
+      api.history = [
+        message(team: const [lan]),
+      ];
+      container.listen(threadProvider('c1'), (_, _) {});
+      await container.read(threadProvider('c1').future);
+      final notifier = container.read(threadProvider('c1').notifier);
+
+      final first = Completer<List<TeamReaction>>();
+      api.answer = first;
+      final one = notifier.toggleTeamReaction('m1', '👍', myUserId: 'u1');
+      final second = Completer<List<TeamReaction>>();
+      api.answer = second;
+      final two = notifier.toggleTeamReaction('m1', '❤️', myUserId: 'u1');
+
+      second.completeError(const ServerException('x'));
+      await expectLater(two, throwsA(isA<ServerException>()));
+      first.complete(const [lan, TeamReaction(userId: 'u1', emoji: '👍')]);
+      await one;
+      expect(reactionsOf('m1').last.emoji, '👍');
+    });
+
     test('tin không có trên màn → bỏ qua, không gọi API', () async {
       api.history = [message(team: const [])];
       container.listen(threadProvider('c1'), (_, _) {});

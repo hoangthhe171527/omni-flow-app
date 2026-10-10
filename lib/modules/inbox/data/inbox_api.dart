@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/config/app_config.dart';
+import '../../../core/error/app_exception.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/network/api_envelope.dart';
 import '../../../core/utils/formatters.dart';
@@ -287,13 +288,25 @@ class InboxApi {
 
   /// "Gửi lại" một tin đi ĐÃ có trên server mà `failed`: mở lại chính tin đó,
   /// server chỉ gửi các phần chưa tới khách (`ResendOutboundMessage`, API
-  /// 0cd1713). 409 `message_not_failed` (tin không còn hỏng) và 422
+  /// 0cd1713). 409 `message_not_failed` (tin không còn hỏng) thành
+  /// [MessageNotFailedException] mang tin HIỆN TẠI server gửi kèm; 422
   /// `message_too_old_to_resend` (quá hạn — gửi tin mới) đi ra như lỗi API.
   Future<Message> resend(String id, String messageId) async {
-    final response = await _client.post(
-      '$_base/$id/messages/$messageId/resend',
-    );
-    return Message.fromJson(response.object);
+    try {
+      final response = await _client.post(
+        '$_base/$id/messages/$messageId/resend',
+      );
+      return Message.fromJson(response.object);
+    } on RequestRejectedException catch (error) {
+      if (error.code != '409' || error.reason != kResendNotFailed) rethrow;
+      final data = error.data;
+      throw MessageNotFailedException(
+        error.message,
+        current: data is Map
+            ? Message.fromJson(Map<String, dynamic>.from(data))
+            : null,
+      );
+    }
   }
 
   Future<void> markRead(String id) => _client.post('$_base/$id/read');

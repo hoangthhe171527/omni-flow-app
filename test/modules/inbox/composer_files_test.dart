@@ -4,6 +4,7 @@ import 'package:omni_app/design/theme/omni_theme.dart';
 import 'package:omni_app/modules/inbox/domain/outbound_capabilities.dart';
 import 'package:omni_app/modules/inbox/domain/pending_attachment.dart';
 import 'package:omni_app/modules/inbox/presentation/widgets/attachment_picking.dart';
+import 'package:omni_app/modules/inbox/presentation/widgets/composer_snack_bar.dart';
 import 'package:omni_app/modules/inbox/presentation/widgets/message_composer.dart';
 
 /// Hộp thư mobile Task 5: tệp trong composer, trần 10 tệp / 25MB, cảnh báo
@@ -60,6 +61,7 @@ void main() {
   late List<int> fileAsks;
   late List<PendingAttachment> nextImages;
   late List<PendingAttachment> nextFiles;
+  late GlobalKey barKey;
 
   setUp(() {
     sent = [];
@@ -67,6 +69,7 @@ void main() {
     fileAsks = [];
     nextImages = const [];
     nextFiles = const [];
+    barKey = GlobalKey();
   });
 
   Widget host({
@@ -74,6 +77,7 @@ void main() {
     bool withFiles = true,
     String? errorText,
     double width = 800,
+    String? channelName,
   }) => MaterialApp(
     theme: OmniTheme.light(TargetPlatform.android),
     home: MediaQuery(
@@ -82,27 +86,32 @@ void main() {
         body: Center(
           child: SizedBox(
             width: width,
-            child: Column(
-              children: [
-                const Expanded(child: SizedBox()),
-                MessageComposer(
-                  capabilities: capabilities,
-                  errorText: errorText,
-                  onSend: (text, attachments, replyTo) async =>
-                      sent.add(List.of(attachments)),
-                  onPickImages: (remaining) async {
-                    imageAsks.add(remaining);
-                    return nextImages;
-                  },
-                  onTakePhoto: () async => null,
-                  onPickFiles: withFiles
-                      ? (remaining) async {
-                          fileAsks.add(remaining);
-                          return nextFiles;
-                        }
-                      : null,
-                ),
-              ],
+            child: ComposerSnackBarScope(
+              barKey: barKey,
+              child: Column(
+                children: [
+                  const Expanded(child: SizedBox()),
+                  MessageComposer(
+                    key: barKey,
+                    capabilities: capabilities,
+                    channelName: channelName,
+                    errorText: errorText,
+                    onSend: (text, attachments, replyTo) async =>
+                        sent.add(List.of(attachments)),
+                    onPickImages: (remaining) async {
+                      imageAsks.add(remaining);
+                      return nextImages;
+                    },
+                    onTakePhoto: () async => null,
+                    onPickFiles: withFiles
+                        ? (remaining) async {
+                            fileAsks.add(remaining);
+                            return nextFiles;
+                          }
+                        : null,
+                  ),
+                ],
+              ),
             ),
           ),
         ),
@@ -235,6 +244,32 @@ void main() {
     expect(fileAsks, [1], reason: 'mục Tệp bị khoá khi đã đủ 10');
   });
 
+  testWidgets('báo trần nổi PHÍA TRÊN composer: nút Gửi vẫn bấm được', (
+    tester,
+  ) async {
+    nextImages = [for (var i = 0; i < 11; i++) image('a$i.jpg')];
+    await tester.pumpWidget(host(capabilities: native));
+    await tester.tap(find.byTooltip('Ảnh'));
+    await tester.pumpAndSettle();
+    expect(find.text('Mỗi tin tối đa 10 tệp — đã bỏ 1 tệp.'), findsOneWidget);
+
+    final snack = tester.getRect(
+      find
+          .descendant(
+            of: find.byType(SnackBar),
+            matching: find.byType(Material),
+          )
+          .first,
+    );
+    expect(
+      snack.bottom,
+      lessThanOrEqualTo(tester.getRect(find.byType(MessageComposer)).top),
+    );
+    // Không gỡ snackbar: bấm Gửi trúng ngay.
+    await sendNow(tester);
+    expect(sent.single, hasLength(10));
+  });
+
   testWidgets('trình chọn bỏ qua limit, trả 11 ảnh → gửi đúng 10', (
     tester,
   ) async {
@@ -333,6 +368,47 @@ void main() {
       expect(find.byType(AlertDialog), findsNothing);
     });
 
+    testWidgets('ảnh PNG 3MB → KHÔNG hỏi: server nén JPG/PNG/WebP ≤ 1MB', (
+      tester,
+    ) async {
+      nextImages = [image('to.png', size: 3 * mb)];
+      await tester.pumpWidget(host(capabilities: zaloOa));
+      await tester.tap(find.byTooltip('Ảnh'));
+      await tester.pumpAndSettle();
+      expect(find.byType(AlertDialog), findsNothing);
+      expect(find.byIcon(Icons.close_rounded), findsOneWidget);
+    });
+
+    testWidgets('ảnh WebP → hỏi (ngoài native_extensions)', (tester) async {
+      nextImages = [image('a.webp')];
+      await tester.pumpWidget(host(capabilities: zaloOa));
+      await tester.tap(find.byTooltip('Ảnh'));
+      await tester.pumpAndSettle();
+      expect(
+        find.textContaining('sẽ gửi dưới dạng đường link'),
+        findsOneWidget,
+      );
+      expect(find.textContaining('MB'), findsNothing, reason: 'không nói cỡ');
+    });
+
+    testWidgets('câu docs_only dùng tên kênh, không ghi cứng', (tester) async {
+      nextFiles = [file('bang.xlsx', mb)];
+      await tester.pumpWidget(
+        host(capabilities: zaloOa, channelName: 'Zalo OA'),
+      );
+      await pickFiles(tester);
+      expect(find.textContaining('Zalo OA chỉ gửi PDF'), findsOneWidget);
+      await tester.tap(find.text('Huỷ'));
+      await tester.pumpAndSettle();
+
+      await tester.pumpWidget(const SizedBox());
+      barKey = GlobalKey();
+      await tester.pumpWidget(host(capabilities: zaloOa));
+      await pickFiles(tester);
+      expect(find.textContaining('Kênh này chỉ gửi PDF'), findsOneWidget);
+      expect(find.textContaining('Zalo OA'), findsNothing);
+    });
+
     testWidgets('image_constraints fallback=failed → báo "không nhận"; Huỷ '
         'thì bỏ ảnh', (tester) async {
       final strict = OutboundCapabilities.fromJson(const {
@@ -348,7 +424,7 @@ void main() {
           'fallback': 'failed',
         },
       });
-      nextImages = [image('to.png', size: 3 * mb)];
+      nextImages = [image('dong.gif')];
       await tester.pumpWidget(host(capabilities: strict));
       await tester.tap(find.byTooltip('Ảnh'));
       await tester.pumpAndSettle();

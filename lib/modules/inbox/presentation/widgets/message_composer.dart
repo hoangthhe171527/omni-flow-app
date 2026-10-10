@@ -34,6 +34,7 @@ class MessageComposer extends StatefulWidget {
     this.voiceRecorder,
     this.onSendVoice,
     this.warnVoiceAsLink = false,
+    this.channelName,
     this.capabilities,
     this.errorText,
     this.onCreateTask,
@@ -73,6 +74,9 @@ class MessageComposer extends StatefulWidget {
   /// Kênh gửi audio thành đường link (Zalo OA `audio: link`): hỏi một lần mỗi
   /// phiên composer, trước lượt ghi đầu tiên.
   final bool warnVoiceAsLink;
+
+  /// Tên kênh cho câu cảnh báo ("Zalo OA chỉ gửi …"). Null = "Kênh này".
+  final String? channelName;
 
   /// Kênh gửi được gì (`outbound_capabilities`). Null = API cũ: giữ chữ + ảnh,
   /// ẩn Tệp và Ghi âm.
@@ -255,7 +259,11 @@ class _MessageComposerState extends State<MessageComposer> {
       items = items.take(room).toList();
     }
 
-    final warning = _channelWarning(items, widget.capabilities);
+    final warning = _channelWarning(
+      items,
+      widget.capabilities,
+      channel: widget.channelName,
+    );
     if (warning != null) {
       final ok = await showOmniConfirm(
         context: context,
@@ -278,9 +286,16 @@ class _MessageComposerState extends State<MessageComposer> {
 
   /// Snackbar nổi phía trên composer (không che nút Gửi). [messenger] lấy
   /// TRƯỚC khi chờ.
+  ///
+  /// Đo composer SAU khung hình kế: khay ảnh vừa thêm (hay thanh ghi vừa
+  /// đóng) đổi chiều cao, đo ngay thì snackbar nằm theo cỡ cũ và đè khay.
   void _notify(ScaffoldMessengerState? messenger, String text) {
-    if (!mounted) return;
-    messenger?.showSnackBar(composerSnackBar(context, text));
+    if (!mounted || messenger == null) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      messenger.showSnackBar(composerSnackBar(context, text));
+    });
+    WidgetsBinding.instance.ensureVisualUpdate();
   }
 
   Future<void> _startVoice() async {
@@ -294,7 +309,8 @@ class _MessageComposerState extends State<MessageComposer> {
           context: context,
           title: 'Gửi ghi âm thành đường link?',
           message:
-              'Zalo OA không nhận tin thoại — bản ghi sẽ gửi dưới dạng '
+              '${widget.channelName ?? 'Kênh này'} không nhận tin thoại — bản '
+              'ghi sẽ gửi dưới dạng '
               'đường link, khách bấm để nghe.',
           confirmLabel: 'Vẫn ghi âm',
         );
@@ -1212,36 +1228,40 @@ String _exts(List<String> exts) => exts.map((e) => e.toUpperCase()).join(', ');
 /// lượt chỉ có một loại.
 _ChannelWarning? _channelWarning(
   List<PendingAttachment> items,
-  OutboundCapabilities? caps,
-) {
+  OutboundCapabilities? caps, {
+  String? channel,
+}) {
   if (caps == null || items.isEmpty) return null;
+  final who = channel ?? 'Kênh này';
 
   final images = items.where((a) => a.isImage).toList();
   final files = items.where((a) => a.kind == PendingKind.file).toList();
 
-  // Ảnh: `image_constraints` (Zalo OA: JPG/PNG ≤ 1MB). Ngoài ràng buộc thì
-  // server gửi thành link (`fallback: link`) hoặc nền tảng từ chối (`failed`).
+  // Ảnh: `image_constraints` (Zalo OA: JPG/PNG). Chỉ xét ĐUÔI: server nén
+  // JPG/PNG/WebP lớn xuống ≤ 1MB lúc tải lên (`InboxImageCompressor`), nên cỡ
+  // không làm ảnh thành link. Đuôi ngoài danh sách (GIF, WebP nhỏ) thì server
+  // gửi thành link (`fallback: link`) hoặc nền tảng từ chối (`failed`).
   final ic = caps.imageConstraints;
   if (ic != null) {
     final off = [
       for (final a in images)
-        if (!ic.allows(a.name, a.size ?? 0)) a,
+        if (!ic.allowsExtension(a.name)) a,
     ];
     if (off.isNotEmpty) {
-      final rule = '${_exts(ic.nativeExtensions)}${_mb(ic.nativeMaxBytes)}';
+      final rule = _exts(ic.nativeExtensions);
       final these = off.length == 1 ? 'Ảnh này' : '${off.length} ảnh này';
       return ic.failsOutside
           ? (
               title: 'Ảnh có thể không tới khách',
               message:
-                  'Kênh này không nhận ảnh ngoài $rule — $these có thể bị '
+                  '$who không nhận ảnh ngoài $rule — $these có thể bị '
                   'từ chối và tin báo lỗi.',
               affected: off,
             )
           : (
               title: 'Gửi thành đường link?',
               message:
-                  'Kênh này chỉ gửi ảnh $rule thành ảnh — $these sẽ gửi dưới '
+                  '$who chỉ gửi ảnh $rule thành ảnh — $these sẽ gửi dưới '
                   'dạng đường link, khách bấm để xem.',
               affected: off,
             );
@@ -1252,8 +1272,7 @@ _ChannelWarning? _channelWarning(
   if (caps.file == OutboundMode.link) {
     return (
       title: 'Gửi thành đường link?',
-      message:
-          'Kênh này gửi tệp dưới dạng đường link — khách bấm vào link để tải.',
+      message: '$who gửi tệp dưới dạng đường link — khách bấm vào link để tải.',
       affected: files,
     );
   }
@@ -1268,7 +1287,7 @@ _ChannelWarning? _channelWarning(
     return (
       title: 'Gửi thành đường link?',
       message:
-          'Zalo OA chỉ gửi ${_exts(fc.nativeExtensions)}${_mb(fc.nativeMaxBytes)} '
+          '$who chỉ gửi ${_exts(fc.nativeExtensions)}${_mb(fc.nativeMaxBytes)} '
           'thành tệp — $these sẽ gửi dưới dạng đường link.',
       affected: off,
     );

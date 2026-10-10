@@ -101,9 +101,13 @@ void main() {
         expect(cap.fileConstraints!.fallback, 'link');
         expect(cap.imageConstraints!.fallback, 'failed');
         expect(cap.imageConstraints!.nativeMaxBytes, 1048576);
-        expect(cap.imageFails('a.JPG', 500 * 1024), isFalse);
-        expect(cap.imageFails('a.gif', 10), isTrue);
-        expect(cap.imageFails('a.png', 1048577), isTrue);
+        // Ảnh xét theo ĐUÔI: JPG/PNG/WebP lớn được server nén lại ≤ 1MB lúc
+        // tải lên (InboxImageCompressor), nên cỡ không quyết định.
+        final ic = cap.imageConstraints!;
+        expect(ic.allowsExtension('a.JPG'), isTrue);
+        expect(ic.allowsExtension('a.png'), isTrue);
+        expect(ic.allowsExtension('a.gif'), isFalse);
+        expect(ic.allowsExtension('a.webp'), isFalse);
       },
     );
 
@@ -120,7 +124,6 @@ void main() {
       })!;
       expect(cap.imageConstraints, isNull);
       expect(cap.fileConstraints, isNull);
-      expect(cap.imageFails('a.gif', 20 << 20), isFalse);
     });
 
     test('bỏ chặn: server XOÁ khoá blocked_at → isBlocked false', () {
@@ -569,7 +572,8 @@ void main() {
       );
     });
 
-    test('409 message_not_failed → RequestRejectedException 409', () async {
+    test('409 message_not_failed mang data → MessageNotFailedException với '
+        'tin hiện tại', () async {
       final (a, _) = api(
         const {},
         status: 409,
@@ -578,7 +582,68 @@ void main() {
           'code': 'message_not_failed',
           'message':
               'Tin này không ở trạng thái gửi lỗi nên không gửi lại được.',
+          // `InboxController::resendMessage`: tin hiện tại, client thay bong
+          // bóng bằng nó.
+          'data': {
+            'id': 'm2',
+            'direction': 'out',
+            'from': 'agent',
+            'status': 'sent',
+            'text': 'Dạ em gửi ạ',
+          },
         }),
+      );
+      await expectLater(
+        a.resend('c1', 'm2'),
+        throwsA(
+          isA<MessageNotFailedException>()
+              .having((e) => e.current?.id, 'current.id', 'm2')
+              .having(
+                (e) => e.current?.status,
+                'current.status',
+                DeliveryStatus.sent,
+              )
+              .having(
+                (e) => e.message,
+                'message',
+                'Tin này không ở trạng thái gửi lỗi nên không gửi lại được.',
+              ),
+        ),
+      );
+    });
+
+    test(
+      '409 không có data → MessageNotFailedException, current null',
+      () async {
+        final (a, _) = api(
+          const {},
+          status: 409,
+          raw: jsonEncode({
+            'success': false,
+            'code': 'message_not_failed',
+            'message': 'Tin này không ở trạng thái gửi lỗi.',
+            'data': null,
+          }),
+        );
+        await expectLater(
+          a.resend('c1', 'm2'),
+          throwsA(
+            isA<MessageNotFailedException>().having(
+              (e) => e.current,
+              'current',
+              isNull,
+            ),
+          ),
+        );
+      },
+    );
+
+    test('409 khác mã (không phải message_not_failed) → vẫn '
+        'RequestRejectedException', () async {
+      final (a, _) = api(
+        const {},
+        status: 409,
+        raw: jsonEncode({'success': false, 'message': 'Xung đột.'}),
       );
       await expectLater(
         a.resend('c1', 'm2'),

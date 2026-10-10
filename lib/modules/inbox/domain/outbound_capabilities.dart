@@ -70,10 +70,16 @@ class FileConstraints {
 
   bool get failsOutside => fallback == 'failed';
 
-  bool allows(String fileName, int bytes) {
+  /// Chỉ xét đuôi (ảnh: server tự nén cỡ, xem
+  /// [OutboundCapabilities.imageConstraints]).
+  bool allowsExtension(String fileName) {
     final dot = fileName.lastIndexOf('.');
     final ext = dot < 0 ? '' : fileName.substring(dot + 1).toLowerCase();
-    if (!nativeExtensions.contains(ext)) return false;
+    return nativeExtensions.contains(ext);
+  }
+
+  bool allows(String fileName, int bytes) {
+    if (!allowsExtension(fileName)) return false;
     final max = nativeMaxBytes;
     return max == null || bytes <= max;
   }
@@ -119,16 +125,12 @@ class OutboundCapabilities {
   /// Chỉ có ý nghĩa khi [file] là [OutboundMode.docsOnly].
   final FileConstraints? fileConstraints;
 
-  /// Ảnh nền tảng nhận (Zalo OA: JPG/PNG ≤ 1MB, ngoài đó `failed` — KHÔNG
-  /// thành link). Null = không có ràng buộc riêng.
+  /// Ảnh nền tảng nhận THÀNH ẢNH (Zalo OA: JPG/PNG ≤ 1MB, `fallback: link`).
+  /// Cỡ không quyết định phía app: `POST /inbox/media` nén lại JPG/PNG/WebP
+  /// lớn xuống ≤ 1MB (`InboxImageCompressor`), nên chỉ ĐUÔI ngoài
+  /// `native_extensions` (GIF, WebP nhỏ) mới thành link. Null = không có ràng
+  /// buộc riêng.
   final FileConstraints? imageConstraints;
-
-  /// Ảnh [fileName] nặng [bytes] sẽ bị nền tảng TỪ CHỐI (tin báo lỗi) — app
-  /// cần chặn hoặc báo trước khi gửi.
-  bool imageFails(String fileName, int bytes) {
-    final c = imageConstraints;
-    return c != null && c.failsOutside && !c.allows(fileName, bytes);
-  }
 
   bool get canSendText => canSend && text != OutboundMode.none;
   bool get canSendImages => canSendText && image != OutboundMode.none;

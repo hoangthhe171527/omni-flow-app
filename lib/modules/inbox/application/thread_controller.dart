@@ -6,6 +6,7 @@ import '../../../core/error/app_exception.dart';
 import '../../../core/error/crash_reporting.dart';
 import '../data/inbox_api.dart';
 import '../domain/message.dart';
+import 'inbox_providers.dart';
 
 class ThreadState {
   ThreadState({
@@ -348,31 +349,64 @@ class ThreadController
       final reopened = await ref.read(inboxApiProvider).resend(arg, failed.id);
       if (_disposed) return;
       _replaceStored(failed.id, reopened);
+    } on MessageNotFailedException catch (conflict) {
+      if (_disposed) return;
+      // 409 `message_not_failed`: một lượt khác vừa mở lại (hay đã gửi được)
+      // tin này. KHÔNG BAO GIỜ gửi tin mới ở đây: đó là gửi trùng.
+      final current = conflict.current;
+      if (current != null) {
+        // Server gửi kèm tin hiện tại: thay bong bóng, khỏi tải lại.
+        _replaceStored(failed.id, current);
+        return;
+      }
+      // Không có tin kèm: trả bong bóng về như trước (không kẹt "đang gửi"
+      // nếu tải lại lỗi) rồi lấy trạng thái thật từ server.
+      _replaceStored(failed.id, failed);
+      try {
+        await refresh();
+      } on Object {
+        // Lượt poll sau sẽ đồng bộ; vẫn không gửi gì thêm.
+      }
     } on ValidationException catch (error) {
       if (_disposed) return;
       // 422 `channel_send_unsupported` cũng rơi vào đây: tin mang mã đó nên
       // bong bóng không còn "Gửi lại".
       _replaceStored(failed.id, _failedAgain(failed, error));
+      if (error.reason == kChannelSendUnsupported) {
+        _refreshCapabilities();
+      }
       if (error.reason != kResendTooOld || confirmNewSend == null) return;
       final ok = await confirmNewSend(error.message);
       if (!ok || _disposed) return;
       // Tin cũ (đã hỏng, quá hạn) rời lịch sử; tin mới thay chỗ nó.
       return _sendAgain(failed);
+    } on NotFoundException catch (error) {
+      if (_disposed) return;
+      // Không có route `/resend` (API chưa cập nhật): gửi theo đường cũ.
+      if (error.routeMissing) return _sendAgain(failed);
+      // 404 thật: tin không còn trên server. Câu server là tiếng Anh.
+      _replaceStored(
+        failed.id,
+        failed.copyWith(
+          status: DeliveryStatus.failed,
+          error: kResendMessageGone,
+        ),
+      );
     } on AppException catch (error) {
       if (_disposed) return;
-      // 409 `message_not_failed`: một lượt khác vừa mở lại (hay đã gửi được)
-      // tin này — trạng thái thật nằm ở server, tải lại. KHÔNG BAO GIỜ gửi tin
-      // mới ở đây: đó là gửi trùng.
-      if (error.code == '409') {
-        try {
-          await refresh();
-        } on Object {
-          // Lượt poll sau sẽ đồng bộ; vẫn không gửi gì thêm.
-        }
-        return;
-      }
       _replaceStored(failed.id, _failedAgain(failed, error));
+    } on Object {
+      // Lỗi ngoài API (phản hồi hỏng…): đừng để bong bóng kẹt "đang gửi".
+      if (_disposed) return;
+      _replaceStored(failed.id, failed);
     }
+  }
+
+  /// Server nói kênh không gửi được (422 `channel_send_unsupported`): khả
+  /// năng gửi đã đổi so với lúc mở hội thoại. Nạp lại hội thoại để trang thay
+  /// composer bằng dòng "Kênh này chưa gửi tin được".
+  void _refreshCapabilities() {
+    if (!_disposed) ref.invalidate(conversationProvider(arg));
   }
 
   static Message _failedAgain(Message failed, AppException error) =>
@@ -538,6 +572,14 @@ class ThreadController
     // lượt mới thì bỏ — không đè trạng thái mới hơn.
     final seq = (_reactionSeq[messageId] ?? 0) + 1;
     _reactionSeq[messageId] = seq;
+    // Mốc hoàn tác: mục của tôi TRƯỚC lượt đang chờ đầu tiên (không phải
+    // trước lượt này — lúc đó nó đã là kết quả lạc quan của lượt trước).
+    final pending = _reactionPending[messageId] ?? 0;
+    if (pending == 0) {
+      _reactionBaseline[messageId] = mine;
+      _reactionLatestFailed.remove(messageId);
+    }
+    _reactionPending[messageId] = pending + 1;
     applyTeamReactions(messageId, optimistic);
 
     final List<TeamReaction> saved;
@@ -546,18 +588,47 @@ class ThreadController
           .read(inboxApiProvider)
           .toggleTeamReaction(arg, messageId, emoji);
     } on Object {
-      if (!_disposed && _reactionSeq[messageId] == seq) {
+      final latest = _reactionSeq[messageId] == seq;
+      if (!_disposed && latest) {
         // Chỉ trả lại mục CỦA TÔI: cảm xúc người khác về qua realtime trong
         // lúc chờ vẫn giữ.
-        _restoreMine(messageId, myUserId, mine);
+        _restoreMine(messageId, myUserId, _reactionBaseline[messageId]);
+        _reactionLatestFailed.add(messageId);
       }
+      _settleReaction(messageId);
       rethrow;
     }
-    if (_disposed || _reactionSeq[messageId] != seq) return;
-    applyTeamReactions(messageId, saved);
+    // Server đã ghi lượt này: mốc hoàn tác của các lượt sau là kết quả thật.
+    final confirmed = saved.where((r) => r.userId == myUserId).firstOrNull;
+    _reactionBaseline[messageId] = confirmed;
+    final latest = _reactionSeq[messageId] == seq;
+    final latestFailed = _reactionLatestFailed.contains(messageId);
+    _settleReaction(messageId);
+    if (_disposed) return;
+    if (latest) {
+      applyTeamReactions(messageId, saved);
+    } else if (latestFailed) {
+      // Lượt mới hơn đã lỗi và đã hoàn tác về mốc cũ; lượt cũ này thì server
+      // đã ghi — hiện đúng mục server có.
+      _restoreMine(messageId, myUserId, confirmed);
+    }
+  }
+
+  void _settleReaction(String messageId) {
+    final left = (_reactionPending[messageId] ?? 1) - 1;
+    if (left > 0) {
+      _reactionPending[messageId] = left;
+      return;
+    }
+    _reactionPending.remove(messageId);
+    _reactionBaseline.remove(messageId);
+    _reactionLatestFailed.remove(messageId);
   }
 
   final _reactionSeq = <String, int>{};
+  final _reactionPending = <String, int>{};
+  final _reactionBaseline = <String, TeamReaction?>{};
+  final _reactionLatestFailed = <String>{};
 
   void _restoreMine(String messageId, String myUserId, TeamReaction? mine) {
     final current = state.valueOrNull?.messages
@@ -670,6 +741,7 @@ class ThreadController
     try {
       _settle(draft.id, await call());
     } on ValidationException catch (error) {
+      if (error.reason == kChannelSendUnsupported) _refreshCapabilities();
       if (surfaceUnsupported && error.reason == kChannelSendUnsupported) {
         discard(draft.id);
         rethrow;

@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/network/active_tenant.dart';
 import '../data/team_api.dart';
 import '../domain/team_member.dart';
 
@@ -11,9 +12,13 @@ import '../domain/team_member.dart';
 /// khi mời, ngừng hoạt động, liên kết Zalo, bấm "Thử lại") thì invalidate
 /// provider NÀY — hai provider kia dựng lại theo.
 final teamDirectoryProvider = FutureProvider<List<TeamMember>>((ref) async {
+  // Lượt nạp bị bỏ (đổi tenant giữa chừng → provider dựng lại) thì không được
+  // bật cờ cho tenant MỚI bằng danh bạ của tenant cũ.
+  var alive = true;
+  ref.onDispose(() => alive = false);
   final members = await ref.watch(teamApiProvider).members();
   // Sau `await`: không phải lúc khởi tạo, nên đổi provider khác được.
-  ref.read(teamDirectoryLoadedProvider.notifier).state = true;
+  if (alive) ref.read(teamDirectoryLoadedProvider.notifier).state = true;
   return members;
 });
 
@@ -21,7 +26,12 @@ final teamDirectoryProvider = FutureProvider<List<TeamMember>>((ref) async {
 /// bạ sẵn có (không tự kéo về, vd tên người thả cảm xúc trong hội thoại) theo
 /// dõi cờ này: `ref.exists(teamDirectoryProvider)` chỉ đúng lúc gọi, không báo
 /// khi danh bạ được nạp sau đó (review Task 4).
-final teamDirectoryLoadedProvider = StateProvider<bool>((ref) => false);
+///
+/// Theo tenant: đổi tenant thì về `false` cho tới khi danh bạ tenant mới nạp.
+final teamDirectoryLoadedProvider = StateProvider<bool>((ref) {
+  ref.watch(activeTenantIdProvider);
+  return false;
+});
 
 /// Người CHỌN ĐƯỢC: đang làm và đã nhận lời mời ([TeamMember.isSelectable]).
 ///

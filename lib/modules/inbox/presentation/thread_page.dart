@@ -1,6 +1,5 @@
 import 'dart:async';
 
-import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -430,6 +429,8 @@ class _ThreadPageState extends ConsumerState<ThreadPage>
                             : null,
                         warnVoiceAsLink:
                             capabilities?.audio == OutboundMode.link,
+                        channelName:
+                            conversation.valueOrNull?.channel.meta.name,
                       )
                     : _ReadOnlyBar(),
               ),
@@ -694,68 +695,38 @@ class _ThreadPageState extends ConsumerState<ThreadPage>
     );
   }
 
+  /// Trình chọn ảnh/tệp nằm ở `attachment_picking.dart` (thử được bằng trình
+  /// chọn giả). Không mở được (từ chối quyền, máy ảnh bận) thì báo, không im.
   Future<List<PendingAttachment>> _pickImages(
     int remaining,
     OutboundCapabilities? capabilities,
   ) async {
-    final options = inboxImagePickOptions(capabilities);
-    final picked = await ImagePicker().pickMultiImage(
-      imageQuality: options.quality,
-      maxWidth: options.maxDimension,
-      maxHeight: options.maxDimension,
-      // `limit` phải ≥ 2; composer vẫn tự cắt (có trình chọn bỏ qua nó).
-      limit: remaining >= 2 ? remaining : null,
-    );
-    return [for (final x in picked) await _imageFrom(x)];
+    try {
+      return await pickInboxImages(ImagePicker(), remaining, capabilities);
+    } on PickerUnavailable catch (e) {
+      _toast(e.message);
+      return const [];
+    }
   }
 
   Future<PendingAttachment?> _takePhoto(
     OutboundCapabilities? capabilities,
   ) async {
-    final options = inboxImagePickOptions(capabilities);
-    final x = await ImagePicker().pickImage(
-      source: ImageSource.camera,
-      imageQuality: options.quality,
-      maxWidth: options.maxDimension,
-      maxHeight: options.maxDimension,
-    );
-    return x == null ? null : _imageFrom(x);
-  }
-
-  static Future<PendingAttachment> _imageFrom(XFile x) async {
-    int? size;
     try {
-      size = await x.length();
-    } on Object {
-      size = null; // không đọc được cỡ: để upload báo lỗi nếu có
+      return await takeInboxPhoto(ImagePicker(), capabilities);
+    } on PickerUnavailable catch (e) {
+      _toast(e.message);
+      return null;
     }
-    return PendingAttachment(
-      path: x.path,
-      name: x.name,
-      size: size,
-      kind: PendingKind.image,
-    );
   }
 
-  /// Tài liệu qua `file_picker` (SAF trên Android, UIDocumentPicker trên iOS —
-  /// không cần quyền bộ nhớ). Tệp không có đường dẫn (nhà cung cấp ảo) bị bỏ.
   Future<List<PendingAttachment>> _pickFiles(int remaining) async {
-    final result = await FilePicker.pickFiles(
-      allowMultiple: true,
-      type: FileType.custom,
-      allowedExtensions: kInboxFileExtensions,
-    );
-    if (result == null) return const [];
-    return [
-      for (final f in result.files)
-        if (f.path != null)
-          PendingAttachment(
-            path: f.path!,
-            name: f.name,
-            size: f.size,
-            kind: PendingKind.file,
-          ),
-    ];
+    try {
+      return await pickInboxFiles();
+    } on PickerUnavailable catch (e) {
+      _toast(e.message);
+      return const [];
+    }
   }
 
   Future<void> _openInfo() async {
