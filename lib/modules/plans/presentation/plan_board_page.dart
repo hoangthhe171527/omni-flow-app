@@ -17,6 +17,7 @@ import '../application/plans_providers.dart';
 import '../data/plans_api.dart';
 import '../domain/plan.dart';
 import 'edit_sections_page.dart';
+import 'widgets/board_task_card.dart';
 import 'widgets/person_filter_sheet.dart';
 import 'widgets/section_pager.dart';
 
@@ -554,13 +555,11 @@ class _Column extends StatelessWidget {
       ),
       itemCount: tasks.length,
       separatorBuilder: (_, _) => const SizedBox(height: OmniSpacing.sm),
-      itemBuilder: (context, index) => TaskCard(
+      itemBuilder: (context, index) => BoardTaskCard(
         task: tasks[index],
-        // Tiêu đề màn đã LÀ tên dự án, và cả bảng chỉ thuộc một dự án.
-        // In lại trên từng thẻ là ba dòng giống nhau trên một màn hình.
-        // Ở "Việc của tôi" thì ngược lại: việc đến từ nhiều dự án, nên ở
-        // đó dòng này là thứ phân biệt.
-        showPlanName: false,
+        // Thẻ bảng không in tên dự án: tiêu đề màn đã LÀ tên dự án. Các thẻ
+        // hiện lần lượt, lệch 50ms mỗi thẻ (tối đa 6 nấc).
+        delay: Duration(milliseconds: 50 * index.clamp(0, 6)),
         onTap: () => context.pushNamed(
           TasksModule.detail,
           pathParameters: {'id': tasks[index].id},
