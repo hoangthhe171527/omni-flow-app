@@ -56,4 +56,49 @@ void main() {
     final text = t.widget<Text>(find.text('60%'));
     expect(text.style?.fontSize ?? 14, greaterThanOrEqualTo(12));
   });
+
+  testWidgets('trợ năng: chạm ngữ nghĩa đổi đoạn', (t) async {
+    final handle = t.ensureSemantics();
+    var picked = -1;
+    await t.pumpWidget(
+      host(
+        OmniSegmented(
+          labels: const ['A', 'B'],
+          index: 0,
+          onChanged: (i) => picked = i,
+        ),
+      ),
+    );
+    t.semantics.tap(find.semantics.byLabel('B'));
+    expect(picked, 1);
+    handle.dispose();
+  });
+
+  testWidgets('mỗi đoạn có vùng chạm cao ≥ 44', (t) async {
+    await t.pumpWidget(
+      host(
+        OmniSegmented(labels: const ['A', 'B'], index: 0, onChanged: (_) {}),
+      ),
+    );
+    for (final l in ['A', 'B']) {
+      final ink = find.ancestor(
+        of: find.text(l),
+        matching: find.byType(InkWell),
+      );
+      expect(t.getSize(ink).height, greaterThanOrEqualTo(44));
+    }
+  });
+
+  testWidgets('index ngoài khoảng và % ngoài khoảng được kẹp', (t) async {
+    await t.pumpWidget(
+      host(
+        OmniSegmented(labels: const ['A', 'B'], index: 9, onChanged: (_) {}),
+      ),
+    );
+    expect(t.takeException(), isNull);
+    await t.pumpWidget(
+      host(const OmniProgressRing(percent: 150, color: Colors.orange)),
+    );
+    expect(find.bySemanticsLabel('Tiến độ 100%'), findsOneWidget);
+  });
 }

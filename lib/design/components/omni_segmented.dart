@@ -5,7 +5,7 @@ import '../tokens/tokens.dart';
 
 /// Thanh chọn đoạn: 2–N nhãn, một con trượt nền sáng chạy tới đoạn đang chọn.
 ///
-/// Cao tổng 44: đoạn vẽ cao 30, vùng chạm nới thêm 4 mỗi phía (+3 đệm ngoài).
+/// Cao tổng 44: mỗi đoạn có vùng chạm cao đủ 44, con trượt vẽ cao 30 ở giữa.
 class OmniSegmented extends StatelessWidget {
   const OmniSegmented({
     super.key,
@@ -24,7 +24,8 @@ class OmniSegmented extends StatelessWidget {
     final text = Theme.of(context).textTheme;
     final n = labels.length;
     if (n == 0) return const SizedBox.shrink();
-    final align = n == 1 ? 0.0 : -1 + 2 * index / (n - 1);
+    final sel = index.clamp(0, n - 1);
+    final align = n == 1 ? 0.0 : -1 + 2 * sel / (n - 1);
 
     return ConstrainedBox(
       constraints: const BoxConstraints(minHeight: 44),
@@ -34,9 +35,9 @@ class OmniSegmented extends StatelessWidget {
           borderRadius: BorderRadius.circular(6),
         ),
         child: Padding(
-          padding: const EdgeInsets.all(3),
+          padding: const EdgeInsets.symmetric(horizontal: 3),
           child: SizedBox(
-            height: 38,
+            height: 44,
             child: Stack(
               children: [
                 Positioned.fill(
@@ -48,14 +49,14 @@ class OmniSegmented extends StatelessWidget {
                     curve: OmniCurves.standard,
                     child: FractionallySizedBox(
                       widthFactor: 1 / n,
-                      heightFactor: 30 / 38,
+                      heightFactor: 30 / 44,
                       child: DecoratedBox(
                         decoration: BoxDecoration(
                           color: scheme.surface,
                           borderRadius: BorderRadius.circular(4),
-                          boxShadow: const [
+                          boxShadow: [
                             BoxShadow(
-                              color: Color(0x1F0B1A33),
+                              color: scheme.shadow.withValues(alpha: 0.12),
                               blurRadius: 3,
                               offset: Offset(0, 1),
                             ),
@@ -71,8 +72,9 @@ class OmniSegmented extends StatelessWidget {
                       Expanded(
                         child: Semantics(
                           button: true,
-                          selected: i == index,
+                          selected: i == sel,
                           label: labels[i],
+                          onTap: () => onChanged(i),
                           excludeSemantics: true,
                           child: InkWell(
                             borderRadius: BorderRadius.circular(4),
@@ -83,7 +85,7 @@ class OmniSegmented extends StatelessWidget {
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                                 style: text.labelLarge?.copyWith(
-                                  color: i == index
+                                  color: i == sel
                                       ? scheme.onSurface
                                       : scheme.onSurfaceVariant,
                                 ),

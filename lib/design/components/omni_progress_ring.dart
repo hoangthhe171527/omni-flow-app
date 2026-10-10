@@ -20,7 +20,7 @@ class OmniProgressRing extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     final shown = percent.clamp(0, 100);
     return Semantics(
-      label: 'Tiến độ $percent%',
+      label: 'Tiến độ $shown%',
       excludeSemantics: true,
       child: SizedBox(
         width: size,
@@ -32,11 +32,15 @@ class OmniProgressRing extends StatelessWidget {
             fraction: shown / 100,
           ),
           child: Center(
-            child: Text(
-              '$percent%',
-              style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Text(
+                '$shown%',
+                style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: scheme.onSurface,
+                ),
               ),
             ),
           ),
