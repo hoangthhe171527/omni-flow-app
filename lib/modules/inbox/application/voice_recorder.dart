@@ -23,6 +23,10 @@ abstract interface class VoiceRecorder {
   /// Dừng (nếu đang ghi) và xoá tệp của lượt ghi gần nhất.
   Future<void> cancel();
 
+  /// Xoá tệp [path] của một bản ghi đã dừng (vd đã gửi xong). Không có tệp
+  /// thì thôi.
+  Future<void> discard(String path);
+
   /// Thời gian đã ghi, nhịp 200ms, bắt đầu từ 0 mỗi lần [start].
   Stream<Duration> get elapsed;
 
@@ -125,6 +129,13 @@ class RecordVoiceRecorder implements VoiceRecorder {
     } on Object {
       // Thư mục tạm: hệ điều hành dọn sau.
     }
+  }
+
+  @override
+  Future<void> discard(String path) async {
+    if (_path == path) _path = null;
+    final file = File(path);
+    if (await file.exists()) await file.delete();
   }
 
   @override

@@ -126,6 +126,10 @@ class _RecordDotState extends State<_RecordDot>
     vsync: this,
     duration: const Duration(milliseconds: 500),
   );
+  late final Animation<double> _opacity = Tween<double>(
+    begin: 1,
+    end: 0.25,
+  ).animate(_blink);
 
   @override
   void didChangeDependencies() {
@@ -166,9 +170,6 @@ class _RecordDotState extends State<_RecordDot>
       ),
     );
     if (!widget.blinking || !OmniMotion.enabled(context)) return dot;
-    return FadeTransition(
-      opacity: Tween<double>(begin: 1, end: 0.25).animate(_blink),
-      child: dot,
-    );
+    return FadeTransition(opacity: _opacity, child: dot);
   }
 }

@@ -1,6 +1,10 @@
+import 'dart:async';
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:omni_app/design/theme/omni_theme.dart';
+import 'package:omni_app/modules/inbox/application/voice_recorder.dart';
 import 'package:omni_app/modules/inbox/domain/outbound_capabilities.dart';
 import 'package:omni_app/modules/inbox/domain/pending_attachment.dart';
 import 'package:omni_app/modules/inbox/presentation/widgets/composer_snack_bar.dart';
@@ -38,23 +42,27 @@ void main() {
   late FakeVoiceRecorder recorder;
   late List<PendingAttachment> voices;
   late bool failSend;
+  // Giữ qua các lần pumpWidget: composer được cập nhật, không dựng lại.
+  late GlobalKey key;
 
   setUp(() {
     recorder = FakeVoiceRecorder();
     voices = [];
     failSend = false;
+    key = GlobalKey();
   });
 
   Widget composer({
     OutboundCapabilities? capabilities,
     bool warn = false,
     bool withVoice = true,
+    bool withRecorder = true,
   }) => MessageComposer(
     capabilities: capabilities,
     onSend: (text, attachments, replyTo) async {},
     onPickImages: (_) async => const [],
     onTakePhoto: () async => null,
-    voiceRecorder: recorder,
+    voiceRecorder: withRecorder ? recorder : null,
     warnVoiceAsLink: warn,
     onSendVoice: withVoice
         ? (voice) async {
@@ -70,8 +78,8 @@ void main() {
     bool reduceMotion = false,
     bool withVoice = true,
     bool mounted = true,
+    bool withRecorder = true,
   }) {
-    final key = GlobalKey();
     return MaterialApp(
       theme: OmniTheme.light(TargetPlatform.android),
       builder: (c, child) => MediaQuery(
@@ -91,6 +99,7 @@ void main() {
                     capabilities: capabilities ?? native,
                     warn: warn,
                     withVoice: withVoice,
+                    withRecorder: withRecorder,
                   ),
                 ),
             ],
@@ -256,6 +265,92 @@ void main() {
       expect(recorder.stops, 1);
     });
 
+    testWidgets('gửi xong → xoá tệp ghi; gửi lỗi → giữ tệp', (tester) async {
+      failSend = true;
+      await tester.pumpWidget(host());
+      await tapMic(tester);
+      recorder.tick(const Duration(seconds: 2));
+      await tester.pump();
+
+      await tester.tap(find.byTooltip('Gửi ghi âm'));
+      await tester.pump();
+      await tester.pump();
+      expect(recorder.discards, isEmpty, reason: 'lỗi: giữ tệp để gửi lại');
+
+      failSend = false;
+      await tester.tap(find.byTooltip('Gửi ghi âm'));
+      await tester.pump();
+      await tester.pump();
+      expect(voices, hasLength(1));
+      expect(recorder.discards, ['/tmp/ghi-am-20261010-090507.wav']);
+    });
+
+    testWidgets('xoá tệp lỗi → vẫn đóng thanh, không ném', (tester) async {
+      recorder.failDiscard = true;
+      await tester.pumpWidget(host());
+      await tapMic(tester);
+      recorder.tick(const Duration(seconds: 2));
+      await tester.pump();
+
+      await tester.tap(find.byTooltip('Gửi ghi âm'));
+      await tester.pump();
+      await tester.pump();
+      expect(voices, hasLength(1));
+      expect(recorder.discards, hasLength(1));
+      expect(tester.takeException(), isNull);
+      expect(find.byType(TextField), findsOneWidget);
+    });
+
+    testWidgets('Gửi lúc đang tự dừng ở 5:00 → chờ tệp chốt xong rồi gửi', (
+      tester,
+    ) async {
+      final gate = Completer<String?>();
+      recorder.stopGate = gate;
+      await tester.pumpWidget(host());
+      await tapMic(tester);
+      recorder.tick(const Duration(minutes: 5));
+      await tester.pump();
+      expect(recorder.stops, 1);
+
+      await tester.tap(find.byTooltip('Gửi ghi âm'));
+      await tester.pump();
+      await tester.pump();
+      expect(voices, isEmpty, reason: 'tệp chưa chốt, chưa được gửi');
+
+      gate.complete('/tmp/ghi-am-xong.wav');
+      await tester.pump();
+      await tester.pump();
+      expect(recorder.stops, 1);
+      expect(voices, hasLength(1));
+      expect(voices.single.path, '/tmp/ghi-am-xong.wav');
+    });
+
+    testWidgets('mất onSendVoice khi đang ghi → huỷ lượt ghi', (tester) async {
+      await tester.pumpWidget(host());
+      await tapMic(tester);
+      recorder.tick(const Duration(seconds: 2));
+      await tester.pump();
+
+      await tester.pumpWidget(host(withVoice: false));
+      await tester.pump();
+      expect(recorder.cancels, 1);
+      expect(find.byTooltip('Gửi ghi âm'), findsNothing);
+      expect(find.byType(TextField), findsOneWidget);
+    });
+
+    testWidgets('mất voiceRecorder khi đang ghi → huỷ trên máy ghi cũ', (
+      tester,
+    ) async {
+      await tester.pumpWidget(host());
+      await tapMic(tester);
+
+      await tester.pumpWidget(host(withRecorder: false));
+      await tester.pump();
+      expect(recorder.cancels, 1);
+      expect(find.byTooltip('Gửi ghi âm'), findsNothing);
+      expect(find.byType(TextField), findsOneWidget);
+    });
+
     testWidgets('gỡ composer khi đang ghi → cancel', (tester) async {
       await tester.pumpWidget(host());
       await tapMic(tester);
@@ -324,6 +419,39 @@ void main() {
     expect(tester.hasRunningAnimations, isTrue);
     // Gỡ trước khi kết thúc (hoạt ảnh lặp).
     await tester.pumpWidget(const SizedBox());
+  });
+
+  testWidgets('chấm đỏ: giữ một Animation qua các lần dựng lại', (
+    tester,
+  ) async {
+    await tester.pumpWidget(host());
+    await tapMic(tester);
+    Animation<double> opacity() => tester
+        .widget<FadeTransition>(
+          find
+              .ancestor(
+                of: find.byKey(const ValueKey('voice-record-dot')),
+                matching: find.byType(FadeTransition),
+              )
+              .first,
+        )
+        .opacity;
+    final first = opacity();
+    recorder.tick(const Duration(seconds: 2));
+    await tester.pump(const Duration(milliseconds: 100));
+    expect(opacity(), same(first));
+    await tester.pumpWidget(const SizedBox());
+  });
+
+  test('RecordVoiceRecorder.discard xoá tệp; tệp không có thì thôi', () async {
+    final dir = await Directory.systemTemp.createTemp('voice-discard');
+    addTearDown(() => dir.delete(recursive: true));
+    final file = File('${dir.path}${Platform.pathSeparator}a.wav');
+    await file.writeAsBytes([1, 2, 3]);
+    final r = RecordVoiceRecorder();
+    await r.discard(file.path);
+    expect(await file.exists(), isFalse);
+    await r.discard(file.path);
   });
 
   testWidgets('giao diện tối: thanh ghi dựng không lỗi, chấm dùng màu lỗi', (

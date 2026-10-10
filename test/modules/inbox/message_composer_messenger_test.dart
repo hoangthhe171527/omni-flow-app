@@ -19,6 +19,8 @@ class _NoopRecorder implements VoiceRecorder {
   @override
   Future<void> cancel() async {}
   @override
+  Future<void> discard(String path) async {}
+  @override
   Stream<Duration> get elapsed => const Stream.empty();
   @override
   Future<void> dispose() async {}

@@ -177,6 +177,15 @@ class _MessageComposerState extends State<MessageComposer> {
   void didUpdateWidget(MessageComposer old) {
     super.didUpdateWidget(old);
     if (!widget.enabled && _trayOpen) _trayOpen = false;
+    // Kênh/quyền đổi giữa chừng (mất onSendVoice hoặc máy ghi): thanh ghi
+    // không còn nút Gửi dùng được — huỷ lượt ghi trên máy ghi CŨ, xoá tệp.
+    // Đang gửi thì để lượt gửi tự kết thúc (tệp đang được tải lên).
+    final lost = widget.onSendVoice == null || widget.voiceRecorder == null;
+    if (lost && _voiceActive && !_sending) {
+      _dropVoiceTicks();
+      _resetVoice();
+      unawaited(old.voiceRecorder?.cancel());
+    }
   }
 
   /// Ô trống trở lại thì cụm công cụ về trạng thái thu/bung mặc định.
@@ -328,6 +337,7 @@ class _MessageComposerState extends State<MessageComposer> {
       if (!mounted) return;
       _dropVoiceTicks();
       _voiceStopped = false;
+      _stopping = null;
       _voiceTicks = recorder.elapsed.listen(_onVoiceTick);
       await recorder.start(path);
       if (!mounted) {
@@ -358,9 +368,14 @@ class _MessageComposerState extends State<MessageComposer> {
     if (elapsed >= kVoiceMaxDuration) unawaited(_stopVoiceRecording());
   }
 
+  /// Lượt dừng đang chạy/đã xong của bản ghi hiện tại. Bấm Gửi đúng lúc tự
+  /// dừng ở 5:00 thì chờ chung lượt này, không gửi tệp chưa chốt.
+  Future<String?>? _stopping;
+
   /// Dừng máy ghi, giữ tệp. Trả đường dẫn, null nếu lỗi.
-  Future<String?> _stopVoiceRecording() async {
-    if (_voiceStopped) return _voicePath;
+  Future<String?> _stopVoiceRecording() => _stopping ??= _stopOnce();
+
+  Future<String?> _stopOnce() async {
     _voiceStopped = true;
     _dropVoiceTicks();
     final path = await widget.voiceRecorder?.stop();
@@ -381,12 +396,23 @@ class _MessageComposerState extends State<MessageComposer> {
     _voiceStopped = false;
     _voicePath = null;
     _voiceElapsed = Duration.zero;
+    _stopping = null;
   }
 
   Future<void> _cancelVoice() async {
     _dropVoiceTicks();
     if (mounted) setState(_resetVoice);
     await widget.voiceRecorder?.cancel();
+  }
+
+  /// Gửi xong thì tệp WAV hết việc: xoá khỏi thư mục tạm. Lỗi xoá thì bỏ qua
+  /// (hệ điều hành dọn sau) — tin đã đi rồi.
+  Future<void> _discardSent(VoiceRecorder? recorder, String path) async {
+    try {
+      await recorder?.discard(path);
+    } on Object {
+      // bỏ qua
+    }
   }
 
   Future<void> _sendVoice() async {
@@ -407,10 +433,12 @@ class _MessageComposerState extends State<MessageComposer> {
         return;
       }
       final name = path.split(RegExp(r'[\\/]')).last;
+      final recorder = widget.voiceRecorder;
       await send(
         PendingAttachment(path: path, name: name, kind: PendingKind.voice),
       );
       if (mounted) setState(_resetVoice);
+      await _discardSent(recorder, path);
     } on Object {
       // Trang đã báo lỗi tải/gửi. Giữ thanh và tệp để bấm Gửi lại.
     } finally {
