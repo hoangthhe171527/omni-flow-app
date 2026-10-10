@@ -6,6 +6,7 @@ import 'package:intl/date_symbol_data_local.dart';
 import 'package:omni_app/core/domain/channel.dart';
 import 'package:omni_app/core/error/app_exception.dart';
 import 'package:omni_app/core/network/api_envelope.dart';
+import 'package:omni_app/core/utils/formatters.dart';
 import 'package:omni_app/design/theme/omni_theme.dart';
 import 'package:omni_app/modules/dashboard/application/dashboard_providers.dart';
 import 'package:omni_app/modules/dashboard/presentation/widgets/awaiting_reply_card.dart';
@@ -27,7 +28,7 @@ Task task(int i, {int daysAgo = 0}) => Task.fromJson({
   'id': 't$i',
   'title': 'Việc số $i',
   'status': 'todo',
-  'due_date': ymd(DateTime.now().subtract(Duration(days: daysAgo))),
+  'due_date': ymd(VnTime.today().subtract(Duration(days: daysAgo))),
 });
 
 Conversation conv(int i) => Conversation(

@@ -101,4 +101,38 @@ void main() {
     await t.pumpAndSettle();
     expect(turns(), 0);
   });
+
+  testWidgets('storageKey: trạng thái thu giữ qua lần dựng lại (PageStorage)', (
+    t,
+  ) async {
+    final show = ValueNotifier(true);
+    await t.pumpWidget(
+      MaterialApp(
+        theme: OmniTheme.light(),
+        home: Scaffold(
+          body: ValueListenableBuilder<bool>(
+            valueListenable: show,
+            builder: (_, v, _) => v
+                ? const SingleChildScrollView(
+                    child: OmniCollapsibleCard(
+                      title: 'Việc của tôi',
+                      storageKey: 'k1',
+                      child: Text('Thân thẻ'),
+                    ),
+                  )
+                : const SizedBox(),
+          ),
+        ),
+      ),
+    );
+    await t.tap(find.text('Việc của tôi'));
+    await t.pumpAndSettle();
+    expect(find.text('Thân thẻ'), findsNothing);
+    show.value = false;
+    await t.pump();
+    show.value = true;
+    await t.pumpAndSettle();
+    expect(find.text('Việc của tôi'), findsOneWidget);
+    expect(find.text('Thân thẻ'), findsNothing);
+  });
 }

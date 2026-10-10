@@ -18,6 +18,7 @@ class OmniCollapsibleCard extends StatefulWidget {
     required this.child,
     this.initiallyExpanded = true,
     this.footer,
+    this.storageKey,
   });
 
   final String title;
@@ -31,12 +32,37 @@ class OmniCollapsibleCard extends StatefulWidget {
   /// Dòng cuối thẻ ("Xem tất cả"), ẩn cùng thân khi thu.
   final Widget? footer;
 
+  /// Khoá [PageStorage] để nhớ thu/mở khi thẻ bị dựng lại (đổi tab, cuộn
+  /// khỏi màn); `null` thì không nhớ.
+  final String? storageKey;
+
   @override
   State<OmniCollapsibleCard> createState() => _OmniCollapsibleCardState();
 }
 
 class _OmniCollapsibleCardState extends State<OmniCollapsibleCard> {
-  late bool _expanded = widget.initiallyExpanded;
+  late bool _expanded = _restore();
+
+  bool _restore() {
+    final key = widget.storageKey;
+    if (key == null) return widget.initiallyExpanded;
+    final saved = PageStorage.maybeOf(
+      context,
+    )?.readState(context, identifier: _id(key));
+    return saved is bool ? saved : widget.initiallyExpanded;
+  }
+
+  static String _id(String key) => 'omni-collapsible:$key';
+
+  void _toggle() {
+    setState(() => _expanded = !_expanded);
+    final key = widget.storageKey;
+    if (key != null) {
+      PageStorage.maybeOf(
+        context,
+      )?.writeState(context, _expanded, identifier: _id(key));
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -61,7 +87,7 @@ class _OmniCollapsibleCardState extends State<OmniCollapsibleCard> {
             button: true,
             expanded: _expanded,
             child: InkWell(
-              onTap: () => setState(() => _expanded = !_expanded),
+              onTap: _toggle,
               child: ConstrainedBox(
                 constraints: const BoxConstraints(minHeight: 44),
                 child: Padding(

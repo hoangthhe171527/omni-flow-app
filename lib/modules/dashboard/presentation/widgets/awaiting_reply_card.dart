@@ -58,6 +58,7 @@ class AwaitingReplyCard extends ConsumerWidget {
 
     return OmniCollapsibleCard(
       title: 'Chờ phản hồi',
+      storageKey: 'dashboard.awaiting',
       // Con trỏ không có tổng: chỉ đếm được khi đã thấy hết.
       count: page == null || page.hasMore ? null : page.items.length,
       footer: items.isEmpty
