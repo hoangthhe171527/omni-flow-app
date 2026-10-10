@@ -246,6 +246,33 @@ void main() {
       expect(OpportunitiesApi.listQuery().containsKey('status'), isFalse);
     },
   );
+
+  testWidgets('đang tìm → list và summary cùng nhận từ khoá', (t) async {
+    await t.pumpWidget(host(withSearch: true));
+    await t.pumpAndSettle();
+    expect(api.summarySearch.last, isNull);
+    expect(api.calls.last.search, isNull);
+
+    await t.enterText(find.byType(TextField), 'đàn');
+    await t.pump(const Duration(milliseconds: 400));
+    await t.pumpAndSettle();
+    expect(api.calls.last.search, 'đàn');
+    expect(api.summarySearch.last, 'đàn');
+  });
+
+  test('hợp đồng: summaryQuery gửi `search` khi có, bỏ khi rỗng', () {
+    expect(OpportunitiesApi.summaryQuery(search: 'đàn')['search'], 'đàn');
+    expect(
+      OpportunitiesApi.summaryQuery(search: '').containsKey('search'),
+      isFalse,
+    );
+    expect(OpportunitiesApi.summaryQuery().containsKey('search'), isFalse);
+    expect(OpportunitiesApi.summaryQuery(mine: true)['owner'], 'me');
+    expect(
+      OpportunitiesApi.summaryQuery(pipeline: 'ban_le')['pipeline'],
+      'ban_le',
+    );
+  });
 }
 
 final _column = find.byWidgetPredicate(
