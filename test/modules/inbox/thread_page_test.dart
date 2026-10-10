@@ -332,7 +332,7 @@ void main() {
       expect(api.markReadCalls, isEmpty);
 
       await openActions(tester);
-      expect(find.text('Ghim hoặc bỏ ghim'), findsNothing);
+      expect(find.text('Ghim tin'), findsNothing);
 
       await closeThread(tester);
     });
@@ -346,7 +346,7 @@ void main() {
       expect(api.markReadCalls, ['c1']);
 
       await openActions(tester);
-      expect(find.text('Ghim hoặc bỏ ghim'), findsOneWidget);
+      expect(find.text('Ghim tin'), findsOneWidget);
 
       await closeThread(tester);
     });

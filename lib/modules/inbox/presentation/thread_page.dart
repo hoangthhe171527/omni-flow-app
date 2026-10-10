@@ -21,6 +21,7 @@ import '../data/inbox_api.dart';
 import '../domain/conversation.dart';
 import '../domain/message.dart';
 import '../../../security/session/session_controller.dart';
+import '../../opportunities/opportunities.dart';
 import '../../tasks/domain/task_permissions.dart';
 import '../../tasks/routes.dart';
 import '../../tasks/tasks.dart';
@@ -272,7 +273,11 @@ class _ThreadPageState extends ConsumerState<ThreadPage>
     final conversation = ref.watch(conversationProvider(widget.conversationId));
     final thread = ref.watch(threadProvider(widget.conversationId));
     final access = ref.watch(inboxAccessProvider);
-    final canCreateTask = ref.watch(accessProvider).can(TaskPermissions.write);
+    final policy = ref.watch(accessProvider);
+    final canCreateTask = policy.can(TaskPermissions.write);
+    final canCreateOpportunity =
+        ref.watch(sessionProvider).featureEnabled('opportunities') &&
+        policy.can(OpportunityPermissions.create);
 
     return Scaffold(
       // Bubbles can only read as raised against a tinted canvas. On white the
@@ -335,6 +340,10 @@ class _ThreadPageState extends ConsumerState<ThreadPage>
                     onReply: (message) => setState(() => _replyingTo = message),
                     // `/pin` cần `inbox.write`; null thì menu ẩn mục "Ghim".
                     onPin: access.canSend ? _togglePin : null,
+                    onCreateTask: canCreateTask ? _createTaskFrom : null,
+                    onCreateOpportunity: canCreateOpportunity
+                        ? _createOpportunityFrom
+                        : null,
                     keyForMessage: _keyForMessage,
                   ),
                 ),
@@ -504,6 +513,33 @@ class _ThreadPageState extends ConsumerState<ThreadPage>
     }
   }
 
+  /// Tiêu đề việc từ một tin: dòng đầu, tối đa 80 ký tự. Tin không có chữ
+  /// (chỉ ảnh/tệp) thì để trống cho người dùng tự đặt.
+  void _createTaskFrom(Message message) {
+    final firstLine = message.text.trim().split('\n').first.trim();
+    context.pushNamed(
+      TaskRoutes.create,
+      extra: CreateTaskArgs(
+        initialTitle: firstLine.isEmpty
+            ? null
+            : firstLine.characters.take(80).toString(),
+      ),
+    );
+  }
+
+  void _createOpportunityFrom(Message message) {
+    final customerId = ref
+        .read(conversationProvider(widget.conversationId))
+        .valueOrNull
+        ?.customerId;
+    context.pushNamed(
+      OpportunityRoutes.create,
+      queryParameters: {
+        if (customerId != null && customerId.isNotEmpty) 'customer': customerId,
+      },
+    );
+  }
+
   String _customerName() =>
       ref
           .read(conversationProvider(widget.conversationId))
@@ -580,6 +616,8 @@ class _MessageList extends StatelessWidget {
     required this.onDiscard,
     required this.onReply,
     required this.onPin,
+    required this.onCreateTask,
+    required this.onCreateOpportunity,
     required this.keyForMessage,
   });
 
@@ -590,6 +628,8 @@ class _MessageList extends StatelessWidget {
   final void Function(Message message) onDiscard;
   final void Function(Message message) onReply;
   final void Function(Message message)? onPin;
+  final void Function(Message message)? onCreateTask;
+  final void Function(Message message)? onCreateOpportunity;
   final GlobalKey Function(String id) keyForMessage;
 
   @override
@@ -676,6 +716,12 @@ class _MessageList extends StatelessWidget {
                     : null,
                 onReply: () => onReply(message),
                 onPin: onPin == null ? null : () => onPin!(message),
+                onCreateTask: onCreateTask == null
+                    ? null
+                    : () => onCreateTask!(message),
+                onCreateOpportunity: onCreateOpportunity == null
+                    ? null
+                    : () => onCreateOpportunity!(message),
               ),
             ],
           ),

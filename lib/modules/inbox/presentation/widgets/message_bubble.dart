@@ -11,6 +11,7 @@ import '../../../../design/tokens/tokens.dart';
 import '../../domain/message.dart';
 import 'message_attachments.dart';
 import 'message_images.dart';
+import 'message_actions_overlay.dart';
 import 'message_link_preview.dart';
 
 class MessageBubble extends StatelessWidget {
@@ -24,6 +25,8 @@ class MessageBubble extends StatelessWidget {
     this.onDiscard,
     this.onReply,
     this.onPin,
+    this.onCreateTask,
+    this.onCreateOpportunity,
   });
 
   final Message message;
@@ -44,6 +47,17 @@ class MessageBubble extends StatelessWidget {
   final VoidCallback? onDiscard;
   final VoidCallback? onReply;
   final VoidCallback? onPin;
+
+  /// Menu bấm giữ: ẩn mục tương ứng khi null (thiếu quyền / tính năng tắt).
+  final VoidCallback? onCreateTask;
+  final VoidCallback? onCreateOpportunity;
+
+  Future<void> _copy(BuildContext context) async {
+    if (!context.mounted) return;
+    final messenger = ScaffoldMessenger.maybeOf(context);
+    await Clipboard.setData(ClipboardData(text: message.text));
+    messenger?.showSnackBar(const SnackBar(content: Text('Đã sao chép.')));
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -263,6 +277,11 @@ class MessageBubble extends StatelessWidget {
       outbound: outbound,
       onReply: onReply,
       onPin: onPin,
+      onCopy: message.text.isEmpty || message.recalled
+          ? null
+          : () => _copy(context),
+      onCreateTask: onCreateTask,
+      onCreateOpportunity: onCreateOpportunity,
       child: Padding(
         // 2 within a run, 10 when the speaker changes: the gap is what tells the
         // eye where one person stopped and the other started.
@@ -452,6 +471,9 @@ class _ReplySwipe extends StatefulWidget {
     required this.enabled,
     this.onReply,
     this.onPin,
+    this.onCopy,
+    this.onCreateTask,
+    this.onCreateOpportunity,
   });
 
   final Widget child;
@@ -459,6 +481,9 @@ class _ReplySwipe extends StatefulWidget {
   final bool enabled;
   final VoidCallback? onReply;
   final VoidCallback? onPin;
+  final VoidCallback? onCopy;
+  final VoidCallback? onCreateTask;
+  final VoidCallback? onCreateOpportunity;
 
   @override
   State<_ReplySwipe> createState() => _ReplySwipeState();
@@ -511,61 +536,51 @@ class _ReplySwipeState extends State<_ReplySwipe>
     _reset();
   }
 
-  Future<void> _showActions() async {
-    final action = await showModalBottomSheet<String>(
+  /// Chạy sau khi hộp thoại đã đóng; cây có thể đã đổi (tin bị thu hồi, trang
+  /// đóng) nên không chạm gì nếu state đã gỡ.
+  VoidCallback _guarded(VoidCallback? action) => () {
+    if (mounted) action?.call();
+  };
+
+  void _showActions() {
+    HapticFeedback.selectionClick();
+    showMessageActions(
       context: context,
-      showDragHandle: true,
-      isScrollControlled: true,
-      useSafeArea: true,
-      constraints: const BoxConstraints(maxWidth: 520),
-      builder: (context) => SafeArea(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxHeight: 220),
-          child: ListView(
-            shrinkWrap: true,
-            padding: const EdgeInsets.only(bottom: 8),
-            children: [
-              const Padding(
-                padding: EdgeInsets.fromLTRB(20, 4, 20, 8),
-                child: Text(
-                  'Thao tác tin nhắn',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(fontWeight: FontWeight.w600),
-                ),
-              ),
-              if (widget.onReply != null)
-                ListTile(
-                  dense: true,
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 16),
-                  leading: const Icon(Icons.reply_rounded),
-                  title: const Text(
-                    'Trả lời',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  onTap: () => Navigator.pop(context, 'reply'),
-                ),
-              if (widget.onPin != null)
-                ListTile(
-                  dense: true,
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 16),
-                  leading: const Icon(Icons.push_pin_outlined),
-                  title: const Text(
-                    'Ghim hoặc bỏ ghim',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  onTap: () => Navigator.pop(context, 'pin'),
-                ),
-            ],
+      bubble: widget.child,
+      outbound: widget.outbound,
+      items: [
+        if (widget.onReply != null)
+          MessageActionItem(
+            label: 'Trả lời',
+            icon: Icons.reply_rounded,
+            onTap: _guarded(widget.onReply),
           ),
-        ),
-      ),
+        if (widget.onCopy != null)
+          MessageActionItem(
+            label: 'Sao chép',
+            icon: Icons.copy_rounded,
+            onTap: _guarded(widget.onCopy),
+          ),
+        if (widget.onPin != null)
+          MessageActionItem(
+            label: 'Ghim tin',
+            icon: Icons.push_pin_outlined,
+            onTap: _guarded(widget.onPin),
+          ),
+        if (widget.onCreateTask != null)
+          MessageActionItem(
+            label: 'Tạo việc từ tin này',
+            icon: Icons.task_alt_rounded,
+            onTap: _guarded(widget.onCreateTask),
+          ),
+        if (widget.onCreateOpportunity != null)
+          MessageActionItem(
+            label: 'Tạo cơ hội',
+            icon: Icons.trending_up_rounded,
+            onTap: _guarded(widget.onCreateOpportunity),
+          ),
+      ],
     );
-    if (!mounted) return;
-    if (action == 'reply') widget.onReply?.call();
-    if (action == 'pin') widget.onPin?.call();
   }
 
   @override
@@ -575,11 +590,29 @@ class _ReplySwipeState extends State<_ReplySwipe>
     final direction = widget.outbound ? -1.0 : 1.0;
     final progress = (_distance / _triggerDistance).clamp(0.0, 1.0);
 
-    return GestureDetector(
+    return RawGestureDetector(
       behavior: HitTestBehavior.translucent,
-      onLongPress: _showActions,
-      onHorizontalDragUpdate: _onDragUpdate,
-      onHorizontalDragEnd: _onDragEnd,
+      gestures: {
+        // 420ms như bản mẫu (mặc định của Flutter là 500). Kéo ngang thắng cuộc
+        // đua nếu ngón tay đã đi trước khi đủ giờ, nên vuốt-để-trả-lời và cuộn
+        // danh sách không bị bấm giữ nuốt.
+        LongPressGestureRecognizer:
+            GestureRecognizerFactoryWithHandlers<LongPressGestureRecognizer>(
+              () => LongPressGestureRecognizer(
+                duration: const Duration(milliseconds: 420),
+              ),
+              (recognizer) => recognizer.onLongPress = _showActions,
+            ),
+        HorizontalDragGestureRecognizer:
+            GestureRecognizerFactoryWithHandlers<
+              HorizontalDragGestureRecognizer
+            >(
+              HorizontalDragGestureRecognizer.new,
+              (recognizer) => recognizer
+                ..onUpdate = _onDragUpdate
+                ..onEnd = _onDragEnd,
+            ),
+      },
       child: Stack(
         clipBehavior: Clip.none,
         children: [
