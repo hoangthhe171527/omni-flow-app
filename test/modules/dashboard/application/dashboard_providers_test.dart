@@ -7,7 +7,7 @@ import 'package:omni_app/modules/dashboard/domain/revenue_period.dart';
 import 'package:omni_app/security/permissions/access_policy.dart';
 import 'package:omni_app/security/session/session_controller.dart';
 
-import '../data/dashboard_api_contract_test.dart' show FakeAdapter, envelope;
+import '../../../helpers/fake_http_adapter.dart';
 
 void main() {
   ProviderContainer make(FakeAdapter adapter, Set<String> perms) {

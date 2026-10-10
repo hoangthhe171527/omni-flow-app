@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'dart:typed_data';
 
 import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -7,6 +6,8 @@ import 'package:omni_app/core/error/app_exception.dart';
 import 'package:omni_app/core/network/api_client.dart';
 import 'package:omni_app/modules/dashboard/data/dashboard_api.dart';
 import 'package:omni_app/modules/dashboard/domain/revenue_period.dart';
+
+import '../../../helpers/fake_http_adapter.dart';
 
 /// Hợp đồng với omni-flow-api feat/revenue-series:
 /// `GET /sales-overview/revenue-series` → `{success, data: {bucket, current,
@@ -108,33 +109,4 @@ void main() {
       throwsA(isA<AppException>()),
     );
   });
-}
-
-String envelope(Object data) => jsonEncode({'success': true, 'data': data});
-
-class FakeAdapter implements HttpClientAdapter {
-  FakeAdapter(this.status, this.body);
-
-  final int status;
-  final String body;
-  final List<RequestOptions> requests = [];
-
-  @override
-  Future<ResponseBody> fetch(
-    RequestOptions options,
-    Stream<Uint8List>? requestStream,
-    Future<void>? cancelFuture,
-  ) async {
-    requests.add(options);
-    return ResponseBody.fromString(
-      body,
-      status,
-      headers: {
-        Headers.contentTypeHeader: [Headers.jsonContentType],
-      },
-    );
-  }
-
-  @override
-  void close({bool force = false}) {}
 }
