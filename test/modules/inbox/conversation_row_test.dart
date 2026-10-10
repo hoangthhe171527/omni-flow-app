@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:omni_app/core/domain/channel.dart';
+import 'package:omni_app/design/tokens/omni_colors.dart';
 import 'package:omni_app/design/theme/omni_theme.dart';
 import 'package:omni_app/modules/inbox/domain/conversation.dart';
 import 'package:omni_app/modules/inbox/presentation/widgets/conversation_row.dart';
@@ -52,7 +53,7 @@ void main() {
   });
 
   test(
-    'màu chữ nguồn Facebook đạt 4.5:1 (sáng trên trắng, tối trên nền tối)',
+    'màu chữ nguồn mọi kênh đạt 4.5:1 (sáng trên trắng, tối trên nền tối)',
     () {
       double contrast(Color a, Color b) {
         final x = a.computeLuminance(), y = b.computeLuminance();
@@ -60,15 +61,17 @@ void main() {
         return (hi + 0.05) / (lo + 0.05);
       }
 
-      for (final ch in [Channel.facebook]) {
+      for (final ch in Channel.values) {
         final m = ch.meta;
         expect(
           contrast(m.textColorOf(Brightness.light), Colors.white),
           greaterThanOrEqualTo(4.5),
+          reason: ch.name,
         );
         expect(
-          contrast(m.textColorOf(Brightness.dark), const Color(0xFF0B1220)),
+          contrast(m.textColorOf(Brightness.dark), OmniColors.darkCard),
           greaterThanOrEqualTo(4.5),
+          reason: ch.name,
         );
       }
     },
