@@ -266,17 +266,21 @@ class _InfoBody extends ConsumerWidget {
               index: 4,
               child: _Section(
                 children: [
-                  _InfoRow(
-                    label: 'Ghim hội thoại',
-                    plainLabel: true,
-                    onTap: () => ConversationActions(
-                      ref,
-                      context,
-                    ).setPinned(c, !c.isPinned),
-                    value: _PinSwitch(
-                      value: c.isPinned,
-                      onChanged: (on) =>
-                          ConversationActions(ref, context).setPinned(c, on),
+                  // Một nút cho trình đọc màn hình: "Ghim hội thoại, công
+                  // tắc, bật". Nhãn lấy từ chữ của dòng, công tắc không lặp.
+                  MergeSemantics(
+                    child: _InfoRow(
+                      label: 'Ghim hội thoại',
+                      plainLabel: true,
+                      onTap: () => ConversationActions(
+                        ref,
+                        context,
+                      ).setPinned(c, !c.isPinned),
+                      value: _PinSwitch(
+                        value: c.isPinned,
+                        onChanged: (on) =>
+                            ConversationActions(ref, context).setPinned(c, on),
+                      ),
                     ),
                   ),
                   // Đã chặn: API trả 422 `conversation_blocked` cho /unread.
@@ -366,25 +370,21 @@ class _PinSwitch extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    return Semantics(
-      label: 'Ghim hội thoại',
-      child: Switch(
-        value: value,
-        onChanged: onChanged,
-        activeThumbColor: scheme.surface,
-        activeTrackColor: OmniColors.byBrightness(
-          context,
-          OmniColors.primary,
-          OmniColors.darkPrimary,
-        ),
-        inactiveThumbColor: scheme.surface,
-        inactiveTrackColor: OmniColors.byBrightness(
-          context,
-          const Color(0xFFC9D2DE),
-          scheme.outline,
-        ),
-        trackOutlineColor: const WidgetStatePropertyAll(Colors.transparent),
+    // Không gắn nhãn riêng: dòng chứa công tắc được gộp (MergeSemantics) với
+    // chữ "Ghim hội thoại" — gắn thêm thì trình đọc màn hình đọc hai lần.
+    return Switch(
+      value: value,
+      onChanged: onChanged,
+      activeThumbColor: scheme.surface,
+      activeTrackColor: OmniColors.byBrightness(
+        context,
+        OmniColors.primary,
+        OmniColors.darkPrimary,
       ),
+      inactiveThumbColor: scheme.surface,
+      // #C9D2DE sáng / darkBorderInteractive tối.
+      inactiveTrackColor: OmniColors.controlBorderOf(context),
+      trackOutlineColor: const WidgetStatePropertyAll(Colors.transparent),
     );
   }
 }

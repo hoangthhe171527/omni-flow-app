@@ -35,7 +35,15 @@ class _InboxPinnedSectionState extends State<InboxPinnedSection> {
     final shown = _expanded || hidden <= 0
         ? items
         : items.take(InboxPinnedSection.collapsedCount).toList();
-    const divider = Divider(height: 1, thickness: 1, color: OmniColors.divider);
+    final divider = Divider(
+      height: 1,
+      thickness: 1,
+      color: OmniColors.byBrightness(
+        context,
+        OmniColors.divider,
+        OmniColors.darkBorder,
+      ),
+    );
 
     return Column(
       mainAxisSize: MainAxisSize.min,

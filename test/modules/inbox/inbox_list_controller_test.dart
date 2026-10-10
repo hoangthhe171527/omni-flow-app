@@ -486,6 +486,30 @@ void main() {
       expect(api.calls.single.query['blocked'], '1');
     });
 
+    test('refresh: làm mới mục ghim TRƯỚC await — danh sách bị dọn giữa '
+        'chừng không làm hỏng lượt làm mới', () async {
+      api.pages = {
+        1: ['c1'],
+      };
+      final mainSub = container.listen(inboxListProvider, (_, _) {});
+      container.listen(pinnedConversationsProvider, (_, _) {});
+      await container.read(inboxListProvider.future);
+      await container.read(pinnedConversationsProvider.future);
+      final pinnedBefore = api.calls.where((c) => c.pinned == true).length;
+
+      final gate = Completer<void>();
+      api.holdNext = gate;
+      final pending = controller().refresh();
+      // Rời màn Hộp thư lúc đang chờ mạng: provider autoDispose bị dọn.
+      mainSub.close();
+      await flush();
+      expect(container.exists(inboxListProvider), isFalse);
+      gate.complete();
+
+      await expectLater(pending, completes);
+      expect(api.calls.where((c) => c.pinned == true).length, pinnedBefore + 1);
+    });
+
     test(
       'conversation.updated: GET trả is_pinned → không chèn, bỏ nếu đang có',
       () async {

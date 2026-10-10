@@ -11,11 +11,13 @@ import 'package:omni_app/core/network/api_envelope.dart';
 import 'package:omni_app/core/realtime/realtime_client.dart';
 import 'package:omni_app/design/components/components.dart';
 import 'package:omni_app/design/theme/omni_theme.dart';
+import 'package:omni_app/design/tokens/tokens.dart';
 import 'package:omni_app/modules/inbox/application/inbox_providers.dart';
 import 'package:omni_app/modules/inbox/data/inbox_api.dart';
 import 'package:omni_app/modules/inbox/domain/conversation.dart';
 import 'package:omni_app/modules/inbox/domain/inbox_filter.dart';
 import 'package:omni_app/modules/inbox/presentation/inbox_page.dart';
+import 'package:omni_app/modules/inbox/presentation/widgets/inbox_pinned_section.dart';
 import 'package:omni_app/security/permissions/access_policy.dart';
 import 'package:omni_app/security/session/session.dart';
 import 'package:omni_app/security/session/session_controller.dart';
@@ -31,6 +33,7 @@ void main() {
 
   Widget host({
     Set<String> permissions = const {'inbox.read', 'inbox.write'},
+    ThemeData? theme,
   }) => ProviderScope(
     overrides: [
       inboxApiProvider.overrideWithValue(api),
@@ -50,7 +53,7 @@ void main() {
       ),
     ],
     child: MaterialApp(
-      theme: OmniTheme.light(TargetPlatform.android),
+      theme: theme ?? OmniTheme.light(TargetPlatform.android),
       home: const InboxPage(),
     ),
   );
@@ -97,6 +100,45 @@ void main() {
       await closePage(tester);
     },
   );
+
+  testWidgets('không kẻ vạch ngay dưới tiêu đề "Hội thoại"', (tester) async {
+    api.main = [_c('c1', 'Minh Trần')];
+    api.pinned = [_c('p1', 'Lan Anh', pinned: true)];
+    await open(tester);
+
+    final sectionBottom = tester
+        .getBottomLeft(find.byType(InboxPinnedSection))
+        .dy;
+    final under = find.byType(Divider).evaluate().where((e) {
+      final top = tester.getTopLeft(find.byWidget(e.widget)).dy;
+      return (top - sectionBottom).abs() < 0.5;
+    });
+    expect(under, isEmpty);
+    await closePage(tester);
+  });
+
+  testWidgets('giao diện tối: vạch ngăn dòng dùng darkBorder, không divider '
+      'sáng', (tester) async {
+    api.main = [_c('c1', 'Minh Trần'), _c('c2', 'Hà')];
+    api.pinned = [
+      _c('p1', 'Lan Anh', pinned: true),
+      _c('p2', 'Bình', pinned: true),
+    ];
+    await tester.pumpWidget(
+      host(theme: OmniTheme.dark(TargetPlatform.android)),
+    );
+    await tester.pump();
+    await tester.pump();
+
+    final colors = tester
+        .widgetList<Divider>(find.byType(Divider))
+        .map((d) => d.color)
+        .toSet();
+    expect(colors, isNotEmpty);
+    expect(colors, isNot(contains(OmniColors.divider)));
+    expect(colors, contains(OmniColors.darkBorder));
+    await closePage(tester);
+  });
 
   testWidgets('7 dòng ghim → 5 + "Xem thêm 2"; bấm → đủ 7 và "Thu gọn"', (
     tester,

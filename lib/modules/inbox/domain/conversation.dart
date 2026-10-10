@@ -70,7 +70,10 @@ class Conversation {
 
   /// Bản sao với các trường đổi (trường không truyền giữ nguyên). Mọi trường
   /// của constructor PHẢI có mặt ở đây — `conversation_test.dart` giữ điều đó.
-  /// Trường nullable không xoá được về null bằng copyWith.
+  /// Trường nullable không xoá được về null bằng copyWith — kể cả
+  /// [blockedAt]: `copyWith(blockedAt: null)` GIỮ thời điểm chặn. Bỏ chặn
+  /// không cần cờ: `InboxApi.setBlocked(id, false)` trả hội thoại đầy đủ từ
+  /// server (`blocked_at` null hoặc vắng), dùng nguyên bản đó.
   Conversation copyWith({
     String? id,
     Channel? channel,

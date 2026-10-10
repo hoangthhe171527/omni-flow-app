@@ -313,13 +313,21 @@ class _InboxPageState extends ConsumerState<InboxPage>
                         // Zalo separates rows with a hairline indented past the
                         // avatar, not a gap. Gaps between bordered cards were what
                         // made the list read as a table of records.
-                        separatorBuilder: (_, _) => const Divider(
-                          height: 1,
-                          thickness: 1,
-                          indent: 0,
-                          endIndent: 0,
-                          color: OmniColors.divider,
-                        ),
+                        // Không kẻ vạch ngay dưới mục ghim: mục đó kết thúc
+                        // bằng tiêu đề "Hội thoại", dòng đầu nằm sát dưới.
+                        separatorBuilder: (_, rawIndex) => rawIndex < lead
+                            ? const SizedBox.shrink()
+                            : Divider(
+                                height: 1,
+                                thickness: 1,
+                                indent: 0,
+                                endIndent: 0,
+                                color: OmniColors.byBrightness(
+                                  context,
+                                  OmniColors.divider,
+                                  OmniColors.darkBorder,
+                                ),
+                              ),
                         itemBuilder: (context, rawIndex) {
                           if (rawIndex < lead) {
                             return InboxPinnedSection(

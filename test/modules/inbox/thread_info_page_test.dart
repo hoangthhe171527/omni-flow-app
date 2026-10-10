@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:ui' show Tristate;
 
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
@@ -491,6 +492,34 @@ void main() {
       await tester.pumpAndSettle();
       expect(api.pins, [true, false]);
       expect(tester.widget<Switch>(find.byType(Switch)).value, isFalse);
+    });
+
+    testWidgets('công tắc Ghim: một nút đọc màn hình, nhãn đọc MỘT lần', (
+      tester,
+    ) async {
+      final handle = tester.ensureSemantics();
+      final api = _RecordingApi()..current = base();
+      await pumpRouted(tester, api);
+      final node = tester.getSemantics(find.byType(Switch)).getSemanticsData();
+      expect(node.label, 'Ghim hội thoại');
+      expect(node.flagsCollection.isToggled, isNot(Tristate.none));
+      expect(find.bySemanticsLabel(RegExp('Ghim hội thoại')), findsOneWidget);
+      handle.dispose();
+    });
+
+    testWidgets('công tắc Ghim tắt: rãnh controlBorder (sáng) / '
+        'darkBorderInteractive (tối)', (tester) async {
+      final api = _RecordingApi()..current = base();
+      await pumpRouted(tester, api);
+      expect(
+        tester.widget<Switch>(find.byType(Switch)).inactiveTrackColor,
+        OmniColors.controlBorder,
+      );
+      await pumpRouted(tester, _RecordingApi()..current = base(), dark: true);
+      expect(
+        tester.widget<Switch>(find.byType(Switch)).inactiveTrackColor,
+        OmniColors.darkBorderInteractive,
+      );
     });
 
     testWidgets('công tắc Ghim không đổi trước khi server trả lời', (

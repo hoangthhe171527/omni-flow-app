@@ -167,6 +167,9 @@ class InboxListController
   /// khác) thì bỏ: nó thuộc một danh sách không còn nữa (review M3).
   Future<void> refresh() async {
     ref.invalidate(inboxFacetsProvider);
+    // Trước `await`: sau đó provider có thể đã bị dọn, `ref` không còn dùng
+    // được.
+    _refreshPinned();
     final generation = ++_generation;
     final result = await AsyncValue.guard(() async {
       final page = await ref
@@ -174,7 +177,6 @@ class InboxListController
           .list(query: ref.read(_inboxQueryProvider), pinned: _pinnedParam());
       return ConversationListState(items: page.items, cursor: page.cursor);
     });
-    _refreshPinned();
     if (generation != _generation) return;
     state = result;
   }

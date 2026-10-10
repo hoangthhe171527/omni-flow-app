@@ -443,6 +443,21 @@ void main() {
     }
   });
 
+  test('trang sau (before) vẫn mang pinned, không kèm cursor=1', () async {
+    final adapter = FakeAdapter(200, envelope(const []));
+    final a = InboxApi(ApiClient(Dio()..httpClientAdapter = adapter));
+    await a.list(
+      query: const {'status': 'open'},
+      before: '2026-10-10T03:00:00.000Z|c9',
+      pinned: false,
+    );
+    final q = adapter.requests.single.uri.queryParameters;
+    expect(q['pinned'], '0');
+    expect(q['before'], '2026-10-10T03:00:00.000Z|c9');
+    expect(q.containsKey('cursor'), isFalse);
+    expect(q['status'], 'open');
+  });
+
   test('gửi tin: attachments.type chỉ image|video|audio|file', () async {
     final (a, h) = api({'id': 'm9', 'direction': 'out', 'status': 'queued'});
     await a.send(
