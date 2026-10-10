@@ -4,8 +4,8 @@ abstract final class OmniType {
   /// Be Vietnam Pro — font giao diện của mọi màn (giao diện mới GĐ1), thiết kế
   /// cho tiếng Việt nên dấu xếp gọn ở mọi cỡ chữ.
   ///
-  /// Đóng gói các độ đậm 400/500/600/700/800 trong `assets/fonts`. Khối Inter
-  /// vẫn còn trong pubspec cho golden cũ; xoá ở GĐ6 khi không còn ai dùng.
+  /// Đóng gói các độ đậm 400/500/600/700/800 trong `assets/fonts`, không tải
+  /// lúc chạy.
   static const String family = 'Be Vietnam Pro';
 
   /// Be Vietnam Pro chỉ còn cho chữ "Viomni" cạnh logo ở màn mở app — nhận

@@ -63,9 +63,6 @@ Future<Widget> bootstrap() async {
   // giấy phép cũng phải đọc được từ trong app — trang "Giấy phép" của Flutter.
   LicenseRegistry.addLicense(() async* {
     yield LicenseEntryWithLineBreaks(const [
-      'Inter',
-    ], await rootBundle.loadString('assets/fonts/Inter-OFL.txt'));
-    yield LicenseEntryWithLineBreaks(const [
       'Be Vietnam Pro',
     ], await rootBundle.loadString('assets/fonts/BeVietnamPro-OFL.txt'));
   });

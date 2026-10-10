@@ -74,27 +74,13 @@ flutter:
   assets:
     - .env
     # Giấy phép của font, hiện trong trang "Giấy phép" của app (xem bootstrap).
-    - assets/fonts/Inter-OFL.txt
     - assets/fonts/BeVietnamPro-OFL.txt
 
-  # Inter — font giao diện (đề xuất "Chuẩn hoá phong cách"). Bản tĩnh
-  # 400/500/600 lấy từ bản phát hành chính thức github.com/rsms/inter (v4.1,
-  # thư mục extras/ttf), giấy phép SIL OFL 1.1: assets/fonts/Inter-OFL.txt.
-  # Đóng gói chứ không tải lúc chạy: xưởng hay mất sóng, và chữ không được
-  # nháy khi mở app.
-  #
-  # Be Vietnam Pro chỉ còn bản 800 cho chữ "Viomni" ở màn mở app — nhận diện
-  # thương hiệu đã duyệt. Tải từ github.com/google/fonts (ofl/bevietnampro),
-  # giấy phép SIL OFL 1.1: assets/fonts/BeVietnamPro-OFL.txt.
+  # Be Vietnam Pro — font giao diện duy nhất, đóng gói các độ đậm 400-800
+  # (không tải lúc chạy: xưởng hay mất sóng, chữ không được nháy khi mở app).
+  # Tải từ github.com/google/fonts (ofl/bevietnampro), giấy phép SIL OFL 1.1:
+  # assets/fonts/BeVietnamPro-OFL.txt.
   fonts:
-    - family: Inter
-      fonts:
-        - asset: assets/fonts/Inter-Regular.ttf
-          weight: 400
-        - asset: assets/fonts/Inter-Medium.ttf
-          weight: 500
-        - asset: assets/fonts/Inter-SemiBold.ttf
-          weight: 600
     - family: Be Vietnam Pro
       fonts:
         - asset: assets/fonts/BeVietnamPro-Regular.ttf
