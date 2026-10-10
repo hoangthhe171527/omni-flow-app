@@ -25,11 +25,13 @@ enum OutboundMode {
 }
 
 /// Luật tệp nào gửi thành TỆP THẬT khi `file` là [OutboundMode.docsOnly]
-/// (`file_constraints: {native_extensions, native_max_bytes}`).
+/// (`file_constraints`), hoặc ảnh nào nền tảng nhận (`image_constraints`):
+/// `{native_extensions, native_max_bytes, fallback}`.
 class FileConstraints {
   const FileConstraints({
     required this.nativeExtensions,
     required this.nativeMaxBytes,
+    this.fallback,
   });
 
   /// Không phải Map → null.
@@ -45,6 +47,7 @@ class FileConstraints {
                 .toList()
           : const [],
       nativeMaxBytes: max is num ? max.toInt() : int.tryParse('$max'),
+      fallback: raw['fallback'] is String ? raw['fallback'] as String : null,
     );
   }
 
@@ -60,6 +63,12 @@ class FileConstraints {
 
   /// Null = không giới hạn riêng (vẫn chịu trần tải lên chung).
   final int? nativeMaxBytes;
+
+  /// Điều xảy ra với tệp NGOÀI ràng buộc: `link` (thành link trong tin chữ) hay
+  /// `failed` (nền tảng từ chối, tin báo lỗi). Null = API chưa gửi.
+  final String? fallback;
+
+  bool get failsOutside => fallback == 'failed';
 
   bool allows(String fileName, int bytes) {
     final dot = fileName.lastIndexOf('.');
@@ -81,6 +90,7 @@ class OutboundCapabilities {
     required this.audio,
     required this.video,
     this.fileConstraints,
+    this.imageConstraints,
   });
 
   /// Không phải Map → null (không đoán).
@@ -95,6 +105,7 @@ class OutboundCapabilities {
       audio: OutboundMode.parse(raw['audio']),
       video: OutboundMode.parse(raw['video']),
       fileConstraints: FileConstraints.fromJson(raw['file_constraints']),
+      imageConstraints: FileConstraints.fromJson(raw['image_constraints']),
     );
   }
 
@@ -107,6 +118,17 @@ class OutboundCapabilities {
 
   /// Chỉ có ý nghĩa khi [file] là [OutboundMode.docsOnly].
   final FileConstraints? fileConstraints;
+
+  /// Ảnh nền tảng nhận (Zalo OA: JPG/PNG ≤ 1MB, ngoài đó `failed` — KHÔNG
+  /// thành link). Null = không có ràng buộc riêng.
+  final FileConstraints? imageConstraints;
+
+  /// Ảnh [fileName] nặng [bytes] sẽ bị nền tảng TỪ CHỐI (tin báo lỗi) — app
+  /// cần chặn hoặc báo trước khi gửi.
+  bool imageFails(String fileName, int bytes) {
+    final c = imageConstraints;
+    return c != null && c.failsOutside && !c.allows(fileName, bytes);
+  }
 
   bool get canSendText => canSend && text != OutboundMode.none;
   bool get canSendImages => canSendText && image != OutboundMode.none;

@@ -75,6 +75,60 @@ void main() {
       expect(cap.sendsFileNatively('lon.pdf', 5242881), isFalse);
     });
 
+    // OutboundCapabilities.php @ fa8acbc: Zalo OA có `image_constraints`
+    // (JPG/PNG ≤ 1MB, fallback `failed`) và `fallback: link` cho tệp.
+    test(
+      'image_constraints + fallback: GIF / ảnh >1MB sẽ LỖI, không thành link',
+      () {
+        final cap = OutboundCapabilities.fromJson({
+          'can_send': true,
+          'text': 'native',
+          'image': 'native',
+          'file': 'docs_only',
+          'audio': 'link',
+          'video': 'link',
+          'file_constraints': {
+            'native_extensions': ['pdf', 'doc', 'docx', 'csv'],
+            'native_max_bytes': 5242880,
+            'fallback': 'link',
+          },
+          'image_constraints': {
+            'native_extensions': ['jpg', 'jpeg', 'png'],
+            'native_max_bytes': 1048576,
+            'fallback': 'failed',
+          },
+        })!;
+        expect(cap.fileConstraints!.fallback, 'link');
+        expect(cap.imageConstraints!.fallback, 'failed');
+        expect(cap.imageConstraints!.nativeMaxBytes, 1048576);
+        expect(cap.imageFails('a.JPG', 500 * 1024), isFalse);
+        expect(cap.imageFails('a.gif', 10), isTrue);
+        expect(cap.imageFails('a.png', 1048577), isTrue);
+      },
+    );
+
+    test('image_constraints null (Facebook) → không báo lỗi ảnh trước', () {
+      final cap = OutboundCapabilities.fromJson({
+        'can_send': true,
+        'text': 'native',
+        'image': 'native',
+        'file': 'native',
+        'audio': 'native',
+        'video': 'native',
+        'file_constraints': null,
+        'image_constraints': null,
+      })!;
+      expect(cap.imageConstraints, isNull);
+      expect(cap.fileConstraints, isNull);
+      expect(cap.imageFails('a.gif', 20 << 20), isFalse);
+    });
+
+    test('bỏ chặn: server XOÁ khoá blocked_at → isBlocked false', () {
+      final c = Conversation.fromJson({'id': 'c1', 'channel': 'zalo'});
+      expect(c.blockedAt, isNull);
+      expect(c.isBlocked, isFalse);
+    });
+
     test(
       'docs_only thiếu file_constraints (API cũ) → mặc định PDF/DOC/DOCX/CSV ≤5MB',
       () {
