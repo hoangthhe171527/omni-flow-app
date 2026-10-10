@@ -126,8 +126,14 @@ String _group(int n) {
 String formatCompactVnd(double v) {
   final sign = v < 0 ? '-' : '';
   final a = v.abs();
-  if (a >= 1e9) return '$sign${_trim(a / 1e9, 2)} tỷ';
-  if (a >= 1e6) return '$sign${_trim(a / 1e6, a >= 1e8 ? 0 : 1)} tr';
+  // Làm tròn TRƯỚC khi chọn đơn vị: 999.999.999 → '1 tỷ', 999.999,6 → '1 tr'.
   final r = a.round();
+  if (r >= 1e6) {
+    final m = a / 1e6;
+    final f = m >= 100 ? 1 : 10;
+    final rm = (m * f).round() / f;
+    if (rm < 1000) return '$sign${_trim(rm, f == 1 ? 0 : 1)} tr';
+    return '$sign${_trim(a / 1e9, 2)} tỷ';
+  }
   return r == 0 ? '0 đ' : '$sign${_group(r)} đ';
 }

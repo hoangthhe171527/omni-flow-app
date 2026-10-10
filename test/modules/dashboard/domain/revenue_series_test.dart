@@ -109,6 +109,15 @@ void main() {
     expect(formatCompactVnd(-8.3e8), '-830 tr');
   });
 
+  test('formatCompactVnd làm tròn trước khi chọn đơn vị', () {
+    expect(formatCompactVnd(999999999), '1 tỷ');
+    expect(formatCompactVnd(999999.6), '1 tr');
+    expect(formatCompactVnd(999.6e6), '1 tỷ');
+    expect(formatCompactVnd(99.96e6), '100 tr');
+    expect(formatCompactVnd(-999999999), '-1 tỷ');
+    expect(formatCompactVnd(999999.4), '999.999 đ');
+  });
+
   test('summary có/không chỉ tiêu', () {
     final x = RevenueSeries(
       range: RevenueRange.month,
