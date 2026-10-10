@@ -13,6 +13,7 @@ import 'package:omni_app/modules/tasks/data/tasks_api.dart';
 import 'package:omni_app/modules/tasks/domain/task.dart';
 import 'package:omni_app/modules/tasks/domain/task_permissions.dart';
 import 'package:omni_app/modules/tasks/presentation/task_detail_page.dart';
+import 'package:omni_app/modules/tasks/presentation/widgets/subtask_row.dart';
 import 'package:omni_app/security/permissions/access_policy.dart';
 
 /// Dựng checklist ngay trên điện thoại.
@@ -77,7 +78,15 @@ void main() {
 
   Future<void> openActions(WidgetTester tester) async {
     // Hàng thứ hai ("Body ngaoi") — cái gõ nhầm.
-    await tester.tap(find.byIcon(Icons.more_horiz_rounded).last);
+    // Chỉ tìm trong các hàng việc con: header màn cũng có ⋯ (Tuỳ chọn công việc).
+    await tester.tap(
+      find
+          .descendant(
+            of: find.byType(SubtaskRow),
+            matching: find.byIcon(Icons.more_horiz_rounded),
+          )
+          .last,
+    );
     await tester.pumpAndSettle();
   }
 

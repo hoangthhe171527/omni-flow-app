@@ -25,7 +25,8 @@ class OmniTaskTones {
     required this.priorityNormal,
     required this.priorityLow,
     required this.dueSoonBar,
-  });
+    required List<Color> sectionColors,
+  }) : _sectionColors = sectionColors;
 
   /// Hạn hôm nay.
   final OmniTaskTone today;
@@ -51,6 +52,13 @@ class OmniTaskTones {
 
   /// Đoạn "trễ" của thanh tiến độ dự án.
   final Color dueSoonBar;
+
+  final List<Color> _sectionColors;
+
+  /// Ô vuông màu của nhóm việc thứ [index] trong bảng chọn "Chuyển nhóm việc"
+  /// (`TaskDetail.dc.html`): năm màu, lặp vòng theo thứ tự nhóm.
+  Color sectionColor(int index) =>
+      _sectionColors[index % _sectionColors.length];
 
   static const _dueSoonBar = Color(0xFFE8890C);
 
@@ -83,6 +91,13 @@ class OmniTaskTones {
     priorityNormal: _dueSoonBar,
     priorityLow: Color(0xFF8A95A8),
     dueSoonBar: _dueSoonBar,
+    sectionColors: [
+      Color(0xFF8A95A8),
+      Color(0xFF2563EB),
+      Color(0xFFE8890C),
+      Color(0xFF7C3AED),
+      Color(0xFF0A7D76),
+    ],
   );
 
   static OmniTaskTone _dark(Color foreground, Color surface) => OmniTaskTone(
@@ -107,6 +122,13 @@ class OmniTaskTones {
       priorityNormal: const Color(0xFFF0A23C),
       priorityLow: const Color(0xFF9AA8BD),
       dueSoonBar: const Color(0xFFF0A23C),
+      sectionColors: const [
+        Color(0xFF9AA8BD),
+        Color(0xFF60A5FA),
+        Color(0xFFF0A23C),
+        Color(0xFFA78BFA),
+        Color(0xFF2DD4BF),
+      ],
     );
   }
 }
