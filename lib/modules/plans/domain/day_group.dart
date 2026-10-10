@@ -63,10 +63,11 @@ class DayGroup {
     ];
   }
 
-  /// `HÔM NAY` / `HÔM QUA` / `05/01`.
+  /// `Hôm nay` / `Hôm qua` / `Thứ Tư 07/10`.
   ///
   /// Hai ngày gần nhất gọi bằng tên vì đó là hai ngày người ta thật sự hỏi;
-  /// xa hơn thì một con số ngày/tháng đọc nhanh hơn "3 ngày trước".
+  /// xa hơn thì thứ + ngày/tháng đọc nhanh hơn "3 ngày trước". Chữ HOA là việc
+  /// của tiêu đề (`DayHeader`), không phải của dữ liệu.
   String get label {
     final now = DateTime.now();
 
@@ -75,15 +76,29 @@ class DayGroup {
         '${d.month.toString().padLeft(2, '0')}-'
         '${d.day.toString().padLeft(2, '0')}';
 
-    if (day == iso(now)) return 'HÔM NAY';
-    if (day == iso(now.subtract(const Duration(days: 1)))) return 'HÔM QUA';
+    if (day == iso(now)) return 'Hôm nay';
+    if (day == iso(now.subtract(const Duration(days: 1)))) return 'Hôm qua';
 
     final parts = day.split('-');
+    if (parts.length != 3) return day;
 
-    return parts.length == 3 ? '${parts[2]}/${parts[1]}' : day;
+    final date = DateTime.tryParse(day);
+    const weekdays = [
+      'Thứ Hai',
+      'Thứ Ba',
+      'Thứ Tư',
+      'Thứ Năm',
+      'Thứ Sáu',
+      'Thứ Bảy',
+      'Chủ Nhật',
+    ];
+
+    return date == null
+        ? '${parts[2]}/${parts[1]}'
+        : '${weekdays[date.weekday - 1]} ${parts[2]}/${parts[1]}';
   }
 
-  /// `HÔM NAY · 12 công đoạn · 2 cây xong`
+  /// `Hôm nay · 12 công đoạn · 2 cây xong`
   ///
   /// Bỏ vế nào bằng 0: khoe một số 0 làm dòng dài ra mà không nói thêm gì, và
   /// một ngày chỉ có công đoạn xong là ngày bình thường của xưởng.

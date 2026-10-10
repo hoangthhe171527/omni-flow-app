@@ -61,6 +61,7 @@ class OmniAppBar extends StatelessWidget implements PreferredSizeWidget {
     this.backgroundColor,
     this.titleSpacing,
     this.toolbarHeight,
+    this.centerTitle = false,
   });
 
   final String title;
@@ -84,6 +85,10 @@ class OmniAppBar extends StatelessWidget implements PreferredSizeWidget {
   final Color? backgroundColor;
   final double? titleSpacing;
   final double? toolbarHeight;
+
+  /// Tiêu đề căn GIỮA cỡ thanh trên (17/600) thay vì tiêu đề lớn canh trái:
+  /// dành cho màn gốc kiểu "Dòng việc" (`Timeline.dc.html`).
+  final bool centerTitle;
 
   @override
   Size get preferredSize => Size.fromHeight(
@@ -116,8 +121,10 @@ class OmniAppBar extends StatelessWidget implements PreferredSizeWidget {
       title: Text(title, maxLines: 1, overflow: TextOverflow.ellipsis),
       titleTextStyle: canPop
           ? null
-          : OmniType.largeTitle.copyWith(color: scheme.onSurface),
-      centerTitle: canPop ? null : false,
+          : (centerTitle ? OmniType.navTitle : OmniType.largeTitle).copyWith(
+              color: scheme.onSurface,
+            ),
+      centerTitle: centerTitle ? true : (canPop ? null : false),
       bottom: bottom,
       backgroundColor: backgroundColor,
       titleSpacing: titleSpacing,

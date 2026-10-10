@@ -62,9 +62,10 @@ void main() {
       entry('c', FeedKind.subtaskCompleted, '2026-01-05'),
     ]);
 
-    expect(groups[0].label, 'HÔM NAY');
-    expect(groups[1].label, 'HÔM QUA');
-    expect(groups[2].label, '05/01');
+    expect(groups[0].label, 'Hôm nay');
+    expect(groups[1].label, 'Hôm qua');
+    // 2026-01-05 là thứ Hai.
+    expect(groups[2].label, 'Thứ Hai 05/01');
   });
 
   test('dòng không có ngày thì BỎ QUA chứ không đoán', () {

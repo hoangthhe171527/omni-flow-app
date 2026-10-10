@@ -162,7 +162,7 @@ void main() {
     }
 
     Finder faded() => find.ancestor(
-      of: find.text('Hằng Ni đã xong Lên dây'),
+      of: find.text('Hằng Ni · Lên dây'),
       matching: find.byType(Opacity),
     );
 
@@ -172,7 +172,7 @@ void main() {
 
       await arrive(tester);
 
-      expect(find.text('Hằng Ni đã xong Lên dây'), findsOneWidget);
+      expect(find.text('Hằng Ni · Lên dây'), findsOneWidget);
       expect(faded(), findsOneWidget);
     });
 
@@ -184,7 +184,7 @@ void main() {
 
       await arrive(tester);
 
-      expect(find.text('Hằng Ni đã xong Lên dây'), findsOneWidget);
+      expect(find.text('Hằng Ni · Lên dây'), findsOneWidget);
       expect(faded(), findsNothing);
     });
   });
