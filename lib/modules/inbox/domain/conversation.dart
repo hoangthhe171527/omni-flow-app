@@ -1,6 +1,7 @@
 import '../../../core/domain/channel.dart';
 import '../../../core/utils/formatters.dart';
 import '../../../core/utils/json.dart';
+import 'outbound_capabilities.dart';
 
 enum ConversationStatus {
   open,
@@ -61,6 +62,10 @@ class Conversation {
     this.isGroup = false,
     this.groupName,
     this.groupMembers = const [],
+    this.isPinned = false,
+    this.isMuted = false,
+    this.blockedAt,
+    this.outboundCapabilities,
   });
 
   /// Bản sao với các trường đổi (trường không truyền giữ nguyên). Mọi trường
@@ -85,6 +90,10 @@ class Conversation {
     bool? isGroup,
     String? groupName,
     List<GroupMember>? groupMembers,
+    bool? isPinned,
+    bool? isMuted,
+    DateTime? blockedAt,
+    OutboundCapabilities? outboundCapabilities,
   }) => Conversation(
     id: id ?? this.id,
     channel: channel ?? this.channel,
@@ -104,6 +113,10 @@ class Conversation {
     isGroup: isGroup ?? this.isGroup,
     groupName: groupName ?? this.groupName,
     groupMembers: groupMembers ?? this.groupMembers,
+    isPinned: isPinned ?? this.isPinned,
+    isMuted: isMuted ?? this.isMuted,
+    blockedAt: blockedAt ?? this.blockedAt,
+    outboundCapabilities: outboundCapabilities ?? this.outboundCapabilities,
   );
 
   /// Bỏ người phụ trách. `copyWith(assigneeId: null)` GIỮ giá trị cũ (null =
@@ -127,6 +140,10 @@ class Conversation {
     isGroup: isGroup,
     groupName: groupName,
     groupMembers: groupMembers,
+    isPinned: isPinned,
+    isMuted: isMuted,
+    blockedAt: blockedAt,
+    outboundCapabilities: outboundCapabilities,
   );
 
   /// The same thread with its unread counter cleared.
@@ -171,6 +188,14 @@ class Conversation {
           .mapList('group_members')
           .map(GroupMember.fromJson)
           .toList(),
+      // Hộp thư mobile: cờ THEO NGƯỜI XEM do server tính (`InboxDTO::forViewer`).
+      // Mảng thô `pinned_by`/`muted_by` không bao giờ ra ngoài — đừng đọc chúng.
+      isPinned: json.flag('is_pinned'),
+      isMuted: json.flag('is_muted'),
+      blockedAt: DateUtilsX.parse(json['blocked_at']),
+      outboundCapabilities: OutboundCapabilities.fromJson(
+        json['outbound_capabilities'],
+      ),
     );
   }
 
@@ -198,6 +223,20 @@ class Conversation {
   final String? groupName;
   final List<GroupMember> groupMembers;
 
+  /// Người xem đang ghim hội thoại này (mục "Đã ghim").
+  final bool isPinned;
+
+  /// Người xem đã tắt thông báo hội thoại này.
+  final bool isMuted;
+
+  /// Đã chặn khách (cờ CHUNG của cả đội, chỉ trong CRM — không chặn trên nền
+  /// tảng). Hội thoại đã chặn bị ẩn khỏi danh sách/facet mặc định.
+  final DateTime? blockedAt;
+
+  /// Kênh gửi đi được gì; null = API cũ chưa có khoá.
+  final OutboundCapabilities? outboundCapabilities;
+
+  bool get isBlocked => blockedAt != null;
   bool get isUnassigned => assigneeId == null || assigneeId!.isEmpty;
   bool get isUnread => unread > 0;
   bool get isLinkedToCustomer => customerId != null && customerId!.isNotEmpty;

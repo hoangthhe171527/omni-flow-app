@@ -9,7 +9,11 @@ enum InboxQuickFilter {
   mine,
   unassigned,
   urgent,
-  closed;
+  closed,
+
+  /// Hội thoại đã chặn (`blocked=1`). Chỉ hiện chip khi `access.canBlock`;
+  /// facet không đếm nên chip không có số.
+  blocked;
 
   String get label => switch (this) {
     InboxQuickFilter.all => 'Tất cả',
@@ -18,6 +22,7 @@ enum InboxQuickFilter {
     InboxQuickFilter.unassigned => 'Chưa gán',
     InboxQuickFilter.urgent => 'Khẩn',
     InboxQuickFilter.closed => 'Đã đóng',
+    InboxQuickFilter.blocked => 'Đã chặn',
   };
 }
 
@@ -90,6 +95,8 @@ class InboxFilter {
           'priority': 'urgent',
         },
         InboxQuickFilter.closed => const {'status': 'closed'},
+        // Không kèm `status`: hội thoại đã chặn ở trạng thái nào cũng hiện.
+        InboxQuickFilter.blocked => const {'blocked': '1'},
       },
     };
   }
@@ -109,6 +116,11 @@ class InboxFilter {
     if (connectionId != null && c.connectionId != connectionId) return false;
     if (label != null && !c.tags.contains(label)) return false;
 
+    // Server ẩn hội thoại đã chặn khỏi mọi danh sách trừ `blocked=1`
+    // (`MongoInboxRepository::applyFilters`).
+    if (quick == InboxQuickFilter.blocked) return c.isBlocked;
+    if (c.isBlocked) return false;
+
     final open = c.status == ConversationStatus.open;
     final assignee = c.assigneeId ?? '';
     return switch (quick) {
@@ -121,6 +133,7 @@ class InboxFilter {
       InboxQuickFilter.unassigned => open && assignee.isEmpty,
       InboxQuickFilter.urgent => open && c.urgent,
       InboxQuickFilter.closed => c.status == ConversationStatus.closed,
+      InboxQuickFilter.blocked => c.isBlocked,
     };
   }
 
@@ -189,5 +202,6 @@ class InboxFacets {
         InboxQuickFilter.unassigned => unassigned,
         InboxQuickFilter.urgent => urgent,
         InboxQuickFilter.closed => closed,
+        InboxQuickFilter.blocked => 0,
       };
 }

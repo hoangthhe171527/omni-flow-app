@@ -165,6 +165,7 @@ class _FakeInboxApi extends InboxApi {
     required Map<String, dynamic> query,
     String? before,
     int perPage = AppConfig.defaultPerPage,
+    bool? pinned,
   }) async {
     listCalls++;
     return CursorPaged(items: conversations);

@@ -33,6 +33,7 @@ class _InboxApi extends InboxApi {
     required Map<String, dynamic> query,
     String? before,
     int perPage = AppConfig.defaultPerPage,
+    bool? pinned,
   }) async => const CursorPaged(items: []);
 
   @override

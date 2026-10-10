@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:omni_app/core/domain/channel.dart';
 import 'package:omni_app/modules/inbox/domain/conversation.dart';
+import 'package:omni_app/modules/inbox/domain/outbound_capabilities.dart';
 
 /// Mọi trường của [Conversation], theo thứ tự khai báo.
 List<Object?> _fields(Conversation c) => [
@@ -24,6 +25,10 @@ List<Object?> _fields(Conversation c) => [
   c.isGroup,
   c.groupName,
   c.groupMembers,
+  c.isPinned,
+  c.isMuted,
+  c.blockedAt,
+  c.outboundCapabilities,
 ];
 
 void main() {
@@ -46,6 +51,17 @@ void main() {
     isGroup: true,
     groupName: 'Nhóm khách',
     groupMembers: const [GroupMember(id: 'm1', name: 'A', avatar: 'av')],
+    isPinned: true,
+    isMuted: true,
+    blockedAt: DateTime.utc(2026, 10, 10, 3),
+    outboundCapabilities: OutboundCapabilities.fromJson(const {
+      'can_send': true,
+      'text': 'native',
+      'image': 'native',
+      'file': 'docs_only',
+      'audio': 'link',
+      'video': 'link',
+    }),
   );
 
   test(

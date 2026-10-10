@@ -454,6 +454,7 @@ class _FakeInboxApi extends InboxApi {
     required Map<String, dynamic> query,
     String? before,
     int perPage = AppConfig.defaultPerPage,
+    bool? pinned,
   }) async {
     final page = before == null ? 1 : int.parse(before.substring(1));
     calls.add((query: query, before: before, page: page));

@@ -59,6 +59,8 @@ class Message {
     this.replyToText,
     this.replyToAuthorName,
     this.attachments = const [],
+    this.teamReactions = const [],
+    this.errorCode,
   });
 
   factory Message.fromJson(Map<String, dynamic> json) {
@@ -74,6 +76,7 @@ class Message {
           DateUtilsX.parse(json['created_at']),
       status: parseStatus(json.str('status')),
       error: json.str('error'),
+      errorCode: json.str('error_code'),
       recalled: json.flag('recalled'),
       pinned: json.flag('pinned'),
       reaction: json.str('reaction'),
@@ -88,6 +91,10 @@ class Message {
       attachments: json
           .mapList('attachments')
           .map(MessageAttachment.fromJson)
+          .toList(),
+      teamReactions: json
+          .mapList('team_reactions')
+          .map(TeamReaction.fromJson)
           .toList(),
     );
   }
@@ -122,6 +129,16 @@ class Message {
   final String? replyToAuthorName;
 
   final List<MessageAttachment> attachments;
+
+  /// Cảm xúc NỘI BỘ của đội (không gửi ra nền tảng). Tách khỏi [reaction] —
+  /// cảm xúc của KHÁCH.
+  final List<TeamReaction> teamReactions;
+
+  /// Mã máy của lỗi gửi (`channel_send_unsupported`…); null khi không lỗi.
+  final String? errorCode;
+
+  /// Tin lỗi vì kênh không có đường gửi đi: gửi lại không bao giờ thành công.
+  bool get isChannelUnsupported => errorCode == 'channel_send_unsupported';
 
   bool get isOutbound => author == MessageAuthor.agent;
   bool get isNote => author == MessageAuthor.note;
@@ -216,6 +233,8 @@ class Message {
     String? replyToAuthorName,
     bool? pinned,
     List<MessageAttachment>? attachments,
+    List<TeamReaction>? teamReactions,
+    String? errorCode,
   }) {
     return Message(
       id: id ?? this.id,
@@ -235,6 +254,30 @@ class Message {
       replyToText: replyToText ?? this.replyToText,
       replyToAuthorName: replyToAuthorName ?? this.replyToAuthorName,
       attachments: attachments ?? this.attachments,
+      teamReactions: teamReactions ?? this.teamReactions,
+      errorCode: errorCode ?? this.errorCode,
     );
   }
+}
+
+/// Một cảm xúc nội bộ (`team_reactions[]`): mỗi người tối đa một emoji.
+class TeamReaction {
+  const TeamReaction({
+    required this.userId,
+    required this.emoji,
+    this.userName,
+    this.at,
+  });
+
+  factory TeamReaction.fromJson(Map<String, dynamic> json) => TeamReaction(
+    userId: json.strOr('user_id', ''),
+    userName: json.str('user_name'),
+    emoji: json.strOr('emoji', ''),
+    at: DateUtilsX.parse(json['at']),
+  );
+
+  final String userId;
+  final String? userName;
+  final String emoji;
+  final DateTime? at;
 }
