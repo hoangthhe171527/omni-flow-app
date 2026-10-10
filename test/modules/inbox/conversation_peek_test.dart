@@ -12,6 +12,7 @@ import 'package:omni_app/core/network/api_client.dart';
 import 'package:omni_app/core/network/api_envelope.dart';
 import 'package:omni_app/core/realtime/realtime_client.dart';
 import 'package:omni_app/design/theme/omni_theme.dart';
+import 'package:omni_app/design/tokens/tokens.dart';
 import 'package:omni_app/modules/inbox/data/inbox_api.dart';
 import 'package:omni_app/modules/inbox/domain/conversation.dart';
 import 'package:omni_app/modules/inbox/domain/inbox_filter.dart';
@@ -36,6 +37,7 @@ void main() {
   Widget host({
     Set<String> permissions = const {'inbox.read', 'inbox.write'},
     bool reduceMotion = false,
+    bool dark = false,
   }) => ProviderScope(
     overrides: [
       inboxApiProvider.overrideWithValue(api),
@@ -55,7 +57,9 @@ void main() {
       ),
     ],
     child: MaterialApp(
-      theme: OmniTheme.light(TargetPlatform.android),
+      theme: dark
+          ? OmniTheme.dark(TargetPlatform.android)
+          : OmniTheme.light(TargetPlatform.android),
       builder: reduceMotion
           ? (c, child) => MediaQuery(
               data: MediaQuery.of(c).copyWith(disableAnimations: true),
@@ -70,9 +74,10 @@ void main() {
     WidgetTester tester, {
     Set<String> permissions = const {'inbox.read', 'inbox.write'},
     bool reduceMotion = false,
+    bool dark = false,
   }) async {
     await tester.pumpWidget(
-      host(permissions: permissions, reduceMotion: reduceMotion),
+      host(permissions: permissions, reduceMotion: reduceMotion, dark: dark),
     );
     await tester.pump();
     await tester.pump();
@@ -107,6 +112,24 @@ void main() {
     expect(find.text('Lưu trữ'), findsOneWidget);
     expect(find.text('Tắt thông báo'), findsNothing, reason: 'API chưa có');
     expect(find.text('Đánh dấu chưa đọc'), findsNothing, reason: 'API chưa có');
+    await closePage(tester);
+  });
+
+  Color labelColor(WidgetTester tester, String label) =>
+      tester.widget<Text>(find.text(label)).style!.color!;
+
+  testWidgets('mục huỷ (Lưu trữ): đỏ đậm khi sáng, dangerTextDark khi tối', (
+    tester,
+  ) async {
+    api.conversations = [_conversation('c1', 'Lan Anh', unread: 2)];
+    await open(tester);
+    await holdRow(tester, 'Lan Anh');
+    expect(labelColor(tester, 'Lưu trữ'), const Color(0xFFB42318));
+    await closePage(tester);
+
+    await open(tester, dark: true);
+    await holdRow(tester, 'Lan Anh');
+    expect(labelColor(tester, 'Lưu trữ'), OmniColors.dangerTextDark);
     await closePage(tester);
   });
 

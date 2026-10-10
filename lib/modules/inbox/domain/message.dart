@@ -151,7 +151,8 @@ class Message {
       author: author,
       text: text,
       sentAt: DateTime.now(),
-      status: isNote ? DeliveryStatus.none : DeliveryStatus.queued,
+      // Ghi chú không bao giờ hiện trong luồng tin nên không có nút gửi lại.
+      status: DeliveryStatus.queued,
       replyToMessageId: replyToMessageId,
       replyToText: replyToText,
       replyToAuthorName: replyToAuthorName,

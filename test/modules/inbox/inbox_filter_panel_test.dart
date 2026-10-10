@@ -9,6 +9,7 @@ import 'package:omni_app/core/network/api_client.dart';
 import 'package:omni_app/core/network/api_envelope.dart';
 import 'package:omni_app/core/realtime/realtime_client.dart';
 import 'package:omni_app/design/theme/omni_theme.dart';
+import 'package:omni_app/design/tokens/tokens.dart';
 import 'package:omni_app/modules/inbox/application/inbox_providers.dart';
 import 'package:omni_app/modules/inbox/data/inbox_api.dart';
 import 'package:omni_app/modules/inbox/presentation/widgets/inbox_filter_bar.dart';
@@ -185,6 +186,118 @@ void main() {
     expect(tester.widget<TextField>(field).controller!.text, '');
 
     await closePage(tester);
+  });
+
+  /// Hàng tìm + panel mở dựng trần, không qua InboxPage: chỉ soi màu của
+  /// chính thanh lọc.
+  Widget barHost(ThemeData theme) => ProviderScope(
+    overrides: [
+      inboxApiProvider.overrideWithValue(api),
+      sessionProvider.overrideWithValue(
+        Session(
+          status: SessionStatus.authenticated,
+          user: const SessionUser(id: 'u1', fullName: 'Kiệt', email: 'k@x.vn'),
+          tenant: const SessionTenant(id: 't1', name: 'Xưởng đàn'),
+          policy: AccessPolicy(const {'inbox.read', 'inbox.write'}),
+        ),
+      ),
+    ],
+    child: MaterialApp(
+      theme: theme,
+      home: Scaffold(
+        body: Column(
+          children: [
+            InboxSearchRow(filtersOpen: false, onToggleFilters: () {}),
+            const InboxFilterPanel(open: true),
+          ],
+        ),
+      ),
+    ),
+  );
+
+  /// Mọi màu nền / viền / bóng mà thanh lọc tự vẽ.
+  List<Color> surfaceColors(WidgetTester tester) {
+    final roots = find.byWidgetPredicate(
+      (w) => w is InboxSearchRow || w is InboxFilterPanel,
+    );
+    final colors = <Color>[];
+    void decoration(Decoration? d) {
+      if (d is! BoxDecoration) return;
+      if (d.color != null) colors.add(d.color!);
+      for (final shadow in d.boxShadow ?? const <BoxShadow>[]) {
+        colors.add(shadow.color);
+      }
+      final border = d.border;
+      if (border is Border) {
+        for (final side in [
+          border.top,
+          border.right,
+          border.bottom,
+          border.left,
+        ]) {
+          if (side.style != BorderStyle.none) colors.add(side.color);
+        }
+      }
+    }
+
+    for (final w in tester.widgetList<Container>(
+      find.descendant(of: roots, matching: find.byType(Container)),
+    )) {
+      decoration(w.decoration);
+    }
+    for (final m in tester.widgetList<Material>(
+      find.descendant(of: roots, matching: find.byType(Material)),
+    )) {
+      if (m.color != null) colors.add(m.color!);
+      final shape = m.shape;
+      if (shape is RoundedRectangleBorder) colors.add(shape.side.color);
+    }
+    return colors;
+  }
+
+  testWidgets('giao diện tối: hàng tìm và panel mở không có nền trắng', (
+    tester,
+  ) async {
+    await tester.pumpWidget(barHost(OmniTheme.dark(TargetPlatform.android)));
+    await tester.pumpAndSettle();
+    // Bật một bộ lọc để huy hiệu đếm (viền) và chip được chọn cùng hiện.
+    ProviderScope.containerOf(
+      tester.element(find.byType(InboxSearchRow)),
+    ).read(inboxFilterProvider.notifier).setQuick(InboxQuickFilter.urgent);
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('inbox-filter-count')), findsOneWidget);
+
+    final colors = surfaceColors(tester);
+    expect(colors, isNotEmpty);
+    expect(
+      colors.where((c) => c.toARGB32() == 0xFFFFFFFF),
+      isEmpty,
+      reason: 'nền/viền trắng tinh lọt vào giao diện tối',
+    );
+    expect(colors, isNot(contains(OmniColors.border)));
+    expect(colors, isNot(contains(OmniColors.muted)));
+    expect(colors, isNot(contains(OmniColors.accent)));
+    final field = tester.widget<TextField>(find.byType(TextField));
+    expect(field.style!.color, OmniColors.darkForeground);
+  });
+
+  testWidgets('giao diện sáng giữ nguyên màu cũ', (tester) async {
+    await tester.pumpWidget(barHost(OmniTheme.light(TargetPlatform.android)));
+    await tester.pumpAndSettle();
+    ProviderScope.containerOf(
+      tester.element(find.byType(InboxSearchRow)),
+    ).read(inboxFilterProvider.notifier).setQuick(InboxQuickFilter.urgent);
+    await tester.pumpAndSettle();
+    final colors = surfaceColors(tester);
+    expect(colors, contains(Colors.white));
+    expect(colors, contains(OmniColors.border));
+    expect(colors, contains(OmniColors.muted));
+    expect(colors, contains(OmniColors.accent));
+    expect(colors, contains(OmniColors.primary));
+    expect(colors, contains(OmniColors.destructive));
+    expect(colors, contains(const Color(0x1F0B1A33)));
+    final field = tester.widget<TextField>(find.byType(TextField));
+    expect(field.style!.color, OmniColors.ink);
   });
 }
 

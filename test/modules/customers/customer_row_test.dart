@@ -165,6 +165,13 @@ void main() {
     expect(zaloNumber('+84 0901 234 567'), '84901234567');
   });
 
+  test('tel bỏ số 0 gõ thừa sau +84 / 0084, như zaloNumber', () {
+    expect(dialNumber('+84 0901 234 567'), '+84901234567');
+    expect(dialNumber('0084 0901 234 567'), '+84901234567');
+    expect(dialNumber('+84 901 234 567'), '+84901234567');
+    expect(dialNumber('0901 234 567'), '0901234567', reason: 'nội địa giữ 0');
+  });
+
   test('hasPhone cần có chữ số', () {
     Customer withPhone(String phone) =>
         Customer.fromJson({'id': 'c1', 'primary_contact_phone': phone});

@@ -243,13 +243,17 @@ class _QuickActions extends StatelessWidget {
 }
 
 /// Số để quay: bỏ mọi ký tự không phải chữ số, giữ dấu `+` đứng đầu; tiền tố
-/// quốc tế `00` đổi thành `+`.
+/// quốc tế `00` đổi thành `+`, và `+84 0…` (gõ thừa số 0 sau mã nước, như
+/// [zaloNumber]) → `+84…`.
 String dialNumber(String raw) {
   final trimmed = raw.trim();
-  final digits = trimmed.replaceAll(RegExp(r'\D'), '');
-  if (trimmed.startsWith('+')) return '+$digits';
-  if (digits.startsWith('00')) return '+${digits.substring(2)}';
-  return digits;
+  var digits = trimmed.replaceAll(RegExp(r'\D'), '');
+  if (!trimmed.startsWith('+')) {
+    if (!digits.startsWith('00')) return digits;
+    digits = digits.substring(2);
+  }
+  if (digits.startsWith('840')) digits = '84${digits.substring(3)}';
+  return '+$digits';
 }
 
 /// Số cho zalo.me: chỉ chữ số kèm mã nước, không `+`. Tiền tố quốc tế `00`

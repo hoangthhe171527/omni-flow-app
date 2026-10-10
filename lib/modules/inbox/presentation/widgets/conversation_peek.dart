@@ -37,8 +37,11 @@ Color _muted(BuildContext context) => OmniColors.byBrightness(
   Theme.of(context).colorScheme.onSurfaceVariant,
 );
 
-Color _danger(BuildContext context) =>
-    OmniFeatureTones.of(context, OmniHue.red).foreground;
+Color _danger(BuildContext context) => OmniColors.byBrightness(
+  context,
+  OmniFeatureTones.light(OmniHue.red).foreground,
+  OmniColors.dangerTextDark,
+);
 
 /// Bấm giữ một dòng → khung xem trước tin gần nhất + menu thao tác, theo
 /// `InboxPeek.dc.html`. Bấm khung mở hội thoại ([onOpen]); bấm ra ngoài đóng.

@@ -9,8 +9,6 @@ import '../../application/inbox_providers.dart';
 import '../../domain/inbox_filter.dart';
 import '../inbox_page.dart';
 
-const _ink = OmniColors.ink;
-
 Duration _fade(BuildContext context) =>
     OmniMotion.enabled(context) ? kThemeChangeDuration : Duration.zero;
 
@@ -20,7 +18,6 @@ InteractiveInkFeatureFactory? _splash(BuildContext context) =>
 
 Color? _highlight(BuildContext context) =>
     OmniMotion.enabled(context) ? null : Colors.transparent;
-const _line = OmniColors.border;
 
 /// Hàng tìm kiếm của hộp thư: ô tìm, nút bộ lọc (có huy hiệu đếm) và các nút
 /// riêng của màn (kết nối kênh, chọn nhiều) xếp sau.
@@ -135,20 +132,21 @@ class _SearchFieldState extends ConsumerState<_SearchField> {
     // không chạy mà vẫn có thể còn lượt gõ đang chờ.
     ref.listen<int>(inboxFilterResetsProvider, (_, _) => _external(''));
 
+    final scheme = Theme.of(context).colorScheme;
     return Container(
       height: 36,
       padding: const EdgeInsets.only(left: 10),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: scheme.surface,
         borderRadius: BorderRadius.circular(6),
-        border: Border.all(color: _line),
+        border: Border.all(color: scheme.outlineVariant),
       ),
       child: Row(
         children: [
-          const Icon(
+          Icon(
             Icons.search_rounded,
             size: OmniIconSize.md,
-            color: OmniColors.mutedForeground,
+            color: scheme.onSurfaceVariant,
           ),
           const SizedBox(width: 8),
           Expanded(
@@ -156,7 +154,7 @@ class _SearchFieldState extends ConsumerState<_SearchField> {
               controller: _controller,
               onChanged: _changed,
               textInputAction: TextInputAction.search,
-              style: OmniType.input.copyWith(color: _ink),
+              style: OmniType.input.copyWith(color: scheme.onSurface),
               decoration: InputDecoration(
                 isDense: true,
                 filled: false,
@@ -166,7 +164,7 @@ class _SearchFieldState extends ConsumerState<_SearchField> {
                 contentPadding: EdgeInsets.zero,
                 hintText: 'Tìm khách, tin nhắn…',
                 hintStyle: OmniType.input.copyWith(
-                  color: OmniColors.mutedForeground,
+                  color: scheme.onSurfaceVariant,
                 ),
               ),
             ),
@@ -178,7 +176,7 @@ class _SearchFieldState extends ConsumerState<_SearchField> {
               padding: EdgeInsets.zero,
               constraints: const BoxConstraints.tightFor(width: 32, height: 36),
               iconSize: OmniIconSize.md,
-              color: OmniColors.mutedForeground,
+              color: scheme.onSurfaceVariant,
               icon: const Icon(Icons.close_rounded),
             )
           else
@@ -203,6 +201,9 @@ class _FilterButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    // Mở: nền đảo màu (mực trên giao diện sáng, chữ sáng trên giao diện tối).
+    final ink = scheme.onSurface;
     return Semantics(
       button: true,
       label: 'Bộ lọc',
@@ -221,10 +222,10 @@ class _FilterButton extends StatelessWidget {
               children: [
                 Material(
                   animationDuration: _fade(context),
-                  color: open ? _ink : Colors.white,
+                  color: open ? ink : scheme.surface,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(6),
-                    side: BorderSide(color: open ? _ink : _line),
+                    side: BorderSide(color: open ? ink : scheme.outlineVariant),
                   ),
                   child: InkWell(
                     splashFactory: _splash(context),
@@ -238,7 +239,7 @@ class _FilterButton extends StatelessWidget {
                       child: Icon(
                         Icons.tune_rounded,
                         size: OmniIconSize.md,
-                        color: open ? Colors.white : _ink,
+                        color: open ? scheme.surface : ink,
                       ),
                     ),
                   ),
@@ -257,12 +258,13 @@ class _FilterButton extends StatelessWidget {
                         decoration: BoxDecoration(
                           color: OmniColors.destructive,
                           borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: Colors.white, width: 1.5),
+                          // Vòng tách huy hiệu khỏi nút: cùng màu nền nút.
+                          border: Border.all(color: scheme.surface, width: 1.5),
                         ),
                         child: Text(
                           '$count',
                           style: OmniType.micro.copyWith(
-                            color: Colors.white,
+                            color: scheme.onError,
                             height: 1,
                             fontWeight: FontWeight.w600,
                           ),
@@ -344,12 +346,13 @@ class _PanelBody extends ConsumerWidget {
           channel,
     ];
 
+    final scheme = Theme.of(context).colorScheme;
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.fromLTRB(16, 4, 16, 10),
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        border: Border(bottom: BorderSide(color: _line)),
+      decoration: BoxDecoration(
+        color: scheme.surface,
+        border: Border(bottom: BorderSide(color: scheme.outlineVariant)),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -438,12 +441,13 @@ class _Segments extends StatelessWidget {
     // Đang ở Khẩn / Đã lưu trữ thì không đoạn nào sáng: ẩn vệt trắng.
     final index = found < 0 ? 0 : found;
     final x = items.length == 1 ? 0.0 : -1 + 2 * index / (items.length - 1);
+    final scheme = Theme.of(context).colorScheme;
 
     return Container(
       height: 36,
       padding: const EdgeInsets.all(3),
       decoration: BoxDecoration(
-        color: OmniColors.muted,
+        color: scheme.surfaceContainerHighest,
         borderRadius: BorderRadius.circular(6),
       ),
       child: Stack(
@@ -460,11 +464,15 @@ class _Segments extends StatelessWidget {
                 opacity: found < 0 ? 0 : 1,
                 child: Container(
                   decoration: BoxDecoration(
-                    color: Colors.white,
+                    color: scheme.surface,
                     borderRadius: BorderRadius.circular(4),
-                    boxShadow: const [
+                    boxShadow: [
                       BoxShadow(
-                        color: Color(0x1F0B1A33),
+                        color: OmniColors.byBrightness(
+                          context,
+                          OmniColors.ink.withAlpha(0x1F),
+                          Colors.black.withAlpha(0x52),
+                        ),
                         blurRadius: 3,
                         offset: Offset(0, 1),
                       ),
@@ -490,8 +498,8 @@ class _Segments extends StatelessWidget {
                         style: OmniType.caption.copyWith(
                           fontWeight: FontWeight.w600,
                           color: filter == selected
-                              ? _ink
-                              : OmniColors.mutedForeground,
+                              ? scheme.onSurface
+                              : scheme.onSurfaceVariant,
                         ),
                       ),
                     ),
@@ -518,15 +526,18 @@ class _Chip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
     return Semantics(
       button: true,
       selected: selected,
       child: Material(
         animationDuration: _fade(context),
-        color: selected ? OmniColors.accent : Colors.white,
+        color: selected ? scheme.primaryContainer : scheme.surface,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(4),
-          side: BorderSide(color: selected ? OmniColors.primary : _line),
+          side: BorderSide(
+            color: selected ? scheme.primary : scheme.outlineVariant,
+          ),
         ),
         child: InkWell(
           splashFactory: _splash(context),
@@ -545,8 +556,12 @@ class _Chip extends StatelessWidget {
                 style: OmniType.caption.copyWith(
                   fontWeight: FontWeight.w600,
                   color: selected
-                      ? OmniColors.accentForeground
-                      : OmniColors.secondaryForeground,
+                      ? scheme.onPrimaryContainer
+                      : OmniColors.byBrightness(
+                          context,
+                          OmniColors.secondaryForeground,
+                          scheme.onSurface,
+                        ),
                 ),
               ),
             ),
