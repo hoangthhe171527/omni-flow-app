@@ -408,6 +408,7 @@ class TaskController
   Future<void> setLabels(List<String> labels) => _optimistic(
     (task) => task.copyWith(labels: List.unmodifiable(labels)),
     (api) => api.setLabels(arg, labels),
+    (before, latest) => latest.copyWith(labels: before.labels),
   );
 
   /// Bật/tắt thích của [userId] (người đang đăng nhập). Lạc quan như
@@ -422,6 +423,7 @@ class TaskController
           : [...task.likes, userId],
     ),
     (api) => api.toggleLike(arg),
+    (before, latest) => latest.copyWith(likes: before.likes),
   );
 
   Future<void> setArchived(bool archived) =>
@@ -442,10 +444,24 @@ class TaskController
   /// Server thay CẢ map `custom_fields`, nên gộp giá trị mới vào map đang có
   /// rồi gửi cả map. Gửi riêng một trường là xoá mọi trường khác — trả 200,
   /// không ai biết. null = xoá giá trị của trường này (giữ khoá với null).
-  Future<void> setCustomField(String fieldId, Object? value) => _apply((api) {
-    final current = state.valueOrNull?.task.customFields ?? const {};
-    return api.setCustomFields(arg, {...current, fieldId: value});
-  });
+  ///
+  /// Các lượt nối đuôi nhau: lượt sau chờ lượt trước xong rồi mới gộp vào map
+  /// LÚC ĐÓ (đã có giá trị lượt trước nếu server nhận). Chạy song song thì hai
+  /// lượt cùng gộp từ map cũ, và lượt về sau xoá giá trị của lượt kia.
+  Future<void> setCustomField(String fieldId, Object? value) {
+    final run = _customFieldsQueue.then(
+      (_) => _apply((api) {
+        final current = state.valueOrNull?.task.customFields ?? const {};
+        return api.setCustomFields(arg, {...current, fieldId: value});
+      }),
+    );
+    // Hàng đợi không mang lỗi: lượt trước hỏng thì lượt sau vẫn chạy. Lỗi vẫn
+    // tới chỗ gọi qua `run`.
+    _customFieldsQueue = run.then<void>((_) {}, onError: (Object _) {});
+    return run;
+  }
+
+  Future<void> _customFieldsQueue = Future<void>.value();
 
   Future<void> deleteAttachment(String attachmentId) =>
       _apply((api) => api.deleteAttachment(arg, attachmentId));
@@ -453,11 +469,17 @@ class TaskController
   Future<void> deleteComment(String commentId) =>
       _apply((api) => api.deleteComment(arg, commentId));
 
-  /// Hiện [change] ngay, gọi API, rồi theo bản server. Lỗi thì đặt lại đúng
-  /// bản trước khi đổi và ném lại cho chỗ gọi báo.
+  /// Hiện [change] ngay, gọi API, rồi theo bản server. Lỗi thì ném lại cho chỗ
+  /// gọi báo, sau khi [revert] trả ĐÚNG trường đã đổi về giá trị trước
+  /// ([before]) trên bản MỚI NHẤT ([latest]).
+  ///
+  /// Không đặt lại cả việc về ảnh chụp cũ: trong lúc lượt này bay, một lượt
+  /// ghi khác có thể đã được server xác nhận và nằm trong state — ảnh chụp cũ
+  /// sẽ xoá nó đi mà không ai hay.
   Future<void> _optimistic(
     Task Function(Task task) change,
     Future<Task> Function(TasksApi api) call,
+    Task Function(Task before, Task latest) revert,
   ) async {
     final current = state.valueOrNull;
     if (current == null) return;
@@ -471,7 +493,9 @@ class TaskController
     } on Object {
       if (!_disposed) {
         final latest = state.valueOrNull ?? current;
-        state = AsyncData(latest.copyWith(task: current.task));
+        state = AsyncData(
+          latest.copyWith(task: revert(current.task, latest.task)),
+        );
       }
       rethrow;
     }

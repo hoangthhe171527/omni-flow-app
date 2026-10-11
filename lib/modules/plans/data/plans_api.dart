@@ -357,12 +357,17 @@ class PlanPatch {
     this.cover,
     this.color,
     this.teamId,
+    this.clearTeam = false,
     this.status,
     this.members,
     this.customFields,
   }) : assert(
          cover == null || OmniCovers.names.contains(cover),
          'cover phải là một tên trong OmniCovers.names, nhận "$cover"',
+       ),
+       assert(
+         !(clearTeam && teamId != null),
+         'teamId và clearTeam loại trừ nhau',
        );
 
   final String? name;
@@ -373,6 +378,10 @@ class PlanPatch {
   final String? cover;
   final String? color;
   final String? teamId;
+
+  /// Đưa kế hoạch ra khỏi team ("Không team"): gửi `team_id: null`. Không
+  /// gộp vào [teamId] vì null ở đó nghĩa là "không đổi".
+  final bool clearTeam;
   final PlanStatus? status;
 
   /// Người trong kế hoạch và vai của họ: khoá = id người.
@@ -389,6 +398,7 @@ class PlanPatch {
     if (cover != null) 'cover': cover,
     if (color != null) 'color': color,
     if (teamId != null) 'team_id': teamId,
+    if (clearTeam) 'team_id': null,
     if (status != null) 'status': status!.name,
     if (members != null) ...{
       'member_ids': members!.keys.toList(),

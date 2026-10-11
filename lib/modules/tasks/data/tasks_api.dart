@@ -601,20 +601,35 @@ class TasksApi {
     }
   }
 
+  /// Mã của mọi nhãn trong nhóm, đang bật lẫn đã tắt. Thiếu quyền đọc (403)
+  /// thì rỗng: vẫn tạo được, chỉ không tránh trùng được.
+  Future<Set<String>> _allLabelCodes() async {
+    try {
+      final response = await _client.get(
+        '/system-options',
+        query: {'group_key': labelGroup},
+      );
+
+      return {for (final l in response.list.map(TaskLabel.fromJson)) l.code};
+    } on ForbiddenException {
+      return const {};
+    }
+  }
+
   /// Tạo một nhãn mới (`system_options.write`).
   ///
-  /// Mã sinh từ [label] ([TaskLabel.codeFor]); [takenCodes] là các mã đã có
-  /// để tránh trùng. [color] null thì không gửi khoá.
-  Future<TaskLabel> createLabel({
-    required String label,
-    String? color,
-    Set<String> takenCodes = const {},
-  }) async {
+  /// Mã sinh từ [label] ([TaskLabel.codeFor]), tránh MỌI mã đã có trong nhóm
+  /// — kể cả nhãn đã tắt, nên đọc danh mục KHÔNG `active_only` ngay trước khi
+  /// gửi. Server không kiểm trùng mã; dùng lại mã của một nhãn đã tắt là gắn
+  /// tên/màu mới lên các việc cũ còn mang mã đó. [color] null thì không gửi
+  /// khoá.
+  Future<TaskLabel> createLabel({required String label, String? color}) async {
+    final taken = await _allLabelCodes();
     final response = await _client.post(
       '/system-options',
       body: {
         'group_key': labelGroup,
-        'code': TaskLabel.codeFor(label, taken: takenCodes),
+        'code': TaskLabel.codeFor(label, taken: taken),
         'label': label,
         if (color != null && color.isNotEmpty) 'color': color,
       },

@@ -47,6 +47,21 @@ void main() {
       expect(bodyOf(rec.single), {'team_id': 't2'});
     });
 
+    test('PlanPatch(clearTeam) gửi {team_id: null} — rời team', () async {
+      await api.updatePlan('p1', PlanPatch(clearTeam: true));
+      final body = bodyOf(rec.single);
+      expect(body, {'team_id': null});
+      expect(body.containsKey('team_id'), isTrue);
+      expect(PlanPatch(clearTeam: true).isEmpty, isFalse);
+    });
+
+    test('teamId và clearTeam cùng lúc là lỗi lập trình', () {
+      expect(
+        () => PlanPatch(teamId: 't2', clearTeam: true),
+        throwsAssertionError,
+      );
+    });
+
     test('PlanPatch(status: done) gửi {status: "done"}', () async {
       await api.updatePlan('p1', PlanPatch(status: PlanStatus.done));
       expect(bodyOf(rec.single), {'status': 'done'});

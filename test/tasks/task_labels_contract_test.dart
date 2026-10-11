@@ -94,43 +94,73 @@ void main() {
   });
 
   group('POST /system-options', () {
-    test('gửi đúng {group_key, code, label, color}', () async {
-      rec.body = jsonEncode({
-        'success': true,
-        'data': {
-          'id': 'o9',
+    // Mã mới phải tránh CẢ mã của nhãn đã tắt: `createLabel` đọc danh mục
+    // KHÔNG `active_only` trước khi sinh mã. Dùng lại mã của nhãn đã tắt là
+    // gắn tên/màu mới lên các việc cũ còn mang mã đó.
+    test(
+      'đọc danh mục KHÔNG active_only rồi gửi {group_key, code, label, color}',
+      () async {
+        rec.getBody = jsonEncode({'success': true, 'data': []});
+        rec.body = jsonEncode({
+          'success': true,
+          'data': {
+            'id': 'o9',
+            'code': 'cho_linh_kien',
+            'label': 'Chờ linh kiện',
+            'color': '#0E7490',
+          },
+        });
+        final created = await api.createLabel(
+          label: 'Chờ linh kiện',
+          color: '#0E7490',
+        );
+        expect(rec.requests, hasLength(2));
+        final get = rec.requests.first;
+        expect(get.method, 'GET');
+        expect(get.uri.path, '/api/v1/system-options');
+        expect(get.uri.queryParameters, {'group_key': 'TASK_LABEL'});
+        final post = rec.requests.last;
+        expect(post.method, 'POST');
+        expect(post.uri.path, '/api/v1/system-options');
+        expect(bodyOf(post), {
+          'group_key': 'TASK_LABEL',
           'code': 'cho_linh_kien',
           'label': 'Chờ linh kiện',
           'color': '#0E7490',
-        },
+        });
+        expect(created.id, 'o9');
+      },
+    );
+
+    test('mã trùng (kể cả nhãn đã tắt) thì thêm _2, _3…', () async {
+      rec.getBody = jsonEncode({
+        'success': true,
+        'data': [
+          {'id': 'o1', 'code': 'khan_cap', 'label': 'Khẩn cấp'},
+          {
+            'id': 'o2',
+            'code': 'khan_cap_2',
+            'label': 'Khẩn cấp cũ',
+            'is_active': false,
+          },
+        ],
       });
-      final created = await api.createLabel(
-        label: 'Chờ linh kiện',
-        color: '#0E7490',
-      );
-      expect(rec.single.method, 'POST');
-      expect(rec.single.uri.path, '/api/v1/system-options');
-      expect(bodyOf(rec.single), {
-        'group_key': 'TASK_LABEL',
-        'code': 'cho_linh_kien',
-        'label': 'Chờ linh kiện',
-        'color': '#0E7490',
-      });
-      expect(created.id, 'o9');
+      await api.createLabel(label: 'Khẩn cấp', color: '#B42318');
+      expect(bodyOf(rec.requests.last)['code'], 'khan_cap_3');
     });
 
-    test('mã trùng thì thêm _2, _3…', () async {
-      await api.createLabel(
-        label: 'Khẩn cấp',
-        color: '#B42318',
-        takenCodes: {'khan_cap', 'khan_cap_2'},
-      );
-      expect(bodyOf(rec.single)['code'], 'khan_cap_3');
+    test('không đọc được danh mục (403) vẫn tạo được', () async {
+      rec.getStatus = 403;
+      rec.getBody = '{"success":false,"message":"Forbidden"}';
+      await api.createLabel(label: 'Nội bộ 2');
+      expect(rec.requests.last.method, 'POST');
+      expect(bodyOf(rec.requests.last)['code'], 'noi_bo_2');
     });
 
     test('không màu thì không gửi khoá color', () async {
+      rec.getBody = jsonEncode({'success': true, 'data': []});
       await api.createLabel(label: 'Nội bộ 2');
-      expect(bodyOf(rec.single).containsKey('color'), isFalse);
+      expect(bodyOf(rec.requests.last).containsKey('color'), isFalse);
     });
   });
 
@@ -254,6 +284,10 @@ class _Recorder implements HttpClientAdapter {
   int status = 200;
   String body = '{"success":true,"data":{"id":"o1","code":"x","label":"x"}}';
 
+  /// Trả lời riêng cho GET (danh mục), khi đặt.
+  String? getBody;
+  int? getStatus;
+
   RequestOptions get single {
     expect(requests, hasLength(1));
     return requests.single;
@@ -266,9 +300,10 @@ class _Recorder implements HttpClientAdapter {
     Future<void>? cancelFuture,
   ) async {
     requests.add(options);
+    final isGet = options.method == 'GET' && getBody != null;
     return ResponseBody.fromString(
-      body,
-      status,
+      isGet ? getBody! : body,
+      isGet ? (getStatus ?? 200) : status,
       headers: {
         Headers.contentTypeHeader: [Headers.jsonContentType],
       },
