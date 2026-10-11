@@ -126,7 +126,8 @@ class CommentSection extends ConsumerWidget {
     if (!canWrite || c.id.isEmpty || f.id.isEmpty) return false;
     if (canModerate) return true;
 
-    return myUserId != null && (f.userId ?? c.userId) == myUserId;
+    // Chỉ người tải lên (server so `uploaded_by`); không rõ thì không gỡ.
+    return myUserId != null && f.userId == myUserId;
   }
 
   Future<void> _removeFile(

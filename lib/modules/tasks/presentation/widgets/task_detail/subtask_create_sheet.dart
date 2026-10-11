@@ -298,6 +298,8 @@ class _SubtaskCreateSheetState extends ConsumerState<SubtaskCreateSheet> {
                         enabled: !_busy,
                         minLines: 3,
                         maxLines: 6,
+                        // `CreateChecklistItemRequest` `description` `max:2000`.
+                        maxLength: 2000,
                         textCapitalization: TextCapitalization.sentences,
                         style: OmniType.body.copyWith(color: scheme.onSurface),
                         decoration: InputDecoration(
@@ -378,7 +380,9 @@ class _SubtaskCreateSheetState extends ConsumerState<SubtaskCreateSheet> {
                               value: _start,
                               clearLabel: 'Xoá ngày bắt đầu',
                               onTap: _busy ? null : () => _pick(start: true),
-                              onClear: () => setState(() => _start = null),
+                              onClear: _busy
+                                  ? null
+                                  : () => setState(() => _start = null),
                             ),
                           ),
                           const SizedBox(width: 10),
@@ -390,7 +394,9 @@ class _SubtaskCreateSheetState extends ConsumerState<SubtaskCreateSheet> {
                               value: _due,
                               clearLabel: 'Xoá hạn',
                               onTap: _busy ? null : () => _pick(start: false),
-                              onClear: () => setState(() => _due = null),
+                              onClear: _busy
+                                  ? null
+                                  : () => setState(() => _due = null),
                             ),
                           ),
                         ],
@@ -447,7 +453,7 @@ class _DateBox extends StatelessWidget {
   final DateTime? value;
   final String clearLabel;
   final VoidCallback? onTap;
-  final VoidCallback onClear;
+  final VoidCallback? onClear;
 
   @override
   Widget build(BuildContext context) {

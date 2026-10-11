@@ -117,8 +117,15 @@ class _TaskDetailPageState extends ConsumerState<TaskDetailPage> {
     final catalog = ref.watch(taskLabelsProvider).valueOrNull ?? const [];
     final viewer = loadedTask != null && _isPlanViewer(ref, loadedTask, me);
     bool api(String name) => ref.watch(apiSupportsProvider(name));
-    final groups = loadedTask == null || viewer
+    final canRemind = api(ApiCapability.taskReminders) && access.canRead;
+    final groups = loadedTask == null
         ? const <List<TaskMenuAction>>[]
+        // Người xem kế hoạch: chỉ "Nhắc việc" (nhắc riêng mình — server cho
+        // mọi người đọc được việc).
+        : viewer
+        ? [
+            if (canRemind) [TaskMenuAction.reminders],
+          ]
         : taskMenuGroups(
             // Thợ có danh mục qua `/system-options/task-labels` (Nhóm 2)
             // cũng bật/tắt nhãn được; sửa danh mục vẫn cần system_options.
@@ -134,7 +141,7 @@ class _TaskDetailPageState extends ConsumerState<TaskDetailPage> {
                 _canManageTask(loadedTask, me, access.isAssigner),
             locked: loadedTask.isLocked,
             // Nhắc "mình" chỉ cần đọc được việc; "mọi người" xét trong sheet.
-            canRemind: api(ApiCapability.taskReminders) && access.canRead,
+            canRemind: canRemind,
             canCopy: api(ApiCapability.taskCopy) && access.canUpdate,
           );
     final showFollowers =
@@ -291,8 +298,9 @@ class _TaskDetailPageState extends ConsumerState<TaskDetailPage> {
     final name = await showTextEditSheet(
       context: context,
       title: 'Sao chép công việc',
-      initial: '${task.title} (bản sao)',
+      initial: copyTitleOf(task.title),
       requireChange: false,
+      maxLength: kTaskTitleMax,
     );
     if (name == null) return;
 
@@ -1015,6 +1023,8 @@ class _Loaded extends ConsumerWidget {
       multiline: true,
       // Xoá sạch mô tả là một lựa chọn hợp lệ, khác với tên việc.
       allowEmpty: true,
+      // `UpdateTaskRequest` `description` `max:10000`.
+      maxLength: 10000,
     );
 
     await _guard(messenger, () => actions.editDescription(task, chosen));
@@ -1126,6 +1136,21 @@ TaskProject? _projectOf(WidgetRef ref, Task task) {
 /// Người đang cầm máy mang vai `viewer` ghi rõ trong kế hoạch của việc
 /// (`assertCanEditTasks`). Chưa đọc được kế hoạch thì không coi là viewer —
 /// server vẫn chặn, và câu 403 của nó hiện lên.
+/// Trần tên việc (`CopyTaskRequest` / `CreateTaskRequest` `title` `max:255`).
+const kTaskTitleMax = 255;
+
+/// Tên gợi ý khi sao chép: tên gốc cắt còn ≤244 ký tự rồi thêm " (bản sao)",
+/// để cả chuỗi không vượt [kTaskTitleMax] (server sẽ trả 422).
+String copyTitleOf(String title) {
+  const suffix = ' (bản sao)';
+  final runes = title.runes;
+  final head = runes.length <= kTaskTitleMax - suffix.length - 1
+      ? title
+      : String.fromCharCodes(runes.take(kTaskTitleMax - suffix.length - 1));
+
+  return '$head$suffix';
+}
+
 bool _isPlanViewer(WidgetRef ref, Task task, String? me) =>
     _projectOf(ref, task)?.isViewer(me) ?? false;
 

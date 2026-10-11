@@ -46,7 +46,7 @@ class BackgroundPage extends ConsumerWidget {
             padding: const EdgeInsets.fromLTRB(20, 12, 20, 12),
             sliver: SliverToBoxAdapter(
               child: Text(
-                'Nền cho khung chat và bảng dự án.',
+                'Nền cho khung chat và bảng kế hoạch.',
                 style: OmniType.body.copyWith(
                   color: OmniColors.byBrightness(
                     context,

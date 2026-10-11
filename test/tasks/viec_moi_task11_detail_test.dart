@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -84,6 +86,8 @@ void main() {
     WidgetTester t, {
     Set<String> apiCaps = caps,
     Map<String, dynamic>? data,
+    bool motion = true,
+    TaskProject project = const TaskProject(ownerId: 'u0'),
   }) async {
     t.view.physicalSize = const Size(390, 1400);
     t.view.devicePixelRatio = 1;
@@ -92,7 +96,7 @@ void main() {
       SystemChannels.platform,
       (call) async => null,
     );
-    api = _Api(data ?? json());
+    api = _Api(data ?? json())..proj = project;
     SharedPreferences.setMockInitialValues({});
     final prefs = await SharedPreferences.getInstance();
     await t.pumpWidget(
@@ -125,6 +129,10 @@ void main() {
         ],
         child: MaterialApp(
           theme: OmniTheme.light(TargetPlatform.android),
+          builder: (context, child) => MediaQuery(
+            data: MediaQuery.of(context).copyWith(disableAnimations: !motion),
+            child: child!,
+          ),
           home: const TaskDetailPage(taskId: 't1'),
         ),
       ),
@@ -275,6 +283,125 @@ void main() {
     expect(api.calls.last, ('uncomment-file', ('cm1', 'a1')));
   });
 
+  Future<void> subMenu(WidgetTester t, int row, String item) async {
+    await t.tap(find.byTooltip('Tuỳ chọn việc con').at(row));
+    await t.pumpAndSettle();
+    await t.tap(find.text(item));
+    await t.pumpAndSettle();
+  }
+
+  testWidgets('tắt chuyển động: không ReorderableListView, sắp xếp bằng ⋮ '
+      '"Chuyển lên" / "Chuyển xuống"', (t) async {
+    await pump(t, motion: false);
+    expect(find.byType(ReorderableListView), findsNothing);
+    expect(find.bySemanticsLabel('Kéo để sắp xếp'), findsNothing);
+    await subMenu(t, 2, 'Chuyển lên');
+    expect(api.calls.last, ('move', ('c3', 'c1')));
+    expect(
+      t.getTopLeft(find.text('Bộ máy')).dy,
+      lessThan(t.getTopLeft(find.text('Tháo đàn')).dy),
+    );
+
+    // Dòng đầu không có "Chuyển lên"; dòng cuối không có "Chuyển xuống".
+    await t.tap(find.byTooltip('Tuỳ chọn việc con').first);
+    await t.pumpAndSettle();
+    expect(find.text('Chuyển lên'), findsNothing);
+    expect(find.text('Chuyển xuống'), findsOneWidget);
+    await t.tap(find.text('Chuyển xuống'));
+    await t.pumpAndSettle();
+    expect(api.calls.last, ('move', ('c1', 'c3')));
+    await t.tap(find.byTooltip('Tuỳ chọn việc con').last);
+    await t.pumpAndSettle();
+    expect(find.text('Chuyển xuống'), findsNothing);
+    expect(find.text('Chuyển lên'), findsOneWidget);
+  });
+
+  testWidgets('bật chuyển động: ⋮ vẫn có "Chuyển lên" — đường trợ năng', (
+    t,
+  ) async {
+    await pump(t);
+    expect(find.byType(ReorderableListView), findsOneWidget);
+    await subMenu(t, 1, 'Chuyển lên');
+    expect(api.calls.last, ('move', ('c2', null)));
+  });
+
+  testWidgets('không có quyền sắp xếp: ⋮ không có "Chuyển lên"', (t) async {
+    await pump(t, apiCaps: caps.difference({ApiCapability.checklistMove}));
+    await t.tap(find.byTooltip('Tuỳ chọn việc con').at(1));
+    await t.pumpAndSettle();
+    expect(find.text('Chuyển lên'), findsNothing);
+    expect(find.text('Chuyển xuống'), findsNothing);
+  });
+
+  testWidgets('sao chép: tên gốc dài cắt còn 244 ký tự trước " (bản sao)" '
+      '(server max:255)', (t) async {
+    final long = 'Đ' * 255;
+    await pump(t, data: {...json(), 'title': long});
+    await openMenu(t);
+    await t.tap(find.text('Sao chép công việc'));
+    await t.pumpAndSettle();
+    final field = t.widget<TextField>(find.byType(TextField).last);
+    final text = field.controller!.text;
+    expect(text, '${'Đ' * 244} (bản sao)');
+    expect(text.length, lessThanOrEqualTo(255));
+    expect(field.maxLength, 255);
+  });
+
+  testWidgets('người xem kế hoạch: ⋯ chỉ có "Nhắc việc"', (t) async {
+    await pump(
+      t,
+      project: const TaskProject(ownerId: 'u0', memberRoles: {me: 'viewer'}),
+    );
+    await openMenu(t);
+    expect(find.text('Nhắc việc'), findsOneWidget);
+    expect(find.text('Sao chép công việc'), findsNothing);
+    expect(find.text('Đổi tên việc'), findsNothing);
+  });
+
+  testWidgets('mô tả việc con tối đa 2000 (tạo và sửa); mô tả việc theo '
+      'server (10000)', (t) async {
+    await pump(t);
+    await subMenu(t, 1, 'Thêm mô tả');
+    expect(t.widget<TextField>(find.byType(TextField).last).maxLength, 2000);
+    await t.tapAt(const Offset(10, 10));
+    await t.pumpAndSettle();
+    await t.tap(find.byTooltip('Thêm việc con'));
+    await t.pumpAndSettle();
+    expect(
+      t
+          .widget<TextField>(
+            find.byKey(const ValueKey('subtask-create-description')),
+          )
+          .maxLength,
+      2000,
+    );
+    await t.tapAt(const Offset(10, 10));
+    await t.pumpAndSettle();
+    await t.tap(find.byTooltip('Sửa mô tả'));
+    await t.pumpAndSettle();
+    expect(t.widget<TextField>(find.byType(TextField).last).maxLength, 10000);
+  });
+
+  testWidgets('đang tạo việc con: nút × xoá ngày bị tắt', (t) async {
+    await pump(t);
+    await t.tap(find.byTooltip('Thêm việc con'));
+    await t.pumpAndSettle();
+    await t.enterText(find.widgetWithText(TextField, 'Tên việc con'), 'Nỉ');
+    await t.tap(find.text('Tuần sau'));
+    await t.pumpAndSettle();
+    final clear = find.ancestor(
+      of: find.byTooltip('Xoá hạn'),
+      matching: find.byType(IconButton),
+    );
+    expect(t.widget<IconButton>(clear).onPressed, isNotNull);
+    api.gate = Completer<void>();
+    await t.tap(find.text('Tạo'));
+    await t.pump();
+    expect(t.widget<IconButton>(clear).onPressed, isNull);
+    api.gate!.complete();
+    await t.pumpAndSettle();
+  });
+
   group('ô bình luận kèm tệp', () {
     Future<void> host(
       WidgetTester t,
@@ -319,7 +446,7 @@ void main() {
       await t.pumpAndSettle();
     }
 
-    CommentUpload file(int i, {int size = 1000}) => CommentUpload(
+    CommentUpload file(int i, {int? size = 1000}) => CommentUpload(
       path: '/khong/co/$i.jpg',
       name: '$i.jpg',
       isImage: true,
@@ -380,6 +507,30 @@ void main() {
       await t.pumpAndSettle();
       final sent = (api.calls.last.$2! as (String, List<String>)).$2;
       expect(sent, hasLength(10));
+    });
+
+    testWidgets('cả lượt tối đa 60MB; tệp không rõ cỡ tính như 25MB', (
+      t,
+    ) async {
+      const mb = 1024 * 1024;
+      await host(
+        t,
+        (_, _) async => [
+          file(1, size: 20 * mb),
+          file(2, size: 20 * mb),
+          file(3, size: 21 * mb),
+          file(4, size: null),
+          file(5, size: 15 * mb),
+        ],
+      );
+      await t.tap(find.byTooltip('Đính kèm ảnh hoặc tệp'));
+      await t.pumpAndSettle();
+      await t.tap(find.text('Chọn tệp'));
+      await t.pumpAndSettle();
+      expect(find.text('Cả lượt gửi tối đa 60MB.'), findsOneWidget);
+      expect(find.bySemanticsLabel('Tệp đính kèm: 3.jpg'), findsNothing);
+      expect(find.bySemanticsLabel('Tệp đính kèm: 4.jpg'), findsNothing);
+      expect(find.bySemanticsLabel('Tệp đính kèm: 5.jpg'), findsOneWidget);
     });
 
     testWidgets('tệp lớn hơn 25MB bị từ chối', (t) async {
@@ -456,6 +607,22 @@ void main() {
       expect(api.calls.where((c) => c.$1 == 'remind'), isEmpty);
     });
 
+    testWidgets('đóng sheet khi lượt thêm còn chờ: không đụng ref đã huỷ', (
+      t,
+    ) async {
+      await open(t, pickAt: DateTime.now().add(const Duration(hours: 2)));
+      api.gate = Completer<void>();
+      await t.tap(find.text('Thêm lời nhắc'));
+      await t.pump();
+      Navigator.of(t.element(find.text('Thêm lời nhắc'))).pop();
+      await t.pumpAndSettle();
+      expect(find.text('Thêm lời nhắc'), findsNothing);
+      api.gate!.complete();
+      await t.pumpAndSettle();
+      expect(t.takeException(), isNull);
+      expect(api.calls.last.$1, 'remind');
+    });
+
     testWidgets('xoá: lời nhắc của mình có ×; "everyone" của người khác '
         'không (trừ khi quản lý); không chọn được "mọi người" nếu không sửa '
         'được việc', (t) async {
@@ -495,6 +662,8 @@ class _Api implements TasksApi {
   final gets = <String>[];
   bool failMove = false;
   List<Map<String, dynamic>> reminderRows = [];
+  Completer<void>? gate;
+  TaskProject proj = const TaskProject(ownerId: 'u0');
 
   Task _with(Map<String, dynamic> patch) {
     _json = {..._json, ...patch};
@@ -512,8 +681,7 @@ class _Api implements TasksApi {
   }
 
   @override
-  Future<TaskProject> project(String projectId) async =>
-      const TaskProject(ownerId: 'u0');
+  Future<TaskProject> project(String projectId) async => proj;
 
   @override
   Future<Task> createSubtask(
@@ -525,6 +693,7 @@ class _Api implements TasksApi {
     String? assigneeId,
   }) async {
     calls.add(('create', (title, description, startDate, dueDate, assigneeId)));
+    await gate?.future;
     return _with({
       'checklist': [
         ..._checklist,
@@ -580,6 +749,7 @@ class _Api implements TasksApi {
     bool everyone = false,
   }) async {
     calls.add(('remind', (at, everyone)));
+    await gate?.future;
     final row = {
       'id': 'r1',
       'remind_at': at.toUtc().toIso8601String(),

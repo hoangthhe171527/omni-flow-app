@@ -103,7 +103,9 @@ class SubtasksCard extends ConsumerWidget {
         ),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 4),
-          child: canReorder && subtasks.length > 1
+          // Tắt chuyển động: ReorderableListView luôn trượt các dòng khi kéo,
+          // nên vẽ Column tĩnh — sắp xếp vẫn được qua ⋮ "Chuyển lên/xuống".
+          child: canReorder && motion && subtasks.length > 1
               ? ReorderableListView.builder(
                   key: const ValueKey('subtask-reorder'),
                   shrinkWrap: true,
@@ -315,9 +317,14 @@ class SubtasksCard extends ConsumerWidget {
     }
   }
 
-  /// ⋮: Đổi tên, Giao, Xoá (đường hiện có).
+  /// ⋮: Đổi tên, Giao, Xoá (đường hiện có); "Chuyển lên / xuống" khi
+  /// [canReorder] — đường không cần kéo (trình đọc màn hình, tắt chuyển động).
   Future<void> _menu(BuildContext context, Subtask s) async {
     final messenger = ScaffoldMessenger.of(context);
+    final shown = task.subtasks;
+    final at = shown.indexWhere((x) => x.id == s.id);
+    final canUp = canReorder && at > 0;
+    final canDown = canReorder && at >= 0 && at < shown.length - 1;
     final action = await showDetailMenuSheet<_SubAction>(
       context,
       semanticsLabel: 'Tuỳ chọn việc con',
@@ -335,6 +342,20 @@ class SubtasksCard extends ConsumerWidget {
               value: _SubAction.assign,
               icon: Icons.person_add_alt_outlined,
               label: 'Giao người làm',
+            ),
+        ],
+        [
+          if (canUp)
+            const DetailMenuItem(
+              value: _SubAction.up,
+              icon: Icons.arrow_upward_rounded,
+              label: 'Chuyển lên',
+            ),
+          if (canDown)
+            const DetailMenuItem(
+              value: _SubAction.down,
+              icon: Icons.arrow_downward_rounded,
+              label: 'Chuyển xuống',
             ),
         ],
         [
@@ -374,6 +395,12 @@ class SubtasksCard extends ConsumerWidget {
 
     try {
       switch (action) {
+        case _SubAction.up:
+        case _SubAction.down:
+          // Cùng đường với kéo thả: một lệnh move, `after_id` là dòng sẽ
+          // đứng ngay trên nó.
+          final up = action == _SubAction.up;
+          await _reorder(context, shown, at, up ? at - 1 : at + 1);
         case _SubAction.remove:
           await controller.removeSubtask(s.id);
         case _SubAction.assign:
@@ -393,6 +420,8 @@ class SubtasksCard extends ConsumerWidget {
             initial: s.description ?? '',
             multiline: true,
             allowEmpty: true,
+            // `UpdateChecklistItemRequest` `description` `max:2000`.
+            maxLength: 2000,
           );
           if (note == null) return;
           await controller.setSubtaskDescription(s.id, note);
@@ -407,7 +436,16 @@ class SubtasksCard extends ConsumerWidget {
   }
 }
 
-enum _SubAction { rename, assign, describe, start, clearStart, remove }
+enum _SubAction {
+  rename,
+  assign,
+  up,
+  down,
+  describe,
+  start,
+  clearStart,
+  remove,
+}
 
 /// Tay kéo `.drag`: 24×44, sáu chấm 14 màu mờ `#9AA5B8`. Kéo NGAY (không
 /// cần giữ lâu) — `ReorderableDragStartListener`.

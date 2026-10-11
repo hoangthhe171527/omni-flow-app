@@ -118,7 +118,7 @@ class _BoardTaskCardState extends ConsumerState<BoardTaskCard>
 
     try {
       // `doing` — mã chuẩn của server, cùng đường với nút Hoàn thành ở chi
-      // tiết (TaskActionBar).
+      // tiết (vòng tick ở dòng tên — TitleRow).
       await api.setStatus(widget.task.id, next ? 'done' : 'doing');
       if (planId != null) container.invalidate(planTasksProvider(planId));
       if (mounted) setState(() => _saving = false);

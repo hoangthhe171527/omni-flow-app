@@ -94,11 +94,14 @@ class _ReminderSheetState extends ConsumerState<ReminderSheet> {
 
   Future<void> _run(Future<void> Function(TasksApi api) write) async {
     if (_busy) return;
-    final api = ref.read(tasksApiProvider);
+    // Container giữ trước lượt chờ: người dùng có thể đóng sheet giữa chừng,
+    // và `ref` của một widget đã huỷ thì ném.
+    final container = ProviderScope.containerOf(context, listen: false);
+    final api = container.read(tasksApiProvider);
     setState(() => _busy = true);
     try {
       await write(api);
-      ref.invalidate(taskRemindersProvider(widget.taskId));
+      container.invalidate(taskRemindersProvider(widget.taskId));
     } on AppException catch (e) {
       widget.messenger.showSnackBar(SnackBar(content: Text(e.message)));
     } finally {

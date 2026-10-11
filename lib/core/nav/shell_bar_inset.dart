@@ -20,18 +20,3 @@ class ShellBarInset extends InheritedWidget {
   bool updateShouldNotify(ShellBarInset oldWidget) =>
       height != oldWidget.height;
 }
-
-/// Nâng một nút nổi lên trên thanh tab của shell; ngoài shell không làm gì.
-class ShellFabLift extends StatelessWidget {
-  const ShellFabLift({super.key, required this.child});
-
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: EdgeInsets.only(bottom: ShellBarInset.of(context)),
-      child: child,
-    );
-  }
-}

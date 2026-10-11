@@ -109,6 +109,71 @@ void main() {
 
     expect(own.style?.color, scheme.onSurface);
   });
+
+  testWidgets('gỡ tệp chỉ xét người tải lên: tệp không rõ người tải trong '
+      'bình luận của mình thì không bấm giữ được', (tester) async {
+    final own = Task.fromJson({
+      'id': 't1',
+      'title': 'KAWAI HAT-5',
+      'checklist': <Map<String, dynamic>>[],
+      'comments': [
+        {
+          'id': 'c1',
+          'body': '',
+          'user_id': 'me',
+          'user_name': 'Tôi',
+          'attachments': [
+            {
+              'id': 'a1',
+              'name': 'x.jpg',
+              'type': 'image',
+              'url': 'https://x.test/x.jpg',
+            },
+            {
+              'id': 'a2',
+              'name': 'y.jpg',
+              'type': 'image',
+              'user_id': 'me',
+              'url': 'https://x.test/y.jpg',
+            },
+          ],
+        },
+      ],
+      'comments_count': 1,
+    });
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [taskDetailProvider.overrideWith(() => _StubDetail(own))],
+        child: MaterialApp(
+          theme: OmniTheme.light(TargetPlatform.android),
+          home: Scaffold(
+            body: SingleChildScrollView(
+              child: CommentSection(
+                task: own,
+                taskId: 't1',
+                myUserId: 'me',
+                canWrite: true,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    Future<bool> removable(String id) async {
+      await tester.longPress(find.byKey(ValueKey('comment-file-$id')));
+      await tester.pumpAndSettle();
+      final shown = find.text('Gỡ tệp').evaluate().isNotEmpty;
+      // Đóng mọi sheet vừa mở (bấm giữ bình luận của mình mở menu xoá).
+      await tester.tapAt(const Offset(10, 10));
+      await tester.pumpAndSettle();
+      return shown;
+    }
+
+    expect(await removable('a1'), isFalse);
+    expect(await removable('a2'), isTrue);
+  });
 }
 
 /// Trả về một trạng thái cố định, không gọi API.

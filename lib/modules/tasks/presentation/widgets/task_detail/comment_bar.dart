@@ -31,8 +31,13 @@ const kCommentMaxFiles = 10;
 /// 25MB mỗi tệp (`TaskUploads::fileRules` `max:25600`).
 const kCommentMaxFileBytes = 25 * 1024 * 1024;
 
-/// 64MB cả lượt gửi (`post_max_size`, DEPLOY.md).
-const kCommentMaxTotalBytes = 64 * 1024 * 1024;
+/// 60MB cả lượt gửi: chừa ~4MB dưới `post_max_size` 64MB (DEPLOY.md) cho
+/// phần đầu multipart và thân bình luận.
+const kCommentMaxTotalBytes = 60 * 1024 * 1024;
+
+/// Cỡ tính cho một tệp không đọc được độ dài: trần mỗi tệp — coi như tệp lớn
+/// nhất có thể, để tổng không bao giờ vượt [kCommentMaxTotalBytes].
+int commentUploadBudget(CommentUpload f) => f.size ?? kCommentMaxFileBytes;
 
 /// Bộ chọn thật: `image_picker` cho ảnh (nén ≤2048px, 85), `file_picker`
 /// cho tài liệu. Hệ điều hành từ chối thì ném [NetworkException] có câu.
@@ -110,7 +115,7 @@ Future<List<CommentUpload>> pickCommentFiles(
 ///
 /// Nút ảnh 44 (Nhóm 2, [canAttachFiles]): chụp / chọn ảnh / chọn tệp, xem
 /// trước có × bỏ từng tệp, gửi CÙNG bình luận (multipart `files[]`, ≤10 tệp,
-/// mỗi tệp ≤25MB, cả lượt ≤64MB); có tệp thì thân rỗng vẫn gửi được. Mặt
+/// mỗi tệp ≤25MB, cả lượt ≤60MB); có tệp thì thân rỗng vẫn gửi được. Mặt
 /// cười của bản mẫu chỉ trang trí nên cũng không vẽ; chỗ đó là nút `@` (năng
 /// lực cũ của ô trao đổi).
 class CommentBar extends ConsumerStatefulWidget {
@@ -215,7 +220,7 @@ class _CommentBarState extends ConsumerState<CommentBar> {
   final _files = <CommentUpload>[];
 
   /// Nút ảnh: chọn nguồn, rồi thêm tệp trong giới hạn (10 tệp, 25MB / tệp,
-  /// 64MB cả lượt). Tệp vượt bị bỏ kèm một câu báo.
+  /// 60MB cả lượt; tệp không rõ cỡ tính 25MB). Tệp vượt bị bỏ kèm câu báo.
   Future<void> _attach() async {
     final messenger = ScaffoldMessenger.of(context);
     final remaining = kCommentMaxFiles - _files.length;
@@ -259,17 +264,17 @@ class _CommentBarState extends ConsumerState<CommentBar> {
     }
     if (picked.isEmpty || !mounted) return;
 
-    var total = _files.fold<int>(0, (sum, f) => sum + (f.size ?? 0));
+    var total = _files.fold<int>(0, (sum, f) => sum + commentUploadBudget(f));
     final accepted = <CommentUpload>[];
     String? refused;
     for (final f in picked) {
-      final size = f.size ?? 0;
+      final size = commentUploadBudget(f);
       if (_files.length + accepted.length >= kCommentMaxFiles) {
         refused = 'Tối đa 10 tệp mỗi bình luận.';
       } else if (size > kCommentMaxFileBytes) {
         refused = '“${f.name}” lớn hơn 25MB.';
       } else if (total + size > kCommentMaxTotalBytes) {
-        refused = 'Cả lượt gửi tối đa 64MB.';
+        refused = 'Cả lượt gửi tối đa 60MB.';
       } else {
         total += size;
         accepted.add(f);

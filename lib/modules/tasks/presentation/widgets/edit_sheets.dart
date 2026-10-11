@@ -136,6 +136,7 @@ Future<String?> showTextEditSheet({
   bool allowEmpty = false,
   TextInputType? keyboardType,
   bool requireChange = true,
+  int? maxLength,
 }) => showOmniSheet<String>(
   context: context,
   builder: (context) => _TextEditSheet(
@@ -146,6 +147,7 @@ Future<String?> showTextEditSheet({
     allowEmpty: allowEmpty,
     keyboardType: keyboardType,
     requireChange: requireChange,
+    maxLength: maxLength,
   ),
 );
 
@@ -158,6 +160,7 @@ class _TextEditSheet extends StatefulWidget {
     required this.allowEmpty,
     this.keyboardType,
     this.requireChange = true,
+    this.maxLength,
   });
 
   final String title;
@@ -169,6 +172,9 @@ class _TextEditSheet extends StatefulWidget {
 
   /// Tắt "Lưu" khi chữ chưa đổi (sửa). Sao chép việc: tên gợi ý lưu ngay.
   final bool requireChange;
+
+  /// Trần ký tự theo luật server (`max:`); null = không giới hạn.
+  final int? maxLength;
 
   @override
   State<_TextEditSheet> createState() => _TextEditSheetState();
@@ -221,6 +227,7 @@ class _TextEditSheetState extends State<_TextEditSheet> {
               textCapitalization: TextCapitalization.sentences,
               minLines: widget.multiline ? 3 : 1,
               maxLines: widget.multiline ? 8 : 1,
+              maxLength: widget.maxLength,
               decoration: InputDecoration(hintText: widget.hint),
               onChanged: (_) => setState(() {}),
             ),

@@ -135,7 +135,7 @@ class Plan {
 
     return Plan(
       id: json.strOr('id', ''),
-      name: json.strOr('name', 'Dự án chưa đặt tên'),
+      name: json.strOr('name', 'Kế hoạch chưa đặt tên'),
       description: json.str('description'),
       color: json.str('color'),
       status: json.strOr('status', 'active'),
