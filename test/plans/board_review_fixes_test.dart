@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:omni_app/core/network/api_envelope.dart';
+import 'package:omni_app/design/components/components.dart';
 import 'package:omni_app/design/theme/omni_theme.dart';
 import 'package:omni_app/modules/plans/application/plans_providers.dart';
 import 'package:omni_app/modules/plans/data/plans_api.dart';
@@ -219,12 +220,31 @@ void main() {
       final result = await container.read(
         planTaskSearchProvider((planId: planId, query: 'x')).future,
       );
-      expect(api.pages, [1, 2, 3, 4, 5]);
+      // Năm trang đầy rồi dò đúng một việc thứ 501 (per_page=1).
+      expect(api.pages, [1, 2, 3, 4, 5, kMaxTasksOnBoard + 1]);
       expect(result.ids, hasLength(kMaxTasksOnBoard));
       expect(result.capped, isTrue);
     });
 
-    test('vừa đúng trần mà hết dữ liệu thì không capped', () async {
+    test(
+      'đúng 500 kết quả: dò thêm một việc, không có thì không capped',
+      () async {
+        final api = _PagingTasksApi(total: kMaxTasksOnBoard);
+        final container = ProviderContainer(
+          overrides: [tasksApiProvider.overrideWithValue(api)],
+        );
+        addTearDown(container.dispose);
+
+        final result = await container.read(
+          planTaskSearchProvider((planId: planId, query: 'x')).future,
+        );
+        expect(api.pages, [1, 2, 3, 4, 5, kMaxTasksOnBoard + 1]);
+        expect(result.ids, hasLength(kMaxTasksOnBoard));
+        expect(result.capped, isFalse);
+      },
+    );
+
+    test('dưới trần mà hết dữ liệu thì không capped', () async {
       final api = _PagingTasksApi(total: 450);
       final container = ProviderContainer(
         overrides: [tasksApiProvider.overrideWithValue(api)],
@@ -263,7 +283,7 @@ void main() {
     tasksApi.gate = gate;
     await search(tester, 'w106');
     await tester.pump();
-    expect(find.byType(CircularProgressIndicator), findsNothing);
+    expect(find.byType(OmniSkeletonList), findsNothing);
     expect(find.text('Kiểm tra đàn Kawai ND21'), findsOneWidget);
 
     gate.complete();

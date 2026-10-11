@@ -543,6 +543,34 @@ void main() {
     expect(find.text('Xoá kế hoạch “Bảo hành”?'), findsOneWidget);
   });
 
+  testWidgets('snap biết số ô: vuốt mạnh tới cuối dừng đúng ô cuối', (
+    tester,
+  ) async {
+    await pumpBoard(tester);
+
+    final list = tester.widget<ListView>(find.byKey(const Key('board-track')));
+    // Bốn cột + ô "Thêm nhóm việc".
+    expect((list.physics! as BoardSnapPhysics).count, 5);
+
+    await tester.fling(
+      find.byKey(const Key('board-track')),
+      const Offset(-2000, 0),
+      8000,
+    );
+    await tester.pumpAndSettle();
+    final position = list.controller!.position;
+    expect(position.pixels, position.maxScrollExtent);
+    expect(find.text('Thêm nhóm việc'), findsOneWidget);
+  });
+
+  testWidgets('snap của thợ: chỉ đếm cột (không có ô thêm nhóm)', (
+    tester,
+  ) async {
+    await pumpBoard(tester, perms: worker);
+    final list = tester.widget<ListView>(find.byKey(const Key('board-track')));
+    expect((list.physics! as BoardSnapPhysics).count, 4);
+  });
+
   testWidgets('thợ không thấy ⋯ kế hoạch', (tester) async {
     await pumpBoard(tester, perms: worker);
     expect(find.byTooltip('Tuỳ chọn kế hoạch'), findsNothing);

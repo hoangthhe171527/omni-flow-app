@@ -162,6 +162,92 @@ void main() {
     expect(find.textContaining('Chưa lưu được'), findsOneWidget);
   });
 
+  testWidgets('lỗi 422 TaskBlocked: hiện câu của server, không câu mạng', (
+    t,
+  ) async {
+    await t.pumpWidget(
+      wrap(BoardTaskCard(task: task(), onTap: () {}, canComplete: true)),
+    );
+    await t.pumpAndSettle();
+
+    final gate = Completer<Task>();
+    api.next = gate;
+    await t.tap(find.bySemanticsLabel('Đánh dấu xong'));
+    await t.pump();
+    gate.completeError(
+      const ValidationException(
+        'Còn 2 việc con chưa xong, chưa đánh dấu xong được.',
+        reason: 'task_blocked',
+      ),
+    );
+    await t.pumpAndSettle();
+
+    expect(
+      find.text('Còn 2 việc con chưa xong, chưa đánh dấu xong được.'),
+      findsOneWidget,
+    );
+    expect(find.textContaining('Kiểm tra mạng'), findsNothing);
+    expect(titleStyle(t).decoration, isNot(TextDecoration.lineThrough));
+  });
+
+  testWidgets('vừa tích xong: chip hạn thôi báo quá hạn ngay', (t) async {
+    final past = DateTime.now().subtract(const Duration(days: 3));
+    final due =
+        '${past.year}-${past.month.toString().padLeft(2, '0')}-'
+        '${past.day.toString().padLeft(2, '0')}';
+    await t.pumpWidget(
+      wrap(
+        BoardTaskCard(
+          task: task(due: due),
+          onTap: () {},
+          canComplete: true,
+        ),
+      ),
+    );
+    await t.pumpAndSettle();
+    expect(find.textContaining('Quá hạn'), findsOneWidget);
+
+    api.next = Completer<Task>();
+    await t.tap(find.bySemanticsLabel('Đánh dấu xong'));
+    await t.pump();
+    expect(find.textContaining('Quá hạn'), findsNothing);
+    expect(find.textContaining('Hạn '), findsOneWidget);
+  });
+
+  testWidgets('việc xong: ô tích cũng nằm trong lớp mờ .78', (t) async {
+    await t.pumpWidget(
+      wrap(
+        BoardTaskCard(
+          task: task(status: 'done'),
+          onTap: () {},
+          canComplete: true,
+        ),
+      ),
+    );
+    await t.pumpAndSettle();
+    expect(
+      find.descendant(
+        of: find.byKey(const ValueKey('card-opacity')),
+        matching: find.byKey(const ValueKey('tick-box')),
+      ),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('tên một chữ: lấy chữ đầu của chữ cuối', (t) async {
+    await t.pumpWidget(
+      wrap(
+        BoardTaskCard(
+          task: task(names: ['Hoàng', 'Trần Minh']),
+          onTap: () {},
+        ),
+      ),
+    );
+    await t.pumpAndSettle();
+    expect(find.text('H'), findsOneWidget);
+    expect(find.text('M'), findsOneWidget);
+  });
+
   testWidgets('bỏ đánh dấu việc đã xong gửi doing', (t) async {
     await t.pumpWidget(
       wrap(

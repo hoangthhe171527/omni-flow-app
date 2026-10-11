@@ -421,5 +421,18 @@ final planTaskSearchProvider = FutureProvider.autoDispose
         }
       }
 
-      return (ids: ids.take(kMaxTasksOnBoard).toSet(), capped: true);
+      // Năm trang đầy không có nghĩa là còn nữa: đúng 500 kết quả cũng trông
+      // như vậy. Dò đúng một việc sau trần (`per_page=1`, trang 501) — có
+      // thì mới báo "Đang hiện N kết quả đầu".
+      final probe = await api.list(
+        projectId: key.planId,
+        search: key.query,
+        page: kMaxTasksOnBoard + 1,
+        perPage: 1,
+      );
+
+      return (
+        ids: ids.take(kMaxTasksOnBoard).toSet(),
+        capped: probe.items.isNotEmpty,
+      );
     }, name: 'planTaskSearch');

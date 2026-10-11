@@ -109,7 +109,7 @@ class _TaskActionBarState extends ConsumerState<TaskActionBar> {
     } on AppException catch (error) {
       _say(
         messenger,
-        _failureText(error, 'Chưa lưu được. Kiểm tra mạng rồi thử lại.'),
+        failureText(error, 'Chưa lưu được. Kiểm tra mạng rồi thử lại.'),
       );
     } on Object {
       _say(messenger, 'Chưa lưu được. Vui lòng thử lại.');
@@ -143,7 +143,7 @@ class _TaskActionBarState extends ConsumerState<TaskActionBar> {
     } on AppException catch (error) {
       _say(
         messenger,
-        _failureText(error, 'Chưa gửi được ảnh. Thử lại khi có mạng.'),
+        failureText(error, 'Chưa gửi được ảnh. Thử lại khi có mạng.'),
       );
     } on Object {
       _say(messenger, 'Chưa gửi được ảnh. Vui lòng thử lại.');
@@ -175,15 +175,6 @@ class _TaskActionBarState extends ConsumerState<TaskActionBar> {
       ),
     ),
   );
-
-  /// Lỗi mạng thì nhắc mạng; mọi lỗi khác là lời của API (422 phụ thuộc, 403
-  /// chỉ xem, ảnh quá 25 MB…) — thợ cần biết VÌ SAO, không phải thử lại mãi
-  /// (CV-I6). `NetworkException` có `code` (vd `file_unreadable`) là lỗi có
-  /// lời riêng, không phải mất mạng.
-  static String _failureText(AppException e, String networkText) =>
-      (e is TimeoutException || (e is NetworkException && e.code == null))
-      ? networkText
-      : e.message;
 
   /// Messenger lấy TRƯỚC khi await, nên báo được cả khi màn đã đóng.
   void _say(ScaffoldMessengerState messenger, String message) {

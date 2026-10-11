@@ -267,6 +267,7 @@ class _PlanBoardPageState extends ConsumerState<PlanBoardPage> {
                   controller: _track,
                   scrollDirection: Axis.horizontal,
                   physics: BoardSnapPhysics(
+                    count: itemCount,
                     animate: OmniMotion.enabled(context),
                   ),
                   padding: const EdgeInsets.fromLTRB(

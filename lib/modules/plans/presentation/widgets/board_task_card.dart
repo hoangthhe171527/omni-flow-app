@@ -5,7 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../../core/utils/formatters.dart';
+import '../../../../core/error/app_exception.dart';
 import '../../../../design/components/omni_avatar.dart';
 import '../../../../design/components/omni_dashed_circle.dart';
 import '../../../../design/components/omni_motion_widgets.dart';
@@ -122,21 +122,28 @@ class _BoardTaskCardState extends ConsumerState<BoardTaskCard>
       await api.setStatus(widget.task.id, next ? 'done' : 'doing');
       if (planId != null) container.invalidate(planTasksProvider(planId));
       if (mounted) setState(() => _saving = false);
+    } on AppException catch (error) {
+      // Lời của server (422 còn việc con chưa xong, 403 chỉ xem…): người
+      // dùng cần biết VÌ SAO, không phải thử lại mãi.
+      _fail(
+        messenger,
+        failureText(error, 'Chưa lưu được. Kiểm tra mạng rồi thử lại.'),
+      );
     } on Object {
-      if (mounted) {
-        setState(() {
-          _doneOverride = null;
-          _saving = false;
-        });
-      }
-      messenger
-        ?..hideCurrentSnackBar()
-        ..showSnackBar(
-          const SnackBar(
-            content: Text('Chưa lưu được. Kiểm tra mạng rồi thử lại.'),
-          ),
-        );
+      _fail(messenger, 'Chưa lưu được. Vui lòng thử lại.');
     }
+  }
+
+  void _fail(ScaffoldMessengerState? messenger, String message) {
+    if (mounted) {
+      setState(() {
+        _doneOverride = null;
+        _saving = false;
+      });
+    }
+    messenger
+      ?..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(content: Text(message)));
   }
 
   @override
@@ -149,8 +156,15 @@ class _BoardTaskCardState extends ConsumerState<BoardTaskCard>
     final labels = [for (final code in task.labels) ?byCode[code]];
 
     final meta = <Widget>[
+      // Theo trạng thái lạc quan: vừa tích xong thì thôi báo quá hạn ngay,
+      // không đợi server.
       if (task.dueDate != null)
-        DueChip(task: task, icon: Icons.calendar_today_outlined),
+        DueChip(
+          task: done == task.isDone
+              ? task
+              : task.copyWith(status: done ? 'done' : 'doing'),
+          icon: Icons.calendar_today_outlined,
+        ),
       if (task.priority == 'high') const OmniTaskChip.high('Ưu tiên cao'),
       if (task.hasSubtasks)
         _Meta(
@@ -261,33 +275,29 @@ class _BoardTaskCardState extends ConsumerState<BoardTaskCard>
       ],
     );
 
-    final card = Opacity(
-      key: const ValueKey('card-opacity'),
-      opacity: done ? 0.78 : 1,
-      child: Semantics(
-        button: true,
-        label: _semanticLabel(done),
-        child: Material(
-          type: MaterialType.transparency,
-          child: InkWell(
-            onTap: widget.onTap,
-            borderRadius: const BorderRadius.all(Radius.circular(8)),
-            child: Container(
-              key: const ValueKey('card-shell'),
-              padding: const EdgeInsets.fromLTRB(8, 10, 10, 10),
-              decoration: BoxDecoration(
-                color: scheme.surface,
-                borderRadius: BorderRadius.circular(8),
-                boxShadow: [
-                  BoxShadow(
-                    color: OmniColors.ink.withValues(alpha: 0.08),
-                    offset: const Offset(0, 1),
-                    blurRadius: 2,
-                  ),
-                ],
-              ),
-              child: content,
+    final card = Semantics(
+      button: true,
+      label: _semanticLabel(done),
+      child: Material(
+        type: MaterialType.transparency,
+        child: InkWell(
+          onTap: widget.onTap,
+          borderRadius: const BorderRadius.all(Radius.circular(8)),
+          child: Container(
+            key: const ValueKey('card-shell'),
+            padding: const EdgeInsets.fromLTRB(8, 10, 10, 10),
+            decoration: BoxDecoration(
+              color: scheme.surface,
+              borderRadius: BorderRadius.circular(8),
+              boxShadow: [
+                BoxShadow(
+                  color: OmniColors.ink.withValues(alpha: 0.08),
+                  offset: const Offset(0, 1),
+                  blurRadius: 2,
+                ),
+              ],
             ),
+            child: content,
           ),
         ),
       ),
@@ -314,15 +324,28 @@ class _BoardTaskCardState extends ConsumerState<BoardTaskCard>
             ],
           );
 
-    return OmniRise(delay: widget.delay, animate: widget.rise, child: body);
+    // Mờ .78 bọc CẢ thẻ lẫn ô tích (`.card` opacity): ô tích nằm ngoài thẻ
+    // trong Stack nên đặt Opacity bên trong là bỏ sót nó.
+    return OmniRise(
+      delay: widget.delay,
+      animate: widget.rise,
+      child: Opacity(
+        key: const ValueKey('card-opacity'),
+        opacity: done ? 0.78 : 1,
+        child: body,
+      ),
+    );
   }
 
   String _semanticLabel(bool done) {
     final task = widget.task;
     final parts = <String>[task.title];
-    if (done) parts.add('đã xong');
-    final due = dueToneOf(task);
-    if (due.tone == DueTone.late) parts.add(due.label.toLowerCase());
+    if (done) {
+      parts.add('đã xong');
+    } else {
+      final due = dueToneOf(task);
+      if (due.tone == DueTone.late) parts.add(due.label.toLowerCase());
+    }
 
     return parts.join(', ');
   }
@@ -526,7 +549,12 @@ class _Face extends StatelessWidget {
       return OmniAvatar(name: name, imageUrl: imageUrl, size: 20);
     }
     final dark = Theme.of(context).brightness == Brightness.dark;
-    final initials = Formatters.initials(name);
+    // MỘT chữ (ô 20 không vừa hai chữ cỡ 12): chữ đầu của chữ CUỐI — tên
+    // người Việt gọi theo chữ cuối ("Trần Minh" → M, "Hoàng" → H).
+    final words = name.trim().split(RegExp(r'\s+'));
+    final initial = words.last.isEmpty
+        ? '?'
+        : words.last.characters.first.toUpperCase();
 
     return Container(
       alignment: Alignment.center,
@@ -535,7 +563,7 @@ class _Face extends StatelessWidget {
         color: dark ? OmniColors.darkAvatarSurface : OmniColors.avatarSurface,
       ),
       child: Text(
-        initials.characters.last,
+        initial,
         style: OmniType.micro.copyWith(
           height: 1,
           fontWeight: FontWeight.w600,
