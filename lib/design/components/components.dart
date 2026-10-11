@@ -12,6 +12,7 @@ export 'omni_card.dart';
 export 'omni_collapsible_card.dart';
 export 'omni_dashed_circle.dart';
 export 'omni_inputs.dart';
+export 'omni_motion_widgets.dart';
 export 'omni_status_chip.dart';
 export 'omni_pills.dart';
 export 'omni_progress_ring.dart';

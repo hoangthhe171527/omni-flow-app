@@ -98,6 +98,15 @@ abstract final class OmniType {
     height: 22 / 15,
   );
 
+  /// Thân gọn 14: dòng kế hoạch, ô tìm của tab Việc (`Main.dc.html` đặt cỡ
+  /// gốc 14). Độ đậm đổi qua copyWith.
+  static const TextStyle bodySm = TextStyle(
+    fontFamily: family,
+    fontSize: 14,
+    fontWeight: FontWeight.w400,
+    height: 1.4,
+  );
+
   /// Phụ, mô tả: 13/18.
   static const TextStyle caption = TextStyle(
     fontFamily: family,

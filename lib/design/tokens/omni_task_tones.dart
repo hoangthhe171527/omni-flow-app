@@ -26,6 +26,7 @@ class OmniTaskTones {
     required this.priorityLow,
     required this.dueSoonBar,
     required this.chevron,
+    required this.faint,
     required List<Color> sectionColors,
   }) : _sectionColors = sectionColors;
 
@@ -56,6 +57,10 @@ class OmniTaskTones {
 
   /// Mũi tên chỉ dẫn ở cuối dòng (Điều phối, Tài khoản).
   final Color chevron;
+
+  /// Mũi tên mờ nhất của tab Việc (`Main.dc.html` `#9AA5B8`): › cuối dòng
+  /// kế hoạch khi ô sao chưa có.
+  final Color faint;
 
   final List<Color> _sectionColors;
 
@@ -96,6 +101,7 @@ class OmniTaskTones {
     priorityLow: Color(0xFF8A95A8),
     dueSoonBar: _dueSoonBar,
     chevron: Color(0xFFC9D2DE),
+    faint: Color(0xFF9AA5B8),
     sectionColors: [
       Color(0xFF8A95A8),
       Color(0xFF2563EB),
@@ -128,6 +134,7 @@ class OmniTaskTones {
       priorityLow: const Color(0xFF9AA8BD),
       dueSoonBar: const Color(0xFFF0A23C),
       chevron: const Color(0xFF5B6678),
+      faint: const Color(0xFF6B7A92),
       sectionColors: const [
         Color(0xFF9AA8BD),
         Color(0xFF60A5FA),

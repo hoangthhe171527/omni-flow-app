@@ -55,7 +55,7 @@ void main() {
 
   test('chữ trắng trên MỌI màu của MỌI nền đạt 4,5:1', () {
     // Ngưỡng độ sáng ở trên chỉ bảo đảm ~2,3:1 — đủ cho một vạch trang trí,
-    // không đủ cho tên dự án. Từ khi `PlanRow` viết tên đè lên nền thì đây
+    // không đủ cho tên dự án. Từ khi ô chữ cái đầu của `PlanTile` viết chữ trắng lên màu cover thì đây
     // mới là lời hứa thật, đo bằng đúng công thức WCAG chứ không đo gần đúng.
     for (final name in OmniCovers.names) {
       for (final color in OmniCovers.gradientOf(name).colors) {

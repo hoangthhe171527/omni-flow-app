@@ -1,3 +1,5 @@
+import 'dart:ui' show ImageFilter;
+
 import 'package:flutter/material.dart';
 
 import '../../../../design/components/components.dart';
@@ -7,122 +9,176 @@ import '../../../../design/tokens/tokens.dart';
 /// Hai thứ tạo được từ gốc tab Việc.
 enum CreateChoice { team, plan }
 
-/// Sheet "Tạo mới": một nút, hai thứ tạo được — hỏi trước bằng một sheet thay
-/// vì hai nút nổi, để người dùng chỉ đọc nhãn khi thật sự cần chọn.
+/// Menu của nút + (`TeamsAdd.dc.html`): lớp phủ mờ, hộp 220 bo 8 bật xuống
+/// ngay dưới nút, neo theo mép phải của nút ([anchor], toạ độ màn).
 ///
 /// "Tạo team" chỉ có khi [canCreateTeam]: tạo team LÀ tạo một đơn vị trong cơ
 /// cấu tổ chức, API đòi quyền org tương ứng, và bày ra một dòng bấm vào là 403
 /// tệ hơn không bày.
-Future<CreateChoice?> showCreateChoiceSheet(
+///
+/// Lớp phủ `fade` 200ms, hộp `pop` 280ms gốc trên-phải. Giảm chuyển động: hiện
+/// và tắt ngay.
+Future<CreateChoice?> showCreateMenu(
   BuildContext context, {
+  required Rect anchor,
   required bool canCreateTeam,
-}) => showOmniSheet<CreateChoice>(
-  context: context,
-  builder: (ctx) => Padding(
-    padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-    child: Column(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.only(top: 16),
-          child: Text(
-            'Tạo mới',
-            style: Theme.of(
-              ctx,
-            ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
-          ),
-        ),
-        const SizedBox(height: 10),
-        if (canCreateTeam) ...[
-          _ChoiceTile(
-            icon: Icons.group_outlined,
-            tone: OmniTaskTones.of(ctx).violet,
-            title: 'Tạo team',
-            subtitle: 'Một nhóm người, chứa nhiều dự án',
-            onTap: () => Navigator.of(ctx).pop(CreateChoice.team),
-          ),
-          const SizedBox(height: 8),
-        ],
-        _ChoiceTile(
-          icon: Icons.assignment_outlined,
-          tone: OmniTaskTones.of(ctx).today,
-          title: 'Tạo dự án',
-          subtitle: 'Các nhóm việc và công việc trong đó',
-          onTap: () => Navigator.of(ctx).pop(CreateChoice.plan),
-        ),
-      ],
-    ),
-  ),
-);
+}) {
+  final motion = OmniMotion.enabled(context);
 
-class _ChoiceTile extends StatelessWidget {
-  const _ChoiceTile({
-    required this.icon,
-    required this.tone,
-    required this.title,
-    required this.subtitle,
-    required this.onTap,
+  return Navigator.of(context).push<CreateChoice>(
+    _CreateMenuRoute(
+      anchor: anchor,
+      canCreateTeam: canCreateTeam,
+      duration: motion ? _popDuration : Duration.zero,
+    ),
+  );
+}
+
+const _popDuration = Duration(milliseconds: 280);
+const _fadeDuration = Duration(milliseconds: 200);
+
+/// cubic-bezier(.2,.9,.25,1) của `pop` và `sheet`.
+const _popCurve = Cubic(0.2, 0.9, 0.25, 1);
+
+class _CreateMenuRoute extends PopupRoute<CreateChoice> {
+  _CreateMenuRoute({
+    required this.anchor,
+    required this.canCreateTeam,
+    required this.duration,
   });
 
-  final IconData icon;
-  final OmniTaskTone tone;
-  final String title;
-  final String subtitle;
-  final VoidCallback onTap;
+  final Rect anchor;
+  final bool canCreateTeam;
+  final Duration duration;
+
+  @override
+  Color? get barrierColor => null;
+
+  // Lớp phủ tự vẽ (có blur) và tự đóng khi chạm.
+  @override
+  bool get barrierDismissible => false;
+
+  @override
+  String? get barrierLabel => null;
+
+  @override
+  Duration get transitionDuration => duration;
+
+  @override
+  Widget buildPage(
+    BuildContext context,
+    Animation<double> animation,
+    Animation<double> secondaryAnimation,
+  ) {
+    final size = MediaQuery.sizeOf(context);
+    final fade = CurvedAnimation(
+      parent: animation,
+      curve: Interval(
+        0,
+        _fadeDuration.inMilliseconds / _popDuration.inMilliseconds,
+      ),
+    );
+    final pop = CurvedAnimation(parent: animation, curve: _popCurve);
+    final scrim = OmniColors.byBrightness(
+      context,
+      OmniColors.ink.withValues(alpha: .22),
+      Colors.black.withValues(alpha: .4),
+    );
+
+    return Stack(
+      children: [
+        Positioned.fill(
+          child: Semantics(
+            button: true,
+            label: 'Đóng',
+            onTap: () => Navigator.of(context).pop(),
+            child: GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: () => Navigator.of(context).pop(),
+              child: FadeTransition(
+                opacity: fade,
+                child: BackdropFilter(
+                  filter: ImageFilter.blur(sigmaX: 2, sigmaY: 2),
+                  child: ColoredBox(color: scrim),
+                ),
+              ),
+            ),
+          ),
+        ),
+        Positioned(
+          top: anchor.bottom + 6,
+          right: size.width - anchor.right,
+          child: AnimatedBuilder(
+            animation: pop,
+            builder: (context, child) {
+              final t = pop.value;
+
+              return Opacity(
+                opacity: t.clamp(0.0, 1.0),
+                child: Transform.translate(
+                  offset: Offset(0, 8 * (1 - t)),
+                  child: Transform.scale(
+                    scale: .96 + .04 * t,
+                    alignment: Alignment.topRight,
+                    child: child,
+                  ),
+                ),
+              );
+            },
+            child: _CreateMenu(canCreateTeam: canCreateTeam),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _CreateMenu extends StatelessWidget {
+  const _CreateMenu({required this.canCreateTeam});
+
+  final bool canCreateTeam;
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final text = Theme.of(context).textTheme;
     const radius = BorderRadius.all(Radius.circular(8));
 
-    return Material(
-      color: scheme.surface,
-      shape: RoundedRectangleBorder(
+    return Container(
+      key: const Key('create-menu'),
+      width: 220,
+      decoration: BoxDecoration(
         borderRadius: radius,
-        side: BorderSide(color: scheme.outlineVariant),
+        boxShadow: [
+          BoxShadow(
+            offset: const Offset(0, 12),
+            blurRadius: 32,
+            color: OmniColors.ink.withValues(alpha: .18),
+          ),
+        ],
       ),
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: onTap,
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(minHeight: 56),
-          child: Padding(
-            padding: const EdgeInsets.all(10),
-            child: Row(
-              children: [
-                Container(
-                  width: 34,
-                  height: 34,
-                  decoration: BoxDecoration(
-                    color: tone.background,
-                    borderRadius: radius,
-                  ),
-                  child: Icon(icon, size: 20, color: tone.foreground),
+      child: Material(
+        color: scheme.surface,
+        borderRadius: radius,
+        clipBehavior: Clip.antiAlias,
+        child: Semantics(
+          scopesRoute: true,
+          explicitChildNodes: true,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (canCreateTeam)
+                _MenuItem(
+                  icon: Icons.person_add_alt_outlined,
+                  label: 'Tạo team',
+                  onTap: () => Navigator.of(context).pop(CreateChoice.team),
                 ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        title,
-                        style: text.bodyMedium?.copyWith(
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      Text(
-                        subtitle,
-                        style: text.bodySmall?.copyWith(
-                          color: scheme.onSurfaceVariant,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
+              _MenuItem(
+                icon: Icons.view_kanban_outlined,
+                label: 'Tạo kế hoạch',
+                divider: canCreateTeam,
+                onTap: () => Navigator.of(context).pop(CreateChoice.plan),
+              ),
+            ],
           ),
         ),
       ),
@@ -130,55 +186,50 @@ class _ChoiceTile extends StatelessWidget {
   }
 }
 
-/// Nút + của tab Việc (`Tasks.dc.html`): vuông 52×52 bo 14, CHỈ biểu tượng.
-///
-/// Xoay 45° thành × khi sheet của nó đang mở ([open]), để nút cũng là chỗ đóng
-/// ngay trước mắt. Hoạt ảnh tắt khi người dùng bật giảm chuyển động.
-class CreateSquareButton extends StatelessWidget {
-  const CreateSquareButton({
-    super.key,
-    required this.open,
-    required this.onPressed,
+class _MenuItem extends StatelessWidget {
+  const _MenuItem({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+    this.divider = false,
   });
 
-  final bool open;
-  final VoidCallback onPressed;
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+  final bool divider;
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    const shape = RoundedRectangleBorder(
-      borderRadius: BorderRadius.all(Radius.circular(14)),
-    );
 
-    return Semantics(
-      button: true,
-      label: 'Tạo team hoặc dự án',
-      excludeSemantics: true,
-      onTap: onPressed,
-      child: SizedBox(
-        width: 52,
-        height: 52,
-        child: Material(
-          color: scheme.primary,
-          elevation: 6,
-          shadowColor: scheme.primary.withValues(alpha: 0.4),
-          shape: shape,
-          child: InkWell(
-            customBorder: shape,
-            // Giảm chuyển động: không gợn sóng khi chạm.
-            splashFactory: OmniMotion.enabled(context)
-                ? null
-                : NoSplash.splashFactory,
-            onTap: onPressed,
-            child: AnimatedRotation(
-              turns: open ? 0.125 : 0,
-              duration: OmniMotion.enabled(context)
-                  ? const Duration(milliseconds: 300)
-                  : Duration.zero,
-              curve: OmniCurves.standard,
-              child: Icon(Icons.add_rounded, size: 24, color: scheme.onPrimary),
-            ),
+    return OmniPressScale(
+      child: InkWell(
+        onTap: onTap,
+        child: Container(
+          constraints: const BoxConstraints(minHeight: 52),
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          decoration: divider
+              ? BoxDecoration(
+                  border: Border(
+                    top: BorderSide(color: scheme.surfaceContainerHighest),
+                  ),
+                )
+              : null,
+          child: Row(
+            children: [
+              Icon(icon, size: 20, color: scheme.primary),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  label,
+                  style: OmniType.body.copyWith(
+                    fontWeight: FontWeight.w500,
+                    color: scheme.onSurface,
+                  ),
+                ),
+              ),
+            ],
           ),
         ),
       ),
