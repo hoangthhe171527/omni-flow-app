@@ -212,15 +212,10 @@ class Plan {
   final int doneCount;
   final int overdueCount;
 
-  /// Kế hoạch tôi đã đánh dấu yêu thích. null = API cũ chưa có khả năng.
+  /// Kế hoạch tôi đã đánh dấu yêu thích; null = phản hồi không có khoá. Có
+  /// vẽ sao hay không do khả năng `projects.favorite` của phiên quyết
+  /// (`ApiCapability`), không do khoá này.
   final bool? isFavorite;
-
-  bool get supportsFavorite => isFavorite != null;
-
-  /// Chuyển chủ (`POST /projects/{id}/transfer-owner`) không có trường riêng:
-  /// nó ra cùng bản phát hành với `is_favorite`, khoá API mới gửi trên MỌI
-  /// kế hoạch. Quyền (chủ hiện tại hoặc `manage.all`) do chỗ gọi xét.
-  bool get supportsTransferOwner => isFavorite != null;
 
   /// Vai của một người trong dự án này. Không có tên trong bảng thì là
   /// người xem — cùng lý do với [PlanRole.parse]. Có trong `member_ids` mà

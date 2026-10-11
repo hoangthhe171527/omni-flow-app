@@ -285,11 +285,11 @@ class Task {
     // Tài liệu cũ không có khoá; server coi đó là chưa lưu trữ (`!= true`).
     archived: json.flag('archived'),
     // API Nhóm 2 (`TaskPresenter::withFlags`) LUÔN gửi hai cờ này dạng bool;
-    // API cũ không có khoá → null = "chưa có khả năng", nên ẩn nút.
+    // API cũ không có khoá → null. Nút ghim / khoá ẩn theo `ApiCapability`.
     pinned: _boolOrNull(json['pinned']),
     locked: _boolOrNull(json['locked']),
     // Chỉ có khi việc từng có người theo dõi; vắng khoá trên API mới vẫn
-    // theo dõi được ([supportsFollowers] nhìn thêm `pinned`).
+    // theo dõi được — nút theo `ApiCapability.taskFollow`.
     followerIds: json.containsKey('follower_ids')
         ? json.strList('follower_ids')
         : null,
@@ -408,7 +408,7 @@ class Task {
   final bool? locked;
 
   /// Id người theo dõi. null = khoá vắng (API cũ, hoặc API mới mà việc chưa
-  /// từng có ai theo dõi — xem [supportsFollowers]).
+  /// từng có ai theo dõi).
   final List<String>? followerIds;
 
   /// Tên / ảnh người theo dõi, THẲNG HÀNG với [followerIds] (null giữ chỗ).
@@ -430,17 +430,6 @@ class Task {
 
   /// Đã khoá (thiếu khoá = không).
   bool get isLocked => locked == true;
-
-  /// Khả năng ghim: chỉ khi API gửi khoá `pinned`.
-  bool get supportsPin => pinned != null;
-
-  /// Khả năng khoá: chỉ khi API gửi khoá `locked`.
-  bool get supportsLock => locked != null;
-
-  /// Khả năng theo dõi. `follower_ids` chỉ có sau lần theo dõi đầu tiên, nên
-  /// `pinned` — khoá API Nhóm 2 gửi trên MỌI việc, cùng bản phát hành với
-  /// `/follow` — cũng là tín hiệu. API cũ thiếu cả hai.
-  bool get supportsFollowers => followerIds != null || pinned != null;
 
   /// Người theo dõi, ghép id / tên / ảnh theo chỉ số (an toàn với mảng ngắn).
   List<({String id, String? name, String? avatar})> get followers => [

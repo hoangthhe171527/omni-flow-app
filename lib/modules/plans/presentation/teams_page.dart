@@ -7,6 +7,7 @@ import '../../../core/utils/text_search.dart';
 import '../../../design/components/components.dart';
 import '../../../design/tokens/tokens.dart';
 import '../../../security/guard/access_requirement.dart';
+import '../../../security/session/api_capabilities.dart';
 import '../../../security/session/session_controller.dart';
 import '../../tasks/application/tasks_providers.dart';
 import '../../tasks/domain/task_permissions.dart';
@@ -66,7 +67,13 @@ class _TeamsPageState extends ConsumerState<TeamsPage> {
   /// Lượt bấm sao đang bay: lần tải lại cây giữa chừng không được xoá nó.
   final _favoriteInFlight = <String>{};
 
-  bool? _favoriteOf(Plan plan) => _favorite[plan.id] ?? plan.isFavorite;
+  /// Sao của [plan]; null = không vẽ sao (API chưa có `projects.favorite`).
+  bool? _favoriteOf(Plan plan) => _favoriteSupported
+      ? _favorite[plan.id] ?? plan.isFavorite ?? false
+      : null;
+
+  /// Khả năng `projects.favorite` của bản API (đọc trong [build]).
+  bool _favoriteSupported = false;
 
   /// Bấm sao (`POST|DELETE /projects/{id}/favorite`): đổi ngay dưới ngón tay,
   /// lỗi thì hoàn tác và báo.
@@ -129,6 +136,9 @@ class _TeamsPageState extends ConsumerState<TeamsPage> {
   @override
   Widget build(BuildContext context) {
     final groups = ref.watch(teamsWithPlansProvider);
+    _favoriteSupported = ref.watch(
+      apiSupportsProvider(ApiCapability.projectFavorite),
+    );
     // Cây mới về thì bỏ các sao đã bấm xong: `is_favorite` của server đã
     // mang giá trị đó (hoặc máy khác vừa đổi — server thắng).
     ref.listen(teamsWithPlansProvider, (_, next) {
@@ -253,7 +263,7 @@ class _TeamsPageState extends ConsumerState<TeamsPage> {
           index: favorites.isEmpty ? i : i + 1,
           rise: !_introDone,
           favoriteOf: _favoriteOf,
-          onToggleFavorite: _toggleFavorite,
+          onToggleFavorite: _favoriteSupported ? _toggleFavorite : null,
           group: visible[i].$1,
           plans: visible[i].$2,
           closed: visible[i].$3,

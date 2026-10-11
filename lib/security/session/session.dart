@@ -67,6 +67,7 @@ class Session {
     this.roles = const [],
     this.policy = const AccessPolicy.empty(),
     this.features = const {},
+    this.apiCapabilities = const {},
   });
 
   const Session.restoring() : this(status: SessionStatus.restoring);
@@ -88,6 +89,15 @@ class Session {
 
   /// [key] null = mục không gắn cờ, luôn bật.
   bool featureEnabled(String? key) => key == null || features[key] != false;
+
+  /// Khả năng của BẢN API đang chạy (`/auth/context` → `api_capabilities`,
+  /// danh sách chuỗi như `tasks.pin`; tên ở `ApiCapability`). NGƯỢC với
+  /// [features]: khoá THIẾU nghĩa là CHƯA CÓ — API cũ hay API vừa lùi bản
+  /// không gửi gì thì mọi nút phụ thuộc đều ẩn.
+  final Set<String> apiCapabilities;
+
+  /// API đang chạy có khả năng [name] không. Thiếu = không.
+  bool apiSupports(String name) => apiCapabilities.contains(name);
 
   bool get isRestoring => status == SessionStatus.restoring;
 
@@ -111,6 +121,7 @@ class Session {
     List<SessionRole>? roles,
     AccessPolicy? policy,
     Map<String, bool>? features,
+    Set<String>? apiCapabilities,
   }) {
     return Session(
       status: status ?? this.status,
@@ -120,6 +131,7 @@ class Session {
       roles: roles ?? this.roles,
       policy: policy ?? this.policy,
       features: features ?? this.features,
+      apiCapabilities: apiCapabilities ?? this.apiCapabilities,
     );
   }
 }

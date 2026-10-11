@@ -22,6 +22,7 @@ import 'package:omni_app/modules/tasks/domain/task.dart';
 import 'package:omni_app/modules/tasks/domain/task_permissions.dart';
 import 'package:omni_app/modules/team/team.dart';
 import 'package:omni_app/security/permissions/access_policy.dart';
+import 'package:omni_app/security/session/api_capabilities.dart';
 import 'package:omni_app/security/session/session.dart';
 import 'package:omni_app/security/session/session_controller.dart';
 
@@ -50,6 +51,7 @@ void main() {
       WidgetTester t,
       List<TeamWithPlans> groups, {
       bool fail = false,
+      bool caps = true,
     }) async {
       t.view.physicalSize = const Size(390, 844);
       t.view.devicePixelRatio = 1;
@@ -82,6 +84,12 @@ void main() {
             ),
             taskAccessProvider.overrideWithValue(TaskAccess.of(policy)),
             accessProvider.overrideWithValue(policy),
+            sessionProvider.overrideWithValue(
+              Session(
+                status: SessionStatus.authenticated,
+                apiCapabilities: {if (caps) ApiCapability.projectFavorite},
+              ),
+            ),
           ],
           child: MaterialApp.router(
             theme: OmniTheme.light(TargetPlatform.android),
@@ -102,7 +110,7 @@ void main() {
     ) async {
       await pump(t, [
         team([plan('Bảo hành'), plan('Sửa tại nhà')]),
-      ]);
+      ], caps: false);
       expect(find.bySemanticsLabel('Thêm vào yêu thích'), findsNothing);
       expect(find.bySemanticsLabel('Bỏ khỏi yêu thích'), findsNothing);
       expect(find.text('Yêu thích'), findsNothing);
@@ -110,6 +118,16 @@ void main() {
         find.byIcon(Icons.chevron_right_rounded),
         findsNWidgets(3),
       ); // 2 dòng + thẻ Dòng việc
+    });
+
+    testWidgets('API lùi bản: JSON còn is_favorite nhưng phiên không khai '
+        'projects.favorite → không sao, không mục Yêu thích', (t) async {
+      await pump(t, [
+        team([plan('Bảo hành', favorite: true), plan('Sửa', favorite: false)]),
+      ], caps: false);
+      expect(find.bySemanticsLabel('Thêm vào yêu thích'), findsNothing);
+      expect(find.bySemanticsLabel('Bỏ khỏi yêu thích'), findsNothing);
+      expect(find.text('Yêu thích'), findsNothing);
     });
 
     testWidgets('API mới: sao trên mỗi dòng; mục Yêu thích có số, "Team · N '
@@ -272,6 +290,9 @@ void main() {
               Session(
                 status: SessionStatus.authenticated,
                 user: SessionUser(id: me, fullName: 'Tôi', email: 'me@x.vn'),
+                apiCapabilities: {
+                  if (newApi) ApiCapability.projectTransferOwner,
+                },
               ),
             ),
             taskAccessProvider.overrideWithValue(

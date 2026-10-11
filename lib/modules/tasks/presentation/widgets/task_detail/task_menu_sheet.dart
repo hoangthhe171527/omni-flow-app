@@ -5,7 +5,7 @@ import 'menu_sheet.dart';
 /// Mục của menu việc (`TaskMenu.dc.html`).
 ///
 /// Mục Nhóm 2 (Người theo dõi, Ghim, Khoá) chỉ có khi API gửi khoá tương ứng
-/// (`Task.supportsFollowers` / `supportsPin` / `supportsLock`). Nhắc việc,
+/// (`ApiCapability.taskFollow` / `taskPin` / `taskLock` trong phiên). Nhắc việc,
 /// Sao chép công việc, Sao chép liên kết thuộc Task 11.
 enum TaskMenuAction {
   labels,

@@ -28,15 +28,11 @@ void main() {
     test('API mới: is_favorite true/false', () {
       final plans = rows('projects_index_group2.json').map(Plan.fromJson);
       expect(plans.map((p) => p.isFavorite), [true, false]);
-      expect(plans.every((p) => p.supportsFavorite), isTrue);
-      expect(plans.every((p) => p.supportsTransferOwner), isTrue);
     });
 
-    test('API cũ (projects_index.json): không có khoá → null, tắt hết', () {
+    test('API cũ (projects_index.json): không có khoá → null', () {
       final plan = Plan.fromJson(rows('projects_index.json').single);
       expect(plan.isFavorite, isNull);
-      expect(plan.supportsFavorite, isFalse);
-      expect(plan.supportsTransferOwner, isFalse);
     });
 
     test('copyWith giữ is_favorite và đổi được nó', () {

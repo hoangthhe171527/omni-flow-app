@@ -13,6 +13,9 @@ import 'package:omni_app/modules/tasks/domain/task.dart';
 import 'package:omni_app/modules/tasks/domain/task_label.dart';
 import 'package:omni_app/modules/tasks/domain/task_permissions.dart';
 import 'package:omni_app/security/permissions/access_policy.dart';
+import 'package:omni_app/security/session/api_capabilities.dart';
+import 'package:omni_app/security/session/session.dart';
+import 'package:omni_app/security/session/session_controller.dart';
 
 /// Hợp đồng Nhóm 2 phía việc (Task 10), đối chiếu `omni-flow-api` nhánh
 /// `feat/viec-moi-api`:
@@ -53,48 +56,39 @@ void main() {
         expect(t.assignedByAvatar, 'https://cdn.viomni.test/a/th.png');
         expect(t.createdByName, 'Trần Hưng');
         expect(t.createdByAvatar, 'https://cdn.viomni.test/a/th.png');
-        expect(t.supportsPin, isTrue);
-        expect(t.supportsLock, isTrue);
-        expect(t.supportsFollowers, isTrue);
         expect(t.assignerName, 'Trần Hưng');
         expect(t.assignerAvatar, 'https://cdn.viomni.test/a/th.png');
       },
     );
 
-    test('API cũ (fixture Task 1): mọi khả năng Nhóm 2 là null / tắt', () {
+    test('API cũ (fixture Task 1): mọi cờ Nhóm 2 là null', () {
       final t = Task.fromJson(fixture('tasks_show_viec_moi.json'));
       expect(t.pinned, isNull);
       expect(t.locked, isNull);
       expect(t.followerIds, isNull);
       expect(t.isPinned, isFalse);
       expect(t.isLocked, isFalse);
-      expect(t.supportsPin, isFalse);
-      expect(t.supportsLock, isFalse);
-      expect(t.supportsFollowers, isFalse);
       expect(t.assignedBy, isNull);
       expect(t.assignerName, isNull);
       expect(t.assignerAvatar, isNull);
     });
 
     test('API mới, việc chưa ai theo dõi: không có follower_ids nhưng có '
-        'pinned → theo dõi được, danh sách rỗng', () {
+        'danh sách rỗng', () {
       final t = Task.fromJson({
         'id': 't1',
         'title': 'x',
         'pinned': false,
         'locked': false,
       });
-      expect(t.supportsFollowers, isTrue);
       expect(t.followerIds, isNull);
       expect(t.followers, isEmpty);
-      expect(t.supportsPin, isTrue);
       expect(t.isPinned, isFalse);
     });
 
     test('follower_ids: [] (bỏ theo dõi hết) vẫn là API mới', () {
       final t = Task.fromJson({'id': 't1', 'title': 'x', 'follower_ids': []});
       expect(t.followerIds, isEmpty);
-      expect(t.supportsFollowers, isTrue);
     });
 
     test('pinned/locked kiểu lạ (không phải bool) → null, không đoán', () {
@@ -322,10 +316,21 @@ void main() {
   });
 
   group('taskLabelsProvider chọn đường đọc theo quyền', () {
-    Future<(List<TaskLabel>, List<String>)> read(Set<String> perms) async {
+    Future<(List<TaskLabel>, List<String>)> read(
+      Set<String> perms, {
+      bool readerRoute = true,
+    }) async {
       final fake = _LabelsApi();
       final c = ProviderContainer(
         overrides: [
+          sessionProvider.overrideWithValue(
+            Session(
+              status: SessionStatus.authenticated,
+              apiCapabilities: {
+                if (readerRoute) ApiCapability.taskLabelsForReaders,
+              },
+            ),
+          ),
           tasksApiProvider.overrideWithValue(fake),
           taskAccessProvider.overrideWithValue(
             TaskAccess.of(AccessPolicy(perms)),
@@ -346,6 +351,13 @@ void main() {
       final (labels, calls) = await read({'tasks.read', 'tasks.write'});
       expect(calls, ['readers']);
       expect(labels.single.code, 'khan_cap');
+    });
+
+    test('thợ nhưng phiên không khai system_options.task_labels (API cũ / '
+        'lùi bản) → [] và KHÔNG gọi', () async {
+      final (labels, calls) = await read({'tasks.read'}, readerRoute: false);
+      expect(labels, isEmpty);
+      expect(calls, isEmpty);
     });
 
     test('không quyền nào → [] và không gọi mạng', () async {

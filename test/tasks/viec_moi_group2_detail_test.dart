@@ -17,6 +17,7 @@ import 'package:omni_app/modules/tasks/domain/task_project.dart';
 import 'package:omni_app/modules/tasks/presentation/task_detail_page.dart';
 import 'package:omni_app/modules/team/team.dart';
 import 'package:omni_app/security/permissions/access_policy.dart';
+import 'package:omni_app/security/session/api_capabilities.dart';
 import 'package:omni_app/security/session/session.dart';
 import 'package:omni_app/security/session/session_controller.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -67,6 +68,7 @@ void main() {
     Map<String, dynamic> json, {
     Set<String> perms = assigner,
     TaskProject project = const TaskProject(ownerId: 'u0'),
+    Set<String> caps = allCaps,
   }) async {
     t.view.physicalSize = const Size(390, 844);
     t.view.devicePixelRatio = 1;
@@ -96,9 +98,14 @@ void main() {
             TaskAccess.of(AccessPolicy(perms)),
           ),
           sessionProvider.overrideWithValue(
-            const Session(
+            Session(
               status: SessionStatus.authenticated,
-              user: SessionUser(id: me, fullName: 'Thợ Hùng', email: 'h@t.vn'),
+              user: const SessionUser(
+                id: me,
+                fullName: 'Thợ Hùng',
+                email: 'h@t.vn',
+              ),
+              apiCapabilities: caps,
             ),
           ),
         ],
@@ -124,9 +131,22 @@ void main() {
     'Mở khoá',
   ];
 
+  testWidgets('API lùi bản: JSON vẫn mang pinned/locked/follower_*/'
+      'assigned_by_name nhưng phiên KHÔNG khai khả năng → không nút nào', (
+    t,
+  ) async {
+    await pump(t, newJson(followers: ['u2']), caps: const {});
+    expect(find.byTooltip('Người theo dõi'), findsNothing);
+    expect(find.bySemanticsLabel('Người giao: Trần Hưng'), findsNothing);
+    await openMenu(t);
+    for (final label in group2Menu) {
+      expect(find.text(label), findsNothing, reason: label);
+    }
+  });
+
   testWidgets('API cũ: không nút theo dõi, không người giao, không mục '
       'Nhóm 2, không chip khoá', (t) async {
-    await pump(t, oldJson());
+    await pump(t, oldJson(), caps: const {});
     expect(find.byTooltip('Người theo dõi'), findsNothing);
     expect(find.bySemanticsLabel('Người giao: Trần Hưng'), findsNothing);
     expect(find.byKey(const Key('assigner-avatar')), findsNothing);
@@ -147,7 +167,7 @@ void main() {
                 )
                 as Map<String, dynamic>)['data']
             as Map<String, dynamic>;
-    await pump(t, {...data, 'id': 't1'});
+    await pump(t, {...data, 'id': 't1'}, caps: const {});
     expect(find.byTooltip('Người theo dõi'), findsNothing);
     expect(find.byKey(const Key('assigner-avatar')), findsNothing);
     expect(find.byKey(const Key('task-locked-chip')), findsNothing);
@@ -386,3 +406,20 @@ class _Silent extends TaskRealtimeSignal {
   @override
   int build() => 0;
 }
+
+/// Mọi khả năng `ApiCapabilities::ALL` của API mới.
+const allCaps = {
+  ApiCapability.taskPin,
+  ApiCapability.taskLock,
+  ApiCapability.taskFollow,
+  ApiCapability.taskAssignedBy,
+  ApiCapability.taskCompletedAt,
+  ApiCapability.projectFavorite,
+  ApiCapability.projectTransferOwner,
+  ApiCapability.taskLabelsForReaders,
+  ApiCapability.taskCopy,
+  ApiCapability.taskReminders,
+  ApiCapability.checklistMove,
+  ApiCapability.subtaskFields,
+  ApiCapability.commentAttachments,
+};

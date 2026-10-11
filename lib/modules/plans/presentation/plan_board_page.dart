@@ -11,6 +11,7 @@ import '../../../core/utils/client_id.dart';
 import '../../../design/components/components.dart';
 import '../../../design/platform/omni_motion_scope.dart';
 import '../../../design/tokens/tokens.dart';
+import '../../../security/session/api_capabilities.dart';
 import '../../../security/session/session_controller.dart';
 import '../../tasks/application/tasks_providers.dart';
 import '../../tasks/domain/task.dart';
@@ -116,7 +117,9 @@ class _PlanBoardPageState extends ConsumerState<PlanBoardPage> {
             // Chuyển chủ (Nhóm 2): chủ hiện tại hoặc `manage.all` — quản lý
             // kế hoạch KHÔNG được (`TransferProjectOwner`, 403).
             canTransferOwner:
-                loaded.supportsTransferOwner &&
+                ref.watch(
+                  apiSupportsProvider(ApiCapability.projectTransferOwner),
+                ) &&
                 taskAccess.canUpdate &&
                 (taskAccess.isAssigner ||
                     (currentUserId != null && loaded.ownerId == currentUserId)),

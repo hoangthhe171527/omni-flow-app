@@ -39,7 +39,7 @@ enum PlanMenuAction {
 /// xoá tệp) tự ẩn theo quyền.
 ///
 /// - [canTransferOwner]: "Chuyển chủ kế hoạch" (Nhóm 2) — API có khả năng
-///   (`Plan.supportsTransferOwner`) VÀ người này là chủ hiện tại hoặc giữ
+///   (`ApiCapability.projectTransferOwner` trong phiên) VÀ người này là chủ hiện tại hoặc giữ
 ///   `tasks.projects.manage.all`, đúng luật `TransferProjectOwner`.
 ///
 /// Chưa có: "Sao chép liên kết" (Task 11).

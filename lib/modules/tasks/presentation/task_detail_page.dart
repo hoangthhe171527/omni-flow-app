@@ -10,6 +10,7 @@ import '../../../core/utils/formatters.dart';
 import '../../../design/components/components.dart';
 import '../../../design/platform/omni_motion_scope.dart';
 import '../../../design/tokens/tokens.dart';
+import '../../../security/session/api_capabilities.dart';
 import '../../../security/session/session_controller.dart';
 import '../../customers/routes.dart';
 import '../../plans/routes.dart';
@@ -113,6 +114,7 @@ class _TaskDetailPageState extends ConsumerState<TaskDetailPage> {
     final me = ref.watch(sessionProvider.select((s) => s.user?.id));
     final catalog = ref.watch(taskLabelsProvider).valueOrNull ?? const [];
     final viewer = loadedTask != null && _isPlanViewer(ref, loadedTask, me);
+    bool api(String name) => ref.watch(apiSupportsProvider(name));
     final groups = loadedTask == null || viewer
         ? const <List<TaskMenuAction>>[]
         : taskMenuGroups(
@@ -121,17 +123,17 @@ class _TaskDetailPageState extends ConsumerState<TaskDetailPage> {
             canLabels: canWrite && (access.canReadLabels || catalog.isNotEmpty),
             isAssigner: access.isAssigner,
             archived: loadedTask.archived,
-            canFollow: loadedTask.supportsFollowers && access.canRead,
-            canPin: loadedTask.supportsPin && access.canUpdate,
+            canFollow: api(ApiCapability.taskFollow) && access.canRead,
+            canPin: api(ApiCapability.taskPin) && access.canUpdate,
             pinned: loadedTask.isPinned,
             canLock:
-                loadedTask.supportsLock &&
+                api(ApiCapability.taskLock) &&
                 access.canUpdate &&
                 _canManageTask(loadedTask, me, access.isAssigner),
             locked: loadedTask.isLocked,
           );
     final showFollowers =
-        loadedTask != null && loadedTask.supportsFollowers && access.canRead;
+        loadedTask != null && api(ApiCapability.taskFollow) && access.canRead;
 
     return Scaffold(
       appBar: DetailHeader(
@@ -501,6 +503,9 @@ class _Loaded extends ConsumerWidget {
         _gap,
         TaskInfoCard(
           task: task,
+          showAssigner: ref.watch(
+            apiSupportsProvider(ApiCapability.taskAssignedBy),
+          ),
           likedByMe: myUserId != null && task.isLikedBy(myUserId),
           onAddAssignee: isAssigner
               ? () => _assign(context, actions, task)

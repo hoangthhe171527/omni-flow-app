@@ -27,6 +27,7 @@ class TaskInfoCard extends StatelessWidget {
     this.onRate,
     this.onLike,
     this.showPriority = false,
+    this.showAssigner = false,
     this.onPriority,
   });
 
@@ -41,6 +42,9 @@ class TaskInfoCard extends StatelessWidget {
   final ValueChanged<int>? onRate;
   final VoidCallback? onLike;
   final bool showPriority;
+
+  /// Vẽ chuỗi "người giao → người làm" (khả năng `tasks.assigned_by`).
+  final bool showAssigner;
   final VoidCallback? onPriority;
 
   @override
@@ -58,7 +62,11 @@ class TaskInfoCard extends StatelessWidget {
         children: [
           _Row(
             label: 'Người làm',
-            child: _People(task: task, onAdd: onAddAssignee),
+            child: _People(
+              task: task,
+              onAdd: onAddAssignee,
+              showAssigner: showAssigner,
+            ),
           ),
           _Row(
             label: 'Thời gian',
@@ -157,10 +165,15 @@ class _Row extends StatelessWidget {
 }
 
 class _People extends StatelessWidget {
-  const _People({required this.task, required this.onAdd});
+  const _People({
+    required this.task,
+    required this.onAdd,
+    required this.showAssigner,
+  });
 
   final Task task;
   final VoidCallback? onAdd;
+  final bool showAssigner;
 
   static const _max = 3;
 
@@ -187,25 +200,26 @@ class _People extends StatelessWidget {
             ),
           )
         else ...[
-          if (task.assignerName case final assigner?) ...[
-            Semantics(
-              label: 'Người giao: $assigner',
-              excludeSemantics: true,
-              child: OmniAvatar(
-                key: const Key('assigner-avatar'),
-                name: assigner,
-                imageUrl: task.assignerAvatar,
-                size: 30,
+          if (showAssigner)
+            if (task.assignerName case final assigner?) ...[
+              Semantics(
+                label: 'Người giao: $assigner',
+                excludeSemantics: true,
+                child: OmniAvatar(
+                  key: const Key('assigner-avatar'),
+                  name: assigner,
+                  imageUrl: task.assignerAvatar,
+                  size: 30,
+                ),
               ),
-            ),
-            const SizedBox(width: 6),
-            Icon(
-              Icons.arrow_forward_rounded,
-              size: 14,
-              color: OmniTaskTones.of(context).faint,
-            ),
-            const SizedBox(width: 6),
-          ],
+              const SizedBox(width: 6),
+              Icon(
+                Icons.arrow_forward_rounded,
+                size: 14,
+                color: OmniTaskTones.of(context).faint,
+              ),
+              const SizedBox(width: 6),
+            ],
           Semantics(
             label: 'Người làm: ${names.join(', ')}',
             excludeSemantics: true,

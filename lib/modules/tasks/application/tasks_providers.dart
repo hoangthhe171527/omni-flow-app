@@ -6,6 +6,7 @@ import '../../../core/config/app_config.dart';
 import '../../../core/error/app_exception.dart';
 import '../../../core/network/api_envelope.dart';
 import '../../../core/realtime/realtime_client.dart';
+import '../../../security/session/api_capabilities.dart';
 import '../../../security/session/session_controller.dart';
 import '../../team/team.dart';
 import '../data/tasks_api.dart';
@@ -271,7 +272,8 @@ final taskBadgeProvider = Provider.autoDispose<int>((ref) {
 ///  * có `system_options.read` → danh mục đầy đủ (có `id`, sheet Nhãn màu sửa
 ///    được theo id);
 ///  * chỉ có `tasks.read` (thợ) → `GET /system-options/task-labels` (API Nhóm
-///    2), chỉ code / tên / màu. API cũ trả 403/404 → rỗng: dải nhãn ẩn, chip
+///    2, chỉ khi phiên khai `system_options.task_labels`), chỉ code / tên /
+///    màu. Không khai (API cũ) → rỗng mà không gọi: dải nhãn ẩn, chip
 ///    hiện mã với màu `fallback`, như trước đây.
 /// Không có quyền nào thì rỗng mà không gọi mạng.
 final taskLabelsProvider = FutureProvider<List<TaskLabel>>((ref) async {
@@ -280,7 +282,10 @@ final taskLabelsProvider = FutureProvider<List<TaskLabel>>((ref) async {
   final access = ref.watch(taskAccessProvider);
   final api = ref.watch(tasksApiProvider);
   if (access.canReadLabels) return api.taskLabels();
-  if (access.canRead) return api.taskLabelsForReaders();
+  if (access.canRead &&
+      ref.watch(apiSupportsProvider(ApiCapability.taskLabelsForReaders))) {
+    return api.taskLabelsForReaders();
+  }
 
   return const [];
 });
