@@ -18,6 +18,7 @@ enum PlanMenuAction {
   archived,
   files,
   report,
+  transferOwner,
   close,
   reopen,
   delete;
@@ -37,12 +38,17 @@ enum PlanMenuAction {
 /// được bảng cũng có: chỉ cần `tasks.read`. Ghi trong các màn đó (khôi phục,
 /// xoá tệp) tự ẩn theo quyền.
 ///
-/// Chưa có: "Sao chép liên kết", "Chuyển chủ kế hoạch" (Task 10–11, chờ API).
+/// - [canTransferOwner]: "Chuyển chủ kế hoạch" (Nhóm 2) — API có khả năng
+///   (`Plan.supportsTransferOwner`) VÀ người này là chủ hiện tại hoặc giữ
+///   `tasks.projects.manage.all`, đúng luật `TransferProjectOwner`.
+///
+/// Chưa có: "Sao chép liên kết" (Task 11).
 List<List<PlanMenuAction>> planMenuGroups(
   Plan plan, {
   required bool canManage,
   required bool canDelete,
   required bool canViewLabels,
+  bool canTransferOwner = false,
 }) {
   final active = plan.planStatus == PlanStatus.active;
   final groups = [
@@ -60,6 +66,7 @@ List<List<PlanMenuAction>> planMenuGroups(
       PlanMenuAction.report,
     ],
     [
+      if (canTransferOwner) PlanMenuAction.transferOwner,
       if (canManage) active ? PlanMenuAction.close : PlanMenuAction.reopen,
       // Năng lực giữ lại từ bảng cũ, không có trong bản mẫu: cuối nhóm 3.
       if (canDelete) PlanMenuAction.delete,
@@ -236,6 +243,10 @@ class _MenuRow extends StatelessWidget {
       PlanMenuAction.archived => (Icons.archive_outlined, 'Việc đã lưu trữ'),
       PlanMenuAction.files => (Icons.attach_file_rounded, 'Tệp đính kèm'),
       PlanMenuAction.report => (Icons.bar_chart_rounded, 'Báo cáo kế hoạch'),
+      PlanMenuAction.transferOwner => (
+        Icons.how_to_reg_outlined,
+        'Chuyển chủ kế hoạch',
+      ),
       PlanMenuAction.close => (Icons.lock_outline_rounded, 'Đóng kế hoạch'),
       PlanMenuAction.reopen => (Icons.lock_open_outlined, 'Mở lại kế hoạch'),
       PlanMenuAction.delete => (Icons.delete_outline, 'Xoá kế hoạch'),

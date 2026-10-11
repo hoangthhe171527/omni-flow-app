@@ -24,6 +24,7 @@ import 'widgets/activity_log.dart';
 import 'widgets/assign_task_sheet.dart';
 import 'widgets/comment_section.dart';
 import 'widgets/edit_sheets.dart';
+import 'widgets/followers_sheet.dart';
 import 'widgets/labels_sheet.dart';
 import 'widgets/task_detail/breadcrumb.dart';
 import 'widgets/task_detail/comment_bar.dart';
@@ -108,18 +109,59 @@ class _TaskDetailPageState extends ConsumerState<TaskDetailPage> {
     final access = ref.watch(taskAccessProvider);
     final loadedTask = detail.valueOrNull?.visible;
     final canWrite = access.canUpdate || access.canComplete;
+    final me = ref.watch(sessionProvider.select((s) => s.user?.id));
+    final catalog = ref.watch(taskLabelsProvider).valueOrNull ?? const [];
     final groups = loadedTask == null
         ? const <List<TaskMenuAction>>[]
         : taskMenuGroups(
-            canLabels: canWrite && access.canReadLabels,
+            // Thợ có danh mục qua `/system-options/task-labels` (Nhóm 2)
+            // cũng bật/tắt nhãn được; sửa danh mục vẫn cần system_options.
+            canLabels: canWrite && (access.canReadLabels || catalog.isNotEmpty),
             isAssigner: access.isAssigner,
             archived: loadedTask.archived,
+            canFollow: loadedTask.supportsFollowers && access.canRead,
+            canPin: loadedTask.supportsPin && access.canUpdate,
+            pinned: loadedTask.isPinned,
+            canLock:
+                loadedTask.supportsLock &&
+                access.canUpdate &&
+                _canManageTask(loadedTask, me, access.isAssigner),
+            locked: loadedTask.isLocked,
           );
+    final showFollowers =
+        loadedTask != null && loadedTask.supportsFollowers && access.canRead;
 
     return Scaffold(
       appBar: DetailHeader(
         title: loadedTask?.title ?? '',
         titleShown: _titleShown,
+        followers: showFollowers
+            ? IconButton(
+                tooltip: 'Người theo dõi',
+                onPressed: () => showFollowersSheet(
+                  context,
+                  taskId: taskId,
+                  myUserId: me,
+                  canEditOthers:
+                      access.isAssigner &&
+                      access.canUpdate &&
+                      !loadedTask.isLocked,
+                ),
+                style: IconButton.styleFrom(
+                  minimumSize: const Size(44, 44),
+                  maximumSize: const Size(44, 44),
+                  padding: EdgeInsets.zero,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                ),
+                icon: Icon(
+                  Icons.visibility_outlined,
+                  size: OmniIconSize.lg,
+                  color: Theme.of(context).colorScheme.onSurface,
+                ),
+              )
+            : null,
         // Không mục nào hiện thì không có ⋯.
         menu: groups.isEmpty
             ? null
@@ -154,6 +196,22 @@ class _TaskDetailPageState extends ConsumerState<TaskDetailPage> {
     );
   }
 
+  /// Quản lý được việc này (khoá / mở khoá): như `ProjectAccessService::
+  /// canManage` — `manage.all`; việc cá nhân thì người tạo; việc trong kế
+  /// hoạch thì chủ / quản lý (kế hoạch legacy không chủ: mở). Kế hoạch chưa
+  /// đọc được thì chỉ `manage.all`.
+  bool _canManageTask(Task task, String? me, bool manageAll) {
+    if (manageAll) return true;
+    final projectId = task.projectId;
+    if (projectId == null) return me != null && task.createdBy == me;
+
+    return ref
+            .watch(taskProjectProvider(projectId))
+            .valueOrNull
+            ?.canManage(me, manageAll: false) ??
+        false;
+  }
+
   /// Menu việc (`TaskMenu.dc.html`): mở sheet rồi chạy mục đã chọn.
   Future<void> _openMenu(
     BuildContext context,
@@ -161,10 +219,41 @@ class _TaskDetailPageState extends ConsumerState<TaskDetailPage> {
     List<List<TaskMenuAction>> groups,
   ) async {
     final controller = ref.read(taskDetailProvider(widget.taskId).notifier);
-    final action = await showTaskMenuSheet(context, groups: groups);
+    final access = ref.read(taskAccessProvider);
+    final me = ref.read(sessionProvider).user?.id;
+    final action = await showTaskMenuSheet(
+      context,
+      groups: groups,
+      followerCount: task.followers.length,
+    );
     if (action == null || !context.mounted) return;
 
     switch (action) {
+      case TaskMenuAction.followers:
+        await showFollowersSheet(
+          context,
+          taskId: widget.taskId,
+          myUserId: me,
+          canEditOthers:
+              access.isAssigner && access.canUpdate && !task.isLocked,
+        );
+      case TaskMenuAction.pin:
+      case TaskMenuAction.unpin:
+        await _flag(
+          context,
+          () => controller.setPinned(action == TaskMenuAction.pin),
+          action == TaskMenuAction.pin ? 'Đã ghim lên đầu cột.' : 'Đã bỏ ghim.',
+          bumpBoard: true,
+        );
+      case TaskMenuAction.lock:
+      case TaskMenuAction.unlock:
+        await _flag(
+          context,
+          () => controller.setLocked(action == TaskMenuAction.lock),
+          action == TaskMenuAction.lock
+              ? 'Đã khoá công việc.'
+              : 'Đã mở khoá công việc.',
+        );
       case TaskMenuAction.labels:
         await _openLabels(context, widget.taskId, controller, task);
       case TaskMenuAction.rename:
@@ -177,6 +266,25 @@ class _TaskDetailPageState extends ConsumerState<TaskDetailPage> {
         await _archive(context, controller, archived: false);
       case TaskMenuAction.delete:
         await _deleteTask(context, task);
+    }
+  }
+
+  /// Ghim / khoá: chờ server, báo [done]; lỗi thì câu của server. Ghim đổi
+  /// thứ tự cột nên báo bảng tải lại.
+  Future<void> _flag(
+    BuildContext context,
+    Future<void> Function() write,
+    String done, {
+    bool bumpBoard = false,
+  }) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final container = ProviderScope.containerOf(context);
+    try {
+      await write();
+      if (bumpBoard) container.read(taskRealtimeSignalProvider.notifier).bump();
+      messenger.showSnackBar(SnackBar(content: Text(done)));
+    } on AppException catch (e) {
+      messenger.showSnackBar(SnackBar(content: Text(e.message)));
     }
   }
 
@@ -312,8 +420,13 @@ class _Loaded extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final task = state.visible;
     final access = ref.watch(taskAccessProvider);
-    final isAssigner = access.isAssigner;
-    final canWrite = access.canUpdate || access.canComplete;
+    // Việc đã khoá: server trả 423 cho MỌI lượt sửa, nên ẩn mọi nút sửa.
+    // Còn lại: bình luận, thích, theo dõi (server vẫn cho).
+    final locked = task.isLocked;
+    final isAssigner = access.isAssigner && !locked;
+    final canWrite = (access.canUpdate || access.canComplete) && !locked;
+    final canComplete = access.canComplete && !locked;
+    final canLike = access.canUpdate || access.canComplete;
     final controller = ref.read(taskDetailProvider(taskId).notifier);
     final actions = TaskDetailActions(controller);
     // `select`: màn này chỉ cần id người đang cầm máy.
@@ -323,6 +436,7 @@ class _Loaded extends ConsumerWidget {
       sessionProvider.select((s) => s.user?.avatarUrl),
     );
     final catalog = ref.watch(taskLabelsProvider).valueOrNull ?? const [];
+    final canLabels = access.canReadLabels || catalog.isNotEmpty;
 
     // §3 là pull-based: ai rảnh TỰ NHẬN. Chỉ khi mình CHƯA có tên trong việc.
     final canClaim =
@@ -338,9 +452,9 @@ class _Loaded extends ConsumerWidget {
         projectId != null &&
         GoRouter.maybeOf(context) != null;
     final sectionName =
-        task.sectionName ?? (isAssigner ? 'Chưa xếp nhóm việc' : null);
+        task.sectionName ?? (access.isAssigner ? 'Chưa xếp nhóm việc' : null);
     final normalPriority = task.priority == 'med' || task.priority == 'medium';
-    final onAddLabel = canWrite && access.canReadLabels
+    final onAddLabel = canWrite && canLabels
         ? () => _openLabels(context, taskId, controller, task)
         : null;
 
@@ -351,12 +465,23 @@ class _Loaded extends ConsumerWidget {
           LabelStrip(codes: task.labels, catalog: catalog, onAdd: onAddLabel),
           _gap,
         ],
+        if (locked) ...[
+          const Align(
+            alignment: Alignment.centerLeft,
+            child: OmniTaskChip.upcoming(
+              'Đã khoá',
+              key: Key('task-locked-chip'),
+              icon: Icons.lock_outline_rounded,
+            ),
+          ),
+          _gap,
+        ],
         KeyedSubtree(
           key: titleKey,
           child: TaskTitleRow(
             task: task,
             taskId: taskId,
-            canComplete: access.canComplete,
+            canComplete: canComplete,
           ),
         ),
         if (task.projectName != null || sectionName != null) ...[
@@ -390,10 +515,10 @@ class _Loaded extends ConsumerWidget {
           onRate: isAssigner
               ? (n) => _rate(context, controller, task, n)
               : null,
-          onLike: canWrite && myUserId != null
+          onLike: canLike && myUserId != null
               ? () => _like(context, controller, myUserId)
               : null,
-          showPriority: isAssigner || !normalPriority,
+          showPriority: access.isAssigner || !normalPriority,
           onPriority: isAssigner
               ? () => _editPriority(context, actions, task)
               : null,
@@ -429,25 +554,25 @@ class _Loaded extends ConsumerWidget {
       ),
       // Người giao việc thấy thẻ việc con KỂ CẢ khi trống — nút + nằm BÊN
       // TRONG thẻ.
-      if (isAssigner || task.hasSubtasks) ...[
+      if (access.isAssigner || task.hasSubtasks) ...[
         _gap,
         SubtasksCard(
           task: task,
           state: state,
           controller: controller,
-          canTick: access.canComplete,
+          canTick: canComplete,
           canEdit: isAssigner,
         ),
       ],
       _gap,
-      FilesCard(task: task, canAttach: access.canAttach),
+      FilesCard(task: task, canAttach: access.canAttach && !locked),
       _gap,
       CommentSection(
         task: task,
         taskId: taskId,
         myUserId: myUserId,
         canWrite: access.canComplete,
-        canModerate: isAssigner,
+        canModerate: access.isAssigner,
       ),
       if (task.activity.isNotEmpty || task.viewers.isNotEmpty) ...[
         _gap,

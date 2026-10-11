@@ -8,6 +8,7 @@ import '../../../core/utils/json.dart';
 import '../domain/custom_field.dart';
 import '../domain/task.dart';
 import '../domain/task_label.dart';
+import '../domain/task_project.dart';
 
 /// Which slice of a person's work to show.
 ///
@@ -537,6 +538,14 @@ class TasksApi {
     );
   }
 
+  /// Kế hoạch chứa việc: chủ, thành viên, vai, trường tuỳ chỉnh — một lượt
+  /// `GET /projects/{id}`. Đọc thẳng ở đây: tasks không import plans.
+  Future<TaskProject> project(String projectId) async {
+    final response = await _client.get('/projects/$projectId');
+
+    return TaskProject.fromJson(response.object);
+  }
+
   /// Định nghĩa trường tuỳ chỉnh của một kế hoạch (`projects.custom_fields`).
   ///
   /// Đọc thẳng `/projects/{id}` như [projectMemberIds]: tasks không import
@@ -601,6 +610,51 @@ class TasksApi {
     }
   }
 
+  /// Bộ nhãn cho người chỉ có `tasks.read` (thợ): `GET
+  /// /system-options/task-labels` → `[{code, label, color, sort_order}]`, chỉ
+  /// nhãn đang bật. Không có `id`, nên KHÔNG dùng để sửa nhãn.
+  ///
+  /// API cũ chưa có route: đường dẫn rơi vào `GET /system-options/{id}`
+  /// (`system_options.read` → 403, hoặc 404). Cả hai ra rỗng như trước đây.
+  Future<List<TaskLabel>> taskLabelsForReaders() async {
+    try {
+      final response = await _client.get('/system-options/task-labels');
+
+      return response.list.map(TaskLabel.fromJson).toList();
+    } on ForbiddenException {
+      return const [];
+    } on NotFoundException {
+      return const [];
+    }
+  }
+
+  /// Ghim / bỏ ghim việc lên đầu cột (`POST|DELETE /tasks/{id}/pin`). Không
+  /// body; server trả việc đầy đủ. Việc đã khoá → 423.
+  Future<Task> setPinned(String taskId, bool pinned) =>
+      _toggle('$_base/$taskId/pin', pinned);
+
+  /// Khoá / mở khoá việc (`POST|DELETE /tasks/{id}/lock`, chủ / quản lý kế
+  /// hoạch; người khác 403 kèm câu của server).
+  Future<Task> setLocked(String taskId, bool locked) =>
+      _toggle('$_base/$taskId/lock', locked);
+
+  /// Tự theo dõi / bỏ theo dõi (`POST|DELETE /tasks/{id}/follow`, chỉ cần
+  /// `tasks.read`; việc đã khoá vẫn được).
+  Future<Task> setFollowing(String taskId, bool following) =>
+      _toggle('$_base/$taskId/follow', following);
+
+  /// Đặt lại TOÀN BỘ người theo dõi (`PUT /tasks/{id}` `follower_ids[]`).
+  /// Rỗng vẫn gửi khoá: đó là "bỏ hết". Mọi id phải là thành viên đang làm
+  /// (422 `errors.follower_ids`), tối đa 50.
+  Future<Task> setFollowers(String taskId, List<String> userIds) =>
+      _patch(taskId, {'follower_ids': userIds});
+
+  Future<Task> _toggle(String path, bool on) async {
+    final response = on ? await _client.post(path) : await _client.delete(path);
+
+    return Task.fromJson(response.object);
+  }
+
   /// Mã của mọi nhãn trong nhóm, đang bật lẫn đã tắt. Thiếu quyền đọc (403)
   /// thì rỗng: vẫn tạo được, chỉ không tránh trùng được.
   Future<Set<String>> _allLabelCodes() async {
@@ -661,6 +715,12 @@ class TasksApi {
         filename: filename,
       );
 }
+
+/// Lỗi "việc đã khoá": 423 `code: task_locked` (`TaskController::
+/// lockedResponse`). Câu cho người đọc nằm sẵn trong `message` của lỗi.
+bool isTaskLockedError(Object error) =>
+    error is RequestRejectedException &&
+    (error.reason == 'task_locked' || error.code == '423');
 
 final tasksApiProvider = Provider<TasksApi>((ref) {
   return TasksApi(ref.watch(apiClientProvider));

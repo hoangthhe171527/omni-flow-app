@@ -13,6 +13,7 @@ import '../domain/custom_field.dart';
 import '../domain/task.dart';
 import '../domain/task_label.dart';
 import '../domain/task_permissions.dart';
+import '../domain/task_project.dart';
 
 final taskAccessProvider = Provider<TaskAccess>((ref) {
   return TaskAccess.of(ref.watch(accessProvider));
@@ -266,16 +267,31 @@ final taskBadgeProvider = Provider.autoDispose<int>((ref) {
 /// Giữ suốt phiên (không autoDispose): thẻ việc nào trên bảng cũng tra màu ở
 /// đây. Sửa hoặc tạo nhãn xong thì `ref.invalidate(taskLabelsProvider)`.
 ///
-/// Thiếu `system_options.read` thì trả rỗng mà KHÔNG gọi mạng: dải nhãn ẩn,
-/// chip nhãn hiện mã với màu `fallback`. API trả 403 cũng ra rỗng
-/// ([TasksApi.taskLabels]).
+/// Hai đường đọc:
+///  * có `system_options.read` → danh mục đầy đủ (có `id`, sheet Nhãn màu sửa
+///    được theo id);
+///  * chỉ có `tasks.read` (thợ) → `GET /system-options/task-labels` (API Nhóm
+///    2), chỉ code / tên / màu. API cũ trả 403/404 → rỗng: dải nhãn ẩn, chip
+///    hiện mã với màu `fallback`, như trước đây.
+/// Không có quyền nào thì rỗng mà không gọi mạng.
 final taskLabelsProvider = FutureProvider<List<TaskLabel>>((ref) async {
   // `taskAccessProvider` dựng lại theo phiên (đổi tenant / người đăng nhập),
   // nên theo dõi nó cũng là tải lại bộ nhãn khi phiên đổi.
-  if (!ref.watch(taskAccessProvider).canReadLabels) return const [];
+  final access = ref.watch(taskAccessProvider);
+  final api = ref.watch(tasksApiProvider);
+  if (access.canReadLabels) return api.taskLabels();
+  if (access.canRead) return api.taskLabelsForReaders();
 
-  return ref.watch(tasksApiProvider).taskLabels();
+  return const [];
 });
+
+/// Kế hoạch chứa việc (chủ, vai, thành viên), cho quyền ở chi tiết việc: ai
+/// khoá được, ai chỉ xem. Lỗi (403/404/mạng) thì chỗ dùng rơi về quyền hệ
+/// thống — không mở thêm nút nào chỉ vì không đọc được kế hoạch.
+final taskProjectProvider = FutureProvider.autoDispose
+    .family<TaskProject, String>((ref, projectId) {
+      return ref.watch(tasksApiProvider).project(projectId);
+    });
 
 /// Định nghĩa trường tuỳ chỉnh của một kế hoạch, cho chi tiết việc.
 ///

@@ -255,7 +255,9 @@ void main() {
         overrides: [
           tasksApiProvider.overrideWithValue(fake),
           taskAccessProvider.overrideWithValue(
-            TaskAccess.of(const AccessPolicy({'tasks.read'})),
+            // Có `tasks.read` thì đi `/system-options/task-labels` (Nhóm 2,
+            // xem viec_moi_group2_tasks_contract_test); ở đây không quyền nào.
+            TaskAccess.of(const AccessPolicy({})),
           ),
         ],
       );

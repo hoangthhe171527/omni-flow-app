@@ -13,8 +13,10 @@ import '../edit_sheets.dart';
 /// Dòng 48, nhãn trái rộng 104 chữ 14 màu phụ. Mọi hành động là callback;
 /// null = chỉ hiển thị.
 ///
-/// Người giao việc (`assigned_by`) và mũi tên → thuộc Nhóm 2: API chưa có
-/// khoá nên không vẽ. Không suy từ `created_by`.
+/// Chuỗi "người giao → người làm" (Nhóm 2): avatar 30 của người giao, mũi
+/// tên 14 màu mờ, rồi người làm. Chỉ vẽ khi API trang trí tên người giao
+/// (`Task.assignerName`: `assigned_by_name`, việc cũ thì `created_by_name`)
+/// và việc đã có người làm. API cũ không có tên → không vẽ, không đoán.
 class TaskInfoCard extends StatelessWidget {
   const TaskInfoCard({
     super.key,
@@ -184,7 +186,26 @@ class _People extends StatelessWidget {
               ),
             ),
           )
-        else
+        else ...[
+          if (task.assignerName case final assigner?) ...[
+            Semantics(
+              label: 'Người giao: $assigner',
+              excludeSemantics: true,
+              child: OmniAvatar(
+                key: const Key('assigner-avatar'),
+                name: assigner,
+                imageUrl: task.assignerAvatar,
+                size: 30,
+              ),
+            ),
+            const SizedBox(width: 6),
+            Icon(
+              Icons.arrow_forward_rounded,
+              size: 14,
+              color: OmniTaskTones.of(context).faint,
+            ),
+            const SizedBox(width: 6),
+          ],
           Semantics(
             label: 'Người làm: ${names.join(', ')}',
             excludeSemantics: true,
@@ -212,6 +233,7 @@ class _People extends StatelessWidget {
               ],
             ),
           ),
+        ],
         if (onAdd != null)
           Semantics(
             button: true,

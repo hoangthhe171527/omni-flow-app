@@ -20,15 +20,29 @@ import '../../../team/team.dart';
 Future<List<String>?> showAssignTaskSheet({
   required BuildContext context,
   required List<String> currentIds,
+  String title = 'Ai làm việc này',
+  String Function(int picked)? confirmLabel,
 }) => showOmniSheet<List<String>>(
   context: context,
-  builder: (context) => _AssignTaskSheet(currentIds: currentIds),
+  builder: (context) => _AssignTaskSheet(
+    currentIds: currentIds,
+    title: title,
+    confirmLabel: confirmLabel,
+  ),
 );
 
 class _AssignTaskSheet extends ConsumerStatefulWidget {
-  const _AssignTaskSheet({required this.currentIds});
+  const _AssignTaskSheet({
+    required this.currentIds,
+    required this.title,
+    this.confirmLabel,
+  });
 
   final List<String> currentIds;
+  final String title;
+
+  /// Chữ nút lưu theo số người đã chọn; null = chữ của "giao việc".
+  final String Function(int picked)? confirmLabel;
 
   @override
   ConsumerState<_AssignTaskSheet> createState() => _AssignTaskSheetState();
@@ -55,7 +69,7 @@ class _AssignTaskSheetState extends ConsumerState<_AssignTaskSheet> {
             OmniSpacing.md,
           ),
           child: Text(
-            'Ai làm việc này',
+            widget.title,
             style: text.titleMedium?.copyWith(fontWeight: FontWeight.w600),
           ),
         ),
@@ -114,9 +128,10 @@ class _AssignTaskSheetState extends ConsumerState<_AssignTaskSheet> {
               // (trả việc về hàng đợi chung), nên nút phải phân biệt được nó
               // với việc bấm nhầm.
               child: Text(
-                _picked.isEmpty
-                    ? 'Bỏ gán tất cả'
-                    : 'Giao cho ${_picked.length} người',
+                widget.confirmLabel?.call(_picked.length) ??
+                    (_picked.isEmpty
+                        ? 'Bỏ gán tất cả'
+                        : 'Giao cho ${_picked.length} người'),
               ),
             ),
           ),

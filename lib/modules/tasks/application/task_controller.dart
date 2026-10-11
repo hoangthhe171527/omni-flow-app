@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -514,6 +515,22 @@ class TaskController
 
   Future<void> _customFieldsQueue = Future<void>.value();
 
+  /// Ghim / bỏ ghim lên đầu cột. Chờ server: thứ tự do server sắp.
+  Future<void> setPinned(bool pinned) =>
+      _apply((api) => api.setPinned(arg, pinned));
+
+  /// Khoá / mở khoá (chủ / quản lý kế hoạch).
+  Future<void> setLocked(bool locked) =>
+      _apply((api) => api.setLocked(arg, locked));
+
+  /// Tự theo dõi / bỏ theo dõi.
+  Future<void> setFollowing(bool following) =>
+      _apply((api) => api.setFollowing(arg, following));
+
+  /// Đặt lại TOÀN BỘ người theo dõi.
+  Future<void> setFollowers(List<String> userIds) =>
+      _apply((api) => api.setFollowers(arg, userIds));
+
   Future<void> deleteAttachment(String attachmentId) =>
       _apply((api) => api.deleteAttachment(arg, attachmentId));
 
@@ -574,7 +591,17 @@ class TaskController
   Future<void> _apply(Future<Task> Function(TasksApi api) call) async {
     if (state.valueOrNull == null) return;
 
-    final updated = await call(ref.read(tasksApiProvider));
+    final Task updated;
+    try {
+      updated = await call(ref.read(tasksApiProvider));
+    } on AppException catch (error) {
+      // 423: ai đó vừa khoá việc ở máy khác. Lỗi vẫn ném (câu của server
+      // hiện lên), và bản mới được tải để màn ẩn nút sửa, hiện "Đã khoá".
+      if (isTaskLockedError(error) && !_disposed) {
+        unawaited(refresh().catchError((Object _) {}));
+      }
+      rethrow;
+    }
     if (_disposed) return;
 
     _adopt(updated);

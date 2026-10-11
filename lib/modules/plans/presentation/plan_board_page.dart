@@ -33,6 +33,7 @@ import 'widgets/board_zoom.dart';
 import 'widgets/person_filter_sheet.dart';
 import 'widgets/plan_copy_move_sheets.dart';
 import 'widgets/plan_menu_sheet.dart';
+import 'widgets/transfer_owner_sheet.dart';
 
 /// Bảng kế hoạch (`Board.dc.html`): nền theo `cover`, header kính tối, dải
 /// cột 300 kéo ngang có snap căn giữa, hé cột kế bên.
@@ -112,6 +113,13 @@ class _PlanBoardPageState extends ConsumerState<PlanBoardPage> {
             canManage: canEditSections,
             canDelete: canDeletePlan,
             canViewLabels: taskAccess.canReadLabels,
+            // Chuyển chủ (Nhóm 2): chủ hiện tại hoặc `manage.all` — quản lý
+            // kế hoạch KHÔNG được (`TransferProjectOwner`, 403).
+            canTransferOwner:
+                loaded.supportsTransferOwner &&
+                taskAccess.canUpdate &&
+                (taskAccess.isAssigner ||
+                    (currentUserId != null && loaded.ownerId == currentUserId)),
           );
 
     final buckets = ref.watch(
@@ -480,6 +488,8 @@ class _PlanBoardPageState extends ConsumerState<PlanBoardPage> {
                 PlanReportPage(planId: plan.id, canConfigure: _canManage(plan)),
           ),
         );
+      case PlanMenuAction.transferOwner:
+        await _transferOwner(plan);
       case PlanMenuAction.close:
         await _closePlan(plan);
       case PlanMenuAction.reopen:
@@ -525,6 +535,39 @@ class _PlanBoardPageState extends ConsumerState<PlanBoardPage> {
     } on AppException catch (error) {
       messenger.showSnackBar(SnackBar(content: Text(error.message)));
       return false;
+    }
+  }
+
+  /// Chuyển chủ: chọn người, hỏi lại, rồi `POST /projects/{id}/transfer-owner`.
+  /// Chủ cũ thành quản lý (mặc định của server).
+  Future<void> _transferOwner(Plan plan) async {
+    final picked = await showTransferOwnerSheet(
+      context,
+      currentOwnerId: plan.ownerId,
+    );
+    if (picked == null || !mounted) return;
+    final confirmed = await showOmniConfirm(
+      context: context,
+      title: 'Chuyển chủ cho ${picked.name}?',
+      message:
+          '${picked.name} sẽ là chủ kế hoạch “${plan.name}”. Chủ hiện tại '
+          'trở thành quản lý kế hoạch.',
+      confirmLabel: 'Chuyển chủ',
+    );
+    if (!confirmed || !mounted) return;
+    final messenger = ScaffoldMessenger.of(context);
+    final container = ProviderScope.containerOf(context);
+    try {
+      await container
+          .read(plansApiProvider)
+          .transferOwner(plan.id, ownerId: picked.userId);
+      container.invalidate(planProvider(plan.id));
+      container.invalidate(teamsWithPlansProvider);
+      messenger.showSnackBar(
+        SnackBar(content: Text('Đã chuyển chủ cho ${picked.name}.')),
+      );
+    } on AppException catch (error) {
+      messenger.showSnackBar(SnackBar(content: Text(error.message)));
     }
   }
 

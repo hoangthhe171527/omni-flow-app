@@ -10,14 +10,15 @@ import '../../../../../design/tokens/tokens.dart';
 ///
 /// ✕ 44 bên trái; giữa là tên việc 15 w600, mờ 0 cho tới khi dòng tiêu đề
 /// trong thân cuộn khuất dưới header ([titleShown]); phải là [menu] (⋯).
-/// Nút "Người theo dõi" của bản mẫu thuộc Nhóm 2: API chưa có khoá nên
-/// không vẽ.
+/// Nút "Người theo dõi" ([followers], Nhóm 2) đứng trước ⋯, chỉ khi API có
+/// khả năng theo dõi.
 class DetailHeader extends StatelessWidget implements PreferredSizeWidget {
   const DetailHeader({
     super.key,
     required this.title,
     required this.titleShown,
     this.menu,
+    this.followers,
   });
 
   static const double height = 48;
@@ -27,6 +28,9 @@ class DetailHeader extends StatelessWidget implements PreferredSizeWidget {
 
   /// Nút ⋯ (đã có vùng chạm 44). null = không có mục nào cho người này.
   final Widget? menu;
+
+  /// Nút "Người theo dõi" (vùng chạm 44). null = API chưa có khả năng.
+  final Widget? followers;
 
   @override
   Size get preferredSize => const Size.fromHeight(height);
@@ -98,6 +102,7 @@ class DetailHeader extends StatelessWidget implements PreferredSizeWidget {
                         ),
                       ),
                     ),
+                    ?followers,
                     menu ?? const SizedBox(width: 44),
                   ],
                 ),

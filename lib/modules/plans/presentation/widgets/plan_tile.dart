@@ -56,19 +56,35 @@ class InitialTile extends StatelessWidget {
 /// Một kế hoạch trong nhóm team (`Main.dc.html .pl`): dòng 48, vạch trên, ô 28
 /// màu cover có chữ cái đầu, tên w500 một dòng, "N việc đang mở", "N trễ" đỏ.
 ///
-/// Ô 44 bên phải dành cho sao Yêu thích (Nhóm 2, Task 10). Khi API chưa có
-/// khả năng đó thì ô là mũi tên › mờ, giống dòng ở mục Yêu thích.
+/// Ô 44 bên phải là sao Yêu thích (Nhóm 2) khi API gửi `is_favorite` và có
+/// [onToggleFavorite]: sao 19, tô `star` khi bật, viền `faint` khi tắt.
+/// Thiếu một trong hai thì ô là mũi tên › mờ, như dòng ở mục Yêu thích.
 class PlanTile extends StatelessWidget {
-  const PlanTile({super.key, required this.plan, this.onTap});
+  const PlanTile({
+    super.key,
+    required this.plan,
+    this.onTap,
+    this.favorite,
+    this.onToggleFavorite,
+    this.subtitle,
+  });
 
   final Plan plan;
   final VoidCallback? onTap;
+
+  /// Trạng thái sao đang hiện (đã áp lượt bấm lạc quan); null = theo [plan].
+  final bool? favorite;
+  final VoidCallback? onToggleFavorite;
+
+  /// Thay dòng "N việc đang mở" (mục Yêu thích: "Team · N việc").
+  final String? subtitle;
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final tones = OmniTaskTones.of(context);
     final open = (plan.taskCount - plan.doneCount).clamp(0, 1 << 30);
+    final fav = favorite ?? plan.isFavorite;
     // Đã đóng / lưu trữ: mờ đi và mang nhãn trạng thái thay cho số trễ.
     final closedLabel = switch (plan.planStatus) {
       PlanStatus.active => null,
@@ -110,7 +126,7 @@ class PlanTile extends StatelessWidget {
                       ),
                     ),
                     Text(
-                      '$open việc đang mở',
+                      subtitle ?? '$open việc đang mở',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: OmniType.micro.copyWith(
@@ -141,14 +157,37 @@ class PlanTile extends StatelessWidget {
                 ),
               ],
               const SizedBox(width: 10),
-              SizedBox.square(
-                dimension: 44,
-                child: Icon(
-                  Icons.chevron_right_rounded,
-                  size: 18,
-                  color: tones.faint,
+              if (fav != null && onToggleFavorite != null)
+                Semantics(
+                  // Nút riêng trong dòng: không gộp vào nhãn của cả dòng.
+                  container: true,
+                  button: true,
+                  toggled: fav,
+                  label: fav ? 'Bỏ khỏi yêu thích' : 'Thêm vào yêu thích',
+                  excludeSemantics: true,
+                  child: InkWell(
+                    key: Key('plan-favorite-${plan.id}'),
+                    onTap: onToggleFavorite,
+                    borderRadius: BorderRadius.circular(6),
+                    child: SizedBox.square(
+                      dimension: 44,
+                      child: Icon(
+                        fav ? Icons.star_rounded : Icons.star_outline_rounded,
+                        size: 19,
+                        color: fav ? tones.star : tones.faint,
+                      ),
+                    ),
+                  ),
+                )
+              else
+                SizedBox.square(
+                  dimension: 44,
+                  child: Icon(
+                    Icons.chevron_right_rounded,
+                    size: 18,
+                    color: tones.faint,
+                  ),
                 ),
-              ),
             ],
           ),
         ),

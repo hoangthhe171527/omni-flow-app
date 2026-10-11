@@ -117,6 +117,7 @@ class Plan {
     this.taskCount = 0,
     this.doneCount = 0,
     this.overdueCount = 0,
+    this.isFavorite,
   });
 
   factory Plan.fromJson(Map<String, dynamic> json) {
@@ -163,6 +164,11 @@ class Plan {
       taskCount: stats.intOr('total'),
       doneCount: stats.intOr('done'),
       overdueCount: stats.intOr('overdue'),
+      // API Nhóm 2 gửi `is_favorite` (bool theo người xem) trên MỌI phản hồi
+      // kế hoạch; API cũ không có khoá → null = ẩn sao và mục Yêu thích.
+      isFavorite: json['is_favorite'] is bool
+          ? json['is_favorite'] as bool
+          : null,
     );
   }
 
@@ -206,6 +212,16 @@ class Plan {
   final int doneCount;
   final int overdueCount;
 
+  /// Kế hoạch tôi đã đánh dấu yêu thích. null = API cũ chưa có khả năng.
+  final bool? isFavorite;
+
+  bool get supportsFavorite => isFavorite != null;
+
+  /// Chuyển chủ (`POST /projects/{id}/transfer-owner`) không có trường riêng:
+  /// nó ra cùng bản phát hành với `is_favorite`, khoá API mới gửi trên MỌI
+  /// kế hoạch. Quyền (chủ hiện tại hoặc `manage.all`) do chỗ gọi xét.
+  bool get supportsTransferOwner => isFavorite != null;
+
   /// Vai của một người trong dự án này. Không có tên trong bảng thì là
   /// người xem — cùng lý do với [PlanRole.parse]. Có trong `member_ids` mà
   /// không có vai riêng là `member`, như API (`ProjectAccessService::
@@ -238,6 +254,7 @@ class Plan {
     List<String>? memberIds,
     Map<String, PlanRole>? memberRoles,
     List<CustomFieldDef>? customFields,
+    bool? isFavorite,
   }) => Plan(
     id: id,
     name: name ?? this.name,
@@ -257,5 +274,6 @@ class Plan {
     taskCount: taskCount,
     doneCount: doneCount,
     overdueCount: overdueCount,
+    isFavorite: isFavorite ?? this.isFavorite,
   );
 }

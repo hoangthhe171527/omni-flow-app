@@ -240,6 +240,44 @@ class PlansApi {
     return Plan.fromJson(response.object);
   }
 
+  /// Đánh dấu / bỏ yêu thích (`POST|DELETE /projects/{id}/favorite`, sở thích
+  /// riêng, chỉ cần `tasks.read`). Trả `data.is_favorite` của server.
+  Future<bool> setFavorite(String planId, bool favorite) async {
+    final path = '/projects/$planId/favorite';
+    final response = favorite
+        ? await _client.post(path)
+        : await _client.delete(path);
+
+    return response.object['is_favorite'] == true;
+  }
+
+  /// Chuyển chủ kế hoạch (`POST /projects/{id}/transfer-owner`). Chỉ chủ hiện
+  /// tại hoặc `tasks.projects.manage.all` (người khác 403); chủ mới phải là
+  /// thành viên đang làm (422 `errors.owner_id`).
+  ///
+  /// [previousOwnerRole] null thì KHÔNG gửi khoá: server cho chủ cũ làm
+  /// `manager`. Server chỉ nhận `manager|member|viewer`.
+  Future<Plan> transferOwner(
+    String planId, {
+    required String ownerId,
+    PlanRole? previousOwnerRole,
+  }) {
+    assert(
+      previousOwnerRole != PlanRole.owner,
+      'previous_owner_role chỉ nhận manager, member hoặc viewer',
+    );
+
+    return _client
+        .post(
+          '/projects/$planId/transfer-owner',
+          body: {
+            'owner_id': ownerId,
+            'previous_owner_role': ?previousOwnerRole?.name,
+          },
+        )
+        .then((response) => Plan.fromJson(response.object));
+  }
+
   /// "Tháng này xong bao nhiêu cây, còn bao xa tới mốc thưởng."
   ///
   /// Bỏ trống [planId] thì tính trên toàn bộ tenant — đúng cách xưởng đếm,

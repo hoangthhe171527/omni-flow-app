@@ -29,6 +29,8 @@ class TeamGroup extends StatelessWidget {
     this.onLongPress,
     this.index = 0,
     this.rise = true,
+    this.favoriteOf,
+    this.onToggleFavorite,
   });
 
   final TeamWithPlans group;
@@ -50,6 +52,22 @@ class TeamGroup extends StatelessWidget {
   /// false = hiện ngay. Tab Việc chỉ cho nhóm "rise" ở lần dựng ĐẦU của màn;
   /// danh sách lười dựng lại nhóm khi cuộn về, và phát lại lúc đó đọc như giật.
   final bool rise;
+
+  /// Sao đang hiện của một kế hoạch (đã áp lượt bấm lạc quan); null = theo
+  /// `Plan.isFavorite`.
+  final bool? Function(Plan plan)? favoriteOf;
+
+  /// Bấm sao (Nhóm 2). null = không có sao (API cũ hoặc không bấm được).
+  final ValueChanged<Plan>? onToggleFavorite;
+
+  Widget _tile(Plan plan) => PlanTile(
+    plan: plan,
+    onTap: () => onOpenPlan(plan),
+    favorite: favoriteOf?.call(plan),
+    onToggleFavorite: onToggleFavorite == null
+        ? null
+        : () => onToggleFavorite!(plan),
+  );
 
   /// Màu ô của team: `color` do server lưu, thiếu hay sai thì xám phụ.
   static Color colorOf(String? raw) {
@@ -135,8 +153,7 @@ class TeamGroup extends StatelessWidget {
               ),
             ),
             if (open) ...[
-              for (final plan in plans)
-                PlanTile(plan: plan, onTap: () => onOpenPlan(plan)),
+              for (final plan in plans) _tile(plan),
               if (group.closedPlans.isNotEmpty)
                 _ClosedToggle(
                   count: group.closedPlans.length,
@@ -144,8 +161,7 @@ class TeamGroup extends StatelessWidget {
                   onTap: onToggleClosed,
                 ),
               if (closedOpen)
-                for (final plan in closed)
-                  PlanTile(plan: plan, onTap: () => onOpenPlan(plan)),
+                for (final plan in closed) _tile(plan),
               if (group.plans.isEmpty && group.closedPlans.isEmpty)
                 // Nói rõ là rỗng: một đầu nhóm không có gì bên dưới đọc như
                 // lỗi tải. Cũng là chỗ duy nhất team rỗng còn hiện để xoá.

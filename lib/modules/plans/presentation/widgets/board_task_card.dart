@@ -233,7 +233,7 @@ class _BoardTaskCardState extends ConsumerState<BoardTaskCard>
                 ),
               ),
             ),
-            if (task.pinned) ...[
+            if (task.isPinned) ...[
               const SizedBox(width: 6),
               Padding(
                 padding: const EdgeInsets.only(top: 2),

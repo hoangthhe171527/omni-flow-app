@@ -89,6 +89,7 @@ void main() {
     required Map<String, dynamic> data,
     Set<String> perms = assigner,
     bool reduceMotion = false,
+    List<TaskLabel> labels = catalog,
   }) {
     recorded = [];
     stub = _Detail(TaskDetailState(task: Task.fromJson(data)), recorded);
@@ -96,7 +97,7 @@ void main() {
     return ProviderScope(
       overrides: [
         taskDetailProvider.overrideWith(() => stub),
-        taskLabelsProvider.overrideWith((ref) async => catalog),
+        taskLabelsProvider.overrideWith((ref) async => labels),
         teamDirectoryProvider.overrideWith(
           (ref) async => [
             TeamMember(membershipId: 'm1', userId: 'u1', name: 'Hằng Ni'),
@@ -197,9 +198,14 @@ void main() {
       expect(find.bySemanticsLabel('Thêm nhãn'), findsNothing);
     });
 
-    tw('không đọc được danh mục nhãn: không có +', (t) async {
-      await pump(t, host(data: json(), perms: worker));
+    tw('không có danh mục nhãn (thợ, API cũ): không có +', (t) async {
+      await pump(t, host(data: json(), perms: worker, labels: const []));
       expect(find.bySemanticsLabel('Thêm nhãn'), findsNothing);
+    });
+
+    tw('thợ có danh mục qua /system-options/task-labels: có +', (t) async {
+      await pump(t, host(data: json(), perms: worker));
+      expect(find.bySemanticsLabel('Thêm nhãn'), findsOneWidget);
     });
   });
 
@@ -618,6 +624,8 @@ void main() {
         host(
           data: json(description: 'Giữ phím ngà'),
           perms: worker,
+          // Không danh mục nhãn (API cũ): thợ không còn mục menu nào.
+          labels: const [],
         ),
       );
       expect(find.byTooltip('Sửa mô tả'), findsNothing);

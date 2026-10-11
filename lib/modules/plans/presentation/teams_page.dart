@@ -17,6 +17,7 @@ import '../plans_module.dart';
 import 'create_plan_page.dart';
 import 'create_team_page.dart';
 import 'widgets/create_choice_sheet.dart';
+import 'widgets/favorites_group.dart';
 import 'widgets/team_group.dart';
 import 'widgets/teams_search_row.dart';
 
@@ -55,6 +56,46 @@ class _TeamsPageState extends ConsumerState<TeamsPage> {
   /// Menu + đang mở: nút + đổi nền mực và xoay thành ×.
   bool _menuOpen = false;
 
+  /// Mục "Yêu thích" đang mở. Mặc định mở, như bản mẫu.
+  bool _favoritesOpen = true;
+
+  /// Sao đã bấm mà cây chưa tải lại (theo id kế hoạch): lạc quan, rồi theo
+  /// `is_favorite` server trả; hỏng thì về giá trị trước lượt bấm.
+  final _favorite = <String, bool>{};
+
+  /// Lượt bấm sao đang bay: lần tải lại cây giữa chừng không được xoá nó.
+  final _favoriteInFlight = <String>{};
+
+  bool? _favoriteOf(Plan plan) => _favorite[plan.id] ?? plan.isFavorite;
+
+  /// Bấm sao (`POST|DELETE /projects/{id}/favorite`): đổi ngay dưới ngón tay,
+  /// lỗi thì hoàn tác và báo.
+  Future<void> _toggleFavorite(Plan plan) async {
+    final before = _favoriteOf(plan) ?? false;
+    final next = !before;
+    final messenger = ScaffoldMessenger.of(context);
+    final api = ref.read(plansApiProvider);
+    setState(() {
+      _favorite[plan.id] = next;
+      _favoriteInFlight.add(plan.id);
+    });
+    try {
+      final server = await api.setFavorite(plan.id, next);
+      if (mounted) setState(() => _favorite[plan.id] = server);
+    } on AppException catch (error) {
+      if (mounted) setState(() => _favorite[plan.id] = before);
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(
+            failureText(error, 'Chưa lưu được yêu thích. Thử lại khi có mạng.'),
+          ),
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _favoriteInFlight.remove(plan.id));
+    }
+  }
+
   @override
   void dispose() {
     _search.dispose();
@@ -88,6 +129,13 @@ class _TeamsPageState extends ConsumerState<TeamsPage> {
   @override
   Widget build(BuildContext context) {
     final groups = ref.watch(teamsWithPlansProvider);
+    // Cây mới về thì bỏ các sao đã bấm xong: `is_favorite` của server đã
+    // mang giá trị đó (hoặc máy khác vừa đổi — server thắng).
+    ref.listen(teamsWithPlansProvider, (_, next) {
+      if (next.hasValue && !next.isLoading) {
+        _favorite.removeWhere((id, _) => !_favoriteInFlight.contains(id));
+      }
+    });
     final taskAccess = ref.watch(taskAccessProvider);
     final access = ref.watch(accessProvider);
     final isAssigner = taskAccess.isAssigner;
@@ -136,6 +184,16 @@ class _TeamsPageState extends ConsumerState<TeamsPage> {
     final searching = needle.isNotEmpty;
     bool hit(String name) => foldDiacritics(name).contains(needle);
 
+    // Mục Yêu thích: mọi kế hoạch (cả đã đóng) mang sao, lọc theo ô tìm như
+    // các team. API cũ không có `is_favorite` nên danh sách luôn rỗng.
+    final favorites = <FavoritePlan>[
+      for (final group in list)
+        for (final p in [...group.plans, ...group.closedPlans])
+          if (_favoriteOf(p) == true &&
+              (!searching || hit(group.team.name) || hit(p.name)))
+            (plan: p, teamName: group.team.name),
+    ];
+
     final visible = <(TeamWithPlans, List<Plan>, List<Plan>)>[];
     for (final group in list) {
       if (!searching) {
@@ -175,13 +233,27 @@ class _TeamsPageState extends ConsumerState<TeamsPage> {
                 : 'Khi bạn được thêm vào một kế hoạch, nó sẽ hiện ở đây.',
           ),
         )
-      else if (visible.isEmpty)
+      else if (visible.isEmpty && favorites.isEmpty)
         () => _NoMatch(query: _query.trim()),
+      if (favorites.isNotEmpty)
+        () => FavoritesGroup(
+          key: const ValueKey('favorites'),
+          rise: !_introDone,
+          favorites: favorites,
+          open: searching || _favoritesOpen,
+          onToggle: () => setState(() => _favoritesOpen = !_favoritesOpen),
+          onOpenPlan: (plan) => context.pushNamed(
+            PlansModule.board,
+            pathParameters: {'id': plan.id},
+          ),
+        ),
       for (var i = 0; i < visible.length; i++)
         () => TeamGroup(
           key: ValueKey(_groupKey(visible[i].$1)),
-          index: i,
+          index: favorites.isEmpty ? i : i + 1,
           rise: !_introDone,
+          favoriteOf: _favoriteOf,
+          onToggleFavorite: _toggleFavorite,
           group: visible[i].$1,
           plans: visible[i].$2,
           closed: visible[i].$3,

@@ -213,8 +213,17 @@ class Task {
     this.labels = const [],
     this.likes = const [],
     this.archived = false,
-    this.pinned = false,
+    this.pinned,
+    this.locked,
+    this.followerIds,
+    this.followerNames = const [],
+    this.followerAvatars = const [],
+    this.assignedBy,
+    this.assignedByName,
+    this.assignedByAvatar,
     this.createdBy,
+    this.createdByName,
+    this.createdByAvatar,
     this.customerId,
     this.customerName,
   });
@@ -275,10 +284,23 @@ class Task {
     likes: json.strList('likes'),
     // Tài liệu cũ không có khoá; server coi đó là chưa lưu trữ (`!= true`).
     archived: json.flag('archived'),
-    // Không phải bản API nào cũng gửi khoá này (nhánh API chuẩn hoá sau).
-    // Vắng khoá = chưa ghim.
-    pinned: json.flag('pinned'),
+    // API Nhóm 2 (`TaskPresenter::withFlags`) LUÔN gửi hai cờ này dạng bool;
+    // API cũ không có khoá → null = "chưa có khả năng", nên ẩn nút.
+    pinned: _boolOrNull(json['pinned']),
+    locked: _boolOrNull(json['locked']),
+    // Chỉ có khi việc từng có người theo dõi; vắng khoá trên API mới vẫn
+    // theo dõi được ([supportsFollowers] nhìn thêm `pinned`).
+    followerIds: json.containsKey('follower_ids')
+        ? json.strList('follower_ids')
+        : null,
+    followerNames: _alignedNames(json['follower_names']),
+    followerAvatars: _alignedAvatars(json['follower_avatars']),
+    assignedBy: json.str('assigned_by'),
+    assignedByName: json.str('assigned_by_name'),
+    assignedByAvatar: resolveAvatarUrl(json.str('assigned_by_avatar')),
     createdBy: json.str('created_by'),
+    createdByName: json.str('created_by_name'),
+    createdByAvatar: resolveAvatarUrl(json.str('created_by_avatar')),
     customerId: json.str('customer_id'),
     // Chỉ có khi tài liệu mang sẵn tên khách; presenter không trang trí.
     customerName: json.str('customer_name'),
@@ -378,12 +400,66 @@ class Task {
   /// Việc đã lưu trữ: ẩn khỏi bảng (`GET /tasks` mặc định `archived=active`).
   final bool archived;
 
-  /// Việc được ghim: biểu tượng ghim trên thẻ bảng. Vắng khoá = false.
-  final bool pinned;
+  /// Việc được ghim lên đầu cột (chung cả kế hoạch). null = API cũ chưa có
+  /// khả năng ghim; thứ tự ghim-trước do SERVER sắp, app không tự sắp.
+  final bool? pinned;
 
-  /// Id người tạo việc — id TRẦN, server không trang trí tên. Tầng trình bày
-  /// tra tên qua `teamMembersProvider`.
+  /// Việc đã khoá: mọi lượt sửa trả 423 `task_locked`. null = API cũ.
+  final bool? locked;
+
+  /// Id người theo dõi. null = khoá vắng (API cũ, hoặc API mới mà việc chưa
+  /// từng có ai theo dõi — xem [supportsFollowers]).
+  final List<String>? followerIds;
+
+  /// Tên / ảnh người theo dõi, THẲNG HÀNG với [followerIds] (null giữ chỗ).
+  final List<String?> followerNames;
+  final List<String?> followerAvatars;
+
+  /// Người giao việc (server đặt khi có người MỚI vào `assignee_ids`).
+  final String? assignedBy;
+  final String? assignedByName;
+  final String? assignedByAvatar;
+
+  /// Id người tạo việc. Tên / ảnh chỉ có khi API Nhóm 2 tra được.
   final String? createdBy;
+  final String? createdByName;
+  final String? createdByAvatar;
+
+  /// Đã ghim (thiếu khoá = không).
+  bool get isPinned => pinned == true;
+
+  /// Đã khoá (thiếu khoá = không).
+  bool get isLocked => locked == true;
+
+  /// Khả năng ghim: chỉ khi API gửi khoá `pinned`.
+  bool get supportsPin => pinned != null;
+
+  /// Khả năng khoá: chỉ khi API gửi khoá `locked`.
+  bool get supportsLock => locked != null;
+
+  /// Khả năng theo dõi. `follower_ids` chỉ có sau lần theo dõi đầu tiên, nên
+  /// `pinned` — khoá API Nhóm 2 gửi trên MỌI việc, cùng bản phát hành với
+  /// `/follow` — cũng là tín hiệu. API cũ thiếu cả hai.
+  bool get supportsFollowers => followerIds != null || pinned != null;
+
+  /// Người theo dõi, ghép id / tên / ảnh theo chỉ số (an toàn với mảng ngắn).
+  List<({String id, String? name, String? avatar})> get followers => [
+    for (var i = 0; i < (followerIds?.length ?? 0); i++)
+      (
+        id: followerIds![i],
+        name: i < followerNames.length ? followerNames[i] : null,
+        avatar: i < followerAvatars.length ? followerAvatars[i] : null,
+      ),
+  ];
+
+  /// Tên người giao cho chuỗi "người giao → người làm". Việc cũ không có
+  /// `assigned_by` thì rơi về người tạo (theo hợp đồng API); có `assigned_by`
+  /// mà không tra được tên thì null — không gán nhầm sang người tạo.
+  String? get assignerName =>
+      assignedBy != null ? assignedByName : createdByName;
+
+  String? get assignerAvatar =>
+      assignedBy != null ? assignedByAvatar : createdByAvatar;
 
   /// Khách hàng gắn với việc, lưu thô. Không có tên đi kèm chắc chắn.
   final String? customerId;
@@ -462,6 +538,11 @@ class Task {
     String? status,
     List<String>? labels,
     List<String>? likes,
+    bool? pinned,
+    bool? locked,
+    List<String>? followerIds,
+    List<String?>? followerNames,
+    List<String?>? followerAvatars,
   }) => Task(
     id: id,
     title: title,
@@ -490,9 +571,39 @@ class Task {
     labels: labels ?? this.labels,
     likes: likes ?? this.likes,
     archived: archived,
-    pinned: pinned,
+    pinned: pinned ?? this.pinned,
+    locked: locked ?? this.locked,
+    followerIds: followerIds ?? this.followerIds,
+    followerNames: followerNames ?? this.followerNames,
+    followerAvatars: followerAvatars ?? this.followerAvatars,
+    assignedBy: assignedBy,
+    assignedByName: assignedByName,
+    assignedByAvatar: assignedByAvatar,
     createdBy: createdBy,
+    createdByName: createdByName,
+    createdByAvatar: createdByAvatar,
     customerId: customerId,
     customerName: customerName,
   );
 }
+
+/// Cờ bool của API Nhóm 2; kiểu khác (hoặc vắng) là null — không đoán.
+bool? _boolOrNull(Object? raw) => raw is bool ? raw : null;
+
+/// Mảng tên thẳng hàng với id: giữ null chỗ không tra được.
+List<String?> _alignedNames(Object? raw) => switch (raw) {
+  final List list => [
+    for (final v in list)
+      if (v is String && v.trim().isNotEmpty) v else null,
+  ],
+  _ => const [],
+};
+
+/// Như [_alignedNames] nhưng chuẩn hoá URL ảnh.
+List<String?> _alignedAvatars(Object? raw) => switch (raw) {
+  final List list => [
+    for (final v in list)
+      if (v is String && v.trim().isNotEmpty) resolveAvatarUrl(v) else null,
+  ],
+  _ => const [],
+};

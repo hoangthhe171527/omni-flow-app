@@ -50,6 +50,9 @@ void main() {
         taskDetailProvider.overrideWith(
           () => _StubDetail(TaskDetailState(task: task)),
         ),
+        // Danh mục nhãn có đường đọc riêng cho tasks.read (Nhóm 2); test
+        // này đếm request của màn chi tiết, không phải của bộ nhãn.
+        taskLabelsProvider.overrideWith((ref) async => const []),
         taskAccessProvider.overrideWithValue(
           TaskAccess.of(AccessPolicy(permissions)),
         ),
