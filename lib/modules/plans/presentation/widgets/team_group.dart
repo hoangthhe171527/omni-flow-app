@@ -123,7 +123,7 @@ class TeamGroup extends StatelessWidget {
                             curve: OmniCurves.standard,
                             child: Icon(
                               Icons.keyboard_arrow_down_rounded,
-                              size: 18,
+                              size: OmniIconSize.md,
                               color: scheme.onSurfaceVariant,
                             ),
                           ),
@@ -209,7 +209,7 @@ class _ClosedToggle extends StatelessWidget {
             children: [
               Icon(
                 Icons.lock_outline_rounded,
-                size: 16,
+                size: OmniIconSize.sm,
                 color: scheme.onSurfaceVariant,
               ),
               const SizedBox(width: 8),
@@ -231,7 +231,7 @@ class _ClosedToggle extends StatelessWidget {
                   curve: OmniCurves.standard,
                   child: Icon(
                     Icons.keyboard_arrow_down_rounded,
-                    size: 18,
+                    size: OmniIconSize.md,
                     color: scheme.onSurfaceVariant,
                   ),
                 ),

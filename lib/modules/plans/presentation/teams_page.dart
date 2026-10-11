@@ -189,10 +189,13 @@ class _TeamsPageState extends ConsumerState<TeamsPage> {
           closedOpen:
               (searching && visible[i].$3.isNotEmpty) ||
               _closedOpen.contains(visible[i].$1.team.id),
-          onToggleClosed: () => setState(() {
-            final id = visible[i].$1.team.id;
-            if (!_closedOpen.remove(id)) _closedOpen.add(id);
-          }),
+          // Đang tìm thì "Đã đóng" luôn mở: chạm gập là nút chết.
+          onToggleClosed: searching
+              ? null
+              : () => setState(() {
+                  final id = visible[i].$1.team.id;
+                  if (!_closedOpen.remove(id)) _closedOpen.add(id);
+                }),
           open: searching || !_collapsed.contains(visible[i].$1.team.id),
           onToggle: () => setState(() {
             final id = visible[i].$1.team.id;

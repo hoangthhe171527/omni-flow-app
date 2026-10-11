@@ -157,6 +157,16 @@ void main() {
     await tester.pumpAndSettle();
   }
 
+  testWidgets('hơn 500 việc lưu trữ: số ghi "500+", không phải "500"', (
+    tester,
+  ) async {
+    await pump(tester, archived: 520);
+    await openMenu(tester);
+
+    expect(find.text('500+'), findsOneWidget);
+    expect(find.text('500'), findsNothing);
+  });
+
   testWidgets('(a) quản lý: đủ ba nhóm, đầu sheet, không mục Nhóm 2', (
     tester,
   ) async {
@@ -563,7 +573,9 @@ void main() {
           teamDirectoryProvider.overrideWith(
             (ref) async => const <TeamMember>[],
           ),
-          archivedTasksProvider.overrideWith((ref, id) async => const []),
+          archivedTasksProvider.overrideWith(
+            (ref, id) async => (tasks: const <Task>[], truncated: false),
+          ),
         ],
         child: MaterialApp(
           theme: OmniTheme.dark(TargetPlatform.android),
@@ -659,17 +671,17 @@ class _ArchivedApi implements TasksApi {
   }) async {
     scopes.add(archived);
     if (fail) throw const ServerException('Lỗi máy chủ');
+    final start = (page - 1) * perPage;
+    final end = (start + perPage).clamp(0, _count);
     return Paged(
-      items: page > 1
-          ? const []
-          : [
-              for (var i = 0; i < _count; i++)
-                Task.fromJson({
-                  'id': 'a$i',
-                  'title': 'Việc lưu trữ $i',
-                  'archived': true,
-                }),
-            ],
+      items: [
+        for (var i = start; i < end; i++)
+          Task.fromJson({
+            'id': 'a$i',
+            'title': 'Việc lưu trữ $i',
+            'archived': true,
+          }),
+      ],
       pagination: const ApiPagination.empty(),
     );
   }

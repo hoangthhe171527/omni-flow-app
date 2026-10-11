@@ -110,10 +110,15 @@ class PlanMenuSheet extends ConsumerWidget {
       if (ownerName case final owner? when owner.isNotEmpty) 'chủ: $owner',
     ].join(' · ');
     // Số việc đã lưu trữ: tải lười khi sheet mở; đang tải hay lỗi thì không
-    // có số, menu vẫn dùng được.
-    final archivedCount = groups.any((g) => g.contains(PlanMenuAction.archived))
-        ? ref.watch(archivedTasksProvider(plan.id)).valueOrNull?.length
+    // có số, menu vẫn dùng được. Dừng ở trần mà server còn nữa thì "500+".
+    final archived = groups.any((g) => g.contains(PlanMenuAction.archived))
+        ? ref.watch(archivedTasksProvider(plan.id)).valueOrNull
         : null;
+    final archivedCount = archived == null
+        ? null
+        : archived.truncated
+        ? '${archived.tasks.length}+'
+        : '${archived.tasks.length}';
 
     return Semantics(
       scopesRoute: true,
@@ -191,7 +196,7 @@ class PlanMenuSheet extends ConsumerWidget {
                         action: groups[g][i],
                         trailing: switch (groups[g][i]) {
                           PlanMenuAction.members => '${planMemberCount(plan)}',
-                          PlanMenuAction.archived => archivedCount?.toString(),
+                          PlanMenuAction.archived => archivedCount,
                           _ => null,
                         },
                       ),

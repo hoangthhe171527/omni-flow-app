@@ -5,6 +5,7 @@ import '../../../design/components/components.dart';
 import '../../../design/tokens/tokens.dart';
 import '../application/plans_providers.dart';
 import '../domain/plan.dart';
+import '../domain/workshop_kpi.dart';
 import 'edit_sections_page.dart';
 import 'widgets/kpi_card.dart';
 
@@ -37,6 +38,11 @@ class PlanReportPage extends ConsumerStatefulWidget {
 class _PlanReportPageState extends ConsumerState<PlanReportPage> {
   /// Tháng đang xem, luôn ngày 1. Sống theo màn: mỗi lần mở là tháng này.
   late DateTime _month = _thisMonth();
+
+  /// Thẻ KPI vừa hiện (tháng của nó và số tháng trước). Đổi tháng thì thẻ
+  /// này đứng lại, mờ, tới khi tháng mới về — không để một khoảng trống
+  /// 132 px nhảy lên rồi nhảy xuống.
+  ({WorkshopKpi kpi, DateTime month, int? previous})? _shown;
 
   static DateTime _thisMonth() {
     final now = DateTime.now();
@@ -83,27 +89,48 @@ class _PlanReportPageState extends ConsumerState<PlanReportPage> {
         _month.year == current.year && _month.month == current.month;
 
     return kpi.when(
-      data: (data) => KpiCard(
-        kpi: data,
-        month: _month,
-        previousDelivered: previous.valueOrNull?.delivered,
-        onPrevMonth: () =>
-            setState(() => _month = DateTime(_month.year, _month.month - 1)),
-        // Không đi tới tương lai: tháng chưa tới luôn ra 0.
-        onNextMonth: atCurrent
-            ? null
-            : () => setState(
-                () => _month = DateTime(_month.year, _month.month + 1),
-              ),
-        onConfigure: widget.canConfigure
-            ? () => Navigator.of(context).push(
-                MaterialPageRoute<bool>(
-                  builder: (_) => EditSectionsPage(planId: widget.planId),
+      data: (data) {
+        _shown = (
+          kpi: data,
+          month: _month,
+          previous: previous.valueOrNull?.delivered,
+        );
+        return KpiCard(
+          kpi: data,
+          month: _month,
+          previousDelivered: previous.valueOrNull?.delivered,
+          onPrevMonth: () =>
+              setState(() => _month = DateTime(_month.year, _month.month - 1)),
+          // Không đi tới tương lai: tháng chưa tới luôn ra 0.
+          onNextMonth: atCurrent
+              ? null
+              : () => setState(
+                  () => _month = DateTime(_month.year, _month.month + 1),
                 ),
-              )
-            : null,
-      ),
-      loading: () => const SizedBox(height: 132),
+          onConfigure: widget.canConfigure
+              ? () => Navigator.of(context).push(
+                  MaterialPageRoute<bool>(
+                    builder: (_) => EditSectionsPage(planId: widget.planId),
+                  ),
+                )
+              : null,
+        );
+      },
+      loading: () {
+        final shown = _shown;
+        if (shown == null) return const SizedBox(height: 132);
+
+        return IgnorePointer(
+          child: Opacity(
+            opacity: 0.5,
+            child: KpiCard(
+              kpi: shown.kpi,
+              month: shown.month,
+              previousDelivered: shown.previous,
+            ),
+          ),
+        );
+      },
       error: (error, _) => SizedBox(
         height: 240,
         child: OmniErrorView(

@@ -106,6 +106,28 @@ void main() {
     expect((fields.last as Map)['options'], ['Đen', 'Trắng']);
   });
 
+  testWidgets('đếm theo mã ký tự như mb_strlen: chữ dựng sẵn dấu rời quá 128', (
+    tester,
+  ) async {
+    await pump(tester);
+
+    await tester.tap(find.text('Thêm trường'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byKey(const Key('field-name')), 'Màu');
+    await tester.pump();
+    await tester.tap(find.text('Chọn'));
+    await tester.pumpAndSettle();
+    // "à" gõ kiểu dấu rời: 1 chữ nhìn thấy nhưng 2 mã (a + U+0300). 65 chữ
+    // = 130 mã: Laravel `max:128` (mb_strlen) từ chối.
+    await tester.enterText(find.byKey(const Key('field-options')), 'à' * 65);
+    await tester.pump();
+
+    expect(
+      find.text('Mỗi lựa chọn tối đa 128 ký tự (dòng 1).'),
+      findsOneWidget,
+    );
+  });
+
   testWidgets('lựa chọn dài quá 128 ký tự: báo lỗi, không cho Xong', (
     tester,
   ) async {

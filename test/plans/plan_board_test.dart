@@ -158,7 +158,9 @@ void main() {
             ],
           }),
         ),
-        archivedTasksProvider(planId).overrideWith((ref) async => const []),
+        archivedTasksProvider(planId).overrideWith(
+          (ref) async => (tasks: const <Task>[], truncated: false),
+        ),
         planTasksProvider(
           planId,
         ).overrideWith((ref) async => (tasks: <Task>[], truncated: false)),

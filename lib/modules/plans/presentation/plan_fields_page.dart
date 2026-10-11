@@ -207,7 +207,9 @@ class _FieldSheetState extends State<_FieldSheet> {
   int? get _tooLongOption {
     final options = _optionList;
     for (var i = 0; i < options.length; i++) {
-      if (options[i].characters.length > _maxOption) return i + 1;
+      // Đếm MÃ ký tự (runes) như `mb_strlen` của Laravel `max:128`, không
+      // đếm chữ nhìn thấy: "à" gõ dấu rời là 2 mã, server tính 2.
+      if (options[i].runes.length > _maxOption) return i + 1;
     }
     return null;
   }

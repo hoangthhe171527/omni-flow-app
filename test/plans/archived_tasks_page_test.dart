@@ -128,16 +128,64 @@ void main() {
     final many = [for (var i = 0; i < 103; i++) task('t$i', 'Việc $i')];
     final fake = _ArchiveApi(many);
     final container = ProviderContainer(
-      overrides: [tasksApiProvider.overrideWithValue(fake)],
+      overrides: [
+        tasksApiProvider.overrideWithValue(fake),
+        taskRealtimeSignalProvider.overrideWith(_Silent.new),
+      ],
     );
     addTearDown(container.dispose);
 
     final sub = container.listen(archivedTasksProvider(planId), (_, _) {});
     addTearDown(sub.close);
-    final items = await container.read(archivedTasksProvider(planId).future);
+    final result = await container.read(archivedTasksProvider(planId).future);
 
-    expect(items, hasLength(103));
+    expect(result.tasks, hasLength(103));
+    expect(result.truncated, isFalse);
     expect(fake.lists.map((c) => c.$3), [1, 2]);
+  });
+
+  Future<ArchivedTasks> load(int count, _ArchiveApi Function(List<Task>) f) {
+    final fake = f([for (var i = 0; i < count; i++) task('t$i', 'Việc $i')]);
+    final container = ProviderContainer(
+      overrides: [
+        tasksApiProvider.overrideWithValue(fake),
+        taskRealtimeSignalProvider.overrideWith(_Silent.new),
+      ],
+    );
+    addTearDown(container.dispose);
+    final sub = container.listen(archivedTasksProvider(planId), (_, _) {});
+    addTearDown(sub.close);
+    return container.read(archivedTasksProvider(planId).future);
+  }
+
+  test('đúng 500: dò một việc sau trần, không báo cắt', () async {
+    late _ArchiveApi fake;
+    final result = await load(500, (l) => fake = _ArchiveApi(l));
+
+    expect(result.tasks, hasLength(500));
+    expect(result.truncated, isFalse);
+    expect(fake.lists.map((c) => c.$3), [1, 2, 3, 4, 5, 501]);
+  });
+
+  test('hơn 500: giữ 500 việc và báo cắt', () async {
+    final result = await load(520, _ArchiveApi.new);
+
+    expect(result.tasks, hasLength(500));
+    expect(result.truncated, isTrue);
+  });
+
+  testWidgets('hơn 500: trang báo "Chỉ hiện 500 việc đầu"', (tester) async {
+    await pump(
+      tester,
+      archived: [for (var i = 0; i < 520; i++) task('t$i', 'Việc $i')],
+    );
+
+    expect(
+      find.text(
+        'Chỉ hiện 500 việc lưu trữ đầu tiên. Tìm việc cũ hơn trên web.',
+      ),
+      findsOneWidget,
+    );
   });
 }
 
@@ -182,4 +230,9 @@ class _ArchiveApi implements TasksApi {
 
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
+class _Silent extends TaskRealtimeSignal {
+  @override
+  int build() => 0;
 }

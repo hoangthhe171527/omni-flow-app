@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -113,14 +115,35 @@ void main() {
       findsOneWidget,
     );
   });
+
+  testWidgets('đổi tháng: thẻ KPI cũ ở lại (mờ) tới khi tháng mới về', (
+    tester,
+  ) async {
+    await pump(tester);
+    final gate = api.gate = Completer<void>();
+
+    await tester.tap(find.byTooltip('Tháng trước'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 50));
+
+    // Không còn khoảng trống 132 px: thẻ tháng trước vẫn đứng đó.
+    expect(find.byType(KpiCard), findsOneWidget);
+
+    gate.complete();
+    await tester.pumpAndSettle();
+    final prev = DateTime(DateTime.now().year, DateTime.now().month - 1);
+    expect(find.text('Tháng ${prev.month}/${prev.year}'), findsOneWidget);
+  });
 }
 
 class _ReportApi implements PlansApi {
   final calls = <(String?, DateTime?)>[];
+  Completer<void>? gate;
 
   @override
   Future<WorkshopKpi> kpi({String? planId, DateTime? month}) async {
     calls.add((planId, month));
+    if (gate case final g?) await g.future;
     return WorkshopKpi.fromJson({
       'delivered': 3,
       'reached_bonus': 0,

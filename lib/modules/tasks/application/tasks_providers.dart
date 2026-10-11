@@ -286,17 +286,21 @@ final planCustomFieldsProvider = FutureProvider.autoDispose
       return ref.watch(tasksApiProvider).projectCustomFields(projectId);
     });
 
+/// Việc đã lưu trữ của một kế hoạch và cờ [truncated] = đã dừng ở trần 500
+/// mà server còn nữa.
+typedef ArchivedTasks = ({List<Task> tasks, bool truncated});
+
 /// Việc đã lưu trữ của một kế hoạch (`GET /tasks?project_id=&archived=archived`).
 ///
-/// Một trang lớn (100, trần API): danh sách này để tìm lại một việc đã cất,
-/// không phải để cuộn vô tận. Theo dõi realtime để bỏ lưu trữ ở máy khác
-/// cũng làm danh sách ngắn lại.
+/// Đi hết các trang (trần 5 × 100), dừng theo dữ liệu như bảng. Năm trang đầy
+/// chưa chắc là còn nữa (đúng 500 cũng trông như vậy): dò đúng một việc sau
+/// trần (`per_page=1`, trang 501) rồi mới báo [ArchivedTasks.truncated] — để
+/// menu ghi "500+" và trang báo cắt thay vì lặng lẽ dừng ở 500. Theo dõi
+/// realtime để bỏ lưu trữ ở máy khác cũng làm danh sách ngắn lại.
 final archivedTasksProvider = FutureProvider.autoDispose
-    .family<List<Task>, String>((ref, projectId) async {
+    .family<ArchivedTasks, String>((ref, projectId) async {
       ref.watch(taskRealtimeSignalProvider);
       final api = ref.watch(tasksApiProvider);
-      // Đi hết các trang (trần 5 × 100), dừng theo dữ liệu như bảng: chỉ
-      // trang đầu là số ở menu và danh sách lặng lẽ dừng ở 100.
       final all = <Task>[];
       for (var page = 1; page <= _archivedMaxPages; page++) {
         final result = await api.list(
@@ -305,10 +309,25 @@ final archivedTasksProvider = FutureProvider.autoDispose
           page: page,
         );
         all.addAll(result.items);
-        if (result.items.length < AppConfig.maxPerPage) break;
+        if (result.items.length < AppConfig.maxPerPage) {
+          return (tasks: all, truncated: false);
+        }
       }
-      return all;
+      final probe = await api.list(
+        projectId: projectId,
+        archived: TaskArchiveScope.archived,
+        page: kMaxArchivedTasks + 1,
+        perPage: 1,
+      );
+
+      return (
+        tasks: all.take(kMaxArchivedTasks).toList(),
+        truncated: probe.items.isNotEmpty,
+      );
     });
+
+/// Trần số việc đã lưu trữ app nạp cho một kế hoạch.
+const kMaxArchivedTasks = _archivedMaxPages * AppConfig.maxPerPage;
 
 const _archivedMaxPages = 5;
 

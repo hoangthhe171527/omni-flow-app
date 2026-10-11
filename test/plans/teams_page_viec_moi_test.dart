@@ -770,6 +770,33 @@ void main() {
       expect(find.text('Bảo hành'), findsNothing);
     });
 
+    testWidgets(
+      'đang tìm: "Đã đóng" luôn mở, chạm không gập (không nút chết)',
+      (t) async {
+        phone(t);
+        await t.pumpWidget(host(groups: withClosed));
+        await t.pumpAndSettle();
+
+        await t.enterText(find.byType(TextField), 'kho');
+        await t.pumpAndSettle();
+        final toggle = t.widget<InkWell>(
+          find
+              .ancestor(
+                of: find.byKey(const Key('team-closed-toggle')).first,
+                matching: find.byType(InkWell),
+              )
+              .first,
+        );
+        expect(toggle.onTap, isNull);
+        await t.tap(
+          find.byKey(const Key('team-closed-toggle')).first,
+          warnIfMissed: false,
+        );
+        await t.pumpAndSettle();
+        expect(find.text('Kho cũ'), findsOneWidget);
+      },
+    );
+
     testWidgets('team chỉ còn kế hoạch đã đóng: KHÔNG xoá được', (t) async {
       phone(t);
       await t.pumpWidget(

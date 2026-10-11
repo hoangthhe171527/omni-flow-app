@@ -199,9 +199,10 @@ void main() {
   group('provider', () {
     test('archivedTasksProvider gọi list(archived: archived)', () async {
       await open(base);
-      final items = await container.read(archivedTasksProvider('p1').future);
+      final result = await container.read(archivedTasksProvider('p1').future);
       expect(api.calls.last, 'list(p1,null,archived)');
-      expect(items, isEmpty);
+      expect(result.tasks, isEmpty);
+      expect(result.truncated, isFalse);
     });
 
     test('planCustomFieldsProvider đọc định nghĩa của kế hoạch', () async {

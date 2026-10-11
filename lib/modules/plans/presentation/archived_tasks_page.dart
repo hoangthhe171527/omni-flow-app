@@ -69,9 +69,9 @@ class _ArchivedTasksPageState extends ConsumerState<ArchivedTasksPage> {
       body: OmniAsyncView(
         value: archived,
         onRetry: () => ref.invalidate(archivedTasksProvider(widget.planId)),
-        data: (all) {
+        data: (result) {
           final tasks = [
-            for (final t in all)
+            for (final t in result.tasks)
               if (!_restored.contains(t.id)) t,
           ];
           if (tasks.isEmpty) {
@@ -89,10 +89,21 @@ class _ArchivedTasksPageState extends ConsumerState<ArchivedTasksPage> {
               OmniSpacing.lg,
               OmniSpacing.bottomSafe,
             ),
-            itemCount: tasks.length,
+            // Dừng ở trần mà server còn nữa: nói ra ở ĐẦU danh sách, không
+            // lặng lẽ dừng ở việc thứ 500.
+            itemCount: tasks.length + (result.truncated ? 1 : 0),
             separatorBuilder: (_, _) => const SizedBox(height: OmniSpacing.sm),
-            itemBuilder: (context, i) {
-              final task = tasks[i];
+            itemBuilder: (context, index) {
+              if (result.truncated && index == 0) {
+                return Text(
+                  'Chỉ hiện $kMaxArchivedTasks việc lưu trữ đầu tiên. '
+                  'Tìm việc cũ hơn trên web.',
+                  style: OmniType.caption.copyWith(
+                    color: scheme.onSurfaceVariant,
+                  ),
+                );
+              }
+              final task = tasks[index - (result.truncated ? 1 : 0)];
 
               return Column(
                 key: ValueKey('archived-${task.id}'),
