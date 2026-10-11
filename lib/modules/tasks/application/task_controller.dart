@@ -298,12 +298,11 @@ class TaskController
   }
 
   Future<void> setStatus(String status) async {
-    final current = state.valueOrNull;
-    if (current == null) return;
+    if (state.valueOrNull == null) return;
 
     final updated = await ref.read(tasksApiProvider).setStatus(arg, status);
     if (_disposed) return;
-    state = AsyncData(current.copyWith(task: updated));
+    _adopt(updated);
   }
 
   /// Chuyển công việc sang công đoạn khác.
@@ -314,15 +313,14 @@ class TaskController
   /// một cây đàn nhảy cột rồi nhảy ngược lại vì mạng hỏng là thứ khó tin hơn
   /// nhiều so với một giây chờ.
   Future<void> moveToSection(String? sectionId) async {
-    final current = state.valueOrNull;
-    if (current == null) return;
+    if (state.valueOrNull == null) return;
 
     final updated = await ref
         .read(tasksApiProvider)
         .moveToSection(arg, sectionId);
     if (_disposed) return;
 
-    state = AsyncData(current.copyWith(task: updated));
+    _adopt(updated);
   }
 
   /// Đặt lại danh sách người làm.
@@ -508,13 +506,25 @@ class TaskController
   /// giá trị hiện lên rồi lặng lẽ quay về cũ vì mạng hỏng thì tệ hơn nhiều so
   /// với một giây chờ. Tick việc con thì ngược lại, nên nó có đường riêng.
   Future<void> _apply(Future<Task> Function(TasksApi api) call) async {
-    final current = state.valueOrNull;
-    if (current == null) return;
+    if (state.valueOrNull == null) return;
 
     final updated = await call(ref.read(tasksApiProvider));
     if (_disposed) return;
 
-    state = AsyncData(current.copyWith(task: updated));
+    _adopt(updated);
+  }
+
+  /// Nhận bản server trả về cho một lượt ghi chờ server.
+  ///
+  /// Áp lên state MỚI NHẤT, không lên ảnh chụp trước `await`: trong lúc lượt
+  /// này bay, người thợ có thể đã tick một việc con (hàng chờ `pending`) hoặc
+  /// tick đã báo lỗi. Ghi lại ảnh chụp cũ là xoá dòng "chưa lưu được" khỏi màn
+  /// hình trong khi đĩa vẫn nhớ — đúng kiểu tick bị bỏ sót lặng lẽ. Chỉ thay
+  /// `task`; `pending` giữ nguyên nên không cần ghi lại đĩa.
+  void _adopt(Task updated) {
+    final latest = state.valueOrNull;
+    if (_disposed || latest == null) return;
+    state = AsyncData(latest.copyWith(task: updated));
   }
 
   /// Đặt state mới VÀ ghi hàng chờ xuống đĩa, trong một lời gọi.

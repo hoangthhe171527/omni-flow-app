@@ -126,6 +126,102 @@ void main() {
     });
   });
 
+  group('lượt chờ server áp lên state MỚI NHẤT, giữ hàng chờ tick', () {
+    final withSub = Task.fromJson(const {
+      'id': 't1',
+      'title': 'KAWAI',
+      'checklist': [
+        {'id': 's1', 'title': 'Lên dây', 'done': false},
+      ],
+    });
+    final serverAfter = Task.fromJson(const {
+      'id': 't1',
+      'title': 'KAWAI',
+      'start_date': '2026-10-20',
+      'status': 'doing',
+      'checklist': [
+        {'id': 's1', 'title': 'Lên dây', 'done': false},
+      ],
+    });
+
+    PendingTick? pendingS1() =>
+        container.read(taskDetailProvider('t1')).value!.pendingFor('s1');
+
+    final writes = <String, Future<void> Function(TaskController)>{
+      'setStartDate': (c) => c.setStartDate(DateTime(2026, 10, 20)),
+      'setStatus': (c) => c.setStatus('doing'),
+      'moveToSection': (c) => c.moveToSection('sec2'),
+    };
+
+    for (final entry in writes.entries) {
+      test('${entry.key} về sau khi tick việc con đã vào hàng chờ', () async {
+        final c = await open(withSub);
+        final write = entry.value(c);
+        // Tick xảy ra TRONG LÚC lượt ghi đang bay; mạng của tick chưa về.
+        final tick = c.toggleSubtask('s1', done: true);
+        expect(pendingS1(), isNotNull);
+
+        api.resolve(entry.key, serverAfter);
+        await write;
+
+        expect(pendingS1(), isNotNull, reason: 'hàng chờ tick bị ghi đè');
+        expect(pendingS1()!.done, isTrue);
+        final state = container.read(taskDetailProvider('t1')).value!;
+        expect(state.task.status, 'doing');
+        expect(state.visible.subtasks.single.done, isTrue);
+
+        api.resolve('setSubtaskDone', serverAfter);
+        await tick;
+      });
+    }
+
+    test('tick hỏng trong lúc lượt ghi bay: lỗi vẫn còn sau đó', () async {
+      final c = await open(withSub);
+      final write = c.setStartDate(DateTime(2026, 10, 20));
+      final tick = c.toggleSubtask('s1', done: true);
+      api.reject('setSubtaskDone');
+      await tick;
+      expect(pendingS1()!.failed, isTrue);
+
+      api.resolve('setStartDate', serverAfter);
+      await write;
+
+      expect(pendingS1(), isNotNull);
+      expect(pendingS1()!.failed, isTrue);
+      expect(visible().startDate!.day, 20);
+    });
+
+    test('lượt ghi chờ server giữ kết quả lượt lạc quan xen giữa', () async {
+      final c = await open(base);
+      final start = c.setStartDate(DateTime(2026, 10, 20));
+      final labels = c.setLabels(['noi_bo']);
+      api.resolve(
+        'setLabels',
+        Task.fromJson(const {
+          'id': 't1',
+          'title': 'KAWAI',
+          'labels': ['noi_bo'],
+          'likes': ['u9'],
+        }),
+      );
+      await labels;
+      // Bản server của lượt ngày bắt đầu đã có nhãn mới (server ghi tuần tự).
+      api.resolve(
+        'setStartDate',
+        Task.fromJson(const {
+          'id': 't1',
+          'title': 'KAWAI',
+          'labels': ['noi_bo'],
+          'likes': ['u9'],
+          'start_date': '2026-10-20',
+        }),
+      );
+      await start;
+      expect(visible().labels, ['noi_bo']);
+      expect(visible().startDate!.day, 20);
+    });
+  });
+
   group('trường tuỳ chỉnh: hai lượt liền nhau', () {
     test('lượt sau gửi map có cả giá trị của lượt trước', () async {
       final c = await open(base);
@@ -216,6 +312,21 @@ class _GatedApi implements TasksApi {
   @override
   Future<Task> setStartDate(String taskId, DateTime? startDate) =>
       _wait('setStartDate');
+
+  @override
+  Future<Task> setStatus(String taskId, String status) => _wait('setStatus');
+
+  @override
+  Future<Task> moveToSection(String taskId, String? sectionId) =>
+      _wait('moveToSection');
+
+  @override
+  Future<Task> setSubtaskDone(
+    String taskId,
+    String subtaskId, {
+    required bool done,
+    String? clientRequestId,
+  }) => _wait('setSubtaskDone');
 
   @override
   Future<Task> setCustomFields(String taskId, Map<String, Object?> fields) {
