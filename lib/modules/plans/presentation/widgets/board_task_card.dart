@@ -21,6 +21,7 @@ class BoardTaskCard extends StatelessWidget {
     required this.task,
     required this.onTap,
     this.delay = Duration.zero,
+    this.rise = true,
   });
 
   final Task task;
@@ -28,6 +29,10 @@ class BoardTaskCard extends StatelessWidget {
 
   /// Độ trễ của hiệu ứng `rise`, để các thẻ trong một cột hiện lần lượt.
   final Duration delay;
+
+  /// false = hiện ngay. Bảng chỉ cho thẻ "rise" ở lần ĐẦU nó hiện: danh sách
+  /// lười dựng lại thẻ khi cuộn về, và phát lại hiệu ứng lúc đó đọc như giật.
+  final bool rise;
 
   @override
   Widget build(BuildContext context) {
@@ -167,7 +172,7 @@ class BoardTaskCard extends StatelessWidget {
       ),
     );
 
-    return _Rise(delay: delay, child: card);
+    return rise ? _Rise(delay: delay, child: card) : card;
   }
 
   String get _semanticLabel {

@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:omni_app/modules/plans/presentation/widgets/section_pager.dart';
 import 'package:omni_app/design/theme/omni_theme.dart';
+import 'package:omni_app/modules/plans/presentation/widgets/board_column.dart';
 import 'package:omni_app/modules/plans/application/plans_providers.dart';
 import 'package:omni_app/modules/plans/domain/plan.dart';
 import 'package:omni_app/modules/plans/presentation/plan_board_page.dart';
@@ -83,72 +83,18 @@ void main() {
     expect(find.text('KAWAI HAT-5'), findsOneWidget);
   });
 
-  testWidgets('mỗi màn đúng MỘT nhóm việc, không hé cột bên cạnh', (
-    tester,
-  ) async {
-    await tester.pumpWidget(
-      host(
-        plan: plan,
-        tasks: [
-          task('t1', 'KAWAI HAT-5', sectionId: 's1'),
-          task('t2', 'YAMAHA U3', sectionId: 's2'),
-        ],
-      ),
-    );
-    await tester.pumpAndSettle();
-
-    final pageView = tester.widget<PageView>(find.byType(PageView));
-
-    expect(
-      pageView.controller?.viewportFraction,
-      1.0,
-      reason:
-          'Hé cột bên cạnh làm chữ bị cắt và đọc như lỗi. Một cột chiếm trọn '
-          'màn hình là điểm khác nhau giữa cách này và một cái kanban thu nhỏ.',
-    );
-
-    // Việc của nhóm 2 chưa được vẽ khi đang đứng ở nhóm 1.
-    expect(find.text('KAWAI HAT-5'), findsOneWidget);
-    expect(find.text('YAMAHA U3'), findsNothing);
-  });
-
-  testWidgets('chạm chỉ báo trang nhảy thẳng tới nhóm đó', (tester) async {
-    await tester.pumpWidget(
-      host(
-        plan: plan,
-        tasks: [task('t3', 'PETROF P118', sectionId: 's3')],
-      ),
-    );
-    await tester.pumpAndSettle();
-
-    expect(find.text('Nhập xưởng'), findsOneWidget);
-
-    await tester.tap(find.bySemanticsLabel('Chờ QC'));
-    await tester.pumpAndSettle();
-
-    expect(
-      find.text('PETROF P118'),
-      findsOneWidget,
-      reason: 'Vuốt bốn lần để tới cột cuối là bốn lần quá nhiều.',
-    );
-  });
-
-  testWidgets('nhóm việc rỗng vẫn là một trang, và nói rõ là rỗng', (
-    tester,
-  ) async {
+  testWidgets('nhóm việc rỗng vẫn là một cột, đếm 0', (tester) async {
     await tester.pumpWidget(host(plan: plan, tasks: const []));
     await tester.pumpAndSettle();
 
-    final pageView = tester.widget<PageView>(find.byType(PageView));
-
+    expect(find.byType(BoardColumn, skipOffstage: false), findsNWidgets(3));
     expect(
-      (pageView.childrenDelegate as SliverChildBuilderDelegate).childCount,
-      3,
-      reason:
-          'Bỏ nhóm rỗng đi làm số trang lệch với số công đoạn, và người quản '
-          'đốc mất đúng thông tin họ cần: công đoạn nào đang trống.',
+      find.descendant(
+        of: find.byKey(const Key('column-count')).first,
+        matching: find.text('0'),
+      ),
+      findsOneWidget,
     );
-    expect(find.textContaining('Chưa có việc ở "Nhập xưởng"'), findsOneWidget);
   });
 
   testWidgets('việc không thuộc nhóm nào rơi vào cột đầu, không biến mất', (
@@ -191,114 +137,9 @@ void main() {
     expect(find.text('Tất cả công việc'), findsOneWidget);
     expect(find.text('Một cây đàn'), findsOneWidget);
   });
-
-  testWidgets('khi tắt hiệu ứng thì nhảy trang ngay, không trượt', (
-    tester,
-  ) async {
-    await tester.pumpWidget(
-      host(
-        plan: plan,
-        tasks: [task('t3', 'PETROF P118', sectionId: 's3')],
-        disableAnimations: true,
-      ),
-    );
-    await tester.pumpAndSettle();
-
-    await tester.tap(find.bySemanticsLabel('Chờ QC'));
-    // MỘT khung hình, không pumpAndSettle: nếu nó còn trượt thì chưa tới nơi.
-    await tester.pump();
-
-    expect(
-      find.text('PETROF P118'),
-      findsOneWidget,
-      reason:
-          'Bảng lướt ngang toàn màn hình là đúng loại chuyển động mà cài đặt '
-          '"giảm chuyển động" nhắm tới.',
-    );
-  });
-
-  /// Tab của một nhóm việc trên dải, kể cả khi đã cuộn khuất.
-  Finder pill(String section) =>
-      find.widgetWithText(SectionTabItem, section, skipOffstage: false);
-
-  /// Số việc hiện TRONG tab của nhóm đó.
-  Finder countIn(String section, int n) =>
-      find.descendant(of: pill(section), matching: find.text('$n'));
-
-  testWidgets('MỌI nhóm hiện tên và số việc trên dải, không chỉ nhóm đang mở', (
-    tester,
-  ) async {
-    // Bản đầu là một hàng chấm: chấm thứ ba không nói nó là "Chờ QC", và số
-    // việc chỉ hiện cho nhóm đang mở. Người quản đốc phải vuốt qua từng trang
-    // để biết công đoạn nào đang dồn việc — đúng câu hỏi bảng này sinh ra để
-    // trả lời bằng một cái nhìn.
-    await tester.pumpWidget(
-      host(
-        plan: plan,
-        tasks: [
-          task('t1', 'A', sectionId: 's1'),
-          task('t2', 'B', sectionId: 's1'),
-          task('t3', 'C', sectionId: 's2'),
-        ],
-      ),
-    );
-    await tester.pumpAndSettle();
-
-    expect(pill('Nhập xưởng'), findsOneWidget);
-    expect(pill('Đang phục chế'), findsOneWidget);
-    expect(pill('Chờ QC'), findsOneWidget);
-
-    expect(countIn('Nhập xưởng', 2), findsOneWidget);
-    expect(countIn('Đang phục chế', 1), findsOneWidget);
-    // Nhóm rỗng KHÔNG in số 0: "0" cạnh tên là tiếng ồn, và cột rỗng đã nói
-    // rõ là rỗng khi mở ra.
-    expect(countIn('Chờ QC', 0), findsNothing);
-  });
-
-  testWidgets('vuốt sang trang thì viên của nhóm đó tự cuộn vào vùng nhìn', (
-    tester,
-  ) async {
-    // Tám nhóm việc tràn khỏi một màn 800dp. Vuốt tới trang cuối mà dải vẫn
-    // đứng ở đầu thì viên đang sáng nằm khuất — người dùng không biết mình
-    // đang ở đâu, đúng thứ dải này sinh ra để nói.
-    final wide = Plan.fromJson({
-      'id': planId,
-      'name': 'Đàn cơ',
-      'sections': [
-        for (var i = 1; i <= 8; i++)
-          {'id': 's$i', 'name': 'Công đoạn số $i', 'order': i},
-      ],
-    });
-    await tester.pumpWidget(
-      host(
-        plan: wide,
-        tasks: [task('t8', 'PETROF P118', sectionId: 's8')],
-      ),
-    );
-    await tester.pumpAndSettle();
-
-    final width = tester.getSize(find.byType(PlanBoardPage)).width;
-    expect(
-      tester.getRect(pill('Công đoạn số 8')).left,
-      greaterThan(width),
-      reason: 'tám viên phải tràn khỏi màn thì bài này mới có nghĩa',
-    );
-
-    for (var i = 0; i < 7; i++) {
-      await tester.fling(find.byType(PageView), const Offset(-400, 0), 1000);
-      await tester.pumpAndSettle();
-    }
-
-    expect(find.text('PETROF P118'), findsOneWidget);
-    expect(
-      tester.getRect(pill('Công đoạn số 8')).right,
-      lessThanOrEqualTo(width),
-    );
-  });
-
   // API cho chủ/quản lý DỰ ÁN sửa nhóm việc, không chỉ người có
   // `tasks.projects.manage.all` (CV-I14). Giờ nằm trong menu ⋯.
-  group('menu ⋯ Tuỳ chọn dự án', () {
+  group('menu ⋯ Tuỳ chọn kế hoạch', () {
     Widget board(
       String role, {
       Set<String> perms = const {'tasks.read', 'tasks.write'},
@@ -337,18 +178,20 @@ void main() {
       ),
     );
 
-    testWidgets('quản lý dự án thấy "Sửa nhóm việc" trong ⋯', (tester) async {
+    testWidgets('quản lý kế hoạch thấy "Sửa nhóm việc" trong ⋯', (
+      tester,
+    ) async {
       await tester.pumpWidget(board('manager'));
       await tester.pumpAndSettle();
 
       expect(find.byTooltip('Sửa nhóm việc'), findsNothing);
-      await tester.tap(find.byTooltip('Tuỳ chọn dự án'));
+      await tester.tap(find.byTooltip('Tuỳ chọn kế hoạch'));
       await tester.pumpAndSettle();
       expect(find.text('Sửa nhóm việc'), findsOneWidget);
-      expect(find.text('Xoá dự án'), findsNothing);
+      expect(find.text('Xoá kế hoạch'), findsNothing);
     });
 
-    testWidgets('người giao việc có đủ Sửa nhóm việc + Xoá dự án', (
+    testWidgets('người giao việc có đủ Sửa nhóm việc + Xoá kế hoạch', (
       tester,
     ) async {
       await tester.pumpWidget(
@@ -362,13 +205,13 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
-      await tester.tap(find.byTooltip('Tuỳ chọn dự án'));
+      await tester.tap(find.byTooltip('Tuỳ chọn kế hoạch'));
       await tester.pumpAndSettle();
       expect(find.text('Sửa nhóm việc'), findsOneWidget);
-      expect(find.text('Xoá dự án'), findsOneWidget);
+      expect(find.text('Xoá kế hoạch'), findsOneWidget);
     });
 
-    testWidgets('Xoá dự án từ ⋯ mở hộp xác nhận', (tester) async {
+    testWidgets('Xoá kế hoạch từ ⋯ mở hộp xác nhận', (tester) async {
       await tester.pumpWidget(
         board(
           'member',
@@ -380,18 +223,18 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
-      await tester.tap(find.byTooltip('Tuỳ chọn dự án'));
+      await tester.tap(find.byTooltip('Tuỳ chọn kế hoạch'));
       await tester.pumpAndSettle();
-      await tester.tap(find.text('Xoá dự án'));
+      await tester.tap(find.text('Xoá kế hoạch'));
       await tester.pumpAndSettle();
-      expect(find.text('Xoá dự án “Đàn cơ”?'), findsOneWidget);
+      expect(find.text('Xoá kế hoạch “Đàn cơ”?'), findsOneWidget);
     });
 
     testWidgets('thành viên thường không thấy ⋯', (tester) async {
       await tester.pumpWidget(board('member'));
       await tester.pumpAndSettle();
 
-      expect(find.byTooltip('Tuỳ chọn dự án'), findsNothing);
+      expect(find.byTooltip('Tuỳ chọn kế hoạch'), findsNothing);
     });
   });
 
@@ -442,56 +285,6 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('Bỏ lọc'), findsNothing);
       expect(find.text('Tổ kỹ thuật · 2 việc'), findsOneWidget);
-    });
-
-    testWidgets('vuốt ngang sang nhóm việc kế, tab theo', (tester) async {
-      await tester.pumpWidget(host(plan: team, tasks: const []));
-      await tester.pumpAndSettle();
-      await tester.fling(find.byType(PageView), const Offset(-300, 0), 1000);
-      await tester.pumpAndSettle();
-      final tabs = tester.widget<SectionTabs>(find.byType(SectionTabs));
-      expect(tabs.current, 1);
-    });
-
-    testWidgets('nút Việc mới cao ≥ 48 khi được phép tạo', (tester) async {
-      await tester.pumpWidget(
-        ProviderScope(
-          overrides: [
-            planProvider(planId).overrideWith((ref) async => team),
-            planTasksProvider(
-              planId,
-            ).overrideWith((ref) async => (tasks: <Task>[], truncated: false)),
-            backgroundProvider.overrideWith(FixedBackground.new),
-            taskAccessProvider.overrideWithValue(
-              TaskAccess.of(const AccessPolicy({'tasks.read', 'tasks.write'})),
-            ),
-          ],
-          child: MaterialApp(
-            theme: OmniTheme.light(TargetPlatform.android),
-            home: const PlanBoardPage(planId: planId),
-          ),
-        ),
-      );
-      await tester.pumpAndSettle();
-      expect(find.text('Việc mới'), findsOneWidget);
-      expect(
-        tester.getSize(find.byType(FloatingActionButton)).height,
-        greaterThanOrEqualTo(48),
-      );
-      final context = tester.element(find.byType(FloatingActionButton));
-      final material = tester.widget<Material>(
-        find
-            .descendant(
-              of: find.byType(FloatingActionButton),
-              matching: find.byType(Material),
-            )
-            .first,
-      );
-      expect(
-        material.color,
-        Theme.of(context).colorScheme.primary,
-        reason: 'theme FAB của app phải còn nguyên, không bị thay mất',
-      );
     });
   });
 }

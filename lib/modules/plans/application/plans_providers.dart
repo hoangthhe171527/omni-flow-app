@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/realtime/realtime_client.dart';
 import '../../../security/session/session_controller.dart';
 import '../../tasks/application/tasks_providers.dart';
+import '../../tasks/data/tasks_api.dart';
 import '../../tasks/domain/task.dart';
 import '../data/plans_api.dart';
 import '../domain/board_person.dart';
@@ -314,6 +315,23 @@ class BoardBuckets {
   final bool truncated;
 
   int countOf(int index) => buckets[index].length;
+
+  /// Tổng số việc đang hiện trên mọi cột.
+  int get total => buckets.fold<int>(0, (sum, b) => sum + b.length);
+
+  /// Chỉ giữ các việc có id trong [ids] (kết quả tìm). Cột giữ nguyên, kể cả
+  /// cột rỗng: số 0 cạnh tên nhóm cũng là một câu trả lời.
+  BoardBuckets only(Set<String> ids) => BoardBuckets(
+    columns: columns,
+    buckets: [
+      for (final bucket in buckets)
+        [
+          for (final task in bucket)
+            if (ids.contains(task.id)) task,
+        ],
+    ],
+    truncated: truncated,
+  );
 }
 
 /// Bảng đã lọc và chia cột, tính MỘT lần cho mỗi (dự án, bộ lọc).
@@ -364,3 +382,21 @@ final boardBucketsProvider = Provider.autoDispose
 
       return built;
     }, name: 'boardBuckets');
+
+/// Khoá của một lượt tìm trong kế hoạch.
+typedef PlanSearchKey = ({String planId, String query});
+
+/// Id các việc khớp [PlanSearchKey.query] trong một kế hoạch, theo
+/// `GET /tasks?project_id=&search=` (server khớp tiền tố token trên tiêu đề,
+/// mã, tên khách). Bảng giữ nguyên cách chia cột và chỉ lọc theo tập này, nên
+/// thẻ vẫn nhận realtime như thường.
+///
+/// Một trang (`AppConfig.maxPerPage`) là đủ cho một lượt tìm trên điện thoại.
+final planTaskSearchProvider = FutureProvider.autoDispose
+    .family<Set<String>, PlanSearchKey>((ref, key) async {
+      final page = await ref
+          .watch(tasksApiProvider)
+          .list(projectId: key.planId, search: key.query);
+
+      return {for (final task in page.items) task.id};
+    }, name: 'planTaskSearch');
