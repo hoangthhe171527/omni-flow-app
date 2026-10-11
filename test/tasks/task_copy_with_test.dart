@@ -40,6 +40,7 @@ void main() {
     'custom_fields': {'serial': '2308512'},
     'attachments_count': 3,
     'comments_count': 4,
+    'pinned': true,
     'viewers': [
       {'user_id': 'u9', 'name': 'Quản đốc'},
     ],
@@ -64,6 +65,7 @@ void main() {
     expect(copy.attachmentCount, full.attachmentCount);
     expect(copy.commentCount, full.commentCount);
     expect(copy.viewers.length, full.viewers.length);
+    expect(copy.pinned, isTrue);
   });
 
   group('ba trường từng bị rơi', () {

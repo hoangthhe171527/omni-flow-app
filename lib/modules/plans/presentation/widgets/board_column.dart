@@ -122,6 +122,7 @@ class BoardColumn extends StatelessWidget {
     required this.tasks,
     required this.onOpenTask,
     required this.firstShow,
+    this.canComplete = false,
     this.onAddTask,
     this.onOptions,
   });
@@ -132,6 +133,9 @@ class BoardColumn extends StatelessWidget {
 
   /// true nếu thẻ được "rise" (chỉ ở khung đầu của bảng, xem PlanBoardPage).
   final bool Function(String taskId) firstShow;
+
+  /// Có ô tích trên thẻ (`taskAccess.canComplete`).
+  final bool canComplete;
 
   /// null = không có quyền tạo việc: ẩn "Thêm công việc".
   final VoidCallback? onAddTask;
@@ -173,6 +177,7 @@ class BoardColumn extends StatelessWidget {
                     key: ValueKey(task.id),
                     task: task,
                     rise: firstShow(task.id),
+                    canComplete: canComplete,
                     delay: Duration(milliseconds: 50 * math.min(index, 6)),
                     onTap: () => onOpenTask(task),
                   );

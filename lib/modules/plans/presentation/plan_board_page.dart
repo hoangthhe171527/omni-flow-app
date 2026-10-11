@@ -22,6 +22,7 @@ import '../domain/plan.dart';
 import '../routes.dart';
 import 'edit_sections_page.dart';
 import 'widgets/board_column.dart';
+import 'widgets/board_zoom.dart';
 import 'widgets/person_filter_sheet.dart';
 
 /// Bảng kế hoạch (`Board.dc.html`): nền theo `cover`, header kính tối, dải
@@ -58,6 +59,9 @@ class _PlanBoardPageState extends ConsumerState<PlanBoardPage> {
   /// tới — phát lại hiệu ứng lúc đó đọc như giật. Đổi lọc, tìm hay realtime
   /// cũng không phát lại.
   bool _introDone = false;
+
+  /// Đang ở chế độ thu nhỏ (lưới mọi cột).
+  bool _zoomed = false;
 
   @override
   void dispose() {
@@ -143,6 +147,7 @@ class _PlanBoardPageState extends ConsumerState<PlanBoardPage> {
                             plan,
                             board,
                             canCreate: taskAccess.canCreate,
+                            canComplete: taskAccess.canComplete,
                             canEditSections: canEditSections,
                           )
                         : OmniAsyncView(
@@ -157,6 +162,7 @@ class _PlanBoardPageState extends ConsumerState<PlanBoardPage> {
                               plan,
                               board.only(ids),
                               canCreate: taskAccess.canCreate,
+                              canComplete: taskAccess.canComplete,
                               canEditSections: canEditSections,
                             ),
                           ),
@@ -182,6 +188,7 @@ class _PlanBoardPageState extends ConsumerState<PlanBoardPage> {
     Plan plan,
     BoardBuckets board, {
     required bool canCreate,
+    required bool canComplete,
     required bool canEditSections,
   }) {
     final columns = board.columns;
@@ -191,7 +198,7 @@ class _PlanBoardPageState extends ConsumerState<PlanBoardPage> {
     final realSections = plan.sections;
     final itemCount = columns.length + (canEditSections ? 1 : 0);
 
-    return Column(
+    final content = Column(
       children: [
         if (board.truncated) const _TruncatedNotice(),
         // Thanh "Đang lọc" trượt xuống thay vì nhảy ra: bảng đổi hình (cột
@@ -218,64 +225,107 @@ class _PlanBoardPageState extends ConsumerState<PlanBoardPage> {
           },
         ),
         Expanded(
-          child: ListView.separated(
-            key: const Key('board-track'),
-            controller: _track,
-            scrollDirection: Axis.horizontal,
-            physics: BoardSnapPhysics(animate: OmniMotion.enabled(context)),
-            padding: const EdgeInsets.fromLTRB(
-              BoardMetrics.inset,
-              BoardMetrics.top,
-              BoardMetrics.inset,
-              BoardMetrics.bottom,
-            ),
-            itemCount: itemCount,
-            separatorBuilder: (_, _) => const SizedBox(width: BoardMetrics.gap),
-            itemBuilder: (context, index) {
-              if (index == columns.length) {
-                return Align(
-                  alignment: Alignment.topCenter,
-                  child: BoardAddSectionTile(
-                    onTap: () => _addSection(plan, board),
+          child: _zoomed
+              ? BoardZoomGrid(
+                  columns: columns,
+                  buckets: board.buckets,
+                  onOpenColumn: _openColumn,
+                )
+              : ListView.separated(
+                  key: const Key('board-track'),
+                  controller: _track,
+                  scrollDirection: Axis.horizontal,
+                  physics: BoardSnapPhysics(
+                    animate: OmniMotion.enabled(context),
                   ),
-                );
-              }
-              final section = columns[index];
-              // Cột "Tất cả công việc" của kế hoạch chưa khai nhóm việc là cột
-              // dựng tạm, không có gì để đổi tên hay xoá.
-              final real = section.id.isNotEmpty;
+                  padding: const EdgeInsets.fromLTRB(
+                    BoardMetrics.inset,
+                    BoardMetrics.top,
+                    BoardMetrics.inset,
+                    BoardMetrics.bottom,
+                  ),
+                  itemCount: itemCount,
+                  separatorBuilder: (_, _) =>
+                      const SizedBox(width: BoardMetrics.gap),
+                  itemBuilder: (context, index) {
+                    if (index == columns.length) {
+                      return Align(
+                        alignment: Alignment.topCenter,
+                        child: BoardAddSectionTile(
+                          onTap: () => _addSection(plan, board),
+                        ),
+                      );
+                    }
+                    final section = columns[index];
+                    // Cột "Tất cả công việc" của kế hoạch chưa khai nhóm việc là cột
+                    // dựng tạm, không có gì để đổi tên hay xoá.
+                    final real = section.id.isNotEmpty;
 
-              return Align(
-                alignment: Alignment.topCenter,
-                child: SizedBox(
-                  width: BoardMetrics.columnWidth,
-                  child: BoardColumn(
-                    section: section,
-                    tasks: board.buckets[index],
-                    firstShow: _firstShow,
-                    onOpenTask: (task) => context.pushNamed(
-                      TasksModule.detail,
-                      pathParameters: {'id': task.id},
-                    ),
-                    onAddTask: canCreate
-                        ? () => _createTask(plan, real ? section.id : null)
-                        : null,
-                    onOptions: canEditSections && real
-                        ? () => _sectionOptions(
-                            plan,
-                            board,
-                            section,
-                            canRemove: realSections.length > 1,
-                          )
-                        : null,
-                  ),
+                    return Align(
+                      alignment: Alignment.topCenter,
+                      child: SizedBox(
+                        width: BoardMetrics.columnWidth,
+                        child: BoardColumn(
+                          section: section,
+                          tasks: board.buckets[index],
+                          firstShow: _firstShow,
+                          canComplete: canComplete,
+                          onOpenTask: (task) => context.pushNamed(
+                            TasksModule.detail,
+                            pathParameters: {'id': task.id},
+                          ),
+                          onAddTask: canCreate
+                              ? () =>
+                                    _createTask(plan, real ? section.id : null)
+                              : null,
+                          onOptions: canEditSections && real
+                              ? () => _sectionOptions(
+                                  plan,
+                                  board,
+                                  section,
+                                  canRemove: realSections.length > 1,
+                                )
+                              : null,
+                        ),
+                      ),
+                    );
+                  },
                 ),
-              );
-            },
+        ),
+      ],
+    );
+
+    return Stack(
+      children: [
+        Positioned.fill(child: content),
+        Positioned(
+          right: 16,
+          bottom: 34 + MediaQuery.paddingOf(context).bottom,
+          child: BoardZoomButton(
+            zoomed: _zoomed,
+            onTap: () => setState(() => _zoomed = !_zoomed),
           ),
         ),
       ],
     );
+  }
+
+  /// Từ lưới thu nhỏ về bảng, cột [index] căn giữa màn.
+  void _openColumn(int index) {
+    setState(() => _zoomed = false);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || !_track.hasClients) return;
+      final target = BoardSnapPhysics.offsetOf(index, _track.position);
+      if (OmniMotion.enabled(context)) {
+        _track.animateTo(
+          target,
+          duration: const Duration(milliseconds: 350),
+          curve: OmniCurves.standard,
+        );
+      } else {
+        _track.jumpTo(target);
+      }
+    });
   }
 
   void _back() {

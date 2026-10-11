@@ -213,6 +213,7 @@ class Task {
     this.labels = const [],
     this.likes = const [],
     this.archived = false,
+    this.pinned = false,
     this.createdBy,
     this.customerId,
   });
@@ -273,6 +274,9 @@ class Task {
     likes: json.strList('likes'),
     // Tài liệu cũ không có khoá; server coi đó là chưa lưu trữ (`!= true`).
     archived: json.flag('archived'),
+    // Không phải bản API nào cũng gửi khoá này (nhánh API chuẩn hoá sau).
+    // Vắng khoá = chưa ghim.
+    pinned: json.flag('pinned'),
     createdBy: json.str('created_by'),
     customerId: json.str('customer_id'),
   );
@@ -370,6 +374,9 @@ class Task {
 
   /// Việc đã lưu trữ: ẩn khỏi bảng (`GET /tasks` mặc định `archived=active`).
   final bool archived;
+
+  /// Việc được ghim: biểu tượng ghim trên thẻ bảng. Vắng khoá = false.
+  final bool pinned;
 
   /// Id người tạo việc — id TRẦN, server không trang trí tên. Tầng trình bày
   /// tra tên qua `teamMembersProvider`.
@@ -477,6 +484,7 @@ class Task {
     labels: labels ?? this.labels,
     likes: likes ?? this.likes,
     archived: archived,
+    pinned: pinned,
     createdBy: createdBy,
     customerId: customerId,
   );

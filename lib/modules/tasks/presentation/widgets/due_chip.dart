@@ -35,19 +35,22 @@ enum DueTone { today, late, upcoming, none }
 /// Một chỗ duy nhất cho thẻ việc, bảng dự án và đầu trang chi tiết. Màu lấy
 /// từ [OmniTaskChip] (token theo chế độ sáng / tối).
 class DueChip extends StatelessWidget {
-  const DueChip({super.key, required this.task});
+  const DueChip({super.key, required this.task, this.icon});
 
   final Task task;
+
+  /// Biểu tượng trước chữ (thẻ bảng kế hoạch: lịch 13).
+  final IconData? icon;
 
   @override
   Widget build(BuildContext context) {
     final d = dueToneOf(task);
 
     return switch (d.tone) {
-      DueTone.today => OmniTaskChip.today(d.label),
-      DueTone.late => OmniTaskChip.late(d.label),
-      DueTone.upcoming => OmniTaskChip.upcoming(d.label),
-      DueTone.none => OmniTaskChip.none(d.label),
+      DueTone.today => OmniTaskChip.today(d.label, icon: icon),
+      DueTone.late => OmniTaskChip.late(d.label, icon: icon),
+      DueTone.upcoming => OmniTaskChip.upcoming(d.label, icon: icon),
+      DueTone.none => OmniTaskChip.none(d.label, icon: icon),
     };
   }
 }
