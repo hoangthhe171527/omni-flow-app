@@ -11,6 +11,7 @@ import '../../domain/mention.dart';
 import '../../domain/task.dart';
 import 'task_detail/detail_card.dart';
 import 'task_detail/menu_sheet.dart';
+import 'task_detail/task_attachments.dart';
 
 /// Thẻ Bình luận (`TaskDetail.dc.html`): avatar 30, bong bóng `#F5F7FA` bo 8,
 /// "Tên · giờ", `@Tên` tô màu chính. Ô nhập nằm ở thanh đáy (`CommentBar`).
@@ -100,6 +101,9 @@ class CommentSection extends ConsumerWidget {
                     onLongPress: _canDelete(comments[i])
                         ? () => _delete(context, ref, comments[i])
                         : null,
+                    onFileLongPress: (file) => _canRemoveFile(comments[i], file)
+                        ? () => _removeFile(context, ref, comments[i], file)
+                        : null,
                   ),
                 ),
             ],
@@ -114,6 +118,59 @@ class CommentSection extends ConsumerWidget {
     if (canModerate) return true;
 
     return myUserId != null && c.userId == myUserId;
+  }
+
+  /// Gỡ tệp kèm bình luận: người tải lên, hoặc người quản lý việc (server:
+  /// `DeleteCommentAttachment`, người khác 403).
+  bool _canRemoveFile(TaskComment c, TaskAttachment f) {
+    if (!canWrite || c.id.isEmpty || f.id.isEmpty) return false;
+    if (canModerate) return true;
+
+    return myUserId != null && (f.userId ?? c.userId) == myUserId;
+  }
+
+  Future<void> _removeFile(
+    BuildContext context,
+    WidgetRef ref,
+    TaskComment comment,
+    TaskAttachment file,
+  ) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final container = ProviderScope.containerOf(context);
+    final remove = await showDetailMenuSheet<bool>(
+      context,
+      semanticsLabel: 'Tuỳ chọn tệp',
+      title: file.name,
+      groups: const [
+        [
+          DetailMenuItem(
+            value: true,
+            icon: Icons.delete_outline,
+            label: 'Gỡ tệp',
+            danger: true,
+          ),
+        ],
+      ],
+    );
+    if (remove != true || !context.mounted) return;
+    final confirmed = await showOmniConfirm(
+      context: context,
+      title: 'Gỡ tệp “${file.name}”?',
+      message: 'Tệp sẽ bị gỡ khỏi bình luận và xoá hẳn.',
+      confirmLabel: 'Gỡ tệp',
+      destructive: true,
+    );
+    if (!confirmed) return;
+
+    try {
+      await container
+          .read(taskDetailProvider(taskId).notifier)
+          .deleteCommentAttachment(comment.id, file.id);
+      container.invalidate(taskCommentsProvider(taskId));
+      messenger.showSnackBar(const SnackBar(content: Text('Đã gỡ tệp.')));
+    } on AppException catch (e) {
+      messenger.showSnackBar(SnackBar(content: Text(e.message)));
+    }
   }
 
   Future<void> _loadOlder(BuildContext context, WidgetRef ref) async {
@@ -186,10 +243,18 @@ String commentStamp(DateTime at, {DateTime? now}) {
 }
 
 class _Comment extends StatelessWidget {
-  const _Comment({super.key, required this.comment, this.onLongPress});
+  const _Comment({
+    super.key,
+    required this.comment,
+    this.onLongPress,
+    this.onFileLongPress,
+  });
 
   final TaskComment comment;
   final VoidCallback? onLongPress;
+
+  /// Bấm giữ một tệp kèm; trả null = tệp đó không gỡ được.
+  final VoidCallback? Function(TaskAttachment file)? onFileLongPress;
 
   @override
   Widget build(BuildContext context) {
@@ -232,26 +297,28 @@ class _Comment extends StatelessWidget {
           ),
           const SizedBox(height: 2),
           // `@Tên` được nhắc tô màu chính, ngay trong câu. Style TƯỜNG MINH
-          // trên từng đoạn: span ngoài mang màu phụ mặc định.
-          Text.rich(
-            TextSpan(
-              children: [
-                for (final part in Mentions.split(
-                  comment.body,
-                  comment.mentionedUserNames,
-                ))
-                  TextSpan(
-                    text: part.text,
-                    style: part.isMention
-                        ? body.copyWith(
-                            color: scheme.primary,
-                            fontWeight: FontWeight.w500,
-                          )
-                        : body.copyWith(color: scheme.onSurface),
-                  ),
-              ],
+          // trên từng đoạn: span ngoài mang màu phụ mặc định. Bình luận chỉ
+          // có tệp thì không có dòng chữ.
+          if (comment.body.trim().isNotEmpty)
+            Text.rich(
+              TextSpan(
+                children: [
+                  for (final part in Mentions.split(
+                    comment.body,
+                    comment.mentionedUserNames,
+                  ))
+                    TextSpan(
+                      text: part.text,
+                      style: part.isMention
+                          ? body.copyWith(
+                              color: scheme.primary,
+                              fontWeight: FontWeight.w500,
+                            )
+                          : body.copyWith(color: scheme.onSurface),
+                    ),
+                ],
+              ),
             ),
-          ),
           // Bình luận từ web nhắc bằng nút, không có `@` trong chữ: dòng này là
           // kênh duy nhất báo cho người thợ biết họ được nhắc.
           if (comment.mentionedUserNames.where(
@@ -262,6 +329,24 @@ class _Comment extends StatelessWidget {
             Text(
               'Nhắc: ${missing.join(', ')}',
               style: OmniType.micro.copyWith(color: scheme.primary),
+            ),
+          ],
+          // Ảnh / tệp gửi kèm: ô 72 bo 6 như thẻ Tệp; chạm mở bản đầy đủ.
+          if (comment.attachments.isNotEmpty) ...[
+            const SizedBox(height: 6),
+            Wrap(
+              spacing: 6,
+              runSpacing: 6,
+              children: [
+                for (final file in comment.attachments)
+                  AttachmentThumb(
+                    key: ValueKey('comment-file-${file.id}'),
+                    attachment: file,
+                    size: 72,
+                    radius: 6,
+                    onLongPress: onFileLongPress?.call(file),
+                  ),
+              ],
             ),
           ],
         ],

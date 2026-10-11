@@ -10,6 +10,7 @@ import '../../../core/storage/storage_keys.dart';
 import '../../../core/utils/client_id.dart';
 import '../data/tasks_api.dart';
 import '../domain/task.dart';
+import '../domain/task_reminder.dart';
 import 'tasks_providers.dart';
 
 /// A tick that has not been confirmed by the server yet.
@@ -534,6 +535,76 @@ class TaskController
   Future<void> setFollowers(List<String> userIds) =>
       _apply((api) => api.setFollowers(arg, userIds));
 
+  /// Tạo việc con đủ trường trong MỘT lượt POST (Nhóm 2). Trả bản server
+  /// như [addSubtask].
+  Future<Task?> createSubtask({
+    required String title,
+    String? description,
+    DateTime? startDate,
+    DateTime? dueDate,
+    String? assigneeId,
+  }) => _apply(
+    (api) => api.createSubtask(
+      arg,
+      title: title,
+      description: description,
+      startDate: startDate,
+      dueDate: dueDate,
+      assigneeId: assigneeId,
+    ),
+  );
+
+  /// null = xoá hạn việc con.
+  Future<void> setSubtaskDueDate(String subtaskId, DateTime? dueDate) =>
+      _apply((api) => api.setSubtaskDueDate(arg, subtaskId, dueDate));
+
+  /// null = xoá ngày bắt đầu việc con.
+  Future<void> setSubtaskStartDate(String subtaskId, DateTime? startDate) =>
+      _apply((api) => api.setSubtaskStartDate(arg, subtaskId, startDate));
+
+  /// Rỗng = xoá ghi chú việc con.
+  Future<void> setSubtaskDescription(String subtaskId, String description) =>
+      _apply((api) => api.setSubtaskDescription(arg, subtaskId, description));
+
+  /// Kéo thả việc con: [subtaskId] đứng ngay sau [afterId] (null = đầu).
+  ///
+  /// LẠC QUAN: danh sách đổi chỗ ngay dưới ngón tay (thả xong mà dòng nhảy
+  /// về chỗ cũ một giây là thả lại lần nữa). Lỗi thì trả THỨ TỰ cũ trên bản
+  /// mới nhất — không trả cả ảnh chụp cũ, kẻo xoá tick vừa về — rồi ném.
+  Future<void> moveSubtask(String subtaskId, {required String? afterId}) =>
+      _optimistic(
+        _Field.order,
+        (task) => task.copyWith(
+          subtasks: _placeAfter(task.subtasks, subtaskId, afterId),
+        ),
+        (api) => api.moveSubtask(arg, subtaskId, afterId: afterId),
+        (before, latest) => latest.copyWith(
+          subtasks: _ordered(latest.subtasks, [
+            for (final s in before.subtasks) s.id,
+          ]),
+        ),
+      );
+
+  /// Bình luận kèm tệp (multipart `files[]`). Thân rỗng được.
+  Future<void> commentWithFiles(
+    String body, {
+    List<String> mentionedUserIds = const [],
+    required List<CommentUpload> files,
+  }) => _apply(
+    (api) => api.commentWithFiles(
+      arg,
+      body,
+      mentionedUserIds: mentionedUserIds,
+      files: files,
+    ),
+  );
+
+  /// Gỡ một tệp kèm bình luận.
+  Future<void> deleteCommentAttachment(String commentId, String attachmentId) =>
+      _apply(
+        (api) => api.deleteCommentAttachment(arg, commentId, attachmentId),
+      );
+
   Future<void> deleteAttachment(String attachmentId) =>
       _apply((api) => api.deleteAttachment(arg, attachmentId));
 
@@ -638,7 +709,46 @@ class TaskController
   Task _keepInFlight(Task server, Task shown) => server.copyWith(
     labels: (_inFlight[_Field.labels] ?? 0) > 0 ? shown.labels : null,
     likes: (_inFlight[_Field.likes] ?? 0) > 0 ? shown.likes : null,
+    // Thứ tự đang kéo: nội dung việc con theo server, THỨ TỰ theo màn.
+    subtasks: (_inFlight[_Field.order] ?? 0) > 0
+        ? _ordered(server.subtasks, [for (final s in shown.subtasks) s.id])
+        : null,
   );
+
+  /// [items] với [id] chuyển tới ngay sau [afterId] (null = đầu).
+  static List<Subtask> _placeAfter(
+    List<Subtask> items,
+    String id,
+    String? afterId,
+  ) {
+    final moving = items.where((s) => s.id == id).toList();
+    if (moving.isEmpty) return items;
+    final rest = [
+      for (final s in items)
+        if (s.id != id) s,
+    ];
+    final at = afterId == null
+        ? 0
+        : rest.indexWhere((s) => s.id == afterId) + 1;
+
+    return [...rest]..insert(at.clamp(0, rest.length), moving.first);
+  }
+
+  /// [items] xếp theo [ids]; việc con không có trong [ids] (vừa thêm ở máy
+  /// khác) giữ thứ tự server, đứng cuối.
+  static List<Subtask> _ordered(List<Subtask> items, List<String> ids) {
+    final rank = {for (var i = 0; i < ids.length; i++) ids[i]: i};
+    final known = [
+      for (final s in items)
+        if (rank.containsKey(s.id)) s,
+    ]..sort((a, b) => rank[a.id]!.compareTo(rank[b.id]!));
+
+    return [
+      ...known,
+      for (final s in items)
+        if (!rank.containsKey(s.id)) s,
+    ];
+  }
 
   /// Đặt state mới VÀ ghi hàng chờ xuống đĩa, trong một lời gọi.
   ///
@@ -718,4 +828,4 @@ final taskDetailProvider =
     >(TaskController.new);
 
 /// Trường có đường ghi lạc quan riêng trong [TaskController].
-enum _Field { labels, likes }
+enum _Field { labels, likes, order }

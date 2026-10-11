@@ -23,6 +23,8 @@ class Subtask {
     this.assigneeName,
     this.assigneeAvatar,
     this.dueDate,
+    this.description,
+    this.startDate,
   });
 
   factory Subtask.fromJson(Map<String, dynamic> json) => Subtask(
@@ -34,6 +36,10 @@ class Subtask {
     // Server chỉ đặt khoá khi người đó có ảnh (cùng quy ước `user_avatar`).
     assigneeAvatar: resolveAvatarUrl(json.str('assignee_avatar')),
     dueDate: DateUtilsX.parse(json['due_date']),
+    // API Nhóm 2 (`Checklist`): PUT cả mảng kiểu cũ có thể lưu `null` — coi
+    // như không có (`json.str` bỏ null và chuỗi rỗng).
+    description: json.str('description'),
+    startDate: DateUtilsX.parse(json['start_date']),
   );
 
   final String id;
@@ -44,6 +50,14 @@ class Subtask {
   final String? assigneeAvatar;
   final DateTime? dueDate;
 
+  /// Ghi chú dưới tên (13 phụ). null = không có.
+  final String? description;
+
+  /// Ngày bắt đầu. Server KHÔNG kiểm `start ≤ due`; app tự chặn.
+  final DateTime? startDate;
+
+  /// Bản sao lạc quan (tick): chép ĐỦ mọi trường — thiếu một là trường đó
+  /// biến khỏi màn ngay khi tick.
   Subtask copyWith({bool? done}) => Subtask(
     id: id,
     title: title,
@@ -52,6 +66,8 @@ class Subtask {
     assigneeName: assigneeName,
     assigneeAvatar: assigneeAvatar,
     dueDate: dueDate,
+    description: description,
+    startDate: startDate,
   );
 }
 
@@ -98,6 +114,7 @@ class TaskComment {
     this.userAvatar,
     this.mentionedUserNames = const [],
     this.createdAt,
+    this.attachments = const [],
   });
 
   factory TaskComment.fromJson(Map<String, dynamic> json) => TaskComment(
@@ -112,15 +129,26 @@ class TaskComment {
     // sách nào để tự tra một UUID ra tên người.
     mentionedUserNames: json.strList('mentioned_user_names'),
     createdAt: DateUtilsX.parse(json['created_at']),
+    // Tệp kèm (Nhóm 2, `files[]`): `url` do presenter dựng lại từ `file`.
+    attachments: json
+        .mapList('attachments')
+        .map(TaskAttachment.fromJson)
+        .toList(),
   );
 
   final String id;
+
+  /// Rỗng được khi bình luận chỉ có tệp.
   final String body;
   final String? userId;
   final String? userName;
   final String? userAvatar;
   final List<String> mentionedUserNames;
   final DateTime? createdAt;
+
+  /// Tệp / ảnh gửi kèm bình luận. Chỉ nằm trong bình luận, không trong
+  /// `Task.attachments`.
+  final List<TaskAttachment> attachments;
 
   /// Không bao giờ hiện UUID: nó không nói cho ai điều gì.
   String get author {
@@ -144,6 +172,7 @@ class TaskAttachment {
     required this.url,
     required this.name,
     required this.type,
+    this.userId,
   });
 
   factory TaskAttachment.fromJson(Map<String, dynamic> json) => TaskAttachment(
@@ -153,12 +182,16 @@ class TaskAttachment {
     // API đặt 'image' hoặc 'file' theo MIME lúc tải lên. Tài liệu cũ thiếu
     // khoá này thì coi là tệp: hiện cái tên còn hơn hiện một ô ảnh vỡ.
     type: json.strOr('type', 'file'),
+    userId: json.str('user_id'),
   );
 
   final String id;
   final String url;
   final String name;
   final String type;
+
+  /// Người tải lên (gỡ tệp kèm bình luận: người tải hoặc quản lý).
+  final String? userId;
 
   bool get isImage => type == 'image';
 }

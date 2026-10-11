@@ -135,6 +135,7 @@ Future<String?> showTextEditSheet({
   bool multiline = false,
   bool allowEmpty = false,
   TextInputType? keyboardType,
+  bool requireChange = true,
 }) => showOmniSheet<String>(
   context: context,
   builder: (context) => _TextEditSheet(
@@ -144,6 +145,7 @@ Future<String?> showTextEditSheet({
     multiline: multiline,
     allowEmpty: allowEmpty,
     keyboardType: keyboardType,
+    requireChange: requireChange,
   ),
 );
 
@@ -155,6 +157,7 @@ class _TextEditSheet extends StatefulWidget {
     required this.multiline,
     required this.allowEmpty,
     this.keyboardType,
+    this.requireChange = true,
   });
 
   final String title;
@@ -163,6 +166,9 @@ class _TextEditSheet extends StatefulWidget {
   final bool multiline;
   final bool allowEmpty;
   final TextInputType? keyboardType;
+
+  /// Tắt "Lưu" khi chữ chưa đổi (sửa). Sao chép việc: tên gợi ý lưu ngay.
+  final bool requireChange;
 
   @override
   State<_TextEditSheet> createState() => _TextEditSheetState();
@@ -179,7 +185,7 @@ class _TextEditSheetState extends State<_TextEditSheet> {
 
   bool get _canSave {
     final value = _controller.text.trim();
-    if (value == widget.initial.trim()) return false;
+    if (widget.requireChange && value == widget.initial.trim()) return false;
 
     return widget.allowEmpty || value.isNotEmpty;
   }

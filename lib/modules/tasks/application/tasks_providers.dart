@@ -15,6 +15,7 @@ import '../domain/task.dart';
 import '../domain/task_label.dart';
 import '../domain/task_permissions.dart';
 import '../domain/task_project.dart';
+import '../domain/task_reminder.dart';
 
 final taskAccessProvider = Provider<TaskAccess>((ref) {
   return TaskAccess.of(ref.watch(accessProvider));
@@ -381,3 +382,11 @@ final projectMembersProvider = FutureProvider.autoDispose
       ];
       return filtered.isEmpty ? all : filtered;
     });
+
+/// Lời nhắc người đang cầm máy thấy trên một việc (`GET /tasks/{id}/
+/// reminders`). Chỉ đọc khi phiên khai `tasks.reminders` (sheet Nhắc việc
+/// chỉ mở được khi đó).
+final taskRemindersProvider = FutureProvider.autoDispose
+    .family<List<TaskReminder>, String>(
+      (ref, taskId) => ref.watch(tasksApiProvider).reminders(taskId),
+    );

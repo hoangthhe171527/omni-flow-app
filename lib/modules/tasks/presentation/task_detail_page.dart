@@ -22,12 +22,14 @@ import '../domain/custom_field.dart';
 import '../domain/task.dart';
 import '../domain/task_permissions.dart';
 import '../domain/task_project.dart';
+import '../routes.dart';
 import 'widgets/activity_log.dart';
 import 'widgets/assign_task_sheet.dart';
 import 'widgets/comment_section.dart';
 import 'widgets/edit_sheets.dart';
 import 'widgets/followers_sheet.dart';
 import 'widgets/labels_sheet.dart';
+import 'widgets/reminder_sheet.dart';
 import 'widgets/task_detail/breadcrumb.dart';
 import 'widgets/task_detail/comment_bar.dart';
 import 'widgets/task_detail/custom_fields_card.dart';
@@ -131,6 +133,9 @@ class _TaskDetailPageState extends ConsumerState<TaskDetailPage> {
                 access.canUpdate &&
                 _canManageTask(loadedTask, me, access.isAssigner),
             locked: loadedTask.isLocked,
+            // Nhắc "mình" chỉ cần đọc được việc; "mọi người" xét trong sheet.
+            canRemind: api(ApiCapability.taskReminders) && access.canRead,
+            canCopy: api(ApiCapability.taskCopy) && access.canUpdate,
           );
     final showFollowers =
         loadedTask != null && api(ApiCapability.taskFollow) && access.canRead;
@@ -249,6 +254,18 @@ class _TaskDetailPageState extends ConsumerState<TaskDetailPage> {
               ? 'Đã khoá công việc.'
               : 'Đã mở khoá công việc.',
         );
+      case TaskMenuAction.reminders:
+        await showReminderSheet(
+          context,
+          taskId: widget.taskId,
+          myUserId: me,
+          canEveryone:
+              (access.canUpdate || access.canComplete) &&
+              !_isPlanViewer(ref, task, me),
+          canManage: canManageTask(ref, task, me, manageAll: access.isAssigner),
+        );
+      case TaskMenuAction.copy:
+        await _copy(context, task);
       case TaskMenuAction.labels:
         await _openLabels(context, widget.taskId, controller, task);
       case TaskMenuAction.rename:
@@ -261,6 +278,48 @@ class _TaskDetailPageState extends ConsumerState<TaskDetailPage> {
         await _archive(context, controller, archived: false);
       case TaskMenuAction.delete:
         await _deleteTask(context, task);
+    }
+  }
+
+  /// Sao chép việc (`POST /tasks/{id}/copy`): hỏi tên, xong thì mở việc
+  /// mới và báo bảng tải lại.
+  Future<void> _copy(BuildContext context, Task task) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final container = ProviderScope.containerOf(context);
+    final router = GoRouter.maybeOf(context);
+    final navigator = Navigator.of(context);
+    final name = await showTextEditSheet(
+      context: context,
+      title: 'Sao chép công việc',
+      initial: '${task.title} (bản sao)',
+      requireChange: false,
+    );
+    if (name == null) return;
+
+    try {
+      final copy = await container
+          .read(tasksApiProvider)
+          .copyTask(task.id, title: name);
+      container.read(taskRealtimeSignalProvider.notifier).bump();
+      messenger.showSnackBar(
+        const SnackBar(content: Text('Đã sao chép công việc.')),
+      );
+      if (copy.id.isEmpty) return;
+      if (router != null) {
+        unawaited(
+          router.pushNamed(TaskRoutes.detail, pathParameters: {'id': copy.id}),
+        );
+      } else {
+        unawaited(
+          navigator.push(
+            MaterialPageRoute<void>(
+              builder: (_) => TaskDetailPage(taskId: copy.id),
+            ),
+          ),
+        );
+      }
+    } on AppException catch (e) {
+      messenger.showSnackBar(SnackBar(content: Text(e.message)));
     }
   }
 
@@ -570,6 +629,10 @@ class _Loaded extends ConsumerWidget {
           controller: controller,
           canTick: canComplete,
           canEdit: isAssigner,
+          details: ref.watch(apiSupportsProvider(ApiCapability.subtaskFields)),
+          canReorder:
+              isAssigner &&
+              ref.watch(apiSupportsProvider(ApiCapability.checklistMove)),
         ),
       ],
       _gap,
@@ -617,7 +680,14 @@ class _Loaded extends ConsumerWidget {
           ),
         ),
         // Ô bình luận cố định đáy; bàn phím đẩy nó lên (Scaffold co thân).
-        if (canComment) CommentBar(task: task, taskId: taskId),
+        if (canComment)
+          CommentBar(
+            task: task,
+            taskId: taskId,
+            canAttachFiles: ref.watch(
+              apiSupportsProvider(ApiCapability.commentAttachments),
+            ),
+          ),
       ],
     );
   }

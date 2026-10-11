@@ -30,6 +30,8 @@ class SubtasksCard extends ConsumerWidget {
     required this.controller,
     required this.canTick,
     required this.canEdit,
+    this.details = false,
+    this.canReorder = false,
   });
 
   final Task task;
@@ -37,6 +39,13 @@ class SubtasksCard extends ConsumerWidget {
   final TaskController controller;
   final bool canTick;
   final bool canEdit;
+
+  /// Phiên khai `tasks.subtask_fields`: sheet tạo đủ trường, nút "Hạn", mục
+  /// "Sửa mô tả" / "Ngày bắt đầu" trong ⋮ (người giao việc).
+  final bool details;
+
+  /// Phiên khai `tasks.checklist_move` VÀ người giao việc: tay kéo 24×44.
+  final bool canReorder;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -94,12 +103,32 @@ class SubtasksCard extends ConsumerWidget {
         ),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 4),
-          child: Column(
-            children: [
-              for (var i = 0; i < subtasks.length; i++)
-                _row(context, subtasks[i], byId, first: i == 0),
-            ],
-          ),
+          child: canReorder && subtasks.length > 1
+              ? ReorderableListView.builder(
+                  key: const ValueKey('subtask-reorder'),
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  buildDefaultDragHandles: false,
+                  itemCount: subtasks.length,
+                  onReorderItem: (from, to) =>
+                      _reorder(context, subtasks, from, to),
+                  itemBuilder: (context, i) => _row(
+                    context,
+                    subtasks[i],
+                    byId,
+                    first: i == 0,
+                    handle: ReorderableDragStartListener(
+                      index: i,
+                      child: const _DragHandle(),
+                    ),
+                  ),
+                )
+              : Column(
+                  children: [
+                    for (var i = 0; i < subtasks.length; i++)
+                      _row(context, subtasks[i], byId, first: i == 0),
+                  ],
+                ),
         ),
         if (subtasks.isNotEmpty) const SizedBox(height: 4),
       ],
@@ -111,6 +140,7 @@ class SubtasksCard extends ConsumerWidget {
     Subtask s,
     Map<String, TeamMember> byId, {
     required bool first,
+    Widget? handle,
   }) {
     final known = s.assigneeId == null ? null : byId[s.assigneeId!];
 
@@ -118,6 +148,8 @@ class SubtasksCard extends ConsumerWidget {
       key: ValueKey(s.id),
       subtask: s,
       first: first,
+      dragHandle: handle,
+      onSetDue: details && canEdit ? () => _setDue(context, s) : null,
       pending: state.pendingFor(s.id),
       enabled: canTick,
       assigneeName: s.assigneeName ?? known?.name,
@@ -145,7 +177,20 @@ class SubtasksCard extends ConsumerWidget {
       context,
       projectId: task.projectId,
       canAssign: canTick,
+      details: details,
       onCreate: (draft) async {
+        // API Nhóm 2: MỘT lượt POST mang đủ trường, kể cả người làm — không
+        // còn ca "đã tạo nhưng chưa giao được".
+        if (details) {
+          await controller.createSubtask(
+            title: draft.title,
+            description: draft.description,
+            startDate: draft.startDate,
+            dueDate: draft.dueDate,
+            assigneeId: draft.assigneeId,
+          );
+          return;
+        }
         final before = {
           for (final s
               in container
@@ -177,6 +222,77 @@ class SubtasksCard extends ConsumerWidget {
         }
       },
     );
+  }
+
+  /// Thả xong: gửi MỘT lệnh move (việc con đứng sau dòng liền trên nó). Lạc
+  /// quan trong controller; lỗi thì thứ tự cũ quay lại và báo.
+  Future<void> _reorder(
+    BuildContext context,
+    List<Subtask> shown,
+    int from,
+    int to,
+  ) async {
+    // `onReorderItem`: [to] đã tính sau khi gỡ dòng ở [from].
+    final target = to;
+    if (target == from) return;
+    final messenger = ScaffoldMessenger.of(context);
+    final order = [...shown];
+    final moving = order.removeAt(from);
+    order.insert(target, moving);
+    try {
+      await controller.moveSubtask(
+        moving.id,
+        afterId: target == 0 ? null : order[target - 1].id,
+      );
+    } on AppException catch (e) {
+      messenger.showSnackBar(
+        SnackBar(content: Text(failureText(e, 'Chưa đổi được thứ tự.'))),
+      );
+    }
+  }
+
+  /// Đặt / đổi / xoá hạn việc con (`PATCH … {due_date}`).
+  Future<void> _setDue(BuildContext context, Subtask s) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final today = DateUtils.dateOnly(DateTime.now());
+    final choice = await showDueDateSheet(
+      context: context,
+      current: s.dueDate,
+      firstDate: DateTime(today.year - 1),
+      lastDate: DateTime(today.year + 3),
+    );
+    if (choice == null) return;
+    final due = choice.date;
+    final start = s.startDate;
+    if (due != null && start != null && start.isAfter(due)) {
+      messenger.showSnackBar(
+        const SnackBar(content: Text('Hạn phải sau ngày bắt đầu.')),
+      );
+      return;
+    }
+    try {
+      await controller.setSubtaskDueDate(s.id, due);
+    } on AppException catch (e) {
+      messenger.showSnackBar(SnackBar(content: Text(e.message)));
+    }
+  }
+
+  /// Đặt ngày bắt đầu bằng lịch. Ném [ValidationException] khi sau hạn —
+  /// server không kiểm.
+  Future<void> _setStart(BuildContext context, Subtask s) async {
+    final today = DateUtils.dateOnly(DateTime.now());
+    final chosen = await showDatePicker(
+      context: context,
+      initialDate: s.startDate ?? today,
+      firstDate: DateTime(today.year - 1),
+      lastDate: DateTime(today.year + 3),
+    );
+    if (chosen == null) return;
+    final due = s.dueDate;
+    if (due != null && chosen.isAfter(due)) {
+      throw const ValidationException('Ngày bắt đầu phải trước hạn.');
+    }
+    await controller.setSubtaskStartDate(s.id, chosen);
   }
 
   /// Giao / đổi / bỏ gán người làm.
@@ -222,6 +338,28 @@ class SubtasksCard extends ConsumerWidget {
             ),
         ],
         [
+          if (details && canEdit) ...[
+            DetailMenuItem(
+              value: _SubAction.describe,
+              icon: Icons.notes_rounded,
+              label: s.description == null ? 'Thêm mô tả' : 'Sửa mô tả',
+            ),
+            DetailMenuItem(
+              value: _SubAction.start,
+              icon: Icons.event_outlined,
+              label: s.startDate == null
+                  ? 'Đặt ngày bắt đầu'
+                  : 'Đổi ngày bắt đầu',
+            ),
+            if (s.startDate != null)
+              const DetailMenuItem(
+                value: _SubAction.clearStart,
+                icon: Icons.event_busy_outlined,
+                label: 'Xoá ngày bắt đầu',
+              ),
+          ],
+        ],
+        [
           if (canEdit)
             const DetailMenuItem(
               value: _SubAction.remove,
@@ -248,6 +386,20 @@ class SubtasksCard extends ConsumerWidget {
           );
           if (renamed == null) return;
           await controller.renameSubtask(s.id, renamed);
+        case _SubAction.describe:
+          final note = await showTextEditSheet(
+            context: context,
+            title: 'Mô tả việc con',
+            initial: s.description ?? '',
+            multiline: true,
+            allowEmpty: true,
+          );
+          if (note == null) return;
+          await controller.setSubtaskDescription(s.id, note);
+        case _SubAction.start:
+          await _setStart(context, s);
+        case _SubAction.clearStart:
+          await controller.setSubtaskStartDate(s.id, null);
       }
     } on AppException catch (e) {
       messenger.showSnackBar(SnackBar(content: Text(e.message)));
@@ -255,4 +407,26 @@ class SubtasksCard extends ConsumerWidget {
   }
 }
 
-enum _SubAction { rename, assign, remove }
+enum _SubAction { rename, assign, describe, start, clearStart, remove }
+
+/// Tay kéo `.drag`: 24×44, sáu chấm 14 màu mờ `#9AA5B8`. Kéo NGAY (không
+/// cần giữ lâu) — `ReorderableDragStartListener`.
+class _DragHandle extends StatelessWidget {
+  const _DragHandle();
+
+  @override
+  Widget build(BuildContext context) => Semantics(
+    container: true,
+    label: 'Kéo để sắp xếp',
+    child: SizedBox(
+      key: const ValueKey('subtask-drag-handle'),
+      width: 24,
+      height: 44,
+      child: Icon(
+        Icons.drag_indicator_rounded,
+        size: 14,
+        color: OmniTaskTones.of(context).faint,
+      ),
+    ),
+  );
+}

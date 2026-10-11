@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../../../../core/utils/formatters.dart';
 import '../../../../design/components/components.dart';
 import '../../../../design/platform/omni_motion_scope.dart';
 import '../../../../design/tokens/tokens.dart';
@@ -20,7 +21,9 @@ import 'due_chip.dart';
 ///    nhìn màn hình.
 ///  * Đổi tên / xoá nằm sau ⋮: một nút xoá nằm ngay trên dòng là một cái bẫy.
 ///
-/// Nhóm 2 (chưa có khoá API) KHÔNG vẽ: tay kéo sắp xếp, ghi chú, nút "Hạn".
+/// Nhóm 2: ghi chú 13 phụ (có thì vẽ), chip "Từ dd/MM", nút nét đứt "Hạn"
+/// ([onSetDue]) và tay kéo ([dragHandle]) — hai cái sau chỉ có khi phiên
+/// khai khả năng tương ứng.
 class SubtaskRow extends StatelessWidget {
   const SubtaskRow({
     super.key,
@@ -35,6 +38,8 @@ class SubtaskRow extends StatelessWidget {
     this.assigneeName,
     this.assigneeAvatar,
     this.first = false,
+    this.onSetDue,
+    this.dragHandle,
   });
 
   /// Vùng chạm tối thiểu của mỗi nút trong dòng.
@@ -62,6 +67,13 @@ class SubtaskRow extends StatelessWidget {
 
   /// Dòng đầu không có vạch trên.
   final bool first;
+
+  /// Đặt / đổi hạn việc con (Nhóm 2, `tasks.subtask_fields`). null = không
+  /// có nút "Hạn" và chip hạn chỉ để xem.
+  final VoidCallback? onSetDue;
+
+  /// Tay kéo 24×44 bên trái (Nhóm 2, `tasks.checklist_move`). null = không.
+  final Widget? dragHandle;
 
   bool get _failed => pending?.failed ?? false;
 
@@ -121,6 +133,8 @@ class SubtaskRow extends StatelessWidget {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            if (dragHandle case final handle?)
+              Padding(padding: const EdgeInsets.only(top: 6), child: handle),
             Padding(
               padding: const EdgeInsets.only(top: 6),
               child: _TickButton(
@@ -156,7 +170,19 @@ class SubtaskRow extends StatelessWidget {
                         color: subtask.done ? secondary : scheme.onSurface,
                       ),
                     ),
-                    if (who != null || subtask.dueDate != null)
+                    if (subtask.description case final note?)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 2),
+                        child: Text(
+                          note,
+                          key: const ValueKey('subtask-note'),
+                          style: OmniType.caption.copyWith(color: secondary),
+                        ),
+                      ),
+                    if (who != null ||
+                        subtask.dueDate != null ||
+                        subtask.startDate != null ||
+                        onSetDue != null)
                       Padding(
                         padding: const EdgeInsets.only(top: 2),
                         child: Wrap(
@@ -164,10 +190,18 @@ class SubtaskRow extends StatelessWidget {
                           crossAxisAlignment: WrapCrossAlignment.center,
                           children: [
                             ?who,
+                            if (subtask.startDate case final start?)
+                              OmniTaskChip.none(
+                                'Từ ${Formatters.dayMonth(start)}',
+                              ),
                             if (subtask.dueDate != null)
-                              DueChip.date(
-                                due: subtask.dueDate,
-                                done: subtask.done,
+                              _dueChip()
+                            else if (onSetDue != null)
+                              _MiniButton(
+                                semanticsLabel: 'Đặt hạn việc con',
+                                icon: Icons.calendar_today_outlined,
+                                label: 'Hạn',
+                                onTap: onSetDue!,
                               ),
                           ],
                         ),
@@ -203,6 +237,29 @@ class SubtaskRow extends StatelessWidget {
                 ),
               ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+extension on SubtaskRow {
+  /// Chip hạn; đổi được ([onSetDue]) thì chạm vào là đổi / xoá, vùng chạm 44.
+  Widget _dueChip() {
+    final chip = DueChip.date(due: subtask.dueDate, done: subtask.done);
+    final onTap = onSetDue;
+    if (onTap == null) return chip;
+
+    return Semantics(
+      button: true,
+      label: 'Đổi hạn việc con',
+      onTap: onTap,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: onTap,
+        child: SizedBox(
+          height: SubtaskRow.tapSize,
+          child: Align(widthFactor: 1, child: chip),
         ),
       ),
     );

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../../core/error/app_exception.dart';
+import '../../../../../core/utils/formatters.dart';
 import '../../../../../design/components/components.dart';
 import '../../../../../design/tokens/tokens.dart';
 import '../../../../team/team.dart';
@@ -11,13 +12,36 @@ import '../subtask_assignee_sheet.dart';
 import 'detail_card.dart';
 
 /// Thứ người dùng nhập ở sheet "Việc con mới".
-typedef SubtaskDraft = ({String title, String? assigneeId});
+typedef SubtaskDraft = ({
+  String title,
+  String? assigneeId,
+  String? description,
+  DateTime? startDate,
+  DateTime? dueDate,
+});
+
+/// Chọn một ngày (mặc định `showDatePicker`); tiêm được để test.
+typedef SubtaskDatePicker =
+    Future<DateTime?> Function(BuildContext context, DateTime initial);
+
+Future<DateTime?> _pickWithCalendar(BuildContext context, DateTime initial) {
+  final today = DateUtils.dateOnly(DateTime.now());
+
+  return showDatePicker(
+    context: context,
+    initialDate: initial,
+    firstDate: DateTime(today.year - 1),
+    lastDate: DateTime(today.year + 3),
+  );
+}
 
 /// Sheet "Việc con mới" (`SubtaskCreate.dc.html`): gần toàn màn (cách trên
 /// 54), đầu Huỷ / "Việc con mới" / Tạo, ô tên, dòng Người làm.
 ///
-/// Ô mô tả, hai ô ngày và chip Hôm nay / Ngày mai / Tuần sau là Nhóm 2 (API
-/// chưa nhận các khoá đó khi tạo việc con) nên KHÔNG vẽ.
+/// [details] (phiên khai `tasks.subtask_fields`): thêm ô mô tả nhiều dòng 76,
+/// hai ô ngày (bắt đầu, hạn; có giá trị thì viền màu chính) và chip nhanh 36
+/// "Hôm nay / Ngày mai / Tuần sau" (+0 / +1 / +7 ngày) đặt HẠN. Không có thì
+/// KHÔNG vẽ (API cũ bỏ qua các khoá đó).
 ///
 /// [onCreate] chạy khi bấm Tạo; xong thì sheet đóng. Nó ném [AppException]
 /// thì sheet ở lại (giữ chữ đã gõ) và báo lỗi.
@@ -26,6 +50,8 @@ Future<void> showSubtaskCreateSheet(
   required String? projectId,
   required bool canAssign,
   required Future<void> Function(SubtaskDraft draft) onCreate,
+  bool details = false,
+  SubtaskDatePicker pickDate = _pickWithCalendar,
 }) {
   final height = MediaQuery.sizeOf(context).height;
 
@@ -45,6 +71,8 @@ Future<void> showSubtaskCreateSheet(
       projectId: projectId,
       canAssign: canAssign,
       onCreate: onCreate,
+      details: details,
+      pickDate: pickDate,
     ),
   );
 }
@@ -55,11 +83,17 @@ class SubtaskCreateSheet extends ConsumerStatefulWidget {
     required this.projectId,
     required this.canAssign,
     required this.onCreate,
+    this.details = false,
+    this.pickDate = _pickWithCalendar,
   });
 
   final String? projectId;
   final bool canAssign;
   final Future<void> Function(SubtaskDraft draft) onCreate;
+
+  /// Vẽ mô tả, ngày, chip nhanh (Nhóm 2).
+  final bool details;
+  final SubtaskDatePicker pickDate;
 
   @override
   ConsumerState<SubtaskCreateSheet> createState() => _SubtaskCreateSheetState();
@@ -67,26 +101,44 @@ class SubtaskCreateSheet extends ConsumerStatefulWidget {
 
 class _SubtaskCreateSheetState extends ConsumerState<SubtaskCreateSheet> {
   final _name = TextEditingController();
+  final _description = TextEditingController();
   String? _assigneeId;
+  DateTime? _start;
+  DateTime? _due;
   bool _busy = false;
 
   @override
   void dispose() {
     _name.dispose();
+    _description.dispose();
     super.dispose();
   }
 
   bool get _canCreate => !_busy && _name.text.trim().isNotEmpty;
 
+  static DateTime _today() => DateUtils.dateOnly(DateTime.now());
+
   Future<void> _create() async {
     if (!_canCreate) return;
     final navigator = Navigator.of(context);
     final messenger = ScaffoldMessenger.of(context);
+    // Server KHÔNG kiểm bắt đầu ≤ hạn: chặn ở đây.
+    final start = _start;
+    final due = _due;
+    if (start != null && due != null && start.isAfter(due)) {
+      messenger.showSnackBar(
+        const SnackBar(content: Text('Ngày bắt đầu phải trước hạn.')),
+      );
+      return;
+    }
     setState(() => _busy = true);
     try {
       await widget.onCreate((
         title: _name.text.trim(),
         assigneeId: _assigneeId,
+        description: widget.details ? _description.text.trim() : null,
+        startDate: widget.details ? start : null,
+        dueDate: widget.details ? due : null,
       ));
       navigator.pop();
     } on AppException catch (e) {
@@ -110,6 +162,17 @@ class _SubtaskCreateSheetState extends ConsumerState<SubtaskCreateSheet> {
     setState(
       () => _assigneeId = result is SubtaskAssignTo ? result.userId : null,
     );
+  }
+
+  Future<void> _pick({required bool start}) async {
+    final current = start ? _start : _due;
+    final chosen = await widget.pickDate(
+      context,
+      current ?? (start ? null : _start) ?? _today(),
+    );
+    if (chosen == null || !mounted) return;
+    final day = DateUtils.dateOnly(chosen);
+    setState(() => start ? _start = day : _due = day);
   }
 
   TeamMember? _member(String id) {
@@ -227,6 +290,38 @@ class _SubtaskCreateSheetState extends ConsumerState<SubtaskCreateSheet> {
                         focusedBorder: focusRing,
                       ),
                     ),
+                    if (widget.details) ...[
+                      const SizedBox(height: 12),
+                      TextField(
+                        key: const ValueKey('subtask-create-description'),
+                        controller: _description,
+                        enabled: !_busy,
+                        minLines: 3,
+                        maxLines: 6,
+                        textCapitalization: TextCapitalization.sentences,
+                        style: OmniType.body.copyWith(color: scheme.onSurface),
+                        decoration: InputDecoration(
+                          hintText: 'Mô tả (không bắt buộc)',
+                          filled: true,
+                          fillColor: scheme.surface,
+                          constraints: const BoxConstraints(minHeight: 76),
+                          contentPadding: const EdgeInsets.all(12),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                            borderSide: BorderSide(
+                              color: scheme.outlineVariant,
+                            ),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                            borderSide: BorderSide(
+                              color: scheme.outlineVariant,
+                            ),
+                          ),
+                          focusedBorder: focusRing,
+                        ),
+                      ),
+                    ],
                     if (widget.canAssign) ...[
                       const SizedBox(height: 12),
                       DetailCard(
@@ -271,11 +366,196 @@ class _SubtaskCreateSheetState extends ConsumerState<SubtaskCreateSheet> {
                         ],
                       ),
                     ],
+                    if (widget.details) ...[
+                      const SizedBox(height: 12),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: _DateBox(
+                              key: const ValueKey('subtask-create-start'),
+                              empty: 'Ngày bắt đầu',
+                              prefix: 'Bắt đầu',
+                              value: _start,
+                              clearLabel: 'Xoá ngày bắt đầu',
+                              onTap: _busy ? null : () => _pick(start: true),
+                              onClear: () => setState(() => _start = null),
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: _DateBox(
+                              key: const ValueKey('subtask-create-due'),
+                              empty: 'Hạn',
+                              prefix: 'Hạn',
+                              value: _due,
+                              clearLabel: 'Xoá hạn',
+                              onTap: _busy ? null : () => _pick(start: false),
+                              onClear: () => setState(() => _due = null),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 4),
+                      Wrap(
+                        spacing: 8,
+                        children: [
+                          for (final (label, days) in const [
+                            ('Hôm nay', 0),
+                            ('Ngày mai', 1),
+                            ('Tuần sau', 7),
+                          ])
+                            _QuickChip(
+                              label: label,
+                              on: _due == _today().add(Duration(days: days)),
+                              onTap: _busy
+                                  ? null
+                                  : () => setState(
+                                      () => _due = _today().add(
+                                        Duration(days: days),
+                                      ),
+                                    ),
+                            ),
+                        ],
+                      ),
+                    ],
                   ],
                 ),
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Ô ngày (`.in` của bản mẫu): cao 48, viền `#E3E8EF`; có giá trị thì viền
+/// màu chính, chữ chính và nút × 44 để xoá.
+class _DateBox extends StatelessWidget {
+  const _DateBox({
+    super.key,
+    required this.empty,
+    required this.prefix,
+    required this.value,
+    required this.clearLabel,
+    required this.onTap,
+    required this.onClear,
+  });
+
+  final String empty;
+  final String prefix;
+  final DateTime? value;
+  final String clearLabel;
+  final VoidCallback? onTap;
+  final VoidCallback onClear;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final date = value;
+
+    return Material(
+      color: scheme.surface,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(8),
+        side: BorderSide(
+          color: date == null ? scheme.outlineVariant : scheme.primary,
+        ),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: onTap,
+        child: SizedBox(
+          height: 48,
+          child: Row(
+            children: [
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  date == null ? empty : '$prefix ${Formatters.dayMonth(date)}',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: OmniType.bodySm.copyWith(
+                    color: date == null
+                        ? detailSecondary(context)
+                        : scheme.onSurface,
+                  ),
+                ),
+              ),
+              if (date != null)
+                IconButton(
+                  tooltip: clearLabel,
+                  onPressed: onClear,
+                  style: IconButton.styleFrom(
+                    minimumSize: const Size(44, 44),
+                    maximumSize: const Size(44, 44),
+                    padding: EdgeInsets.zero,
+                  ),
+                  icon: Icon(
+                    Icons.close_rounded,
+                    size: 18,
+                    color: detailSecondary(context),
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Chip nhanh `.qc`: cao 36 (vùng chạm 44), viền `#E3E8EF`; bật thì nền
+/// `#E6F3F2` chữ `#075E59` viền màu chính.
+class _QuickChip extends StatelessWidget {
+  const _QuickChip({
+    required this.label,
+    required this.on,
+    required this.onTap,
+  });
+
+  final String label;
+  final bool on;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final tone = OmniTaskTones.of(context).today;
+
+    return Semantics(
+      button: true,
+      selected: on,
+      label: 'Hạn: $label',
+      excludeSemantics: true,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: onTap,
+        child: SizedBox(
+          height: 44,
+          child: Center(
+            widthFactor: 1,
+            child: Container(
+              key: ValueKey('quick-chip-$label'),
+              height: 36,
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: on ? tone.background : scheme.surface,
+                borderRadius: BorderRadius.circular(6),
+                border: Border.all(
+                  color: on ? scheme.primary : scheme.outlineVariant,
+                ),
+              ),
+              child: Text(
+                label,
+                style: OmniType.caption.copyWith(
+                  fontWeight: FontWeight.w500,
+                  color: on ? tone.foreground : detailSecondary(context),
+                ),
+              ),
+            ),
+          ),
         ),
       ),
     );

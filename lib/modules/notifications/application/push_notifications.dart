@@ -154,6 +154,8 @@ class PushIntent {
       // `NotificationType` bên API; thêm loại ở đó mà quên ở đây thì thông báo
       // vẫn hiện, chỉ là chạm vào không đi đâu cả.
       'task_progress' ||
+      // Nhắc việc theo giờ tự chọn (`SendTaskRemindersCommand`).
+      'task_reminder' ||
       'task_mentioned' => PushTarget.task,
       _ => null,
     };

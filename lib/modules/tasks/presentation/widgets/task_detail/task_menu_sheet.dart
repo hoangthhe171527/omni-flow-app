@@ -5,14 +5,17 @@ import 'menu_sheet.dart';
 /// Mục của menu việc (`TaskMenu.dc.html`).
 ///
 /// Mục Nhóm 2 (Người theo dõi, Ghim, Khoá) chỉ có khi API gửi khoá tương ứng
-/// (`ApiCapability.taskFollow` / `taskPin` / `taskLock` trong phiên). Nhắc việc,
-/// Sao chép công việc, Sao chép liên kết thuộc Task 11.
+/// (`ApiCapability.taskFollow` / `taskPin` / `taskLock` trong phiên); Nhắc việc
+/// và Sao chép công việc theo `taskReminders` / `taskCopy`. "Sao chép liên
+/// kết" KHÔNG có: app chưa có URL web gốc (xem báo cáo Task 11).
 enum TaskMenuAction {
   labels,
   followers,
+  reminders,
   pin,
   unpin,
   rename,
+  copy,
   move,
   lock,
   unlock,
@@ -41,6 +44,8 @@ List<List<TaskMenuAction>> taskMenuGroups({
   bool pinned = false,
   bool canLock = false,
   bool locked = false,
+  bool canRemind = false,
+  bool canCopy = false,
 }) {
   final edit = !locked;
 
@@ -48,10 +53,16 @@ List<List<TaskMenuAction>> taskMenuGroups({
     [
       if (canLabels && edit) TaskMenuAction.labels,
       if (canFollow) TaskMenuAction.followers,
+      // Nhắc việc: server cho cả việc đã khoá (`LockCoversEveryWriteRouteTest`).
+      if (canRemind) TaskMenuAction.reminders,
       if (canPin && edit) pinned ? TaskMenuAction.unpin : TaskMenuAction.pin,
       if (isAssigner && edit) TaskMenuAction.rename,
     ],
-    [if (isAssigner && edit) TaskMenuAction.move],
+    [
+      // Sao chép: việc gốc đang khoá vẫn chép được (`CopyTask`).
+      if (canCopy) TaskMenuAction.copy,
+      if (isAssigner && edit) TaskMenuAction.move,
+    ],
     [
       if (canLock) locked ? TaskMenuAction.unlock : TaskMenuAction.lock,
       if (isAssigner && edit)
@@ -87,6 +98,16 @@ DetailMenuItem<TaskMenuAction> _item(TaskMenuAction a, int followers) =>
         icon: Icons.visibility_outlined,
         label: 'Người theo dõi',
         trailing: '$followers',
+      ),
+      TaskMenuAction.reminders => DetailMenuItem(
+        value: a,
+        icon: Icons.alarm_rounded,
+        label: 'Nhắc việc',
+      ),
+      TaskMenuAction.copy => DetailMenuItem(
+        value: a,
+        icon: Icons.content_copy_rounded,
+        label: 'Sao chép công việc',
       ),
       TaskMenuAction.pin => DetailMenuItem(
         value: a,

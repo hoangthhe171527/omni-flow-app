@@ -9,6 +9,7 @@ import '../domain/custom_field.dart';
 import '../domain/task.dart';
 import '../domain/task_label.dart';
 import '../domain/task_project.dart';
+import '../domain/task_reminder.dart';
 
 /// Which slice of a person's work to show.
 ///
@@ -504,6 +505,180 @@ class TasksApi {
   /// Xoá một bình luận (tác giả hoặc quản lý kế hoạch; người khác → 403).
   Future<Task> deleteComment(String taskId, String commentId) async {
     final response = await _client.delete('$_base/$taskId/comments/$commentId');
+
+    return Task.fromJson(response.object);
+  }
+
+  // ── Nhóm 2, Task 11 (`ApiCapability`: subtaskFields, checklistMove, taskCopy,
+  // taskReminders, commentAttachments). Chỗ gọi chỉ gọi khi phiên khai khả
+  // năng tương ứng.
+
+  /// Tạo việc con ĐỦ trường trong MỘT lượt `POST /tasks/{id}/checklist`
+  /// (`CreateChecklistItemRequest`). Trường trống không gửi. `assignee_id`
+  /// phải là thành viên đang làm (422 `errors.assignee_id`).
+  Future<Task> createSubtask(
+    String taskId, {
+    required String title,
+    String? description,
+    DateTime? startDate,
+    DateTime? dueDate,
+    String? assigneeId,
+  }) async {
+    final note = description?.trim() ?? '';
+    final response = await _client.post(
+      '$_base/$taskId/checklist',
+      body: {
+        'title': title,
+        if (note.isNotEmpty) 'description': note,
+        if (startDate != null) 'start_date': _ymd(startDate),
+        if (dueDate != null) 'due_date': _ymd(dueDate),
+        if (assigneeId != null && assigneeId.isNotEmpty)
+          'assignee_id': assigneeId,
+      },
+    );
+
+    return Task.fromJson(response.object);
+  }
+
+  /// Đặt / XOÁ hạn một việc con. Khoá LUÔN gửi: null = xoá
+  /// (`UpdateChecklistItemRequest`, `array_key_exists`).
+  Future<Task> setSubtaskDueDate(
+    String taskId,
+    String subtaskId,
+    DateTime? dueDate,
+  ) => _patchSubtask(taskId, subtaskId, {
+    'due_date': dueDate == null ? null : _ymd(dueDate),
+  });
+
+  /// Đặt / xoá ngày bắt đầu một việc con (null = xoá).
+  Future<Task> setSubtaskStartDate(
+    String taskId,
+    String subtaskId,
+    DateTime? startDate,
+  ) => _patchSubtask(taskId, subtaskId, {
+    'start_date': startDate == null ? null : _ymd(startDate),
+  });
+
+  /// Sửa ghi chú việc con; rỗng = xoá (gửi null).
+  Future<Task> setSubtaskDescription(
+    String taskId,
+    String subtaskId,
+    String? description,
+  ) {
+    final note = description?.trim() ?? '';
+    return _patchSubtask(taskId, subtaskId, {
+      'description': note.isEmpty ? null : note,
+    });
+  }
+
+  Future<Task> _patchSubtask(
+    String taskId,
+    String subtaskId,
+    Map<String, dynamic> body,
+  ) async {
+    final response = await _client.patch(
+      '$_base/$taskId/checklist/$subtaskId',
+      body: body,
+    );
+
+    return Task.fromJson(response.object);
+  }
+
+  /// Kéo thả: đặt MỘT việc con ngay sau [afterId] (null = lên đầu) —
+  /// `POST …/checklist/{itemId}/move`. Khoá `after_id` LUÔN có (`present`).
+  /// Không PUT cả mảng `checklist`.
+  Future<Task> moveSubtask(
+    String taskId,
+    String subtaskId, {
+    required String? afterId,
+  }) async {
+    final response = await _client.post(
+      '$_base/$taskId/checklist/$subtaskId/move',
+      body: <String, dynamic>{'after_id': afterId},
+    );
+
+    return Task.fromJson(response.object);
+  }
+
+  /// Sao chép việc phía server (`POST /tasks/{id}/copy`, 201 + việc mới).
+  /// [title] null = tên mặc định của server. Không chép bình luận, tệp,
+  /// ghim, khoá, người theo dõi.
+  Future<Task> copyTask(String taskId, {String? title}) async {
+    final name = title?.trim() ?? '';
+    final response = await _client.post(
+      '$_base/$taskId/copy',
+      body: {if (name.isNotEmpty) 'title': name},
+    );
+
+    return Task.fromJson(response.object);
+  }
+
+  /// Lời nhắc người này thấy được trên việc: của mình, và `everyone`.
+  Future<List<TaskReminder>> reminders(String taskId) async {
+    final response = await _client.get('$_base/$taskId/reminders');
+
+    return response.list.map(TaskReminder.fromJson).toList();
+  }
+
+  /// Đặt lời nhắc lúc [at]. Gửi ISO **UTC có `Z`** — regex server bắt buộc
+  /// có múi giờ; phải sau bây giờ và trong 366 ngày. [everyone] cần quyền
+  /// sửa việc (người xem → 403); tối đa 20 lời nhắc đang chờ / người / việc
+  /// (422 `reminder_limit_reached`).
+  Future<TaskReminder> addReminder(
+    String taskId,
+    DateTime at, {
+    bool everyone = false,
+  }) async {
+    final response = await _client.post(
+      '$_base/$taskId/reminders',
+      body: {
+        'remind_at': at.toUtc().toIso8601String(),
+        'audience': everyone ? 'everyone' : 'me',
+      },
+    );
+
+    return TaskReminder.fromJson(response.object);
+  }
+
+  /// Xoá lời nhắc (người đặt; `everyone` của người khác cần quản lý việc).
+  Future<void> deleteReminder(String taskId, String reminderId) async {
+    await _client.delete('$_base/$taskId/reminders/$reminderId');
+  }
+
+  /// Bình luận KÈM tệp: multipart `files[]` (≤10 tệp, mỗi tệp ≤25MB, cả
+  /// request ≤64MB) trên CÙNG `POST /tasks/{id}/comments`. Thân rỗng thì
+  /// không gửi `body` (`required_without_all:attachment_ids,files`).
+  Future<Task> commentWithFiles(
+    String taskId,
+    String body, {
+    List<String> mentionedUserIds = const [],
+    required List<CommentUpload> files,
+  }) async {
+    final text = body.trim();
+    final response = await _client.uploadMany(
+      '$_base/$taskId/comments',
+      files: [
+        for (final f in files)
+          (field: 'files[]', path: f.path, filename: f.name),
+      ],
+      fields: [
+        if (text.isNotEmpty) MapEntry('body', text),
+        for (final id in mentionedUserIds) MapEntry('mentioned_user_ids[]', id),
+      ],
+    );
+
+    return Task.fromJson(response.object);
+  }
+
+  /// Gỡ một tệp kèm bình luận (người tải hoặc quản lý; việc khoá vẫn được).
+  Future<Task> deleteCommentAttachment(
+    String taskId,
+    String commentId,
+    String attachmentId,
+  ) async {
+    final response = await _client.delete(
+      '$_base/$taskId/comments/$commentId/attachments/$attachmentId',
+    );
 
     return Task.fromJson(response.object);
   }
