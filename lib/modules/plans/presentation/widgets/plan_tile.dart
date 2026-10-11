@@ -69,8 +69,14 @@ class PlanTile extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     final tones = OmniTaskTones.of(context);
     final open = (plan.taskCount - plan.doneCount).clamp(0, 1 << 30);
+    // Đã đóng / lưu trữ: mờ đi và mang nhãn trạng thái thay cho số trễ.
+    final closedLabel = switch (plan.planStatus) {
+      PlanStatus.active => null,
+      PlanStatus.done => 'Đã đóng',
+      PlanStatus.archived => 'Lưu trữ',
+    };
 
-    return OmniPressScale(
+    final tile = OmniPressScale(
       child: InkWell(
         onTap: onTap,
         child: Container(
@@ -115,7 +121,16 @@ class PlanTile extends StatelessWidget {
                   ],
                 ),
               ),
-              if (plan.overdueCount > 0) ...[
+              if (closedLabel != null) ...[
+                const SizedBox(width: 10),
+                Text(
+                  closedLabel,
+                  style: OmniType.micro.copyWith(
+                    fontWeight: FontWeight.w600,
+                    color: scheme.onSurfaceVariant,
+                  ),
+                ),
+              ] else if (plan.overdueCount > 0) ...[
                 const SizedBox(width: 10),
                 Text(
                   '${plan.overdueCount} trễ',
@@ -138,6 +153,14 @@ class PlanTile extends StatelessWidget {
           ),
         ),
       ),
+    );
+
+    if (closedLabel == null) return tile;
+
+    return Opacity(
+      key: const Key('plan-tile-closed'),
+      opacity: 0.6,
+      child: tile,
     );
   }
 }

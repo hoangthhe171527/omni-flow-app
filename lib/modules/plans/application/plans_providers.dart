@@ -19,11 +19,18 @@ class TeamWithPlans {
   const TeamWithPlans({
     required this.team,
     required this.plans,
+    this.closedPlans = const [],
     this.synthetic = false,
   });
 
   final Team team;
+
+  /// Kế hoạch đang chạy (`status` active, hoặc lạ / thiếu).
   final List<Plan> plans;
+
+  /// Kế hoạch đã đóng (`done`) hoặc lưu trữ (`archived`): gập dưới dòng
+  /// "Đã đóng (N)" ở cuối khối, không bị giấu khỏi app.
+  final List<Plan> closedPlans;
   final bool synthetic;
 }
 
@@ -108,17 +115,23 @@ final teamsWithPlansSearchProvider = FutureProvider.autoDispose
 /// Ghép team với kế hoạch của nó, giữ mọi kế hoạch — kể cả kế hoạch mồ côi.
 List<TeamWithPlans> groupTeamsWithPlans(List<Team> teams, List<Plan> plans) {
   final byTeam = <String, List<Plan>>{};
+  final closedByTeam = <String, List<Plan>>{};
   for (final plan in plans) {
-    // Tab Việc chỉ hiện kế hoạch đang chạy: server không lọc theo `status`
-    // (trả cả `done` / `archived`), nên lọc ở đây. Trạng thái lạ đọc ra
-    // `active` ([PlanStatus.parse]) nên không bị giấu.
-    if (plan.planStatus != PlanStatus.active) continue;
-    byTeam.putIfAbsent(plan.teamId ?? '', () => []).add(plan);
+    // Server không lọc theo `status` (trả cả `done` / `archived`). Kế hoạch
+    // đang chạy hiện thẳng; đã đóng / lưu trữ gập dưới "Đã đóng (N)" — giấu
+    // hẳn thì không còn chỗ nào trong app mở lại được. Trạng thái lạ đọc ra
+    // `active` ([PlanStatus.parse]) nên không bị gập.
+    final bucket = plan.planStatus == PlanStatus.active ? byTeam : closedByTeam;
+    bucket.putIfAbsent(plan.teamId ?? '', () => []).add(plan);
   }
 
   final grouped = [
     for (final team in teams)
-      TeamWithPlans(team: team, plans: byTeam[team.id] ?? const []),
+      TeamWithPlans(
+        team: team,
+        plans: byTeam[team.id] ?? const [],
+        closedPlans: closedByTeam[team.id] ?? const [],
+      ),
   ];
 
   // Dự án có team mà team ĐÓ không nằm trong danh sách vừa tải.
@@ -132,30 +145,37 @@ List<TeamWithPlans> groupTeamsWithPlans(List<Team> teams, List<Plan> plans) {
   // team đã lưu trữ), hoặc danh sách team tải hỏng. Cả hai đều KHÔNG được làm dự
   // án biến mất.
   final known = {for (final team in teams) team.id};
-  final extras = <String, TeamWithPlans>{};
-  for (final entry in byTeam.entries) {
-    if (entry.key.isEmpty || known.contains(entry.key)) continue;
-
-    final name = entry.value
+  final extraIds = <String>{
+    for (final id in [...byTeam.keys, ...closedByTeam.keys])
+      if (id.isNotEmpty && !known.contains(id)) id,
+  };
+  for (final id in extraIds) {
+    final open = byTeam[id] ?? const <Plan>[];
+    final closed = closedByTeam[id] ?? const <Plan>[];
+    final name = [...open, ...closed]
         .map((p) => p.teamName)
         .firstWhere((n) => (n ?? '').isNotEmpty, orElse: () => null);
 
-    extras[entry.key] = TeamWithPlans(
-      team: Team(id: entry.key, name: name ?? 'Cần xếp lại team'),
-      plans: entry.value,
-      synthetic: true,
+    grouped.add(
+      TeamWithPlans(
+        team: Team(id: id, name: name ?? 'Cần xếp lại team'),
+        plans: open,
+        closedPlans: closed,
+        synthetic: true,
+      ),
     );
   }
-  grouped.addAll(extras.values);
 
   // Dự án thật sự chưa xếp team. Chúng đi vào một khối riêng ở cuối chứ không
   // bị bỏ qua: giấu chúng nghĩa là công việc đang chạy biến mất khỏi app.
   final orphans = byTeam[''] ?? const <Plan>[];
-  if (orphans.isNotEmpty) {
+  final closedOrphans = closedByTeam[''] ?? const <Plan>[];
+  if (orphans.isNotEmpty || closedOrphans.isNotEmpty) {
     grouped.add(
       TeamWithPlans(
         team: const Team(id: '', name: 'Chưa xếp team'),
         plans: orphans,
+        closedPlans: closedOrphans,
         synthetic: true,
       ),
     );

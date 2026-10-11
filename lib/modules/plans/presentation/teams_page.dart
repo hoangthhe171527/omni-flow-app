@@ -44,6 +44,9 @@ class _TeamsPageState extends ConsumerState<TeamsPage> {
   /// Team đang gập, theo id. Mặc định mọi team mở; không nhớ qua phiên.
   final _collapsed = <String>{};
 
+  /// Team đang mở dòng "Đã đóng (N)", theo id. Mặc định gập.
+  final _closedOpen = <String>{};
+
   /// Đã qua khung đầu có dữ liệu. Chỉ nhóm vào cây ở khung đó mới "rise":
   /// danh sách lười dựng lại nhóm khi cuộn về, đổi tìm hay realtime, và phát
   /// lại hiệu ứng lúc đó đọc như giật.
@@ -133,10 +136,10 @@ class _TeamsPageState extends ConsumerState<TeamsPage> {
     final searching = needle.isNotEmpty;
     bool hit(String name) => foldDiacritics(name).contains(needle);
 
-    final visible = <(TeamWithPlans, List<Plan>)>[];
+    final visible = <(TeamWithPlans, List<Plan>, List<Plan>)>[];
     for (final group in list) {
       if (!searching) {
-        visible.add((group, group.plans));
+        visible.add((group, group.plans, group.closedPlans));
         continue;
       }
       final teamHit = hit(group.team.name);
@@ -144,8 +147,15 @@ class _TeamsPageState extends ConsumerState<TeamsPage> {
         for (final p in group.plans)
           if (teamHit || hit(p.name)) p,
       ];
+      // Tìm cũng ra kế hoạch đã đóng (dòng có nhãn "Đã đóng" / "Lưu trữ").
+      final closed = [
+        for (final p in group.closedPlans)
+          if (teamHit || hit(p.name)) p,
+      ];
       // Có query: nhóm không còn kế hoạch nào thì ẩn.
-      if (plans.isNotEmpty) visible.add((group, plans));
+      if (plans.isNotEmpty || closed.isNotEmpty) {
+        visible.add((group, plans, closed));
+      }
     }
 
     // Nhóm dựng LƯỜI trong itemBuilder: cờ rise được đọc lúc nhóm thật sự vào
@@ -174,6 +184,15 @@ class _TeamsPageState extends ConsumerState<TeamsPage> {
           rise: !_introDone,
           group: visible[i].$1,
           plans: visible[i].$2,
+          closed: visible[i].$3,
+          // Đang tìm: kế hoạch đã đóng khớp phải thấy ngay.
+          closedOpen:
+              (searching && visible[i].$3.isNotEmpty) ||
+              _closedOpen.contains(visible[i].$1.team.id),
+          onToggleClosed: () => setState(() {
+            final id = visible[i].$1.team.id;
+            if (!_closedOpen.remove(id)) _closedOpen.add(id);
+          }),
           open: searching || !_collapsed.contains(visible[i].$1.team.id),
           onToggle: () => setState(() {
             final id = visible[i].$1.team.id;
@@ -258,11 +277,17 @@ class _TeamsPageState extends ConsumerState<TeamsPage> {
     // Bắt trước `await`: sau hộp thoại xác nhận, widget này có thể đã rời cây
     // (realtime dựng lại danh sách), và `ref` của nó khi đó không còn dùng được.
     final container = ProviderScope.containerOf(context);
-    if (group.plans.isNotEmpty) {
+    // Kế hoạch đã đóng vẫn trỏ về team này: xoá team là để chúng mồ côi.
+    final total = group.plans.length + group.closedPlans.length;
+    if (total > 0) {
+      final closed = group.closedPlans.isEmpty
+          ? ''
+          : ' (${group.closedPlans.length} đã đóng)';
       messenger.showSnackBar(
         SnackBar(
           content: Text(
-            'Team còn ${group.plans.length} kế hoạch. Hãy chuyển các kế hoạch sang team khác trước.',
+            'Team còn $total kế hoạch$closed. Hãy chuyển các kế hoạch sang '
+            'team khác trước.',
           ),
         ),
       );

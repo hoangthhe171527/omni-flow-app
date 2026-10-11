@@ -82,6 +82,9 @@ class _CopyPlanSheetState extends State<_CopyPlanSheet> {
             contentPadding: EdgeInsets.zero,
             value: _asTemplate,
             title: const Text('Lưu làm mẫu'),
+            // App chưa có chỗ dùng mẫu: nói trước, để bật công tắc không dẫn
+            // vào ngõ cụt.
+            subtitle: const Text('Mẫu chỉ dùng được trên web.'),
             onChanged: (on) => setState(() => _asTemplate = on),
           ),
           const SizedBox(height: 12),

@@ -106,6 +106,46 @@ void main() {
     expect((fields.last as Map)['options'], ['Đen', 'Trắng']);
   });
 
+  testWidgets('lựa chọn dài quá 128 ký tự: báo lỗi, không cho Xong', (
+    tester,
+  ) async {
+    await pump(tester);
+
+    await tester.tap(find.text('Thêm trường'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byKey(const Key('field-name')), 'Màu');
+    await tester.pump();
+    await tester.tap(find.text('Chọn'));
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.byKey(const Key('field-options')),
+      'Đen\n${'a' * 129}',
+    );
+    await tester.pump();
+
+    expect(
+      find.text('Mỗi lựa chọn tối đa 128 ký tự (dòng 2).'),
+      findsOneWidget,
+    );
+    final done = tester.widget<FilledButton>(
+      find.widgetWithText(FilledButton, 'Xong'),
+    );
+    expect(done.onPressed, isNull);
+
+    await tester.enterText(
+      find.byKey(const Key('field-options')),
+      'Đen\n${'a' * 128}',
+    );
+    await tester.pump();
+    expect(find.textContaining('tối đa 128'), findsNothing);
+    expect(
+      tester
+          .widget<FilledButton>(find.widgetWithText(FilledButton, 'Xong'))
+          .onPressed,
+      isNotNull,
+    );
+  });
+
   testWidgets('xoá trường hỏi lại rồi gửi mảng thiếu nó', (tester) async {
     await pump(tester);
 

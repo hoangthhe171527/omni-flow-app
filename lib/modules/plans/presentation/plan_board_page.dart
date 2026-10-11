@@ -159,6 +159,17 @@ class _PlanBoardPageState extends ConsumerState<PlanBoardPage> {
                     ? () => _planMenu(loaded!, menuGroups)
                     : null,
               ),
+              if (loaded != null && loaded.planStatus != PlanStatus.active)
+                _ClosedBanner(
+                  status: loaded.planStatus,
+                  onReopen: canEditSections
+                      ? () => _patchPlan(
+                          loaded,
+                          PlanPatch(status: PlanStatus.active),
+                          done: 'Đã mở lại kế hoạch.',
+                        )
+                      : null,
+                ),
               Expanded(
                 child: OmniAsyncView(
                   value: plan,
@@ -553,6 +564,13 @@ class _PlanBoardPageState extends ConsumerState<PlanBoardPage> {
           );
       container.invalidate(teamsWithPlansProvider);
       if (!mounted) return;
+      // Mẫu không mở được trong app (tab Việc không liệt kê mẫu): ở lại bảng.
+      if (choice.asTemplate) {
+        messenger.showSnackBar(
+          const SnackBar(content: Text('Đã lưu làm mẫu. Dùng mẫu trên web.')),
+        );
+        return;
+      }
       router.pushReplacementNamed(
         PlanRoutes.board,
         pathParameters: {'id': copy.id},
@@ -772,7 +790,9 @@ class _PlanBoardPageState extends ConsumerState<PlanBoardPage> {
       context: context,
       title: 'Xoá kế hoạch “${plan.name}”?',
       message:
-          'Toàn bộ công việc trong kế hoạch cũng sẽ được chuyển vào thùng rác. Thao tác sẽ đồng bộ trên web và điện thoại.',
+          'Toàn bộ công việc trong kế hoạch cũng sẽ được chuyển vào thùng rác. '
+          'Khôi phục được (kèm công việc) từ thùng rác trên web. Thao tác sẽ '
+          'đồng bộ trên web và điện thoại.',
       confirmLabel: 'Xoá kế hoạch',
       destructive: true,
     );
@@ -1197,6 +1217,60 @@ class _TruncatedNotice extends StatelessWidget {
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+/// Dải dưới header khi kế hoạch đã đóng / lưu trữ: nói rõ trạng thái, và với
+/// người quản lý có "Mở lại" ngay tại chỗ (tab Việc đã gập kế hoạch này dưới
+/// "Đã đóng (N)").
+class _ClosedBanner extends StatelessWidget {
+  const _ClosedBanner({required this.status, this.onReopen});
+
+  final PlanStatus status;
+  final VoidCallback? onReopen;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final label = status == PlanStatus.archived
+        ? 'Kế hoạch đã lưu trữ'
+        : 'Kế hoạch đã đóng';
+
+    return Container(
+      key: const Key('plan-closed-banner'),
+      margin: const EdgeInsets.fromLTRB(12, 8, 12, 0),
+      padding: const EdgeInsets.fromLTRB(12, 0, 4, 0),
+      constraints: const BoxConstraints(minHeight: 44),
+      decoration: BoxDecoration(
+        color: scheme.surface,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            Icons.lock_outline_rounded,
+            size: OmniIconSize.sm,
+            color: scheme.onSurfaceVariant,
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              label,
+              style: OmniType.bodySm.copyWith(
+                fontWeight: FontWeight.w500,
+                color: scheme.onSurface,
+              ),
+            ),
+          ),
+          if (onReopen != null)
+            TextButton(
+              style: TextButton.styleFrom(minimumSize: const Size(44, 44)),
+              onPressed: onReopen,
+              child: const Text('Mở lại'),
+            ),
+        ],
       ),
     );
   }

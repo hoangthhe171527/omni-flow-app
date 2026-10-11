@@ -202,9 +202,22 @@ class _FieldSheetState extends State<_FieldSheet> {
       if (line.trim().isNotEmpty) line.trim(),
   ];
 
+  /// Dòng (đếm từ 1, bỏ dòng trống) có lựa chọn dài quá 128 — trần
+  /// `options.*` của `CreateProjectRequest`; null khi mọi dòng đều vừa.
+  int? get _tooLongOption {
+    final options = _optionList;
+    for (var i = 0; i < options.length; i++) {
+      if (options[i].characters.length > _maxOption) return i + 1;
+    }
+    return null;
+  }
+
+  static const _maxOption = 128;
+
   bool get _valid =>
       _name.text.trim().isNotEmpty &&
-      (_type != CustomFieldType.select || _optionList.isNotEmpty);
+      (_type != CustomFieldType.select ||
+          (_optionList.isNotEmpty && _tooLongOption == null));
 
   void _submit() {
     if (!_valid) return;
@@ -267,6 +280,13 @@ class _FieldSheetState extends State<_FieldSheet> {
                 controller: _options,
                 minLines: 3,
                 maxLines: 8,
+                decoration: InputDecoration(
+                  errorText: switch (_tooLongOption) {
+                    final line? =>
+                      'Mỗi lựa chọn tối đa $_maxOption ký tự (dòng $line).',
+                    null => null,
+                  },
+                ),
                 onChanged: (_) => setState(() {}),
               ),
             ),

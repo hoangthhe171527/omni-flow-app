@@ -23,6 +23,9 @@ class TeamGroup extends StatelessWidget {
     required this.open,
     required this.onToggle,
     required this.onOpenPlan,
+    this.closed = const [],
+    this.closedOpen = false,
+    this.onToggleClosed,
     this.onLongPress,
     this.index = 0,
     this.rise = true,
@@ -33,6 +36,12 @@ class TeamGroup extends StatelessWidget {
   final bool open;
   final VoidCallback onToggle;
   final ValueChanged<Plan> onOpenPlan;
+
+  /// Kế hoạch đã đóng / lưu trữ ĐÃ LỌC theo ô tìm, hiện dưới dòng
+  /// "Đã đóng (N)" (N đếm cả team) khi [closedOpen].
+  final List<Plan> closed;
+  final bool closedOpen;
+  final VoidCallback? onToggleClosed;
 
   /// Bấm giữ đầu nhóm: "Tuỳ chọn team" (Xoá team). Null thì không có.
   final VoidCallback? onLongPress;
@@ -128,7 +137,16 @@ class TeamGroup extends StatelessWidget {
             if (open) ...[
               for (final plan in plans)
                 PlanTile(plan: plan, onTap: () => onOpenPlan(plan)),
-              if (group.plans.isEmpty)
+              if (group.closedPlans.isNotEmpty)
+                _ClosedToggle(
+                  count: group.closedPlans.length,
+                  open: closedOpen,
+                  onTap: onToggleClosed,
+                ),
+              if (closedOpen)
+                for (final plan in closed)
+                  PlanTile(plan: plan, onTap: () => onOpenPlan(plan)),
+              if (group.plans.isEmpty && group.closedPlans.isEmpty)
                 // Nói rõ là rỗng: một đầu nhóm không có gì bên dưới đọc như
                 // lỗi tải. Cũng là chỗ duy nhất team rỗng còn hiện để xoá.
                 Container(
@@ -152,6 +170,74 @@ class TeamGroup extends StatelessWidget {
                 ),
             ],
           ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Dòng "Đã đóng (N)" cuối khối team: gập mặc định, chạm để mở các kế hoạch
+/// đã đóng / lưu trữ. Mờ hơn dòng kế hoạch: đây là kho, không phải việc đang
+/// chạy.
+class _ClosedToggle extends StatelessWidget {
+  const _ClosedToggle({required this.count, required this.open, this.onTap});
+
+  final int count;
+  final bool open;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final motion = OmniMotion.enabled(context);
+
+    return Semantics(
+      button: true,
+      expanded: open,
+      child: InkWell(
+        onTap: onTap,
+        child: Container(
+          key: const Key('team-closed-toggle'),
+          constraints: const BoxConstraints(minHeight: 44),
+          padding: const EdgeInsets.fromLTRB(12, 0, 6, 0),
+          decoration: BoxDecoration(
+            border: Border(
+              top: BorderSide(color: scheme.surfaceContainerHighest),
+            ),
+          ),
+          child: Row(
+            children: [
+              Icon(
+                Icons.lock_outline_rounded,
+                size: 16,
+                color: scheme.onSurfaceVariant,
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'Đã đóng ($count)',
+                  style: OmniType.caption.copyWith(
+                    color: scheme.onSurfaceVariant,
+                  ),
+                ),
+              ),
+              SizedBox.square(
+                dimension: 44,
+                child: AnimatedRotation(
+                  turns: open ? 0.5 : 0,
+                  duration: motion
+                      ? const Duration(milliseconds: 300)
+                      : Duration.zero,
+                  curve: OmniCurves.standard,
+                  child: Icon(
+                    Icons.keyboard_arrow_down_rounded,
+                    size: 18,
+                    color: scheme.onSurfaceVariant,
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

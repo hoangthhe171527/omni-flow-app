@@ -41,22 +41,26 @@ void main() {
     int done = 4,
     int overdue = 0,
     String? cover,
+    String? status,
   }) => Plan.fromJson({
     'id': 'id-$name',
     'name': name,
     'cover': ?cover,
+    'status': ?status,
     'stats': {'total': total, 'done': done, 'overdue': overdue},
   });
 
   TeamWithPlans group(
     String name, {
     List<Plan> plans = const [],
+    List<Plan> closed = const [],
     bool synthetic = false,
     String? id,
     String? color,
   }) => TeamWithPlans(
     team: Team(id: id ?? 'team-$name', name: name, color: color),
     plans: plans,
+    closedPlans: closed,
     synthetic: synthetic,
   );
 
@@ -698,4 +702,101 @@ void main() {
     await t.pumpAndSettle();
     expect(find.byType(RefreshIndicator), findsOneWidget);
   });
+
+  // Kế hoạch đã đóng / lưu trữ.
+  {
+    final withClosed = [
+      group(
+        'Tổ kỹ thuật',
+        plans: [plan('Bảo hành')],
+        closed: [
+          plan('Đợt 1 đã xong', status: 'done'),
+          plan('Kho cũ', status: 'archived'),
+        ],
+      ),
+    ];
+
+    testWidgets('"Đã đóng (N)" gập mặc định, mở ra kế hoạch mờ có nhãn', (
+      t,
+    ) async {
+      phone(t);
+      await t.pumpWidget(host(groups: withClosed));
+      await t.pumpAndSettle();
+
+      expect(find.text('Đã đóng (2)'), findsOneWidget);
+      expect(find.text('Đợt 1 đã xong'), findsNothing);
+      // "N kế hoạch" vẫn chỉ đếm kế hoạch đang chạy.
+      expect(find.text('1 kế hoạch'), findsOneWidget);
+
+      await t.tap(find.text('Đã đóng (2)'));
+      await t.pumpAndSettle();
+      expect(find.text('Đợt 1 đã xong'), findsOneWidget);
+      expect(find.text('Kho cũ'), findsOneWidget);
+      final done = find.ancestor(
+        of: find.text('Đợt 1 đã xong'),
+        matching: find.byType(PlanTile),
+      );
+      expect(
+        find.descendant(of: done, matching: find.text('Đã đóng')),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(of: done, matching: find.byType(Opacity)),
+        findsWidgets,
+      );
+      final archived = find.ancestor(
+        of: find.text('Kho cũ'),
+        matching: find.byType(PlanTile),
+      );
+      expect(
+        find.descendant(of: archived, matching: find.text('Lưu trữ')),
+        findsOneWidget,
+      );
+
+      await t.tap(find.text('Đợt 1 đã xong'));
+      await t.pumpAndSettle();
+      expect(lastPushedRoute, '${PlanRoutes.board}:id-Đợt 1 đã xong');
+    });
+
+    testWidgets('tìm cũng ra kế hoạch đã đóng, có nhãn', (t) async {
+      phone(t);
+      await t.pumpWidget(host(groups: withClosed));
+      await t.pumpAndSettle();
+
+      await t.enterText(find.byType(TextField), 'kho');
+      await t.pumpAndSettle();
+      expect(find.text('Kho cũ'), findsOneWidget);
+      expect(find.text('Lưu trữ'), findsOneWidget);
+      expect(find.text('Bảo hành'), findsNothing);
+    });
+
+    testWidgets('team chỉ còn kế hoạch đã đóng: KHÔNG xoá được', (t) async {
+      phone(t);
+      await t.pumpWidget(
+        host(
+          groups: [
+            group('A', closed: [plan('P', status: 'done')]),
+          ],
+          canDeleteTeam: true,
+        ),
+      );
+      await t.pumpAndSettle();
+      // Không nói "chưa có kế hoạch nào" khi còn kế hoạch đã đóng.
+      expect(find.text('Team này chưa có kế hoạch nào.'), findsNothing);
+      expect(find.text('Đã đóng (1)'), findsOneWidget);
+
+      await t.longPress(header('A'));
+      await t.pumpAndSettle();
+      await t.tap(find.text('Xoá team'));
+      await t.pumpAndSettle();
+      expect(
+        find.text(
+          'Team còn 1 kế hoạch (1 đã đóng). Hãy chuyển các kế hoạch sang '
+          'team khác trước.',
+        ),
+        findsOneWidget,
+      );
+      expect(find.text('Xoá team “A”?'), findsNothing);
+    });
+  }
 }

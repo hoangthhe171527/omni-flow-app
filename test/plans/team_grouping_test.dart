@@ -64,7 +64,7 @@ void main() {
     },
   );
 
-  test('tab Việc chỉ giữ kế hoạch đang chạy (đóng / lưu trữ bị bỏ)', () {
+  test('đang chạy ở plans, đã đóng / lưu trữ ở closedPlans', () {
     Plan withStatus(String id, String? status) => Plan.fromJson({
       'id': id,
       'name': id,
@@ -88,6 +88,28 @@ void main() {
       'p-legacy',
       'p-odd',
     ]);
+    expect(groups.single.closedPlans.map((p) => p.id), [
+      'p-done',
+      'p-archived',
+    ]);
+  });
+
+  test('kế hoạch đã đóng của team lạ / chưa xếp team vẫn có khối', () {
+    final groups = groupTeamsWithPlans(const [], [
+      Plan.fromJson({
+        'id': 'p-x',
+        'name': 'x',
+        'team_id': 't-gone',
+        'team_name': 'Tổ cũ',
+        'status': 'done',
+      }),
+      Plan.fromJson({'id': 'p-o', 'name': 'o', 'status': 'archived'}),
+    ]);
+
+    expect(groups.map((g) => g.team.name), ['Tổ cũ', 'Chưa xếp team']);
+    expect(groups.first.plans, isEmpty);
+    expect(groups.first.closedPlans.single.id, 'p-x');
+    expect(groups.last.closedPlans.single.id, 'p-o');
   });
 
   test('dự án THẬT SỰ chưa xếp tổ vẫn có chỗ riêng, không bị giấu', () async {

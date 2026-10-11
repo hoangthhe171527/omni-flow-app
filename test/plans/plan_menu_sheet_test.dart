@@ -443,7 +443,49 @@ void main() {
       copyTasks: true,
       asTemplate: true,
     ));
+    // Mẫu không mở được trong app: ở lại bảng, nói rõ chỗ dùng mẫu.
+    expect(find.text('Bản sao mới'), findsNothing);
+    expect(find.text('Bảo hành'), findsWidgets);
+    expect(find.text('Đã lưu làm mẫu. Dùng mẫu trên web.'), findsOneWidget);
+  });
+
+  testWidgets('sao chép thường (không làm mẫu) mở bảng mới', (tester) async {
+    await pump(tester);
+    await openMenu(tester);
+    await tester.tap(find.text('Sao chép kế hoạch'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Mẫu chỉ dùng được trên web.'), findsOneWidget);
+    await tester.tap(find.widgetWithText(FilledButton, 'Sao chép'));
+    await tester.pumpAndSettle();
+
+    expect(api.copies.single.asTemplate, isFalse);
     expect(find.text('Bản sao mới'), findsOneWidget);
+  });
+
+  testWidgets('kế hoạch đã đóng: dải "Kế hoạch đã đóng · Mở lại" cho quản lý', (
+    tester,
+  ) async {
+    await pump(tester, status: 'done');
+
+    expect(find.text('Kế hoạch đã đóng'), findsOneWidget);
+    final reopen = find.widgetWithText(TextButton, 'Mở lại');
+    expect(reopen, findsOneWidget);
+    expect(tester.getSize(reopen).height, greaterThanOrEqualTo(44));
+    await tester.tap(reopen);
+    await tester.pumpAndSettle();
+
+    expect(api.patches.single.toJson(), {'status': 'active'});
+    expect(find.text('Kế hoạch đã đóng'), findsNothing);
+  });
+
+  testWidgets('kế hoạch đã đóng: thợ thấy dải nhưng không có "Mở lại"', (
+    tester,
+  ) async {
+    await pump(tester, status: 'archived', role: 'member', perms: workerPerms);
+
+    expect(find.text('Kế hoạch đã lưu trữ'), findsOneWidget);
+    expect(find.widgetWithText(TextButton, 'Mở lại'), findsNothing);
   });
 
   testWidgets('chuyển team: chọn team khác gửi team_id', (tester) async {
@@ -493,6 +535,12 @@ void main() {
     await tester.tap(find.text('Xoá kế hoạch'));
     await tester.pumpAndSettle();
     expect(find.text('Xoá kế hoạch “Bảo hành”?'), findsOneWidget);
+    expect(
+      find.textContaining(
+        'Khôi phục được (kèm công việc) từ thùng rác trên web',
+      ),
+      findsOneWidget,
+    );
   });
 
   testWidgets('(i) không còn PopupMenuButton trên bảng', (tester) async {
