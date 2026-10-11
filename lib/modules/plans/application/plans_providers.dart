@@ -227,6 +227,19 @@ final workshopKpiProvider = FutureProvider.autoDispose<WorkshopKpi>((ref) {
   return ref.watch(plansApiProvider).kpi(month: ref.watch(kpiMonthProvider));
 });
 
+/// KPI của MỘT kế hoạch trong một tháng (`/tasks/kpi?project_id=&month=`),
+/// cho màn Báo cáo kế hoạch. Tháng là ngày 1 của tháng đó.
+typedef PlanKpiKey = ({String planId, DateTime month});
+
+final planKpiProvider = FutureProvider.autoDispose
+    .family<WorkshopKpi, PlanKpiKey>((ref, key) {
+      ref.watch(taskRealtimeSignalProvider);
+
+      return ref
+          .watch(plansApiProvider)
+          .kpi(planId: key.planId, month: key.month);
+    });
+
 /// Tháng đang xem trên thẻ KPI. Luôn là ngày 1 của tháng đó.
 ///
 /// Cuối tháng chủ xưởng đọc con số để trao thưởng (§B4) — nhưng ngày mùng 1

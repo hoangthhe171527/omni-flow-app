@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/config/app_config.dart';
 import '../../../core/error/app_exception.dart';
 import '../../../core/network/api_envelope.dart';
 import '../../../core/realtime/realtime_client.dart';
@@ -293,11 +294,23 @@ final planCustomFieldsProvider = FutureProvider.autoDispose
 final archivedTasksProvider = FutureProvider.autoDispose
     .family<List<Task>, String>((ref, projectId) async {
       ref.watch(taskRealtimeSignalProvider);
-      final page = await ref
-          .watch(tasksApiProvider)
-          .list(projectId: projectId, archived: TaskArchiveScope.archived);
-      return page.items;
+      final api = ref.watch(tasksApiProvider);
+      // Đi hết các trang (trần 5 × 100), dừng theo dữ liệu như bảng: chỉ
+      // trang đầu là số ở menu và danh sách lặng lẽ dừng ở 100.
+      final all = <Task>[];
+      for (var page = 1; page <= _archivedMaxPages; page++) {
+        final result = await api.list(
+          projectId: projectId,
+          archived: TaskArchiveScope.archived,
+          page: page,
+        );
+        all.addAll(result.items);
+        if (result.items.length < AppConfig.maxPerPage) break;
+      }
+      return all;
     });
+
+const _archivedMaxPages = 5;
 
 /// Người chọn được cho một việc con: thành viên dự án, theo thứ tự danh sách
 /// workspace. Rơi về CẢ workspace (server cũng chỉ kiểm thành viên workspace)

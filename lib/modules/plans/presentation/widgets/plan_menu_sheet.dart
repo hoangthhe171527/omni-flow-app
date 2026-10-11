@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../design/components/components.dart';
 import '../../../../design/tokens/tokens.dart';
+import '../../../tasks/application/tasks_providers.dart';
 import '../../../team/team.dart';
 import '../../domain/plan.dart';
 
@@ -14,6 +15,9 @@ enum PlanMenuAction {
   fields,
   copy,
   moveTeam,
+  archived,
+  files,
+  report,
   close,
   reopen,
   delete;
@@ -22,15 +26,18 @@ enum PlanMenuAction {
 }
 
 /// Các nhóm của menu kế hoạch theo quyền, đúng thứ tự `Board.dc.html`
-/// (`.og`). Nhóm rỗng bị bỏ; trả rỗng nghĩa là không có ⋯.
+/// (`.og`). Nhóm rỗng bị bỏ.
 ///
 /// - [canManage]: chủ / quản lý kế hoạch hoặc người giao việc — sửa, thành
 ///   viên, trường, sao chép, chuyển team, đóng / mở lại.
 /// - [canViewLabels]: đọc được danh mục nhãn (`system_options.read`).
 /// - [canDelete]: như `canDeletePlan` của bảng.
 ///
-/// Chưa có: "Sao chép liên kết", "Chuyển chủ kế hoạch" (Task 10–11, chờ API),
-/// "Việc đã lưu trữ", "Tệp đính kèm", "Báo cáo kế hoạch" (Task 7).
+/// Ba mục đọc ("Việc đã lưu trữ", "Tệp đính kèm", "Báo cáo kế hoạch") ai mở
+/// được bảng cũng có: chỉ cần `tasks.read`. Ghi trong các màn đó (khôi phục,
+/// xoá tệp) tự ẩn theo quyền.
+///
+/// Chưa có: "Sao chép liên kết", "Chuyển chủ kế hoạch" (Task 10–11, chờ API).
 List<List<PlanMenuAction>> planMenuGroups(
   Plan plan, {
   required bool canManage,
@@ -48,6 +55,9 @@ List<List<PlanMenuAction>> planMenuGroups(
     [
       if (canManage) PlanMenuAction.copy,
       if (canManage) PlanMenuAction.moveTeam,
+      PlanMenuAction.archived,
+      PlanMenuAction.files,
+      PlanMenuAction.report,
     ],
     [
       if (canManage) active ? PlanMenuAction.close : PlanMenuAction.reopen,
@@ -99,6 +109,11 @@ class PlanMenuSheet extends ConsumerWidget {
       if (plan.teamName case final team? when team.isNotEmpty) team,
       if (ownerName case final owner? when owner.isNotEmpty) 'chủ: $owner',
     ].join(' · ');
+    // Số việc đã lưu trữ: tải lười khi sheet mở; đang tải hay lỗi thì không
+    // có số, menu vẫn dùng được.
+    final archivedCount = groups.any((g) => g.contains(PlanMenuAction.archived))
+        ? ref.watch(archivedTasksProvider(plan.id)).valueOrNull?.length
+        : null;
 
     return Semantics(
       scopesRoute: true,
@@ -174,9 +189,11 @@ class PlanMenuSheet extends ConsumerWidget {
                         ),
                       _MenuRow(
                         action: groups[g][i],
-                        trailing: groups[g][i] == PlanMenuAction.members
-                            ? '${planMemberCount(plan)}'
-                            : null,
+                        trailing: switch (groups[g][i]) {
+                          PlanMenuAction.members => '${planMemberCount(plan)}',
+                          PlanMenuAction.archived => archivedCount?.toString(),
+                          _ => null,
+                        },
                       ),
                     ],
                   ],
@@ -211,6 +228,9 @@ class _MenuRow extends StatelessWidget {
         Icons.arrow_forward_rounded,
         'Chuyển sang team khác',
       ),
+      PlanMenuAction.archived => (Icons.archive_outlined, 'Việc đã lưu trữ'),
+      PlanMenuAction.files => (Icons.attach_file_rounded, 'Tệp đính kèm'),
+      PlanMenuAction.report => (Icons.bar_chart_rounded, 'Báo cáo kế hoạch'),
       PlanMenuAction.close => (Icons.lock_outline_rounded, 'Đóng kế hoạch'),
       PlanMenuAction.reopen => (Icons.lock_open_outlined, 'Mở lại kế hoạch'),
       PlanMenuAction.delete => (Icons.delete_outline, 'Xoá kế hoạch'),

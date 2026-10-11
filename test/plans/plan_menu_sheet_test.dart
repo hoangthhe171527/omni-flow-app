@@ -1,17 +1,24 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:omni_app/core/error/app_exception.dart';
+import 'package:omni_app/core/network/api_envelope.dart';
 import 'package:go_router/go_router.dart';
 import 'package:omni_app/design/theme/omni_theme.dart';
 import 'package:omni_app/modules/plans/application/plans_providers.dart';
 import 'package:omni_app/modules/plans/data/plans_api.dart';
 import 'package:omni_app/modules/plans/domain/plan.dart';
 import 'package:omni_app/modules/plans/domain/team.dart';
+import 'package:omni_app/modules/plans/domain/workshop_kpi.dart';
+import 'package:omni_app/modules/plans/presentation/archived_tasks_page.dart';
 import 'package:omni_app/modules/plans/presentation/plan_board_page.dart';
+import 'package:omni_app/modules/plans/presentation/plan_files_page.dart';
+import 'package:omni_app/modules/plans/presentation/plan_report_page.dart';
 import 'package:omni_app/modules/plans/presentation/widgets/plan_menu_sheet.dart';
 import 'package:omni_app/modules/plans/routes.dart';
 import 'package:omni_app/modules/settings/application/appearance_providers.dart';
 import 'package:omni_app/modules/tasks/application/tasks_providers.dart';
+import 'package:omni_app/modules/tasks/data/tasks_api.dart';
 import 'package:omni_app/modules/tasks/domain/task.dart';
 import 'package:omni_app/modules/tasks/domain/task_label.dart';
 import 'package:omni_app/modules/tasks/domain/task_permissions.dart';
@@ -54,13 +61,17 @@ void main() {
   };
 
   late _FakePlansApi api;
+  late _ArchivedApi tasksApi;
 
   Future<void> pump(
     WidgetTester tester, {
     String role = 'manager',
     String status = 'active',
     Set<String> perms = managerPerms,
+    int archived = 12,
+    bool archivedFails = false,
   }) async {
+    tasksApi = _ArchivedApi(archived, fail: archivedFails);
     tester.view.physicalSize = const Size(390, 844);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.reset);
@@ -86,6 +97,7 @@ void main() {
       ProviderScope(
         overrides: [
           plansApiProvider.overrideWithValue(api),
+          tasksApiProvider.overrideWithValue(tasksApi),
           planTasksProvider.overrideWith(
             (ref, id) async => (tasks: <Task>[], truncated: false),
           ),
@@ -160,10 +172,37 @@ void main() {
       'Trường tuỳ chỉnh',
       'Sao chép kế hoạch',
       'Chuyển sang team khác',
+      'Việc đã lưu trữ',
+      'Tệp đính kèm',
+      'Báo cáo kế hoạch',
       'Đóng kế hoạch',
     ]) {
       expect(find.text(label), findsOneWidget, reason: label);
     }
+    // Ba mục đọc nằm cuối nhóm 2, sau "Chuyển sang team khác".
+    expect(
+      find.descendant(
+        of: find.byKey(const Key('plan-menu-group-1')),
+        matching: find.text('Báo cáo kế hoạch'),
+      ),
+      findsOneWidget,
+    );
+    expect(
+      tester.getTopLeft(find.text('Việc đã lưu trữ')).dy,
+      greaterThan(tester.getTopLeft(find.text('Chuyển sang team khác')).dy),
+    );
+    // Số việc đã lưu trữ ở bên phải dòng.
+    expect(
+      find.descendant(
+        of: find.ancestor(
+          of: find.text('Việc đã lưu trữ'),
+          matching: find.byType(InkWell),
+        ),
+        matching: find.text('12'),
+      ),
+      findsOneWidget,
+    );
+    expect(tasksApi.scopes, [TaskArchiveScope.archived]);
     // Số thành viên: chủ + hai người.
     expect(
       find.descendant(
@@ -178,7 +217,6 @@ void main() {
     for (final hidden in [
       'Chuyển chủ kế hoạch',
       'Sao chép liên kết',
-      'Việc đã lưu trữ',
       'Mở lại kế hoạch',
       'Xoá kế hoạch',
       'Sửa nhóm việc',
@@ -227,11 +265,18 @@ void main() {
     );
   });
 
-  testWidgets('(a) thợ chỉ thấy "Nhãn màu", mở ra chỉ xem', (tester) async {
+  testWidgets('(a)(d) thợ: "Nhãn màu" chỉ xem cùng ba mục đọc', (tester) async {
     await pump(tester, role: 'member', perms: workerPerms);
     await openMenu(tester);
 
-    expect(find.text('Nhãn màu'), findsOneWidget);
+    for (final label in [
+      'Nhãn màu',
+      'Việc đã lưu trữ',
+      'Tệp đính kèm',
+      'Báo cáo kế hoạch',
+    ]) {
+      expect(find.text(label), findsOneWidget, reason: label);
+    }
     for (final hidden in [
       'Sửa tên, mô tả, nền',
       'Thành viên',
@@ -242,7 +287,7 @@ void main() {
     ]) {
       expect(find.text(hidden), findsNothing, reason: hidden);
     }
-    expect(find.byKey(const Key('plan-menu-group-1')), findsNothing);
+    expect(find.byKey(const Key('plan-menu-group-1')), findsOneWidget);
     expect(find.byKey(const Key('plan-menu-group-2')), findsNothing);
 
     await tester.tap(find.text('Nhãn màu'));
@@ -251,6 +296,101 @@ void main() {
     expect(find.text('Nhãn dùng chung cho cả công ty'), findsOneWidget);
     expect(find.bySemanticsLabel('Sửa nhãn Khẩn cấp'), findsNothing);
     expect(find.text('Nhãn mới…'), findsNothing);
+  });
+
+  testWidgets('chỉ có tasks.read: vẫn có ⋯ với ba mục đọc', (tester) async {
+    await pump(tester, role: 'member', perms: const {'tasks.read'});
+    await openMenu(tester);
+
+    for (final label in [
+      'Việc đã lưu trữ',
+      'Tệp đính kèm',
+      'Báo cáo kế hoạch',
+    ]) {
+      expect(find.text(label), findsOneWidget, reason: label);
+    }
+    expect(find.text('Nhãn màu'), findsNothing);
+    expect(find.byKey(const Key('plan-menu-group-1')), findsNothing);
+  });
+
+  testWidgets('đếm việc lưu trữ lỗi: không số, menu vẫn dùng được', (
+    tester,
+  ) async {
+    await pump(tester, archivedFails: true);
+    await openMenu(tester);
+
+    final row = find.ancestor(
+      of: find.text('Việc đã lưu trữ'),
+      matching: find.byType(InkWell),
+    );
+    expect(
+      find.descendant(of: row, matching: find.byType(Text)),
+      findsOneWidget,
+    );
+    await tester.tap(find.text('Sửa tên, mô tả, nền'));
+    await tester.pumpAndSettle();
+    expect(find.byType(PlanMenuSheet), findsNothing);
+  });
+
+  testWidgets('(a) "Việc đã lưu trữ" mở trang, thành viên có "Khôi phục"', (
+    tester,
+  ) async {
+    await pump(tester, role: 'member', perms: workerPerms, archived: 2);
+    await openMenu(tester);
+    await tester.tap(find.text('Việc đã lưu trữ'));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(ArchivedTasksPage), findsOneWidget);
+    expect(find.text('Việc lưu trữ 0'), findsOneWidget);
+    expect(find.text('Khôi phục'), findsNWidgets(2));
+  });
+
+  testWidgets('(d) người xem kế hoạch: không "Khôi phục", không "Xoá tệp"', (
+    tester,
+  ) async {
+    await pump(tester, role: 'viewer', perms: workerPerms, archived: 2);
+    await openMenu(tester);
+    await tester.tap(find.text('Việc đã lưu trữ'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Việc lưu trữ 0'), findsOneWidget);
+    expect(find.text('Khôi phục'), findsNothing);
+    final page = tester.widget<ArchivedTasksPage>(
+      find.byType(ArchivedTasksPage),
+    );
+    expect(page.canRestore, isFalse);
+
+    await tester.pageBack();
+    await tester.pumpAndSettle();
+    await openMenu(tester);
+    await tester.tap(find.text('Tệp đính kèm'));
+    await tester.pumpAndSettle();
+    expect(
+      tester.widget<PlanFilesPage>(find.byType(PlanFilesPage)).canDelete,
+      isFalse,
+    );
+  });
+
+  testWidgets('"Tệp đính kèm" và "Báo cáo kế hoạch" mở đúng trang', (
+    tester,
+  ) async {
+    await pump(tester);
+    await openMenu(tester);
+    await tester.tap(find.text('Tệp đính kèm'));
+    await tester.pumpAndSettle();
+    expect(find.byType(PlanFilesPage), findsOneWidget);
+    expect(
+      tester.widget<PlanFilesPage>(find.byType(PlanFilesPage)).canDelete,
+      isTrue,
+    );
+
+    await tester.pageBack();
+    await tester.pumpAndSettle();
+    await openMenu(tester);
+    await tester.tap(find.text('Báo cáo kế hoạch'));
+    await tester.pumpAndSettle();
+    expect(find.byType(PlanReportPage), findsOneWidget);
+    expect(api.kpis.toSet(), {planId});
   });
 
   testWidgets('(g) đóng kế hoạch: hỏi lại, gửi status done, về tab Việc', (
@@ -375,6 +515,7 @@ void main() {
           teamDirectoryProvider.overrideWith(
             (ref) async => const <TeamMember>[],
           ),
+          archivedTasksProvider.overrideWith((ref, id) async => const []),
         ],
         child: MaterialApp(
           theme: OmniTheme.dark(TargetPlatform.android),
@@ -413,6 +554,13 @@ class _FakePlansApi implements PlansApi {
   Plan _plan;
   final patches = <PlanPatch>[];
   final copies = <_Copy>[];
+  final kpis = <String?>[];
+
+  @override
+  Future<WorkshopKpi> kpi({String? planId, DateTime? month}) async {
+    kpis.add(planId);
+    return WorkshopKpi.fromJson(const {});
+  }
 
   @override
   Future<Plan> plan(String id) async =>
@@ -440,6 +588,42 @@ class _FakePlansApi implements PlansApi {
       asTemplate: asTemplate,
     ));
     return Plan.fromJson({'id': 'p9', 'name': 'Bản sao mới'});
+  }
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
+class _ArchivedApi implements TasksApi {
+  _ArchivedApi(this._count, {this.fail = false});
+
+  final int _count;
+  final bool fail;
+  final scopes = <TaskArchiveScope>[];
+
+  @override
+  Future<Paged<Task>> list({
+    required String projectId,
+    String? search,
+    TaskArchiveScope archived = TaskArchiveScope.active,
+    int page = 1,
+    int perPage = 100,
+  }) async {
+    scopes.add(archived);
+    if (fail) throw const ServerException('Lỗi máy chủ');
+    return Paged(
+      items: page > 1
+          ? const []
+          : [
+              for (var i = 0; i < _count; i++)
+                Task.fromJson({
+                  'id': 'a$i',
+                  'title': 'Việc lưu trữ $i',
+                  'archived': true,
+                }),
+            ],
+      pagination: const ApiPagination.empty(),
+    );
   }
 
   @override

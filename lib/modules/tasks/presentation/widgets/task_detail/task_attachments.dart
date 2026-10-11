@@ -126,6 +126,7 @@ class AttachmentThumb extends StatelessWidget {
     required this.size,
     this.overflow = 0,
     this.onOverflow,
+    this.onLongPress,
   });
 
   final TaskAttachment attachment;
@@ -136,6 +137,9 @@ class AttachmentThumb extends StatelessWidget {
   /// > 0: ô này mang "+n" và chạm vào là mở danh sách đủ, không mở tệp.
   final int overflow;
   final VoidCallback? onOverflow;
+
+  /// Bấm giữ (vd "Xoá tệp" ở màn Tệp của kế hoạch). null: không làm gì.
+  final VoidCallback? onLongPress;
 
   /// Mở bản đầy đủ ra ngoài app, như module hộp thư vẫn làm với tệp đính kèm.
   /// Ô nhỏ đủ để nhận ra là tấm nào, không đủ để soi một vết xước.
@@ -165,6 +169,7 @@ class AttachmentThumb extends StatelessWidget {
           clipBehavior: Clip.antiAlias,
           child: InkWell(
             onTap: more ? onOverflow : _open,
+            onLongPress: more ? null : onLongPress,
             child: Stack(
               fit: StackFit.expand,
               children: [

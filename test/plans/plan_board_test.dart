@@ -158,6 +158,7 @@ void main() {
             ],
           }),
         ),
+        archivedTasksProvider(planId).overrideWith((ref) async => const []),
         planTasksProvider(
           planId,
         ).overrideWith((ref) async => (tasks: <Task>[], truncated: false)),
@@ -230,11 +231,17 @@ void main() {
       expect(find.text('Xoá kế hoạch “Đàn cơ”?'), findsOneWidget);
     });
 
-    testWidgets('thành viên thường không thấy ⋯', (tester) async {
+    testWidgets('thành viên thường: ⋯ chỉ có ba mục đọc', (tester) async {
       await tester.pumpWidget(board('member'));
       await tester.pumpAndSettle();
 
-      expect(find.byTooltip('Tuỳ chọn kế hoạch'), findsNothing);
+      await tester.tap(find.byTooltip('Tuỳ chọn kế hoạch'));
+      await tester.pumpAndSettle();
+      expect(find.text('Việc đã lưu trữ'), findsOneWidget);
+      expect(find.text('Tệp đính kèm'), findsOneWidget);
+      expect(find.text('Báo cáo kế hoạch'), findsOneWidget);
+      expect(find.text('Sửa tên, mô tả, nền'), findsNothing);
+      expect(find.text('Xoá kế hoạch'), findsNothing);
     });
   });
 

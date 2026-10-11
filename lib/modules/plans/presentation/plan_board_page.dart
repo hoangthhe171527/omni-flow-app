@@ -21,10 +21,13 @@ import '../application/plans_providers.dart';
 import '../data/plans_api.dart';
 import '../domain/plan.dart';
 import '../routes.dart';
+import 'archived_tasks_page.dart';
 import 'edit_plan_page.dart';
 import 'edit_sections_page.dart';
 import 'plan_fields_page.dart';
+import 'plan_files_page.dart';
 import 'plan_members_page.dart';
+import 'plan_report_page.dart';
 import 'widgets/board_column.dart';
 import 'widgets/board_zoom.dart';
 import 'widgets/person_filter_sheet.dart';
@@ -443,6 +446,29 @@ class _PlanBoardPageState extends ConsumerState<PlanBoardPage> {
         await _copyPlan(plan);
       case PlanMenuAction.moveTeam:
         await _moveTeam(plan);
+      case PlanMenuAction.archived:
+        await navigator.push(
+          MaterialPageRoute<void>(
+            builder: (_) => ArchivedTasksPage(
+              planId: plan.id,
+              canRestore: _canEditTasks(plan),
+            ),
+          ),
+        );
+      case PlanMenuAction.files:
+        await navigator.push(
+          MaterialPageRoute<void>(
+            builder: (_) =>
+                PlanFilesPage(planId: plan.id, canDelete: _canEditTasks(plan)),
+          ),
+        );
+      case PlanMenuAction.report:
+        await navigator.push(
+          MaterialPageRoute<void>(
+            builder: (_) =>
+                PlanReportPage(planId: plan.id, canConfigure: _canManage(plan)),
+          ),
+        );
       case PlanMenuAction.close:
         await _closePlan(plan);
       case PlanMenuAction.reopen:
@@ -454,6 +480,23 @@ class _PlanBoardPageState extends ConsumerState<PlanBoardPage> {
       case PlanMenuAction.delete:
         await _deletePlan(plan);
     }
+  }
+
+  /// Ghi được việc trong kế hoạch: `tasks.write` và không mang vai người xem
+  /// — đúng `ProjectAccessService::assertCanEditTasks` (chỉ vai `viewer` bị
+  /// chặn; người ngoài danh sách thành viên vẫn ghi được).
+  bool _canEditTasks(Plan plan) {
+    if (!ref.read(taskAccessProvider).canUpdate) return false;
+    final me = ref.read(sessionProvider).user?.id;
+    if (me == null) return true;
+    return plan.ownerId == me || plan.memberRoles[me] != PlanRole.viewer;
+  }
+
+  /// Như `canEditSections` trong build: người giao việc hoặc chủ / quản lý.
+  bool _canManage(Plan plan) {
+    if (ref.read(taskAccessProvider).isAssigner) return true;
+    final me = ref.read(sessionProvider).user?.id;
+    return me != null && plan.roleOf(me).canManagePlan;
   }
 
   /// Gửi [patch], làm mới kế hoạch và tab Việc; báo [done] khi xong.

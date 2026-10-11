@@ -571,9 +571,13 @@ void main() {
     expect((list.physics! as BoardSnapPhysics).count, 4);
   });
 
-  testWidgets('thợ không thấy ⋯ kế hoạch', (tester) async {
+  testWidgets('thợ: ⋯ kế hoạch chỉ có ba mục đọc', (tester) async {
     await pumpBoard(tester, perms: worker);
-    expect(find.byTooltip('Tuỳ chọn kế hoạch'), findsNothing);
+    await tester.tap(find.byTooltip('Tuỳ chọn kế hoạch'));
+    await tester.pumpAndSettle();
+    expect(find.text('Việc đã lưu trữ'), findsOneWidget);
+    expect(find.text('Báo cáo kế hoạch'), findsOneWidget);
+    expect(find.text('Sửa tên, mô tả, nền'), findsNothing);
   });
 
   testWidgets('chế độ tối: rãnh cột theo theme, nền vẫn gradient', (
