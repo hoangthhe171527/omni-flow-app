@@ -46,7 +46,7 @@ void main() {
         .read(primaryNavEntriesProvider)
         .map((e) => e.label)
         .toList();
-    expect(labels, ['Hộp thư']);
+    expect(labels, ['Tổng quan', 'Hộp thư']);
   });
 
   test('tab xếp theo nhóm chức năng khi quyền mở rộng', () {
@@ -66,16 +66,17 @@ void main() {
     // quyền thấy "Việc của tôi" trước "Hộp thư". Đổi lại là đổi thứ tự các
     // hằng trong enum NavArea — một dòng, một chỗ.
     //
-    // "Dự án" đứng ngay sau "Việc của tôi" vì cùng NavArea.work và order 20 so
+    // "Việc" (mục teams) đứng ngay sau "Việc của tôi" vì cùng NavArea.work và order 20 so
     // với 10: thợ mở hàng đợi của mình trước, toàn cảnh xưởng sau.
     // Ba mục của NavArea.work đứng trước, theo order 10/20/30: thợ mở hàng
     // đợi của mình trước, toàn cảnh xưởng sau, rồi mới tới dòng thời gian.
     expect(labels, [
+      'Tổng quan',
       'Việc của tôi',
-      'Dự án',
+      'Việc',
       'Dòng việc',
       'Hộp thư',
-      'Khách hàng',
+      'Khách',
     ]);
   });
 
@@ -175,7 +176,9 @@ void main() {
       addTearDown(container.dispose);
 
       expect(container.read(primaryNavEntriesProvider).map((e) => e.label), [
-        'Khách hàng',
+        // Tổng quan không có cờ tính năng riêng: quyền tasks.read vẫn giữ tab.
+        'Tổng quan',
+        'Khách',
       ]);
     });
 

@@ -34,7 +34,7 @@ class InboxAccess extends ResourceAccess {
         canUpdate: canWrite,
         canDelete: canWrite,
         capabilities: canWrite
-            ? const {'send', 'note', 'assign', 'convert', 'label'}
+            ? const {'send', 'note', 'assign', 'convert', 'label', 'react'}
             : const {},
       );
 
@@ -48,6 +48,13 @@ class InboxAccess extends ResourceAccess {
   bool get canAssign => can('assign');
   bool get canConvert => can('convert');
   bool get canLabel => can('label');
+
+  /// Cảm xúc nội bộ trên tin: `team-reactions` sau `inbox.write`.
+  bool get canReact => can('react');
+
+  /// Chặn/bỏ chặn khách: route đòi `inbox.write` VÀ (`inbox.read` hoặc
+  /// `inbox.read.all`). Sale `.own` có ghi vẫn bị 403, nên ẩn hẳn.
+  bool get canBlock => canUpdate && readScope == AccessScope.all;
 
   /// A member who only sees their own threads has no use for an assignee
   /// filter — every row would be theirs.

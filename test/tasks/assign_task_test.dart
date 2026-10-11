@@ -72,12 +72,12 @@ void main() {
   }
 
   Future<void> openSheet(WidgetTester tester) async {
-    await tester.tap(find.text('Chưa gán ai'));
+    await tester.tap(find.text('Chưa giao ai'));
     await tester.pumpAndSettle();
   }
 
   group('mở bộ chọn', () {
-    testWidgets('chạm vào chính dòng "Chưa gán ai" là gán được', (
+    testWidgets('chạm vào chính dòng "Chưa giao ai" là gán được', (
       tester,
     ) async {
       // Chỗ người ta nhìn cũng là chỗ người ta bấm — không phải một nút ở tận
@@ -92,13 +92,18 @@ void main() {
       expect(find.text('Bảo Khánh'), findsOneWidget);
     });
 
-    testWidgets('người NHẬN việc không thấy dòng gán', (tester) async {
+    testWidgets('người NHẬN việc chạm dòng Người làm không mở bộ chọn', (
+      tester,
+    ) async {
       // Bảng điều phối là của người giao việc. Cho thợ thấy nút gán người là
       // mời họ làm một việc API sẽ từ chối.
       await tester.pumpWidget(host(permissions: worker));
       await tester.pumpAndSettle();
 
-      expect(find.text('Chưa gán ai'), findsNothing);
+      // Thợ VẪN thấy dòng (chỉ đọc), nhưng chạm vào không mở bộ chọn người.
+      await tester.tap(find.text('Chưa giao ai'));
+      await tester.pumpAndSettle();
+      expect(find.text('Ai làm việc này'), findsNothing);
     });
 
     testWidgets('người đã nghỉ không hiện trong danh sách', (tester) async {

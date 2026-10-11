@@ -359,19 +359,4 @@ class _FakeInboxApi extends InboxApi {
       'sent_at': DateTime.utc(2026, 1, 1, 9, _sent).toIso8601String(),
     });
   }
-
-  @override
-  Future<Message> addNote(
-    String id,
-    String text, {
-    String? clientMessageId,
-  }) async {
-    return Message.fromJson({
-      'id': 'note-${++_sent}',
-      'client_message_id': clientMessageId,
-      'from': 'note',
-      'text': text,
-      'sent_at': DateTime.utc(2026, 1, 1, 9, _sent).toIso8601String(),
-    });
-  }
 }

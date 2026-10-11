@@ -12,12 +12,73 @@ import 'task_chip.dart';
 /// ("did they get it") and never the worker's, so it must not sit between a
 /// worker and the stage they came to tick.
 class TaskViewers extends StatelessWidget {
-  const TaskViewers({super.key, required this.viewers});
+  const TaskViewers({super.key, required this.viewers, this.compact = false});
 
   final List<TaskViewer> viewers;
 
+  /// Dải "Đã xem" + avatar 18 chồng nhau (lùi −6), đặt bên phải tiêu đề
+  /// "TRAO ĐỔI" (`TaskDetail.dc.html`). Không compact = khối đầy đủ cũ.
+  final bool compact;
+
+  /// Số avatar tối đa trong dải: nhiều hơn là dải tràn tiêu đề.
+  static const _maxFaces = 5;
+
+  Widget _strip(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final shown = viewers.take(_maxFaces).toList();
+    const face = 18.0;
+    const step = face - 6;
+
+    return Tooltip(
+      message: 'Đã xem: ${viewers.map((v) => v.label).join(', ')}',
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            'Đã xem',
+            style: OmniType.micro.copyWith(
+              color: OmniColors.byBrightness(
+                context,
+                OmniColors.mutedForeground,
+                scheme.onSurfaceVariant,
+              ),
+            ),
+          ),
+          const SizedBox(width: 6),
+          SizedBox(
+            width: face + step * (shown.length - 1),
+            height: face,
+            child: Stack(
+              children: [
+                for (var i = 0; i < shown.length; i++)
+                  Positioned(
+                    left: step * i,
+                    child: DecoratedBox(
+                      position: DecorationPosition.foreground,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: Border.all(color: scheme.surface),
+                      ),
+                      child: OmniAvatar(
+                        name: shown[i].label,
+                        imageUrl: shown[i].avatar,
+                        size: face,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    if (compact) {
+      return viewers.isEmpty ? const SizedBox.shrink() : _strip(context);
+    }
     final scheme = Theme.of(context).colorScheme;
 
     return Container(

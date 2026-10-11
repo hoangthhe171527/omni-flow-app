@@ -383,10 +383,8 @@ class Task {
   int? get daysOverdue {
     final due = dueDate;
     if (due == null || isDone) return null;
-    final today = DateTime.now();
-    final dueDay = DateTime(due.year, due.month, due.day);
-    final todayDay = DateTime(today.year, today.month, today.day);
-    final difference = todayDay.difference(dueDay).inDays;
+    // Ngày VN như dueToneOf, để thẻ và chip luôn khớp nhau.
+    final difference = VnTime.today().difference(VnTime.day(due)).inDays;
 
     return difference > 0 ? difference : null;
   }
@@ -396,11 +394,8 @@ class Task {
   bool get isDueToday {
     final due = dueDate;
     if (due == null || isDone) return false;
-    final today = DateTime.now();
 
-    return due.year == today.year &&
-        due.month == today.month &&
-        due.day == today.day;
+    return VnTime.day(due) == VnTime.today();
   }
 
   /// Bản sao có sửa vài trường.

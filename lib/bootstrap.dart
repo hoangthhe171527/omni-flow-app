@@ -7,6 +7,8 @@ import 'package:intl/date_symbol_data_local.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'app/omni_app.dart';
+import 'core/module/customer_opportunities_section.dart';
+import 'core/module/extra_segment.dart';
 import 'core/module/module_registry.dart';
 import 'core/module/omni_module.dart';
 import 'core/storage/preferences_store.dart';
@@ -16,8 +18,11 @@ import 'modules/auth/data/auth_api.dart';
 import 'modules/auth/data/google_identity_service.dart';
 import 'modules/channels/channels_module.dart';
 import 'modules/customers/customers_module.dart';
+import 'modules/dashboard/dashboard_module.dart';
 import 'modules/inbox/inbox_module.dart';
 import 'modules/notifications/notifications_module.dart';
+import 'modules/opportunities/opportunities.dart'
+    show opportunitiesCustomerSection, opportunitiesKhachSegment;
 import 'modules/opportunities/opportunities_module.dart';
 import 'modules/plans/plans_module.dart';
 import 'modules/settings/settings_module.dart';
@@ -32,6 +37,7 @@ import 'security/session/auth_gateway.dart';
 /// central permission map, and nothing to remember in a second file.
 const List<OmniModule> appModules = [
   AuthModule(),
+  DashboardModule(),
   InboxModule(),
   TasksModule(),
   PlansModule(),
@@ -59,9 +65,6 @@ Future<Widget> bootstrap() async {
   // giấy phép cũng phải đọc được từ trong app — trang "Giấy phép" của Flutter.
   LicenseRegistry.addLicense(() async* {
     yield LicenseEntryWithLineBreaks(const [
-      'Inter',
-    ], await rootBundle.loadString('assets/fonts/Inter-OFL.txt'));
-    yield LicenseEntryWithLineBreaks(const [
       'Be Vietnam Pro',
     ], await rootBundle.loadString('assets/fonts/BeVietnamPro-OFL.txt'));
   });
@@ -72,6 +75,12 @@ Future<Widget> bootstrap() async {
     overrides: [
       sharedPreferencesProvider.overrideWithValue(preferences),
       modulesProvider.overrideWithValue(appModules),
+      // Đoạn Cơ hội của tab Khách: customers không import opportunities (sẽ
+      // đóng vòng), nên đoạn được cắm vào đây.
+      khachExtraSegmentProvider.overrideWithValue(opportunitiesKhachSegment),
+      customerOpportunitiesSectionProvider.overrideWithValue(
+        opportunitiesCustomerSection,
+      ),
       // Dependency inversion: `security` declares the gateway, `modules/auth`
       // implements it, and they meet here.
       authGatewayProvider.overrideWith((ref) => ref.watch(authApiProvider)),

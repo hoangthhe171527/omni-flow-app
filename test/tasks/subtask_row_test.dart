@@ -6,12 +6,13 @@ import 'package:omni_app/modules/tasks/domain/task.dart';
 import 'package:omni_app/modules/tasks/presentation/widgets/subtask_row.dart';
 
 /// The row a worker taps with a gloved thumb, in a noisy room, without looking
-/// carefully. These tests guard the three things that makes possible.
+/// carefully. These tests guard the things that makes possible.
 void main() {
   const subtask = Subtask(
     id: 'a',
     title: 'Nắp phím',
     done: false,
+    assigneeId: 'u1',
     assigneeName: 'Hằng Ni',
   );
 
@@ -22,6 +23,24 @@ void main() {
         child: child,
       ),
     ),
+  );
+
+  SubtaskRow row({
+    Subtask s = subtask,
+    PendingTick? pending,
+    bool enabled = true,
+    ValueChanged<bool>? onToggle,
+    VoidCallback? onAssign,
+    VoidCallback? onEdit,
+  }) => SubtaskRow(
+    subtask: s,
+    pending: pending,
+    enabled: enabled,
+    onToggle: onToggle ?? (_) {},
+    onRetry: () {},
+    onDiscard: () {},
+    onAssign: onAssign,
+    onEdit: onEdit,
   );
 
   Future<List<MethodCall>> recordHaptics(WidgetTester tester) async {
@@ -38,87 +57,59 @@ void main() {
     return calls;
   }
 
-  testWidgets('the whole row is the tap target, not just the box', (
+  testWidgets('the tick target is 44dp and toggles the subtask', (
+    tester,
+  ) async {
+    bool? toggledTo;
+    await tester.pumpWidget(host(row(onToggle: (v) => toggledTo = v)));
+
+    final tick = find.bySemanticsLabel('Xong');
+    expect(tester.getSize(tick).shortestSide, greaterThanOrEqualTo(44));
+    await tester.tap(tick);
+    expect(toggledTo, isTrue);
+  });
+
+  testWidgets('tapping the title does not tick (it opens edit instead)', (
     tester,
   ) async {
     var toggled = false;
+    var edited = false;
     await tester.pumpWidget(
-      host(
-        SubtaskRow(
-          subtask: subtask,
-          pending: null,
-          enabled: true,
-          onToggle: (_) => toggled = true,
-          onRetry: () {},
-          onDiscard: () {},
-        ),
-      ),
+      host(row(onToggle: (_) => toggled = true, onEdit: () => edited = true)),
     );
 
-    // Tapping the far right edge — nowhere near the checkbox — must count.
-    // Aiming at a 24dp box with dirty hands is how the wrong stage gets ticked.
-    final row = tester.getRect(find.byType(SubtaskRow));
-    await tester.tapAt(Offset(row.right - 8, row.center.dy));
-    expect(toggled, isTrue);
+    await tester.tap(find.text('Nắp phím'));
+    expect(toggled, isFalse);
+    expect(edited, isTrue);
   });
 
-  testWidgets('the row is at least 56dp tall', (tester) async {
+  testWidgets('the row is at least 44dp tall, with or without an assignee', (
+    tester,
+  ) async {
+    await tester.pumpWidget(host(row()));
+    expect(
+      tester.getSize(find.byType(SubtaskRow)).height,
+      greaterThanOrEqualTo(44),
+    );
+
     await tester.pumpWidget(
       host(
-        SubtaskRow(
-          subtask: subtask,
-          pending: null,
-          enabled: true,
-          onToggle: (_) {},
-          onRetry: () {},
-          onDiscard: () {},
+        row(
+          s: const Subtask(id: 'b', title: 'Body', done: false),
         ),
       ),
     );
-
-    // 48dp is the Android floor; this is a workshop, so the floor is 56.
     expect(
       tester.getSize(find.byType(SubtaskRow)).height,
-      greaterThanOrEqualTo(56),
-    );
-  });
-
-  testWidgets('a short row stays 56dp even with no assignee', (tester) async {
-    await tester.pumpWidget(
-      host(
-        SubtaskRow(
-          subtask: const Subtask(id: 'b', title: 'Body', done: false),
-          pending: null,
-          enabled: true,
-          onToggle: (_) {},
-          onRetry: () {},
-          onDiscard: () {},
-        ),
-      ),
-    );
-
-    expect(
-      tester.getSize(find.byType(SubtaskRow)).height,
-      greaterThanOrEqualTo(56),
+      greaterThanOrEqualTo(44),
     );
   });
 
   testWidgets('ticking fires haptic feedback', (tester) async {
     final calls = await recordHaptics(tester);
-    await tester.pumpWidget(
-      host(
-        SubtaskRow(
-          subtask: subtask,
-          pending: null,
-          enabled: true,
-          onToggle: (_) {},
-          onRetry: () {},
-          onDiscard: () {},
-        ),
-      ),
-    );
+    await tester.pumpWidget(host(row()));
 
-    await tester.tap(find.byType(SubtaskRow));
+    await tester.tap(find.bySemanticsLabel('Xong'));
 
     // The room is loud and they may not be looking at the screen; the buzz is
     // the only confirmation that actually lands.
@@ -131,37 +122,23 @@ void main() {
   testWidgets('a read-only viewer cannot tick', (tester) async {
     var toggled = false;
     await tester.pumpWidget(
-      host(
-        SubtaskRow(
-          subtask: subtask,
-          pending: null,
-          enabled: false,
-          onToggle: (_) => toggled = true,
-          onRetry: () {},
-          onDiscard: () {},
-        ),
-      ),
+      host(row(enabled: false, onToggle: (_) => toggled = true)),
     );
 
-    await tester.tap(find.byType(SubtaskRow));
+    await tester.tap(find.bySemanticsLabel('Xong'));
     expect(toggled, isFalse);
   });
 
   testWidgets('a failed tick says so and offers both ways out', (tester) async {
     await tester.pumpWidget(
       host(
-        SubtaskRow(
-          subtask: subtask,
+        row(
           pending: const PendingTick(
             subtaskId: 'a',
             done: true,
             clientRequestId: 'c1',
             error: 'Không có kết nối mạng',
           ),
-          enabled: true,
-          onToggle: (_) {},
-          onRetry: () {},
-          onDiscard: () {},
         ),
       ),
     );
@@ -173,22 +150,18 @@ void main() {
     expect(find.text('Bỏ'), findsOneWidget);
   });
 
-  testWidgets('the assignee is a chip, not part of the title', (tester) async {
-    await tester.pumpWidget(
-      host(
-        SubtaskRow(
-          subtask: subtask,
-          pending: null,
-          enabled: true,
-          onToggle: (_) {},
-          onRetry: () {},
-          onDiscard: () {},
-        ),
-      ),
-    );
+  testWidgets('the assignee is an avatar button, not part of the title', (
+    tester,
+  ) async {
+    var assigned = false;
+    await tester.pumpWidget(host(row(onAssign: () => assigned = true)));
 
     expect(find.text('Nắp phím'), findsOneWidget);
-    expect(find.text('Hằng Ni'), findsOneWidget);
+    expect(find.text('Hằng Ni'), findsNothing);
+    final button = find.bySemanticsLabel('Đổi người làm: Hằng Ni');
+    expect(tester.getSize(button).shortestSide, greaterThanOrEqualTo(44));
+    await tester.tap(button);
+    expect(assigned, isTrue);
   });
 
   testWidgets('the row still fits its content at 200% text size', (
@@ -196,18 +169,14 @@ void main() {
   ) async {
     await tester.pumpWidget(
       host(
-        SubtaskRow(
-          subtask: const Subtask(
+        row(
+          s: const Subtask(
             id: 'c',
             title: 'Hoàn thiện bề mặt và đánh bóng toàn bộ thân đàn',
             done: false,
+            assigneeId: 'u2',
             assigneeName: 'Luận',
           ),
-          pending: null,
-          enabled: true,
-          onToggle: (_) {},
-          onRetry: () {},
-          onDiscard: () {},
         ),
         textScale: 2,
       ),
@@ -216,6 +185,6 @@ void main() {
     // Older eyes under workshop lighting turn the system font size up. The row
     // has to grow rather than clip.
     expect(tester.takeException(), isNull);
-    expect(tester.getSize(find.byType(SubtaskRow)).height, greaterThan(56));
+    expect(tester.getSize(find.byType(SubtaskRow)).height, greaterThan(44));
   });
 }

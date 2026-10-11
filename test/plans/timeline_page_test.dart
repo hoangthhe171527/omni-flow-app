@@ -106,7 +106,7 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  testWidgets('gom theo ngày và đếm hai loại riêng', (tester) async {
+  testWidgets('gom theo ngày, tiêu đề đếm số việc của ngày', (tester) async {
     await show(
       tester,
       feed: [
@@ -116,9 +116,10 @@ void main() {
       ],
     );
 
-    // Hai con số RIÊNG. Gộp thành "3 việc xong" sẽ đá nhau với thẻ KPI, thứ
-    // chỉ đếm cây.
-    expect(find.text('HÔM NAY · 2 công đoạn · 1 cây xong'), findsOneWidget);
+    // Tiêu đề chỉ đếm số dòng của ngày ("3 việc"), không nói "xong": con số
+    // cây xong là của thẻ KPI, hai loại công đoạn/cây đếm riêng ở DayGroup.
+    expect(find.text('HÔM NAY'), findsOneWidget);
+    expect(find.text('3 việc'), findsOneWidget);
   });
 
   testWidgets('mỗi ngày một tiêu đề riêng', (tester) async {
@@ -130,8 +131,8 @@ void main() {
       ],
     );
 
-    expect(find.textContaining('HÔM NAY'), findsOneWidget);
-    expect(find.textContaining('HÔM QUA'), findsOneWidget);
+    expect(find.text('HÔM NAY'), findsOneWidget);
+    expect(find.text('HÔM QUA'), findsOneWidget);
   });
 
   testWidgets('ảnh bằng chứng hiện NGAY trên dòng việc xong', (tester) async {
@@ -191,7 +192,7 @@ void main() {
   testWidgets('câu nói rõ AI và LÀM GÌ', (tester) async {
     await show(tester, feed: [entry()]);
 
-    expect(find.text('Hằng Ni đã xong Body ngoài'), findsOneWidget);
+    expect(find.text('Hằng Ni · Body ngoài – KAWAI HAT-5'), findsOneWidget);
   });
 
   testWidgets('rỗng thì nói đúng cái đang rỗng', (tester) async {
@@ -248,14 +249,14 @@ void main() {
     );
     expect(find.text('Đánh dấu nhóm việc đích'), findsOneWidget);
     // Dòng việc vẫn ở đó, không bị đẩy xuống dưới màn hình.
-    expect(find.text('Hằng Ni đã xong Body ngoài'), findsOneWidget);
+    expect(find.text('Hằng Ni · Body ngoài – KAWAI HAT-5'), findsOneWidget);
   });
 
   testWidgets('giờ hiện TUYỆT ĐỐI, không phải "2 giờ trước"', (tester) async {
     // Quản đốc đối chiếu dòng này với ca làm và với lời thợ nói.
     await show(tester, feed: [entry()]);
 
-    expect(find.text('09:35'), findsOneWidget);
+    expect(find.text('Phục chế T9 · 09:35'), findsOneWidget);
   });
 
   testWidgets('ảnh gửi lẻ vẫn hiện, không bị nuốt', (tester) async {
@@ -267,6 +268,8 @@ void main() {
     );
 
     expect(find.text('Hằng Ni đã gửi mau.jpg'), findsOneWidget);
+    // Tên cây đàn nằm ở dòng meta.
+    expect(find.text('KAWAI HAT-5 · Phục chế T9 · 09:35'), findsOneWidget);
   });
 
   testWidgets('tải lần đầu hiện KHUNG XƯƠNG dòng việc, không phải vòng xoay', (

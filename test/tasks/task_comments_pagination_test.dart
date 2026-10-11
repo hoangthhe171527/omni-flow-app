@@ -215,6 +215,9 @@ void main() {
       await tester.pumpAndSettle();
 
       await tester.enterText(find.byType(TextField), 'Chưa đạt phần đồng.');
+      // Khối Điều phối mới đẩy ô soạn xuống dưới mép khung 800×600.
+      await tester.ensureVisible(find.byTooltip('Gửi'));
+      await tester.pumpAndSettle();
       await tester.tap(find.byTooltip('Gửi'));
       await tester.pumpAndSettle();
 

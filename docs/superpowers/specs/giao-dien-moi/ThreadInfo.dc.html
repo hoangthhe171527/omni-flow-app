@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<title>Thông tin khách – Lan Anh</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#0A7D76}a:hover{color:#075E59}
+@keyframes rise{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+.r{animation:rise .5s cubic-bezier(.2,.8,.2,1) both}
+.d1{animation-delay:.05s}.d2{animation-delay:.1s}.d3{animation-delay:.15s}.d4{animation-delay:.2s}
+button,a{transition:transform .2s cubic-bezier(.2,.8,.2,1),background-color .2s,color .2s;-webkit-tap-highlight-color:transparent}
+button:active,a:active{transform:scale(.97)}
+.bar{background:rgba(245,247,250,.82);backdrop-filter:blur(20px) saturate(180%);-webkit-backdrop-filter:blur(20px) saturate(180%)}
+.qa{display:flex;flex-direction:column;align-items:center;gap:5px;font:600 11px 'Be Vietnam Pro',sans-serif;color:#0B1A33;text-decoration:none;border:0;background:transparent;cursor:pointer;padding:0;width:64px}
+.qa .c{width:40px;height:40px;border-radius:20px;background:#fff;border:1px solid #E3E8EF;display:flex;align-items:center;justify-content:center;color:#0B1A33;transition:background-color .25s,color .25s,border-color .25s}
+.sec{font-size:11px;font-weight:600;letter-spacing:.5px;text-transform:uppercase;color:#56637A;padding:0 4px 6px}
+.card{background:#fff;border:1px solid #E3E8EF;border-radius:8px;overflow:hidden}
+.li{display:flex;align-items:center;gap:10px;min-height:44px;padding:0 12px;border-top:1px solid #EEF1F5;width:100%;box-sizing:border-box;background:transparent;border-left:0;border-right:0;border-bottom:0;font:400 14px 'Be Vietnam Pro',sans-serif;color:#0B1A33;text-decoration:none;cursor:pointer;text-align:left}
+.li:first-child{border-top:0}
+.li:hover{background:#FAFBFC}
+.k{color:#56637A;flex-grow:1}
+.v{font-weight:600;text-align:right}
+.chev{color:#A9B2C1;flex-shrink:0}
+.tabm{flex:1;height:30px;border:0;background:transparent;font:600 12px 'Be Vietnam Pro',sans-serif;color:#56637A;cursor:pointer;position:relative;z-index:1}
+.tabm.on{color:#0B1A33}
+.sw{width:42px;height:26px;border-radius:13px;border:0;padding:0;position:relative;cursor:pointer;flex-shrink:0;transition:background-color .3s}
+.sw span{position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:10px;background:#fff;box-shadow:0 1px 3px rgba(11,26,51,.25);transition:transform .3s cubic-bezier(.2,.8,.2,1)}
+</style>
+</helmet>
+<div style="width:390px;height:980px;position:relative;overflow:hidden;font-family:'Be Vietnam Pro',system-ui,sans-serif;color:#0B1A33;background:#F5F7FA;font-size:14px">
+  <header class="bar" style="position:absolute;top:0;left:0;right:0;z-index:3;padding:50px 6px 6px;display:flex;align-items:center;border-bottom:1px solid rgba(11,26,51,.06)">
+    <a href="Thread.dc.html" aria-label="Quay lại" style="width:36px;height:36px;display:flex;align-items:center;justify-content:center;color:#0B1A33"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 5-7 7 7 7"></path></svg></a>
+    <span style="flex-grow:1;text-align:center;font-weight:700;font-size:15px;margin-right:36px">Thông tin</span>
+  </header>
+
+  <main style="position:absolute;top:94px;left:0;right:0;bottom:0;padding:16px 16px 30px;display:flex;flex-direction:column;gap:16px;overflow:hidden">
+    <div class="r" style="display:flex;flex-direction:column;align-items:center;text-align:center">
+      <span style="width:72px;height:72px;border-radius:36px;background:#E6F3F2;color:#075E59;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:24px">LA</span>
+      <span style="font-size:19px;font-weight:700;margin-top:8px;display:flex;align-items:center;gap:6px">Lan Anh<span title="Đặt lịch" style="width:8px;height:8px;border-radius:50%;background:#0A7D76"></span></span>
+      <span style="font-size:12px;color:#56637A;margin-top:2px"><span style="font-weight:700;color:#0068FF">OA</span> · Trung Nguyên</span>
+      <div style="display:flex;gap:6px;margin-top:14px">
+        <button class="qa"><span class="c"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2"></path></svg></span>Gọi</button>
+        <a class="qa" href="CustomerDetail.dc.html"><span class="c"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"></circle><path d="M4 21c1-4 4-6 8-6s7 2 8 6"></path></svg></span>Hồ sơ</a>
+        <button class="qa" onClick="{{toggleMute}}" aria-pressed="{{muteP}}"><span class="c" style="background:{{muteBg}};color:{{muteFg}};border-color:{{muteBd}}"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 1 1 12 0c0 7 3 8 3 8H3s3-1 3-8"></path><path d="M10 20a2 2 0 0 0 4 0"></path><sc-if value="{{mute}}" hint-placeholder-val="{{false}}"><path d="M3 3l18 18"></path></sc-if></svg></span>{{muteL}}</button>
+        <button class="qa"><span class="c"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-3.5-3.5"></path></svg></span>Tìm tin</button>
+      </div>
+    </div>
+
+    <div class="r d1">
+      <div class="sec">Khách hàng</div>
+      <div class="card">
+        <button class="li"><span class="k">Phụ trách</span><span class="v" style="display:flex;align-items:center;gap:6px"><span style="width:20px;height:20px;border-radius:4px;background:#0B1A33;color:#fff;font-size:9px;display:flex;align-items:center;justify-content:center">HT</span>Hoàng Trần</span><svg class="chev" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"></path></svg></button>
+        <a class="li" href="tel:"><span class="k">Điện thoại</span><span class="v" style="color:#0A7D76">0912 345 468</span><svg class="chev" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"></path></svg></a>
+        <button class="li"><span class="k">Nhãn</span><span class="v" style="display:flex;align-items:center;gap:6px"><span style="width:7px;height:7px;border-radius:50%;background:#0A7D76"></span>Đặt lịch</span><svg class="chev" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"></path></svg></button>
+      </div>
+    </div>
+
+    <div class="r d2">
+      <div class="sec">Bán hàng</div>
+      <div class="card">
+        <a class="li" href="Customers.dc.html"><span style="flex-grow:1;min-width:0"><span style="display:block;font-weight:600">Liệu trình 2 người</span><span style="display:block;font-size:12px;color:#56637A">Cơ hội · 2,4tr</span></span><span style="font-size:11px;font-weight:600;padding:2px 6px;border-radius:4px;background:#FDECE3;color:#9A3412">Báo giá</span><svg class="chev" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"></path></svg></a>
+        <div class="li" style="cursor:default"><span class="k">Đã mua</span><span class="v">2 đơn · 3,6tr</span></div>
+      </div>
+    </div>
+
+    <div class="r d3">
+      <div class="sec">Ảnh, tệp, liên kết</div>
+      <div class="card" style="padding:4px 4px 8px">
+        <div style="position:relative;display:flex;background:#EEF1F5;border-radius:6px;padding:3px;margin-bottom:8px">
+          <span style="position:absolute;top:3px;bottom:3px;left:3px;width:calc((100% - 6px) / 3);border-radius:4px;background:#fff;box-shadow:0 1px 3px rgba(11,26,51,.12);transform:{{mX}};transition:transform .35s cubic-bezier(.2,.8,.2,1)"></span>
+          <sc-for list="{{mtabs}}" as="g" hint-placeholder-count="3"><button class="{{g.cls}}" onClick="{{g.pick}}">{{g.l}}</button></sc-for>
+        </div>
+        <sc-if value="{{showImg}}" hint-placeholder-val="{{true}}">
+          <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:4px;padding:0 4px">
+            <sc-for list="{{imgs}}" as="im" hint-placeholder-count="4"><div style="aspect-ratio:1;border-radius:4px;background:{{im.bg}};animation:rise .35s cubic-bezier(.2,.8,.2,1) both;animation-delay:{{im.d}}"></div></sc-for>
+          </div>
+        </sc-if>
+        <sc-if value="{{showList}}" hint-placeholder-val="{{false}}">
+          <sc-for list="{{files}}" as="f" hint-placeholder-count="2">
+            <div class="li" style="animation:rise .35s cubic-bezier(.2,.8,.2,1) both"><span style="width:30px;height:30px;border-radius:6px;background:#EEF1F5;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;color:#56637A;flex-shrink:0">{{f.ext}}</span><span style="flex-grow:1;min-width:0"><span style="display:block;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{f.n}}</span><span style="display:block;font-size:11px;color:#56637A">{{f.m}}</span></span></div>
+          </sc-for>
+        </sc-if>
+      </div>
+    </div>
+
+    <div class="r d4">
+      <div class="card">
+        <div class="li" style="cursor:default"><span class="k" style="color:#0B1A33">Ghim hội thoại</span><button class="sw" role="switch" aria-checked="{{pinP}}" aria-label="Ghim hội thoại" onClick="{{togglePin}}" style="background:{{pinBg}}"><span style="transform:{{pinX}}"></span></button></div>
+        <button class="li"><span class="k" style="color:#0B1A33">Lưu trữ hội thoại</span></button>
+        <button class="li"><span class="k" style="color:#B42318">Chặn khách này</span></button>
+      </div>
+    </div>
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":980}}'>
+class Component extends DCLogic {
+constructor(p) { super(p); this.state = { mute: false, pin: true, tab: 0 }; }
+renderVals() {
+const s = this.state;
+const imgs = ['#CFE7E5','#E3E8EF','#FDE2CF','#D9E2F5','#E6F3F2','#F2E7D0','#DDE7EE','#EADCF5'].map((bg, i) => ({ bg, d: (i * 0.03) + 's' }));
+const files = s.tab === 1
+  ? [{ ext: 'PDF', n: 'Bao-gia-lieu-trinh-doi.pdf', m: '214 KB · Hôm qua' }, { ext: 'XLS', n: 'Lich-hen-thang-10.xlsx', m: '38 KB · 02/10' }]
+  : [{ ext: 'URL', n: 'viomni.vn/bang-gia-spa', m: 'Bạn gửi · Hôm qua' }, { ext: 'URL', n: 'maps.app.goo.gl/q1-chi-nhanh', m: 'Bạn gửi · 28/09' }];
+return {
+mute: s.mute, muteL: s.mute ? 'Đã tắt' : 'Tắt TB', muteP: s.mute ? 'true' : 'false',
+muteBg: s.mute ? '#0B1A33' : '#fff', muteFg: s.mute ? '#fff' : '#0B1A33', muteBd: s.mute ? '#0B1A33' : '#E3E8EF',
+toggleMute: () => this.setState({ mute: !s.mute }),
+mtabs: ['Ảnh · 8', 'Tệp · 2', 'Link · 2'].map((l, i) => ({ l, cls: i === s.tab ? 'tabm on' : 'tabm', pick: () => this.setState({ tab: i }) })),
+mX: 'translateX(' + (s.tab * 100) + '%)', showImg: s.tab === 0, showList: s.tab !== 0, imgs, files,
+pinP: s.pin ? 'true' : 'false', pinBg: s.pin ? '#0A7D76' : '#C9D2DE', pinX: s.pin ? 'translateX(16px)' : 'none',
+togglePin: () => this.setState({ pin: !s.pin })
+};
+}
+}
+</script>
+</body>
+</html>

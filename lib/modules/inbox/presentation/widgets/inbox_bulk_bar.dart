@@ -8,6 +8,7 @@ import '../../application/bulk_assign.dart';
 import '../../application/inbox_providers.dart';
 import '../../data/inbox_api.dart';
 import 'assign_sheet.dart';
+import 'conversation_actions.dart';
 
 /// Bulk actions on selected conversations: assign in one go, or apply a label.
 /// Triage on mobile is done in batches — one thread at a time is how a 200-row
@@ -149,32 +150,7 @@ class InboxBulkBar extends ConsumerWidget {
 
   Future<void> _label(BuildContext context, WidgetRef ref) async {
     final messenger = ScaffoldMessenger.of(context);
-    final controller = TextEditingController();
-    // Không dùng showOmniConfirm: đây không phải câu hỏi có/không mà là một ô
-    // nhập liệu. CupertinoAlertDialog có nhận TextField, nhưng một hộp thoại
-    // nhập liệu là màn hình chứ không phải lời nhắc — nó xứng đáng có thiết kế
-    // riêng chứ không phải nhét vào cái API dành cho câu hỏi.
-    final label = await showDialog<String>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Gắn nhãn'),
-        content: TextField(
-          controller: controller,
-          autofocus: true,
-          decoration: const InputDecoration(hintText: 'VD: gia đình, VIP'),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Huỷ'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(context, controller.text.trim()),
-            child: const Text('Áp dụng'),
-          ),
-        ],
-      ),
-    );
+    final label = await showLabelDialog(context);
     if (label == null || label.isEmpty) return;
 
     try {

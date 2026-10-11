@@ -6,12 +6,7 @@ import 'feed_entry.dart';
 /// "hôm nay ai xong cái gì", và gom theo cây đàn bắt họ tự cộng lại trong đầu
 /// qua nhiều thẻ.
 class DayGroup {
-  const DayGroup({
-    required this.day,
-    required this.entries,
-    required this.stageCount,
-    required this.pianoCount,
-  });
+  const DayGroup({required this.day, required this.entries});
 
   /// `YYYY-MM-DD`, do SERVER tính theo giờ xưởng.
   ///
@@ -21,16 +16,6 @@ class DayGroup {
   final String day;
 
   final List<FeedEntry> entries;
-
-  /// Số công đoạn xong trong ngày.
-  ///
-  /// Đếm RIÊNG với [pianoCount]: thẻ KPI ngay phía trên chỉ đếm CÂY, và đếm
-  /// mỗi cây một lần/tháng kể cả khi QC trả về rồi vào lại (§B3). Một con số
-  /// gộp sẽ nói ngược với nó trên cùng một màn hình.
-  final int stageCount;
-
-  /// Số cây đàn hoàn thành trong ngày.
-  final int pianoCount;
 
   static List<DayGroup> from(List<FeedEntry> entries) {
     final byDay = <String, List<FeedEntry>>{};
@@ -53,20 +38,15 @@ class DayGroup {
           // Giữ nguyên thứ tự server đã sắp. Sắp lại ở client là tạo cơ hội
           // cho hai client hiện hai thứ tự khác nhau cho cùng dữ liệu.
           entries: byDay[day]!,
-          stageCount: byDay[day]!
-              .where((e) => e.kind == FeedKind.subtaskCompleted)
-              .length,
-          pianoCount: byDay[day]!
-              .where((e) => e.kind == FeedKind.pianoDone)
-              .length,
         ),
     ];
   }
 
-  /// `HÔM NAY` / `HÔM QUA` / `05/01`.
+  /// `Hôm nay` / `Hôm qua` / `Thứ Tư 07/10`.
   ///
   /// Hai ngày gần nhất gọi bằng tên vì đó là hai ngày người ta thật sự hỏi;
-  /// xa hơn thì một con số ngày/tháng đọc nhanh hơn "3 ngày trước".
+  /// xa hơn thì thứ + ngày/tháng đọc nhanh hơn "3 ngày trước". Chữ HOA là việc
+  /// của tiêu đề (`DayHeader`), không phải của dữ liệu.
   String get label {
     final now = DateTime.now();
 
@@ -75,21 +55,25 @@ class DayGroup {
         '${d.month.toString().padLeft(2, '0')}-'
         '${d.day.toString().padLeft(2, '0')}';
 
-    if (day == iso(now)) return 'HÔM NAY';
-    if (day == iso(now.subtract(const Duration(days: 1)))) return 'HÔM QUA';
+    if (day == iso(now)) return 'Hôm nay';
+    if (day == iso(now.subtract(const Duration(days: 1)))) return 'Hôm qua';
 
     final parts = day.split('-');
+    if (parts.length != 3) return day;
 
-    return parts.length == 3 ? '${parts[2]}/${parts[1]}' : day;
+    final date = DateTime.tryParse(day);
+    const weekdays = [
+      'Thứ Hai',
+      'Thứ Ba',
+      'Thứ Tư',
+      'Thứ Năm',
+      'Thứ Sáu',
+      'Thứ Bảy',
+      'Chủ Nhật',
+    ];
+
+    return date == null
+        ? '${parts[2]}/${parts[1]}'
+        : '${weekdays[date.weekday - 1]} ${parts[2]}/${parts[1]}';
   }
-
-  /// `HÔM NAY · 12 công đoạn · 2 cây xong`
-  ///
-  /// Bỏ vế nào bằng 0: khoe một số 0 làm dòng dài ra mà không nói thêm gì, và
-  /// một ngày chỉ có công đoạn xong là ngày bình thường của xưởng.
-  String get summary => [
-    label,
-    if (stageCount > 0) '$stageCount công đoạn',
-    if (pianoCount > 0) '$pianoCount cây xong',
-  ].join(' · ');
 }

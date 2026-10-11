@@ -1,9 +1,12 @@
+import 'dart:ui' show ImageFilter;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/module/module_registry.dart';
-import '../../core/nav/pinned_tabs.dart';
+import '../../core/nav/shell_bar_inset.dart';
+import '../../core/nav/tab_order.dart';
 import '../../core/module/nav_destination.dart';
 import '../../design/components/components.dart';
 import '../../design/platform/omni_motion_scope.dart';
@@ -76,12 +79,17 @@ class AppShell extends ConsumerWidget {
           );
         }
 
-        return Scaffold(
-          body: navigationShell,
-          bottomNavigationBar: _ShellNavBar(
-            tabs: tabs,
-            selectedIndex: selectedIndex,
-            onSelected: select,
+        return ShellBarInset(
+          height: ShellBarInset.barHeight,
+          child: Scaffold(
+            // Body vẽ dưới thanh kính mờ; màn danh sách tự chừa chỗ ở đáy.
+            extendBody: true,
+            body: navigationShell,
+            bottomNavigationBar: _ShellNavBar(
+              tabs: tabs,
+              selectedIndex: selectedIndex,
+              onSelected: select,
+            ),
           ),
         );
       },
@@ -211,32 +219,39 @@ class _ShellNavBar extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
 
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: scheme.surface,
-        border: Border(top: BorderSide(color: scheme.outlineVariant)),
-      ),
-      child: SafeArea(
-        top: false,
-        child: SizedBox(
-          height: 62,
-          child: Row(
-            children: [
-              for (var i = 0; i < tabs.length; i++)
-                Expanded(
-                  child: _ShellNavItem(
-                    destination: tabs[i],
-                    selected: selectedIndex == i,
-                    onTap: () => onSelected(i),
+    return ClipRect(
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            color: scheme.surface.withValues(alpha: 0.8),
+            border: Border(
+              top: BorderSide(color: scheme.onSurface.withValues(alpha: 0.07)),
+            ),
+          ),
+          child: SafeArea(
+            top: false,
+            child: SizedBox(
+              height: ShellBarInset.barHeight,
+              child: Row(
+                children: [
+                  for (var i = 0; i < tabs.length; i++)
+                    Expanded(
+                      child: _ShellNavItem(
+                        destination: tabs[i],
+                        selected: selectedIndex == i,
+                        onTap: () => onSelected(i),
+                      ),
+                    ),
+                  Expanded(
+                    child: _ShellNavItem.more(
+                      selected: selectedIndex == tabs.length,
+                      onTap: () => onSelected(tabs.length),
+                    ),
                   ),
-                ),
-              Expanded(
-                child: _ShellNavItem.more(
-                  selected: selectedIndex == tabs.length,
-                  onTap: () => onSelected(tabs.length),
-                ),
+                ],
               ),
-            ],
+            ),
           ),
         ),
       ),
@@ -272,7 +287,7 @@ class _ShellNavItem extends ConsumerWidget {
     // Mục đang chọn: icon màu chính + vạch 2px ở mép trên + chữ mực 600. Không
     // còn viên nền teal nhạt — nền màu cho một mục điều hướng là trang trí.
     final iconColor = selected ? scheme.primary : scheme.onSurfaceVariant;
-    final labelColor = selected ? scheme.onSurface : scheme.onSurfaceVariant;
+    final labelColor = selected ? scheme.primary : scheme.onSurfaceVariant;
     final badgeProvider = destination?.badge;
     final count = badgeProvider == null ? 0 : ref.watch(badgeProvider);
     final text = destination?.label ?? label!;
@@ -290,13 +305,18 @@ class _ShellNavItem extends ConsumerWidget {
               top: 0,
               left: 0,
               right: 0,
-              child: FractionallySizedBox(
-                widthFactor: 0.56,
-                child: AnimatedContainer(
-                  duration: OmniMotion.of(context).base,
-                  curve: OmniCurves.standard,
-                  height: 2,
-                  color: selected ? scheme.primary : Colors.transparent,
+              child: Center(
+                child: SizedBox(
+                  width: 22,
+                  child: AnimatedContainer(
+                    duration: OmniMotion.of(context).base,
+                    curve: OmniCurves.standard,
+                    height: 2,
+                    decoration: BoxDecoration(
+                      color: selected ? scheme.primary : Colors.transparent,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
                 ),
               ),
             ),
@@ -315,7 +335,7 @@ class _ShellNavItem extends ConsumerWidget {
                           selected
                               ? (destination?.selectedIcon ?? selectedIcon!)
                               : (destination?.icon ?? icon!),
-                          size: 24,
+                          size: 21,
                           color: iconColor,
                         ),
                         if (count > 0)

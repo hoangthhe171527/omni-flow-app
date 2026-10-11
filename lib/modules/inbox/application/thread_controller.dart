@@ -1,9 +1,12 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/error/app_exception.dart';
 import '../../../core/error/crash_reporting.dart';
 import '../data/inbox_api.dart';
 import '../domain/message.dart';
+import 'inbox_providers.dart';
 
 class ThreadState {
   ThreadState({
@@ -294,6 +297,7 @@ class ThreadController
     );
     return _dispatch(
       draft: draft,
+      surfaceUnsupported: true,
       call: () => ref
           .read(inboxApiProvider)
           .send(
@@ -308,22 +312,151 @@ class ThreadController
 
   /// Sends a failed bubble again.
   ///
-  /// The retried bubble replaces the failed one in place rather than being
-  /// appended: two bubbles for one message is exactly the confusion a rep cannot
-  /// afford, and the old one carried a failure reason that no longer applies.
-  /// [Message.requeued] decides whether the original idempotency key is reused —
-  /// see it for why that is not unconditional.
-  Future<void> retry(Message failed) {
-    final draft = failed.requeued();
-    if (draft.isNote) {
-      return _dispatch(
-        draft: draft,
-        replacing: failed.id,
-        call: () => ref
-            .read(inboxApiProvider)
-            .addNote(arg, draft.text, clientMessageId: draft.clientId),
+  /// Tin server ĐÃ lưu rồi mới hỏng (id server, nằm trong lịch sử) đi qua
+  /// `POST …/resend`: server mở lại chính tin đó và chỉ gửi phần chưa tới
+  /// khách — gửi một tin mới sẽ gửi lại cả những tệp khách đã nhận. Quá hạn
+  /// (`message_too_old_to_resend`) hay server không còn tin đó thì lùi về
+  /// đường cũ.
+  ///
+  /// Đường cũ (bong bóng chưa từng có id server): the retried bubble replaces
+  /// the failed one in place rather than being appended: two bubbles for one
+  /// message is exactly the confusion a rep cannot afford, and the old one
+  /// carried a failure reason that no longer applies. [Message.requeued]
+  /// decides whether the original idempotency key is reused — see it for why
+  /// that is not unconditional.
+  ///
+  /// [confirmNewSend] chỉ được hỏi khi `/resend` trả 422
+  /// `message_too_old_to_resend`: gửi thành tin MỚI thì khách có thể nhận lại
+  /// những phần đã tới, nên phải có người đồng ý. Null hoặc trả false → tin
+  /// vẫn `failed` với câu của server.
+  Future<void> retry(
+    Message failed, {
+    Future<bool> Function(String serverMessage)? confirmNewSend,
+  }) {
+    final stored =
+        !failed.isPending &&
+        (state.valueOrNull?.messages.any((m) => m.id == failed.id) ?? false);
+    if (stored) return _resend(failed, confirmNewSend);
+    return _sendAgain(failed);
+  }
+
+  Future<void> _resend(
+    Message failed,
+    Future<bool> Function(String serverMessage)? confirmNewSend,
+  ) async {
+    _replaceStored(failed.id, failed.copyWith(status: DeliveryStatus.queued));
+    try {
+      final reopened = await ref.read(inboxApiProvider).resend(arg, failed.id);
+      if (_disposed) return;
+      _replaceStored(failed.id, reopened);
+    } on MessageNotFailedException catch (conflict) {
+      if (_disposed) return;
+      // 409 `message_not_failed`: một lượt khác vừa mở lại (hay đã gửi được)
+      // tin này. KHÔNG BAO GIỜ gửi tin mới ở đây: đó là gửi trùng.
+      final current = conflict.current;
+      if (current != null) {
+        // Server gửi kèm tin hiện tại: thay bong bóng, khỏi tải lại.
+        _replaceStored(failed.id, current);
+        return;
+      }
+      // Không có tin kèm: trả bong bóng về như trước (không kẹt "đang gửi"
+      // nếu tải lại lỗi) rồi lấy trạng thái thật từ server.
+      _replaceStored(failed.id, failed);
+      try {
+        await refresh();
+      } on Object {
+        // Lượt poll sau sẽ đồng bộ; vẫn không gửi gì thêm.
+      }
+    } on ValidationException catch (error) {
+      if (_disposed) return;
+      // 422 `channel_send_unsupported` cũng rơi vào đây: tin mang mã đó nên
+      // bong bóng không còn "Gửi lại".
+      _replaceStored(failed.id, _failedAgain(failed, error));
+      if (error.reason == kChannelSendUnsupported) {
+        _refreshCapabilities();
+      }
+      if (error.reason != kResendTooOld || confirmNewSend == null) return;
+      final ok = await confirmNewSend(error.message);
+      if (!ok || _disposed) return;
+      // Tin cũ (đã hỏng, quá hạn) rời lịch sử; tin mới thay chỗ nó.
+      return _sendAgain(failed);
+    } on NotFoundException catch (error) {
+      if (_disposed) return;
+      // Không có route `/resend` (API chưa cập nhật): gửi theo đường cũ.
+      if (error.routeMissing) return _sendAgain(failed);
+      // 404 thật: tin không còn trên server. Câu server là tiếng Anh.
+      _replaceStored(
+        failed.id,
+        failed.copyWith(
+          status: DeliveryStatus.failed,
+          error: kResendMessageGone,
+        ),
       );
+    } on AppException catch (error) {
+      if (_disposed) return;
+      _replaceStored(failed.id, _failedAgain(failed, error));
+    } on Object {
+      // Lỗi ngoài API (phản hồi hỏng…): đừng để bong bóng kẹt "đang gửi".
+      if (_disposed) return;
+      _replaceStored(failed.id, failed);
     }
+  }
+
+  /// Server nói kênh không gửi được (422 `channel_send_unsupported`): khả
+  /// năng gửi đã đổi so với lúc mở hội thoại. Nạp lại hội thoại để trang thay
+  /// composer bằng dòng "Kênh này chưa gửi tin được".
+  void _refreshCapabilities() {
+    if (!_disposed) ref.invalidate(conversationProvider(arg));
+  }
+
+  static Message _failedAgain(Message failed, AppException error) =>
+      failed.copyWith(
+        status: DeliveryStatus.failed,
+        error: error.message,
+        errorCode: error is ValidationException ? error.reason : null,
+      );
+
+  /// Thay tại chỗ một tin trong lịch sử (không đụng hộp gửi đi).
+  void _replaceStored(String id, Message next) {
+    if (_disposed) return;
+    final current = state.valueOrNull;
+    if (current == null) return;
+    state = AsyncData(
+      current.copyWith(
+        messages: [
+          for (final item in current.messages) item.id == id ? next : item,
+        ],
+      ),
+    );
+  }
+
+  /// Tin [messageId] trên màn thành `failed` với lý do từ realtime
+  /// (`message.sent` của worker mang `error`/`error_code`). False khi tin
+  /// chưa tải — lượt tải sau đã mang lý do.
+  bool applyFailure(String messageId, String? error, String? errorCode) {
+    if (_disposed) return false;
+    final current = state.valueOrNull;
+    if (current == null) return false;
+    if (!current.messages.any((m) => m.id == messageId)) return false;
+    state = AsyncData(
+      current.copyWith(
+        messages: [
+          for (final item in current.messages)
+            item.id == messageId
+                ? item.copyWith(
+                    status: DeliveryStatus.failed,
+                    error: error,
+                    errorCode: errorCode,
+                  )
+                : item,
+        ],
+      ),
+    );
+    return true;
+  }
+
+  Future<void> _sendAgain(Message failed) {
+    final draft = failed.requeued();
     return _dispatch(
       draft: draft,
       replacing: failed.id,
@@ -366,6 +499,7 @@ class ThreadController
     return _dispatch(
       draft: draft.copyWith(attachments: uploaded),
       replacing: draft.id,
+      surfaceUnsupported: true,
       call: () => ref
           .read(inboxApiProvider)
           .send(
@@ -375,16 +509,6 @@ class ThreadController
             replyToMessageId: replyTo?.id,
             clientMessageId: draft.clientId,
           ),
-    );
-  }
-
-  Future<void> addNote(String text) {
-    final draft = Message.optimistic(text: text, asNote: true);
-    return _dispatch(
-      draft: draft,
-      call: () => ref
-          .read(inboxApiProvider)
-          .addNote(arg, text, clientMessageId: draft.clientId),
     );
   }
 
@@ -410,6 +534,133 @@ class ThreadController
       ),
     );
     return pinned;
+  }
+
+  /// Thả / bỏ / đổi cảm xúc NỘI BỘ của tôi trên một tin (không gửi cho khách).
+  ///
+  /// Lạc quan: bỏ mục của tôi, rồi thêm [emoji] nếu nó khác emoji cũ của tôi
+  /// (server cũng đảo y như vậy). Server trả lời thì danh sách server THAY
+  /// danh sách lạc quan; lỗi thì trả lại danh sách cũ rồi ném tiếp để màn
+  /// báo. Tin nháp (chưa có id server) hay không có trên màn thì bỏ qua.
+  Future<void> toggleTeamReaction(
+    String messageId,
+    String emoji, {
+    required String myUserId,
+    String? myName,
+  }) async {
+    final current = state.valueOrNull;
+    if (current == null) return;
+    final message = current.messages
+        .where((item) => item.id == messageId)
+        .firstOrNull;
+    if (message == null || message.isPending) return;
+
+    final before = message.teamReactions;
+    final mine = before.where((r) => r.userId == myUserId).firstOrNull;
+    final optimistic = [
+      for (final r in before)
+        if (r.userId != myUserId) r,
+      if (mine?.emoji != emoji)
+        TeamReaction(
+          userId: myUserId,
+          userName: myName,
+          emoji: emoji,
+          at: DateTime.now(),
+        ),
+    ];
+    // Số thứ tự lượt bấm theo tin: phản hồi (hay lỗi) của lượt CŨ về sau một
+    // lượt mới thì bỏ — không đè trạng thái mới hơn.
+    final seq = (_reactionSeq[messageId] ?? 0) + 1;
+    _reactionSeq[messageId] = seq;
+    // Mốc hoàn tác: mục của tôi TRƯỚC lượt đang chờ đầu tiên (không phải
+    // trước lượt này — lúc đó nó đã là kết quả lạc quan của lượt trước).
+    final pending = _reactionPending[messageId] ?? 0;
+    if (pending == 0) {
+      _reactionBaseline[messageId] = mine;
+      _reactionLatestFailed.remove(messageId);
+    }
+    _reactionPending[messageId] = pending + 1;
+    applyTeamReactions(messageId, optimistic);
+
+    final List<TeamReaction> saved;
+    try {
+      saved = await ref
+          .read(inboxApiProvider)
+          .toggleTeamReaction(arg, messageId, emoji);
+    } on Object {
+      final latest = _reactionSeq[messageId] == seq;
+      if (!_disposed && latest) {
+        // Chỉ trả lại mục CỦA TÔI: cảm xúc người khác về qua realtime trong
+        // lúc chờ vẫn giữ.
+        _restoreMine(messageId, myUserId, _reactionBaseline[messageId]);
+        _reactionLatestFailed.add(messageId);
+      }
+      _settleReaction(messageId);
+      rethrow;
+    }
+    // Server đã ghi lượt này: mốc hoàn tác của các lượt sau là kết quả thật.
+    final confirmed = saved.where((r) => r.userId == myUserId).firstOrNull;
+    _reactionBaseline[messageId] = confirmed;
+    final latest = _reactionSeq[messageId] == seq;
+    final latestFailed = _reactionLatestFailed.contains(messageId);
+    _settleReaction(messageId);
+    if (_disposed) return;
+    if (latest) {
+      applyTeamReactions(messageId, saved);
+    } else if (latestFailed) {
+      // Lượt mới hơn đã lỗi và đã hoàn tác về mốc cũ; lượt cũ này thì server
+      // đã ghi — hiện đúng mục server có.
+      _restoreMine(messageId, myUserId, confirmed);
+    }
+  }
+
+  void _settleReaction(String messageId) {
+    final left = (_reactionPending[messageId] ?? 1) - 1;
+    if (left > 0) {
+      _reactionPending[messageId] = left;
+      return;
+    }
+    _reactionPending.remove(messageId);
+    _reactionBaseline.remove(messageId);
+    _reactionLatestFailed.remove(messageId);
+  }
+
+  final _reactionSeq = <String, int>{};
+  final _reactionPending = <String, int>{};
+  final _reactionBaseline = <String, TeamReaction?>{};
+  final _reactionLatestFailed = <String>{};
+
+  void _restoreMine(String messageId, String myUserId, TeamReaction? mine) {
+    final current = state.valueOrNull?.messages
+        .where((m) => m.id == messageId)
+        .firstOrNull;
+    if (current == null) return;
+    applyTeamReactions(messageId, [
+      for (final r in current.teamReactions)
+        if (r.userId != myUserId) r,
+      ?mine,
+    ]);
+  }
+
+  /// Thay cảm xúc nội bộ của một tin đang có trên màn (phản hồi POST hoặc
+  /// realtime `message.team_reaction`). Tin chưa tải thì trả `false`: lượt
+  /// tải lịch sử sau đã mang sẵn danh sách mới.
+  bool applyTeamReactions(String messageId, List<TeamReaction> reactions) {
+    if (_disposed) return false;
+    final current = state.valueOrNull;
+    if (current == null) return false;
+    if (!current.messages.any((item) => item.id == messageId)) return false;
+    state = AsyncData(
+      current.copyWith(
+        messages: [
+          for (final item in current.messages)
+            item.id == messageId
+                ? item.copyWith(teamReactions: reactions)
+                : item,
+        ],
+      ),
+    );
+    return true;
   }
 
   /// Applies a realtime delivery receipt (`message.status`) in place.
@@ -474,15 +725,34 @@ class ThreadController
   ///
   /// [replacing] is the id of an outbox entry this attempt supersedes (a failed
   /// one being retried); leave it null to add a new entry.
+  ///
+  /// [surfaceUnsupported] (tin MỚI): 422 `channel_send_unsupported` nghĩa là
+  /// server không tạo tin — rút bong bóng và ném lại, để composer giữ nháp và
+  /// hiện câu của server. Bong bóng "Gửi lại" không bao giờ thành công thì
+  /// không có ích gì.
   Future<void> _dispatch({
     required Message draft,
     required Future<Message> Function() call,
     String? replacing,
+    bool surfaceUnsupported = false,
   }) async {
     _enqueue(draft, replacing: replacing);
 
     try {
       _settle(draft.id, await call());
+    } on ValidationException catch (error) {
+      if (error.reason == kChannelSendUnsupported) _refreshCapabilities();
+      if (surfaceUnsupported && error.reason == kChannelSendUnsupported) {
+        discard(draft.id);
+        rethrow;
+      }
+      _fail(
+        draft.id,
+        error.message,
+        errorCode: error.reason == kChannelSendUnsupported
+            ? kChannelSendUnsupported
+            : null,
+      );
     } on AppException catch (error) {
       _fail(draft.id, error.message);
     } on Object catch (error, stackTrace) {
@@ -559,7 +829,7 @@ class ThreadController
   }
 
   /// The send failed: keep the bubble in the outbox, carrying the reason.
-  void _fail(String draftId, String reason) {
+  void _fail(String draftId, String reason, {String? errorCode}) {
     if (_disposed) return;
     final current = state.valueOrNull;
     if (current == null) return;
@@ -569,7 +839,11 @@ class ThreadController
         pending: [
           for (final message in current.pending)
             if (message.id == draftId)
-              message.copyWith(status: DeliveryStatus.failed, error: reason)
+              message.copyWith(
+                status: DeliveryStatus.failed,
+                error: reason,
+                errorCode: errorCode,
+              )
             else
               message,
         ],

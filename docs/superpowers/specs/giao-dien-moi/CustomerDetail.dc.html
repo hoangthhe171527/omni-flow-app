@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<title>Chi tiết khách – Spa Hạnh Phúc</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#0A7D76}a:hover{color:#075E59}
+@keyframes rise{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+@keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+.r{animation:rise .5s cubic-bezier(.2,.8,.2,1) both}
+.d1{animation-delay:.05s}.d2{animation-delay:.1s}
+button,a{transition:transform .2s cubic-bezier(.2,.8,.2,1),background-color .2s,color .2s,border-color .2s;-webkit-tap-highlight-color:transparent}
+button:active,a:active{transform:scale(.97)}
+.bar{background:rgba(245,247,250,.82);backdrop-filter:blur(20px) saturate(180%);-webkit-backdrop-filter:blur(20px) saturate(180%)}
+.card{background:#fff;border:1px solid #E3E8EF;border-radius:8px;overflow:hidden}
+.act{flex:1;height:36px;border-radius:6px;border:1px solid #E3E8EF;background:#fff;display:flex;align-items:center;justify-content:center;gap:6px;font:600 12px 'Be Vietnam Pro',sans-serif;color:#0B1A33;cursor:pointer;text-decoration:none}
+.act.pri{background:#0A7D76;border-color:#0A7D76;color:#fff}
+.seg{flex:1;height:30px;border:0;background:transparent;font:600 13px 'Be Vietnam Pro',sans-serif;color:#56637A;cursor:pointer;position:relative;z-index:1}
+.seg.on{color:#0B1A33}
+.li{display:flex;align-items:center;gap:10px;min-height:42px;padding:0 12px;border-top:1px solid #EEF1F5;font-size:14px;color:#0B1A33;text-decoration:none}
+.li:first-child{border-top:0}
+.k{color:#56637A;width:92px;flex-shrink:0;font-size:13px}
+.v{flex-grow:1;font-weight:500;text-align:right;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ed{width:100%;box-sizing:border-box;border:0;border-top:1px solid #EEF1F5;font-family:inherit;cursor:pointer;text-align:left;transition:background-color .6s ease}
+.ed:hover{background:#FAFBFC}
+.pen{color:#C9D2DE;flex-shrink:0;transition:color .2s}
+.ed:hover .pen{color:#0A7D76}
+.mini{width:28px;height:28px;border-radius:14px;border:0;background:#EEF1F5;display:flex;align-items:center;justify-content:center;padding:0;cursor:pointer;flex-shrink:0;animation:fadeIn .25s both}
+.tl{display:flex;gap:10px;padding:0 12px}
+.tl .dot{width:26px;height:26px;border-radius:13px;display:flex;align-items:center;justify-content:center;flex-shrink:0;position:relative;z-index:1}
+.tl .line{position:absolute;left:12px;top:26px;bottom:-4px;width:2px;background:#EEF1F5}
+.deal{display:flex;align-items:center;gap:10px;padding:10px 12px;border-top:1px solid #EEF1F5;text-decoration:none;color:#0B1A33}
+.deal:first-child{border-top:0}
+</style>
+</helmet>
+<div style="width:390px;height:844px;position:relative;overflow:hidden;font-family:'Be Vietnam Pro',system-ui,sans-serif;color:#0B1A33;background:#F5F7FA;font-size:14px">
+  <header class="bar" style="position:absolute;top:0;left:0;right:0;z-index:3;padding:50px 6px 6px;display:flex;align-items:center;border-bottom:1px solid rgba(11,26,51,.06)">
+    <a href="Customers.dc.html" aria-label="Quay lại" style="width:36px;height:36px;display:flex;align-items:center;justify-content:center;color:#0B1A33"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 5-7 7 7 7"></path></svg></a>
+    <span style="flex-grow:1;text-align:center;font-weight:700;font-size:15px">Khách hàng</span>
+    <span style="width:36px"></span>
+  </header>
+
+  <main style="position:absolute;top:94px;left:0;right:0;bottom:0;padding:14px 16px 30px;display:flex;flex-direction:column;gap:12px;overflow:hidden">
+    <div class="r" style="display:flex;align-items:center;gap:12px">
+      <span style="width:52px;height:52px;border-radius:26px;background:#E3EAFD;color:#1D4ED8;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:17px;flex-shrink:0">SH</span>
+      <span style="flex-grow:1;min-width:0">
+        <span style="display:flex;align-items:center;gap:6px;font-size:18px;font-weight:700;letter-spacing:-.2px">Spa Hạnh Phúc<span title="Hợp đồng" style="width:8px;height:8px;border-radius:50%;background:#2563EB"></span></span>
+        <span style="display:block;font-size:12px;color:#56637A"><span style="font-weight:700;color:#0068FF">OA</span> · Viomni CSKH · Khách từ 03/2025</span>
+      </span>
+    </div>
+
+    <div class="r d1" style="display:flex;gap:6px">
+      <a class="act pri" href="Thread.dc.html"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16v11H8l-4 4z"></path></svg>Nhắn</a>
+      <a class="act" href="tel:"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2"></path></svg>Gọi</a>
+      <a class="act" href="Tasks.dc.html"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="3"></rect><path d="m8.5 12 2.5 2.5 4.5-5"></path></svg>Việc</a>
+      <button class="act"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l6-6 4 4 8-8"></path></svg>Cơ hội</button>
+    </div>
+
+    <div class="card r d2" style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr))">
+      <div style="padding:10px 12px"><div style="font-size:11px;color:#56637A">Đã mua</div><div style="font-size:17px;font-weight:700">186tr</div></div>
+      <div style="padding:10px 12px;border-left:1px solid #EEF1F5"><div style="font-size:11px;color:#56637A">Đơn hàng</div><div style="font-size:17px;font-weight:700">4</div></div>
+      <div style="padding:10px 12px;border-left:1px solid #EEF1F5"><div style="font-size:11px;color:#56637A">Đang mở</div><div style="font-size:17px;font-weight:700;color:#C2410C">48tr</div></div>
+    </div>
+
+    <div style="position:relative;display:flex;background:#EEF1F5;border-radius:6px;padding:3px">
+      <span style="position:absolute;top:3px;bottom:3px;left:3px;width:calc((100% - 6px) / 3);border-radius:4px;background:#fff;box-shadow:0 1px 3px rgba(11,26,51,.12);transform:{{tX}};transition:transform .35s cubic-bezier(.2,.8,.2,1)"></span>
+      <sc-for list="{{tabs}}" as="t" hint-placeholder-count="3"><button class="{{t.cls}}" onClick="{{t.pick}}">{{t.l}}</button></sc-for>
+    </div>
+
+    <sc-if value="{{t0}}" hint-placeholder-val="{{true}}">
+      <div class="card" style="animation:fadeIn .35s cubic-bezier(.2,.8,.2,1) both">
+        <sc-for list="{{fields}}" as="f" hint-placeholder-count="4">
+          <sc-if value="{{f.view}}" hint-placeholder-val="{{true}}">
+            <button class="li ed" style="background:{{f.flash}}" onClick="{{f.edit}}"><span class="k">{{f.k}}</span><span class="v" style="white-space:{{f.ws}};text-align:right;color:{{f.vc}}">{{f.v}}</span><svg class="pen" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4L19 9l-4-4L4 16zM14 6l4 4"></path></svg></button>
+          </sc-if>
+          <sc-if value="{{f.editing}}" hint-placeholder-val="{{false}}">
+            <div class="li" style="background:#F3FAF9;box-shadow:inset 0 0 0 1.5px #0A7D76;animation:fadeIn .25s both">
+              <span class="k" style="color:#075E59;font-weight:600">{{f.k}}</span>
+              <input aria-label="{{f.k}}" value="{{draft}}" onInput="{{type}}" onKeyDown="{{key}}" autofocus style="flex-grow:1;min-width:0;border:0;outline:0;background:transparent;font:500 14px 'Be Vietnam Pro',sans-serif;color:#0B1A33;text-align:right">
+              <button aria-label="Hủy" onClick="{{cancel}}" class="mini" style="color:#56637A"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"></path></svg></button>
+              <button aria-label="Lưu" onClick="{{save}}" class="mini" style="background:#0A7D76;color:#fff"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 4.5 4.5L19 7"></path></svg></button>
+            </div>
+          </sc-if>
+        </sc-for>
+        <button class="li ed"><span class="k">Phụ trách</span><span class="v" style="display:flex;justify-content:flex-end;align-items:center;gap:6px"><span style="width:18px;height:18px;border-radius:4px;background:#0B1A33;color:#fff;font-size:8px;font-weight:700;display:flex;align-items:center;justify-content:center">HT</span>Hoàng Trần</span><svg class="pen" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"></path></svg></button>
+        <button class="li ed"><span class="k">Nhãn</span><span class="v" style="display:flex;justify-content:flex-end;gap:4px"><span style="font-size:11px;font-weight:600;padding:2px 6px;border-radius:4px;background:#E3EAFD;color:#1D4ED8">Hợp đồng</span><span style="font-size:11px;font-weight:600;padding:2px 6px;border-radius:4px;background:#EEF1F5;color:#3D4A60">VIP</span></span><svg class="pen" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"></path></svg></button>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{t1}}" hint-placeholder-val="{{false}}">
+      <div class="card" style="padding:12px 0 4px;animation:fadeIn .35s cubic-bezier(.2,.8,.2,1) both">
+        <sc-for list="{{acts}}" as="a" hint-placeholder-count="5">
+          <div class="tl" style="position:relative;padding-bottom:12px;animation:rise .35s cubic-bezier(.2,.8,.2,1) both;animation-delay:{{a.delay}}">
+            <sc-if value="{{a.line}}" hint-placeholder-val="{{true}}"><span class="line" style="left:24px"></span></sc-if>
+            <span class="dot" style="background:{{a.bg}};color:{{a.c}}"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="{{a.d}}"></path></svg></span>
+            <span style="flex-grow:1;min-width:0;padding-top:3px"><span style="display:block;font-size:13px;line-height:1.4">{{a.t}}</span><span style="display:block;font-size:11px;color:#8A95A8">{{a.when}}</span></span>
+          </div>
+        </sc-for>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{t2}}" hint-placeholder-val="{{false}}">
+      <div class="card" style="animation:fadeIn .35s cubic-bezier(.2,.8,.2,1) both">
+        <sc-for list="{{deals}}" as="d" hint-placeholder-count="3">
+          <a class="deal" href="#">
+            <span style="position:relative;width:34px;height:34px;flex-shrink:0"><svg width="34" height="34" viewBox="0 0 36 36"><circle cx="18" cy="18" r="15" fill="none" stroke="#EEF1F5" stroke-width="3.5"></circle><circle cx="18" cy="18" r="15" fill="none" stroke="{{d.c}}" stroke-width="3.5" stroke-linecap="round" stroke-dasharray="{{d.dash}}" transform="rotate(-90 18 18)"></circle></svg><span style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700">{{d.p}}</span></span>
+            <span style="flex-grow:1;min-width:0"><span style="display:block;font-weight:600">{{d.n}}</span><span style="display:block;font-size:12px;color:#56637A">{{d.due}}</span></span>
+            <span style="text-align:right"><span style="display:block;font-weight:700">{{d.v}}</span><span style="display:block;font-size:10px;font-weight:600;color:{{d.c}}">{{d.s}}</span></span>
+          </a>
+        </sc-for>
+      </div>
+    </sc-if>
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+constructor(p) { super(p); this.state = { tab: 0, edit: null, draft: '', flash: null, vals: { phone: '0283 822 4567', email: 'hanhphuc.spa@gmail.com', addr: '12 Lê Thánh Tôn, Q1', note: 'Chuỗi 3 spa, quyết định qua chị Hạnh. Ưu tiên liên hệ buổi sáng.' } }; }
+renderVals() {
+const s = this.state, C2 = 2 * Math.PI * 15;
+const K = { msg: ['M4 5h16v11H8l-4 4z', '#E6F3F2', '#075E59'], call: ['M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2', '#E3EAFD', '#1D4ED8'], order: ['M6 7h12l-1 13H7zM9 7a3 3 0 0 1 6 0', '#FDECE3', '#9A3412'], task: ['M4 4h16v16H4zM8.5 12l2.5 2.5 4.5-5', '#EEF1F5', '#0B1A33'] };
+const A = [
+['msg', 'Bạn gửi hợp đồng gói Pro qua OA', 'Hôm nay 09:12'],
+['task', 'Việc “Gọi lại báo giá gói Pro” quá hạn', 'Hôm qua'],
+['call', 'Cuộc gọi 6 phút với chị Hạnh', '07/10'],
+['order', 'Đơn #1042 · Gói Basic 6 tháng · 36tr', '14/08'],
+['msg', 'Khách hỏi về gói Pro cho 3 chi nhánh', '02/08']
+];
+const D = [['Gói Pro 12 tháng', '48tr', 'Báo giá', '#E8890C', 60, 'Hạn 12/10'], ['Đào tạo nhân viên', '12tr', 'Mới', '#2563EB', 20, 'Hạn 30/10'], ['Gói Basic 6 tháng', '36tr', 'Chốt', '#0A7D76', 100, 'Đã chốt 14/08']];
+const F = [['phone', 'Điện thoại'], ['email', 'Email'], ['addr', 'Địa chỉ'], ['note', 'Ghi chú']];
+const save = () => { const k = this.state.edit; if (!k) return; clearTimeout(this.ft); this.setState({ vals: { ...this.state.vals, [k]: this.state.draft.trim() || this.state.vals[k] }, edit: null, flash: k }); this.ft = setTimeout(() => this.setState({ flash: null }), 700); };
+return {
+fields: F.map(([k, l]) => ({ k: l, v: s.vals[k], view: s.edit !== k, editing: s.edit === k, ws: k === 'note' ? 'normal' : 'nowrap', vc: k === 'phone' ? '#0A7D76' : '#0B1A33',
+  flash: s.flash === k ? '#E6F3F2' : '#fff', edit: () => this.setState({ edit: k, draft: s.vals[k] }) })),
+draft: s.draft, type: e => this.setState({ draft: e.target.value }), save, cancel: () => this.setState({ edit: null }),
+key: e => { if (e.key === 'Enter') save(); if (e.key === 'Escape') this.setState({ edit: null }); },
+tabs: ['Tổng quan', 'Hoạt động', 'Cơ hội · 3'].map((l, i) => ({ l, cls: i === s.tab ? 'seg on' : 'seg', pick: () => this.setState({ tab: i }) })),
+tX: 'translateX(' + (s.tab * 100) + '%)', t0: s.tab === 0, t1: s.tab === 1, t2: s.tab === 2,
+acts: A.map((a, i) => ({ t: a[1], when: a[2], d: K[a[0]][0], bg: K[a[0]][1], c: K[a[0]][2], line: i < A.length - 1, delay: (i * 0.05) + 's' })),
+deals: D.map(d => ({ n: d[0], v: d[1], s: d[2], c: d[3], p: d[4] + '%', due: d[5], dash: (C2 * d[4] / 100).toFixed(1) + ' ' + C2.toFixed(1) }))
+};
+}
+}
+</script>
+</body>
+</html>

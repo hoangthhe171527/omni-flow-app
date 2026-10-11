@@ -21,6 +21,7 @@ class OmniAvatar extends StatelessWidget {
     this.size = 44,
     this.online = false,
     this.badge,
+    this.borderRadius,
   });
 
   final String name;
@@ -30,6 +31,9 @@ class OmniAvatar extends StatelessWidget {
 
   /// Small overlay at the bottom-right — the channel dot on inbox rows.
   final Widget? badge;
+
+  /// Bo góc vuông thay cho hình tròn (dòng hội thoại GĐ3: 38px bo 6).
+  final double? borderRadius;
 
   @override
   Widget build(BuildContext context) {
@@ -53,10 +57,16 @@ class OmniAvatar extends StatelessWidget {
     final avatar = Container(
       width: size,
       height: size,
-      decoration: BoxDecoration(shape: BoxShape.circle, color: surface),
+      decoration: borderRadius == null
+          ? BoxDecoration(shape: BoxShape.circle, color: surface)
+          : BoxDecoration(
+              color: surface,
+              borderRadius: BorderRadius.circular(borderRadius!),
+            ),
       alignment: Alignment.center,
       child: resolvedImageUrl != null
-          ? ClipOval(
+          ? ClipRRect(
+              borderRadius: BorderRadius.circular(borderRadius ?? size),
               // Bộ nhớ đệm ĐĨA, không chỉ bộ nhớ: cùng một khuôn mặt hiện ở
               // mười chỗ, và `Image.network` tải lại nó mỗi lần bị đẩy khỏi
               // bộ nhớ đệm — ngoài xưởng sóng yếu là những vòng tròn trống.

@@ -74,6 +74,8 @@ void main() {
     await tester.pumpWidget(host());
     await tester.pumpAndSettle();
 
+    await tester.tap(find.text('Người làm'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Nhận việc này'));
     await tester.pumpAndSettle();
 
@@ -88,6 +90,8 @@ void main() {
     await tester.pumpWidget(host(ids: ['u1'], names: ['Hằng Ni']));
     await tester.pumpAndSettle();
 
+    await tester.tap(find.text('Người làm'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Nhận việc này'));
     await tester.pumpAndSettle();
 
@@ -112,6 +116,8 @@ void main() {
     await tester.pumpWidget(host());
     await tester.pumpAndSettle();
 
+    await tester.tap(find.text('Người làm'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Nhận việc này'));
     await tester.pumpAndSettle();
 

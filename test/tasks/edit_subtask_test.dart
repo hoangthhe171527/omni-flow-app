@@ -63,6 +63,8 @@ void main() {
 
   RequestOptions sent() => adapter.singleRequest;
 
+  final addField = find.widgetWithText(TextField, 'Thêm việc con');
+
   /// Khung mặc định của flutter_test là 800×600 — thấp hơn một màn điện thoại,
   /// nên nút cuối danh sách việc con nằm ngoài vùng chạm được và mọi tap đều
   /// trượt. Đặt khung cao như máy thật.
@@ -76,8 +78,8 @@ void main() {
   }
 
   Future<void> openActions(WidgetTester tester) async {
-    // Hàng thứ hai ("Body ngaoi") — cái gõ nhầm.
-    await tester.tap(find.byIcon(Icons.more_horiz_rounded).last);
+    // Hàng thứ hai ("Body ngaoi") — cái gõ nhầm. Chạm TÊN để mở menu sửa.
+    await tester.tap(find.text('Body ngaoi'));
     await tester.pumpAndSettle();
   }
 
@@ -85,11 +87,8 @@ void main() {
     testWidgets('thêm được một việc con mới', (tester) async {
       await pumpApp(tester, host());
 
-      await tester.tap(find.text('Thêm việc con'));
-      await tester.pumpAndSettle();
-      await tester.enterText(sheetField, 'Lên dây');
-      await tester.pump();
-      await tester.tap(find.text('Lưu'));
+      await tester.enterText(addField, 'Lên dây');
+      await tester.testTextInput.receiveAction(TextInputAction.done);
       await tester.pumpAndSettle();
 
       expect(sent().method, 'POST');
@@ -100,13 +99,11 @@ void main() {
     testWidgets('không cho thêm việc con không tên', (tester) async {
       await pumpApp(tester, host());
 
-      await tester.tap(find.text('Thêm việc con'));
+      await tester.enterText(addField, '   ');
+      await tester.testTextInput.receiveAction(TextInputAction.done);
       await tester.pumpAndSettle();
 
-      final save = tester.widget<FilledButton>(
-        find.widgetWithText(FilledButton, 'Lưu'),
-      );
-      expect(save.onPressed, isNull);
+      expect(adapter.requests, isEmpty);
     });
   });
 
@@ -156,7 +153,7 @@ void main() {
       await pumpApp(tester, host(permissions: worker));
 
       expect(find.text('Tháo máy'), findsOneWidget);
-      expect(find.text('Thêm việc con'), findsNothing);
+      expect(addField, findsNothing);
       expect(find.byIcon(Icons.more_horiz_rounded), findsNothing);
     });
   });

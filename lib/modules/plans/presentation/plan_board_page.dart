@@ -17,6 +17,7 @@ import '../application/plans_providers.dart';
 import '../data/plans_api.dart';
 import '../domain/plan.dart';
 import 'edit_sections_page.dart';
+import 'widgets/board_task_card.dart';
 import 'widgets/person_filter_sheet.dart';
 import 'widgets/section_pager.dart';
 
@@ -76,41 +77,30 @@ class _PlanBoardPageState extends ConsumerState<PlanBoardPage> {
                 loaded.roleOf(currentUserId) == PlanRole.owner));
 
     final canPop = ModalRoute.of(context)?.canPop ?? false;
-    final subtitle = [
-      if (loaded?.teamName case final team? when team.isNotEmpty) team,
-      if (loaded != null && loaded.taskCount > 0) '${loaded.taskCount} việc',
-    ].join(' · ');
+    final scheme = Theme.of(context).colorScheme;
+
+    // Chủ/quản lý DỰ ÁN cũng sửa được nhóm việc, đúng quyền API (CV-I14).
+    final canEditSections =
+        loaded != null &&
+        (taskAccess.isAssigner ||
+            (currentUserId != null &&
+                loaded.roleOf(currentUserId).canManagePlan));
 
     return Scaffold(
       // Đầu bảng là mặt TRẮNG liền với dải tab nhóm việc — cùng kiểu đầu màn
       // với mọi màn làm việc khác (đề xuất "Chuẩn hoá phong cách"). Khối mực
       // cũ là một kiểu tab thứ ba trên cùng một app.
       appBar: AppBar(
-        backgroundColor: Theme.of(context).colorScheme.surface,
+        backgroundColor: scheme.surface,
         // Nút quay lại luôn có khi mở từ danh sách; khi không có (mở thẳng
         // bằng liên kết sâu) thì tiêu đề lùi vào 16 chứ không dính mép.
+        automaticallyImplyLeading: false,
         leading: canPop ? const BackButton() : null,
-        titleSpacing: canPop ? 4 : OmniSpacing.lg,
-        title: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              loaded?.name ?? 'Dự án',
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: OmniType.section.copyWith(
-                color: Theme.of(context).colorScheme.onSurface,
-              ),
-            ),
-            if (subtitle.isNotEmpty)
-              Text(
-                subtitle,
-                style: OmniType.caption.copyWith(
-                  color: Theme.of(context).colorScheme.onSurfaceVariant,
-                ),
-              ),
-          ],
+        titleSpacing: canPop ? 0 : OmniSpacing.lg,
+        title: _BoardTitle(
+          planId: widget.planId,
+          plan: loaded,
+          person: _person,
         ),
         actions: [
           // Lọc theo người. Mở cho MỌI người đọc được bảng, không riêng quản
@@ -118,58 +108,77 @@ class _PlanBoardPageState extends ConsumerState<PlanBoardPage> {
           // là câu người thợ hỏi mỗi lần rảnh tay — "Chưa giao ai" trong
           // sheet này là câu trả lời, trước nay chỉ có bằng cách lướt hết
           // bảng đọc từng thẻ.
-          IconButton(
-            onPressed: _pickPerson,
-            tooltip: 'Lọc theo người',
-            icon: Icon(
-              _person.chipLabel == null
-                  ? Icons.filter_alt_outlined
-                  : Icons.filter_alt_rounded,
-            ),
-          ),
-          // Sửa các cột của chính cái bảng đang nhìn. Nhóm việc trước đây
-          // chỉ khai được lúc tạo dự án, nên một cái tên gõ nhầm là phải
-          // tạo lại cả dự án — mà công việc thì đã nằm trong đó rồi.
-          // Chủ/quản lý DỰ ÁN cũng sửa được, đúng quyền API (CV-I14).
-          if (loaded != null &&
-              (taskAccess.isAssigner ||
-                  (currentUserId != null &&
-                      loaded.roleOf(currentUserId).canManagePlan)))
-            IconButton(
-              onPressed: _editSections,
-              icon: const Icon(Icons.view_column_outlined),
-              tooltip: 'Sửa nhóm việc',
-            ),
-          if (canDeletePlan)
+          _FilterButton(active: _person.chipLabel != null, onTap: _pickPerson),
+          // Sửa nhóm việc và xoá dự án gộp một menu: hai nút riêng chiếm chỗ
+          // của tên dự án. Không quyền nào thì ẩn cả ⋯ (không nút chết).
+          if (loaded != null && (canEditSections || canDeletePlan))
             PopupMenuButton<_PlanAction>(
               tooltip: 'Tuỳ chọn dự án',
               onSelected: (action) {
-                if (action == _PlanAction.delete) _deletePlan(loaded);
+                switch (action) {
+                  case _PlanAction.editSections:
+                    _editSections();
+                  case _PlanAction.delete:
+                    _deletePlan(loaded);
+                }
               },
-              itemBuilder: (context) => const [
-                PopupMenuItem(
-                  value: _PlanAction.delete,
-                  child: Row(
-                    children: [
-                      Icon(Icons.delete_outline, color: Colors.red),
-                      SizedBox(width: OmniSpacing.sm),
-                      Text('Xoá dự án', style: TextStyle(color: Colors.red)),
-                    ],
+              itemBuilder: (context) => [
+                if (canEditSections)
+                  const PopupMenuItem(
+                    value: _PlanAction.editSections,
+                    child: Row(
+                      children: [
+                        Icon(Icons.view_column_outlined),
+                        SizedBox(width: OmniSpacing.sm),
+                        Text('Sửa nhóm việc'),
+                      ],
+                    ),
                   ),
-                ),
+                if (canDeletePlan)
+                  const PopupMenuItem(
+                    value: _PlanAction.delete,
+                    child: Row(
+                      children: [
+                        Icon(Icons.delete_outline, color: Colors.red),
+                        SizedBox(width: OmniSpacing.sm),
+                        Text('Xoá dự án', style: TextStyle(color: Colors.red)),
+                      ],
+                    ),
+                  ),
               ],
             ),
         ],
+        // Dải tab nhóm việc nằm ngay dưới tên dự án và ĐỌC cùng rổ đã chia với
+        // bảng, nên số trên tab đi theo bộ lọc.
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(SectionTabs.height),
+          child: _BoardTabs(
+            planId: widget.planId,
+            person: _person,
+            controller: _controller,
+            current: _current,
+          ),
+        ),
       ),
       // Nút tạo nằm trên BẢNG, không nằm ở "Việc của tôi": ở đây dự án và
       // cột đang đứng đã biết sẵn, nên việc mới ra đời đúng chỗ mà không phải
       // hỏi thêm câu nào. Ở "Việc của tôi" thì cả hai đều phải hỏi.
       floatingActionButton: loaded == null || !taskAccess.canCreate
           ? null
-          : FloatingActionButton.extended(
-              onPressed: () => _createTask(loaded),
-              icon: const Icon(Icons.add_rounded),
-              label: const Text('Việc mới'),
+          // Bảng là route gốc (rootNavigator) nên thanh kính mờ của shell
+          // không phủ lên đây — nút không cần nâng lên khỏi nó.
+          : FloatingActionButtonTheme(
+              data: Theme.of(context).floatingActionButtonTheme.copyWith(
+                extendedSizeConstraints: BoxConstraints.tightFor(height: 48),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.all(Radius.circular(14)),
+                ),
+              ),
+              child: FloatingActionButton.extended(
+                onPressed: () => _createTask(loaded),
+                icon: const Icon(Icons.add_rounded),
+                label: const Text('Việc mới'),
+              ),
             ),
       body: OmniAsyncView(
         value: plan,
@@ -254,7 +263,170 @@ class _PlanBoardPageState extends ConsumerState<PlanBoardPage> {
   }
 }
 
-enum _PlanAction { delete }
+enum _PlanAction { editSections, delete }
+
+/// Tên dự án + "team · N việc". N là số việc ĐANG HIỆN sau lọc, nên widget này
+/// tự đọc rổ đã chia: lọc đổi thì phụ đề đổi theo mà AppBar không dựng lại.
+class _BoardTitle extends ConsumerWidget {
+  const _BoardTitle({
+    required this.planId,
+    required this.plan,
+    required this.person,
+  });
+
+  final String planId;
+  final Plan? plan;
+  final BoardPerson person;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final scheme = Theme.of(context).colorScheme;
+    final loaded = plan;
+    final board = ref
+        .watch(boardBucketsProvider((planId: planId, person: person)))
+        .valueOrNull;
+    // Chưa tải rổ thì dùng số tổng của dự án — im lặng còn hơn đoán.
+    final shown = board == null
+        ? (loaded?.taskCount ?? 0)
+        : board.buckets.fold<int>(0, (a, b) => a + b.length);
+    final subtitle = [
+      if (loaded?.teamName case final team? when team.isNotEmpty) team,
+      if (board != null || shown > 0) '$shown việc',
+    ].join(' · ');
+
+    return Row(
+      children: [
+        Container(
+          key: const Key('board-swatch'),
+          width: 26,
+          height: 26,
+          decoration: BoxDecoration(
+            color: OmniCovers.colorOf(loaded?.cover),
+            borderRadius: const BorderRadius.all(Radius.circular(6)),
+          ),
+        ),
+        const SizedBox(width: OmniSpacing.sm),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                loaded?.name ?? 'Dự án',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: OmniType.bodyStrong.copyWith(color: scheme.onSurface),
+              ),
+              if (subtitle.isNotEmpty)
+                Text(
+                  subtitle,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: OmniType.micro.copyWith(
+                    color: scheme.onSurfaceVariant,
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// Nút lọc: ô 36 bo 6 trong vùng chạm 44. Đang lọc thì đảo màu (mực/nền).
+class _FilterButton extends StatelessWidget {
+  const _FilterButton({required this.active, required this.onTap});
+
+  final bool active;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+
+    return Tooltip(
+      message: 'Lọc theo người',
+      child: Semantics(
+        button: true,
+        selected: active,
+        label: 'Lọc theo người',
+        excludeSemantics: true,
+        child: InkResponse(
+          onTap: onTap,
+          radius: 22,
+          child: SizedBox.square(
+            dimension: 44,
+            child: Center(
+              child: Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  color: active ? scheme.onSurface : Colors.transparent,
+                  borderRadius: const BorderRadius.all(Radius.circular(6)),
+                ),
+                child: Icon(
+                  active ? Icons.filter_alt_rounded : Icons.filter_alt_outlined,
+                  size: OmniIconSize.md,
+                  color: active ? scheme.surface : scheme.onSurface,
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Dải tab nhóm việc dưới đầu bảng, kèm vạch đáy. Đọc rổ đã chia để có số.
+class _BoardTabs extends ConsumerWidget {
+  const _BoardTabs({
+    required this.planId,
+    required this.person,
+    required this.controller,
+    required this.current,
+  });
+
+  final String planId;
+  final BoardPerson person;
+  final PageController controller;
+  final ValueNotifier<int> current;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final scheme = Theme.of(context).colorScheme;
+    final board = ref
+        .watch(boardBucketsProvider((planId: planId, person: person)))
+        .valueOrNull;
+
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: scheme.surface,
+        border: Border(bottom: BorderSide(color: scheme.outlineVariant)),
+      ),
+      child: SizedBox(
+        height: SectionTabs.height,
+        width: double.infinity,
+        child: board == null || board.columns.isEmpty
+            ? null
+            // Chỉ dải tab dựng lại khi lướt trang; các cột đứng yên.
+            : ValueListenableBuilder<int>(
+                valueListenable: current,
+                builder: (context, index, _) => SectionTabs(
+                  sections: board.columns,
+                  current: index.clamp(0, board.columns.length - 1),
+                  countOf: board.countOf,
+                  // goTo nhảy thay vì trượt khi người dùng đã tắt hiệu ứng.
+                  // Bảng lướt ngang toàn màn hình là đúng loại chuyển động mà
+                  // cài đặt đó nhắm tới.
+                  onSelected: (i) => controller.goTo(context, i),
+                ),
+              ),
+      ),
+    );
+  }
+}
 
 /// Bảng: dải chỉ báo + các cột lướt ngang, vẽ từ rổ đã chia trong provider.
 class _Board extends ConsumerWidget {
@@ -293,20 +465,28 @@ class _Board extends ConsumerWidget {
         return Column(
           children: [
             if (board.truncated) const _TruncatedNotice(),
-            if (person.chipLabel case final String label)
-              _FilterBar(label: label, onClear: onClearPerson),
-            // Chỉ dải chỉ báo dựng lại khi lướt trang; các cột đứng yên.
-            ValueListenableBuilder<int>(
-              valueListenable: current,
-              builder: (context, index, _) => SectionIndicator(
-                sections: columns,
-                current: index.clamp(0, columns.length - 1),
-                countOf: board.countOf,
-                // goTo nhảy thay vì trượt khi người dùng đã tắt hiệu ứng. Bảng
-                // lướt ngang toàn màn hình là đúng loại chuyển động mà cài đặt
-                // đó nhắm tới.
-                onSelected: (i) => controller.goTo(context, i),
+            // Thanh "Đang lọc" trượt xuống thay vì nhảy ra: bảng đổi hình
+            // (cột ngắn đi) nên người dùng cần thấy nó đến từ đâu.
+            AnimatedSwitcher(
+              duration: OmniMotion.enabled(context)
+                  ? const Duration(milliseconds: 300)
+                  : Duration.zero,
+              transitionBuilder: (child, animation) => SizeTransition(
+                sizeFactor: animation,
+                alignment: Alignment.topCenter,
+                child: child,
               ),
+              child: switch (person.chipLabel) {
+                final String label => _FilterBar(
+                  key: const ValueKey('filter-bar'),
+                  label: label,
+                  onClear: onClearPerson,
+                ),
+                null => const SizedBox(
+                  key: ValueKey('no-filter'),
+                  width: double.infinity,
+                ),
+              },
             ),
             Expanded(
               // Nền cả app nằm SAU các cột, không sau dải nhóm việc: dải và
@@ -375,13 +555,11 @@ class _Column extends StatelessWidget {
       ),
       itemCount: tasks.length,
       separatorBuilder: (_, _) => const SizedBox(height: OmniSpacing.sm),
-      itemBuilder: (context, index) => TaskCard(
+      itemBuilder: (context, index) => BoardTaskCard(
         task: tasks[index],
-        // Tiêu đề màn đã LÀ tên dự án, và cả bảng chỉ thuộc một dự án.
-        // In lại trên từng thẻ là ba dòng giống nhau trên một màn hình.
-        // Ở "Việc của tôi" thì ngược lại: việc đến từ nhiều dự án, nên ở
-        // đó dòng này là thứ phân biệt.
-        showPlanName: false,
+        // Thẻ bảng không in tên dự án: tiêu đề màn đã LÀ tên dự án. Các thẻ
+        // hiện lần lượt, lệch 50ms mỗi thẻ (tối đa 6 nấc).
+        delay: Duration(milliseconds: 50 * index.clamp(0, 6)),
         onTap: () => context.pushNamed(
           TasksModule.detail,
           pathParameters: {'id': tasks[index].id},
@@ -398,51 +576,66 @@ class _Column extends StatelessWidget {
 /// sau một biểu tượng ở thanh tiêu đề — và nút bỏ lọc phải ở ngay cạnh, vì
 /// người bật nó lên thường không nhớ mình đã bật.
 class _FilterBar extends StatelessWidget {
-  const _FilterBar({required this.label, required this.onClear});
+  const _FilterBar({super.key, required this.label, required this.onClear});
 
   final String label;
   final VoidCallback onClear;
 
   @override
   Widget build(BuildContext context) {
-    // Dải vàng nhạt "Đang lọc: Kiệt · Bỏ lọc" (`MPlanBoard.dc.html`).
-    final (foreground, background) = OmniTone.warning.of(context);
-    final scheme = Theme.of(context).colorScheme;
+    // Khối xanh nhạt "Đang lọc: X · Bỏ lọc" (`Plan.dc.html`): cùng cặp màu với
+    // chip "hôm nay" của màn Việc, và đổi theo chế độ tối.
+    final tone = OmniTaskTones.of(context).today;
 
-    return Container(
-      width: double.infinity,
-      color: background,
-      padding: const EdgeInsets.fromLTRB(16, 4, 8, 4),
-      child: Row(
-        children: [
-          Expanded(
-            child: Text.rich(
-              TextSpan(
-                children: [
-                  const TextSpan(text: 'Đang lọc: '),
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+        OmniSpacing.lg,
+        OmniSpacing.sm,
+        OmniSpacing.lg,
+        0,
+      ),
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: tone.background,
+          borderRadius: const BorderRadius.all(Radius.circular(8)),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.only(left: OmniSpacing.md),
+          child: Row(
+            children: [
+              Expanded(
+                child: Text.rich(
                   TextSpan(
-                    text: label,
-                    style: const TextStyle(fontWeight: FontWeight.w600),
+                    children: [
+                      const TextSpan(text: 'Đang lọc: '),
+                      TextSpan(
+                        text: label,
+                        style: const TextStyle(fontWeight: FontWeight.w600),
+                      ),
+                    ],
                   ),
-                ],
+                  style: OmniType.caption.copyWith(
+                    fontWeight: FontWeight.w400,
+                    color: tone.foreground,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
               ),
-              style: OmniType.caption.copyWith(
-                fontWeight: FontWeight.w400,
-                color: scheme.onSurface,
+              TextButton(
+                onPressed: onClear,
+                style: TextButton.styleFrom(
+                  foregroundColor: tone.foreground,
+                  minimumSize: const Size(64, 44),
+                  textStyle: OmniType.caption.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                child: const Text('Bỏ lọc'),
               ),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
+            ],
           ),
-          TextButton(
-            onPressed: onClear,
-            style: TextButton.styleFrom(
-              foregroundColor: foreground,
-              textStyle: OmniType.caption.copyWith(fontWeight: FontWeight.w600),
-            ),
-            child: const Text('Bỏ lọc'),
-          ),
-        ],
+        ),
       ),
     );
   }

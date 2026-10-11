@@ -33,7 +33,10 @@ class CustomersModule extends OmniModule {
       path: '/customers',
       name: list,
       access: const AccessRequirement.any(CustomerPermissions.anyRead),
-      builder: (_, _) => const CustomersPage(),
+      builder: (_, state) => CustomersPage(
+        // `/customers?seg=co-hoi` mở thẳng đoạn Cơ hội.
+        initialSegment: state.uri.queryParameters['seg'] == 'co-hoi' ? 1 : 0,
+      ),
     ),
     // Declared before `/customers/:id` so "new" is never read as an id.
     ModuleRoute(
@@ -65,7 +68,7 @@ class CustomersModule extends OmniModule {
   List<ModuleNavEntry> navEntries() => const [
     ModuleNavEntry(
       moduleId: 'customers',
-      label: 'Khách hàng',
+      label: 'Khách',
       subtitle: 'Danh bạ và lịch sử liên hệ',
       icon: Icons.people_outline_rounded,
       selectedIcon: Icons.people_rounded,

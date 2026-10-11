@@ -44,8 +44,20 @@ class InboxFilterController extends Notifier<InboxFilter> {
 
   void setLabel(String? label) => state = state.copyWith(label: label);
 
-  void reset() => state = const InboxFilter();
+  /// Đặt lại toàn bộ, kể cả ô tìm. Báo qua [inboxFilterResetsProvider] để ô
+  /// tìm huỷ lượt gõ đang chờ — kể cả khi `search` vốn đã rỗng nên không đổi.
+  void reset() {
+    state = const InboxFilter();
+    ref.read(inboxFilterResetsProvider.notifier).state++;
+  }
+
+  /// Gỡ mọi bộ lọc được đếm trong [InboxFilter.activeCount]; giữ ô tìm (ô tìm
+  /// có nút xoá riêng).
+  void clearFilters() => state = InboxFilter(search: state.search);
 }
+
+/// Tăng mỗi lần [InboxFilterController.reset] chạy.
+final inboxFilterResetsProvider = StateProvider<int>((ref) => 0);
 
 /// Query the current filter resolves to, including the caller's user id for the
 /// "Của tôi" filter.
@@ -72,6 +84,10 @@ final inboxUnreadBadgeProvider = Provider<int>((ref) {
 final inboxLabelsProvider = FutureProvider.autoDispose<List<String>>((ref) {
   return ref.watch(inboxApiProvider).labels();
 });
+
+final quickRepliesProvider = FutureProvider.autoDispose<List<QuickReply>?>(
+  (ref) => ref.watch(inboxApiProvider).quickReplies(),
+);
 
 final conversationAssetsProvider = FutureProvider.autoDispose
     .family<ConversationAssets, String>((ref, id) {
@@ -136,7 +152,9 @@ class InboxListController
       if (batch != null) unawaited(_applyUpdates(batch));
     });
     final query = ref.watch(_inboxQueryProvider);
-    final page = await ref.watch(inboxApiProvider).list(query: query);
+    final page = await ref
+        .watch(inboxApiProvider)
+        .list(query: query, pinned: _pinnedParam());
     return ConversationListState(items: page.items, cursor: page.cursor);
   }
 
@@ -149,11 +167,14 @@ class InboxListController
   /// khác) thì bỏ: nó thuộc một danh sách không còn nữa (review M3).
   Future<void> refresh() async {
     ref.invalidate(inboxFacetsProvider);
+    // Trước `await`: sau đó provider có thể đã bị dọn, `ref` không còn dùng
+    // được.
+    _refreshPinned();
     final generation = ++_generation;
     final result = await AsyncValue.guard(() async {
       final page = await ref
           .read(inboxApiProvider)
-          .list(query: ref.read(_inboxQueryProvider));
+          .list(query: ref.read(_inboxQueryProvider), pinned: _pinnedParam());
       return ConversationListState(items: page.items, cursor: page.cursor);
     });
     if (generation != _generation) return;
@@ -164,7 +185,36 @@ class InboxListController
   /// đã cuộn (cùng đường với tin mới qua realtime).
   Future<void> mergeLatest() {
     ref.invalidate(inboxFacetsProvider);
+    _refreshPinned();
     return _catchUp();
+  }
+
+  /// Mục "Đã ghim" làm mới cùng nhịp với danh sách chính — chỉ khi nó đang
+  /// được dựng (không dựng hộ một provider không ai xem).
+  void _refreshPinned() {
+    if (!ref.exists(pinnedConversationsProvider)) return;
+    try {
+      unawaited(ref.read(pinnedConversationsProvider.notifier).refresh());
+    } catch (_) {
+      // Provider vừa bị dọn giữa hai lệnh: không có gì để làm mới.
+    }
+  }
+
+  /// `pinned=0` ở MỌI lượt tải danh sách chính: hội thoại tôi ghim nằm trong
+  /// mục "Đã ghim". Quên một chỗ là dòng ghim hiện hai lần sau lượt gộp. Tab
+  /// "Đã chặn" không có mục ghim, nên không lọc — hội thoại ghim đã chặn
+  /// phải hiện ở đó.
+  bool? _pinnedParam() =>
+      ref.read(inboxFilterProvider).quick == InboxQuickFilter.blocked
+      ? null
+      : false;
+
+  /// Hội thoại [c] có thuộc danh sách CHÍNH không: như [InboxFilter.matches],
+  /// cộng luật "dòng ghim ở mục Đã ghim" (trừ tab "Đã chặn").
+  bool? _belongs(Conversation c) {
+    final filter = ref.read(inboxFilterProvider);
+    if (c.isPinned && filter.quick != InboxQuickFilter.blocked) return false;
+    return filter.matches(c, currentUserId: ref.read(sessionProvider).user?.id);
   }
 
   /// Tín hiệu hay nhịp poll: gộp trang 1. Danh sách đang LỖI (chưa có giá trị
@@ -188,6 +238,7 @@ class InboxListController
           .list(
             query: ref.read(_inboxQueryProvider),
             before: current.cursor.nextBefore,
+            pinned: _pinnedParam(),
           );
       // The list was rebuilt while this page was in flight (filter change,
       // realtime signal, pull-to-refresh): its page 2 belongs to a list that
@@ -236,6 +287,24 @@ class InboxListController
     );
   }
 
+  /// Áp một thay đổi tự mình vừa làm (đóng, đọc, gán, nhãn) và XÉT LẠI theo
+  /// bộ lọc — cùng vị từ với server ([InboxFilter.matches]). Hội thoại vừa
+  /// lưu trữ rời tab "Tất cả" ngay; không tự xét được (đang tìm) thì vá.
+  ///
+  /// Khớp mà chưa có trên màn thì CHÈN (vd vừa bỏ ghim: dòng rời mục "Đã
+  /// ghim" và phải về đúng chỗ ở đây, không biến khỏi cả hai mục).
+  void reconcile(Conversation updated) {
+    switch (_belongs(updated)) {
+      case false:
+        _remove({updated.id});
+      case true:
+        _insert(updated);
+      case null:
+        patch(updated);
+    }
+    ref.invalidate(inboxFacetsProvider);
+  }
+
   /// Vá theo id tối đa bấy nhiêu dòng mỗi loạt; nhiều hơn (gán hàng loạt)
   /// thì làm mới trang 1 kiểu gộp — một request thay vì hàng chục.
   static const _maxPatchIds = 10;
@@ -257,15 +326,21 @@ class InboxListController
     final current = state.valueOrNull;
     if (current == null) return;
     final generation = _generation;
-    final filter = ref.read(inboxFilterProvider);
-    final userId = ref.read(sessionProvider).user?.id;
+    final blockedTab =
+        ref.read(inboxFilterProvider).quick == InboxQuickFilter.blocked;
 
     final loaded = {for (final c in current.items) c.id};
     final deleted = <String>{};
     var fetch = <String>[];
     var merge = batch.unscoped;
     batch.reasonsById.forEach((id, reasons) {
-      if (reasons.contains('deleted')) {
+      // Vừa bị chặn: bỏ dòng NGAY, không hỏi lại — kể cả khi loạt quá dài
+      // phải gộp trang 1, vì gộp trang 1 không chạm tới dòng ở trang 3.
+      final justBlocked =
+          !blockedTab &&
+          reasons.contains('blocked') &&
+          !reasons.contains('unblocked');
+      if (reasons.contains('deleted') || justBlocked) {
         if (loaded.contains(id)) deleted.add(id);
       } else if (loaded.contains(id) || !reasons.every((r) => r == 'read')) {
         fetch.add(id);
@@ -301,7 +376,7 @@ class InboxListController
     if (generation != _generation) return;
 
     for (final c in fresh) {
-      final matches = filter.matches(c, currentUserId: userId);
+      final matches = _belongs(c);
       if (matches == null) {
         if (loaded.contains(c.id)) patch(c);
         merge = true;
@@ -350,7 +425,7 @@ class InboxListController
     try {
       page = await ref
           .read(inboxApiProvider)
-          .list(query: ref.read(_inboxQueryProvider));
+          .list(query: ref.read(_inboxQueryProvider), pinned: _pinnedParam());
     } catch (_) {
       return;
     }
@@ -388,6 +463,7 @@ class InboxListController
             .list(
               query: ref.read(_inboxQueryProvider),
               before: tail.cursor.nextBefore,
+              pinned: _pinnedParam(),
             );
       } catch (_) {
         return;
@@ -451,6 +527,124 @@ final inboxListProvider =
       InboxListController,
       ConversationListState
     >(InboxListController.new);
+
+/// Mục "Đã ghim" ở đầu Hộp thư: MỘT trang `pinned=1&per_page=50` theo cùng
+/// bộ lọc với danh sách chính (danh sách chính `pinned=0`), nên hai mục gộp
+/// lại đúng bằng kết quả bộ lọc, không trùng, không sót.
+final pinnedConversationsProvider =
+    AutoDisposeAsyncNotifierProvider<
+      PinnedConversationsController,
+      List<Conversation>
+    >(PinnedConversationsController.new);
+
+class PinnedConversationsController
+    extends AutoDisposeAsyncNotifier<List<Conversation>> {
+  /// = trần ghim của server (`InboxController::PIN_LIMIT`): mục luôn gọn
+  /// trong một trang.
+  static const pageSize = 50;
+
+  int _generation = 0;
+
+  @override
+  Future<List<Conversation>> build() async {
+    _generation++;
+    ref.listen<int>(inboxListSignalProvider, (previous, next) {
+      if (previous != next) unawaited(refresh());
+    });
+    ref.listen<ConversationUpdateBatch?>(inboxConversationUpdatesProvider, (
+      _,
+      batch,
+    ) {
+      if (batch != null) _onUpdates(batch);
+    });
+    final query = ref.watch(_inboxQueryProvider);
+    // Tab "Đã chặn": không có mục ghim.
+    if (ref.read(inboxFilterProvider).quick == InboxQuickFilter.blocked) {
+      return const [];
+    }
+    return _fetch(query);
+  }
+
+  Future<List<Conversation>> _fetch(Map<String, dynamic> query) async {
+    final page = await ref
+        .read(inboxApiProvider)
+        .list(query: query, pinned: true, perPage: pageSize);
+    // `is_pinned` là sự thật: API cũ không hiểu `pinned` trả cả danh sách,
+    // và mục ghim không được thành bản sao của danh sách chính.
+    return [
+      for (final c in page.items)
+        if (c.isPinned && !c.isBlocked) c,
+    ];
+  }
+
+  /// Tải lại; lỗi thì GIỮ dữ liệu cũ (mục ghim không bao giờ làm hỏng màn).
+  Future<void> refresh() async {
+    if (ref.read(inboxFilterProvider).quick == InboxQuickFilter.blocked) {
+      return;
+    }
+    final generation = ++_generation;
+    try {
+      final items = await _fetch(ref.read(_inboxQueryProvider));
+      if (generation != _generation) return;
+      state = AsyncData(items);
+    } catch (_) {
+      // Lượt sau sửa; đang có dữ liệu thì giữ.
+    }
+  }
+
+  /// `conversation.updated`: vừa chặn thì bỏ ngay; đụng tới một dòng đang
+  /// ghim hoặc lý do khác `read` thì tải lại (≤ 50 dòng, một request).
+  void _onUpdates(ConversationUpdateBatch batch) {
+    final shown = {for (final c in state.valueOrNull ?? const []) c.id};
+    var reload = batch.unscoped;
+    batch.reasonsById.forEach((id, reasons) {
+      if (reasons.contains('deleted') ||
+          (reasons.contains('blocked') && !reasons.contains('unblocked'))) {
+        remove(id);
+      } else if (shown.contains(id) || !reasons.every((r) => r == 'read')) {
+        reload = true;
+      }
+    });
+    if (reload) unawaited(refresh());
+  }
+
+  /// Áp kết quả một thao tác của chính mình: không còn ghim / đã chặn / hết
+  /// khớp bộ lọc → bỏ; còn lại chèn hoặc thay, theo `last_message_at`.
+  void upsert(Conversation c) {
+    final current = state.valueOrNull;
+    if (current == null) return;
+    final filter = ref.read(inboxFilterProvider);
+    if (filter.quick == InboxQuickFilter.blocked) return;
+    final userId = ref.read(sessionProvider).user?.id;
+    if (!c.isPinned ||
+        c.isBlocked ||
+        filter.matches(c, currentUserId: userId) == false) {
+      remove(c.id);
+      return;
+    }
+    final rest = [
+      for (final x in current)
+        if (x.id != c.id) x,
+    ];
+    final at = c.lastMessageAt;
+    var index = at == null
+        ? -1
+        : rest.indexWhere(
+            (x) => x.lastMessageAt == null || x.lastMessageAt!.isBefore(at),
+          );
+    if (index < 0) index = rest.length;
+    state = AsyncData([...rest]..insert(index, c));
+  }
+
+  void remove(String id) {
+    final current = state.valueOrNull;
+    if (current == null || !current.any((c) => c.id == id)) return;
+    state = AsyncData([
+      for (final c in current)
+        if (c.id != id) c,
+    ]);
+  }
+}
 
 final conversationProvider = FutureProvider.autoDispose
     .family<Conversation, String>((ref, id) {

@@ -12,6 +12,7 @@ void main() {
     int unread = 0,
     String? priority,
     List<String> tags = const [],
+    String? blockedAt,
   }) => Conversation.fromJson({
     'id': 'c1',
     'channel': 'zalo',
@@ -20,6 +21,62 @@ void main() {
     'unread_count': unread,
     'priority': ?priority,
     'tags': tags,
+    'blocked_at': ?blockedAt,
+  });
+
+  group('Đã chặn (Hộp thư mobile)', () {
+    const at = '2026-10-10T03:00:00.000Z';
+
+    test('toQuery chỉ gửi blocked=1, không kèm status', () {
+      final query = const InboxFilter(
+        quick: InboxQuickFilter.blocked,
+      ).toQuery(currentUserId: 'u1');
+      expect(query, {'blocked': '1'});
+    });
+
+    test('nhãn "Đã chặn", facet không có số', () {
+      expect(InboxQuickFilter.blocked.label, 'Đã chặn');
+      expect(const InboxFacets(total: 9).countFor(InboxQuickFilter.blocked), 0);
+    });
+
+    test('hội thoại đã chặn không thuộc tab nào trừ "Đã chặn"', () {
+      final blocked = conv(blockedAt: at);
+      final blockedClosed = conv(status: 'closed', blockedAt: at);
+      for (final q in InboxQuickFilter.values) {
+        if (q == InboxQuickFilter.blocked) continue;
+        for (final c in [blocked, blockedClosed]) {
+          expect(
+            InboxFilter(quick: q).matches(c, currentUserId: 'u1'),
+            isFalse,
+            reason: '$q ${c.status}',
+          );
+        }
+      }
+      for (final c in [blocked, blockedClosed]) {
+        expect(
+          const InboxFilter(
+            quick: InboxQuickFilter.blocked,
+          ).matches(c, currentUserId: 'u1'),
+          isTrue,
+        );
+      }
+    });
+
+    test('tab "Đã chặn" loại hội thoại chưa chặn; kênh vẫn áp', () {
+      expect(
+        const InboxFilter(
+          quick: InboxQuickFilter.blocked,
+        ).matches(conv(), currentUserId: 'u1'),
+        isFalse,
+      );
+      expect(
+        const InboxFilter(
+          quick: InboxQuickFilter.blocked,
+          channel: Channel.facebook,
+        ).matches(conv(blockedAt: at), currentUserId: 'u1'),
+        isFalse,
+      );
+    });
   });
 
   test(

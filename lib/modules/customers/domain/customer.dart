@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import '../../../core/domain/channel.dart';
 import '../../../core/utils/formatters.dart';
 import '../../../core/utils/json.dart';
+import 'customer_field.dart';
 
 enum CustomerStatus {
   fresh,
@@ -149,7 +150,8 @@ class Customer {
     };
   }
 
-  bool get hasPhone => phone.trim().isNotEmpty;
+  /// Có ít nhất một chữ số — "chưa có", "-" không quay/nhắn được.
+  bool get hasPhone => phone.contains(RegExp(r'\d'));
   bool get hasEmail => email.trim().isNotEmpty;
 
   /// The web's "Cá nhân / Doanh nghiệp" (`metadata.party_type`); a record
@@ -181,6 +183,9 @@ class Customer {
     final origin = this.origin;
 
     if (origin == null || id.isEmpty) {
+      // Bản nháp tạo mới chưa chọn người phụ trách: null ở đây là "chưa chọn",
+      // không phải "bỏ gán" — không gửi khoá.
+      if (ownerId == null) fields.remove('assigned_sales_rep_id');
       return {
         'legal_name': name,
         ...fields,
@@ -203,6 +208,21 @@ class Customer {
         origin.metadata.containsKey('channel')) {
       changedMeta['channel'] = null;
     }
+    // Bỏ gán: tên người phụ trách còn rơi về `metadata.owner_name` (web đọc cả
+    // `sales_account`) — không xoá thì nhãn cũ hiện lại sau khi lưu (như web).
+    // Khách chỉ có tên (metadata.owner_name, không có id) cũng là "có người":
+    // bản nháp đã xoá cả id lẫn tên mới là bỏ gán (sửa phụ trường khác của
+    // khách đó giữ nguyên tên, không bị coi là bỏ gán).
+    final unassign =
+        ownerId == null &&
+        ownerName == null &&
+        (origin.ownerId != null || origin.ownerName != null);
+    if (unassign) {
+      for (final legacy in const ['owner_name', 'sales_account']) {
+        final old = origin.metadata[legacy];
+        if (old != null && '$old'.trim().isNotEmpty) changedMeta[legacy] = null;
+      }
+    }
 
     return {
       if (origin.legalName.isEmpty && !isBusiness && name != origin.name)
@@ -210,6 +230,7 @@ class Customer {
       for (final entry in fields.entries)
         if (!_same(entry.value, loadedFields[entry.key]))
           entry.key: entry.value,
+      if (unassign && origin.ownerId == null) 'assigned_sales_rep_id': null,
       if (changedMeta.isNotEmpty) 'metadata': changedMeta,
     };
   }
@@ -223,7 +244,9 @@ class Customer {
     'address': address,
     'tax_code': taxCode,
     'customer_status': statusCode,
-    'assigned_sales_rep_id': ?ownerId,
+    // null là giá trị thật: so với bản gốc nên chỉ được gửi khi bản gốc có
+    // người (= bỏ gán); máy chủ ghi null (UpdateCustomer::CLEARABLE).
+    'assigned_sales_rep_id': ownerId,
   };
 
   /// The metadata keys this app writes. Notes go under the web's `notes` AND
@@ -269,6 +292,26 @@ class Customer {
     status: status,
   )._withNote(note);
 
+  /// Bản nháp với MỘT trường đổi — đầu vào của [toPayload] cho sửa tại chỗ.
+  /// [value]: `String` (phone/email/address/note), `({String? id, String? name})`
+  /// (owner; id null = bỏ gán), `List<String>` (tags).
+  Customer patch(CustomerField field, Object? value) => switch (field) {
+    CustomerField.phone => copyWith(phone: (value as String).trim()),
+    CustomerField.email => copyWith(email: (value as String).trim()),
+    CustomerField.address => copyWith(address: (value as String).trim()),
+    CustomerField.note => _withNote((value as String).trim()),
+    CustomerField.owner => switch (value as ({String? id, String? name})) {
+      // Xoá trước để tên cũ không sống sót khi tên mới null.
+      (id: final id?, name: final name) => copyWith(
+        clearOwner: true,
+      ).copyWith(ownerId: id, ownerName: name),
+      _ => copyWith(clearOwner: true),
+    },
+    CustomerField.tags => copyWith(
+      tags: List.unmodifiable(value as List<String>),
+    ),
+  };
+
   Customer copyWith({
     String? name,
     String? contactName,
@@ -280,6 +323,8 @@ class Customer {
     List<String>? tags,
     CustomerStatus? status,
     String? ownerId,
+    String? ownerName,
+    bool clearOwner = false,
     String? note,
   }) {
     return Customer(
@@ -297,8 +342,8 @@ class Customer {
       lifetimeValue: lifetimeValue,
       status: status ?? this.status,
       customerType: customerType,
-      ownerId: ownerId ?? this.ownerId,
-      ownerName: ownerName,
+      ownerId: clearOwner ? null : (ownerId ?? this.ownerId),
+      ownerName: clearOwner ? null : (ownerName ?? this.ownerName),
       note: note ?? this.note,
       lastInteractionAt: lastInteractionAt,
       createdAt: createdAt,

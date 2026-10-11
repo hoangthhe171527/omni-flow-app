@@ -7,11 +7,16 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../../../core/utils/formatters.dart';
 import '../../../../design/components/components.dart';
+import '../../../../design/platform/omni_motion_scope.dart';
 import '../../../../design/tokens/tokens.dart';
 import '../../domain/message.dart';
 import 'message_attachments.dart';
 import 'message_images.dart';
+import 'message_actions_overlay.dart';
+import 'composer_snack_bar.dart';
+import 'heart_burst.dart';
 import 'message_link_preview.dart';
+import 'team_reactions.dart';
 
 class MessageBubble extends StatelessWidget {
   const MessageBubble({
@@ -24,6 +29,12 @@ class MessageBubble extends StatelessWidget {
     this.onDiscard,
     this.onReply,
     this.onPin,
+    this.onCreateTask,
+    this.onCreateOpportunity,
+    this.onReact,
+    this.myUserId,
+    this.myName,
+    this.memberNames = const {},
   });
 
   final Message message;
@@ -45,9 +56,41 @@ class MessageBubble extends StatelessWidget {
   final VoidCallback? onReply;
   final VoidCallback? onPin;
 
+  /// Menu bấm giữ: ẩn mục tương ứng khi null (thiếu quyền / tính năng tắt).
+  final VoidCallback? onCreateTask;
+  final VoidCallback? onCreateOpportunity;
+
+  /// Thả / bỏ cảm xúc NỘI BỘ (`team_reactions`). null = không có thanh cảm xúc
+  /// trong menu và không bắt bấm đúp (thiếu quyền, tin nháp, ghi chú).
+  final ValueChanged<String>? onReact;
+
+  /// Người đang xem — để biết viên nào là của tôi và bấm đúp là thả hay bỏ.
+  final String? myUserId;
+
+  /// Tên của tôi trong phiên — cho viên của tôi khi server chưa có `user_name`.
+  final String? myName;
+
+  /// Tên theo `user_id` từ danh bạ đội (khi đã nạp), ưu tiên hơn tên server
+  /// chụp lại lúc thả.
+  final Map<String, String> memberNames;
+
+  Future<void> _copy(BuildContext context) async {
+    // Lấy messenger TRƯỚC khi chờ: sau await, context có thể đã gỡ.
+    final messenger = ScaffoldMessenger.maybeOf(context);
+    var notice = 'Đã sao chép.';
+    try {
+      await Clipboard.setData(ClipboardData(text: message.text));
+    } on PlatformException {
+      notice = 'Không sao chép được. Vui lòng thử lại.';
+    }
+    if (!context.mounted) return;
+    messenger?.showSnackBar(composerSnackBar(context, notice));
+  }
+
   @override
   Widget build(BuildContext context) {
-    if (message.isNote) return _NoteBubble(message: message);
+    // Ghi chú nội bộ không hiện trong hội thoại (danh sách đã lọc).
+    if (message.isNote) return const SizedBox.shrink();
 
     final scheme = Theme.of(context).colorScheme;
     final outbound = message.isOutbound;
@@ -63,7 +106,7 @@ class MessageBubble extends StatelessWidget {
         : outbound
         ? OmniColors.chat(
             context,
-            OmniColors.chatOutbound,
+            OmniColors.primary,
             OmniColors.chatOutboundDark,
           )
         : OmniColors.chat(
@@ -71,15 +114,38 @@ class MessageBubble extends StatelessWidget {
             OmniColors.chatInbound,
             OmniColors.chatInboundDark,
           );
-    // Dark mode carries white text on both sides; light mode is dark-on-pale.
+    // Tin ra sáng là nền primary chữ trắng; dark mode trắng cả hai phía; tin
+    // vào sáng là chữ tối trên nền trắng.
     final onBubble = failed
         ? scheme.onErrorContainer
-        : dark
+        : dark || outbound
         ? Colors.white
         : scheme.onSurface;
     final metaColor = dark
         ? Colors.white.withValues(alpha: 0.55)
+        : outbound && !failed
+        ? Colors.white.withValues(alpha: 0.9)
         : OmniColors.chatMeta;
+    // Góc ngoài 18; phía "đuôi" (phải với tin ra, trái với tin vào) chỉ bo 4
+    // khi tin nằm trong một nhóm: đầu nhóm giữ 18 ở trên, cuối nhóm giữ 18 ở
+    // dưới, tin giữa nhóm cả hai góc 4.
+    final onPrimaryBubble = outbound && !dark && !failed;
+    final tailTop = Radius.circular(groupedWithPrevious ? 4 : 18);
+    final tailBottom = Radius.circular(isLastInGroup ? 18 : 4);
+    const round = Radius.circular(18);
+    final bubbleRadius = outbound
+        ? BorderRadius.only(
+            topLeft: round,
+            bottomLeft: round,
+            topRight: tailTop,
+            bottomRight: tailBottom,
+          )
+        : BorderRadius.only(
+            topRight: round,
+            bottomRight: round,
+            topLeft: tailTop,
+            bottomLeft: tailBottom,
+          );
 
     final images = message.recalled
         ? const <MessageAttachment>[]
@@ -99,6 +165,8 @@ class MessageBubble extends StatelessWidget {
         message.text.isNotEmpty ||
         files.isNotEmpty ||
         videos.isNotEmpty;
+    final hasCustomerReaction =
+        message.reaction != null && message.reaction!.isNotEmpty;
     final mediaHeroPrefix = message.id.isNotEmpty
         ? message.id
         : 'local-${identityHashCode(message)}';
@@ -116,6 +184,7 @@ class MessageBubble extends StatelessWidget {
             status: message.status,
             fallbackColor: color,
             showLabel: isLastInGroup,
+            onPrimary: onPrimaryBubble,
           ),
         ],
         if (message.pinned) ...[
@@ -134,19 +203,38 @@ class MessageBubble extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
       decoration: BoxDecoration(
         color: bubbleColor,
-        borderRadius: BorderRadius.circular(18),
-        // No shadow at all. The tinted canvas already separates the bubbles by
-        // value, so the drop shadow was doing no work — it only fuzzed every
-        // edge in the thread, which is what reads as cheap at this scale.
-        boxShadow: null,
+        borderRadius: bubbleRadius,
+        // Chỉ tin vào (sáng) có bóng nhẹ `0 1 2 rgba(11,26,51,.08)` để nổi
+        // khỏi nền; tin ra đã đủ tương phản bằng màu.
+        boxShadow: !outbound && !dark && !failed
+            ? const [
+                BoxShadow(
+                  color: Color(0x140B1A33),
+                  blurRadius: 2,
+                  offset: Offset(0, 1),
+                ),
+              ]
+            : null,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           if (message.replyToMessageId != null)
-            _QuotedMessage(message: message),
+            _QuotedMessage(message: message, onPrimary: onPrimaryBubble),
           if (files.isNotEmpty) ...[
-            MessageFileAttachments(attachments: files),
+            if (onPrimaryBubble)
+              // Tệp trên nền primary: đảo sang chữ trắng.
+              Theme(
+                data: Theme.of(context).copyWith(
+                  colorScheme: scheme.copyWith(
+                    onSurface: Colors.white,
+                    onSurfaceVariant: Colors.white.withValues(alpha: 0.8),
+                  ),
+                ),
+                child: MessageFileAttachments(attachments: files),
+              )
+            else
+              MessageFileAttachments(attachments: files),
             if (message.text.isNotEmpty) const SizedBox(height: OmniSpacing.sm),
           ],
           if (message.recalled)
@@ -158,7 +246,11 @@ class MessageBubble extends StatelessWidget {
               ),
             )
           else if (message.text.isNotEmpty)
-            _MessageText(text: message.text, color: onBubble),
+            _MessageText(
+              text: message.text,
+              color: onBubble,
+              linkColor: onPrimaryBubble ? Colors.white : null,
+            ),
           if (message.text.isNotEmpty && _urlPattern.hasMatch(message.text))
             MessageLinkPreview(
               url: _urlPattern.firstMatch(message.text)!.group(0)!,
@@ -211,11 +303,26 @@ class MessageBubble extends StatelessWidget {
                 : const SizedBox(width: 32),
           );
 
+    final myReaction = myUserId == null
+        ? null
+        : message.teamReactions
+              .where((r) => r.userId == myUserId)
+              .firstOrNull
+              ?.emoji;
+
     return _ReplySwipe(
-      enabled: onReply != null,
+      enabled: onReply != null || onReact != null,
       outbound: outbound,
       onReply: onReply,
+      onReact: onReact,
+      myReaction: myReaction,
       onPin: onPin,
+      pinned: message.pinned,
+      onCopy: message.text.isEmpty || message.recalled
+          ? null
+          : () => _copy(context),
+      onCreateTask: onCreateTask,
+      onCreateOpportunity: onCreateOpportunity,
       child: Padding(
         // 2 within a run, 10 when the speaker changes: the gap is what tells the
         // eye where one person stopped and the other started.
@@ -257,27 +364,45 @@ class MessageBubble extends StatelessWidget {
                   Stack(
                     clipBehavior: Clip.none,
                     children: [
-                      content,
-                      if (message.reaction != null &&
-                          message.reaction!.isNotEmpty)
+                      onReact == null
+                          ? content
+                          : _BubbleDoubleTap(child: content),
+                      // Cảm xúc của KHÁCH: vòng tròn ở góc bong bóng. Cảm xúc
+                      // nội bộ của đội là viên riêng bên dưới — hai thứ không
+                      // bao giờ đè nhau.
+                      if (hasCustomerReaction)
                         Positioned(
                           right: outbound ? null : -6,
                           left: outbound ? -6 : null,
                           bottom: -8,
-                          child: Container(
-                            padding: const EdgeInsets.all(3),
-                            decoration: BoxDecoration(
-                              color: scheme.surface,
-                              shape: BoxShape.circle,
-                              border: Border.all(color: scheme.outline),
-                            ),
-                            child: Text(
-                              message.reaction!,
-                              style: OmniChatType.meta,
+                          child: Semantics(
+                            label: 'Cảm xúc của khách: ${message.reaction}',
+                            excludeSemantics: true,
+                            child: Container(
+                              padding: const EdgeInsets.all(3),
+                              decoration: BoxDecoration(
+                                color: scheme.surface,
+                                shape: BoxShape.circle,
+                                border: Border.all(color: scheme.outline),
+                              ),
+                              child: Text(
+                                message.reaction!,
+                                style: OmniChatType.meta,
+                              ),
                             ),
                           ),
                         ),
                     ],
+                  ),
+                  // Luôn dựng (rỗng thì không vẽ gì): giữ state qua các lần
+                  // đổi cảm xúc, để viên MỚI nảy vào còn viên cũ thì không.
+                  TeamReactionChips(
+                    reactions: message.teamReactions,
+                    myUserId: myUserId,
+                    myName: myName,
+                    memberNames: memberNames,
+                    alignEnd: outbound,
+                    lift: !hasCustomerReaction,
                   ),
                   _MetaLine(
                     message: message,
@@ -301,10 +426,13 @@ final _urlPattern = RegExp(
 );
 
 class _MessageText extends StatefulWidget {
-  const _MessageText({required this.text, required this.color});
+  const _MessageText({required this.text, required this.color, this.linkColor});
 
   final String text;
   final Color color;
+
+  /// Màu liên kết; null = xanh kênh chat. Tin ra nền primary dùng trắng.
+  final Color? linkColor;
 
   @override
   State<_MessageText> createState() => _MessageTextState();
@@ -324,7 +452,10 @@ class _MessageTextState extends State<_MessageText> {
   @override
   void didUpdateWidget(covariant _MessageText oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.text != widget.text) _spans = _buildSpans();
+    if (oldWidget.text != widget.text ||
+        oldWidget.linkColor != widget.linkColor) {
+      _spans = _buildSpans();
+    }
   }
 
   @override
@@ -366,10 +497,10 @@ class _MessageTextState extends State<_MessageText> {
         TextSpan(
           text: url,
           recognizer: recognizer,
-          style: const TextStyle(
-            color: OmniColors.chatPrimary,
+          style: TextStyle(
+            color: widget.linkColor ?? OmniColors.chatPrimary,
             decoration: TextDecoration.underline,
-            decorationColor: OmniColors.chatPrimary,
+            decorationColor: widget.linkColor ?? OmniColors.chatPrimary,
           ),
         ),
       );
@@ -392,6 +523,23 @@ class _MessageTextState extends State<_MessageText> {
   }
 }
 
+/// Bấm đúp lên CHÍNH bong bóng = thả / bỏ ❤️ (review Task 4: trước đây cả
+/// hàng rộng hết màn, viên cảm xúc và "Gửi lại" cũng bắt bấm đúp). Tim bay vẫn
+/// do [_ReplySwipe] vẽ. Chỉ được dựng khi có `onReact`: nhận dạng bấm đúp làm
+/// chạm đơn (mở ảnh, mở link) trễ tới 300ms, nên người chỉ đọc không phải chịu.
+class _BubbleDoubleTap extends StatelessWidget {
+  const _BubbleDoubleTap({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) => GestureDetector(
+    onDoubleTap: () =>
+        context.findAncestorStateOfType<_ReplySwipeState>()?._onDoubleTap(),
+    child: child,
+  );
+}
+
 class _ReplySwipe extends StatefulWidget {
   const _ReplySwipe({
     required this.child,
@@ -399,13 +547,27 @@ class _ReplySwipe extends StatefulWidget {
     required this.enabled,
     this.onReply,
     this.onPin,
+    this.onCopy,
+    this.pinned = false,
+    this.onCreateTask,
+    this.onCreateOpportunity,
+    this.onReact,
+    this.myReaction,
   });
 
   final Widget child;
   final bool outbound;
   final bool enabled;
   final VoidCallback? onReply;
+  final ValueChanged<String>? onReact;
+
+  /// Emoji nội bộ tôi đang thả trên tin này (null = chưa thả).
+  final String? myReaction;
   final VoidCallback? onPin;
+  final VoidCallback? onCopy;
+  final bool pinned;
+  final VoidCallback? onCreateTask;
+  final VoidCallback? onCreateOpportunity;
 
   @override
   State<_ReplySwipe> createState() => _ReplySwipeState();
@@ -458,61 +620,81 @@ class _ReplySwipeState extends State<_ReplySwipe>
     _reset();
   }
 
-  Future<void> _showActions() async {
-    final action = await showModalBottomSheet<String>(
+  /// Chạy sau khi hộp thoại đã đóng; cây có thể đã đổi (tin bị thu hồi, trang
+  /// đóng) nên không chạm gì nếu state đã gỡ.
+  VoidCallback _guarded(VoidCallback? action) => () {
+    if (mounted) action?.call();
+  };
+
+  /// Tăng mỗi lần thả tim để tim bay mới thay hẳn tim đang bay (key mới).
+  int _burst = 0;
+  bool _bursting = false;
+
+  /// Bấm đúp = thả / bỏ ❤️ của tôi (server tự đảo). Tim chỉ bay khi THẢ, và
+  /// chỉ khi được phép chuyển động.
+  void _onDoubleTap() {
+    final react = widget.onReact;
+    if (react == null) return;
+    final adding = widget.myReaction != _heart;
+    if (adding) {
+      HapticFeedback.lightImpact();
+      if (OmniMotion.enabled(context)) {
+        setState(() {
+          _burst++;
+          _bursting = true;
+        });
+      }
+    }
+    react(_heart);
+  }
+
+  static const _heart = '❤️';
+
+  void _showActions() {
+    HapticFeedback.selectionClick();
+    showMessageActions(
       context: context,
-      showDragHandle: true,
-      isScrollControlled: true,
-      useSafeArea: true,
-      constraints: const BoxConstraints(maxWidth: 520),
-      builder: (context) => SafeArea(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxHeight: 220),
-          child: ListView(
-            shrinkWrap: true,
-            padding: const EdgeInsets.only(bottom: 8),
-            children: [
-              const Padding(
-                padding: EdgeInsets.fromLTRB(20, 4, 20, 8),
-                child: Text(
-                  'Thao tác tin nhắn',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(fontWeight: FontWeight.w600),
-                ),
-              ),
-              if (widget.onReply != null)
-                ListTile(
-                  dense: true,
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 16),
-                  leading: const Icon(Icons.reply_rounded),
-                  title: const Text(
-                    'Trả lời',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  onTap: () => Navigator.pop(context, 'reply'),
-                ),
-              if (widget.onPin != null)
-                ListTile(
-                  dense: true,
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 16),
-                  leading: const Icon(Icons.push_pin_outlined),
-                  title: const Text(
-                    'Ghim hoặc bỏ ghim',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  onTap: () => Navigator.pop(context, 'pin'),
-                ),
-            ],
+      bubble: widget.child,
+      outbound: widget.outbound,
+      myReaction: widget.myReaction,
+      onReact: widget.onReact == null
+          ? null
+          : (emoji) {
+              if (mounted) widget.onReact?.call(emoji);
+            },
+      items: [
+        if (widget.onReply != null)
+          MessageActionItem(
+            label: 'Trả lời',
+            icon: Icons.reply_rounded,
+            onTap: _guarded(widget.onReply),
           ),
-        ),
-      ),
+        if (widget.onCopy != null)
+          MessageActionItem(
+            label: 'Sao chép',
+            icon: Icons.copy_rounded,
+            onTap: _guarded(widget.onCopy),
+          ),
+        if (widget.onPin != null)
+          MessageActionItem(
+            label: widget.pinned ? 'Bỏ ghim' : 'Ghim tin',
+            icon: Icons.push_pin_outlined,
+            onTap: _guarded(widget.onPin),
+          ),
+        if (widget.onCreateTask != null)
+          MessageActionItem(
+            label: 'Tạo việc từ tin này',
+            icon: Icons.task_alt_rounded,
+            onTap: _guarded(widget.onCreateTask),
+          ),
+        if (widget.onCreateOpportunity != null)
+          MessageActionItem(
+            label: 'Tạo cơ hội',
+            icon: Icons.trending_up_rounded,
+            onTap: _guarded(widget.onCreateOpportunity),
+          ),
+      ],
     );
-    if (!mounted) return;
-    if (action == 'reply') widget.onReply?.call();
-    if (action == 'pin') widget.onPin?.call();
   }
 
   @override
@@ -522,11 +704,33 @@ class _ReplySwipeState extends State<_ReplySwipe>
     final direction = widget.outbound ? -1.0 : 1.0;
     final progress = (_distance / _triggerDistance).clamp(0.0, 1.0);
 
-    return GestureDetector(
+    return RawGestureDetector(
       behavior: HitTestBehavior.translucent,
-      onLongPress: _showActions,
-      onHorizontalDragUpdate: _onDragUpdate,
-      onHorizontalDragEnd: _onDragEnd,
+      gestures: {
+        // 420ms như bản mẫu (mặc định của Flutter là 500). Kéo ngang thắng cuộc
+        // đua nếu ngón tay đã đi trước khi đủ giờ, nên vuốt-để-trả-lời và cuộn
+        // danh sách không bị bấm giữ nuốt.
+        LongPressGestureRecognizer:
+            GestureRecognizerFactoryWithHandlers<LongPressGestureRecognizer>(
+              () => LongPressGestureRecognizer(
+                duration: const Duration(milliseconds: 420),
+              ),
+              (recognizer) => recognizer.onLongPress = _showActions,
+            ),
+        if (widget.onReply != null)
+          HorizontalDragGestureRecognizer:
+              GestureRecognizerFactoryWithHandlers<
+                HorizontalDragGestureRecognizer
+              >(
+                HorizontalDragGestureRecognizer.new,
+                (recognizer) => recognizer
+                  ..onUpdate = _onDragUpdate
+                  ..onEnd = _onDragEnd,
+              ),
+        // Bấm đúp KHÔNG bắt ở đây (cả hàng rộng hết màn): chỉ bong bóng mới
+        // nhận — xem [_BubbleDoubleTap]. Viên cảm xúc và "Gửi lại" giữ chạm
+        // đơn tức thì.
+      },
       child: Stack(
         clipBehavior: Clip.none,
         children: [
@@ -555,6 +759,23 @@ class _ReplySwipeState extends State<_ReplySwipe>
             offset: Offset(direction * _distance, 0),
             child: widget.child,
           ),
+          // Tim bay TRÊN tin, giữa chiều dọc, cách mép trong 24
+          // (`Thread.dc.html`).
+          if (_bursting)
+            Positioned(
+              top: 0,
+              bottom: 0,
+              right: widget.outbound ? 24 : null,
+              left: widget.outbound ? null : 24,
+              child: Center(
+                child: HeartBurst(
+                  key: ValueKey('heart-burst-$_burst'),
+                  onDone: () {
+                    if (mounted) setState(() => _bursting = false);
+                  },
+                ),
+              ),
+            ),
         ],
       ),
     );
@@ -562,13 +783,20 @@ class _ReplySwipeState extends State<_ReplySwipe>
 }
 
 class _QuotedMessage extends StatelessWidget {
-  const _QuotedMessage({required this.message});
+  const _QuotedMessage({required this.message, this.onPrimary = false});
 
   final Message message;
+
+  /// Nằm trong bong bóng tin ra nền primary: màu phải đảo sang trắng.
+  final bool onPrimary;
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final accent = onPrimary ? Colors.white : OmniColors.chatPrimary;
+    final bodyColor = onPrimary
+        ? Colors.white.withValues(alpha: 0.85)
+        : scheme.onSurfaceVariant;
     final author = message.replyToAuthorName ?? 'Tin nhắn trước đó';
     final text = message.replyToText?.trim();
     return Container(
@@ -576,13 +804,12 @@ class _QuotedMessage extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 7),
       padding: const EdgeInsets.fromLTRB(8, 5, 8, 5),
       decoration: BoxDecoration(
-        color: scheme.onSurface.withValues(alpha: 0.06),
+        color: onPrimary
+            ? Colors.white.withValues(alpha: 0.16)
+            : scheme.onSurface.withValues(alpha: 0.06),
         borderRadius: BorderRadius.circular(8),
         border: Border(
-          left: BorderSide(
-            color: OmniColors.chatPrimary.withValues(alpha: 0.85),
-            width: 3,
-          ),
+          left: BorderSide(color: accent.withValues(alpha: 0.85), width: 3),
         ),
       ),
       child: Column(
@@ -593,7 +820,7 @@ class _QuotedMessage extends StatelessWidget {
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: OmniChatType.meta.copyWith(
-              color: OmniColors.chatPrimary,
+              color: accent,
               fontWeight: FontWeight.w600,
             ),
           ),
@@ -602,7 +829,7 @@ class _QuotedMessage extends StatelessWidget {
             text == null || text.isEmpty ? 'Tin nhắn được trích dẫn' : text,
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
-            style: OmniChatType.meta.copyWith(color: scheme.onSurfaceVariant),
+            style: OmniChatType.meta.copyWith(color: bodyColor),
           ),
         ],
       ),
@@ -621,6 +848,8 @@ class _MetaLine extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final failed = message.status == DeliveryStatus.failed;
+    // Kênh không có đường gửi đi: "Gửi lại" không bao giờ thành công.
+    final onRetry = message.isChannelUnsupported ? null : this.onRetry;
 
     if (failed) {
       return Column(
@@ -637,7 +866,10 @@ class _MetaLine extends StatelessWidget {
               const SizedBox(width: 5),
               Expanded(
                 child: Text(
-                  message.error ?? 'Gửi lỗi',
+                  message.error ??
+                      (message.isChannelUnsupported
+                          ? kChannelUnsupportedText
+                          : 'Gửi lỗi'),
                   style: OmniType.micro.copyWith(color: scheme.error),
                 ),
               ),
@@ -688,18 +920,22 @@ class _DeliveryReceipt extends StatelessWidget {
     required this.status,
     required this.fallbackColor,
     required this.showLabel,
+    this.onPrimary = false,
   });
 
   final DeliveryStatus status;
   final Color fallbackColor;
   final bool showLabel;
 
+  /// Trên bong bóng nền primary: "đã xem" là trắng, không phải xanh kênh.
+  final bool onPrimary;
+
   @override
   Widget build(BuildContext context) {
     final read = status == DeliveryStatus.read;
     final failed = status == DeliveryStatus.failed;
     final color = read
-        ? OmniColors.chatPrimary
+        ? (onPrimary ? Colors.white : OmniColors.chatPrimary)
         : failed
         ? Theme.of(context).colorScheme.error
         : fallbackColor;
@@ -746,71 +982,6 @@ class _DeliveryReceipt extends StatelessWidget {
               ),
             ],
           ],
-        ),
-      ),
-    );
-  }
-}
-
-/// Internal note. Deliberately unlike a message bubble — full width, amber,
-/// labelled — so it can never be mistaken for something the customer saw.
-class _NoteBubble extends StatelessWidget {
-  const _NoteBubble({required this.message});
-
-  final Message message;
-
-  @override
-  Widget build(BuildContext context) {
-    final dark = Theme.of(context).brightness == Brightness.dark;
-    final amber = OmniColors.warningTextOf(context);
-
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: OmniSpacing.sm),
-      child: FractionallySizedBox(
-        widthFactor: 0.88,
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-          decoration: BoxDecoration(
-            color: dark ? OmniColors.darkWarningSoft : OmniColors.noteSurface,
-            borderRadius: OmniRadius.lgAll,
-            border: Border.all(
-              color: dark
-                  ? OmniColors.warningTextDark.withValues(alpha: 0.4)
-                  : OmniColors.noteBorder,
-            ),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Icon(
-                    Icons.sticky_note_2_outlined,
-                    size: OmniIconSize.xs,
-                    color: amber,
-                  ),
-                  const SizedBox(width: 5),
-                  Text(
-                    'GHI CHÚ NỘI BỘ',
-                    style: OmniChatType.meta.copyWith(
-                      color: amber,
-                      // The one place bold is right: this label is the guard
-                      // against a note being mistaken for a customer message.
-                      fontWeight: FontWeight.w600,
-                      letterSpacing: 0.6,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: OmniSpacing.sm),
-              Text(message.text, style: OmniChatType.message),
-              const SizedBox(height: OmniSpacing.sm),
-              Text(
-                'Bởi ${message.agentName ?? "bạn"} · ${Formatters.time(message.sentAt)}',
-                style: OmniChatType.meta.copyWith(color: amber),
-              ),
-            ],
-          ),
         ),
       ),
     );

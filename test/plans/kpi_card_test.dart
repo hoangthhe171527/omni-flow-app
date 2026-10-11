@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:omni_app/design/theme/omni_theme.dart';
+import 'package:omni_app/design/tokens/tokens.dart';
 import 'package:omni_app/modules/plans/domain/workshop_kpi.dart';
 import 'package:omni_app/modules/plans/presentation/widgets/kpi_card.dart';
 
@@ -121,16 +122,24 @@ void main() {
     );
 
     expect(find.textContaining('Còn 23 việc tới mốc 35'), findsOneWidget);
-    expect(find.byType(LinearProgressIndicator), findsOneWidget);
+    // Thanh tự vẽ: một vạch cho mỗi mốc trong bảng.
+    expect(find.byKey(const Key('kpi-tier-mark')), findsOneWidget);
   });
 
-  testWidgets("số lần làm lại hiện ra khi có, ẩn khi bằng 0", (tester) async {
-    // §B3: "hệ thống tự đếm rework". Một số 0 khoe ra không nói thêm được gì,
-    // còn một con số khác 0 thì là thứ đáng bàn trong cuộc họp cuối tháng.
+  testWidgets('số lần làm lại: phụ khi ≤ 1, cam khi > 1', (tester) async {
+    // §B3: "hệ thống tự đếm rework". Cam khi nhiều hơn một lần để quản đốc để
+    // ý; không kèm tên ai.
     await show(tester, kpi(rework: 3));
-    expect(find.text("3 lần phải làm lại trong tháng"), findsOneWidget);
+    final loud = tester.widget<Text>(find.text('3 lần làm lại'));
+    final tones = OmniTaskTones.of(tester.element(find.byType(KpiCard)));
+    expect(loud.style?.color, tones.late.foreground);
 
-    await show(tester, kpi());
-    expect(find.textContaining("phải làm lại"), findsNothing);
+    await show(tester, kpi(rework: 1));
+    final quiet = tester.widget<Text>(find.text('1 lần làm lại'));
+    expect(quiet.style?.color, isNot(tones.late.foreground));
+
+    // Số 0 vẫn hiện (thiết kế luôn có dòng này).
+    await show(tester, kpi(rework: 0));
+    expect(find.text('0 lần làm lại'), findsOneWidget);
   });
 }

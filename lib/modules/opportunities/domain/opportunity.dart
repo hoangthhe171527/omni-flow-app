@@ -278,6 +278,10 @@ class Opportunity {
       pipeline?.stage(stageCode)?.probability ??
       stage.defaultProbability;
 
+  /// Phần trăm trên vòng: thắng = 100, còn lại [effectiveProbability].
+  int displayPercent([PipelineDef? pipeline]) =>
+      isWon ? 100 : effectiveProbability(pipeline);
+
   /// Value weighted by probability — what a forecast actually sums.
   double weightedValue([PipelineDef? pipeline]) =>
       value * effectiveProbability(pipeline) / 100;

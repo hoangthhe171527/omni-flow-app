@@ -1,5 +1,13 @@
 platform :ios, '15.0'
 
+# file_picker: app chỉ dùng trình chọn TÀI LIỆU (FileType.custom →
+# UIDocumentPickerViewController, không cần khoá quyền trong Info.plist). Tắt
+# trình chọn ảnh/video (kéo theo DKImagePickerController — ảnh đã đi qua
+# image_picker) và trình chọn nhạc (MediaPlayer, sẽ đòi
+# NSAppleMusicUsageDescription khi duyệt App Store).
+Pod::PICKER_MEDIA = false
+Pod::PICKER_AUDIO = false
+
 # CocoaPods analytics sends network stats synchronously affecting flutter build latency.
 ENV['COCOAPODS_DISABLE_STATS'] = 'true'
 

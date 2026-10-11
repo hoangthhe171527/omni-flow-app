@@ -2,21 +2,21 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../../../../design/components/components.dart';
+import '../../../../design/platform/omni_motion_scope.dart';
 import '../../../../design/tokens/tokens.dart';
 import '../../application/task_controller.dart';
 import '../../domain/task.dart';
 
-/// One stage, and the tap target for finishing it.
+/// Một việc con: ô tick, tên, và nút người làm.
 ///
-/// The person using this is standing at a workbench with dirty or gloved hands
-/// and a noisy room. Three consequences, and none of them are cosmetic:
+/// Người dùng đứng ở bàn làm việc với tay bẩn, trong phòng ồn. Hệ quả:
 ///
-///  * The whole row is the target, 56dp tall — well past the 48dp platform
-///    minimum. Nobody should have to aim at a checkbox.
-///  * Rows are spaced further apart than the usual 8dp, because a mis-tap here
-///    marks the wrong stage of a piano complete.
-///  * Ticking fires haptic feedback. In a workshop you cannot hear a sound and
-///    may not be looking at the screen as you tap.
+///  * Ô tick và nút người làm mỗi cái là một vùng chạm 44×44 riêng — tick nhầm
+///    một công đoạn là cây đàn bị đánh dấu xong sai.
+///  * Tick rung nhẹ: trong xưởng không nghe được tiếng và có thể đang không
+///    nhìn màn hình.
+///  * Tên là chỗ chạm để đổi tên / xoá (người giao việc); người làm là nút
+///    riêng — vòng nét đứt có + khi chưa ai nhận, avatar khi đã có người.
 class SubtaskRow extends StatelessWidget {
   const SubtaskRow({
     super.key,
@@ -27,32 +27,37 @@ class SubtaskRow extends StatelessWidget {
     required this.onRetry,
     required this.onDiscard,
     this.onEdit,
-    this.onClaim,
+    this.onAssign,
+    this.assigneeName,
+    this.assigneeAvatar,
+    this.first = false,
   });
 
-  /// Comfortably above the 48dp Android minimum: this is a gloved thumb.
-  static const double minHeight = 56;
+  /// Vùng chạm tối thiểu của mỗi nút trong dòng.
+  static const double tapSize = 44;
 
   final Subtask subtask;
   final PendingTick? pending;
+
+  /// Được tick / giao người (`taskAccess.canComplete`). False = chỉ xem.
   final bool enabled;
   final ValueChanged<bool> onToggle;
   final VoidCallback onRetry;
   final VoidCallback onDiscard;
 
-  /// Đổi tên / xoá việc con này. Null = chỉ đọc, và không hiện nút.
-  ///
-  /// Nút nằm CẠNH hàng chứ không thay chỗ chạm của hàng: hàng vẫn là mục
-  /// tiêu 56dp để tick, còn sửa là một hành động hiếm hơn nhiều.
+  /// Chạm (hoặc giữ) TÊN để đổi tên / xoá. Null = chỉ đọc.
   final VoidCallback? onEdit;
 
-  /// Nhận việc con này về mình. Null = màn hình không biết người dùng là ai,
-  /// và khi đó không mời nhận việc.
-  ///
-  /// KHÔNG dùng chung cờ với [onEdit]: dựng checklist là việc của quản đốc,
-  /// còn nhận một công đoạn trống là việc của thợ (§3). Gộp hai thứ vào một
-  /// quyền sẽ khoá đúng người cần nhận.
-  final VoidCallback? onClaim;
+  /// Mở bảng "Ai làm việc này". Null = nút người làm chỉ hiển thị.
+  final VoidCallback? onAssign;
+
+  /// Tên / ảnh người đang làm. Tên null mà [Subtask.assigneeId] có = server
+  /// không tra ra tên; nút vẫn là avatar (chữ tắt "?"), không phải vòng trống.
+  final String? assigneeName;
+  final String? assigneeAvatar;
+
+  /// Dòng đầu không có vạch trên.
+  final bool first;
 
   bool get _failed => pending?.failed ?? false;
 
@@ -61,235 +66,215 @@ class SubtaskRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final text = Theme.of(context).textTheme;
+    final hasAssignee = subtask.assigneeId != null;
+    final displayName = assigneeName ?? subtask.assigneeName;
+    final title = Text(
+      subtask.title,
+      style: OmniType.body.copyWith(
+        decoration: subtask.done ? TextDecoration.lineThrough : null,
+        color: subtask.done ? scheme.onSurfaceVariant : scheme.onSurface,
+      ),
+    );
 
-    return Semantics(
-      checked: subtask.done,
-      label: subtask.title,
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: enabled
-              ? () {
-                  // Haptic first so the confirmation is felt at the moment of
-                  // the tap, not after the network decides anything.
-                  HapticFeedback.selectionClick();
-                  onToggle(!subtask.done);
-                }
-              : null,
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(minHeight: minHeight),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(
-                horizontal: OmniSpacing.lg,
-                vertical: OmniSpacing.md,
-              ),
-              child: Row(
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        border: first
+            ? null
+            : Border(top: BorderSide(color: OmniColors.trackOf(context))),
+      ),
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(minHeight: tapSize),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _TickButton(
+              title: subtask.title,
+              done: subtask.done,
+              inFlight: _inFlight,
+              failed: _failed,
+              onTap: enabled
+                  ? () {
+                      // Rung trước, để người dùng cảm thấy ngay lúc chạm chứ
+                      // không phải sau khi mạng quyết định.
+                      HapticFeedback.selectionClick();
+                      onToggle(!subtask.done);
+                    }
+                  : null,
+            ),
+            Expanded(
+              child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _Box(
-                    done: subtask.done,
-                    inFlight: _inFlight,
-                    failed: _failed,
-                  ),
-                  const SizedBox(width: OmniSpacing.md),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          subtask.title,
-                          style: text.bodyLarge?.copyWith(
-                            decoration: subtask.done
-                                ? TextDecoration.lineThrough
-                                : null,
-                            color: subtask.done
-                                ? scheme.onSurfaceVariant
-                                : scheme.onSurface,
-                          ),
-                        ),
-                        if (subtask.assigneeName != null) ...[
-                          const SizedBox(height: OmniSpacing.xs),
-                          // A chip rather than "(Hằng Ni)" inside the title, so
-                          // the name is a filterable fact and the title stays
-                          // the name of the work.
-                          _AssigneeChip(
-                            name: subtask.assigneeName!,
-                            avatar: subtask.assigneeAvatar,
-                          ),
-                        ] else if (onClaim != null &&
-                            subtask.assigneeId == null &&
-                            !subtask.done) ...[
-                          const SizedBox(height: OmniSpacing.xs),
-                          // §3: không ai phân việc, ai rảnh thì nhận. Nút đứng
-                          // ĐÚNG chỗ cái chip sẽ hiện sau khi nhận, nên hàng
-                          // không nhảy và người thợ thấy ngay mình vừa nhận
-                          // công đoạn nào.
-                          //
-                          // Điều kiện hỏi `assigneeId` chứ không hỏi
-                          // `assigneeName`: tên là thứ server tra thêm và có thể
-                          // tra không ra, còn "việc này đã có người chưa" thì
-                          // chỉ id trả lời được — lấy tên làm căn cứ sẽ mời
-                          // người thứ hai nhận một công đoạn đã có chủ.
-                          Align(
-                            alignment: Alignment.centerLeft,
-                            // Nút viền màu chính cao 32, chữ đậm — như thiết kế.
-                            child: OutlinedButton.icon(
-                              onPressed: enabled ? onClaim : null,
-                              style: OutlinedButton.styleFrom(
-                                minimumSize: const Size(0, 32),
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 12,
-                                ),
-                                foregroundColor: scheme.onPrimaryContainer,
-                                side: BorderSide(color: scheme.primary),
-                                shape: const RoundedRectangleBorder(
-                                  borderRadius: OmniRadius.xsAll,
-                                ),
-                                textStyle: OmniType.caption.copyWith(
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                              icon: const Icon(
-                                Icons.person_add_alt_rounded,
-                                size: OmniIconSize.sm,
-                              ),
-                              label: const Text('Tôi nhận'),
-                            ),
-                          ),
-                        ],
-                        if (_failed) ...[
-                          const SizedBox(height: OmniSpacing.sm),
-                          _FailureNotice(
-                            reason: pending!.error!,
-                            onRetry: onRetry,
-                            onDiscard: onDiscard,
-                          ),
-                        ],
-                      ],
+                  InkWell(
+                    onTap: onEdit,
+                    onLongPress: onEdit,
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(minHeight: tapSize),
+                      child: Align(
+                        alignment: Alignment.centerLeft,
+                        child: title,
+                      ),
                     ),
                   ),
-                  if (onEdit != null)
-                    IconButton(
-                      onPressed: onEdit,
-                      icon: const Icon(Icons.more_horiz_rounded),
-                      iconSize: OmniIconSize.md,
-                      color: scheme.onSurfaceVariant,
-                      tooltip: 'Sửa việc con',
+                  if (_failed)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: OmniSpacing.sm),
+                      child: _FailureNotice(
+                        reason: pending!.error!,
+                        onRetry: onRetry,
+                        onDiscard: onDiscard,
+                      ),
                     ),
                 ],
               ),
             ),
-          ),
+            Semantics(
+              button: onAssign != null,
+              onTap: onAssign,
+              label: hasAssignee
+                  ? 'Đổi người làm: ${displayName ?? 'người khác'}'
+                  : 'Giao việc con',
+              excludeSemantics: true,
+              child: InkWell(
+                onTap: onAssign,
+                customBorder: const CircleBorder(),
+                child: SizedBox.square(
+                  dimension: tapSize,
+                  child: Center(
+                    child: hasAssignee
+                        ? OmniAvatar(
+                            name: displayName ?? '?',
+                            imageUrl: assigneeAvatar ?? subtask.assigneeAvatar,
+                            size: 22,
+                          )
+                        : const OmniDashedCircle(),
+                  ),
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );
   }
 }
 
-class _Box extends StatelessWidget {
-  const _Box({
+/// Ô tick tròn 20 trong vùng chạm 44. "Xong": nền primary + dấu ✓ trắng, nảy
+/// 0.6 → 1.15 → 1 trong 350ms (tắt khi giảm chuyển động).
+class _TickButton extends StatefulWidget {
+  const _TickButton({
     required this.done,
     required this.inFlight,
     required this.failed,
+    required this.title,
+    required this.onTap,
   });
 
   final bool done;
   final bool inFlight;
   final bool failed;
+  final String title;
+  final VoidCallback? onTap;
+
+  @override
+  State<_TickButton> createState() => _TickButtonState();
+}
+
+class _TickButtonState extends State<_TickButton>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _pop = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 350),
+  );
+
+  static final _scale = TweenSequence<double>([
+    TweenSequenceItem(tween: Tween(begin: 0.6, end: 1.15), weight: 60),
+    TweenSequenceItem(tween: Tween(begin: 1.15, end: 1.0), weight: 40),
+  ]);
+
+  @override
+  void didUpdateWidget(_TickButton old) {
+    super.didUpdateWidget(old);
+    if (widget.done && !old.done && OmniMotion.enabled(context)) {
+      _pop.forward(from: 0);
+    }
+  }
+
+  @override
+  void dispose() {
+    _pop.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
 
-    if (inFlight) {
-      // The box already shows the new state; this only says it is still on its
-      // way, so the worker does not tap twice.
-      return const SizedBox(
-        width: 24,
-        height: 24,
+    final Widget box;
+    if (widget.inFlight) {
+      // Ô đã hiện trạng thái mới; vòng xoay chỉ nói là còn đang trên đường đi,
+      // để người dùng khỏi chạm hai lần.
+      box = const SizedBox.square(
+        dimension: 20,
         child: Padding(
-          padding: EdgeInsets.all(3),
+          padding: EdgeInsets.all(2),
           child: CircularProgressIndicator(strokeWidth: 2),
         ),
       );
+    } else {
+      // "Xong" mang MÀU CHÍNH, cái phân biệt với "chưa" là dấu ✓ đặc trên nền
+      // đặc chứ không phải sắc màu.
+      final filled = widget.done && !widget.failed;
+      final border = widget.failed
+          ? OmniColors.destructive
+          : (widget.done
+                ? scheme.primary
+                : OmniColors.controlBorderOf(context));
+      box = Container(
+        width: 20,
+        height: 20,
+        decoration: BoxDecoration(
+          color: filled ? scheme.primary : Colors.transparent,
+          border: Border.all(color: border, width: 1.5),
+          shape: BoxShape.circle,
+        ),
+        child: widget.done
+            ? Icon(
+                Icons.check_rounded,
+                size: 14,
+                color: widget.failed ? OmniColors.destructive : Colors.white,
+              )
+            : null,
+      );
     }
 
-    // "Đã xong" mang MÀU CHÍNH, không phải một màu xanh lá riêng. Xanh lá
-    // #10B981 cạnh mòng két #0F6E63 đọc như hai màu thương hiệu cãi nhau, và
-    // với người mù màu lục-đỏ thì hai màu đó gần như một. Xem ghi chú Semantic
-    // trong omni_colors.dart.
-    //
-    // Cái phân biệt "xong" với "chưa" là DẤU TICK ĐẶC trên nền đặc, không phải
-    // sắc màu.
-    final colour = failed
-        ? OmniColors.destructive
-        : (done ? scheme.primary : scheme.outline);
-
-    return Container(
-      width: 24,
-      height: 24,
-      decoration: BoxDecoration(
-        color: done && !failed ? scheme.primary : Colors.transparent,
-        border: Border.all(color: colour, width: 2),
-        borderRadius: BorderRadius.circular(7),
-      ),
-      child: done
-          ? Icon(
-              Icons.check_rounded,
-              size: OmniIconSize.md,
-              color: failed ? OmniColors.destructive : Colors.white,
-            )
-          : null,
-    );
-  }
-}
-
-class _AssigneeChip extends StatelessWidget {
-  const _AssigneeChip({required this.name, this.avatar});
-
-  final String name;
-
-  /// Ảnh thật; null thì [OmniAvatar] tự rơi về chữ tắt. Mặt người đọc nhanh
-  /// hơn tên khi lướt một danh sách công đoạn dài.
-  final String? avatar;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-
-    return Container(
-      padding: const EdgeInsets.fromLTRB(
-        OmniSpacing.xxs,
-        OmniSpacing.xxs,
-        OmniSpacing.sm,
-        OmniSpacing.xxs,
-      ),
-      decoration: BoxDecoration(
-        color: scheme.surfaceContainerHighest,
-        borderRadius: BorderRadius.circular(OmniRadius.chip),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          OmniAvatar(name: name, imageUrl: avatar, size: OmniIconSize.md),
-          const SizedBox(width: OmniSpacing.xs),
-          Text(
-            name,
-            style: Theme.of(
-              context,
-            ).textTheme.labelSmall?.copyWith(color: scheme.onSurfaceVariant),
+    return Semantics(
+      label: 'Xong',
+      value: widget.title,
+      onTap: widget.onTap,
+      checked: widget.done,
+      button: true,
+      excludeSemantics: true,
+      // GestureDetector chứ không phải InkWell: gợn sóng là một hoạt ảnh nữa
+      // chạy sau mỗi lần chạm; ở đây phản hồi là cú rung + ô đổi trạng thái.
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: widget.onTap,
+        child: SizedBox.square(
+          dimension: SubtaskRow.tapSize,
+          child: Center(
+            child: ScaleTransition(scale: _scale.animate(_pop), child: box),
           ),
-        ],
+        ),
       ),
     );
   }
 }
 
-/// A tick that did not save, and what to do about it.
+/// Một lượt tick không lưu được, và cách xử lý.
 ///
-/// Stated in words with two explicit choices. A stage silently un-ticking is
-/// how a piano gets skipped, so this stays on screen until the worker decides.
+/// Nói bằng lời với hai lựa chọn rõ ràng. Một công đoạn lặng lẽ bỏ tick là cách
+/// một cây đàn bị bỏ sót, nên dòng này ở lại màn hình tới khi người thợ quyết.
 class _FailureNotice extends StatelessWidget {
   const _FailureNotice({
     required this.reason,

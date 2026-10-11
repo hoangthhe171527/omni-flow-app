@@ -71,7 +71,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.textContaining('Tệp đính kèm'), findsOneWidget);
+    expect(find.text('TỆP ĐÍNH KÈM (1)'), findsOneWidget);
     final thumbs = find.byWidgetPredicate(
       (widget) => widget is CachedNetworkImage && widget.imageUrl == photoUrl,
     );
@@ -83,11 +83,12 @@ void main() {
           'nào xem lại — thợ phải mở web để nhìn tấm mình vừa chụp.',
     );
 
-    // Ô 96dp giải mã ở 96 × tỉ lệ điểm ảnh, không phải 3000×4000 của ảnh
-    // chụp. Khoá một chiều để ảnh 3:4 giữ tỉ lệ rồi mới được `cover` cắt.
+    // Ô giải mã ở cạnh ô × tỉ lệ điểm ảnh, không phải 3000×4000 của ảnh chụp.
+    // Khoá một chiều để ảnh 3:4 giữ tỉ lệ rồi mới được `cover` cắt.
     final thumb = tester.widget<CachedNetworkImage>(thumbs);
     final dpr = tester.view.devicePixelRatio;
-    expect(thumb.memCacheWidth, (96 * dpr).round());
+    final side = tester.getSize(thumbs).width;
+    expect(thumb.memCacheWidth, (side * dpr).round());
     expect(thumb.memCacheHeight, isNull);
   });
 
@@ -118,9 +119,11 @@ void main() {
     expect(find.text('phieu-qc.pdf'), findsOneWidget);
   });
 
-  testWidgets('chưa có tệp nào thì không chiếm chỗ', (tester) async {
-    // Khối rỗng đẩy nút "Hoàn thành" xa thêm một quãng, trên màn hình người ta
-    // cầm một tay giữa xưởng.
+  testWidgets('chưa có tệp nào thì nói rõ "Chưa có tệp", không để ô trống', (
+    tester,
+  ) async {
+    // Lưới 2 cột giữ ô tệp luôn hiện: một ô biến mất làm cột kia lệch nhịp,
+    // và người kiểm không biết là không có tệp hay app chưa tải.
     await tester.pumpWidget(
       host(
         Task.fromJson({
@@ -132,7 +135,8 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.textContaining('Tệp đính kèm'), findsNothing);
+    expect(find.text('TỆP ĐÍNH KÈM (0)'), findsOneWidget);
+    expect(find.text('Chưa có tệp'), findsOneWidget);
   });
 }
 

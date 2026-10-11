@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:omni_app/design/theme/omni_theme.dart';
+import 'package:omni_app/design/tokens/tokens.dart';
 import 'package:omni_app/modules/plans/application/plans_providers.dart';
 import 'package:omni_app/modules/plans/data/plans_api.dart';
 import 'package:omni_app/modules/plans/domain/workshop_kpi.dart';
@@ -105,12 +106,13 @@ void main() {
       await show(tester, kpi(delivered: 20), previousDelivered: 23);
 
       final line = tester.widget<Text>(find.text('−3 so với tháng 8'));
-      // Thẻ KPI nằm trên nền mực với theme riêng: đọc màu từ chính dòng chữ.
-      final scheme = Theme.of(
+      // Chip giảm dùng tông trung tính (cùng tông "hạn sắp tới"), không đỏ.
+      final tones = OmniTaskTones.of(
         tester.element(find.text('−3 so với tháng 8')),
-      ).colorScheme;
+      );
 
-      expect(line.style?.color, scheme.onSurfaceVariant);
+      expect(line.style?.color, tones.upcoming.foreground);
+      expect(line.style?.color, isNot(tones.late.foreground));
     });
   });
 

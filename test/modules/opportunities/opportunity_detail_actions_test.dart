@@ -90,6 +90,15 @@ void main() {
     },
   );
 
+  // Danh sách hiện 100% cho cơ hội thắng (displayPercent); chi tiết phải
+  // khớp, không hiện xác suất của giai đoạn trước đó.
+  testWidgets('cơ hội đã thắng: Xác suất 100% như ở danh sách', (tester) async {
+    await tester.pumpWidget(host('WON', stage: 'consulting'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('100%'), findsOneWidget);
+  });
+
   // Phụ trách là `owner_user_id`, tra tên trong danh bạ. `metadata.owner_name`
   // không ai ghi nên app luôn hiện "Chưa gán" (OPP-X7).
   testWidgets('phụ trách: tên tra theo owner_user_id', (tester) async {

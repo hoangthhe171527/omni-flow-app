@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<title>Tài khoản</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#0A7D76}a:hover{color:#075E59}
+@keyframes rise{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+.r{animation:rise .5s cubic-bezier(.2,.8,.2,1) both}
+.d1{animation-delay:.05s}.d2{animation-delay:.1s}.d3{animation-delay:.15s}.d4{animation-delay:.2s}
+button,a{transition:transform .2s cubic-bezier(.2,.8,.2,1),background-color .25s,color .25s;-webkit-tap-highlight-color:transparent}
+button:active,a:active{transform:scale(.98)}
+.bar{background:rgba(245,247,250,.82);backdrop-filter:blur(20px) saturate(180%);-webkit-backdrop-filter:blur(20px) saturate(180%)}
+.card{background:#fff;border:1px solid #E3E8EF;border-radius:8px;overflow:hidden}
+.sec{font-size:11px;font-weight:600;letter-spacing:.5px;text-transform:uppercase;color:#56637A;padding:0 4px 6px}
+.li{display:flex;align-items:center;gap:10px;min-height:44px;padding:0 12px;border-top:1px solid #EEF1F5;width:100%;box-sizing:border-box;background:transparent;border-left:0;border-right:0;border-bottom:0;font:400 14px 'Be Vietnam Pro',sans-serif;color:#0B1A33;text-decoration:none;cursor:pointer;text-align:left}
+.li:first-child{border-top:0}
+.li:hover{background:#FAFBFC}
+.ico{width:28px;height:28px;border-radius:6px;background:#EEF1F5;color:#0B1A33;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.k{flex-grow:1}
+.v{font-size:13px;color:#56637A;display:flex;align-items:center;gap:6px}
+.chev{color:#A9B2C1;flex-shrink:0}
+.th{flex:1;height:30px;border:0;background:transparent;font:600 12px 'Be Vietnam Pro',sans-serif;color:#56637A;cursor:pointer;position:relative;z-index:1}
+.th.on{color:#0B1A33}
+</style>
+</helmet>
+<div style="width:390px;height:844px;position:relative;overflow:hidden;font-family:'Be Vietnam Pro',system-ui,sans-serif;color:#0B1A33;background:#F5F7FA;font-size:14px">
+  <header class="bar" style="position:absolute;top:0;left:0;right:0;z-index:3;padding:50px 6px 6px;display:flex;align-items:center;border-bottom:1px solid rgba(11,26,51,.06)">
+    <a href="Main.dc.html" aria-label="Đóng" style="width:36px;height:36px;display:flex;align-items:center;justify-content:center;color:#0B1A33"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 5-7 7 7 7"></path></svg></a>
+    <span style="flex-grow:1;text-align:center;font-weight:700;font-size:15px;margin-right:36px">Tài khoản</span>
+  </header>
+
+  <main style="position:absolute;top:94px;left:0;right:0;bottom:0;padding:14px 16px 30px;display:flex;flex-direction:column;gap:14px;overflow:hidden">
+    <div class="card r" style="display:flex;align-items:center;gap:12px;padding:12px">
+      <span style="width:48px;height:48px;border-radius:10px;background:#0B1A33;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:16px">HT</span>
+      <span style="flex-grow:1;min-width:0"><span style="display:block;font-weight:700;font-size:16px">Hoàng Trần</span><span style="display:block;font-size:12px;color:#56637A">Trưởng nhóm bán hàng · Chi nhánh Q1</span></span>
+      <button aria-label="Đổi chi nhánh" style="height:30px;padding:0 10px;border-radius:6px;border:1px solid #E3E8EF;background:#fff;font:600 12px 'Be Vietnam Pro',sans-serif;color:#0B1A33;cursor:pointer">Đổi</button>
+    </div>
+
+    <div class="r d1">
+      <div class="sec">Làm việc</div>
+      <div class="card">
+        <a class="li" href="#"><span class="ico"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.5"></circle><path d="M2.5 20c.8-3.6 3.4-5.5 6.5-5.5s5.7 1.9 6.5 5.5M16 4.5a3.5 3.5 0 0 1 0 7M18 14.8c1.8.7 3 2.4 3.5 5.2"></path></svg></span><span class="k">Đội nhóm</span><span class="v">8 người</span><svg class="chev" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"></path></svg></a>
+        <a class="li" href="#"><span class="ico"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16v11H8l-4 4z"></path></svg></span><span class="k">Kênh kết nối</span><span class="v"><span style="width:6px;height:6px;border-radius:50%;background:#0A7D76"></span>4 · <span style="width:6px;height:6px;border-radius:50%;background:#DC2626"></span>1 lỗi</span><svg class="chev" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"></path></svg></a>
+        <a class="li" href="#"><span class="ico"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 4 6v6c0 5 3.5 8 8 9 4.5-1 8-4 8-9V6z"></path></svg></span><span class="k">Quyền của tôi</span><svg class="chev" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"></path></svg></a>
+      </div>
+    </div>
+
+    <div class="r d2">
+      <div class="sec">Ứng dụng</div>
+      <div class="card">
+        <a class="li" href="#"><span class="ico"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 8a6 6 0 1 1 12 0c0 7 3 8 3 8H3s3-1 3-8"></path><path d="M10 20a2 2 0 0 0 4 0"></path></svg></span><span class="k">Thông báo</span><span class="v">Bật</span><svg class="chev" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"></path></svg></a>
+        <div class="li" style="cursor:default;flex-wrap:wrap;padding:10px 12px"><span class="ico"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"></path></svg></span><span class="k">Giao diện</span>
+          <span style="position:relative;display:flex;background:#EEF1F5;border-radius:6px;padding:3px;width:100%;margin-top:8px">
+            <span style="position:absolute;top:3px;bottom:3px;left:3px;width:calc((100% - 6px) / 3);border-radius:4px;background:#fff;box-shadow:0 1px 3px rgba(11,26,51,.12);transform:{{thX}};transition:transform .35s cubic-bezier(.2,.8,.2,1)"></span>
+            <sc-for list="{{themes}}" as="t" hint-placeholder-count="3"><button class="{{t.cls}}" onClick="{{t.pick}}">{{t.l}}</button></sc-for>
+          </span>
+        </div>
+      </div>
+    </div>
+
+    <div class="r d3">
+      <div class="sec">Hỗ trợ</div>
+      <div class="card">
+        <a class="li" href="#"><span class="k">Trung tâm hỗ trợ</span><svg class="chev" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"></path></svg></a>
+        <a class="li" href="#"><span class="k">Chính sách quyền riêng tư</span><svg class="chev" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"></path></svg></a>
+        <a class="li" href="#"><span class="k" style="color:#B42318">Xóa tài khoản</span></a>
+      </div>
+    </div>
+
+    <button class="r d4" style="height:44px;border-radius:8px;border:1px solid #E3E8EF;background:#fff;font:600 14px 'Be Vietnam Pro',sans-serif;color:#B42318;cursor:pointer">Đăng xuất</button>
+    <div style="text-align:center;font-size:11px;color:#8A95A8">Viomni 2.0.0</div>
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+constructor(p) { super(p); this.state = { th: 2 }; }
+renderVals() {
+const s = this.state;
+return {
+themes: ['Sáng', 'Tối', 'Theo máy'].map((l, i) => ({ l, cls: i === s.th ? 'th on' : 'th', pick: () => this.setState({ th: i }) })),
+thX: 'translateX(' + (s.th * 100) + '%)'
+};
+}
+}
+</script>
+</body>
+</html>

@@ -29,6 +29,7 @@ void main() {
     'lib/modules/settings/presentation/my_permissions_page.dart',
     'lib/modules/settings/presentation/notification_settings_page.dart',
     'lib/modules/settings/presentation/background_page.dart',
+    'lib/modules/dashboard/presentation/dashboard_page.dart',
     'lib/app/shell/directory_page.dart',
   ];
 
@@ -43,7 +44,10 @@ void main() {
       );
 
       expect(
-        file.readAsStringSync().contains('OmniAppBar'),
+        (() {
+          final src = file.readAsStringSync();
+          return src.contains('OmniAppBar') || src.contains('OmniTopBar');
+        })(),
         isTrue,
         reason:
             '$path là màn gốc của một tab — thiếu OmniAppBar thì góc trên bên '

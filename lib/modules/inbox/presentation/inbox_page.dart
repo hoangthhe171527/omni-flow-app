@@ -16,10 +16,14 @@ import '../application/inbox_providers.dart';
 import '../application/inbox_realtime.dart';
 import '../data/inbox_api.dart';
 import '../domain/inbox_filter.dart';
-import '../inbox_module.dart';
+import '../inbox_routes.dart';
+import '../domain/conversation.dart';
+import 'widgets/conversation_actions.dart';
+import 'widgets/conversation_peek.dart';
 import 'widgets/conversation_row.dart';
 import 'widgets/inbox_bulk_bar.dart';
 import 'widgets/inbox_filter_bar.dart';
+import 'widgets/inbox_pinned_section.dart';
 
 class InboxPage extends ConsumerStatefulWidget {
   const InboxPage({super.key});
@@ -33,6 +37,7 @@ class _InboxPageState extends ConsumerState<InboxPage>
   final _scrollController = ScrollController();
   final Set<String> _selected = {};
   bool _selectionMode = false;
+  bool _filtersOpen = false;
   Timer? _syncTimer;
 
   /// Nhịp poll dự phòng theo trạng thái socket thật (MS-I38).
@@ -123,6 +128,48 @@ class _InboxPageState extends ConsumerState<InboxPage>
     });
   }
 
+  Future<void> _openPeek(Conversation c) async {
+    final actions = ConversationActions(ref, context);
+    await showConversationPeek(
+      context: context,
+      conversation: c,
+      onOpen: () =>
+          context.pushNamed(InboxRoutes.thread, pathParameters: {'id': c.id}),
+      onAction: (action) => switch (action) {
+        PeekAction.markRead => actions.markRead(c),
+        PeekAction.markUnread => actions.markUnread(c),
+        PeekAction.assign => actions.assign(c),
+        PeekAction.label => actions.addLabel(c),
+        PeekAction.pin => actions.setPinned(c, true),
+        PeekAction.unpin => actions.setPinned(c, false),
+        PeekAction.mute => actions.setMuted(c, true),
+        PeekAction.unmute => actions.setMuted(c, false),
+        PeekAction.archive => actions.setArchived(c, true),
+        PeekAction.reopen => actions.setArchived(c, false),
+        PeekAction.block => actions.setBlocked(c, true),
+        PeekAction.unblock => actions.setBlocked(c, false),
+      },
+    );
+  }
+
+  Widget _row(Conversation conversation, bool selecting) => ConversationRow(
+    key: ValueKey('row-${conversation.id}'),
+    conversation: conversation,
+    selectionMode: selecting,
+    selected: _selected.contains(conversation.id),
+    onPeek: () => _openPeek(conversation),
+    onTap: () {
+      if (selecting) {
+        _toggleSelection(conversation.id);
+        return;
+      }
+      context.pushNamed(
+        InboxRoutes.thread,
+        pathParameters: {'id': conversation.id},
+      );
+    },
+  );
+
   void _clearSelection() {
     setState(() {
       _selected.clear();
@@ -153,6 +200,11 @@ class _InboxPageState extends ConsumerState<InboxPage>
     }
     final access = ref.watch(inboxAccessProvider);
     final list = ref.watch(inboxListProvider);
+    // Mục ghim lỗi hay đang tải thì ẩn — danh sách chính vẫn hiện.
+    final pinned =
+        ref.watch(pinnedConversationsProvider).valueOrNull ??
+        const <Conversation>[];
+    final lead = pinned.isEmpty ? 0 : 1;
     final scheme = Theme.of(context).colorScheme;
     final selecting = _selectionMode;
     final canConnectChannels = ref
@@ -164,54 +216,54 @@ class _InboxPageState extends ConsumerState<InboxPage>
       // (#F8F8FC) while the rows use `surface` (white), so the whole search area
       // read as a tinted panel framing itself — the "khung mờ" around the search
       // field was that seam, not a border on the field.
-      backgroundColor: scheme.surface,
-      appBar: OmniAppBar(
-        backgroundColor: scheme.surface,
-        title: 'Hộp thư',
-        titleSpacing: OmniSpacing.lg,
-        toolbarHeight: 56,
-        actions: [
-          if (canConnectChannels)
-            IconButton(
-              tooltip: 'Kết nối kênh',
-              onPressed: () => context.pushNamed(ChannelsModule.list),
-              style: IconButton.styleFrom(
-                foregroundColor: scheme.onSurfaceVariant,
+      backgroundColor: OmniColors.background,
+      appBar: OmniTopBar(
+        semanticsTitle: 'Hộp thư',
+        // Search line + pill row + the rule under them. "Kết nối kênh" and
+        // "Chọn nhiều" moved here from the old AppBar actions, on the search
+        // row after the filter button.
+        bottom: InboxSearchRow(
+          filtersOpen: _filtersOpen,
+          onToggleFilters: () => setState(() => _filtersOpen = !_filtersOpen),
+          trailing: [
+            if (canConnectChannels)
+              IconButton(
+                tooltip: 'Kết nối kênh',
+                onPressed: () => context.pushNamed(ChannelsModule.list),
+                style: IconButton.styleFrom(
+                  fixedSize: const Size(36, 36),
+                  tapTargetSize: MaterialTapTargetSize.padded,
+                  visualDensity: VisualDensity.standard,
+                  foregroundColor: scheme.onSurfaceVariant,
+                ),
+                icon: const Icon(Icons.hub_outlined),
               ),
-              icon: const Icon(Icons.hub_outlined),
+            IconButton(
+              tooltip: 'Chọn nhiều',
+              onPressed: access.canLabel
+                  ? () => setState(() {
+                      _selectionMode = !_selectionMode;
+                      if (!_selectionMode) _selected.clear();
+                    })
+                  : null,
+              style: IconButton.styleFrom(
+                fixedSize: const Size(36, 36),
+                tapTargetSize: MaterialTapTargetSize.padded,
+                visualDensity: VisualDensity.standard,
+                foregroundColor: selecting
+                    ? OmniColors.chatPrimary
+                    : scheme.onSurfaceVariant,
+              ),
+              icon: Icon(
+                selecting ? Icons.close_rounded : Icons.checklist_rounded,
+              ),
             ),
-          IconButton(
-            tooltip: 'Chọn nhiều',
-            onPressed: access.canLabel
-                ? () => setState(() {
-                    _selectionMode = !_selectionMode;
-                    if (!_selectionMode) _selected.clear();
-                  })
-                : null,
-            // A bare icon. The filled circle behind it was a button drawn twice
-            // — the icon already reads as tappable, and the disc only added a
-            // grey blob to the corner of an otherwise clean bar.
-            style: IconButton.styleFrom(
-              foregroundColor: selecting
-                  ? OmniColors.chatPrimary
-                  : scheme.onSurfaceVariant,
-            ),
-            icon: Icon(
-              selecting ? Icons.close_rounded : Icons.checklist_rounded,
-            ),
-          ),
-          const SizedBox(width: OmniSpacing.sm),
-        ],
-        // Was 112 for three stacked filter bands; the header is now a search
-        // line plus one pill row, and the stale number left a dead white gap.
-        bottom: const PreferredSize(
-          // Search line + pill row + the rule under them.
-          preferredSize: Size.fromHeight(105),
-          child: InboxFilterBar(),
+          ],
         ),
       ),
       body: Column(
         children: [
+          InboxFilterPanel(open: _filtersOpen),
           // A member scoped to `inbox.read.own` sees only threads assigned to
           // them — not the unassigned pool. Saying so up front stops "hộp thư
           // trống" being read as a sync failure.
@@ -227,66 +279,82 @@ class _InboxPageState extends ConsumerState<InboxPage>
               ),
             ),
           Expanded(
-            child: RefreshIndicator(
-              onRefresh: () => ref.read(inboxListProvider.notifier).refresh(),
-              child: OmniAsyncView(
-                value: list,
-                onRetry: () => ref.invalidate(inboxListProvider),
-                isEmpty: (state) => state.items.isEmpty,
-                empty: _empty(),
-                data: (state) => ListView.separated(
-                  controller: _scrollController,
-                  padding: const EdgeInsets.only(
-                    bottom: OmniSpacing.bottomSafe,
-                  ),
-                  itemCount: state.items.length + (state.hasMore ? 1 : 0),
-                  // Zalo separates rows with a hairline indented past the
-                  // avatar, not a gap. Gaps between bordered cards were what
-                  // made the list read as a table of records.
-                  separatorBuilder: (_, _) => Divider(
-                    height: 1,
-                    thickness: 1,
-                    indent: 84,
-                    endIndent: 0,
-                    color: OmniColors.chat(
-                      context,
-                      OmniColors.chatDivider,
-                      OmniColors.chatDividerDark,
+            // Danh sách nằm trong một thẻ trắng viền mảnh trên nền xám nhạt
+            // (`main` của bản mẫu: padding 12 16).
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  color: scheme.surface,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: scheme.outlineVariant),
+                ),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(7),
+                  child: RefreshIndicator(
+                    onRefresh: () =>
+                        ref.read(inboxListProvider.notifier).refresh(),
+                    child: OmniAsyncView(
+                      value: list,
+                      onRetry: () => ref.invalidate(inboxListProvider),
+                      // Rỗng chỉ khi CẢ HAI mục rỗng.
+                      isEmpty: (state) => state.items.isEmpty && pinned.isEmpty,
+                      empty: _empty(),
+                      data: (state) => ListView.separated(
+                        controller: _scrollController,
+                        padding: const EdgeInsets.only(
+                          bottom: OmniSpacing.bottomSafe,
+                        ),
+                        // Mục "Đã ghim" (nếu có) là dòng đầu của CÙNG danh
+                        // sách: một ScrollController, `loadMore` vẫn theo
+                        // `extentAfter`.
+                        itemCount:
+                            lead + state.items.length + (state.hasMore ? 1 : 0),
+                        // Zalo separates rows with a hairline indented past the
+                        // avatar, not a gap. Gaps between bordered cards were what
+                        // made the list read as a table of records.
+                        // Không kẻ vạch ngay dưới mục ghim: mục đó kết thúc
+                        // bằng tiêu đề "Hội thoại", dòng đầu nằm sát dưới.
+                        separatorBuilder: (_, rawIndex) => rawIndex < lead
+                            ? const SizedBox.shrink()
+                            : Divider(
+                                height: 1,
+                                thickness: 1,
+                                indent: 0,
+                                endIndent: 0,
+                                color: OmniColors.byBrightness(
+                                  context,
+                                  OmniColors.divider,
+                                  OmniColors.darkBorder,
+                                ),
+                              ),
+                        itemBuilder: (context, rawIndex) {
+                          if (rawIndex < lead) {
+                            return InboxPinnedSection(
+                              items: pinned,
+                              rowBuilder: (c) => _row(c, selecting),
+                            );
+                          }
+                          final index = rawIndex - lead;
+                          if (index >= state.items.length) {
+                            return const Padding(
+                              padding: EdgeInsets.all(OmniSpacing.lg),
+                              child: Center(
+                                child: SizedBox(
+                                  width: 20,
+                                  height: 20,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                  ),
+                                ),
+                              ),
+                            );
+                          }
+                          return _row(state.items[index], selecting);
+                        },
+                      ),
                     ),
                   ),
-                  itemBuilder: (context, index) {
-                    if (index >= state.items.length) {
-                      return const Padding(
-                        padding: EdgeInsets.all(OmniSpacing.lg),
-                        child: Center(
-                          child: SizedBox(
-                            width: 20,
-                            height: 20,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          ),
-                        ),
-                      );
-                    }
-                    final conversation = state.items[index];
-                    return ConversationRow(
-                      conversation: conversation,
-                      selectionMode: selecting,
-                      selected: _selected.contains(conversation.id),
-                      onLongPress: access.canLabel
-                          ? () => _toggleSelection(conversation.id)
-                          : null,
-                      onTap: () {
-                        if (selecting) {
-                          _toggleSelection(conversation.id);
-                          return;
-                        }
-                        context.pushNamed(
-                          InboxModule.thread,
-                          pathParameters: {'id': conversation.id},
-                        );
-                      },
-                    );
-                  },
                 ),
               ),
             ),
@@ -294,9 +362,12 @@ class _InboxPageState extends ConsumerState<InboxPage>
           if (selecting)
             InboxBulkBar(
               selectedIds: _selected.toList(),
-              allIds:
-                  list.valueOrNull?.items.map((item) => item.id).toList() ??
-                  const [],
+              allIds: [
+                for (final c in pinned) c.id,
+                for (final c
+                    in list.valueOrNull?.items ?? const <Conversation>[])
+                  c.id,
+              ],
               onSelectAll: (ids) => setState(() {
                 _selected
                   ..clear()

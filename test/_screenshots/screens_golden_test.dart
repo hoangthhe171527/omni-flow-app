@@ -9,7 +9,7 @@
 // Ảnh ra: test/_screenshots/goldens/*.png (780×1688, tức 390×844 @2x) — thư
 // mục này nằm trong .gitignore, mỗi người tự dựng.
 //
-// Nạp font Inter thật từ assets và MaterialIcons từ SDK, nếu không
+// Nạp font Be Vietnam Pro thật từ assets và MaterialIcons từ SDK, nếu không
 // golden vẽ chữ bằng font Ahem (toàn ô vuông) và không đọc được gì về kiểu chữ. Dữ liệu
 // mẫu chép từ tool/ui_preview.dart — cố ý có ca xấu: việc trễ, tên dài hai
 // dòng, ảnh (trong test không có mạng nên ảnh hiện ô giữ chỗ "ảnh vỡ").
@@ -359,20 +359,13 @@ Plan _plan(String id, String name, {String? cover, int overdue = 0}) =>
     });
 
 Future<void> _loadAppFont() async {
-  final loader = FontLoader('Inter');
-  for (final f in ['Regular', 'Medium', 'SemiBold']) {
-    final bytes = File('assets/fonts/Inter-$f.ttf').readAsBytesSync();
+  // Phông giao diện: Be Vietnam Pro, mỗi độ đậm một file TTF.
+  final loader = FontLoader('Be Vietnam Pro');
+  for (final f in ['Regular', 'Medium', 'SemiBold', 'Bold', 'ExtraBold']) {
+    final bytes = File('assets/fonts/BeVietnamPro-$f.ttf').readAsBytesSync();
     loader.addFont(Future.value(ByteData.view(bytes.buffer)));
   }
   await loader.load();
-
-  // Be Vietnam Pro chỉ còn cho chữ "Viomni" ở màn mở app.
-  final brand = FontLoader('Be Vietnam Pro');
-  final brandBytes = File(
-    'assets/fonts/BeVietnamPro-ExtraBold.ttf',
-  ).readAsBytesSync();
-  brand.addFont(Future.value(ByteData.view(brandBytes.buffer)));
-  await brand.load();
 
   // Icon Material không được nạp trong môi trường test → mọi icon vẽ thành ô
   // vuông. Nạp thẳng từ SDK để ảnh chụp phản ánh đúng thứ người dùng thấy.
@@ -561,7 +554,7 @@ void main() {
         ],
       ),
       '03b-chi-tiet-viec-trao-doi',
-      scrollTo: find.text('Trao đổi'),
+      scrollTo: find.text('TRAO ĐỔI'),
     ),
   );
   testWidgets(

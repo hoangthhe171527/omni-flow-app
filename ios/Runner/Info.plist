@@ -45,6 +45,8 @@
 	<true/>
 	<key>NSCameraUsageDescription</key>
 	<string>Dùng camera để chụp ảnh gửi cho khách trong hộp thư.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Viomni cần micro để ghi âm tin nhắn thoại gửi cho khách.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>Chọn ảnh từ thư viện để gửi cho khách trong hộp thư.</string>
 	<key>NSPhotoLibraryAddUsageDescription</key>

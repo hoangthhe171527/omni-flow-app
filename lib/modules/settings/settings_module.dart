@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../core/module/module_route.dart';
 import '../../core/module/nav_destination.dart';
 import '../../core/module/omni_module.dart';
+import 'presentation/account_page.dart';
 import 'presentation/background_page.dart';
 import 'presentation/my_permissions_page.dart';
 import 'presentation/notification_settings_page.dart';
@@ -12,6 +13,7 @@ import 'presentation/notification_settings_page.dart';
 class SettingsModule extends OmniModule {
   const SettingsModule();
 
+  static const account = 'settings.account';
   static const myPermissions = 'settings.permissions';
   static const notifications = 'settings.notifications';
   static const background = 'settings.background';
@@ -24,6 +26,12 @@ class SettingsModule extends OmniModule {
 
   @override
   List<ModuleRoute> routes() => [
+    ModuleRoute(
+      path: '/settings/account',
+      name: account,
+      rootNavigator: true,
+      builder: (_, _) => const AccountPage(),
+    ),
     ModuleRoute(
       path: '/settings/permissions',
       name: myPermissions,

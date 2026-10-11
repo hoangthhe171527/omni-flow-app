@@ -95,7 +95,7 @@ class _TimelinePageState extends ConsumerState<TimelinePage> {
     final groups = DayGroup.from(data?.entries ?? const []);
 
     return Scaffold(
-      appBar: const OmniAppBar(title: 'Dòng việc'),
+      appBar: const OmniAppBar(title: 'Dòng việc', centerTitle: true),
       body: RefreshIndicator(
         onRefresh: () async {
           ref.invalidate(workshopFeedProvider);
@@ -150,9 +150,9 @@ class _Feed extends ConsumerWidget {
           const SliverPadding(
             padding: EdgeInsets.fromLTRB(
               OmniSpacing.lg,
+              14,
               OmniSpacing.lg,
-              OmniSpacing.lg,
-              0,
+              14,
             ),
             sliver: SliverToBoxAdapter(child: _Kpi()),
           ),
@@ -179,18 +179,14 @@ class _Feed extends ConsumerWidget {
             ),
           ),
           SliverPadding(
-            padding: const EdgeInsets.symmetric(horizontal: OmniSpacing.lg),
-            sliver: SliverList.builder(
-              itemCount: group.entries.length,
-              itemBuilder: (context, index) {
-                final entry = group.entries[index];
-
-                return _SlideInOnce(
-                  key: ValueKey(entry.id),
-                  enabled: fresh.contains(entry.id),
-                  child: _Row(entry: entry),
-                );
-              },
+            padding: const EdgeInsets.fromLTRB(
+              OmniSpacing.lg,
+              0,
+              OmniSpacing.lg,
+              14,
+            ),
+            sliver: SliverToBoxAdapter(
+              child: _DayCard(group: group, fresh: fresh),
             ),
           ),
         ],
@@ -203,16 +199,50 @@ class _Feed extends ConsumerWidget {
                 // tưởng mình đã thấy hết — và một dòng thời gian thiếu thì
                 // không nhìn ra được là nó thiếu.
                 'Chỉ hiện 7 ngày gần nhất.',
+                textAlign: TextAlign.center,
                 style: Theme.of(context).textTheme.labelSmall?.copyWith(
                   color: Theme.of(context).colorScheme.onSurfaceVariant,
                 ),
               ),
             ),
           ),
-        const SliverToBoxAdapter(
-          child: SizedBox(height: OmniSpacing.bottomSafe),
-        ),
+        const SliverToBoxAdapter(child: SizedBox(height: 30)),
       ],
+    );
+  }
+}
+
+/// Thẻ bo 8 bọc các dòng của MỘT ngày, ngăn nhau bằng vạch mảnh.
+class _DayCard extends StatelessWidget {
+  const _DayCard({required this.group, required this.fresh});
+
+  final DayGroup group;
+  final Set<String> fresh;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+
+    return Material(
+      color: scheme.surface,
+      clipBehavior: Clip.antiAlias,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(8),
+        side: BorderSide(color: scheme.outlineVariant),
+      ),
+      child: Column(
+        children: [
+          for (var i = 0; i < group.entries.length; i++) ...[
+            if (i > 0)
+              Divider(height: 1, thickness: 1, color: scheme.outlineVariant),
+            _SlideInOnce(
+              key: ValueKey(group.entries[i].id),
+              enabled: fresh.contains(group.entries[i].id),
+              child: _Row(entry: group.entries[i]),
+            ),
+          ],
+        ],
+      ),
     );
   }
 }

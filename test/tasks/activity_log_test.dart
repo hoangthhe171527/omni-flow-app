@@ -30,11 +30,11 @@ void main() {
   );
 
   testWidgets('không có dòng nào thì không chiếm chỗ', (tester) async {
-    // Một khối "Nhật ký (0)" chỉ dạy người dùng rằng bấm vào nó không ra gì.
+    // Một khối "NHẬT KÝ (0)" chỉ dạy người dùng rằng bấm vào nó không ra gì.
     await tester.pumpWidget(host(task(const [])));
     await tester.pumpAndSettle();
 
-    expect(find.textContaining('Nhật ký'), findsNothing);
+    expect(find.textContaining('NHẬT KÝ'), findsNothing);
   });
 
   testWidgets('gấp mặc định — nói có bao nhiêu dòng, chưa bày ra', (
@@ -51,7 +51,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('Nhật ký (1)'), findsOneWidget);
+    expect(find.text('NHẬT KÝ (1)'), findsOneWidget);
     expect(find.textContaining('đã tạo việc'), findsNothing);
   });
 
@@ -75,7 +75,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('Nhật ký (1)'));
+    await tester.tap(find.text('NHẬT KÝ (1)'));
     await tester.pumpAndSettle();
 
     expect(
@@ -99,7 +99,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('Nhật ký (2)'));
+    await tester.tap(find.text('NHẬT KÝ (2)'));
     await tester.pumpAndSettle();
 
     final newest = tester.getTopLeft(find.text('Hằng Ni đã đổi hạn')).dy;
@@ -122,7 +122,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('Nhật ký (1)'));
+    await tester.tap(find.text('NHẬT KÝ (1)'));
     await tester.pumpAndSettle();
 
     expect(find.text('đã tạo việc'), findsOneWidget);
@@ -140,7 +140,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('Nhật ký (25)'));
+    await tester.tap(find.text('NHẬT KÝ (25)'));
     await tester.pumpAndSettle();
 
     expect(find.text('Xem thêm 5 dòng'), findsOneWidget);

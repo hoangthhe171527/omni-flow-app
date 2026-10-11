@@ -79,7 +79,19 @@ class RateLimitedException extends AppException {
 
 /// Mã 4xx khác (409, 410, 413…) mà API không gửi câu cho người đọc.
 class RequestRejectedException extends AppException {
-  const RequestRejectedException(super.message, {super.code});
+  const RequestRejectedException(
+    super.message, {
+    super.code,
+    this.reason,
+    this.data,
+  });
+
+  /// Mã nghiệp vụ API gửi kèm (`code`, vd 409 `message_not_failed`).
+  final String? reason;
+
+  /// `data` của phản hồi lỗi khi API gửi kèm (vd 409 `/resend` trả tin hiện
+  /// tại). Null khi không có.
+  final Object? data;
 }
 
 /// Câu cho NGƯỜI đọc từ một lỗi bất kỳ: lời của API khi có, không thì câu chung.

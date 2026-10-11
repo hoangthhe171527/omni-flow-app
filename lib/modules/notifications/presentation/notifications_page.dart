@@ -3,21 +3,28 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/utils/formatters.dart';
 import '../../../design/components/components.dart';
+import '../../../design/platform/omni_motion_scope.dart';
 import '../../../design/tokens/tokens.dart';
 import '../application/notifications_providers.dart';
 import '../domain/app_notification.dart';
 
-/// The bell.
+/// Chuông (`Notifications.dc.html`).
 ///
-/// One list, newest first, unread marked. No filters and no tabs: a workshop
-/// notification is either something to act on or something already handled, and
-/// a tab bar over twenty rows is furniture, not navigation.
+/// Một danh sách, mới nhất trước, nhóm "Hôm nay" / "Trước đó" theo ngày VN.
+/// Thanh chọn "Tất cả / Chưa đọc · N" lọc ở server; N cũng đếm ở server.
 class NotificationsPage extends ConsumerStatefulWidget {
-  const NotificationsPage({super.key, this.onOpenTask});
+  const NotificationsPage({
+    super.key,
+    this.onOpenTask,
+    this.onOpenConversation,
+  });
 
-  /// Where a task notification goes when tapped. Injected rather than imported
-  /// so this screen does not depend on the tasks module's router.
+  /// Nơi một thông báo việc dẫn tới. Truyền vào thay vì import, để màn này
+  /// không phụ thuộc router của module việc.
   final void Function(String taskId)? onOpenTask;
+
+  /// Nơi thông báo tin nhắn dẫn tới (hội thoại trong hộp thư).
+  final void Function(String conversationId)? onOpenConversation;
 
   @override
   ConsumerState<NotificationsPage> createState() => _NotificationsPageState();
@@ -48,28 +55,52 @@ class _NotificationsPageState extends ConsumerState<NotificationsPage> {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    // Holds the socket open for as long as this screen is mounted. The screen
-    // owns the subscription, not the controller: fetching a list should not be
-    // what opens a connection.
+    // Giữ socket mở suốt thời gian màn này còn đó.
     ref.watch(notificationRealtimeProvider);
     final notifications = ref.watch(notificationsProvider);
-    // Đếm ở server, qua mọi trang — không phải số dòng chưa đọc đang trên màn.
-    final unread = ref.watch(unreadNotificationCountProvider).valueOrNull ?? 0;
+    final unreadOnly = ref.watch(notificationUnreadOnlyProvider);
+    // Đếm ở server, qua mọi trang — không phải số dòng đang trên màn. Null =
+    // chưa về: thanh chọn không kèm số, thay vì "· 0" như thể đã đọc hết.
+    final unreadCount = ref.watch(unreadNotificationCountProvider).valueOrNull;
+    final unread = unreadCount ?? 0;
 
     return Scaffold(
       backgroundColor: scheme.surface,
       appBar: OmniAppBar(
         backgroundColor: scheme.surface,
         title: 'Thông báo',
-        toolbarHeight: 56,
+        centerTitle: true,
+        showAccount: false,
         actions: [
-          if (unread > 0)
-            TextButton(
-              onPressed: () =>
-                  ref.read(notificationsProvider.notifier).markAllRead(),
-              child: const Text('Đọc hết'),
+          TextButton(
+            onPressed: unread > 0
+                ? () => ref.read(notificationsProvider.notifier).markAllRead()
+                : null,
+            child: Text(
+              'Đọc hết',
+              style: TextStyle(
+                fontWeight: FontWeight.w600,
+                color: unread > 0 ? scheme.primary : null,
+              ),
             ),
+          ),
         ],
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(54),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
+            child: OmniSegmented(
+              labels: [
+                'Tất cả',
+                unreadCount == null ? 'Chưa đọc' : 'Chưa đọc · $unreadCount',
+              ],
+              index: unreadOnly ? 1 : 0,
+              onChanged: (i) =>
+                  ref.read(notificationUnreadOnlyProvider.notifier).state =
+                      i == 1,
+            ),
+          ),
+        ),
       ),
       body: RefreshIndicator(
         onRefresh: () => ref.read(notificationsProvider.notifier).refresh(),
@@ -77,27 +108,39 @@ class _NotificationsPageState extends ConsumerState<NotificationsPage> {
           value: notifications,
           onRetry: () => ref.invalidate(notificationsProvider),
           isEmpty: (state) => state.items.isEmpty,
-          empty: const OmniEmptyState(
-            icon: Icons.notifications_none_rounded,
-            title: 'Chưa có thông báo',
-            message:
-                'Khi có việc được giao hoặc hoàn thành, bạn sẽ thấy ở đây.',
-          ),
-          data: (state) => ListView.separated(
-            controller: _scrollController,
-            padding: const EdgeInsets.only(bottom: OmniSpacing.bottomSafe),
-            itemCount: state.items.length,
-            separatorBuilder: (_, _) =>
-                Divider(height: 1, color: scheme.outlineVariant),
-            itemBuilder: (context, index) {
-              final notification = state.items[index];
+          empty: unreadOnly
+              ? const _AllReadEmpty()
+              : const OmniEmptyState(
+                  icon: Icons.notifications_none_rounded,
+                  title: 'Chưa có thông báo',
+                  message:
+                      'Khi có việc được giao hoặc hoàn thành, bạn sẽ thấy ở đây.',
+                ),
+          data: (state) {
+            final groups = groupNotificationsByDay(state.items);
 
-              return NotificationRow(
-                notification: notification,
-                onTap: () => _open(notification),
-              );
-            },
-          ),
+            return ListView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              controller: _scrollController,
+              padding: const EdgeInsets.fromLTRB(
+                16,
+                14,
+                16,
+                OmniSpacing.bottomSafe,
+              ),
+              children: [
+                for (final group in groups)
+                  _Rise(
+                    key: ValueKey(group.label),
+                    child: _GroupBlock(
+                      label: group.label,
+                      items: group.items,
+                      onOpen: _open,
+                    ),
+                  ),
+              ],
+            );
+          },
         ),
       ),
     );
@@ -106,18 +149,131 @@ class _NotificationsPageState extends ConsumerState<NotificationsPage> {
   void _open(AppNotification notification) {
     ref.read(notificationsProvider.notifier).markRead(notification.id);
 
+    // Dòng không định tuyến được vẫn đánh dấu đã đọc, chỉ không điều hướng.
     final taskId = notification.taskId;
-    // A row this build cannot route is still worth reading and still marks
-    // itself read — it just does not navigate. Better than a dead end on a
-    // screen that does not exist.
-    if (taskId != null) widget.onOpenTask?.call(taskId);
+    if (taskId != null) {
+      widget.onOpenTask?.call(taskId);
+      return;
+    }
+    final conversationId = notification.conversationId;
+    if (conversationId != null) {
+      widget.onOpenConversation?.call(conversationId);
+    }
   }
 }
 
-/// One notification.
-///
-/// The whole row is the target at 72dp; the unread dot is an indicator, never
-/// something to aim at.
+class _AllReadEmpty extends StatelessWidget {
+  const _AllReadEmpty();
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView(
+      physics: const AlwaysScrollableScrollPhysics(),
+      padding: const EdgeInsets.only(top: 60),
+      children: [
+        Center(
+          child: Text(
+            'Bạn đã đọc hết thông báo',
+            style: OmniType.body.copyWith(
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// `rise`: hiện dần và trượt lên 10px trong 450ms. Tắt khi giảm chuyển động.
+class _Rise extends StatelessWidget {
+  const _Rise({super.key, required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    if (!OmniMotion.enabled(context)) return child;
+
+    return TweenAnimationBuilder<double>(
+      tween: Tween(begin: 0, end: 1),
+      duration: const Duration(milliseconds: 450),
+      curve: OmniCurves.standard,
+      child: child,
+      builder: (context, t, child) => Opacity(
+        opacity: t,
+        child: Transform.translate(
+          offset: Offset(0, 10 * (1 - t)),
+          child: child,
+        ),
+      ),
+    );
+  }
+}
+
+class _GroupBlock extends StatelessWidget {
+  const _GroupBlock({
+    required this.label,
+    required this.items,
+    required this.onOpen,
+  });
+
+  final String label;
+  final List<AppNotification> items;
+  final void Function(AppNotification) onOpen;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(2, 0, 2, 8),
+            child: Semantics(
+              header: true,
+              child: Text(
+                label,
+                style: OmniType.overline.copyWith(
+                  color: scheme.onSurfaceVariant,
+                ),
+              ),
+            ),
+          ),
+          DecoratedBox(
+            decoration: BoxDecoration(
+              border: Border.all(color: scheme.outlineVariant),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(7),
+              child: Column(
+                children: [
+                  for (var i = 0; i < items.length; i++) ...[
+                    if (i > 0)
+                      Divider(
+                        height: 1,
+                        thickness: 1,
+                        color: scheme.surfaceContainerHighest,
+                      ),
+                    NotificationRow(
+                      notification: items[i],
+                      onTap: () => onOpen(items[i]),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Một thông báo. Cả dòng là đích chạm; chấm chưa đọc chỉ là chỉ báo.
 class NotificationRow extends StatelessWidget {
   const NotificationRow({
     super.key,
@@ -133,52 +289,76 @@ class NotificationRow extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     final unread = notification.isUnread;
 
-    return Material(
-      // Unread is carried by weight and a dot as well as by the tint, so it
-      // survives both dim workshop light and colour-blindness.
-      color: unread ? scheme.primary.withValues(alpha: 0.05) : scheme.surface,
-      child: InkWell(
-        onTap: onTap,
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(minHeight: 72),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
+    return Semantics(
+      button: true,
+      label: [
+        if (unread) 'Chưa đọc',
+        notification.title,
+        if (notification.body.isNotEmpty) notification.body,
+      ].join(', '),
+      onTap: onTap,
+      excludeSemantics: true,
+      child: Material(
+        color: unread
+            ? OmniColors.byBrightness(
+                context,
+                OmniColors.unreadRow,
+                scheme.primary.withValues(alpha: 0.08),
+              )
+            : scheme.surface,
+        child: InkWell(
+          onTap: onTap,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(minHeight: 52),
+            child: Stack(
               children: [
-                _KindIcon(kind: notification.kind),
-                const SizedBox(width: OmniSpacing.md),
-                Expanded(
-                  child: Column(
+                if (unread)
+                  Positioned(
+                    left: 7,
+                    top: 22,
+                    child: Container(
+                      width: 6,
+                      height: 6,
+                      decoration: BoxDecoration(
+                        color: scheme.primary,
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                  ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(18, 10, 12, 10),
+                  child: Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        notification.title,
-                        style: OmniType.bodyStrong.copyWith(
-                          fontWeight: unread
-                              ? FontWeight.w600
-                              : FontWeight.w500,
-                          color: scheme.onSurface,
+                      _KindIcon(kind: notification.kind),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              notification.title,
+                              style: OmniType.body.copyWith(
+                                fontWeight: unread
+                                    ? FontWeight.w600
+                                    : FontWeight.w400,
+                                color: scheme.onSurface,
+                              ),
+                            ),
+                            const SizedBox(height: OmniSpacing.xxs),
+                            Text(
+                              notification.body,
+                              style: OmniType.body.copyWith(
+                                color: scheme.onSurfaceVariant,
+                              ),
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ],
                         ),
-                      ),
-                      const SizedBox(height: OmniSpacing.xxs),
-                      Text(
-                        notification.body,
-                        style: OmniType.body.copyWith(
-                          height: 20 / 14,
-                          color: unread
-                              ? OmniColors.byBrightness(
-                                  context,
-                                  OmniColors.secondaryForeground,
-                                  scheme.onSurfaceVariant,
-                                )
-                              : scheme.onSurfaceVariant,
-                        ),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
                       ),
                       if (notification.createdAt != null) ...[
-                        const SizedBox(height: OmniSpacing.xs),
+                        const SizedBox(width: OmniSpacing.sm),
                         Text(
                           Formatters.relative(notification.createdAt),
                           style: OmniType.micro.copyWith(
@@ -189,18 +369,6 @@ class NotificationRow extends StatelessWidget {
                     ],
                   ),
                 ),
-                if (unread) ...[
-                  const SizedBox(width: OmniSpacing.sm),
-                  Container(
-                    width: 8,
-                    height: 8,
-                    margin: const EdgeInsets.only(top: OmniSpacing.xs),
-                    decoration: BoxDecoration(
-                      color: scheme.primary,
-                      shape: BoxShape.circle,
-                    ),
-                  ),
-                ],
               ],
             ),
           ),
@@ -210,8 +378,8 @@ class NotificationRow extends StatelessWidget {
   }
 }
 
-/// A glyph per kind, so the list can be read by shape before it is read by
-/// words. Never an emoji: they render differently on every Android skin.
+/// Hình theo loại, màu theo sắc: tin nhắn teal, việc xanh, sắp hạn cam, trễ
+/// hạn đỏ, còn lại trung tính.
 class _KindIcon extends StatelessWidget {
   const _KindIcon({required this.kind});
 
@@ -219,54 +387,48 @@ class _KindIcon extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Ô icon xám trung tính, icon nói LOẠI bằng hình. Màu chỉ còn cho trạng
-    // thái: trễ hạn đỏ, sắp tới hạn hổ phách. Bản cũ tô bốn màu (xanh dương,
-    // mòng két, đỏ, vàng) — bốn giọng cho một danh sách là trang trí.
-    final (icon, tone) = switch (kind) {
+    final (icon, hue) = switch (kind) {
+      NotificationKind.inboxMessage => (
+        Icons.chat_bubble_outline_rounded,
+        OmniHue.teal,
+      ),
       NotificationKind.taskAssigned => (
         Icons.assignment_ind_outlined,
-        OmniTone.neutral,
+        OmniHue.blue,
       ),
       NotificationKind.taskStageOpen => (
         Icons.pan_tool_alt_outlined,
-        OmniTone.neutral,
+        OmniHue.blue,
       ),
-      NotificationKind.taskProgress => (
-        Icons.timeline_rounded,
-        OmniTone.neutral,
-      ),
+      NotificationKind.taskProgress => (Icons.timeline_rounded, OmniHue.blue),
       NotificationKind.taskCompleted => (
         Icons.check_circle_outline_rounded,
-        OmniTone.neutral,
-      ),
-      NotificationKind.taskOverdue => (
-        Icons.warning_amber_rounded,
-        OmniTone.danger,
-      ),
-      NotificationKind.taskDueSoon => (
-        Icons.schedule_rounded,
-        OmniTone.warning,
+        OmniHue.blue,
       ),
       NotificationKind.taskCommented || NotificationKind.taskMentioned => (
         Icons.chat_bubble_outline_rounded,
-        OmniTone.neutral,
+        OmniHue.blue,
       ),
-      NotificationKind.inboxMessage => (Icons.forum_outlined, OmniTone.neutral),
+      NotificationKind.taskDueSoon => (Icons.schedule_rounded, OmniHue.orange),
+      NotificationKind.taskOverdue => (
+        Icons.warning_amber_rounded,
+        OmniHue.red,
+      ),
       NotificationKind.other => (
         Icons.notifications_none_rounded,
-        OmniTone.neutral,
+        OmniHue.neutral,
       ),
     };
-    final (foreground, background) = tone.of(context);
+    final tone = OmniFeatureTones.of(context, hue);
 
     return Container(
-      width: 40,
-      height: 40,
+      width: 32,
+      height: 32,
       decoration: BoxDecoration(
-        color: background,
-        borderRadius: OmniRadius.mdAll,
+        color: tone.background,
+        borderRadius: BorderRadius.circular(8),
       ),
-      child: Icon(icon, size: OmniIconSize.lg, color: foreground),
+      child: Icon(icon, size: OmniIconSize.lg, color: tone.foreground),
     );
   }
 }

@@ -410,8 +410,11 @@ class _StubTasksApi implements TasksApi {
   }) => get(taskId);
 
   @override
-  Future<Task> claimSubtask(String taskId, String subtaskId, String userId) =>
+  Future<Task> assignSubtask(String taskId, String subtaskId, String? userId) =>
       get(taskId);
+
+  @override
+  Future<List<String>> projectMemberIds(String projectId) async => const [];
 
   @override
   Future<Task> setRating(String taskId, int rating) =>

@@ -38,28 +38,41 @@ void main() {
     );
   }
 
-  testWidgets('người kiểm chấm được', (tester) async {
+  /// Nhãn "n điểm" là ngữ nghĩa, nên các bài này bật nó — và trả tay cầm
+  /// TRƯỚC khi bài kết thúc.
+  void tw(String name, Future<void> Function(WidgetTester tester) body) {
+    testWidgets(name, (tester) async {
+      final handle = tester.ensureSemantics();
+      try {
+        await body(tester);
+      } finally {
+        handle.dispose();
+      }
+    });
+  }
+
+  tw('người kiểm chấm được', (tester) async {
     await tester.pumpWidget(host(task()));
     await tester.pumpAndSettle();
 
-    await tester.tap(find.byTooltip('4 sao'));
+    await tester.tap(find.bySemanticsLabel('4 điểm'));
     await tester.pumpAndSettle();
 
     expect(rated, [4]);
   });
 
-  testWidgets('chạm lại đúng sao đang chọn là XOÁ điểm', (tester) async {
+  tw('chạm lại đúng sao đang chọn là XOÁ điểm', (tester) async {
     // Chấm nhầm phải gỡ được, và không có nút nào khác để làm việc đó.
     await tester.pumpWidget(host(task(rating: 3)));
     await tester.pumpAndSettle();
 
-    await tester.tap(find.byTooltip('3 sao'));
+    await tester.tap(find.bySemanticsLabel('3 điểm'));
     await tester.pumpAndSettle();
 
     expect(rated, [0]);
   });
 
-  testWidgets('người LÀM thấy điểm nhưng không đổi được', (tester) async {
+  tw('người LÀM thấy điểm nhưng không đổi được', (tester) async {
     // Ai cũng tự chấm được thì con số thôi là một đánh giá. Vẫn cho thấy: §7
     // cấm bảng xếp hạng cá nhân, không cấm một người biết việc của chính mình
     // được kiểm ra sao.
@@ -67,11 +80,17 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('4/5'), findsOneWidget);
-    for (final button in tester.widgetList<IconButton>(
-      find.byType(IconButton),
-    )) {
-      expect(button.onPressed, isNull);
-    }
+    // Không phải nút với trình đọc màn hình, và chạm không ghi gì.
+    expect(
+      tester
+          .getSemantics(find.bySemanticsLabel('2 điểm'))
+          .flagsCollection
+          .isButton,
+      isFalse,
+    );
+    await tester.tap(find.bySemanticsLabel('2 điểm'));
+    await tester.pumpAndSettle();
+    expect(rated, isEmpty);
   });
 
   testWidgets('chưa chấm và không được chấm thì không chiếm chỗ', (
@@ -80,7 +99,7 @@ void main() {
     await tester.pumpWidget(host(task(), canRate: false));
     await tester.pumpAndSettle();
 
-    expect(find.text('Điểm kiểm tra'), findsNothing);
+    expect(find.text('ĐIỂM KIỂM TRA'), findsNothing);
   });
 
   test('gửi `rating` là SỐ, kể cả khi xoá điểm', () async {

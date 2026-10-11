@@ -5,6 +5,7 @@ import '../../core/module/module_route.dart';
 import '../../core/module/nav_destination.dart';
 import '../../core/module/omni_module.dart';
 import '../../security/guard/access_requirement.dart';
+import 'application/channels_providers.dart';
 import 'domain/channel_permissions.dart';
 import 'domain/connectable_channel.dart';
 import 'presentation/channels_page.dart';
@@ -57,10 +58,10 @@ class ChannelsModule extends OmniModule {
       : UnsupportedPairPage(channel: channel);
 
   @override
-  List<ModuleNavEntry> navEntries() => const [
+  List<ModuleNavEntry> navEntries() => [
     ModuleNavEntry(
       moduleId: 'channels',
-      label: 'Kết nối kênh',
+      label: 'Kênh kết nối',
       subtitle: 'Nối Zalo, Facebook, TikTok vào hộp thư',
       icon: Icons.hub_outlined,
       selectedIcon: Icons.hub_rounded,
@@ -72,6 +73,8 @@ class ChannelsModule extends OmniModule {
       order: 30,
       access: AccessRequirement.any(ChannelPermissions.anyRead),
       feature: 'channels',
+      badge: channelErrorCountProvider,
+      badgeTone: NavBadgeTone.alert,
     ),
   ];
 }

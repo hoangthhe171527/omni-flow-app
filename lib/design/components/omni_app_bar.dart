@@ -16,10 +16,18 @@ class OmniAccountSlot extends InheritedWidget {
   const OmniAccountSlot({
     super.key,
     required this.builder,
+    this.tileBuilder,
     required super.child,
   });
 
   final WidgetBuilder builder;
+
+  /// Biến thể ô vuông 36 chữ cái đầu, dành cho [OmniTopBar].
+  final WidgetBuilder? tileBuilder;
+
+  static WidgetBuilder? maybeTileOf(BuildContext context) => context
+      .dependOnInheritedWidgetOfExactType<OmniAccountSlot>()
+      ?.tileBuilder;
 
   /// Null khi chưa ai cắm gì — đúng trong bài kiểm widget của một màn lẻ, và
   /// [OmniAppBar] chỉ đơn giản không vẽ nút. Không ném lỗi: một AppBar không
@@ -29,7 +37,7 @@ class OmniAccountSlot extends InheritedWidget {
 
   @override
   bool updateShouldNotify(OmniAccountSlot oldWidget) =>
-      oldWidget.builder != builder;
+      oldWidget.builder != builder || oldWidget.tileBuilder != tileBuilder;
 }
 
 /// AppBar của app, với nút tài khoản ở góc phải là MẶC ĐỊNH.
@@ -53,6 +61,7 @@ class OmniAppBar extends StatelessWidget implements PreferredSizeWidget {
     this.backgroundColor,
     this.titleSpacing,
     this.toolbarHeight,
+    this.centerTitle = false,
   });
 
   final String title;
@@ -76,6 +85,10 @@ class OmniAppBar extends StatelessWidget implements PreferredSizeWidget {
   final Color? backgroundColor;
   final double? titleSpacing;
   final double? toolbarHeight;
+
+  /// Tiêu đề căn GIỮA cỡ thanh trên (17/600) thay vì tiêu đề lớn canh trái:
+  /// dành cho màn gốc kiểu "Dòng việc" (`Timeline.dc.html`).
+  final bool centerTitle;
 
   @override
   Size get preferredSize => Size.fromHeight(
@@ -108,8 +121,10 @@ class OmniAppBar extends StatelessWidget implements PreferredSizeWidget {
       title: Text(title, maxLines: 1, overflow: TextOverflow.ellipsis),
       titleTextStyle: canPop
           ? null
-          : OmniType.largeTitle.copyWith(color: scheme.onSurface),
-      centerTitle: canPop ? null : false,
+          : (centerTitle ? OmniType.navTitle : OmniType.largeTitle).copyWith(
+              color: scheme.onSurface,
+            ),
+      centerTitle: centerTitle ? true : (canPop ? null : false),
       bottom: bottom,
       backgroundColor: backgroundColor,
       titleSpacing: titleSpacing,

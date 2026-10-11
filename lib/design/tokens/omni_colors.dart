@@ -88,6 +88,14 @@ abstract final class OmniColors {
   static Color controlBorderOf(BuildContext context) =>
       _byBrightness(context, controlBorder, darkBorderInteractive);
 
+  /// Rãnh của thanh tiến độ mảnh (#EEF1F5 / tối: darkMuted).
+  static Color trackOf(BuildContext context) =>
+      _byBrightness(context, muted, darkMuted);
+
+  /// Đoạn "còn lại" của thanh tiến độ (#C9D2DE / tối: darkBorderInteractive).
+  static Color mutedBarOf(BuildContext context) =>
+      _byBrightness(context, controlBorder, darkBorderInteractive);
+
   /// Ranh giới của thành phần TƯƠNG TÁC: ô nhập, nút viền, chip chưa chọn.
   ///
   /// Thiết kế ghi #8A97AB, nhưng giá trị đó chỉ đạt 2.96:1 trên thẻ và 2.76:1
@@ -120,6 +128,10 @@ abstract final class OmniColors {
 
   /// Nguy — đồ hoạ và viền lỗi của ô nhập (5.32:1 trên thẻ).
   static const destructive = Color(0xFFC8322A);
+
+  /// Tim bay lên khi bấm đúp tin (`Thread.dc.html` `burst`). Đồ hoạ thuần,
+  /// không mang chữ; đủ nổi trên cả nền sáng lẫn tối nên không đổi theo chế độ.
+  static const heart = Color(0xFFE5484D);
 
   /// Thông tin — đồ hoạ.
   static const info = Color(0xFF2456D6);
@@ -200,6 +212,10 @@ abstract final class OmniColors {
   static const darkInfoSoft = Color(0xFF17264A);
   static const darkInfoText = Color(0xFF9DB6F5);
   static const darkWarningSoft = Color(0xFF3A2E12);
+
+  /// Nền dòng thông báo chưa đọc (`Notifications.dc.html`); tối dùng primary
+  /// alpha .08.
+  static const unreadRow = Color(0xFFF3FAF9);
 
   /// Chọn bản sáng/tối của một cặp màu theo chế độ đang bật.
   static Color byBrightness(BuildContext context, Color light, Color dark) =>

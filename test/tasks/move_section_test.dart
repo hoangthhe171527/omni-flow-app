@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:omni_app/design/theme/omni_theme.dart';
+import 'package:omni_app/design/tokens/tokens.dart';
 import 'package:omni_app/modules/tasks/domain/task.dart';
-import 'package:omni_app/modules/tasks/presentation/widgets/move_section_sheet.dart';
+import 'package:omni_app/modules/tasks/presentation/widgets/task_detail/option_sheet.dart';
 
-/// Chọn công đoạn mới, thay cho kéo thả.
+/// Chọn nhóm việc mới, thay cho kéo thả — nay qua `showOptionSheet`.
 ///
 /// Trên điện thoại, kéo một thẻ qua ranh giới trang tranh trực tiếp với cử chỉ
 /// lật trang của chính cái bảng — hai thao tác cùng hướng, và người dùng đoán
@@ -16,13 +17,13 @@ void main() {
     TaskSection(id: 's3', name: 'Chờ QC'),
   ];
 
-  Future<String?> open(
+  /// Mở sheet đúng như màn chi tiết gọi nó; `result()` trả chỉ số đã chọn.
+  Future<int? Function()> open(
     WidgetTester tester, {
     List<TaskSection> list = sections,
-    String? current = 's2',
+    int? selected = 1,
   }) async {
-    String? result;
-    var returned = false;
+    int? picked;
 
     await tester.pumpWidget(
       MaterialApp(
@@ -31,12 +32,19 @@ void main() {
           body: Builder(
             builder: (context) => TextButton(
               onPressed: () async {
-                result = await showMoveSectionSheet(
-                  context: context,
-                  sections: list,
-                  current: current,
+                picked = await showOptionSheet(
+                  context,
+                  title: 'Chuyển nhóm việc',
+                  emptyMessage: 'Dự án này chưa khai báo nhóm việc nào.',
+                  selected: selected,
+                  items: [
+                    for (var i = 0; i < list.length; i++)
+                      OptionItem(
+                        label: list[i].name,
+                        color: OmniTaskTones.of(context).sectionColor(i),
+                      ),
+                  ],
                 );
-                returned = true;
               },
               child: const Text('mở'),
             ),
@@ -48,115 +56,76 @@ void main() {
     await tester.tap(find.text('mở'));
     await tester.pumpAndSettle();
 
-    return returned ? result : null;
+    return () => picked;
   }
 
   testWidgets('liệt kê đúng các nhóm việc của dự án', (tester) async {
     await open(tester);
 
+    expect(find.text('Chuyển nhóm việc'), findsOneWidget);
     expect(find.text('Nhập xưởng'), findsOneWidget);
     expect(find.text('Đang phục chế'), findsOneWidget);
     expect(find.text('Chờ QC'), findsOneWidget);
   });
 
-  testWidgets('đánh dấu nhóm việc đang đứng', (tester) async {
+  testWidgets('đánh dấu ✓ đúng nhóm việc đang đứng', (tester) async {
     await open(tester);
 
-    expect(find.byIcon(Icons.radio_button_checked_rounded), findsOneWidget);
-    expect(find.byIcon(Icons.radio_button_unchecked_rounded), findsNWidgets(2));
+    expect(find.byIcon(Icons.check_rounded), findsOneWidget);
+    expect(
+      find.descendant(
+        of: find.ancestor(
+          of: find.text('Đang phục chế'),
+          matching: find.byType(InkWell),
+        ),
+        matching: find.byIcon(Icons.check_rounded),
+      ),
+      findsOneWidget,
+    );
   });
 
-  testWidgets('chọn một nhóm việc thì đóng lại và trả về id của nó', (
+  testWidgets('chọn một nhóm việc thì đóng lại và trả về chỉ số của nó', (
     tester,
   ) async {
-    String? chosen;
+    final result = await open(tester);
 
-    await tester.pumpWidget(
-      MaterialApp(
-        theme: OmniTheme.light(TargetPlatform.android),
-        home: Scaffold(
-          body: Builder(
-            builder: (context) => TextButton(
-              onPressed: () async {
-                chosen = await showMoveSectionSheet(
-                  context: context,
-                  sections: sections,
-                  current: 's2',
-                );
-              },
-              child: const Text('mở'),
-            ),
-          ),
-        ),
-      ),
-    );
-
-    await tester.tap(find.text('mở'));
-    await tester.pumpAndSettle();
     await tester.tap(find.text('Chờ QC'));
     await tester.pumpAndSettle();
 
-    expect(chosen, 's3');
+    expect(result(), 2);
     expect(find.text('Chờ QC'), findsNothing);
   });
 
   testWidgets('nhóm việc hiện tại vẫn bấm được', (tester) async {
-    String? chosen;
-    var settled = false;
+    final result = await open(tester);
 
-    await tester.pumpWidget(
-      MaterialApp(
-        theme: OmniTheme.light(TargetPlatform.android),
-        home: Scaffold(
-          body: Builder(
-            builder: (context) => TextButton(
-              onPressed: () async {
-                chosen = await showMoveSectionSheet(
-                  context: context,
-                  sections: sections,
-                  current: 's2',
-                );
-                settled = true;
-              },
-              child: const Text('mở'),
-            ),
-          ),
-        ),
-      ),
-    );
-
-    await tester.tap(find.text('mở'));
-    await tester.pumpAndSettle();
     await tester.tap(find.text('Đang phục chế'));
     await tester.pumpAndSettle();
 
     expect(
-      settled,
-      isTrue,
+      result(),
+      1,
       reason:
           'Khoá dòng đang chọn buộc người dùng phải đoán vì sao nó không phản '
           'hồi. Cho bấm, rồi bỏ qua ở chỗ gọi.',
     );
-    expect(chosen, 's2');
   });
 
   testWidgets('dự án chưa có nhóm việc nào thì nói rõ', (tester) async {
-    await open(tester, list: const [], current: null);
+    await open(tester, list: const [], selected: null);
 
     expect(find.text('Dự án này chưa khai báo nhóm việc nào.'), findsOneWidget);
   });
 
-  testWidgets('mỗi dòng cao ít nhất 56dp', (tester) async {
+  testWidgets('mỗi dòng cao 46', (tester) async {
     await open(tester);
 
-    final tile = tester.getSize(
-      find.ancestor(of: find.text('Chờ QC'), matching: find.byType(ListTile)),
+    final row = tester.getSize(
+      find
+          .ancestor(of: find.text('Chờ QC'), matching: find.byType(InkWell))
+          .first,
     );
 
-    expect(
-      tile.height,
-      greaterThanOrEqualTo(56),
-      reason: 'Người bấm nó cũng là người đang đứng ở bàn làm việc.',
-    );
+    expect(row.height, 46);
   });
 }

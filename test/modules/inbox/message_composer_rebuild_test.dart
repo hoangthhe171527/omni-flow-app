@@ -23,8 +23,8 @@ void main() {
           children: [
             const Expanded(child: SizedBox.expand()),
             MessageComposer(
-              onSend: (text, mode, images, replyTo) async {},
-              onPickImages: () async => const [],
+              onSend: (text, images, replyTo) async {},
+              onPickImages: (_) async => const [],
             ),
           ],
         ),
@@ -87,7 +87,7 @@ void main() {
   testWidgets('nút gửi vẫn hiện khi có chữ và ẩn khi xoá hết', (tester) async {
     await tester.pumpWidget(host());
     expect(find.byIcon(Icons.send_rounded), findsNothing);
-    expect(find.byIcon(Icons.image_outlined), findsOneWidget);
+    expect(find.byTooltip('Ảnh'), findsOneWidget);
 
     await type(tester, 'ok');
     expect(find.byIcon(Icons.send_rounded), findsOneWidget);

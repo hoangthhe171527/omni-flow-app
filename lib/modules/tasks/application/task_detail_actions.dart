@@ -55,7 +55,9 @@ class TaskDetailActions {
   }
 
   Future<void> editPriority(Task task, String? chosen) async {
-    if (chosen == null || chosen == task.priority) return;
+    // Server có thể trả 'medium', sheet gửi 'med': cùng một mức.
+    String norm(String p) => p == 'medium' ? 'med' : p;
+    if (chosen == null || norm(chosen) == norm(task.priority)) return;
 
     await _controller.setPriority(chosen);
   }

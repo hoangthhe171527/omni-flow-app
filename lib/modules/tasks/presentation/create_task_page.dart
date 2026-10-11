@@ -16,11 +16,19 @@ import 'widgets/assign_task_sheet.dart';
 /// một danh sách vật thể, và nhét nó vào URL nghĩa là tuần tự hoá rồi giải mã
 /// lại một thứ đã nằm sẵn trong bộ nhớ.
 class CreateTaskArgs {
-  const CreateTaskArgs({this.planId, this.sectionId, this.sections = const []});
+  const CreateTaskArgs({
+    this.planId,
+    this.sectionId,
+    this.sections = const [],
+    this.initialTitle,
+  });
 
   final String? planId;
   final String? sectionId;
   final List<TaskSection> sections;
+
+  /// Tên việc điền sẵn (vd "Liên hệ {khách}" từ hộp thư).
+  final String? initialTitle;
 }
 
 /// Tạo một công việc, từ điện thoại.
@@ -39,7 +47,11 @@ class CreateTaskPage extends ConsumerStatefulWidget {
     this.planId,
     this.sectionId,
     this.sections = const [],
+    this.initialTitle,
   });
+
+  /// Tên việc điền sẵn.
+  final String? initialTitle;
 
   /// Dự án việc này thuộc về. Null = việc rời, không nằm trên bảng nào.
   final String? planId;
@@ -61,6 +73,13 @@ class _CreateTaskPageState extends ConsumerState<CreateTaskPage> {
   DateTime? _dueDate;
   bool _saving = false;
   String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    final initial = widget.initialTitle;
+    if (initial != null) _title.text = initial;
+  }
 
   @override
   void dispose() {

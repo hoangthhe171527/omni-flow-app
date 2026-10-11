@@ -12,28 +12,51 @@ import '../../../design/components/components.dart';
 import '../../../design/platform/omni_motion_scope.dart';
 import '../../../design/tokens/tokens.dart';
 import '../../../core/realtime/realtime_client.dart';
-import '../../../security/session/session_controller.dart';
-import '../../opportunities/opportunities.dart';
 import '../../settings/settings.dart';
 import '../application/inbox_providers.dart';
 import '../application/inbox_realtime.dart';
 import '../application/media_url_resolver.dart';
 import '../application/thread_controller.dart';
+import '../application/voice_recorder.dart';
 import '../data/inbox_api.dart';
 import '../domain/conversation.dart';
 import '../domain/message.dart';
+import '../domain/outbound_capabilities.dart';
+import '../domain/pending_attachment.dart';
+import '../../../security/session/session_controller.dart';
+import '../../opportunities/opportunities.dart';
+import '../../tasks/domain/task_permissions.dart';
+import '../../tasks/routes.dart';
+import '../../tasks/tasks.dart';
+import '../../team/team.dart';
+import '../inbox_routes.dart';
 import 'message_key_registry.dart';
-import 'widgets/assign_sheet.dart';
-import 'widgets/conversation_context_sheet.dart';
+import 'thread_info_page.dart';
+import 'widgets/attachment_picking.dart';
+import 'widgets/composer_snack_bar.dart';
 import 'widgets/message_bubble.dart';
 import 'widgets/message_composer.dart';
 import 'widgets/message_images.dart';
+import 'widgets/thread_header.dart';
+import 'widgets/thread_intro.dart';
 
 export '../application/media_url_resolver.dart' show mediaReloadCooldown;
 
 /// Đồng hồ của [mediaReloadCooldown] — test thay để khỏi chờ 10 phút thật.
 @visibleForTesting
 DateTime Function() mediaReloadClock = DateTime.now;
+
+/// Rule-based, not generated: openers a rep would type anyway, offered as one
+/// tap. Deliberately generic — a wrong "smart" suggestion costs more trust
+/// than no suggestion.
+const _defaultTemplates = <String>[
+  'Dạ em chào anh/chị ạ!',
+  'Em gửi báo giá ạ',
+  'Em gọi lại ngay',
+  'Cảm ơn anh/chị đã quan tâm.',
+  'Anh/chị cho em xin số điện thoại để tư vấn nhé.',
+  'Bên em đang có chương trình ưu đãi ạ.',
+];
 
 class ThreadPage extends ConsumerStatefulWidget {
   const ThreadPage({super.key, required this.conversationId});
@@ -57,6 +80,10 @@ class _ThreadPageState extends ConsumerState<ThreadPage>
   bool _syncing = false;
   Timer? _searchDebounce;
   Message? _replyingTo;
+
+  /// Câu 422 của server khi gửi (`channel_send_unsupported`), hiện trong
+  /// composer tới lượt gửi sau.
+  String? _sendError;
   bool _searchMode = false;
   List<Message> _searchResults = const [];
   int _searchIndex = 0;
@@ -255,6 +282,31 @@ class _ThreadPageState extends ConsumerState<ThreadPage>
     final conversation = ref.watch(conversationProvider(widget.conversationId));
     final thread = ref.watch(threadProvider(widget.conversationId));
     final access = ref.watch(inboxAccessProvider);
+    final policy = ref.watch(accessProvider);
+    final canCreateTask = policy.can(TaskPermissions.write);
+    final session = ref.watch(sessionProvider);
+    final canCreateOpportunity =
+        session.featureEnabled('opportunities') &&
+        policy.can(OpportunityPermissions.create);
+    final myUserId = session.user?.id;
+    // Null = API cũ thiếu khoá: giữ chữ + ảnh, ẩn Tệp.
+    final capabilities = conversation.valueOrNull?.outboundCapabilities;
+    // Ghi âm chỉ khi kênh gửi được audio; API cũ (null) thì ẩn. Máy ghi chỉ
+    // được tạo (và giữ) khi nút mic có mặt.
+    final canVoice = access.canSend && (capabilities?.canSendVoice ?? false);
+    // Tên người thả cảm xúc: danh bạ đội nếu ĐÃ nạp ở nơi khác (không kéo cả
+    // danh bạ chỉ để mở một hội thoại), không thì tên server chụp lúc thả.
+    // Theo dõi cờ "đã nạp": danh bạ nạp SAU khi mở (sheet Gán…) thì tên đổi
+    // theo ngay. `exists` giữ cho trường hợp provider bị override.
+    final directoryLoaded =
+        ref.watch(teamDirectoryLoadedProvider) ||
+        ref.exists(teamDirectoryProvider);
+    final memberNames = directoryLoaded
+        ? {
+            for (final entry in ref.watch(teamMemberByIdProvider).entries)
+              entry.key: entry.value.name,
+          }
+        : const <String, String>{};
 
     return Scaffold(
       // Bubbles can only read as raised against a tinted canvas. On white the
@@ -266,113 +318,171 @@ class _ThreadPageState extends ConsumerState<ThreadPage>
         OmniColors.chatCanvas,
         OmniColors.chatCanvasDark,
       ),
-      appBar: _ThreadAppBar(
+      appBar: ThreadHeader(
         conversation: conversation.valueOrNull,
-        onAssign: access.canAssign ? _assign : null,
-        onInfo: _showContext,
+        onInfo: _openInfo,
         searchMode: _searchMode,
         searchController: _searchController,
         searchFocusNode: _searchFocusNode,
         searchResultCount: _searchResults.length,
         searchResultIndex: _searchResults.isEmpty ? 0 : _searchIndex,
-        onSearch: _openSearch,
         onSearchChanged: _search,
         onSearchPrevious: () => _moveSearch(-1),
         onSearchNext: () => _moveSearch(1),
         onCloseSearch: _closeSearch,
       ),
       body: SurfaceBackdrop(
-        child: Column(
-          children: [
-            _OpportunityStrip(conversationId: widget.conversationId),
-            Expanded(
-              // No tint layer over the canvas: it fought the chat background and
-              // washed the bubbles back down into the page.
-              child: OmniAsyncView(
-                value: thread,
-                onRetry: () =>
-                    ref.invalidate(threadProvider(widget.conversationId)),
-                isEmpty: (state) => state.isEmpty,
-                empty: const OmniEmptyState(
-                  icon: Icons.chat_bubble_outline_rounded,
-                  title: 'Chưa có tin nhắn',
-                  message: 'Gửi tin đầu tiên để bắt đầu cuộc trò chuyện.',
-                ),
-                data: (state) => MediaReloadScope(
-                  onLoadError: _onMediaLoadError,
-                  onUserRetry: _onMediaUserRetry,
-                  resolver: _mediaResolver,
-                  child: _MessageList(
-                    state: state,
-                    controller: _scrollController,
-                    isGroup: conversation.valueOrNull?.isGroup ?? false,
-                    // retry(), not send(): a fresh send would drop the reply the
-                    // rep was answering, leave the failed bubble sitting below the
-                    // new one, and — because it would carry a new idempotency key —
-                    // deliver a second copy whenever the first attempt had in fact
-                    // reached the server.
-                    onRetry: (message) => ref
-                        .read(threadProvider(widget.conversationId).notifier)
-                        .retry(message),
-                    onDiscard: (message) => ref
-                        .read(threadProvider(widget.conversationId).notifier)
-                        .discard(message.id),
-                    onReply: (message) => setState(() => _replyingTo = message),
-                    // `/pin` cần `inbox.write`; null thì menu ẩn mục "Ghim".
-                    onPin: access.canSend ? _togglePin : null,
-                    keyForMessage: _keyForMessage,
+        child: ComposerSnackBarScope(
+          barKey: _bottomBarKey,
+          child: Column(
+            children: [
+              Expanded(
+                // No tint layer over the canvas: it fought the chat background and
+                // washed the bubbles back down into the page.
+                child: OmniAsyncView(
+                  value: thread,
+                  onRetry: () =>
+                      ref.invalidate(threadProvider(widget.conversationId)),
+                  isEmpty: (state) => state.isEmpty,
+                  empty: const OmniEmptyState(
+                    icon: Icons.chat_bubble_outline_rounded,
+                    title: 'Chưa có tin nhắn',
+                    message: 'Gửi tin đầu tiên để bắt đầu cuộc trò chuyện.',
+                  ),
+                  data: (state) => MediaReloadScope(
+                    onLoadError: _onMediaLoadError,
+                    onUserRetry: _onMediaUserRetry,
+                    resolver: _mediaResolver,
+                    child: _MessageList(
+                      state: state,
+                      controller: _scrollController,
+                      conversation: conversation.valueOrNull,
+                      // retry(), not send(): a fresh send would drop the reply the
+                      // rep was answering, leave the failed bubble sitting below the
+                      // new one, and — because it would carry a new idempotency key —
+                      // deliver a second copy whenever the first attempt had in fact
+                      // reached the server.
+                      onRetry: _retry,
+                      onDiscard: (message) => ref
+                          .read(threadProvider(widget.conversationId).notifier)
+                          .discard(message.id),
+                      onReply: (message) =>
+                          setState(() => _replyingTo = message),
+                      // `/pin` cần `inbox.write`; null thì menu ẩn mục "Ghim".
+                      onPin: access.canSend ? _togglePin : null,
+                      onCreateTask: canCreateTask ? _createTaskFrom : null,
+                      onCreateOpportunity: canCreateOpportunity
+                          ? _createOpportunityFrom
+                          : null,
+                      // `team-reactions` cần `inbox.write`; cần biết tôi là ai
+                      // để đảo đúng mục của mình.
+                      onReact:
+                          access.canReact &&
+                              myUserId != null &&
+                              myUserId.isNotEmpty
+                          ? (message, emoji) => _react(
+                              message,
+                              emoji,
+                              myUserId: myUserId,
+                              myName: session.user?.fullName,
+                            )
+                          : null,
+                      myUserId: myUserId,
+                      myName: session.user?.fullName,
+                      memberNames: memberNames,
+                      keyForMessage: _keyForMessage,
+                    ),
                   ),
                 ),
               ),
-            ),
-            if (access.canSend)
-              MessageComposer(
-                canNote: access.canNote,
-                suggestions: _suggestions(conversation.valueOrNull),
-                replyTo: _replyingTo,
-                onCancelReply: () => setState(() => _replyingTo = null),
-                onPickImages: _pickImages,
-                onTakePhoto: _takePhoto,
-                onSend: (text, mode, images, replyTo) async {
-                  final controller = ref.read(
-                    threadProvider(widget.conversationId).notifier,
-                  );
-                  if (mode == ComposeMode.note) {
-                    await controller.addNote(text);
-                  } else {
-                    try {
-                      final upload = Future.wait(
-                        images.map(
-                          (image) => ref
-                              .read(inboxApiProvider)
-                              .uploadMedia(image.path, filename: image.name),
-                        ),
-                      );
-                      await controller.sendAfterUpload(
-                        text,
-                        attachments: upload,
-                        replyTo: replyTo,
-                      );
-                    } on AppException catch (error) {
-                      _toast(error.message);
-                      rethrow;
-                    } on Object {
-                      // Lỗi ngoài API (đọc tệp hỏng…): vẫn báo, và ném lại để
-                      // composer giữ chữ và khay ảnh (INB-I22).
-                      _toast('Không tải ảnh lên được. Vui lòng thử lại.');
-                      rethrow;
-                    }
-                  }
-                  if (mounted) setState(() => _replyingTo = null);
-                  _scrollToBottom();
-                },
-              )
-            else
-              _ReadOnlyBar(),
-          ],
+              KeyedSubtree(
+                key: _bottomBarKey,
+                child: access.canSend && capabilities?.canSendText == false
+                    ? const _ChannelCannotSendBar()
+                    : access.canSend
+                    ? MessageComposer(
+                        replyTo: _replyingTo,
+                        onCancelReply: () => setState(() => _replyingTo = null),
+                        capabilities: capabilities,
+                        errorText: _sendError,
+                        onPickImages: (remaining) =>
+                            _pickImages(remaining, capabilities),
+                        onTakePhoto: () => _takePhoto(capabilities),
+                        onPickFiles: _pickFiles,
+                        onCreateTask: canCreateTask
+                            ? () => context.pushNamed(
+                                TaskRoutes.create,
+                                extra: CreateTaskArgs(
+                                  initialTitle: 'Liên hệ ${_customerName()}'
+                                      .trim(),
+                                ),
+                              )
+                            : null,
+                        loadTemplates: _loadTemplates,
+                        onSend: _sendWithAttachments,
+                        voiceRecorder: canVoice
+                            ? ref.watch(voiceRecorderProvider)
+                            : null,
+                        onSendVoice: canVoice
+                            ? (voice) =>
+                                  _sendWithAttachments('', [voice], _replyingTo)
+                            : null,
+                        warnVoiceAsLink:
+                            capabilities?.audio == OutboundMode.link,
+                        channelName:
+                            conversation.valueOrNull?.channel.meta.name,
+                      )
+                    : _ReadOnlyBar(),
+              ),
+            ],
+          ),
         ),
       ),
     );
+  }
+
+  /// Thanh dưới đáy (composer / dòng chỉ xem): snackbar nổi phía trên nó.
+  final _bottomBarKey = GlobalKey(debugLabel: 'thread-bottom-bar');
+
+  /// Tải từng tệp lên `POST /inbox/media` rồi gửi tin. Dùng cho cả composer
+  /// (chữ + ảnh + tệp) lẫn ghi âm (một tệp `voice`, không chữ). `type` của
+  /// tệp là cái server trả từ upload (MIME dò được), không đoán theo đuôi —
+  /// bản ghi WAV về thành `audio`.
+  Future<void> _sendWithAttachments(
+    String text,
+    List<PendingAttachment> attachments,
+    Message? replyTo,
+  ) async {
+    final controller = ref.read(threadProvider(widget.conversationId).notifier);
+    final api = ref.read(inboxApiProvider);
+    if (_sendError != null) setState(() => _sendError = null);
+    try {
+      final upload = Future.wait(
+        attachments.map((a) => api.uploadMedia(a.path, filename: a.name)),
+      );
+      await controller.sendAfterUpload(
+        text,
+        attachments: upload,
+        replyTo: replyTo,
+      );
+    } on AppException catch (error) {
+      if (error is ValidationException &&
+          error.reason == kChannelSendUnsupported) {
+        // Server không tạo tin: báo NGAY trong composer, nháp giữ nguyên
+        // (composer giữ khi onSend ném).
+        if (mounted) setState(() => _sendError = error.message);
+      } else {
+        _toast(error.message);
+      }
+      rethrow;
+    } on Object {
+      // Lỗi ngoài API (đọc tệp hỏng…): vẫn báo, và ném lại để composer giữ
+      // chữ và khay ảnh (INB-I22).
+      _toast('Không tải tệp lên được. Vui lòng thử lại.');
+      rethrow;
+    }
+    if (mounted) setState(() => _replyingTo = null);
+    _scrollToBottom();
   }
 
   /// Dọn theo cửa sổ đang hiển thị mỗi khi state đổi (xem [_pruneMessageKeys]);
@@ -420,9 +530,11 @@ class _ThreadPageState extends ConsumerState<ThreadPage>
     }
     _searchDebounce = Timer(const Duration(milliseconds: 280), () async {
       try {
-        final found = await ref
+        final all = await ref
             .read(inboxApiProvider)
             .searchMessages(widget.conversationId, query);
+        // Ghi chú nội bộ ẩn khỏi danh sách tin nên không có đích để cuộn tới.
+        final found = all.where((m) => !m.isNote).toList();
         if (!mounted || _searchController.text.trim() != query) return;
         ref
             .read(threadProvider(widget.conversationId).notifier)
@@ -464,21 +576,6 @@ class _ThreadPageState extends ConsumerState<ThreadPage>
     });
   }
 
-  /// Rule-based, not generated: openers a rep would type anyway, offered as one
-  /// tap. Deliberately generic — a wrong "smart" suggestion costs more trust
-  /// than no suggestion.
-  List<String> _suggestions(Conversation? conversation) {
-    if (conversation == null) return const [];
-    return const [
-      'Dạ em chào anh/chị ạ!',
-      'Em gửi báo giá ạ',
-      'Em gọi lại ngay',
-      'Cảm ơn anh/chị đã quan tâm.',
-      'Anh/chị cho em xin số điện thoại để tư vấn nhé.',
-      'Bên em đang có chương trình ưu đãi ạ.',
-    ];
-  }
-
   void _scrollToBottom() {
     if (!_scrollController.hasClients) return;
     _scrollController.animateTo(
@@ -501,241 +598,150 @@ class _ThreadPageState extends ConsumerState<ThreadPage>
     }
   }
 
-  Future<List<XFile>> _pickImages() =>
-      ImagePicker().pickMultiImage(imageQuality: 85);
-
-  Future<XFile?> _takePhoto() =>
-      ImagePicker().pickImage(source: ImageSource.camera, imageQuality: 85);
-
-  Future<void> _assign() async {
-    final conversation = ref
-        .read(conversationProvider(widget.conversationId))
-        .valueOrNull;
-    final result = await showOmniSheet<AssignResult>(
-      context: context,
-      expand: true,
-      builder: (_) => AssignSheet(currentAssigneeId: conversation?.assigneeId),
-    );
-    if (result == null) return;
-
+  /// Thả / bỏ cảm xúc nội bộ. Bộ điều khiển cập nhật lạc quan và tự hoàn tác
+  /// khi lỗi; ở đây chỉ báo. Messenger lấy TRƯỚC khi chờ.
+  Future<void> _react(
+    Message message,
+    String emoji, {
+    required String myUserId,
+    String? myName,
+  }) async {
+    final messenger = ScaffoldMessenger.maybeOf(context);
+    final controller = ref.read(threadProvider(widget.conversationId).notifier);
     try {
-      final updated = await ref
-          .read(inboxApiProvider)
-          .assign(widget.conversationId, result.assigneeId, note: result.note);
-      ref.read(inboxListProvider.notifier).patch(updated);
-      ref.invalidate(conversationProvider(widget.conversationId));
-      _toast(result.assigneeId == null ? 'Đã bỏ gán.' : 'Đã gán hội thoại.');
-    } on AppException catch (error) {
-      _toast(error.message);
+      await controller.toggleTeamReaction(
+        message.id,
+        emoji,
+        myUserId: myUserId,
+        myName: myName,
+      );
+    } on Object {
+      if (!mounted) return;
+      messenger?.showSnackBar(
+        snackAboveBar(
+          const Text('Không thả được cảm xúc. Vui lòng thử lại.'),
+          barKey: _bottomBarKey,
+        ),
+      );
     }
   }
 
-  void _showContext() {
-    showOmniSheet(
-      context: context,
-      expand: true,
-      builder: (_) =>
-          ConversationContextSheet(conversationId: widget.conversationId),
+  /// Tiêu đề việc từ một tin: dòng đầu, tối đa 80 ký tự. Tin không có chữ
+  /// (chỉ ảnh/tệp) thì để trống cho người dùng tự đặt.
+  void _createTaskFrom(Message message) {
+    final firstLine = message.text.trim().split('\n').first.trim();
+    context.pushNamed(
+      TaskRoutes.create,
+      extra: CreateTaskArgs(
+        initialTitle: firstLine.isEmpty
+            ? null
+            : firstLine.characters.take(80).toString(),
+      ),
     );
+  }
+
+  void _createOpportunityFrom(Message message) {
+    final customerId = ref
+        .read(conversationProvider(widget.conversationId))
+        .valueOrNull
+        ?.customerId;
+    context.pushNamed(
+      OpportunityRoutes.create,
+      queryParameters: {
+        if (customerId != null && customerId.isNotEmpty) 'customer': customerId,
+      },
+    );
+  }
+
+  String _customerName() =>
+      ref
+          .read(conversationProvider(widget.conversationId))
+          .valueOrNull
+          ?.title ??
+      '';
+
+  /// Mẫu trả lời của tenant; chưa có (hoặc lỗi mạng) thì dùng bộ câu mở đầu
+  /// mặc định — đừng để khay trống chỉ vì máy chủ chưa cấu hình.
+  Future<List<String>> _loadTemplates() async {
+    try {
+      final replies = await ref.read(quickRepliesProvider.future);
+      if (replies == null || replies.isEmpty) return _defaultTemplates;
+      return [for (final q in replies) q.body];
+    } catch (_) {
+      return _defaultTemplates;
+    }
+  }
+
+  /// "Gửi lại": tin đã có id server đi qua `/resend` (bộ điều khiển quyết).
+  /// Quá hạn thì chỉ gửi thành tin MỚI khi người dùng đồng ý — khách có thể
+  /// nhận lại phần đã tới.
+  void _retry(Message message) {
+    final controller = ref.read(threadProvider(widget.conversationId).notifier);
+    unawaited(
+      controller.retry(
+        message,
+        confirmNewSend: (serverMessage) async {
+          if (!mounted) return false;
+          return showOmniConfirm(
+            context: context,
+            title: 'Gửi thành tin mới?',
+            message:
+                '$serverMessage Gửi tin mới thì khách có thể nhận lại '
+                'những phần đã tới.',
+            confirmLabel: 'Gửi tin mới',
+          );
+        },
+      ),
+    );
+  }
+
+  /// Trình chọn ảnh/tệp nằm ở `attachment_picking.dart` (thử được bằng trình
+  /// chọn giả). Không mở được (từ chối quyền, máy ảnh bận) thì báo, không im.
+  Future<List<PendingAttachment>> _pickImages(
+    int remaining,
+    OutboundCapabilities? capabilities,
+  ) async {
+    try {
+      return await pickInboxImages(ImagePicker(), remaining, capabilities);
+    } on PickerUnavailable catch (e) {
+      _toast(e.message);
+      return const [];
+    }
+  }
+
+  Future<PendingAttachment?> _takePhoto(
+    OutboundCapabilities? capabilities,
+  ) async {
+    try {
+      return await takeInboxPhoto(ImagePicker(), capabilities);
+    } on PickerUnavailable catch (e) {
+      _toast(e.message);
+      return null;
+    }
+  }
+
+  Future<List<PendingAttachment>> _pickFiles(int remaining) async {
+    try {
+      return await pickInboxFiles();
+    } on PickerUnavailable catch (e) {
+      _toast(e.message);
+      return const [];
+    }
+  }
+
+  Future<void> _openInfo() async {
+    final result = await context.pushNamed<ThreadInfoResult>(
+      InboxRoutes.threadInfo,
+      pathParameters: {'id': widget.conversationId},
+    );
+    if (result == ThreadInfoResult.search && mounted) _openSearch();
   }
 
   void _toast(String message) {
     if (!mounted) return;
     ScaffoldMessenger.of(
       context,
-    ).showSnackBar(SnackBar(content: Text(message)));
-  }
-}
-
-class _ThreadAppBar extends StatelessWidget implements PreferredSizeWidget {
-  const _ThreadAppBar({
-    required this.conversation,
-    required this.onInfo,
-    required this.searchMode,
-    required this.searchController,
-    required this.searchFocusNode,
-    required this.searchResultCount,
-    required this.searchResultIndex,
-    required this.onSearch,
-    required this.onSearchChanged,
-    required this.onSearchPrevious,
-    required this.onSearchNext,
-    required this.onCloseSearch,
-    this.onAssign,
-  });
-
-  final Conversation? conversation;
-  final VoidCallback onInfo;
-  final bool searchMode;
-  final TextEditingController searchController;
-  final FocusNode searchFocusNode;
-  final int searchResultCount;
-  final int searchResultIndex;
-  final VoidCallback onSearch;
-  final ValueChanged<String> onSearchChanged;
-  final VoidCallback onSearchPrevious;
-  final VoidCallback onSearchNext;
-  final VoidCallback onCloseSearch;
-  final VoidCallback? onAssign;
-
-  @override
-  Size get preferredSize => const Size.fromHeight(72);
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-
-    return AppBar(
-      toolbarHeight: 64,
-      leadingWidth: 48,
-      titleSpacing: (ModalRoute.of(context)?.canPop ?? false) ? 0 : 16,
-      backgroundColor: scheme.surface,
-      surfaceTintColor: Colors.transparent,
-      elevation: 0,
-      shape: Border(bottom: BorderSide(color: scheme.outlineVariant)),
-      title: searchMode
-          ? TextField(
-              controller: searchController,
-              focusNode: searchFocusNode,
-              autofocus: true,
-              onChanged: onSearchChanged,
-              textInputAction: TextInputAction.search,
-              decoration: InputDecoration(
-                hintText: 'Tìm trong hội thoại',
-                border: InputBorder.none,
-                isDense: true,
-                suffixText: searchResultCount == 0
-                    ? null
-                    : '${searchResultIndex + 1}/$searchResultCount',
-              ),
-            )
-          : conversation == null
-          ? const SizedBox.shrink()
-          : Row(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                conversation!.isGroup
-                    ? OmniGroupAvatar(
-                        names: conversation!.groupMembers
-                            .map((m) => m.name ?? '?')
-                            .toList(),
-                        size: 40,
-                      )
-                    : OmniAvatar(
-                        name: conversation!.title,
-                        imageUrl: conversation!.customerAvatar,
-                        size: 40,
-                      ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        conversation!.title,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: OmniChatType.peer.copyWith(
-                          color: scheme.onSurface,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Row(
-                        children: [
-                          Flexible(
-                            child: Align(
-                              alignment: Alignment.centerLeft,
-                              child: OmniSourcePill(
-                                channel: conversation!.channel,
-                                accountName: conversation!.accountName,
-                              ),
-                            ),
-                          ),
-                          if (conversation!.lastMessageAt != null) ...[
-                            const SizedBox(width: 8),
-                            Flexible(
-                              child: Text(
-                                Formatters.relative(
-                                  conversation!.lastMessageAt,
-                                ),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: OmniChatType.meta.copyWith(
-                                  color: scheme.onSurfaceVariant,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-      actions: [
-        if (searchMode) ...[
-          IconButton(
-            tooltip: 'Kết quả trước',
-            onPressed: searchResultCount == 0 ? null : onSearchPrevious,
-            icon: const Icon(Icons.keyboard_arrow_up_rounded, size: 22),
-          ),
-          IconButton(
-            tooltip: 'Kết quả sau',
-            onPressed: searchResultCount == 0 ? null : onSearchNext,
-            icon: const Icon(Icons.keyboard_arrow_down_rounded, size: 22),
-          ),
-          IconButton(
-            tooltip: 'Đóng tìm kiếm',
-            onPressed: onCloseSearch,
-            icon: const Icon(Icons.close_rounded, size: 21),
-          ),
-          const SizedBox(width: 8),
-        ] else ...[
-          IconButton(
-            tooltip: 'Tìm trong hội thoại',
-            onPressed: onSearch,
-            style: IconButton.styleFrom(
-              foregroundColor: scheme.onSurfaceVariant,
-              minimumSize: const Size(40, 40),
-              maximumSize: const Size(40, 40),
-              padding: EdgeInsets.zero,
-              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-            ),
-            icon: const Icon(Icons.search_rounded, size: 21),
-          ),
-          // The phone number lives on the customer record, not the thread, so
-          // "gọi" is offered in the context sheet where that data is loaded.
-          if (onAssign != null)
-            IconButton(
-              tooltip: 'Gán nhân viên',
-              onPressed: onAssign,
-              style: IconButton.styleFrom(
-                foregroundColor: scheme.onSurfaceVariant,
-                minimumSize: const Size(40, 40),
-                maximumSize: const Size(40, 40),
-                padding: EdgeInsets.zero,
-                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-              ),
-              icon: const Icon(Icons.person_add_alt_outlined, size: 21),
-            ),
-          IconButton(
-            tooltip: 'Thông tin khách hàng',
-            onPressed: onInfo,
-            style: IconButton.styleFrom(
-              foregroundColor: scheme.onSurfaceVariant,
-              minimumSize: const Size(40, 40),
-              maximumSize: const Size(40, 40),
-              padding: EdgeInsets.zero,
-              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-            ),
-            icon: const Icon(Icons.info_outline_rounded, size: 21),
-          ),
-          const SizedBox(width: 8),
-        ],
-      ],
-    );
+    ).showSnackBar(snackAboveBar(Text(message), barKey: _bottomBarKey));
   }
 }
 
@@ -743,21 +749,33 @@ class _MessageList extends StatelessWidget {
   const _MessageList({
     required this.state,
     required this.controller,
-    required this.isGroup,
+    required this.conversation,
     required this.onRetry,
     required this.onDiscard,
     required this.onReply,
     required this.onPin,
+    required this.onCreateTask,
+    required this.onCreateOpportunity,
+    required this.onReact,
+    required this.myUserId,
+    required this.myName,
+    required this.memberNames,
     required this.keyForMessage,
   });
 
   final ThreadState state;
   final ScrollController controller;
-  final bool isGroup;
+  final Conversation? conversation;
   final void Function(Message message) onRetry;
   final void Function(Message message) onDiscard;
   final void Function(Message message) onReply;
   final void Function(Message message)? onPin;
+  final void Function(Message message)? onCreateTask;
+  final void Function(Message message)? onCreateOpportunity;
+  final void Function(Message message, String emoji)? onReact;
+  final String? myUserId;
+  final String? myName;
+  final Map<String, String> memberNames;
   final GlobalKey Function(String id) keyForMessage;
 
   @override
@@ -768,7 +786,13 @@ class _MessageList extends StatelessWidget {
     // send is not in `messages` and would otherwise never render. It is sorted
     // once per state; indexing it from the end instead of `.reversed.toList()`
     // means this build copies nothing.
-    final visible = state.visible;
+    final visible = state.visible
+        .where((m) => !m.isNote)
+        .toList(growable: false);
+    final conversation = this.conversation;
+    final showIntro =
+        !state.hasMore && conversation != null && !conversation.isGroup;
+    final isGroup = conversation?.isGroup ?? false;
     final count = visible.length;
     // The list runs newest→oldest: reversed index i is visible[count - 1 - i].
     Message? at(int reversedIndex) =>
@@ -782,9 +806,10 @@ class _MessageList extends StatelessWidget {
       // Tight gutters: Zalo lets bubbles run close to both edges, which is what
       // makes the left/right split read at a glance.
       padding: const EdgeInsets.fromLTRB(8, OmniSpacing.lg, 8, OmniSpacing.md),
-      itemCount: count + (state.hasMore ? 1 : 0),
+      itemCount: count + (state.hasMore ? 1 : 0) + (showIntro ? 1 : 0),
       itemBuilder: (context, index) {
         if (index >= count) {
+          if (showIntro) return ThreadIntro(conversation: conversation);
           return const Padding(
             padding: EdgeInsets.all(OmniSpacing.lg),
             child: Center(
@@ -811,13 +836,9 @@ class _MessageList extends StatelessWidget {
         final grouped =
             !needsDayHeader &&
             earlier != null &&
-            earlier.isOutbound == message.isOutbound &&
-            !earlier.isNote &&
-            !message.isNote;
+            earlier.isOutbound == message.isOutbound;
         final isLastInGroup =
-            later == null ||
-            later.isOutbound != message.isOutbound ||
-            later.isNote;
+            later == null || later.isOutbound != message.isOutbound;
 
         return KeyedSubtree(
           key: keyForMessage(message.id),
@@ -833,7 +854,10 @@ class _MessageList extends StatelessWidget {
                 showSender: isGroup && !message.isOutbound && !grouped,
                 groupedWithPrevious: grouped,
                 isLastInGroup: isLastInGroup,
-                onRetry: message.status == DeliveryStatus.failed
+                // Kênh không có đường gửi đi: gửi lại không bao giờ được.
+                onRetry:
+                    message.status == DeliveryStatus.failed &&
+                        !message.isChannelUnsupported
                     ? () => onRetry(message)
                     : null,
                 onDiscard: message.status == DeliveryStatus.failed
@@ -841,6 +865,23 @@ class _MessageList extends StatelessWidget {
                     : null,
                 onReply: () => onReply(message),
                 onPin: onPin == null ? null : () => onPin!(message),
+                onCreateTask: onCreateTask == null
+                    ? null
+                    : () => onCreateTask!(message),
+                onCreateOpportunity: onCreateOpportunity == null
+                    ? null
+                    : () => onCreateOpportunity!(message),
+                // Chỉ tin đã có id server: tin nháp chưa có gì để thả lên.
+                onReact:
+                    onReact == null ||
+                        message.isPending ||
+                        message.isNote ||
+                        message.id.isEmpty
+                    ? null
+                    : (emoji) => onReact!(message, emoji),
+                myUserId: myUserId,
+                myName: myName,
+                memberNames: memberNames,
               ),
             ],
           ),
@@ -863,20 +904,22 @@ class _DaySeparator extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
 
-    // Bare centred text, like Zalo. The bordered pill was a third framed object
-    // in a thread that had just had its frames removed, and at fontSize 10 the
-    // label inside it was below every platform's readable floor.
-    //
-    // 20 above, 12 below: the gap belongs to the day that is STARTING, so the
-    // separator sits closer to what it introduces than to what it closes.
+    // Mốc giờ trần, giữa: "09:40, HÔM NAY". Cỡ 12 (sàn đọc được của design
+    // system; bản thiết kế ghi 10) w600 giãn chữ .5, lề trên 10 dưới 6.
+    final color = OmniColors.byBrightness(
+      context,
+      const Color(0xFF8A95A8),
+      scheme.onSurfaceVariant,
+    );
     return Padding(
-      padding: const EdgeInsets.only(top: 20, bottom: 12),
+      padding: const EdgeInsets.only(top: 10, bottom: 6),
       child: Center(
         child: Text(
-          Formatters.dayHeader(date),
-          style: OmniChatType.meta.copyWith(
-            color: scheme.onSurfaceVariant,
-            letterSpacing: 0.2,
+          Formatters.threadStamp(date),
+          style: OmniType.micro.copyWith(
+            fontWeight: FontWeight.w600,
+            letterSpacing: 0.5,
+            color: color,
           ),
         ),
       ),
@@ -884,7 +927,34 @@ class _DaySeparator extends StatelessWidget {
   }
 }
 
+/// Kênh của hội thoại không gửi tin đi được (`can_send:false` hoặc `text:
+/// none`, vd TikTok): thay composer, cùng chỗ với [_ReadOnlyBar].
+class _ChannelCannotSendBar extends StatelessWidget {
+  const _ChannelCannotSendBar();
+
+  @override
+  Widget build(BuildContext context) => const _NoComposerBar(
+    icon: Icons.block_rounded,
+    text:
+        'Kênh này chưa gửi tin được từ Hộp thư — hãy trả lời trên ứng dụng '
+        'của kênh.',
+  );
+}
+
 class _ReadOnlyBar extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) => const _NoComposerBar(
+    icon: Icons.lock_outline_rounded,
+    text: 'Bạn chỉ có quyền xem hội thoại này.',
+  );
+}
+
+class _NoComposerBar extends StatelessWidget {
+  const _NoComposerBar({required this.icon, required this.text});
+
+  final IconData icon;
+  final String text;
+
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
@@ -903,15 +973,11 @@ class _ReadOnlyBar extends StatelessWidget {
       ),
       child: Row(
         children: [
-          Icon(
-            Icons.lock_outline_rounded,
-            size: OmniIconSize.sm,
-            color: scheme.onSurfaceVariant,
-          ),
+          Icon(icon, size: OmniIconSize.sm, color: scheme.onSurfaceVariant),
           const SizedBox(width: OmniSpacing.sm),
           Expanded(
             child: Text(
-              'Bạn chỉ có quyền xem hội thoại này.',
+              text,
               style: OmniType.caption.copyWith(color: scheme.onSurfaceVariant),
             ),
           ),
@@ -920,122 +986,3 @@ class _ReadOnlyBar extends StatelessWidget {
     );
   }
 }
-
-/// Dải cơ hội đang gắn với hội thoại, ngay dưới thanh trên (`MThread.dc.html`).
-///
-/// Đọc từ `conversationContextProvider` — cùng provider tấm thông tin khách
-/// dùng, nên mở tấm đó sau không tải lại. Hội thoại không kèm cơ hội trong dữ
-/// liệu của chính nó, nên đây là MỘT lượt gọi `/context` khi mở hội thoại.
-/// Chỉ gọi khi người dùng có quyền xem cơ hội; không có cơ hội đang mở thì
-/// không vẽ gì, lỗi mạng cũng không vẽ gì — dải này là lối tắt, không phải
-/// nội dung chính.
-class _OpportunityStrip extends ConsumerWidget {
-  const _OpportunityStrip({required this.conversationId});
-
-  final String conversationId;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final canRead = ref
-        .watch(accessProvider)
-        .canAny(OpportunityPermissions.anyRead);
-    if (!canRead) return const SizedBox.shrink();
-
-    final data = ref.watch(conversationContextProvider(conversationId));
-    final opportunities = data.valueOrNull?.opportunities ?? const [];
-    final open = opportunities.where(
-      (o) => o.status == null || o.status == 'open',
-    );
-    if (open.isEmpty) return const SizedBox.shrink();
-
-    final opportunity = open.first;
-    final scheme = Theme.of(context).colorScheme;
-    final budget = opportunity.budget;
-    final title = budget == null || budget <= 0
-        ? opportunity.title
-        : '${opportunity.title} · ${Formatters.vndCompact(budget)}';
-
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(12, 10, 12, 0),
-      child: Material(
-        color: scheme.surface,
-        borderRadius: OmniRadius.mdAll,
-        elevation: 0,
-        shadowColor: Colors.transparent,
-        child: InkWell(
-          borderRadius: OmniRadius.mdAll,
-          onTap: opportunity.id.isEmpty
-              ? null
-              : () => context.pushNamed(
-                  OpportunityRoutes.detail,
-                  pathParameters: {'id': opportunity.id},
-                ),
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-            decoration: BoxDecoration(
-              borderRadius: OmniRadius.mdAll,
-              // Viền thay bóng: thẻ nằm yên trên nền chat, không nổi.
-              border: Border.all(color: scheme.outlineVariant),
-            ),
-            child: Row(
-              children: [
-                Container(
-                  width: 32,
-                  height: 32,
-                  decoration: BoxDecoration(
-                    color: scheme.primaryContainer,
-                    borderRadius: OmniRadius.smAll,
-                  ),
-                  child: Icon(
-                    Icons.trending_up_rounded,
-                    size: OmniIconSize.md,
-                    color: scheme.onPrimaryContainer,
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        title,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: OmniType.caption.copyWith(
-                          fontWeight: FontWeight.w600,
-                          color: scheme.onSurface,
-                          fontFeatures: OmniType.tabular,
-                        ),
-                      ),
-                      if (opportunity.stage != null)
-                        Text(
-                          'Giai đoạn: ${_stageLabel(ref, opportunity.stage!)}',
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: OmniType.micro.copyWith(
-                            fontWeight: FontWeight.w400,
-                            color: scheme.onSurfaceVariant,
-                          ),
-                        ),
-                    ],
-                  ),
-                ),
-                Icon(
-                  Icons.chevron_right_rounded,
-                  size: OmniIconSize.md,
-                  color: scheme.outline,
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-/// Nhãn giai đoạn theo quy trình của tenant (`da_mua` → "Đã mua"). Ngữ cảnh
-/// hội thoại không gửi quy trình, nên tra mọi quy trình; danh mục chưa về thì
-/// hiện mã.
-String _stageLabel(WidgetRef ref, String code) =>
-    ref.watch(pipelineCatalogProvider).valueOrNull?.stageLabel(code) ?? code;

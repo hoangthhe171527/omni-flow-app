@@ -58,6 +58,8 @@ AppException mapDioException(DioException error) {
     _ => RequestRejectedException(
       message ?? 'Yêu cầu không thực hiện được (mã $status).',
       code: '$status',
+      reason: _reason(map),
+      data: map['data'],
     ),
   };
 }
