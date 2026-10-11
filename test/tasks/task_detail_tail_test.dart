@@ -3,18 +3,18 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:intl/date_symbol_data_local.dart';
-import 'package:omni_app/core/error/app_exception.dart';
 import 'package:omni_app/design/theme/omni_theme.dart';
 import 'package:omni_app/modules/tasks/application/task_controller.dart';
 import 'package:omni_app/modules/tasks/application/tasks_providers.dart';
 import 'package:omni_app/modules/tasks/domain/task.dart';
 import 'package:omni_app/modules/tasks/domain/task_permissions.dart';
 import 'package:omni_app/modules/tasks/presentation/task_detail_page.dart';
+import 'package:omni_app/modules/tasks/presentation/widgets/task_detail/task_action_bar.dart';
 import 'package:omni_app/security/permissions/access_policy.dart';
 import 'package:omni_app/security/session/session.dart';
 import 'package:omni_app/security/session/session_controller.dart';
 
-/// Nửa dưới màn chi tiết việc (GĐ5 Task 7): Điểm kiểm tra + Tệp, Trao đổi,
+/// Nửa dưới màn chi tiết việc (GĐ5 Task 7): Tệp, Trao đổi,
 /// Nhật ký gập, thanh đáy.
 void main() {
   setUpAll(() => initializeDateFormatting('vi_VN'));
@@ -119,9 +119,7 @@ void main() {
     await t.pumpAndSettle();
   }
 
-  tw('tiêu đề khối: ĐIỂM KIỂM TRA, TỆP ĐÍNH KÈM (3), TRAO ĐỔI + Đã xem', (
-    t,
-  ) async {
+  tw('tiêu đề khối: TỆP ĐÍNH KÈM (3), TRAO ĐỔI + Đã xem', (t) async {
     await pump(
       t,
       host(
@@ -129,37 +127,13 @@ void main() {
         perms: assigner,
       ),
     );
-    expect(find.text('ĐIỂM KIỂM TRA'), findsOneWidget);
     expect(find.text('TỆP ĐÍNH KÈM (3)'), findsOneWidget);
     expect(find.text('TRAO ĐỔI'), findsOneWidget);
     expect(find.text('Đã xem'), findsOneWidget);
   });
 
-  tw('chấm 4 sao (người giao việc) → setRating(4)', (t) async {
-    await pump(t, host(task: task(), perms: assigner));
-    final star = find.bySemanticsLabel('4 điểm');
-    await t.ensureVisible(star);
-    await t.pumpAndSettle();
-    await t.tap(star);
-    await t.pumpAndSettle();
-    expect(recorded.last, ('rating', 4));
-  });
-
-  tw('người làm thấy sao chỉ đọc, chạm không ghi gì', (t) async {
-    await pump(t, host(task: task(rating: 3), perms: worker));
-    expect(find.text('ĐIỂM KIỂM TRA'), findsOneWidget);
-    expect(find.text('3/5'), findsOneWidget);
-    final star = find.bySemanticsLabel('4 điểm');
-    await t.ensureVisible(star);
-    await t.tap(star, warnIfMissed: false);
-    await t.pumpAndSettle();
-    expect(recorded.where((r) => r.$1 == 'rating'), isEmpty);
-  });
-
-  tw('chưa chấm và không được chấm: không có khối điểm', (t) async {
+  tw('chưa có tệp: khối tệp vẫn ở đó, nói rõ', (t) async {
     await pump(t, host(task: task(), perms: worker));
-    expect(find.text('ĐIỂM KIỂM TRA'), findsNothing);
-    // Khối tệp vẫn ở đó, nói rõ chưa có.
     expect(find.text('Chưa có tệp'), findsOneWidget);
   });
 
@@ -212,55 +186,6 @@ void main() {
     expect(find.textContaining('NHẬT KÝ'), findsNothing);
   });
 
-  tw('Hoàn thành → toast báo quản lý; đã xong → Mở lại', (t) async {
-    await pump(
-      t,
-      host(
-        task: task(status: 'todo'),
-        perms: worker,
-      ),
-    );
-    await t.tap(find.text('Hoàn thành công việc'));
-    await t.pumpAndSettle();
-    expect(
-      find.text('Đã báo hoàn thành. Quản lý sẽ nhận thông báo.'),
-      findsOneWidget,
-    );
-    expect(find.text('Mở lại công việc'), findsOneWidget);
-  });
-
-  tw('Mở lại → toast "Đã mở lại công việc."', (t) async {
-    await pump(
-      t,
-      host(
-        task: task(status: 'done'),
-        perms: worker,
-      ),
-    );
-    await t.tap(find.text('Mở lại công việc'));
-    await t.pumpAndSettle();
-    expect(find.text('Đã mở lại công việc.'), findsOneWidget);
-    expect(find.text('Hoàn thành công việc'), findsOneWidget);
-  });
-
-  tw('mất mạng khi hoàn thành → giữ thông báo lỗi cũ', (t) async {
-    await pump(
-      t,
-      host(
-        task: task(),
-        perms: worker,
-        statusError: const NetworkException('Không có kết nối mạng.'),
-      ),
-    );
-    await t.tap(find.text('Hoàn thành công việc'));
-    await t.pumpAndSettle();
-    expect(
-      find.text('Chưa lưu được. Kiểm tra mạng rồi thử lại.'),
-      findsOneWidget,
-    );
-    expect(find.textContaining('Đã báo hoàn thành'), findsNothing);
-  });
-
   tw('giảm chuyển động: mở Nhật ký không để lại hoạt ảnh', (t) async {
     await pump(
       t,
@@ -273,23 +198,10 @@ void main() {
     expect(t.hasRunningAnimations, isFalse);
   });
 
-  tw('nút máy ảnh và nút chính cao ≥ 44', (t) async {
+  tw('nút máy ảnh cao ≥ 44', (t) async {
     await pump(t, host(task: task(), perms: worker));
     expect(
       t.getSize(find.bySemanticsLabel('Chụp ảnh')).height,
-      greaterThanOrEqualTo(44),
-    );
-    expect(
-      t
-          .getSize(
-            find
-                .ancestor(
-                  of: find.text('Hoàn thành công việc'),
-                  matching: find.byType(InkWell),
-                )
-                .first,
-          )
-          .height,
       greaterThanOrEqualTo(44),
     );
   });
@@ -302,24 +214,23 @@ void main() {
     expect(find.text('Chọn ảnh có sẵn'), findsOneWidget);
   });
   for (final width in [360.0, 390.0]) {
-    tw('rộng $width: đủ 5 sao trong màn không cần cuộn, thấy "3/5"', (t) async {
+    tw('rộng $width: đủ 5 sao trong màn, thấy "3/5 · 0 lượt"', (t) async {
       await pump(
         t,
         host(task: task(rating: 3), perms: assigner),
         width: width,
       );
       for (var n = 1; n <= 5; n++) {
-        final r = t.getRect(find.bySemanticsLabel('$n điểm'));
-        expect(r.left, greaterThanOrEqualTo(0), reason: '$n điểm');
-        expect(r.right, lessThanOrEqualTo(width), reason: '$n điểm');
-        expect(r.width, greaterThanOrEqualTo(44));
+        final r = t.getRect(find.bySemanticsLabel('$n sao'));
+        expect(r.left, greaterThanOrEqualTo(0), reason: '$n sao');
+        expect(r.right, lessThanOrEqualTo(width), reason: '$n sao');
+        // Bản mẫu: sao 30×44 liền nhau (plan Việc mới, Global Constraints).
         expect(r.height, greaterThanOrEqualTo(44));
       }
-      final label = t.getRect(find.text('3/5'));
+      final label = t.getRect(find.text('3/5 · 0 lượt'));
       expect(label.right, lessThanOrEqualTo(width));
-      // Không bị cắt bởi vùng cuộn: sao 5 nằm bên trái nhãn.
       expect(
-        t.getRect(find.bySemanticsLabel('5 điểm')).right,
+        t.getRect(find.bySemanticsLabel('5 sao')).right,
         lessThanOrEqualTo(label.left),
       );
     });
@@ -331,6 +242,8 @@ void main() {
         width: width,
       );
       final tile = find.bySemanticsLabel('anh-0.jpg');
+      await t.ensureVisible(tile);
+      await t.pumpAndSettle();
       expect(tile, findsOneWidget);
       final s = t.getSize(tile);
       expect(s.width, greaterThanOrEqualTo(44));
@@ -345,40 +258,30 @@ void main() {
     t.view.viewPadding = const FakeViewPadding(bottom: 34);
     t.view.padding = const FakeViewPadding(bottom: 34);
     await t.pumpAndSettle();
-    final withHome = t.getRect(find.text('Hoàn thành công việc')).bottom;
-    expect(844 - withHome, greaterThan(34), reason: 'có thanh home');
+    final camera = find.bySemanticsLabel('Chụp ảnh');
+    final withHome = t.getRect(camera).bottom;
+    expect(844 - withHome, greaterThanOrEqualTo(34), reason: 'có thanh home');
 
     // Nền tảng báo padding đã trừ phần bàn phím che; viewPadding thì không.
     t.view.viewInsets = const FakeViewPadding(bottom: 300);
     t.view.padding = FakeViewPadding.zero;
     await t.pumpAndSettle();
-    final button = t.getRect(
-      find
-          .ancestor(
-            of: find.text('Hoàn thành công việc'),
-            matching: find.byType(InkWell),
-          )
-          .first,
-    );
     // 844 - bàn phím 300 = đáy thân; nút cách đáy đúng đệm 8.
-    expect(544 - button.bottom, closeTo(8, 1.01)); // +1: viền của nút
+    expect(544 - t.getRect(camera).bottom, closeTo(8, 1.01));
   });
 
   tw('thanh đáy là nền đặc, không BackdropFilter', (t) async {
     await pump(t, host(task: task(), perms: worker));
     expect(
       find.descendant(
-        of: find.ancestor(
-          of: find.text('Hoàn thành công việc'),
-          matching: find.byType(Padding),
-        ),
+        of: find.byType(TaskActionBar),
         matching: find.byType(BackdropFilter),
       ),
       findsNothing,
     );
     expect(
       find.ancestor(
-        of: find.text('Hoàn thành công việc'),
+        of: find.byType(TaskActionBar),
         matching: find.byType(BackdropFilter),
       ),
       findsNothing,

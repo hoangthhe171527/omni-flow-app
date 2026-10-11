@@ -93,7 +93,7 @@ void main() {
   });
 
   group('hạn', () {
-    testWidgets('chưa có hạn thì mở thẳng lịch, không hỏi thêm', (
+    testWidgets('chưa có thời gian: sheet Thời gian, chạm ô Hạn mở lịch', (
       tester,
     ) async {
       // Chưa có hạn thì "xoá hạn" là lựa chọn vô nghĩa, và thêm một lần chạm
@@ -101,7 +101,9 @@ void main() {
       await pumpApp(tester, host());
       await tester.pumpAndSettle();
 
-      await tester.tap(find.text('Chưa đặt hạn'));
+      await tester.tap(find.text('Đặt thời gian'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('time-due')));
       await tester.pumpAndSettle();
 
       expect(find.text('OK'), findsOneWidget, reason: 'lịch phải mở ngay');
@@ -112,9 +114,11 @@ void main() {
       await pumpApp(tester, host(task: taskWith({'due_date': '2026-12-31'})));
       await tester.pumpAndSettle();
 
-      await tester.tap(find.text('31/12'));
+      await tester.tap(find.text('Hạn 31/12'));
       await tester.pumpAndSettle();
-      await tester.tap(find.text('Xoá hạn'));
+      await tester.tap(find.byTooltip('Xoá hạn'));
+      await tester.pump();
+      await tester.tap(find.text('Lưu'));
       await tester.pumpAndSettle();
 
       // Chuỗi RỖNG, không phải null: API lọc bỏ trường null, nên gửi null sẽ
@@ -204,7 +208,8 @@ void main() {
       await pumpApp(tester, host());
       await tester.pumpAndSettle();
 
-      expect(find.text('Thêm mô tả'), findsOneWidget);
+      expect(find.text('Chưa có mô tả'), findsOneWidget);
+      expect(find.byTooltip('Sửa mô tả'), findsOneWidget);
     });
 
     testWidgets('xoá sạch mô tả là lựa chọn hợp lệ', (tester) async {
@@ -213,7 +218,7 @@ void main() {
         host(task: taskWith({'description': 'Khách dặn giữ nguyên phím ngà'})),
       );
 
-      await tester.tap(find.text('Khách dặn giữ nguyên phím ngà'));
+      await tester.tap(find.byTooltip('Sửa mô tả'));
       await tester.pumpAndSettle();
       await tester.enterText(sheetField, '');
       await tester.pump();

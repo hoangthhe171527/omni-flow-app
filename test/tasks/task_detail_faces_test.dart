@@ -8,7 +8,6 @@ import 'package:omni_app/modules/tasks/application/tasks_providers.dart';
 import 'package:omni_app/modules/tasks/domain/task.dart';
 import 'package:omni_app/modules/tasks/domain/task_permissions.dart';
 import 'package:omni_app/modules/tasks/presentation/task_detail_page.dart';
-import 'package:omni_app/modules/tasks/presentation/widgets/task_detail/coordination_card.dart';
 import 'package:omni_app/security/permissions/access_policy.dart';
 
 /// Một màn, hai bộ mặt.
@@ -31,6 +30,7 @@ void main() {
     'title': 'KAWAI HAT-5 · 2308512',
     'project_id': 'p1',
     'section_id': 's2',
+    'section_name': 'Đang sửa',
     'due_date': '2026-12-31',
     'priority': 'high',
     'assignee_ids': ['u1'],
@@ -57,82 +57,64 @@ void main() {
   );
 
   group('người nhận việc', () {
-    testWidgets('thấy bảng điều phối nhưng chỉ đọc', (tester) async {
+    testWidgets('thấy thẻ thông tin nhưng không sửa được', (tester) async {
       await tester.pumpWidget(host());
       await tester.pumpAndSettle();
 
-      expect(find.text('ĐIỀU PHỐI'), findsOneWidget);
-      expect(find.text('Nhóm việc'), findsOneWidget);
-      // Chỉ đọc: không dòng nào bấm được, không mũi tên.
-      expect(
-        find.descendant(
-          of: find.byType(CoordinationCard),
-          matching: find.byType(InkWell),
-        ),
-        findsNothing,
-      );
-      expect(
-        find.descendant(
-          of: find.byType(CoordinationCard),
-          matching: find.byIcon(Icons.chevron_right_rounded),
-        ),
-        findsNothing,
-      );
+      expect(find.text('Người làm'), findsOneWidget);
+      expect(find.text('Thời gian'), findsOneWidget);
+      // Chỉ đọc: không bút sửa mô tả, chạm nhóm việc không mở sheet.
+      expect(find.byTooltip('Sửa mô tả'), findsNothing);
+      await tester.tap(find.byKey(const ValueKey('crumb-section')));
+      await tester.pumpAndSettle();
+      expect(find.text('Chuyển nhóm việc'), findsNothing);
     });
 
     testWidgets('VẪN thấy và tick được công đoạn', (tester) async {
       await tester.pumpWidget(host());
       await tester.pumpAndSettle();
 
-      expect(find.text('Tháo dây'), findsOneWidget);
-      expect(find.text('Nắp phím'), findsOneWidget);
+      expect(find.text('Tháo dây', skipOffstage: false), findsOneWidget);
+      expect(find.text('Nắp phím', skipOffstage: false), findsOneWidget);
     });
 
-    testWidgets('vẫn thấy tên đàn và tiến độ', (tester) async {
+    testWidgets('vẫn thấy tên đàn', (tester) async {
       await tester.pumpWidget(host());
       await tester.pumpAndSettle();
 
-      expect(find.text('KAWAI HAT-5 · 2308512'), findsOneWidget);
-      expect(find.text('Đã xong 1/2 việc con'), findsOneWidget);
+      expect(find.byKey(const ValueKey('detail-title')), findsOneWidget);
+      expect(find.text('KAWAI HAT-5 · 2308512'), findsWidgets);
     });
   });
 
   group('người giao việc', () {
-    testWidgets('thấy bảng điều phối', (tester) async {
+    testWidgets('thấy thẻ thông tin', (tester) async {
       await tester.pumpWidget(host(permissions: assigner));
       await tester.pumpAndSettle();
 
-      expect(find.text('ĐIỀU PHỐI'), findsOneWidget);
+      expect(find.text('Người làm'), findsOneWidget);
     });
 
     testWidgets('thấy ai đang làm', (tester) async {
+      final handle = tester.ensureSemantics();
       await tester.pumpWidget(host(permissions: assigner));
       await tester.pumpAndSettle();
 
-      expect(find.text('Hằng Ni'), findsOneWidget);
+      expect(find.bySemanticsLabel('Người làm: Hằng Ni'), findsOneWidget);
+      handle.dispose();
     });
 
-    testWidgets('dòng "Nhóm việc" bấm được để chuyển — không có nút riêng', (
+    testWidgets('chạm nhóm việc trên breadcrumb là chuyển nhóm', (
       tester,
     ) async {
-      // Bản trước dòng này trơ và một nút "Chuyển nhóm việc" đứng riêng bên
-      // dưới: hai chỗ cho một việc, và là dòng DUY NHẤT trong bảng không bấm
-      // được. Cùng quy ước với "Người làm", "Hạn", "Ưu tiên": chỗ người ta
-      // nhìn cũng là chỗ người ta bấm.
+      // Chỗ người ta nhìn cũng là chỗ người ta bấm: không có nút riêng.
       await tester.pumpWidget(host(permissions: assigner));
       await tester.pumpAndSettle();
 
-      final row = tester.widget<InkWell>(
-        find
-            .ancestor(
-              of: find.text('Nhóm việc'),
-              matching: find.byType(InkWell),
-            )
-            .first,
-      );
-
-      expect(row.onTap, isNotNull);
       expect(find.text('Chuyển nhóm việc'), findsNothing);
+      await tester.tap(find.byKey(const ValueKey('crumb-section')));
+      await tester.pumpAndSettle();
+      expect(find.text('Chuyển nhóm việc'), findsOneWidget);
     });
 
     testWidgets('việc chưa gán ai thì nói rõ, không để trống', (tester) async {
@@ -169,10 +151,9 @@ void main() {
       );
     });
 
-    // Người nhận việc thấy tình trạng hạn qua chip ở đầu màn. Người giao việc
     // không còn chip đó (nó trùng với bảng điều phối), nên bảng phải tự mang
     // tín hiệu — nếu không họ mất đúng thứ họ mở màn này ra để tìm.
-    testWidgets('quá hạn hiện ngay trong bảng điều phối', (tester) async {
+    testWidgets('quá hạn hiện ngay trong thẻ thông tin', (tester) async {
       final late_ = Task.fromJson({
         'id': 't1',
         'title': 'Trễ',
@@ -198,7 +179,7 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(find.textContaining('quá hạn'), findsOneWidget);
+      expect(find.textContaining('Quá hạn'), findsOneWidget);
     });
 
     testWidgets('vẫn tick được công đoạn như thợ', (tester) async {

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:intl/date_symbol_data_local.dart';
+import 'package:omni_app/design/components/components.dart';
 import 'package:omni_app/design/theme/omni_theme.dart';
 import 'package:omni_app/modules/tasks/application/task_controller.dart';
 import 'package:omni_app/modules/tasks/application/tasks_providers.dart';
@@ -72,14 +73,13 @@ void main() {
   }
 
   Future<void> openSheet(WidgetTester tester) async {
-    await tester.tap(find.text('Chưa giao ai'));
+    // Vòng nét đứt + của dòng "Người làm" (thẻ thông tin).
+    await tester.tap(find.byType(OmniDashedCircle));
     await tester.pumpAndSettle();
   }
 
   group('mở bộ chọn', () {
-    testWidgets('chạm vào chính dòng "Chưa giao ai" là gán được', (
-      tester,
-    ) async {
+    testWidgets('chạm vòng + ở dòng "Người làm" là gán được', (tester) async {
       // Chỗ người ta nhìn cũng là chỗ người ta bấm — không phải một nút ở tận
       // đâu khác trên màn.
       await tester.pumpWidget(host());
@@ -145,9 +145,8 @@ void main() {
       await tester.pumpWidget(host(ids: ['u1'], names: ['Hằng Ni']));
       await tester.pumpAndSettle();
 
-      await tester.tap(find.text('Hằng Ni').first);
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('Hằng Ni').last);
+      await openSheet(tester);
+      await tester.tap(find.text('Hằng Ni'));
       await tester.pump();
 
       expect(find.text('Bỏ gán tất cả'), findsOneWidget);
@@ -164,8 +163,7 @@ void main() {
       await tester.pumpWidget(host(ids: ['u1'], names: ['Hằng Ni']));
       await tester.pumpAndSettle();
 
-      await tester.tap(find.text('Hằng Ni').first);
-      await tester.pumpAndSettle();
+      await openSheet(tester);
       await tester.tap(find.text('Giao cho 1 người'));
       await tester.pumpAndSettle();
 
