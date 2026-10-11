@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<title>Web và API cần bổ sung</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#F5F7FA}
+a{color:#0A7D76}a:hover{color:#075E59}
+.wrap{max-width:1180px;margin:0 auto;padding:48px 24px 64px;box-sizing:border-box}
+.sec{background:#fff;border:1px solid #E3E8EF;border-radius:8px;margin-top:20px;overflow:hidden}
+.sh{display:flex;align-items:center;gap:10px;padding:14px 18px;border-bottom:1px solid #E3E8EF}
+.tag{font-size:12px;font-weight:600;padding:3px 8px;border-radius:4px;white-space:nowrap}
+.tbl{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:14px;min-width:760px}
+th{text-align:left;font-weight:600;font-size:12px;color:#56637A;padding:10px 18px;background:#F5F7FA;text-transform:uppercase;letter-spacing:.02em}
+td{padding:11px 18px;border-top:1px solid #EEF1F5;vertical-align:top;line-height:1.45}
+td.m{color:#56637A;white-space:nowrap}
+.y{color:#075E59;font-weight:600}.n{color:#B42318;font-weight:600}.p{color:#9A3412;font-weight:600}
+.q{display:flex;gap:12px;padding:14px 18px;border-top:1px solid #EEF1F5;line-height:1.5}
+.q:first-of-type{border-top:0}
+.qn{width:26px;height:26px;border-radius:13px;background:#0B1A33;color:#fff;font-size:12px;font-weight:600;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+</style>
+</helmet>
+<div style="font-family:'Be Vietnam Pro',system-ui,sans-serif;color:#0B1A33;background:#F5F7FA">
+<div class="wrap">
+  <div style="font-size:13px;font-weight:600;color:#0A7D76;letter-spacing:.04em;text-transform:uppercase">Màn Việc mới · đối chiếu 11/10</div>
+  <h1 style="margin:6px 0 8px;font-size:30px;line-height:1.25;font-weight:600">Web &amp; API cần bổ sung</h1>
+  <p style="margin:0;max-width:760px;color:#3D4A60;line-height:1.6">Mỗi tính năng trong bản thiết kế đã được đối chiếu với mã thật ở API, web và app. Nhóm 1 làm được ngay vì API đã có. Nhóm 2 cần thêm API trước, rồi web và app cùng dùng. Theo nguyên tắc đã chốt, tính năng chưa có API thì app <b>không</b> làm nút giả.</p>
+
+  <section class="sec">
+    <div class="sh"><span class="tag" style="background:#E6F3F2;color:#075E59">Nhóm 1</span><span style="font-weight:600;font-size:16px">API đã có — chỉ app (và đôi chỗ web) phải làm</span></div>
+    <div class="tbl"><table>
+      <thead><tr><th>Tính năng</th><th>Màn</th><th>API</th><th>Web</th><th>App</th></tr></thead>
+      <tbody>
+        <tr><td>Bảng dạng cột kéo ngang, thu nhỏ xem toàn bảng</td><td class="m">2, 2b</td><td class="y">Có</td><td class="y">Có</td><td class="n">Làm mới (đang 1 cột/màn)</td></tr>
+        <tr><td>Thẻ việc: ô tích xong, hạn, số việc con, tệp, bình luận, nhãn</td><td class="m">2</td><td class="y">Có</td><td class="y">Có</td><td class="n">Làm mới</td></tr>
+        <tr><td>Nhãn màu (bật/tắt trên việc)</td><td class="m">3, 3e</td><td class="y">Có · danh sách chung công ty</td><td class="y">Có</td><td class="n">Chưa đọc nhãn</td></tr>
+        <tr><td>Trường tuỳ chỉnh theo kế hoạch</td><td class="m">3b</td><td class="y">Có</td><td class="y">Có</td><td class="n">Làm mới</td></tr>
+        <tr><td>Đánh giá sao, lượt thích</td><td class="m">3</td><td class="y">Có</td><td class="p">Có nút trong code nhưng không vẽ</td><td class="n">Làm mới</td></tr>
+        <tr><td>Ngày bắt đầu → hạn</td><td class="m">3</td><td class="y">Có</td><td class="y">Có</td><td class="p">Mới có hạn</td></tr>
+        <tr><td>Menu kế hoạch: sửa tên/mô tả/nền, thành viên, sao chép, chuyển team, đóng</td><td class="m">2c</td><td class="y">Có</td><td class="y">Có</td><td class="n">Làm mới</td></tr>
+        <tr><td>Lưu trữ việc + danh sách việc đã lưu trữ</td><td class="m">2c, 3c</td><td class="y">Có</td><td class="y">Có</td><td class="n">Làm mới</td></tr>
+        <tr><td>Chuyển việc sang nhóm / kế hoạch khác</td><td class="m">3c</td><td class="y">Có</td><td class="p">Chỉ trong cùng kế hoạch</td><td class="n">Làm mới</td></tr>
+        <tr><td>Tìm trong kế hoạch, tìm team/kế hoạch</td><td class="m">1, 2</td><td class="y">Có</td><td class="y">Có</td><td class="n">Làm mới</td></tr>
+        <tr><td>Tệp của kế hoạch, báo cáo một kế hoạch</td><td class="m">2c</td><td class="y">Có</td><td class="y">Có</td><td class="n">Làm mới</td></tr>
+        <tr><td>Xoá tệp đính kèm, xoá bình luận</td><td class="m">3</td><td class="y">Có</td><td class="y">Có</td><td class="n">Làm mới</td></tr>
+        <tr><td>Nền kế hoạch (chọn từ mẫu có sẵn)</td><td class="m">2</td><td class="y">Có · tên mẫu, không nhận ảnh tải lên</td><td class="p">Có hàm nhưng chưa hiển thị</td><td class="n">Làm mới</td></tr>
+      </tbody>
+    </table></div>
+  </section>
+
+  <section class="sec">
+    <div class="sh"><span class="tag" style="background:#FDECE3;color:#9A3412">Nhóm 2</span><span style="font-weight:600;font-size:16px">API cần thêm — sau đó web và app cùng làm</span></div>
+    <div class="tbl"><table>
+      <thead><tr><th>Tính năng</th><th>Màn</th><th>API cần thêm</th><th>Web</th><th>Ước lượng</th></tr></thead>
+      <tbody>
+        <tr><td>Kế hoạch yêu thích</td><td class="m">1</td><td>Cờ theo từng người + POST/DELETE favorite + bộ lọc</td><td>Ngôi sao trên danh sách kế hoạch</td><td class="m">Nhỏ</td></tr>
+        <tr><td>Ghim việc lên đầu cột</td><td class="m">2</td><td>Trường <code>pinned</code> + sắp xếp</td><td>Biểu tượng ghim trên thẻ</td><td class="m">Nhỏ</td></tr>
+        <tr><td>Người theo dõi việc</td><td class="m">3, 3c</td><td>Danh sách <code>followers</code> + thông báo cho họ</td><td>Mục người theo dõi</td><td class="m">Vừa</td></tr>
+        <tr><td>Chuỗi “người giao → người làm”</td><td class="m">3, 3d</td><td>Trường <code>assigned_by</code> (hiện chỉ có người tạo)</td><td>Hiển thị người giao</td><td class="m">Nhỏ</td></tr>
+        <tr><td>Việc con: mô tả, ngày bắt đầu/hạn, kéo sắp xếp</td><td class="m">3b, 3d</td><td>Nhận <code>description</code>, <code>start_date</code>, <code>due_date</code> khi sửa một việc con; endpoint sắp xếp</td><td>Ô mô tả, chọn ngày, kéo thả</td><td class="m">Vừa</td></tr>
+        <tr><td>Sao chép việc</td><td class="m">3c</td><td>Endpoint copy (web đang tự chép phía trình duyệt)</td><td>Chuyển sang gọi endpoint</td><td class="m">Nhỏ</td></tr>
+        <tr><td>Nhắc việc theo giờ tự chọn</td><td class="m">3c</td><td>Lịch nhắc riêng + job gửi thông báo</td><td>Hộp chọn giờ nhắc</td><td class="m">Vừa</td></tr>
+        <tr><td>Khoá công việc</td><td class="m">3c</td><td>Cờ <code>locked</code> + chặn sửa ở mọi route</td><td>Trạng thái khoá</td><td class="m">Vừa</td></tr>
+        <tr><td>Chuyển chủ kế hoạch</td><td class="m">2c</td><td>Cho sửa <code>owner_id</code> (hiện chỉ đặt lúc tạo)</td><td>Chọn chủ mới</td><td class="m">Nhỏ</td></tr>
+        <tr><td>Ảnh/tệp, nhắc tên trong bình luận</td><td class="m">3</td><td>Đính kèm cho bình luận; @ đã có hay chưa cần kiểm lại</td><td>Đính kèm trong ô bình luận</td><td class="m">Vừa</td></tr>
+        <tr><td>Sao chép liên kết kế hoạch/việc</td><td class="m">2c, 3c</td><td>Không cần API — chỉ cần đường dẫn mở được trên web và app</td><td>Thêm nút</td><td class="m">Nhỏ</td></tr>
+      </tbody>
+    </table></div>
+  </section>
+
+  <section class="sec">
+    <div class="sh"><span class="tag" style="background:#EEF1F5;color:#3D4A60">Cần anh chốt</span><span style="font-weight:600;font-size:16px">Ba điểm thiết kế phụ thuộc quyết định</span></div>
+    <div class="q"><span class="qn">1</span><span><b>Nhãn chung công ty hay riêng từng kế hoạch?</b> Hiện cả hệ thống dùng một bộ nhãn chung. Bản thiết kế giữ như vậy; nếu muốn mỗi kế hoạch có bộ nhãn riêng như app tham khảo thì phải đổi API và chuyển dữ liệu cũ.</span></div>
+    <div class="q"><span class="qn">2</span><span><b>Thảo luận theo kế hoạch (WorkChat)?</b> Viomni chưa có chat nội bộ nào. Bản thiết kế đã bỏ biểu tượng chat; nếu cần thì đó là một dự án riêng.</span></div>
+    <div class="q"><span class="qn">3</span><span><b>Nền kế hoạch bằng ảnh tải lên?</b> API cố ý chỉ nhận mẫu nền có sẵn. Bản thiết kế dùng nền màu; ảnh tải lên cần đổi API và lưu trữ ảnh.</span></div>
+  </section>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1280,"height":1400}}'>
+class Component extends DCLogic {
+renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

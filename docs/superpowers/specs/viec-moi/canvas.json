@@ -1,0 +1,21 @@
+{"v":3,"createdOnFiles":{"v":1,"at":"2026-10-11T07:10:00+07:00"},"title":"Viomni – Màn Việc mới","launch":{"view":"canvas"},"pages":[],
+"boards":{
+"Main.dc.html":{"x":0,"y":0,"w":390,"h":844,"title":"1 · Team & kế hoạch","is_interactive":true},
+"TeamsAdd.dc.html":{"x":470,"y":0,"w":390,"h":844,"title":"1b · Nút + mở Tạo team / kế hoạch","is_interactive":true},
+"Board.dc.html":{"x":940,"y":0,"w":390,"h":844,"title":"2 · Bảng kế hoạch (cột kéo ngang)","is_interactive":true},
+"BoardZoom.dc.html":{"x":1410,"y":0,"w":390,"h":844,"title":"2b · Thu nhỏ xem toàn bảng","is_interactive":true},
+"PlanMenu.dc.html":{"x":1880,"y":0,"w":390,"h":844,"title":"2c · Menu kế hoạch","is_interactive":true},
+"TaskDetail.dc.html":{"x":0,"y":1200,"w":390,"h":844,"title":"3 · Chi tiết công việc","is_interactive":true},
+"TaskSubtasks.dc.html":{"x":470,"y":1200,"w":390,"h":844,"title":"3b · Trường tuỳ chỉnh & việc con","is_interactive":true},
+"TaskMenu.dc.html":{"x":940,"y":1200,"w":390,"h":844,"title":"3c · Menu công việc","is_interactive":true},
+"SubtaskCreate.dc.html":{"x":1410,"y":1200,"w":390,"h":844,"title":"3d · Tạo việc con","is_interactive":true},
+"Labels.dc.html":{"x":1880,"y":1200,"w":390,"h":844,"title":"3e · Nhãn màu","is_interactive":true},
+"Gaps.dc.html":{"x":0,"y":2400,"w":1280,"h":1400,"title":"4 · Web & API cần bổ sung","expand":"fill"}
+},
+"order":["Main.dc.html","TeamsAdd.dc.html","Board.dc.html","BoardZoom.dc.html","PlanMenu.dc.html","TaskDetail.dc.html","TaskSubtasks.dc.html","TaskMenu.dc.html","SubtaskCreate.dc.html","Labels.dc.html","Gaps.dc.html"],
+"notes":{
+"t1":{"x":0,"y":-300,"text":"Team, kế hoạch & bảng","kind":"title1","maxW":2270},
+"t2":{"x":0,"y":900,"text":"Chi tiết công việc","kind":"title1","maxW":2270},
+"t3":{"x":0,"y":2100,"text":"Web & API cần bổ sung","kind":"title1","maxW":1280}
+},
+"designSystems":[]}
