@@ -406,12 +406,60 @@ class TaskController
   /// Đặt lại nhãn của việc. LẠC QUAN: dải nhãn đổi ngay dưới ngón tay, rồi
   /// theo bản server. Lỗi thì hoàn tác về nhãn cũ và NÉM lại để chỗ gọi báo
   /// ("Không lưu được nhãn.") — một nhãn lặng lẽ biến mất đọc như đã lưu.
-  Future<void> setLabels(List<String> labels) => _optimistic(
-    _Field.labels,
-    (task) => task.copyWith(labels: List.unmodifiable(labels)),
-    (api) => api.setLabels(arg, labels),
-    (before, latest) => latest.copyWith(labels: before.labels),
-  );
+  ///
+  /// Các lượt NỐI ĐUÔI nhau như [setCustomField]: dải nhãn đổi ngay, nhưng
+  /// lượt gửi sau chờ lượt trước về. Mỗi lượt nhớ nhãn "trước nó" là nhãn lượt
+  /// liền trước đã xin; lượt cuối hỏng thì dải về đúng giá trị đó, không về
+  /// một ảnh chụp đã cũ từ trước cả chuỗi.
+  Future<void> setLabels(List<String> labels) {
+    final current = state.valueOrNull;
+    if (current == null) return Future<void>.value();
+
+    final next = List<String>.unmodifiable(labels);
+    final before = _labelsTail ?? current.task.labels;
+    _labelsTail = next;
+    state = AsyncData(
+      current.copyWith(task: current.task.copyWith(labels: next)),
+    );
+    _inFlight[_Field.labels] = (_inFlight[_Field.labels] ?? 0) + 1;
+
+    final run = _labelsQueue.then((_) => _sendLabels(next, before));
+    // Hàng đợi không mang lỗi: lượt trước hỏng thì lượt sau vẫn chạy.
+    _labelsQueue = run.then<void>((_) {}, onError: (Object _) {});
+    return run;
+  }
+
+  Future<void> _labelsQueue = Future<void>.value();
+
+  /// Nhãn lượt mới nhất đã xin (null khi không còn lượt nào bay).
+  List<String>? _labelsTail;
+
+  Future<void> _sendLabels(List<String> labels, List<String> before) async {
+    void land() {
+      final left = _inFlight[_Field.labels]! - 1;
+      _inFlight[_Field.labels] = left;
+      if (left == 0) _labelsTail = null;
+    }
+
+    try {
+      final updated = await ref.read(tasksApiProvider).setLabels(arg, labels);
+      land();
+      _adopt(updated);
+    } on Object {
+      land();
+      final latest = state.valueOrNull;
+      // Còn lượt sau đang bay thì lượt sau quyết dải nhãn; lượt cuối hỏng thì
+      // về nhãn lượt liền trước đã xin.
+      if (!_disposed &&
+          latest != null &&
+          (_inFlight[_Field.labels] ?? 0) == 0) {
+        state = AsyncData(
+          latest.copyWith(task: latest.task.copyWith(labels: before)),
+        );
+      }
+      rethrow;
+    }
+  }
 
   /// Bật/tắt thích của [userId] (người đang đăng nhập). Lạc quan như
   /// [setLabels]; lỗi thì hoàn tác và ném ("Không thích được.").

@@ -37,7 +37,8 @@ class TaskBreadcrumb extends StatelessWidget {
         if (plan != null && section != null)
           Icon(
             Icons.chevron_right_rounded,
-            size: OmniIconSize.sm,
+            // Bản mẫu: › 14 màu `#9AA5B8`.
+            size: 14,
             color: OmniTaskTones.of(context).faint,
           ),
         if (section != null)

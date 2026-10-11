@@ -111,6 +111,88 @@ void main() {
       );
       expect(visible().labels, ['khan_cap']);
     });
+
+    test('hai lượt nối đuôi: lượt sau chờ lượt trước về mới gửi', () async {
+      final c = await open(base);
+      final first = Completer<Task>();
+      final second = Completer<Task>();
+      api.labelReplies.addAll([first, second]);
+
+      final a = c.setLabels(['khan_cap', 'cho_khach']);
+      final b = c.setLabels(['khan_cap', 'cho_khach', 'noi_bo']);
+      await Future<void>.delayed(Duration.zero);
+      // Dải nhãn đã đổi theo lượt mới nhất; mạng mới nhận lượt đầu.
+      expect(visible().labels, ['khan_cap', 'cho_khach', 'noi_bo']);
+      expect(api.labelLog, [
+        ['khan_cap', 'cho_khach'],
+      ]);
+
+      first.complete(
+        Task.fromJson(const {
+          'id': 't1',
+          'title': 'KAWAI',
+          'labels': ['khan_cap', 'cho_khach'],
+        }),
+      );
+      await a;
+      // Bản server của lượt đầu không đè nhãn lượt sau đang bay.
+      expect(visible().labels, ['khan_cap', 'cho_khach', 'noi_bo']);
+      expect(api.labelLog, hasLength(2));
+
+      second.complete(
+        Task.fromJson(const {
+          'id': 't1',
+          'title': 'KAWAI',
+          'labels': ['khan_cap', 'cho_khach', 'noi_bo'],
+        }),
+      );
+      await b;
+      expect(visible().labels, ['khan_cap', 'cho_khach', 'noi_bo']);
+    });
+
+    test('lượt cuối hỏng: về nhãn lượt liền trước đã xin', () async {
+      final c = await open(base);
+      final first = Completer<Task>();
+      final second = Completer<Task>();
+      api.labelReplies.addAll([first, second]);
+
+      final a = c.setLabels(['khan_cap', 'cho_khach']);
+      final b = c.setLabels(['khan_cap', 'cho_khach', 'noi_bo']);
+      first.complete(
+        Task.fromJson(const {
+          'id': 't1',
+          'title': 'KAWAI',
+          'labels': ['khan_cap', 'cho_khach'],
+        }),
+      );
+      await a;
+      second.completeError(const NetworkException('mất mạng'));
+      await expectLater(b, throwsA(isA<NetworkException>()));
+      expect(visible().labels, ['khan_cap', 'cho_khach']);
+    });
+
+    test('lượt đầu hỏng khi lượt sau còn bay: lượt sau quyết', () async {
+      final c = await open(base);
+      final first = Completer<Task>();
+      final second = Completer<Task>();
+      api.labelReplies.addAll([first, second]);
+
+      final a = c.setLabels(['khan_cap', 'cho_khach']);
+      final b = c.setLabels(['cho_khach']);
+      first.completeError(const NetworkException('mất mạng'));
+      await expectLater(a, throwsA(isA<NetworkException>()));
+      // Không nháy về nhãn cũ khi lượt sau chưa về.
+      expect(visible().labels, ['cho_khach']);
+      second.complete(
+        Task.fromJson(const {
+          'id': 't1',
+          'title': 'KAWAI',
+          'labels': ['cho_khach'],
+        }),
+      );
+      await b;
+      expect(visible().labels, ['cho_khach']);
+    });
   });
 
   group('thích — lạc quan', () {
@@ -228,6 +310,8 @@ class _FakeApi implements TasksApi {
   int getCalls = 0;
   int likeCalls = 0;
   List<String>? sentLabels;
+  final labelLog = <List<String>>[];
+  final labelReplies = <Completer<Task>>[];
   Map<String, Object?>? sentCustomFields;
   final calls = <String>[];
 
@@ -246,6 +330,8 @@ class _FakeApi implements TasksApi {
   @override
   Future<Task> setLabels(String taskId, List<String> labels) {
     sentLabels = labels;
+    labelLog.add(labels);
+    if (labelReplies.isNotEmpty) return labelReplies.removeAt(0).future;
     return _answer();
   }
 

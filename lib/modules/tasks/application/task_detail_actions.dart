@@ -54,6 +54,14 @@ class TaskDetailActions {
     await _controller.setDueDate(value);
   }
 
+  /// Đặt hoặc XOÁ ngày bắt đầu (`start_date`). [value] null = xoá. Cùng ngày
+  /// thì không ghi.
+  Future<void> editStartDate(Task task, DateTime? value) async {
+    if (_sameDay(value, task.startDate)) return;
+
+    await _controller.setStartDate(value);
+  }
+
   Future<void> editPriority(Task task, String? chosen) async {
     // Server có thể trả 'medium', sheet gửi 'med': cùng một mức.
     String norm(String p) => p == 'medium' ? 'med' : p;

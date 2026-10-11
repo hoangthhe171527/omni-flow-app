@@ -54,6 +54,8 @@ void main() {
     test('nhãn hỏng sau khi lượt thích đã xong: giữ lượt thích', () async {
       final c = await open(base);
       final labels = c.setLabels(['noi_bo']);
+      // Lượt nhãn đi qua hàng đợi: gửi sau một nhịp vi tác vụ.
+      await Future<void>.delayed(Duration.zero);
       final like = c.toggleLike('u1');
 
       // Lượt thứ hai xong trước: server chưa có nhãn mới, đã có lượt thích.
@@ -81,6 +83,8 @@ void main() {
       () async {
         final c = await open(base);
         final labels = c.setLabels(['noi_bo']);
+        // Lượt nhãn đi qua hàng đợi: gửi sau một nhịp vi tác vụ.
+        await Future<void>.delayed(Duration.zero);
         final start = c.setStartDate(DateTime(2026, 10, 20));
 
         api.resolve(
@@ -107,6 +111,8 @@ void main() {
       final c = await open(base);
       final like = c.toggleLike('u1');
       final labels = c.setLabels(['noi_bo']);
+      // Lượt nhãn đi qua hàng đợi: gửi sau một nhịp vi tác vụ.
+      await Future<void>.delayed(Duration.zero);
 
       api.resolve(
         'setLabels',
@@ -195,6 +201,8 @@ void main() {
       final c = await open(base);
       final start = c.setStartDate(DateTime(2026, 10, 20));
       final labels = c.setLabels(['noi_bo']);
+      // Lượt nhãn đi qua hàng đợi: gửi sau một nhịp vi tác vụ.
+      await Future<void>.delayed(Duration.zero);
       api.resolve(
         'setLabels',
         Task.fromJson(const {
@@ -234,6 +242,8 @@ void main() {
     test('ngày bắt đầu về trước: nhãn đang chờ không bật về cũ', () async {
       final c = await open(base);
       final labels = c.setLabels(['noi_bo']);
+      // Lượt nhãn đi qua hàng đợi: gửi sau một nhịp vi tác vụ.
+      await Future<void>.delayed(Duration.zero);
       final start = c.setStartDate(DateTime(2026, 10, 20));
       api.resolve('setStartDate', Task.fromJson(stale));
       await start;
@@ -274,6 +284,8 @@ void main() {
     test('thích xong trước: nhãn đang chờ không bật về cũ', () async {
       final c = await open(base);
       final labels = c.setLabels(['noi_bo']);
+      // Lượt nhãn đi qua hàng đợi: gửi sau một nhịp vi tác vụ.
+      await Future<void>.delayed(Duration.zero);
       final like = c.toggleLike('u1');
       api.resolve(
         'toggleLike',

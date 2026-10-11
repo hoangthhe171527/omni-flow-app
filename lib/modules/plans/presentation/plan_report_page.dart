@@ -44,6 +44,13 @@ class _PlanReportPageState extends ConsumerState<PlanReportPage> {
   /// 132 px nhảy lên rồi nhảy xuống.
   ({WorkshopKpi kpi, DateTime month, int? previous})? _shown;
 
+  /// Đổi tháng. Chụp thẻ đang hiện vào [_shown] NGAY LÚC ĐỔI (không ghi
+  /// state trong build): tháng mới còn tải thì thẻ này đứng mờ thay chỗ.
+  void _go(int delta, WorkshopKpi data, int? previous) => setState(() {
+    _shown = (kpi: data, month: _month, previous: previous);
+    _month = DateTime(_month.year, _month.month + delta);
+  });
+
   static DateTime _thisMonth() {
     final now = DateTime.now();
     return DateTime(now.year, now.month);
@@ -90,23 +97,15 @@ class _PlanReportPageState extends ConsumerState<PlanReportPage> {
 
     return kpi.when(
       data: (data) {
-        _shown = (
-          kpi: data,
-          month: _month,
-          previous: previous.valueOrNull?.delivered,
-        );
+        final before = previous.valueOrNull?.delivered;
+
         return KpiCard(
           kpi: data,
           month: _month,
           previousDelivered: previous.valueOrNull?.delivered,
-          onPrevMonth: () =>
-              setState(() => _month = DateTime(_month.year, _month.month - 1)),
+          onPrevMonth: () => _go(-1, data, before),
           // Không đi tới tương lai: tháng chưa tới luôn ra 0.
-          onNextMonth: atCurrent
-              ? null
-              : () => setState(
-                  () => _month = DateTime(_month.year, _month.month + 1),
-                ),
+          onNextMonth: atCurrent ? null : () => _go(1, data, before),
           onConfigure: widget.canConfigure
               ? () => Navigator.of(context).push(
                   MaterialPageRoute<bool>(

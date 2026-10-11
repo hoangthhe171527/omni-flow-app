@@ -2,10 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:omni_app/core/error/app_exception.dart';
 import 'package:omni_app/design/theme/omni_theme.dart';
 import 'package:omni_app/design/tokens/tokens.dart';
+import 'package:omni_app/modules/plans/routes.dart';
 import 'package:omni_app/modules/tasks/application/task_controller.dart';
 import 'package:omni_app/modules/tasks/application/tasks_providers.dart';
 import 'package:omni_app/modules/tasks/domain/task.dart';
@@ -717,6 +719,151 @@ void main() {
     expect(t.takeException(), isNull);
     final ctx = t.element(find.byType(TaskDetailPage));
     expect(OmniTaskTones.of(ctx).star, const Color(0xFFF0A23C));
+  });
+
+  group('rà soát Task 8', () {
+    /// Màn chi tiết trong GoRouter thật: `/plans/:id` (bảng) và `/tasks/:id`.
+    Widget routed({
+      Set<String> perms = assigner,
+      String initial = '/tasks/t1',
+      bool fromBoard = false,
+    }) {
+      recorded = [];
+      stub = _Detail(TaskDetailState(task: Task.fromJson(json())), recorded);
+      final router = GoRouter(
+        initialLocation: fromBoard ? '/plans/p1' : initial,
+        routes: [
+          GoRoute(
+            path: '/plans/:id',
+            name: PlanRoutes.board,
+            builder: (_, state) => Scaffold(
+              body: Builder(
+                builder: (context) => TextButton(
+                  onPressed: () => context.push('/tasks/t1'),
+                  child: Text('bảng ${state.pathParameters['id']}'),
+                ),
+              ),
+            ),
+          ),
+          GoRoute(
+            path: '/tasks/:id',
+            builder: (_, _) => const TaskDetailPage(taskId: 't1'),
+          ),
+        ],
+      );
+
+      return ProviderScope(
+        overrides: [
+          taskDetailProvider.overrideWith(() => stub),
+          taskLabelsProvider.overrideWith((ref) async => catalog),
+          planCustomFieldsProvider.overrideWith((ref, id) async => const []),
+          taskAccessProvider.overrideWithValue(
+            TaskAccess.of(AccessPolicy(perms)),
+          ),
+        ],
+        child: MaterialApp.router(
+          theme: OmniTheme.light(TargetPlatform.android),
+          routerConfig: router,
+        ),
+      );
+    }
+
+    tw('chạm tên kế hoạch: đẩy bảng của kế hoạch đó', (t) async {
+      await pump(t, routed());
+      await t.tap(find.byKey(const ValueKey('crumb-plan')));
+      await t.pumpAndSettle();
+      expect(find.text('bảng p1'), findsOneWidget);
+      // Đẩy, không thay: quay lại vẫn về chi tiết.
+      expect(GoRouter.of(t.element(find.text('bảng p1'))).canPop(), isTrue);
+    });
+
+    tw('mở việc TỪ bảng đó: chạm tên kế hoạch thì quay lại, không chồng', (
+      t,
+    ) async {
+      await pump(t, routed(fromBoard: true));
+      await t.tap(find.text('bảng p1'));
+      await t.pumpAndSettle();
+      expect(find.byType(TaskDetailPage), findsOneWidget);
+      await t.tap(find.byKey(const ValueKey('crumb-plan')));
+      await t.pumpAndSettle();
+      expect(find.byType(TaskDetailPage), findsNothing);
+      expect(find.text('bảng p1'), findsOneWidget);
+      // Đã quay lại chứ không đẩy bảng thứ hai.
+      expect(GoRouter.of(t.element(find.text('bảng p1'))).canPop(), isFalse);
+    });
+
+    tw('thiếu tasks.read: tên kế hoạch không chạm được', (t) async {
+      await pump(t, routed(perms: {'tasks.write'}));
+      await t.tap(find.byKey(const ValueKey('crumb-plan')));
+      await t.pumpAndSettle();
+      expect(find.textContaining('bảng'), findsNothing);
+      expect(find.byType(TaskDetailPage), findsOneWidget);
+    });
+
+    tw('mũi tên › giữa breadcrumb cỡ 14', (t) async {
+      await pump(t, host(data: json()));
+      final chevron = t.widget<Icon>(find.byIcon(Icons.chevron_right_rounded));
+      expect(chevron.size, 14);
+    });
+
+    tw('tiêu đề: ô 26 thẳng mép thân, chữ bắt đầu ở +38 (bố cục thật)', (
+      t,
+    ) async {
+      await pump(t, host(data: json()));
+      final body = t.getTopLeft(find.byKey(const ValueKey('crumb-plan'))).dx;
+      final box = t.getTopLeft(find.byKey(const ValueKey('title-tick-box'))).dx;
+      final title = t.getRect(find.byKey(const ValueKey('detail-title')));
+      expect(box, body);
+      expect(title.left - body, 38);
+      // Vùng chạm của ô vẫn 44.
+      expect(
+        t.getSize(find.bySemanticsLabel('Đánh dấu xong')),
+        const Size(44, 44),
+      );
+    });
+
+    tw('header: cuộn xuống rồi cuộn ngược lên thì tên về mờ 0', (t) async {
+      await pump(t, host(data: json(description: 'x\n' * 40)));
+      AnimatedOpacity headerTitle() => t.widget<AnimatedOpacity>(
+        find.ancestor(
+          of: find.byKey(const ValueKey('header-title')),
+          matching: find.byType(AnimatedOpacity),
+        ),
+      );
+      await t.drag(find.byType(CustomScrollView), const Offset(0, -300));
+      await t.pumpAndSettle();
+      expect(headerTitle().opacity, 1);
+      await t.drag(find.byType(CustomScrollView), const Offset(0, 300));
+      await t.pumpAndSettle();
+      expect(headerTitle().opacity, 0);
+    });
+
+    tw('giảm chuyển động: tên trên header đổi tức thì (Duration.zero)', (
+      t,
+    ) async {
+      await pump(t, host(data: json(), reduceMotion: true));
+      final fade = t.widget<AnimatedOpacity>(
+        find.ancestor(
+          of: find.byKey(const ValueKey('header-title')),
+          matching: find.byType(AnimatedOpacity),
+        ),
+      );
+      expect(fade.duration, Duration.zero);
+    });
+
+    tw('clipboard ném lỗi: báo "Không chép được mô tả."', (t) async {
+      await pump(t, host(data: json(description: 'Quy trình')));
+      t.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+        SystemChannels.platform,
+        (call) async => call.method == 'Clipboard.setData'
+            ? throw PlatformException(code: 'denied')
+            : null,
+      );
+      await t.tap(find.byTooltip('Sao chép mô tả'));
+      await t.pumpAndSettle();
+      expect(find.text('Không chép được mô tả.'), findsOneWidget);
+      expect(find.text('Đã chép mô tả.'), findsNothing);
+    });
   });
 }
 

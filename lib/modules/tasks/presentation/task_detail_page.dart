@@ -364,12 +364,7 @@ class _Loaded extends ConsumerWidget {
           TaskBreadcrumb(
             planName: task.projectName,
             sectionName: sectionName,
-            onPlan: canOpenBoard
-                ? () => context.pushNamed(
-                    PlanRoutes.board,
-                    pathParameters: {'id': projectId},
-                  )
-                : null,
+            onPlan: canOpenBoard ? () => _openBoard(context, projectId) : null,
             onSection: isAssigner
                 ? () => _moveSection(context, actions, task)
                 : null,
@@ -391,9 +386,7 @@ class _Loaded extends ConsumerWidget {
                   myAvatar,
                 )
               : null,
-          onTime: isAssigner
-              ? () => _editTime(context, controller, actions, task)
-              : null,
+          onTime: isAssigner ? () => _editTime(context, actions, task) : null,
           onRate: isAssigner
               ? (n) => _rate(context, controller, task, n)
               : null,
@@ -619,17 +612,55 @@ class _Loaded extends ConsumerWidget {
     }
   }
 
+  /// Chép mô tả. Kênh clipboard có thể ném (nền tảng từ chối, máy hạn chế):
+  /// báo bằng lời thay vì để lỗi trôi lặng.
   Future<void> _copyDescription(BuildContext context, String text) async {
     final messenger = ScaffoldMessenger.of(context);
-    await Clipboard.setData(ClipboardData(text: text));
+    try {
+      await Clipboard.setData(ClipboardData(text: text));
+    } on Object {
+      messenger.showSnackBar(
+        const SnackBar(content: Text('Không chép được mô tả.')),
+      );
+      return;
+    }
     messenger.showSnackBar(const SnackBar(content: Text('Đã chép mô tả.')));
+  }
+
+  /// Chạm tên kế hoạch: mở bảng. Màn ngay dưới đã CHÍNH là bảng đó (mở việc
+  /// từ bảng) thì quay lại, không chồng thêm một bảng thứ hai lên ngăn xếp.
+  void _openBoard(BuildContext context, String projectId) {
+    final router = GoRouter.of(context);
+    final board = router.namedLocation(
+      PlanRoutes.board,
+      pathParameters: {'id': projectId},
+    );
+    final leaves = _leafMatches(
+      router.routerDelegate.currentConfiguration.matches,
+    ).toList();
+    if (leaves.length >= 2 &&
+        leaves[leaves.length - 2].matchedLocation == board &&
+        router.canPop()) {
+      router.pop();
+      return;
+    }
+    context.pushNamed(PlanRoutes.board, pathParameters: {'id': projectId});
+  }
+
+  static Iterable<RouteMatch> _leafMatches(List<RouteMatchBase> matches) sync* {
+    for (final m in matches) {
+      if (m is ShellRouteMatch) {
+        yield* _leafMatches(m.matches);
+      } else if (m is RouteMatch) {
+        yield m;
+      }
+    }
   }
 
   /// Ngày bắt đầu và hạn trong một sheet. Gửi `start_date` khi đổi ngày, rồi
   /// đi đường đổi hạn hiện có (`due_date`, không bao giờ `due_at`).
   Future<void> _editTime(
     BuildContext context,
-    TaskController controller,
     TaskDetailActions actions,
     Task task,
   ) async {
@@ -642,17 +673,9 @@ class _Loaded extends ConsumerWidget {
     if (chosen == null) return;
 
     await _guard(messenger, () async {
-      if (!_sameDay(chosen.start, task.startDate)) {
-        await controller.setStartDate(chosen.start);
-      }
+      await actions.editStartDate(task, chosen.start);
       await actions.editDueDate(task, chosen.due);
     });
-  }
-
-  static bool _sameDay(DateTime? a, DateTime? b) {
-    if (a == null || b == null) return a == b;
-
-    return a.year == b.year && a.month == b.month && a.day == b.day;
   }
 
   /// Giao việc cho ai, ngay tại chỗ.

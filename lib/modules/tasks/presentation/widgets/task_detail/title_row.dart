@@ -176,33 +176,35 @@ class _TaskTitleRowState extends ConsumerState<TaskTitleRow>
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
         onTap: enabled ? _toggle : null,
-        child: SizedBox.square(dimension: 44, child: Center(child: box)),
+        child: SizedBox.square(
+          dimension: 44,
+          child: Align(alignment: Alignment.centerLeft, child: box),
+        ),
       ),
     );
 
-    // `.ck` lề trái −10: ô vẽ thẳng mép thân, vùng chạm 44 vẫn đủ.
-    return Transform.translate(
-      offset: const Offset(-10, 0),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          tick,
-          const SizedBox(width: 4),
-          Expanded(
-            child: Padding(
-              padding: const EdgeInsets.only(top: 7),
-              child: Text(
-                widget.task.title,
-                key: const ValueKey('detail-title'),
-                style: OmniType.title.copyWith(
-                  letterSpacing: 0,
-                  color: scheme.onSurface,
-                ),
+    // `.ck` lề trái −10 của bản mẫu: ô 26 vẽ thẳng mép thân (x 0), chữ bắt
+    // đầu ở 38 (−10 + 44 + 4). Bố cục thật, không dịch hình: chữ được trọn bề
+    // rộng của nó. Vùng chạm 44 của ô phủ lên 6px đầu dòng chữ — chữ không
+    // chạm được nên không tranh chạm.
+    return Stack(
+      children: [
+        ConstrainedBox(
+          constraints: const BoxConstraints(minHeight: 44),
+          child: Padding(
+            padding: const EdgeInsets.only(left: 38, top: 7),
+            child: Text(
+              widget.task.title,
+              key: const ValueKey('detail-title'),
+              style: OmniType.title.copyWith(
+                letterSpacing: 0,
+                color: scheme.onSurface,
               ),
             ),
           ),
-        ],
-      ),
+        ),
+        Positioned(left: 0, top: 0, width: 44, height: 44, child: tick),
+      ],
     );
   }
 }
