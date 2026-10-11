@@ -111,6 +111,10 @@ void main() {
     final ids = sentSections().map((s) => s['id']).toList();
     expect(ids, isNot(contains('s1')));
     expect(ids.toSet().length, ids.length, reason: 'không id nào trùng');
+    // Id đoán được (`sN`) vẫn có thể trùng một nhóm đã xoá từ lâu mà việc còn
+    // trỏ tới. Id ngẫu nhiên như server và web.
+    expect(ids.last, isNot(matches(RegExp(r'^s\d+$'))));
+    expect((ids.last! as String).length, lessThanOrEqualTo(64));
   });
 
   testWidgets('nhóm không tên thì không lưu được', (tester) async {

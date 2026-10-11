@@ -222,6 +222,77 @@ void main() {
     });
   });
 
+  group('lượt khác về trong lúc nhãn / thích lạc quan đang bay', () {
+    const stale = {
+      'id': 't1',
+      'title': 'KAWAI',
+      'labels': ['khan_cap'],
+      'likes': ['u9'],
+      'start_date': '2026-10-20',
+    };
+
+    test('ngày bắt đầu về trước: nhãn đang chờ không bật về cũ', () async {
+      final c = await open(base);
+      final labels = c.setLabels(['noi_bo']);
+      final start = c.setStartDate(DateTime(2026, 10, 20));
+      api.resolve('setStartDate', Task.fromJson(stale));
+      await start;
+      expect(visible().labels, ['noi_bo']);
+      expect(visible().startDate!.day, 20);
+
+      api.resolve(
+        'setLabels',
+        Task.fromJson({
+          ...stale,
+          'labels': ['noi_bo'],
+        }),
+      );
+      await labels;
+      expect(visible().labels, ['noi_bo']);
+      expect(visible().startDate!.day, 20);
+    });
+
+    test('ngày bắt đầu về trước: lượt thích đang chờ không mất', () async {
+      final c = await open(base);
+      final like = c.toggleLike('u1');
+      final start = c.setStartDate(DateTime(2026, 10, 20));
+      api.resolve('setStartDate', Task.fromJson(stale));
+      await start;
+      expect(visible().likes, ['u9', 'u1']);
+
+      api.resolve(
+        'toggleLike',
+        Task.fromJson({
+          ...stale,
+          'likes': ['u9', 'u1'],
+        }),
+      );
+      await like;
+      expect(visible().likes, ['u9', 'u1']);
+    });
+
+    test('thích xong trước: nhãn đang chờ không bật về cũ', () async {
+      final c = await open(base);
+      final labels = c.setLabels(['noi_bo']);
+      final like = c.toggleLike('u1');
+      api.resolve(
+        'toggleLike',
+        Task.fromJson({
+          ...stale,
+          'likes': ['u9', 'u1'],
+        }),
+      );
+      await like;
+      expect(visible().labels, ['noi_bo']);
+      expect(visible().likes, ['u9', 'u1']);
+
+      api.reject('setLabels');
+      await expectLater(labels, throwsA(isA<NetworkException>()));
+      expect(visible().labels, ['khan_cap']);
+      expect(visible().likes, ['u9', 'u1']);
+    });
+  });
+
   group('trường tuỳ chỉnh: hai lượt liền nhau', () {
     test('lượt sau gửi map có cả giá trị của lượt trước', () async {
       final c = await open(base);

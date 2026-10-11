@@ -32,13 +32,21 @@ abstract final class BoardMetrics {
 /// [animate] = false (giảm chuyển động): nhảy thẳng tới cột đích trong một
 /// khung, không trượt.
 class BoardSnapPhysics extends ScrollPhysics {
-  const BoardSnapPhysics({super.parent, this.animate = true});
+  const BoardSnapPhysics({super.parent, this.animate = true, this.count});
 
   final bool animate;
 
+  /// Số ô trên dải (cột + ô "Thêm nhóm việc"). Biết thì kẹp đầu cuối theo
+  /// nó; null thì suy từ tầm cuộn — mà tầm cuộn của danh sách lười chỉ là
+  /// ước lượng cho tới khi ô cuối được dựng.
+  final int? count;
+
   @override
-  BoardSnapPhysics applyTo(ScrollPhysics? ancestor) =>
-      BoardSnapPhysics(parent: buildParent(ancestor), animate: animate);
+  BoardSnapPhysics applyTo(ScrollPhysics? ancestor) => BoardSnapPhysics(
+    parent: buildParent(ancestor),
+    animate: animate,
+    count: count,
+  );
 
   static double offsetOf(int index, ScrollMetrics metrics) =>
       (BoardMetrics.inset +
@@ -65,10 +73,16 @@ class BoardSnapPhysics extends ScrollPhysics {
         metrics.viewportDimension -
         2 * BoardMetrics.inset +
         BoardMetrics.gap;
-    final count = math.max(1, (content / BoardMetrics.pitch).round());
+    final count =
+        this.count ?? math.max(1, (content / BoardMetrics.pitch).round());
 
-    return offsetOf(index.round().clamp(0, count - 1), metrics);
+    return offsetOf(index.round().clamp(0, math.max(0, count - 1)), metrics);
   }
+
+  /// Vị trí dừng khi thả ở [metrics] với vận tốc [velocity] (px/s).
+  @visibleForTesting
+  double targetFor(ScrollMetrics metrics, double velocity) =>
+      _target(metrics, velocity, toleranceFor(metrics).velocity);
 
   @override
   Simulation? createBallisticSimulation(

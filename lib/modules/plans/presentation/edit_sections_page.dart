@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/error/app_exception.dart';
+import '../../../core/utils/client_id.dart';
 import '../../../design/tokens/tokens.dart';
 import '../application/plans_providers.dart';
 import '../data/plans_api.dart';
@@ -35,12 +36,6 @@ class _EditSectionsPageState extends ConsumerState<EditSectionsPage> {
   bool _saving = false;
   String? _error;
 
-  /// Id đã từng dùng trong dự án này, KỂ CẢ nhóm vừa xoá khỏi màn.
-  ///
-  /// Nhóm mới không được nhận lại id của một nhóm vừa bị bỏ: công việc cũ vẫn
-  /// đang trỏ vào id đó, và chúng sẽ lặng lẽ xuất hiện trong nhóm mới.
-  final _usedIds = <String>{};
-
   @override
   Widget build(BuildContext context) {
     final plan = ref.watch(planProvider(widget.planId));
@@ -50,7 +45,6 @@ class _EditSectionsPageState extends ConsumerState<EditSectionsPage> {
     final loaded = plan.valueOrNull;
     if (loaded != null && _sections == null) {
       _sections = [...loaded.sections];
-      _usedIds.addAll(loaded.sections.map((s) => s.id));
     }
     final sections = _sections;
 
@@ -158,7 +152,10 @@ class _EditSectionsPageState extends ConsumerState<EditSectionsPage> {
                     onPressed: () => setState(() {
                       sections.add(
                         PlanSection(
-                          id: _nextId(),
+                          // Id ngẫu nhiên như server và web: id đoán được
+                          // (`sN`) có thể trùng nhóm đã xoá mà việc còn trỏ
+                          // tới, và các việc đó sẽ lặng lẽ hiện vào nhóm mới.
+                          id: newClientId(),
                           name: '',
                           order: sections.length,
                         ),
@@ -192,17 +189,6 @@ class _EditSectionsPageState extends ConsumerState<EditSectionsPage> {
 
   bool _canSave(List<PlanSection> sections) =>
       !_saving && sections.every((s) => s.name.trim().isNotEmpty);
-
-  /// Id chưa từng dùng trong dự án này.
-  String _nextId() {
-    var n = _usedIds.length + 1;
-    while (_usedIds.contains('s$n')) {
-      n++;
-    }
-    _usedIds.add('s$n');
-
-    return 's$n';
-  }
 
   Future<void> _save(List<PlanSection> sections) async {
     setState(() {

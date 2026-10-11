@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/config/app_config.dart';
 import '../../../core/realtime/realtime_client.dart';
 import '../../../security/session/session_controller.dart';
 import '../../tasks/application/tasks_providers.dart';
@@ -386,17 +387,35 @@ final boardBucketsProvider = Provider.autoDispose
 /// Khoá của một lượt tìm trong kế hoạch.
 typedef PlanSearchKey = ({String planId, String query});
 
+/// Kết quả một lượt tìm: id các việc khớp, và [capped] = đã dừng ở trần
+/// [kMaxTasksOnBoard] mà server có thể còn nữa.
+typedef PlanSearchResult = ({Set<String> ids, bool capped});
+
 /// Id các việc khớp [PlanSearchKey.query] trong một kế hoạch, theo
 /// `GET /tasks?project_id=&search=` (server khớp tiền tố token trên tiêu đề,
 /// mã, tên khách). Bảng giữ nguyên cách chia cột và chỉ lọc theo tập này, nên
 /// thẻ vẫn nhận realtime như thường.
 ///
-/// Một trang (`AppConfig.maxPerPage`) là đủ cho một lượt tìm trên điện thoại.
+/// Đi hết các trang như [loadAllTasksInPlan], cùng trần [kMaxTasksOnBoard]:
+/// bảng đã nạp tới 500 việc, nên chỉ lấy trang đầu (100) là giấu mất thẻ khớp
+/// đang nằm ngay trên bảng. Dừng theo dữ liệu (trang thiếu), không theo
+/// `last_page`.
 final planTaskSearchProvider = FutureProvider.autoDispose
-    .family<Set<String>, PlanSearchKey>((ref, key) async {
-      final page = await ref
-          .watch(tasksApiProvider)
-          .list(projectId: key.planId, search: key.query);
+    .family<PlanSearchResult, PlanSearchKey>((ref, key) async {
+      final api = ref.watch(tasksApiProvider);
+      final ids = <String>{};
+      for (var page = 1; ids.length < kMaxTasksOnBoard; page++) {
+        final result = await api.list(
+          projectId: key.planId,
+          search: key.query,
+          page: page,
+          perPage: AppConfig.maxPerPage,
+        );
+        ids.addAll(result.items.map((t) => t.id));
+        if (result.items.length < AppConfig.maxPerPage) {
+          return (ids: ids, capped: false);
+        }
+      }
 
-      return {for (final task in page.items) task.id};
+      return (ids: ids.take(kMaxTasksOnBoard).toSet(), capped: true);
     }, name: 'planTaskSearch');

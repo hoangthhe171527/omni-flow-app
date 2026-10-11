@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/error/app_exception.dart';
+import '../../../core/utils/client_id.dart';
 import '../../../design/components/components.dart';
 import '../../../design/platform/omni_motion_scope.dart';
 import '../../../design/tokens/tokens.dart';
@@ -60,6 +61,9 @@ class _PlanBoardPageState extends ConsumerState<PlanBoardPage> {
   /// cũng không phát lại.
   bool _introDone = false;
 
+  /// Kết quả lượt tìm gần nhất đã về, để giữ trên bảng khi lượt mới đang tải.
+  PlanSearchResult? _lastSearch;
+
   /// Đang ở chế độ thu nhỏ (lưới mọi cột).
   bool _zoomed = false;
 
@@ -100,9 +104,16 @@ class _PlanBoardPageState extends ConsumerState<PlanBoardPage> {
         : ref.watch(
             planTaskSearchProvider((planId: widget.planId, query: _query)),
           );
-    final ids = search?.valueOrNull;
+    // Lượt tìm mới đang tải thì giữ kết quả lượt trước trên bảng, thay vì
+    // xoá trắng bảng để quay vòng chờ.
+    if (search?.valueOrNull case final found?) _lastSearch = found;
+    final result =
+        search?.valueOrNull ??
+        (search != null && !search.hasError ? _lastSearch : null);
     final board = buckets.valueOrNull;
-    final visible = board == null || ids == null ? board : board.only(ids);
+    final visible = board == null || result == null
+        ? board
+        : board.only(result.ids);
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle.light,
@@ -142,13 +153,16 @@ class _PlanBoardPageState extends ConsumerState<PlanBoardPage> {
                     value: buckets,
                     onRetry: () =>
                         ref.invalidate(planTasksProvider(widget.planId)),
-                    data: (board) => search == null
+                    data: (board) => search == null || result != null
                         ? _body(
                             plan,
-                            board,
+                            result == null ? board : board.only(result.ids),
                             canCreate: taskAccess.canCreate,
                             canComplete: taskAccess.canComplete,
                             canEditSections: canEditSections,
+                            searchCapped: result != null && result.capped
+                                ? result.ids.length
+                                : null,
                           )
                         : OmniAsyncView(
                             value: search,
@@ -158,12 +172,15 @@ class _PlanBoardPageState extends ConsumerState<PlanBoardPage> {
                                 query: _query,
                               )),
                             ),
-                            data: (ids) => _body(
+                            data: (found) => _body(
                               plan,
-                              board.only(ids),
+                              board.only(found.ids),
                               canCreate: taskAccess.canCreate,
                               canComplete: taskAccess.canComplete,
                               canEditSections: canEditSections,
+                              searchCapped: found.capped
+                                  ? found.ids.length
+                                  : null,
                             ),
                           ),
                   ),
@@ -190,6 +207,7 @@ class _PlanBoardPageState extends ConsumerState<PlanBoardPage> {
     required bool canCreate,
     required bool canComplete,
     required bool canEditSections,
+    int? searchCapped,
   }) {
     final columns = board.columns;
     if (!_introDone) {
@@ -201,6 +219,8 @@ class _PlanBoardPageState extends ConsumerState<PlanBoardPage> {
     final content = Column(
       children: [
         if (board.truncated) const _TruncatedNotice(),
+        if (searchCapped case final n?)
+          _TruncatedNotice(text: 'Đang hiện $n kết quả đầu'),
         // Thanh "Đang lọc" trượt xuống thay vì nhảy ra: bảng đổi hình (cột
         // ngắn đi) nên người dùng cần thấy nó đến từ đâu.
         AnimatedSwitcher(
@@ -352,6 +372,7 @@ class _PlanBoardPageState extends ConsumerState<PlanBoardPage> {
     setState(() {
       _searching = false;
       _query = '';
+      _lastSearch = null;
     });
   }
 
@@ -439,14 +460,34 @@ class _PlanBoardPageState extends ConsumerState<PlanBoardPage> {
     BoardBuckets board,
     PlanSection section,
   ) async {
-    final index = board.columns.indexWhere((c) => c.id == section.id);
-    final count = index < 0 ? 0 : board.buckets[index].length;
+    // Đếm trên CẢ kế hoạch, không trên [board]: bảng có thể đang lọc theo
+    // người hoặc đang tìm, và cột đầu còn chứa việc mồ côi không thuộc nhóm.
+    final all = ref.read(planTasksProvider(widget.planId)).valueOrNull;
+    final count = [
+      for (final t in all?.tasks ?? const <Task>[])
+        if (t.sectionId == section.id) t,
+    ].length;
+    final atLeast = all?.truncated ?? false;
+    // Web và app xếp việc mất nhóm khác nhau, nên chỉ nói điều đúng ở cả
+    // hai: việc thành chưa xếp nhóm.
+    final parts = [
+      if (count > 0)
+        '${atLeast ? 'Ít nhất $count' : '$count'} việc trong nhóm này sẽ '
+            'thành chưa xếp nhóm.'
+      else if (atLeast)
+        'Việc trong nhóm này (nếu có) sẽ thành chưa xếp nhóm.'
+      else
+        'Nhóm việc này sẽ biến mất trên cả điện thoại và web.',
+      if (section.countsForKpi)
+        'Nhóm này đang được tính vào KPI; xoá nhóm là bỏ luôn thiết lập đó.',
+      if (section.requiresChecklist)
+        'Nhóm này đang bắt buộc xong việc con; xoá nhóm là bỏ luôn thiết lập '
+            'đó.',
+    ];
     final confirmed = await showOmniConfirm(
       context: context,
       title: 'Xoá nhóm “${section.name}”?',
-      message: count == 0
-          ? 'Nhóm việc này sẽ biến mất trên cả điện thoại và web.'
-          : '$count việc trong nhóm này sẽ hiện ở nhóm việc đầu tiên.',
+      message: parts.join(' '),
       confirmLabel: 'Xoá nhóm',
       destructive: true,
     );
@@ -461,21 +502,13 @@ class _PlanBoardPageState extends ConsumerState<PlanBoardPage> {
     final name = await _askName(title: 'Thêm nhóm việc');
     if (name == null || !mounted) return;
 
-    // Id chưa từng dùng: kể cả id mà việc nào đó còn trỏ tới (nhóm đã xoá),
-    // nếu không các việc cũ đó sẽ lặng lẽ hiện vào nhóm mới.
-    final used = {
-      for (final s in plan.sections) s.id,
-      for (final bucket in board.buckets)
-        for (final task in bucket) ?task.sectionId,
-    };
-    var n = plan.sections.length + 1;
-    while (used.contains('s$n')) {
-      n++;
-    }
-
+    // Id ngẫu nhiên, như server và web (`crypto.randomUUID`). Id đoán được
+    // (`sN`) có thể trùng một nhóm đã xoá mà việc còn trỏ tới — kể cả việc
+    // không nằm trên bảng này (đã lưu trữ, quá trần) — và các việc đó sẽ lặng
+    // lẽ hiện vào nhóm mới.
     await _saveSections([
       ...plan.sections,
-      PlanSection(id: 's$n', name: name, order: plan.sections.length),
+      PlanSection(id: newClientId(), name: name, order: plan.sections.length),
     ]);
   }
 
@@ -957,7 +990,10 @@ class _FilterBar extends StatelessWidget {
 
 /// Kế hoạch vượt trần: bảng chỉ vẽ được một phần, và phải nói ra.
 class _TruncatedNotice extends StatelessWidget {
-  const _TruncatedNotice();
+  const _TruncatedNotice({this.text});
+
+  /// null = câu mặc định về trần [kMaxTasksOnBoard] của bảng.
+  final String? text;
 
   @override
   Widget build(BuildContext context) {
@@ -988,8 +1024,10 @@ class _TruncatedNotice extends StatelessWidget {
               const SizedBox(width: OmniSpacing.sm),
               Expanded(
                 child: Text(
-                  'Kế hoạch này có hơn $kMaxTasksOnBoard việc. Bảng đang hiện '
-                  '$kMaxTasksOnBoard việc đầu theo thứ tự trên bảng.',
+                  text ??
+                      'Kế hoạch này có hơn $kMaxTasksOnBoard việc. Bảng đang '
+                          'hiện $kMaxTasksOnBoard việc đầu theo thứ tự trên '
+                          'bảng.',
                   style: OmniType.caption.copyWith(color: warning),
                 ),
               ),

@@ -236,7 +236,10 @@ class TaskController
 
     final current = state.valueOrNull;
     state = AsyncData(
-      TaskDetailState(task: fresh, pending: current?.pending ?? const []),
+      TaskDetailState(
+        task: current == null ? fresh : _keepInFlight(fresh, current.task),
+        pending: current?.pending ?? const [],
+      ),
     );
   }
 
@@ -404,6 +407,7 @@ class TaskController
   /// theo bản server. Lỗi thì hoàn tác về nhãn cũ và NÉM lại để chỗ gọi báo
   /// ("Không lưu được nhãn.") — một nhãn lặng lẽ biến mất đọc như đã lưu.
   Future<void> setLabels(List<String> labels) => _optimistic(
+    _Field.labels,
     (task) => task.copyWith(labels: List.unmodifiable(labels)),
     (api) => api.setLabels(arg, labels),
     (before, latest) => latest.copyWith(labels: before.labels),
@@ -412,6 +416,7 @@ class TaskController
   /// Bật/tắt thích của [userId] (người đang đăng nhập). Lạc quan như
   /// [setLabels]; lỗi thì hoàn tác và ném ("Không thích được.").
   Future<void> toggleLike(String userId) => _optimistic(
+    _Field.likes,
     (task) => task.copyWith(
       likes: task.isLikedBy(userId)
           ? [
@@ -475,6 +480,7 @@ class TaskController
   /// ghi khác có thể đã được server xác nhận và nằm trong state — ảnh chụp cũ
   /// sẽ xoá nó đi mà không ai hay.
   Future<void> _optimistic(
+    _Field field,
     Task Function(Task task) change,
     Future<Task> Function(TasksApi api) call,
     Task Function(Task before, Task latest) revert,
@@ -483,12 +489,24 @@ class TaskController
     if (current == null) return;
 
     state = AsyncData(current.copyWith(task: change(current.task)));
+    _inFlight[field] = (_inFlight[field] ?? 0) + 1;
+    var landed = false;
+    void land() {
+      if (landed) return;
+      landed = true;
+      _inFlight[field] = _inFlight[field]! - 1;
+    }
+
     try {
       final updated = await call(ref.read(tasksApiProvider));
+      land();
       if (_disposed) return;
       final latest = state.valueOrNull ?? current;
-      state = AsyncData(latest.copyWith(task: updated));
+      state = AsyncData(
+        latest.copyWith(task: _keepInFlight(updated, latest.task)),
+      );
     } on Object {
+      land();
       if (!_disposed) {
         final latest = state.valueOrNull ?? current;
         state = AsyncData(
@@ -524,8 +542,24 @@ class TaskController
   void _adopt(Task updated) {
     final latest = state.valueOrNull;
     if (_disposed || latest == null) return;
-    state = AsyncData(latest.copyWith(task: updated));
+    state = AsyncData(
+      latest.copyWith(task: _keepInFlight(updated, latest.task)),
+    );
   }
+
+  /// Số lượt lạc quan đang bay, theo từng trường.
+  final _inFlight = <_Field, int>{};
+
+  /// Bản [server] nhưng GIỮ trường đang có lượt lạc quan bay (lấy từ [shown]).
+  ///
+  /// Bản server của một lượt ghi khác có thể được dựng TRƯỚC khi server nhận
+  /// lượt nhãn / thích, nên mang giá trị cũ. Áp thẳng nó là nhãn vừa chọn bật
+  /// về cũ, và ở lại cũ nếu lượt kia về sau cùng. Lượt lạc quan tự về (hoặc
+  /// tự hoàn tác) sẽ đặt trường của nó.
+  Task _keepInFlight(Task server, Task shown) => server.copyWith(
+    labels: (_inFlight[_Field.labels] ?? 0) > 0 ? shown.labels : null,
+    likes: (_inFlight[_Field.likes] ?? 0) > 0 ? shown.likes : null,
+  );
 
   /// Đặt state mới VÀ ghi hàng chờ xuống đĩa, trong một lời gọi.
   ///
@@ -603,3 +637,6 @@ final taskDetailProvider =
       TaskDetailState,
       String
     >(TaskController.new);
+
+/// Trường có đường ghi lạc quan riêng trong [TaskController].
+enum _Field { labels, likes }
