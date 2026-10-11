@@ -47,6 +47,9 @@ void main() {
         taskDetailProvider.overrideWith(
           () => _StubDetail(TaskDetailState(task: task ?? taskWith(const {}))),
         ),
+        // Danh mục nhãn có đường đọc riêng cho tasks.read (Nhóm 2); test
+        // này đếm request của màn chi tiết, không phải của bộ nhãn.
+        taskLabelsProvider.overrideWith((ref) async => const []),
         taskAccessProvider.overrideWithValue(
           TaskAccess.of(AccessPolicy(permissions)),
         ),
@@ -93,7 +96,7 @@ void main() {
   });
 
   group('hạn', () {
-    testWidgets('chưa có hạn thì mở thẳng lịch, không hỏi thêm', (
+    testWidgets('chưa có thời gian: sheet Thời gian, chạm ô Hạn mở lịch', (
       tester,
     ) async {
       // Chưa có hạn thì "xoá hạn" là lựa chọn vô nghĩa, và thêm một lần chạm
@@ -101,7 +104,9 @@ void main() {
       await pumpApp(tester, host());
       await tester.pumpAndSettle();
 
-      await tester.tap(find.text('Chưa đặt hạn'));
+      await tester.tap(find.text('Đặt thời gian'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('time-due')));
       await tester.pumpAndSettle();
 
       expect(find.text('OK'), findsOneWidget, reason: 'lịch phải mở ngay');
@@ -112,9 +117,11 @@ void main() {
       await pumpApp(tester, host(task: taskWith({'due_date': '2026-12-31'})));
       await tester.pumpAndSettle();
 
-      await tester.tap(find.text('31/12'));
+      await tester.tap(find.text('Hạn 31/12'));
       await tester.pumpAndSettle();
-      await tester.tap(find.text('Xoá hạn'));
+      await tester.tap(find.byTooltip('Xoá hạn'));
+      await tester.pump();
+      await tester.tap(find.text('Lưu'));
       await tester.pumpAndSettle();
 
       // Chuỗi RỖNG, không phải null: API lọc bỏ trường null, nên gửi null sẽ
@@ -204,7 +211,8 @@ void main() {
       await pumpApp(tester, host());
       await tester.pumpAndSettle();
 
-      expect(find.text('Thêm mô tả'), findsOneWidget);
+      expect(find.text('Chưa có mô tả'), findsOneWidget);
+      expect(find.byTooltip('Sửa mô tả'), findsOneWidget);
     });
 
     testWidgets('xoá sạch mô tả là lựa chọn hợp lệ', (tester) async {
@@ -213,7 +221,7 @@ void main() {
         host(task: taskWith({'description': 'Khách dặn giữ nguyên phím ngà'})),
       );
 
-      await tester.tap(find.text('Khách dặn giữ nguyên phím ngà'));
+      await tester.tap(find.byTooltip('Sửa mô tả'));
       await tester.pumpAndSettle();
       await tester.enterText(sheetField, '');
       await tester.pump();
@@ -264,6 +272,18 @@ class _RecordingAdapter implements HttpClientAdapter {
     Stream<Uint8List>? requestStream,
     Future<void>? cancelFuture,
   ) async {
+    // Thẻ Trường tuỳ chỉnh đọc định nghĩa của kế hoạch (GET /projects/{id}):
+    // lượt đọc phụ, không phải lượt ghi bài này kiểm.
+    if (options.method == 'GET' &&
+        options.uri.path.startsWith('/api/v1/projects/')) {
+      return ResponseBody.fromString(
+        '{"success":true,"data":{"id":"p1"}}',
+        200,
+        headers: {
+          Headers.contentTypeHeader: [Headers.jsonContentType],
+        },
+      );
+    }
     requests.add(options);
 
     return ResponseBody.fromString(

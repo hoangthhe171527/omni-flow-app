@@ -28,7 +28,7 @@ void main() {
     ),
   );
 
-  /// Cuộn xuống cho tới khi nút "Tạo dự án" được DỰNG.
+  /// Cuộn xuống cho tới khi nút "Tạo kế hoạch" được DỰNG.
   ///
   /// Màn này là một `ListView`, nên widget dưới vùng nhìn thấy không tồn tại
   /// trong cây — `ensureVisible` không cứu được vì nó cần widget đã có. Từ khi
@@ -36,7 +36,7 @@ void main() {
   /// sổ kiểm 800×600.
   Future<void> revealSave(WidgetTester tester) async {
     await tester.scrollUntilVisible(
-      find.text('Tạo dự án'),
+      find.text('Tạo kế hoạch'),
       200,
       scrollable: find.byType(Scrollable).first,
     );
@@ -88,7 +88,7 @@ void main() {
     await tester.enterText(find.byType(TextField).first, 'Đàn cơ');
     await tester.pumpAndSettle();
     await revealSave(tester);
-    await tester.tap(find.text('Tạo dự án'));
+    await tester.tap(find.text('Tạo kế hoạch'));
     await tester.pumpAndSettle();
 
     expect(api.createdName, 'Đàn cơ');
@@ -118,7 +118,7 @@ void main() {
     await tester.enterText(find.byType(TextField).at(1), '   ');
     await tester.pumpAndSettle();
     await revealSave(tester);
-    await tester.tap(find.text('Tạo dự án'));
+    await tester.tap(find.text('Tạo kế hoạch'));
     await tester.pumpAndSettle();
 
     expect(
@@ -163,6 +163,9 @@ void main() {
 
 /// Ghi lại tham số của lần gọi tạo, không đi mạng.
 class _RecordingApi implements PlansApi {
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+
   @override
   Future<void> deletePlan(String planId) async {}
 
@@ -220,10 +223,10 @@ class _RecordingApi implements PlansApi {
   }) async => (entries: const <FeedEntry>[], truncated: false);
 
   @override
-  Future<List<Team>> teams() async => const [];
+  Future<List<Team>> teams({String? search}) async => const [];
 
   @override
-  Future<List<Plan>> plans({String? teamId}) async => const [];
+  Future<List<Plan>> plans({String? teamId, String? search}) async => const [];
 
   @override
   Future<Plan> plan(String id) async => Plan.fromJson({'id': id, 'name': 'X'});

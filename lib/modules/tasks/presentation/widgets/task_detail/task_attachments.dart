@@ -6,126 +6,14 @@ import '../../../../../design/platform/omni_motion_scope.dart';
 import '../../../../../design/tokens/tokens.dart';
 import '../../../domain/task.dart';
 
-/// Thẻ tệp đính kèm (`TaskDetail.dc.html`): 3 ô vuông bo 4 — ba tệp đầu tiên,
-/// và "+n" ở ô thứ ba khi có hơn 3. Tiêu đề "TỆP ĐÍNH KÈM (n)" do
-/// `ScoreAndFilesRow` đặt ngoài thẻ.
-///
-/// Hiện cho MỌI người đọc được việc, không gắn với quyền đính kèm: người thợ
-/// bị trả việc về cần nhìn lại tấm ảnh chỗ lỗi, kể cả khi họ không gửi thêm
-/// ảnh mới. Trước đây app gửi ảnh lên rồi không xem lại được ở đâu cả.
-///
-/// Chạm "+n" mở danh sách ĐỦ mọi tệp: hàng cuộn ngang cũ cho thấy tất cả, nên
-/// ba ô mà không có lối vào phần còn lại là mất khả năng.
-class TaskAttachments extends StatelessWidget {
-  const TaskAttachments({super.key, required this.attachments});
-
-  final List<TaskAttachment> attachments;
-
-  static const _visible = 3;
-  static const _gap = 6.0;
-  static const _maxTile = 96.0;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-
-    return Material(
-      color: scheme.surface,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(8),
-        side: BorderSide(color: scheme.outlineVariant),
-      ),
-      clipBehavior: Clip.antiAlias,
-      child: Padding(
-        padding: const EdgeInsets.all(8),
-        child: attachments.isEmpty
-            ? ConstrainedBox(
-                constraints: const BoxConstraints(minHeight: 44),
-                child: Align(
-                  alignment: Alignment.centerLeft,
-                  child: Text(
-                    'Chưa có tệp',
-                    style: OmniType.micro.copyWith(
-                      color: OmniColors.byBrightness(
-                        context,
-                        OmniColors.mutedForeground,
-                        scheme.onSurfaceVariant,
-                      ),
-                    ),
-                  ),
-                ),
-              )
-            : LayoutBuilder(
-                builder: (context, box) {
-                  // Sàn 44: ô nhỏ hơn không chạm được. Không đủ chỗ cho 3 ô 44
-                  // thì hàng cuộn ngang.
-                  final tile = ((box.maxWidth - 2 * _gap) / _visible).clamp(
-                    44.0,
-                    _maxTile,
-                  );
-                  final extra = attachments.length - _visible;
-
-                  return SingleChildScrollView(
-                    scrollDirection: Axis.horizontal,
-                    child: Row(
-                      children: [
-                        for (
-                          var i = 0;
-                          i < attachments.length && i < _visible;
-                          i++
-                        )
-                          Padding(
-                            padding: EdgeInsets.only(
-                              right: i < _visible - 1 ? _gap : 0,
-                            ),
-                            child: AttachmentThumb(
-                              attachment: attachments[i],
-                              size: tile,
-                              overflow: i == _visible - 1 && extra > 0
-                                  ? extra
-                                  : 0,
-                              onOverflow: () => _showAll(context, attachments),
-                            ),
-                          ),
-                      ],
-                    ),
-                  );
-                },
-              ),
-      ),
-    );
-  }
-
-  /// Mọi tệp, ô 96, trong một bảng đáy.
-  static Future<void> _showAll(
-    BuildContext context,
-    List<TaskAttachment> all,
-  ) => showModalBottomSheet<void>(
-    context: context,
-    isScrollControlled: true,
-    builder: (_) => SafeArea(
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          children: [
-            for (final a in all) AttachmentThumb(attachment: a, size: _maxTile),
-          ],
-        ),
-      ),
-    ),
-  );
-}
-
 /// Một ô vuông: ảnh thì hiện chính nó, tệp khác thì hiện tên.
 class AttachmentThumb extends StatelessWidget {
   const AttachmentThumb({
     super.key,
     required this.attachment,
     required this.size,
-    this.overflow = 0,
-    this.onOverflow,
+    this.onLongPress,
+    this.radius = 4,
   });
 
   final TaskAttachment attachment;
@@ -133,9 +21,11 @@ class AttachmentThumb extends StatelessWidget {
   /// Cạnh ô, dp. Cũng là cỡ giải mã (nhân tỉ lệ điểm ảnh).
   final double size;
 
-  /// > 0: ô này mang "+n" và chạm vào là mở danh sách đủ, không mở tệp.
-  final int overflow;
-  final VoidCallback? onOverflow;
+  /// Bấm giữ (vd "Xoá tệp" ở màn Tệp của kế hoạch). null: không làm gì.
+  final VoidCallback? onLongPress;
+
+  /// Bo góc ô (thẻ Tệp của chi tiết việc: 6).
+  final double radius;
 
   /// Mở bản đầy đủ ra ngoài app, như module hộp thư vẫn làm với tệp đính kèm.
   /// Ô nhỏ đủ để nhận ra là tấm nào, không đủ để soi một vết xước.
@@ -148,23 +38,29 @@ class AttachmentThumb extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final more = overflow > 0;
 
     return Semantics(
       button: true,
       // Ảnh không có chữ nào nên nhãn là TÊN tệp; tệp khác đã có tên trong ô.
-      label: more
-          ? 'Xem thêm $overflow tệp'
-          : (attachment.isImage ? attachment.name : null),
+      label: attachment.isImage ? attachment.name : null,
       child: SizedBox(
         width: size,
         height: size,
         child: Material(
-          color: scheme.surfaceContainerHighest,
-          borderRadius: BorderRadius.circular(4),
+          // Ảnh: nền xám khi đang tải. Tệp khác: ô trắng viền (`TaskDetail.dc.html`).
+          color: attachment.isImage
+              ? scheme.surfaceContainerHighest
+              : scheme.surface,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(radius),
+            side: attachment.isImage
+                ? BorderSide.none
+                : BorderSide(color: scheme.outlineVariant),
+          ),
           clipBehavior: Clip.antiAlias,
           child: InkWell(
-            onTap: more ? onOverflow : _open,
+            onTap: _open,
+            onLongPress: onLongPress,
             child: Stack(
               fit: StackFit.expand,
               children: [
@@ -187,18 +83,6 @@ class AttachmentThumb extends StatelessWidget {
                   )
                 else
                   _AttachmentName(name: attachment.name, size: size),
-                if (more)
-                  ColoredBox(
-                    color: Colors.black54,
-                    child: Center(
-                      child: Text(
-                        '+$overflow',
-                        style: OmniType.bodyStrong.copyWith(
-                          color: Colors.white,
-                        ),
-                      ),
-                    ),
-                  ),
               ],
             ),
           ),
@@ -219,6 +103,7 @@ class _AttachmentName extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     // Ô nhỏ (≈ 48): một dòng dưới biểu tượng nhỏ; ô 96: hai dòng.
     final roomy = size >= 80;
+    final pdf = name.toLowerCase().endsWith('.pdf');
 
     return ClipRect(
       child: Padding(
@@ -227,9 +112,13 @@ class _AttachmentName extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(
-              Icons.insert_drive_file_outlined,
-              size: roomy ? OmniIconSize.lg : 18,
-              color: scheme.onSurfaceVariant,
+              pdf
+                  ? Icons.picture_as_pdf_outlined
+                  : Icons.insert_drive_file_outlined,
+              size: OmniIconSize.lg,
+              color: pdf
+                  ? OmniTaskTones.of(context).highPriority.foreground
+                  : scheme.onSurfaceVariant,
             ),
             const SizedBox(height: 2),
             Text(
@@ -237,7 +126,7 @@ class _AttachmentName extends StatelessWidget {
               maxLines: roomy ? 2 : 1,
               textAlign: TextAlign.center,
               overflow: TextOverflow.ellipsis,
-              style: OmniType.micro,
+              style: OmniType.micro.copyWith(color: scheme.onSurfaceVariant),
             ),
           ],
         ),

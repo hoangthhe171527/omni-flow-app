@@ -2,14 +2,20 @@ import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/config/app_config.dart';
 import '../../../core/error/app_exception.dart';
 import '../../../core/network/api_envelope.dart';
 import '../../../core/realtime/realtime_client.dart';
+import '../../../security/session/api_capabilities.dart';
 import '../../../security/session/session_controller.dart';
 import '../../team/team.dart';
 import '../data/tasks_api.dart';
+import '../domain/custom_field.dart';
 import '../domain/task.dart';
+import '../domain/task_label.dart';
 import '../domain/task_permissions.dart';
+import '../domain/task_project.dart';
+import '../domain/task_reminder.dart';
 
 final taskAccessProvider = Provider<TaskAccess>((ref) {
   return TaskAccess.of(ref.watch(accessProvider));
@@ -258,6 +264,98 @@ final taskBadgeProvider = Provider.autoDispose<int>((ref) {
   return ref.watch(taskOverdueCountProvider).valueOrNull ?? 0;
 });
 
+/// Bộ nhãn việc của công ty (`TASK_LABEL`).
+///
+/// Giữ suốt phiên (không autoDispose): thẻ việc nào trên bảng cũng tra màu ở
+/// đây. Sửa hoặc tạo nhãn xong thì `ref.invalidate(taskLabelsProvider)`.
+///
+/// Hai đường đọc:
+///  * có `system_options.read` → danh mục đầy đủ (có `id`, sheet Nhãn màu sửa
+///    được theo id);
+///  * chỉ có `tasks.read` (thợ) → `GET /system-options/task-labels` (API Nhóm
+///    2, chỉ khi phiên khai `system_options.task_labels`), chỉ code / tên /
+///    màu. Không khai (API cũ) → rỗng mà không gọi: dải nhãn ẩn, chip
+///    hiện mã với màu `fallback`, như trước đây.
+/// Không có quyền nào thì rỗng mà không gọi mạng.
+final taskLabelsProvider = FutureProvider<List<TaskLabel>>((ref) async {
+  // `taskAccessProvider` dựng lại theo phiên (đổi tenant / người đăng nhập),
+  // nên theo dõi nó cũng là tải lại bộ nhãn khi phiên đổi.
+  final access = ref.watch(taskAccessProvider);
+  final api = ref.watch(tasksApiProvider);
+  if (access.canReadLabels) return api.taskLabels();
+  if (access.canRead &&
+      ref.watch(apiSupportsProvider(ApiCapability.taskLabelsForReaders))) {
+    return api.taskLabelsForReaders();
+  }
+
+  return const [];
+});
+
+/// Kế hoạch chứa việc (chủ, vai, thành viên), cho quyền ở chi tiết việc: ai
+/// khoá được, ai chỉ xem. Lỗi (403/404/mạng) thì chỗ dùng rơi về quyền hệ
+/// thống — không mở thêm nút nào chỉ vì không đọc được kế hoạch.
+final taskProjectProvider = FutureProvider.autoDispose
+    .family<TaskProject, String>((ref, projectId) {
+      return ref.watch(tasksApiProvider).project(projectId);
+    });
+
+/// Định nghĩa trường tuỳ chỉnh của một kế hoạch, cho chi tiết việc.
+///
+/// Lấy từ [taskProjectProvider]: CÙNG MỘT lượt `GET /projects/{id}` cho cả
+/// định nghĩa trường lẫn vai (khoá việc, xoá bình luận, người xem). Không qua
+/// module plans — tasks không import plans.
+final planCustomFieldsProvider = FutureProvider.autoDispose
+    .family<List<CustomFieldDef>, String>((ref, projectId) async {
+      final project = await ref.watch(taskProjectProvider(projectId).future);
+
+      return project.customFields;
+    });
+
+/// Việc đã lưu trữ của một kế hoạch và cờ [truncated] = đã dừng ở trần 500
+/// mà server còn nữa.
+typedef ArchivedTasks = ({List<Task> tasks, bool truncated});
+
+/// Việc đã lưu trữ của một kế hoạch (`GET /tasks?project_id=&archived=archived`).
+///
+/// Đi hết các trang (trần 5 × 100), dừng theo dữ liệu như bảng. Năm trang đầy
+/// chưa chắc là còn nữa (đúng 500 cũng trông như vậy): dò đúng một việc sau
+/// trần (`per_page=1`, trang 501) rồi mới báo [ArchivedTasks.truncated] — để
+/// menu ghi "500+" và trang báo cắt thay vì lặng lẽ dừng ở 500. Theo dõi
+/// realtime để bỏ lưu trữ ở máy khác cũng làm danh sách ngắn lại.
+final archivedTasksProvider = FutureProvider.autoDispose
+    .family<ArchivedTasks, String>((ref, projectId) async {
+      ref.watch(taskRealtimeSignalProvider);
+      final api = ref.watch(tasksApiProvider);
+      final all = <Task>[];
+      for (var page = 1; page <= _archivedMaxPages; page++) {
+        final result = await api.list(
+          projectId: projectId,
+          archived: TaskArchiveScope.archived,
+          page: page,
+        );
+        all.addAll(result.items);
+        if (result.items.length < AppConfig.maxPerPage) {
+          return (tasks: all, truncated: false);
+        }
+      }
+      final probe = await api.list(
+        projectId: projectId,
+        archived: TaskArchiveScope.archived,
+        page: kMaxArchivedTasks + 1,
+        perPage: 1,
+      );
+
+      return (
+        tasks: all.take(kMaxArchivedTasks).toList(),
+        truncated: probe.items.isNotEmpty,
+      );
+    });
+
+/// Trần số việc đã lưu trữ app nạp cho một kế hoạch.
+const kMaxArchivedTasks = _archivedMaxPages * AppConfig.maxPerPage;
+
+const _archivedMaxPages = 5;
+
 /// Người chọn được cho một việc con: thành viên dự án, theo thứ tự danh sách
 /// workspace. Rơi về CẢ workspace (server cũng chỉ kiểm thành viên workspace)
 /// khi không lọc được một cách đáng tin:
@@ -284,3 +382,11 @@ final projectMembersProvider = FutureProvider.autoDispose
       ];
       return filtered.isEmpty ? all : filtered;
     });
+
+/// Lời nhắc người đang cầm máy thấy trên một việc (`GET /tasks/{id}/
+/// reminders`). Chỉ đọc khi phiên khai `tasks.reminders` (sheet Nhắc việc
+/// chỉ mở được khi đó).
+final taskRemindersProvider = FutureProvider.autoDispose
+    .family<List<TaskReminder>, String>(
+      (ref, taskId) => ref.watch(tasksApiProvider).reminders(taskId),
+    );

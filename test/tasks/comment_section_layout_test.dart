@@ -7,6 +7,7 @@ import 'package:omni_app/design/tokens/tokens.dart';
 import 'package:omni_app/modules/tasks/application/task_controller.dart';
 import 'package:omni_app/modules/tasks/domain/task.dart';
 import 'package:omni_app/modules/tasks/presentation/widgets/comment_section.dart';
+import 'package:omni_app/modules/tasks/presentation/widgets/task_detail/comment_bar.dart';
 
 /// Bố cục ô soạn trao đổi, đo bằng toạ độ chứ không bằng mắt.
 ///
@@ -40,8 +41,15 @@ void main() {
     child: MaterialApp(
       theme: OmniTheme.light(TargetPlatform.android),
       home: Scaffold(
-        body: SingleChildScrollView(
-          child: CommentSection(task: task, taskId: 't1', canWrite: true),
+        body: Column(
+          children: [
+            Expanded(
+              child: SingleChildScrollView(
+                child: CommentSection(task: task, taskId: 't1', canWrite: true),
+              ),
+            ),
+            CommentBar(task: task, taskId: 't1'),
+          ],
         ),
       ),
     ),
@@ -68,7 +76,7 @@ void main() {
     await tester.pumpWidget(host());
 
     final field = tester.getRect(find.byType(TextField));
-    final send = tester.getRect(find.byTooltip('Gửi'));
+    final send = tester.getRect(find.byTooltip('Gửi bình luận'));
     final at = tester.getRect(find.byTooltip('Nhắc tên'));
 
     expect((send.center.dy - field.center.dy).abs(), lessThanOrEqualTo(2));
@@ -100,6 +108,71 @@ void main() {
     final own = spans.firstWhere((s) => s.text == body);
 
     expect(own.style?.color, scheme.onSurface);
+  });
+
+  testWidgets('gỡ tệp chỉ xét người tải lên: tệp không rõ người tải trong '
+      'bình luận của mình thì không bấm giữ được', (tester) async {
+    final own = Task.fromJson({
+      'id': 't1',
+      'title': 'KAWAI HAT-5',
+      'checklist': <Map<String, dynamic>>[],
+      'comments': [
+        {
+          'id': 'c1',
+          'body': '',
+          'user_id': 'me',
+          'user_name': 'Tôi',
+          'attachments': [
+            {
+              'id': 'a1',
+              'name': 'x.jpg',
+              'type': 'image',
+              'url': 'https://x.test/x.jpg',
+            },
+            {
+              'id': 'a2',
+              'name': 'y.jpg',
+              'type': 'image',
+              'user_id': 'me',
+              'url': 'https://x.test/y.jpg',
+            },
+          ],
+        },
+      ],
+      'comments_count': 1,
+    });
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [taskDetailProvider.overrideWith(() => _StubDetail(own))],
+        child: MaterialApp(
+          theme: OmniTheme.light(TargetPlatform.android),
+          home: Scaffold(
+            body: SingleChildScrollView(
+              child: CommentSection(
+                task: own,
+                taskId: 't1',
+                myUserId: 'me',
+                canWrite: true,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    Future<bool> removable(String id) async {
+      await tester.longPress(find.byKey(ValueKey('comment-file-$id')));
+      await tester.pumpAndSettle();
+      final shown = find.text('Gỡ tệp').evaluate().isNotEmpty;
+      // Đóng mọi sheet vừa mở (bấm giữ bình luận của mình mở menu xoá).
+      await tester.tapAt(const Offset(10, 10));
+      await tester.pumpAndSettle();
+      return shown;
+    }
+
+    expect(await removable('a1'), isFalse);
+    expect(await removable('a2'), isTrue);
   });
 }
 

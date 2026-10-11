@@ -111,6 +111,15 @@ class AuthApi implements AuthGateway {
         for (final e in context.child('features').entries)
           if (e.value is bool) e.key: e.value as bool,
       },
+      // Khả năng của bản API (Việc mới Nhóm 2): danh sách chuỗi; thiếu khoá
+      // = API cũ = không khả năng nào. Phần tử không phải chuỗi bị bỏ.
+      apiCapabilities: switch (context['api_capabilities']) {
+        final List raw => {
+          for (final v in raw)
+            if (v is String && v.trim().isNotEmpty) v.trim(),
+        },
+        _ => const <String>{},
+      },
     );
   }
 

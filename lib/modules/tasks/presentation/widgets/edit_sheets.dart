@@ -123,60 +123,6 @@ Future<DueDateChoice?> showDueDateSheet({
   return null;
 }
 
-enum SubtaskAction { rename, remove }
-
-/// Đổi tên hay xoá một việc con.
-///
-/// Hỏi trước rồi mới mở ô nhập, thay vì để một nút thùng rác cạnh mỗi hàng:
-/// hàng việc con là chỗ thợ chạm hàng chục lần một ca với tay bẩn, và một nút
-/// xoá nằm ngay đó là một cái bẫy. Ở đây phải cố ý mở ra mới thấy nó.
-Future<SubtaskAction?> showSubtaskActionSheet({
-  required BuildContext context,
-  required String title,
-}) => showOmniSheet<SubtaskAction>(
-  context: context,
-  builder: (context) => SafeArea(
-    child: Column(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(
-            OmniSpacing.lg,
-            OmniSpacing.sm,
-            OmniSpacing.lg,
-            OmniSpacing.sm,
-          ),
-          child: Text(
-            title,
-            style: Theme.of(
-              context,
-            ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-          ),
-        ),
-        ListTile(
-          leading: const Icon(Icons.edit_outlined),
-          title: const Text('Đổi tên'),
-          onTap: () => Navigator.of(context).pop(SubtaskAction.rename),
-        ),
-        ListTile(
-          leading: Icon(
-            Icons.delete_outline_rounded,
-            color: OmniColors.dangerTextOf(context),
-          ),
-          title: Text(
-            'Xoá việc con',
-            style: TextStyle(color: OmniColors.dangerTextOf(context)),
-          ),
-          onTap: () => Navigator.of(context).pop(SubtaskAction.remove),
-        ),
-      ],
-    ),
-  ),
-);
-
 /// Sửa một đoạn văn bản (tên việc, mô tả).
 ///
 /// Trả về `null` khi người dùng đóng mà không lưu — khác hẳn chuỗi rỗng, vốn
@@ -188,6 +134,9 @@ Future<String?> showTextEditSheet({
   String? hint,
   bool multiline = false,
   bool allowEmpty = false,
+  TextInputType? keyboardType,
+  bool requireChange = true,
+  int? maxLength,
 }) => showOmniSheet<String>(
   context: context,
   builder: (context) => _TextEditSheet(
@@ -196,6 +145,9 @@ Future<String?> showTextEditSheet({
     hint: hint,
     multiline: multiline,
     allowEmpty: allowEmpty,
+    keyboardType: keyboardType,
+    requireChange: requireChange,
+    maxLength: maxLength,
   ),
 );
 
@@ -206,6 +158,9 @@ class _TextEditSheet extends StatefulWidget {
     required this.hint,
     required this.multiline,
     required this.allowEmpty,
+    this.keyboardType,
+    this.requireChange = true,
+    this.maxLength,
   });
 
   final String title;
@@ -213,6 +168,13 @@ class _TextEditSheet extends StatefulWidget {
   final String? hint;
   final bool multiline;
   final bool allowEmpty;
+  final TextInputType? keyboardType;
+
+  /// Tắt "Lưu" khi chữ chưa đổi (sửa). Sao chép việc: tên gợi ý lưu ngay.
+  final bool requireChange;
+
+  /// Trần ký tự theo luật server (`max:`); null = không giới hạn.
+  final int? maxLength;
 
   @override
   State<_TextEditSheet> createState() => _TextEditSheetState();
@@ -229,7 +191,7 @@ class _TextEditSheetState extends State<_TextEditSheet> {
 
   bool get _canSave {
     final value = _controller.text.trim();
-    if (value == widget.initial.trim()) return false;
+    if (widget.requireChange && value == widget.initial.trim()) return false;
 
     return widget.allowEmpty || value.isNotEmpty;
   }
@@ -261,9 +223,11 @@ class _TextEditSheetState extends State<_TextEditSheet> {
             TextField(
               controller: _controller,
               autofocus: true,
+              keyboardType: widget.keyboardType,
               textCapitalization: TextCapitalization.sentences,
               minLines: widget.multiline ? 3 : 1,
               maxLines: widget.multiline ? 8 : 1,
+              maxLength: widget.maxLength,
               decoration: InputDecoration(hintText: widget.hint),
               onChanged: (_) => setState(() {}),
             ),

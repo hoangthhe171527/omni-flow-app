@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:intl/date_symbol_data_local.dart';
+import 'package:omni_app/design/components/components.dart';
 import 'package:omni_app/design/theme/omni_theme.dart';
 import 'package:omni_app/modules/tasks/application/task_controller.dart';
 import 'package:omni_app/modules/tasks/application/tasks_providers.dart';
@@ -74,7 +75,7 @@ void main() {
     await tester.pumpWidget(host());
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('Người làm'));
+    await tester.tap(find.byType(OmniDashedCircle));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Nhận việc này'));
     await tester.pumpAndSettle();
@@ -90,7 +91,7 @@ void main() {
     await tester.pumpWidget(host(ids: ['u1'], names: ['Hằng Ni']));
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('Người làm'));
+    await tester.tap(find.byType(OmniDashedCircle));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Nhận việc này'));
     await tester.pumpAndSettle();
@@ -116,7 +117,7 @@ void main() {
     await tester.pumpWidget(host());
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('Người làm'));
+    await tester.tap(find.byType(OmniDashedCircle));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Nhận việc này'));
     await tester.pumpAndSettle();

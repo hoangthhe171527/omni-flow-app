@@ -255,6 +255,12 @@ Future<T?> showOmniSheet<T>({
   required BuildContext context,
   required Widget Function(BuildContext context) builder,
   bool expand = false,
+  Color? backgroundColor,
+  Color? barrierColor,
+  double? maxHeight,
+  double? radius,
+  bool? showDragHandle,
+  AnimationStyle? animationStyle,
 }) {
   final apple = isApple(context);
 
@@ -262,17 +268,22 @@ Future<T?> showOmniSheet<T>({
     context: context,
     isScrollControlled: true,
     useSafeArea: true,
+    backgroundColor: backgroundColor,
+    barrierColor: barrierColor,
+    constraints: maxHeight == null
+        ? null
+        : BoxConstraints(maxHeight: maxHeight),
     // Giảm chuyển động: sheet hiện ngay, không trượt lên.
     sheetAnimationStyle: OmniMotion.enabled(context)
-        ? null
+        ? animationStyle
         : AnimationStyle.noAnimation,
     // iOS bo góc rõ hơn Material và luôn có thanh kéo — đó là dấu hiệu người
     // dùng iPhone đọc để biết sheet này kéo xuống đóng được. Trên Android thì
     // nút back của hệ thống đã nói điều đó rồi.
-    showDragHandle: apple,
+    showDragHandle: showDragHandle ?? apple,
     shape: RoundedRectangleBorder(
       borderRadius: BorderRadius.vertical(
-        top: Radius.circular(apple ? 14 : OmniRadius.xxl),
+        top: Radius.circular(radius ?? (apple ? 14 : OmniRadius.xxl)),
       ),
     ),
     builder: (context) => Padding(
@@ -280,6 +291,52 @@ Future<T?> showOmniSheet<T>({
       child: expand
           ? FractionallySizedBox(heightFactor: 0.9, child: builder(context))
           : builder(context),
+    ),
+  );
+}
+
+/// Sheet chia nhóm của màn Việc (`Board.dc.html` menu kế hoạch,
+/// `TaskDetail.dc.html` nhãn): bo trên 12, lớp phủ mực .4, trượt 380ms
+/// [OmniCurves.sheet], cao tối đa 740, thanh kéo vẽ trong nội dung
+/// ([OmniSheetHandle]).
+Future<T?> showOmniViecSheet<T>({
+  required BuildContext context,
+  required Widget Function(BuildContext context) builder,
+  Color? backgroundColor,
+}) => showOmniSheet<T>(
+  context: context,
+  builder: builder,
+  backgroundColor: backgroundColor,
+  barrierColor: OmniColors.ink.withValues(alpha: 0.4),
+  maxHeight: 740,
+  radius: OmniRadius.fab,
+  showDragHandle: false,
+  animationStyle: const AnimationStyle(
+    duration: OmniDuration.sheet,
+    curve: OmniCurves.sheet,
+    reverseDuration: OmniDuration.base,
+  ),
+);
+
+/// Thanh kéo 36×4 của [showOmniViecSheet] (`#C9D2DE`), cách nội dung [gap].
+class OmniSheetHandle extends StatelessWidget {
+  const OmniSheetHandle({super.key, this.gap = 10});
+
+  final double gap;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: EdgeInsets.only(bottom: gap),
+    child: Center(
+      child: Container(
+        key: const Key('sheet-handle'),
+        width: 36,
+        height: 4,
+        decoration: BoxDecoration(
+          color: OmniColors.controlBorderOf(context),
+          borderRadius: BorderRadius.circular(2),
+        ),
+      ),
     ),
   );
 }

@@ -11,6 +11,7 @@ import 'package:omni_app/modules/tasks/application/task_controller.dart';
 import 'package:omni_app/modules/tasks/data/tasks_api.dart';
 import 'package:omni_app/modules/tasks/domain/task.dart';
 import 'package:omni_app/modules/tasks/presentation/widgets/comment_section.dart';
+import 'package:omni_app/modules/tasks/presentation/widgets/task_detail/comment_bar.dart';
 
 /// Trao đổi trên một công việc (§B3).
 ///
@@ -39,7 +40,21 @@ void main() {
       child: MaterialApp(
         theme: OmniTheme.light(TargetPlatform.android),
         home: Scaffold(
-          body: CommentSection(task: value, taskId: 't1', canWrite: canWrite),
+          body: Column(
+            children: [
+              Expanded(
+                child: SingleChildScrollView(
+                  child: CommentSection(
+                    task: value,
+                    taskId: 't1',
+                    canWrite: canWrite,
+                  ),
+                ),
+              ),
+              // Trang chi tiết chỉ đặt ô bình luận đáy khi ghi được.
+              if (canWrite) CommentBar(task: value, taskId: 't1'),
+            ],
+          ),
         ),
       ),
     );
@@ -115,7 +130,7 @@ void main() {
     await tester.pumpAndSettle();
 
     await tester.enterText(find.byType(TextField), '   ');
-    await tester.tap(find.byTooltip('Gửi'));
+    await tester.tap(find.byTooltip('Gửi bình luận'));
     await tester.pumpAndSettle();
 
     expect(sent, isEmpty);
@@ -130,7 +145,7 @@ void main() {
     await tester.enterText(find.byType(TextField), 'Chưa đạt phần đồng.');
     // enterText không dựng lại khung hình; nút Gửi mở theo chữ ở khung kế.
     await tester.pump();
-    await tester.tap(find.byTooltip('Gửi'));
+    await tester.tap(find.byTooltip('Gửi bình luận'));
     await tester.pumpAndSettle();
 
     expect(sent, ['Chưa đạt phần đồng.']);
@@ -156,15 +171,16 @@ void main() {
     expect(find.textContaining('xem trên web'), findsNothing);
   });
 
-  testWidgets('không có quyền ghi và chưa có bình luận thì không chiếm chỗ', (
-    tester,
-  ) async {
-    await tester.pumpWidget(host(task(), canWrite: false));
-    await tester.pumpAndSettle();
+  testWidgets(
+    'không có quyền ghi và chưa có bình luận: nói rõ, không có ô nhập',
+    (tester) async {
+      await tester.pumpWidget(host(task(), canWrite: false));
+      await tester.pumpAndSettle();
 
-    expect(find.text('TRAO ĐỔI'), findsNothing);
-    expect(find.byType(TextField), findsNothing);
-  });
+      expect(find.text('Chưa có bình luận'), findsOneWidget);
+      expect(find.byType(TextField), findsNothing);
+    },
+  );
 
   testWidgets('không có quyền ghi vẫn ĐỌC được', (tester) async {
     // Người bị trả việc về phải đọc được lý do; viết lại thì không nhất thiết.

@@ -1,0 +1,182 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<title>Bảng kế hoạch – Bảo hành</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#0A7D76}a:hover{color:#075E59}
+@keyframes rise{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+@keyframes sheet{from{transform:translateY(100%)}to{transform:none}}
+@keyframes fade{from{opacity:0}to{opacity:1}}
+@keyframes tick{0%{transform:scale(1)}40%{transform:scale(1.25)}100%{transform:scale(1)}}
+button,a{transition:transform .2s cubic-bezier(.2,.8,.2,1),background-color .2s,color .2s,opacity .2s;-webkit-tap-highlight-color:transparent}
+button:active,a:active{transform:scale(.97)}
+.bar{background:rgba(20,44,58,.55);backdrop-filter:blur(20px) saturate(160%);-webkit-backdrop-filter:blur(20px) saturate(160%)}
+.hb{width:44px;height:44px;border:0;background:transparent;color:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;border-radius:6px;padding:0;flex-shrink:0}
+.track{display:flex;gap:10px;overflow-x:auto;scroll-snap-type:x mandatory;padding:12px 16px 120px;box-sizing:border-box;height:100%;scrollbar-width:none;align-items:flex-start}
+.track::-webkit-scrollbar{display:none}
+.col{width:300px;flex-shrink:0;scroll-snap-align:center;background:#EEF1F5;border-radius:8px;display:flex;flex-direction:column;max-height:100%}
+.ch{display:flex;align-items:center;gap:8px;padding:4px 0 4px 12px;min-height:44px}
+.cnt{font-size:12px;font-weight:600;min-width:20px;height:20px;padding:0 6px;box-sizing:border-box;border-radius:10px;background:#fff;color:#56637A;display:flex;align-items:center;justify-content:center}
+.card{display:block;background:#fff;border-radius:8px;padding:10px 10px 10px 8px;text-decoration:none;color:#0B1A33;box-shadow:0 1px 2px rgba(11,26,51,.08);animation:rise .35s cubic-bezier(.2,.8,.2,1) both}
+.ck{width:44px;height:44px;margin:-11px -8px -11px -10px;border:0;background:transparent;display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0;flex-shrink:0}
+.box{width:20px;height:20px;border-radius:5px;display:flex;align-items:center;justify-content:center;box-sizing:border-box}
+.lb{height:6px;width:32px;border-radius:3px}
+.chip{display:inline-flex;align-items:center;gap:4px;font-size:12px;font-weight:500;padding:2px 6px;border-radius:4px;white-space:nowrap}
+.mt{display:inline-flex;align-items:center;gap:3px;font-size:12px;color:#56637A}
+.av{width:24px;height:24px;border-radius:12px;border:2px solid #fff;margin-left:-6px;font-size:12px;font-weight:600;display:flex;align-items:center;justify-content:center;color:#fff;box-sizing:border-box}
+.add{width:100%;min-height:44px;border:0;border-radius:6px;background:transparent;display:flex;align-items:center;gap:6px;padding:0 10px;font:500 14px 'Be Vietnam Pro',sans-serif;color:#3D4A60;cursor:pointer}
+.add:hover{background:rgba(11,26,51,.05)}
+.zc{width:150px;flex-shrink:0;background:rgba(238,241,245,.96);border-radius:8px;padding:8px;box-sizing:border-box;border:0;text-align:left;cursor:pointer;font-family:'Be Vietnam Pro',sans-serif;color:#0B1A33;display:flex;flex-direction:column;gap:5px;align-self:flex-start}
+.zt{background:#fff;border-radius:4px;padding:5px 6px;font-size:12px;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.op{width:100%;min-height:48px;border:0;background:transparent;display:flex;align-items:center;gap:12px;padding:0 4px;font:500 15px 'Be Vietnam Pro',sans-serif;color:#0B1A33;cursor:pointer;text-align:left}
+.op svg{flex-shrink:0;color:#56637A}
+.og{background:#fff;border-radius:8px;padding:0 12px}
+.og .op+.op{border-top:1px solid #EEF1F5}
+</style>
+</helmet>
+<div style="width:390px;height:844px;position:relative;overflow:hidden;font-family:'Be Vietnam Pro',system-ui,sans-serif;color:#0B1A33;background:{{bg}};font-size:14px">
+
+  <header class="bar" style="position:absolute;top:0;left:0;right:0;z-index:3;padding:46px 4px 6px;color:#fff">
+    <div style="display:flex;align-items:center">
+      <a href="Main.dc.html" class="hb" aria-label="Quay lại" style="color:#fff"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 5-7 7 7 7"></path></svg></a>
+      <span style="flex-grow:1;min-width:0;padding-left:2px"><span style="display:block;font-weight:600;font-size:16px;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Bảo hành</span><span style="display:block;font-size:12px;opacity:.82">Tổ kỹ thuật · {{total}} việc</span></span>
+      <button class="hb" aria-label="Tìm trong kế hoạch"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-3.5-3.5"></path></svg></button>
+      <button class="hb" aria-label="Lọc theo người"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"></circle><path d="M4 21c1-4 4-6 8-6s7 2 8 6"></path></svg></button>
+      <button class="hb" aria-label="Tuỳ chọn kế hoạch" onClick="{{openMenu}}"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.8"></circle><circle cx="12" cy="12" r="1.8"></circle><circle cx="19" cy="12" r="1.8"></circle></svg></button>
+    </div>
+  </header>
+
+  <main style="position:absolute;top:104px;left:0;right:0;bottom:0">
+    <sc-if value="{{isBoard}}" hint-placeholder-val="{{true}}">
+      <div class="track">
+        <sc-for list="{{cols}}" as="c" hint-placeholder-count="3">
+          <section class="col" aria-label="{{c.n}}">
+            <div class="ch">
+              <span style="font-weight:600;flex-grow:1">{{c.n}}</span>
+              <span class="cnt">{{c.count}}</span>
+              <button class="hb" aria-label="Tuỳ chọn nhóm việc" style="color:#56637A"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.7"></circle><circle cx="12" cy="12" r="1.7"></circle><circle cx="19" cy="12" r="1.7"></circle></svg></button>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:8px;padding:0 8px;overflow-y:auto">
+              <sc-for list="{{c.cards}}" as="t" hint-placeholder-count="3">
+                <a class="card" href="TaskDetail.dc.html" style="animation-delay:{{t.delay}};opacity:{{t.op}}">
+                  <sc-if value="{{t.hasLabels}}" hint-placeholder-val="{{false}}"><span style="display:flex;gap:4px;margin:0 0 8px 2px"><sc-for list="{{t.labels}}" as="l" hint-placeholder-count="1"><span class="lb" style="background:{{l}}"></span></sc-for></span></sc-if>
+                  <span style="display:flex;align-items:flex-start;gap:6px">
+                    <button class="ck" aria-label="{{t.ckLabel}}" aria-pressed="{{t.done}}" onClick="{{t.toggle}}"><span class="box" style="background:{{t.boxBg}};border:{{t.boxBd}};animation:{{t.anim}}"><sc-if value="{{t.done}}" hint-placeholder-val="{{false}}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 4.5 4.5L19 7"></path></svg></sc-if></span></button>
+                    <span style="flex-grow:1;font-weight:500;line-height:1.35;text-decoration:{{t.strike}};color:{{t.titleC}}">{{t.title}}</span>
+                    <sc-if value="{{t.pinned}}" hint-placeholder-val="{{false}}"><svg width="16" height="16" viewBox="0 0 24 24" fill="#0A7D76" aria-label="Đã ghim" role="img" style="flex-shrink:0;margin-top:2px"><path d="M15 3 21 9l-3 1-4 4 1 5-2 2-4-4-5 5-1-1 5-5-4-4 2-2 5 1 4-4z"></path></svg></sc-if>
+                  </span>
+                  <span style="display:flex;align-items:center;gap:8px;margin:8px 0 0 28px;flex-wrap:wrap">
+                    <sc-if value="{{t.due}}" hint-placeholder-val="{{false}}"><span class="chip" style="background:{{t.dueBg}};color:{{t.dueC}}"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"></rect><path d="M8 3v4M16 3v4M3 10h18"></path></svg>{{t.due}}</span></sc-if>
+                    <sc-if value="{{t.sub}}" hint-placeholder-val="{{false}}"><span class="mt"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m4 7 2 2 3-3M4 15l2 2 3-3M13 8h7M13 16h7"></path></svg>{{t.sub}}</span></sc-if>
+                    <sc-if value="{{t.files}}" hint-placeholder-val="{{false}}"><span class="mt"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="m20 12-8.5 8.5a5 5 0 0 1-7-7L13 5a3.5 3.5 0 0 1 5 5l-8.5 8.5a2 2 0 0 1-3-3L14 8"></path></svg>{{t.files}}</span></sc-if>
+                    <sc-if value="{{t.cmt}}" hint-placeholder-val="{{false}}"><span class="mt"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"></path></svg>{{t.cmt}}</span></sc-if>
+                    <span style="margin-left:auto;display:flex;padding-left:6px">
+                      <sc-for list="{{t.avs}}" as="v" hint-placeholder-count="1"><span class="av" style="background:{{v.c}}">{{v.i}}</span></sc-for>
+                      <sc-if value="{{t.none}}" hint-placeholder-val="{{false}}"><span class="av" aria-label="Chưa giao ai" style="background:#fff;border:1.5px dashed #9AA5B8;color:#9AA5B8"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M12 5v14M5 12h14"></path></svg></span></sc-if>
+                    </span>
+                  </span>
+                </a>
+              </sc-for>
+            </div>
+            <div style="padding:6px 8px 8px"><button class="add"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"></path></svg>Thêm công việc</button></div>
+          </section>
+        </sc-for>
+        <button class="col" style="border:0;min-height:52px;flex-direction:row;align-items:center;justify-content:center;gap:6px;font:500 14px 'Be Vietnam Pro',sans-serif;color:#fff;background:rgba(255,255,255,.18);cursor:pointer"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"></path></svg>Thêm nhóm việc</button>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{isZoom}}" hint-placeholder-val="{{false}}">
+      <div style="display:flex;gap:10px;flex-wrap:wrap;padding:14px 16px 120px;box-sizing:border-box;animation:fade .3s both">
+        <sc-for list="{{cols}}" as="c" hint-placeholder-count="4">
+          <button class="zc" onClick="{{backBoard}}" aria-label="Mở nhóm {{c.n}}">
+            <span style="display:flex;align-items:center;gap:6px;font-weight:600;font-size:13px"><span style="flex-grow:1">{{c.n}}</span><span class="cnt" style="background:#fff">{{c.count}}</span></span>
+            <sc-for list="{{c.cards}}" as="t" hint-placeholder-count="3"><span class="zt" style="opacity:{{t.op}}">{{t.title}}</span></sc-for>
+          </button>
+        </sc-for>
+      </div>
+    </sc-if>
+  </main>
+
+  <button onClick="{{toggleZoom}}" aria-label="{{zoomLabel}}" style="position:absolute;right:16px;bottom:34px;z-index:4;width:52px;height:52px;border-radius:12px;border:0;background:#fff;color:#0A7D76;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 8px 22px rgba(11,26,51,.28)">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-3.5-3.5"></path><path d="M8 11h6"></path><sc-if value="{{isZoom}}" hint-placeholder-val="{{false}}"><path d="M11 8v6"></path></sc-if></svg>
+  </button>
+
+  <sc-if value="{{isMenu}}" hint-placeholder-val="{{false}}">
+    <button aria-label="Đóng" onClick="{{closeMenu}}" style="position:absolute;inset:0;z-index:7;border:0;padding:0;cursor:default;background:rgba(11,26,51,.4);animation:fade .25s both"></button>
+    <div role="dialog" aria-label="Tuỳ chọn kế hoạch" style="position:absolute;left:0;right:0;bottom:0;z-index:8;background:#F5F7FA;border-radius:12px 12px 0 0;padding:8px 16px 30px;box-shadow:0 -8px 30px rgba(11,26,51,.2);animation:sheet .38s cubic-bezier(.2,.9,.25,1) both;max-height:740px;overflow-y:auto;box-sizing:border-box">
+      <div style="width:36px;height:4px;border-radius:2px;background:#C9D2DE;margin:0 auto 10px"></div>
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px"><span style="width:36px;height:36px;border-radius:8px;background:#24485A"></span><span><span style="display:block;font-weight:600;font-size:16px">Bảo hành</span><span style="font-size:12px;color:#56637A">Tổ kỹ thuật · chủ: Trung Nguyên</span></span></div>
+      <div class="og">
+        <button class="op"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4L19 9l-4-4L4 16z"></path></svg>Sửa tên, mô tả, nền</button>
+        <button class="op"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.5"></circle><path d="M2.5 20c.8-3.5 3.3-5.5 6.5-5.5s5.7 2 6.5 5.5"></path><path d="M18 8v6M15 11h6"></path></svg>Thành viên<span style="margin-left:auto;font-size:13px;color:#56637A">6</span></button>
+        <a class="op" href="Labels.dc.html" style="text-decoration:none"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12V4h8l10 10-8 8z"></path><circle cx="7.5" cy="8.5" r="1.3"></circle></svg>Nhãn màu</a>
+        <button class="op"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"></rect><path d="M7 9h4M7 13h10M7 17h6"></path></svg>Trường tuỳ chỉnh</button>
+      </div>
+      <div class="og" style="margin-top:10px">
+        <button class="op"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8v12H8"></path><rect x="3" y="3" width="13" height="13" rx="2"></rect></svg>Sao chép kế hoạch</button>
+        <button class="op"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"></path></svg>Chuyển sang team khác</button>
+        <button class="op"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1"></path><path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"></path></svg>Sao chép liên kết</button>
+        <button class="op"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="5" rx="1"></rect><path d="M5 9v10h14V9M10 13h4"></path></svg>Việc đã lưu trữ<span style="margin-left:auto;font-size:13px;color:#56637A">12</span></button>
+        <button class="op"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="m20 12-8.5 8.5a5 5 0 0 1-7-7L13 5a3.5 3.5 0 0 1 5 5l-8.5 8.5a2 2 0 0 1-3-3L14 8"></path></svg>Tệp đính kèm</button>
+        <button class="op"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"></path></svg>Báo cáo kế hoạch</button>
+      </div>
+      <div class="og" style="margin-top:10px">
+        <button class="op"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"></circle><path d="M4 21c1-4 4-6 8-6"></path><path d="m16 17 2 2 4-4"></path></svg>Chuyển chủ kế hoạch</button>
+        <button class="op" style="color:#B42318"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#B42318" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="10" width="16" height="11" rx="2"></rect><path d="M8 10V7a4 4 0 0 1 8 0v3"></path></svg>Đóng kế hoạch</button>
+      </div>
+    </div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"startView":{"editor":"enum","options":["board","zoom","menu"],"default":"board"},"background":{"editor":"color","options":["#24485A","#0A7D76","#3D4A60","#E9EEF3"],"default":"#24485A"},"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+constructor(p) { super(p); this.state = { view: p.startView || 'board', done: { 3: true, 6: true }, bump: null }; }
+renderVals() {
+const s = this.state;
+const P = { H: ['H', '#0B1A33'], M: ['M', '#0A7D76'], T: ['T', '#2563EB'], L: ['L', '#7C3AED'] };
+const DK = { today: ['#E6F3F2', '#075E59'], late: ['#FDECE3', '#9A3412'], up: ['#EEF1F5', '#3D4A60'] };
+const LC = { o: '#E8890C', b: '#2563EB', r: '#DC2626', g: '#0A7D76' };
+const COLS = ['Tiếp nhận', 'Đang xử lý', 'Chờ linh kiện', 'Xong'];
+const T = [
+[0, 'Bảo hành W106 Anton Music – đánh bóng tay đàn', 'Hạn 14/10', 'up', ['M'], '0/3', 0, 2, ['o'], 1],
+[0, 'Kiểm tra đàn Kawai ND21 – kẹt phím', null, null, [], null, 0, 0, [], 0],
+[1, 'Bảo hành Ux kẹt cờ giảm âm', 'Hạn hôm nay', 'today', ['H', 'M'], '2/5', 1, 4, ['r', 'b'], 0],
+[1, 'Làm phím CLP920 – Nhà Bè', 'Quá hạn 1 ngày', 'late', ['T'], '1/4', 0, 1, ['b'], 0],
+[2, 'Thay khung phím CLP950', 'Hạn 18/10', 'up', ['L', 'H'], '0/2', 2, 0, ['o'], 0],
+[2, 'Xử lý phím CA49 – Thanh Khuê', null, null, ['T'], null, 0, 3, [], 0],
+[3, 'Bảo hành 2 cây cho anh Sáu', 'Xong 08/10', 'up', ['H'], '3/3', 1, 2, ['g'], 0]
+];
+const cols = COLS.map((n, ci) => {
+  const cards = T.map((t, i) => [t, i]).filter(x => x[0][0] === ci).map((x, k) => {
+    const t = x[0], i = x[1], done = !!s.done[i] || ci === 3;
+    return { title: t[1], due: t[2] || false, dueBg: t[3] ? DK[t[3]][0] : '', dueC: t[3] ? DK[t[3]][1] : '', avs: t[4].map(c => ({ i: P[c][0], c: P[c][1] })), none: t[4].length === 0,
+      sub: t[5] || false, files: t[6] || false, cmt: t[7] || false, labels: t[8].map(c => LC[c]), hasLabels: t[8].length > 0, pinned: !!t[9], done,
+      boxBg: done ? '#0A7D76' : '#fff', boxBd: done ? '0' : '1.5px solid #9AA5B8', anim: s.bump === i ? 'tick .35s cubic-bezier(.2,.8,.2,1)' : 'none',
+      strike: done ? 'line-through' : 'none', titleC: done ? '#56637A' : '#0B1A33', op: done ? '.78' : '1', delay: (k * 0.05) + 's',
+      ckLabel: done ? 'Bỏ đánh dấu xong' : 'Đánh dấu xong',
+      toggle: e => { e.preventDefault(); e.stopPropagation(); this.setState({ done: Object.assign({}, s.done, { [i]: !s.done[i] }), bump: i }); } };
+  });
+  return { n, count: cards.length, cards };
+});
+return {
+  bg: this.props.background || '#24485A',
+  total: T.length, cols,
+  isBoard: s.view !== 'zoom', isZoom: s.view === 'zoom', isMenu: s.view === 'menu',
+  toggleZoom: () => this.setState({ view: s.view === 'zoom' ? 'board' : 'zoom' }),
+  zoomLabel: s.view === 'zoom' ? 'Phóng to lại' : 'Thu nhỏ xem toàn bảng',
+  backBoard: () => this.setState({ view: 'board' }),
+  openMenu: () => this.setState({ view: 'menu' }), closeMenu: () => this.setState({ view: 'board' })
+};
+}
+}
+</script>
+</body>
+</html>

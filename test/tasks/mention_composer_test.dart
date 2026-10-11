@@ -6,6 +6,7 @@ import 'package:omni_app/design/theme/omni_theme.dart';
 import 'package:omni_app/modules/tasks/application/task_controller.dart';
 import 'package:omni_app/modules/tasks/domain/task.dart';
 import 'package:omni_app/modules/tasks/presentation/widgets/comment_section.dart';
+import 'package:omni_app/modules/tasks/presentation/widgets/task_detail/comment_bar.dart';
 
 /// Nhắc tên bằng `@` ngay trong chữ, như mọi app trao đổi trên thị trường.
 ///
@@ -61,8 +62,19 @@ void main() {
       child: MaterialApp(
         theme: OmniTheme.light(TargetPlatform.android),
         home: Scaffold(
-          body: SingleChildScrollView(
-            child: CommentSection(task: task, taskId: 't1', canWrite: true),
+          body: Column(
+            children: [
+              Expanded(
+                child: SingleChildScrollView(
+                  child: CommentSection(
+                    task: task,
+                    taskId: 't1',
+                    canWrite: true,
+                  ),
+                ),
+              ),
+              CommentBar(task: task, taskId: 't1'),
+            ],
           ),
         ),
       ),
@@ -126,7 +138,7 @@ void main() {
     await tester.tap(suggestion('u-2'));
     await tester.pump();
     await type(tester, 'nhờ @Luận xem lại búa');
-    await tester.tap(find.byTooltip('Gửi'));
+    await tester.tap(find.byTooltip('Gửi bình luận'));
     await tester.pumpAndSettle();
 
     expect(sent.single.body, 'nhờ @Luận xem lại búa');
@@ -140,7 +152,7 @@ void main() {
     await tester.tap(suggestion('u-2'));
     await tester.pump();
     await type(tester, 'nhờ xem lại búa');
-    await tester.tap(find.byTooltip('Gửi'));
+    await tester.tap(find.byTooltip('Gửi bình luận'));
     await tester.pumpAndSettle();
 
     expect(sent.single.ids, isEmpty);
@@ -179,7 +191,8 @@ void main() {
     final mention = spans.firstWhere((s) => s.text == '@Luận');
 
     expect(mention.style?.color, scheme.primary);
-    expect(mention.style?.fontWeight, FontWeight.w600);
+    // Bản mẫu: @Tên w500 màu chính.
+    expect(mention.style?.fontWeight, FontWeight.w500);
   });
 
   testWidgets('dòng "Nhắc:" chỉ hiện khi tên KHÔNG có trong câu', (

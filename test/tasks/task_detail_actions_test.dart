@@ -101,6 +101,36 @@ void main() {
     });
   });
 
+  group('editStartDate', () {
+    final started = Task.fromJson({
+      'id': 't1',
+      'title': 'x',
+      'start_date': '2026-10-12',
+    });
+
+    test('cùng ngày thì không ghi', () async {
+      await actions.editStartDate(started, DateTime(2026, 10, 12, 9));
+
+      expect(controller.calls, isEmpty);
+    });
+
+    test('ngày khác thì ghi', () async {
+      final next = DateTime(2026, 10, 15);
+      await actions.editStartDate(started, next);
+
+      expect(controller.calls, [('setStartDate', next)]);
+    });
+
+    test('xoá ngày đang có thì ghi null; vốn chưa có thì không ghi', () async {
+      await actions.editStartDate(started, null);
+      expect(controller.calls, [('setStartDate', null)]);
+
+      controller.calls.clear();
+      await actions.editStartDate(task, null);
+      expect(controller.calls, isEmpty);
+    });
+  });
+
   group('editPriority', () {
     test('không chọn hoặc chọn lại mức đang có thì không ghi', () async {
       await actions.editPriority(task, null);
@@ -219,6 +249,10 @@ class _Recording extends TaskController {
 
   @override
   Future<void> setDueDate(DateTime? dueDate) => _record('setDueDate', dueDate);
+
+  @override
+  Future<void> setStartDate(DateTime? startDate) =>
+      _record('setStartDate', startDate);
 
   @override
   Future<void> setPriority(String priority) => _record('setPriority', priority);

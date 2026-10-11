@@ -81,6 +81,35 @@ class ApiClient {
     return _send(() => _dio.post<Map<String, dynamic>>(_url(path), data: form));
   }
 
+  /// POST multipart nhiều tệp cùng các trường chữ, giữ ĐÚNG tên khoá đã cho
+  /// (`files[]`, `mentioned_user_ids[]`) để PHP đọc thành mảng. [fields] là
+  /// danh sách cặp (lặp khoá được), không phải map.
+  Future<ApiEnvelope> uploadMany(
+    String path, {
+    required List<({String field, String path, String? filename})> files,
+    List<MapEntry<String, String>> fields = const [],
+  }) async {
+    final form = FormData()..fields.addAll(fields);
+    try {
+      for (final f in files) {
+        form.files.add(
+          MapEntry(
+            f.field,
+            await MultipartFile.fromFile(f.path, filename: f.filename),
+          ),
+        );
+      }
+    } on Object catch (_) {
+      // Như [upload]: lỗi đọc tệp là I/O ngoài Dio, phải thành AppException.
+      throw const NetworkException(
+        'Không đọc được tệp đã chọn. Vui lòng chọn lại.',
+        code: 'file_unreadable',
+      );
+    }
+
+    return _send(() => _dio.post<Map<String, dynamic>>(_url(path), data: form));
+  }
+
   Future<ApiEnvelope> _send(
     Future<Response<Map<String, dynamic>>> Function() request,
   ) async {

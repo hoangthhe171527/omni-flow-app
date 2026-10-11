@@ -144,10 +144,10 @@ class _FakePlansApi implements PlansApi {
   }
 
   @override
-  Future<List<Team>> teams() async => const [];
+  Future<List<Team>> teams({String? search}) async => const [];
 
   @override
-  Future<List<Plan>> plans({String? teamId}) async => const [];
+  Future<List<Plan>> plans({String? teamId, String? search}) async => const [];
 
   @override
   Future<WorkshopKpi> kpi({String? planId, DateTime? month}) async =>

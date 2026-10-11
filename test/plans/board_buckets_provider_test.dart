@@ -212,7 +212,7 @@ void main() {
     });
   });
 
-  testWidgets('lướt trang KHÔNG tính lại rổ', (tester) async {
+  testWidgets('vuốt dải cột KHÔNG tính lại rổ', (tester) async {
     final observer = _CountingObserver();
 
     await tester.pumpWidget(
@@ -236,19 +236,19 @@ void main() {
     final settled = observer.bucketBuilds;
     expect(settled, greaterThan(0));
 
-    // Chạm chỉ báo để nhảy tới cột cuối, rồi vuốt ngược một trang.
-    await tester.tap(find.bySemanticsLabel('Chờ QC'));
+    // Vuốt dải cột sang phải rồi vuốt ngược lại.
+    final track = find.byKey(const Key('board-track'));
+    await tester.fling(track, const Offset(-400, 0), 1000);
     await tester.pumpAndSettle();
-    expect(find.text('t4'), findsOneWidget);
-    await tester.fling(find.byType(PageView), const Offset(400, 0), 1000);
+    await tester.fling(track, const Offset(400, 0), 1000);
     await tester.pumpAndSettle();
-    expect(find.text('t3'), findsOneWidget);
+    expect(find.text('t1'), findsOneWidget);
 
     expect(
       observer.bucketBuilds,
       settled,
       reason:
-          'Lướt trang chỉ đổi chỉ báo. Lọc lại 500 việc cho mỗi cú vuốt là '
+          'Vuốt dải cột chỉ cuộn. Lọc lại 500 việc cho mỗi cú vuốt là '
           'thứ bảng này từng làm.',
     );
   });

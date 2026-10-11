@@ -410,6 +410,7 @@ class _KindIcon extends StatelessWidget {
         OmniHue.blue,
       ),
       NotificationKind.taskDueSoon => (Icons.schedule_rounded, OmniHue.orange),
+      NotificationKind.taskReminder => (Icons.alarm_rounded, OmniHue.orange),
       NotificationKind.taskOverdue => (
         Icons.warning_amber_rounded,
         OmniHue.red,

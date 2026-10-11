@@ -1,10 +1,15 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/config/app_config.dart';
+import '../../../core/error/app_exception.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/network/api_envelope.dart';
 import '../../../core/utils/json.dart';
+import '../domain/custom_field.dart';
 import '../domain/task.dart';
+import '../domain/task_label.dart';
+import '../domain/task_project.dart';
+import '../domain/task_reminder.dart';
 
 /// Which slice of a person's work to show.
 ///
@@ -41,6 +46,15 @@ enum TaskBucket {
   /// vào đúng màn hình cần ít lựa chọn nhất.
   static const forMyWork = [today, overdue, upcoming, all];
 }
+
+/// Phạm vi lưu trữ khi liệt kê việc của một kế hoạch.
+///
+/// Tên case là đúng chữ `MongoTaskRepository::paginate` nhận cho `archived`:
+/// `active` (mặc định của server), `archived`, `all`.
+enum TaskArchiveScope { active, archived, all }
+
+/// Một kế hoạch, như sheet "Chuyển việc" cần: id, tên, các nhóm việc.
+typedef MovablePlan = ({String id, String name, List<TaskSection> sections});
 
 class TasksApi {
   TasksApi(this._client);
@@ -432,6 +446,447 @@ class TasksApi {
     );
   }
 
+  /// Đặt lại TOÀN BỘ nhãn của việc (`labels[]`).
+  ///
+  /// Danh sách rỗng vẫn gửi khoá: đó là "bỏ hết nhãn". Bỏ khoá thì server
+  /// không đổi gì và trả 200 — lượt ghi bị nuốt lặng.
+  Future<Task> setLabels(String taskId, List<String> labels) =>
+      _patch(taskId, {'labels': labels});
+
+  /// Bật/tắt thích của người đang đăng nhập. Server trả việc đầy đủ đã trang
+  /// trí; chỗ gọi thay state bằng nó, không tải lại.
+  Future<Task> toggleLike(String taskId) async {
+    final response = await _client.post('$_base/$taskId/like');
+
+    return Task.fromJson(response.object);
+  }
+
+  /// Lưu trữ hoặc bỏ lưu trữ. Gửi `bool` thật, không chuỗi.
+  Future<Task> setArchived(String taskId, bool archived) =>
+      _patch(taskId, {'archived': archived});
+
+  /// Chuyển việc sang kế hoạch (và nhóm việc) khác.
+  ///
+  /// `section_id` LUÔN có khoá: null là "chưa xếp nhóm" ở kế hoạch đích. Bỏ
+  /// khoá thì việc mang theo `section_id` của kế hoạch cũ — một id không có
+  /// trong kế hoạch mới.
+  Future<Task> moveTask(
+    String taskId, {
+    required String projectId,
+    String? sectionId,
+  }) => _patch(taskId, <String, dynamic>{
+    'project_id': projectId,
+    'section_id': sectionId,
+  });
+
+  /// Đặt hoặc XOÁ ngày bắt đầu. null = xoá, gửi khoá với giá trị null
+  /// (`UpdateTaskDTO::$provided` giữ khoá đã gửi kể cả khi null).
+  Future<Task> setStartDate(String taskId, DateTime? startDate) => _patch(
+    taskId,
+    <String, dynamic>{'start_date': startDate == null ? null : _ymd(startDate)},
+  );
+
+  /// Ghi giá trị trường tuỳ chỉnh.
+  ///
+  /// Server THAY CẢ MAP `custom_fields`, nên [fields] phải là map đã gộp đủ
+  /// mọi trường. Gửi một trường là xoá mọi trường còn lại — im lặng.
+  Future<Task> setCustomFields(String taskId, Map<String, Object?> fields) =>
+      _patch(taskId, {'custom_fields': fields});
+
+  /// Xoá một tệp đã đính. Server trả việc sau khi xoá.
+  Future<Task> deleteAttachment(String taskId, String attachmentId) async {
+    final response = await _client.delete(
+      '$_base/$taskId/attachments/$attachmentId',
+    );
+
+    return Task.fromJson(response.object);
+  }
+
+  /// Xoá một bình luận (tác giả hoặc quản lý kế hoạch; người khác → 403).
+  Future<Task> deleteComment(String taskId, String commentId) async {
+    final response = await _client.delete('$_base/$taskId/comments/$commentId');
+
+    return Task.fromJson(response.object);
+  }
+
+  // ── Nhóm 2, Task 11 (`ApiCapability`: subtaskFields, checklistMove, taskCopy,
+  // taskReminders, commentAttachments). Chỗ gọi chỉ gọi khi phiên khai khả
+  // năng tương ứng.
+
+  /// Tạo việc con ĐỦ trường trong MỘT lượt `POST /tasks/{id}/checklist`
+  /// (`CreateChecklistItemRequest`). Trường trống không gửi. `assignee_id`
+  /// phải là thành viên đang làm (422 `errors.assignee_id`).
+  Future<Task> createSubtask(
+    String taskId, {
+    required String title,
+    String? description,
+    DateTime? startDate,
+    DateTime? dueDate,
+    String? assigneeId,
+  }) async {
+    final note = description?.trim() ?? '';
+    final response = await _client.post(
+      '$_base/$taskId/checklist',
+      body: {
+        'title': title,
+        if (note.isNotEmpty) 'description': note,
+        if (startDate != null) 'start_date': _ymd(startDate),
+        if (dueDate != null) 'due_date': _ymd(dueDate),
+        if (assigneeId != null && assigneeId.isNotEmpty)
+          'assignee_id': assigneeId,
+      },
+    );
+
+    return Task.fromJson(response.object);
+  }
+
+  /// Đặt / XOÁ hạn một việc con. Khoá LUÔN gửi: null = xoá
+  /// (`UpdateChecklistItemRequest`, `array_key_exists`).
+  Future<Task> setSubtaskDueDate(
+    String taskId,
+    String subtaskId,
+    DateTime? dueDate,
+  ) => _patchSubtask(taskId, subtaskId, {
+    'due_date': dueDate == null ? null : _ymd(dueDate),
+  });
+
+  /// Đặt / xoá ngày bắt đầu một việc con (null = xoá).
+  Future<Task> setSubtaskStartDate(
+    String taskId,
+    String subtaskId,
+    DateTime? startDate,
+  ) => _patchSubtask(taskId, subtaskId, {
+    'start_date': startDate == null ? null : _ymd(startDate),
+  });
+
+  /// Sửa ghi chú việc con; rỗng = xoá (gửi null).
+  Future<Task> setSubtaskDescription(
+    String taskId,
+    String subtaskId,
+    String? description,
+  ) {
+    final note = description?.trim() ?? '';
+    return _patchSubtask(taskId, subtaskId, {
+      'description': note.isEmpty ? null : note,
+    });
+  }
+
+  Future<Task> _patchSubtask(
+    String taskId,
+    String subtaskId,
+    Map<String, dynamic> body,
+  ) async {
+    final response = await _client.patch(
+      '$_base/$taskId/checklist/$subtaskId',
+      body: body,
+    );
+
+    return Task.fromJson(response.object);
+  }
+
+  /// Kéo thả: đặt MỘT việc con ngay sau [afterId] (null = lên đầu) —
+  /// `POST …/checklist/{itemId}/move`. Khoá `after_id` LUÔN có (`present`).
+  /// Không PUT cả mảng `checklist`.
+  Future<Task> moveSubtask(
+    String taskId,
+    String subtaskId, {
+    required String? afterId,
+  }) async {
+    final response = await _client.post(
+      '$_base/$taskId/checklist/$subtaskId/move',
+      body: <String, dynamic>{'after_id': afterId},
+    );
+
+    return Task.fromJson(response.object);
+  }
+
+  /// Sao chép việc phía server (`POST /tasks/{id}/copy`, 201 + việc mới).
+  /// [title] null = tên mặc định của server. Không chép bình luận, tệp,
+  /// ghim, khoá, người theo dõi.
+  Future<Task> copyTask(String taskId, {String? title}) async {
+    final name = title?.trim() ?? '';
+    final response = await _client.post(
+      '$_base/$taskId/copy',
+      body: {if (name.isNotEmpty) 'title': name},
+    );
+
+    return Task.fromJson(response.object);
+  }
+
+  /// Lời nhắc người này thấy được trên việc: của mình, và `everyone`.
+  Future<List<TaskReminder>> reminders(String taskId) async {
+    final response = await _client.get('$_base/$taskId/reminders');
+
+    return response.list.map(TaskReminder.fromJson).toList();
+  }
+
+  /// Đặt lời nhắc lúc [at]. Gửi ISO **UTC có `Z`** — regex server bắt buộc
+  /// có múi giờ; phải sau bây giờ và trong 366 ngày. [everyone] cần quyền
+  /// sửa việc (người xem → 403); tối đa 20 lời nhắc đang chờ / người / việc
+  /// (422 `reminder_limit_reached`).
+  Future<TaskReminder> addReminder(
+    String taskId,
+    DateTime at, {
+    bool everyone = false,
+  }) async {
+    final response = await _client.post(
+      '$_base/$taskId/reminders',
+      body: {
+        'remind_at': at.toUtc().toIso8601String(),
+        'audience': everyone ? 'everyone' : 'me',
+      },
+    );
+
+    return TaskReminder.fromJson(response.object);
+  }
+
+  /// Xoá lời nhắc (người đặt; `everyone` của người khác cần quản lý việc).
+  Future<void> deleteReminder(String taskId, String reminderId) async {
+    await _client.delete('$_base/$taskId/reminders/$reminderId');
+  }
+
+  /// Bình luận KÈM tệp: multipart `files[]` (≤10 tệp, mỗi tệp ≤25MB, cả
+  /// request ≤64MB) trên CÙNG `POST /tasks/{id}/comments`. Thân rỗng thì
+  /// không gửi `body` (`required_without_all:attachment_ids,files`).
+  Future<Task> commentWithFiles(
+    String taskId,
+    String body, {
+    List<String> mentionedUserIds = const [],
+    required List<CommentUpload> files,
+  }) async {
+    final text = body.trim();
+    final response = await _client.uploadMany(
+      '$_base/$taskId/comments',
+      files: [
+        for (final f in files)
+          (field: 'files[]', path: f.path, filename: f.name),
+      ],
+      fields: [
+        if (text.isNotEmpty) MapEntry('body', text),
+        for (final id in mentionedUserIds) MapEntry('mentioned_user_ids[]', id),
+      ],
+    );
+
+    return Task.fromJson(response.object);
+  }
+
+  /// Gỡ một tệp kèm bình luận (người tải hoặc quản lý; việc khoá vẫn được).
+  Future<Task> deleteCommentAttachment(
+    String taskId,
+    String commentId,
+    String attachmentId,
+  ) async {
+    final response = await _client.delete(
+      '$_base/$taskId/comments/$commentId/attachments/$attachmentId',
+    );
+
+    return Task.fromJson(response.object);
+  }
+
+  /// Việc của một kế hoạch, có tìm theo chữ và lọc lưu trữ.
+  ///
+  /// [archived] mặc định `active` — đúng mặc định của server, nên khi đó
+  /// KHÔNG gửi khoá. `search` rỗng cũng không gửi: rỗng ở server là "không
+  /// lọc", gửi đi chỉ thêm nhiễu.
+  Future<Paged<Task>> list({
+    required String projectId,
+    String? search,
+    TaskArchiveScope archived = TaskArchiveScope.active,
+    int page = 1,
+    int perPage = AppConfig.maxPerPage,
+  }) async {
+    final query = search?.trim() ?? '';
+    final response = await _client.get(
+      _base,
+      query: {
+        'project_id': projectId,
+        if (query.isNotEmpty) 'search': query,
+        if (archived != TaskArchiveScope.active) 'archived': archived.name,
+        'page': page,
+        'per_page': perPage,
+      },
+    );
+
+    return Paged(
+      items: response.list.map(Task.fromJson).toList(),
+      pagination: response.pagination ?? const ApiPagination.empty(),
+    );
+  }
+
+  /// Kế hoạch chứa việc: chủ, thành viên, vai, trường tuỳ chỉnh — một lượt
+  /// `GET /projects/{id}`. Đọc thẳng ở đây: tasks không import plans.
+  Future<TaskProject> project(String projectId) async {
+    final response = await _client.get('/projects/$projectId');
+
+    return TaskProject.fromJson(response.object);
+  }
+
+  /// Định nghĩa trường tuỳ chỉnh của một kế hoạch (`projects.custom_fields`).
+  ///
+  /// Đọc thẳng `/projects/{id}` như [projectMemberIds]: tasks không import
+  /// plans.
+  Future<List<CustomFieldDef>> projectCustomFields(String projectId) async {
+    final response = await _client.get('/projects/$projectId');
+
+    return response.object
+        .mapList('custom_fields')
+        .map(CustomFieldDef.fromJson)
+        .toList();
+  }
+
+  /// Mọi kế hoạch người dùng đọc được, kèm nhóm việc — cho sheet "Chuyển
+  /// việc". Gom hết các trang; dừng theo dữ liệu nhận được.
+  Future<List<MovablePlan>> projectsForMove() async {
+    final all = <MovablePlan>[];
+    var page = 1;
+    while (true) {
+      final response = await _client.get(
+        '/projects',
+        query: {'page': page, 'per_page': AppConfig.maxPerPage},
+      );
+      final rows = response.list;
+      for (final json in rows) {
+        all.add((
+          id: json.strOr('id', ''),
+          name: json.strOr('name', ''),
+          sections: json.mapList('sections').map(TaskSection.fromJson).toList(),
+        ));
+      }
+      final pagination = response.pagination;
+      if (rows.length < AppConfig.maxPerPage ||
+          pagination == null ||
+          !pagination.hasMore) {
+        break;
+      }
+      page = pagination.nextPage;
+    }
+
+    return all;
+  }
+
+  /// Nhóm `system_options` chứa bộ nhãn việc của công ty.
+  static const labelGroup = 'TASK_LABEL';
+
+  /// Bộ nhãn việc của công ty, chỉ nhãn đang bật.
+  ///
+  /// `group_key` BẮT BUỘC (thiếu → 422). Người thiếu `system_options.read`
+  /// nhận 403: trả rỗng thay vì ném — họ vẫn làm việc được, chỉ không có tên
+  /// và màu cho nhãn.
+  Future<List<TaskLabel>> taskLabels() async {
+    try {
+      final response = await _client.get(
+        '/system-options',
+        query: {'group_key': labelGroup, 'active_only': 1},
+      );
+
+      return response.list.map(TaskLabel.fromJson).toList();
+    } on ForbiddenException {
+      return const [];
+    }
+  }
+
+  /// Bộ nhãn cho người chỉ có `tasks.read` (thợ): `GET
+  /// /system-options/task-labels` → `[{code, label, color, sort_order}]`, chỉ
+  /// nhãn đang bật. Không có `id`, nên KHÔNG dùng để sửa nhãn.
+  ///
+  /// Chỉ gọi khi phiên khai `system_options.task_labels`. Phòng khi API vẫn
+  /// lùi bản giữa phiên: API cũ KHÔNG có `GET /system-options/{id}` (chỉ
+  /// `PUT`/`DELETE /{id}`), nên đường này ra 405; tắt `feature:tasks` hay
+  /// thiếu quyền ra 403; route lạ ra 404. Cả ba ra rỗng như trước đây.
+  Future<List<TaskLabel>> taskLabelsForReaders() async {
+    try {
+      final response = await _client.get('/system-options/task-labels');
+
+      return response.list.map(TaskLabel.fromJson).toList();
+    } on ForbiddenException {
+      return const [];
+    } on NotFoundException {
+      return const [];
+    } on RequestRejectedException catch (e) {
+      if (e.code == '405') return const [];
+      rethrow;
+    }
+  }
+
+  /// Ghim / bỏ ghim việc lên đầu cột (`POST|DELETE /tasks/{id}/pin`). Không
+  /// body; server trả việc đầy đủ. Việc đã khoá → 423.
+  Future<Task> setPinned(String taskId, bool pinned) =>
+      _toggle('$_base/$taskId/pin', pinned);
+
+  /// Khoá / mở khoá việc (`POST|DELETE /tasks/{id}/lock`, chủ / quản lý kế
+  /// hoạch; người khác 403 kèm câu của server).
+  Future<Task> setLocked(String taskId, bool locked) =>
+      _toggle('$_base/$taskId/lock', locked);
+
+  /// Tự theo dõi / bỏ theo dõi (`POST|DELETE /tasks/{id}/follow`, chỉ cần
+  /// `tasks.read`; việc đã khoá vẫn được).
+  Future<Task> setFollowing(String taskId, bool following) =>
+      _toggle('$_base/$taskId/follow', following);
+
+  /// Đặt lại TOÀN BỘ người theo dõi (`PUT /tasks/{id}` `follower_ids[]`).
+  /// Rỗng vẫn gửi khoá: đó là "bỏ hết". Mọi id phải là thành viên đang làm
+  /// (422 `errors.follower_ids`), tối đa 50.
+  Future<Task> setFollowers(String taskId, List<String> userIds) =>
+      _patch(taskId, {'follower_ids': userIds});
+
+  Future<Task> _toggle(String path, bool on) async {
+    final response = on ? await _client.post(path) : await _client.delete(path);
+
+    return Task.fromJson(response.object);
+  }
+
+  /// Mã của mọi nhãn trong nhóm, đang bật lẫn đã tắt. Thiếu quyền đọc (403)
+  /// thì rỗng: vẫn tạo được, chỉ không tránh trùng được.
+  Future<Set<String>> _allLabelCodes() async {
+    try {
+      final response = await _client.get(
+        '/system-options',
+        query: {'group_key': labelGroup},
+      );
+
+      return {for (final l in response.list.map(TaskLabel.fromJson)) l.code};
+    } on ForbiddenException {
+      return const {};
+    }
+  }
+
+  /// Tạo một nhãn mới (`system_options.write`).
+  ///
+  /// Mã sinh từ [label] ([TaskLabel.codeFor]), tránh MỌI mã đã có trong nhóm
+  /// — kể cả nhãn đã tắt, nên đọc danh mục KHÔNG `active_only` ngay trước khi
+  /// gửi. Server không kiểm trùng mã; dùng lại mã của một nhãn đã tắt là gắn
+  /// tên/màu mới lên các việc cũ còn mang mã đó. [color] null thì không gửi
+  /// khoá.
+  Future<TaskLabel> createLabel({required String label, String? color}) async {
+    final taken = await _allLabelCodes();
+    final response = await _client.post(
+      '/system-options',
+      body: {
+        'group_key': labelGroup,
+        'code': TaskLabel.codeFor(label, taken: taken),
+        'label': label,
+        if (color != null && color.isNotEmpty) 'color': color,
+      },
+    );
+
+    return TaskLabel.fromJson(response.object);
+  }
+
+  /// Sửa tên / màu một nhãn theo [id] bản ghi. Server KHÔNG nhận `code` hay
+  /// `group_key` ở đây — mã trên các việc cũ giữ nguyên.
+  Future<TaskLabel> updateLabel(
+    String id, {
+    required String label,
+    String? color,
+  }) async {
+    final response = await _client.put(
+      '/system-options/$id',
+      body: {'label': label, 'color': color},
+    );
+
+    return TaskLabel.fromJson(response.object);
+  }
+
   Future<void> attach(String taskId, String filePath, {String? filename}) =>
       _client.upload(
         '$_base/$taskId/attachments',
@@ -440,6 +895,12 @@ class TasksApi {
         filename: filename,
       );
 }
+
+/// Lỗi "việc đã khoá": 423 `code: task_locked` (`TaskController::
+/// lockedResponse`). Câu cho người đọc nằm sẵn trong `message` của lỗi.
+bool isTaskLockedError(Object error) =>
+    error is RequestRejectedException &&
+    (error.reason == 'task_locked' || error.code == '423');
 
 final tasksApiProvider = Provider<TasksApi>((ref) {
   return TasksApi(ref.watch(apiClientProvider));

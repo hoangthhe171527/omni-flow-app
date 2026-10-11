@@ -7,15 +7,21 @@ import 'package:flutter/material.dart';
 /// Cùng cỡ với avatar nhỏ (mặc định 22) nên dòng không nhảy khi có người nhận.
 /// Màu lấy từ `colorScheme.outline` để chế độ tối tự đúng.
 class OmniDashedCircle extends StatelessWidget {
-  const OmniDashedCircle({super.key, this.size = 22});
+  const OmniDashedCircle({super.key, this.size = 22, this.color, this.fill});
 
   final double size;
 
+  /// Màu nét và dấu +; null = `colorScheme.outline`.
+  final Color? color;
+
+  /// Nền trong vòng (bảng kế hoạch: `surface`); null = trong suốt.
+  final Color? fill;
+
   @override
   Widget build(BuildContext context) {
-    final color = Theme.of(context).colorScheme.outline;
+    final color = this.color ?? Theme.of(context).colorScheme.outline;
 
-    return SizedBox.square(
+    final circle = SizedBox.square(
       dimension: size,
       child: CustomPaint(
         painter: _DashedCirclePainter(color),
@@ -23,6 +29,13 @@ class OmniDashedCircle extends StatelessWidget {
           child: Icon(Icons.add_rounded, size: size * 0.55, color: color),
         ),
       ),
+    );
+    final fill = this.fill;
+    if (fill == null) return circle;
+
+    return DecoratedBox(
+      decoration: BoxDecoration(color: fill, shape: BoxShape.circle),
+      child: circle,
     );
   }
 }

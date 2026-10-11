@@ -142,7 +142,7 @@ void main() {
     await tester.pumpAndSettle();
 
     await tester.scrollUntilVisible(
-      find.text('Đã xem'),
+      find.text('Đã xem việc này'),
       200,
       scrollable: find.byType(Scrollable).first,
     );

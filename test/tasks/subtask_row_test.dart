@@ -31,7 +31,7 @@ void main() {
     bool enabled = true,
     ValueChanged<bool>? onToggle,
     VoidCallback? onAssign,
-    VoidCallback? onEdit,
+    VoidCallback? onMenu,
   }) => SubtaskRow(
     subtask: s,
     pending: pending,
@@ -40,7 +40,7 @@ void main() {
     onRetry: () {},
     onDiscard: () {},
     onAssign: onAssign,
-    onEdit: onEdit,
+    onMenu: onMenu,
   );
 
   Future<List<MethodCall>> recordHaptics(WidgetTester tester) async {
@@ -63,24 +63,28 @@ void main() {
     bool? toggledTo;
     await tester.pumpWidget(host(row(onToggle: (v) => toggledTo = v)));
 
-    final tick = find.bySemanticsLabel('Xong');
+    final tick = find.bySemanticsLabel('Đánh dấu xong việc con');
     expect(tester.getSize(tick).shortestSide, greaterThanOrEqualTo(44));
     await tester.tap(tick);
     expect(toggledTo, isTrue);
   });
 
-  testWidgets('tapping the title does not tick (it opens edit instead)', (
+  testWidgets('tapping the title does not tick; ⋮ (44) opens the menu', (
     tester,
   ) async {
     var toggled = false;
-    var edited = false;
+    var menu = false;
     await tester.pumpWidget(
-      host(row(onToggle: (_) => toggled = true, onEdit: () => edited = true)),
+      host(row(onToggle: (_) => toggled = true, onMenu: () => menu = true)),
     );
 
     await tester.tap(find.text('Nắp phím'));
     expect(toggled, isFalse);
-    expect(edited, isTrue);
+    expect(menu, isFalse);
+    final more = find.byTooltip('Tuỳ chọn việc con');
+    expect(tester.getSize(more), const Size(44, 44));
+    await tester.tap(more);
+    expect(menu, isTrue);
   });
 
   testWidgets('the row is at least 44dp tall, with or without an assignee', (
@@ -109,7 +113,7 @@ void main() {
     final calls = await recordHaptics(tester);
     await tester.pumpWidget(host(row()));
 
-    await tester.tap(find.bySemanticsLabel('Xong'));
+    await tester.tap(find.bySemanticsLabel('Đánh dấu xong việc con'));
 
     // The room is loud and they may not be looking at the screen; the buzz is
     // the only confirmation that actually lands.
@@ -125,7 +129,7 @@ void main() {
       host(row(enabled: false, onToggle: (_) => toggled = true)),
     );
 
-    await tester.tap(find.bySemanticsLabel('Xong'));
+    await tester.tap(find.bySemanticsLabel('Đánh dấu xong việc con'));
     expect(toggled, isFalse);
   });
 

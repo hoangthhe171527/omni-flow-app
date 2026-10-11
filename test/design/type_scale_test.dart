@@ -23,6 +23,7 @@ void main() {
     'overline': OmniType.overline,
     'bodyStrong': OmniType.bodyStrong,
     'body': OmniType.body,
+    'bodySm': OmniType.bodySm,
     'caption': OmniType.caption,
     'micro': OmniType.micro,
     'input': OmniType.input,

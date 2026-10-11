@@ -30,7 +30,7 @@ class PlansModule extends OmniModule {
   String get id => 'plans';
 
   @override
-  String get title => 'Dự án';
+  String get title => 'Kế hoạch';
 
   @override
   List<String> get permissions => TaskPermissions.all;
@@ -78,7 +78,7 @@ class PlansModule extends OmniModule {
     ModuleNavEntry(
       moduleId: 'plans',
       label: 'Việc',
-      subtitle: 'Mọi dự án của xưởng, xếp theo tổ',
+      subtitle: 'Mọi kế hoạch của xưởng, xếp theo tổ',
       icon: Icons.workspaces_outline,
       selectedIcon: Icons.workspaces_rounded,
       routeName: teams,

@@ -16,6 +16,9 @@ enum NotificationKind {
   taskMentioned('TASK_MENTIONED'),
   taskDueSoon('TASK_DUE_SOON'),
   taskOverdue('TASK_OVERDUE'),
+
+  /// Lời nhắc theo giờ tự chọn (Việc mới, `NotificationType::TaskReminder`).
+  taskReminder('TASK_REMINDER'),
   inboxMessage('INBOX_MESSAGE'),
 
   /// Anything the server knows about and this build does not.

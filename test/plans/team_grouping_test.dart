@@ -64,6 +64,54 @@ void main() {
     },
   );
 
+  test('đang chạy ở plans, đã đóng / lưu trữ ở closedPlans', () {
+    Plan withStatus(String id, String? status) => Plan.fromJson({
+      'id': id,
+      'name': id,
+      'team_id': 't1',
+      'status': ?status,
+    });
+
+    final groups = groupTeamsWithPlans(
+      const [Team(id: 't1', name: 'Tổ một')],
+      [
+        withStatus('p-active', 'active'),
+        withStatus('p-done', 'done'),
+        withStatus('p-archived', 'archived'),
+        withStatus('p-legacy', null),
+        withStatus('p-odd', 'in_progress'),
+      ],
+    );
+
+    expect(groups.single.plans.map((p) => p.id), [
+      'p-active',
+      'p-legacy',
+      'p-odd',
+    ]);
+    expect(groups.single.closedPlans.map((p) => p.id), [
+      'p-done',
+      'p-archived',
+    ]);
+  });
+
+  test('kế hoạch đã đóng của team lạ / chưa xếp team vẫn có khối', () {
+    final groups = groupTeamsWithPlans(const [], [
+      Plan.fromJson({
+        'id': 'p-x',
+        'name': 'x',
+        'team_id': 't-gone',
+        'team_name': 'Tổ cũ',
+        'status': 'done',
+      }),
+      Plan.fromJson({'id': 'p-o', 'name': 'o', 'status': 'archived'}),
+    ]);
+
+    expect(groups.map((g) => g.team.name), ['Tổ cũ', 'Chưa xếp team']);
+    expect(groups.first.plans, isEmpty);
+    expect(groups.first.closedPlans.single.id, 'p-x');
+    expect(groups.last.closedPlans.single.id, 'p-o');
+  });
+
   test('dự án THẬT SỰ chưa xếp tổ vẫn có chỗ riêng, không bị giấu', () async {
     // Phần lớn dữ liệu cũ ở trạng thái này. Giấu chúng là làm công việc đang
     // chạy biến mất khỏi app.
@@ -130,10 +178,10 @@ class _StubPlansApi implements PlansApi {
   final List<Plan> _plans;
 
   @override
-  Future<List<Team>> teams() async => _teams;
+  Future<List<Team>> teams({String? search}) async => _teams;
 
   @override
-  Future<List<Plan>> plans({String? teamId}) async => _plans;
+  Future<List<Plan>> plans({String? teamId, String? search}) async => _plans;
 
   @override
   noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);

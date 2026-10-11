@@ -103,3 +103,14 @@ String humanError(
 }) => error is AppException && error.message.trim().isNotEmpty
     ? error.message
     : fallback;
+
+/// Câu báo cho một lượt ghi hỏng: mất mạng / hết giờ thì [networkText]; mọi
+/// lỗi khác là lời của API (422 phụ thuộc, 403 chỉ xem, ảnh quá 25 MB…) —
+/// người dùng cần biết VÌ SAO, không phải thử lại mãi (CV-I6).
+/// `NetworkException` có `code` (vd `file_unreadable`) là lỗi có lời riêng,
+/// không phải mất mạng.
+String failureText(AppException error, String networkText) =>
+    (error is TimeoutException ||
+        (error is NetworkException && error.code == null))
+    ? networkText
+    : error.message;

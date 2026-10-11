@@ -1,66 +1,203 @@
-import 'dart:ui';
+import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../core/error/app_exception.dart';
+import '../../../core/utils/formatters.dart';
 import '../../../design/components/components.dart';
 import '../../../design/platform/omni_motion_scope.dart';
 import '../../../design/tokens/tokens.dart';
+import '../../../security/session/api_capabilities.dart';
 import '../../../security/session/session_controller.dart';
+import '../../customers/routes.dart';
+import '../../plans/routes.dart';
 import '../application/task_controller.dart';
 import '../application/task_detail_actions.dart';
 import '../application/tasks_providers.dart';
 import '../data/tasks_api.dart';
+import '../domain/custom_field.dart';
 import '../domain/task.dart';
+import '../domain/task_permissions.dart';
+import '../domain/task_project.dart';
+import '../routes.dart';
 import 'widgets/activity_log.dart';
 import 'widgets/assign_task_sheet.dart';
 import 'widgets/comment_section.dart';
 import 'widgets/edit_sheets.dart';
-import 'widgets/rating_row.dart';
-import 'widgets/task_detail/coordination_card.dart';
+import 'widgets/followers_sheet.dart';
+import 'widgets/labels_sheet.dart';
+import 'widgets/reminder_sheet.dart';
+import 'widgets/task_detail/breadcrumb.dart';
+import 'widgets/task_detail/comment_bar.dart';
+import 'widgets/task_detail/custom_fields_card.dart';
+import 'widgets/task_detail/description_card.dart';
+import 'widgets/task_detail/detail_header.dart';
+import 'widgets/task_detail/files_card.dart';
+import 'widgets/task_detail/label_strip.dart';
+import 'widgets/task_detail/move_task_sheet.dart';
 import 'widgets/task_detail/option_sheet.dart';
-import 'widgets/task_detail/section_title.dart';
-import 'widgets/task_detail/task_action_bar.dart';
-import 'widgets/task_detail/task_description.dart';
-import 'widgets/task_detail/subtask_card.dart';
-import 'widgets/task_detail/task_title_block.dart';
+import 'widgets/task_detail/subtasks_card.dart';
+import 'widgets/task_detail/task_info_card.dart';
+import 'widgets/task_detail/task_menu_sheet.dart';
+import 'widgets/task_detail/title_row.dart';
 
-/// One task, and the two things a worker does with it: tick stages, and say it
-/// is finished.
+/// Chi tiết một việc (`TaskDetail.dc.html`).
 ///
-/// Those two actions are the entire screen. Everything else — project, deadline,
-/// who else is on it — is context placed above them, never between them.
+/// Nửa trên (Task 8 của Việc mới): header kính có tên việc hiện khi cuộn,
+/// dải nhãn, tiêu đề có ô tích, breadcrumb kế hoạch › nhóm, thẻ thông tin
+/// (người làm, thời gian, đánh giá + thích, ưu tiên) và thẻ mô tả. Nửa dưới
+/// (Task 9): trường tuỳ chỉnh, việc con, tệp, bình luận, nhật ký; ô bình luận
+/// cố định ở đáy; ⋯ mở menu việc chia nhóm.
 ///
-/// Từng khối là một widget riêng dưới `widgets/task_detail/`; file này chỉ còn
-/// XẾP chúng và nối sheet với [TaskDetailActions].
-class TaskDetailPage extends ConsumerWidget {
+/// Từng khối là một widget riêng dưới `widgets/task_detail/`; file này chỉ
+/// XẾP chúng và nối sheet với controller / [TaskDetailActions].
+class TaskDetailPage extends ConsumerStatefulWidget {
   const TaskDetailPage({super.key, required this.taskId});
 
   final String taskId;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<TaskDetailPage> createState() => _TaskDetailPageState();
+}
+
+class _TaskDetailPageState extends ConsumerState<TaskDetailPage> {
+  final _scroll = ScrollController();
+  final _titleShown = ValueNotifier(false);
+  final _titleKey = GlobalKey();
+
+  @override
+  void initState() {
+    super.initState();
+    _scroll.addListener(_onScroll);
+  }
+
+  @override
+  void dispose() {
+    _scroll
+      ..removeListener(_onScroll)
+      ..dispose();
+    _titleShown.dispose();
+    super.dispose();
+  }
+
+  /// Tên việc lên header khi dòng tiêu đề trong thân đã khuất dưới header.
+  void _onScroll() {
+    // Vị trí cuộn đổi TRƯỚC khi khung mới được xếp: đo sau khung đó, nếu
+    // không thì đọc vị trí cũ của dòng tiêu đề.
+    if (_measureQueued) return;
+    _measureQueued = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _measureQueued = false;
+      _measure();
+    });
+  }
+
+  bool _measureQueued = false;
+
+  void _measure() {
+    final box = _titleKey.currentContext?.findRenderObject();
+    if (box is! RenderBox || !box.attached || !mounted) return;
+    final bottom = box.localToGlobal(Offset(0, box.size.height)).dy;
+    final headerBottom =
+        MediaQuery.paddingOf(context).top + DetailHeader.height;
+    _titleShown.value = bottom <= headerBottom;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final taskId = widget.taskId;
     final detail = ref.watch(taskDetailProvider(taskId));
     final access = ref.watch(taskAccessProvider);
     final loadedTask = detail.valueOrNull?.visible;
+    final canWrite = access.canUpdate || access.canComplete;
+    final me = ref.watch(sessionProvider.select((s) => s.user?.id));
+    final catalog = ref.watch(taskLabelsProvider).valueOrNull ?? const [];
+    final viewer = loadedTask != null && _isPlanViewer(ref, loadedTask, me);
+    bool api(String name) => ref.watch(apiSupportsProvider(name));
+    final canRemind = api(ApiCapability.taskReminders) && access.canRead;
+    final groups = loadedTask == null
+        ? const <List<TaskMenuAction>>[]
+        // Người xem kế hoạch: chỉ "Nhắc việc" (nhắc riêng mình — server cho
+        // mọi người đọc được việc).
+        : viewer
+        ? [
+            if (canRemind) [TaskMenuAction.reminders],
+          ]
+        : taskMenuGroups(
+            // Thợ có danh mục qua `/system-options/task-labels` (Nhóm 2)
+            // cũng bật/tắt nhãn được; sửa danh mục vẫn cần system_options.
+            canLabels: canWrite && (access.canReadLabels || catalog.isNotEmpty),
+            isAssigner: access.isAssigner,
+            archived: loadedTask.archived,
+            canFollow: api(ApiCapability.taskFollow) && access.canRead,
+            canPin: api(ApiCapability.taskPin) && access.canUpdate,
+            pinned: loadedTask.isPinned,
+            canLock:
+                api(ApiCapability.taskLock) &&
+                access.canUpdate &&
+                _canManageTask(loadedTask, me, access.isAssigner),
+            locked: loadedTask.isLocked,
+            // Nhắc "mình" chỉ cần đọc được việc; "mọi người" xét trong sheet.
+            canRemind: canRemind,
+            canCopy: api(ApiCapability.taskCopy) && access.canUpdate,
+          );
+    final showFollowers =
+        loadedTask != null && api(ApiCapability.taskFollow) && access.canRead;
 
     return Scaffold(
-      appBar: _DetailHeader(
-        title: _headerTitle(loadedTask),
-        // Đổi tên và xoá đều là việc của người giao việc; thợ không có menu.
-        onRename: access.isAssigner && loadedTask != null
-            ? () => _editTitle(
-                context,
-                TaskDetailActions(
-                  ref.read(taskDetailProvider(taskId).notifier),
+      appBar: DetailHeader(
+        title: loadedTask?.title ?? '',
+        titleShown: _titleShown,
+        followers: showFollowers
+            ? IconButton(
+                tooltip: 'Người theo dõi',
+                onPressed: () => showFollowersSheet(
+                  context,
+                  taskId: taskId,
+                  myUserId: me,
+                  canEditOthers:
+                      access.isAssigner &&
+                      access.canUpdate &&
+                      !loadedTask.isLocked,
                 ),
-                loadedTask,
+                style: IconButton.styleFrom(
+                  minimumSize: const Size(44, 44),
+                  maximumSize: const Size(44, 44),
+                  padding: EdgeInsets.zero,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                ),
+                icon: Icon(
+                  Icons.visibility_outlined,
+                  size: OmniIconSize.lg,
+                  color: Theme.of(context).colorScheme.onSurface,
+                ),
               )
             : null,
-        onDelete: access.isAssigner && loadedTask != null
-            ? () => _deleteTask(context, loadedTask)
-            : null,
+        // Không mục nào hiện thì không có ⋯.
+        menu: groups.isEmpty
+            ? null
+            : IconButton(
+                tooltip: 'Tuỳ chọn công việc',
+                onPressed: () => _openMenu(context, loadedTask!, groups),
+                style: IconButton.styleFrom(
+                  minimumSize: const Size(44, 44),
+                  maximumSize: const Size(44, 44),
+                  padding: EdgeInsets.zero,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                ),
+                icon: Icon(
+                  Icons.more_horiz_rounded,
+                  size: OmniIconSize.lg,
+                  color: Theme.of(context).colorScheme.onSurface,
+                ),
+              ),
       ),
       body: OmniAsyncView(
         value: detail,
@@ -68,24 +205,204 @@ class TaskDetailPage extends ConsumerWidget {
         data: (state) => _Loaded(
           taskId: taskId,
           state: state,
-          canComplete: access.canComplete,
-          canAttach: access.canAttach,
-          isAssigner: access.isAssigner,
+          scroll: _scroll,
+          titleKey: _titleKey,
         ),
       ),
     );
   }
 
-  /// "{Dự án} · {Nhóm việc}"; thiếu cái nào bỏ cái đó.
-  static String _headerTitle(Task? task) {
-    final project = task?.projectName?.trim() ?? '';
-    final section = task?.sectionName?.trim() ?? '';
-    final parts = [
-      if (project.isNotEmpty) project,
-      if (section.isNotEmpty) section,
-    ];
+  /// Quản lý được việc này (khoá / mở khoá): như `ProjectAccessService::
+  /// canManage` — `manage.all`; việc cá nhân thì người tạo; việc trong kế
+  /// hoạch thì chủ / quản lý (kế hoạch legacy không chủ: mở). Kế hoạch chưa
+  /// đọc được thì chỉ `manage.all`.
+  bool _canManageTask(Task task, String? me, bool manageAll) =>
+      canManageTask(ref, task, me, manageAll: manageAll);
 
-    return parts.isEmpty ? 'Chi tiết công việc' : parts.join(' · ');
+  /// Menu việc (`TaskMenu.dc.html`): mở sheet rồi chạy mục đã chọn.
+  Future<void> _openMenu(
+    BuildContext context,
+    Task task,
+    List<List<TaskMenuAction>> groups,
+  ) async {
+    final controller = ref.read(taskDetailProvider(widget.taskId).notifier);
+    final access = ref.read(taskAccessProvider);
+    final me = ref.read(sessionProvider).user?.id;
+    final action = await showTaskMenuSheet(
+      context,
+      groups: groups,
+      followerCount: task.followers.length,
+    );
+    if (action == null || !context.mounted) return;
+
+    switch (action) {
+      case TaskMenuAction.followers:
+        await showFollowersSheet(
+          context,
+          taskId: widget.taskId,
+          myUserId: me,
+          canEditOthers:
+              access.isAssigner && access.canUpdate && !task.isLocked,
+        );
+      case TaskMenuAction.pin:
+      case TaskMenuAction.unpin:
+        await _flag(
+          context,
+          () => controller.setPinned(action == TaskMenuAction.pin),
+          action == TaskMenuAction.pin ? 'Đã ghim lên đầu cột.' : 'Đã bỏ ghim.',
+          bumpBoard: true,
+        );
+      case TaskMenuAction.lock:
+      case TaskMenuAction.unlock:
+        await _flag(
+          context,
+          () => controller.setLocked(action == TaskMenuAction.lock),
+          action == TaskMenuAction.lock
+              ? 'Đã khoá công việc.'
+              : 'Đã mở khoá công việc.',
+        );
+      case TaskMenuAction.reminders:
+        await showReminderSheet(
+          context,
+          taskId: widget.taskId,
+          myUserId: me,
+          canEveryone:
+              (access.canUpdate || access.canComplete) &&
+              !_isPlanViewer(ref, task, me),
+          canManage: canManageTask(ref, task, me, manageAll: access.isAssigner),
+        );
+      case TaskMenuAction.copy:
+        await _copy(context, task);
+      case TaskMenuAction.labels:
+        await _openLabels(context, widget.taskId, controller, task);
+      case TaskMenuAction.rename:
+        await _editTitle(context, TaskDetailActions(controller), task);
+      case TaskMenuAction.move:
+        await _move(context, controller, task);
+      case TaskMenuAction.archive:
+        await _archive(context, controller, archived: true);
+      case TaskMenuAction.unarchive:
+        await _archive(context, controller, archived: false);
+      case TaskMenuAction.delete:
+        await _deleteTask(context, task);
+    }
+  }
+
+  /// Sao chép việc (`POST /tasks/{id}/copy`): hỏi tên, xong thì mở việc
+  /// mới và báo bảng tải lại.
+  Future<void> _copy(BuildContext context, Task task) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final container = ProviderScope.containerOf(context);
+    final router = GoRouter.maybeOf(context);
+    final navigator = Navigator.of(context);
+    final name = await showTextEditSheet(
+      context: context,
+      title: 'Sao chép công việc',
+      initial: copyTitleOf(task.title),
+      requireChange: false,
+      maxLength: kTaskTitleMax,
+    );
+    if (name == null) return;
+
+    try {
+      final copy = await container
+          .read(tasksApiProvider)
+          .copyTask(task.id, title: name);
+      container.read(taskRealtimeSignalProvider.notifier).bump();
+      messenger.showSnackBar(
+        const SnackBar(content: Text('Đã sao chép công việc.')),
+      );
+      if (copy.id.isEmpty) return;
+      if (router != null) {
+        unawaited(
+          router.pushNamed(TaskRoutes.detail, pathParameters: {'id': copy.id}),
+        );
+      } else {
+        unawaited(
+          navigator.push(
+            MaterialPageRoute<void>(
+              builder: (_) => TaskDetailPage(taskId: copy.id),
+            ),
+          ),
+        );
+      }
+    } on AppException catch (e) {
+      messenger.showSnackBar(SnackBar(content: Text(e.message)));
+    }
+  }
+
+  /// Ghim / khoá: chờ server, báo [done]; lỗi thì câu của server. Ghim đổi
+  /// thứ tự cột nên báo bảng tải lại.
+  Future<void> _flag(
+    BuildContext context,
+    Future<void> Function() write,
+    String done, {
+    bool bumpBoard = false,
+  }) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final container = ProviderScope.containerOf(context);
+    try {
+      await write();
+      if (bumpBoard) container.read(taskRealtimeSignalProvider.notifier).bump();
+      messenger.showSnackBar(SnackBar(content: Text(done)));
+    } on AppException catch (e) {
+      messenger.showSnackBar(SnackBar(content: Text(e.message)));
+    }
+  }
+
+  /// Chuyển sang nhóm / kế hoạch khác. Xong thì báo bảng (cũ và mới) tải lại
+  /// qua tín hiệu realtime chung.
+  Future<void> _move(
+    BuildContext context,
+    TaskController controller,
+    Task task,
+  ) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final container = ProviderScope.containerOf(context);
+    final target = await showMoveTaskSheet(
+      context,
+      currentProjectId: task.projectId,
+      currentSectionId: task.sectionId,
+    );
+    if (target == null) return;
+    if (target.projectId == task.projectId &&
+        target.sectionId == task.sectionId) {
+      return;
+    }
+
+    try {
+      await controller.moveTask(
+        projectId: target.projectId,
+        sectionId: target.sectionId,
+      );
+      container.read(taskRealtimeSignalProvider.notifier).bump();
+      messenger.showSnackBar(
+        const SnackBar(content: Text('Đã chuyển công việc.')),
+      );
+    } on AppException catch (e) {
+      messenger.showSnackBar(SnackBar(content: Text(e.message)));
+    }
+  }
+
+  /// Lưu trữ thì rời màn (việc biến khỏi bảng); bỏ lưu trữ thì ở lại.
+  Future<void> _archive(
+    BuildContext context,
+    TaskController controller, {
+    required bool archived,
+  }) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final navigator = Navigator.of(context);
+    final container = ProviderScope.containerOf(context);
+    try {
+      await controller.setArchived(archived);
+      container.read(taskRealtimeSignalProvider.notifier).bump();
+      if (archived) unawaited(navigator.maybePop());
+      messenger.showSnackBar(
+        SnackBar(content: Text(archived ? 'Đã lưu trữ.' : 'Đã bỏ lưu trữ.')),
+      );
+    } on AppException catch (e) {
+      messenger.showSnackBar(SnackBar(content: Text(e.message)));
+    }
   }
 
   Future<void> _deleteTask(BuildContext context, Task task) async {
@@ -119,151 +436,26 @@ class TaskDetailPage extends ConsumerWidget {
   }
 }
 
-enum _TaskAction { rename, delete }
-
-/// Header kính mờ (`TaskDetail.dc.html`): ‹ quay lại, "{Dự án} · {Nhóm việc}"
-/// giữa, ⋯ "Tuỳ chọn công việc" (chỉ người giao việc). Tap target 44.
-class _DetailHeader extends StatelessWidget implements PreferredSizeWidget {
-  const _DetailHeader({
-    required this.title,
-    required this.onRename,
-    required this.onDelete,
-  });
-
-  final String title;
-  final VoidCallback? onRename;
-  final VoidCallback? onDelete;
-
-  @override
-  Size get preferredSize => const Size.fromHeight(52);
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final glass = OmniColors.byBrightness(
-      context,
-      OmniColors.background.withValues(alpha: 0.82),
-      OmniColors.darkBackground.withValues(alpha: 0.82),
-    );
-    final secondary = OmniColors.byBrightness(
-      context,
-      OmniColors.mutedForeground,
-      scheme.onSurfaceVariant,
-    );
-    final danger = OmniColors.dangerTextOf(context);
-
-    return ClipRect(
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-        child: DecoratedBox(
-          decoration: BoxDecoration(
-            color: glass,
-            border: Border(bottom: BorderSide(color: scheme.outlineVariant)),
-          ),
-          child: SafeArea(
-            bottom: false,
-            child: SizedBox(
-              height: 52,
-              child: Row(
-                children: [
-                  const SizedBox(width: 2),
-                  IconButton(
-                    tooltip: 'Quay lại',
-                    onPressed: () => Navigator.of(context).maybePop(),
-                    style: IconButton.styleFrom(
-                      minimumSize: const Size(44, 44),
-                      maximumSize: const Size(44, 44),
-                      padding: EdgeInsets.zero,
-                      foregroundColor: scheme.onSurface,
-                    ),
-                    icon: const Icon(Icons.chevron_left_rounded, size: 28),
-                  ),
-                  Expanded(
-                    child: Text(
-                      title,
-                      textAlign: TextAlign.center,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: OmniType.overline.copyWith(color: secondary),
-                    ),
-                  ),
-                  if (onRename != null || onDelete != null)
-                    PopupMenuButton<_TaskAction>(
-                      tooltip: 'Tuỳ chọn công việc',
-                      onSelected: (action) => switch (action) {
-                        _TaskAction.rename => onRename?.call(),
-                        _TaskAction.delete => onDelete?.call(),
-                      },
-                      itemBuilder: (context) => [
-                        const PopupMenuItem(
-                          value: _TaskAction.rename,
-                          child: Row(
-                            children: [
-                              Icon(Icons.edit_outlined),
-                              SizedBox(width: OmniSpacing.sm),
-                              Text('Đổi tên việc'),
-                            ],
-                          ),
-                        ),
-                        PopupMenuItem(
-                          value: _TaskAction.delete,
-                          child: Row(
-                            children: [
-                              Icon(Icons.delete_outline, color: danger),
-                              const SizedBox(width: OmniSpacing.sm),
-                              Text(
-                                'Xoá công việc',
-                                style: TextStyle(color: danger),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                      child: SizedBox(
-                        width: 44,
-                        height: 44,
-                        child: Icon(
-                          Icons.more_horiz_rounded,
-                          color: scheme.onSurface,
-                        ),
-                      ),
-                    )
-                  else
-                    const SizedBox(width: 44),
-                  const SizedBox(width: 2),
-                ],
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-/// Hiệu ứng `rise`: mờ → rõ và trượt lên 10px, mỗi khối lệch 40ms. Tắt hẳn
-/// khi người dùng giảm chuyển động.
+/// Hiệu ứng `rise` của khối trên: mờ → rõ, trượt lên 8px, 350ms
+/// cubic(.2,.8,.2,1). Tắt hẳn khi người dùng giảm chuyển động.
 class _Rise extends StatelessWidget {
-  const _Rise({required this.index, required this.child});
+  const _Rise({required this.child});
 
-  final int index;
   final Widget child;
 
   @override
   Widget build(BuildContext context) {
     if (!OmniMotion.enabled(context)) return child;
-    final delay = 40 * index;
-    final total = 400 + delay;
 
     return TweenAnimationBuilder<double>(
       tween: Tween(begin: 0, end: 1),
-      duration: Duration(milliseconds: total),
-      curve: Interval(delay / total, 1, curve: Curves.easeOutCubic),
+      duration: const Duration(milliseconds: 350),
+      curve: OmniCurves.standard,
       child: child,
       builder: (context, t, child) => Opacity(
         opacity: t,
         child: Transform.translate(
-          offset: Offset(0, 10 * (1 - t)),
+          offset: Offset(0, 8 * (1 - t)),
           child: child,
         ),
       ),
@@ -275,41 +467,197 @@ class _Loaded extends ConsumerWidget {
   const _Loaded({
     required this.taskId,
     required this.state,
-    required this.canComplete,
-    required this.canAttach,
-    required this.isAssigner,
+    required this.scroll,
+    required this.titleKey,
   });
 
   final String taskId;
   final TaskDetailState state;
-  final bool canComplete;
-  final bool canAttach;
-  final bool isAssigner;
+  final ScrollController scroll;
+  final GlobalKey titleKey;
 
-  static const _gap = SizedBox(height: 14);
+  static const _gap = SizedBox(height: 10);
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final task = state.visible;
+    final access = ref.watch(taskAccessProvider);
+    // Việc đã khoá: server trả 423 cho MỌI lượt sửa, nên ẩn mọi nút sửa.
+    // Còn lại: bình luận, thích, theo dõi (server vẫn cho).
+    // `select`: màn này chỉ cần id người đang cầm máy.
+    final myUserId = ref.watch(sessionProvider.select((s) => s.user?.id));
+    // Người XEM của kế hoạch (vai đọc từ `GET /projects/{id}`, đúng lượt
+    // gọi định nghĩa trường đã dùng): server chặn MỌI lượt ghi việc, kể cả
+    // bình luận — nên ẩn hết như việc đã khoá.
+    final viewer = _isPlanViewer(ref, task, myUserId);
+    final locked = task.isLocked;
+    final isAssigner = access.isAssigner && !locked && !viewer;
+    final canWrite =
+        (access.canUpdate || access.canComplete) && !locked && !viewer;
+    final canComplete = access.canComplete && !locked && !viewer;
+    final canComment = access.canComplete && !viewer;
+    final canLike = (access.canUpdate || access.canComplete) && !viewer;
+    // Xoá bình luận người khác: như `ProjectAccessService::canManage`.
+    final canModerate =
+        !viewer &&
+        canManageTask(ref, task, myUserId, manageAll: access.isAssigner);
     final controller = ref.read(taskDetailProvider(taskId).notifier);
     final actions = TaskDetailActions(controller);
-    // `select`: màn này chỉ cần id người đang cầm máy. Theo dõi cả Session là
-    // dựng lại toàn bộ màn chi tiết mỗi khi phiên đổi bất kỳ trường nào.
-    //
-    // §3: người nhận việc là CHÍNH người đang cầm máy, nên id lấy từ phiên chứ
-    // không nhận từ đâu khác — không có màn nào trong app chọn hộ người khác.
-    final myUserId = ref.watch(sessionProvider.select((s) => s.user?.id));
     final myName = ref.watch(sessionProvider.select((s) => s.user?.fullName));
     final myAvatar = ref.watch(
       sessionProvider.select((s) => s.user?.avatarUrl),
     );
-    final hasDescription = task.description?.trim().isNotEmpty ?? false;
+    final catalog = ref.watch(taskLabelsProvider).valueOrNull ?? const [];
+    final canLabels = access.canReadLabels || catalog.isNotEmpty;
 
-    // §3 là pull-based: ai rảnh TỰ NHẬN. Chỉ hiện khi mình CHƯA có tên trong
-    // việc: đây là thao tác thêm mình vào, không phải bật/tắt. Bỏ mình ra là
-    // một quyết định khác hẳn và vẫn là việc của quản đốc.
+    // §3 là pull-based: ai rảnh TỰ NHẬN. Chỉ khi mình CHƯA có tên trong việc.
     final canClaim =
-        !isAssigner && myUserId != null && !task.assigneeIds.contains(myUserId);
+        !isAssigner &&
+        canWrite &&
+        myUserId != null &&
+        !task.assigneeIds.contains(myUserId);
+
+    final description = task.description?.trim() ?? '';
+    final projectId = task.projectId;
+    final canOpenBoard =
+        access.canRead &&
+        projectId != null &&
+        GoRouter.maybeOf(context) != null;
+    final sectionName =
+        task.sectionName ?? (access.isAssigner ? 'Chưa xếp nhóm việc' : null);
+    final normalPriority = task.priority == 'med' || task.priority == 'medium';
+    final onAddLabel = canWrite && canLabels
+        ? () => _openLabels(context, taskId, controller, task)
+        : null;
+
+    final top = Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        if (task.labels.isNotEmpty || onAddLabel != null) ...[
+          LabelStrip(codes: task.labels, catalog: catalog, onAdd: onAddLabel),
+          _gap,
+        ],
+        if (locked) ...[
+          const Align(
+            alignment: Alignment.centerLeft,
+            child: OmniTaskChip.upcoming(
+              'Đã khoá',
+              key: Key('task-locked-chip'),
+              icon: Icons.lock_outline_rounded,
+            ),
+          ),
+          _gap,
+        ],
+        KeyedSubtree(
+          key: titleKey,
+          child: TaskTitleRow(
+            task: task,
+            taskId: taskId,
+            canComplete: canComplete,
+          ),
+        ),
+        if (task.projectName != null || sectionName != null) ...[
+          _gap,
+          TaskBreadcrumb(
+            planName: task.projectName,
+            sectionName: sectionName,
+            onPlan: canOpenBoard ? () => _openBoard(context, projectId) : null,
+            onSection: isAssigner
+                ? () => _moveSection(context, actions, task)
+                : null,
+          ),
+        ],
+        _gap,
+        TaskInfoCard(
+          task: task,
+          showAssigner: ref.watch(
+            apiSupportsProvider(ApiCapability.taskAssignedBy),
+          ),
+          likedByMe: myUserId != null && task.isLikedBy(myUserId),
+          onAddAssignee: isAssigner
+              ? () => _assign(context, actions, task)
+              : canClaim
+              ? () => _claimSheet(
+                  context,
+                  actions,
+                  task,
+                  myUserId,
+                  myName ?? '',
+                  myAvatar,
+                )
+              : null,
+          onTime: isAssigner ? () => _editTime(context, actions, task) : null,
+          onRate: isAssigner
+              ? (n) => _rate(context, controller, task, n)
+              : null,
+          onLike: canLike && myUserId != null
+              ? () => _like(context, controller, myUserId)
+              : null,
+          showPriority: access.isAssigner || !normalPriority,
+          onPriority: isAssigner
+              ? () => _editPriority(context, actions, task)
+              : null,
+        ),
+        _gap,
+        DescriptionCard(
+          text: description,
+          onCopy: description.isEmpty
+              ? null
+              : () => _copyDescription(context, description),
+          onEdit: isAssigner
+              ? () => _editDescription(context, actions, task)
+              : null,
+        ),
+      ],
+    );
+
+    final canOpenCustomer =
+        ref.watch(accessProvider).canAny(TaskPermissions.openCustomer) &&
+        GoRouter.maybeOf(context) != null;
+    final customerId = task.customerId;
+
+    final bottom = [
+      CustomFieldsCard(
+        task: task,
+        onEdit: canWrite ? (def) => _editField(context, controller, def) : null,
+        onOpenCustomer: canOpenCustomer && customerId != null
+            ? () => context.pushNamed(
+                CustomerRoutes.detail,
+                pathParameters: {'id': customerId},
+              )
+            : null,
+      ),
+      // Người giao việc thấy thẻ việc con KỂ CẢ khi trống — nút + nằm BÊN
+      // TRONG thẻ.
+      if (isAssigner || task.hasSubtasks) ...[
+        _gap,
+        SubtasksCard(
+          task: task,
+          state: state,
+          controller: controller,
+          canTick: canComplete,
+          canEdit: isAssigner,
+          details: ref.watch(apiSupportsProvider(ApiCapability.subtaskFields)),
+          canReorder:
+              isAssigner &&
+              ref.watch(apiSupportsProvider(ApiCapability.checklistMove)),
+        ),
+      ],
+      _gap,
+      FilesCard(task: task, canAttach: access.canAttach && !locked && !viewer),
+      _gap,
+      CommentSection(
+        task: task,
+        taskId: taskId,
+        myUserId: myUserId,
+        canWrite: canComment,
+        canModerate: canModerate,
+      ),
+      if (task.activity.isNotEmpty || task.viewers.isNotEmpty) ...[
+        _gap,
+        ActivityCard(task: task),
+      ],
+    ];
 
     return Column(
       children: [
@@ -317,144 +665,240 @@ class _Loaded extends ConsumerWidget {
           child: RefreshIndicator(
             onRefresh: controller.refresh,
             child: CustomScrollView(
+              controller: scroll,
               // Luôn kéo được, kể cả khi nội dung ngắn hơn màn — nếu không thì
               // kéo-để-tải-lại không hoạt động đúng ở việc ít công đoạn.
               physics: const AlwaysScrollableScrollPhysics(),
               slivers: [
                 SliverPadding(
-                  padding: const EdgeInsets.fromLTRB(16, 14, 16, 0),
-                  sliver: SliverList.list(
-                    children: [
-                      _Rise(index: 0, child: TaskTitleBlock(task: task)),
-                      _gap,
-                      _Rise(
-                        index: 1,
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const DetailSectionTitle('ĐIỀU PHỐI'),
-                            CoordinationCard(
-                              task: task,
-                              canEdit: isAssigner,
-                              canClaim: canClaim,
-                              onAssignees: isAssigner
-                                  ? () => _assign(context, actions, task)
-                                  : canClaim
-                                  ? () => _claimSheet(
-                                      context,
-                                      actions,
-                                      task,
-                                      myUserId,
-                                      myName ?? '',
-                                      myAvatar,
-                                    )
-                                  : () {},
-                              onDue: () => _editDueDate(context, actions, task),
-                              onSection: () =>
-                                  _moveSection(context, actions, task),
-                              onPriority: () =>
-                                  _editPriority(context, actions, task),
-                            ),
-                          ],
-                        ),
-                      ),
-                      // Người giao việc thấy khối mô tả KỂ CẢ khi trống — nếu
-                      // không thì không có chỗ nào để thêm mô tả lần đầu.
-                      // Người thợ + trống thì ẩn cả khối.
-                      if (isAssigner || hasDescription) ...[
-                        _gap,
-                        _Rise(
-                          index: 2,
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const DetailSectionTitle('MÔ TẢ'),
-                              TaskDescription(
-                                text: task.description ?? '',
-                                onEdit: isAssigner
-                                    ? () => _editDescription(
-                                        context,
-                                        actions,
-                                        task,
-                                      )
-                                    : null,
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ],
-                  ),
+                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+                  sliver: SliverToBoxAdapter(child: _Rise(child: top)),
                 ),
-                // Người giao việc thấy khối việc con KỂ CẢ khi trống — nút
-                // "Thêm việc con" nằm BÊN TRONG khối này, nên gói nó theo
-                // `hasSubtasks` là khoá mất chính đường tạo việc con đầu tiên.
-                // Người thợ vẫn không thấy gì khi trống — họ tick chứ không
-                // dựng danh sách.
-                if (isAssigner || task.hasSubtasks)
-                  SliverToBoxAdapter(
-                    child: Padding(
-                      padding: const EdgeInsets.fromLTRB(16, 14, 16, 0),
-                      child: SubtaskCard(
-                        task: task,
-                        state: state,
-                        controller: controller,
-                        canTick: canComplete,
-                        canEdit: isAssigner,
-                      ),
+                SliverPadding(
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+                  sliver: SliverToBoxAdapter(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: bottom,
                     ),
                   ),
-                // Điểm kiểm tra (trái) và tệp đính kèm (phải) chung một lưới:
-                // người kiểm nhìn ảnh rồi mới chấm, còn người bị trả việc về
-                // xem lại chính tấm mình đã gửi.
-                SliverToBoxAdapter(
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 14, 16, 0),
-                    child: ScoreAndFilesRow(
-                      task: task,
-                      taskId: taskId,
-                      canRate: isAssigner,
-                    ),
-                  ),
-                ),
-                // Trao đổi đứng sau điểm: nó là lý do phía sau kết luận. Dải
-                // "Đã xem" nằm ngay tiêu đề của nó — ai đã mở việc là câu hỏi
-                // của quản đốc, không chen giữa người thợ và công đoạn.
-                SliverToBoxAdapter(
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 14, 16, 0),
-                    child: CommentSection(
-                      task: task,
-                      taskId: taskId,
-                      canWrite: canComplete,
-                    ),
-                  ),
-                ),
-                // Cuối cùng, và GẤP lại: nhật ký là thứ người ta tra khi có
-                // nghi vấn, không phải thứ đọc mỗi lần mở việc.
-                SliverToBoxAdapter(child: ActivityLog(task: task)),
-                const SliverToBoxAdapter(
-                  child: SizedBox(height: OmniSpacing.xxl),
                 ),
               ],
             ),
           ),
         ),
-        TaskActionBar(
-          task: task,
-          canComplete: canComplete,
-          canAttach: canAttach,
-          taskId: taskId,
-        ),
+        // Ô bình luận cố định đáy; bàn phím đẩy nó lên (Scaffold co thân).
+        if (canComment)
+          CommentBar(
+            task: task,
+            taskId: taskId,
+            canAttachFiles: ref.watch(
+              apiSupportsProvider(ApiCapability.commentAttachments),
+            ),
+          ),
       ],
     );
   }
 
   // Mỗi hàm dưới đây chỉ MỞ SHEET rồi giao phần "có gì để ghi không" cho
-  // [TaskDetailActions]. Messenger lấy TRƯỚC khi await: sau khi sheet đóng,
-  // `context` có thể đã rời khỏi cây widget.
+  // [TaskDetailActions] / controller. Messenger lấy TRƯỚC khi await: sau khi
+  // sheet đóng, `context` có thể đã rời khỏi cây widget.
 
-  /// Giao việc cho ai, ngay tại chỗ — thao tác từng bắt buộc phải mở máy tính.
+  /// Sửa một trường tuỳ chỉnh theo kiểu: chữ / số qua ô nhập, ngày qua lịch,
+  /// lựa chọn qua bảng chọn. Gửi map ĐÃ GỘP (`setCustomField`).
+  Future<void> _editField(
+    BuildContext context,
+    TaskController controller,
+    CustomFieldDef def,
+  ) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final task = state.visible;
+    final raw = task.customFields[def.id];
+    final current = raw?.toString() ?? '';
+
+    Object? value;
+    switch (def.type) {
+      case CustomFieldType.text:
+      case CustomFieldType.number:
+        final number = def.type == CustomFieldType.number;
+        final typed = await showTextEditSheet(
+          context: context,
+          title: def.name,
+          initial: number ? (displayCustomValue(def, raw) ?? '') : current,
+          hint: 'Nhập ${def.name.toLowerCase()}',
+          allowEmpty: true,
+          keyboardType: number
+              ? const TextInputType.numberWithOptions(
+                  decimal: true,
+                  signed: true,
+                )
+              : null,
+        );
+        if (typed == null) return;
+        if (typed.isEmpty) {
+          value = null;
+        } else if (number) {
+          final parsed = num.tryParse(typed.replaceAll(',', '.'));
+          if (parsed == null) {
+            messenger.showSnackBar(
+              const SnackBar(content: Text('Nhập một số.')),
+            );
+            return;
+          }
+          value = parsed;
+        } else {
+          value = typed;
+        }
+      case CustomFieldType.date:
+        final now = DateTime.now();
+        final initial = DateUtilsX.parse(current) ?? now;
+        // Khoảng lịch luôn chứa ngày đang có: ngày đặt từ web có thể nằm xa.
+        final first = DateTime(now.year - 5);
+        final last = DateTime(now.year + 5, 12, 31);
+        final picked = await showDatePicker(
+          context: context,
+          initialDate: initial,
+          firstDate: initial.isBefore(first) ? initial : first,
+          lastDate: initial.isAfter(last) ? initial : last,
+        );
+        if (picked == null) return;
+        value =
+            '${picked.year.toString().padLeft(4, '0')}-'
+            '${picked.month.toString().padLeft(2, '0')}-'
+            '${picked.day.toString().padLeft(2, '0')}';
+      case CustomFieldType.select:
+        final scheme = Theme.of(context).colorScheme;
+        // Đã có giá trị thì thêm dòng cuối "Xoá giá trị" (gửi null): chọn
+        // nhầm phải gỡ được, như chữ / số xoá được bằng ô rỗng.
+        final canClear = current.isNotEmpty;
+        final picked = await showOptionSheet(
+          context,
+          title: def.name,
+          emptyMessage: 'Trường này chưa có lựa chọn nào.',
+          selected: def.options.indexOf(current),
+          items: [
+            for (final o in def.options)
+              OptionItem(label: o, color: scheme.primary, round: true),
+            if (canClear)
+              OptionItem(
+                label: 'Xoá giá trị',
+                color: scheme.onSurfaceVariant,
+                round: true,
+              ),
+          ],
+        );
+        if (picked == null) return;
+        value = picked < def.options.length ? def.options[picked] : null;
+    }
+    if (value == raw || (value == null && current.isEmpty)) return;
+
+    await _guard(messenger, () => controller.setCustomField(def.id, value));
+  }
+
+  Future<void> _like(
+    BuildContext context,
+    TaskController controller,
+    String myUserId,
+  ) async {
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      await controller.toggleLike(myUserId);
+    } on Object {
+      messenger.showSnackBar(
+        const SnackBar(content: Text('Không thích được.')),
+      );
+    }
+  }
+
+  /// Chấm điểm QC (chỉ người giao việc). Chạm lại đúng sao đang chọn là XOÁ
+  /// điểm: chấm nhầm phải gỡ được, và không có nút nào khác để làm việc đó.
+  Future<void> _rate(
+    BuildContext context,
+    TaskController controller,
+    Task task,
+    int star,
+  ) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final next = task.rating == star ? 0 : star;
+    unawaited(HapticFeedback.selectionClick());
+    try {
+      await controller.setRating(next);
+    } on AppException catch (e) {
+      messenger.showSnackBar(SnackBar(content: Text(e.message)));
+    } on Object {
+      messenger.showSnackBar(
+        const SnackBar(content: Text('Chưa lưu được. Thử lại khi có mạng.')),
+      );
+    }
+  }
+
+  /// Chép mô tả. Kênh clipboard có thể ném (nền tảng từ chối, máy hạn chế):
+  /// báo bằng lời thay vì để lỗi trôi lặng.
+  Future<void> _copyDescription(BuildContext context, String text) async {
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      await Clipboard.setData(ClipboardData(text: text));
+    } on Object {
+      messenger.showSnackBar(
+        const SnackBar(content: Text('Không chép được mô tả.')),
+      );
+      return;
+    }
+    messenger.showSnackBar(const SnackBar(content: Text('Đã chép mô tả.')));
+  }
+
+  /// Chạm tên kế hoạch: mở bảng. Màn ngay dưới đã CHÍNH là bảng đó (mở việc
+  /// từ bảng) thì quay lại, không chồng thêm một bảng thứ hai lên ngăn xếp.
+  void _openBoard(BuildContext context, String projectId) {
+    final router = GoRouter.of(context);
+    final board = router.namedLocation(
+      PlanRoutes.board,
+      pathParameters: {'id': projectId},
+    );
+    final leaves = _leafMatches(
+      router.routerDelegate.currentConfiguration.matches,
+    ).toList();
+    if (leaves.length >= 2 &&
+        leaves[leaves.length - 2].matchedLocation == board &&
+        router.canPop()) {
+      router.pop();
+      return;
+    }
+    context.pushNamed(PlanRoutes.board, pathParameters: {'id': projectId});
+  }
+
+  static Iterable<RouteMatch> _leafMatches(List<RouteMatchBase> matches) sync* {
+    for (final m in matches) {
+      if (m is ShellRouteMatch) {
+        yield* _leafMatches(m.matches);
+      } else if (m is RouteMatch) {
+        yield m;
+      }
+    }
+  }
+
+  /// Ngày bắt đầu và hạn trong một sheet. Gửi `start_date` khi đổi ngày, rồi
+  /// đi đường đổi hạn hiện có (`due_date`, không bao giờ `due_at`).
+  Future<void> _editTime(
+    BuildContext context,
+    TaskDetailActions actions,
+    Task task,
+  ) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final chosen = await showTaskTimeSheet(
+      context,
+      start: task.startDate,
+      due: task.dueDate,
+    );
+    if (chosen == null) return;
+
+    await _guard(messenger, () async {
+      await actions.editStartDate(task, chosen.start);
+      await actions.editDueDate(task, chosen.due);
+    });
+  }
+
+  /// Giao việc cho ai, ngay tại chỗ.
   Future<void> _assign(
     BuildContext context,
     TaskDetailActions actions,
@@ -471,11 +915,9 @@ class _Loaded extends ConsumerWidget {
 
   /// "Nhận việc này": sheet MỘT dòng, không phải bộ chọn người.
   ///
-  /// Cố ý KHÔNG mở bộ chọn người: nó chỉ gửi đúng một id, id của chính người
-  /// đang bấm. Bộ chọn lấy danh sách từ `GET /memberships`, đường cần
-  /// `membership.members.read` — quyền mà vai `worker` cố ý không có, nên với
-  /// đúng người cần tự nhận thì bộ chọn đó luôn rỗng. Gán NGƯỜI KHÁC vẫn là
-  /// việc của quản đốc.
+  /// Bộ chọn lấy danh sách từ `GET /memberships`, đường cần
+  /// `membership.members.read` — quyền mà vai `worker` cố ý không có. Gán
+  /// NGƯỜI KHÁC vẫn là việc của quản đốc.
   Future<void> _claimSheet(
     BuildContext context,
     TaskDetailActions actions,
@@ -535,27 +977,6 @@ class _Loaded extends ConsumerWidget {
     await _guard(messenger, () => actions.claim(task, userId));
   }
 
-  Future<void> _editDueDate(
-    BuildContext context,
-    TaskDetailActions actions,
-    Task task,
-  ) async {
-    final messenger = ScaffoldMessenger.of(context);
-    final now = DateTime.now();
-    final chosen = await showDueDateSheet(
-      context: context,
-      current: task.dueDate,
-      firstDate: DateTime(now.year - 1),
-      lastDate: DateTime(now.year + 3),
-    );
-    if (chosen == null) return;
-
-    await _guard(
-      messenger,
-      () => actions.editDueDate(task, chosen.clear ? null : chosen.date),
-    );
-  }
-
   Future<void> _editPriority(
     BuildContext context,
     TaskDetailActions actions,
@@ -563,7 +984,7 @@ class _Loaded extends ConsumerWidget {
   ) async {
     final messenger = ScaffoldMessenger.of(context);
     final tones = OmniTaskTones.of(context);
-    // Khoá lấy từ `kPriorities` (high / med / low): đó đúng là giá trị
+    // Khoá lấy từ `kPriorities` (high / med / low): đúng giá trị
     // `actions.editPriority` vẫn gửi từ trước tới nay, không phải "medium".
     final keys = kPriorities.keys.toList();
     final picked = await showOptionSheet(
@@ -602,6 +1023,8 @@ class _Loaded extends ConsumerWidget {
       multiline: true,
       // Xoá sạch mô tả là một lựa chọn hợp lệ, khác với tên việc.
       allowEmpty: true,
+      // `UpdateTaskRequest` `description` `max:10000`.
+      maxLength: 10000,
     );
 
     await _guard(messenger, () => actions.editDescription(task, chosen));
@@ -619,7 +1042,7 @@ class _Loaded extends ConsumerWidget {
     final picked = await showOptionSheet(
       context,
       title: 'Chuyển nhóm việc',
-      emptyMessage: 'Dự án này chưa khai báo nhóm việc nào.',
+      emptyMessage: 'Kế hoạch này chưa khai báo nhóm việc nào.',
       selected: sections.indexWhere((s) => s.id == task.sectionId),
       items: [
         for (var i = 0; i < sections.length; i++)
@@ -662,4 +1085,86 @@ Future<void> _guard(
   } on AppException catch (e) {
     messenger.showSnackBar(SnackBar(content: Text(e.message)));
   }
+}
+
+/// Sheet Nhãn màu ở chế độ bật/tắt; mỗi lần bật/tắt gửi cả danh sách mới
+/// (`labels[]`) tính từ bản đang hiện — lạc quan, lỗi thì hoàn tác và báo.
+Future<void> _openLabels(
+  BuildContext context,
+  String taskId,
+  TaskController controller,
+  Task task,
+) async {
+  final messenger = ScaffoldMessenger.of(context);
+  final container = ProviderScope.containerOf(context);
+
+  await showLabelsSheet(
+    context,
+    selected: task.labels.toSet(),
+    onToggle: (code) {
+      final current =
+          container.read(taskDetailProvider(taskId)).valueOrNull?.task.labels ??
+          task.labels;
+      final next = current.contains(code)
+          ? [
+              for (final c in current)
+                if (c != code) c,
+            ]
+          : [...current, code];
+      unawaited(
+        controller
+            .setLabels(next)
+            .then<void>(
+              (_) {},
+              onError: (Object _) => messenger.showSnackBar(
+                const SnackBar(content: Text('Không lưu được nhãn.')),
+              ),
+            ),
+      );
+    },
+  );
+}
+
+/// Kế hoạch chứa việc (null: việc cá nhân, hoặc chưa đọc được kế hoạch).
+TaskProject? _projectOf(WidgetRef ref, Task task) {
+  final projectId = task.projectId;
+  if (projectId == null) return null;
+
+  return ref.watch(taskProjectProvider(projectId)).valueOrNull;
+}
+
+/// Người đang cầm máy mang vai `viewer` ghi rõ trong kế hoạch của việc
+/// (`assertCanEditTasks`). Chưa đọc được kế hoạch thì không coi là viewer —
+/// server vẫn chặn, và câu 403 của nó hiện lên.
+/// Trần tên việc (`CopyTaskRequest` / `CreateTaskRequest` `title` `max:255`).
+const kTaskTitleMax = 255;
+
+/// Tên gợi ý khi sao chép: tên gốc cắt còn ≤244 ký tự rồi thêm " (bản sao)",
+/// để cả chuỗi không vượt [kTaskTitleMax] (server sẽ trả 422).
+String copyTitleOf(String title) {
+  const suffix = ' (bản sao)';
+  final runes = title.runes;
+  final head = runes.length <= kTaskTitleMax - suffix.length - 1
+      ? title
+      : String.fromCharCodes(runes.take(kTaskTitleMax - suffix.length - 1));
+
+  return '$head$suffix';
+}
+
+bool _isPlanViewer(WidgetRef ref, Task task, String? me) =>
+    _projectOf(ref, task)?.isViewer(me) ?? false;
+
+/// Quản lý được việc (`ProjectAccessService::canManage`): `manage.all`; việc
+/// cá nhân thì người tạo; việc trong kế hoạch thì chủ / quản lý, hoặc kế
+/// hoạch legacy không chủ. Kế hoạch chưa đọc được thì chỉ `manage.all`.
+bool canManageTask(
+  WidgetRef ref,
+  Task task,
+  String? me, {
+  required bool manageAll,
+}) {
+  if (manageAll) return true;
+  if (task.projectId == null) return me != null && task.createdBy == me;
+
+  return _projectOf(ref, task)?.canManage(me, manageAll: false) ?? false;
 }

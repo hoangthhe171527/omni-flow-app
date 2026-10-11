@@ -23,6 +23,8 @@ class Subtask {
     this.assigneeName,
     this.assigneeAvatar,
     this.dueDate,
+    this.description,
+    this.startDate,
   });
 
   factory Subtask.fromJson(Map<String, dynamic> json) => Subtask(
@@ -34,6 +36,10 @@ class Subtask {
     // Server chỉ đặt khoá khi người đó có ảnh (cùng quy ước `user_avatar`).
     assigneeAvatar: resolveAvatarUrl(json.str('assignee_avatar')),
     dueDate: DateUtilsX.parse(json['due_date']),
+    // API Nhóm 2 (`Checklist`): PUT cả mảng kiểu cũ có thể lưu `null` — coi
+    // như không có (`json.str` bỏ null và chuỗi rỗng).
+    description: json.str('description'),
+    startDate: DateUtilsX.parse(json['start_date']),
   );
 
   final String id;
@@ -44,6 +50,14 @@ class Subtask {
   final String? assigneeAvatar;
   final DateTime? dueDate;
 
+  /// Ghi chú dưới tên (13 phụ). null = không có.
+  final String? description;
+
+  /// Ngày bắt đầu. Server KHÔNG kiểm `start ≤ due`; app tự chặn.
+  final DateTime? startDate;
+
+  /// Bản sao lạc quan (tick): chép ĐỦ mọi trường — thiếu một là trường đó
+  /// biến khỏi màn ngay khi tick.
   Subtask copyWith({bool? done}) => Subtask(
     id: id,
     title: title,
@@ -52,6 +66,8 @@ class Subtask {
     assigneeName: assigneeName,
     assigneeAvatar: assigneeAvatar,
     dueDate: dueDate,
+    description: description,
+    startDate: startDate,
   );
 }
 
@@ -98,6 +114,7 @@ class TaskComment {
     this.userAvatar,
     this.mentionedUserNames = const [],
     this.createdAt,
+    this.attachments = const [],
   });
 
   factory TaskComment.fromJson(Map<String, dynamic> json) => TaskComment(
@@ -112,15 +129,26 @@ class TaskComment {
     // sách nào để tự tra một UUID ra tên người.
     mentionedUserNames: json.strList('mentioned_user_names'),
     createdAt: DateUtilsX.parse(json['created_at']),
+    // Tệp kèm (Nhóm 2, `files[]`): `url` do presenter dựng lại từ `file`.
+    attachments: json
+        .mapList('attachments')
+        .map(TaskAttachment.fromJson)
+        .toList(),
   );
 
   final String id;
+
+  /// Rỗng được khi bình luận chỉ có tệp.
   final String body;
   final String? userId;
   final String? userName;
   final String? userAvatar;
   final List<String> mentionedUserNames;
   final DateTime? createdAt;
+
+  /// Tệp / ảnh gửi kèm bình luận. Chỉ nằm trong bình luận, không trong
+  /// `Task.attachments`.
+  final List<TaskAttachment> attachments;
 
   /// Không bao giờ hiện UUID: nó không nói cho ai điều gì.
   String get author {
@@ -144,6 +172,7 @@ class TaskAttachment {
     required this.url,
     required this.name,
     required this.type,
+    this.userId,
   });
 
   factory TaskAttachment.fromJson(Map<String, dynamic> json) => TaskAttachment(
@@ -153,12 +182,16 @@ class TaskAttachment {
     // API đặt 'image' hoặc 'file' theo MIME lúc tải lên. Tài liệu cũ thiếu
     // khoá này thì coi là tệp: hiện cái tên còn hơn hiện một ô ảnh vỡ.
     type: json.strOr('type', 'file'),
+    userId: json.str('user_id'),
   );
 
   final String id;
   final String url;
   final String name;
   final String type;
+
+  /// Người tải lên (gỡ tệp kèm bình luận: người tải hoặc quản lý).
+  final String? userId;
 
   bool get isImage => type == 'image';
 }
@@ -210,6 +243,22 @@ class Task {
     this.viewers = const [],
     this.comments = const [],
     this.activity = const [],
+    this.labels = const [],
+    this.likes = const [],
+    this.archived = false,
+    this.pinned,
+    this.locked,
+    this.followerIds,
+    this.followerNames = const [],
+    this.followerAvatars = const [],
+    this.assignedBy,
+    this.assignedByName,
+    this.assignedByAvatar,
+    this.createdBy,
+    this.createdByName,
+    this.createdByAvatar,
+    this.customerId,
+    this.customerName,
   });
 
   factory Task.fromJson(Map<String, dynamic> json) => Task(
@@ -262,6 +311,32 @@ class Task {
     viewers: json.mapList('viewers').map(TaskViewer.fromJson).toList(),
     comments: json.mapList('comments').map(TaskComment.fromJson).toList(),
     activity: json.mapList('activity').map(TaskActivityEntry.fromJson).toList(),
+    labels: json.strList('labels'),
+    // Vắng khoá khi chưa ai từng thích (`MongoTaskRepository::toggleLike`
+    // chỉ ghi khoá ở lần thích đầu tiên).
+    likes: json.strList('likes'),
+    // Tài liệu cũ không có khoá; server coi đó là chưa lưu trữ (`!= true`).
+    archived: json.flag('archived'),
+    // API Nhóm 2 (`TaskPresenter::withFlags`) LUÔN gửi hai cờ này dạng bool;
+    // API cũ không có khoá → null. Nút ghim / khoá ẩn theo `ApiCapability`.
+    pinned: _boolOrNull(json['pinned']),
+    locked: _boolOrNull(json['locked']),
+    // Chỉ có khi việc từng có người theo dõi; vắng khoá trên API mới vẫn
+    // theo dõi được — nút theo `ApiCapability.taskFollow`.
+    followerIds: json.containsKey('follower_ids')
+        ? json.strList('follower_ids')
+        : null,
+    followerNames: _alignedNames(json['follower_names']),
+    followerAvatars: _alignedAvatars(json['follower_avatars']),
+    assignedBy: json.str('assigned_by'),
+    assignedByName: json.str('assigned_by_name'),
+    assignedByAvatar: resolveAvatarUrl(json.str('assigned_by_avatar')),
+    createdBy: json.str('created_by'),
+    createdByName: json.str('created_by_name'),
+    createdByAvatar: resolveAvatarUrl(json.str('created_by_avatar')),
+    customerId: json.str('customer_id'),
+    // Chỉ có khi tài liệu mang sẵn tên khách; presenter không trang trí.
+    customerName: json.str('customer_name'),
   );
 
   final String id;
@@ -348,6 +423,74 @@ class Task {
   /// với `comments`.
   final List<TaskActivityEntry> activity;
 
+  /// Mã nhãn gắn trên việc (`labels[]`, mỗi mã ≤64). Tên và màu tra từ bộ
+  /// nhãn công ty (`TASK_LABEL`), không lưu ở đây.
+  final List<String> labels;
+
+  /// Id những người đã thích việc này.
+  final List<String> likes;
+
+  /// Việc đã lưu trữ: ẩn khỏi bảng (`GET /tasks` mặc định `archived=active`).
+  final bool archived;
+
+  /// Việc được ghim lên đầu cột (chung cả kế hoạch). null = API cũ chưa có
+  /// khả năng ghim; thứ tự ghim-trước do SERVER sắp, app không tự sắp.
+  final bool? pinned;
+
+  /// Việc đã khoá: mọi lượt sửa trả 423 `task_locked`. null = API cũ.
+  final bool? locked;
+
+  /// Id người theo dõi. null = khoá vắng (API cũ, hoặc API mới mà việc chưa
+  /// từng có ai theo dõi).
+  final List<String>? followerIds;
+
+  /// Tên / ảnh người theo dõi, THẲNG HÀNG với [followerIds] (null giữ chỗ).
+  final List<String?> followerNames;
+  final List<String?> followerAvatars;
+
+  /// Người giao việc (server đặt khi có người MỚI vào `assignee_ids`).
+  final String? assignedBy;
+  final String? assignedByName;
+  final String? assignedByAvatar;
+
+  /// Id người tạo việc. Tên / ảnh chỉ có khi API Nhóm 2 tra được.
+  final String? createdBy;
+  final String? createdByName;
+  final String? createdByAvatar;
+
+  /// Đã ghim (thiếu khoá = không).
+  bool get isPinned => pinned == true;
+
+  /// Đã khoá (thiếu khoá = không).
+  bool get isLocked => locked == true;
+
+  /// Người theo dõi, ghép id / tên / ảnh theo chỉ số (an toàn với mảng ngắn).
+  List<({String id, String? name, String? avatar})> get followers => [
+    for (var i = 0; i < (followerIds?.length ?? 0); i++)
+      (
+        id: followerIds![i],
+        name: i < followerNames.length ? followerNames[i] : null,
+        avatar: i < followerAvatars.length ? followerAvatars[i] : null,
+      ),
+  ];
+
+  /// Tên người giao cho chuỗi "người giao → người làm". Việc cũ không có
+  /// `assigned_by` thì rơi về người tạo (theo hợp đồng API); có `assigned_by`
+  /// mà không tra được tên thì null — không gán nhầm sang người tạo.
+  String? get assignerName =>
+      assignedBy != null ? assignedByName : createdByName;
+
+  String? get assignerAvatar =>
+      assignedBy != null ? assignedByAvatar : createdByAvatar;
+
+  /// Khách hàng gắn với việc, lưu thô. Không có tên đi kèm chắc chắn.
+  final String? customerId;
+
+  /// Tên khách nếu tài liệu có `customer_name`. null = chỉ có id.
+  final String? customerName;
+
+  bool isLikedBy(String userId) => likes.contains(userId);
+
   /// Only `done` is terminal; every other status id is defined by the project.
   bool get isDone => status == 'done';
 
@@ -412,7 +555,17 @@ class Task {
   ///
   /// `task_copy_with_test.dart` so từng trường, để lần thêm trường sau không
   /// lặp lại chuyện này.
-  Task copyWith({List<Subtask>? subtasks, String? status}) => Task(
+  Task copyWith({
+    List<Subtask>? subtasks,
+    String? status,
+    List<String>? labels,
+    List<String>? likes,
+    bool? pinned,
+    bool? locked,
+    List<String>? followerIds,
+    List<String?>? followerNames,
+    List<String?>? followerAvatars,
+  }) => Task(
     id: id,
     title: title,
     description: description,
@@ -437,5 +590,42 @@ class Task {
     viewers: viewers,
     comments: comments,
     activity: activity,
+    labels: labels ?? this.labels,
+    likes: likes ?? this.likes,
+    archived: archived,
+    pinned: pinned ?? this.pinned,
+    locked: locked ?? this.locked,
+    followerIds: followerIds ?? this.followerIds,
+    followerNames: followerNames ?? this.followerNames,
+    followerAvatars: followerAvatars ?? this.followerAvatars,
+    assignedBy: assignedBy,
+    assignedByName: assignedByName,
+    assignedByAvatar: assignedByAvatar,
+    createdBy: createdBy,
+    createdByName: createdByName,
+    createdByAvatar: createdByAvatar,
+    customerId: customerId,
+    customerName: customerName,
   );
 }
+
+/// Cờ bool của API Nhóm 2; kiểu khác (hoặc vắng) là null — không đoán.
+bool? _boolOrNull(Object? raw) => raw is bool ? raw : null;
+
+/// Mảng tên thẳng hàng với id: giữ null chỗ không tra được.
+List<String?> _alignedNames(Object? raw) => switch (raw) {
+  final List list => [
+    for (final v in list)
+      if (v is String && v.trim().isNotEmpty) v else null,
+  ],
+  _ => const [],
+};
+
+/// Như [_alignedNames] nhưng chuẩn hoá URL ảnh.
+List<String?> _alignedAvatars(Object? raw) => switch (raw) {
+  final List list => [
+    for (final v in list)
+      if (v is String && v.trim().isNotEmpty) resolveAvatarUrl(v) else null,
+  ],
+  _ => const [],
+};

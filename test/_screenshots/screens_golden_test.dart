@@ -554,7 +554,7 @@ void main() {
         ],
       ),
       '03b-chi-tiet-viec-trao-doi',
-      scrollTo: find.text('TRAO ĐỔI'),
+      scrollTo: find.text('Bình luận'),
     ),
   );
   testWidgets(

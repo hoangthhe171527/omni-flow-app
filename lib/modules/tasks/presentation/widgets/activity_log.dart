@@ -1,177 +1,136 @@
 import 'package:flutter/material.dart';
 
 import '../../../../core/utils/formatters.dart';
+import '../../../../design/components/components.dart';
 import '../../../../design/platform/omni_motion_scope.dart';
 import '../../../../design/tokens/tokens.dart';
 import '../../domain/task.dart';
 import '../../domain/task_activity.dart';
+import 'task_detail/detail_card.dart';
+import 'task_detail/task_viewers.dart';
 
-/// "Ai đã kéo cây này về lại Đang làm, và lúc nào."
+/// Thẻ Nhật ký hoạt động (`TaskDetail.dc.html`): đầu thẻ có nút "Xem" (mở cả
+/// nhật ký trong một sheet), thân là dòng "Đã xem việc này" cùng avatar 24
+/// chồng ([TaskViewers]).
 ///
-/// API ghi nhật ký này từ lâu và gửi kèm ở mỗi lần mở công việc — app chỉ chưa
-/// đọc. Trao đổi (§B3) ghi LÝ DO một cây bị trả về; nhật ký ghi việc đã xảy
-/// ra: ai chuyển, từ cột nào sang cột nào, tick xong công đoạn nào, gửi tấm
-/// ảnh nào. Hai thứ trả lời hai nửa của cùng một câu hỏi, và nửa thứ hai
-/// trước nay không có chỗ nào để đọc trên điện thoại.
+/// "Ai đã kéo cây này về lại Đang làm, và lúc nào": API gửi nhật ký kèm mỗi
+/// lần mở việc. Một cây đàn đi hết vòng phục chế để lại hàng trăm dòng, nên
+/// nó nằm sau nút "Xem" chứ không bày sẵn — là thứ tra khi có nghi vấn.
 ///
-/// GẤP mặc định. Một cây đàn đi hết vòng phục chế để lại hàng trăm dòng, và
-/// mở sẵn là đẩy thanh thao tác — chỗ người thợ tick và chụp ảnh — ra khỏi tầm
-/// ngón tay. Nhật ký là thứ người ta tra khi có nghi vấn, không phải thứ đọc
-/// mỗi lần mở việc.
-///
-/// Giao diện (`TaskDetail.dc.html`): nút "NHẬT KÝ (n)" hoa 12 w600 + mũi tên
-/// xoay 180° khi mở; thân là thẻ chữ 12 cao 1.9, mở/gập 400ms (bỏ hẳn khi giảm
-/// chuyển động).
-class ActivityLog extends StatefulWidget {
-  const ActivityLog({super.key, required this.task});
+/// Không có dòng nhật ký và chưa ai xem thì cả thẻ ẩn.
+class ActivityCard extends StatelessWidget {
+  const ActivityCard({super.key, required this.task});
 
   final Task task;
 
   @override
-  State<ActivityLog> createState() => _ActivityLogState();
+  Widget build(BuildContext context) {
+    final entries = task.activity;
+    final viewers = task.viewers;
+    if (entries.isEmpty && viewers.isEmpty) return const SizedBox.shrink();
+    final scheme = Theme.of(context).colorScheme;
+
+    return DetailCard(
+      children: [
+        DetailCardHeader(
+          icon: Icons.schedule_rounded,
+          title: 'Nhật ký hoạt động',
+          actions: [
+            if (entries.isNotEmpty)
+              TextButton(
+                onPressed: () => showActivityLogSheet(context, task),
+                style: TextButton.styleFrom(
+                  minimumSize: const Size(44, 44),
+                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                  // Giảm chuyển động: không gợn sóng (cũng là một hoạt ảnh).
+                  splashFactory: OmniMotion.enabled(context)
+                      ? null
+                      : NoSplash.splashFactory,
+                  foregroundColor: scheme.primary,
+                  textStyle: OmniType.caption.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                child: Text('Xem', semanticsLabel: 'Xem nhật ký hoạt động'),
+              ),
+          ],
+        ),
+        if (viewers.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+            child: TaskViewers(viewers: viewers),
+          ),
+      ],
+    );
+  }
 }
 
-class _ActivityLogState extends State<ActivityLog> {
-  /// Số dòng hiện ra ở lần mở đầu tiên.
+/// Cả nhật ký, mới nhất trước, 20 dòng một lần ("Xem thêm n dòng").
+Future<void> showActivityLogSheet(BuildContext context, Task task) =>
+    showOmniViecSheet<void>(
+      context: context,
+      builder: (_) => ActivityLogSheet(task: task),
+    );
+
+class ActivityLogSheet extends StatefulWidget {
+  const ActivityLogSheet({super.key, required this.task});
+
+  final Task task;
+
+  @override
+  State<ActivityLogSheet> createState() => _ActivityLogSheetState();
+}
+
+class _ActivityLogSheetState extends State<ActivityLogSheet> {
   static const _pageSize = 20;
-
-  bool _open = false;
   int _shown = _pageSize;
-
-  void _toggle() => setState(() => _open = !_open);
-
-  /// Mở/gập mượt khi được phép. Giảm chuyển động thì KHÔNG dùng AnimatedSize
-  /// với thời lượng 0: nó vẫn khởi động một bộ điều khiển trong lúc bố cục (và
-  /// báo lỗi), nên nhánh này bỏ hẳn nó.
-  static Widget _sized({
-    required bool motion,
-    required Duration duration,
-    required Widget child,
-  }) => motion
-      ? AnimatedSize(
-          duration: duration,
-          curve: Curves.easeOutCubic,
-          alignment: Alignment.topCenter,
-          child: child,
-        )
-      : child;
 
   @override
   Widget build(BuildContext context) {
-    final entries = widget.task.activity;
-    if (entries.isEmpty) {
-      // Không có dòng nào thì không có gì để gấp. Một khối "Nhật ký (0)" chỉ
-      // dạy người dùng rằng bấm vào nó không ra gì.
-      return const SizedBox.shrink();
-    }
-
-    final scheme = Theme.of(context).colorScheme;
-    final muted = OmniColors.byBrightness(
-      context,
-      OmniColors.mutedForeground,
-      scheme.onSurfaceVariant,
-    );
-    final motion = OmniMotion.enabled(context);
-    final duration = motion ? const Duration(milliseconds: 400) : Duration.zero;
-    // Mới nhất trước: câu hỏi luôn là "vừa có chuyện gì", không phải "hồi đầu
-    // có chuyện gì". API trả về cũ nhất trước vì đó là thứ tự nó ghi.
-    final newestFirst = entries.reversed.toList();
+    // Mới nhất trước: câu hỏi luôn là "vừa có chuyện gì". API trả cũ nhất
+    // trước vì đó là thứ tự nó ghi.
+    final newestFirst = widget.task.activity.reversed.toList();
     final shown = newestFirst.take(_shown).toList();
+    final scheme = Theme.of(context).colorScheme;
 
-    final head = Align(
-      alignment: Alignment.centerLeft,
-      widthFactor: 1,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: OmniSpacing.sm),
-        child: Row(
+    return Semantics(
+      scopesRoute: true,
+      explicitChildNodes: true,
+      label: 'Nhật ký hoạt động',
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 30),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text(
-              'NHẬT KÝ (${entries.length})',
-              style: OmniType.micro.copyWith(
-                fontWeight: FontWeight.w600,
-                letterSpacing: 0.5,
-                color: muted,
+            const OmniSheetHandle(),
+            Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: Text(
+                'Nhật ký hoạt động (${newestFirst.length})',
+                style: OmniType.section.copyWith(color: scheme.onSurface),
               ),
             ),
-            const SizedBox(width: OmniSpacing.xs),
-            AnimatedRotation(
-              turns: _open ? 0.5 : 0,
-              duration: duration,
-              child: Icon(Icons.expand_more_rounded, size: 18, color: muted),
-            ),
+            for (final entry in shown)
+              _Line(entry: entry, sections: widget.task.planSections),
+            if (newestFirst.length > shown.length)
+              Align(
+                alignment: Alignment.centerLeft,
+                child: TextButton(
+                  onPressed: () => setState(
+                    () => _shown = (_shown + _pageSize).clamp(
+                      0,
+                      newestFirst.length,
+                    ),
+                  ),
+                  style: TextButton.styleFrom(minimumSize: const Size(44, 44)),
+                  child: Text(
+                    'Xem thêm ${newestFirst.length - shown.length} dòng',
+                  ),
+                ),
+              ),
           ],
         ),
-      ),
-    );
-
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 6, 16, 0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Semantics(
-            button: true,
-            expanded: _open,
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(minHeight: 44),
-              // Giảm chuyển động: không InkWell, vì gợn sóng và vệt sáng của nó
-              // là hoạt ảnh mà cài đặt này đã xin bỏ.
-              child: motion
-                  ? InkWell(
-                      onTap: _toggle,
-                      borderRadius: OmniRadius.smAll,
-                      child: head,
-                    )
-                  : GestureDetector(
-                      behavior: HitTestBehavior.opaque,
-                      onTap: _toggle,
-                      child: head,
-                    ),
-            ),
-          ),
-          _sized(
-            motion: motion,
-            duration: duration,
-            child: _open
-                ? Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 10,
-                    ),
-                    decoration: BoxDecoration(
-                      color: scheme.surface,
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: scheme.outlineVariant),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        for (final entry in shown)
-                          _Line(
-                            entry: entry,
-                            sections: widget.task.planSections,
-                          ),
-                        if (newestFirst.length > shown.length)
-                          TextButton(
-                            onPressed: () => setState(
-                              () => _shown = (_shown + _pageSize).clamp(
-                                0,
-                                entries.length,
-                              ),
-                            ),
-                            child: Text(
-                              'Xem thêm ${newestFirst.length - shown.length} dòng',
-                              style: OmniType.micro,
-                            ),
-                          ),
-                      ],
-                    ),
-                  )
-                : const SizedBox(width: double.infinity),
-          ),
-        ],
       ),
     );
   }

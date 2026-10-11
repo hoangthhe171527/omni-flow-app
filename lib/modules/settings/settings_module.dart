@@ -68,7 +68,7 @@ class SettingsModule extends OmniModule {
     ModuleNavEntry(
       moduleId: 'settings',
       label: 'Nền',
-      subtitle: 'Nền cho chat và bảng dự án',
+      subtitle: 'Nền cho chat và bảng kế hoạch',
       icon: Icons.wallpaper_outlined,
       selectedIcon: Icons.wallpaper_rounded,
       routeName: background,

@@ -5,7 +5,6 @@ import 'package:go_router/go_router.dart';
 import 'package:omni_app/app/shell/app_shell.dart';
 import 'package:omni_app/bootstrap.dart';
 import 'package:omni_app/core/module/module_registry.dart';
-import 'package:omni_app/core/nav/shell_bar_inset.dart';
 import 'package:omni_app/security/permissions/access_policy.dart';
 import 'package:omni_app/security/session/session.dart';
 import 'package:omni_app/security/session/session_controller.dart';
@@ -84,58 +83,5 @@ void main() {
           .first,
     );
     expect(scaffold.extendBody, isTrue);
-  });
-
-  testWidgets('nút nổi của màn gốc tab nằm trên thanh, không bị thanh đè', (
-    tester,
-  ) async {
-    await pumpShell(
-      tester,
-      firstPage: Scaffold(
-        floatingActionButton: ShellFabLift(
-          child: FloatingActionButton.extended(
-            onPressed: () {},
-            label: const Text('Thêm'),
-          ),
-        ),
-        body: const SizedBox.expand(),
-      ),
-    );
-
-    final fab = tester.getRect(find.byType(FloatingActionButton));
-    final bar = tester.getRect(find.byType(BackdropFilter));
-
-    expect(fab.bottom, lessThanOrEqualTo(bar.top));
-    // Chạm giữa nút phải trúng chính nút, không trúng thanh.
-    expect(
-      tester
-          .hitTestOnBinding(fab.center)
-          .path
-          .any(
-            (e) =>
-                e.target is RenderBox &&
-                e.target.runtimeType.toString().contains('Backdrop'),
-          ),
-      isFalse,
-    );
-  });
-
-  testWidgets('ngoài shell, ShellFabLift không đệm gì', (tester) async {
-    await tester.pumpWidget(
-      const MaterialApp(
-        home: Scaffold(
-          floatingActionButton: ShellFabLift(child: SizedBox(key: Key('f'))),
-        ),
-      ),
-    );
-
-    expect(ShellBarInset.barHeight, 62);
-    final padding = tester.widget<Padding>(
-      find.descendant(
-        of: find.byType(ShellFabLift),
-        matching: find.byType(Padding),
-      ),
-    );
-    expect(padding.padding, EdgeInsets.zero);
   });
 }

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -9,6 +10,7 @@ import '../../../core/storage/storage_keys.dart';
 import '../../../core/utils/client_id.dart';
 import '../data/tasks_api.dart';
 import '../domain/task.dart';
+import '../domain/task_reminder.dart';
 import 'tasks_providers.dart';
 
 /// A tick that has not been confirmed by the server yet.
@@ -236,7 +238,10 @@ class TaskController
 
     final current = state.valueOrNull;
     state = AsyncData(
-      TaskDetailState(task: fresh, pending: current?.pending ?? const []),
+      TaskDetailState(
+        task: current == null ? fresh : _keepInFlight(fresh, current.task),
+        pending: current?.pending ?? const [],
+      ),
     );
   }
 
@@ -298,12 +303,11 @@ class TaskController
   }
 
   Future<void> setStatus(String status) async {
-    final current = state.valueOrNull;
-    if (current == null) return;
+    if (state.valueOrNull == null) return;
 
     final updated = await ref.read(tasksApiProvider).setStatus(arg, status);
     if (_disposed) return;
-    state = AsyncData(current.copyWith(task: updated));
+    _adopt(updated);
   }
 
   /// Chuyển công việc sang công đoạn khác.
@@ -314,15 +318,14 @@ class TaskController
   /// một cây đàn nhảy cột rồi nhảy ngược lại vì mạng hỏng là thứ khó tin hơn
   /// nhiều so với một giây chờ.
   Future<void> moveToSection(String? sectionId) async {
-    final current = state.valueOrNull;
-    if (current == null) return;
+    if (state.valueOrNull == null) return;
 
     final updated = await ref
         .read(tasksApiProvider)
         .moveToSection(arg, sectionId);
     if (_disposed) return;
 
-    state = AsyncData(current.copyWith(task: updated));
+    _adopt(updated);
   }
 
   /// Đặt lại danh sách người làm.
@@ -381,7 +384,10 @@ class TaskController
     (api) => api.comment(arg, body, mentionedUserIds: mentionedUserIds),
   );
 
-  Future<void> addSubtask(String title) =>
+  /// Thêm việc con; trả bản server của lượt POST (id việc con mới nằm ở
+  /// đó), null khi màn chưa có dữ liệu. Chỗ gọi lấy id từ phản hồi này chứ
+  /// không từ state: realtime có thể thay state giữa chừng.
+  Future<Task?> addSubtask(String title) =>
       _apply((api) => api.addSubtask(arg, title));
 
   Future<void> renameSubtask(String subtaskId, String title) =>
@@ -402,20 +408,349 @@ class TaskController
     discard(subtaskId);
   }
 
+  /// Đặt lại nhãn của việc. LẠC QUAN: dải nhãn đổi ngay dưới ngón tay, rồi
+  /// theo bản server. Lỗi thì hoàn tác về nhãn cũ và NÉM lại để chỗ gọi báo
+  /// ("Không lưu được nhãn.") — một nhãn lặng lẽ biến mất đọc như đã lưu.
+  ///
+  /// Các lượt NỐI ĐUÔI nhau như [setCustomField]: dải nhãn đổi ngay, nhưng
+  /// lượt gửi sau chờ lượt trước về. Lượt cuối hỏng thì dải về nhãn SERVER
+  /// ĐÃ XÁC NHẬN gần nhất ([_labelsConfirmed]) — không về nhãn lượt liền
+  /// trước đã xin: lượt đó có thể cũng đã hỏng, và hiện nó là hiện thứ chưa
+  /// từng được lưu.
+  Future<void> setLabels(List<String> labels) {
+    final current = state.valueOrNull;
+    if (current == null) return Future<void>.value();
+
+    final next = List<String>.unmodifiable(labels);
+    // Đầu chuỗi: nhãn đang hiện là bản server (không lượt nào bay).
+    if ((_inFlight[_Field.labels] ?? 0) == 0) {
+      _labelsConfirmed = current.task.labels;
+    }
+    state = AsyncData(
+      current.copyWith(task: current.task.copyWith(labels: next)),
+    );
+    _inFlight[_Field.labels] = (_inFlight[_Field.labels] ?? 0) + 1;
+
+    final run = _labelsQueue.then((_) => _sendLabels(next));
+    // Hàng đợi không mang lỗi: lượt trước hỏng thì lượt sau vẫn chạy.
+    _labelsQueue = run.then<void>((_) {}, onError: (Object _) {});
+    return run;
+  }
+
+  Future<void> _labelsQueue = Future<void>.value();
+
+  /// Nhãn server xác nhận gần nhất trong chuỗi lượt nhãn đang bay.
+  List<String> _labelsConfirmed = const [];
+
+  Future<void> _sendLabels(List<String> labels) async {
+    void land() => _inFlight[_Field.labels] = _inFlight[_Field.labels]! - 1;
+
+    try {
+      final updated = await ref.read(tasksApiProvider).setLabels(arg, labels);
+      land();
+      _labelsConfirmed = updated.labels;
+      _adopt(updated);
+    } on Object {
+      land();
+      final latest = state.valueOrNull;
+      // Còn lượt sau đang bay thì lượt sau quyết dải nhãn; lượt cuối hỏng thì
+      // về nhãn server đã xác nhận.
+      if (!_disposed &&
+          latest != null &&
+          (_inFlight[_Field.labels] ?? 0) == 0) {
+        state = AsyncData(
+          latest.copyWith(task: latest.task.copyWith(labels: _labelsConfirmed)),
+        );
+      }
+      rethrow;
+    }
+  }
+
+  /// Bật/tắt thích của [userId] (người đang đăng nhập). Lạc quan như
+  /// [setLabels]; lỗi thì hoàn tác và ném ("Không thích được.").
+  Future<void> toggleLike(String userId) => _optimistic(
+    _Field.likes,
+    (task) => task.copyWith(
+      likes: task.isLikedBy(userId)
+          ? [
+              for (final id in task.likes)
+                if (id != userId) id,
+            ]
+          : [...task.likes, userId],
+    ),
+    (api) => api.toggleLike(arg),
+    (before, latest) => latest.copyWith(likes: before.likes),
+  );
+
+  Future<void> setArchived(bool archived) =>
+      _apply((api) => api.setArchived(arg, archived));
+
+  /// Chuyển việc sang kế hoạch khác. Chờ server như [moveToSection].
+  Future<void> moveTask({required String projectId, String? sectionId}) =>
+      _apply(
+        (api) => api.moveTask(arg, projectId: projectId, sectionId: sectionId),
+      );
+
+  /// null = xoá ngày bắt đầu.
+  Future<void> setStartDate(DateTime? startDate) =>
+      _apply((api) => api.setStartDate(arg, startDate));
+
+  /// Ghi MỘT trường tuỳ chỉnh.
+  ///
+  /// Server thay CẢ map `custom_fields`, nên gộp giá trị mới vào map đang có
+  /// rồi gửi cả map. Gửi riêng một trường là xoá mọi trường khác — trả 200,
+  /// không ai biết. null = xoá giá trị của trường này (giữ khoá với null).
+  ///
+  /// Các lượt nối đuôi nhau: lượt sau chờ lượt trước xong rồi mới gộp vào map
+  /// LÚC ĐÓ (đã có giá trị lượt trước nếu server nhận). Chạy song song thì hai
+  /// lượt cùng gộp từ map cũ, và lượt về sau xoá giá trị của lượt kia.
+  Future<void> setCustomField(String fieldId, Object? value) {
+    final run = _customFieldsQueue.then(
+      (_) => _apply((api) {
+        final current = state.valueOrNull?.task.customFields ?? const {};
+        return api.setCustomFields(arg, {...current, fieldId: value});
+      }),
+    );
+    // Hàng đợi không mang lỗi: lượt trước hỏng thì lượt sau vẫn chạy. Lỗi vẫn
+    // tới chỗ gọi qua `run`.
+    _customFieldsQueue = run.then<void>((_) {}, onError: (Object _) {});
+    return run;
+  }
+
+  Future<void> _customFieldsQueue = Future<void>.value();
+
+  /// Ghim / bỏ ghim lên đầu cột. Chờ server: thứ tự do server sắp.
+  Future<void> setPinned(bool pinned) =>
+      _apply((api) => api.setPinned(arg, pinned));
+
+  /// Khoá / mở khoá (chủ / quản lý kế hoạch).
+  Future<void> setLocked(bool locked) =>
+      _apply((api) => api.setLocked(arg, locked));
+
+  /// Tự theo dõi / bỏ theo dõi.
+  Future<void> setFollowing(bool following) =>
+      _apply((api) => api.setFollowing(arg, following));
+
+  /// Đặt lại TOÀN BỘ người theo dõi.
+  Future<void> setFollowers(List<String> userIds) =>
+      _apply((api) => api.setFollowers(arg, userIds));
+
+  /// Tạo việc con đủ trường trong MỘT lượt POST (Nhóm 2). Trả bản server
+  /// như [addSubtask].
+  Future<Task?> createSubtask({
+    required String title,
+    String? description,
+    DateTime? startDate,
+    DateTime? dueDate,
+    String? assigneeId,
+  }) => _apply(
+    (api) => api.createSubtask(
+      arg,
+      title: title,
+      description: description,
+      startDate: startDate,
+      dueDate: dueDate,
+      assigneeId: assigneeId,
+    ),
+  );
+
+  /// null = xoá hạn việc con.
+  Future<void> setSubtaskDueDate(String subtaskId, DateTime? dueDate) =>
+      _apply((api) => api.setSubtaskDueDate(arg, subtaskId, dueDate));
+
+  /// null = xoá ngày bắt đầu việc con.
+  Future<void> setSubtaskStartDate(String subtaskId, DateTime? startDate) =>
+      _apply((api) => api.setSubtaskStartDate(arg, subtaskId, startDate));
+
+  /// Rỗng = xoá ghi chú việc con.
+  Future<void> setSubtaskDescription(String subtaskId, String description) =>
+      _apply((api) => api.setSubtaskDescription(arg, subtaskId, description));
+
+  /// Kéo thả việc con: [subtaskId] đứng ngay sau [afterId] (null = đầu).
+  ///
+  /// LẠC QUAN: danh sách đổi chỗ ngay dưới ngón tay (thả xong mà dòng nhảy
+  /// về chỗ cũ một giây là thả lại lần nữa). Lỗi thì trả THỨ TỰ cũ trên bản
+  /// mới nhất — không trả cả ảnh chụp cũ, kẻo xoá tick vừa về — rồi ném.
+  Future<void> moveSubtask(String subtaskId, {required String? afterId}) =>
+      _optimistic(
+        _Field.order,
+        (task) => task.copyWith(
+          subtasks: _placeAfter(task.subtasks, subtaskId, afterId),
+        ),
+        (api) => api.moveSubtask(arg, subtaskId, afterId: afterId),
+        (before, latest) => latest.copyWith(
+          subtasks: _ordered(latest.subtasks, [
+            for (final s in before.subtasks) s.id,
+          ]),
+        ),
+      );
+
+  /// Bình luận kèm tệp (multipart `files[]`). Thân rỗng được.
+  Future<void> commentWithFiles(
+    String body, {
+    List<String> mentionedUserIds = const [],
+    required List<CommentUpload> files,
+  }) => _apply(
+    (api) => api.commentWithFiles(
+      arg,
+      body,
+      mentionedUserIds: mentionedUserIds,
+      files: files,
+    ),
+  );
+
+  /// Gỡ một tệp kèm bình luận.
+  Future<void> deleteCommentAttachment(String commentId, String attachmentId) =>
+      _apply(
+        (api) => api.deleteCommentAttachment(arg, commentId, attachmentId),
+      );
+
+  Future<void> deleteAttachment(String attachmentId) =>
+      _apply((api) => api.deleteAttachment(arg, attachmentId));
+
+  Future<void> deleteComment(String commentId) =>
+      _apply((api) => api.deleteComment(arg, commentId));
+
+  /// Hiện [change] ngay, gọi API, rồi theo bản server. Lỗi thì ném lại cho chỗ
+  /// gọi báo, sau khi [revert] trả ĐÚNG trường đã đổi về giá trị trước
+  /// ([before]) trên bản MỚI NHẤT ([latest]).
+  ///
+  /// Không đặt lại cả việc về ảnh chụp cũ: trong lúc lượt này bay, một lượt
+  /// ghi khác có thể đã được server xác nhận và nằm trong state — ảnh chụp cũ
+  /// sẽ xoá nó đi mà không ai hay.
+  Future<void> _optimistic(
+    _Field field,
+    Task Function(Task task) change,
+    Future<Task> Function(TasksApi api) call,
+    Task Function(Task before, Task latest) revert,
+  ) async {
+    final current = state.valueOrNull;
+    if (current == null) return;
+
+    state = AsyncData(current.copyWith(task: change(current.task)));
+    _inFlight[field] = (_inFlight[field] ?? 0) + 1;
+    var landed = false;
+    void land() {
+      if (landed) return;
+      landed = true;
+      _inFlight[field] = _inFlight[field]! - 1;
+    }
+
+    try {
+      final updated = await call(ref.read(tasksApiProvider));
+      land();
+      if (_disposed) return;
+      final latest = state.valueOrNull ?? current;
+      state = AsyncData(
+        latest.copyWith(task: _keepInFlight(updated, latest.task)),
+      );
+    } on Object {
+      land();
+      if (!_disposed) {
+        final latest = state.valueOrNull ?? current;
+        state = AsyncData(
+          latest.copyWith(task: revert(current.task, latest.task)),
+        );
+      }
+      rethrow;
+    }
+  }
+
   /// Gọi API rồi thay công việc trong state bằng bản server trả về.
   ///
   /// Không lạc quan, và có lý do: mọi thứ đi qua đây đều là sửa dữ liệu điều
   /// phối — hạn, ưu tiên, người làm. Chúng được sửa vài lần một ngày, và một
   /// giá trị hiện lên rồi lặng lẽ quay về cũ vì mạng hỏng thì tệ hơn nhiều so
   /// với một giây chờ. Tick việc con thì ngược lại, nên nó có đường riêng.
-  Future<void> _apply(Future<Task> Function(TasksApi api) call) async {
-    final current = state.valueOrNull;
-    if (current == null) return;
+  Future<Task?> _apply(Future<Task> Function(TasksApi api) call) async {
+    if (state.valueOrNull == null) return null;
 
-    final updated = await call(ref.read(tasksApiProvider));
-    if (_disposed) return;
+    final Task updated;
+    try {
+      updated = await call(ref.read(tasksApiProvider));
+    } on AppException catch (error) {
+      // 423: ai đó vừa khoá việc ở máy khác. Lỗi vẫn ném (câu của server
+      // hiện lên), và bản mới được tải để màn ẩn nút sửa, hiện "Đã khoá".
+      if (isTaskLockedError(error) && !_disposed) {
+        unawaited(refresh().catchError((Object _) {}));
+      }
+      rethrow;
+    }
+    if (_disposed) return updated;
 
-    state = AsyncData(current.copyWith(task: updated));
+    _adopt(updated);
+    return updated;
+  }
+
+  /// Nhận bản server trả về cho một lượt ghi chờ server.
+  ///
+  /// Áp lên state MỚI NHẤT, không lên ảnh chụp trước `await`: trong lúc lượt
+  /// này bay, người thợ có thể đã tick một việc con (hàng chờ `pending`) hoặc
+  /// tick đã báo lỗi. Ghi lại ảnh chụp cũ là xoá dòng "chưa lưu được" khỏi màn
+  /// hình trong khi đĩa vẫn nhớ — đúng kiểu tick bị bỏ sót lặng lẽ. Chỉ thay
+  /// `task`; `pending` giữ nguyên nên không cần ghi lại đĩa.
+  void _adopt(Task updated) {
+    final latest = state.valueOrNull;
+    if (_disposed || latest == null) return;
+    // Phản hồi này là nhãn SERVER mới nhất: lượt nhãn đang bay mà hỏng thì
+    // về đây, không về ảnh chụp đầu chuỗi (rà soát Task 10).
+    _labelsConfirmed = updated.labels;
+    state = AsyncData(
+      latest.copyWith(task: _keepInFlight(updated, latest.task)),
+    );
+  }
+
+  /// Số lượt lạc quan đang bay, theo từng trường.
+  final _inFlight = <_Field, int>{};
+
+  /// Bản [server] nhưng GIỮ trường đang có lượt lạc quan bay (lấy từ [shown]).
+  ///
+  /// Bản server của một lượt ghi khác có thể được dựng TRƯỚC khi server nhận
+  /// lượt nhãn / thích, nên mang giá trị cũ. Áp thẳng nó là nhãn vừa chọn bật
+  /// về cũ, và ở lại cũ nếu lượt kia về sau cùng. Lượt lạc quan tự về (hoặc
+  /// tự hoàn tác) sẽ đặt trường của nó.
+  Task _keepInFlight(Task server, Task shown) => server.copyWith(
+    labels: (_inFlight[_Field.labels] ?? 0) > 0 ? shown.labels : null,
+    likes: (_inFlight[_Field.likes] ?? 0) > 0 ? shown.likes : null,
+    // Thứ tự đang kéo: nội dung việc con theo server, THỨ TỰ theo màn.
+    subtasks: (_inFlight[_Field.order] ?? 0) > 0
+        ? _ordered(server.subtasks, [for (final s in shown.subtasks) s.id])
+        : null,
+  );
+
+  /// [items] với [id] chuyển tới ngay sau [afterId] (null = đầu).
+  static List<Subtask> _placeAfter(
+    List<Subtask> items,
+    String id,
+    String? afterId,
+  ) {
+    final moving = items.where((s) => s.id == id).toList();
+    if (moving.isEmpty) return items;
+    final rest = [
+      for (final s in items)
+        if (s.id != id) s,
+    ];
+    final at = afterId == null
+        ? 0
+        : rest.indexWhere((s) => s.id == afterId) + 1;
+
+    return [...rest]..insert(at.clamp(0, rest.length), moving.first);
+  }
+
+  /// [items] xếp theo [ids]; việc con không có trong [ids] (vừa thêm ở máy
+  /// khác) giữ thứ tự server, đứng cuối.
+  static List<Subtask> _ordered(List<Subtask> items, List<String> ids) {
+    final rank = {for (var i = 0; i < ids.length; i++) ids[i]: i};
+    final known = [
+      for (final s in items)
+        if (rank.containsKey(s.id)) s,
+    ]..sort((a, b) => rank[a.id]!.compareTo(rank[b.id]!));
+
+    return [
+      ...known,
+      for (final s in items)
+        if (!rank.containsKey(s.id)) s,
+    ];
   }
 
   /// Đặt state mới VÀ ghi hàng chờ xuống đĩa, trong một lời gọi.
@@ -494,3 +829,6 @@ final taskDetailProvider =
       TaskDetailState,
       String
     >(TaskController.new);
+
+/// Trường có đường ghi lạc quan riêng trong [TaskController].
+enum _Field { labels, likes, order }

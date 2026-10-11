@@ -1,5 +1,22 @@
 import '../../../core/utils/formatters.dart';
 import '../../../core/utils/json.dart';
+import '../../tasks/domain/custom_field.dart';
+
+/// Trạng thái ghi được của kế hoạch — đúng ba giá trị `UpdateProjectRequest`
+/// nhận (`in:active,done,archived`).
+enum PlanStatus {
+  active,
+  done,
+  archived;
+
+  /// Giá trị lạ rơi về [active]: một kế hoạch đọc không ra trạng thái vẫn
+  /// phải hiện trên danh sách.
+  static PlanStatus parse(String? raw) => switch (raw?.trim()) {
+    'done' => done,
+    'archived' => archived,
+    _ => active,
+  };
+}
 
 /// Vai của một người TRONG MỘT KẾ HOẠCH.
 ///
@@ -94,11 +111,13 @@ class Plan {
     this.sections = const [],
     this.memberIds = const [],
     this.memberRoles = const {},
+    this.customFields = const [],
     this.startDate,
     this.endDate,
     this.taskCount = 0,
     this.doneCount = 0,
     this.overdueCount = 0,
+    this.isFavorite,
   });
 
   factory Plan.fromJson(Map<String, dynamic> json) {
@@ -116,7 +135,7 @@ class Plan {
 
     return Plan(
       id: json.strOr('id', ''),
-      name: json.strOr('name', 'Dự án chưa đặt tên'),
+      name: json.strOr('name', 'Kế hoạch chưa đặt tên'),
       description: json.str('description'),
       color: json.str('color'),
       status: json.strOr('status', 'active'),
@@ -131,6 +150,10 @@ class Plan {
       memberRoles: json
           .child('member_roles')
           .map((userId, role) => MapEntry(userId, PlanRole.parse('$role'))),
+      customFields: json
+          .mapList('custom_fields')
+          .map(CustomFieldDef.fromJson)
+          .toList(),
       startDate: DateUtilsX.parse(json['start_date']),
       endDate: DateUtilsX.parse(json['end_date']),
       // API gói ba con số này trong `stats`, không rải phẳng ra ngoài — xem
@@ -141,6 +164,11 @@ class Plan {
       taskCount: stats.intOr('total'),
       doneCount: stats.intOr('done'),
       overdueCount: stats.intOr('overdue'),
+      // API Nhóm 2 gửi `is_favorite` (bool theo người xem) trên MỌI phản hồi
+      // kế hoạch; API cũ không có khoá → null = ẩn sao và mục Yêu thích.
+      isFavorite: json['is_favorite'] is bool
+          ? json['is_favorite'] as bool
+          : null,
     );
   }
 
@@ -173,12 +201,21 @@ class Plan {
   final List<PlanSection> sections;
   final List<String> memberIds;
   final Map<String, PlanRole> memberRoles;
+
+  /// Định nghĩa trường tuỳ chỉnh (`custom_fields[]`). `PUT /projects/{id}`
+  /// THAY cả mảng, nên sửa một trường là gửi lại đủ mảng.
+  final List<CustomFieldDef> customFields;
   final DateTime? startDate;
   final DateTime? endDate;
 
   final int taskCount;
   final int doneCount;
   final int overdueCount;
+
+  /// Kế hoạch tôi đã đánh dấu yêu thích; null = phản hồi không có khoá. Có
+  /// vẽ sao hay không do khả năng `projects.favorite` của phiên quyết
+  /// (`ApiCapability`), không do khoá này.
+  final bool? isFavorite;
 
   /// Vai của một người trong dự án này. Không có tên trong bảng thì là
   /// người xem — cùng lý do với [PlanRole.parse]. Có trong `member_ids` mà
@@ -193,4 +230,45 @@ class Plan {
   double get progress => taskCount == 0 ? 0 : doneCount / taskCount;
 
   bool get isArchived => status == 'archived';
+
+  PlanStatus get planStatus => PlanStatus.parse(status);
+
+  /// Bản sao có sửa vài trường. Viết tay, nên `plans_api_viec_moi_contract_test`
+  /// so TỪNG trường — quên một trường là mất nó sau lần cập nhật lạc quan đầu
+  /// tiên, đúng như `Task.copyWith` từng làm rơi `planSections`.
+  Plan copyWith({
+    String? name,
+    String? description,
+    String? color,
+    String? cover,
+    String? status,
+    String? teamId,
+    String? teamName,
+    String? ownerId,
+    List<PlanSection>? sections,
+    List<String>? memberIds,
+    Map<String, PlanRole>? memberRoles,
+    List<CustomFieldDef>? customFields,
+    bool? isFavorite,
+  }) => Plan(
+    id: id,
+    name: name ?? this.name,
+    description: description ?? this.description,
+    color: color ?? this.color,
+    cover: cover ?? this.cover,
+    status: status ?? this.status,
+    teamId: teamId ?? this.teamId,
+    teamName: teamName ?? this.teamName,
+    ownerId: ownerId ?? this.ownerId,
+    sections: sections ?? this.sections,
+    memberIds: memberIds ?? this.memberIds,
+    memberRoles: memberRoles ?? this.memberRoles,
+    customFields: customFields ?? this.customFields,
+    startDate: startDate,
+    endDate: endDate,
+    taskCount: taskCount,
+    doneCount: doneCount,
+    overdueCount: overdueCount,
+    isFavorite: isFavorite ?? this.isFavorite,
+  );
 }
