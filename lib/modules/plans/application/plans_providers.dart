@@ -78,6 +78,33 @@ final teamsWithPlansProvider = FutureProvider<List<TeamWithPlans>>((ref) async {
   final api = ref.watch(plansApiProvider);
   final (teams, plans) = await (api.teams(), api.plans()).wait;
 
+  return groupTeamsWithPlans(teams, plans);
+});
+
+/// Cây Teams lọc theo chữ ở SERVER (`GET /teams?search=`, `GET /projects?search=`).
+///
+/// Chuỗi rỗng là đúng [teamsWithPlansProvider]. Có chữ thì mỗi danh sách lọc
+/// riêng theo TÊN của chính nó, nên một kế hoạch khớp mà team không khớp vẫn
+/// hiện — dưới khối dựng từ `team_name` của nó, như mọi kế hoạch có team ngoài
+/// danh sách. Để dành cho khi danh sách có phân trang; tab Việc hôm nay lọc
+/// phía app trên dữ liệu đã tải đủ.
+final teamsWithPlansSearchProvider = FutureProvider.autoDispose
+    .family<List<TeamWithPlans>, String>((ref, search) async {
+      final query = search.trim();
+      if (query.isEmpty) return ref.watch(teamsWithPlansProvider.future);
+
+      ref.watch(planRealtimeSignalProvider);
+      final api = ref.watch(plansApiProvider);
+      final (teams, plans) = await (
+        api.teams(search: query),
+        api.plans(search: query),
+      ).wait;
+
+      return groupTeamsWithPlans(teams, plans);
+    });
+
+/// Ghép team với kế hoạch của nó, giữ mọi kế hoạch — kể cả kế hoạch mồ côi.
+List<TeamWithPlans> groupTeamsWithPlans(List<Team> teams, List<Plan> plans) {
   final byTeam = <String, List<Plan>>{};
   for (final plan in plans) {
     byTeam.putIfAbsent(plan.teamId ?? '', () => []).add(plan);
@@ -129,7 +156,7 @@ final teamsWithPlansProvider = FutureProvider<List<TeamWithPlans>>((ref) async {
   }
 
   return grouped;
-});
+}
 
 final planProvider = FutureProvider.family<Plan, String>((ref, id) {
   ref.watch(planRealtimeSignalProvider);

@@ -130,10 +130,10 @@ class _StubPlansApi implements PlansApi {
   final List<Plan> _plans;
 
   @override
-  Future<List<Team>> teams() async => _teams;
+  Future<List<Team>> teams({String? search}) async => _teams;
 
   @override
-  Future<List<Plan>> plans({String? teamId}) async => _plans;
+  Future<List<Plan>> plans({String? teamId, String? search}) async => _plans;
 
   @override
   noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);

@@ -1,11 +1,13 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/config/app_config.dart';
+import '../../../core/error/app_exception.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/network/api_envelope.dart';
 import '../../../core/utils/json.dart';
 import '../domain/custom_field.dart';
 import '../domain/task.dart';
+import '../domain/task_label.dart';
 
 /// Which slice of a person's work to show.
 ///
@@ -576,6 +578,64 @@ class TasksApi {
     }
 
     return all;
+  }
+
+  /// Nhóm `system_options` chứa bộ nhãn việc của công ty.
+  static const labelGroup = 'TASK_LABEL';
+
+  /// Bộ nhãn việc của công ty, chỉ nhãn đang bật.
+  ///
+  /// `group_key` BẮT BUỘC (thiếu → 422). Người thiếu `system_options.read`
+  /// nhận 403: trả rỗng thay vì ném — họ vẫn làm việc được, chỉ không có tên
+  /// và màu cho nhãn.
+  Future<List<TaskLabel>> taskLabels() async {
+    try {
+      final response = await _client.get(
+        '/system-options',
+        query: {'group_key': labelGroup, 'active_only': 1},
+      );
+
+      return response.list.map(TaskLabel.fromJson).toList();
+    } on ForbiddenException {
+      return const [];
+    }
+  }
+
+  /// Tạo một nhãn mới (`system_options.write`).
+  ///
+  /// Mã sinh từ [label] ([TaskLabel.codeFor]); [takenCodes] là các mã đã có
+  /// để tránh trùng. [color] null thì không gửi khoá.
+  Future<TaskLabel> createLabel({
+    required String label,
+    String? color,
+    Set<String> takenCodes = const {},
+  }) async {
+    final response = await _client.post(
+      '/system-options',
+      body: {
+        'group_key': labelGroup,
+        'code': TaskLabel.codeFor(label, taken: takenCodes),
+        'label': label,
+        if (color != null && color.isNotEmpty) 'color': color,
+      },
+    );
+
+    return TaskLabel.fromJson(response.object);
+  }
+
+  /// Sửa tên / màu một nhãn theo [id] bản ghi. Server KHÔNG nhận `code` hay
+  /// `group_key` ở đây — mã trên các việc cũ giữ nguyên.
+  Future<TaskLabel> updateLabel(
+    String id, {
+    required String label,
+    String? color,
+  }) async {
+    final response = await _client.put(
+      '/system-options/$id',
+      body: {'label': label, 'color': color},
+    );
+
+    return TaskLabel.fromJson(response.object);
   }
 
   Future<void> attach(String taskId, String filePath, {String? filename}) =>

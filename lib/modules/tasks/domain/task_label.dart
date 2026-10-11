@@ -1,4 +1,5 @@
 import '../../../core/utils/json.dart';
+import '../../../core/utils/text_search.dart';
 
 /// Một nhãn trong bộ nhãn của công ty (`system_options`, `group_key =
 /// TASK_LABEL`).
@@ -35,4 +36,31 @@ class TaskLabel {
 
   /// Nhãn mặc định của hệ thống: không xoá được.
   final bool isSystem;
+
+  /// Trần độ dài mã của server (`SystemOptionCatalog::CODE_MAX`).
+  static const codeMax = 100;
+
+  /// Mã cho một nhãn mới, sinh từ tên: bỏ dấu, chữ thường, mọi chuỗi ký tự
+  /// khác `[a-z0-9]` thành một `_`. Khớp regex server `^[a-z0-9_]+$`.
+  ///
+  /// Trùng một mã trong [taken] thì thêm `_2`, `_3`… — `CreateSystemOption`
+  /// bên API không kiểm trùng mã, và hai nhãn cùng mã là hai nhãn không phân
+  /// biệt được trên việc.
+  static String codeFor(String name, {Set<String> taken = const {}}) {
+    var base = foldDiacritics(
+      name,
+    ).replaceAll(RegExp('[^a-z0-9]+'), '_').replaceAll(RegExp(r'^_+|_+$'), '');
+    if (base.isEmpty) base = 'nhan';
+    if (base.length > codeMax) base = base.substring(0, codeMax);
+    if (!taken.contains(base)) return base;
+
+    for (var n = 2; ; n++) {
+      final suffix = '_$n';
+      final head = base.length + suffix.length > codeMax
+          ? base.substring(0, codeMax - suffix.length)
+          : base;
+      final candidate = '$head$suffix';
+      if (!taken.contains(candidate)) return candidate;
+    }
+  }
 }

@@ -15,6 +15,13 @@ abstract final class OmniCovers {
   /// Nền của dự án chưa chọn gì — và của MỌI dự án tạo trước tính năng này.
   static const fallback = 'teal-1';
 
+  /// Kính tối của header bảng kế hoạch (`Board.dc.html .bar`):
+  /// `rgba(20,44,58,.55)` phủ trên nền cover, cộng [glassBlur].
+  static const glass = Color.fromRGBO(20, 44, 58, .55);
+
+  /// Độ nhoè (sigma) của lớp kính tối.
+  static const double glassBlur = 20;
+
   static const _table = <String, List<Color>>{
     'teal-1': [Color(0xFF0F6E63), Color(0xFF0A4F47)],
     'teal-2': [Color(0xFF12776A), Color(0xFF124E6B)],

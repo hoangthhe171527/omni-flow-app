@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/config/app_config.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/network/api_envelope.dart';
+import '../../../design/tokens/omni_covers.dart';
+import '../../tasks/domain/custom_field.dart';
 import '../../tasks/domain/task.dart';
 import '../domain/plan.dart';
 import '../domain/feed_entry.dart';
@@ -35,13 +37,20 @@ class PlansApi {
 
   final ApiClient _client;
 
-  Future<List<Team>> teams() async {
+  /// Mọi team, tuỳ chọn lọc theo tên ([search], LIKE ở server —
+  /// `TeamController@index`). Rỗng thì không gửi khoá.
+  Future<List<Team>> teams({String? search}) async {
+    final query = search?.trim() ?? '';
     final all = <Team>[];
     var page = 1;
     while (true) {
       final response = await _client.get(
         '/teams',
-        query: {'page': page, 'per_page': AppConfig.maxPerPage},
+        query: {
+          if (query.isNotEmpty) 'search': query,
+          'page': page,
+          'per_page': AppConfig.maxPerPage,
+        },
       );
       all.addAll(response.list.map(Team.fromJson));
       final pagination = response.pagination;
@@ -57,7 +66,11 @@ class PlansApi {
   /// Bỏ trống [teamId] thì trả về TẤT CẢ, kể cả dự án chưa thuộc team nào —
   /// mọi dự án tạo trước tầng Team đều vậy, và giấu chúng đi nghĩa là công
   /// việc đang chạy biến mất khỏi app.
-  Future<List<Plan>> plans({String? teamId}) async {
+  ///
+  /// [search] lọc theo tên ở server (`ProjectController@index`); rỗng thì
+  /// không gửi khoá.
+  Future<List<Plan>> plans({String? teamId, String? search}) async {
+    final query = search?.trim() ?? '';
     final all = <Plan>[];
     var page = 1;
     while (true) {
@@ -65,6 +78,7 @@ class PlansApi {
         '/projects',
         query: {
           if (teamId != null && teamId.isNotEmpty) 'team_id': teamId,
+          if (query.isNotEmpty) 'search': query,
           'page': page,
           'per_page': AppConfig.maxPerPage,
         },
@@ -185,6 +199,47 @@ class PlansApi {
     return Plan.fromJson(response.object);
   }
 
+  /// Sửa kế hoạch: CHỈ những khoá [patch] đã đặt.
+  ///
+  /// Server coi khoá gửi kèm null là XOÁ trường (`UpdateProjectDTO::$provided`),
+  /// nên gửi cả bản ghi là mời xoá nhầm — xem [PlanPatch.toJson].
+  Future<Plan> updatePlan(String planId, PlanPatch patch) async {
+    final response = await _client.put(
+      '/projects/$planId',
+      body: patch.toJson(),
+    );
+
+    return Plan.fromJson(response.object);
+  }
+
+  /// Sao chép kế hoạch (`POST /projects/{id}/copy`, `CopyProjectRequest`).
+  ///
+  /// `copy_tasks` và `as_template` luôn gửi tường minh. [startDate] chỉ gửi
+  /// khi có, dạng `YYYY-MM-DD` (luật `date`).
+  Future<Plan> copyPlan(
+    String planId, {
+    required String name,
+    bool copyTasks = true,
+    bool asTemplate = false,
+    DateTime? startDate,
+  }) async {
+    final response = await _client.post(
+      '/projects/$planId/copy',
+      body: {
+        'name': name,
+        'copy_tasks': copyTasks,
+        'as_template': asTemplate,
+        if (startDate != null)
+          'start_date':
+              '${startDate.year.toString().padLeft(4, '0')}-'
+              '${startDate.month.toString().padLeft(2, '0')}-'
+              '${startDate.day.toString().padLeft(2, '0')}',
+      },
+    );
+
+    return Plan.fromJson(response.object);
+  }
+
   /// "Tháng này xong bao nhiêu cây, còn bao xa tới mốc thưởng."
   ///
   /// Bỏ trống [planId] thì tính trên toàn bộ tenant — đúng cách xưởng đếm,
@@ -283,6 +338,67 @@ class PlansApi {
       pagination: response.pagination ?? const ApiPagination.empty(),
     );
   }
+}
+
+/// Một lượt sửa kế hoạch: chỉ những trường được đặt (khác null) đi lên.
+///
+/// Khoá theo `UpdateProjectRequest`. Muốn XOÁ mô tả thì đặt chuỗi rỗng: Laravel
+/// đổi nó thành null, và vì khoá có gửi nên server xoá trường đó.
+///
+/// [members] gộp `member_ids` và `member_roles` vào một chỗ: hai khoá ấy phải
+/// đi cùng nhau — gửi danh sách người mà thiếu vai (hoặc ngược lại) là để
+/// server giữ một nửa cũ, một nửa mới.
+class PlanPatch {
+  /// Không `const`: kiểm [cover] cần gọi [OmniCovers.names], thứ một hàm tạo
+  /// const không gọi được.
+  PlanPatch({
+    this.name,
+    this.description,
+    this.cover,
+    this.color,
+    this.teamId,
+    this.status,
+    this.members,
+    this.customFields,
+  }) : assert(
+         cover == null || OmniCovers.names.contains(cover),
+         'cover phải là một tên trong OmniCovers.names, nhận "$cover"',
+       );
+
+  final String? name;
+  final String? description;
+
+  /// TÊN nền (`teal-1`…), không URL. Phải nằm trong [OmniCovers.names] —
+  /// server không có danh sách để từ chối tên lạ.
+  final String? cover;
+  final String? color;
+  final String? teamId;
+  final PlanStatus? status;
+
+  /// Người trong kế hoạch và vai của họ: khoá = id người.
+  final Map<String, PlanRole>? members;
+
+  /// Cả mảng định nghĩa trường tuỳ chỉnh — server thay cả mảng.
+  final List<CustomFieldDef>? customFields;
+
+  bool get isEmpty => toJson().isEmpty;
+
+  Map<String, dynamic> toJson() => {
+    if (name != null) 'name': name,
+    if (description != null) 'description': description,
+    if (cover != null) 'cover': cover,
+    if (color != null) 'color': color,
+    if (teamId != null) 'team_id': teamId,
+    if (status != null) 'status': status!.name,
+    if (members != null) ...{
+      'member_ids': members!.keys.toList(),
+      'member_roles': {
+        for (final entry in members!.entries) entry.key: entry.value.name,
+      },
+    },
+    if (customFields != null)
+      'custom_fields': [for (final field in customFields!) field.toJson()],
+  };
 }
 
 /// Số việc tối đa bảng nạp về.

@@ -24,6 +24,16 @@ abstract final class TaskPermissions {
   /// Khớp với `ProjectAccessService::MANAGE_ALL_PERMISSION` bên API.
   static const manageAllProjects = 'tasks.projects.manage.all';
 
+  /// Đọc bộ nhãn công ty (`GET /system-options?group_key=TASK_LABEL`).
+  ///
+  /// Không phải quyền của module tasks mà của `system_options`: API chưa mở
+  /// đường đọc nhãn cho `tasks.read`, nên người thợ thiếu quyền này thấy mã
+  /// nhãn mà không có tên và màu.
+  static const readLabels = 'system_options.read';
+
+  /// Tạo và sửa nhãn (`POST`/`PUT /system-options`).
+  static const writeLabels = 'system_options.write';
+
   static const all = [read, write];
 
   static const anyRead = [read];
@@ -34,6 +44,8 @@ class TaskAccess extends ResourceAccess {
     required super.readScope,
     required bool canWrite,
     required this.isAssigner,
+    this.canReadLabels = false,
+    this.canEditLabels = false,
   }) : super(
          canCreate: canWrite,
          canUpdate: canWrite,
@@ -62,8 +74,17 @@ class TaskAccess extends ResourceAccess {
       readScope: canRead ? AccessScope.all : AccessScope.none,
       canWrite: policy.can(TaskPermissions.write),
       isAssigner: policy.can(TaskPermissions.manageAllProjects),
+      canReadLabels: policy.can(TaskPermissions.readLabels),
+      canEditLabels: policy.can(TaskPermissions.writeLabels),
     );
   }
+
+  /// Đọc được danh mục nhãn (tên, màu). Thiếu thì app không gọi mạng và chỉ
+  /// có mã nhãn.
+  final bool canReadLabels;
+
+  /// Tạo / sửa nhãn trong sheet Nhãn màu. Thiếu thì ẩn bút sửa và "Nhãn mới".
+  final bool canEditLabels;
 
   /// Ticking a stage, changing status — the whole point of the app for a worker.
   bool get canComplete => can('complete');

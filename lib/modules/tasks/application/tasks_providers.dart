@@ -10,6 +10,7 @@ import '../../team/team.dart';
 import '../data/tasks_api.dart';
 import '../domain/custom_field.dart';
 import '../domain/task.dart';
+import '../domain/task_label.dart';
 import '../domain/task_permissions.dart';
 
 final taskAccessProvider = Provider<TaskAccess>((ref) {
@@ -257,6 +258,22 @@ final taskOverdueCountProvider = FutureProvider.autoDispose<int>((ref) async {
 /// badge không nháy về 0 mỗi lần realtime bơm tín hiệu.
 final taskBadgeProvider = Provider.autoDispose<int>((ref) {
   return ref.watch(taskOverdueCountProvider).valueOrNull ?? 0;
+});
+
+/// Bộ nhãn việc của công ty (`TASK_LABEL`).
+///
+/// Giữ suốt phiên (không autoDispose): thẻ việc nào trên bảng cũng tra màu ở
+/// đây. Sửa hoặc tạo nhãn xong thì `ref.invalidate(taskLabelsProvider)`.
+///
+/// Thiếu `system_options.read` thì trả rỗng mà KHÔNG gọi mạng: dải nhãn ẩn,
+/// chip nhãn hiện mã với màu `fallback`. API trả 403 cũng ra rỗng
+/// ([TasksApi.taskLabels]).
+final taskLabelsProvider = FutureProvider<List<TaskLabel>>((ref) async {
+  // `taskAccessProvider` dựng lại theo phiên (đổi tenant / người đăng nhập),
+  // nên theo dõi nó cũng là tải lại bộ nhãn khi phiên đổi.
+  if (!ref.watch(taskAccessProvider).canReadLabels) return const [];
+
+  return ref.watch(tasksApiProvider).taskLabels();
 });
 
 /// Định nghĩa trường tuỳ chỉnh của một kế hoạch, cho chi tiết việc.

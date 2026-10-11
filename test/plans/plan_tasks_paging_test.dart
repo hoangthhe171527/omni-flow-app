@@ -83,6 +83,9 @@ void main() {
 /// Trả về đúng [total] việc, chia trang theo `perPage` mà chỗ gọi xin.
 class _PagedApi implements PlansApi {
   @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+
+  @override
   Future<void> deletePlan(String planId) async {}
 
   @override
@@ -135,9 +138,9 @@ class _PagedApi implements PlansApi {
   }) async => (entries: const <FeedEntry>[], truncated: false);
 
   @override
-  Future<List<Team>> teams() async => const [];
+  Future<List<Team>> teams({String? search}) async => const [];
   @override
-  Future<List<Plan>> plans({String? teamId}) async => const [];
+  Future<List<Plan>> plans({String? teamId, String? search}) async => const [];
   @override
   Future<Plan> plan(String id) async => Plan.fromJson({'id': id, 'name': 'X'});
   @override
