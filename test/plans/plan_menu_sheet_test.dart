@@ -1,0 +1,447 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
+import 'package:omni_app/design/theme/omni_theme.dart';
+import 'package:omni_app/modules/plans/application/plans_providers.dart';
+import 'package:omni_app/modules/plans/data/plans_api.dart';
+import 'package:omni_app/modules/plans/domain/plan.dart';
+import 'package:omni_app/modules/plans/domain/team.dart';
+import 'package:omni_app/modules/plans/presentation/plan_board_page.dart';
+import 'package:omni_app/modules/plans/presentation/widgets/plan_menu_sheet.dart';
+import 'package:omni_app/modules/plans/routes.dart';
+import 'package:omni_app/modules/settings/application/appearance_providers.dart';
+import 'package:omni_app/modules/tasks/application/tasks_providers.dart';
+import 'package:omni_app/modules/tasks/domain/task.dart';
+import 'package:omni_app/modules/tasks/domain/task_label.dart';
+import 'package:omni_app/modules/tasks/domain/task_permissions.dart';
+import 'package:omni_app/modules/team/team.dart';
+import 'package:omni_app/security/permissions/access_policy.dart';
+import 'package:omni_app/security/session/session.dart';
+import 'package:omni_app/security/session/session_controller.dart';
+
+import '../support/fixed_background.dart';
+
+/// Menu kế hoạch (`PlanMenu.dc.html` / `Board.dc.html` `isMenu`): sheet ba
+/// nhóm, mục theo quyền, các lượt ghi đi đúng khoá.
+void main() {
+  const planId = 'p1';
+  const managerPerms = {'tasks.read', 'tasks.write', 'system_options.read'};
+  const workerPerms = {'tasks.read', 'tasks.write', 'system_options.read'};
+  const assignerPerms = {
+    'tasks.read',
+    'tasks.write',
+    'tasks.projects.manage.all',
+    'system_options.read',
+  };
+
+  Map<String, dynamic> planJson({
+    String role = 'manager',
+    String status = 'active',
+  }) => {
+    'id': planId,
+    'name': 'Bảo hành',
+    'team_id': 't1',
+    'team_name': 'Tổ kỹ thuật',
+    'cover': 'plum-1',
+    'status': status,
+    'owner_id': 'u-owner',
+    'member_ids': ['u-me', 'u-2'],
+    'member_roles': {'u-me': role},
+    'sections': [
+      {'id': 's1', 'name': 'Tiếp nhận', 'order': 0},
+    ],
+  };
+
+  late _FakePlansApi api;
+
+  Future<void> pump(
+    WidgetTester tester, {
+    String role = 'manager',
+    String status = 'active',
+    Set<String> perms = managerPerms,
+  }) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    api = _FakePlansApi(Plan.fromJson(planJson(role: role, status: status)));
+    final router = GoRouter(
+      initialLocation: '/plans/$planId',
+      routes: [
+        GoRoute(
+          path: '/teams',
+          name: PlanRoutes.teams,
+          builder: (_, _) => const Scaffold(body: Text('tab viec')),
+        ),
+        GoRoute(
+          path: '/plans/:id',
+          name: PlanRoutes.board,
+          builder: (_, state) =>
+              PlanBoardPage(planId: state.pathParameters['id']!),
+        ),
+      ],
+    );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          plansApiProvider.overrideWithValue(api),
+          planTasksProvider.overrideWith(
+            (ref, id) async => (tasks: <Task>[], truncated: false),
+          ),
+          teamsWithPlansProvider.overrideWith(
+            (ref) async => const [
+              TeamWithPlans(
+                team: Team(id: 't1', name: 'Tổ kỹ thuật'),
+                plans: [],
+              ),
+              TeamWithPlans(
+                team: Team(id: 't2', name: 'Tổ sơn'),
+                plans: [],
+              ),
+            ],
+          ),
+          taskLabelsProvider.overrideWith(
+            (ref) async => const [
+              TaskLabel(
+                id: 'o1',
+                code: 'khan_cap',
+                label: 'Khẩn cấp',
+                color: '#B42318',
+              ),
+            ],
+          ),
+          backgroundProvider.overrideWith(FixedBackground.new),
+          teamDirectoryProvider.overrideWith(
+            (ref) async => const [
+              TeamMember(
+                membershipId: 'm0',
+                userId: 'u-owner',
+                name: 'Trung Nguyên',
+              ),
+            ],
+          ),
+          sessionProvider.overrideWithValue(
+            const Session(
+              status: SessionStatus.authenticated,
+              user: SessionUser(id: 'u-me', fullName: 'Tôi', email: 'me@x.vn'),
+            ),
+          ),
+          taskAccessProvider.overrideWithValue(
+            TaskAccess.of(AccessPolicy(perms)),
+          ),
+        ],
+        child: MaterialApp.router(
+          theme: OmniTheme.light(TargetPlatform.android),
+          routerConfig: router,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+  }
+
+  Future<void> openMenu(WidgetTester tester) async {
+    await tester.tap(find.byTooltip('Tuỳ chọn kế hoạch'));
+    await tester.pumpAndSettle();
+  }
+
+  testWidgets('(a) quản lý: đủ ba nhóm, đầu sheet, không mục Nhóm 2', (
+    tester,
+  ) async {
+    await pump(tester);
+    await openMenu(tester);
+
+    expect(find.byType(PlanMenuSheet), findsOneWidget);
+    expect(find.text('Tổ kỹ thuật · chủ: Trung Nguyên'), findsOneWidget);
+    for (final label in [
+      'Sửa tên, mô tả, nền',
+      'Thành viên',
+      'Nhãn màu',
+      'Trường tuỳ chỉnh',
+      'Sao chép kế hoạch',
+      'Chuyển sang team khác',
+      'Đóng kế hoạch',
+    ]) {
+      expect(find.text(label), findsOneWidget, reason: label);
+    }
+    // Số thành viên: chủ + hai người.
+    expect(
+      find.descendant(
+        of: find.ancestor(
+          of: find.text('Thành viên'),
+          matching: find.byType(InkWell),
+        ),
+        matching: find.text('3'),
+      ),
+      findsOneWidget,
+    );
+    for (final hidden in [
+      'Chuyển chủ kế hoạch',
+      'Sao chép liên kết',
+      'Việc đã lưu trữ',
+      'Mở lại kế hoạch',
+      'Xoá kế hoạch',
+      'Sửa nhóm việc',
+    ]) {
+      expect(find.text(hidden), findsNothing, reason: hidden);
+    }
+    expect(find.byKey(const Key('plan-menu-group-0')), findsOneWidget);
+    expect(find.byKey(const Key('plan-menu-group-1')), findsOneWidget);
+    expect(find.byKey(const Key('plan-menu-group-2')), findsOneWidget);
+  });
+
+  testWidgets('(a) kích thước theo bản mẫu: nhóm surface bo 8, dòng 48', (
+    tester,
+  ) async {
+    await pump(tester);
+    await openMenu(tester);
+
+    final group = tester.widget<Container>(
+      find.byKey(const Key('plan-menu-group-0')),
+    );
+    final deco = group.decoration! as BoxDecoration;
+    expect(deco.color, Colors.white);
+    expect(deco.borderRadius, BorderRadius.circular(8));
+    expect(
+      tester
+          .getSize(
+            find.ancestor(
+              of: find.text('Nhãn màu'),
+              matching: find.byType(InkWell),
+            ),
+          )
+          .height,
+      48,
+    );
+    final close = tester.widget<Text>(find.text('Đóng kế hoạch'));
+    expect(close.style?.color, const Color(0xFFB42318));
+    expect(close.style?.fontSize, 15);
+    expect(close.style?.fontWeight, FontWeight.w500);
+    expect(
+      tester.getSize(find.byKey(const Key('sheet-handle'))),
+      const Size(36, 4),
+    );
+    expect(
+      tester.getSize(find.byKey(const Key('plan-menu-cover'))),
+      const Size(36, 36),
+    );
+  });
+
+  testWidgets('(a) thợ chỉ thấy "Nhãn màu", mở ra chỉ xem', (tester) async {
+    await pump(tester, role: 'member', perms: workerPerms);
+    await openMenu(tester);
+
+    expect(find.text('Nhãn màu'), findsOneWidget);
+    for (final hidden in [
+      'Sửa tên, mô tả, nền',
+      'Thành viên',
+      'Trường tuỳ chỉnh',
+      'Sao chép kế hoạch',
+      'Chuyển sang team khác',
+      'Đóng kế hoạch',
+    ]) {
+      expect(find.text(hidden), findsNothing, reason: hidden);
+    }
+    expect(find.byKey(const Key('plan-menu-group-1')), findsNothing);
+    expect(find.byKey(const Key('plan-menu-group-2')), findsNothing);
+
+    await tester.tap(find.text('Nhãn màu'));
+    await tester.pumpAndSettle();
+    expect(find.text('Khẩn cấp'), findsOneWidget);
+    expect(find.text('Nhãn dùng chung cho cả công ty'), findsOneWidget);
+    expect(find.bySemanticsLabel('Sửa nhãn Khẩn cấp'), findsNothing);
+    expect(find.text('Nhãn mới…'), findsNothing);
+  });
+
+  testWidgets('(g) đóng kế hoạch: hỏi lại, gửi status done, về tab Việc', (
+    tester,
+  ) async {
+    await pump(tester);
+    await openMenu(tester);
+    await tester.tap(find.text('Đóng kế hoạch'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Đóng kế hoạch “Bảo hành”?'), findsOneWidget);
+    expect(api.patches, isEmpty);
+    await tester.tap(find.widgetWithText(TextButton, 'Đóng kế hoạch'));
+    await tester.pumpAndSettle();
+
+    expect(api.patches.single.toJson(), {'status': 'done'});
+    expect(find.text('tab viec'), findsOneWidget);
+  });
+
+  testWidgets('kế hoạch đã đóng: "Mở lại kế hoạch" gửi status active', (
+    tester,
+  ) async {
+    await pump(tester, status: 'done');
+    await openMenu(tester);
+
+    expect(find.text('Đóng kế hoạch'), findsNothing);
+    await tester.tap(find.text('Mở lại kế hoạch'));
+    await tester.pumpAndSettle();
+
+    expect(api.patches.single.toJson(), {'status': 'active'});
+  });
+
+  testWidgets('(f) sao chép: gọi /copy đúng khoá rồi mở bảng mới', (
+    tester,
+  ) async {
+    await pump(tester);
+    await openMenu(tester);
+    await tester.tap(find.text('Sao chép kế hoạch'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Bản sao của Bảo hành'), findsOneWidget);
+    await tester.tap(find.text('Lưu làm mẫu'));
+    await tester.pump();
+    await tester.tap(find.widgetWithText(FilledButton, 'Sao chép'));
+    await tester.pumpAndSettle();
+
+    expect(api.copies.single, (
+      planId: planId,
+      name: 'Bản sao của Bảo hành',
+      copyTasks: true,
+      asTemplate: true,
+    ));
+    expect(find.text('Bản sao mới'), findsOneWidget);
+  });
+
+  testWidgets('chuyển team: chọn team khác gửi team_id', (tester) async {
+    await pump(tester);
+    await openMenu(tester);
+    await tester.tap(find.text('Chuyển sang team khác'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Không team'), findsOneWidget);
+    expect(find.bySemanticsLabel(RegExp('Tổ kỹ thuật.*đang chọn')), findsOne);
+    await tester.tap(find.text('Tổ sơn'));
+    await tester.pumpAndSettle();
+
+    expect(api.patches.single.toJson(), {'team_id': 't2'});
+  });
+
+  testWidgets('chuyển team: "Không team" gửi team_id null (clearTeam)', (
+    tester,
+  ) async {
+    await pump(tester);
+    await openMenu(tester);
+    await tester.tap(find.text('Chuyển sang team khác'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Không team'));
+    await tester.pumpAndSettle();
+
+    final sent = api.patches.single;
+    expect(sent.clearTeam, isTrue);
+    expect(sent.toJson(), {'team_id': null});
+  });
+
+  testWidgets('người giao việc: "Xoá kế hoạch" cuối nhóm 3, đỏ, hỏi lại', (
+    tester,
+  ) async {
+    await pump(tester, role: 'member', perms: assignerPerms);
+    await openMenu(tester);
+
+    final group = find.byKey(const Key('plan-menu-group-2'));
+    expect(
+      find.descendant(of: group, matching: find.text('Xoá kế hoạch')),
+      findsOneWidget,
+    );
+    expect(
+      tester.getTopLeft(find.text('Xoá kế hoạch')).dy,
+      greaterThan(tester.getTopLeft(find.text('Đóng kế hoạch')).dy),
+    );
+    await tester.tap(find.text('Xoá kế hoạch'));
+    await tester.pumpAndSettle();
+    expect(find.text('Xoá kế hoạch “Bảo hành”?'), findsOneWidget);
+  });
+
+  testWidgets('(i) không còn PopupMenuButton trên bảng', (tester) async {
+    await pump(tester);
+    expect(find.byType(PopupMenuButton), findsNothing);
+    await openMenu(tester);
+    expect(find.byType(PopupMenuButton), findsNothing);
+  });
+
+  testWidgets('chế độ tối: nền sheet theo scaffold, nhóm theo surface', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    final plan = Plan.fromJson(planJson());
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          teamDirectoryProvider.overrideWith(
+            (ref) async => const <TeamMember>[],
+          ),
+        ],
+        child: MaterialApp(
+          theme: OmniTheme.dark(TargetPlatform.android),
+          home: Scaffold(
+            body: PlanMenuSheet(
+              plan: plan,
+              groups: planMenuGroups(
+                plan,
+                canManage: true,
+                canDelete: false,
+                canViewLabels: true,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    final ctx = tester.element(find.byType(PlanMenuSheet));
+    final group = tester.widget<Container>(
+      find.byKey(const Key('plan-menu-group-0')),
+    );
+    expect(
+      (group.decoration! as BoxDecoration).color,
+      Theme.of(ctx).colorScheme.surface,
+    );
+    expect(find.text('Tổ kỹ thuật'), findsOneWidget);
+  });
+}
+
+typedef _Copy = ({String planId, String name, bool copyTasks, bool asTemplate});
+
+class _FakePlansApi implements PlansApi {
+  _FakePlansApi(this._plan);
+
+  Plan _plan;
+  final patches = <PlanPatch>[];
+  final copies = <_Copy>[];
+
+  @override
+  Future<Plan> plan(String id) async =>
+      id == _plan.id ? _plan : Plan.fromJson({'id': id, 'name': 'Bản sao mới'});
+
+  @override
+  Future<Plan> updatePlan(String planId, PlanPatch patch) async {
+    patches.add(patch);
+    _plan = _plan.copyWith(status: patch.status?.name, teamId: patch.teamId);
+    return _plan;
+  }
+
+  @override
+  Future<Plan> copyPlan(
+    String planId, {
+    required String name,
+    bool copyTasks = true,
+    bool asTemplate = false,
+    DateTime? startDate,
+  }) async {
+    copies.add((
+      planId: planId,
+      name: name,
+      copyTasks: copyTasks,
+      asTemplate: asTemplate,
+    ));
+    return Plan.fromJson({'id': 'p9', 'name': 'Bản sao mới'});
+  }
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}

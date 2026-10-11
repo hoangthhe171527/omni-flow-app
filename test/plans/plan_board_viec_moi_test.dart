@@ -530,14 +530,14 @@ void main() {
     await tester.pumpAndSettle();
   });
 
-  testWidgets('⋯ kế hoạch: Sửa nhóm việc + Xoá kế hoạch cho người giao', (
+  testWidgets('⋯ kế hoạch: Sửa kế hoạch + Xoá kế hoạch cho người giao', (
     tester,
   ) async {
     await pumpBoard(tester);
 
     await tester.tap(find.byTooltip('Tuỳ chọn kế hoạch'));
     await tester.pumpAndSettle();
-    expect(find.text('Sửa nhóm việc'), findsOneWidget);
+    expect(find.text('Sửa tên, mô tả, nền'), findsOneWidget);
     await tester.tap(find.text('Xoá kế hoạch'));
     await tester.pumpAndSettle();
     expect(find.text('Xoá kế hoạch “Bảo hành”?'), findsOneWidget);

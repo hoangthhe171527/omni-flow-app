@@ -24,6 +24,32 @@ abstract final class OmniLabelColors {
 
   static Color of(String? label) => _known[label?.trim()] ?? fallback;
 
+  /// Ba chấm chọn nhanh ở dòng "Nhãn mới…" (`TaskDetail.dc.html` sheet nhãn):
+  /// màu chính, xanh dương, cam.
+  static const quickPicks = <Color>[
+    Color(0xFF0A7D76),
+    Color(0xFF2563EB),
+    Color(0xFFE8890C),
+  ];
+
+  /// Bảng màu khi sửa một nhãn: ba chấm nhanh cùng sáu màu nhãn của bản mẫu.
+  static const palette = <Color>[
+    ...quickPicks,
+    Color(0xFF5E8C0A),
+    Color(0xFF0E7490),
+    Color(0xFF56637A),
+    Color(0xFFB42318),
+    Color(0xFFB45309),
+    Color(0xFF6D28D9),
+  ];
+
+  /// `#RRGGBB` chữ hoa — dạng server lưu trong `system_options.color` (≤30).
+  static String toHex(Color color) {
+    final rgb = color.toARGB32() & 0xFFFFFF;
+
+    return '#${rgb.toRadixString(16).padLeft(6, '0').toUpperCase()}';
+  }
+
   static final _hex = RegExp(r'^#?([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$');
 
   /// Màu từ chuỗi hex `#RRGGBB` / `RRGGBB` / `#RGB` (luôn đục).

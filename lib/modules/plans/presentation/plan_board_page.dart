@@ -21,10 +21,15 @@ import '../application/plans_providers.dart';
 import '../data/plans_api.dart';
 import '../domain/plan.dart';
 import '../routes.dart';
+import 'edit_plan_page.dart';
 import 'edit_sections_page.dart';
+import 'plan_fields_page.dart';
+import 'plan_members_page.dart';
 import 'widgets/board_column.dart';
 import 'widgets/board_zoom.dart';
 import 'widgets/person_filter_sheet.dart';
+import 'widgets/plan_copy_move_sheets.dart';
+import 'widgets/plan_menu_sheet.dart';
 
 /// Bảng kế hoạch (`Board.dc.html`): nền theo `cover`, header kính tối, dải
 /// cột 300 kéo ngang có snap căn giữa, hé cột kế bên.
@@ -95,6 +100,16 @@ class _PlanBoardPageState extends ConsumerState<PlanBoardPage> {
         (taskAccess.isAssigner ||
             (currentUserId != null &&
                 loaded.roleOf(currentUserId).canManagePlan));
+    // Sửa kế hoạch (tên, nền, thành viên, trường, đóng, chuyển team) cùng
+    // điều kiện với sửa nhóm việc.
+    final menuGroups = loaded == null
+        ? const <List<PlanMenuAction>>[]
+        : planMenuGroups(
+            loaded,
+            canManage: canEditSections,
+            canDelete: canDeletePlan,
+            canViewLabels: taskAccess.canReadLabels,
+          );
 
     final buckets = ref.watch(
       boardBucketsProvider((planId: widget.planId, person: _person)),
@@ -137,12 +152,8 @@ class _PlanBoardPageState extends ConsumerState<PlanBoardPage> {
                 onCloseSearch: _closeSearch,
                 filterActive: _person.chipLabel != null,
                 onFilter: _pickPerson,
-                onMenu: loaded != null && (canEditSections || canDeletePlan)
-                    ? () => _planMenu(
-                        loaded,
-                        canEditSections: canEditSections,
-                        canDeletePlan: canDeletePlan,
-                      )
+                onMenu: menuGroups.isNotEmpty
+                    ? () => _planMenu(loaded!, menuGroups)
                     : null,
               ),
               Expanded(
@@ -400,27 +411,137 @@ class _PlanBoardPageState extends ConsumerState<PlanBoardPage> {
     }
   }
 
-  /// ⋯ của kế hoạch, tạm thời tới khi menu kế hoạch đầy đủ ra đời (Task 6).
-  Future<void> _planMenu(
-    Plan plan, {
-    required bool canEditSections,
-    required bool canDeletePlan,
-  }) async {
-    final choice = await _optionsSheet<_PlanAction>(plan.name, [
-      if (canEditSections)
-        (_PlanAction.editSections, Icons.view_column_outlined, 'Sửa nhóm việc'),
-      if (canDeletePlan)
-        (_PlanAction.delete, Icons.delete_outline, 'Xoá kế hoạch'),
-    ], danger: _PlanAction.delete);
-    if (!mounted) return;
+  /// ⋯ của kế hoạch: sheet ba nhóm (`PlanMenu.dc.html`). Sửa nhóm việc đã
+  /// chuyển sang ⋯ của cột và ô "Thêm nhóm việc".
+  Future<void> _planMenu(Plan plan, List<List<PlanMenuAction>> groups) async {
+    final choice = await showPlanMenuSheet(context, plan: plan, groups: groups);
+    if (!mounted || choice == null) return;
+    final navigator = Navigator.of(context);
     switch (choice) {
-      case _PlanAction.editSections:
-        await _editSections();
-      case _PlanAction.delete:
+      case PlanMenuAction.edit:
+        await navigator.push(
+          MaterialPageRoute<bool>(
+            builder: (_) => EditPlanPage(planId: plan.id),
+          ),
+        );
+      case PlanMenuAction.members:
+        await navigator.push(
+          MaterialPageRoute<bool>(
+            builder: (_) => PlanMembersPage(planId: plan.id),
+          ),
+        );
+      case PlanMenuAction.labels:
+        await showLabelsSheet(context);
+      case PlanMenuAction.fields:
+        await navigator.push(
+          MaterialPageRoute<bool>(
+            builder: (_) => PlanFieldsPage(planId: plan.id),
+          ),
+        );
+      case PlanMenuAction.copy:
+        await _copyPlan(plan);
+      case PlanMenuAction.moveTeam:
+        await _moveTeam(plan);
+      case PlanMenuAction.close:
+        await _closePlan(plan);
+      case PlanMenuAction.reopen:
+        await _patchPlan(
+          plan,
+          PlanPatch(status: PlanStatus.active),
+          done: 'Đã mở lại kế hoạch.',
+        );
+      case PlanMenuAction.delete:
         await _deletePlan(plan);
-      case null:
-        break;
     }
+  }
+
+  /// Gửi [patch], làm mới kế hoạch và tab Việc; báo [done] khi xong.
+  Future<bool> _patchPlan(Plan plan, PlanPatch patch, {String? done}) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final container = ProviderScope.containerOf(context);
+    try {
+      await container.read(plansApiProvider).updatePlan(plan.id, patch);
+      container.invalidate(planProvider(plan.id));
+      container.invalidate(teamsWithPlansProvider);
+      if (done != null) {
+        messenger.showSnackBar(SnackBar(content: Text(done)));
+      }
+      return true;
+    } on AppException catch (error) {
+      messenger.showSnackBar(SnackBar(content: Text(error.message)));
+      return false;
+    }
+  }
+
+  Future<void> _closePlan(Plan plan) async {
+    final confirmed = await showOmniConfirm(
+      context: context,
+      title: 'Đóng kế hoạch “${plan.name}”?',
+      message:
+          'Kế hoạch sẽ không còn hiện ở tab Việc. Công việc vẫn giữ nguyên, '
+          'và mở lại được từ menu kế hoạch.',
+      confirmLabel: 'Đóng kế hoạch',
+      destructive: true,
+    );
+    if (!confirmed || !mounted) return;
+    final ok = await _patchPlan(
+      plan,
+      PlanPatch(status: PlanStatus.done),
+      done: 'Đã đóng kế hoạch.',
+    );
+    if (ok && mounted) context.goNamed(PlanRoutes.teams);
+  }
+
+  Future<void> _copyPlan(Plan plan) async {
+    final choice = await showCopyPlanSheet(context, plan);
+    if (choice == null || !mounted) return;
+    final messenger = ScaffoldMessenger.of(context);
+    final container = ProviderScope.containerOf(context);
+    final router = GoRouter.of(context);
+    try {
+      final copy = await container
+          .read(plansApiProvider)
+          .copyPlan(
+            plan.id,
+            name: choice.name,
+            copyTasks: choice.copyTasks,
+            asTemplate: choice.asTemplate,
+          );
+      container.invalidate(teamsWithPlansProvider);
+      if (!mounted) return;
+      router.pushReplacementNamed(
+        PlanRoutes.board,
+        pathParameters: {'id': copy.id},
+      );
+    } on AppException catch (error) {
+      messenger.showSnackBar(SnackBar(content: Text(error.message)));
+    }
+  }
+
+  Future<void> _moveTeam(Plan plan) async {
+    final groups = await ref.read(teamsWithPlansProvider.future);
+    if (!mounted) return;
+    final target = await showMoveTeamSheet(
+      context,
+      plan: plan,
+      teams: [
+        for (final group in groups)
+          if (!group.synthetic && group.team.id.isNotEmpty) group.team,
+      ],
+    );
+    if (target == null || !mounted) return;
+    await switch (target) {
+      PlanTeamTo(:final team) => _patchPlan(
+        plan,
+        PlanPatch(teamId: team.id),
+        done: 'Đã chuyển sang ${team.name}.',
+      ),
+      PlanTeamNone() => _patchPlan(
+        plan,
+        PlanPatch(clearTeam: true),
+        done: 'Kế hoạch không còn thuộc team nào.',
+      ),
+    };
   }
 
   Future<void> _sectionOptions(
@@ -627,8 +748,6 @@ class _PlanBoardPageState extends ConsumerState<PlanBoardPage> {
     }
   }
 }
-
-enum _PlanAction { editSections, delete }
 
 enum _SectionAction { rename, remove, reorder }
 

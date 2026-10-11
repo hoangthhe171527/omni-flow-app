@@ -17,6 +17,9 @@ abstract final class OmniDuration {
   /// Sheet trượt lên, chuyển màn.
   static const slow = Duration(milliseconds: 320);
 
+  /// Sheet chia nhóm của màn Việc (`Board.dc.html` `sheet .38s`).
+  static const sheet = Duration(milliseconds: 380);
+
   /// Hiệu ứng mở app — chạy MỘT lần mỗi lần khởi động (xem `OmniSplash`).
   static const splash = Duration(milliseconds: 1400);
 }
@@ -27,6 +30,9 @@ abstract final class OmniCurves {
 
   /// Nảy nhẹ khi một chấm "bật" ra — cubic-bezier(.3,1.6,.5,1).
   static const pop = Cubic(0.3, 1.6, 0.5, 1);
+
+  /// Sheet trượt lên của màn Việc — cubic-bezier(.2,.9,.25,1).
+  static const sheet = Cubic(0.2, 0.9, 0.25, 1);
 }
 
 /// Thang này mô tả app đang làm gì, không phải áp một thang lý thuyết lên nó.

@@ -75,7 +75,7 @@ class _CreatePlanPageState extends ConsumerState<CreatePlanPage> {
     final text = Theme.of(context).textTheme;
 
     // Bố cục `MCreatePlan.dc.html`: nền trắng, xem trước nền dự án, các ô có
-    // nhãn phía trên, nút "Tạo dự án" ghim ở đáy.
+    // nhãn phía trên, nút "Tạo kế hoạch" ghim ở đáy.
     final label = OmniType.body.copyWith(
       fontWeight: FontWeight.w600,
       color: scheme.onSurface,
@@ -86,7 +86,7 @@ class _CreatePlanPageState extends ConsumerState<CreatePlanPage> {
       appBar: AppBar(
         backgroundColor: scheme.surface,
         leading: const CloseButton(),
-        title: const Text('Dự án mới'),
+        title: const Text('Kế hoạch mới'),
       ),
       bottomNavigationBar: DecoratedBox(
         decoration: BoxDecoration(
@@ -105,7 +105,7 @@ class _CreatePlanPageState extends ConsumerState<CreatePlanPage> {
                       height: 20,
                       child: CircularProgressIndicator(strokeWidth: 2),
                     )
-                  : const Text('Tạo dự án'),
+                  : const Text('Tạo kế hoạch'),
             ),
           ),
         ),
@@ -145,7 +145,9 @@ class _CreatePlanPageState extends ConsumerState<CreatePlanPage> {
                   right: 16,
                   bottom: 16,
                   child: Text(
-                    _name.text.trim().isEmpty ? 'Dự án mới' : _name.text.trim(),
+                    _name.text.trim().isEmpty
+                        ? 'Kế hoạch mới'
+                        : _name.text.trim(),
                     style: OmniType.title.copyWith(
                       color: Colors.white,
                       fontWeight: FontWeight.w600,
@@ -159,7 +161,7 @@ class _CreatePlanPageState extends ConsumerState<CreatePlanPage> {
           ),
           const SizedBox(height: 18),
           OmniField(
-            label: 'Tên dự án',
+            label: 'Tên kế hoạch',
             child: TextField(
               controller: _name,
               autofocus: true,

@@ -64,6 +64,32 @@ void main() {
     },
   );
 
+  test('tab Việc chỉ giữ kế hoạch đang chạy (đóng / lưu trữ bị bỏ)', () {
+    Plan withStatus(String id, String? status) => Plan.fromJson({
+      'id': id,
+      'name': id,
+      'team_id': 't1',
+      'status': ?status,
+    });
+
+    final groups = groupTeamsWithPlans(
+      const [Team(id: 't1', name: 'Tổ một')],
+      [
+        withStatus('p-active', 'active'),
+        withStatus('p-done', 'done'),
+        withStatus('p-archived', 'archived'),
+        withStatus('p-legacy', null),
+        withStatus('p-odd', 'in_progress'),
+      ],
+    );
+
+    expect(groups.single.plans.map((p) => p.id), [
+      'p-active',
+      'p-legacy',
+      'p-odd',
+    ]);
+  });
+
   test('dự án THẬT SỰ chưa xếp tổ vẫn có chỗ riêng, không bị giấu', () async {
     // Phần lớn dữ liệu cũ ở trạng thái này. Giấu chúng là làm công việc đang
     // chạy biến mất khỏi app.

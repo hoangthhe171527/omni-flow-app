@@ -109,6 +109,10 @@ final teamsWithPlansSearchProvider = FutureProvider.autoDispose
 List<TeamWithPlans> groupTeamsWithPlans(List<Team> teams, List<Plan> plans) {
   final byTeam = <String, List<Plan>>{};
   for (final plan in plans) {
+    // Tab Việc chỉ hiện kế hoạch đang chạy: server không lọc theo `status`
+    // (trả cả `done` / `archived`), nên lọc ở đây. Trạng thái lạ đọc ra
+    // `active` ([PlanStatus.parse]) nên không bị giấu.
+    if (plan.planStatus != PlanStatus.active) continue;
     byTeam.putIfAbsent(plan.teamId ?? '', () => []).add(plan);
   }
 

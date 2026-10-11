@@ -178,7 +178,7 @@ void main() {
       ),
     );
 
-    testWidgets('quản lý kế hoạch thấy "Sửa nhóm việc" trong ⋯', (
+    testWidgets('quản lý kế hoạch thấy menu sửa kế hoạch trong ⋯', (
       tester,
     ) async {
       await tester.pumpWidget(board('manager'));
@@ -187,11 +187,11 @@ void main() {
       expect(find.byTooltip('Sửa nhóm việc'), findsNothing);
       await tester.tap(find.byTooltip('Tuỳ chọn kế hoạch'));
       await tester.pumpAndSettle();
-      expect(find.text('Sửa nhóm việc'), findsOneWidget);
+      expect(find.text('Sửa tên, mô tả, nền'), findsOneWidget);
       expect(find.text('Xoá kế hoạch'), findsNothing);
     });
 
-    testWidgets('người giao việc có đủ Sửa nhóm việc + Xoá kế hoạch', (
+    testWidgets('người giao việc có đủ Sửa kế hoạch + Xoá kế hoạch', (
       tester,
     ) async {
       await tester.pumpWidget(
@@ -207,7 +207,7 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.byTooltip('Tuỳ chọn kế hoạch'));
       await tester.pumpAndSettle();
-      expect(find.text('Sửa nhóm việc'), findsOneWidget);
+      expect(find.text('Sửa tên, mô tả, nền'), findsOneWidget);
       expect(find.text('Xoá kế hoạch'), findsOneWidget);
     });
 

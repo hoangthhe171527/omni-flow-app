@@ -28,7 +28,7 @@ void main() {
     ),
   );
 
-  /// Cuộn xuống cho tới khi nút "Tạo dự án" được DỰNG.
+  /// Cuộn xuống cho tới khi nút "Tạo kế hoạch" được DỰNG.
   ///
   /// Màn này là một `ListView`, nên widget dưới vùng nhìn thấy không tồn tại
   /// trong cây — `ensureVisible` không cứu được vì nó cần widget đã có. Từ khi
@@ -36,7 +36,7 @@ void main() {
   /// sổ kiểm 800×600.
   Future<void> revealSave(WidgetTester tester) async {
     await tester.scrollUntilVisible(
-      find.text('Tạo dự án'),
+      find.text('Tạo kế hoạch'),
       200,
       scrollable: find.byType(Scrollable).first,
     );
@@ -88,7 +88,7 @@ void main() {
     await tester.enterText(find.byType(TextField).first, 'Đàn cơ');
     await tester.pumpAndSettle();
     await revealSave(tester);
-    await tester.tap(find.text('Tạo dự án'));
+    await tester.tap(find.text('Tạo kế hoạch'));
     await tester.pumpAndSettle();
 
     expect(api.createdName, 'Đàn cơ');
@@ -118,7 +118,7 @@ void main() {
     await tester.enterText(find.byType(TextField).at(1), '   ');
     await tester.pumpAndSettle();
     await revealSave(tester);
-    await tester.tap(find.text('Tạo dự án'));
+    await tester.tap(find.text('Tạo kế hoạch'));
     await tester.pumpAndSettle();
 
     expect(

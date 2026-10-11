@@ -8,4 +8,5 @@ library;
 
 export 'presentation/create_task_page.dart';
 export 'presentation/widgets/due_chip.dart';
+export 'presentation/widgets/labels_sheet.dart';
 export 'presentation/widgets/task_card.dart';
