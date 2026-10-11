@@ -151,7 +151,8 @@ void main() {
       expect(visible().labels, ['khan_cap', 'cho_khach', 'noi_bo']);
     });
 
-    test('lượt cuối hỏng: về nhãn lượt liền trước đã xin', () async {
+    test('lượt cuối hỏng: về nhãn server đã xác nhận gần nhất (phản hồi lượt '
+        'đầu)', () async {
       final c = await open(base);
       final first = Completer<Task>();
       final second = Completer<Task>();
@@ -170,6 +171,28 @@ void main() {
       second.completeError(const NetworkException('mất mạng'));
       await expectLater(b, throwsA(isA<NetworkException>()));
       expect(visible().labels, ['khan_cap', 'cho_khach']);
+    });
+
+    test('lượt ghi KHÁC về giữa chừng mang nhãn server mới: lượt nhãn hỏng '
+        'thì về nhãn đó, không về ảnh chụp đầu chuỗi', () async {
+      final c = await open(base);
+      final first = Completer<Task>();
+      api.labelReplies.add(first);
+
+      final a = c.setLabels(['khan_cap', 'noi_bo']);
+      // Máy khác vừa đổi nhãn; phản hồi lượt lưu trữ mang bản server đó.
+      api.reply = Task.fromJson(const {
+        'id': 't1',
+        'title': 'KAWAI',
+        'labels': ['tu_may_khac'],
+      });
+      await c.setArchived(true);
+      // Lượt nhãn còn bay: dải vẫn theo lượt đang xin.
+      expect(visible().labels, ['khan_cap', 'noi_bo']);
+
+      first.completeError(const NetworkException('mất mạng'));
+      await expectLater(a, throwsA(isA<NetworkException>()));
+      expect(visible().labels, ['tu_may_khac']);
     });
 
     test('lượt đầu hỏng khi lượt sau còn bay: lượt sau quyết', () async {

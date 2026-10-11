@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -168,6 +170,22 @@ void main() {
       await t.pumpAndSettle();
       expect(api.calls.last, ('id-Sửa', false));
       expect(find.text('Yêu thích'), findsNothing);
+    });
+
+    testWidgets('bấm sao lần hai khi lượt đầu còn bay: bỏ qua, chỉ MỘT lượt '
+        'gửi', (t) async {
+      await pump(t, [
+        team([plan('Sửa', favorite: false)]),
+      ]);
+      api.gate = Completer<void>();
+      await t.tap(find.byKey(const Key('plan-favorite-id-Sửa')));
+      await t.pump();
+      await t.tap(find.byKey(const Key('plan-favorite-id-Sửa')));
+      await t.pump();
+      api.gate!.complete();
+      await t.pumpAndSettle();
+      expect(api.calls, [('id-Sửa', true)]);
+      expect(find.bySemanticsLabel('Bỏ khỏi yêu thích'), findsOneWidget);
     });
 
     testWidgets('lỗi: hoàn tác sao và báo', (t) async {
@@ -351,9 +369,13 @@ class _FavoriteApi implements PlansApi {
   final bool fail;
   final calls = <(String, bool)>[];
 
+  /// Giữ lượt ghi lại tới khi test cho về.
+  Completer<void>? gate;
+
   @override
   Future<bool> setFavorite(String planId, bool favorite) async {
     calls.add((planId, favorite));
+    await gate?.future;
     if (fail) throw const ForbiddenException('Không có quyền.');
     return favorite;
   }

@@ -19,9 +19,12 @@ class TaskProject {
   factory TaskProject.fromJson(Map<String, dynamic> json) => TaskProject(
     ownerId: json.str('owner_id'),
     memberIds: json.strList('member_ids'),
-    memberRoles: json
-        .child('member_roles')
-        .map((id, role) => MapEntry(id, '$role')),
+    // Như `roleFromAttributes` (`isset && !== ''`): vai null hoặc rỗng là
+    // KHÔNG có vai ghi rõ — rơi về `member_ids`.
+    memberRoles: {
+      for (final e in json.child('member_roles').entries)
+        if (e.value != null && '${e.value}'.isNotEmpty) e.key: '${e.value}',
+    },
     customFields: json
         .mapList('custom_fields')
         .map(CustomFieldDef.fromJson)

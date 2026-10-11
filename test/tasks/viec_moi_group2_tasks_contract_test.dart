@@ -12,6 +12,7 @@ import 'package:omni_app/modules/tasks/data/tasks_api.dart';
 import 'package:omni_app/modules/tasks/domain/task.dart';
 import 'package:omni_app/modules/tasks/domain/task_label.dart';
 import 'package:omni_app/modules/tasks/domain/task_permissions.dart';
+import 'package:omni_app/modules/tasks/domain/task_project.dart';
 import 'package:omni_app/security/permissions/access_policy.dart';
 import 'package:omni_app/security/session/api_capabilities.dart';
 import 'package:omni_app/security/session/session.dart';
@@ -293,15 +294,13 @@ void main() {
         ]);
       });
 
-      for (final status in [403, 404]) {
-        test(
-          '$status (API cũ: route rơi vào /{id}) → [] chứ không ném',
-          () async {
-            rec.status = status;
-            rec.body = '{"success":false,"message":"x"}';
-            expect(await api.taskLabelsForReaders(), isEmpty);
-          },
-        );
+      for (final status in [403, 404, 405]) {
+        test('$status (405: API cũ chỉ có PUT/DELETE /{id}; 403: quyền / cờ '
+            'tasks) → [] chứ không ném', () async {
+          rec.status = status;
+          rec.body = '{"success":false,"message":"x"}';
+          expect(await api.taskLabelsForReaders(), isEmpty);
+        });
       }
 
       test('lỗi khác vẫn ném', () async {
@@ -312,6 +311,22 @@ void main() {
           throwsA(isA<AppException>()),
         );
       });
+    });
+  });
+
+  group('TaskProject vai (ProjectAccessService::roleFromAttributes)', () {
+    test('vai rỗng hoặc null = không có vai ghi rõ → rơi về member_ids', () {
+      final p = TaskProject.fromJson(const {
+        'owner_id': 'u0',
+        'member_ids': ['u1', 'u2'],
+        'member_roles': {'u1': '', 'u2': null, 'u3': 'viewer'},
+      });
+      expect(p.memberRoles, {'u3': 'viewer'});
+      expect(p.roleOf('u1'), 'member');
+      expect(p.roleOf('u2'), 'member');
+      expect(p.isViewer('u1'), isFalse);
+      expect(p.roleOf('u3'), 'viewer');
+      expect(p.roleOf('u0'), 'owner');
     });
   });
 

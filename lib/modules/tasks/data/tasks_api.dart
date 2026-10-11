@@ -789,8 +789,10 @@ class TasksApi {
   /// /system-options/task-labels` → `[{code, label, color, sort_order}]`, chỉ
   /// nhãn đang bật. Không có `id`, nên KHÔNG dùng để sửa nhãn.
   ///
-  /// API cũ chưa có route: đường dẫn rơi vào `GET /system-options/{id}`
-  /// (`system_options.read` → 403, hoặc 404). Cả hai ra rỗng như trước đây.
+  /// Chỉ gọi khi phiên khai `system_options.task_labels`. Phòng khi API vẫn
+  /// lùi bản giữa phiên: API cũ KHÔNG có `GET /system-options/{id}` (chỉ
+  /// `PUT`/`DELETE /{id}`), nên đường này ra 405; tắt `feature:tasks` hay
+  /// thiếu quyền ra 403; route lạ ra 404. Cả ba ra rỗng như trước đây.
   Future<List<TaskLabel>> taskLabelsForReaders() async {
     try {
       final response = await _client.get('/system-options/task-labels');
@@ -800,6 +802,9 @@ class TasksApi {
       return const [];
     } on NotFoundException {
       return const [];
+    } on RequestRejectedException catch (e) {
+      if (e.code == '405') return const [];
+      rethrow;
     }
   }
 

@@ -78,6 +78,9 @@ class _TeamsPageState extends ConsumerState<TeamsPage> {
   /// Bấm sao (`POST|DELETE /projects/{id}/favorite`): đổi ngay dưới ngón tay,
   /// lỗi thì hoàn tác và báo.
   Future<void> _toggleFavorite(Plan plan) async {
+    // Lượt trước còn bay: bỏ qua chạm mới — hai lượt chéo nhau sẽ để sao
+    // hiện ngược với server tuỳ lượt nào về sau.
+    if (_favoriteInFlight.contains(plan.id)) return;
     final before = _favoriteOf(plan) ?? false;
     final next = !before;
     final messenger = ScaffoldMessenger.of(context);

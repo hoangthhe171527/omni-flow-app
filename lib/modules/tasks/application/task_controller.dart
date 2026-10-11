@@ -692,6 +692,9 @@ class TaskController
   void _adopt(Task updated) {
     final latest = state.valueOrNull;
     if (_disposed || latest == null) return;
+    // Phản hồi này là nhãn SERVER mới nhất: lượt nhãn đang bay mà hỏng thì
+    // về đây, không về ảnh chụp đầu chuỗi (rà soát Task 10).
+    _labelsConfirmed = updated.labels;
     state = AsyncData(
       latest.copyWith(task: _keepInFlight(updated, latest.task)),
     );
