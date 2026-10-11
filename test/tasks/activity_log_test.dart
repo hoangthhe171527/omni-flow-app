@@ -25,7 +25,7 @@ void main() {
   Widget host(Task value) => MaterialApp(
     theme: OmniTheme.light(TargetPlatform.android),
     home: Scaffold(
-      body: SingleChildScrollView(child: ActivityLog(task: value)),
+      body: SingleChildScrollView(child: ActivityCard(task: value)),
     ),
   );
 
@@ -34,12 +34,10 @@ void main() {
     await tester.pumpWidget(host(task(const [])));
     await tester.pumpAndSettle();
 
-    expect(find.textContaining('NHẬT KÝ'), findsNothing);
+    expect(find.textContaining('Nhật ký'), findsNothing);
   });
 
-  testWidgets('gấp mặc định — nói có bao nhiêu dòng, chưa bày ra', (
-    tester,
-  ) async {
+  testWidgets('gấp mặc định — chỉ có nút Xem, chưa bày ra', (tester) async {
     // Một cây đàn đi hết vòng phục chế để lại hàng trăm dòng. Mở sẵn là đẩy
     // thanh thao tác — chỗ người thợ tick và chụp ảnh — ra khỏi tầm ngón tay.
     await tester.pumpWidget(
@@ -51,7 +49,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('NHẬT KÝ (1)'), findsOneWidget);
+    expect(find.text('Nhật ký hoạt động'), findsOneWidget);
     expect(find.textContaining('đã tạo việc'), findsNothing);
   });
 
@@ -75,7 +73,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('NHẬT KÝ (1)'));
+    await tester.tap(find.text('Xem'));
     await tester.pumpAndSettle();
 
     expect(
@@ -99,7 +97,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('NHẬT KÝ (2)'));
+    await tester.tap(find.text('Xem'));
     await tester.pumpAndSettle();
 
     final newest = tester.getTopLeft(find.text('Hằng Ni đã đổi hạn')).dy;
@@ -122,7 +120,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('NHẬT KÝ (1)'));
+    await tester.tap(find.text('Xem'));
     await tester.pumpAndSettle();
 
     expect(find.text('đã tạo việc'), findsOneWidget);
@@ -140,7 +138,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('NHẬT KÝ (25)'));
+    await tester.tap(find.text('Xem'));
     await tester.pumpAndSettle();
 
     expect(find.text('Xem thêm 5 dòng'), findsOneWidget);

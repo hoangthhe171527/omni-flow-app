@@ -71,11 +71,14 @@ void main() {
     await tester.pumpWidget(host());
     await tester.pumpAndSettle();
 
-    final addField = find.widgetWithText(TextField, 'Thêm việc con');
-    expect(addField, findsOneWidget);
+    final add = find.byTooltip('Thêm việc con');
+    expect(add, findsOneWidget);
 
-    await tester.enterText(addField, 'Tháo máy');
-    await tester.testTextInput.receiveAction(TextInputAction.done);
+    await tester.tap(add);
+    await tester.pumpAndSettle();
+    await tester.enterText(sheetField, 'Tháo máy');
+    await tester.pump();
+    await tester.tap(find.text('Tạo'));
     await tester.pumpAndSettle();
 
     final sent = adapter.singleRequest;
@@ -108,6 +111,18 @@ class _RecordingAdapter implements HttpClientAdapter {
     Stream<Uint8List>? requestStream,
     Future<void>? cancelFuture,
   ) async {
+    // Thẻ Trường tuỳ chỉnh đọc định nghĩa của kế hoạch (GET /projects/{id}):
+    // lượt đọc phụ, không phải lượt ghi bài này kiểm.
+    if (options.method == 'GET' &&
+        options.uri.path.startsWith('/api/v1/projects/')) {
+      return ResponseBody.fromString(
+        '{"success":true,"data":{"id":"p1"}}',
+        200,
+        headers: {
+          Headers.contentTypeHeader: [Headers.jsonContentType],
+        },
+      );
+    }
     requests.add(options);
 
     return ResponseBody.fromString(

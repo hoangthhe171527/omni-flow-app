@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:omni_app/core/error/app_exception.dart';
-import 'package:omni_app/design/components/omni_dashed_circle.dart';
 import 'package:omni_app/design/theme/omni_theme.dart';
 import 'package:omni_app/modules/tasks/application/task_controller.dart';
 import 'package:omni_app/modules/tasks/application/tasks_providers.dart';
@@ -99,13 +98,24 @@ void main() {
     addTearDown(t.view.reset);
   }
 
+  /// Ô tên của sheet "Việc con mới" (tự lấy tiêu điểm).
+  final nameField = find.byWidgetPredicate(
+    (w) => w is TextField && w.autofocus,
+  );
+
+  Future<void> openCreate(WidgetTester t) async {
+    await t.tap(find.byTooltip('Thêm việc con'));
+    await t.pumpAndSettle();
+  }
+
   testWidgets('việc con chưa ai làm: vòng nét đứt, KHÔNG có chữ "Tôi nhận"', (
     t,
   ) async {
     phone(t);
     await t.pumpWidget(host(subtasks: [sub('c1', 'Vệ sinh')], perms: worker));
     await t.pumpAndSettle();
-    expect(find.byType(OmniDashedCircle), findsOneWidget);
+    expect(find.byKey(const ValueKey('subtask-mini-dashed')), findsOneWidget);
+    expect(find.text('Người làm'), findsWidgets);
     expect(find.bySemanticsLabel('Giao việc con'), findsOneWidget);
     expect(find.textContaining('Tôi nhận'), findsNothing);
     expect(find.textContaining('Nhận'), findsNothing);
@@ -232,8 +242,8 @@ void main() {
         host(subtasks: [sub('c1', 'A')], perms: const {'tasks.read'}),
       );
       await t.pumpAndSettle();
-      await t.tap(find.bySemanticsLabel('Giao việc con'));
-      await t.pumpAndSettle();
+      // Chỉ đọc: không có nút "Người làm" nét đứt nào để bấm.
+      expect(find.bySemanticsLabel('Giao việc con'), findsNothing);
       expect(find.text('Ai làm việc này'), findsNothing);
     },
   );
@@ -260,20 +270,21 @@ void main() {
     expect(find.bySemanticsLabel('Đổi người làm: Hoàng'), findsOneWidget);
   });
 
-  testWidgets('thêm việc con bằng Enter (người giao việc)', (t) async {
+  testWidgets('thêm việc con qua sheet (người giao việc)', (t) async {
     phone(t);
     await t.pumpWidget(host(subtasks: const [], perms: assigner));
     await t.pumpAndSettle();
-    await t.enterText(
-      find.widgetWithText(TextField, 'Thêm việc con'),
-      'Lên dây lần 2',
-    );
-    await t.testTextInput.receiveAction(TextInputAction.done);
+    await openCreate(t);
+    await t.enterText(nameField, 'Lên dây lần 2');
+    await t.pump();
+    await t.tap(find.text('Tạo'));
     await t.pumpAndSettle();
     expect(recorded.last, ('addSubtask', 'Lên dây lần 2', null));
   });
 
-  testWidgets('Enter hai lần khi đang thêm: chỉ thêm MỘT việc con', (t) async {
+  testWidgets('bấm Tạo hai lần khi đang thêm: chỉ thêm MỘT việc con', (
+    t,
+  ) async {
     phone(t);
     await t.pumpWidget(
       host(
@@ -283,8 +294,10 @@ void main() {
       ),
     );
     await t.pumpAndSettle();
-    await t.enterText(find.widgetWithText(TextField, 'Thêm việc con'), 'Lắp');
-    await t.testTextInput.receiveAction(TextInputAction.done);
+    await openCreate(t);
+    await t.enterText(nameField, 'Lắp');
+    await t.pump();
+    await t.tap(find.text('Tạo'));
     await t.pump(const Duration(milliseconds: 50));
     await t.testTextInput.receiveAction(TextInputAction.done);
     await t.pump(const Duration(milliseconds: 400));
@@ -299,7 +312,7 @@ void main() {
     final handle = t.ensureSemantics();
     await t.pumpWidget(host(subtasks: [sub('c1', 'Vệ sinh')], perms: worker));
     await t.pumpAndSettle();
-    final tick = find.bySemanticsLabel('Xong');
+    final tick = find.bySemanticsLabel('Đánh dấu xong việc con');
     expect(t.getSemantics(tick).getSemanticsData().value, 'Vệ sinh');
     expect(
       t.getSemantics(tick),
@@ -307,11 +320,11 @@ void main() {
         hasTapAction: true,
         isButton: true,
         hasCheckedState: true,
-        label: 'Xong',
+        label: 'Đánh dấu xong việc con',
         value: 'Vệ sinh',
       ),
     );
-    t.semantics.tap(find.semantics.byLabel('Xong'));
+    t.semantics.tap(find.semantics.byLabel('Đánh dấu xong việc con'));
     await t.pump();
     expect(recorded.last, ('toggleSubtask', 'c1', 'true'));
 
@@ -325,26 +338,29 @@ void main() {
     phone(t);
     await t.pumpWidget(host(subtasks: const [], perms: assigner));
     await t.pumpAndSettle();
-    await t.enterText(find.widgetWithText(TextField, 'Thêm việc con'), '   ');
+    await openCreate(t);
+    await t.enterText(nameField, '   ');
+    await t.pump();
+    await t.tap(find.text('Tạo'));
     await t.testTextInput.receiveAction(TextInputAction.done);
     await t.pumpAndSettle();
     expect(recorded, isEmpty);
   });
 
-  testWidgets('người thợ không thấy ô "Thêm việc con"', (t) async {
+  testWidgets('người thợ không thấy nút + "Thêm việc con"', (t) async {
     phone(t);
     await t.pumpWidget(host(subtasks: [sub('c1', 'A')], perms: worker));
     await t.pumpAndSettle();
-    expect(find.widgetWithText(TextField, 'Thêm việc con'), findsNothing);
+    expect(find.byTooltip('Thêm việc con'), findsNothing);
   });
 
-  testWidgets('tiêu đề khối: VIỆC CON và số xong/tổng', (t) async {
+  testWidgets('đầu thẻ: Việc con và số xong/tổng', (t) async {
     phone(t);
     await t.pumpWidget(
       host(subtasks: [sub('c1', 'A'), sub('c2', 'B')], perms: worker),
     );
     await t.pumpAndSettle();
-    expect(find.text('VIỆC CON'), findsOneWidget);
+    expect(find.text('Việc con'), findsOneWidget);
     expect(find.text('0/2'), findsOneWidget);
   });
 
@@ -354,7 +370,7 @@ void main() {
       host(subtasks: [sub('c1', 'A')], perms: worker, reduceMotion: true),
     );
     await t.pumpAndSettle();
-    await t.tap(find.bySemanticsLabel('Xong'));
+    await t.tap(find.bySemanticsLabel('Đánh dấu xong việc con'));
     await t.pump();
     await t.pump();
     expect(t.hasRunningAnimations, isFalse);
@@ -370,7 +386,7 @@ void main() {
       greaterThanOrEqualTo(44),
     );
     expect(
-      t.getSize(find.bySemanticsLabel('Xong')).shortestSide,
+      t.getSize(find.bySemanticsLabel('Đánh dấu xong việc con')).shortestSide,
       greaterThanOrEqualTo(44),
     );
   });

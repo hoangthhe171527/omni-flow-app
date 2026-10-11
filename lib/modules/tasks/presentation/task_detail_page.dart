@@ -6,31 +6,37 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/error/app_exception.dart';
+import '../../../core/utils/formatters.dart';
 import '../../../design/components/components.dart';
 import '../../../design/platform/omni_motion_scope.dart';
 import '../../../design/tokens/tokens.dart';
 import '../../../security/session/session_controller.dart';
+import '../../customers/routes.dart';
 import '../../plans/routes.dart';
 import '../application/task_controller.dart';
 import '../application/task_detail_actions.dart';
 import '../application/tasks_providers.dart';
 import '../data/tasks_api.dart';
+import '../domain/custom_field.dart';
 import '../domain/task.dart';
+import '../domain/task_permissions.dart';
 import 'widgets/activity_log.dart';
 import 'widgets/assign_task_sheet.dart';
 import 'widgets/comment_section.dart';
 import 'widgets/edit_sheets.dart';
 import 'widgets/labels_sheet.dart';
 import 'widgets/task_detail/breadcrumb.dart';
+import 'widgets/task_detail/comment_bar.dart';
+import 'widgets/task_detail/custom_fields_card.dart';
 import 'widgets/task_detail/description_card.dart';
 import 'widgets/task_detail/detail_header.dart';
+import 'widgets/task_detail/files_card.dart';
 import 'widgets/task_detail/label_strip.dart';
+import 'widgets/task_detail/move_task_sheet.dart';
 import 'widgets/task_detail/option_sheet.dart';
-import 'widgets/task_detail/section_title.dart';
-import 'widgets/task_detail/subtask_card.dart';
-import 'widgets/task_detail/task_action_bar.dart';
-import 'widgets/task_detail/task_attachments.dart';
+import 'widgets/task_detail/subtasks_card.dart';
 import 'widgets/task_detail/task_info_card.dart';
+import 'widgets/task_detail/task_menu_sheet.dart';
 import 'widgets/task_detail/title_row.dart';
 
 /// Chi tiết một việc (`TaskDetail.dc.html`).
@@ -38,7 +44,8 @@ import 'widgets/task_detail/title_row.dart';
 /// Nửa trên (Task 8 của Việc mới): header kính có tên việc hiện khi cuộn,
 /// dải nhãn, tiêu đề có ô tích, breadcrumb kế hoạch › nhóm, thẻ thông tin
 /// (người làm, thời gian, đánh giá + thích, ưu tiên) và thẻ mô tả. Nửa dưới
-/// (việc con, tệp, trao đổi, nhật ký) còn là các khối cũ tới Task 9.
+/// (Task 9): trường tuỳ chỉnh, việc con, tệp, bình luận, nhật ký; ô bình luận
+/// cố định ở đáy; ⋯ mở menu việc chia nhóm.
 ///
 /// Từng khối là một widget riêng dưới `widgets/task_detail/`; file này chỉ
 /// XẾP chúng và nối sheet với controller / [TaskDetailActions].
@@ -100,25 +107,39 @@ class _TaskDetailPageState extends ConsumerState<TaskDetailPage> {
     final detail = ref.watch(taskDetailProvider(taskId));
     final access = ref.watch(taskAccessProvider);
     final loadedTask = detail.valueOrNull?.visible;
+    final canWrite = access.canUpdate || access.canComplete;
+    final groups = loadedTask == null
+        ? const <List<TaskMenuAction>>[]
+        : taskMenuGroups(
+            canLabels: canWrite && access.canReadLabels,
+            isAssigner: access.isAssigner,
+            archived: loadedTask.archived,
+          );
 
     return Scaffold(
       appBar: DetailHeader(
         title: loadedTask?.title ?? '',
         titleShown: _titleShown,
-        // Đổi tên và xoá đều là việc của người giao việc. Menu chia nhóm của
-        // bản mẫu là Task 9.
-        menu: access.isAssigner && loadedTask != null
-            ? _TaskMenuButton(
-                onRename: () => _editTitle(
-                  context,
-                  TaskDetailActions(
-                    ref.read(taskDetailProvider(taskId).notifier),
+        // Không mục nào hiện thì không có ⋯.
+        menu: groups.isEmpty
+            ? null
+            : IconButton(
+                tooltip: 'Tuỳ chọn công việc',
+                onPressed: () => _openMenu(context, loadedTask!, groups),
+                style: IconButton.styleFrom(
+                  minimumSize: const Size(44, 44),
+                  maximumSize: const Size(44, 44),
+                  padding: EdgeInsets.zero,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(6),
                   ),
-                  loadedTask,
                 ),
-                onDelete: () => _deleteTask(context, loadedTask),
-              )
-            : null,
+                icon: Icon(
+                  Icons.more_horiz_rounded,
+                  size: OmniIconSize.lg,
+                  color: Theme.of(context).colorScheme.onSurface,
+                ),
+              ),
       ),
       body: OmniAsyncView(
         value: detail,
@@ -131,6 +152,87 @@ class _TaskDetailPageState extends ConsumerState<TaskDetailPage> {
         ),
       ),
     );
+  }
+
+  /// Menu việc (`TaskMenu.dc.html`): mở sheet rồi chạy mục đã chọn.
+  Future<void> _openMenu(
+    BuildContext context,
+    Task task,
+    List<List<TaskMenuAction>> groups,
+  ) async {
+    final controller = ref.read(taskDetailProvider(widget.taskId).notifier);
+    final action = await showTaskMenuSheet(context, groups: groups);
+    if (action == null || !context.mounted) return;
+
+    switch (action) {
+      case TaskMenuAction.labels:
+        await _openLabels(context, widget.taskId, controller, task);
+      case TaskMenuAction.rename:
+        await _editTitle(context, TaskDetailActions(controller), task);
+      case TaskMenuAction.move:
+        await _move(context, controller, task);
+      case TaskMenuAction.archive:
+        await _archive(context, controller, archived: true);
+      case TaskMenuAction.unarchive:
+        await _archive(context, controller, archived: false);
+      case TaskMenuAction.delete:
+        await _deleteTask(context, task);
+    }
+  }
+
+  /// Chuyển sang nhóm / kế hoạch khác. Xong thì báo bảng (cũ và mới) tải lại
+  /// qua tín hiệu realtime chung.
+  Future<void> _move(
+    BuildContext context,
+    TaskController controller,
+    Task task,
+  ) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final container = ProviderScope.containerOf(context);
+    final target = await showMoveTaskSheet(
+      context,
+      currentProjectId: task.projectId,
+      currentSectionId: task.sectionId,
+    );
+    if (target == null) return;
+    if (target.projectId == task.projectId &&
+        target.sectionId == task.sectionId) {
+      return;
+    }
+
+    try {
+      await controller.moveTask(
+        projectId: target.projectId,
+        sectionId: target.sectionId,
+      );
+      container.read(taskRealtimeSignalProvider.notifier).bump();
+      messenger.showSnackBar(
+        const SnackBar(content: Text('Đã chuyển công việc.')),
+      );
+    } on AppException catch (e) {
+      messenger.showSnackBar(SnackBar(content: Text(e.message)));
+    }
+  }
+
+  /// Lưu trữ thì rời màn (việc biến khỏi bảng); bỏ lưu trữ thì ở lại.
+  Future<void> _archive(
+    BuildContext context,
+    TaskController controller, {
+    required bool archived,
+  }) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final navigator = Navigator.of(context);
+    final container = ProviderScope.containerOf(context);
+    try {
+      await controller.setArchived(archived);
+      container.read(taskRealtimeSignalProvider.notifier).bump();
+      if (archived) unawaited(navigator.maybePop());
+      messenger.showSnackBar(
+        SnackBar(content: Text(archived ? 'Đã lưu trữ.' : 'Đã bỏ lưu trữ.')),
+      );
+    } on AppException catch (e) {
+      messenger.showSnackBar(SnackBar(content: Text(e.message)));
+    }
   }
 
   Future<void> _deleteTask(BuildContext context, Task task) async {
@@ -161,62 +263,6 @@ class _TaskDetailPageState extends ConsumerState<TaskDetailPage> {
     } on AppException catch (error) {
       messenger.showSnackBar(SnackBar(content: Text(error.message)));
     }
-  }
-}
-
-enum _TaskAction { rename, delete }
-
-/// ⋯ "Tuỳ chọn công việc" (44). Tạm giữ menu bật xuống cũ (Đổi tên, Xoá)
-/// tới khi sheet menu việc của Task 9 thay nó.
-class _TaskMenuButton extends StatelessWidget {
-  const _TaskMenuButton({required this.onRename, required this.onDelete});
-
-  final VoidCallback onRename;
-  final VoidCallback onDelete;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final danger = OmniColors.dangerTextOf(context);
-
-    return PopupMenuButton<_TaskAction>(
-      tooltip: 'Tuỳ chọn công việc',
-      onSelected: (action) => switch (action) {
-        _TaskAction.rename => onRename(),
-        _TaskAction.delete => onDelete(),
-      },
-      itemBuilder: (context) => [
-        const PopupMenuItem(
-          value: _TaskAction.rename,
-          child: Row(
-            children: [
-              Icon(Icons.edit_outlined),
-              SizedBox(width: OmniSpacing.sm),
-              Text('Đổi tên việc'),
-            ],
-          ),
-        ),
-        PopupMenuItem(
-          value: _TaskAction.delete,
-          child: Row(
-            children: [
-              Icon(Icons.delete_outline, color: danger),
-              const SizedBox(width: OmniSpacing.sm),
-              Text('Xoá công việc', style: TextStyle(color: danger)),
-            ],
-          ),
-        ),
-      ],
-      child: SizedBox(
-        width: 44,
-        height: 44,
-        child: Icon(
-          Icons.more_horiz_rounded,
-          size: OmniIconSize.lg,
-          color: scheme.onSurface,
-        ),
-      ),
-    );
   }
 }
 
@@ -295,7 +341,7 @@ class _Loaded extends ConsumerWidget {
         task.sectionName ?? (isAssigner ? 'Chưa xếp nhóm việc' : null);
     final normalPriority = task.priority == 'med' || task.priority == 'medium';
     final onAddLabel = canWrite && access.canReadLabels
-        ? () => _labels(context, controller, task)
+        ? () => _openLabels(context, taskId, controller, task)
         : null;
 
     final top = Column(
@@ -372,6 +418,50 @@ class _Loaded extends ConsumerWidget {
       ],
     );
 
+    final canOpenCustomer =
+        ref.watch(accessProvider).canAny(TaskPermissions.openCustomer) &&
+        GoRouter.maybeOf(context) != null;
+    final customerId = task.customerId;
+
+    final bottom = [
+      CustomFieldsCard(
+        task: task,
+        onEdit: canWrite ? (def) => _editField(context, controller, def) : null,
+        onOpenCustomer: canOpenCustomer && customerId != null
+            ? () => context.pushNamed(
+                CustomerRoutes.detail,
+                pathParameters: {'id': customerId},
+              )
+            : null,
+      ),
+      // Người giao việc thấy thẻ việc con KỂ CẢ khi trống — nút + nằm BÊN
+      // TRONG thẻ.
+      if (isAssigner || task.hasSubtasks) ...[
+        _gap,
+        SubtasksCard(
+          task: task,
+          state: state,
+          controller: controller,
+          canTick: access.canComplete,
+          canEdit: isAssigner,
+        ),
+      ],
+      _gap,
+      FilesCard(task: task, canAttach: access.canAttach),
+      _gap,
+      CommentSection(
+        task: task,
+        taskId: taskId,
+        myUserId: myUserId,
+        canWrite: access.canComplete,
+        canModerate: isAssigner,
+      ),
+      if (task.activity.isNotEmpty || task.viewers.isNotEmpty) ...[
+        _gap,
+        ActivityCard(task: task),
+      ],
+    ];
+
     return Column(
       children: [
         Expanded(
@@ -387,52 +477,21 @@ class _Loaded extends ConsumerWidget {
                   padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
                   sliver: SliverToBoxAdapter(child: _Rise(child: top)),
                 ),
-                // Người giao việc thấy khối việc con KỂ CẢ khi trống — nút
-                // "Thêm việc con" nằm BÊN TRONG khối này.
-                if (isAssigner || task.hasSubtasks)
-                  SliverToBoxAdapter(
-                    child: Padding(
-                      padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
-                      child: SubtaskCard(
-                        task: task,
-                        state: state,
-                        controller: controller,
-                        canTick: access.canComplete,
-                        canEdit: isAssigner,
-                      ),
-                    ),
-                  ),
-                SliverToBoxAdapter(
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
+                SliverPadding(
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+                  sliver: SliverToBoxAdapter(
                     child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        DetailSectionTitle(
-                          'TỆP ĐÍNH KÈM (${task.attachments.length})',
-                        ),
-                        TaskAttachments(attachments: task.attachments),
-                      ],
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: bottom,
                     ),
                   ),
                 ),
-                SliverToBoxAdapter(
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
-                    child: CommentSection(
-                      task: task,
-                      taskId: taskId,
-                      canWrite: access.canComplete,
-                    ),
-                  ),
-                ),
-                SliverToBoxAdapter(child: ActivityLog(task: task)),
-                const SliverToBoxAdapter(child: SizedBox(height: 24)),
               ],
             ),
           ),
         ),
-        TaskActionBar(canAttach: access.canAttach, taskId: taskId),
+        // Ô bình luận cố định đáy; bàn phím đẩy nó lên (Scaffold co thân).
+        if (access.canComplete) CommentBar(task: task, taskId: taskId),
       ],
     );
   }
@@ -441,45 +500,86 @@ class _Loaded extends ConsumerWidget {
   // [TaskDetailActions] / controller. Messenger lấy TRƯỚC khi await: sau khi
   // sheet đóng, `context` có thể đã rời khỏi cây widget.
 
-  /// Sheet Nhãn màu ở chế độ bật/tắt; mỗi lần bật/tắt gửi cả danh sách mới
-  /// (`labels[]`) tính từ bản đang hiện — lạc quan, lỗi thì hoàn tác và báo.
-  Future<void> _labels(
+  /// Sửa một trường tuỳ chỉnh theo kiểu: chữ / số qua ô nhập, ngày qua lịch,
+  /// lựa chọn qua bảng chọn. Gửi map ĐÃ GỘP (`setCustomField`).
+  Future<void> _editField(
     BuildContext context,
     TaskController controller,
-    Task task,
+    CustomFieldDef def,
   ) async {
     final messenger = ScaffoldMessenger.of(context);
-    final container = ProviderScope.containerOf(context);
+    final task = state.visible;
+    final raw = task.customFields[def.id];
+    final current = raw?.toString() ?? '';
 
-    await showLabelsSheet(
-      context,
-      selected: task.labels.toSet(),
-      onToggle: (code) {
-        final current =
-            container
-                .read(taskDetailProvider(taskId))
-                .valueOrNull
-                ?.task
-                .labels ??
-            task.labels;
-        final next = current.contains(code)
-            ? [
-                for (final c in current)
-                  if (c != code) c,
-              ]
-            : [...current, code];
-        unawaited(
-          controller
-              .setLabels(next)
-              .then<void>(
-                (_) {},
-                onError: (Object _) => messenger.showSnackBar(
-                  const SnackBar(content: Text('Không lưu được nhãn.')),
-                ),
-              ),
+    Object? value;
+    switch (def.type) {
+      case CustomFieldType.text:
+      case CustomFieldType.number:
+        final number = def.type == CustomFieldType.number;
+        final typed = await showTextEditSheet(
+          context: context,
+          title: def.name,
+          initial: number ? (displayCustomValue(def, raw) ?? '') : current,
+          hint: 'Nhập ${def.name.toLowerCase()}',
+          allowEmpty: true,
+          keyboardType: number
+              ? const TextInputType.numberWithOptions(
+                  decimal: true,
+                  signed: true,
+                )
+              : null,
         );
-      },
-    );
+        if (typed == null) return;
+        if (typed.isEmpty) {
+          value = null;
+        } else if (number) {
+          final parsed = num.tryParse(typed.replaceAll(',', '.'));
+          if (parsed == null) {
+            messenger.showSnackBar(
+              const SnackBar(content: Text('Nhập một số.')),
+            );
+            return;
+          }
+          value = parsed;
+        } else {
+          value = typed;
+        }
+      case CustomFieldType.date:
+        final now = DateTime.now();
+        final initial = DateUtilsX.parse(current) ?? now;
+        // Khoảng lịch luôn chứa ngày đang có: ngày đặt từ web có thể nằm xa.
+        final first = DateTime(now.year - 5);
+        final last = DateTime(now.year + 5, 12, 31);
+        final picked = await showDatePicker(
+          context: context,
+          initialDate: initial,
+          firstDate: initial.isBefore(first) ? initial : first,
+          lastDate: initial.isAfter(last) ? initial : last,
+        );
+        if (picked == null) return;
+        value =
+            '${picked.year.toString().padLeft(4, '0')}-'
+            '${picked.month.toString().padLeft(2, '0')}-'
+            '${picked.day.toString().padLeft(2, '0')}';
+      case CustomFieldType.select:
+        final primary = Theme.of(context).colorScheme.primary;
+        final picked = await showOptionSheet(
+          context,
+          title: def.name,
+          emptyMessage: 'Trường này chưa có lựa chọn nào.',
+          selected: def.options.indexOf(current),
+          items: [
+            for (final o in def.options)
+              OptionItem(label: o, color: primary, round: true),
+          ],
+        );
+        if (picked == null) return;
+        value = def.options[picked];
+    }
+    if (value == raw || (value == null && current.isEmpty)) return;
+
+    await _guard(messenger, () => controller.setCustomField(def.id, value));
   }
 
   Future<void> _like(
@@ -740,4 +840,42 @@ Future<void> _guard(
   } on AppException catch (e) {
     messenger.showSnackBar(SnackBar(content: Text(e.message)));
   }
+}
+
+/// Sheet Nhãn màu ở chế độ bật/tắt; mỗi lần bật/tắt gửi cả danh sách mới
+/// (`labels[]`) tính từ bản đang hiện — lạc quan, lỗi thì hoàn tác và báo.
+Future<void> _openLabels(
+  BuildContext context,
+  String taskId,
+  TaskController controller,
+  Task task,
+) async {
+  final messenger = ScaffoldMessenger.of(context);
+  final container = ProviderScope.containerOf(context);
+
+  await showLabelsSheet(
+    context,
+    selected: task.labels.toSet(),
+    onToggle: (code) {
+      final current =
+          container.read(taskDetailProvider(taskId)).valueOrNull?.task.labels ??
+          task.labels;
+      final next = current.contains(code)
+          ? [
+              for (final c in current)
+                if (c != code) c,
+            ]
+          : [...current, code];
+      unawaited(
+        controller
+            .setLabels(next)
+            .then<void>(
+              (_) {},
+              onError: (Object _) => messenger.showSnackBar(
+                const SnackBar(content: Text('Không lưu được nhãn.')),
+              ),
+            ),
+      );
+    },
+  );
 }

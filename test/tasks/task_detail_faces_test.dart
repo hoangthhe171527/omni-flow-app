@@ -61,7 +61,7 @@ void main() {
       await tester.pumpWidget(host());
       await tester.pumpAndSettle();
 
-      expect(find.text('Người làm'), findsOneWidget);
+      expect(find.text('Người làm'), findsWidgets);
       expect(find.text('Thời gian'), findsOneWidget);
       // Chỉ đọc: không bút sửa mô tả, chạm nhóm việc không mở sheet.
       expect(find.byTooltip('Sửa mô tả'), findsNothing);
@@ -92,7 +92,7 @@ void main() {
       await tester.pumpWidget(host(permissions: assigner));
       await tester.pumpAndSettle();
 
-      expect(find.text('Người làm'), findsOneWidget);
+      expect(find.text('Người làm'), findsWidgets);
     });
 
     testWidgets('thấy ai đang làm', (tester) async {

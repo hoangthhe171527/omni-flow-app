@@ -4,132 +4,83 @@ import '../../../../../core/utils/formatters.dart';
 import '../../../../../design/components/components.dart';
 import '../../../../../design/tokens/tokens.dart';
 import '../../../domain/task.dart';
-import 'task_chip.dart';
 
-/// "Thành viên đã xem" — who has opened this task.
+/// Dòng "Đã xem việc này" của thẻ Nhật ký (`TaskDetail.dc.html`): chữ 13 màu
+/// phụ, bên phải là avatar 24 chồng nhau (lùi −6, viền 2 màu nền thẻ).
 ///
-/// Placed last, below the work itself: it answers the manager's question
-/// ("did they get it") and never the worker's, so it must not sit between a
-/// worker and the stage they came to tick.
+/// Trả lời câu hỏi của quản lý ("họ đã nhận chưa"); chạm giữ (tooltip) đọc
+/// đủ tên và lúc xem.
 class TaskViewers extends StatelessWidget {
-  const TaskViewers({super.key, required this.viewers, this.compact = false});
+  const TaskViewers({super.key, required this.viewers});
 
   final List<TaskViewer> viewers;
 
-  /// Dải "Đã xem" + avatar 18 chồng nhau (lùi −6), đặt bên phải tiêu đề
-  /// "TRAO ĐỔI" (`TaskDetail.dc.html`). Không compact = khối đầy đủ cũ.
-  final bool compact;
-
-  /// Số avatar tối đa trong dải: nhiều hơn là dải tràn tiêu đề.
+  /// Số avatar tối đa: nhiều hơn thì "+n".
   static const _maxFaces = 5;
-
-  Widget _strip(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final shown = viewers.take(_maxFaces).toList();
-    const face = 18.0;
-    const step = face - 6;
-
-    return Tooltip(
-      message: 'Đã xem: ${viewers.map((v) => v.label).join(', ')}',
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(
-            'Đã xem',
-            style: OmniType.micro.copyWith(
-              color: OmniColors.byBrightness(
-                context,
-                OmniColors.mutedForeground,
-                scheme.onSurfaceVariant,
-              ),
-            ),
-          ),
-          const SizedBox(width: 6),
-          SizedBox(
-            width: face + step * (shown.length - 1),
-            height: face,
-            child: Stack(
-              children: [
-                for (var i = 0; i < shown.length; i++)
-                  Positioned(
-                    left: step * i,
-                    child: DecoratedBox(
-                      position: DecorationPosition.foreground,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        border: Border.all(color: scheme.surface),
-                      ),
-                      child: OmniAvatar(
-                        name: shown[i].label,
-                        imageUrl: shown[i].avatar,
-                        size: face,
-                      ),
-                    ),
-                  ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+  static const _face = 24.0;
+  static const _step = _face - 6;
 
   @override
   Widget build(BuildContext context) {
-    if (compact) {
-      return viewers.isEmpty ? const SizedBox.shrink() : _strip(context);
-    }
+    if (viewers.isEmpty) return const SizedBox.shrink();
     final scheme = Theme.of(context).colorScheme;
+    final secondary = OmniColors.byBrightness(
+      context,
+      OmniColors.mutedForeground,
+      scheme.onSurfaceVariant,
+    );
+    final shown = viewers.take(_maxFaces).toList();
+    final more = viewers.length - shown.length;
 
-    return Container(
-      width: double.infinity,
-      margin: const EdgeInsets.only(top: OmniSpacing.sm),
-      color: scheme.surface,
-      padding: const EdgeInsets.all(OmniSpacing.lg),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(
-                Icons.visibility_outlined,
-                size: OmniIconSize.sm,
-                color: scheme.onSurfaceVariant,
+    return Tooltip(
+      message: viewers
+          .map(
+            (v) => v.viewedAt == null
+                ? v.label
+                : '${v.label} · ${Formatters.relative(v.viewedAt)}',
+          )
+          .join('\n'),
+      child: Semantics(
+        label: 'Đã xem: ${viewers.map((v) => v.label).join(', ')}',
+        excludeSemantics: true,
+        child: Row(
+          children: [
+            Expanded(
+              child: Text(
+                'Đã xem việc này',
+                style: OmniType.caption.copyWith(color: secondary),
               ),
-              const SizedBox(width: OmniSpacing.xs),
-              Text(
-                'Thành viên đã xem',
-                style: OmniType.overline.copyWith(
-                  color: scheme.onSurfaceVariant,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: OmniSpacing.md),
-          Wrap(
-            spacing: OmniSpacing.sm,
-            runSpacing: OmniSpacing.sm,
-            children: [
-              for (final viewer in viewers)
-                Tooltip(
-                  message: viewer.viewedAt == null
-                      ? viewer.label
-                      : '${viewer.label} · ${Formatters.relative(viewer.viewedAt)}',
-                  child: TaskChip(
-                    // Mặt người thay dấu tích: "đã xem" đã nằm ở tiêu đề khối,
-                    // còn AI xem thì mặt người nói nhanh hơn tên.
-                    leading: OmniAvatar(
-                      name: viewer.label,
-                      imageUrl: viewer.avatar,
-                      size: OmniIconSize.md,
+            ),
+            SizedBox(
+              width: _face + _step * (shown.length - 1),
+              height: _face,
+              child: Stack(
+                children: [
+                  for (var i = 0; i < shown.length; i++)
+                    Positioned(
+                      left: _step * i,
+                      child: DecoratedBox(
+                        position: DecorationPosition.foreground,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          border: Border.all(color: scheme.surface, width: 2),
+                        ),
+                        child: OmniAvatar(
+                          name: shown[i].label,
+                          imageUrl: shown[i].avatar,
+                          size: _face,
+                        ),
+                      ),
                     ),
-                    label: viewer.label,
-                    color: scheme.onSurfaceVariant,
-                  ),
-                ),
+                ],
+              ),
+            ),
+            if (more > 0) ...[
+              const SizedBox(width: 4),
+              Text('+$more', style: OmniType.micro.copyWith(color: secondary)),
             ],
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

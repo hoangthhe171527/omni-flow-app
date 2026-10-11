@@ -216,6 +216,7 @@ class Task {
     this.pinned = false,
     this.createdBy,
     this.customerId,
+    this.customerName,
   });
 
   factory Task.fromJson(Map<String, dynamic> json) => Task(
@@ -279,6 +280,8 @@ class Task {
     pinned: json.flag('pinned'),
     createdBy: json.str('created_by'),
     customerId: json.str('customer_id'),
+    // Chỉ có khi tài liệu mang sẵn tên khách; presenter không trang trí.
+    customerName: json.str('customer_name'),
   );
 
   final String id;
@@ -385,6 +388,9 @@ class Task {
   /// Khách hàng gắn với việc, lưu thô. Không có tên đi kèm chắc chắn.
   final String? customerId;
 
+  /// Tên khách nếu tài liệu có `customer_name`. null = chỉ có id.
+  final String? customerName;
+
   bool isLikedBy(String userId) => likes.contains(userId);
 
   /// Only `done` is terminal; every other status id is defined by the project.
@@ -487,5 +493,6 @@ class Task {
     pinned: pinned,
     createdBy: createdBy,
     customerId: customerId,
+    customerName: customerName,
   );
 }

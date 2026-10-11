@@ -34,6 +34,18 @@ abstract final class TaskPermissions {
   /// Tạo và sửa nhãn (`POST`/`PUT /system-options`).
   static const writeLabels = 'system_options.write';
 
+  /// Mở hồ sơ khách từ dòng "Khách" (route `CustomerRoutes.detail`).
+  ///
+  /// BẢN SAO của `CustomerPermissions.anyRead`: module customers đã import
+  /// tasks, nên tasks import ngược lại là một chu trình. Test
+  /// `task_detail_bottom_viec_moi_test` canh hai danh sách luôn bằng nhau.
+  static const openCustomer = [
+    'crm.customers.read',
+    'crm.customers.read.own',
+    'crm.customers.read.team',
+    'crm.customers.read.all',
+  ];
+
   static const all = [read, write];
 
   static const anyRead = [read];

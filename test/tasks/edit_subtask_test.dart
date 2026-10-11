@@ -63,7 +63,17 @@ void main() {
 
   RequestOptions sent() => adapter.singleRequest;
 
-  final addField = find.widgetWithText(TextField, 'Thêm việc con');
+  final addButton = find.byTooltip('Thêm việc con');
+
+  /// + ở đầu thẻ Việc con mở sheet "Việc con mới"; gõ tên rồi bấm Tạo.
+  Future<void> addViaSheet(WidgetTester tester, String name) async {
+    await tester.tap(addButton);
+    await tester.pumpAndSettle();
+    await tester.enterText(sheetField, name);
+    await tester.pump();
+    await tester.tap(find.text('Tạo'));
+    await tester.pumpAndSettle();
+  }
 
   /// Khung mặc định của flutter_test là 800×600 — thấp hơn một màn điện thoại,
   /// nên nút cuối danh sách việc con nằm ngoài vùng chạm được và mọi tap đều
@@ -78,8 +88,8 @@ void main() {
   }
 
   Future<void> openActions(WidgetTester tester) async {
-    // Hàng thứ hai ("Body ngaoi") — cái gõ nhầm. Chạm TÊN để mở menu sửa.
-    await tester.tap(find.text('Body ngaoi'));
+    // Hàng thứ hai ("Body ngaoi") — cái gõ nhầm. ⋮ của dòng mở menu sửa.
+    await tester.tap(find.byTooltip('Tuỳ chọn việc con').at(1));
     await tester.pumpAndSettle();
   }
 
@@ -87,9 +97,7 @@ void main() {
     testWidgets('thêm được một việc con mới', (tester) async {
       await pumpApp(tester, host());
 
-      await tester.enterText(addField, 'Lên dây');
-      await tester.testTextInput.receiveAction(TextInputAction.done);
-      await tester.pumpAndSettle();
+      await addViaSheet(tester, 'Lên dây');
 
       expect(sent().method, 'POST');
       expect(sent().uri.path, '/api/v1/tasks/t1/checklist');
@@ -99,9 +107,7 @@ void main() {
     testWidgets('không cho thêm việc con không tên', (tester) async {
       await pumpApp(tester, host());
 
-      await tester.enterText(addField, '   ');
-      await tester.testTextInput.receiveAction(TextInputAction.done);
-      await tester.pumpAndSettle();
+      await addViaSheet(tester, '   ');
 
       expect(adapter.requests, isEmpty);
     });
@@ -153,8 +159,12 @@ void main() {
       await pumpApp(tester, host(permissions: worker));
 
       expect(find.text('Tháo máy'), findsOneWidget);
-      expect(addField, findsNothing);
-      expect(find.byIcon(Icons.more_horiz_rounded), findsNothing);
+      expect(addButton, findsNothing);
+      // ⋮ của thợ chỉ còn Giao người làm.
+      await openActions(tester);
+      expect(find.text('Giao người làm'), findsOneWidget);
+      expect(find.text('Đổi tên'), findsNothing);
+      expect(find.text('Xoá việc con'), findsNothing);
     });
   });
 }
@@ -182,6 +192,18 @@ class _RecordingAdapter implements HttpClientAdapter {
     Stream<Uint8List>? requestStream,
     Future<void>? cancelFuture,
   ) async {
+    // Thẻ Trường tuỳ chỉnh đọc định nghĩa của kế hoạch (GET /projects/{id}):
+    // lượt đọc phụ, không phải lượt ghi bài này kiểm.
+    if (options.method == 'GET' &&
+        options.uri.path.startsWith('/api/v1/projects/')) {
+      return ResponseBody.fromString(
+        '{"success":true,"data":{"id":"p1"}}',
+        200,
+        headers: {
+          Headers.contentTypeHeader: [Headers.jsonContentType],
+        },
+      );
+    }
     requests.add(options);
 
     return ResponseBody.fromString(

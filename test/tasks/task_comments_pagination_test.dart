@@ -10,6 +10,7 @@ import 'package:omni_app/modules/tasks/application/task_controller.dart';
 import 'package:omni_app/modules/tasks/data/tasks_api.dart';
 import 'package:omni_app/modules/tasks/domain/task.dart';
 import 'package:omni_app/modules/tasks/presentation/widgets/comment_section.dart';
+import 'package:omni_app/modules/tasks/presentation/widgets/task_detail/comment_bar.dart';
 
 /// Bình luận cũ đọc được NGAY TRONG APP.
 ///
@@ -176,8 +177,19 @@ void main() {
         child: MaterialApp(
           theme: OmniTheme.light(TargetPlatform.android),
           home: Scaffold(
-            body: SingleChildScrollView(
-              child: CommentSection(task: task, taskId: 't1', canWrite: true),
+            body: Column(
+              children: [
+                Expanded(
+                  child: SingleChildScrollView(
+                    child: CommentSection(
+                      task: task,
+                      taskId: 't1',
+                      canWrite: true,
+                    ),
+                  ),
+                ),
+                CommentBar(task: task, taskId: 't1'),
+              ],
             ),
           ),
         ),
@@ -215,10 +227,8 @@ void main() {
       await tester.pumpAndSettle();
 
       await tester.enterText(find.byType(TextField), 'Chưa đạt phần đồng.');
-      // Khối Điều phối mới đẩy ô soạn xuống dưới mép khung 800×600.
-      await tester.ensureVisible(find.byTooltip('Gửi'));
-      await tester.pumpAndSettle();
-      await tester.tap(find.byTooltip('Gửi'));
+      await tester.pump();
+      await tester.tap(find.byTooltip('Gửi bình luận'));
       await tester.pumpAndSettle();
 
       expect(find.text('Chưa đạt phần đồng.'), findsOneWidget);

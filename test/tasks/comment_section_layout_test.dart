@@ -7,6 +7,7 @@ import 'package:omni_app/design/tokens/tokens.dart';
 import 'package:omni_app/modules/tasks/application/task_controller.dart';
 import 'package:omni_app/modules/tasks/domain/task.dart';
 import 'package:omni_app/modules/tasks/presentation/widgets/comment_section.dart';
+import 'package:omni_app/modules/tasks/presentation/widgets/task_detail/comment_bar.dart';
 
 /// Bố cục ô soạn trao đổi, đo bằng toạ độ chứ không bằng mắt.
 ///
@@ -40,8 +41,15 @@ void main() {
     child: MaterialApp(
       theme: OmniTheme.light(TargetPlatform.android),
       home: Scaffold(
-        body: SingleChildScrollView(
-          child: CommentSection(task: task, taskId: 't1', canWrite: true),
+        body: Column(
+          children: [
+            Expanded(
+              child: SingleChildScrollView(
+                child: CommentSection(task: task, taskId: 't1', canWrite: true),
+              ),
+            ),
+            CommentBar(task: task, taskId: 't1'),
+          ],
         ),
       ),
     ),
@@ -68,7 +76,7 @@ void main() {
     await tester.pumpWidget(host());
 
     final field = tester.getRect(find.byType(TextField));
-    final send = tester.getRect(find.byTooltip('Gửi'));
+    final send = tester.getRect(find.byTooltip('Gửi bình luận'));
     final at = tester.getRect(find.byTooltip('Nhắc tên'));
 
     expect((send.center.dy - field.center.dy).abs(), lessThanOrEqualTo(2));

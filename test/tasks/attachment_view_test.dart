@@ -71,7 +71,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('TỆP ĐÍNH KÈM (1)'), findsOneWidget);
+    expect(find.text('Tệp đính kèm'), findsOneWidget);
     final thumbs = find.byWidgetPredicate(
       (widget) => widget is CachedNetworkImage && widget.imageUrl == photoUrl,
     );
@@ -135,7 +135,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('TỆP ĐÍNH KÈM (0)'), findsOneWidget);
+    expect(find.text('Tệp đính kèm'), findsOneWidget);
     expect(find.text('Chưa có tệp'), findsOneWidget);
   });
 }

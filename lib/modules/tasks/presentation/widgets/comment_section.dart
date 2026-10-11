@@ -9,221 +9,69 @@ import '../../application/task_comments_controller.dart';
 import '../../application/task_controller.dart';
 import '../../domain/mention.dart';
 import '../../domain/task.dart';
-import 'task_detail/section_title.dart';
-import 'task_detail/task_viewers.dart';
+import 'task_detail/detail_card.dart';
+import 'task_detail/menu_sheet.dart';
 
-/// Trao đổi trên một công việc.
+/// Thẻ Bình luận (`TaskDetail.dc.html`): avatar 30, bong bóng `#F5F7FA` bo 8,
+/// "Tên · giờ", `@Tên` tô màu chính. Ô nhập nằm ở thanh đáy (`CommentBar`).
 ///
 /// §B3: QC không đạt thì "@mention người phụ trách công đoạn lỗi, kéo về Đang
 /// phục chế". Đây là chỗ duy nhất trong cả luồng ghi lại LÝ DO một cây bị trả
 /// về — nhật ký hoạt động chỉ biết nó đã chuyển cột, không biết vì sao.
 ///
-/// Cho tới giờ app không có màn hình nào cho việc này, nên người thợ bị trả
-/// việc về mà không đọc được lời giải thích ở đâu, trừ khi mở máy tính. Ở
-/// xưởng thì không ai mở máy tính.
-///
-/// Đặt DƯỚI danh sách công đoạn: người thợ mở việc ra để tick, không phải để
-/// đọc. Nhưng vẫn nằm trên màn chi tiết chứ không giấu sau một nút — một lời
-/// giải thích không ai thấy thì bằng không có.
-class CommentSection extends ConsumerStatefulWidget {
+/// Bấm giữ bình luận của CHÍNH MÌNH (hoặc khi [canModerate], người giao việc)
+/// hiện "Xoá bình luận" — đúng luật `DeleteTaskComment` của server: tác giả
+/// hoặc quản lý kế hoạch.
+class CommentSection extends ConsumerWidget {
   const CommentSection({
     super.key,
     required this.task,
     required this.taskId,
-    required this.canWrite,
+    this.myUserId,
+    this.canWrite = false,
+    this.canModerate = false,
   });
 
   final Task task;
   final String taskId;
+
+  /// Người đang cầm máy: bình luận của họ xoá được.
+  final String? myUserId;
+
+  /// Có quyền ghi việc (server đòi `tasks.write` để xoá).
   final bool canWrite;
 
-  @override
-  ConsumerState<CommentSection> createState() => _CommentSectionState();
-}
-
-class _CommentSectionState extends ConsumerState<CommentSection> {
-  final _controller = TextEditingController();
-  final _focus = FocusNode();
-  bool _sending = false;
-
-  /// Đoạn `@…` đang gõ ngay trước con trỏ; null khi không gõ nhắc ai.
-  String? _query;
+  /// Xoá được bình luận của người khác (người giao việc).
+  final bool canModerate;
 
   @override
-  void initState() {
-    super.initState();
-    _controller.addListener(_onTyped);
-  }
-
-  void _onTyped() {
-    final sel = _controller.selection;
-    final cursor = sel.isValid ? sel.baseOffset : _controller.text.length;
-    final next = Mentions.queryAt(_controller.text, cursor);
-    if (next != _query) setState(() => _query = next);
-  }
-
-  /// Thay đoạn `@…` đang gõ bằng `@Tên `, giữ bàn phím mở để gõ tiếp.
-  void _pick(String name) {
-    final sel = _controller.selection;
-    final cursor = sel.isValid ? sel.baseOffset : _controller.text.length;
-    final r = Mentions.insert(_controller.text, cursor, name);
-    _controller.value = TextEditingValue(
-      text: r.text,
-      selection: TextSelection.collapsed(offset: r.cursor),
-    );
-    _focus.requestFocus();
-  }
-
-  /// Nút `@` cho người không biết quy ước: chèn `@` tại con trỏ và mở gợi ý.
-  void _startMention() {
-    final text = _controller.text;
-    final sel = _controller.selection;
-    final cursor = (sel.isValid ? sel.baseOffset : text.length).clamp(
-      0,
-      text.length,
-    );
-    final lead = cursor > 0 && text[cursor - 1].trim().isNotEmpty ? ' ' : '';
-    final out = text.replaceRange(cursor, cursor, '$lead@');
-    _controller.value = TextEditingValue(
-      text: out,
-      selection: TextSelection.collapsed(offset: cursor + lead.length + 1),
-    );
-    _focus.requestFocus();
-  }
-
-  /// Ai có thể bị nhắc: người của việc và người của từng công đoạn.
-  ///
-  /// Lấy từ chính công việc đang mở, KHÔNG gọi danh sách nhân sự: vai thợ cố ý
-  /// không có quyền đó, nên một bộ chọn dựa vào /team sẽ rỗng đúng trong tay
-  /// người hay phải trả việc về nhất. Đây cũng là cách duy nhất không viết
-  /// cứng cho một loại việc nào — công đoạn nào cũng có người phụ trách.
-  Map<String, String> get _candidates {
-    final out = <String, String>{};
-    final ids = widget.task.assigneeIds;
-    final names = widget.task.assigneeNames;
-    for (var i = 0; i < ids.length; i++) {
-      final name = i < names.length ? names[i].trim() : '';
-      if (name.isNotEmpty) out[ids[i]] = name;
-    }
-    for (final step in widget.task.subtasks) {
-      final id = step.assigneeId ?? '';
-      final name = (step.assigneeName ?? '').trim();
-      if (id.isNotEmpty && name.isNotEmpty) out[id] = name;
-    }
-
-    return out;
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    _focus.dispose();
-    super.dispose();
-  }
-
-  Future<void> _send() async {
-    final body = _controller.text.trim();
-    if (body.isEmpty) return;
-
-    final messenger = ScaffoldMessenger.of(context);
-    setState(() => _sending = true);
-    try {
-      await ref
-          .read(taskDetailProvider(widget.taskId).notifier)
-          .comment(
-            body,
-            // Đọc lại từ CHỮ lúc gửi: xoá `@Tên` khỏi câu là hết nhắc. Không có
-            // trạng thái ngầm nào để lệch với cái đang nhìn thấy.
-            mentionedUserIds: Mentions.idsIn(body, _candidates),
-          );
-      // Xoá ô nhập CHỈ khi server đã nhận. Xoá trước rồi lỗi mạng là mất chữ
-      // người ta vừa gõ, và ở đây chữ đó là lý do một cây đàn bị trả về.
-      if (mounted) _controller.clear();
-    } on AppException catch (e) {
-      messenger.showSnackBar(SnackBar(content: Text(e.message)));
-    } on Object {
-      messenger.showSnackBar(
-        const SnackBar(content: Text('Chưa gửi được. Thử lại khi có mạng.')),
-      );
-    } finally {
-      if (mounted) setState(() => _sending = false);
-    }
-  }
-
-  /// Xin trang cũ hơn. Lỗi hiện ra, không im lặng: bấm mà không thấy gì xảy
-  /// ra là kiểu hỏng đã lặp lại nhiều lần ở dự án này.
-  Future<void> _loadOlder() async {
-    final messenger = ScaffoldMessenger.of(context);
-    try {
-      await ref.read(taskCommentsProvider(widget.taskId).notifier).loadOlder();
-    } on AppException catch (e) {
-      messenger.showSnackBar(SnackBar(content: Text(e.message)));
-    } on Object {
-      messenger.showSnackBar(
-        const SnackBar(
-          content: Text('Chưa tải được bình luận cũ. Thử lại khi có mạng.'),
-        ),
-      );
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
+  Widget build(BuildContext context, WidgetRef ref) {
     // Hạt giống là `task.comments`; provider cộng thêm những trang cũ đã xin.
     // Nó giữ mới nhất trước (thứ tự API); lật lại để đọc như trò chuyện: cũ
     // nhất trên, mới nhất dưới.
-    final thread = ref.watch(taskCommentsProvider(widget.taskId)).valueOrNull;
-    // Chưa gieo hạt (chi tiết còn đang tải) thì vẽ từ Task đang cầm, không vẽ
-    // một danh sách trống rồi nháy sang có.
+    final thread = ref.watch(taskCommentsProvider(taskId)).valueOrNull;
     final ready = thread != null && thread.seeded;
-    final comments = ready
-        ? thread.items.reversed.toList()
-        : widget.task.comments;
-    final viewers = widget.task.viewers;
+    final comments = ready ? thread.items.reversed.toList() : task.comments;
 
-    // Không đọc được mà cũng không viết được thì đừng chiếm chỗ — trừ dải
-    // "Đã xem", vốn trước đây là một khối riêng và không được mất theo.
-    if (comments.isEmpty && !widget.canWrite) {
-      if (viewers.isEmpty) return const SizedBox.shrink();
-
-      return Align(
-        alignment: Alignment.centerRight,
-        child: TaskViewers(viewers: viewers, compact: true),
-      );
-    }
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+    return DetailCard(
       children: [
-        Row(
-          children: [
-            const Expanded(child: DetailSectionTitle('TRAO ĐỔI')),
-            Padding(
-              padding: const EdgeInsets.only(bottom: 6),
-              child: TaskViewers(viewers: viewers, compact: true),
-            ),
-          ],
+        const DetailCardHeader(
+          icon: Icons.chat_bubble_outline_rounded,
+          title: 'Bình luận',
         ),
-        Container(
-          width: double.infinity,
-          decoration: BoxDecoration(
-            color: scheme.surface,
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: scheme.outlineVariant),
-          ),
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // Phần cũ đọc được NGAY ĐÂY. Bản trước viết "xem trên web" — ở
-              // xưởng không ai mở web, và lý do một cây bị trả về ba tuần
-              // trước nằm đúng trong phần bị cắt.
+              // Phần cũ đọc được NGAY ĐÂY: ở xưởng không ai mở web.
               if (ready && thread.hasMore)
                 Align(
                   alignment: Alignment.centerLeft,
                   child: TextButton.icon(
-                    onPressed: thread.loadingOlder ? null : _loadOlder,
+                    onPressed: thread.loadingOlder
+                        ? null
+                        : () => _loadOlder(context, ref),
                     icon: thread.loadingOlder
                         ? const SizedBox(
                             width: 16,
@@ -236,44 +84,24 @@ class _CommentSectionState extends ConsumerState<CommentSection> {
                     ),
                   ),
                 ),
-              for (final comment in comments)
-                Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 8),
-                  child: _Comment(comment: comment),
+              if (comments.isEmpty)
+                Text(
+                  'Chưa có bình luận',
+                  style: OmniType.caption.copyWith(
+                    color: detailSecondary(context),
+                  ),
                 ),
-              if (widget.canWrite) ...[
-                // §B3: QC trượt thì phải nhắc tên người phụ trách công đoạn
-                // lỗi. Gõ `@` là ra gợi ý — quy ước mọi app trao đổi đều dùng
-                // — và chọn thì `@Tên` nằm ngay trong câu. Gõ tên trơn chỉ ra
-                // một chuỗi chữ; `@Tên` mới thành lời nhắc người kia đọc được
-                // ở máy của họ.
-                if (_query case final String q)
-                  if (Mentions.suggest(_candidates, q) case final hits
-                      when hits.isNotEmpty) ...[
-                    Padding(
-                      padding: const EdgeInsets.only(top: 4),
-                      child: Wrap(
-                        spacing: OmniSpacing.xs,
-                        runSpacing: OmniSpacing.xs,
-                        children: [
-                          for (final person in hits)
-                            ActionChip(
-                              key: ValueKey('mention:${person.key}'),
-                              label: Text('@${person.value}'),
-                              onPressed: _sending
-                                  ? null
-                                  : () => _pick(person.value),
-                            ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: OmniSpacing.sm),
-                  ],
+              for (var i = 0; i < comments.length; i++)
                 Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 8),
-                  child: _composer(context),
+                  padding: EdgeInsets.only(top: i == 0 ? 0 : 10),
+                  child: _Comment(
+                    key: ValueKey('comment-${comments[i].id}'),
+                    comment: comments[i],
+                    onLongPress: _canDelete(comments[i])
+                        ? () => _delete(context, ref, comments[i])
+                        : null,
+                  ),
                 ),
-              ],
             ],
           ),
         ),
@@ -281,197 +109,186 @@ class _CommentSectionState extends ConsumerState<CommentSection> {
     );
   }
 
-  /// Ô nhập bo 17 cao ≥ 44 nền xám nhạt + nút "Gửi" bo 17.
-  Widget _composer(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
+  bool _canDelete(TaskComment c) {
+    if (!canWrite || c.id.isEmpty) return false;
+    if (canModerate) return true;
 
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.end,
-      children: [
-        Expanded(
-          child: TextField(
-            controller: _controller,
-            focusNode: _focus,
-            enabled: !_sending,
-            minLines: 1,
-            maxLines: 4,
-            textCapitalization: TextCapitalization.sentences,
-            // Enter gửi: `text` chứ không phải `multiline` (mặc định khi
-            // maxLines > 1), vì multiline biến Enter thành xuống dòng và
-            // `onSubmitted` không bao giờ chạy. Chữ dài vẫn tự xuống dòng.
-            keyboardType: TextInputType.text,
-            textInputAction: TextInputAction.send,
-            style: OmniType.caption.copyWith(color: scheme.onSurface),
-            decoration: InputDecoration(
-              hintText: 'Viết trao đổi… (@ để nhắc tên)',
-              isDense: true,
-              filled: true,
-              fillColor: OmniColors.trackOf(context),
-              constraints: const BoxConstraints(minHeight: 44),
-              contentPadding: const EdgeInsets.symmetric(
-                horizontal: 14,
-                vertical: 12,
-              ),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(17),
-                borderSide: BorderSide.none,
-              ),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(17),
-                borderSide: BorderSide.none,
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(17),
-                borderSide: BorderSide(color: scheme.primary),
-              ),
-              disabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(17),
-                borderSide: BorderSide.none,
-              ),
-            ),
-            onSubmitted: (_) => _send(),
-          ),
+    return myUserId != null && c.userId == myUserId;
+  }
+
+  Future<void> _loadOlder(BuildContext context, WidgetRef ref) async {
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      await ref.read(taskCommentsProvider(taskId).notifier).loadOlder();
+    } on AppException catch (e) {
+      messenger.showSnackBar(SnackBar(content: Text(e.message)));
+    } on Object {
+      messenger.showSnackBar(
+        const SnackBar(
+          content: Text('Chưa tải được bình luận cũ. Thử lại khi có mạng.'),
         ),
-        if (_candidates.isNotEmpty) ...[
-          const SizedBox(width: OmniSpacing.xs),
-          // Cho người không biết quy ước `@`: bấm là thấy tên để chọn, như nút
-          // @ trên web.
-          IconButton(
-            onPressed: _sending ? null : _startMention,
-            icon: const Icon(Icons.alternate_email_rounded),
-            tooltip: 'Nhắc tên',
-            style: IconButton.styleFrom(minimumSize: const Size(44, 44)),
+      );
+    }
+  }
+
+  Future<void> _delete(
+    BuildContext context,
+    WidgetRef ref,
+    TaskComment comment,
+  ) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final container = ProviderScope.containerOf(context);
+    final remove = await showDetailMenuSheet<bool>(
+      context,
+      semanticsLabel: 'Tuỳ chọn bình luận',
+      groups: const [
+        [
+          DetailMenuItem(
+            value: true,
+            icon: Icons.delete_outline,
+            label: 'Xoá bình luận',
+            danger: true,
           ),
         ],
-        const SizedBox(width: OmniSpacing.xs),
-        // Nghe chính ô nhập: nút phải tắt/mở theo chữ, không chỉ theo gợi ý @.
-        ValueListenableBuilder<TextEditingValue>(
-          valueListenable: _controller,
-          builder: (context, value, _) {
-            final enabled = !_sending && value.text.trim().isNotEmpty;
-
-            return Opacity(
-              opacity: enabled || _sending ? 1 : 0.4,
-              // Tooltip chỉ để chuột/test tìm được; nhãn đọc to đã là chữ
-              // "Gửi" trên nút, không đọc hai lần.
-              child: Tooltip(
-                message: 'Gửi',
-                excludeFromSemantics: true,
-                child: FilledButton(
-                  onPressed: enabled ? _send : null,
-                  style: FilledButton.styleFrom(
-                    minimumSize: const Size(44, 44),
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(17),
-                    ),
-                  ),
-                  child: _sending
-                      ? const SizedBox(
-                          width: 18,
-                          height: 18,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : const Text('Gửi'),
-                ),
-              ),
-            );
-          },
-        ),
       ],
     );
+    if (remove != true || !context.mounted) return;
+    final confirmed = await showOmniConfirm(
+      context: context,
+      title: 'Xoá bình luận này?',
+      message: 'Mọi người sẽ không còn thấy bình luận này.',
+      confirmLabel: 'Xoá bình luận',
+      destructive: true,
+    );
+    if (!confirmed) return;
+
+    try {
+      await container
+          .read(taskDetailProvider(taskId).notifier)
+          .deleteComment(comment.id);
+      // Trang cũ đã xin giữ trong provider riêng: gieo lại từ bản mới.
+      container.invalidate(taskCommentsProvider(taskId));
+      messenger.showSnackBar(
+        const SnackBar(content: Text('Đã xoá bình luận.')),
+      );
+    } on AppException catch (e) {
+      messenger.showSnackBar(SnackBar(content: Text(e.message)));
+    }
   }
 }
 
+/// Giờ bình luận: `HH:mm` trong ngày, `dd/MM HH:mm` ngày khác (giờ VN).
+String commentStamp(DateTime at, {DateTime? now}) {
+  final sameDay = VnTime.day(at) == VnTime.today(now);
+  final time = Formatters.time(at);
+
+  return sameDay ? time : '${Formatters.dayMonth(at)} $time';
+}
+
 class _Comment extends StatelessWidget {
-  const _Comment({required this.comment});
+  const _Comment({super.key, required this.comment, this.onLongPress});
 
   final TaskComment comment;
+  final VoidCallback? onLongPress;
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final muted = OmniColors.byBrightness(
-      context,
-      OmniColors.mutedForeground,
-      scheme.onSurfaceVariant,
-    );
-    // Nội dung 13 cao 1.45. Màu chữ CHÍNH, đặt tường minh: `bodyMedium` của
-    // theme mang màu phụ, và thân bình luận — lý do một cây đàn bị trả về —
-    // từng in mờ hơn cả tên người.
-    final body = OmniType.caption.copyWith(height: 1.45);
+    final secondary = detailSecondary(context);
+    // Màu chữ CHÍNH, đặt tường minh: thân bình luận — lý do một cây đàn bị
+    // trả về — từng in mờ hơn cả tên người.
+    final body = OmniType.bodySm.copyWith(height: 1.45);
 
-    return Column(
+    final bubble = Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      decoration: BoxDecoration(
+        color: Theme.of(context).scaffoldBackgroundColor,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text.rich(
+            TextSpan(
+              children: [
+                TextSpan(
+                  text: comment.author,
+                  style: OmniType.micro.copyWith(
+                    fontWeight: FontWeight.w600,
+                    color: scheme.onSurface,
+                  ),
+                ),
+                if (comment.createdAt case final at?)
+                  TextSpan(
+                    text: ' · ${commentStamp(at)}',
+                    style: OmniType.micro.copyWith(
+                      fontWeight: FontWeight.w400,
+                      color: secondary,
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 2),
+          // `@Tên` được nhắc tô màu chính, ngay trong câu. Style TƯỜNG MINH
+          // trên từng đoạn: span ngoài mang màu phụ mặc định.
+          Text.rich(
+            TextSpan(
+              children: [
+                for (final part in Mentions.split(
+                  comment.body,
+                  comment.mentionedUserNames,
+                ))
+                  TextSpan(
+                    text: part.text,
+                    style: part.isMention
+                        ? body.copyWith(
+                            color: scheme.primary,
+                            fontWeight: FontWeight.w500,
+                          )
+                        : body.copyWith(color: scheme.onSurface),
+                  ),
+              ],
+            ),
+          ),
+          // Bình luận từ web nhắc bằng nút, không có `@` trong chữ: dòng này là
+          // kênh duy nhất báo cho người thợ biết họ được nhắc.
+          if (comment.mentionedUserNames.where(
+                (n) => !comment.body.contains('@$n'),
+              )
+              case final missing when missing.isNotEmpty) ...[
+            const SizedBox(height: OmniSpacing.xs),
+            Text(
+              'Nhắc: ${missing.join(', ')}',
+              style: OmniType.micro.copyWith(color: scheme.primary),
+            ),
+          ],
+        ],
+      ),
+    );
+
+    return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
-          children: [
-            // Mặt người trước tên: một chuỗi trao đổi đọc bằng mặt, như mọi
-            // app chat. Chưa có ảnh thì OmniAvatar tự vẽ chữ tắt.
-            OmniAvatar(
-              name: comment.author,
-              imageUrl: comment.userAvatar,
-              size: 22,
-            ),
-            const SizedBox(width: OmniSpacing.sm),
-            Flexible(
-              child: Text(
-                comment.author,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: body.copyWith(
-                  fontWeight: FontWeight.w600,
-                  color: scheme.onSurface,
-                ),
-              ),
-            ),
-            const SizedBox(width: OmniSpacing.sm),
-            if (comment.createdAt != null)
-              Text(
-                Formatters.relative(comment.createdAt),
-                style: OmniType.micro.copyWith(color: muted),
-              ),
-          ],
+        OmniAvatar(
+          name: comment.author,
+          imageUrl: comment.userAvatar,
+          size: 30,
         ),
-        const SizedBox(height: OmniSpacing.xs),
-        // `@Tên` được nhắc tô màu chính, ngay trong câu.
-        Text.rich(
-          TextSpan(
-            children: [
-              for (final part in Mentions.split(
-                comment.body,
-                comment.mentionedUserNames,
-              ))
-                TextSpan(
-                  text: part.text,
-                  // Style TƯỜNG MINH trên từng đoạn: `Text.rich` bọc span này
-                  // vào một span ngoài mang style mặc định (màu phụ), nên một
-                  // đoạn không style sẽ thừa kế nhầm màu đó.
-                  style: part.isMention
-                      ? body.copyWith(
-                          color: scheme.primary,
-                          fontWeight: FontWeight.w600,
-                        )
-                      : body.copyWith(color: scheme.onSurface),
+        const SizedBox(width: 10),
+        Expanded(
+          child: onLongPress == null
+              ? bubble
+              : Material(
+                  type: MaterialType.transparency,
+                  child: InkWell(
+                    onLongPress: onLongPress,
+                    borderRadius: BorderRadius.circular(8),
+                    child: bubble,
+                  ),
                 ),
-            ],
-          ),
         ),
-        // Người thợ không có hộp thư, nên thông báo "bạn được nhắc tên" rơi
-        // vào chỗ họ không mở được. Dòng này là kênh DUY NHẤT báo cho họ biết
-        // công đoạn của mình là chỗ bị trả về — nhưng chỉ khi tên KHÔNG đã nằm
-        // trong câu (bình luận từ web nhắc bằng nút, không có `@` trong chữ).
-        // Có `@Tên` rồi mà lặp lại là nói hai lần.
-        if (comment.mentionedUserNames.where(
-              (n) => !comment.body.contains('@$n'),
-            )
-            case final missing when missing.isNotEmpty) ...[
-          const SizedBox(height: OmniSpacing.xs),
-          Text(
-            'Nhắc: ${missing.join(', ')}',
-            style: OmniType.micro.copyWith(color: scheme.primary),
-          ),
-        ],
       ],
     );
   }

@@ -13,7 +13,6 @@ import 'package:omni_app/modules/tasks/domain/task_label.dart';
 import 'package:omni_app/modules/tasks/domain/task_permissions.dart';
 import 'package:omni_app/modules/tasks/presentation/task_detail_page.dart';
 import 'package:omni_app/modules/tasks/presentation/widgets/task_detail/option_sheet.dart';
-import 'package:omni_app/modules/tasks/presentation/widgets/task_detail/task_action_bar.dart';
 import 'package:omni_app/modules/team/team.dart';
 import 'package:omni_app/security/permissions/access_policy.dart';
 import 'package:omni_app/security/session/session.dart';
@@ -307,9 +306,8 @@ void main() {
     tw('không còn nút "Hoàn thành công việc" ở thanh đáy', (t) async {
       await pump(t, host(data: json(), perms: worker));
       expect(find.text('Hoàn thành công việc'), findsNothing);
-      // Máy ảnh vẫn ở thanh đáy tới Task 9.
-      expect(find.byType(TaskActionBar), findsOneWidget);
-      expect(find.bySemanticsLabel('Chụp ảnh'), findsOneWidget);
+      // Máy ảnh nay là "Tải tệp lên" trong thẻ Tệp (Task 9).
+      expect(find.byTooltip('Tải tệp lên'), findsOneWidget);
     });
   });
 

@@ -49,6 +49,21 @@ void main() {
     expect(t.customFields, isEmpty);
   });
 
+  test('customer_name đọc khi có, copyWith giữ nó; vắng khoá thì null', () {
+    final t = Task.fromJson(const {
+      'id': 't1',
+      'customer_id': 'c1',
+      'customer_name': 'Đặng Hoài Bảo',
+    });
+
+    expect(t.customerName, 'Đặng Hoài Bảo');
+    expect(t.copyWith(status: 'done').customerName, 'Đặng Hoài Bảo');
+    expect(
+      Task.fromJson(fixture('tasks_show_viec_moi.json')).customerName,
+      isNull,
+    );
+  });
+
   test('archived: true đọc được', () {
     final t = Task.fromJson(const {'id': 't1', 'archived': true});
 
