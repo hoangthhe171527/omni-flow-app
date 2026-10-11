@@ -10,6 +10,7 @@ import 'package:omni_app/modules/tasks/application/tasks_providers.dart';
 import 'package:omni_app/modules/tasks/data/tasks_api.dart';
 import 'package:omni_app/modules/tasks/domain/custom_field.dart';
 import 'package:omni_app/modules/tasks/domain/task.dart';
+import 'package:omni_app/modules/tasks/domain/task_project.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// Đường ghi Việc mới trong `TaskController`: cái gì lạc quan (nhãn, thích),
@@ -195,6 +196,67 @@ void main() {
     });
   });
 
+  group('nhãn — hai lượt cùng hỏng (rà soát Task 9)', () {
+    test(
+      'A hỏng rồi B hỏng: dải nhãn về đúng nhãn server đã xác nhận',
+      () async {
+        final c = await open(base);
+        final first = Completer<Task>();
+        final second = Completer<Task>();
+        api.labelReplies.addAll([first, second]);
+
+        final a = c.setLabels(['khan_cap', 'cho_khach']);
+        final b = c.setLabels(['khan_cap', 'cho_khach', 'noi_bo']);
+        first.completeError(const NetworkException('mất mạng'));
+        await expectLater(a, throwsA(isA<NetworkException>()));
+        second.completeError(const NetworkException('mất mạng'));
+        await expectLater(b, throwsA(isA<NetworkException>()));
+        // Không lượt nào được lưu: KHÔNG được hiện ['khan_cap','cho_khach'] —
+        // nhãn của lượt A, thứ server chưa từng nhận.
+        expect(visible().labels, ['khan_cap']);
+      },
+    );
+
+    test(
+      'A thành công rồi B hỏng: về nhãn của A (server đã xác nhận)',
+      () async {
+        final c = await open(base);
+        final first = Completer<Task>();
+        final second = Completer<Task>();
+        api.labelReplies.addAll([first, second]);
+
+        final a = c.setLabels(['khan_cap', 'cho_khach']);
+        final b = c.setLabels(['noi_bo']);
+        first.complete(
+          Task.fromJson(const {
+            'id': 't1',
+            'title': 'KAWAI',
+            'labels': ['khan_cap', 'cho_khach'],
+          }),
+        );
+        await a;
+        second.completeError(const NetworkException('mất mạng'));
+        await expectLater(b, throwsA(isA<NetworkException>()));
+        expect(visible().labels, ['khan_cap', 'cho_khach']);
+      },
+    );
+  });
+
+  group('thêm việc con', () {
+    test('addSubtask trả về Task của phản hồi POST (nơi lấy id mới)', () async {
+      final c = await open(base);
+      api.reply = Task.fromJson(const {
+        'id': 't1',
+        'title': 'KAWAI',
+        'checklist': [
+          {'id': 'c9', 'title': 'Thay nỉ búa', 'done': false},
+        ],
+      });
+      final created = await c.addSubtask('Thay nỉ búa');
+      expect(created?.subtasks.single.id, 'c9');
+    });
+  });
+
   group('thích — lạc quan', () {
     test('bật ngay cho người đang đăng nhập, rồi theo bản server', () async {
       final c = await open(base);
@@ -336,6 +398,9 @@ class _FakeApi implements TasksApi {
   }
 
   @override
+  Future<Task> addSubtask(String taskId, String title) => _answer();
+
+  @override
   Future<Task> toggleLike(String taskId) {
     likeCalls++;
     return _answer();
@@ -397,9 +462,9 @@ class _FakeApi implements TasksApi {
   }
 
   @override
-  Future<List<CustomFieldDef>> projectCustomFields(String projectId) async => [
-    const CustomFieldDef(id: 'f1', name: 'Màu'),
-  ];
+  Future<TaskProject> project(String projectId) async => const TaskProject(
+    customFields: [CustomFieldDef(id: 'f1', name: 'Màu')],
+  );
 
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);

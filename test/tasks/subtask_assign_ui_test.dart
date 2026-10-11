@@ -411,9 +411,10 @@ class _RecordingDetail extends TaskController {
   }
 
   @override
-  Future<void> addSubtask(String title) async {
+  Future<Task?> addSubtask(String title) async {
     _log.add(('addSubtask', title, null));
     await Future<void>.delayed(_addDelay);
+    return null;
   }
 
   @override

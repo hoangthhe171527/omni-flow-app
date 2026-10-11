@@ -295,11 +295,14 @@ final taskProjectProvider = FutureProvider.autoDispose
 
 /// Định nghĩa trường tuỳ chỉnh của một kế hoạch, cho chi tiết việc.
 ///
-/// Đọc qua [TasksApi.projectCustomFields] (thẳng `/projects/{id}`), không qua
+/// Lấy từ [taskProjectProvider]: CÙNG MỘT lượt `GET /projects/{id}` cho cả
+/// định nghĩa trường lẫn vai (khoá việc, xoá bình luận, người xem). Không qua
 /// module plans — tasks không import plans.
 final planCustomFieldsProvider = FutureProvider.autoDispose
-    .family<List<CustomFieldDef>, String>((ref, projectId) {
-      return ref.watch(tasksApiProvider).projectCustomFields(projectId);
+    .family<List<CustomFieldDef>, String>((ref, projectId) async {
+      final project = await ref.watch(taskProjectProvider(projectId).future);
+
+      return project.customFields;
     });
 
 /// Việc đã lưu trữ của một kế hoạch và cờ [truncated] = đã dừng ở trần 500

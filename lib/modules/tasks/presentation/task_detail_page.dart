@@ -20,6 +20,7 @@ import '../data/tasks_api.dart';
 import '../domain/custom_field.dart';
 import '../domain/task.dart';
 import '../domain/task_permissions.dart';
+import '../domain/task_project.dart';
 import 'widgets/activity_log.dart';
 import 'widgets/assign_task_sheet.dart';
 import 'widgets/comment_section.dart';
@@ -111,7 +112,8 @@ class _TaskDetailPageState extends ConsumerState<TaskDetailPage> {
     final canWrite = access.canUpdate || access.canComplete;
     final me = ref.watch(sessionProvider.select((s) => s.user?.id));
     final catalog = ref.watch(taskLabelsProvider).valueOrNull ?? const [];
-    final groups = loadedTask == null
+    final viewer = loadedTask != null && _isPlanViewer(ref, loadedTask, me);
+    final groups = loadedTask == null || viewer
         ? const <List<TaskMenuAction>>[]
         : taskMenuGroups(
             // Thợ có danh mục qua `/system-options/task-labels` (Nhóm 2)
@@ -200,17 +202,8 @@ class _TaskDetailPageState extends ConsumerState<TaskDetailPage> {
   /// canManage` — `manage.all`; việc cá nhân thì người tạo; việc trong kế
   /// hoạch thì chủ / quản lý (kế hoạch legacy không chủ: mở). Kế hoạch chưa
   /// đọc được thì chỉ `manage.all`.
-  bool _canManageTask(Task task, String? me, bool manageAll) {
-    if (manageAll) return true;
-    final projectId = task.projectId;
-    if (projectId == null) return me != null && task.createdBy == me;
-
-    return ref
-            .watch(taskProjectProvider(projectId))
-            .valueOrNull
-            ?.canManage(me, manageAll: false) ??
-        false;
-  }
+  bool _canManageTask(Task task, String? me, bool manageAll) =>
+      canManageTask(ref, task, me, manageAll: manageAll);
 
   /// Menu việc (`TaskMenu.dc.html`): mở sheet rồi chạy mục đã chọn.
   Future<void> _openMenu(
@@ -422,15 +415,25 @@ class _Loaded extends ConsumerWidget {
     final access = ref.watch(taskAccessProvider);
     // Việc đã khoá: server trả 423 cho MỌI lượt sửa, nên ẩn mọi nút sửa.
     // Còn lại: bình luận, thích, theo dõi (server vẫn cho).
-    final locked = task.isLocked;
-    final isAssigner = access.isAssigner && !locked;
-    final canWrite = (access.canUpdate || access.canComplete) && !locked;
-    final canComplete = access.canComplete && !locked;
-    final canLike = access.canUpdate || access.canComplete;
-    final controller = ref.read(taskDetailProvider(taskId).notifier);
-    final actions = TaskDetailActions(controller);
     // `select`: màn này chỉ cần id người đang cầm máy.
     final myUserId = ref.watch(sessionProvider.select((s) => s.user?.id));
+    // Người XEM của kế hoạch (vai đọc từ `GET /projects/{id}`, đúng lượt
+    // gọi định nghĩa trường đã dùng): server chặn MỌI lượt ghi việc, kể cả
+    // bình luận — nên ẩn hết như việc đã khoá.
+    final viewer = _isPlanViewer(ref, task, myUserId);
+    final locked = task.isLocked;
+    final isAssigner = access.isAssigner && !locked && !viewer;
+    final canWrite =
+        (access.canUpdate || access.canComplete) && !locked && !viewer;
+    final canComplete = access.canComplete && !locked && !viewer;
+    final canComment = access.canComplete && !viewer;
+    final canLike = (access.canUpdate || access.canComplete) && !viewer;
+    // Xoá bình luận người khác: như `ProjectAccessService::canManage`.
+    final canModerate =
+        !viewer &&
+        canManageTask(ref, task, myUserId, manageAll: access.isAssigner);
+    final controller = ref.read(taskDetailProvider(taskId).notifier);
+    final actions = TaskDetailActions(controller);
     final myName = ref.watch(sessionProvider.select((s) => s.user?.fullName));
     final myAvatar = ref.watch(
       sessionProvider.select((s) => s.user?.avatarUrl),
@@ -554,7 +557,7 @@ class _Loaded extends ConsumerWidget {
       ),
       // Người giao việc thấy thẻ việc con KỂ CẢ khi trống — nút + nằm BÊN
       // TRONG thẻ.
-      if (access.isAssigner || task.hasSubtasks) ...[
+      if (isAssigner || task.hasSubtasks) ...[
         _gap,
         SubtasksCard(
           task: task,
@@ -565,14 +568,14 @@ class _Loaded extends ConsumerWidget {
         ),
       ],
       _gap,
-      FilesCard(task: task, canAttach: access.canAttach && !locked),
+      FilesCard(task: task, canAttach: access.canAttach && !locked && !viewer),
       _gap,
       CommentSection(
         task: task,
         taskId: taskId,
         myUserId: myUserId,
-        canWrite: access.canComplete,
-        canModerate: access.isAssigner,
+        canWrite: canComment,
+        canModerate: canModerate,
       ),
       if (task.activity.isNotEmpty || task.viewers.isNotEmpty) ...[
         _gap,
@@ -609,7 +612,7 @@ class _Loaded extends ConsumerWidget {
           ),
         ),
         // Ô bình luận cố định đáy; bàn phím đẩy nó lên (Scaffold co thân).
-        if (access.canComplete) CommentBar(task: task, taskId: taskId),
+        if (canComment) CommentBar(task: task, taskId: taskId),
       ],
     );
   }
@@ -681,7 +684,10 @@ class _Loaded extends ConsumerWidget {
             '${picked.month.toString().padLeft(2, '0')}-'
             '${picked.day.toString().padLeft(2, '0')}';
       case CustomFieldType.select:
-        final primary = Theme.of(context).colorScheme.primary;
+        final scheme = Theme.of(context).colorScheme;
+        // Đã có giá trị thì thêm dòng cuối "Xoá giá trị" (gửi null): chọn
+        // nhầm phải gỡ được, như chữ / số xoá được bằng ô rỗng.
+        final canClear = current.isNotEmpty;
         final picked = await showOptionSheet(
           context,
           title: def.name,
@@ -689,11 +695,17 @@ class _Loaded extends ConsumerWidget {
           selected: def.options.indexOf(current),
           items: [
             for (final o in def.options)
-              OptionItem(label: o, color: primary, round: true),
+              OptionItem(label: o, color: scheme.primary, round: true),
+            if (canClear)
+              OptionItem(
+                label: 'Xoá giá trị',
+                color: scheme.onSurfaceVariant,
+                round: true,
+              ),
           ],
         );
         if (picked == null) return;
-        value = def.options[picked];
+        value = picked < def.options.length ? def.options[picked] : null;
     }
     if (value == raw || (value == null && current.isEmpty)) return;
 
@@ -1026,4 +1038,33 @@ Future<void> _openLabels(
       );
     },
   );
+}
+
+/// Kế hoạch chứa việc (null: việc cá nhân, hoặc chưa đọc được kế hoạch).
+TaskProject? _projectOf(WidgetRef ref, Task task) {
+  final projectId = task.projectId;
+  if (projectId == null) return null;
+
+  return ref.watch(taskProjectProvider(projectId)).valueOrNull;
+}
+
+/// Người đang cầm máy mang vai `viewer` ghi rõ trong kế hoạch của việc
+/// (`assertCanEditTasks`). Chưa đọc được kế hoạch thì không coi là viewer —
+/// server vẫn chặn, và câu 403 của nó hiện lên.
+bool _isPlanViewer(WidgetRef ref, Task task, String? me) =>
+    _projectOf(ref, task)?.isViewer(me) ?? false;
+
+/// Quản lý được việc (`ProjectAccessService::canManage`): `manage.all`; việc
+/// cá nhân thì người tạo; việc trong kế hoạch thì chủ / quản lý, hoặc kế
+/// hoạch legacy không chủ. Kế hoạch chưa đọc được thì chỉ `manage.all`.
+bool canManageTask(
+  WidgetRef ref,
+  Task task,
+  String? me, {
+  required bool manageAll,
+}) {
+  if (manageAll) return true;
+  if (task.projectId == null) return me != null && task.createdBy == me;
+
+  return _projectOf(ref, task)?.canManage(me, manageAll: false) ?? false;
 }

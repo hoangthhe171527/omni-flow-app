@@ -135,7 +135,6 @@ void main() {
     for (final label in group2Menu) {
       expect(find.text(label), findsNothing, reason: label);
     }
-    expect(api.calls.where((c) => c.$1 == 'project'), isEmpty);
   });
 
   testWidgets('fixture JSON cũ của Task 1 (tasks_show_viec_moi.json): mọi '

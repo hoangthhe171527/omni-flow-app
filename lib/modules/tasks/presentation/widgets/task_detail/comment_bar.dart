@@ -1,5 +1,4 @@
 import 'dart:math' as math;
-import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -11,7 +10,7 @@ import '../../../domain/mention.dart';
 import '../../../domain/task.dart';
 
 /// Ô bình luận cố định ở đáy chi tiết việc (`TaskDetail.dc.html` `footer`):
-/// kính sáng (nền .82 + blur 20), ô nhập bo tròn nền `#EEF1F5` chữ 15
+/// nền sáng .82 (không blur), ô nhập bo tròn nền `#EEF1F5` chữ 15
 /// "Bình luận, @ để nhắc tên", nút gửi 44 màu chính.
 ///
 /// Gõ `@` thì hiện gợi ý tên ngay trên thanh; chọn thì `@Tên` nằm trong câu.
@@ -145,151 +144,141 @@ class _CommentBarState extends ConsumerState<CommentBar> {
         ? const <MapEntry<String, String>>[]
         : Mentions.suggest(candidates, _query!);
 
-    return ClipRect(
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-        child: DecoratedBox(
-          key: const ValueKey('comment-bar'),
-          decoration: BoxDecoration(
-            color: Theme.of(
-              context,
-            ).scaffoldBackgroundColor.withValues(alpha: 0.82),
-            border: Border(
-              top: BorderSide(color: scheme.onSurface.withValues(alpha: 0.06)),
-            ),
-          ),
-          child: Padding(
-            padding: EdgeInsets.fromLTRB(8, 6, 8, bottom),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
+    // Nền .82, KHÔNG blur: một BackdropFilter cố định đáy dựng lại lớp mờ ở
+    // mỗi khung cuộn của cả màn (rà soát Task 9).
+    return DecoratedBox(
+      key: const ValueKey('comment-bar'),
+      decoration: BoxDecoration(
+        color: Theme.of(
+          context,
+        ).scaffoldBackgroundColor.withValues(alpha: 0.82),
+        border: Border(
+          top: BorderSide(color: scheme.onSurface.withValues(alpha: 0.06)),
+        ),
+      ),
+      child: Padding(
+        padding: EdgeInsets.fromLTRB(8, 6, 8, bottom),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            if (hits.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(6, 0, 6, 8),
+                child: Wrap(
+                  spacing: OmniSpacing.xs,
+                  runSpacing: OmniSpacing.xs,
+                  children: [
+                    for (final person in hits)
+                      ActionChip(
+                        key: ValueKey('mention:${person.key}'),
+                        label: Text('@${person.value}'),
+                        onPressed: _sending ? null : () => _pick(person.value),
+                      ),
+                  ],
+                ),
+              ),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.end,
               children: [
-                if (hits.isNotEmpty)
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(6, 0, 6, 8),
-                    child: Wrap(
-                      spacing: OmniSpacing.xs,
-                      runSpacing: OmniSpacing.xs,
+                const SizedBox(width: 4),
+                Expanded(
+                  child: Container(
+                    constraints: const BoxConstraints(minHeight: 44),
+                    padding: const EdgeInsets.only(left: 14, right: 0),
+                    decoration: BoxDecoration(
+                      color: OmniColors.trackOf(context),
+                      borderRadius: BorderRadius.circular(22),
+                    ),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.end,
                       children: [
-                        for (final person in hits)
-                          ActionChip(
-                            key: ValueKey('mention:${person.key}'),
-                            label: Text('@${person.value}'),
-                            onPressed: _sending
-                                ? null
-                                : () => _pick(person.value),
+                        Expanded(
+                          child: TextField(
+                            controller: _controller,
+                            focusNode: _focus,
+                            enabled: !_sending,
+                            minLines: 1,
+                            maxLines: 4,
+                            textCapitalization: TextCapitalization.sentences,
+                            // Enter gửi: `text` chứ không `multiline`.
+                            keyboardType: TextInputType.text,
+                            textInputAction: TextInputAction.send,
+                            style: OmniType.body.copyWith(
+                              color: scheme.onSurface,
+                            ),
+                            decoration: InputDecoration(
+                              hintText: 'Bình luận, @ để nhắc tên',
+                              hintStyle: OmniType.body.copyWith(
+                                color: secondary,
+                              ),
+                              semanticCounterText: '',
+                              isDense: true,
+                              filled: false,
+                              border: InputBorder.none,
+                              enabledBorder: InputBorder.none,
+                              focusedBorder: InputBorder.none,
+                              disabledBorder: InputBorder.none,
+                              contentPadding: const EdgeInsets.symmetric(
+                                vertical: 11,
+                              ),
+                            ),
+                            onSubmitted: (_) => _send(),
                           ),
+                        ),
+                        if (candidates.isNotEmpty)
+                          IconButton(
+                            onPressed: _sending ? null : _startMention,
+                            icon: const Icon(
+                              Icons.alternate_email_rounded,
+                              size: OmniIconSize.lg,
+                            ),
+                            color: secondary,
+                            tooltip: 'Nhắc tên',
+                            style: IconButton.styleFrom(
+                              minimumSize: const Size(44, 44),
+                              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                              maximumSize: const Size(44, 44),
+                              padding: EdgeInsets.zero,
+                            ),
+                          )
+                        else
+                          const SizedBox(width: 10),
                       ],
                     ),
                   ),
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    const SizedBox(width: 4),
-                    Expanded(
-                      child: Container(
-                        constraints: const BoxConstraints(minHeight: 44),
-                        padding: const EdgeInsets.only(left: 14, right: 0),
-                        decoration: BoxDecoration(
-                          color: OmniColors.trackOf(context),
-                          borderRadius: BorderRadius.circular(22),
-                        ),
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.end,
-                          children: [
-                            Expanded(
-                              child: TextField(
-                                controller: _controller,
-                                focusNode: _focus,
-                                enabled: !_sending,
-                                minLines: 1,
-                                maxLines: 4,
-                                textCapitalization:
-                                    TextCapitalization.sentences,
-                                // Enter gửi: `text` chứ không `multiline`.
-                                keyboardType: TextInputType.text,
-                                textInputAction: TextInputAction.send,
-                                style: OmniType.body.copyWith(
-                                  color: scheme.onSurface,
-                                ),
-                                decoration: InputDecoration(
-                                  hintText: 'Bình luận, @ để nhắc tên',
-                                  hintStyle: OmniType.body.copyWith(
-                                    color: secondary,
-                                  ),
-                                  semanticCounterText: '',
-                                  isDense: true,
-                                  filled: false,
-                                  border: InputBorder.none,
-                                  enabledBorder: InputBorder.none,
-                                  focusedBorder: InputBorder.none,
-                                  disabledBorder: InputBorder.none,
-                                  contentPadding: const EdgeInsets.symmetric(
-                                    vertical: 11,
-                                  ),
-                                ),
-                                onSubmitted: (_) => _send(),
-                              ),
-                            ),
-                            if (candidates.isNotEmpty)
-                              IconButton(
-                                onPressed: _sending ? null : _startMention,
-                                icon: const Icon(
-                                  Icons.alternate_email_rounded,
-                                  size: OmniIconSize.lg,
-                                ),
-                                color: secondary,
-                                tooltip: 'Nhắc tên',
-                                style: IconButton.styleFrom(
-                                  minimumSize: const Size(44, 44),
-                                  tapTargetSize:
-                                      MaterialTapTargetSize.shrinkWrap,
-                                  maximumSize: const Size(44, 44),
-                                  padding: EdgeInsets.zero,
-                                ),
-                              )
-                            else
-                              const SizedBox(width: 10),
-                          ],
+                ),
+                const SizedBox(width: 2),
+                ValueListenableBuilder<TextEditingValue>(
+                  valueListenable: _controller,
+                  builder: (context, value, _) {
+                    final enabled = !_sending && value.text.trim().isNotEmpty;
+
+                    return IconButton(
+                      tooltip: 'Gửi bình luận',
+                      onPressed: enabled ? _send : null,
+                      style: IconButton.styleFrom(
+                        minimumSize: const Size(44, 44),
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        maximumSize: const Size(44, 44),
+                        padding: EdgeInsets.zero,
+                        foregroundColor: scheme.primary,
+                        disabledForegroundColor: scheme.primary.withValues(
+                          alpha: 0.4,
                         ),
                       ),
-                    ),
-                    const SizedBox(width: 2),
-                    ValueListenableBuilder<TextEditingValue>(
-                      valueListenable: _controller,
-                      builder: (context, value, _) {
-                        final enabled =
-                            !_sending && value.text.trim().isNotEmpty;
-
-                        return IconButton(
-                          tooltip: 'Gửi bình luận',
-                          onPressed: enabled ? _send : null,
-                          style: IconButton.styleFrom(
-                            minimumSize: const Size(44, 44),
-                            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                            maximumSize: const Size(44, 44),
-                            padding: EdgeInsets.zero,
-                            foregroundColor: scheme.primary,
-                            disabledForegroundColor: scheme.primary.withValues(
-                              alpha: 0.4,
-                            ),
-                          ),
-                          icon: _sending
-                              ? const SizedBox.square(
-                                  dimension: 18,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                  ),
-                                )
-                              : const Icon(Icons.send_rounded, size: 22),
-                        );
-                      },
-                    ),
-                  ],
+                      icon: _sending
+                          ? const SizedBox.square(
+                              dimension: 18,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : const Icon(Icons.send_rounded, size: 22),
+                    );
+                  },
                 ),
               ],
             ),
-          ),
+          ],
         ),
       ),
     );

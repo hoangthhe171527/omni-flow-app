@@ -383,7 +383,10 @@ class TaskController
     (api) => api.comment(arg, body, mentionedUserIds: mentionedUserIds),
   );
 
-  Future<void> addSubtask(String title) =>
+  /// Thêm việc con; trả bản server của lượt POST (id việc con mới nằm ở
+  /// đó), null khi màn chưa có dữ liệu. Chỗ gọi lấy id từ phản hồi này chứ
+  /// không từ state: realtime có thể thay state giữa chừng.
+  Future<Task?> addSubtask(String title) =>
       _apply((api) => api.addSubtask(arg, title));
 
   Future<void> renameSubtask(String subtaskId, String title) =>
@@ -409,22 +412,25 @@ class TaskController
   /// ("Không lưu được nhãn.") — một nhãn lặng lẽ biến mất đọc như đã lưu.
   ///
   /// Các lượt NỐI ĐUÔI nhau như [setCustomField]: dải nhãn đổi ngay, nhưng
-  /// lượt gửi sau chờ lượt trước về. Mỗi lượt nhớ nhãn "trước nó" là nhãn lượt
-  /// liền trước đã xin; lượt cuối hỏng thì dải về đúng giá trị đó, không về
-  /// một ảnh chụp đã cũ từ trước cả chuỗi.
+  /// lượt gửi sau chờ lượt trước về. Lượt cuối hỏng thì dải về nhãn SERVER
+  /// ĐÃ XÁC NHẬN gần nhất ([_labelsConfirmed]) — không về nhãn lượt liền
+  /// trước đã xin: lượt đó có thể cũng đã hỏng, và hiện nó là hiện thứ chưa
+  /// từng được lưu.
   Future<void> setLabels(List<String> labels) {
     final current = state.valueOrNull;
     if (current == null) return Future<void>.value();
 
     final next = List<String>.unmodifiable(labels);
-    final before = _labelsTail ?? current.task.labels;
-    _labelsTail = next;
+    // Đầu chuỗi: nhãn đang hiện là bản server (không lượt nào bay).
+    if ((_inFlight[_Field.labels] ?? 0) == 0) {
+      _labelsConfirmed = current.task.labels;
+    }
     state = AsyncData(
       current.copyWith(task: current.task.copyWith(labels: next)),
     );
     _inFlight[_Field.labels] = (_inFlight[_Field.labels] ?? 0) + 1;
 
-    final run = _labelsQueue.then((_) => _sendLabels(next, before));
+    final run = _labelsQueue.then((_) => _sendLabels(next));
     // Hàng đợi không mang lỗi: lượt trước hỏng thì lượt sau vẫn chạy.
     _labelsQueue = run.then<void>((_) {}, onError: (Object _) {});
     return run;
@@ -432,30 +438,27 @@ class TaskController
 
   Future<void> _labelsQueue = Future<void>.value();
 
-  /// Nhãn lượt mới nhất đã xin (null khi không còn lượt nào bay).
-  List<String>? _labelsTail;
+  /// Nhãn server xác nhận gần nhất trong chuỗi lượt nhãn đang bay.
+  List<String> _labelsConfirmed = const [];
 
-  Future<void> _sendLabels(List<String> labels, List<String> before) async {
-    void land() {
-      final left = _inFlight[_Field.labels]! - 1;
-      _inFlight[_Field.labels] = left;
-      if (left == 0) _labelsTail = null;
-    }
+  Future<void> _sendLabels(List<String> labels) async {
+    void land() => _inFlight[_Field.labels] = _inFlight[_Field.labels]! - 1;
 
     try {
       final updated = await ref.read(tasksApiProvider).setLabels(arg, labels);
       land();
+      _labelsConfirmed = updated.labels;
       _adopt(updated);
     } on Object {
       land();
       final latest = state.valueOrNull;
       // Còn lượt sau đang bay thì lượt sau quyết dải nhãn; lượt cuối hỏng thì
-      // về nhãn lượt liền trước đã xin.
+      // về nhãn server đã xác nhận.
       if (!_disposed &&
           latest != null &&
           (_inFlight[_Field.labels] ?? 0) == 0) {
         state = AsyncData(
-          latest.copyWith(task: latest.task.copyWith(labels: before)),
+          latest.copyWith(task: latest.task.copyWith(labels: _labelsConfirmed)),
         );
       }
       rethrow;
@@ -588,8 +591,8 @@ class TaskController
   /// phối — hạn, ưu tiên, người làm. Chúng được sửa vài lần một ngày, và một
   /// giá trị hiện lên rồi lặng lẽ quay về cũ vì mạng hỏng thì tệ hơn nhiều so
   /// với một giây chờ. Tick việc con thì ngược lại, nên nó có đường riêng.
-  Future<void> _apply(Future<Task> Function(TasksApi api) call) async {
-    if (state.valueOrNull == null) return;
+  Future<Task?> _apply(Future<Task> Function(TasksApi api) call) async {
+    if (state.valueOrNull == null) return null;
 
     final Task updated;
     try {
@@ -602,9 +605,10 @@ class TaskController
       }
       rethrow;
     }
-    if (_disposed) return;
+    if (_disposed) return updated;
 
     _adopt(updated);
+    return updated;
   }
 
   /// Nhận bản server trả về cho một lượt ghi chờ server.

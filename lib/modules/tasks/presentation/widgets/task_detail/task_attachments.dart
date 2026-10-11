@@ -12,8 +12,6 @@ class AttachmentThumb extends StatelessWidget {
     super.key,
     required this.attachment,
     required this.size,
-    this.overflow = 0,
-    this.onOverflow,
     this.onLongPress,
     this.radius = 4,
   });
@@ -22,10 +20,6 @@ class AttachmentThumb extends StatelessWidget {
 
   /// Cạnh ô, dp. Cũng là cỡ giải mã (nhân tỉ lệ điểm ảnh).
   final double size;
-
-  /// > 0: ô này mang "+n" và chạm vào là mở danh sách đủ, không mở tệp.
-  final int overflow;
-  final VoidCallback? onOverflow;
 
   /// Bấm giữ (vd "Xoá tệp" ở màn Tệp của kế hoạch). null: không làm gì.
   final VoidCallback? onLongPress;
@@ -44,14 +38,11 @@ class AttachmentThumb extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final more = overflow > 0;
 
     return Semantics(
       button: true,
       // Ảnh không có chữ nào nên nhãn là TÊN tệp; tệp khác đã có tên trong ô.
-      label: more
-          ? 'Xem thêm $overflow tệp'
-          : (attachment.isImage ? attachment.name : null),
+      label: attachment.isImage ? attachment.name : null,
       child: SizedBox(
         width: size,
         height: size,
@@ -68,8 +59,8 @@ class AttachmentThumb extends StatelessWidget {
           ),
           clipBehavior: Clip.antiAlias,
           child: InkWell(
-            onTap: more ? onOverflow : _open,
-            onLongPress: more ? null : onLongPress,
+            onTap: _open,
+            onLongPress: onLongPress,
             child: Stack(
               fit: StackFit.expand,
               children: [
@@ -92,18 +83,6 @@ class AttachmentThumb extends StatelessWidget {
                   )
                 else
                   _AttachmentName(name: attachment.name, size: size),
-                if (more)
-                  ColoredBox(
-                    color: Colors.black54,
-                    child: Center(
-                      child: Text(
-                        '+$overflow',
-                        style: OmniType.bodyStrong.copyWith(
-                          color: Colors.white,
-                        ),
-                      ),
-                    ),
-                  ),
               ],
             ),
           ),

@@ -267,17 +267,23 @@ void main() {
     expect(544 - t.getRect(send).bottom, closeTo(8, 1.01));
   });
 
-  tw('ô bình luận đáy là kính (BackdropFilter), không còn TaskActionBar', (
+  tw('ô bình luận đáy: nền .82, KHÔNG BackdropFilter, không TaskActionBar', (
     t,
   ) async {
     await pump(t, host(task: task(), perms: worker));
+    // Bỏ blur (rà soát Task 9): một BackdropFilter cố định đáy dựng lại lớp
+    // mờ mỗi khung cuộn. Nền .82 vẫn che chữ cuộn bên dưới.
     expect(
       find.ancestor(
         of: find.byKey(const ValueKey('comment-bar')),
         matching: find.byType(BackdropFilter),
       ),
-      findsOneWidget,
+      findsNothing,
     );
+    final bar = t.widget<DecoratedBox>(
+      find.byKey(const ValueKey('comment-bar')),
+    );
+    expect((bar.decoration as BoxDecoration).color!.a, closeTo(0.82, 0.01));
     expect(find.bySemanticsLabel('Chụp ảnh'), findsNothing);
     // Nhóm 2: nút ảnh đính kèm bình luận chưa có khoá API.
     expect(find.byTooltip('Đính kèm ảnh hoặc tệp'), findsNothing);

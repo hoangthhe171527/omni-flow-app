@@ -156,20 +156,17 @@ class SubtasksCard extends ConsumerWidget {
                   task.subtasks)
             s.id,
         };
-        await controller.addSubtask(draft.title);
+        final created = await controller.addSubtask(draft.title);
         final userId = draft.assigneeId;
         if (userId == null) return;
 
         void notAssigned() => messenger.showSnackBar(
           const SnackBar(content: Text('Đã tạo nhưng chưa giao được.')),
         );
-        // Id do server sinh: việc con mới là id chưa có trước lượt tạo.
-        final after = container
-            .read(taskDetailProvider(taskId))
-            .valueOrNull
-            ?.task;
+        // Id do server sinh: việc con mới là id chưa có trước lượt tạo, đọc
+        // từ PHẢN HỒI của chính lượt POST — state có thể đã bị realtime thay.
         final fresh = [
-          for (final s in after?.subtasks ?? const <Subtask>[])
+          for (final s in created?.subtasks ?? const <Subtask>[])
             if (!before.contains(s.id)) s.id,
         ];
         if (fresh.isEmpty) return notAssigned();

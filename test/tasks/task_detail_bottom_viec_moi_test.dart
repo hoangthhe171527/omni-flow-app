@@ -12,6 +12,7 @@ import 'package:omni_app/modules/tasks/application/tasks_providers.dart';
 import 'package:omni_app/modules/tasks/domain/custom_field.dart';
 import 'package:omni_app/modules/tasks/domain/task.dart';
 import 'package:omni_app/modules/tasks/domain/task_permissions.dart';
+import 'package:omni_app/modules/tasks/domain/task_project.dart';
 import 'package:omni_app/modules/tasks/presentation/task_detail_page.dart';
 import 'package:omni_app/modules/team/team.dart';
 import 'package:omni_app/security/permissions/access_policy.dart';
@@ -68,6 +69,7 @@ void main() {
     Set<String> perms = assigner,
     List<CustomFieldDef> defs = fields,
     bool reduceMotion = false,
+    TaskProject project = const TaskProject(ownerId: 'u0'),
   }) {
     recorded = [];
     stub = _Detail(TaskDetailState(task: Task.fromJson(data)), recorded);
@@ -76,6 +78,7 @@ void main() {
       overrides: [
         taskDetailProvider.overrideWith(() => stub),
         planCustomFieldsProvider.overrideWith((ref, id) async => defs),
+        taskProjectProvider.overrideWith((ref, id) async => project),
         taskLabelsProvider.overrideWith((ref) async => const []),
         teamDirectoryProvider.overrideWith(
           (ref) async => [
@@ -158,12 +161,110 @@ void main() {
       await t.tap(find.text('Lưu'));
       await t.pumpAndSettle();
 
+      // Màn chỉ gửi (trường, giá trị); việc GỘP map do controller thật làm
+      // và được kiểm ở task_controller_viec_moi_test ("sửa một trường gửi CẢ
+      // map đã gộp"), qua TasksApi giả — không kiểm lại bằng stub ở đây.
       expect(recorded.last, ('customField', ('f_mau', 'Đen bóng')));
-      // Map ghi ĐÃ GỘP: hai trường cũ vẫn còn.
-      expect(stub.lastFields, {
-        'f_hang': 'Yamaha',
-        'f_serial': '592698',
-        'f_mau': 'Đen bóng',
+    });
+
+    tw('số: "12,5" gửi 12.5 (num); chữ không phải số thì báo, không gửi', (
+      t,
+    ) async {
+      await pump(
+        t,
+        host(
+          data: json(),
+          defs: const [
+            CustomFieldDef(
+              id: 'f_kg',
+              name: 'Cân nặng',
+              type: CustomFieldType.number,
+            ),
+          ],
+        ),
+      );
+      await t.tap(find.text('Nhập cân nặng'));
+      await t.pumpAndSettle();
+      await t.enterText(
+        find.byWidgetPredicate((w) => w is TextField && w.autofocus),
+        'abc',
+      );
+      await t.pump();
+      await t.tap(find.text('Lưu'));
+      await t.pumpAndSettle();
+      expect(find.text('Nhập một số.'), findsOneWidget);
+      expect(recorded, isEmpty);
+
+      await t.tap(find.text('Nhập cân nặng'));
+      await t.pumpAndSettle();
+      await t.enterText(
+        find.byWidgetPredicate((w) => w is TextField && w.autofocus),
+        '12,5',
+      );
+      await t.pump();
+      await t.tap(find.text('Lưu'));
+      await t.pumpAndSettle();
+      expect(recorded.last, ('customField', ('f_kg', 12.5)));
+    });
+
+    tw('ngày: chọn trên lịch gửi "YYYY-MM-DD"', (t) async {
+      await pump(
+        t,
+        host(
+          data: json(custom: {'f_giao': '2026-10-05'}),
+          defs: const [
+            CustomFieldDef(
+              id: 'f_giao',
+              name: 'Ngày giao',
+              type: CustomFieldType.date,
+            ),
+          ],
+        ),
+      );
+      expect(find.text('05/10/2026'), findsOneWidget);
+      await t.tap(find.text('05/10/2026'));
+      await t.pumpAndSettle();
+      await t.tap(find.text('20'));
+      await t.pumpAndSettle();
+      await t.tap(find.text('OK'));
+      await t.pumpAndSettle();
+      expect(recorded.last, ('customField', ('f_giao', '2026-10-20')));
+    });
+
+    group('lựa chọn', () {
+      const select = [
+        CustomFieldDef(
+          id: 'f_mau',
+          name: 'Màu sắc',
+          type: CustomFieldType.select,
+          options: ['Đen', 'Trắng'],
+        ),
+      ];
+
+      tw('chọn "Trắng" gửi đúng chuỗi lựa chọn', (t) async {
+        await pump(t, host(data: json(), defs: select));
+        await t.tap(find.text('Nhập màu sắc'));
+        await t.pumpAndSettle();
+        // Chưa có giá trị: không có dòng xoá.
+        expect(find.text('Xoá giá trị'), findsNothing);
+        await t.tap(find.text('Trắng'));
+        await t.pumpAndSettle();
+        expect(recorded.last, ('customField', ('f_mau', 'Trắng')));
+      });
+
+      tw('đã có giá trị: "Xoá giá trị" gửi null', (t) async {
+        await pump(
+          t,
+          host(
+            data: json(custom: {'f_mau': 'Đen'}),
+            defs: select,
+          ),
+        );
+        await t.tap(find.text('Đen'));
+        await t.pumpAndSettle();
+        await t.tap(find.text('Xoá giá trị'));
+        await t.pumpAndSettle();
+        expect(recorded.last, ('customField', ('f_mau', null)));
       });
     });
 
@@ -433,6 +534,89 @@ void main() {
       expect(recorded.last, ('deleteComment', 'k1'));
     });
 
+    tw('thợ là quản lý kế hoạch (vai từ GET /projects/{id}): xoá được bình '
+        'luận của người khác', (t) async {
+      await pump(
+        t,
+        host(
+          data: json(comments: comments),
+          perms: worker,
+          project: const TaskProject(
+            ownerId: 'u0',
+            memberRoles: {me: 'manager'},
+          ),
+        ),
+      );
+      await t.longPress(find.text('Của người khác'));
+      await t.pumpAndSettle();
+      expect(find.text('Xoá bình luận'), findsOneWidget);
+    });
+
+    tw('kế hoạch legacy (không chủ): thợ xoá được bình luận người khác', (
+      t,
+    ) async {
+      await pump(
+        t,
+        host(
+          data: json(comments: comments),
+          perms: worker,
+          project: const TaskProject(),
+        ),
+      );
+      await t.longPress(find.text('Của người khác'));
+      await t.pumpAndSettle();
+      expect(find.text('Xoá bình luận'), findsOneWidget);
+    });
+
+    tw('việc cá nhân do tôi tạo: xoá được bình luận người khác', (t) async {
+      await pump(
+        t,
+        host(
+          data: {
+            ...json(comments: comments),
+            'project_id': null,
+            'created_by': me,
+          },
+          perms: worker,
+        ),
+      );
+      await t.longPress(find.text('Của người khác'));
+      await t.pumpAndSettle();
+      expect(find.text('Xoá bình luận'), findsOneWidget);
+    });
+
+    tw('người xem kế hoạch: không ô bình luận đáy, không xoá, không tick', (
+      t,
+    ) async {
+      await pump(
+        t,
+        host(
+          data: json(
+            comments: comments,
+            checklist: [
+              {'id': 'c1', 'title': 'Tháo đàn', 'done': false},
+            ],
+          ),
+          perms: worker,
+          project: const TaskProject(
+            ownerId: 'u0',
+            memberRoles: {me: 'viewer'},
+          ),
+        ),
+      );
+      expect(
+        find.widgetWithText(TextField, 'Bình luận, @ để nhắc tên'),
+        findsNothing,
+      );
+      // Ô tích vẫn vẽ trạng thái nhưng chạm không gửi gì.
+      await t.tap(find.bySemanticsLabel('Đánh dấu xong việc con'));
+      await t.pump();
+      expect(recorded, isEmpty);
+      await t.longPress(find.text('Của tôi'));
+      await t.pumpAndSettle();
+      expect(find.text('Xoá bình luận'), findsNothing);
+    });
+
     tw('người giao việc xoá được bình luận của người khác', (t) async {
       await pump(t, host(data: json(comments: comments)));
       await t.longPress(find.text('Của người khác'));
@@ -534,7 +718,6 @@ class _Detail extends TaskController {
 
   final TaskDetailState _state;
   final List<(String, Object?)> _saved;
-  Map<String, Object?>? lastFields;
 
   @override
   Future<TaskDetailState> build(String taskId) async => _state;
@@ -550,7 +733,6 @@ class _Detail extends TaskController {
   @override
   Future<void> setCustomField(String fieldId, Object? value) async {
     _saved.add(('customField', (fieldId, value)));
-    lastFields = {..._task.customFields, fieldId: value};
   }
 
   @override
