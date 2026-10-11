@@ -8,6 +8,7 @@ import '../../../core/realtime/realtime_client.dart';
 import '../../../security/session/session_controller.dart';
 import '../../team/team.dart';
 import '../data/tasks_api.dart';
+import '../domain/custom_field.dart';
 import '../domain/task.dart';
 import '../domain/task_permissions.dart';
 
@@ -257,6 +258,29 @@ final taskOverdueCountProvider = FutureProvider.autoDispose<int>((ref) async {
 final taskBadgeProvider = Provider.autoDispose<int>((ref) {
   return ref.watch(taskOverdueCountProvider).valueOrNull ?? 0;
 });
+
+/// Định nghĩa trường tuỳ chỉnh của một kế hoạch, cho chi tiết việc.
+///
+/// Đọc qua [TasksApi.projectCustomFields] (thẳng `/projects/{id}`), không qua
+/// module plans — tasks không import plans.
+final planCustomFieldsProvider = FutureProvider.autoDispose
+    .family<List<CustomFieldDef>, String>((ref, projectId) {
+      return ref.watch(tasksApiProvider).projectCustomFields(projectId);
+    });
+
+/// Việc đã lưu trữ của một kế hoạch (`GET /tasks?project_id=&archived=archived`).
+///
+/// Một trang lớn (100, trần API): danh sách này để tìm lại một việc đã cất,
+/// không phải để cuộn vô tận. Theo dõi realtime để bỏ lưu trữ ở máy khác
+/// cũng làm danh sách ngắn lại.
+final archivedTasksProvider = FutureProvider.autoDispose
+    .family<List<Task>, String>((ref, projectId) async {
+      ref.watch(taskRealtimeSignalProvider);
+      final page = await ref
+          .watch(tasksApiProvider)
+          .list(projectId: projectId, archived: TaskArchiveScope.archived);
+      return page.items;
+    });
 
 /// Người chọn được cho một việc con: thành viên dự án, theo thứ tự danh sách
 /// workspace. Rơi về CẢ workspace (server cũng chỉ kiểm thành viên workspace)

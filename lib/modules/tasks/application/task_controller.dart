@@ -402,6 +402,81 @@ class TaskController
     discard(subtaskId);
   }
 
+  /// Đặt lại nhãn của việc. LẠC QUAN: dải nhãn đổi ngay dưới ngón tay, rồi
+  /// theo bản server. Lỗi thì hoàn tác về nhãn cũ và NÉM lại để chỗ gọi báo
+  /// ("Không lưu được nhãn.") — một nhãn lặng lẽ biến mất đọc như đã lưu.
+  Future<void> setLabels(List<String> labels) => _optimistic(
+    (task) => task.copyWith(labels: List.unmodifiable(labels)),
+    (api) => api.setLabels(arg, labels),
+  );
+
+  /// Bật/tắt thích của [userId] (người đang đăng nhập). Lạc quan như
+  /// [setLabels]; lỗi thì hoàn tác và ném ("Không thích được.").
+  Future<void> toggleLike(String userId) => _optimistic(
+    (task) => task.copyWith(
+      likes: task.isLikedBy(userId)
+          ? [
+              for (final id in task.likes)
+                if (id != userId) id,
+            ]
+          : [...task.likes, userId],
+    ),
+    (api) => api.toggleLike(arg),
+  );
+
+  Future<void> setArchived(bool archived) =>
+      _apply((api) => api.setArchived(arg, archived));
+
+  /// Chuyển việc sang kế hoạch khác. Chờ server như [moveToSection].
+  Future<void> moveTask({required String projectId, String? sectionId}) =>
+      _apply(
+        (api) => api.moveTask(arg, projectId: projectId, sectionId: sectionId),
+      );
+
+  /// null = xoá ngày bắt đầu.
+  Future<void> setStartDate(DateTime? startDate) =>
+      _apply((api) => api.setStartDate(arg, startDate));
+
+  /// Ghi MỘT trường tuỳ chỉnh.
+  ///
+  /// Server thay CẢ map `custom_fields`, nên gộp giá trị mới vào map đang có
+  /// rồi gửi cả map. Gửi riêng một trường là xoá mọi trường khác — trả 200,
+  /// không ai biết. null = xoá giá trị của trường này (giữ khoá với null).
+  Future<void> setCustomField(String fieldId, Object? value) => _apply((api) {
+    final current = state.valueOrNull?.task.customFields ?? const {};
+    return api.setCustomFields(arg, {...current, fieldId: value});
+  });
+
+  Future<void> deleteAttachment(String attachmentId) =>
+      _apply((api) => api.deleteAttachment(arg, attachmentId));
+
+  Future<void> deleteComment(String commentId) =>
+      _apply((api) => api.deleteComment(arg, commentId));
+
+  /// Hiện [change] ngay, gọi API, rồi theo bản server. Lỗi thì đặt lại đúng
+  /// bản trước khi đổi và ném lại cho chỗ gọi báo.
+  Future<void> _optimistic(
+    Task Function(Task task) change,
+    Future<Task> Function(TasksApi api) call,
+  ) async {
+    final current = state.valueOrNull;
+    if (current == null) return;
+
+    state = AsyncData(current.copyWith(task: change(current.task)));
+    try {
+      final updated = await call(ref.read(tasksApiProvider));
+      if (_disposed) return;
+      final latest = state.valueOrNull ?? current;
+      state = AsyncData(latest.copyWith(task: updated));
+    } on Object {
+      if (!_disposed) {
+        final latest = state.valueOrNull ?? current;
+        state = AsyncData(latest.copyWith(task: current.task));
+      }
+      rethrow;
+    }
+  }
+
   /// Gọi API rồi thay công việc trong state bằng bản server trả về.
   ///
   /// Không lạc quan, và có lý do: mọi thứ đi qua đây đều là sửa dữ liệu điều

@@ -4,6 +4,7 @@ import '../../../core/config/app_config.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/network/api_envelope.dart';
 import '../../../core/utils/json.dart';
+import '../domain/custom_field.dart';
 import '../domain/task.dart';
 
 /// Which slice of a person's work to show.
@@ -41,6 +42,15 @@ enum TaskBucket {
   /// vào đúng màn hình cần ít lựa chọn nhất.
   static const forMyWork = [today, overdue, upcoming, all];
 }
+
+/// Phạm vi lưu trữ khi liệt kê việc của một kế hoạch.
+///
+/// Tên case là đúng chữ `MongoTaskRepository::paginate` nhận cho `archived`:
+/// `active` (mặc định của server), `archived`, `all`.
+enum TaskArchiveScope { active, archived, all }
+
+/// Một kế hoạch, như sheet "Chuyển việc" cần: id, tên, các nhóm việc.
+typedef MovablePlan = ({String id, String name, List<TaskSection> sections});
 
 class TasksApi {
   TasksApi(this._client);
@@ -430,6 +440,142 @@ class TasksApi {
       items: response.list.map(TaskComment.fromJson).toList(),
       pagination: response.pagination ?? const ApiPagination.empty(),
     );
+  }
+
+  /// Đặt lại TOÀN BỘ nhãn của việc (`labels[]`).
+  ///
+  /// Danh sách rỗng vẫn gửi khoá: đó là "bỏ hết nhãn". Bỏ khoá thì server
+  /// không đổi gì và trả 200 — lượt ghi bị nuốt lặng.
+  Future<Task> setLabels(String taskId, List<String> labels) =>
+      _patch(taskId, {'labels': labels});
+
+  /// Bật/tắt thích của người đang đăng nhập. Server trả việc đầy đủ đã trang
+  /// trí; chỗ gọi thay state bằng nó, không tải lại.
+  Future<Task> toggleLike(String taskId) async {
+    final response = await _client.post('$_base/$taskId/like');
+
+    return Task.fromJson(response.object);
+  }
+
+  /// Lưu trữ hoặc bỏ lưu trữ. Gửi `bool` thật, không chuỗi.
+  Future<Task> setArchived(String taskId, bool archived) =>
+      _patch(taskId, {'archived': archived});
+
+  /// Chuyển việc sang kế hoạch (và nhóm việc) khác.
+  ///
+  /// `section_id` LUÔN có khoá: null là "chưa xếp nhóm" ở kế hoạch đích. Bỏ
+  /// khoá thì việc mang theo `section_id` của kế hoạch cũ — một id không có
+  /// trong kế hoạch mới.
+  Future<Task> moveTask(
+    String taskId, {
+    required String projectId,
+    String? sectionId,
+  }) => _patch(taskId, <String, dynamic>{
+    'project_id': projectId,
+    'section_id': sectionId,
+  });
+
+  /// Đặt hoặc XOÁ ngày bắt đầu. null = xoá, gửi khoá với giá trị null
+  /// (`UpdateTaskDTO::$provided` giữ khoá đã gửi kể cả khi null).
+  Future<Task> setStartDate(String taskId, DateTime? startDate) => _patch(
+    taskId,
+    <String, dynamic>{'start_date': startDate == null ? null : _ymd(startDate)},
+  );
+
+  /// Ghi giá trị trường tuỳ chỉnh.
+  ///
+  /// Server THAY CẢ MAP `custom_fields`, nên [fields] phải là map đã gộp đủ
+  /// mọi trường. Gửi một trường là xoá mọi trường còn lại — im lặng.
+  Future<Task> setCustomFields(String taskId, Map<String, Object?> fields) =>
+      _patch(taskId, {'custom_fields': fields});
+
+  /// Xoá một tệp đã đính. Server trả việc sau khi xoá.
+  Future<Task> deleteAttachment(String taskId, String attachmentId) async {
+    final response = await _client.delete(
+      '$_base/$taskId/attachments/$attachmentId',
+    );
+
+    return Task.fromJson(response.object);
+  }
+
+  /// Xoá một bình luận (tác giả hoặc quản lý kế hoạch; người khác → 403).
+  Future<Task> deleteComment(String taskId, String commentId) async {
+    final response = await _client.delete('$_base/$taskId/comments/$commentId');
+
+    return Task.fromJson(response.object);
+  }
+
+  /// Việc của một kế hoạch, có tìm theo chữ và lọc lưu trữ.
+  ///
+  /// [archived] mặc định `active` — đúng mặc định của server, nên khi đó
+  /// KHÔNG gửi khoá. `search` rỗng cũng không gửi: rỗng ở server là "không
+  /// lọc", gửi đi chỉ thêm nhiễu.
+  Future<Paged<Task>> list({
+    required String projectId,
+    String? search,
+    TaskArchiveScope archived = TaskArchiveScope.active,
+    int page = 1,
+    int perPage = AppConfig.maxPerPage,
+  }) async {
+    final query = search?.trim() ?? '';
+    final response = await _client.get(
+      _base,
+      query: {
+        'project_id': projectId,
+        if (query.isNotEmpty) 'search': query,
+        if (archived != TaskArchiveScope.active) 'archived': archived.name,
+        'page': page,
+        'per_page': perPage,
+      },
+    );
+
+    return Paged(
+      items: response.list.map(Task.fromJson).toList(),
+      pagination: response.pagination ?? const ApiPagination.empty(),
+    );
+  }
+
+  /// Định nghĩa trường tuỳ chỉnh của một kế hoạch (`projects.custom_fields`).
+  ///
+  /// Đọc thẳng `/projects/{id}` như [projectMemberIds]: tasks không import
+  /// plans.
+  Future<List<CustomFieldDef>> projectCustomFields(String projectId) async {
+    final response = await _client.get('/projects/$projectId');
+
+    return response.object
+        .mapList('custom_fields')
+        .map(CustomFieldDef.fromJson)
+        .toList();
+  }
+
+  /// Mọi kế hoạch người dùng đọc được, kèm nhóm việc — cho sheet "Chuyển
+  /// việc". Gom hết các trang; dừng theo dữ liệu nhận được.
+  Future<List<MovablePlan>> projectsForMove() async {
+    final all = <MovablePlan>[];
+    var page = 1;
+    while (true) {
+      final response = await _client.get(
+        '/projects',
+        query: {'page': page, 'per_page': AppConfig.maxPerPage},
+      );
+      final rows = response.list;
+      for (final json in rows) {
+        all.add((
+          id: json.strOr('id', ''),
+          name: json.strOr('name', ''),
+          sections: json.mapList('sections').map(TaskSection.fromJson).toList(),
+        ));
+      }
+      final pagination = response.pagination;
+      if (rows.length < AppConfig.maxPerPage ||
+          pagination == null ||
+          !pagination.hasMore) {
+        break;
+      }
+      page = pagination.nextPage;
+    }
+
+    return all;
   }
 
   Future<void> attach(String taskId, String filePath, {String? filename}) =>

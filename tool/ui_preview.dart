@@ -168,6 +168,11 @@ final _notifications = <Map<String, dynamic>>[
 class _StubTasksApi implements TasksApi {
   final _rows = [..._tasks];
 
+  // Bản xem trước chỉ dựng những lượt đọc màn hình cần; lệnh ghi nào chưa
+  // dựng thì ném NoSuchMethodError thay vì giả vờ thành công.
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+
   @override
   Future<void> deleteTask(String taskId) async {
     _rows.removeWhere((row) => row['id'] == taskId);

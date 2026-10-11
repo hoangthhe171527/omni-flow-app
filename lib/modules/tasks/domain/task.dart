@@ -210,6 +210,11 @@ class Task {
     this.viewers = const [],
     this.comments = const [],
     this.activity = const [],
+    this.labels = const [],
+    this.likes = const [],
+    this.archived = false,
+    this.createdBy,
+    this.customerId,
   });
 
   factory Task.fromJson(Map<String, dynamic> json) => Task(
@@ -262,6 +267,14 @@ class Task {
     viewers: json.mapList('viewers').map(TaskViewer.fromJson).toList(),
     comments: json.mapList('comments').map(TaskComment.fromJson).toList(),
     activity: json.mapList('activity').map(TaskActivityEntry.fromJson).toList(),
+    labels: json.strList('labels'),
+    // Vắng khoá khi chưa ai từng thích (`MongoTaskRepository::toggleLike`
+    // chỉ ghi khoá ở lần thích đầu tiên).
+    likes: json.strList('likes'),
+    // Tài liệu cũ không có khoá; server coi đó là chưa lưu trữ (`!= true`).
+    archived: json.flag('archived'),
+    createdBy: json.str('created_by'),
+    customerId: json.str('customer_id'),
   );
 
   final String id;
@@ -348,6 +361,25 @@ class Task {
   /// với `comments`.
   final List<TaskActivityEntry> activity;
 
+  /// Mã nhãn gắn trên việc (`labels[]`, mỗi mã ≤64). Tên và màu tra từ bộ
+  /// nhãn công ty (`TASK_LABEL`), không lưu ở đây.
+  final List<String> labels;
+
+  /// Id những người đã thích việc này.
+  final List<String> likes;
+
+  /// Việc đã lưu trữ: ẩn khỏi bảng (`GET /tasks` mặc định `archived=active`).
+  final bool archived;
+
+  /// Id người tạo việc — id TRẦN, server không trang trí tên. Tầng trình bày
+  /// tra tên qua `teamMembersProvider`.
+  final String? createdBy;
+
+  /// Khách hàng gắn với việc, lưu thô. Không có tên đi kèm chắc chắn.
+  final String? customerId;
+
+  bool isLikedBy(String userId) => likes.contains(userId);
+
   /// Only `done` is terminal; every other status id is defined by the project.
   bool get isDone => status == 'done';
 
@@ -412,7 +444,12 @@ class Task {
   ///
   /// `task_copy_with_test.dart` so từng trường, để lần thêm trường sau không
   /// lặp lại chuyện này.
-  Task copyWith({List<Subtask>? subtasks, String? status}) => Task(
+  Task copyWith({
+    List<Subtask>? subtasks,
+    String? status,
+    List<String>? labels,
+    List<String>? likes,
+  }) => Task(
     id: id,
     title: title,
     description: description,
@@ -437,5 +474,10 @@ class Task {
     viewers: viewers,
     comments: comments,
     activity: activity,
+    labels: labels ?? this.labels,
+    likes: likes ?? this.likes,
+    archived: archived,
+    createdBy: createdBy,
+    customerId: customerId,
   );
 }
