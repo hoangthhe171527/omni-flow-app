@@ -44,6 +44,11 @@ class _TeamsPageState extends ConsumerState<TeamsPage> {
   /// Team đang gập, theo id. Mặc định mọi team mở; không nhớ qua phiên.
   final _collapsed = <String>{};
 
+  /// Đã qua khung đầu có dữ liệu. Chỉ nhóm vào cây ở khung đó mới "rise":
+  /// danh sách lười dựng lại nhóm khi cuộn về, đổi tìm hay realtime, và phát
+  /// lại hiệu ứng lúc đó đọc như giật.
+  bool _introDone = false;
+
   /// Menu + đang mở: nút + đổi nền mực và xoay thành ×.
   bool _menuOpen = false;
 
@@ -143,9 +148,14 @@ class _TeamsPageState extends ConsumerState<TeamsPage> {
       if (plans.isNotEmpty) visible.add((group, plans));
     }
 
-    final children = <Widget>[
+    // Nhóm dựng LƯỜI trong itemBuilder: cờ rise được đọc lúc nhóm thật sự vào
+    // cây, nên nhóm ở xa cuộn tới sau khung đầu thì hiện ngay.
+    if (!_introDone) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _introDone = true);
+    }
+    final children = <Widget Function()>[
       if (list.isEmpty)
-        SizedBox(
+        () => SizedBox(
           height: 260,
           child: OmniEmptyState(
             icon: Icons.workspaces_outline,
@@ -156,13 +166,12 @@ class _TeamsPageState extends ConsumerState<TeamsPage> {
           ),
         )
       else if (visible.isEmpty)
-        _NoMatch(query: _query.trim()),
+        () => _NoMatch(query: _query.trim()),
       for (var i = 0; i < visible.length; i++)
-        TeamGroup(
-          key: ValueKey(
-            'team-${visible[i].$1.team.id}-${visible[i].$1.team.name}',
-          ),
+        () => TeamGroup(
+          key: ValueKey(_groupKey(visible[i].$1)),
           index: i,
+          rise: !_introDone,
           group: visible[i].$1,
           plans: visible[i].$2,
           open: searching || !_collapsed.contains(visible[i].$1.team.id),
@@ -178,7 +187,7 @@ class _TeamsPageState extends ConsumerState<TeamsPage> {
               ? () => _teamOptions(visible[i].$1)
               : null,
         ),
-      if (canOpenFeed) const _TimelineCard(),
+      if (canOpenFeed) () => const _TimelineCard(),
     ];
 
     return ListView.separated(
@@ -186,9 +195,14 @@ class _TeamsPageState extends ConsumerState<TeamsPage> {
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 110),
       itemCount: children.length,
       separatorBuilder: (_, _) => const SizedBox(height: 10),
-      itemBuilder: (_, i) => children[i],
+      itemBuilder: (_, i) => children[i](),
     );
   }
+
+  /// Khoá nhóm CHỈ theo id: đổi tên team không được dựng lại cả nhóm. Team
+  /// tổng hợp "Chưa xếp team" không có id nên có khoá riêng.
+  static String _groupKey(TeamWithPlans group) =>
+      group.synthetic ? 'team-synthetic' : 'team-${group.team.id}';
 
   bool _canDelete(TeamWithPlans group, bool canDeleteTeam) =>
       canDeleteTeam && !group.synthetic && group.team.id.isNotEmpty;

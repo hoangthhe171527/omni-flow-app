@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 
 import '../../../../design/components/omni_avatar.dart';
+import '../../../../design/components/omni_motion_widgets.dart';
 import '../../../../design/components/omni_tabs.dart';
 import '../../../../design/components/omni_task_chip.dart';
-import '../../../../design/platform/omni_motion_scope.dart';
 import '../../../../design/tokens/tokens.dart';
 import '../../../tasks/domain/task.dart';
 import '../../../tasks/tasks.dart';
@@ -172,7 +172,7 @@ class BoardTaskCard extends StatelessWidget {
       ),
     );
 
-    return rise ? _Rise(delay: delay, child: card) : card;
+    return OmniRise(delay: delay, animate: rise, child: card);
   }
 
   String get _semanticLabel {
@@ -184,36 +184,6 @@ class BoardTaskCard extends StatelessWidget {
     if (due.tone == DueTone.late) parts.add(due.label.toLowerCase());
 
     return parts.join(', ');
-  }
-}
-
-/// Hiệu ứng `rise`: mờ → rõ và trượt lên 10px trong 400ms (+ [delay]).
-/// Tắt hẳn khi người dùng giảm chuyển động.
-class _Rise extends StatelessWidget {
-  const _Rise({required this.delay, required this.child});
-
-  final Duration delay;
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) {
-    if (!OmniMotion.enabled(context)) return child;
-    final total = 400 + delay.inMilliseconds;
-    final start = delay.inMilliseconds / total;
-
-    return TweenAnimationBuilder<double>(
-      tween: Tween(begin: 0, end: 1),
-      duration: Duration(milliseconds: total),
-      curve: Interval(start, 1, curve: Curves.easeOutCubic),
-      child: child,
-      builder: (context, t, child) => Opacity(
-        opacity: t,
-        child: Transform.translate(
-          offset: Offset(0, 10 * (1 - t)),
-          child: child,
-        ),
-      ),
-    );
   }
 }
 

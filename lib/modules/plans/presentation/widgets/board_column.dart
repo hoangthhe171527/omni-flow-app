@@ -130,7 +130,7 @@ class BoardColumn extends StatelessWidget {
   final List<Task> tasks;
   final ValueChanged<Task> onOpenTask;
 
-  /// true nếu thẻ này hiện lần ĐẦU trên bảng (được phép "rise").
+  /// true nếu thẻ được "rise" (chỉ ở khung đầu của bảng, xem PlanBoardPage).
   final bool Function(String taskId) firstShow;
 
   /// null = không có quyền tạo việc: ẩn "Thêm công việc".

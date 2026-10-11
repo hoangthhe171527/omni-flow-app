@@ -146,17 +146,19 @@ class _AddButtonState extends State<_AddButton> {
       expanded: open,
       excludeSemantics: true,
       onTap: tap,
-      child: GestureDetector(
-        key: const Key('teams-add-hit'),
-        behavior: HitTestBehavior.opaque,
-        onTap: tap,
-        child: SizedBox(
-          key: _hitKey,
-          width: 44,
-          height: TeamsSearchRow._fieldHeight + TeamsSearchRow._bottomPad,
-          child: Align(
-            alignment: Alignment.topCenter,
-            child: OmniPressScale(
+      // Co khi nhấn bọc NGOÀI vùng chạm: recognizer tap trong cùng thắng arena,
+      // nên OmniPressScale bên trong sẽ nuốt mất cú chạm mở menu.
+      child: OmniPressScale(
+        child: GestureDetector(
+          key: const Key('teams-add-hit'),
+          behavior: HitTestBehavior.opaque,
+          onTap: tap,
+          child: SizedBox(
+            key: _hitKey,
+            width: 44,
+            height: TeamsSearchRow._fieldHeight + TeamsSearchRow._bottomPad,
+            child: Align(
+              alignment: Alignment.topCenter,
               child: AnimatedContainer(
                 key: const Key('teams-add-face'),
                 width: 44,

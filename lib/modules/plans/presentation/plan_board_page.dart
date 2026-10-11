@@ -53,10 +53,11 @@ class _PlanBoardPageState extends ConsumerState<PlanBoardPage> {
   /// Chuỗi tìm đã qua debounce 300ms; rỗng = không lọc.
   String _query = '';
 
-  /// Thẻ đã hiện trên bảng này. Chỉ lần đầu mới "rise": cột là danh sách
-  /// lười, cuộn đi rồi cuộn về là dựng lại thẻ — phát lại hiệu ứng lúc đó
-  /// đọc như giật. Đổi lọc hay realtime cũng không phát lại.
-  final _shown = <String>{};
+  /// Đã qua khung đầu có thẻ. Chỉ thẻ vào cây ở khung đó mới "rise": cột và
+  /// dải là danh sách lười, dựng lại thẻ khi cuộn về hay khi cột kế được cuộn
+  /// tới — phát lại hiệu ứng lúc đó đọc như giật. Đổi lọc, tìm hay realtime
+  /// cũng không phát lại.
+  bool _introDone = false;
 
   @override
   void dispose() {
@@ -66,7 +67,7 @@ class _PlanBoardPageState extends ConsumerState<PlanBoardPage> {
     super.dispose();
   }
 
-  bool _firstShow(String taskId) => _shown.add(taskId);
+  bool _firstShow(String taskId) => !_introDone;
 
   @override
   Widget build(BuildContext context) {
@@ -184,6 +185,9 @@ class _PlanBoardPageState extends ConsumerState<PlanBoardPage> {
     required bool canEditSections,
   }) {
     final columns = board.columns;
+    if (!_introDone) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _introDone = true);
+    }
     final realSections = plan.sections;
     final itemCount = columns.length + (canEditSections ? 1 : 0);
 

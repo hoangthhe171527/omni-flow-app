@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 
 import '../../../../design/components/components.dart';
@@ -23,6 +25,7 @@ class TeamGroup extends StatelessWidget {
     required this.onOpenPlan,
     this.onLongPress,
     this.index = 0,
+    this.rise = true,
   });
 
   final TeamWithPlans group;
@@ -35,13 +38,13 @@ class TeamGroup extends StatelessWidget {
   final VoidCallback? onLongPress;
   final int index;
 
+  /// false = hiện ngay. Tab Việc chỉ cho nhóm "rise" ở lần dựng ĐẦU của màn;
+  /// danh sách lười dựng lại nhóm khi cuộn về, và phát lại lúc đó đọc như giật.
+  final bool rise;
+
   /// Màu ô của team: `color` do server lưu, thiếu hay sai thì xám phụ.
   static Color colorOf(String? raw) {
-    final parsed = OmniLabelColors.parseHex(raw);
-
-    return parsed == OmniLabelColors.fallback
-        ? OmniColors.mutedForeground
-        : parsed;
+    return OmniLabelColors.tryParseHex(raw) ?? OmniColors.mutedForeground;
   }
 
   @override
@@ -51,7 +54,9 @@ class TeamGroup extends StatelessWidget {
     const radius = BorderRadius.all(Radius.circular(8));
 
     return OmniRise(
-      delay: OmniRise.step * index,
+      // Trần 6 bước: nhóm thứ 20 không phải chờ cả giây mới hiện.
+      delay: OmniRise.step * math.min(index, 6),
+      animate: rise,
       child: Material(
         color: scheme.surface,
         shape: RoundedRectangleBorder(

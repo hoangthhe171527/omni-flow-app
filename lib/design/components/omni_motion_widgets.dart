@@ -9,12 +9,22 @@ import '../tokens/omni_motion.dart';
 ///
 /// Giảm chuyển động: hiện ngay ở trạng thái cuối, không có khung chờ nào.
 class OmniRise extends StatefulWidget {
-  const OmniRise({super.key, this.delay = Duration.zero, required this.child});
+  const OmniRise({
+    super.key,
+    this.delay = Duration.zero,
+    this.animate = true,
+    required this.child,
+  });
 
   static const duration = Duration(milliseconds: 350);
   static const step = Duration(milliseconds: 50);
 
   final Duration delay;
+
+  /// false = hiện ngay ở trạng thái cuối. Chỉ đọc lúc khối vào cây: đổi về
+  /// false khi đang chạy thì hiệu ứng vẫn chạy nốt. Danh sách lười dùng cờ
+  /// này để khối dựng lại khi cuộn về không phát lại `rise`.
+  final bool animate;
   final Widget child;
 
   @override
@@ -44,7 +54,7 @@ class _OmniRiseState extends State<OmniRise>
     super.didChangeDependencies();
     if (_started) return;
     _started = true;
-    if (OmniMotion.enabled(context)) {
+    if (widget.animate && OmniMotion.enabled(context)) {
       _controller.forward();
     } else {
       _controller.value = 1;
@@ -95,10 +105,15 @@ class _OmniPressScaleState extends State<OmniPressScale> {
   Widget build(BuildContext context) {
     final motion = OmniMotion.enabled(context);
 
-    return Listener(
-      onPointerDown: (_) => _set(true),
-      onPointerUp: (_) => _set(false),
-      onPointerCancel: (_) => _set(false),
+    // Nhận chạm qua arena cử chỉ, không qua Listener: kéo cuộn danh sách thì
+    // recognizer cuộn thắng và lượt chạm bị huỷ (onTapCancel), nên khối không
+    // co lại trong lúc đang cuộn. Không bắt chạm: con (InkWell) vẫn nhận tap.
+    return GestureDetector(
+      behavior: HitTestBehavior.translucent,
+      excludeFromSemantics: true,
+      onTapDown: (_) => _set(true),
+      onTapUp: (_) => _set(false),
+      onTapCancel: () => _set(false),
       child: AnimatedScale(
         scale: motion && _down ? .97 : 1,
         duration: motion ? OmniDuration.base : Duration.zero,

@@ -30,9 +30,13 @@ abstract final class OmniLabelColors {
   ///
   /// Rỗng, null hay sai dạng đều ra [fallback] chứ không ném: màu do người
   /// dùng nhập ở web, và một chuỗi gõ nhầm không được làm vỡ cả thẻ việc.
-  static Color parseHex(String? raw) {
+  static Color parseHex(String? raw) => tryParseHex(raw) ?? fallback;
+
+  /// Như [parseHex] nhưng trả null khi rỗng hoặc sai dạng, để chỗ gọi tự chọn
+  /// màu thay — so sánh với [fallback] thì nhầm một màu hợp lệ trùng giá trị.
+  static Color? tryParseHex(String? raw) {
     final match = _hex.firstMatch(raw?.trim() ?? '');
-    if (match == null) return fallback;
+    if (match == null) return null;
 
     var digits = match.group(1)!;
     if (digits.length == 3) {

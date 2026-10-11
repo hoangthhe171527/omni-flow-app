@@ -509,6 +509,27 @@ void main() {
     expect(opacitiesOf('Kiểm tra đàn Kawai ND21').every((o) => o == 1), isTrue);
   });
 
+  testWidgets('cột ở xa cuộn tới sau khung đầu: thẻ hiện ngay, không rise', (
+    tester,
+  ) async {
+    await pumpBoard(tester);
+    expect(find.text('Bảo hành 2 cây'), findsNothing, reason: 'chưa dựng');
+
+    _scrollTrackToEnd(tester);
+    await tester.pump();
+
+    final opacities = tester
+        .widgetList<Opacity>(
+          find.ancestor(
+            of: find.text('Bảo hành 2 cây'),
+            matching: find.byType(Opacity),
+          ),
+        )
+        .map((o) => o.opacity);
+    expect(opacities.every((o) => o == 1), isTrue);
+    await tester.pumpAndSettle();
+  });
+
   testWidgets('⋯ kế hoạch: Sửa nhóm việc + Xoá kế hoạch cho người giao', (
     tester,
   ) async {

@@ -162,6 +162,8 @@ class _CreateMenu extends StatelessWidget {
         clipBehavior: Clip.antiAlias,
         child: Semantics(
           scopesRoute: true,
+          namesRoute: true,
+          label: 'Tạo mới',
           explicitChildNodes: true,
           child: Column(
             mainAxisSize: MainAxisSize.min,
