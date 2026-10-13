@@ -1129,15 +1129,21 @@ class _NameSheetState extends State<_NameSheet> {
               style: OmniType.bodyStrong.copyWith(color: scheme.onSurface),
             ),
             const SizedBox(height: 12),
-            TextField(
-              controller: _controller,
-              autofocus: true,
-              maxLength: 128,
-              textInputAction: TextInputAction.done,
-              onSubmitted: (_) => _submit(),
-              decoration: const InputDecoration(
-                hintText: 'Tên nhóm việc',
-                counterText: '',
+            // Màn nhỏ + bàn phím: ô nhập co lại và cuộn, nút "Lưu" luôn trong
+            // tầm chạm (như `showTextEditSheet`).
+            Flexible(
+              child: SingleChildScrollView(
+                child: TextField(
+                  controller: _controller,
+                  autofocus: true,
+                  maxLength: 128,
+                  textInputAction: TextInputAction.done,
+                  onSubmitted: (_) => _submit(),
+                  decoration: const InputDecoration(
+                    hintText: 'Tên nhóm việc',
+                    counterText: '',
+                  ),
+                ),
               ),
             ),
             const SizedBox(height: 12),

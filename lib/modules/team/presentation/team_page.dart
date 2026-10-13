@@ -218,46 +218,45 @@ class _LinkZaloSheetState extends State<_LinkZaloSheet> {
     final text = Theme.of(context).textTheme;
     final scheme = Theme.of(context).colorScheme;
 
+    // Phần bàn phím `showOmniSheet` đã đệm; đệm thêm lần nữa là nút "Lưu"
+    // tràn ra ngoài khung nhận chạm.
     return Padding(
-      padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(
-          OmniSpacing.lg,
-          OmniSpacing.sm,
-          OmniSpacing.lg,
-          OmniSpacing.lg,
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Liên kết Zalo — ${widget.member.name}',
-              style: text.titleMedium?.copyWith(fontWeight: FontWeight.w600),
+      padding: const EdgeInsets.fromLTRB(
+        OmniSpacing.lg,
+        OmniSpacing.sm,
+        OmniSpacing.lg,
+        OmniSpacing.lg,
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Liên kết Zalo — ${widget.member.name}',
+            style: text.titleMedium?.copyWith(fontWeight: FontWeight.w600),
+          ),
+          const SizedBox(height: OmniSpacing.xs),
+          Text(
+            'Id Zalo của người này. Sau khi liên kết, tin họ nhắn trong nhóm '
+            'xưởng sẽ được ghi nhận đúng tên. Để trống là gỡ liên kết.',
+            style: text.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
+          ),
+          const SizedBox(height: OmniSpacing.md),
+          TextField(
+            controller: _controller,
+            autofocus: true,
+            decoration: const InputDecoration(hintText: 'Ví dụ: 79000012345'),
+          ),
+          const SizedBox(height: OmniSpacing.lg),
+          SizedBox(
+            width: double.infinity,
+            child: FilledButton(
+              onPressed: () =>
+                  Navigator.of(context).pop(_controller.text.trim()),
+              child: const Text('Lưu'),
             ),
-            const SizedBox(height: OmniSpacing.xs),
-            Text(
-              'Id Zalo của người này. Sau khi liên kết, tin họ nhắn trong nhóm '
-              'xưởng sẽ được ghi nhận đúng tên. Để trống là gỡ liên kết.',
-              style: text.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
-            ),
-            const SizedBox(height: OmniSpacing.md),
-            TextField(
-              controller: _controller,
-              autofocus: true,
-              decoration: const InputDecoration(hintText: 'Ví dụ: 79000012345'),
-            ),
-            const SizedBox(height: OmniSpacing.lg),
-            SizedBox(
-              width: double.infinity,
-              child: FilledButton(
-                onPressed: () =>
-                    Navigator.of(context).pop(_controller.text.trim()),
-                child: const Text('Lưu'),
-              ),
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
