@@ -125,14 +125,26 @@ class DetailRow extends StatelessWidget {
     required this.label,
     required this.child,
     this.divider = false,
+    this.icon,
+    this.iconColor,
   });
 
   final String label;
   final Widget child;
   final bool divider;
 
+  /// Biểu tượng 16 trước nhãn (thẻ Trường tuỳ chỉnh: kiểu trường). Có thì
+  /// cột nhãn rộng 116 thay vì 104, để chữ nhãn vẫn còn chỗ như cũ.
+  final IconData? icon;
+
+  /// Màu [icon]; null = màu chữ phụ như nhãn.
+  final Color? iconColor;
+
   @override
   Widget build(BuildContext context) {
+    final secondary = detailSecondary(context);
+    final text = Text(label, style: OmniType.bodySm.copyWith(color: secondary));
+
     return Container(
       constraints: const BoxConstraints(minHeight: 48),
       padding: const EdgeInsets.fromLTRB(12, 0, 6, 0),
@@ -144,11 +156,20 @@ class DetailRow extends StatelessWidget {
       child: Row(
         children: [
           SizedBox(
-            width: 104,
-            child: Text(
-              label,
-              style: OmniType.bodySm.copyWith(color: detailSecondary(context)),
-            ),
+            width: icon == null ? 104 : 116,
+            child: icon == null
+                ? text
+                : Row(
+                    children: [
+                      Icon(
+                        icon,
+                        size: OmniIconSize.sm,
+                        color: iconColor ?? secondary,
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(child: text),
+                    ],
+                  ),
           ),
           const SizedBox(width: 10),
           Expanded(child: child),

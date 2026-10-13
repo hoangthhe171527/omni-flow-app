@@ -6,6 +6,7 @@ import '../../core/module/omni_module.dart';
 import '../../security/guard/access_requirement.dart';
 import '../tasks/domain/task_permissions.dart';
 import 'presentation/plan_board_page.dart';
+import 'presentation/plan_fields_page.dart';
 import 'presentation/teams_page.dart';
 import 'presentation/timeline_page.dart';
 import 'routes.dart';
@@ -55,6 +56,14 @@ class PlansModule extends OmniModule {
       rootNavigator: true,
       access: const AccessRequirement.any(TaskPermissions.anyRead),
       builder: (_, state) => PlanBoardPage(planId: state.pathParameters['id']!),
+    ),
+    ModuleRoute(
+      path: '/plans/:id/fields',
+      name: PlanRoutes.fields,
+      rootNavigator: true,
+      access: const AccessRequirement.any(TaskPermissions.anyRead),
+      builder: (_, state) =>
+          PlanFieldsPage(planId: state.pathParameters['id']!),
     ),
   ];
 
