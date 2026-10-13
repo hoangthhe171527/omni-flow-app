@@ -198,53 +198,57 @@ class _TextEditSheetState extends State<_TextEditSheet> {
 
   @override
   Widget build(BuildContext context) {
+    // KHÔNG tự đệm phần bàn phím: `showOmniSheet` đã đệm rồi. Đệm hai lần
+    // thì nội dung bị ép, tràn xuống dưới, và nút "Lưu" vẽ ra mà bấm không ăn
+    // (`text_edit_sheet_keyboard_test.dart`).
     return Padding(
-      // Chừa chỗ cho bàn phím: không có dòng này thì ô nhập nằm dưới bàn phím
-      // và người dùng gõ mù.
-      padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(
-          OmniSpacing.lg,
-          OmniSpacing.sm,
-          OmniSpacing.lg,
-          OmniSpacing.lg,
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              widget.title,
-              style: Theme.of(
-                context,
-              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
-            ),
-            const SizedBox(height: OmniSpacing.md),
-            TextField(
-              controller: _controller,
-              autofocus: true,
-              keyboardType: widget.keyboardType,
-              textCapitalization: TextCapitalization.sentences,
-              minLines: widget.multiline ? 3 : 1,
-              maxLines: widget.multiline ? 8 : 1,
-              maxLength: widget.maxLength,
-              decoration: InputDecoration(hintText: widget.hint),
-              onChanged: (_) => setState(() {}),
-            ),
-            const SizedBox(height: OmniSpacing.lg),
-            SizedBox(
-              width: double.infinity,
-              child: FilledButton(
-                // Tắt khi chưa đổi gì: lưu lại đúng nội dung cũ vẫn chạm
-                // updated_at và đẻ ra một dòng nhật ký nói có người sửa.
-                onPressed: _canSave
-                    ? () => Navigator.of(context).pop(_controller.text.trim())
-                    : null,
-                child: const Text('Lưu'),
+      padding: const EdgeInsets.fromLTRB(
+        OmniSpacing.lg,
+        OmniSpacing.sm,
+        OmniSpacing.lg,
+        OmniSpacing.lg,
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            widget.title,
+            style: Theme.of(
+              context,
+            ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
+          ),
+          const SizedBox(height: OmniSpacing.md),
+          // Màn nhỏ + bàn phím: mô tả tám dòng cao hơn chỗ còn lại. Ô nhập co
+          // lại và tự cuộn, còn tiêu đề và nút "Lưu" luôn trong tầm chạm.
+          Flexible(
+            child: SingleChildScrollView(
+              child: TextField(
+                controller: _controller,
+                autofocus: true,
+                keyboardType: widget.keyboardType,
+                textCapitalization: TextCapitalization.sentences,
+                minLines: widget.multiline ? 3 : 1,
+                maxLines: widget.multiline ? 8 : 1,
+                maxLength: widget.maxLength,
+                decoration: InputDecoration(hintText: widget.hint),
+                onChanged: (_) => setState(() {}),
               ),
             ),
-          ],
-        ),
+          ),
+          const SizedBox(height: OmniSpacing.lg),
+          SizedBox(
+            width: double.infinity,
+            child: FilledButton(
+              // Tắt khi chưa đổi gì: lưu lại đúng nội dung cũ vẫn chạm
+              // updated_at và đẻ ra một dòng nhật ký nói có người sửa.
+              onPressed: _canSave
+                  ? () => Navigator.of(context).pop(_controller.text.trim())
+                  : null,
+              child: const Text('Lưu'),
+            ),
+          ),
+        ],
       ),
     );
   }
