@@ -13,7 +13,9 @@ import 'package:omni_app/modules/tasks/domain/custom_field.dart';
 import 'package:omni_app/modules/tasks/domain/task.dart';
 import 'package:omni_app/modules/tasks/domain/task_permissions.dart';
 import 'package:omni_app/modules/tasks/domain/task_project.dart';
+import 'package:omni_app/modules/plans/routes.dart';
 import 'package:omni_app/modules/tasks/presentation/task_detail_page.dart';
+import 'package:omni_app/modules/tasks/presentation/widgets/task_detail/custom_fields_card.dart';
 import 'package:omni_app/modules/team/team.dart';
 import 'package:omni_app/security/permissions/access_policy.dart';
 import 'package:omni_app/security/session/session.dart';
@@ -39,6 +41,7 @@ void main() {
   late _Detail stub;
 
   Map<String, dynamic> json({
+    String? projectId = 'p1',
     List<Map<String, dynamic>> checklist = const [],
     Map<String, dynamic> custom = const {},
     String? customerId,
@@ -50,7 +53,7 @@ void main() {
     'id': 't1',
     'title': 'YAMAHA U3E 592698',
     'status': 'todo',
-    'project_id': 'p1',
+    'project_id': ?projectId,
     'project_name': 'Tân trang',
     'assignee_ids': ['u1', 'u2'],
     'assignee_names': ['Khánh', 'Trung Nguyên'],
@@ -243,7 +246,8 @@ void main() {
 
       tw('chọn "Trắng" gửi đúng chuỗi lựa chọn', (t) async {
         await pump(t, host(data: json(), defs: select));
-        await t.tap(find.text('Nhập màu sắc'));
+        // Lựa chọn thì mời "Chọn …", không phải "Nhập …" (mẫu đã duyệt).
+        await t.tap(find.text('Chọn màu sắc'));
         await t.pumpAndSettle();
         // Chưa có giá trị: không có dòng xoá.
         expect(find.text('Xoá giá trị'), findsNothing);
@@ -268,11 +272,84 @@ void main() {
       });
     });
 
-    tw('kế hoạch không có trường nào (và không có khách): không có thẻ', (
+    // Mẫu đã duyệt (artifact "Trường tuỳ chỉnh – chi tiết việc"): việc trong
+    // kế hoạch LUÔN có thẻ, để người dùng biết tính năng có mà khai báo.
+    tw('kế hoạch chưa có trường, thành viên: chỉ dòng báo, không nút', (
       t,
     ) async {
-      await pump(t, host(data: json(), defs: const []));
+      await pump(t, host(data: json(), defs: const [], perms: worker));
+      expect(find.text('Trường tuỳ chỉnh'), findsOneWidget);
+      expect(
+        find.textContaining('Chủ hoặc quản lý kế hoạch thêm được'),
+        findsOneWidget,
+      );
+      expect(find.text('Thêm trường'), findsNothing);
+      expect(find.byTooltip('Quản lý trường của kế hoạch'), findsNothing);
+    });
+
+    tw('việc không thuộc kế hoạch, không có khách: không có thẻ', (t) async {
+      await pump(t, host(data: json(projectId: null), defs: const []));
       expect(find.text('Trường tuỳ chỉnh'), findsNothing);
+    });
+
+    tw('đã có trường: thành viên không có nút +', (t) async {
+      await pump(t, host(data: json(), perms: worker));
+      expect(find.byTooltip('Quản lý trường của kế hoạch'), findsNothing);
+    });
+
+    tw('mỗi dòng có biểu tượng theo kiểu; ngày trống mời "Chọn …"', (t) async {
+      await pump(
+        t,
+        host(
+          data: json(),
+          defs: const [
+            CustomFieldDef(
+              id: 'f_hang',
+              name: 'Hãng',
+              type: CustomFieldType.select,
+              options: ['Yamaha'],
+            ),
+            CustomFieldDef(id: 'f_model', name: 'Model'),
+            CustomFieldDef(
+              id: 'f_serial',
+              name: 'Serial',
+              type: CustomFieldType.number,
+            ),
+            CustomFieldDef(
+              id: 'f_nhan',
+              name: 'Ngày nhận',
+              type: CustomFieldType.date,
+            ),
+          ],
+        ),
+      );
+      Finder iconIn(String id, IconData icon) => find.descendant(
+        of: find.byKey(ValueKey('custom-field-$id')),
+        matching: find.byIcon(icon),
+      );
+      expect(
+        iconIn('f_hang', customFieldIcon(CustomFieldType.select)),
+        findsOneWidget,
+      );
+      expect(
+        iconIn('f_model', customFieldIcon(CustomFieldType.text)),
+        findsOneWidget,
+      );
+      expect(
+        iconIn('f_serial', customFieldIcon(CustomFieldType.number)),
+        findsOneWidget,
+      );
+      expect(
+        iconIn('f_nhan', customFieldIcon(CustomFieldType.date)),
+        findsOneWidget,
+      );
+      // Bốn kiểu, bốn biểu tượng khác nhau.
+      expect(
+        CustomFieldType.values.map(customFieldIcon).toSet(),
+        hasLength(CustomFieldType.values.length),
+      );
+      expect(find.text('Chọn ngày nhận'), findsOneWidget);
+      expect(find.text('Nhập model'), findsOneWidget);
     });
 
     tw('chỉ đọc: chạm trường không mở gì', (t) async {
@@ -318,6 +395,61 @@ void main() {
 
     test('quyền mở hồ sơ khách là bản sao đúng của CustomerPermissions', () {
       expect(TaskPermissions.openCustomer, CustomerPermissions.anyRead);
+    });
+  });
+
+  group('"Thêm trường" → trang trường của kế hoạch', () {
+    tw('quản lý bấm "Thêm trường" mở PlanRoutes.fields của đúng kế hoạch', (
+      t,
+    ) async {
+      final router = GoRouter(
+        routes: [
+          GoRoute(
+            path: '/',
+            builder: (_, _) => const TaskDetailPage(taskId: 't1'),
+          ),
+          GoRoute(
+            path: '/plans/:id/fields',
+            name: PlanRoutes.fields,
+            builder: (_, state) =>
+                Text('trường của ${state.pathParameters['id']}'),
+          ),
+        ],
+      );
+      await pump(
+        t,
+        ProviderScope(
+          overrides: [
+            taskDetailProvider.overrideWith(
+              () => _Detail(TaskDetailState(task: Task.fromJson(json())), []),
+            ),
+            planCustomFieldsProvider.overrideWith((ref, id) async => const []),
+            taskProjectProvider.overrideWith(
+              (ref, id) async => const TaskProject(ownerId: 'u0'),
+            ),
+            taskLabelsProvider.overrideWith((ref) async => const []),
+            accessProvider.overrideWithValue(AccessPolicy(assigner)),
+            taskAccessProvider.overrideWithValue(
+              TaskAccess.of(AccessPolicy(assigner)),
+            ),
+          ],
+          child: MaterialApp.router(
+            theme: OmniTheme.light(TargetPlatform.android),
+            routerConfig: router,
+          ),
+        ),
+      );
+      // Kế hoạch chưa có trường, người quản lý: thẻ trống vẫn hiện, có nút.
+      expect(find.text('Trường tuỳ chỉnh'), findsOneWidget);
+      expect(
+        find.textContaining('Kế hoạch này chưa có trường nào.'),
+        findsOneWidget,
+      );
+      expect(find.byTooltip('Quản lý trường của kế hoạch'), findsOneWidget);
+
+      await t.tap(find.text('Thêm trường'));
+      await t.pumpAndSettle();
+      expect(find.text('trường của p1'), findsOneWidget);
     });
   });
 

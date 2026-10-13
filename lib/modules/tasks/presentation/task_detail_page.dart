@@ -616,10 +616,26 @@ class _Loaded extends ConsumerWidget {
         GoRouter.maybeOf(context) != null;
     final customerId = task.customerId;
 
+    // Khai báo trường là sửa KẾ HOẠCH (`UpdateProjectRequest`): cùng luật
+    // `canManage` với xoá bình luận người khác.
+    final canManageFields =
+        canModerate && projectId != null && GoRouter.maybeOf(context) != null;
+
     final bottom = [
       CustomFieldsCard(
         task: task,
         onEdit: canWrite ? (def) => _editField(context, controller, def) : null,
+        onManageFields: canManageFields
+            ? () async {
+                await context.pushNamed(
+                  PlanRoutes.fields,
+                  pathParameters: {'id': projectId},
+                );
+                // Trang trường lưu thẳng vào kế hoạch; đọc lại để thẻ hiện
+                // ngay các trường vừa thêm.
+                ref.invalidate(taskProjectProvider(projectId));
+              }
+            : null,
         onOpenCustomer: canOpenCustomer && customerId != null
             ? () => context.pushNamed(
                 CustomerRoutes.detail,

@@ -29,6 +29,7 @@ class OmniTaskTones {
     required this.faint,
     required this.star,
     required this.starIdle,
+    required this.fieldIcon,
     required List<Color> sectionColors,
   }) : _sectionColors = sectionColors;
 
@@ -69,6 +70,11 @@ class OmniTaskTones {
 
   /// Sao đánh giá chưa bật (`#D5DBE5`).
   final Color starIdle;
+
+  /// Biểu tượng kiểu trường (lựa chọn / chữ / số / ngày) ở thẻ Trường tuỳ
+  /// chỉnh: vàng đất, KHÔNG phải [OmniColors.sun] — vàng sáng chỉ để báo
+  /// "có cái mới". Biểu tượng nên chỉ cần 3:1 trên nền thẻ.
+  final Color fieldIcon;
 
   final List<Color> _sectionColors;
 
@@ -112,6 +118,7 @@ class OmniTaskTones {
     faint: Color(0xFF9AA5B8),
     star: Color(0xFFE8890C),
     starIdle: Color(0xFFD5DBE5),
+    fieldIcon: Color(0xFFB7791F),
     sectionColors: [
       Color(0xFF8A95A8),
       Color(0xFF2563EB),
@@ -147,6 +154,7 @@ class OmniTaskTones {
       faint: const Color(0xFF6B7A92),
       star: const Color(0xFFF0A23C),
       starIdle: const Color(0xFF3A4A63),
+      fieldIcon: const Color(0xFFF0A23C),
       sectionColors: const [
         Color(0xFF9AA8BD),
         Color(0xFF60A5FA),
