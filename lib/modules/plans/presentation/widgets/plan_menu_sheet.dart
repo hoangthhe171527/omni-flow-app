@@ -15,6 +15,7 @@ enum PlanMenuAction {
   fields,
   copy,
   moveTeam,
+  copyLink,
   archived,
   files,
   report,
@@ -34,15 +35,14 @@ enum PlanMenuAction {
 /// - [canViewLabels]: đọc được danh mục nhãn (`system_options.read`).
 /// - [canDelete]: như `canDeletePlan` của bảng.
 ///
-/// Ba mục đọc ("Việc đã lưu trữ", "Tệp đính kèm", "Báo cáo kế hoạch") ai mở
-/// được bảng cũng có: chỉ cần `tasks.read`. Ghi trong các màn đó (khôi phục,
-/// xoá tệp) tự ẩn theo quyền.
+/// Các mục đọc ("Sao chép liên kết", "Việc đã lưu trữ", "Tệp đính kèm",
+/// "Báo cáo kế hoạch") ai mở được bảng cũng có: chỉ cần `tasks.read`. Ghi
+/// trong các màn đó (khôi phục, xoá tệp) tự ẩn theo quyền. Liên kết là route
+/// web `/projects/<id>` (`WebLinks.plan`), không gọi API.
 ///
 /// - [canTransferOwner]: "Chuyển chủ kế hoạch" (Nhóm 2) — API có khả năng
 ///   (`ApiCapability.projectTransferOwner` trong phiên) VÀ người này là chủ hiện tại hoặc giữ
 ///   `tasks.projects.manage.all`, đúng luật `TransferProjectOwner`.
-///
-/// Chưa có: "Sao chép liên kết" (Task 11).
 List<List<PlanMenuAction>> planMenuGroups(
   Plan plan, {
   required bool canManage,
@@ -61,6 +61,7 @@ List<List<PlanMenuAction>> planMenuGroups(
     [
       if (canManage) PlanMenuAction.copy,
       if (canManage) PlanMenuAction.moveTeam,
+      PlanMenuAction.copyLink,
       PlanMenuAction.archived,
       PlanMenuAction.files,
       PlanMenuAction.report,
@@ -240,6 +241,7 @@ class _MenuRow extends StatelessWidget {
         Icons.arrow_forward_rounded,
         'Chuyển sang team khác',
       ),
+      PlanMenuAction.copyLink => (Icons.link_rounded, 'Sao chép liên kết'),
       PlanMenuAction.archived => (Icons.archive_outlined, 'Việc đã lưu trữ'),
       PlanMenuAction.files => (Icons.attach_file_rounded, 'Tệp đính kèm'),
       PlanMenuAction.report => (Icons.bar_chart_rounded, 'Báo cáo kế hoạch'),

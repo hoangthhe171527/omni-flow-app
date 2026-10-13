@@ -7,7 +7,7 @@ import 'menu_sheet.dart';
 /// Mục Nhóm 2 (Người theo dõi, Ghim, Khoá) chỉ có khi API gửi khoá tương ứng
 /// (`ApiCapability.taskFollow` / `taskPin` / `taskLock` trong phiên); Nhắc việc
 /// và Sao chép công việc theo `taskReminders` / `taskCopy`. "Sao chép liên
-/// kết" KHÔNG có: app chưa có URL web gốc (xem báo cáo Task 11).
+/// kết" luôn có: chỉ chép đường dẫn web (`WebLinks.task`), không gọi API.
 enum TaskMenuAction {
   labels,
   followers,
@@ -17,6 +17,7 @@ enum TaskMenuAction {
   rename,
   copy,
   move,
+  copyLink,
   lock,
   unlock,
   archive,
@@ -29,7 +30,8 @@ enum TaskMenuAction {
 /// - Nhóm 1: "Nhãn màu" ([canLabels]), "Người theo dõi" ([canFollow]),
 ///   "Ghim lên đầu cột" / "Bỏ ghim" ([canPin], [pinned]), "Đổi tên việc"
 ///   (người giao việc — năng lực giữ từ ⋯ cũ, bản mẫu không có).
-/// - Nhóm 2: "Chuyển sang nhóm / kế hoạch khác" (người giao việc).
+/// - Nhóm 2: "Sao chép công việc" ([canCopy]), "Chuyển sang nhóm / kế hoạch
+///   khác" (người giao việc), "Sao chép liên kết" (luôn có, kể cả việc khoá).
 /// - Nhóm 3: "Khoá công việc" / "Mở khoá" ([canLock]), "Lưu trữ" / "Bỏ lưu
 ///   trữ", "Xoá công việc" (người giao việc).
 ///
@@ -62,6 +64,7 @@ List<List<TaskMenuAction>> taskMenuGroups({
       // Sao chép: việc gốc đang khoá vẫn chép được (`CopyTask`).
       if (canCopy) TaskMenuAction.copy,
       if (isAssigner && edit) TaskMenuAction.move,
+      TaskMenuAction.copyLink,
     ],
     [
       if (canLock) locked ? TaskMenuAction.unlock : TaskMenuAction.lock,
@@ -128,6 +131,11 @@ DetailMenuItem<TaskMenuAction> _item(TaskMenuAction a, int followers) =>
         value: a,
         icon: Icons.arrow_forward_rounded,
         label: 'Chuyển sang nhóm / kế hoạch khác',
+      ),
+      TaskMenuAction.copyLink => DetailMenuItem(
+        value: a,
+        icon: Icons.link_rounded,
+        label: 'Sao chép liên kết',
       ),
       TaskMenuAction.lock => DetailMenuItem(
         value: a,

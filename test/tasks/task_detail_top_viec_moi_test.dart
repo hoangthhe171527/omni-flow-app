@@ -14,6 +14,7 @@ import 'package:omni_app/modules/tasks/domain/task.dart';
 import 'package:omni_app/modules/tasks/domain/task_label.dart';
 import 'package:omni_app/modules/tasks/domain/task_permissions.dart';
 import 'package:omni_app/modules/tasks/presentation/task_detail_page.dart';
+import 'package:omni_app/modules/tasks/presentation/widgets/task_detail/menu_sheet.dart';
 import 'package:omni_app/modules/tasks/presentation/widgets/task_detail/option_sheet.dart';
 import 'package:omni_app/modules/team/team.dart';
 import 'package:omni_app/security/permissions/access_policy.dart';
@@ -618,13 +619,15 @@ void main() {
   });
 
   group('(i) thợ', () {
-    tw('không bút sửa mô tả, chạm nhóm không mở sheet, không ⋯', (t) async {
+    tw('không bút sửa mô tả, chạm nhóm không mở sheet, ⋯ chỉ chép liên kết', (
+      t,
+    ) async {
       await pump(
         t,
         host(
           data: json(description: 'Giữ phím ngà'),
           perms: worker,
-          // Không danh mục nhãn (API cũ): thợ không còn mục menu nào.
+          // Không danh mục nhãn (API cũ): thợ chỉ còn "Sao chép liên kết".
           labels: const [],
         ),
       );
@@ -633,7 +636,17 @@ void main() {
       await t.tap(find.byKey(const ValueKey('crumb-section')));
       await t.pumpAndSettle();
       expect(find.text('Chuyển nhóm việc'), findsNothing);
-      expect(find.byTooltip('Tuỳ chọn công việc'), findsNothing);
+      await t.tap(find.byTooltip('Tuỳ chọn công việc'));
+      await t.pumpAndSettle();
+      expect(find.text('Sao chép liên kết'), findsOneWidget);
+      expect(
+        find.descendant(
+          of: find.byWidgetPredicate((w) => w is DetailMenuSheet),
+          matching: find.byType(InkWell),
+        ),
+        findsOneWidget,
+        reason: 'menu của thợ chỉ có đúng một mục',
+      );
     });
   });
 

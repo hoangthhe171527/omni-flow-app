@@ -26,6 +26,8 @@ void main() {
   };
 
   late List<(String, Object?)> recorded;
+  late List<Object?> clipboard;
+  var clipboardFails = false;
 
   Widget host({Set<String> perms = assigner, bool archived = false}) {
     recorded = [];
@@ -74,9 +76,16 @@ void main() {
     t.view.physicalSize = const Size(390, 844);
     t.view.devicePixelRatio = 1;
     addTearDown(t.view.reset);
+    clipboard = [];
     t.binding.defaultBinaryMessenger.setMockMethodCallHandler(
       SystemChannels.platform,
-      (call) async => null,
+      (call) async {
+        if (call.method == 'Clipboard.setData') {
+          if (clipboardFails) throw PlatformException(code: 'denied');
+          clipboard.add((call.arguments as Map)['text']);
+        }
+        return null;
+      },
     );
     await t.pumpWidget(app);
     await t.tap(find.text('Mở việc'));
@@ -92,7 +101,6 @@ void main() {
     'Người theo dõi',
     'Nhắc việc',
     'Sao chép công việc',
-    'Sao chép liên kết',
     'Khoá công việc',
   ];
 
@@ -130,10 +138,11 @@ void main() {
     );
   });
 
-  testWidgets('(i) thợ: chỉ có Nhãn màu', (t) async {
+  testWidgets('(i) thợ: chỉ có Nhãn màu và Sao chép liên kết', (t) async {
     await open(t, host(perms: worker));
     await openMenu(t);
     expect(find.text('Nhãn màu'), findsOneWidget);
+    expect(find.text('Sao chép liên kết'), findsOneWidget);
     for (final label in [
       'Đổi tên việc',
       'Chuyển sang nhóm / kế hoạch khác',
@@ -145,11 +154,54 @@ void main() {
     }
   });
 
-  testWidgets('thợ không đọc được nhãn: không mục nào nên không có ⋯', (
+  testWidgets('thợ không đọc được nhãn: ⋯ chỉ còn "Sao chép liên kết"', (
     t,
   ) async {
     await open(t, host(perms: {'tasks.read', 'tasks.write'}));
-    expect(find.byTooltip('Tuỳ chọn công việc'), findsNothing);
+    await openMenu(t);
+    expect(find.text('Sao chép liên kết'), findsOneWidget);
+    expect(find.text('Nhãn màu'), findsNothing);
+  });
+
+  testWidgets('"Sao chép liên kết" ở nhóm 2, sau "Chuyển sang…"', (t) async {
+    await open(t, host());
+    await openMenu(t);
+    final group = find.byKey(const Key('detail-menu-group-1'));
+    final move = t.getTopLeft(
+      find.descendant(
+        of: group,
+        matching: find.text('Chuyển sang nhóm / kế hoạch khác'),
+      ),
+    );
+    final link = t.getTopLeft(
+      find.descendant(of: group, matching: find.text('Sao chép liên kết')),
+    );
+    expect(link.dy, greaterThan(move.dy));
+  });
+
+  testWidgets('thợ: "Sao chép liên kết" chép link web my-work, báo đã chép', (
+    t,
+  ) async {
+    await open(t, host(perms: worker));
+    await openMenu(t);
+    await t.tap(find.text('Sao chép liên kết'));
+    await t.pumpAndSettle();
+    expect(clipboard, [
+      'https://omni.app.sunriseieco.vn/projects/my-work?task=t1',
+    ]);
+    expect(find.text('Đã sao chép liên kết.'), findsOneWidget);
+    expect(recorded, isEmpty);
+  });
+
+  testWidgets('chép liên kết lỗi: báo không chép được', (t) async {
+    clipboardFails = true;
+    addTearDown(() => clipboardFails = false);
+    await open(t, host());
+    await openMenu(t);
+    await t.tap(find.text('Sao chép liên kết'));
+    await t.pumpAndSettle();
+    expect(clipboard, isEmpty);
+    expect(find.text('Không sao chép được liên kết.'), findsOneWidget);
   });
 
   testWidgets('(j) chuyển sang kế hoạch B, nhóm "Đang xử lý"', (t) async {
