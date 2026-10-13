@@ -241,10 +241,15 @@ void main() {
 
       // Thợ VẪN thấy khối ĐIỀU PHỐI ở dạng chỉ đọc, vì đó là thứ họ
       // cần biết để làm việc. Thứ họ không có là cách đổi nó.
-      expect(find.byTooltip('Tuỳ chọn công việc'), findsNothing);
       expect(find.text('Thêm mô tả'), findsNothing);
       expect(find.byIcon(Icons.edit_outlined), findsNothing);
       expect(find.byIcon(Icons.chevron_right_rounded), findsNothing);
+      // ⋯ vẫn có "Sao chép liên kết" (chỉ đọc), không có mục sửa nào.
+      await tester.tap(find.byTooltip('Tuỳ chọn công việc'));
+      await tester.pumpAndSettle();
+      expect(find.text('Sao chép liên kết'), findsOneWidget);
+      expect(find.text('Đổi tên việc'), findsNothing);
+      expect(find.text('Chuyển sang nhóm / kế hoạch khác'), findsNothing);
     });
   });
 }

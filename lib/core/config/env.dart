@@ -12,9 +12,18 @@ abstract final class Env {
   static const defaultGoogleSsoIosClientId =
       '858803204032-doeqcqgftmn0itu2ip9oej6gtlggjj1h.apps.googleusercontent.com';
 
+  static const defaultWebBaseUrl = 'https://omni.app.sunriseieco.vn';
+
   static String get apiBaseUrl => _normalizeBaseUrl(
-    _read(const String.fromEnvironment('API_BASE_URL'), 'API_BASE_URL') ??
-        defaultApiBaseUrl,
+    _read(const String.fromEnvironment('API_BASE_URL'), 'API_BASE_URL'),
+    defaultApiBaseUrl,
+  );
+
+  /// Gốc của web app (`omni-flow`), dùng cho "Sao chép liên kết" việc / kế
+  /// hoạch. Xem `WebLinks`.
+  static String get webBaseUrl => _normalizeBaseUrl(
+    _read(const String.fromEnvironment('WEB_BASE_URL'), 'WEB_BASE_URL'),
+    defaultWebBaseUrl,
   );
 
   static String get appName =>
@@ -80,9 +89,9 @@ abstract final class Env {
     return (value == null || value.isEmpty) ? null : value;
   }
 
-  static String _normalizeBaseUrl(String url) {
-    final trimmed = url.trim();
-    if (trimmed.isEmpty) return defaultApiBaseUrl;
+  static String _normalizeBaseUrl(String? url, String fallback) {
+    final trimmed = (url ?? '').trim();
+    if (trimmed.isEmpty) return fallback;
     return trimmed.endsWith('/')
         ? trimmed.substring(0, trimmed.length - 1)
         : trimmed;

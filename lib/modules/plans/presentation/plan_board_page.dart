@@ -6,8 +6,10 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/config/web_links.dart';
 import '../../../core/error/app_exception.dart';
 import '../../../core/utils/client_id.dart';
+import '../../../core/utils/copy_link.dart';
 import '../../../design/components/components.dart';
 import '../../../design/platform/omni_motion_scope.dart';
 import '../../../design/tokens/tokens.dart';
@@ -468,6 +470,11 @@ class _PlanBoardPageState extends ConsumerState<PlanBoardPage> {
         await _copyPlan(plan);
       case PlanMenuAction.moveTeam:
         await _moveTeam(plan);
+      case PlanMenuAction.copyLink:
+        await copyLinkToClipboard(
+          ScaffoldMessenger.of(context),
+          WebLinks.plan(plan.id),
+        );
       case PlanMenuAction.archived:
         await navigator.push(
           MaterialPageRoute<void>(

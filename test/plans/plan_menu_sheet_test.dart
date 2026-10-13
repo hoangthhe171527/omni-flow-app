@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:omni_app/core/error/app_exception.dart';
@@ -224,9 +225,22 @@ void main() {
       ),
       findsOneWidget,
     );
+    // "Sao chép liên kết" ở nhóm 2, ngay sau "Chuyển sang team khác".
+    final group1 = find.byKey(const Key('plan-menu-group-1'));
+    expect(
+      find.descendant(of: group1, matching: find.text('Sao chép liên kết')),
+      findsOneWidget,
+    );
+    expect(
+      tester.getTopLeft(find.text('Sao chép liên kết')).dy,
+      greaterThan(tester.getTopLeft(find.text('Chuyển sang team khác')).dy),
+    );
+    expect(
+      tester.getTopLeft(find.text('Sao chép liên kết')).dy,
+      lessThan(tester.getTopLeft(find.text('Việc đã lưu trữ')).dy),
+    );
     for (final hidden in [
       'Chuyển chủ kế hoạch',
-      'Sao chép liên kết',
       'Mở lại kế hoạch',
       'Xoá kế hoạch',
       'Sửa nhóm việc',
@@ -313,6 +327,7 @@ void main() {
     await openMenu(tester);
 
     for (final label in [
+      'Sao chép liên kết',
       'Việc đã lưu trữ',
       'Tệp đính kèm',
       'Báo cáo kế hoạch',
@@ -401,6 +416,55 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byType(PlanReportPage), findsOneWidget);
     expect(api.kpis.toSet(), {planId});
+  });
+
+  group('Sao chép liên kết', () {
+    late List<Object?> clipboard;
+
+    void mockClipboard(WidgetTester tester, {bool fail = false}) {
+      clipboard = [];
+      tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+        SystemChannels.platform,
+        (call) async {
+          if (call.method == 'Clipboard.setData') {
+            if (fail) throw PlatformException(code: 'denied');
+            clipboard.add((call.arguments as Map)['text']);
+          }
+          return null;
+        },
+      );
+      addTearDown(
+        () => tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+          SystemChannels.platform,
+          null,
+        ),
+      );
+    }
+
+    testWidgets('thợ chép link bảng web /projects/<id>, báo đã chép', (
+      tester,
+    ) async {
+      await pump(tester, role: 'member', perms: workerPerms);
+      mockClipboard(tester);
+      await openMenu(tester);
+      await tester.tap(find.text('Sao chép liên kết'));
+      await tester.pumpAndSettle();
+
+      expect(clipboard, ['https://omni.app.sunriseieco.vn/projects/$planId']);
+      expect(find.text('Đã sao chép liên kết.'), findsOneWidget);
+      expect(find.byType(PlanMenuSheet), findsNothing);
+    });
+
+    testWidgets('chép lỗi: báo không chép được', (tester) async {
+      await pump(tester);
+      mockClipboard(tester, fail: true);
+      await openMenu(tester);
+      await tester.tap(find.text('Sao chép liên kết'));
+      await tester.pumpAndSettle();
+
+      expect(clipboard, isEmpty);
+      expect(find.text('Không sao chép được liên kết.'), findsOneWidget);
+    });
   });
 
   testWidgets('(g) đóng kế hoạch: hỏi lại, gửi status done, về tab Việc', (

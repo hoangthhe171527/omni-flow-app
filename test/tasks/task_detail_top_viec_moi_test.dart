@@ -618,13 +618,15 @@ void main() {
   });
 
   group('(i) thợ', () {
-    tw('không bút sửa mô tả, chạm nhóm không mở sheet, không ⋯', (t) async {
+    tw('không bút sửa mô tả, chạm nhóm không mở sheet, ⋯ chỉ chép liên kết', (
+      t,
+    ) async {
       await pump(
         t,
         host(
           data: json(description: 'Giữ phím ngà'),
           perms: worker,
-          // Không danh mục nhãn (API cũ): thợ không còn mục menu nào.
+          // Không danh mục nhãn (API cũ): thợ chỉ còn "Sao chép liên kết".
           labels: const [],
         ),
       );
@@ -633,7 +635,11 @@ void main() {
       await t.tap(find.byKey(const ValueKey('crumb-section')));
       await t.pumpAndSettle();
       expect(find.text('Chuyển nhóm việc'), findsNothing);
-      expect(find.byTooltip('Tuỳ chọn công việc'), findsNothing);
+      await t.tap(find.byTooltip('Tuỳ chọn công việc'));
+      await t.pumpAndSettle();
+      expect(find.text('Sao chép liên kết'), findsOneWidget);
+      expect(find.text('Nhãn màu'), findsNothing);
+      expect(find.text('Đổi tên việc'), findsNothing);
     });
   });
 

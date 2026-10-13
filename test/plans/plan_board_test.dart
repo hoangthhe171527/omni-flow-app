@@ -228,6 +228,9 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.byTooltip('Tuỳ chọn kế hoạch'));
       await tester.pumpAndSettle();
+      // Thêm "Sao chép liên kết" làm sheet dài hơn cửa sổ test 800×600.
+      await tester.ensureVisible(find.text('Xoá kế hoạch'));
+      await tester.pumpAndSettle();
       await tester.tap(find.text('Xoá kế hoạch'));
       await tester.pumpAndSettle();
       expect(find.text('Xoá kế hoạch “Đàn cơ”?'), findsOneWidget);

@@ -5,7 +5,9 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/config/web_links.dart';
 import '../../../core/error/app_exception.dart';
+import '../../../core/utils/copy_link.dart';
 import '../../../core/utils/formatters.dart';
 import '../../../design/components/components.dart';
 import '../../../design/platform/omni_motion_scope.dart';
@@ -121,10 +123,11 @@ class _TaskDetailPageState extends ConsumerState<TaskDetailPage> {
     final groups = loadedTask == null
         ? const <List<TaskMenuAction>>[]
         // Người xem kế hoạch: chỉ "Nhắc việc" (nhắc riêng mình — server cho
-        // mọi người đọc được việc).
+        // mọi người đọc được việc) và "Sao chép liên kết" (chỉ đọc).
         : viewer
         ? [
             if (canRemind) [TaskMenuAction.reminders],
+            [TaskMenuAction.copyLink],
           ]
         : taskMenuGroups(
             // Thợ có danh mục qua `/system-options/task-labels` (Nhóm 2)
@@ -273,6 +276,11 @@ class _TaskDetailPageState extends ConsumerState<TaskDetailPage> {
         );
       case TaskMenuAction.copy:
         await _copy(context, task);
+      case TaskMenuAction.copyLink:
+        await copyLinkToClipboard(
+          ScaffoldMessenger.of(context),
+          WebLinks.task(task.id),
+        );
       case TaskMenuAction.labels:
         await _openLabels(context, widget.taskId, controller, task);
       case TaskMenuAction.rename:
