@@ -14,6 +14,7 @@ import 'package:omni_app/modules/tasks/domain/task.dart';
 import 'package:omni_app/modules/tasks/domain/task_label.dart';
 import 'package:omni_app/modules/tasks/domain/task_permissions.dart';
 import 'package:omni_app/modules/tasks/presentation/task_detail_page.dart';
+import 'package:omni_app/modules/tasks/presentation/widgets/task_detail/menu_sheet.dart';
 import 'package:omni_app/modules/tasks/presentation/widgets/task_detail/option_sheet.dart';
 import 'package:omni_app/modules/team/team.dart';
 import 'package:omni_app/security/permissions/access_policy.dart';
@@ -638,8 +639,14 @@ void main() {
       await t.tap(find.byTooltip('Tuỳ chọn công việc'));
       await t.pumpAndSettle();
       expect(find.text('Sao chép liên kết'), findsOneWidget);
-      expect(find.text('Nhãn màu'), findsNothing);
-      expect(find.text('Đổi tên việc'), findsNothing);
+      expect(
+        find.descendant(
+          of: find.byWidgetPredicate((w) => w is DetailMenuSheet),
+          matching: find.byType(InkWell),
+        ),
+        findsOneWidget,
+        reason: 'menu của thợ chỉ có đúng một mục',
+      );
     });
   });
 

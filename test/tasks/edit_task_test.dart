@@ -13,6 +13,7 @@ import 'package:omni_app/modules/tasks/data/tasks_api.dart';
 import 'package:omni_app/modules/tasks/domain/task.dart';
 import 'package:omni_app/modules/tasks/domain/task_permissions.dart';
 import 'package:omni_app/modules/tasks/presentation/task_detail_page.dart';
+import 'package:omni_app/modules/tasks/presentation/widgets/task_detail/menu_sheet.dart';
 import 'package:omni_app/security/permissions/access_policy.dart';
 
 /// Người giao việc sửa được MỌI thứ ngay trên điện thoại.
@@ -248,6 +249,14 @@ void main() {
       await tester.tap(find.byTooltip('Tuỳ chọn công việc'));
       await tester.pumpAndSettle();
       expect(find.text('Sao chép liên kết'), findsOneWidget);
+      expect(
+        find.descendant(
+          of: find.byWidgetPredicate((w) => w is DetailMenuSheet),
+          matching: find.byType(InkWell),
+        ),
+        findsOneWidget,
+        reason: 'menu của thợ chỉ có đúng một mục',
+      );
       expect(find.text('Đổi tên việc'), findsNothing);
       expect(find.text('Chuyển sang nhóm / kế hoạch khác'), findsNothing);
     });

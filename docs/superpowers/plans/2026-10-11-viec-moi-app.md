@@ -110,7 +110,7 @@ Nhóm 1 (API đã có) làm hết trong Task 1–9. Nhóm 2 (API đang làm song
 
 **Không làm ở Nhóm 1:**
 - "Chuyển chủ kế hoạch": `owner_id` không có trong `UpdateProjectRequest`, nên thuộc Nhóm 2.
-- "Sao chép liên kết": thuộc Task 11. App chưa có cấu hình URL web gốc hay app link.
+- "Sao chép liên kết": đã bật qua `WEB_BASE_URL` (việc `/projects/my-work?task=<id>`, kế hoạch `/projects/<id>`). App link (mở ngược vào app) vẫn ngoài phạm vi.
 - Chat theo kế hoạch: bỏ.
 - Ảnh nền tải lên: bỏ.
 
@@ -118,7 +118,7 @@ Nhóm 1 (API đã có) làm hết trong Task 1–9. Nhóm 2 (API đang làm song
 
 **Không làm ở Nhóm 1:**
 - "Chuyển chủ kế hoạch": `owner_id` không có trong `UpdateProjectRequest`, nên thuộc Nhóm 2.
-- "Sao chép liên kết" (kế hoạch và việc): thuộc Task 11, cần đường dẫn mở được trên web và app.
+- "Sao chép liên kết" (kế hoạch và việc): đã bật qua `WEB_BASE_URL`, liên kết web `/projects/my-work?task=<id>` và `/projects/<id>`; app link vẫn ngoài phạm vi.
 - Chat theo kế hoạch: bỏ.
 - Ảnh nền tải lên: bỏ.
 
@@ -516,7 +516,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 - Đầu sheet: ô 36 màu nền kế hoạch, tên w600 16, "Team · chủ: Tên" 12.
 - Ba nhóm `.og` (nền surface, bo 8, dòng 48, vạch giữa, biểu tượng phụ 20, chữ w500 15):
   1. "Sửa tên, mô tả, nền"; "Thành viên" (số ở phải); "Nhãn màu"; "Trường tuỳ chỉnh". Sửa / Thành viên / Trường chỉ dành cho người quản lý kế hoạch. "Nhãn màu" ai cũng mở được: trong sheet nhãn từ menu kế hoạch, người không sửa được nhãn chỉ **xem**.
-  2. "Sao chép kế hoạch" (quản lý); "Chuyển sang team khác" (quản lý); "Sao chép liên kết" (Task 11, ẩn); "Việc đã lưu trữ" (có số); "Tệp đính kèm"; "Báo cáo kế hoạch". Ba mục cuối nối ở Task 7; ở task này chưa hiện.
+  2. "Sao chép kế hoạch" (quản lý); "Chuyển sang team khác" (quản lý); "Sao chép liên kết" (đã bật qua `WEB_BASE_URL`, `/projects/<id>`); "Việc đã lưu trữ" (có số); "Tệp đính kèm"; "Báo cáo kế hoạch". Ba mục cuối nối ở Task 7; ở task này chưa hiện.
   3. "Chuyển chủ kế hoạch" (Nhóm 2, ẩn); **"Đóng kế hoạch"** chữ và biểu tượng `#B42318` (quản lý); thêm "Mở lại kế hoạch" khi `status != active`; "Xoá kế hoạch" (đỏ, `canDeletePlan`) đặt cuối nhóm 3. Đây là năng lực giữ lại, không có trong bản mẫu.
 - Nhóm nào rỗng thì ẩn cả nhóm.
 
@@ -686,7 +686,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 - **Nhật ký hoạt động:** đầu thẻ có nút "Xem" (mở `ActivityLog` đầy đủ trong sheet); thân là dòng "Đã xem việc này" kèm avatar 24 chồng (`TaskViewers`).
 - **Menu việc** (sheet ba nhóm, kiểu như menu kế hoạch):
   1. "Nhãn màu" (mở sheet nhãn); "Người theo dõi" (Nhóm 2, ẩn); "Nhắc việc" (Nhóm 2, ẩn).
-  2. "Sao chép công việc" (Nhóm 2, ẩn); "Chuyển sang nhóm / kế hoạch khác" (người giao việc): sheet hai bước chọn kế hoạch (`projectsForMove`) rồi nhóm, gửi `moveTask`; chuyển khác kế hoạch xong thì làm mới bảng cũ; "Sao chép liên kết" (Task 11, ẩn).
+  2. "Sao chép công việc" (Nhóm 2, ẩn); "Chuyển sang nhóm / kế hoạch khác" (người giao việc): sheet hai bước chọn kế hoạch (`projectsForMove`) rồi nhóm, gửi `moveTask`; chuyển khác kế hoạch xong thì làm mới bảng cũ; "Sao chép liên kết" (đã bật qua `WEB_BASE_URL`, `/projects/my-work?task=<id>`).
   3. "Khoá công việc" (Nhóm 2, ẩn); "Lưu trữ" / "Bỏ lưu trữ" (người giao việc; xong thì pop cùng SnackBar "Đã lưu trữ."); **"Xoá công việc"** đỏ (giữ `_deleteTask`).
   4. Thêm "Đổi tên việc" ở nhóm 1 (năng lực giữ).
 
@@ -758,11 +758,11 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
   - **Dòng việc con:** ghi chú 13 phụ; nút nét đứt "Hạn" mở chọn ngày; tay kéo 24×44 cho `ReorderableListView` (đổi chỗ lạc quan, lỗi thì trả thứ tự cũ cùng SnackBar); Semantics tay kéo "Kéo để sắp xếp".
   - **Menu việc:** "Sao chép công việc" (hỏi tên, xong thì mở việc mới); "Nhắc việc" mở `reminder_sheet` (chọn ngày giờ, danh sách nhắc đang có, xoá nhắc).
   - **Ô bình luận đáy:** nút ảnh 44 hiện ra; chọn ảnh/tệp qua callback tiêm được (không gọi plugin trong widget), xem trước, gửi kèm.
-  - **Sao chép liên kết** (kế hoạch và việc): hiện app **không** có URL web gốc (`AppConfig`/`Env` chỉ có `API_BASE_URL`) và không có app link (`AndroidManifest` chỉ có LAUNCHER). Chỉ dựng khi có đủ hai điều:
-    - cấu hình `WEB_BASE_URL` (thêm vào `env.dart` cùng test);
-    - router web `omni-flow` mở được `/projects/{id}` và `/tasks/{id}`.
+  - **Sao chép liên kết** (kế hoạch và việc): **đã bật** qua `WEB_BASE_URL` (`env.dart`: dart-define → `.env` → mặc định `https://omni.app.sunriseieco.vn`; `WebLinks` trong `lib/core/config/web_links.dart`):
+    - việc: `${WEB_BASE_URL}/projects/my-work?task=<id>` (route web `_app.projects.my-work.tsx`, khớp `taskDeepLink` của web);
+    - kế hoạch: `${WEB_BASE_URL}/projects/<id>` (route web `_app.projects.$projectId.tsx`).
 
-    Thiếu một trong hai thì giữ ẩn và ghi vào báo cáo. Không cần API. Mở liên kết ngược vào app (app links) là ngoài phạm vi.
+    Không cần API; chép bằng `Clipboard`, báo SnackBar, lỗi thì báo không chép được. Mở liên kết ngược vào app (app links) vẫn ngoài phạm vi.
 - [ ] **Step 3–4:** làm → xanh; chạy lại test fixture JSON cũ.
 - [ ] **Step 5: Commit** `feat(viec): việc con mô tả/ngày/sắp xếp, sao chép việc, nhắc việc, đính kèm bình luận, sao chép liên kết (API feat/viec-moi-api)`.
 

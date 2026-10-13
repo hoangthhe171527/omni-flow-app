@@ -347,16 +347,20 @@ void main() {
     expect(field.maxLength, 255);
   });
 
-  testWidgets('người xem kế hoạch: ⋯ chỉ có "Nhắc việc"', (t) async {
-    await pump(
-      t,
-      project: const TaskProject(ownerId: 'u0', memberRoles: {me: 'viewer'}),
-    );
-    await openMenu(t);
-    expect(find.text('Nhắc việc'), findsOneWidget);
-    expect(find.text('Sao chép công việc'), findsNothing);
-    expect(find.text('Đổi tên việc'), findsNothing);
-  });
+  testWidgets(
+    'người xem kế hoạch: ⋯ chỉ có "Nhắc việc" và "Sao chép liên kết"',
+    (t) async {
+      await pump(
+        t,
+        project: const TaskProject(ownerId: 'u0', memberRoles: {me: 'viewer'}),
+      );
+      await openMenu(t);
+      expect(find.text('Nhắc việc'), findsOneWidget);
+      expect(find.text('Sao chép liên kết'), findsOneWidget);
+      expect(find.text('Sao chép công việc'), findsNothing);
+      expect(find.text('Đổi tên việc'), findsNothing);
+    },
+  );
 
   testWidgets('mô tả việc con tối đa 2000 (tạo và sửa); mô tả việc theo '
       'server (10000)', (t) async {

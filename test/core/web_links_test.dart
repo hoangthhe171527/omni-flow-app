@@ -11,7 +11,7 @@ void main() {
     dotenv.testLoad(fileInput: '');
   });
 
-  test('không có .env: dùng URL web mặc định', () {
+  test('.env không có WEB_BASE_URL: dùng mặc định omni.app.sunriseieco.vn', () {
     expect(Env.defaultWebBaseUrl, 'https://omni.app.sunriseieco.vn');
     dotenv.testLoad(fileInput: '');
     expect(Env.webBaseUrl, 'https://omni.app.sunriseieco.vn');
