@@ -9,6 +9,7 @@ import 'package:omni_app/modules/tasks/application/tasks_providers.dart';
 import 'package:omni_app/modules/tasks/domain/task.dart';
 import 'package:omni_app/modules/tasks/domain/task_permissions.dart';
 import 'package:omni_app/modules/tasks/presentation/task_detail_page.dart';
+import 'package:omni_app/modules/tasks/presentation/widgets/assign_task_sheet.dart';
 import 'package:omni_app/modules/team/team.dart';
 import 'package:omni_app/security/permissions/access_policy.dart';
 
@@ -168,6 +169,86 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(saved, isEmpty);
+    });
+
+    testWidgets(
+      'allowedIds: chỉ hiện người trong tập; người đang chọn vẫn hiện '
+      'để còn gỡ',
+      (tester) async {
+        List<String>? picked;
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [
+              teamDirectoryProvider.overrideWith((ref) async => members),
+            ],
+            child: MaterialApp(
+              theme: OmniTheme.light(TargetPlatform.android),
+              home: Scaffold(
+                body: Builder(
+                  builder: (context) => TextButton(
+                    onPressed: () async => picked = await showAssignTaskSheet(
+                      context: context,
+                      currentIds: const ['u1'],
+                      allowedIds: const {'u2'},
+                      title: 'Người thực hiện bản sao',
+                      confirmLabel: (n) => 'Chọn $n người',
+                    ),
+                    child: const Text('mở'),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+        await tester.tap(find.text('mở'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Người thực hiện bản sao'), findsOneWidget);
+        // u1 ngoài tập nhưng đang được chọn → vẫn hiện; u2 trong tập.
+        expect(find.text('Hằng Ni'), findsOneWidget);
+        expect(find.text('Bảo Khánh'), findsOneWidget);
+
+        await tester.tap(find.text('Hằng Ni'));
+        await tester.pump();
+        // Gỡ xong vẫn còn trong danh sách (đang hiện thì không biến mất).
+        await tester.tap(find.text('Bảo Khánh'));
+        await tester.pump();
+        await tester.tap(find.text('Chọn 1 người'));
+        await tester.pumpAndSettle();
+        expect(picked, ['u2']);
+      },
+    );
+
+    testWidgets('allowedIds: người ngoài tập, không được chọn → không hiện', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            teamDirectoryProvider.overrideWith((ref) async => members),
+          ],
+          child: MaterialApp(
+            theme: OmniTheme.light(TargetPlatform.android),
+            home: Scaffold(
+              body: Builder(
+                builder: (context) => TextButton(
+                  onPressed: () => showAssignTaskSheet(
+                    context: context,
+                    currentIds: const [],
+                    allowedIds: const {'u2'},
+                  ),
+                  child: const Text('mở'),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.tap(find.text('mở'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Hằng Ni'), findsNothing);
+      expect(find.text('Bảo Khánh'), findsOneWidget);
     });
 
     testWidgets('đóng sheet mà không lưu thì không gọi API', (tester) async {

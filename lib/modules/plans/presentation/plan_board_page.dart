@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 import 'dart:ui' show ImageFilter;
 
 import 'package:flutter/material.dart';
@@ -16,12 +17,14 @@ import '../../../design/tokens/tokens.dart';
 import '../../../security/session/api_capabilities.dart';
 import '../../../security/session/session_controller.dart';
 import '../../tasks/application/tasks_providers.dart';
+import '../../tasks/data/tasks_api.dart';
 import '../../tasks/domain/task.dart';
 import '../../tasks/routes.dart';
 import '../../tasks/tasks.dart';
 import '../../tasks/tasks_module.dart';
 import '../application/plans_providers.dart';
 import '../data/plans_api.dart';
+import '../domain/board_drop.dart';
 import '../domain/plan.dart';
 import '../routes.dart';
 import 'archived_tasks_page.dart';
@@ -31,7 +34,9 @@ import 'plan_fields_page.dart';
 import 'plan_files_page.dart';
 import 'plan_members_page.dart';
 import 'plan_report_page.dart';
+import 'section_order_page.dart';
 import 'widgets/board_column.dart';
+import 'widgets/board_drag.dart';
 import 'widgets/board_zoom.dart';
 import 'widgets/person_filter_sheet.dart';
 import 'widgets/plan_copy_move_sheets.dart';
@@ -79,8 +84,104 @@ class _PlanBoardPageState extends ConsumerState<PlanBoardPage> {
   /// Đang ở chế độ thu nhỏ (lưới mọi cột).
   bool _zoomed = false;
 
+  /// Lượt kéo đang diễn ra (thẻ, cột đích, chỗ chèn).
+  final _drag = BoardDragController();
+
+  /// Con trỏ đang ở mép nào của dải: -1 trái, 1 phải, 0 không. Dải sáng 28px
+  /// ở mép đó, và [_edgeTimer] sang cột kế mỗi 700ms.
+  final _edgeSide = ValueNotifier<int>(0);
+  Timer? _edgeTimer;
+
+  /// Số ô trên dải (cột + ô "Thêm nhóm việc"), để tự trượt không vượt cuối.
+  int _trackCount = 1;
+
+  /// Bảng đang vẽ (đã gồm thẻ lạc quan), để thả và dò lại cột sau khi trượt.
+  BoardBuckets? _board;
+
+  /// Thẻ vừa thả, đang chờ server: bảng vẽ nó ở chỗ mới ngay (lạc quan). Xoá
+  /// khi dữ liệu mới về hoặc khi lưu lỗi.
+  ({String taskId, int toColumn, int index, String sectionId})? _pending;
+
+  /// Các ngón đang chạm, theo thứ tự chạm; và ngón đang giữ thẻ (ngón chạm
+  /// gần nhất lúc thẻ nhấc lên). Chỉ ngón ấy nhấc lên mới kết thúc lượt kéo.
+  final _pointers = <int>[];
+  int? _dragPointer;
+
+  @override
+  void initState() {
+    super.initState();
+    _drag.addListener(_onDragState);
+  }
+
+  void _onDragState() {
+    if (_drag.active && _dragPointer == null && _pointers.isNotEmpty) {
+      _dragPointer = _pointers.last;
+    }
+  }
+
+  /// Ngón [pointer] nhấc lên ([drop]) hoặc bị huỷ. Ngón đang giữ thẻ nhấc lên
+  /// thì thả vào ĐÍCH của [_drag] — đọc trước khi dọn. Không dựa vào
+  /// `DragTarget` nhận thả: sau khi dải tự trượt, Flutter không dò lại đích
+  /// khi ngón tay đứng yên, nên cột nhận thả là cột đã trôi khỏi dưới ngón.
+  void _pointerEnded(int pointer, {required bool drop}) {
+    _pointers.remove(pointer);
+    if (_dragPointer != null && pointer != _dragPointer) return;
+    final task = _drag.task;
+    final to = _drag.targetColumn;
+    final index = _drag.targetIndex;
+    final board = _board;
+    _endDrag();
+    if (!drop || task == null || to == null || index == null) return;
+    if (board == null || to >= board.columns.length) return;
+    unawaited(_drop(board, task, to, index, board.columns[to].id));
+  }
+
+  /// Ngón giữ thẻ di chuyển. Bắt ở đây chứ không chỉ ở `onDragUpdate` của
+  /// thẻ: thẻ nguồn có thể đã rời cây khi dải trượt xa.
+  void _pointerMoved(PointerMoveEvent e) {
+    if (!_drag.active || e.pointer != _dragPointer) return;
+    _drag.pointer = e.position;
+    _onDragUpdate(e.position);
+  }
+
+  /// Sau khi dải trượt xong: tìm cột đang dưới ngón (theo vị trí cuộn và
+  /// bước cột) và chỗ chèn trong nó, rồi đặt làm đích.
+  void _retarget() {
+    if (!mounted) return;
+    final pointer = _drag.pointer;
+    final board = _board;
+    final box = context.findRenderObject();
+    if (!_drag.active || pointer == null || board == null) return;
+    if (!_track.hasClients || box is! RenderBox || !box.hasSize) return;
+    final x =
+        _track.offset + box.globalToLocal(pointer).dx - BoardMetrics.inset;
+    final column = (x / BoardMetrics.pitch).floor();
+    final inColumn =
+        column >= 0 &&
+        column < board.columns.length &&
+        x - column * BoardMetrics.pitch < BoardMetrics.columnWidth;
+    final index = inColumn ? _drag.indexAt(column, pointer) : null;
+    if (index == null) {
+      _drag.clearTarget();
+    } else {
+      _drag.hover(column, index, board.columns[column].name);
+    }
+  }
+
+  /// Dò lại đích ở khung kế (khi các cột đã dựng ở vị trí mới).
+  void _retargetAfterLayout() {
+    if (!mounted) return;
+    WidgetsBinding.instance
+      ..addPostFrameCallback((_) => _retarget())
+      ..ensureVisualUpdate();
+  }
+
   @override
   void dispose() {
+    _drag.removeListener(_onDragState);
+    _edgeTimer?.cancel();
+    _edgeSide.dispose();
+    _drag.dispose();
     _debounce?.cancel();
     _searchField.dispose();
     _track.dispose();
@@ -126,6 +227,27 @@ class _PlanBoardPageState extends ConsumerState<PlanBoardPage> {
                 (taskAccess.isAssigner ||
                     (currentUserId != null && loaded.ownerId == currentUserId)),
           );
+
+    // Kéo thẻ (R1, R2, R5): `tasks.write`, không mang vai người xem ghi rõ,
+    // không đang thu nhỏ; thẻ khoá thì không nhấc (canDrag). KHÔNG dùng
+    // `manage.all` — nó mở quyền quản kế hoạch, không mở quyền sửa việc.
+    final canDragTasks =
+        taskAccess.canUpdate &&
+        !(loaded?.isTaskViewer(currentUserId) ?? false) &&
+        !_zoomed;
+
+    // Dữ liệu mới về (sau khi thả) là sự thật: bỏ phần vẽ lạc quan.
+    // Chỉ khi dữ liệu mới ĐÃ có việc ở nhóm mới (hoặc việc không còn): một lượt
+    // tải lại bắt đầu trước khi PUT xong vẫn thấy thẻ ở nhóm cũ, và xoá lúc đó
+    // là làm thẻ bật về chỗ cũ rồi nhảy lại.
+    ref.listen(planTasksProvider(widget.planId), (_, next) {
+      final pending = _pending;
+      if (pending == null || next is! AsyncData<PlanTasks>) return;
+      final now = next.value.tasks.where((t) => t.id == pending.taskId);
+      if (now.isEmpty || now.first.sectionId == pending.sectionId) {
+        setState(() => _pending = null);
+      }
+    });
 
     final buckets = ref.watch(
       boardBucketsProvider((planId: widget.planId, person: _person)),
@@ -197,6 +319,7 @@ class _PlanBoardPageState extends ConsumerState<PlanBoardPage> {
                             result == null ? board : board.only(result.ids),
                             canCreate: taskAccess.canCreate,
                             canComplete: taskAccess.canComplete,
+                            canDragTasks: canDragTasks,
                             canEditSections: canEditSections,
                             searchCapped: result != null && result.capped
                                 ? result.ids.length
@@ -215,6 +338,7 @@ class _PlanBoardPageState extends ConsumerState<PlanBoardPage> {
                               board.only(found.ids),
                               canCreate: taskAccess.canCreate,
                               canComplete: taskAccess.canComplete,
+                              canDragTasks: canDragTasks,
                               canEditSections: canEditSections,
                               searchCapped: found.capped
                                   ? found.ids.length
@@ -245,14 +369,20 @@ class _PlanBoardPageState extends ConsumerState<PlanBoardPage> {
     required bool canCreate,
     required bool canComplete,
     required bool canEditSections,
+    required bool canDragTasks,
     int? searchCapped,
   }) {
+    if (_pending case final p?) {
+      board = board.moved(p.taskId, p.toColumn, p.index, p.sectionId);
+    }
     final columns = board.columns;
     if (!_introDone) {
       WidgetsBinding.instance.addPostFrameCallback((_) => _introDone = true);
     }
     final realSections = plan.sections;
     final itemCount = columns.length + (canEditSections ? 1 : 0);
+    _trackCount = itemCount;
+    _board = board;
 
     final content = Column(
       children: [
@@ -329,6 +459,12 @@ class _PlanBoardPageState extends ConsumerState<PlanBoardPage> {
                           tasks: board.buckets[index],
                           firstShow: _firstShow,
                           canComplete: canComplete,
+                          columnIndex: index,
+                          // Cột dựng tạm (id rỗng) không có nhóm để thả vào.
+                          drag: canDragTasks && real ? _drag : null,
+                          canDrag: (t) => canDragTasks && !t.isLocked,
+                          onDragUpdate: _onDragUpdate,
+                          onDragEnd: _endDrag,
                           onOpenTask: (task) => context.pushNamed(
                             TasksModule.detail,
                             pathParameters: {'id': task.id},
@@ -354,19 +490,152 @@ class _PlanBoardPageState extends ConsumerState<PlanBoardPage> {
       ],
     );
 
-    return Stack(
-      children: [
-        Positioned.fill(child: content),
-        Positioned(
-          right: 16,
-          bottom: 34 + MediaQuery.paddingOf(context).bottom,
-          child: BoardZoomButton(
-            zoomed: _zoomed,
-            onTap: () => setState(() => _zoomed = !_zoomed),
+    return Listener(
+      // Chốt: thẻ nguồn có thể đã rời cây khi tự trượt (lúc đó Flutter không
+      // gọi onDragEnd), nên nhấc tay là dọn hết, ở đây.
+      onPointerDown: (e) => _pointers.add(e.pointer),
+      onPointerMove: _pointerMoved,
+      onPointerUp: (e) => _pointerEnded(e.pointer, drop: true),
+      onPointerCancel: (e) => _pointerEnded(e.pointer, drop: false),
+      child: Stack(
+        children: [
+          Positioned.fill(child: content),
+          _EdgeGlow(side: _edgeSide, alignLeft: true),
+          _EdgeGlow(side: _edgeSide, alignLeft: false),
+          Positioned(
+            right: 16,
+            bottom: 34 + MediaQuery.paddingOf(context).bottom,
+            child: BoardZoomButton(
+              zoomed: _zoomed,
+              onTap: () => setState(() => _zoomed = !_zoomed),
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
+  }
+
+  /// Vùng mép: con trỏ cách mép trái/phải của dải dưới 40.
+  static const double _edgeZone = 40;
+
+  void _onDragUpdate(Offset global) {
+    final box = context.findRenderObject();
+    if (box is! RenderBox || !box.hasSize) return;
+    final x = box.globalToLocal(global).dx;
+    final side = x < _edgeZone
+        ? -1
+        : x > box.size.width - _edgeZone
+        ? 1
+        : 0;
+    if (side == _edgeSide.value) return;
+    _edgeSide.value = side;
+    _edgeTimer?.cancel();
+    _edgeTimer = side == 0
+        ? null
+        : Timer.periodic(
+            const Duration(milliseconds: 700),
+            (_) => _slideColumn(side),
+          );
+  }
+
+  /// Sang cột kế theo [side]: trượt 350ms, hoặc nhảy khi giảm chuyển động.
+  void _slideColumn(int side) {
+    if (!mounted || !_track.hasClients) return;
+    final position = _track.position;
+    final current =
+        ((position.pixels +
+                    position.viewportDimension / 2 -
+                    BoardMetrics.inset -
+                    BoardMetrics.columnWidth / 2) /
+                BoardMetrics.pitch)
+            .round();
+    final next = math.min(math.max(current + side, 0), _trackCount - 1);
+    final target = BoardSnapPhysics.offsetOf(next, position);
+    if (OmniMotion.enabled(context)) {
+      _track
+          .animateTo(
+            target,
+            duration: const Duration(milliseconds: 350),
+            curve: OmniCurves.standard,
+          )
+          .then((_) => _retargetAfterLayout());
+    } else {
+      _track.jumpTo(target);
+      _retargetAfterLayout();
+    }
+  }
+
+  /// Thả, huỷ hay thẻ nguồn rời cây: dọn mọi thứ. Gọi nhiều lần cũng được.
+  void _endDrag() {
+    _edgeTimer?.cancel();
+    _edgeTimer = null;
+    if (_edgeSide.value != 0) _edgeSide.value = 0;
+    _dragPointer = null;
+    _drag.clear();
+  }
+
+  /// Thả [task] vào cột [toColumn] tại chỗ chèn [index] (R3: về cột cũ thì
+  /// không làm gì). Vẽ ngay, gửi `PUT {section_id, order}`; lỗi thì thẻ về chỗ
+  /// cũ và báo câu của server (R6).
+  Future<void> _drop(
+    BoardBuckets board,
+    Task task,
+    int toColumn,
+    int index,
+    String sectionId,
+  ) async {
+    // Cột gốc tìm trên bảng chứ không đọc từ [_drag]: nhấc tay đã dọn nó
+    // trước khi lượt thả tới đây.
+    final from = board.buckets.indexWhere((b) => b.any((t) => t.id == task.id));
+    _endDrag();
+    if (sectionId.isEmpty || from < 0 || from == toColumn) return;
+    // `order` tính trên CẢ cột đích (không lọc người / tìm kiếm): neo vào thẻ
+    // thấy được phía trên nhưng không nhảy qua thẻ ẩn nằm ngay sau nó.
+    final visible = board.buckets[toColumn];
+    final all = ref.read(planTasksProvider(widget.planId)).valueOrNull;
+    final full = all == null
+        ? visible
+        : BoardBuckets.build(
+            all,
+            board.columns,
+            BoardPerson.everyone,
+          ).buckets[toColumn];
+    final others = [
+      for (final t in full)
+        if (t.id != task.id) t,
+    ];
+    final order = boardDropOrder(
+      others,
+      task,
+      fullInsertIndex(others, visible, index),
+    );
+    final container = ProviderScope.containerOf(context);
+    final messenger = ScaffoldMessenger.of(context);
+    final api = ref.read(tasksApiProvider);
+    setState(() {
+      _pending = (
+        taskId: task.id,
+        toColumn: toColumn,
+        index: index,
+        sectionId: sectionId,
+      );
+    });
+    try {
+      await api.moveOnBoard(task.id, sectionId: sectionId, order: order);
+      container.read(taskRealtimeSignalProvider.notifier).bump();
+    } on AppException catch (error) {
+      if (mounted) setState(() => _pending = null);
+      messenger
+        ..hideCurrentSnackBar()
+        ..showSnackBar(SnackBar(content: Text(error.message)));
+    } on Object {
+      if (mounted) setState(() => _pending = null);
+      messenger
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          const SnackBar(content: Text('Chưa chuyển được. Vui lòng thử lại.')),
+        );
+    }
   }
 
   /// Từ lưới thu nhỏ về bảng, cột [index] căn giữa màn.
@@ -669,6 +938,7 @@ class _PlanBoardPageState extends ConsumerState<PlanBoardPage> {
       (_SectionAction.rename, Icons.edit_outlined, 'Đổi tên nhóm'),
       if (canRemove) (_SectionAction.remove, Icons.delete_outline, 'Xoá nhóm'),
       (_SectionAction.reorder, Icons.swap_vert_rounded, 'Sắp xếp nhóm việc'),
+      (_SectionAction.edit, Icons.tune_rounded, 'Sửa nhóm việc'),
     ], danger: _SectionAction.remove);
     if (!mounted) return;
     switch (choice) {
@@ -685,7 +955,18 @@ class _PlanBoardPageState extends ConsumerState<PlanBoardPage> {
       case _SectionAction.remove:
         await _removeSection(plan, board, section);
       case _SectionAction.reorder:
-        await _editSections();
+        await Navigator.of(context).push<bool>(
+          MaterialPageRoute(
+            builder: (_) => SectionOrderPage(planId: widget.planId),
+          ),
+        );
+      case _SectionAction.edit:
+        // EditSectionsPage tự invalidate planProvider/planTasksProvider khi lưu.
+        await Navigator.of(context).push<bool>(
+          MaterialPageRoute(
+            builder: (_) => EditSectionsPage(planId: widget.planId),
+          ),
+        );
       case null:
         break;
     }
@@ -828,14 +1109,6 @@ class _PlanBoardPageState extends ConsumerState<PlanBoardPage> {
     },
   );
 
-  Future<void> _editSections() async {
-    await Navigator.of(context).push<bool>(
-      MaterialPageRoute(
-        builder: (_) => EditSectionsPage(planId: widget.planId),
-      ),
-    );
-  }
-
   Future<void> _deletePlan(Plan plan) async {
     final messenger = ScaffoldMessenger.of(context);
     final container = ProviderScope.containerOf(context);
@@ -866,7 +1139,55 @@ class _PlanBoardPageState extends ConsumerState<PlanBoardPage> {
   }
 }
 
-enum _SectionAction { rename, remove, reorder }
+enum _SectionAction { rename, remove, reorder, edit }
+
+/// Dải sáng 28px ở mép trái/phải khi kéo thẻ tới sát mép: báo "thả ở đây sẽ
+/// sang cột kế". Fade 200ms; giảm chuyển động thì đổi ngay.
+class _EdgeGlow extends StatelessWidget {
+  const _EdgeGlow({required this.side, required this.alignLeft});
+
+  final ValueNotifier<int> side;
+  final bool alignLeft;
+
+  @override
+  Widget build(BuildContext context) {
+    final primary = Theme.of(context).colorScheme.primary;
+
+    return Positioned(
+      top: 0,
+      bottom: 0,
+      left: alignLeft ? 0 : null,
+      right: alignLeft ? null : 0,
+      width: 28,
+      child: IgnorePointer(
+        child: ValueListenableBuilder<int>(
+          valueListenable: side,
+          builder: (context, value, _) => AnimatedOpacity(
+            key: Key(alignLeft ? 'edge-glow-left' : 'edge-glow-right'),
+            opacity: value == (alignLeft ? -1 : 1) ? 1 : 0,
+            duration: OmniMotion.enabled(context)
+                ? const Duration(milliseconds: 200)
+                : Duration.zero,
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: alignLeft
+                      ? Alignment.centerLeft
+                      : Alignment.centerRight,
+                  end: alignLeft ? Alignment.centerRight : Alignment.centerLeft,
+                  colors: [
+                    primary.withValues(alpha: .35),
+                    primary.withValues(alpha: 0),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
 
 /// Header kính tối (`.bar`): `OmniCovers.glass` + blur 20, hàng 44 dưới
 /// safe area, đệm 4 hai bên và 6 ở đáy.

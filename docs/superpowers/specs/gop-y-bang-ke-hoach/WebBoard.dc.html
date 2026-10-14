@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<title>Web – kéo nhóm việc, kéo việc, lăn chuột ngang</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+.scroller{display:flex;gap:12px;overflow-x:auto;padding:16px 24px 24px;align-items:flex-start;flex-grow:1;scrollbar-width:thin}
+.col{width:268px;flex-shrink:0;background:#eef1f5;border-radius:8px;padding:8px;box-sizing:border-box;display:flex;flex-direction:column;gap:8px;transition:transform .15s,opacity .15s,box-shadow .15s}
+.col.dragging{opacity:.45}
+.col.target{box-shadow:inset 0 0 0 2px #0a7d76}
+.ch{display:flex;align-items:center;gap:6px;padding:2px 2px 2px 0;cursor:grab}
+.grip{width:24px;height:26px;border:0;border-radius:6px;background:transparent;color:#8592a6;display:flex;align-items:center;justify-content:center;cursor:grab;padding:0}
+.grip:hover{background:#fff;color:#0b1a33}
+.card{display:flex;flex-direction:column;gap:6px;border-radius:8px;border:1px solid #e3e8ef;background:#fff;padding:10px 12px;cursor:grab;font-size:14px;transition:opacity .15s}
+.card:hover{border-color:#c9d2de}
+.card.dragging{opacity:.4}
+.line{height:3px;border-radius:2px;background:#0a7d76;margin:-2px 0}
+.meta{font-size:12px;color:#56637a;display:flex;gap:10px}
+.chk{width:16px;height:16px;border-radius:8px;border:1.5px solid rgba(86,99,122,.6);box-sizing:border-box;flex-shrink:0;margin-top:2px}
+.tip{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;color:#3a4760;background:#fff;border:1px solid #e3e8ef;border-radius:6px;padding:4px 10px}
+@keyframes toast{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:none}}
+</style>
+</helmet>
+<div style="width:1100px;height:640px;box-sizing:border-box;display:flex;flex-direction:column;background:#f5f7fa;font-family:'Inter',system-ui,sans-serif;color:#0b1a33;line-height:20px;position:relative;overflow:hidden">
+  <header style="border-bottom:1px solid #e3e8ef;background:#fff;padding:14px 24px;display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+    <span style="width:10px;height:10px;border-radius:2px;background:#0a7d76"></span>
+    <h1 style="margin:0;font-size:20px;line-height:28px;font-weight:600">Tân trang đàn cơ</h1>
+    <span style="flex-grow:1"></span>
+    <span class="tip"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><rect x="7" y="3" width="10" height="18" rx="5"></rect><path d="M12 7v3"></path></svg>Lăn chuột trên bảng để trượt ngang</span>
+    <span class="tip"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="9" cy="6" r="1.6"></circle><circle cx="15" cy="6" r="1.6"></circle><circle cx="9" cy="12" r="1.6"></circle><circle cx="15" cy="12" r="1.6"></circle><circle cx="9" cy="18" r="1.6"></circle><circle cx="15" cy="18" r="1.6"></circle></svg>Kéo tiêu đề cột để đổi thứ tự</span>
+  </header>
+  <div class="scroller" onWheel="{{wheel}}" aria-label="Bảng kế hoạch, lăn chuột để trượt ngang">
+    <sc-for list="{{cols}}" as="c" hint-placeholder-count="5">
+      <section class="{{c.cls}}" aria-label="{{c.n}}" onDragOver="{{c.over}}" onDrop="{{c.drop}}">
+        <div class="ch" draggable="{{c.canDrag}}" onDragStart="{{c.start}}" onDragEnd="{{end}}">
+          <button class="grip" aria-label="Kéo để đổi chỗ nhóm {{c.n}} (hoặc dùng phím ← →)" onKeyDown="{{c.key}}"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="9" cy="6" r="1.6"></circle><circle cx="15" cy="6" r="1.6"></circle><circle cx="9" cy="12" r="1.6"></circle><circle cx="15" cy="12" r="1.6"></circle><circle cx="9" cy="18" r="1.6"></circle><circle cx="15" cy="18" r="1.6"></circle></svg></button>
+          <span style="font-size:13.5px;font-weight:600;flex-grow:1">{{c.n}}</span>
+          <span style="font-size:12px;color:#56637a">{{c.count}}</span>
+        </div>
+        <sc-for list="{{c.cards}}" as="t" hint-placeholder-count="2">
+          <sc-if value="{{t.lineBefore}}" hint-placeholder-val="{{false}}"><div class="line" aria-hidden="true"></div></sc-if>
+          <div class="{{t.cls}}" draggable="true" onDragStart="{{t.start}}" onDragEnd="{{end}}" onDragOver="{{t.over}}">
+            <span style="display:flex;gap:8px"><span class="chk"></span><span style="font-weight:500">{{t.title}}</span></span>
+            <span class="meta"><span>{{t.due}}</span><span>{{t.sub}}</span></span>
+          </div>
+        </sc-for>
+        <sc-if value="{{c.lineEnd}}" hint-placeholder-val="{{false}}"><div class="line" aria-hidden="true"></div></sc-if>
+        <sc-if value="{{c.empty}}" hint-placeholder-val="{{false}}"><div style="padding:14px;font-size:12px;text-align:center;color:#56637a;border:1px dashed #c9d2de;border-radius:8px">Thả việc vào đây</div></sc-if>
+      </section>
+    </sc-for>
+  </div>
+  <sc-if value="{{toast}}" hint-placeholder-val="{{false}}">
+    <div role="status" style="position:absolute;top:70px;right:20px;max-width:340px;background:#fff;border:1px solid #e3e8ef;border-radius:8px;box-shadow:0 8px 24px rgba(11,26,51,.1);padding:10px 14px;font-size:13px;animation:toast .2s both">{{toast}}</div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1100,"height":640}}'>
+class Component extends DCLogic {
+constructor(p) { super(p);
+  this.state = { cols: [
+    { id: 'a', n: 'Khách khác', qc: false, cards: ['t1', 't2'] },
+    { id: 'b', n: 'Thiện Pianno', qc: false, cards: ['t3'] },
+    { id: 'c', n: 'Đặng Hoài Bảo', qc: false, cards: ['t4', 't5'] },
+    { id: 'd', n: 'Tường Nhật', qc: false, cards: ['t6', 't7'] },
+    { id: 'e', n: 'Hoàn thiện (QC)', qc: true, cards: [] },
+    { id: 'f', n: 'Bàn giao', qc: false, cards: [] }
+  ], drag: null, over: null, toast: null };
+  this.T = { t1: ['YAMAHA U1E 1174957', 'Hạn 31/10', '0/3'], t2: ['KAWAI BL61 – lên dây', 'Hạn 20/10', '1/5'], t3: ['Thay búa U3H', 'Hạn 18/10', '2/4'],
+    t4: ['YAMAHA U3E 592698', 'Hạn 31/10', '0/10'], t5: ['Đánh bóng vỏ G2', 'Hạn 25/10', '3/3'], t6: ['KAWAI BL61 K578504', 'Trễ 32 ngày', '3/10'], t7: ['KAWAI BL61 K578504 (b)', 'Trễ 32 ngày', '1/10'] };
+}
+componentWillUnmount() { clearTimeout(this.tt); }
+flash(m) { clearTimeout(this.tt); this.setState({ toast: m }); this.tt = setTimeout(() => this.setState({ toast: null }), 2600); }
+moveCol(from, to) { const cols = this.state.cols.slice(); if (to < 0 || to >= cols.length) return; const [c] = cols.splice(from, 1); cols.splice(to, 0, c); this.setState({ cols }); this.flash('Đã đổi thứ tự nhóm việc.'); }
+renderVals() {
+  const s = this.state, d = s.drag, o = s.over;
+  const end = () => this.setState({ drag: null, over: null });
+  return {
+    end,
+    toast: s.toast || false,
+    wheel: e => { const sc = e.currentTarget; if (Math.abs(e.deltaX) > Math.abs(e.deltaY)) return; let el = e.target; while (el && el !== sc) { if (el.scrollHeight > el.clientHeight + 1 && getComputedStyle(el).overflowY !== 'visible') return; el = el.parentElement; } sc.scrollLeft += e.deltaY; },
+    cols: s.cols.map((c, ci) => {
+      const isTarget = d && d.type === 'card' && o && o.col === c.id;
+      return {
+        n: c.n, count: c.cards.length, empty: c.cards.length === 0 && !isTarget, canDrag: 'true',
+        cls: 'col' + (d && d.type === 'col' && d.id === c.id ? ' dragging' : '') + (isTarget || (d && d.type === 'col' && o && o.col === c.id) ? ' target' : ''),
+        lineEnd: isTarget && o.idx === c.cards.length && c.cards.length > 0,
+        start: e => { e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', c.id); this.setState({ drag: { type: 'col', id: c.id } }); },
+        key: e => { if (e.key === 'ArrowLeft') { e.preventDefault(); this.moveCol(ci, ci - 1); } if (e.key === 'ArrowRight') { e.preventDefault(); this.moveCol(ci, ci + 1); } },
+        over: e => { if (!d) return; e.preventDefault(); if (d.type === 'col') { if (!o || o.col !== c.id) this.setState({ over: { col: c.id } }); } else if (!o || o.col !== c.id || o.idx == null) { this.setState({ over: { col: c.id, idx: c.cards.length } }); } },
+        drop: e => { e.preventDefault(); if (!d) return;
+          if (d.type === 'col') { const from = s.cols.findIndex(x => x.id === d.id); if (from !== ci) this.moveCol(from, ci); end(); return; }
+          if (c.qc && d.from !== c.id) { this.flash('“' + c.n + '” yêu cầu xong hết việc con trước khi chuyển vào. Việc vẫn ở nhóm cũ.'); end(); return; }
+          const cols = s.cols.map(x => Object.assign({}, x, { cards: x.cards.filter(id => id !== d.id) }));
+          const tgt = cols[ci]; let idx = o && o.col === c.id && o.idx != null ? o.idx : tgt.cards.length;
+          const oldIdx = s.cols[ci].cards.indexOf(d.id); if (oldIdx >= 0 && oldIdx < idx) idx -= 1;
+          tgt.cards.splice(Math.max(0, Math.min(idx, tgt.cards.length)), 0, d.id);
+          this.setState({ cols, drag: null, over: null }); },
+        cards: c.cards.map((id, k) => ({ title: this.T[id][0], due: this.T[id][1], sub: 'Việc con ' + this.T[id][2],
+          cls: 'card' + (d && d.id === id ? ' dragging' : ''), lineBefore: isTarget && o.idx === k,
+          start: e => { e.stopPropagation(); e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', id); this.setState({ drag: { type: 'card', id, from: c.id } }); },
+          over: e => { if (!d || d.type !== 'card') return; e.preventDefault(); e.stopPropagation(); const r = e.currentTarget.getBoundingClientRect(); const idx = e.clientY < r.top + r.height / 2 ? k : k + 1; if (!o || o.col !== c.id || o.idx !== idx) this.setState({ over: { col: c.id, idx } }); } }))
+      };
+    })
+  };
+}
+}
+</script>
+</body>
+</html>

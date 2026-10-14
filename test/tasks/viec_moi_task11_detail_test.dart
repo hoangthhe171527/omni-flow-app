@@ -12,11 +12,13 @@ import 'package:omni_app/modules/tasks/application/task_controller.dart';
 import 'package:omni_app/modules/tasks/application/tasks_providers.dart';
 import 'package:omni_app/modules/tasks/data/tasks_api.dart';
 import 'package:omni_app/modules/tasks/domain/task.dart';
+import 'package:omni_app/modules/tasks/domain/task_copy_request.dart';
 import 'package:omni_app/modules/tasks/domain/task_permissions.dart';
 import 'package:omni_app/modules/tasks/domain/task_project.dart';
 import 'package:omni_app/modules/tasks/domain/task_reminder.dart';
 import 'package:omni_app/modules/tasks/presentation/task_detail_page.dart';
 import 'package:omni_app/modules/tasks/presentation/widgets/reminder_sheet.dart';
+import 'package:omni_app/modules/tasks/presentation/widgets/task_detail/copy_task_sheet.dart';
 import 'package:omni_app/modules/tasks/presentation/widgets/task_detail/comment_bar.dart';
 import 'package:omni_app/modules/team/team.dart';
 import 'package:omni_app/security/permissions/access_policy.dart';
@@ -252,19 +254,55 @@ void main() {
     );
   });
 
-  testWidgets('Sao chép công việc: hỏi tên (mặc định "… (bản sao)"), POST '
-      'copy, mở việc mới', (t) async {
+  testWidgets('Sao chép công việc: sheet mới, Sao chép → POST copy, SnackBar '
+      '"Đã tạo bản sao trong …" + "Mở" mở việc mới', (t) async {
     await pump(t);
     await openMenu(t);
     expect(find.text('Nhắc việc'), findsOneWidget);
     await t.tap(find.text('Sao chép công việc'));
     await t.pumpAndSettle();
+    expect(find.byType(CopyTaskSheet), findsOneWidget);
     expect(find.text('YAMAHA U3E (bản sao)'), findsOneWidget);
-    await t.tap(find.text('Lưu'));
+    await t.tap(find.widgetWithText(FilledButton, 'Sao chép'));
     await t.pumpAndSettle();
     expect(api.calls, contains(('copy', 'YAMAHA U3E (bản sao)')));
+    // Việc gốc chưa xếp nhóm, ô nhóm không đụng → không gửi section_id.
+    expect(api.copyBodies.single, {
+      'title': 'YAMAHA U3E (bản sao)',
+      'project_id': 'p1',
+      'keep_assignees': true,
+      'keep_checklist': true,
+    });
+    // Không tự mở việc mới (R15): chỉ mở khi bấm "Mở".
+    expect(api.gets, isNot(contains('t2')));
+    expect(find.text('Đã tạo bản sao trong “Tân trang”.'), findsOneWidget);
+    await t.tap(find.widgetWithText(SnackBarAction, 'Mở'));
+    await t.pumpAndSettle();
     expect(api.gets, contains('t2'));
-    expect(find.text('Đã sao chép công việc.'), findsOneWidget);
+  });
+
+  testWidgets('422 section_id → SnackBar câu server cho khoá section_id', (
+    t,
+  ) async {
+    await pump(t);
+    api.copyError = const ValidationException(
+      'Dữ liệu không hợp lệ.',
+      errors: {
+        'section_id': ['Nhóm việc không thuộc kế hoạch đích.'],
+      },
+    );
+    await openMenu(t);
+    await t.tap(find.text('Sao chép công việc'));
+    await t.pumpAndSettle();
+    await t.tap(find.widgetWithText(FilledButton, 'Sao chép'));
+    await t.pumpAndSettle();
+    expect(
+      find.text(
+        'Nhóm việc không thuộc kế hoạch đích. Mở lại "Sao chép" để chọn nhóm khác.',
+      ),
+      findsOneWidget,
+    );
+    expect(find.textContaining('Đã tạo bản sao'), findsNothing);
   });
 
   testWidgets('bình luận có ảnh kèm: hiện ô 72; bấm giữ ảnh của mình → Gỡ '
@@ -340,7 +378,12 @@ void main() {
     await openMenu(t);
     await t.tap(find.text('Sao chép công việc'));
     await t.pumpAndSettle();
-    final field = t.widget<TextField>(find.byType(TextField).last);
+    final field = t.widget<TextField>(
+      find.descendant(
+        of: find.byType(CopyTaskSheet),
+        matching: find.byType(TextField),
+      ),
+    );
     final text = field.controller!.text;
     expect(text, '${'Đ' * 244} (bản sao)');
     expect(text.length, lessThanOrEqualTo(255));
@@ -668,6 +711,8 @@ class _Api implements TasksApi {
   List<Map<String, dynamic>> reminderRows = [];
   Completer<void>? gate;
   TaskProject proj = const TaskProject(ownerId: 'u0');
+  final copyBodies = <Map<String, dynamic>>[];
+  AppException? copyError;
 
   Task _with(Map<String, dynamic> patch) {
     _json = {..._json, ...patch};
@@ -737,9 +782,27 @@ class _Api implements TasksApi {
   }
 
   @override
-  Future<Task> copyTask(String taskId, {String? title}) async {
-    calls.add(('copy', title));
-    return Task.fromJson({..._json, 'id': 't2', 'title': title});
+  Future<List<MovablePlan>> projectsForMove() async => [
+    (
+      id: 'p1',
+      name: 'Tân trang',
+      teamId: 'T1',
+      teamName: 'Xưởng',
+      ownerId: null,
+      memberRoles: const {},
+      sections: const [
+        TaskSection(id: 's1', name: 'Khách khác'),
+        TaskSection(id: 's2', name: 'Thiện Piano'),
+      ],
+    ),
+  ];
+
+  @override
+  Future<Task> copyTask(String taskId, TaskCopyRequest request) async {
+    calls.add(('copy', request.title));
+    copyBodies.add(request.toJson());
+    if (copyError case final e?) throw e;
+    return Task.fromJson({..._json, 'id': 't2', 'title': request.title});
   }
 
   @override

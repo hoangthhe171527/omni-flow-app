@@ -9,6 +9,26 @@ import 'package:omni_app/modules/tasks/domain/task.dart';
 /// trường tuỳ chỉnh) đọc từ JSON dựng theo `TaskPresenter::detail` — tài liệu
 /// Mongo trả nguyên, nên tên khoá là tên trường trong tài liệu.
 void main() {
+  test('order: số nguyên/thực đọc thành double; thiếu hoặc sai kiểu → 0', () {
+    expect(Task.fromJson({'id': 'a', 'order': 3}).order, 3.0);
+    expect(Task.fromJson({'id': 'a', 'order': 2.5}).order, 2.5);
+    expect(Task.fromJson({'id': 'a'}).order, 0);
+    expect(Task.fromJson({'id': 'a', 'order': 'x'}).order, 0);
+  });
+
+  test(
+    'hasOrder: có khoá order là số → true; thiếu, null, sai kiểu → false',
+    () {
+      // `CreateTaskDTO` bỏ `order` null: việc tạo từ app KHÔNG có khoá, và Mongo
+      // xếp nó trước mọi số — khác với "order = 0".
+      expect(Task.fromJson({'id': 'a', 'order': 0}).hasOrder, isTrue);
+      expect(Task.fromJson({'id': 'a', 'order': 2.5}).hasOrder, isTrue);
+      expect(Task.fromJson({'id': 'a'}).hasOrder, isFalse);
+      expect(Task.fromJson({'id': 'a', 'order': null}).hasOrder, isFalse);
+      expect(Task.fromJson({'id': 'a', 'order': 'x'}).hasOrder, isFalse);
+    },
+  );
+
   Map<String, dynamic> fixture(String name) =>
       (jsonDecode(File('test/contract/fixtures/$name').readAsStringSync())
               as Map<String, dynamic>)['data']

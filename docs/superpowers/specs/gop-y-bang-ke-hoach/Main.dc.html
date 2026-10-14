@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<title>Góp ý bảng kế hoạch – hiện trạng</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#f5f7fa}
+a{color:#0a7d76}a:hover{color:#075e59}
+.wrap{max-width:1200px;margin:0 auto;padding:40px 24px 56px;box-sizing:border-box}
+.tbl{overflow-x:auto;background:#fff;border:1px solid #e3e8ef;border-radius:8px;margin-top:20px}
+table{width:100%;border-collapse:collapse;font-size:14px;min-width:860px}
+th{text-align:left;font-size:12px;font-weight:600;color:#56637a;text-transform:uppercase;letter-spacing:.04em;padding:10px 16px;background:#f5f7fa}
+td{padding:12px 16px;border-top:1px solid #eef1f5;vertical-align:top;line-height:1.5}
+.ok{color:#075e59;font-weight:600}.no{color:#a32720;font-weight:600}.part{color:#7a4f00;font-weight:600}
+.n{width:26px;height:26px;border-radius:13px;background:#0b1a33;color:#fff;font-size:12px;font-weight:600;display:inline-flex;align-items:center;justify-content:center}
+.chip{display:inline-block;font-size:12px;font-weight:500;padding:2px 8px;border-radius:4px;margin-right:4px}
+</style>
+</helmet>
+<div style="font-family:'Inter',system-ui,sans-serif;color:#0b1a33">
+<div class="wrap">
+  <div style="font-size:13px;font-weight:600;color:#0a7d76;text-transform:uppercase;letter-spacing:.04em">Góp ý của anh Lê Nguyên · 14/10</div>
+  <h1 style="margin:6px 0 8px;font-size:28px;line-height:1.25;font-weight:600">Bảng kế hoạch: 4 điểm cần hoàn chỉnh</h1>
+  <p style="margin:0;max-width:780px;color:#3a4760;line-height:1.6">Đã kiểm mã thật của web, app và API. Ba điểm chỉ cần sửa phía giao diện (API đã có). Điểm 3 cần thêm vài trường cho API sao chép. Các màn bên dưới là đề xuất để duyệt.</p>
+  <div class="tbl"><table>
+    <thead><tr><th></th><th>Góp ý</th><th>Web hiện tại</th><th>App hiện tại</th><th>API</th><th>Đề xuất</th></tr></thead>
+    <tbody>
+      <tr><td><span class="n">1</span></td><td><b style="font-weight:600">Kéo đổi chỗ nhóm việc</b></td><td class="no">Chưa có — chỉ kéo được thẻ</td><td class="no">Chưa có — mục "Sắp xếp nhóm việc" mở trang không sắp được (lỗi)</td><td class="ok">Có sẵn (lưu thứ tự nhóm)</td><td>Web: kéo tiêu đề cột. App: trang Sắp xếp có tay kéo. Chỉ chủ/quản lý kế hoạch.</td></tr>
+      <tr><td><span class="n">2</span></td><td><b style="font-weight:600">Kéo việc sang nhóm khác</b></td><td class="part">Kéo được, nhưng thả ở đâu cũng nằm sai vị trí</td><td class="no">Không kéo được — chỉ qua menu "Chuyển"</td><td class="ok">Có sẵn</td><td>Web: giữ đúng chỗ thả. App: giữ thẻ ~0,4s rồi kéo sang cột, tới mép thì bảng tự trượt. Nhóm có cổng QC thì báo lý do.</td></tr>
+      <tr><td><span class="n">3</span></td><td><b style="font-weight:600">Hộp thoại sao chép công việc</b></td><td class="no">Tạo bản y hệt trong cùng nhóm, còn mất nhãn &amp; trường tuỳ chỉnh</td><td class="part">Chỉ hỏi tên</td><td class="part">Thiếu: ngày, chọn người khác, chép trường tuỳ chỉnh</td><td>Một hộp thoại chung: tên, team → kế hoạch → nhóm, từ ngày/đến ngày, người thực hiện (giữ nguyên / chọn khác), trường tuỳ chỉnh (không chép / chép tất cả). API thêm 4 trường + kiểm nhóm thuộc kế hoạch.</td></tr>
+      <tr><td><span class="n">4</span></td><td><b style="font-weight:600">Lăn chuột kéo bảng ngang</b></td><td class="no">Lăn thường không trượt ngang (chỉ Shift+lăn)</td><td class="part">Điện thoại không cần; bản máy tính chưa hỗ trợ</td><td>—</td><td>Web: lăn chuột trên bảng = trượt ngang; trong cột còn cuộn dọc được thì cuộn cột trước. App: làm khi phát hành bản máy tính.</td></tr>
+    </tbody>
+  </table></div>
+  <div style="display:flex;gap:16px;flex-wrap:wrap;margin-top:20px;font-size:13px;color:#3a4760">
+    <span><span class="chip" style="background:#e3f8f6;color:#075e59">Có</span>đã chạy được</span>
+    <span><span class="chip" style="background:#fff4d6;color:#7a4f00">Một phần</span>có nhưng thiếu</span>
+    <span><span class="chip" style="background:#fdecea;color:#a32720">Chưa</span>cần làm</span>
+  </div>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1280,"height":760}}'>
+class Component extends DCLogic { renderVals() { return {}; } }
+</script>
+</body>
+</html>

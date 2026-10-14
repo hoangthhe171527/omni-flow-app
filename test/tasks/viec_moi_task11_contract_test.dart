@@ -10,6 +10,7 @@ import 'package:omni_app/modules/notifications/application/push_notifications.da
 import 'package:omni_app/modules/notifications/domain/app_notification.dart';
 import 'package:omni_app/modules/tasks/data/tasks_api.dart';
 import 'package:omni_app/modules/tasks/domain/task.dart';
+import 'package:omni_app/modules/tasks/domain/task_copy_request.dart';
 import 'package:omni_app/modules/tasks/domain/task_reminder.dart';
 
 /// Hợp đồng Task 11 (API `feat/viec-moi-api`), đối chiếu mã thật:
@@ -179,10 +180,17 @@ void main() {
         'success': true,
         'data': {'id': 't2', 'title': 'KAWAI (bản sao)'},
       });
-      final copy = await api.copyTask('t1', title: 'KAWAI (bản sao)');
+      final copy = await api.copyTask(
+        't1',
+        const TaskCopyRequest(title: 'KAWAI (bản sao)'),
+      );
       expect(rec.single.method, 'POST');
       expect(rec.single.uri.path, '/api/v1/tasks/t1/copy');
-      expect(bodyOf(rec.single), {'title': 'KAWAI (bản sao)'});
+      expect(bodyOf(rec.single), {
+        'title': 'KAWAI (bản sao)',
+        'keep_assignees': true,
+        'keep_checklist': true,
+      });
       expect(copy.id, 't2');
     });
 

@@ -34,6 +34,7 @@ import 'widgets/labels_sheet.dart';
 import 'widgets/reminder_sheet.dart';
 import 'widgets/task_detail/breadcrumb.dart';
 import 'widgets/task_detail/comment_bar.dart';
+import 'widgets/task_detail/copy_task_sheet.dart';
 import 'widgets/task_detail/custom_fields_card.dart';
 import 'widgets/task_detail/description_card.dart';
 import 'widgets/task_detail/detail_header.dart';
@@ -296,44 +297,65 @@ class _TaskDetailPageState extends ConsumerState<TaskDetailPage> {
     }
   }
 
-  /// Sao chép việc (`POST /tasks/{id}/copy`): hỏi tên, xong thì mở việc
-  /// mới và báo bảng tải lại.
+  /// Sao chép việc (`POST /tasks/{id}/copy`) qua sheet "Sao chép công việc".
+  /// Xong thì báo bảng tải lại và hiện SnackBar có nút "Mở" — KHÔNG tự mở
+  /// việc mới (R15).
   Future<void> _copy(BuildContext context, Task task) async {
     final messenger = ScaffoldMessenger.of(context);
     final container = ProviderScope.containerOf(context);
     final router = GoRouter.maybeOf(context);
     final navigator = Navigator.of(context);
-    final name = await showTextEditSheet(
-      context: context,
-      title: 'Sao chép công việc',
-      initial: copyTitleOf(task.title),
-      requireChange: false,
-      maxLength: kTaskTitleMax,
-    );
-    if (name == null) return;
+    final result = await showCopyTaskSheet(context, task: task);
+    if (result == null) return;
 
     try {
       final copy = await container
           .read(tasksApiProvider)
-          .copyTask(task.id, title: name);
+          .copyTask(task.id, result.request);
       container.read(taskRealtimeSignalProvider.notifier).bump();
-      messenger.showSnackBar(
-        const SnackBar(content: Text('Đã sao chép công việc.')),
-      );
-      if (copy.id.isEmpty) return;
-      if (router != null) {
-        unawaited(
-          router.pushNamed(TaskRoutes.detail, pathParameters: {'id': copy.id}),
-        );
-      } else {
-        unawaited(
-          navigator.push(
-            MaterialPageRoute<void>(
-              builder: (_) => TaskDetailPage(taskId: copy.id),
+      void open() {
+        if (router != null) {
+          unawaited(
+            router.pushNamed(
+              TaskRoutes.detail,
+              pathParameters: {'id': copy.id},
             ),
-          ),
-        );
+          );
+        } else {
+          unawaited(
+            navigator.push(
+              MaterialPageRoute<void>(
+                builder: (_) => TaskDetailPage(taskId: copy.id),
+              ),
+            ),
+          );
+        }
       }
+
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(switch (result.placeName) {
+            final place? => 'Đã tạo bản sao trong “$place”.',
+            null => 'Đã tạo bản sao.',
+          }),
+          action: copy.id.isEmpty
+              ? null
+              : SnackBarAction(label: 'Mở', onPressed: open),
+        ),
+      );
+    } on ValidationException catch (e) {
+      // Nhóm việc không thuộc kế hoạch đích (người khác vừa xoá nhóm): câu
+      // của server cho khoá `section_id`.
+      final section = e.firstFor('section_id');
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(
+            section == null
+                ? e.message
+                : '$section Mở lại "Sao chép" để chọn nhóm khác.',
+          ),
+        ),
+      );
     } on AppException catch (e) {
       messenger.showSnackBar(SnackBar(content: Text(e.message)));
     }
@@ -1160,21 +1182,6 @@ TaskProject? _projectOf(WidgetRef ref, Task task) {
 /// Người đang cầm máy mang vai `viewer` ghi rõ trong kế hoạch của việc
 /// (`assertCanEditTasks`). Chưa đọc được kế hoạch thì không coi là viewer —
 /// server vẫn chặn, và câu 403 của nó hiện lên.
-/// Trần tên việc (`CopyTaskRequest` / `CreateTaskRequest` `title` `max:255`).
-const kTaskTitleMax = 255;
-
-/// Tên gợi ý khi sao chép: tên gốc cắt còn ≤244 ký tự rồi thêm " (bản sao)",
-/// để cả chuỗi không vượt [kTaskTitleMax] (server sẽ trả 422).
-String copyTitleOf(String title) {
-  const suffix = ' (bản sao)';
-  final runes = title.runes;
-  final head = runes.length <= kTaskTitleMax - suffix.length - 1
-      ? title
-      : String.fromCharCodes(runes.take(kTaskTitleMax - suffix.length - 1));
-
-  return '$head$suffix';
-}
-
 bool _isPlanViewer(WidgetRef ref, Task task, String? me) =>
     _projectOf(ref, task)?.isViewer(me) ?? false;
 
