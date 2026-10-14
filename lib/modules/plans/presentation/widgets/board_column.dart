@@ -262,7 +262,12 @@ class _BoardColumnState extends State<BoardColumn> {
       onTap: () => widget.onOpenTask(task),
     );
     final drag = widget.drag;
-    if (drag == null || !widget.canDrag(task)) return card;
+    // Thẻ không nhấc được (khoá) vẫn phải có khoá: `_indexAt` đo tâm mọi thẻ,
+    // thiếu khoá thì nó bị coi như ở vô cực và chỗ chèn lệch.
+    if (drag == null) return card;
+    if (!widget.canDrag(task)) {
+      return KeyedSubtree(key: _keyOf(task.id), child: card);
+    }
 
     return LongPressDraggable<Task>(
       key: _keyOf(task.id),

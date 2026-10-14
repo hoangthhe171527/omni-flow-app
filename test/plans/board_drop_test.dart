@@ -43,6 +43,25 @@ void main() {
     });
   });
 
+  group('fullInsertIndex', () {
+    final a = t('a', 1), h = t('h', 2), b = t('b', 3);
+    final full = [a, h, b];
+
+    test('ngay sau thẻ thấy được phía trên, không nhảy qua thẻ ẩn', () {
+      expect(fullInsertIndex(full, [a, b], 1), 1);
+      expect(boardDropOrder(full, t('m', 9), 1), 1.5);
+    });
+
+    test('cuối cột → sau thẻ thấy được cuối; đầu cột → trước thẻ thấy đầu', () {
+      expect(fullInsertIndex(full, [a, b], 2), 3);
+      expect(fullInsertIndex(full, [h, b], 0), 1);
+    });
+
+    test('không thấy thẻ nào → cuối cột đầy đủ', () {
+      expect(fullInsertIndex(full, const [], 0), 3);
+    });
+  });
+
   test('dropIndexFor: trên mọi tâm → 0; giữa → 1; dưới hết → length', () {
     const centers = [100.0, 200.0, 300.0];
     expect(dropIndexFor(centers, 10), 0);

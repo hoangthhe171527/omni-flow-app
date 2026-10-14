@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:omni_app/core/error/app_exception.dart';
+import 'package:omni_app/core/network/api_envelope.dart';
 import 'package:omni_app/design/theme/omni_theme.dart';
 import 'package:omni_app/design/tokens/tokens.dart';
 import 'package:omni_app/modules/plans/application/plans_providers.dart';
@@ -60,17 +61,26 @@ void main() {
   late _FakeTasksApi tasksApi;
   late List<Task> tasks;
 
+  /// Tăng để mô phỏng một lượt tải lại (realtime) của danh sách việc.
+  final reloadTick = StateProvider<int>((_) => 0);
+
   Future<void> pumpBoard(
     WidgetTester tester, {
     Set<String> perms = worker,
     Plan? plan,
     bool reduceMotion = false,
     bool lockT1 = false,
+    bool lockedMiddle = false,
+    bool hiddenMiddle = false,
   }) async {
     tasks = [
       task('t1', 'Bảo hành W106', 's1', 1, locked: lockT1),
       task('t2', 'Kiểm tra đàn Kawai ND21', 's1', 2),
       task('t3', 'Bảo hành Ux kẹt cờ', 's2', 1),
+      // Thẻ khoá nằm GIỮA hai thẻ kéo được.
+      if (lockedMiddle) task('t5', 'Thẻ khoá giữa', 's2', 1.5, locked: true),
+      // Thẻ không khớp tìm kiếm "à" nằm giữa hai thẻ khớp.
+      if (hiddenMiddle) task('t6', 'Chờ linh kiện ẩn', 's2', 1.5),
       task('t4', 'Làm phím CLP920', 's2', 2),
     ];
     tasksApi = _FakeTasksApi(tasks);
@@ -96,9 +106,10 @@ void main() {
       ProviderScope(
         overrides: [
           planProvider(planId).overrideWith((ref) async => thePlan),
-          planTasksProvider(
-            planId,
-          ).overrideWith((ref) async => (tasks: tasks, truncated: false)),
+          planTasksProvider(planId).overrideWith((ref) async {
+            ref.watch(reloadTick);
+            return (tasks: tasks, truncated: false);
+          }),
           backgroundProvider.overrideWith(FixedBackground.new),
           teamDirectoryProvider.overrideWith(
             (ref) async => const <TeamMember>[],
@@ -464,6 +475,123 @@ void main() {
     },
   );
 
+  testWidgets(
+    'cột đích có thẻ khoá ở giữa: thả dưới thẻ cuối → order = cuối + 1',
+    (t) async {
+      await pumpBoard(t, lockedMiddle: true);
+      final g = await lift(t, 'Bảo hành W106');
+      await g.moveTo(
+        Offset(340, t.getCenter(find.text('Làm phím CLP920')).dy + 60),
+      );
+      await t.pump();
+      await g.up();
+      await t.pumpAndSettle();
+
+      expect(tasksApi.moves.single, ('t1', 's2', 3.0));
+    },
+  );
+
+  testWidgets('cột đích có thẻ khoá ở giữa: thả trên thẻ khoá → order giữa thẻ '
+      'trước và thẻ khoá', (t) async {
+    await pumpBoard(t, lockedMiddle: true);
+    final g = await lift(t, 'Bảo hành W106');
+    // Trên tâm thẻ khoá, dưới tâm thẻ đầu.
+    await g.moveTo(
+      Offset(340, t.getCenter(find.text('Thẻ khoá giữa')).dy - 10),
+    );
+    await t.pump();
+    await g.up();
+    await t.pumpAndSettle();
+
+    expect(tasksApi.moves.single, ('t1', 's2', 1.25));
+  });
+
+  testWidgets('đang tìm: order tính trên cả cột đích, ngay sau thẻ thấy được '
+      'phía trên', (t) async {
+    await pumpBoard(t, hiddenMiddle: true);
+    await t.tap(find.byTooltip('Tìm trong kế hoạch'));
+    await t.pumpAndSettle();
+    await t.enterText(find.byType(TextField), 'à');
+    await t.pump(const Duration(milliseconds: 350));
+    await t.pumpAndSettle();
+    expect(find.text('Chờ linh kiện ẩn'), findsNothing);
+
+    final g = await lift(t, 'Bảo hành W106');
+    final a = t.getCenter(find.text('Bảo hành Ux kẹt cờ')).dy;
+    final b = t.getCenter(find.text('Làm phím CLP920')).dy;
+    await g.moveTo(Offset(340, (a + b) / 2));
+    await t.pump();
+    await g.up();
+    await t.pumpAndSettle();
+
+    // Giữa t3 (1) và thẻ ẩn kế tiếp (1.5), không phải giữa t3 và t4 (1.5 trùng
+    // thẻ ẩn).
+    expect(tasksApi.moves.single, ('t1', 's2', 1.25));
+  });
+
+  testWidgets('ngón thứ hai nhấc lên không kết thúc lượt kéo', (t) async {
+    await pumpBoard(t);
+    final g = await lift(t, 'Bảo hành W106');
+    await g.moveTo(aboveFirstOfColumn2(t));
+    await t.pump();
+    expect(find.byKey(const Key('drop-placeholder')), findsOneWidget);
+
+    final second = await t.startGesture(const Offset(200, 760), pointer: 7);
+    await second.up();
+    await t.pump();
+    expect(find.byKey(const Key('drag-feedback')), findsOneWidget);
+    expect(find.byKey(const Key('drop-placeholder')), findsOneWidget);
+
+    await g.up();
+    await t.pumpAndSettle();
+
+    expect(tasksApi.moves.single, ('t1', 's2', 0.0));
+  });
+
+  testWidgets('lượt tải lại đến trước khi PUT xong (thẻ còn ở nhóm cũ) không '
+      'làm thẻ bật về', (t) async {
+    await pumpBoard(t);
+    tasksApi.gate = Completer<void>();
+    final g = await lift(t, 'Bảo hành W106');
+    await g.moveTo(aboveFirstOfColumn2(t));
+    await t.pump();
+    await g.up();
+    await t.pump();
+
+    Finder inColumn(String name) => find.descendant(
+      of: column(name),
+      matching: find.text('Bảo hành W106'),
+      skipOffstage: false,
+    );
+    expect(inColumn('Đang xử lý'), findsOneWidget);
+
+    // Realtime tải lại: server chưa kịp ghi, thẻ vẫn ở s1.
+    ProviderScope.containerOf(
+      t.element(find.byType(PlanBoardPage)),
+    ).read(reloadTick.notifier).state++;
+    await t.pump();
+    await t.pump();
+    expect(inColumn('Đang xử lý'), findsOneWidget);
+    expect(inColumn('Tiếp nhận'), findsNothing);
+
+    tasksApi.gate!.complete();
+    await t.pumpAndSettle();
+  });
+
+  testWidgets('ô tích vẫn tích được trong LongPressDraggable, không nhấc thẻ', (
+    t,
+  ) async {
+    await pumpBoard(t);
+    expect(find.byType(LongPressDraggable<Task>), findsWidgets);
+
+    await t.tap(find.byKey(const ValueKey('tick-target')).first);
+    await t.pumpAndSettle();
+
+    expect(tasksApi.statuses, [('t1', 'done')]);
+    expect(find.byKey(const Key('drag-feedback')), findsNothing);
+    expect(find.text('chi tiet t1'), findsNothing);
+  });
+
   testWidgets('chế độ thu nhỏ: không có LongPressDraggable', (t) async {
     await pumpBoard(t);
     expect(find.byType(LongPressDraggable<Task>), findsWidgets);
@@ -542,6 +670,32 @@ class _FakeTasksApi implements TasksApi {
 
   final List<Task> _tasks;
   final moves = <(String, String, double?)>[];
+  final statuses = <(String, String)>[];
+
+  @override
+  Future<Paged<Task>> list({
+    required String projectId,
+    String? search,
+    TaskArchiveScope archived = TaskArchiveScope.active,
+    int page = 1,
+    int perPage = 100,
+  }) async {
+    final q = (search ?? '').toLowerCase();
+    return Paged(
+      items: [
+        for (final t in _tasks)
+          if (t.title.toLowerCase().contains(q)) t,
+      ],
+      pagination: const ApiPagination.empty(),
+    );
+  }
+
+  @override
+  Future<Task> setStatus(String taskId, String status) async {
+    statuses.add((taskId, status));
+
+    return _tasks.firstWhere((t) => t.id == taskId);
+  }
 
   /// Có thì `moveOnBoard` chờ nó (và ném lỗi nếu nó hoàn tất bằng lỗi).
   Completer<void>? gate;

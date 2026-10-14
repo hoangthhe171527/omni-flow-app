@@ -100,8 +100,31 @@ class _PlanBoardPageState extends ConsumerState<PlanBoardPage> {
   /// khi dữ liệu mới về hoặc khi lưu lỗi.
   ({String taskId, int toColumn, int index, String sectionId})? _pending;
 
+  /// Các ngón đang chạm, theo thứ tự chạm; và ngón đang giữ thẻ (ngón chạm
+  /// gần nhất lúc thẻ nhấc lên). Chỉ ngón ấy nhấc lên mới kết thúc lượt kéo.
+  final _pointers = <int>[];
+  int? _dragPointer;
+
+  @override
+  void initState() {
+    super.initState();
+    _drag.addListener(_onDragState);
+  }
+
+  void _onDragState() {
+    if (_drag.active && _dragPointer == null && _pointers.isNotEmpty) {
+      _dragPointer = _pointers.last;
+    }
+  }
+
+  void _pointerEnded(int pointer) {
+    _pointers.remove(pointer);
+    if (_dragPointer == null || pointer == _dragPointer) _endDrag();
+  }
+
   @override
   void dispose() {
+    _drag.removeListener(_onDragState);
     _edgeTimer?.cancel();
     _edgeSide.dispose();
     _drag.dispose();
@@ -160,8 +183,14 @@ class _PlanBoardPageState extends ConsumerState<PlanBoardPage> {
         !_zoomed;
 
     // Dữ liệu mới về (sau khi thả) là sự thật: bỏ phần vẽ lạc quan.
+    // Chỉ khi dữ liệu mới ĐÃ có việc ở nhóm mới (hoặc việc không còn): một lượt
+    // tải lại bắt đầu trước khi PUT xong vẫn thấy thẻ ở nhóm cũ, và xoá lúc đó
+    // là làm thẻ bật về chỗ cũ rồi nhảy lại.
     ref.listen(planTasksProvider(widget.planId), (_, next) {
-      if (_pending != null && next is AsyncData) {
+      final pending = _pending;
+      if (pending == null || next is! AsyncData<PlanTasks>) return;
+      final now = next.value.tasks.where((t) => t.id == pending.taskId);
+      if (now.isEmpty || now.first.sectionId == pending.sectionId) {
         setState(() => _pending = null);
       }
     });
@@ -411,8 +440,9 @@ class _PlanBoardPageState extends ConsumerState<PlanBoardPage> {
     return Listener(
       // Chốt: thẻ nguồn có thể đã rời cây khi tự trượt (lúc đó Flutter không
       // gọi onDragEnd), nên nhấc tay là dọn hết, ở đây.
-      onPointerUp: (_) => _endDrag(),
-      onPointerCancel: (_) => _endDrag(),
+      onPointerDown: (e) => _pointers.add(e.pointer),
+      onPointerUp: (e) => _pointerEnded(e.pointer),
+      onPointerCancel: (e) => _pointerEnded(e.pointer),
       child: Stack(
         children: [
           Positioned.fill(child: content),
@@ -483,6 +513,7 @@ class _PlanBoardPageState extends ConsumerState<PlanBoardPage> {
     _edgeTimer?.cancel();
     _edgeTimer = null;
     if (_edgeSide.value != 0) _edgeSide.value = 0;
+    _dragPointer = null;
     _drag.clear();
   }
 
@@ -501,7 +532,26 @@ class _PlanBoardPageState extends ConsumerState<PlanBoardPage> {
     final from = board.buckets.indexWhere((b) => b.any((t) => t.id == task.id));
     _endDrag();
     if (sectionId.isEmpty || from < 0 || from == toColumn) return;
-    final order = boardDropOrder(board.buckets[toColumn], task, index);
+    // `order` tính trên CẢ cột đích (không lọc người / tìm kiếm): neo vào thẻ
+    // thấy được phía trên nhưng không nhảy qua thẻ ẩn nằm ngay sau nó.
+    final visible = board.buckets[toColumn];
+    final all = ref.read(planTasksProvider(widget.planId)).valueOrNull;
+    final full = all == null
+        ? visible
+        : BoardBuckets.build(
+            all,
+            board.columns,
+            BoardPerson.everyone,
+          ).buckets[toColumn];
+    final others = [
+      for (final t in full)
+        if (t.id != task.id) t,
+    ];
+    final order = boardDropOrder(
+      others,
+      task,
+      fullInsertIndex(others, visible, index),
+    );
     final container = ProviderScope.containerOf(context);
     final messenger = ScaffoldMessenger.of(context);
     final api = ref.read(tasksApiProvider);
