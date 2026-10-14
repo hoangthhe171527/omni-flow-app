@@ -26,7 +26,7 @@ import '../domain/plan.dart';
 import '../routes.dart';
 import 'archived_tasks_page.dart';
 import 'edit_plan_page.dart';
-import 'edit_sections_page.dart';
+import 'section_order_page.dart';
 import 'plan_fields_page.dart';
 import 'plan_files_page.dart';
 import 'plan_members_page.dart';
@@ -685,7 +685,11 @@ class _PlanBoardPageState extends ConsumerState<PlanBoardPage> {
       case _SectionAction.remove:
         await _removeSection(plan, board, section);
       case _SectionAction.reorder:
-        await _editSections();
+        await Navigator.of(context).push<bool>(
+          MaterialPageRoute(
+            builder: (_) => SectionOrderPage(planId: widget.planId),
+          ),
+        );
       case null:
         break;
     }
@@ -827,14 +831,6 @@ class _PlanBoardPageState extends ConsumerState<PlanBoardPage> {
       );
     },
   );
-
-  Future<void> _editSections() async {
-    await Navigator.of(context).push<bool>(
-      MaterialPageRoute(
-        builder: (_) => EditSectionsPage(planId: widget.planId),
-      ),
-    );
-  }
 
   Future<void> _deletePlan(Plan plan) async {
     final messenger = ScaffoldMessenger.of(context);

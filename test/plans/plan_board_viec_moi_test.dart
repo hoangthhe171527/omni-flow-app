@@ -8,7 +8,9 @@ import 'package:omni_app/design/tokens/tokens.dart';
 import 'package:omni_app/modules/plans/application/plans_providers.dart';
 import 'package:omni_app/modules/plans/data/plans_api.dart';
 import 'package:omni_app/modules/plans/domain/plan.dart';
+import 'package:omni_app/modules/plans/presentation/edit_sections_page.dart';
 import 'package:omni_app/modules/plans/presentation/plan_board_page.dart';
+import 'package:omni_app/modules/plans/presentation/section_order_page.dart';
 import 'package:omni_app/modules/plans/presentation/widgets/board_column.dart';
 import 'package:omni_app/modules/settings/application/appearance_providers.dart';
 import 'package:omni_app/modules/tasks/application/tasks_providers.dart';
@@ -374,6 +376,26 @@ void main() {
 
     expect(plansApi.sentSections.single.map((s) => s.id), ['s2', 's3', 's4']);
   });
+
+  testWidgets(
+    '⋯ cột → "Sắp xếp nhóm việc" mở SectionOrderPage (không phải EditSectionsPage)',
+    (tester) async {
+      await pumpBoard(tester);
+
+      await tester.tap(
+        find.descendant(
+          of: column('Tiếp nhận'),
+          matching: find.byTooltip('Tuỳ chọn nhóm việc'),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Sắp xếp nhóm việc'));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(SectionOrderPage), findsOneWidget);
+      expect(find.byType(EditSectionsPage), findsNothing);
+    },
+  );
 
   testWidgets('(e) tìm "kawai" gọi search=kawai và chỉ còn thẻ khớp', (
     tester,
