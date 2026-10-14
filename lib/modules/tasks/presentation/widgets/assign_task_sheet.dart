@@ -22,10 +22,12 @@ Future<List<String>?> showAssignTaskSheet({
   required List<String> currentIds,
   String title = 'Ai làm việc này',
   String Function(int picked)? confirmLabel,
+  Set<String>? allowedIds,
 }) => showOmniSheet<List<String>>(
   context: context,
   builder: (context) => _AssignTaskSheet(
     currentIds: currentIds,
+    allowedIds: allowedIds,
     title: title,
     confirmLabel: confirmLabel,
   ),
@@ -36,9 +38,14 @@ class _AssignTaskSheet extends ConsumerStatefulWidget {
     required this.currentIds,
     required this.title,
     this.confirmLabel,
+    this.allowedIds,
   });
 
   final List<String> currentIds;
+
+  /// Chỉ cho chọn trong tập này (thành viên kế hoạch đích khi sao chép);
+  /// null = không lọc. Người đang được chọn lúc mở vẫn hiện để còn gỡ.
+  final Set<String>? allowedIds;
   final String title;
 
   /// Chữ nút lưu theo số người đã chọn; null = chữ của "giao việc".
@@ -50,6 +57,10 @@ class _AssignTaskSheet extends ConsumerStatefulWidget {
 
 class _AssignTaskSheetState extends ConsumerState<_AssignTaskSheet> {
   late final Set<String> _picked = {...widget.currentIds};
+
+  /// Người được chọn lúc mở: luôn hiện, kể cả ngoài `allowedIds`, để gỡ được
+  /// — và không biến mất khỏi danh sách ngay khi vừa bỏ chọn.
+  late final Set<String> _initial = {...widget.currentIds};
   String _search = '';
 
   @override
@@ -147,12 +158,19 @@ class _AssignTaskSheetState extends ConsumerState<_AssignTaskSheet> {
   /// nhận — nhưng người ĐANG được gán vẫn hiện, để còn gỡ họ ra.
   List<TeamMember> _visible(List<TeamMember> members) {
     final needle = _search.trim().toLowerCase();
+    final allowed = widget.allowedIds;
 
     // `members` chỉ có người chọn được (`teamMembersProvider`).
     return withPickedMembers(
           members,
           _picked,
           ref.watch(teamMemberByIdProvider),
+        )
+        .where(
+          (m) =>
+              allowed == null ||
+              allowed.contains(m.userId) ||
+              _initial.contains(m.userId),
         )
         .where((m) => needle.isEmpty || m.name.toLowerCase().contains(needle))
         .toList();
