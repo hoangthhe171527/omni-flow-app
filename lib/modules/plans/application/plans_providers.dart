@@ -357,6 +357,33 @@ class BoardBuckets {
   /// Tổng số việc đang hiện trên mọi cột.
   int get total => buckets.fold<int>(0, (sum, b) => sum + b.length);
 
+  /// Bảng sau khi việc [taskId] được thả vào cột [toColumn] tại chỉ số
+  /// [index] (tính trong cột đích SAU khi đã bỏ việc đó), mang `sectionId`
+  /// mới. Số cột giữ nguyên; không có việc đó thì trả nguyên bảng.
+  BoardBuckets moved(String taskId, int toColumn, int index, String sectionId) {
+    Task? found;
+    for (final bucket in buckets) {
+      for (final task in bucket) {
+        if (task.id == taskId) found = task;
+      }
+    }
+    if (found == null) return this;
+    final next = [
+      for (final bucket in buckets)
+        [
+          for (final task in bucket)
+            if (task.id != taskId) task,
+        ],
+    ];
+    final target = next[toColumn];
+    target.insert(
+      index.clamp(0, target.length),
+      found.copyWith(sectionId: sectionId),
+    );
+
+    return BoardBuckets(columns: columns, buckets: next, truncated: truncated);
+  }
+
   /// Chỉ giữ các việc có id trong [ids] (kết quả tìm). Cột giữ nguyên, kể cả
   /// cột rỗng: số 0 cạnh tên nhóm cũng là một câu trả lời.
   BoardBuckets only(Set<String> ids) => BoardBuckets(

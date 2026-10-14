@@ -80,6 +80,12 @@ abstract final class OmniShadows {
 
   /// Dòng đang được kéo ở trang sắp xếp nhóm việc (`AppSections.dc.html`):
   /// `0 10 26 rgba(11,26,51,.18)`.
+  /// Thẻ việc đang nhấc khỏi bảng kế hoạch (`AppBoard.dc.html`):
+  /// `0 18 40 rgba(11,26,51,.35)`.
+  static const List<BoxShadow> lifted = [
+    BoxShadow(color: Color(0x590B1A33), blurRadius: 40, offset: Offset(0, 18)),
+  ];
+
   static const List<BoxShadow> dragging = [
     BoxShadow(color: Color(0x2E0B1A33), blurRadius: 26, offset: Offset(0, 10)),
   ];

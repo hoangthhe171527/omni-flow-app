@@ -572,6 +572,7 @@ class Task {
     List<String?>? followerNames,
     List<String?>? followerAvatars,
     double? order,
+    String? sectionId,
   }) => Task(
     id: id,
     title: title,
@@ -580,7 +581,7 @@ class Task {
     priority: priority,
     projectId: projectId,
     projectName: projectName,
-    sectionId: sectionId,
+    sectionId: sectionId ?? this.sectionId,
     sectionName: sectionName,
     planSections: planSections,
     assigneeIds: assigneeIds,

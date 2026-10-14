@@ -1,10 +1,15 @@
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
+import '../../../../design/components/omni_dashed_box.dart';
+import '../../../../design/platform/omni_motion_scope.dart';
 import '../../../../design/tokens/tokens.dart';
 import '../../../tasks/domain/task.dart';
+import '../../domain/board_drop.dart';
 import '../../domain/plan.dart';
+import 'board_drag.dart';
 import 'board_task_card.dart';
 
 /// Kích thước dải cột của bảng (`Board.dc.html` `.track`, `.col`).
@@ -129,7 +134,10 @@ class _JumpSimulation extends Simulation {
 
 /// Một cột của bảng (`.col`): rãnh bo 8, đầu cột 44 (tên, viên đếm, ⋯),
 /// thẻ cuộn dọc TRONG cột, đáy "Thêm công việc".
-class BoardColumn extends StatelessWidget {
+///
+/// Có [drag] thì giữ thẻ ~400ms để nhấc lên và thả sang cột khác; cả cột là
+/// một `DragTarget`, ô chỗ trống chèn tại chỉ số tính từ tâm các thẻ.
+class BoardColumn extends StatefulWidget {
   const BoardColumn({
     super.key,
     required this.section,
@@ -139,7 +147,15 @@ class BoardColumn extends StatelessWidget {
     this.canComplete = false,
     this.onAddTask,
     this.onOptions,
+    this.columnIndex = 0,
+    this.drag,
+    this.canDrag = _never,
+    this.onDrop,
+    this.onDragUpdate,
+    this.onDragEnd,
   });
+
+  static bool _never(Task _) => false;
 
   final PlanSection section;
   final List<Task> tasks;
@@ -157,59 +173,254 @@ class BoardColumn extends StatelessWidget {
   /// null = không sửa được nhóm việc: ẩn ⋯.
   final VoidCallback? onOptions;
 
+  /// Vị trí của cột trên bảng, để [drag] biết đích là cột nào.
+  final int columnIndex;
+
+  /// null = tắt kéo thả (không quyền, thu nhỏ, cột dựng tạm).
+  final BoardDragController? drag;
+
+  /// Thẻ này nhấc được không (đã khoá thì không).
+  final bool Function(Task task) canDrag;
+
+  /// Thả [Task] vào cột này tại chỗ chèn `index` (đã bỏ nó khỏi cột).
+  final void Function(Task task, int index)? onDrop;
+
+  /// Con trỏ toàn cục khi đang kéo — trang dùng để bật tự trượt ở mép.
+  final ValueChanged<Offset>? onDragUpdate;
+
+  /// Kết thúc kéo (thả hay huỷ).
+  final VoidCallback? onDragEnd;
+
+  @override
+  State<BoardColumn> createState() => _BoardColumnState();
+}
+
+class _BoardColumnState extends State<BoardColumn> {
+  /// Chiều cao ô chỗ trống, và bước nó đẩy các thẻ phía sau (cộng khe 8).
+  static const double _slot = 64;
+  static const double _slotStep = _slot + 8;
+
+  final _keys = <String, GlobalKey>{};
+
+  @override
+  void didUpdateWidget(BoardColumn old) {
+    super.didUpdateWidget(old);
+    final ids = {for (final t in widget.tasks) t.id};
+    _keys.removeWhere((id, _) => !ids.contains(id));
+  }
+
+  GlobalKey _keyOf(String id) => _keys.putIfAbsent(id, GlobalKey.new);
+
+  /// Chỗ chèn theo con trỏ Y toàn cục: số thẻ có tâm nằm trên nó. Bỏ thẻ đang
+  /// kéo; thẻ chưa dựng (cuộn ra xa) coi như nằm trên hay dưới tuỳ vị trí.
+  int _indexAt(double pointerY, Task dragged) {
+    final drag = widget.drag;
+    final slotAt =
+        drag != null &&
+            drag.targetColumn == widget.columnIndex &&
+            drag.fromColumn != widget.columnIndex
+        ? drag.targetIndex
+        : null;
+    final centers = <double>[];
+    var seenBuilt = false;
+    for (final task in widget.tasks) {
+      if (task.id == dragged.id) continue;
+      final box = _keys[task.id]?.currentContext?.findRenderObject();
+      if (box is RenderBox && box.attached && box.hasSize) {
+        seenBuilt = true;
+        var y = box.localToGlobal(box.size.center(Offset.zero)).dy;
+        // Ô chỗ trống đẩy các thẻ phía sau xuống; trừ đi, kẻo con trỏ đứng yên
+        // mà chỗ chèn nhảy qua lại.
+        if (slotAt != null && centers.length >= slotAt) y -= _slotStep;
+        centers.add(y);
+      } else {
+        centers.add(seenBuilt ? double.infinity : double.negativeInfinity);
+      }
+    }
+
+    return dropIndexFor(centers, pointerY);
+  }
+
+  /// Con trỏ Y toàn cục. [DragTargetDetails.offset] là góc trên-trái của bản
+  /// nổi; con trỏ nằm [BoardDragFeedback.grab] bên trong nó.
+  double _pointerY(DragTargetDetails<Task> details) =>
+      details.offset.dy + BoardDragFeedback.grab.dy;
+
+  void _hover(DragTargetDetails<Task> details) => widget.drag?.hover(
+    widget.columnIndex,
+    _indexAt(_pointerY(details), details.data),
+    widget.section.name,
+  );
+
+  Widget _card(Task task, int index) {
+    final card = BoardTaskCard(
+      key: ValueKey(task.id),
+      task: task,
+      rise: widget.firstShow(task.id),
+      canComplete: widget.canComplete,
+      delay: Duration(milliseconds: 50 * math.min(index, 6)),
+      onTap: () => widget.onOpenTask(task),
+    );
+    final drag = widget.drag;
+    if (drag == null || !widget.canDrag(task)) return card;
+
+    return LongPressDraggable<Task>(
+      key: _keyOf(task.id),
+      data: task,
+      delay: const Duration(milliseconds: 400),
+      // Không dùng `feedbackOffset`: nó dời cả điểm dò cột đích đi theo bản
+      // nổi (hit-test ở `con trỏ + feedbackOffset`). Neo kiểu này dời riêng
+      // bản nổi, còn cột đích vẫn dò ngay dưới ngón tay.
+      dragAnchorStrategy: boardDragAnchor,
+      hapticFeedbackOnStart: false,
+      onDragStarted: () {
+        HapticFeedback.selectionClick();
+        drag.start(task, widget.columnIndex);
+      },
+      onDragUpdate: (details) {
+        drag.pointer = details.globalPosition;
+        widget.onDragUpdate?.call(details.globalPosition);
+      },
+      onDragEnd: (_) => widget.onDragEnd?.call(),
+      feedback: BoardDragFeedback(task: task, controller: drag),
+      childWhenDragging: Opacity(
+        opacity: .3,
+        child: IgnorePointer(
+          child: BoardTaskCard(
+            task: task,
+            rise: false,
+            canComplete: widget.canComplete,
+            onTap: () {},
+          ),
+        ),
+      ),
+      child: card,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final drag = widget.drag;
+
+    final body = ListenableBuilder(
+      listenable: drag ?? const _NoListenable(),
+      builder: (context, _) {
+        final hot = drag != null && drag.targetColumn == widget.columnIndex;
+        final tasks = widget.tasks;
+        final slotAt = hot && drag.fromColumn != widget.columnIndex
+            ? math.min(drag.targetIndex ?? tasks.length, tasks.length)
+            : null;
+        final duration = OmniMotion.enabled(context)
+            ? const Duration(milliseconds: 200)
+            : Duration.zero;
+
+        return AnimatedContainer(
+          duration: duration,
+          decoration: BoxDecoration(
+            color: hot
+                ? OmniTaskTones.of(context).today.background
+                : scheme.surfaceContainerHighest,
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Stack(
+            fit: StackFit.passthrough,
+            children: [
+              Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  _Header(
+                    name: widget.section.name,
+                    count: tasks.length,
+                    onOptions: widget.onOptions,
+                  ),
+                  Flexible(
+                    child: ListView.separated(
+                      shrinkWrap: true,
+                      padding: const EdgeInsets.symmetric(horizontal: 8),
+                      itemCount: tasks.length + (slotAt == null ? 0 : 1),
+                      separatorBuilder: (_, _) => const SizedBox(height: 8),
+                      itemBuilder: (context, index) {
+                        if (index == slotAt) {
+                          return const OmniDashedBox(
+                            key: Key('drop-placeholder'),
+                            height: _slot,
+                          );
+                        }
+                        final at = slotAt != null && index > slotAt
+                            ? index - 1
+                            : index;
+
+                        return _card(tasks[at], at);
+                      },
+                    ),
+                  ),
+                  if (widget.onAddTask case final add?)
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(8, 6, 8, 8),
+                      child: _AddTaskButton(onTap: add),
+                    )
+                  else
+                    const SizedBox(height: 8),
+                ],
+              ),
+              Positioned.fill(
+                child: IgnorePointer(
+                  child: AnimatedContainer(
+                    key: const Key('column-drop-border'),
+                    duration: duration,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(
+                        color: hot ? scheme.primary : Colors.transparent,
+                        width: 2,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
 
     return Semantics(
       container: true,
-      label: section.name,
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          color: scheme.surfaceContainerHighest,
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            _Header(
-              name: section.name,
-              count: tasks.length,
-              onOptions: onOptions,
-            ),
-            Flexible(
-              child: ListView.separated(
-                shrinkWrap: true,
-                padding: const EdgeInsets.symmetric(horizontal: 8),
-                itemCount: tasks.length,
-                separatorBuilder: (_, _) => const SizedBox(height: 8),
-                itemBuilder: (context, index) {
-                  final task = tasks[index];
+      label: widget.section.name,
+      child: drag == null
+          ? body
+          : DragTarget<Task>(
+              // Flutter chỉ gọi onMove khi con trỏ đã ở trong cột từ sự kiện
+              // trước; sự kiện VÀO cột chỉ gọi ở đây, nên hover cũng phải
+              // báo ở đây, kẻo cột đích chậm một nhịp.
+              onWillAcceptWithDetails: (details) {
+                _hover(details);
 
-                  return BoardTaskCard(
-                    key: ValueKey(task.id),
-                    task: task,
-                    rise: firstShow(task.id),
-                    canComplete: canComplete,
-                    delay: Duration(milliseconds: 50 * math.min(index, 6)),
-                    onTap: () => onOpenTask(task),
-                  );
-                },
+                return true;
+              },
+              onMove: _hover,
+              onLeave: (_) => drag.leave(widget.columnIndex),
+              onAcceptWithDetails: (details) => widget.onDrop?.call(
+                details.data,
+                _indexAt(_pointerY(details), details.data),
               ),
+              builder: (context, _, _) => body,
             ),
-            if (onAddTask case final add?)
-              Padding(
-                padding: const EdgeInsets.fromLTRB(8, 6, 8, 8),
-                child: _AddTaskButton(onTap: add),
-              )
-            else
-              const SizedBox(height: 8),
-          ],
-        ),
-      ),
     );
   }
+}
+
+/// `ListenableBuilder` cần một [Listenable]; cột không kéo được thì không nghe gì.
+class _NoListenable implements Listenable {
+  const _NoListenable();
+
+  @override
+  void addListener(VoidCallback listener) {}
+
+  @override
+  void removeListener(VoidCallback listener) {}
 }
 
 class _Header extends StatelessWidget {

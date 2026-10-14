@@ -226,6 +226,14 @@ class Plan {
       : memberRoles[userId] ??
             (memberIds.contains(userId) ? PlanRole.member : PlanRole.viewer);
 
+  /// Mang vai người xem GHI RÕ trong `member_roles` — đúng
+  /// `ProjectAccessService::assertCanEditTasks`: chỉ vai `viewer` bị chặn;
+  /// chủ và người ngoài danh sách thành viên vẫn ghi được việc.
+  bool isTaskViewer(String? userId) =>
+      userId != null &&
+      ownerId != userId &&
+      memberRoles[userId] == PlanRole.viewer;
+
   /// 0.0–1.0, và 0 chứ không phải NaN khi chưa có việc nào.
   double get progress => taskCount == 0 ? 0 : doneCount / taskCount;
 
