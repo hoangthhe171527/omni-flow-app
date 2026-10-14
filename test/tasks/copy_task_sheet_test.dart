@@ -99,11 +99,12 @@ void main() {
     Set<String> caps = newCaps,
     Map<String, dynamic>? data,
     bool failLoad = false,
+    List<MovablePlan>? planList,
   }) async {
     t.view.physicalSize = const Size(390, 844);
     t.view.devicePixelRatio = 1;
     addTearDown(t.view.reset);
-    api = _Api(plans, projects)..failNext = failLoad;
+    api = _Api(planList ?? plans, projects)..failNext = failLoad;
     result = null;
     final task = Task.fromJson(data ?? taskJson());
     await t.pumpWidget(
@@ -256,12 +257,13 @@ void main() {
     await open(t);
     await pickDay(t, 'copy-due', '20');
     expect(find.text('20/10/2026'), findsOneWidget);
-    var body = result?.request.toJson();
-    expect(body, isNull);
+    // Chọn ngày không đóng sheet.
+    expect(find.byType(CopyTaskSheet), findsOneWidget);
 
     await tapIt(t, find.byTooltip('Xoá ngày bắt đầu'));
     expect(find.text('12/10/2026'), findsNothing);
-    body = await submit(t);
+    expect(find.byTooltip('Xoá ngày bắt đầu'), findsNothing);
+    final body = await submit(t);
     expect(body['due_date'], '2026-10-20');
     expect(body.containsKey('start_date'), isTrue);
     expect(body['start_date'], isNull);
@@ -413,6 +415,79 @@ void main() {
     expect(find.text('Trường tuỳ chỉnh'), findsNothing);
     final body = await submit(t);
     expect(body.containsKey('keep_custom_fields'), isFalse);
+  });
+
+  Map<String, dynamic> personalJson() => {
+    ...taskJson(),
+    'project_id': null,
+    'section_id': null,
+    'custom_fields': <String, dynamic>{},
+  };
+
+  testWidgets('việc cá nhân → chọn sẵn "Không thuộc kế hoạch", ẩn Team và Nhóm '
+      'việc; body KHÔNG có project_id/section_id', (t) async {
+    await open(t, data: personalJson());
+    expect(inField('copy-plan', 'Không thuộc kế hoạch'), findsOneWidget);
+    expect(find.byKey(const ValueKey('copy-team')), findsNothing);
+    expect(find.byKey(const ValueKey('copy-section')), findsNothing);
+    final body = await submit(t);
+    expect(body.containsKey('project_id'), isFalse);
+    expect(body.containsKey('section_id'), isFalse);
+    expect(body['title'], 'YAMAHA U1E (bản sao)');
+    expect(result!.placeName, isNull);
+  });
+
+  testWidgets('việc cá nhân + không có kế hoạch nào → "Sao chép" vẫn bật', (
+    t,
+  ) async {
+    await open(t, data: personalJson(), planList: const []);
+    expect(copyButton(t).onPressed, isNotNull);
+    final body = await submit(t);
+    expect(body.containsKey('project_id'), isFalse);
+  });
+
+  testWidgets('việc cá nhân → chọn một kế hoạch: hiện Team + Nhóm, gửi '
+      'project_id + section_id', (t) async {
+    await open(t, data: personalJson());
+    await pick(t, 'copy-plan', 'Bảo hành');
+    expect(inField('copy-team', 'Xưởng'), findsOneWidget);
+    expect(inField('copy-section', 'Chờ'), findsOneWidget);
+    final body = await submit(t);
+    expect(body['project_id'], 'pB');
+    expect(body['section_id'], 'b1');
+  });
+
+  testWidgets('việc trong kế hoạch: KHÔNG có lựa chọn "Không thuộc kế hoạch" '
+      '(thiếu project_id thì server chép vào kế hoạch gốc)', (t) async {
+    await open(t);
+    await tapIt(t, find.byKey(const ValueKey('copy-plan')));
+    expect(find.text('Không thuộc kế hoạch'), findsNothing);
+  });
+
+  testWidgets('cùng kế hoạch, việc gốc chưa xếp nhóm, không đụng ô nhóm → '
+      'KHÔNG gửi section_id', (t) async {
+    await open(t, data: {...taskJson(), 'section_id': null});
+    expect(inField('copy-section', 'Chưa xếp nhóm'), findsOneWidget);
+    final body = await submit(t);
+    expect(body['project_id'], 'pA');
+    expect(body.containsKey('section_id'), isFalse);
+    expect(result!.placeName, 'Tân trang');
+  });
+
+  testWidgets('API cũ, việc gốc chưa giao ai → không có công tắc "Giữ người '
+      'thực hiện"', (t) async {
+    await open(
+      t,
+      caps: oldCaps,
+      data: {
+        ...taskJson(),
+        'assignee_ids': <String>[],
+        'assignee_names': <String>[],
+      },
+    );
+    expect(find.text('Giữ người thực hiện'), findsNothing);
+    final body = await submit(t);
+    expect(body['keep_assignees'], true);
   });
 
   testWidgets('việc không có việc con → không có công tắc, keep_checklist: '

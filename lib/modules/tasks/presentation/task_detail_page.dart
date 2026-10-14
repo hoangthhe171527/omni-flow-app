@@ -334,7 +334,10 @@ class _TaskDetailPageState extends ConsumerState<TaskDetailPage> {
 
       messenger.showSnackBar(
         SnackBar(
-          content: Text('Đã tạo bản sao trong “${result.placeName}”.'),
+          content: Text(switch (result.placeName) {
+            final place? => 'Đã tạo bản sao trong “$place”.',
+            null => 'Đã tạo bản sao.',
+          }),
           action: copy.id.isEmpty
               ? null
               : SnackBarAction(label: 'Mở', onPressed: open),
@@ -343,8 +346,15 @@ class _TaskDetailPageState extends ConsumerState<TaskDetailPage> {
     } on ValidationException catch (e) {
       // Nhóm việc không thuộc kế hoạch đích (người khác vừa xoá nhóm): câu
       // của server cho khoá `section_id`.
+      final section = e.firstFor('section_id');
       messenger.showSnackBar(
-        SnackBar(content: Text(e.firstFor('section_id') ?? e.message)),
+        SnackBar(
+          content: Text(
+            section == null
+                ? e.message
+                : '$section Mở lại "Sao chép" để chọn nhóm khác.',
+          ),
+        ),
       );
     } on AppException catch (e) {
       messenger.showSnackBar(SnackBar(content: Text(e.message)));

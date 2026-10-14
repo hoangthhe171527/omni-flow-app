@@ -16,7 +16,8 @@ import '../assign_task_sheet.dart';
 
 /// Kết quả sheet sao chép: body cho `POST /tasks/{id}/copy` và tên chỗ đặt
 /// bản sao (nhóm việc, hoặc kế hoạch khi kế hoạch không có nhóm) cho SnackBar.
-typedef TaskCopyResult = ({TaskCopyRequest request, String placeName});
+/// `placeName` null = bản sao không thuộc kế hoạch nào (việc cá nhân).
+typedef TaskCopyResult = ({TaskCopyRequest request, String? placeName});
 
 /// Trần tên việc (`CopyTaskRequest` / `CreateTaskRequest` `title` `max:255`).
 const kTaskTitleMax = 255;
@@ -66,6 +67,9 @@ class CopyTaskSheet extends ConsumerStatefulWidget {
 /// Khoá nhóm "Chưa thuộc team" trong ô Team.
 const _noTeam = '';
 
+/// Giá trị "Không thuộc kế hoạch" trong ô Kế hoạch (không trùng id nào).
+const _noPlan = '\u0000no-plan';
+
 class _CopyTaskSheetState extends ConsumerState<CopyTaskSheet> {
   late final _title = TextEditingController(
     text: copyTitleOf(widget.task.title),
@@ -76,6 +80,15 @@ class _CopyTaskSheetState extends ConsumerState<CopyTaskSheet> {
 
   String? _team;
   MovablePlan? _plan;
+
+  /// Việc gốc là việc cá nhân. Chỉ khi đó mới có lựa chọn "Không thuộc kế
+  /// hoạch": thiếu `project_id` thì server chép vào kế hoạch GỐC
+  /// (`CopyTask`: `project_id ?? sourceProject`), nên với việc trong kế hoạch
+  /// lựa chọn ấy sẽ là nói dối.
+  bool get _personalSource => (widget.task.projectId ?? '').isEmpty;
+
+  /// Đang chọn "Không thuộc kế hoạch": không gửi project_id / section_id.
+  late bool _personal = _personalSource;
   String? _sectionId;
 
   late final DateTime? _origStart = _calendarDay(widget.task.startDate);
@@ -116,6 +129,7 @@ class _CopyTaskSheetState extends ConsumerState<CopyTaskSheet> {
       if (!mounted) return;
       setState(() {
         _all = plans;
+        if (_personal) return;
         final source =
             plans.where((p) => p.id == widget.task.projectId).firstOrNull ??
             plans.firstOrNull;
@@ -123,8 +137,13 @@ class _CopyTaskSheetState extends ConsumerState<CopyTaskSheet> {
         _team = _teamOf(source);
         _plan = source;
         final sections = source.sections;
-        _sectionId = sections.any((s) => s.id == widget.task.sectionId)
-            ? widget.task.sectionId
+        final from = widget.task.sectionId;
+        // Gốc chưa xếp nhóm và vẫn ở kế hoạch gốc: để trống, không tự chọn
+        // nhóm đầu — chọn sẵn là gửi section_id người dùng không hề chọn.
+        _sectionId = source.id == widget.task.projectId && from == null
+            ? null
+            : sections.any((s) => s.id == from)
+            ? from
             : sections.firstOrNull?.id;
       });
     } on Object {
@@ -186,9 +205,22 @@ class _CopyTaskSheetState extends ConsumerState<CopyTaskSheet> {
   }
 
   void _pickPlan(String? id) {
+    if (id == _noPlan) {
+      setState(() {
+        _personal = true;
+        _plan = null;
+        _team = null;
+        _sectionId = null;
+      });
+      return;
+    }
     final plan = _all?.where((p) => p.id == id).firstOrNull;
-    if (plan == null || plan.id == _plan?.id) return;
-    setState(() => _selectPlan(plan));
+    if (plan == null || (!_personal && plan.id == _plan?.id)) return;
+    setState(() {
+      _personal = false;
+      _team = _teamOf(plan);
+      _selectPlan(plan);
+    });
   }
 
   /// Đổi kế hoạch: nhóm đầu tiên; bỏ người không thuộc kế hoạch mới (R13).
@@ -284,18 +316,22 @@ class _CopyTaskSheetState extends ConsumerState<CopyTaskSheet> {
   }
 
   void _submit({required bool extended, required List<String> people}) {
-    final plan = _plan;
-    if (plan == null) return;
+    final plan = _personal ? null : _plan;
+    if (plan == null && !_personal) return;
     final task = widget.task;
-    final samePlan = plan.id == task.projectId;
-    final section = plan.sections.where((s) => s.id == _sectionId).firstOrNull;
+    final samePlan = plan?.id == task.projectId;
+    final section = plan?.sections.where((s) => s.id == _sectionId).firstOrNull;
     final request = TaskCopyRequest(
       title: _title.text,
-      projectId: plan.id,
+      // Không thuộc kế hoạch (chỉ có với việc cá nhân): không gửi khoá nào —
+      // server giữ "không kế hoạch" của việc gốc.
+      projectId: plan?.id,
       // Cùng kế hoạch + cùng nhóm: không gửi, để server tự lùi về cột không
       // có cổng QC (R12). Kế hoạch không có nhóm: không gửi.
       sectionId:
-          plan.sections.isEmpty || (samePlan && _sectionId == task.sectionId)
+          plan == null ||
+              plan.sections.isEmpty ||
+              (samePlan && _sectionId == task.sectionId)
           ? null
           : _sectionId,
       keepAssignees: extended ? true : _keepAssignees,
@@ -311,7 +347,7 @@ class _CopyTaskSheetState extends ConsumerState<CopyTaskSheet> {
     );
     Navigator.of(context).pop<TaskCopyResult>((
       request: request,
-      placeName: section?.name ?? plan.name,
+      placeName: section?.name ?? plan?.name,
     ));
   }
 
@@ -323,7 +359,7 @@ class _CopyTaskSheetState extends ConsumerState<CopyTaskSheet> {
     );
     final byId = ref.watch(teamMemberByIdProvider);
     final task = widget.task;
-    final plan = _plan;
+    final plan = _personal ? null : _plan;
 
     final target = plan == null
         ? null
@@ -343,7 +379,7 @@ class _CopyTaskSheetState extends ConsumerState<CopyTaskSheet> {
 
     final canSubmit =
         _title.text.trim().isNotEmpty &&
-        plan != null &&
+        (_personal || plan != null) &&
         !(extended && _datesInvalid);
     final bottom = MediaQuery.viewPaddingOf(context).bottom;
 
@@ -411,7 +447,7 @@ class _CopyTaskSheetState extends ConsumerState<CopyTaskSheet> {
                     _assignees(context, byId, people, allowed),
                     if (task.customFields.isNotEmpty)
                       _customFields(context, target),
-                  ] else
+                  ] else if (task.assigneeIds.isNotEmpty)
                     _SwitchRow(
                       label: 'Giữ người thực hiện',
                       note: _keepNote(byId),
@@ -531,42 +567,56 @@ class _CopyTaskSheetState extends ConsumerState<CopyTaskSheet> {
         ),
       ];
     }
-    final plan = _plan;
+    final plan = _personal ? null : _plan;
+    // "Không thuộc kế hoạch" thì chưa có team để lọc: liệt kê mọi kế hoạch.
     final teamPlans = [
       for (final p in plans)
-        if (_teamOf(p) == _team) p,
+        if (_personal || _teamOf(p) == _team) p,
     ];
     final style = OmniType.body.copyWith(color: scheme.onSurface);
     final sections = plan?.sections ?? const <TaskSection>[];
+    final noneHint = Text(
+      'Chưa xếp nhóm',
+      style: style.copyWith(color: scheme.onSurfaceVariant),
+    );
 
     return [
-      _Field(
-        label: 'Team',
-        child: DropdownButtonFormField<String>(
-          key: const ValueKey('copy-team'),
-          initialValue: _team,
-          isExpanded: true,
-          style: style,
-          decoration: _inputDecoration(context),
-          items: [
-            for (final (id, name) in _teams(plans))
-              DropdownMenuItem(
-                value: id,
-                child: Text(name, overflow: TextOverflow.ellipsis),
-              ),
-          ],
-          onChanged: _pickTeam,
+      if (!_personal)
+        _Field(
+          label: 'Team',
+          child: DropdownButtonFormField<String>(
+            key: const ValueKey('copy-team'),
+            initialValue: _team,
+            isExpanded: true,
+            style: style,
+            decoration: _inputDecoration(context),
+            items: [
+              for (final (id, name) in _teams(plans))
+                DropdownMenuItem(
+                  value: id,
+                  child: Text(name, overflow: TextOverflow.ellipsis),
+                ),
+            ],
+            onChanged: _pickTeam,
+          ),
         ),
-      ),
       _Field(
         label: 'Kế hoạch',
         child: DropdownButtonFormField<String>(
           key: const ValueKey('copy-plan'),
-          initialValue: plan?.id,
+          initialValue: _personal ? _noPlan : plan?.id,
           isExpanded: true,
           style: style,
           decoration: _inputDecoration(context),
           items: [
+            if (_personalSource)
+              const DropdownMenuItem(
+                value: _noPlan,
+                child: Text(
+                  'Không thuộc kế hoạch',
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
             for (final p in teamPlans)
               DropdownMenuItem(
                 value: p.id,
@@ -576,30 +626,29 @@ class _CopyTaskSheetState extends ConsumerState<CopyTaskSheet> {
           onChanged: _pickPlan,
         ),
       ),
-      _Field(
-        label: 'Nhóm việc',
-        child: DropdownButtonFormField<String>(
-          key: const ValueKey('copy-section'),
-          initialValue: sections.isEmpty ? null : _sectionId,
-          isExpanded: true,
-          style: style,
-          decoration: _inputDecoration(context),
-          disabledHint: Text(
-            'Chưa xếp nhóm',
-            style: style.copyWith(color: scheme.onSurfaceVariant),
+      if (!_personal)
+        _Field(
+          label: 'Nhóm việc',
+          child: DropdownButtonFormField<String>(
+            key: const ValueKey('copy-section'),
+            initialValue: sections.isEmpty ? null : _sectionId,
+            isExpanded: true,
+            style: style,
+            decoration: _inputDecoration(context),
+            hint: noneHint,
+            disabledHint: noneHint,
+            items: [
+              for (final s in sections)
+                DropdownMenuItem(
+                  value: s.id,
+                  child: Text(s.name, overflow: TextOverflow.ellipsis),
+                ),
+            ],
+            onChanged: sections.isEmpty
+                ? null
+                : (id) => setState(() => _sectionId = id),
           ),
-          items: [
-            for (final s in sections)
-              DropdownMenuItem(
-                value: s.id,
-                child: Text(s.name, overflow: TextOverflow.ellipsis),
-              ),
-          ],
-          onChanged: sections.isEmpty
-              ? null
-              : (id) => setState(() => _sectionId = id),
         ),
-      ),
     ];
   }
 

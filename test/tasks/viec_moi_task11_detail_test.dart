@@ -266,17 +266,16 @@ void main() {
     await t.tap(find.widgetWithText(FilledButton, 'Sao chép'));
     await t.pumpAndSettle();
     expect(api.calls, contains(('copy', 'YAMAHA U3E (bản sao)')));
-    // Việc gốc chưa xếp nhóm → sheet chọn nhóm đầu của kế hoạch, gửi id đó.
+    // Việc gốc chưa xếp nhóm, ô nhóm không đụng → không gửi section_id.
     expect(api.copyBodies.single, {
       'title': 'YAMAHA U3E (bản sao)',
       'project_id': 'p1',
-      'section_id': 's1',
       'keep_assignees': true,
       'keep_checklist': true,
     });
     // Không tự mở việc mới (R15): chỉ mở khi bấm "Mở".
     expect(api.gets, isNot(contains('t2')));
-    expect(find.text('Đã tạo bản sao trong “Khách khác”.'), findsOneWidget);
+    expect(find.text('Đã tạo bản sao trong “Tân trang”.'), findsOneWidget);
     await t.tap(find.widgetWithText(SnackBarAction, 'Mở'));
     await t.pumpAndSettle();
     expect(api.gets, contains('t2'));
@@ -297,7 +296,12 @@ void main() {
     await t.pumpAndSettle();
     await t.tap(find.widgetWithText(FilledButton, 'Sao chép'));
     await t.pumpAndSettle();
-    expect(find.text('Nhóm việc không thuộc kế hoạch đích.'), findsOneWidget);
+    expect(
+      find.text(
+        'Nhóm việc không thuộc kế hoạch đích. Mở lại "Sao chép" để chọn nhóm khác.',
+      ),
+      findsOneWidget,
+    );
     expect(find.textContaining('Đã tạo bản sao'), findsNothing);
   });
 
