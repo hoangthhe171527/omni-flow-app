@@ -9,7 +9,9 @@ import '../domain/custom_field.dart';
 import '../domain/task.dart';
 import '../domain/task_label.dart';
 import '../domain/task_project.dart';
+import '../domain/task_copy_request.dart';
 import '../domain/task_reminder.dart';
+import '../domain/ymd.dart';
 
 /// Which slice of a person's work to show.
 ///
@@ -54,7 +56,13 @@ enum TaskBucket {
 enum TaskArchiveScope { active, archived, all }
 
 /// Một kế hoạch, như sheet "Chuyển việc" cần: id, tên, các nhóm việc.
-typedef MovablePlan = ({String id, String name, List<TaskSection> sections});
+typedef MovablePlan = ({
+  String id,
+  String name,
+  String? teamId,
+  String? teamName,
+  List<TaskSection> sections,
+});
 
 class TasksApi {
   TasksApi(this._client);
@@ -325,17 +333,12 @@ class TasksApi {
         if (assigneeIds.isNotEmpty) 'assignee_ids': assigneeIds,
         // API nhận `YYYY-MM-DD` và tự hiểu theo múi giờ nghiệp vụ. Gửi cả giờ
         // là mời nó lệch một ngày ở hai đầu tháng.
-        if (dueDate != null) 'due_date': _ymd(dueDate),
+        if (dueDate != null) 'due_date': ymd(dueDate),
       },
     );
 
     return Task.fromJson(response.object);
   }
-
-  static String _ymd(DateTime date) =>
-      '${date.year.toString().padLeft(4, '0')}-'
-      '${date.month.toString().padLeft(2, '0')}-'
-      '${date.day.toString().padLeft(2, '0')}';
 
   /// Đổi tên công việc.
   Future<Task> setTitle(String taskId, String title) =>
@@ -368,7 +371,7 @@ class TasksApi {
   /// thì bị lọc. Suốt thời gian đó hạn KHÔNG xoá được: API trả 200 với dữ liệu
   /// y nguyên. Xem `ClearFieldWithEmptyStringTest` bên API.
   Future<Task> setDueDate(String taskId, DateTime? dueDate) =>
-      _patch(taskId, {'due_date': dueDate == null ? '' : _ymd(dueDate)});
+      _patch(taskId, {'due_date': dueDate == null ? '' : ymd(dueDate)});
 
   /// Đặt lại TOÀN BỘ danh sách người làm.
   ///
@@ -483,7 +486,7 @@ class TasksApi {
   /// (`UpdateTaskDTO::$provided` giữ khoá đã gửi kể cả khi null).
   Future<Task> setStartDate(String taskId, DateTime? startDate) => _patch(
     taskId,
-    <String, dynamic>{'start_date': startDate == null ? null : _ymd(startDate)},
+    <String, dynamic>{'start_date': startDate == null ? null : ymd(startDate)},
   );
 
   /// Ghi giá trị trường tuỳ chỉnh.
@@ -530,8 +533,8 @@ class TasksApi {
       body: {
         'title': title,
         if (note.isNotEmpty) 'description': note,
-        if (startDate != null) 'start_date': _ymd(startDate),
-        if (dueDate != null) 'due_date': _ymd(dueDate),
+        if (startDate != null) 'start_date': ymd(startDate),
+        if (dueDate != null) 'due_date': ymd(dueDate),
         if (assigneeId != null && assigneeId.isNotEmpty)
           'assignee_id': assigneeId,
       },
@@ -547,7 +550,7 @@ class TasksApi {
     String subtaskId,
     DateTime? dueDate,
   ) => _patchSubtask(taskId, subtaskId, {
-    'due_date': dueDate == null ? null : _ymd(dueDate),
+    'due_date': dueDate == null ? null : ymd(dueDate),
   });
 
   /// Đặt / xoá ngày bắt đầu một việc con (null = xoá).
@@ -556,7 +559,7 @@ class TasksApi {
     String subtaskId,
     DateTime? startDate,
   ) => _patchSubtask(taskId, subtaskId, {
-    'start_date': startDate == null ? null : _ymd(startDate),
+    'start_date': startDate == null ? null : ymd(startDate),
   });
 
   /// Sửa ghi chú việc con; rỗng = xoá (gửi null).
@@ -601,17 +604,26 @@ class TasksApi {
   }
 
   /// Sao chép việc phía server (`POST /tasks/{id}/copy`, 201 + việc mới).
-  /// [title] null = tên mặc định của server. Không chép bình luận, tệp,
-  /// ghim, khoá, người theo dõi.
-  Future<Task> copyTask(String taskId, {String? title}) async {
-    final name = title?.trim() ?? '';
+  /// Tên rỗng = tên mặc định của server. Không chép bình luận, tệp, ghim,
+  /// khoá, người theo dõi. Các khoá mới (ngày, `assignee_ids`,
+  /// `keep_custom_fields`) chỉ được đặt khi có `ApiCapability.taskCopyOptions`.
+  Future<Task> copyTask(String taskId, TaskCopyRequest request) async {
     final response = await _client.post(
       '$_base/$taskId/copy',
-      body: {if (name.isNotEmpty) 'title': name},
+      body: request.toJson(),
     );
 
     return Task.fromJson(response.object);
   }
+
+  /// Kéo thẻ trên bảng: đổi nhóm và/hoặc vị trí trong một lời gọi
+  /// (`PUT /tasks/{id}` nhận `section_id` + `order` cùng lúc). [order] null =
+  /// chỉ đổi nhóm.
+  Future<Task> moveOnBoard(
+    String taskId, {
+    required String sectionId,
+    double? order,
+  }) => _patch(taskId, {'section_id': sectionId, 'order': ?order});
 
   /// Lời nhắc người này thấy được trên việc: của mình, và `everyone`.
   Future<List<TaskReminder>> reminders(String taskId) async {
@@ -749,6 +761,8 @@ class TasksApi {
         all.add((
           id: json.strOr('id', ''),
           name: json.strOr('name', ''),
+          teamId: json.str('team_id'),
+          teamName: json.str('team_name'),
           sections: json.mapList('sections').map(TaskSection.fromJson).toList(),
         ));
       }

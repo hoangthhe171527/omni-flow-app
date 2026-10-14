@@ -12,6 +12,7 @@ import 'package:omni_app/modules/tasks/application/task_controller.dart';
 import 'package:omni_app/modules/tasks/application/tasks_providers.dart';
 import 'package:omni_app/modules/tasks/data/tasks_api.dart';
 import 'package:omni_app/modules/tasks/domain/task.dart';
+import 'package:omni_app/modules/tasks/domain/task_copy_request.dart';
 import 'package:omni_app/modules/tasks/domain/task_permissions.dart';
 import 'package:omni_app/modules/tasks/domain/task_project.dart';
 import 'package:omni_app/modules/tasks/domain/task_reminder.dart';
@@ -737,9 +738,9 @@ class _Api implements TasksApi {
   }
 
   @override
-  Future<Task> copyTask(String taskId, {String? title}) async {
-    calls.add(('copy', title));
-    return Task.fromJson({..._json, 'id': 't2', 'title': title});
+  Future<Task> copyTask(String taskId, TaskCopyRequest request) async {
+    calls.add(('copy', request.title));
+    return Task.fromJson({..._json, 'id': 't2', 'title': request.title});
   }
 
   @override

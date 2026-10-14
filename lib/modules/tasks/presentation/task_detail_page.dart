@@ -22,6 +22,7 @@ import '../application/tasks_providers.dart';
 import '../data/tasks_api.dart';
 import '../domain/custom_field.dart';
 import '../domain/task.dart';
+import '../domain/task_copy_request.dart';
 import '../domain/task_permissions.dart';
 import '../domain/task_project.dart';
 import '../routes.dart';
@@ -315,7 +316,7 @@ class _TaskDetailPageState extends ConsumerState<TaskDetailPage> {
     try {
       final copy = await container
           .read(tasksApiProvider)
-          .copyTask(task.id, title: name);
+          .copyTask(task.id, TaskCopyRequest(title: name));
       container.read(taskRealtimeSignalProvider.notifier).bump();
       messenger.showSnackBar(
         const SnackBar(content: Text('Đã sao chép công việc.')),

@@ -49,23 +49,27 @@ void main() {
     }
   });
 
-  test('tên hằng khớp ĐÚNG 13 khoá của ApiCapabilities::ALL', () {
-    expect(_all.toSet(), {
-      'tasks.pin',
-      'tasks.lock',
-      'tasks.follow',
-      'tasks.assigned_by',
-      'tasks.completed_at',
-      'projects.favorite',
-      'projects.transfer_owner',
-      'system_options.task_labels',
-      'tasks.copy',
-      'tasks.reminders',
-      'tasks.checklist_move',
-      'tasks.subtask_fields',
-      'tasks.comment_attachments',
-    });
-  });
+  test(
+    'tên hằng khớp ĐÚNG 14 khoá app dùng (tập con của ApiCapabilities::ALL)',
+    () {
+      expect(_all.toSet(), {
+        'tasks.pin',
+        'tasks.lock',
+        'tasks.follow',
+        'tasks.assigned_by',
+        'tasks.completed_at',
+        'projects.favorite',
+        'projects.transfer_owner',
+        'system_options.task_labels',
+        'tasks.copy',
+        'tasks.reminders',
+        'tasks.checklist_move',
+        'tasks.subtask_fields',
+        'tasks.comment_attachments',
+        'tasks.copy_options',
+      });
+    },
+  );
 
   test('copyWith giữ api_capabilities', () {
     const s = Session(
@@ -111,6 +115,7 @@ const _all = [
   ApiCapability.checklistMove,
   ApiCapability.subtaskFields,
   ApiCapability.commentAttachments,
+  ApiCapability.taskCopyOptions,
 ];
 
 class _RoutedAdapter implements HttpClientAdapter {

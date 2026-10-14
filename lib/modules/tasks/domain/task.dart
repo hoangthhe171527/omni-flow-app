@@ -259,6 +259,7 @@ class Task {
     this.createdByAvatar,
     this.customerId,
     this.customerName,
+    this.order = 0,
   });
 
   factory Task.fromJson(Map<String, dynamic> json) => Task(
@@ -337,6 +338,7 @@ class Task {
     customerId: json.str('customer_id'),
     // Chỉ có khi tài liệu mang sẵn tên khách; presenter không trang trí.
     customerName: json.str('customer_name'),
+    order: json.dbl('order') ?? 0,
   );
 
   final String id;
@@ -489,6 +491,10 @@ class Task {
   /// Tên khách nếu tài liệu có `customer_name`. null = chỉ có id.
   final String? customerName;
 
+  /// Vị trí trong nhóm việc (`tasks.order`, số thực để chèn giữa hai thẻ).
+  /// Thiếu hoặc sai kiểu = 0.
+  final double order;
+
   bool isLikedBy(String userId) => likes.contains(userId);
 
   /// Only `done` is terminal; every other status id is defined by the project.
@@ -565,6 +571,7 @@ class Task {
     List<String>? followerIds,
     List<String?>? followerNames,
     List<String?>? followerAvatars,
+    double? order,
   }) => Task(
     id: id,
     title: title,
@@ -606,6 +613,7 @@ class Task {
     createdByAvatar: createdByAvatar,
     customerId: customerId,
     customerName: customerName,
+    order: order ?? this.order,
   );
 }
 

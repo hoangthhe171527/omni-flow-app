@@ -265,11 +265,15 @@ class _PlansApi implements TasksApi {
     (
       id: 'A',
       name: 'Kế hoạch A',
+      teamId: null,
+      teamName: null,
       sections: const [TaskSection(id: 'a1', name: 'Tiếp nhận')],
     ),
     (
       id: 'B',
       name: 'Kế hoạch B',
+      teamId: null,
+      teamName: null,
       sections: const [
         TaskSection(id: 's1', name: 'Tiếp nhận B'),
         TaskSection(id: 's2', name: 'Đang xử lý'),

@@ -22,6 +22,7 @@ abstract final class ApiCapability {
   static const checklistMove = 'tasks.checklist_move';
   static const subtaskFields = 'tasks.subtask_fields';
   static const commentAttachments = 'tasks.comment_attachments';
+  static const taskCopyOptions = 'tasks.copy_options';
 }
 
 /// `ref.watch(apiSupportsProvider(ApiCapability.taskPin))`. Dựng lại khi phiên

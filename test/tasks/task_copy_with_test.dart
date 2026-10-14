@@ -102,6 +102,13 @@ void main() {
     expect(ticked.planSections.length, full.planSections.length);
   });
 
+  test('order được giữ khi copyWith(), đổi khi copyWith(order:)', () {
+    final t = Task.fromJson({'id': 't1', 'order': 2.5});
+
+    expect(t.copyWith().order, 2.5);
+    expect(t.copyWith(order: 4).order, 4);
+  });
+
   test('đổi trạng thái cũng vậy', () {
     final done = full.copyWith(status: 'done');
 
