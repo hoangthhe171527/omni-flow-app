@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<title>Web – hộp thoại sao chép công việc</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+.f{display:flex;flex-direction:column;gap:6px}
+.lb{font-size:12px;font-weight:500;color:#3a4760}
+.in,.sel{height:36px;border-radius:6px;border:1px solid #8592a6;background:#fff;padding:0 10px;font:400 14px 'Inter',sans-serif;color:#0b1a33;box-sizing:border-box;width:100%}
+.in:focus,.sel:focus{outline:0;border-color:#0a7d76;box-shadow:0 0 0 3px rgba(10,125,118,.15)}
+.rad{display:flex;align-items:flex-start;gap:8px;font-size:13.5px;cursor:pointer;padding:4px 0}
+.rad input{margin-top:3px;accent-color:#0a7d76}
+.chip{display:inline-flex;align-items:center;gap:6px;height:28px;padding:0 6px 0 4px;border-radius:14px;background:#eef1f5;font-size:12.5px}
+.av{width:20px;height:20px;border-radius:10px;background:#e3e8ef;color:#3a4760;font-size:9px;font-weight:600;display:flex;align-items:center;justify-content:center}
+.x{width:20px;height:20px;border:0;border-radius:10px;background:transparent;color:#56637a;cursor:pointer;padding:0;display:flex;align-items:center;justify-content:center}
+.btn{height:36px;border-radius:6px;border:1px solid #c9d2de;background:#fff;padding:0 16px;font:500 14px 'Inter',sans-serif;color:#0b1a33;cursor:pointer}
+.note{font-size:12px;color:#56637a;line-height:1.45}
+@keyframes pop{from{opacity:0;transform:translateY(6px) scale(.98)}to{opacity:1;transform:none}}
+</style>
+</helmet>
+<div style="width:980px;height:760px;box-sizing:border-box;position:relative;overflow:hidden;font-family:'Inter',system-ui,sans-serif;color:#0b1a33;line-height:20px;background:#f5f7fa">
+  <div aria-hidden="true" style="position:absolute;right:0;top:0;bottom:0;width:620px;background:#fff;border-left:1px solid #e3e8ef;padding:20px;box-sizing:border-box">
+    <div style="font-size:12.5px;color:#56637a">Tân trang đàn cơ / Khách khác</div>
+    <div style="font-size:20px;font-weight:600;margin-top:8px">YAMAHA U1E 1174957 – Đặng Hoài Bảo</div>
+  </div>
+  <div style="position:absolute;inset:0;background:rgba(11,26,51,.45)"></div>
+  <div role="dialog" aria-modal="true" aria-labelledby="cp-title" style="position:absolute;left:50%;top:40px;margin-left:-260px;width:520px;max-height:680px;overflow-y:auto;background:#fff;border-radius:12px;box-shadow:0 24px 64px -12px rgba(11,26,51,.24);animation:pop .22s both">
+    <div style="display:flex;align-items:center;padding:16px 20px;border-bottom:1px solid #e3e8ef">
+      <h2 id="cp-title" style="margin:0;font-size:16px;font-weight:600;flex-grow:1">Sao chép công việc</h2>
+      <button class="x" aria-label="Đóng" style="width:32px;height:32px;border-radius:6px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"></path></svg></button>
+    </div>
+    <div style="padding:16px 20px;display:flex;flex-direction:column;gap:14px">
+      <label class="f"><span class="lb">Tên công việc</span><input class="in" value="{{title}}" onInput="{{setTitle}}"></label>
+      <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px">
+        <label class="f"><span class="lb">Team</span><select class="sel" onChange="{{pickTeam}}"><sc-for list="{{teams}}" as="t" hint-placeholder-count="2"><option value="{{t.v}}" selected="{{t.on}}">{{t.l}}</option></sc-for></select></label>
+        <label class="f"><span class="lb">Kế hoạch</span><select class="sel" onChange="{{pickPlan}}"><sc-for list="{{plans}}" as="p" hint-placeholder-count="2"><option value="{{p.v}}" selected="{{p.on}}">{{p.l}}</option></sc-for></select></label>
+      </div>
+      <label class="f"><span class="lb">Nhóm việc</span><select class="sel" onChange="{{pickSec}}"><sc-for list="{{secs}}" as="g" hint-placeholder-count="3"><option value="{{g.v}}" selected="{{g.on}}">{{g.l}}</option></sc-for></select></label>
+      <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px">
+        <label class="f"><span class="lb">Từ ngày</span><input class="in" type="date" value="2026-10-12"></label>
+        <label class="f"><span class="lb">Đến ngày</span><input class="in" type="date" value="2026-10-31"></label>
+      </div>
+      <fieldset style="border:0;padding:0;margin:0" class="f"><legend class="lb" style="margin-bottom:4px">Người thực hiện</legend>
+        <label class="rad"><input type="radio" name="who" checked="{{keepWho}}" onChange="{{whoKeep}}"><span>Giữ nguyên người thực hiện như công việc gốc <span style="color:#56637a">(Trung Nguyên → Khánh)</span></span></label>
+        <label class="rad"><input type="radio" name="who" checked="{{otherWho}}" onChange="{{whoOther}}"><span>Chọn người thực hiện khác</span></label>
+        <sc-if value="{{otherWho}}" hint-placeholder-val="{{false}}">
+          <div style="display:flex;gap:6px;flex-wrap:wrap;margin:2px 0 0 24px">
+            <sc-for list="{{people}}" as="m" hint-placeholder-count="2"><span class="chip"><span class="av">{{m.i}}</span>{{m.n}}<button class="x" aria-label="Bỏ {{m.n}}" onClick="{{m.drop}}"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"></path></svg></button></span></sc-for>
+            <button class="chip" style="border:1px dashed #8592a6;background:#fff;cursor:pointer;padding:0 10px" onClick="{{addPerson}}">+ Thêm người</button>
+          </div>
+        </sc-if>
+      </fieldset>
+      <fieldset style="border:0;padding:0;margin:0" class="f"><legend class="lb" style="margin-bottom:4px">Trường tuỳ chỉnh</legend>
+        <label class="rad"><input type="radio" name="cf" checked="{{noCf}}" onChange="{{cfNo}}"><span>Không sao chép trường tuỳ chỉnh</span></label>
+        <label class="rad"><input type="radio" name="cf" checked="{{allCf}}" onChange="{{cfAll}}"><span>Sao chép tất cả trường tuỳ chỉnh của công việc cũ sang công việc mới</span></label>
+        <sc-if value="{{crossPlan}}" hint-placeholder-val="{{false}}"><div class="note" style="margin-left:24px">Khác kế hoạch: chỉ chép những trường có cùng tên ở kế hoạch đích (Hãng, Model, Serial). Trường không có sẽ bỏ qua.</div></sc-if>
+      </fieldset>
+      <label class="rad" style="border-top:1px solid #eef1f5;padding-top:12px"><input type="checkbox" checked="{{keepSubs}}" onChange="{{toggleSubs}}"><span>Chép cả việc con <span style="color:#56637a">(10 việc con, bỏ đánh dấu đã xong)</span></span></label>
+    </div>
+    <div style="display:flex;justify-content:flex-end;gap:8px;padding:12px 20px 16px;border-top:1px solid #e3e8ef">
+      <button class="btn">Huỷ</button>
+      <button class="btn" style="background:#0a7d76;border-color:#0a7d76;color:#fff;font-weight:600">Sao chép</button>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":980,"height":760}}'>
+class Component extends DCLogic {
+constructor(p) { super(p); this.state = { title: 'YAMAHA U1E 1174957 – Đặng Hoài Bảo', team: 'ln', plan: 'tt', sec: 'kk', who: 'keep', cf: 'all', subs: true, people: ['KH'] }; }
+renderVals() {
+  const s = this.state;
+  const TEAMS = [['ln', 'Lê Nguyên Team'], ['test', 'Test']];
+  const PLANS = { ln: [['tt', 'Tân trang đàn piano cơ'], ['bh', 'Bảo hành']], test: [['t1', 'test']] };
+  const SECS = { tt: [['kk', 'Khách khác'], ['tp', 'Thiện Pianno'], ['dhb', 'Đặng Hoài Bảo'], ['tn', 'Tường Nhật']], bh: [['bh', 'Bảo hành'], ['at', 'A Thành']], t1: [['g', 'Chung']] };
+  const P = { KH: 'Khánh', L: 'Linh', HN: 'Hằng Ni', PH: 'Phượng' };
+  const plans = PLANS[s.team], secs = SECS[s.plan] || [];
+  return {
+    title: s.title, setTitle: e => this.setState({ title: e.target.value }),
+    teams: TEAMS.map(t => ({ v: t[0], l: t[1], on: t[0] === s.team })),
+    plans: plans.map(p => ({ v: p[0], l: p[1], on: p[0] === s.plan })),
+    secs: secs.map(g => ({ v: g[0], l: g[1], on: g[0] === s.sec })),
+    pickTeam: e => { const t = e.target.value, p = PLANS[t][0][0]; this.setState({ team: t, plan: p, sec: SECS[p][0][0] }); },
+    pickPlan: e => { const p = e.target.value; this.setState({ plan: p, sec: SECS[p][0][0] }); },
+    pickSec: e => this.setState({ sec: e.target.value }),
+    keepWho: s.who === 'keep', otherWho: s.who === 'other', whoKeep: () => this.setState({ who: 'keep' }), whoOther: () => this.setState({ who: 'other' }),
+    people: s.people.map(k => ({ i: k, n: P[k], drop: () => this.setState({ people: s.people.filter(x => x !== k) }) })),
+    addPerson: () => { const next = Object.keys(P).find(k => s.people.indexOf(k) < 0); if (next) this.setState({ people: s.people.concat([next]) }); },
+    noCf: s.cf === 'none', allCf: s.cf === 'all', cfNo: () => this.setState({ cf: 'none' }), cfAll: () => this.setState({ cf: 'all' }),
+    crossPlan: s.cf === 'all' && s.plan !== 'tt',
+    keepSubs: s.subs, toggleSubs: () => this.setState({ subs: !s.subs })
+  };
+}
+}
+</script>
+</body>
+</html>
