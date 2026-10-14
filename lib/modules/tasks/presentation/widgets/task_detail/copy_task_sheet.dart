@@ -5,6 +5,7 @@ import '../../../../../core/utils/formatters.dart';
 import '../../../../../design/components/components.dart';
 import '../../../../../design/tokens/tokens.dart';
 import '../../../../../security/session/api_capabilities.dart';
+import '../../../../../security/session/session_controller.dart';
 import '../../../../team/team.dart';
 import '../../../application/tasks_providers.dart';
 import '../../../data/tasks_api.dart';
@@ -125,7 +126,13 @@ class _CopyTaskSheetState extends ConsumerState<CopyTaskSheet> {
       _loadFailed = false;
     });
     try {
-      final plans = await ref.read(tasksApiProvider).projectsForMove();
+      final me = ref.read(sessionProvider).user?.id;
+      // Kế hoạch mình chỉ xem: server trả 403 cho mọi lượt chép vào đó
+      // (`assertCanEditTasks`), nên không đưa ra cho chọn — kể cả làm mặc định.
+      final plans = [
+        for (final p in await ref.read(tasksApiProvider).projectsForMove())
+          if (!isPlanViewer(p, me)) p,
+      ];
       if (!mounted) return;
       setState(() {
         _all = plans;

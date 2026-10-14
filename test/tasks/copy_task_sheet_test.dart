@@ -32,17 +32,29 @@ void main() {
       name: 'Tân trang',
       teamId: 'T1',
       teamName: 'Xưởng',
+      ownerId: null,
+      memberRoles: const {},
       sections: [
         TaskSection(id: 'a1', name: 'Khách khác'),
         TaskSection(id: 'a2', name: 'Thiện Piano'),
       ],
     ),
-    (id: 'pC', name: 'Riêng', teamId: null, teamName: null, sections: []),
+    (
+      id: 'pC',
+      name: 'Riêng',
+      teamId: null,
+      teamName: null,
+      ownerId: null,
+      memberRoles: const {},
+      sections: [],
+    ),
     (
       id: 'pB',
       name: 'Bảo hành',
       teamId: 'T1',
       teamName: 'Xưởng',
+      ownerId: null,
+      memberRoles: const {},
       sections: [TaskSection(id: 'b1', name: 'Chờ')],
     ),
     (
@@ -50,6 +62,8 @@ void main() {
       name: 'Kho tổng',
       teamId: 'T2',
       teamName: 'Kho',
+      ownerId: null,
+      memberRoles: const {},
       sections: [TaskSection(id: 'd1', name: 'Nhập')],
     ),
   ];
@@ -348,6 +362,60 @@ void main() {
     // Chỉ kế hoạch của "Chưa thuộc team" trong danh sách.
     expect(find.text('Tân trang'), findsNothing);
     expect(find.text('Bảo hành'), findsNothing);
+  });
+
+  group('kế hoạch mình chỉ là người xem (server 403)', () {
+    MovablePlan extra(
+      String id,
+      String name, {
+      String teamId = 'T1',
+      String teamName = 'Xưởng',
+      String? ownerId,
+    }) => (
+      id: id,
+      name: name,
+      teamId: teamId,
+      teamName: teamName,
+      ownerId: ownerId,
+      memberRoles: const {'u9': 'viewer'},
+      sections: const [TaskSection(id: 'x1', name: 'Nhóm X')],
+    );
+
+    final withViewer = [
+      ...plans,
+      extra('pV', 'Chỉ xem'),
+      // Chủ thắng vai ghi rõ, như `roleFromAttributes`.
+      extra('pO', 'Của tôi', ownerId: 'u9'),
+      extra('pK', 'Kho xem', teamId: 'T3', teamName: 'Team chỉ xem'),
+    ];
+
+    testWidgets('không có trong danh sách kế hoạch; team chỉ có kế hoạch như '
+        'thế cũng biến mất', (t) async {
+      await open(t, planList: withViewer);
+      await tapIt(t, find.byKey(const ValueKey('copy-plan')));
+      expect(find.text('Chỉ xem'), findsNothing);
+      expect(find.text('Của tôi'), findsWidgets);
+      await t.tapAt(const Offset(5, 5));
+      await t.pumpAndSettle();
+
+      await tapIt(t, find.byKey(const ValueKey('copy-team')));
+      expect(find.text('Team chỉ xem'), findsNothing);
+      expect(find.text('Kho'), findsWidgets);
+    });
+
+    testWidgets('việc gốc nằm ở kế hoạch chỉ xem → chọn sẵn kế hoạch khác', (
+      t,
+    ) async {
+      await open(
+        t,
+        planList: withViewer,
+        data: {...taskJson(), 'project_id': 'pV', 'section_id': 'x1'},
+      );
+      expect(inField('copy-plan', 'Chỉ xem'), findsNothing);
+      expect(inField('copy-plan', 'Tân trang'), findsOneWidget);
+      final body = await submit(t);
+      expect(body['project_id'], 'pA');
+    });
   });
 
   testWidgets('kế hoạch C (không nhóm) → ô nhóm tắt "Chưa xếp nhóm", body '

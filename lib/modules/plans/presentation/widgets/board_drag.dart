@@ -52,6 +52,39 @@ class BoardDragController extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Bỏ đích (con trỏ không còn trên cột nào), dù đích đang là cột nào.
+  void clearTarget() {
+    if (targetColumn == null) return;
+    targetColumn = null;
+    targetIndex = null;
+    targetName = '';
+    notifyListeners();
+  }
+
+  /// Mỗi cột kéo được đăng ký một hàm dò: con trỏ toàn cục → chỗ chèn, hoặc
+  /// null nếu con trỏ không nằm trong cột. Trang dùng nó sau khi dải tự trượt,
+  /// vì lúc đó Flutter không dò lại `DragTarget` khi ngón tay đứng yên.
+  final _probes = <int, int? Function(Offset pointer, Task dragged)>{};
+
+  void attach(int column, int? Function(Offset, Task) probe) =>
+      _probes[column] = probe;
+
+  /// Chỉ gỡ khi [column] vẫn là của [probe] (cột mới cùng chỉ số có thể đã
+  /// đăng ký trước khi cột cũ bị huỷ).
+  void detach(int column, int? Function(Offset, Task) probe) {
+    if (_probes[column] == probe) _probes.remove(column);
+  }
+
+  /// Chỗ chèn trong [column] tại [pointer]; null nếu cột chưa dựng, không
+  /// kéo được, hoặc con trỏ nằm ngoài cột.
+  int? indexAt(int column, Offset pointer) {
+    final dragged = task;
+    final probe = _probes[column];
+    if (dragged == null || probe == null) return null;
+
+    return probe(pointer, dragged);
+  }
+
   void clear() {
     if (task == null && targetColumn == null) return;
     task = null;

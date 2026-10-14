@@ -9,14 +9,21 @@ import '../../tasks/domain/task.dart';
 ///
 /// null = không có hàng xóm hợp lệ (cột rỗng, hoặc chỉ có nhóm kia): chỉ gửi
 /// `section_id`, để server tự xếp cuối.
+///
+/// Cũng null khi một hàng xóm dùng để tính CHƯA có `order` trên server
+/// ([Task.hasOrder] false, như việc tạo từ app): Mongo xếp việc thiếu khoá
+/// trước mọi số, nên coi nó là 0 rồi gửi 0 / −1 là thẻ nhảy chỗ khi tải lại.
 double? boardDropOrder(List<Task> column, Task moving, int index) {
-  double? at(int i) =>
+  Task? at(int i) =>
       i >= 0 && i < column.length && column[i].isPinned == moving.isPinned
-      ? column[i].order
+      ? column[i]
       : null;
 
-  final before = at(index - 1);
-  final after = at(index);
+  final b = at(index - 1);
+  final a = at(index);
+  if ((b != null && !b.hasOrder) || (a != null && !a.hasOrder)) return null;
+  final before = b?.order;
+  final after = a?.order;
   if (before != null && after != null) return (before + after) / 2;
   if (after != null) return after - 1;
   if (before != null) return before + 1;

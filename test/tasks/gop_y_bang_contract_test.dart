@@ -182,6 +182,50 @@ void main() {
     expect(plans[1].teamId, isNull);
     expect(plans[1].teamName, isNull);
   });
+
+  test(
+    'projectsForMove đọc owner_id/member_roles (hàng là tài liệu thô của '
+    'ProjectController::index); vai null/rỗng bị bỏ; thiếu khoá → rỗng',
+    () async {
+      rec.body = jsonEncode({
+        'success': true,
+        'data': [
+          {
+            'id': 'p1',
+            'name': 'A',
+            'owner_id': 'u1',
+            'member_ids': ['u2', 'u3'],
+            'member_roles': {'u2': 'viewer', 'u3': '', 'u4': null},
+            'sections': [],
+          },
+          {'id': 'p2', 'name': 'B', 'sections': []},
+        ],
+      });
+      final plans = await api.projectsForMove();
+      expect(plans[0].ownerId, 'u1');
+      expect(plans[0].memberRoles, {'u2': 'viewer'});
+      expect(plans[1].ownerId, isNull);
+      expect(plans[1].memberRoles, isEmpty);
+
+      // Như `assertCanEditTasks`: chỉ vai viewer ghi rõ; chủ thắng vai.
+      expect(isPlanViewer(plans[0], 'u2'), isTrue);
+      expect(isPlanViewer(plans[0], 'u3'), isFalse);
+      expect(isPlanViewer(plans[0], 'u-ngoai'), isFalse);
+      expect(isPlanViewer(plans[0], null), isFalse);
+      expect(
+        isPlanViewer((
+          id: 'p',
+          name: 'P',
+          teamId: null,
+          teamName: null,
+          ownerId: 'u2',
+          memberRoles: const {'u2': 'viewer'},
+          sections: const [],
+        ), 'u2'),
+        isFalse,
+      );
+    },
+  );
 }
 
 class _Recorder implements HttpClientAdapter {

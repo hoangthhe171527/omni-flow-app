@@ -150,7 +150,6 @@ class BoardColumn extends StatefulWidget {
     this.columnIndex = 0,
     this.drag,
     this.canDrag = _never,
-    this.onDrop,
     this.onDragUpdate,
     this.onDragEnd,
   });
@@ -182,9 +181,6 @@ class BoardColumn extends StatefulWidget {
   /// Thẻ này nhấc được không (đã khoá thì không).
   final bool Function(Task task) canDrag;
 
-  /// Thả [Task] vào cột này tại chỗ chèn `index` (đã bỏ nó khỏi cột).
-  final void Function(Task task, int index)? onDrop;
-
   /// Con trỏ toàn cục khi đang kéo — trang dùng để bật tự trượt ở mép.
   final ValueChanged<Offset>? onDragUpdate;
 
@@ -202,11 +198,41 @@ class _BoardColumnState extends State<BoardColumn> {
 
   final _keys = <String, GlobalKey>{};
 
+  /// Chỉ số ô chỗ trống ở lần dựng gần nhất (null = không có).
+  int? _builtSlot;
+
+  @override
+  void initState() {
+    super.initState();
+    widget.drag?.attach(widget.columnIndex, _probe);
+  }
+
   @override
   void didUpdateWidget(BoardColumn old) {
     super.didUpdateWidget(old);
     final ids = {for (final t in widget.tasks) t.id};
     _keys.removeWhere((id, _) => !ids.contains(id));
+    if (old.drag != widget.drag || old.columnIndex != widget.columnIndex) {
+      old.drag?.detach(old.columnIndex, _probe);
+      widget.drag?.attach(widget.columnIndex, _probe);
+    }
+  }
+
+  @override
+  void dispose() {
+    widget.drag?.detach(widget.columnIndex, _probe);
+    super.dispose();
+  }
+
+  /// Chỗ chèn tại con trỏ toàn cục [pointer], hoặc null nếu nó nằm ngoài cột.
+  int? _probe(Offset pointer, Task dragged) {
+    final box = context.findRenderObject();
+    if (box is! RenderBox || !box.attached || !box.hasSize) return null;
+    if (!(Offset.zero & box.size).contains(box.globalToLocal(pointer))) {
+      return null;
+    }
+
+    return _indexAt(pointer.dy, dragged);
   }
 
   GlobalKey _keyOf(String id) => _keys.putIfAbsent(id, GlobalKey.new);
@@ -214,13 +240,9 @@ class _BoardColumnState extends State<BoardColumn> {
   /// Chỗ chèn theo con trỏ Y toàn cục: số thẻ có tâm nằm trên nó. Bỏ thẻ đang
   /// kéo; thẻ chưa dựng (cuộn ra xa) coi như nằm trên hay dưới tuỳ vị trí.
   int _indexAt(double pointerY, Task dragged) {
-    final drag = widget.drag;
-    final slotAt =
-        drag != null &&
-            drag.targetColumn == widget.columnIndex &&
-            drag.fromColumn != widget.columnIndex
-        ? drag.targetIndex
-        : null;
+    // Ô chỗ trống ĐÃ DỰNG (khung trước), không phải ô sẽ dựng: hover vừa đổi
+    // đích trong cùng sự kiện thì các thẻ chưa bị đẩy xuống.
+    final slotAt = _builtSlot;
     final centers = <double>[];
     var seenBuilt = false;
     for (final task in widget.tasks) {
@@ -316,6 +338,7 @@ class _BoardColumnState extends State<BoardColumn> {
         final slotAt = hot && drag.fromColumn != widget.columnIndex
             ? math.min(drag.targetIndex ?? tasks.length, tasks.length)
             : null;
+        _builtSlot = slotAt;
         final duration = OmniMotion.enabled(context)
             ? const Duration(milliseconds: 200)
             : Duration.zero;
@@ -407,10 +430,9 @@ class _BoardColumnState extends State<BoardColumn> {
               },
               onMove: _hover,
               onLeave: (_) => drag.leave(widget.columnIndex),
-              onAcceptWithDetails: (details) => widget.onDrop?.call(
-                details.data,
-                _indexAt(_pointerY(details), details.data),
-              ),
+              // Không thả ở đây: sau khi dải tự trượt, `DragTarget` nhận thả
+              // là cột CŨ (Flutter không dò lại khi ngón tay đứng yên). Trang
+              // thả theo đích của [drag] lúc nhấc tay.
               builder: (context, _, _) => body,
             ),
     );

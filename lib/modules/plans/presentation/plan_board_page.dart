@@ -30,7 +30,6 @@ import '../routes.dart';
 import 'archived_tasks_page.dart';
 import 'edit_plan_page.dart';
 import 'edit_sections_page.dart';
-
 import 'plan_fields_page.dart';
 import 'plan_files_page.dart';
 import 'plan_members_page.dart';
@@ -96,6 +95,9 @@ class _PlanBoardPageState extends ConsumerState<PlanBoardPage> {
   /// Số ô trên dải (cột + ô "Thêm nhóm việc"), để tự trượt không vượt cuối.
   int _trackCount = 1;
 
+  /// Bảng đang vẽ (đã gồm thẻ lạc quan), để thả và dò lại cột sau khi trượt.
+  BoardBuckets? _board;
+
   /// Thẻ vừa thả, đang chờ server: bảng vẽ nó ở chỗ mới ngay (lạc quan). Xoá
   /// khi dữ liệu mới về hoặc khi lưu lỗi.
   ({String taskId, int toColumn, int index, String sectionId})? _pending;
@@ -117,9 +119,61 @@ class _PlanBoardPageState extends ConsumerState<PlanBoardPage> {
     }
   }
 
-  void _pointerEnded(int pointer) {
+  /// Ngón [pointer] nhấc lên ([drop]) hoặc bị huỷ. Ngón đang giữ thẻ nhấc lên
+  /// thì thả vào ĐÍCH của [_drag] — đọc trước khi dọn. Không dựa vào
+  /// `DragTarget` nhận thả: sau khi dải tự trượt, Flutter không dò lại đích
+  /// khi ngón tay đứng yên, nên cột nhận thả là cột đã trôi khỏi dưới ngón.
+  void _pointerEnded(int pointer, {required bool drop}) {
     _pointers.remove(pointer);
-    if (_dragPointer == null || pointer == _dragPointer) _endDrag();
+    if (_dragPointer != null && pointer != _dragPointer) return;
+    final task = _drag.task;
+    final to = _drag.targetColumn;
+    final index = _drag.targetIndex;
+    final board = _board;
+    _endDrag();
+    if (!drop || task == null || to == null || index == null) return;
+    if (board == null || to >= board.columns.length) return;
+    unawaited(_drop(board, task, to, index, board.columns[to].id));
+  }
+
+  /// Ngón giữ thẻ di chuyển. Bắt ở đây chứ không chỉ ở `onDragUpdate` của
+  /// thẻ: thẻ nguồn có thể đã rời cây khi dải trượt xa.
+  void _pointerMoved(PointerMoveEvent e) {
+    if (!_drag.active || e.pointer != _dragPointer) return;
+    _drag.pointer = e.position;
+    _onDragUpdate(e.position);
+  }
+
+  /// Sau khi dải trượt xong: tìm cột đang dưới ngón (theo vị trí cuộn và
+  /// bước cột) và chỗ chèn trong nó, rồi đặt làm đích.
+  void _retarget() {
+    if (!mounted) return;
+    final pointer = _drag.pointer;
+    final board = _board;
+    final box = context.findRenderObject();
+    if (!_drag.active || pointer == null || board == null) return;
+    if (!_track.hasClients || box is! RenderBox || !box.hasSize) return;
+    final x =
+        _track.offset + box.globalToLocal(pointer).dx - BoardMetrics.inset;
+    final column = (x / BoardMetrics.pitch).floor();
+    final inColumn =
+        column >= 0 &&
+        column < board.columns.length &&
+        x - column * BoardMetrics.pitch < BoardMetrics.columnWidth;
+    final index = inColumn ? _drag.indexAt(column, pointer) : null;
+    if (index == null) {
+      _drag.clearTarget();
+    } else {
+      _drag.hover(column, index, board.columns[column].name);
+    }
+  }
+
+  /// Dò lại đích ở khung kế (khi các cột đã dựng ở vị trí mới).
+  void _retargetAfterLayout() {
+    if (!mounted) return;
+    WidgetsBinding.instance
+      ..addPostFrameCallback((_) => _retarget())
+      ..ensureVisualUpdate();
   }
 
   @override
@@ -328,6 +382,7 @@ class _PlanBoardPageState extends ConsumerState<PlanBoardPage> {
     final realSections = plan.sections;
     final itemCount = columns.length + (canEditSections ? 1 : 0);
     _trackCount = itemCount;
+    _board = board;
 
     final content = Column(
       children: [
@@ -408,8 +463,6 @@ class _PlanBoardPageState extends ConsumerState<PlanBoardPage> {
                           // Cột dựng tạm (id rỗng) không có nhóm để thả vào.
                           drag: canDragTasks && real ? _drag : null,
                           canDrag: (t) => canDragTasks && !t.isLocked,
-                          onDrop: (task, at) =>
-                              _drop(board, task, index, at, section.id),
                           onDragUpdate: _onDragUpdate,
                           onDragEnd: _endDrag,
                           onOpenTask: (task) => context.pushNamed(
@@ -441,8 +494,9 @@ class _PlanBoardPageState extends ConsumerState<PlanBoardPage> {
       // Chốt: thẻ nguồn có thể đã rời cây khi tự trượt (lúc đó Flutter không
       // gọi onDragEnd), nên nhấc tay là dọn hết, ở đây.
       onPointerDown: (e) => _pointers.add(e.pointer),
-      onPointerUp: (e) => _pointerEnded(e.pointer),
-      onPointerCancel: (e) => _pointerEnded(e.pointer),
+      onPointerMove: _pointerMoved,
+      onPointerUp: (e) => _pointerEnded(e.pointer, drop: true),
+      onPointerCancel: (e) => _pointerEnded(e.pointer, drop: false),
       child: Stack(
         children: [
           Positioned.fill(child: content),
@@ -498,13 +552,16 @@ class _PlanBoardPageState extends ConsumerState<PlanBoardPage> {
     final next = math.min(math.max(current + side, 0), _trackCount - 1);
     final target = BoardSnapPhysics.offsetOf(next, position);
     if (OmniMotion.enabled(context)) {
-      _track.animateTo(
-        target,
-        duration: const Duration(milliseconds: 350),
-        curve: OmniCurves.standard,
-      );
+      _track
+          .animateTo(
+            target,
+            duration: const Duration(milliseconds: 350),
+            curve: OmniCurves.standard,
+          )
+          .then((_) => _retargetAfterLayout());
     } else {
       _track.jumpTo(target);
+      _retargetAfterLayout();
     }
   }
 

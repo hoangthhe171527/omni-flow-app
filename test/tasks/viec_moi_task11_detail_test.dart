@@ -788,6 +788,8 @@ class _Api implements TasksApi {
       name: 'Tân trang',
       teamId: 'T1',
       teamName: 'Xưởng',
+      ownerId: null,
+      memberRoles: const {},
       sections: const [
         TaskSection(id: 's1', name: 'Khách khác'),
         TaskSection(id: 's2', name: 'Thiện Piano'),

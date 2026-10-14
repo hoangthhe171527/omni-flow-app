@@ -260,6 +260,7 @@ class Task {
     this.customerId,
     this.customerName,
     this.order = 0,
+    this.hasOrder = true,
   });
 
   factory Task.fromJson(Map<String, dynamic> json) => Task(
@@ -339,6 +340,7 @@ class Task {
     // Chỉ có khi tài liệu mang sẵn tên khách; presenter không trang trí.
     customerName: json.str('customer_name'),
     order: json.dbl('order') ?? 0,
+    hasOrder: json.dbl('order') != null,
   );
 
   final String id;
@@ -495,6 +497,13 @@ class Task {
   /// Thiếu hoặc sai kiểu = 0.
   final double order;
 
+  /// Server CÓ khoá `order` là số. Việc tạo từ app thì không (`CreateTaskDTO`
+  /// bỏ `order` null), và Mongo xếp việc thiếu khoá TRƯỚC mọi số — nên [order]
+  /// = 0 của nó không dùng làm hàng xóm khi tính chỗ thả được.
+  ///
+  /// Dựng tay (không qua [Task.fromJson]) mặc định là có.
+  final bool hasOrder;
+
   bool isLikedBy(String userId) => likes.contains(userId);
 
   /// Only `done` is terminal; every other status id is defined by the project.
@@ -572,6 +581,7 @@ class Task {
     List<String?>? followerNames,
     List<String?>? followerAvatars,
     double? order,
+    bool? hasOrder,
     String? sectionId,
   }) => Task(
     id: id,
@@ -615,6 +625,7 @@ class Task {
     customerId: customerId,
     customerName: customerName,
     order: order ?? this.order,
+    hasOrder: hasOrder ?? (order != null || this.hasOrder),
   );
 }
 

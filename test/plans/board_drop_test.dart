@@ -37,6 +37,18 @@ void main() {
       );
     });
 
+    test('hàng xóm chưa có order trên server (việc tạo từ app) → null', () {
+      // Mongo xếp việc thiếu khoá `order` TRƯỚC mọi số; coi nó là 0 rồi gửi
+      // 0 / −1 là thẻ nhảy chỗ sau khi tải lại.
+      final bare = Task.fromJson(const {'id': 'x'});
+      expect(boardDropOrder([t('a', 1), bare], t('m', 9), 1), isNull);
+      expect(boardDropOrder([bare, t('a', 1)], t('m', 9), 1), isNull);
+      expect(boardDropOrder([bare], t('m', 9), 0), isNull);
+      expect(boardDropOrder([bare], t('m', 9), 1), isNull);
+      // Hàng xóm có order vẫn tính như cũ.
+      expect(boardDropOrder([t('a', 1), bare], t('m', 9), 0), 0);
+    });
+
     test('chỉ có hàng xóm khác nhóm ghim → null', () {
       expect(boardDropOrder([t('p', 0, pinned: true)], t('m', 9), 1), isNull);
       expect(boardDropOrder([t('a', 5)], t('m', 9, pinned: true), 0), isNull);

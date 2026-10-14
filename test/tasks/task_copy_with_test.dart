@@ -109,6 +109,17 @@ void main() {
     expect(t.copyWith(order: 4).order, 4);
   });
 
+  test('hasOrder được giữ khi copyWith(); đặt order thì có order', () {
+    final bare = Task.fromJson(const {'id': 't1'});
+    final ordered = Task.fromJson(const {'id': 't1', 'order': 2.5});
+
+    expect(bare.copyWith().hasOrder, isFalse);
+    expect(bare.copyWith(sectionId: 's2').hasOrder, isFalse);
+    expect(ordered.copyWith().hasOrder, isTrue);
+    expect(bare.copyWith(order: 4).hasOrder, isTrue);
+    expect(ordered.copyWith(hasOrder: false).hasOrder, isFalse);
+  });
+
   test('đổi trạng thái cũng vậy', () {
     final done = full.copyWith(status: 'done');
 

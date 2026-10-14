@@ -50,11 +50,13 @@ void main() {
     String section,
     double order, {
     bool locked = false,
+    bool unordered = false,
   }) => Task.fromJson({
     'id': id,
     'title': title,
     'section_id': section,
-    'order': order,
+    // Việc tạo từ app: server không có khoá `order`.
+    if (!unordered) 'order': order,
     'locked': locked,
   });
 
@@ -72,16 +74,17 @@ void main() {
     bool lockT1 = false,
     bool lockedMiddle = false,
     bool hiddenMiddle = false,
+    bool unorderedColumn2 = false,
   }) async {
     tasks = [
       task('t1', 'Bảo hành W106', 's1', 1, locked: lockT1),
       task('t2', 'Kiểm tra đàn Kawai ND21', 's1', 2),
-      task('t3', 'Bảo hành Ux kẹt cờ', 's2', 1),
+      task('t3', 'Bảo hành Ux kẹt cờ', 's2', 1, unordered: unorderedColumn2),
       // Thẻ khoá nằm GIỮA hai thẻ kéo được.
       if (lockedMiddle) task('t5', 'Thẻ khoá giữa', 's2', 1.5, locked: true),
       // Thẻ không khớp tìm kiếm "à" nằm giữa hai thẻ khớp.
       if (hiddenMiddle) task('t6', 'Chờ linh kiện ẩn', 's2', 1.5),
-      task('t4', 'Làm phím CLP920', 's2', 2),
+      task('t4', 'Làm phím CLP920', 's2', 2, unordered: unorderedColumn2),
     ];
     tasksApi = _FakeTasksApi(tasks);
     final thePlan = plan ?? makePlan();
@@ -152,6 +155,35 @@ void main() {
     return g;
   }
 
+  /// Y của dòng tên cột (mọi cột cùng một hàng).
+  double headerY(WidgetTester t) => t.getCenter(find.text('Tiếp nhận')).dy;
+
+  Color borderOf(WidgetTester t, String name) =>
+      (t
+                  .widget<AnimatedContainer>(
+                    find.descendant(
+                      of: column(name),
+                      matching: find.byKey(const Key('column-drop-border')),
+                    ),
+                  )
+                  .decoration!
+              as BoxDecoration)
+          .border!
+          .top
+          .color;
+
+  /// Chỉ cột [name] sáng viền đích.
+  void expectHot(WidgetTester t, String name) {
+    final primary = Theme.of(t.element(column(name))).colorScheme.primary;
+    for (final other in ['Tiếp nhận', 'Đang xử lý', 'Chờ linh kiện']) {
+      expect(
+        borderOf(t, other),
+        other == name ? primary : Colors.transparent,
+        reason: other,
+      );
+    }
+  }
+
   Offset aboveFirstOfColumn2(WidgetTester t) =>
       Offset(340, t.getTopLeft(find.text('Bảo hành Ux kẹt cờ')).dy - 10);
 
@@ -181,6 +213,20 @@ void main() {
     await t.pumpAndSettle();
 
     expect(tasksApi.moves.single, ('t1', 's2', 1.5));
+  });
+
+  testWidgets('hàng xóm chưa có order trên server (việc tạo từ app) → chỉ gửi '
+      'section_id', (t) async {
+    await pumpBoard(t, unorderedColumn2: true);
+    final g = await lift(t, 'Bảo hành W106');
+    final a = t.getCenter(find.text('Bảo hành Ux kẹt cờ')).dy;
+    final b = t.getCenter(find.text('Làm phím CLP920')).dy;
+    await g.moveTo(Offset(340, (a + b) / 2));
+    await t.pump();
+    await g.up();
+    await t.pumpAndSettle();
+
+    expect(tasksApi.moves.single, ('t1', 's2', null));
   });
 
   testWidgets('cột đích viền primary 2px + ô chỗ trống; cột gốc không có ô '
@@ -309,14 +355,17 @@ void main() {
   });
 
   testWidgets('giữ ở mép phải 750ms → dải sang cột 2 (offset = '
-      'BoardSnapPhysics.offsetOf(1))', (t) async {
+      'BoardSnapPhysics.offsetOf(1)); đích đổi sang cột đang dưới ngón, thả → '
+      'thẻ vào cột đó', (t) async {
     await pumpBoard(t);
     final controller = t
         .widget<ListView>(find.byKey(const Key('board-track')))
         .controller!;
     final g = await lift(t, 'Bảo hành W106');
-    await g.moveTo(const Offset(385, 400));
+    // Ngang đầu cột: cột nào ở dưới ngón cũng chứa điểm này (kể cả cột rỗng).
+    await g.moveTo(Offset(385, headerY(t)));
     await t.pump();
+    expect(find.text('Thả vào “Đang xử lý”'), findsOneWidget);
     final glow = t.widget<AnimatedOpacity>(
       find.byKey(const Key('edge-glow-right')),
     );
@@ -335,9 +384,14 @@ void main() {
       controller.offset,
       moreOrLessEquals(BoardSnapPhysics.offsetOf(1, controller.position)),
     );
+    // Ngón đứng yên nhưng dải đã trượt: dưới ngón giờ là "Chờ linh kiện".
+    await t.pump();
+    expect(find.text('Thả vào “Chờ linh kiện”'), findsOneWidget);
+    expectHot(t, 'Chờ linh kiện');
     await g.up();
     await t.pumpAndSettle();
-    expect(tasksApi.moves, isEmpty);
+    // Cột rỗng: không hàng xóm → chỉ section_id.
+    expect(tasksApi.moves.single, ('t1', 's3', null));
   });
 
   testWidgets('rời vùng mép trước 700ms → không tự trượt', (t) async {
@@ -632,7 +686,7 @@ void main() {
         .widget<ListView>(find.byKey(const Key('board-track')))
         .controller!;
     final g = await lift(t, 'Bảo hành W106');
-    await g.moveTo(const Offset(385, 400));
+    await g.moveTo(Offset(385, headerY(t)));
     await t.pump();
 
     expect(
@@ -648,8 +702,13 @@ void main() {
       controller.offset,
       moreOrLessEquals(BoardSnapPhysics.offsetOf(1, controller.position)),
     );
+    // jumpTo cũng phải dò lại cột dưới ngón.
+    await t.pump();
+    expect(find.text('Thả vào “Chờ linh kiện”'), findsOneWidget);
+    expectHot(t, 'Chờ linh kiện');
     await g.up();
     await t.pumpAndSettle();
+    expect(tasksApi.moves.single, ('t1', 's3', null));
   });
 }
 

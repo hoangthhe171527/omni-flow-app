@@ -56,13 +56,26 @@ enum TaskBucket {
 enum TaskArchiveScope { active, archived, all }
 
 /// Một kế hoạch, như sheet "Chuyển việc" cần: id, tên, các nhóm việc.
+///
+/// [ownerId] / [memberRoles] đọc từ hàng thô của `GET /projects` (cùng luật
+/// với [TaskProject.fromJson]), để sheet sao chép bỏ kế hoạch mình chỉ xem
+/// ([isPlanViewer]) — server trả 403 cho mọi lượt chép vào đó.
 typedef MovablePlan = ({
   String id,
   String name,
   String? teamId,
   String? teamName,
+  String? ownerId,
+  Map<String, String> memberRoles,
   List<TaskSection> sections,
 });
+
+/// [userId] mang vai `viewer` ghi rõ ở [plan] (`assertCanEditTasks`): chủ
+/// thắng vai; người ngoài danh sách không bị chặn.
+bool isPlanViewer(MovablePlan plan, String? userId) => TaskProject(
+  ownerId: plan.ownerId,
+  memberRoles: plan.memberRoles,
+).isViewer(userId);
 
 class TasksApi {
   TasksApi(this._client);
@@ -758,11 +771,14 @@ class TasksApi {
       );
       final rows = response.list;
       for (final json in rows) {
+        final access = TaskProject.fromJson(json);
         all.add((
           id: json.strOr('id', ''),
           name: json.strOr('name', ''),
           teamId: json.str('team_id'),
           teamName: json.str('team_name'),
+          ownerId: access.ownerId,
+          memberRoles: access.memberRoles,
           sections: json.mapList('sections').map(TaskSection.fromJson).toList(),
         ));
       }
