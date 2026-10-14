@@ -70,6 +70,13 @@ class _SectionOrderPageState extends ConsumerState<SectionOrderPage> {
     } on AppException catch (e) {
       messenger.showSnackBar(SnackBar(content: Text(e.message)));
       if (mounted) setState(() => _saving = false);
+    } catch (_) {
+      // Lỗi không phải AppException cũng phải mở lại nút "Lưu", không để
+      // vòng xoay quay mãi.
+      messenger.showSnackBar(
+        const SnackBar(content: Text('Không lưu được thứ tự. Thử lại nhé.')),
+      );
+      if (mounted) setState(() => _saving = false);
     }
   }
 
@@ -205,10 +212,11 @@ class _SectionOrderPageState extends ConsumerState<SectionOrderPage> {
                                 const TextSpan(
                                   text:
                                       'Chỉ chủ hoặc quản lý kế hoạch thấy màn này. '
-                                      'Đổi tên, xoá, gắn cờ QC vẫn ở menu ',
+                                      'Đổi tên, xoá, cờ QC/KPI: mục “Sửa nhóm việc” '
+                                      'trong menu ',
                                 ),
                                 _glyph(Icons.more_horiz_rounded, tones.faint),
-                                const TextSpan(text: ' của từng cột.'),
+                                const TextSpan(text: ' của cột.'),
                               ],
                             ),
                             style: OmniType.micro.copyWith(

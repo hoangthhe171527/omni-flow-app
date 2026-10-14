@@ -200,7 +200,7 @@ void main() {
       // Kéo từng bước tới đúng tâm dòng 2: ngưỡng đổi chỗ của
       // ReorderableListView nằm sát mép nên một cú nhảy dài dễ vượt quá.
       final target = t.getCenter(find.text("Đang xử lý")).dy;
-      while (t.getCenter(handle).dy < target) {
+      for (var i = 0; i < 40 && t.getCenter(handle).dy < target; i++) {
         await g.moveBy(const Offset(0, 8));
         await t.pump();
       }

@@ -26,11 +26,13 @@ import '../domain/plan.dart';
 import '../routes.dart';
 import 'archived_tasks_page.dart';
 import 'edit_plan_page.dart';
-import 'section_order_page.dart';
+import 'edit_sections_page.dart';
+
 import 'plan_fields_page.dart';
 import 'plan_files_page.dart';
 import 'plan_members_page.dart';
 import 'plan_report_page.dart';
+import 'section_order_page.dart';
 import 'widgets/board_column.dart';
 import 'widgets/board_zoom.dart';
 import 'widgets/person_filter_sheet.dart';
@@ -669,6 +671,7 @@ class _PlanBoardPageState extends ConsumerState<PlanBoardPage> {
       (_SectionAction.rename, Icons.edit_outlined, 'Đổi tên nhóm'),
       if (canRemove) (_SectionAction.remove, Icons.delete_outline, 'Xoá nhóm'),
       (_SectionAction.reorder, Icons.swap_vert_rounded, 'Sắp xếp nhóm việc'),
+      (_SectionAction.edit, Icons.tune_rounded, 'Sửa nhóm việc'),
     ], danger: _SectionAction.remove);
     if (!mounted) return;
     switch (choice) {
@@ -688,6 +691,13 @@ class _PlanBoardPageState extends ConsumerState<PlanBoardPage> {
         await Navigator.of(context).push<bool>(
           MaterialPageRoute(
             builder: (_) => SectionOrderPage(planId: widget.planId),
+          ),
+        );
+      case _SectionAction.edit:
+        // EditSectionsPage tự invalidate planProvider/planTasksProvider khi lưu.
+        await Navigator.of(context).push<bool>(
+          MaterialPageRoute(
+            builder: (_) => EditSectionsPage(planId: widget.planId),
           ),
         );
       case null:
@@ -862,7 +872,7 @@ class _PlanBoardPageState extends ConsumerState<PlanBoardPage> {
   }
 }
 
-enum _SectionAction { rename, remove, reorder }
+enum _SectionAction { rename, remove, reorder, edit }
 
 /// Header kính tối (`.bar`): `OmniCovers.glass` + blur 20, hàng 44 dưới
 /// safe area, đệm 4 hai bên và 6 ở đáy.

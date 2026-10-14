@@ -397,6 +397,33 @@ void main() {
     },
   );
 
+  testWidgets(
+    '⋯ cột có cả "Sắp xếp nhóm việc" và "Sửa nhóm việc"; "Sửa nhóm việc" mở EditSectionsPage',
+    (tester) async {
+      await pumpBoard(tester);
+
+      Future<void> openSheet() async {
+        await tester.tap(
+          find.descendant(
+            of: column('Tiếp nhận'),
+            matching: find.byTooltip('Tuỳ chọn nhóm việc'),
+          ),
+        );
+        await tester.pumpAndSettle();
+      }
+
+      await openSheet();
+      expect(find.text('Sắp xếp nhóm việc'), findsOneWidget);
+      expect(find.text('Sửa nhóm việc'), findsOneWidget);
+
+      await tester.tap(find.text('Sửa nhóm việc'));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(EditSectionsPage), findsOneWidget);
+      expect(find.byType(SectionOrderPage), findsNothing);
+    },
+  );
+
   testWidgets('(e) tìm "kawai" gọi search=kawai và chỉ còn thẻ khớp', (
     tester,
   ) async {
