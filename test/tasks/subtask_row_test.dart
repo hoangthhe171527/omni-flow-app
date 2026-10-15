@@ -30,8 +30,8 @@ void main() {
     PendingTick? pending,
     bool enabled = true,
     ValueChanged<bool>? onToggle,
-    VoidCallback? onAssign,
-    VoidCallback? onMenu,
+    ValueChanged<Rect>? onAssign,
+    ValueChanged<Rect>? onMenu,
   }) => SubtaskRow(
     subtask: s,
     pending: pending,
@@ -75,7 +75,7 @@ void main() {
     var toggled = false;
     var menu = false;
     await tester.pumpWidget(
-      host(row(onToggle: (_) => toggled = true, onMenu: () => menu = true)),
+      host(row(onToggle: (_) => toggled = true, onMenu: (_) => menu = true)),
     );
 
     await tester.tap(find.text('Nắp phím'));
@@ -158,7 +158,7 @@ void main() {
     tester,
   ) async {
     var assigned = false;
-    await tester.pumpWidget(host(row(onAssign: () => assigned = true)));
+    await tester.pumpWidget(host(row(onAssign: (_) => assigned = true)));
 
     expect(find.text('Nắp phím'), findsOneWidget);
     expect(find.text('Hằng Ni'), findsNothing);

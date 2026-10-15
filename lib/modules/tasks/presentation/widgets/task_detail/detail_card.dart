@@ -2,12 +2,13 @@ import 'package:flutter/material.dart';
 
 import '../../../../../design/tokens/tokens.dart';
 
-/// Thẻ `.cd` của chi tiết việc (`TaskDetail.dc.html`): nền surface, viền
-/// `#E3E8EF`, bo 8, cắt nội dung theo góc bo.
+/// Section chi tiết việc. Mặc định phẳng ở cấp trang; nơi dùng trong modal có
+/// thể bật lại khung bằng [flat] = false.
 class DetailCard extends StatelessWidget {
-  const DetailCard({super.key, required this.children});
+  const DetailCard({super.key, required this.children, this.flat = false});
 
   final List<Widget> children;
+  final bool flat;
 
   @override
   Widget build(BuildContext context) {
@@ -16,10 +17,10 @@ class DetailCard extends StatelessWidget {
     return Container(
       decoration: BoxDecoration(
         color: scheme.surface,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: scheme.outlineVariant),
+        borderRadius: flat ? null : BorderRadius.circular(8),
+        border: flat ? null : Border.all(color: scheme.outlineVariant),
       ),
-      clipBehavior: Clip.antiAlias,
+      clipBehavior: flat ? Clip.none : Clip.antiAlias,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: children,

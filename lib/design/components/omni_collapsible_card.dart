@@ -19,6 +19,7 @@ class OmniCollapsibleCard extends StatefulWidget {
     this.initiallyExpanded = true,
     this.footer,
     this.storageKey,
+    this.flat = false,
   });
 
   final String title;
@@ -35,6 +36,9 @@ class OmniCollapsibleCard extends StatefulWidget {
   /// Khoá [PageStorage] để nhớ thu/mở khi thẻ bị dựng lại (đổi tab, cuộn
   /// khỏi màn); `null` thì không nhớ.
   final String? storageKey;
+
+  /// Section phẳng cấp trang, không dùng khung viền/bo góc của card.
+  final bool flat;
 
   @override
   State<OmniCollapsibleCard> createState() => _OmniCollapsibleCardState();
@@ -80,6 +84,7 @@ class _OmniCollapsibleCardState extends State<OmniCollapsibleCard> {
     return OmniCard(
       padding: EdgeInsets.zero,
       background: scheme.surface,
+      flat: widget.flat,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [

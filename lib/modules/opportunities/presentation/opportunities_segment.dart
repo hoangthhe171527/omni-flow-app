@@ -272,11 +272,13 @@ class OpportunitySearchRow extends ConsumerWidget
   const OpportunitySearchRow({
     super.key,
     required this.filtersOpen,
-    required this.onToggleFilters,
-  });
+    this.onToggleFilters,
+    this.onOpenFilters,
+  }) : assert(onToggleFilters != null || onOpenFilters != null);
 
   final bool filtersOpen;
-  final VoidCallback onToggleFilters;
+  final VoidCallback? onToggleFilters;
+  final ValueChanged<Rect>? onOpenFilters;
 
   @override
   Size get preferredSize => const Size.fromHeight(46);
@@ -304,10 +306,21 @@ class OpportunitySearchRow extends ConsumerWidget
           children: [
             const Expanded(child: _SearchField()),
             const SizedBox(width: 8),
-            _FilterButton(
-              open: filtersOpen,
-              count: count,
-              onTap: onToggleFilters,
+            Builder(
+              builder: (buttonContext) => _FilterButton(
+                open: filtersOpen,
+                count: count,
+                onTap: () {
+                  final anchored = onOpenFilters;
+                  if (anchored == null) {
+                    onToggleFilters?.call();
+                    return;
+                  }
+                  final box = buttonContext.findRenderObject() as RenderBox?;
+                  if (box == null || !box.hasSize) return;
+                  anchored(box.localToGlobal(Offset.zero) & box.size);
+                },
+              ),
             ),
             if (access.canCreate) ...[
               IconButton(
@@ -318,10 +331,7 @@ class OpportunitySearchRow extends ConsumerWidget
                   tapTargetSize: MaterialTapTargetSize.padded,
                   visualDensity: VisualDensity.standard,
                   foregroundColor: scheme.onSurface,
-                  side: BorderSide(color: scheme.outlineVariant),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(6),
-                  ),
+                  backgroundColor: Colors.transparent,
                 ),
                 icon: const Icon(Icons.add_rounded),
               ),
@@ -377,49 +387,53 @@ class _SearchFieldState extends ConsumerState<_SearchField> {
     final scheme = Theme.of(context).colorScheme;
     final meta = scheme.onSurfaceVariant;
 
-    return Container(
+    return SizedBox(
+      key: const Key('opportunity-search-flat'),
       height: 44,
-      padding: const EdgeInsets.only(left: 10),
-      decoration: BoxDecoration(
-        color: scheme.surface,
-        borderRadius: BorderRadius.circular(6),
-        border: Border.all(color: scheme.outlineVariant),
-      ),
-      child: Row(
-        children: [
-          Icon(Icons.search_rounded, size: OmniIconSize.md, color: meta),
-          const SizedBox(width: 8),
-          Expanded(
-            child: TextField(
-              controller: _controller,
-              onChanged: _changed,
-              textInputAction: TextInputAction.search,
-              style: OmniType.input.copyWith(color: scheme.onSurface),
-              decoration: InputDecoration(
-                isDense: true,
-                filled: false,
-                border: InputBorder.none,
-                enabledBorder: InputBorder.none,
-                focusedBorder: InputBorder.none,
-                contentPadding: EdgeInsets.zero,
-                hintText: 'Tìm cơ hội, khách hàng',
-                hintStyle: OmniType.input.copyWith(color: meta),
+      child: Padding(
+        padding: const EdgeInsets.only(left: 4),
+        child: Row(
+          children: [
+            Icon(Icons.search_rounded, size: OmniIconSize.md, color: meta),
+            const SizedBox(width: 8),
+            Expanded(
+              child: TextField(
+                controller: _controller,
+                onChanged: _changed,
+                textInputAction: TextInputAction.search,
+                style: OmniType.search.copyWith(
+                  color: scheme.onSurface,
+                  fontStyle: FontStyle.normal,
+                ),
+                decoration: InputDecoration(
+                  isDense: true,
+                  filled: false,
+                  border: InputBorder.none,
+                  enabledBorder: InputBorder.none,
+                  focusedBorder: InputBorder.none,
+                  contentPadding: EdgeInsets.zero,
+                  hintText: 'Tìm cơ hội, khách hàng',
+                  hintStyle: OmniType.searchHint.copyWith(color: meta),
+                ),
               ),
             ),
-          ),
-          if (_controller.text.isNotEmpty)
-            IconButton(
-              tooltip: 'Xoá tìm kiếm',
-              onPressed: _clear,
-              padding: EdgeInsets.zero,
-              constraints: const BoxConstraints.tightFor(width: 44, height: 44),
-              iconSize: OmniIconSize.md,
-              color: meta,
-              icon: const Icon(Icons.close_rounded),
-            )
-          else
-            const SizedBox(width: 10),
-        ],
+            if (_controller.text.isNotEmpty)
+              IconButton(
+                tooltip: 'Xoá tìm kiếm',
+                onPressed: _clear,
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints.tightFor(
+                  width: 44,
+                  height: 44,
+                ),
+                iconSize: OmniIconSize.md,
+                color: meta,
+                icon: const Icon(Icons.close_rounded),
+              )
+            else
+              const SizedBox(width: 10),
+          ],
+        ),
       ),
     );
   }
@@ -439,9 +453,7 @@ class _FilterButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final motion = OmniMotion.enabled(context);
-
-    // Hình 36, vùng chạm 44.
+    // Icon phẳng, vùng chạm 44.
     return Semantics(
       button: true,
       label: 'Bộ lọc',
@@ -453,69 +465,54 @@ class _FilterButton extends StatelessWidget {
         onTap: onTap,
         child: SizedBox.square(
           dimension: 44,
-          child: Center(
-            child: Stack(
-              clipBehavior: Clip.none,
-              children: [
-                Material(
-                  animationDuration: motion
-                      ? kThemeChangeDuration
-                      : Duration.zero,
-                  color: open ? scheme.onSurface : scheme.surface,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(6),
-                    side: BorderSide(
-                      color: open ? scheme.onSurface : scheme.outlineVariant,
-                    ),
+          child: Material(
+            color: Colors.transparent,
+            child: InkResponse(
+              onTap: onTap,
+              radius: 22,
+              containedInkWell: true,
+              highlightShape: BoxShape.circle,
+              child: Stack(
+                alignment: Alignment.center,
+                clipBehavior: Clip.none,
+                children: [
+                  Icon(
+                    Icons.tune_rounded,
+                    size: OmniIconSize.md,
+                    color: open ? scheme.primary : scheme.onSurface,
                   ),
-                  child: InkWell(
-                    splashFactory: motion ? null : NoSplash.splashFactory,
-                    highlightColor: motion ? null : Colors.transparent,
-                    onTap: onTap,
-                    customBorder: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(6),
-                    ),
-                    child: SizedBox.square(
-                      dimension: 36,
-                      child: Icon(
-                        Icons.tune_rounded,
-                        size: OmniIconSize.md,
-                        color: open ? scheme.surface : scheme.onSurface,
-                      ),
-                    ),
-                  ),
-                ),
-                Positioned(
-                  right: -4,
-                  top: -4,
-                  child: IgnorePointer(
-                    child: Container(
-                      key: const Key('opportunity-filter-count'),
-                      constraints: const BoxConstraints(minWidth: 16),
-                      height: 16,
-                      padding: const EdgeInsets.symmetric(horizontal: 4),
-                      alignment: Alignment.center,
-                      decoration: BoxDecoration(
-                        color: count > 0
-                            ? OmniColors.destructive
-                            : scheme.surfaceContainerHighest,
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: scheme.surface, width: 1.5),
-                      ),
-                      child: Text(
-                        '$count',
-                        style: OmniType.micro.copyWith(
-                          color: count > 0
-                              ? Colors.white
-                              : scheme.onSurfaceVariant,
-                          height: 1,
-                          fontWeight: FontWeight.w600,
+                  if (count > 0)
+                    Positioned(
+                      right: 2,
+                      top: 2,
+                      child: IgnorePointer(
+                        child: Container(
+                          key: const Key('opportunity-filter-count'),
+                          constraints: const BoxConstraints(minWidth: 16),
+                          height: 16,
+                          padding: const EdgeInsets.symmetric(horizontal: 4),
+                          alignment: Alignment.center,
+                          decoration: BoxDecoration(
+                            color: OmniColors.destructive,
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(
+                              color: scheme.surface,
+                              width: 1.5,
+                            ),
+                          ),
+                          child: Text(
+                            '$count',
+                            style: OmniType.micro.copyWith(
+                              color: Colors.white,
+                              height: 1,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
                         ),
                       ),
                     ),
-                  ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ),
@@ -551,6 +548,195 @@ class OpportunityFilterPanel extends ConsumerWidget {
           : const SizedBox(width: double.infinity),
     );
   }
+}
+
+/// Mở bộ lọc Cơ hội tại đúng nút đã chạm. Dùng chung cho màn độc lập và đoạn
+/// Cơ hội trong tab Khách để danh sách không bị đẩy xuống khi bật lọc.
+Future<void> showOpportunityFilterMenu({
+  required BuildContext context,
+  required Rect anchor,
+}) => showOmniAnchoredMenu<void>(
+  context: context,
+  anchor: anchor,
+  width: 320,
+  menuKey: const Key('opportunity-filter-menu'),
+  semanticsLabel: 'Bộ lọc cơ hội',
+  builder: (menuContext) => Column(
+    mainAxisSize: MainAxisSize.min,
+    children: [
+      Container(
+        constraints: const BoxConstraints(minHeight: 56),
+        padding: const EdgeInsets.only(left: 16, right: 6),
+        color: Theme.of(
+          menuContext,
+        ).colorScheme.surfaceContainerLow.withValues(alpha: .7),
+        child: Row(
+          children: [
+            Icon(
+              Icons.tune_rounded,
+              size: OmniIconSize.md,
+              color: Theme.of(menuContext).colorScheme.primary,
+            ),
+            const SizedBox(width: 10),
+            Expanded(child: Text('Bộ lọc', style: OmniType.bodyStrong)),
+            IconButton(
+              tooltip: 'Đóng bộ lọc',
+              onPressed: () => Navigator.of(menuContext).pop(),
+              icon: const Icon(Icons.close_rounded),
+            ),
+          ],
+        ),
+      ),
+      const OpportunityFilterMenuContent(),
+      const SizedBox(height: 8),
+    ],
+  ),
+);
+
+/// Bản gọn của bộ lọc Cơ hội để đặt trong popover neo.
+class OpportunityFilterMenuContent extends ConsumerWidget {
+  const OpportunityFilterMenuContent({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final pipeline = ref.watch(boardPipelineProvider);
+    final pipelines =
+        ref.watch(pipelineCatalogProvider).valueOrNull?.pipelines ??
+        const <PipelineDef>[];
+    final mine = ref.watch(pipelineMineProvider);
+    final closed = ref.watch(segmentClosedProvider);
+    final hasClosedStage = pipeline?.stages.any((s) => s.isClosed) ?? false;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 8),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (pipelines.length > 1 && pipeline != null)
+            _OpportunityMenuRow(
+              icon: Icons.account_tree_outlined,
+              label: 'Quy trình',
+              value: pipeline.label,
+              onTap: () => _pickOpportunityPipeline(
+                context,
+                ref,
+                pipelines,
+                pipeline.code,
+              ),
+            ),
+          _OpportunityMenuRow(
+            icon: Icons.person_outline_rounded,
+            label: 'Chỉ cơ hội của tôi',
+            selected: mine,
+            onTap: () => ref.read(pipelineMineProvider.notifier).state = !mine,
+          ),
+          if (hasClosedStage)
+            _OpportunityMenuRow(
+              icon: Icons.inventory_2_outlined,
+              label: 'Cơ hội đã đóng',
+              selected: closed,
+              onTap: () =>
+                  ref.read(segmentClosedProvider.notifier).state = !closed,
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _OpportunityMenuRow extends StatelessWidget {
+  const _OpportunityMenuRow({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+    this.value,
+    this.selected,
+  });
+
+  final IconData icon;
+  final String label;
+  final String? value;
+  final bool? selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final active = selected == true;
+    return Material(
+      color: active
+          ? scheme.primary.withValues(alpha: .08)
+          : Colors.transparent,
+      borderRadius: OmniRadius.mdAll,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: OmniRadius.mdAll,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(minHeight: 48),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            child: Row(
+              children: [
+                Icon(
+                  icon,
+                  size: OmniIconSize.md,
+                  color: active ? scheme.primary : scheme.onSurfaceVariant,
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    label,
+                    style: OmniType.body.copyWith(
+                      color: scheme.onSurface,
+                      fontWeight: active ? FontWeight.w600 : FontWeight.w400,
+                    ),
+                  ),
+                ),
+                if (value != null) ...[
+                  Flexible(
+                    child: Text(
+                      value!,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: OmniType.caption.copyWith(
+                        color: scheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 4),
+                  Icon(
+                    Icons.chevron_right_rounded,
+                    size: OmniIconSize.md,
+                    color: scheme.onSurfaceVariant,
+                  ),
+                ] else
+                  Icon(
+                    active ? Icons.check_circle_rounded : Icons.circle_outlined,
+                    size: OmniIconSize.md,
+                    color: active ? scheme.primary : scheme.onSurfaceVariant,
+                  ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+Future<void> _pickOpportunityPipeline(
+  BuildContext context,
+  WidgetRef ref,
+  List<PipelineDef> pipelines,
+  String current,
+) async {
+  final container = ProviderScope.containerOf(context);
+  final code = await showOmniSheet<String>(
+    context: context,
+    builder: (_) => PipelinePickerSheet(pipelines: pipelines, current: current),
+  );
+  if (code == null || code == current) return;
+  container.read(selectedPipelineProvider.notifier).state = code;
 }
 
 class _PanelBody extends ConsumerWidget {
@@ -706,10 +892,11 @@ final opportunitiesKhachSegment = ExtraSegment(
     if (pipeline == null || summary == null) return 'Cơ hội';
     return 'Cơ hội · ${summary.openCount(pipeline)}';
   },
-  searchRow: (open, toggle) =>
-      OpportunitySearchRow(filtersOpen: open, onToggleFilters: toggle),
-  body: (open) => OpportunitiesSegment(
-    key: const ValueKey('khach-seg-co-hoi'),
-    filtersOpen: open,
+  searchRow: (open, onOpen) =>
+      OpportunitySearchRow(filtersOpen: open, onOpenFilters: onOpen),
+  filterContent: () => const OpportunityFilterMenuContent(),
+  body: (_) => const OpportunitiesSegment(
+    key: ValueKey('khach-seg-co-hoi'),
+    filtersOpen: false,
   ),
 );

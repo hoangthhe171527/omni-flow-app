@@ -211,6 +211,7 @@ class _CustomerDetailPageState extends ConsumerState<CustomerDetailPage> {
     final oppCount = summary?.opportunitiesCount ?? oppStats?.count;
 
     return Scaffold(
+      backgroundColor: Theme.of(context).colorScheme.surface,
       appBar: OmniTopBar(
         semanticsTitle: 'Khách hàng',
         bottom: _BackBar(
@@ -337,15 +338,14 @@ class _BackBar extends StatelessWidget implements PreferredSizeWidget {
             ),
           ),
           const Spacer(),
+          // Chỉ có đúng một hành động thì dùng nút trực tiếp; dấu ⋯ rồi mở
+          // menu một dòng chỉ tạo thêm một lần chạm không có giá trị.
           if (onFullEdit != null)
-            PopupMenuButton<int>(
-              tooltip: 'Thêm',
-              icon: const Icon(Icons.more_horiz_rounded),
+            IconButton(
+              tooltip: 'Sửa đầy đủ thông tin',
+              onPressed: onFullEdit,
               style: IconButton.styleFrom(minimumSize: const Size(44, 44)),
-              onSelected: (_) => onFullEdit!(),
-              itemBuilder: (_) => const [
-                PopupMenuItem(value: 0, child: Text('Sửa đầy đủ thông tin')),
-              ],
+              icon: const Icon(Icons.edit_note_rounded),
             ),
           const SizedBox(width: 8),
         ],
@@ -698,6 +698,7 @@ class _Overview extends StatelessWidget {
       child: Column(
         children: [
           OmniCard(
+            flat: true,
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
             child: Column(
               children: [
@@ -733,6 +734,7 @@ class _Overview extends StatelessWidget {
           ),
           const SizedBox(height: 12),
           OmniCard(
+            flat: true,
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
             child: Column(
               children: [

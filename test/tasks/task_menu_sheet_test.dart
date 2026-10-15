@@ -12,8 +12,8 @@ import 'package:omni_app/modules/tasks/domain/task_permissions.dart';
 import 'package:omni_app/modules/tasks/presentation/task_detail_page.dart';
 import 'package:omni_app/security/permissions/access_policy.dart';
 
-/// Menu việc (`TaskMenu.dc.html`): sheet ba nhóm theo quyền, chuyển việc hai
-/// bước, lưu trữ rồi rời màn. Mục Nhóm 2 không bao giờ hiện với API cũ.
+/// Menu việc (`TaskMenu.dc.html`): popover neo tại nút `…` theo quyền, chuyển
+/// việc hai bước, lưu trữ rồi rời màn. Mục Nhóm 2 không hiện với API cũ.
 void main() {
   setUpAll(() => initializeDateFormatting('vi_VN'));
 
@@ -109,6 +109,7 @@ void main() {
   ) async {
     await open(t, host());
     await openMenu(t);
+    expect(find.byKey(const Key('task-actions-menu')), findsOneWidget);
     for (final label in [
       'Nhãn màu',
       'Đổi tên việc',

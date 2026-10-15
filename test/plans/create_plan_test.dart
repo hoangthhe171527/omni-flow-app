@@ -1,25 +1,33 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:omni_app/core/error/app_exception.dart';
 import 'package:omni_app/design/theme/omni_theme.dart';
 import 'package:omni_app/modules/plans/application/plans_providers.dart';
 import 'package:omni_app/core/network/api_envelope.dart';
+import 'package:omni_app/modules/plans/data/plan_cover_upload.dart';
 import 'package:omni_app/modules/plans/data/plans_api.dart';
 import 'package:omni_app/modules/plans/domain/feed_entry.dart';
 import 'package:omni_app/modules/plans/domain/plan.dart';
 import 'package:omni_app/modules/plans/domain/workshop_kpi.dart';
 import 'package:omni_app/modules/plans/domain/team.dart';
 import 'package:omni_app/modules/plans/presentation/create_plan_page.dart';
+import 'package:omni_app/modules/plans/presentation/widgets/cover_picker.dart';
 import 'package:omni_app/modules/tasks/domain/task.dart';
 
 void main() {
   late _RecordingApi api;
+  late _RecordingCoverApi coverApi;
 
-  setUp(() => api = _RecordingApi());
+  setUp(() {
+    api = _RecordingApi();
+    coverApi = _RecordingCoverApi();
+  });
 
   Widget host({List<TeamWithPlans> teams = const []}) => ProviderScope(
     overrides: [
       plansApiProvider.overrideWithValue(api),
+      planCoverApiProvider.overrideWithValue(coverApi),
       teamsWithPlansProvider.overrideWith((ref) async => teams),
     ],
     child: MaterialApp(
@@ -95,6 +103,48 @@ void main() {
     expect(api.createdSections, kDefaultSections);
   });
 
+  testWidgets('tạo xong tải ảnh nền qua endpoint riêng', (tester) async {
+    await tester.pumpWidget(host());
+    await tester.pumpAndSettle();
+
+    tester
+        .widget<CoverPicker>(find.byType(CoverPicker))
+        .onPicked('/tmp/cover.jpg');
+    await tester.enterText(find.byType(TextField).first, 'Dự án có ảnh');
+    await tester.pump();
+    await revealSave(tester);
+    await tester.tap(find.text('Tạo kế hoạch'));
+    await tester.pumpAndSettle();
+
+    expect(api.createCalls, 1);
+    expect(coverApi.uploads, [('p1', '/tmp/cover.jpg')]);
+  });
+
+  testWidgets('upload lỗi thử lại không tạo trùng dự án', (tester) async {
+    coverApi.failFirstUpload = true;
+    await tester.pumpWidget(host());
+    await tester.pumpAndSettle();
+
+    tester
+        .widget<CoverPicker>(find.byType(CoverPicker))
+        .onPicked('/tmp/retry.jpg');
+    await tester.enterText(find.byType(TextField).first, 'Dự án retry');
+    await tester.pump();
+    await revealSave(tester);
+    await tester.tap(find.text('Tạo kế hoạch'));
+    await tester.pumpAndSettle();
+
+    expect(api.createCalls, 1);
+    expect(find.text('Thử tải ảnh lại'), findsOneWidget);
+
+    await tester.tap(find.text('Thử tải ảnh lại'));
+    await tester.pumpAndSettle();
+
+    expect(api.createCalls, 1);
+    expect(coverApi.attempts, 2);
+    expect(coverApi.uploads, [('p1', '/tmp/retry.jpg')]);
+  });
+
   testWidgets('tên chỉ có khoảng trắng không tính là có tên', (tester) async {
     await tester.pumpWidget(host());
     await tester.pumpAndSettle();
@@ -114,8 +164,18 @@ void main() {
     await tester.pumpAndSettle();
 
     await tester.enterText(find.byType(TextField).first, 'Đàn điện');
-    // Ô đầu tiên là tên dự án, nên công đoạn thứ nhất là TextField thứ hai.
-    await tester.enterText(find.byType(TextField).at(1), '   ');
+    await tester.scrollUntilVisible(
+      find.byKey(const ValueKey('section-0')),
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.enterText(
+      find.descendant(
+        of: find.byKey(const ValueKey('section-0')),
+        matching: find.byType(TextField),
+      ),
+      '   ',
+    );
     await tester.pumpAndSettle();
     await revealSave(tester);
     await tester.tap(find.text('Tạo kế hoạch'));
@@ -156,6 +216,12 @@ void main() {
     );
     await tester.pumpAndSettle();
 
+    await tester.scrollUntilVisible(
+      find.text('Thuộc team'),
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pumpAndSettle();
     expect(find.text('Thuộc team'), findsOneWidget);
     expect(find.text('Chưa thuộc team nào'), findsOneWidget);
   });
@@ -178,6 +244,7 @@ class _RecordingApi implements PlansApi {
   }
 
   String? createdName;
+  int createCalls = 0;
   List<String>? createdSections;
   String? createdTeamId;
 
@@ -192,6 +259,7 @@ class _RecordingApi implements PlansApi {
     Set<String> gatedSectionNames = const {},
     String? cover,
   }) async {
+    createCalls++;
     createdName = name;
     createdTeamId = teamId;
     createdSections = sectionNames;
@@ -237,4 +305,23 @@ class _RecordingApi implements PlansApi {
     int page = 1,
     int perPage = 50,
   }) async => Paged(items: const [], pagination: const ApiPagination.empty());
+}
+
+class _RecordingCoverApi implements PlanCoverApi {
+  final uploads = <(String, String)>[];
+  int attempts = 0;
+  bool failFirstUpload = false;
+
+  @override
+  Future<String> upload(String planId, String filePath) async {
+    attempts++;
+    if (failFirstUpload && attempts == 1) {
+      throw const NetworkException('Mất kết nối');
+    }
+    uploads.add((planId, filePath));
+    return '/api/v1/projects/media/tenant/new.jpg';
+  }
+
+  @override
+  Future<void> remove(String planId) async {}
 }

@@ -4,6 +4,7 @@
 library;
 
 export 'brand_anchor.dart';
+export 'omni_anchored_menu.dart';
 export 'omni_app_bar.dart';
 export 'omni_avatar.dart';
 export 'omni_backdrop.dart';

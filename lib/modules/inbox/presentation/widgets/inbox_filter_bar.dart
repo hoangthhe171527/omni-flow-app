@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../design/components/components.dart';
 import '../../../../design/platform/omni_motion_scope.dart';
 import '../../../../design/tokens/tokens.dart';
 import '../../application/inbox_providers.dart';
@@ -19,22 +20,21 @@ InteractiveInkFeatureFactory? _splash(BuildContext context) =>
 Color? _highlight(BuildContext context) =>
     OmniMotion.enabled(context) ? null : Colors.transparent;
 
-/// Hàng tìm kiếm của hộp thư: ô tìm, nút bộ lọc (có huy hiệu đếm) và các nút
-/// riêng của màn (kết nối kênh, chọn nhiều) xếp sau.
+/// Hàng tìm kiếm của hộp thư: ô tìm và nút bộ lọc có huy hiệu đếm.
 ///
-/// Bộ lọc không còn là một dải chip luôn hiện; nó gom sau nút này và trượt
-/// xuống thành [InboxFilterPanel] khi cần.
+/// Bộ lọc không còn là một dải chip luôn hiện; tab Hộp thư mở nó thành menu
+/// neo tại nút. [InboxFilterPanel] chỉ còn cho màn nhúng cũ tương thích.
 class InboxSearchRow extends ConsumerWidget implements PreferredSizeWidget {
   const InboxSearchRow({
     super.key,
     required this.filtersOpen,
-    required this.onToggleFilters,
-    this.trailing = const [],
-  });
+    this.onToggleFilters,
+    this.onOpenFilters,
+  }) : assert(onToggleFilters != null || onOpenFilters != null);
 
   final bool filtersOpen;
-  final VoidCallback onToggleFilters;
-  final List<Widget> trailing;
+  final VoidCallback? onToggleFilters;
+  final ValueChanged<Rect>? onOpenFilters;
 
   @override
   Size get preferredSize => const Size.fromHeight(46);
@@ -52,12 +52,22 @@ class InboxSearchRow extends ConsumerWidget implements PreferredSizeWidget {
             const Expanded(child: _SearchField()),
             // Ô lọc rộng 44 mà vẽ 36: 4 mỗi bên đã nằm trong ô.
             const SizedBox(width: 4),
-            _FilterButton(
-              open: filtersOpen,
-              count: count,
-              onTap: onToggleFilters,
+            Builder(
+              builder: (buttonContext) => _FilterButton(
+                open: filtersOpen,
+                count: count,
+                onTap: () {
+                  final anchored = onOpenFilters;
+                  if (anchored == null) {
+                    onToggleFilters?.call();
+                    return;
+                  }
+                  final box = buttonContext.findRenderObject() as RenderBox?;
+                  if (box == null || !box.hasSize) return;
+                  anchored(box.localToGlobal(Offset.zero) & box.size);
+                },
+              ),
             ),
-            ...trailing,
           ],
         ),
       ),
@@ -133,61 +143,65 @@ class _SearchFieldState extends ConsumerState<_SearchField> {
     ref.listen<int>(inboxFilterResetsProvider, (_, _) => _external(''));
 
     final scheme = Theme.of(context).colorScheme;
-    return Container(
-      height: 36,
-      padding: const EdgeInsets.only(left: 10),
-      decoration: BoxDecoration(
-        color: scheme.surface,
-        borderRadius: BorderRadius.circular(6),
-        border: Border.all(color: scheme.outlineVariant),
-      ),
-      child: Row(
-        children: [
-          Icon(
-            Icons.search_rounded,
-            size: OmniIconSize.md,
-            color: scheme.onSurfaceVariant,
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: TextField(
-              controller: _controller,
-              onChanged: _changed,
-              textInputAction: TextInputAction.search,
-              style: OmniType.input.copyWith(color: scheme.onSurface),
-              decoration: InputDecoration(
-                isDense: true,
-                filled: false,
-                border: InputBorder.none,
-                enabledBorder: InputBorder.none,
-                focusedBorder: InputBorder.none,
-                contentPadding: EdgeInsets.zero,
-                hintText: 'Tìm khách, tin nhắn…',
-                hintStyle: OmniType.input.copyWith(
-                  color: scheme.onSurfaceVariant,
+    return SizedBox(
+      key: const Key('inbox-search-flat'),
+      height: 44,
+      child: Padding(
+        padding: const EdgeInsets.only(left: 4),
+        child: Row(
+          children: [
+            Icon(
+              Icons.search_rounded,
+              size: OmniIconSize.md,
+              color: scheme.onSurfaceVariant,
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: TextField(
+                controller: _controller,
+                onChanged: _changed,
+                textInputAction: TextInputAction.search,
+                style: OmniType.search.copyWith(
+                  color: scheme.onSurface,
+                  fontStyle: FontStyle.normal,
+                ),
+                decoration: InputDecoration(
+                  isDense: true,
+                  filled: false,
+                  border: InputBorder.none,
+                  enabledBorder: InputBorder.none,
+                  focusedBorder: InputBorder.none,
+                  contentPadding: EdgeInsets.zero,
+                  hintText: 'Tìm khách, tin nhắn…',
+                  hintStyle: OmniType.searchHint.copyWith(
+                    color: scheme.onSurfaceVariant,
+                  ),
                 ),
               ),
             ),
-          ),
-          if (_controller.text.isNotEmpty)
-            IconButton(
-              tooltip: 'Xoá tìm kiếm',
-              onPressed: _clear,
-              padding: EdgeInsets.zero,
-              constraints: const BoxConstraints.tightFor(width: 32, height: 36),
-              iconSize: OmniIconSize.md,
-              color: scheme.onSurfaceVariant,
-              icon: const Icon(Icons.close_rounded),
-            )
-          else
-            const SizedBox(width: 10),
-        ],
+            if (_controller.text.isNotEmpty)
+              IconButton(
+                tooltip: 'Xoá tìm kiếm',
+                onPressed: _clear,
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints.tightFor(
+                  width: 44,
+                  height: 44,
+                ),
+                iconSize: OmniIconSize.md,
+                color: scheme.onSurfaceVariant,
+                icon: const Icon(Icons.close_rounded),
+              )
+            else
+              const SizedBox(width: 10),
+          ],
+        ),
       ),
     );
   }
 }
 
-/// Nút lọc 36×36: nền ink khi panel mở, huy hiệu đỏ đếm số bộ lọc đang bật.
+/// Nút lọc phẳng 44×44, huy hiệu đỏ đếm số bộ lọc đang bật.
 class _FilterButton extends StatelessWidget {
   const _FilterButton({
     required this.open,
@@ -202,8 +216,6 @@ class _FilterButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    // Mở: nền đảo màu (mực trên giao diện sáng, chữ sáng trên giao diện tối).
-    final ink = scheme.onSurface;
     return Semantics(
       button: true,
       label: 'Bộ lọc',
@@ -216,63 +228,55 @@ class _FilterButton extends StatelessWidget {
         onTap: onTap,
         child: SizedBox.square(
           dimension: 44,
-          child: Center(
-            child: Stack(
-              clipBehavior: Clip.none,
-              children: [
-                Material(
-                  animationDuration: _fade(context),
-                  color: open ? ink : scheme.surface,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(6),
-                    side: BorderSide(color: open ? ink : scheme.outlineVariant),
+          child: Material(
+            color: Colors.transparent,
+            child: InkResponse(
+              onTap: onTap,
+              radius: 22,
+              containedInkWell: true,
+              highlightShape: BoxShape.circle,
+              child: Stack(
+                alignment: Alignment.center,
+                clipBehavior: Clip.none,
+                children: [
+                  Icon(
+                    Icons.tune_rounded,
+                    size: OmniIconSize.md,
+                    color: open ? scheme.primary : scheme.onSurface,
                   ),
-                  child: InkWell(
-                    splashFactory: _splash(context),
-                    highlightColor: _highlight(context),
-                    onTap: onTap,
-                    customBorder: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(6),
-                    ),
-                    child: SizedBox.square(
-                      dimension: 36,
-                      child: Icon(
-                        Icons.tune_rounded,
-                        size: OmniIconSize.md,
-                        color: open ? scheme.surface : ink,
-                      ),
-                    ),
-                  ),
-                ),
-                if (count > 0)
-                  Positioned(
-                    right: -4,
-                    top: -4,
-                    child: IgnorePointer(
-                      child: Container(
-                        key: const Key('inbox-filter-count'),
-                        constraints: const BoxConstraints(minWidth: 16),
-                        height: 16,
-                        padding: const EdgeInsets.symmetric(horizontal: 4),
-                        alignment: Alignment.center,
-                        decoration: BoxDecoration(
-                          color: OmniColors.destructive,
-                          borderRadius: BorderRadius.circular(8),
-                          // Vòng tách huy hiệu khỏi nút: cùng màu nền nút.
-                          border: Border.all(color: scheme.surface, width: 1.5),
-                        ),
-                        child: Text(
-                          '$count',
-                          style: OmniType.micro.copyWith(
-                            color: scheme.onError,
-                            height: 1,
-                            fontWeight: FontWeight.w600,
+                  if (count > 0)
+                    Positioned(
+                      right: 2,
+                      top: 2,
+                      child: IgnorePointer(
+                        child: Container(
+                          key: const Key('inbox-filter-count'),
+                          constraints: const BoxConstraints(minWidth: 16),
+                          height: 16,
+                          padding: const EdgeInsets.symmetric(horizontal: 4),
+                          alignment: Alignment.center,
+                          decoration: BoxDecoration(
+                            color: OmniColors.destructive,
+                            borderRadius: BorderRadius.circular(8),
+                            // Vòng tách huy hiệu khỏi nút: cùng màu nền nút.
+                            border: Border.all(
+                              color: scheme.surface,
+                              width: 1.5,
+                            ),
+                          ),
+                          child: Text(
+                            '$count',
+                            style: OmniType.micro.copyWith(
+                              color: scheme.onError,
+                              height: 1,
+                              fontWeight: FontWeight.w600,
+                            ),
                           ),
                         ),
                       ),
                     ),
-                  ),
-              ],
+                ],
+              ),
             ),
           ),
         ),
@@ -281,8 +285,77 @@ class _FilterButton extends StatelessWidget {
   }
 }
 
-/// Panel bộ lọc trượt xuống dưới header: thanh chia đoạn theo người phụ trách,
-/// chip kênh (chọn một) và chip trạng thái (Khẩn / Đã lưu trữ).
+/// Bộ lọc Hộp thư mở cạnh nút giống bộ lọc Khách: không đẩy danh sách xuống,
+/// không làm header đổi chiều cao và vẫn giữ toàn bộ tiêu chí tại chỗ.
+Future<void> showInboxFilterMenu({
+  required BuildContext context,
+  required Rect anchor,
+}) => showOmniAnchoredMenu<void>(
+  context: context,
+  anchor: anchor,
+  width: 344,
+  menuKey: const Key('inbox-filter-menu'),
+  semanticsLabel: 'Bộ lọc hộp thư',
+  builder: (menuContext) => Column(
+    mainAxisSize: MainAxisSize.min,
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      _InboxFilterMenuHeader(onClose: () => Navigator.of(menuContext).pop()),
+      const _PanelBody(inMenu: true),
+    ],
+  ),
+);
+
+class _InboxFilterMenuHeader extends ConsumerWidget {
+  const _InboxFilterMenuHeader({required this.onClose});
+
+  final VoidCallback onClose;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final scheme = Theme.of(context).colorScheme;
+    final count = ref.watch(inboxFilterProvider.select((f) => f.activeCount));
+    return Container(
+      constraints: const BoxConstraints(minHeight: 56),
+      padding: const EdgeInsets.only(left: 16, right: 6),
+      color: scheme.surfaceContainerLow.withValues(alpha: .7),
+      child: Row(
+        children: [
+          Icon(
+            Icons.tune_rounded,
+            size: OmniIconSize.md,
+            color: scheme.primary,
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              'Lọc hội thoại',
+              style: OmniType.bodyStrong.copyWith(color: scheme.onSurface),
+            ),
+          ),
+          if (count > 0)
+            TextButton(
+              key: const Key('inbox-filter-clear'),
+              onPressed: ref.read(inboxFilterProvider.notifier).clearFilters,
+              style: TextButton.styleFrom(
+                minimumSize: const Size(44, 44),
+                padding: const EdgeInsets.symmetric(horizontal: 8),
+              ),
+              child: const Text('Đặt lại'),
+            ),
+          IconButton(
+            tooltip: 'Đóng bộ lọc',
+            onPressed: onClose,
+            icon: const Icon(Icons.close_rounded),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Panel bộ lọc trượt xuống dưới header. Các lựa chọn được chia thành ba nhóm
+/// theo đúng mô hình người dùng: phạm vi hiển thị, kênh và tình trạng đặc biệt.
 ///
 /// Đóng thì không dựng nội dung nên cao 0; mở/đóng chạy `AnimatedSize`, và
 /// "giảm chuyển động" của hệ điều hành đưa mọi thời lượng về 0.
@@ -320,7 +393,9 @@ class InboxFilterPanel extends ConsumerWidget {
 }
 
 class _PanelBody extends ConsumerWidget {
-  const _PanelBody();
+  const _PanelBody({this.inMenu = false});
+
+  final bool inMenu;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -348,77 +423,90 @@ class _PanelBody extends ConsumerWidget {
     final scheme = Theme.of(context).colorScheme;
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.fromLTRB(16, 4, 16, 10),
-      decoration: BoxDecoration(
-        color: scheme.surface,
-        border: Border(bottom: BorderSide(color: scheme.outlineVariant)),
-      ),
+      padding: EdgeInsets.fromLTRB(16, inMenu ? 0 : 4, 16, 12),
+      decoration: inMenu
+          ? null
+          : BoxDecoration(
+              color: scheme.surface,
+              border: Border(bottom: BorderSide(color: scheme.outlineVariant)),
+            ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _Segments(
-            items: segments,
-            selected: filter.quick,
-            onPick: controller.setQuick,
+          _FilterSection(
+            key: const Key('inbox-filter-section-scope'),
+            label: 'Hiển thị',
+            child: _QuickFilterGrid(
+              items: segments,
+              selected: filter.quick,
+              onPick: controller.setQuick,
+            ),
           ),
           if (channels.isNotEmpty) ...[
-            const SizedBox(height: 10),
-            Wrap(
-              spacing: 6,
-              runSpacing: 6,
+            _FilterSection(
+              key: const Key('inbox-filter-section-channel'),
+              label: 'Kênh',
+              child: Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  for (final channel in channels)
+                    _ChoiceChip(
+                      label: channel.meta.short,
+                      selected: filter.channel == channel,
+                      onTap: () => controller.setChannel(
+                        filter.channel == channel ? null : channel,
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ],
+          _FilterSection(
+            key: const Key('inbox-filter-section-state'),
+            label: 'Tình trạng',
+            child: Wrap(
+              spacing: 8,
+              runSpacing: 8,
               children: [
-                for (final channel in channels)
-                  _Chip(
-                    label: channel.meta.short,
-                    selected: filter.channel == channel,
-                    onTap: () => controller.setChannel(
-                      filter.channel == channel ? null : channel,
+                _ChoiceChip(
+                  label: 'Khẩn',
+                  selected: filter.quick == InboxQuickFilter.urgent,
+                  onTap: () => controller.setQuick(
+                    filter.quick == InboxQuickFilter.urgent
+                        ? InboxQuickFilter.all
+                        : InboxQuickFilter.urgent,
+                  ),
+                ),
+                _ChoiceChip(
+                  label: 'Đã lưu trữ',
+                  selected: filter.quick == InboxQuickFilter.closed,
+                  onTap: () => controller.setQuick(
+                    filter.quick == InboxQuickFilter.closed
+                        ? InboxQuickFilter.all
+                        : InboxQuickFilter.closed,
+                  ),
+                ),
+                // Đường duy nhất tới "Bỏ chặn": hội thoại đã chặn ẩn khỏi
+                // mọi danh sách khác. Không có số vì facet không đếm mục chặn.
+                if (access.canBlock)
+                  _ChoiceChip(
+                    label: InboxQuickFilter.blocked.label,
+                    selected: filter.quick == InboxQuickFilter.blocked,
+                    onTap: () => controller.setQuick(
+                      filter.quick == InboxQuickFilter.blocked
+                          ? InboxQuickFilter.all
+                          : InboxQuickFilter.blocked,
                     ),
                   ),
               ],
             ),
-          ],
-          const SizedBox(height: 10),
-          Wrap(
-            spacing: 6,
-            runSpacing: 6,
-            children: [
-              _Chip(
-                label: 'Khẩn',
-                selected: filter.quick == InboxQuickFilter.urgent,
-                onTap: () => controller.setQuick(
-                  filter.quick == InboxQuickFilter.urgent
-                      ? InboxQuickFilter.all
-                      : InboxQuickFilter.urgent,
-                ),
-              ),
-              _Chip(
-                label: 'Đã lưu trữ',
-                selected: filter.quick == InboxQuickFilter.closed,
-                onTap: () => controller.setQuick(
-                  filter.quick == InboxQuickFilter.closed
-                      ? InboxQuickFilter.all
-                      : InboxQuickFilter.closed,
-                ),
-              ),
-              // Đường duy nhất tới "Bỏ chặn": hội thoại đã chặn ẩn khỏi mọi
-              // danh sách khác. Không có số — facet không đếm hội thoại chặn.
-              if (access.canBlock)
-                _Chip(
-                  label: InboxQuickFilter.blocked.label,
-                  selected: filter.quick == InboxQuickFilter.blocked,
-                  onTap: () => controller.setQuick(
-                    filter.quick == InboxQuickFilter.blocked
-                        ? InboxQuickFilter.all
-                        : InboxQuickFilter.blocked,
-                  ),
-                ),
-            ],
           ),
           // Gỡ MỌI thứ huy hiệu đếm — cả tài khoản kênh và nhãn, vốn không có
-          // chip riêng trong panel.
-          if (filter.activeCount > 0)
+          // chip riêng trong panel. Menu đặt hành động này trên header để gọn;
+          // panel nhúng cũ vẫn giữ nó ở cuối.
+          if (!inMenu && filter.activeCount > 0)
             Align(
               alignment: Alignment.centerRight,
               child: TextButton(
@@ -434,8 +522,36 @@ class _PanelBody extends ConsumerWidget {
   }
 }
 
-class _Segments extends StatelessWidget {
-  const _Segments({
+class _FilterSection extends StatelessWidget {
+  const _FilterSection({super.key, required this.label, required this.child});
+
+  final String label;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.only(top: 12),
+    child: Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(bottom: 8),
+          child: Text(
+            label,
+            style: OmniType.overline.copyWith(
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+            ),
+          ),
+        ),
+        child,
+      ],
+    ),
+  );
+}
+
+class _QuickFilterGrid extends StatelessWidget {
+  const _QuickFilterGrid({
     required this.items,
     required this.selected,
     required this.onPick,
@@ -447,85 +563,33 @@ class _Segments extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final motion = OmniMotion.of(context);
-    final found = items.indexWhere((e) => e.$1 == selected);
-    // Đang ở Khẩn / Đã lưu trữ thì không đoạn nào sáng: ẩn vệt trắng.
-    final index = found < 0 ? 0 : found;
-    final x = items.length == 1 ? 0.0 : -1 + 2 * index / (items.length - 1);
-    final scheme = Theme.of(context).colorScheme;
-
-    return Container(
-      height: 36,
-      padding: const EdgeInsets.all(3),
-      decoration: BoxDecoration(
-        color: scheme.surfaceContainerHighest,
-        borderRadius: BorderRadius.circular(6),
-      ),
-      child: Stack(
-        children: [
-          AnimatedAlign(
-            alignment: Alignment(x, 0),
-            duration: motion.enabled
-                ? const Duration(milliseconds: 350)
-                : Duration.zero,
-            curve: OmniCurves.standard,
-            child: FractionallySizedBox(
-              widthFactor: 1 / items.length,
-              child: Opacity(
-                opacity: found < 0 ? 0 : 1,
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: scheme.surface,
-                    borderRadius: BorderRadius.circular(4),
-                    boxShadow: [
-                      BoxShadow(
-                        color: OmniColors.byBrightness(
-                          context,
-                          OmniColors.ink.withAlpha(0x1F),
-                          Colors.black.withAlpha(0x52),
-                        ),
-                        blurRadius: 3,
-                        offset: Offset(0, 1),
-                      ),
-                    ],
-                  ),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        const gap = 8.0;
+        final itemWidth = (constraints.maxWidth - gap) / 2;
+        return Wrap(
+          spacing: gap,
+          runSpacing: gap,
+          children: [
+            for (final (filter, label) in items)
+              SizedBox(
+                key: ValueKey('inbox-filter-quick-${filter.name}'),
+                width: itemWidth,
+                child: _QuickFilterChoice(
+                  label: label,
+                  selected: filter == selected,
+                  onTap: () => onPick(filter),
                 ),
               ),
-            ),
-          ),
-          Row(
-            children: [
-              for (final (filter, label) in items)
-                Expanded(
-                  child: InkWell(
-                    splashFactory: _splash(context),
-                    highlightColor: _highlight(context),
-                    onTap: () => onPick(filter),
-                    child: Center(
-                      child: Text(
-                        label,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: OmniType.caption.copyWith(
-                          fontWeight: FontWeight.w600,
-                          color: filter == selected
-                              ? scheme.onSurface
-                              : scheme.onSurfaceVariant,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-            ],
-          ),
-        ],
-      ),
+          ],
+        );
+      },
     );
   }
 }
 
-class _Chip extends StatelessWidget {
-  const _Chip({
+class _QuickFilterChoice extends StatelessWidget {
+  const _QuickFilterChoice({
     required this.label,
     required this.selected,
     required this.onTap,
@@ -543,37 +607,101 @@ class _Chip extends StatelessWidget {
       selected: selected,
       child: Material(
         animationDuration: _fade(context),
-        color: selected ? scheme.primaryContainer : scheme.surface,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(4),
-          side: BorderSide(
-            color: selected ? scheme.primary : scheme.outlineVariant,
+        color: selected
+            ? scheme.primaryContainer
+            : scheme.surfaceContainerHighest,
+        borderRadius: OmniRadius.mdAll,
+        child: InkWell(
+          splashFactory: _splash(context),
+          highlightColor: _highlight(context),
+          onTap: onTap,
+          borderRadius: OmniRadius.mdAll,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(minHeight: 44),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 10),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      label,
+                      maxLines: 1,
+                      style: OmniType.caption.copyWith(
+                        color: scheme.onSurface,
+                        fontWeight: selected
+                            ? FontWeight.w600
+                            : FontWeight.w500,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 6),
+                  Icon(
+                    selected
+                        ? Icons.radio_button_checked_rounded
+                        : Icons.radio_button_off_rounded,
+                    size: 18,
+                    color: selected ? scheme.primary : scheme.onSurfaceVariant,
+                  ),
+                ],
+              ),
+            ),
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ChoiceChip extends StatelessWidget {
+  const _ChoiceChip({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Semantics(
+      button: true,
+      selected: selected,
+      child: Material(
+        animationDuration: _fade(context),
+        color: selected ? scheme.primaryContainer : Colors.transparent,
+        shape: RoundedRectangleBorder(
+          borderRadius: OmniRadius.chipAll,
+          side: BorderSide(color: selected ? scheme.primary : scheme.outline),
         ),
         child: InkWell(
           splashFactory: _splash(context),
           highlightColor: _highlight(context),
           onTap: onTap,
           customBorder: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(4),
+            borderRadius: OmniRadius.chipAll,
           ),
-          child: Container(
-            height: 28,
-            padding: const EdgeInsets.symmetric(horizontal: 10),
-            child: Center(
-              widthFactor: 1,
-              child: Text(
-                label,
-                style: OmniType.caption.copyWith(
-                  fontWeight: FontWeight.w600,
-                  color: selected
-                      ? scheme.onPrimaryContainer
-                      : OmniColors.byBrightness(
-                          context,
-                          OmniColors.secondaryForeground,
-                          scheme.onSurface,
-                        ),
-                ),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(minHeight: 44),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (selected) ...[
+                    Icon(Icons.check_rounded, size: 16, color: scheme.primary),
+                    const SizedBox(width: 6),
+                  ],
+                  Text(
+                    label,
+                    style: OmniType.caption.copyWith(
+                      fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
+                      color: selected ? scheme.primary : scheme.onSurface,
+                    ),
+                  ),
+                ],
               ),
             ),
           ),

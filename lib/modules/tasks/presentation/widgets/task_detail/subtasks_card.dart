@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../../core/error/app_exception.dart';
+import '../../../../../design/components/components.dart';
 import '../../../../../design/platform/omni_motion_scope.dart';
 import '../../../../../design/tokens/tokens.dart';
 import '../../../../team/team.dart';
@@ -57,6 +58,7 @@ class SubtasksCard extends ConsumerWidget {
     final motion = OmniMotion.enabled(context);
 
     return DetailCard(
+      flat: true,
       children: [
         DetailCardHeader(
           icon: Icons.checklist_rounded,
@@ -162,8 +164,8 @@ class SubtasksCard extends ConsumerWidget {
         done: state.pendingFor(s.id)?.done ?? s.done,
       ),
       onDiscard: () => controller.discard(s.id),
-      onMenu: canEdit || canTick ? () => _menu(context, s) : null,
-      onAssign: canTick ? () => _assign(context, s) : null,
+      onMenu: canEdit || canTick ? (anchor) => _menu(context, s, anchor) : null,
+      onAssign: canTick ? (anchor) => _assign(context, s, anchor) : null,
     );
   }
 
@@ -301,10 +303,11 @@ class SubtasksCard extends ConsumerWidget {
   ///
   /// Bắt lỗi tại chỗ: [TaskController.assignSubtask] chờ server và NÉM khi hỏng,
   /// mà một Future ném ra từ callback thì không ai bắt.
-  Future<void> _assign(BuildContext context, Subtask s) async {
+  Future<void> _assign(BuildContext context, Subtask s, Rect anchor) async {
     final messenger = ScaffoldMessenger.of(context);
-    final result = await showSubtaskAssigneeSheet(
+    final result = await showSubtaskAssigneeMenu(
       context,
+      anchor: anchor,
       projectId: task.projectId,
       subtask: s,
     );
@@ -319,14 +322,16 @@ class SubtasksCard extends ConsumerWidget {
 
   /// ⋮: Đổi tên, Giao, Xoá (đường hiện có); "Chuyển lên / xuống" khi
   /// [canReorder] — đường không cần kéo (trình đọc màn hình, tắt chuyển động).
-  Future<void> _menu(BuildContext context, Subtask s) async {
+  Future<void> _menu(BuildContext context, Subtask s, Rect anchor) async {
     final messenger = ScaffoldMessenger.of(context);
     final shown = task.subtasks;
     final at = shown.indexWhere((x) => x.id == s.id);
     final canUp = canReorder && at > 0;
     final canDown = canReorder && at >= 0 && at < shown.length - 1;
-    final action = await showDetailMenuSheet<_SubAction>(
+    final action = await showDetailAnchoredMenu<_SubAction>(
       context,
+      anchor: anchor,
+      menuKey: const Key('subtask-options-menu'),
       semanticsLabel: 'Tuỳ chọn việc con',
       title: s.title,
       groups: [
@@ -402,9 +407,17 @@ class SubtasksCard extends ConsumerWidget {
           final up = action == _SubAction.up;
           await _reorder(context, shown, at, up ? at - 1 : at + 1);
         case _SubAction.remove:
+          final confirmed = await showOmniConfirm(
+            context: context,
+            title: 'Xoá việc con “${s.title}”?',
+            message: 'Thao tác này không thể hoàn tác.',
+            confirmLabel: 'Xoá việc con',
+            destructive: true,
+          );
+          if (!confirmed) return;
           await controller.removeSubtask(s.id);
         case _SubAction.assign:
-          await _assign(context, s);
+          await _assign(context, s, anchor);
         case _SubAction.rename:
           final renamed = await showTextEditSheet(
             context: context,

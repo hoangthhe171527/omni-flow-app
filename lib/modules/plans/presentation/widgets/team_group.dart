@@ -10,8 +10,8 @@ import '../../domain/plan.dart';
 import 'plan_tile.dart';
 import 'project_cover.dart';
 
-/// Một team gập/mở được (`Main.dc.html .grp`): khung surface viền bo 8, đầu
-/// nhóm 48 (tên, "N kế hoạch", mũi tên xoay 180° khi mở), rồi
+/// Một team gập/mở được: section phẳng, đầu nhóm 48 (biểu tượng team, tên,
+/// "N kế hoạch", mũi tên xoay 180° khi mở), rồi
 /// các dòng kế hoạch.
 ///
 /// [plans] là danh sách ĐÃ LỌC theo ô tìm; "N kế hoạch" luôn đếm cả team.
@@ -28,6 +28,8 @@ class TeamGroup extends StatelessWidget {
     this.closedOpen = false,
     this.onToggleClosed,
     this.onLongPress,
+    this.onLongPressPlan,
+    this.canLongPressPlan,
     this.index = 0,
     this.rise = true,
     this.favoriteOf,
@@ -50,6 +52,12 @@ class TeamGroup extends StatelessWidget {
 
   /// Bấm giữ đầu nhóm: "Tuỳ chọn team" (Xoá team). Null thì không có.
   final VoidCallback? onLongPress;
+
+  /// Bấm giữ một kế hoạch: mở thẳng thao tác của chính kế hoạch đó.
+  final ValueChanged<Plan>? onLongPressPlan;
+
+  /// Quyền long-press có thể khác nhau theo từng kế hoạch trong cùng team.
+  final bool Function(Plan plan)? canLongPressPlan;
   final int index;
 
   /// false = hiện ngay. Tab Việc chỉ cho nhóm "rise" ở lần dựng ĐẦU của màn;
@@ -70,10 +78,14 @@ class TeamGroup extends StatelessWidget {
   final ValueChanged<Plan>? onMovePlan;
 
   Widget _tile(Plan plan) {
+    final canOpenActions =
+        onLongPressPlan != null && (canLongPressPlan?.call(plan) ?? true);
     final tile = PlanTile(
       plan: plan,
+      nested: true,
       onTap: () => onOpenPlan(plan),
       favorite: favoriteOf?.call(plan),
+      onActions: canOpenActions ? () => onLongPressPlan!(plan) : null,
       onToggleFavorite: onToggleFavorite == null
           ? null
           : () => onToggleFavorite!(plan),
@@ -143,11 +155,6 @@ class TeamGroup extends StatelessWidget {
       animate: rise,
       child: Material(
         color: scheme.surface,
-        shape: RoundedRectangleBorder(
-          borderRadius: radius,
-          side: BorderSide(color: scheme.outlineVariant),
-        ),
-        clipBehavior: Clip.antiAlias,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -161,9 +168,19 @@ class TeamGroup extends StatelessWidget {
                   onLongPress: onLongPress,
                   child: Container(
                     constraints: const BoxConstraints(minHeight: 48),
-                    padding: const EdgeInsets.fromLTRB(12, 0, 6, 0),
+                    padding: const EdgeInsets.fromLTRB(16, 0, 10, 0),
+                    color: scheme.surfaceContainerLow.withValues(alpha: .55),
                     child: Row(
                       children: [
+                        ExcludeSemantics(
+                          child: Icon(
+                            Icons.groups_2_outlined,
+                            key: const Key('team-group-icon'),
+                            size: OmniIconSize.md,
+                            color: scheme.primary,
+                          ),
+                        ),
+                        const SizedBox(width: 10),
                         Expanded(
                           child: Text(
                             group.team.name,
@@ -218,10 +235,7 @@ class TeamGroup extends StatelessWidget {
                 // lỗi tải. Cũng là chỗ duy nhất team rỗng còn hiện để xoá.
                 Container(
                   width: double.infinity,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 14,
-                  ),
+                  padding: const EdgeInsets.fromLTRB(40, 14, 16, 14),
                   decoration: BoxDecoration(
                     border: Border(
                       top: BorderSide(color: scheme.surfaceContainerHighest),
@@ -289,7 +303,7 @@ class _ClosedToggle extends StatelessWidget {
         child: Container(
           key: const Key('team-closed-toggle'),
           constraints: const BoxConstraints(minHeight: 44),
-          padding: const EdgeInsets.fromLTRB(12, 0, 6, 0),
+          padding: const EdgeInsets.fromLTRB(40, 0, 6, 0),
           decoration: BoxDecoration(
             border: Border(
               top: BorderSide(color: scheme.surfaceContainerHighest),

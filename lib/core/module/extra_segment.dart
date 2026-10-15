@@ -13,6 +13,7 @@ class ExtraSegment {
     required this.visible,
     required this.label,
     required this.searchRow,
+    required this.filterContent,
     required this.body,
   });
 
@@ -25,9 +26,13 @@ class ExtraSegment {
   /// Hàng tìm của đoạn, xếp dưới thanh chọn đoạn.
   final PreferredSizeWidget Function(
     bool filtersOpen,
-    VoidCallback onToggleFilters,
+    ValueChanged<Rect> onOpenFilters,
   )
   searchRow;
+
+  /// Nội dung lọc của đoạn để tab gốc đặt trong cùng một popover neo. Đoạn
+  /// đóng góp dữ liệu, còn tab gốc quyết định vị trí và hình thức overlay.
+  final Widget Function() filterContent;
 
   /// Thân của đoạn (cuộn, không Scaffold).
   final Widget Function(bool filtersOpen) body;

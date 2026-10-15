@@ -44,7 +44,7 @@ import 'widgets/plan_copy_move_sheets.dart';
 import 'widgets/plan_menu_sheet.dart';
 import 'widgets/transfer_owner_sheet.dart';
 
-/// Bảng kế hoạch (`Board.dc.html`): nền theo `cover`, header kính tối, dải
+/// Bảng kế hoạch (`Board.dc.html`): ảnh nền theo `cover`, header kính tối, dải
 /// cột 300 kéo ngang có snap căn giữa, hé cột kế bên.
 ///
 /// Bản trước là một cột mỗi trang. Bản mẫu đã duyệt chọn dải cột: hé cột kế
@@ -276,11 +276,12 @@ class _PlanBoardPageState extends ConsumerState<PlanBoardPage> {
     final visible = board == null || result == null
         ? board
         : board.only(result.ids);
-
+    final scheme = Theme.of(context).colorScheme;
     return AnnotatedRegion<SystemUiOverlayStyle>(
+      // Header luôn là lớp kính tối, kể cả khi phần thân dùng surface sáng.
       value: SystemUiOverlayStyle.light,
       child: Scaffold(
-        backgroundColor: OmniCovers.colorOf(loaded?.cover),
+        backgroundColor: scheme.surface,
         body: ProjectCoverSurface(
           key: const Key('board-background'),
           cover: loaded?.cover,
@@ -299,7 +300,7 @@ class _PlanBoardPageState extends ConsumerState<PlanBoardPage> {
                 filterActive: _person.chipLabel != null,
                 onFilter: _pickPerson,
                 onMenu: menuGroups.isNotEmpty
-                    ? () => _planMenu(loaded!, menuGroups)
+                    ? (anchor) => _planMenu(loaded!, menuGroups, anchor)
                     : null,
               ),
               if (loaded != null && loaded.planStatus != PlanStatus.active)
@@ -492,10 +493,11 @@ class _PlanBoardPageState extends ConsumerState<PlanBoardPage> {
                                     _createTask(plan, real ? section.id : null)
                               : null,
                           onOptions: canEditSections && real
-                              ? () => _sectionOptions(
+                              ? (anchor) => _sectionOptions(
                                   plan,
                                   board,
                                   section,
+                                  anchor: anchor,
                                   canRemove: realSections.length > 1,
                                 )
                               : null,
@@ -722,8 +724,12 @@ class _PlanBoardPageState extends ConsumerState<PlanBoardPage> {
     });
   }
 
-  Future<void> _pickPerson() async {
-    final picked = await showPersonFilterSheet(context, current: _person);
+  Future<void> _pickPerson(Rect anchor) async {
+    final picked = await showPersonFilterMenu(
+      context,
+      anchor: anchor,
+      current: _person,
+    );
     if (picked != null && mounted) setState(() => _person = picked);
   }
 
@@ -755,10 +761,19 @@ class _PlanBoardPageState extends ConsumerState<PlanBoardPage> {
     }
   }
 
-  /// ⋯ của kế hoạch: sheet ba nhóm (`PlanMenu.dc.html`). Sửa nhóm việc đã
-  /// chuyển sang ⋯ của cột và ô "Thêm nhóm việc".
-  Future<void> _planMenu(Plan plan, List<List<PlanMenuAction>> groups) async {
-    final choice = await showPlanMenuSheet(context, plan: plan, groups: groups);
+  /// ⋯ của kế hoạch: menu neo tại nút, cùng mẫu với dấu + ở màn Team. Sửa
+  /// nhóm việc vẫn nằm ở ⋯ của cột và ô "Thêm nhóm việc".
+  Future<void> _planMenu(
+    Plan plan,
+    List<List<PlanMenuAction>> groups,
+    Rect anchor,
+  ) async {
+    final choice = await showPlanMenu(
+      context,
+      anchor: anchor,
+      plan: plan,
+      groups: groups,
+    );
     if (!mounted || choice == null) return;
     final navigator = Navigator.of(context);
     switch (choice) {
@@ -979,13 +994,14 @@ class _PlanBoardPageState extends ConsumerState<PlanBoardPage> {
     Plan plan,
     BoardBuckets board,
     PlanSection section, {
+    required Rect anchor,
     required bool canRemove,
   }) async {
-    final choice = await _optionsSheet<_SectionAction>(section.name, [
+    final choice = await _optionsMenu<_SectionAction>(anchor, section.name, [
       (_SectionAction.rename, Icons.edit_outlined, 'Đổi tên nhóm'),
-      if (canRemove) (_SectionAction.remove, Icons.delete_outline, 'Xoá nhóm'),
       (_SectionAction.reorder, Icons.swap_vert_rounded, 'Sắp xếp nhóm việc'),
       (_SectionAction.edit, Icons.tune_rounded, 'Sửa nhóm việc'),
+      if (canRemove) (_SectionAction.remove, Icons.delete_outline, 'Xoá nhóm'),
     ], danger: _SectionAction.remove);
     if (!mounted) return;
     switch (choice) {
@@ -1105,55 +1121,43 @@ class _PlanBoardPageState extends ConsumerState<PlanBoardPage> {
         builder: (_) => _NameSheet(title: title, initial: initial),
       );
 
-  Future<T?> _optionsSheet<T>(
+  Future<T?> _optionsMenu<T>(
+    Rect anchor,
     String title,
     List<(T, IconData, String)> items, {
     required T danger,
-  }) => showOmniSheet<T>(
+  }) => showOmniAnchoredMenu<T>(
     context: context,
-    builder: (ctx) {
-      final scheme = Theme.of(ctx).colorScheme;
-
-      return SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 8),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-                child: Text(
-                  title,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: OmniType.bodyStrong.copyWith(color: scheme.onSurface),
-                ),
-              ),
-              for (final (value, icon, label) in items)
-                ListTile(
-                  minTileHeight: 52,
-                  leading: Icon(
-                    icon,
-                    color: value == danger
-                        ? scheme.error
-                        : scheme.onSurfaceVariant,
-                  ),
-                  title: Text(
-                    label,
-                    style: OmniType.body.copyWith(
-                      fontWeight: FontWeight.w500,
-                      color: value == danger
-                          ? OmniColors.dangerTextOf(ctx)
-                          : scheme.onSurface,
-                    ),
-                  ),
-                  onTap: () => Navigator.of(ctx).pop(value),
-                ),
-            ],
+    anchor: anchor,
+    width: 276,
+    menuKey: const Key('section-options-menu'),
+    semanticsLabel: 'Tuỳ chọn nhóm việc',
+    builder: (menuContext) => Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          constraints: const BoxConstraints(minHeight: 48),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+          alignment: Alignment.centerLeft,
+          child: Text(
+            title,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: OmniType.bodyStrong.copyWith(
+              color: Theme.of(menuContext).colorScheme.onSurface,
+            ),
           ),
         ),
-      );
-    },
+        for (var i = 0; i < items.length; i++)
+          OmniAnchoredMenuItem(
+            icon: items[i].$2,
+            label: items[i].$3,
+            divider: i == 0 || items[i].$1 == danger,
+            destructive: items[i].$1 == danger,
+            onTap: () => Navigator.of(menuContext).pop(items[i].$1),
+          ),
+      ],
+    ),
   );
 
   Future<void> _deletePlan(Plan plan) async {
@@ -1262,8 +1266,8 @@ class _GlassHeader extends StatelessWidget {
   final VoidCallback onOpenSearch;
   final VoidCallback onCloseSearch;
   final bool filterActive;
-  final VoidCallback onFilter;
-  final VoidCallback? onMenu;
+  final ValueChanged<Rect> onFilter;
+  final ValueChanged<Rect>? onMenu;
 
   @override
   Widget build(BuildContext context) {
@@ -1310,18 +1314,32 @@ class _GlassHeader extends StatelessWidget {
                       icon: Icons.search_rounded,
                       onTap: onOpenSearch,
                     ),
-                  _HeaderButton(
-                    tooltip: 'Lọc theo người',
-                    icon: Icons.person_outline_rounded,
-                    onTap: onFilter,
-                    dot: filterActive,
-                    selected: filterActive,
+                  Builder(
+                    builder: (buttonContext) => _HeaderButton(
+                      tooltip: 'Lọc theo người',
+                      icon: Icons.person_outline_rounded,
+                      onTap: () {
+                        final box =
+                            buttonContext.findRenderObject() as RenderBox?;
+                        if (box == null || !box.hasSize) return;
+                        onFilter(box.localToGlobal(Offset.zero) & box.size);
+                      },
+                      dot: filterActive,
+                      selected: filterActive,
+                    ),
                   ),
                   if (onMenu case final menu?)
-                    _HeaderButton(
-                      tooltip: 'Tuỳ chọn kế hoạch',
-                      icon: Icons.more_horiz_rounded,
-                      onTap: menu,
+                    Builder(
+                      builder: (buttonContext) => _HeaderButton(
+                        tooltip: 'Tuỳ chọn kế hoạch',
+                        icon: Icons.more_horiz_rounded,
+                        onTap: () {
+                          final box =
+                              buttonContext.findRenderObject() as RenderBox?;
+                          if (box == null || !box.hasSize) return;
+                          menu(box.localToGlobal(Offset.zero) & box.size);
+                        },
+                      ),
                     ),
                 ],
               ),
@@ -1382,7 +1400,10 @@ class _HeaderSearch extends StatelessWidget {
       onChanged: onChanged,
       textInputAction: TextInputAction.search,
       cursorColor: Colors.white,
-      style: OmniType.body.copyWith(color: Colors.white),
+      style: OmniType.search.copyWith(
+        color: Colors.white,
+        fontStyle: FontStyle.normal,
+      ),
       decoration: InputDecoration(
         isDense: true,
         filled: false,
@@ -1390,7 +1411,7 @@ class _HeaderSearch extends StatelessWidget {
         enabledBorder: InputBorder.none,
         focusedBorder: InputBorder.none,
         hintText: 'Tìm trong kế hoạch',
-        hintStyle: OmniType.body.copyWith(
+        hintStyle: OmniType.searchHint.copyWith(
           color: Colors.white.withValues(alpha: .7),
         ),
       ),

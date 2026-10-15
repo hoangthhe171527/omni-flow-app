@@ -63,9 +63,10 @@ class _ChannelsPageState extends ConsumerState<ChannelsPage> {
     }
   }
 
-  Future<void> _pickChannel() async {
-    final channel = await showConnectSheet(
+  Future<void> _pickChannel(Rect anchor) async {
+    final channel = await showConnectMenu(
       context,
+      anchor: anchor,
       access: ref.read(accessProvider),
     );
     if (channel == null || !mounted) return;
@@ -156,6 +157,7 @@ class _ChannelsPageState extends ConsumerState<ChannelsPage> {
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
     final channels = ref.watch(channelsProvider);
     final access = ref.watch(accessProvider);
     final canWrite = access.can(ChannelPermissions.write);
@@ -164,11 +166,20 @@ class _ChannelsPageState extends ConsumerState<ChannelsPage> {
     final canPick =
         canConnectCompany || (canWrite && ConnectableChannels.pair.isNotEmpty);
     return Scaffold(
+      backgroundColor: scheme.surface,
       appBar: const OmniAppBar(title: 'Kết nối kênh'),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: _connecting ? null : (canPick ? _pickChannel : null),
-        icon: const Icon(Icons.add_link_rounded),
-        label: const Text('Kết nối kênh'),
+      floatingActionButton: Builder(
+        builder: (buttonContext) => FloatingActionButton.extended(
+          onPressed: _connecting || !canPick
+              ? null
+              : () {
+                  final box = buttonContext.findRenderObject() as RenderBox?;
+                  if (box == null || !box.hasSize) return;
+                  _pickChannel(box.localToGlobal(Offset.zero) & box.size);
+                },
+          icon: const Icon(Icons.add_link_rounded),
+          label: const Text('Kết nối kênh'),
+        ),
       ),
       body: RefreshIndicator(
         onRefresh: () async => ref.invalidate(channelsProvider),
@@ -203,15 +214,16 @@ class _ChannelsPageState extends ConsumerState<ChannelsPage> {
                     padding: EdgeInsets.only(bottom: OmniSpacing.sm),
                   ),
                   const SizedBox(height: OmniSpacing.sm),
-                  for (final connection in official) ...[
+                  for (var i = 0; i < official.length; i++) ...[
                     ChannelTile(
-                      connection: connection,
+                      connection: official[i],
                       canWrite: canWrite,
                       canReconnect: canConnectCompany,
-                      onReconnect: () => _startOauth(connection.channel),
-                      onDisconnect: () => _disconnect(connection),
+                      onReconnect: () => _startOauth(official[i].channel),
+                      onDisconnect: () => _disconnect(official[i]),
                     ),
-                    const SizedBox(height: OmniSpacing.sm),
+                    if (i < official.length - 1)
+                      Divider(height: 1, color: scheme.outlineVariant),
                   ],
                 ],
                 if (personal.isNotEmpty) ...[
@@ -221,14 +233,15 @@ class _ChannelsPageState extends ConsumerState<ChannelsPage> {
                     padding: EdgeInsets.only(bottom: OmniSpacing.sm),
                   ),
                   const SizedBox(height: OmniSpacing.sm),
-                  for (final connection in personal) ...[
+                  for (var i = 0; i < personal.length; i++) ...[
                     ChannelTile(
-                      connection: connection,
+                      connection: personal[i],
                       canWrite: canWrite,
-                      onReconnect: () => _openPair(connection.channel),
-                      onDisconnect: () => _disconnect(connection),
+                      onReconnect: () => _openPair(personal[i].channel),
+                      onDisconnect: () => _disconnect(personal[i]),
                     ),
-                    const SizedBox(height: OmniSpacing.sm),
+                    if (i < personal.length - 1)
+                      Divider(height: 1, color: scheme.outlineVariant),
                   ],
                 ],
               ],

@@ -1,15 +1,14 @@
 import 'package:flutter/material.dart';
 
-/// Tám nền cho thẻ dự án.
+/// Hợp đồng nền của dự án.
 ///
 /// Các token gradient cũ. API cũng có thể trả URL ảnh trong `cover`; phần nhận
 /// diện URL và fallback màu hệ thống nằm ở `ProjectCoverSurface`.
 ///
-/// Mọi màu ở đây đủ tối cho chữ trắng; `omni_covers_test.dart` giữ điều đó
-/// bằng một ngưỡng độ sáng. Thêm nền mới mà bài kiểm đỏ thì **chỉnh màu, đừng
-/// nới ngưỡng** — ngưỡng đó chính là thứ tính năng này hứa.
+/// [colorOf] và [gradientOf] được giữ tạm để các bản app cũ / phần đang chuyển
+/// đổi vẫn biên dịch. UI mới không được dùng chúng để dựng nền dự án.
 abstract final class OmniCovers {
-  /// Nền của dự án chưa chọn gì — và của MỌI dự án tạo trước tính năng này.
+  /// Token cũ từng được dùng làm mặc định.
   static const fallback = 'teal-1';
 
   /// Kính tối của header bảng kế hoạch (`Board.dc.html .bar`):
@@ -30,20 +29,31 @@ abstract final class OmniCovers {
     'slate-1': [Color(0xFF3A4654), Color(0xFF222A33)],
   };
 
-  /// Thứ tự ỔN ĐỊNH — dải chọn nền không được nhảy chỗ giữa hai lần mở.
+  /// Danh sách token cũ, chỉ dùng để phân biệt với URL ảnh.
   static List<String> get names => _table.keys.toList(growable: false);
 
-  /// Tên lạ hoặc null đều rơi về [fallback] chứ KHÔNG ném lỗi.
+  static bool isLegacyName(String? value) =>
+      value != null && _table.containsKey(value.trim());
+
+  /// Có vẻ là một tham chiếu ảnh hợp lệ để tầng dữ liệu chuẩn hoá thành URL.
   ///
-  /// Web và app giữ hai bảng riêng (một bên Flutter, một bên CSS); cái phải
-  /// đồng bộ là TÊN, không phải màu. Lệch một tên không được làm sập một màn
-  /// danh sách ở bên kia.
-  /// Màu ĐỊNH DANH của dự án trong màn làm việc: ô vuông 8–10px cạnh tên
-  /// (`SPrinciples.dc.html` §7). Đầu thẻ tô cả gradient chỉ còn ở ô xem
-  /// trước lúc chọn nền — trong danh sách nó là trang trí.
+  /// Không coi chuỗi bất kỳ là ảnh: token cũ và scheme ngoài HTTP(S) phải rơi
+  /// về nền hệ thống thay vì đi vào một `NetworkImage` không an toàn.
+  static bool isImageReference(String? value) {
+    final source = value?.trim() ?? '';
+    if (source.isEmpty || isLegacyName(source)) return false;
+    final uri = Uri.tryParse(source);
+    if (uri == null) return false;
+    if (!uri.hasScheme) return source.startsWith('/');
+    return uri.scheme == 'http' || uri.scheme == 'https';
+  }
+
+  /// API tương thích tạm cho phần UI cũ chưa được chuyển trong lane khác.
+  @Deprecated('Dùng ảnh cover hoặc màu surface của theme.')
   static Color colorOf(String? name) =>
       (_table[name] ?? _table[fallback]!).first;
 
+  @Deprecated('Dùng ảnh cover hoặc màu surface của theme.')
   static LinearGradient gradientOf(String? name) => LinearGradient(
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,

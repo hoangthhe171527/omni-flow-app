@@ -149,6 +149,9 @@ void main() {
 
       await tester.tap(find.text('Xoá việc con'));
       await tester.pumpAndSettle();
+      expect(find.text('Xoá việc con “Body ngaoi”?'), findsOneWidget);
+      await tester.tap(find.text('Xoá việc con').last);
+      await tester.pumpAndSettle();
 
       expect(sent().method, 'DELETE');
       expect(sent().uri.path, '/api/v1/tasks/t1/checklist/c2');

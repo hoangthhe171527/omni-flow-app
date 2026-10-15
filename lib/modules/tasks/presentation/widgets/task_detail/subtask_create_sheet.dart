@@ -327,6 +327,7 @@ class _SubtaskCreateSheetState extends ConsumerState<SubtaskCreateSheet> {
                     if (widget.canAssign) ...[
                       const SizedBox(height: 12),
                       DetailCard(
+                        flat: false,
                         children: [
                           DetailRow(
                             label: 'Người làm',

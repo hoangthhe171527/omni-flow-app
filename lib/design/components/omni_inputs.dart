@@ -17,15 +17,20 @@ class OmniSearchField extends StatefulWidget {
     this.debounce = const Duration(milliseconds: 350),
     this.trailing,
     this.outlined = false,
+    this.flat = false,
     this.dense = false,
   });
 
   final ValueChanged<String> onChanged;
 
-  /// Bộ Orbit có hai kiểu ô tìm: khối xám không viền (mặc định — hộp thư,
-  /// khách hàng, gán người) và ô trắng viền mảnh đặt trên nền xám (danh bạ
-  /// "Tất cả").
+  /// Kiểu có đường biên dùng trong biểu mẫu khi ranh giới nhập liệu phải rõ.
+  /// Thanh tìm của màn danh sách dùng [flat] thay vì kiểu này.
   final bool outlined;
+
+  /// Ô tìm nằm ngay trên cùng một mặt phẳng với nội dung: không nền, không
+  /// viền. Chỉ dùng cho thanh tìm của màn danh sách; ô nhập trong form vẫn cần
+  /// khung để nhận biết ranh giới dữ liệu.
+  final bool flat;
 
   /// Gọn mắt nhưng vẫn cao 44 (vùng chạm): đệm dọc nhỏ, icon 36.
   final bool dense;
@@ -75,10 +80,14 @@ class _OmniSearchFieldState extends State<OmniSearchField> {
       controller: _controller,
       onChanged: _onChanged,
       textInputAction: TextInputAction.search,
-      style: OmniType.body.copyWith(color: scheme.onSurface),
+      style: OmniType.search.copyWith(
+        color: scheme.onSurface,
+        fontStyle: FontStyle.normal,
+      ),
       textAlignVertical: TextAlignVertical.center,
       decoration: InputDecoration(
         hintText: widget.hint,
+        hintStyle: OmniType.searchHint.copyWith(color: scheme.onSurfaceVariant),
         prefixIcon: Icon(
           Icons.search_rounded,
           color: scheme.onSurfaceVariant,
@@ -110,17 +119,21 @@ class _OmniSearchFieldState extends State<OmniSearchField> {
               ),
         isDense: true,
         contentPadding: EdgeInsets.symmetric(vertical: widget.dense ? 10 : 12),
-        filled: true,
-        fillColor: widget.outlined
+        filled: !widget.flat,
+        fillColor: widget.flat
+            ? Colors.transparent
+            : widget.outlined
             ? scheme.surface
             : scheme.surfaceContainerHighest,
-        border: _border(scheme),
-        enabledBorder: _border(scheme),
-        focusedBorder: widget.outlined
+        border: widget.flat ? InputBorder.none : _border(scheme),
+        enabledBorder: widget.flat ? InputBorder.none : _border(scheme),
+        focusedBorder: !widget.flat && widget.outlined
             ? OutlineInputBorder(
                 borderRadius: OmniRadius.lgAll,
                 borderSide: BorderSide(color: scheme.primary, width: 1.5),
               )
+            : widget.flat
+            ? InputBorder.none
             : _border(scheme),
       ),
     );

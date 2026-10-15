@@ -70,6 +70,7 @@ class _TaskDetailPageState extends ConsumerState<TaskDetailPage> {
   final _scroll = ScrollController();
   final _titleShown = ValueNotifier(false);
   final _titleKey = GlobalKey();
+  final _menuButtonKey = GlobalKey(debugLabel: 'TaskMenuButton');
 
   @override
   void initState() {
@@ -152,6 +153,7 @@ class _TaskDetailPageState extends ConsumerState<TaskDetailPage> {
         loadedTask != null && api(ApiCapability.taskFollow) && access.canRead;
 
     return Scaffold(
+      backgroundColor: Theme.of(context).colorScheme.surface,
       appBar: DetailHeader(
         title: loadedTask?.title ?? '',
         titleShown: _titleShown,
@@ -186,6 +188,7 @@ class _TaskDetailPageState extends ConsumerState<TaskDetailPage> {
         menu: groups.isEmpty
             ? null
             : IconButton(
+                key: _menuButtonKey,
                 tooltip: 'Tuỳ chọn công việc',
                 onPressed: () => _openMenu(context, loadedTask!, groups),
                 style: IconButton.styleFrom(
@@ -223,17 +226,26 @@ class _TaskDetailPageState extends ConsumerState<TaskDetailPage> {
   bool _canManageTask(Task task, String? me, bool manageAll) =>
       canManageTask(ref, task, me, manageAll: manageAll);
 
-  /// Menu việc (`TaskMenu.dc.html`): mở sheet rồi chạy mục đã chọn.
+  Rect? _menuAnchor() {
+    final box = _menuButtonKey.currentContext?.findRenderObject() as RenderBox?;
+    if (box == null || !box.hasSize) return null;
+    return box.localToGlobal(Offset.zero) & box.size;
+  }
+
+  /// Menu việc (`TaskMenu.dc.html`): mở ngay tại nút `…` rồi chạy mục đã chọn.
   Future<void> _openMenu(
     BuildContext context,
     Task task,
     List<List<TaskMenuAction>> groups,
   ) async {
+    final anchor = _menuAnchor();
+    if (anchor == null) return;
     final controller = ref.read(taskDetailProvider(widget.taskId).notifier);
     final access = ref.read(taskAccessProvider);
     final me = ref.read(sessionProvider).user?.id;
-    final action = await showTaskMenuSheet(
+    final action = await showTaskMenu(
       context,
+      anchor: anchor,
       groups: groups,
       followerCount: task.followers.length,
     );
@@ -533,10 +545,6 @@ class _Loaded extends ConsumerWidget {
         canManageTask(ref, task, myUserId, manageAll: access.isAssigner);
     final controller = ref.read(taskDetailProvider(taskId).notifier);
     final actions = TaskDetailActions(controller);
-    final myName = ref.watch(sessionProvider.select((s) => s.user?.fullName));
-    final myAvatar = ref.watch(
-      sessionProvider.select((s) => s.user?.avatarUrl),
-    );
     final catalog = ref.watch(taskLabelsProvider).valueOrNull ?? const [];
     final canLabels = access.canReadLabels || catalog.isNotEmpty;
 
@@ -605,16 +613,9 @@ class _Loaded extends ConsumerWidget {
           ),
           likedByMe: myUserId != null && task.isLikedBy(myUserId),
           onAddAssignee: isAssigner
-              ? () => _assign(context, actions, task)
+              ? (anchor) => _assign(context, actions, task, anchor)
               : canClaim
-              ? () => _claimSheet(
-                  context,
-                  actions,
-                  task,
-                  myUserId,
-                  myName ?? '',
-                  myAvatar,
-                )
+              ? (anchor) => _claimMenu(context, actions, task, anchor, myUserId)
               : null,
           onTime: isAssigner ? () => _editTime(context, actions, task) : null,
           onRate: isAssigner
@@ -949,74 +950,42 @@ class _Loaded extends ConsumerWidget {
     BuildContext context,
     TaskDetailActions actions,
     Task task,
+    Rect anchor,
   ) async {
     final messenger = ScaffoldMessenger.of(context);
-    final chosen = await showAssignTaskSheet(
+    final chosen = await showAssignTaskMenu(
       context: context,
+      anchor: anchor,
       currentIds: task.assigneeIds,
     );
 
     await _guard(messenger, () => actions.assign(task, chosen));
   }
 
-  /// "Nhận việc này": sheet MỘT dòng, không phải bộ chọn người.
+  /// "Nhận việc này": menu neo MỘT dòng, không phải bộ chọn người.
   ///
   /// Bộ chọn lấy danh sách từ `GET /memberships`, đường cần
   /// `membership.members.read` — quyền mà vai `worker` cố ý không có. Gán
   /// NGƯỜI KHÁC vẫn là việc của quản đốc.
-  Future<void> _claimSheet(
+  Future<void> _claimMenu(
     BuildContext context,
     TaskDetailActions actions,
     Task task,
+    Rect anchor,
     String userId,
-    String name,
-    String? avatarUrl,
   ) async {
     final messenger = ScaffoldMessenger.of(context);
-    final claim = await showOmniSheet<bool>(
+    final claim = await showOmniAnchoredMenu<bool>(
       context: context,
-      builder: (ctx) {
-        final text = Theme.of(ctx).textTheme;
-
-        return SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Người làm',
-                  style: text.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                InkWell(
-                  onTap: () => Navigator.of(ctx).pop(true),
-                  child: Container(
-                    height: 46,
-                    padding: const EdgeInsets.symmetric(horizontal: 4),
-                    child: Row(
-                      children: [
-                        OmniAvatar(
-                          name: name.isEmpty ? '?' : name,
-                          imageUrl: avatarUrl,
-                          size: 28,
-                        ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: Text('Nhận việc này', style: text.bodyLarge),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        );
-      },
+      anchor: anchor,
+      width: 264,
+      menuKey: const Key('claim-task-menu'),
+      semanticsLabel: 'Nhận việc',
+      builder: (menuContext) => OmniAnchoredMenuItem(
+        icon: Icons.person_add_alt_1_outlined,
+        label: 'Nhận việc này',
+        onTap: () => Navigator.of(menuContext).pop(true),
+      ),
     );
     if (claim != true) return;
 

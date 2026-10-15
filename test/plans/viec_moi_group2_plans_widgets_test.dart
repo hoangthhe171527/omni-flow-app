@@ -68,11 +68,6 @@ void main() {
             name: PlanRoutes.board,
             builder: (_, _) => const Scaffold(body: Text('trang bang')),
           ),
-          GoRoute(
-            path: '/timeline',
-            name: PlanRoutes.timeline,
-            builder: (_, _) => const Scaffold(),
-          ),
         ],
       );
       await t.pumpWidget(
@@ -81,9 +76,6 @@ void main() {
             backgroundProvider.overrideWith(FixedBackground.new),
             plansApiProvider.overrideWithValue(api),
             teamsWithPlansProvider.overrideWith((ref) async => groups),
-            workshopKpiProvider.overrideWith(
-              (ref) async => WorkshopKpi.fromJson(const {}),
-            ),
             taskAccessProvider.overrideWithValue(TaskAccess.of(policy)),
             accessProvider.overrideWithValue(policy),
             sessionProvider.overrideWithValue(
@@ -107,19 +99,32 @@ void main() {
       plans: plans,
     );
 
+    Future<void> openTeam(WidgetTester t) async {
+      final header = find.ancestor(
+        of: find.text('Tổ kỹ thuật'),
+        matching: find.byType(InkWell),
+      );
+      await t.tap(header.first);
+      await t.pumpAndSettle();
+    }
+
+    Future<void> openFavorites(WidgetTester t) async {
+      await t.tap(find.byKey(const Key('favorites-header')));
+      await t.pumpAndSettle();
+    }
+
     testWidgets('API cũ (không is_favorite): không sao, không mục Yêu thích', (
       t,
     ) async {
       await pump(t, [
         team([plan('Bảo hành'), plan('Sửa tại nhà')]),
       ], caps: false);
+      await openTeam(t);
       expect(find.bySemanticsLabel('Thêm vào yêu thích'), findsNothing);
       expect(find.bySemanticsLabel('Bỏ khỏi yêu thích'), findsNothing);
       expect(find.text('Yêu thích'), findsNothing);
-      expect(
-        find.byIcon(Icons.chevron_right_rounded),
-        findsNWidgets(3),
-      ); // 2 dòng + thẻ Dòng việc
+      // Chỉ hai kế hoạch có mũi tên; tab Việc không còn lặp Dòng việc.
+      expect(find.byIcon(Icons.chevron_right_rounded), findsNWidgets(2));
     });
 
     testWidgets('API lùi bản: JSON còn is_favorite nhưng phiên không khai '
@@ -127,6 +132,7 @@ void main() {
       await pump(t, [
         team([plan('Bảo hành', favorite: true), plan('Sửa', favorite: false)]),
       ], caps: false);
+      await openTeam(t);
       expect(find.bySemanticsLabel('Thêm vào yêu thích'), findsNothing);
       expect(find.bySemanticsLabel('Bỏ khỏi yêu thích'), findsNothing);
       expect(find.text('Yêu thích'), findsNothing);
@@ -137,6 +143,8 @@ void main() {
       await pump(t, [
         team([plan('Bảo hành', favorite: true), plan('Sửa', favorite: false)]),
       ]);
+      await openFavorites(t);
+      await openTeam(t);
       expect(find.bySemanticsLabel('Bỏ khỏi yêu thích'), findsOneWidget);
       expect(find.bySemanticsLabel('Thêm vào yêu thích'), findsOneWidget);
       expect(find.text('Yêu thích'), findsOneWidget);
@@ -159,6 +167,7 @@ void main() {
       await pump(t, [
         team([plan('Sửa', favorite: false)]),
       ]);
+      await openTeam(t);
       expect(find.text('Yêu thích'), findsNothing);
       await t.tap(find.byKey(const Key('plan-favorite-id-Sửa')));
       await t.pumpAndSettle();
@@ -177,6 +186,7 @@ void main() {
       await pump(t, [
         team([plan('Sửa', favorite: false)]),
       ]);
+      await openTeam(t);
       api.gate = Completer<void>();
       await t.tap(find.byKey(const Key('plan-favorite-id-Sửa')));
       await t.pump();
@@ -192,6 +202,7 @@ void main() {
       await pump(t, [
         team([plan('Sửa', favorite: false)]),
       ], fail: true);
+      await openTeam(t);
       await t.tap(find.byKey(const Key('plan-favorite-id-Sửa')));
       await t.pumpAndSettle();
       expect(find.bySemanticsLabel('Thêm vào yêu thích'), findsOneWidget);
@@ -206,12 +217,11 @@ void main() {
           plan('Sự kiện', favorite: true),
         ]),
       ]);
-      expect(find.byKey(const ValueKey('favorite-id-Bảo hành')), findsOne);
-      await t.tap(find.byKey(const Key('favorites-header')));
-      await t.pumpAndSettle();
       expect(find.byKey(const ValueKey('favorite-id-Bảo hành')), findsNothing);
-      await t.tap(find.byKey(const Key('favorites-header')));
-      await t.pumpAndSettle();
+      await openFavorites(t);
+      expect(find.byKey(const ValueKey('favorite-id-Bảo hành')), findsOne);
+      await openFavorites(t);
+      expect(find.byKey(const ValueKey('favorite-id-Bảo hành')), findsNothing);
 
       await t.enterText(find.byType(TextField), 'su kien');
       await t.pumpAndSettle();

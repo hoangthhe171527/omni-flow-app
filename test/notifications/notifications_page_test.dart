@@ -145,6 +145,19 @@ void main() {
     expect(find.text('Chưa đọc · 2'), findsOneWidget);
   });
 
+  testWidgets('nhóm ngày phẳng, không còn khung bo ngoài danh sách', (t) async {
+    await pump(t);
+
+    for (final label in ['Hôm nay', 'Trước đó']) {
+      final material = t.widget<Material>(
+        find.byKey(ValueKey('notification-group-$label')),
+      );
+      expect(material.shape, isNull, reason: label);
+      expect(material.borderRadius, isNull, reason: label);
+      expect(material.clipBehavior, Clip.none, reason: label);
+    }
+  });
+
   testWidgets(
     'bấm tin nhắn mở hội thoại, bấm việc mở việc, loại lạ không đi đâu',
     (t) async {

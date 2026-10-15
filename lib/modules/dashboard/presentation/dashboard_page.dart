@@ -34,7 +34,6 @@ class DashboardPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final scheme = Theme.of(context).colorScheme;
     // Mọi thẻ đều ẩn (thiếu quyền / cờ tắt, hoặc server từ chối doanh thu →
     // provider trả null) → báo trống thay cho trang trắng. Chỉ watch doanh
     // thu khi thẻ được phép, để không gọi mạng thay người không có quyền.
@@ -46,17 +45,15 @@ class DashboardPage extends ConsumerWidget {
     }
     final none = !revenueVisible && !cards.tasks && !cards.inbox;
     return Scaffold(
-      backgroundColor: scheme.surfaceContainerLowest,
+      backgroundColor: Theme.of(context).colorScheme.surface,
       appBar: const OmniTopBar(semanticsTitle: 'Tổng quan'),
       body: RefreshIndicator(
         onRefresh: () => _refresh(ref),
         child: ListView(
           physics: const AlwaysScrollableScrollPhysics(),
-          padding: const EdgeInsets.fromLTRB(
-            OmniSpacing.lg,
-            12,
-            OmniSpacing.lg,
-            OmniSpacing.bottomSafe,
+          padding: const EdgeInsets.only(
+            top: 4,
+            bottom: OmniSpacing.bottomSafe,
           ),
           children: none
               ? const [
@@ -67,9 +64,9 @@ class DashboardPage extends ConsumerWidget {
                 ]
               : const [
                   RevenueCard(),
-                  _Gap(),
+                  _SectionDivider(),
                   MyTasksCard(),
-                  _Gap(),
+                  _SectionDivider(),
                   AwaitingReplyCard(),
                 ],
         ),
@@ -78,9 +75,15 @@ class DashboardPage extends ConsumerWidget {
   }
 }
 
-class _Gap extends StatelessWidget {
-  const _Gap();
+class _SectionDivider extends StatelessWidget {
+  const _SectionDivider();
 
   @override
-  Widget build(BuildContext context) => const SizedBox(height: 12);
+  Widget build(BuildContext context) => Divider(
+    height: 17,
+    thickness: 1,
+    indent: OmniSpacing.lg,
+    endIndent: OmniSpacing.lg,
+    color: Theme.of(context).colorScheme.outlineVariant,
+  );
 }

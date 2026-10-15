@@ -78,9 +78,19 @@ void main() {
       });
     });
 
-    test('cover lạ bị app từ chối (assert)', () {
-      expect(() => PlanPatch(cover: 'https://x/y.png'), throwsAssertionError);
-      expect(() => PlanPatch(cover: 'khong-co'), throwsAssertionError);
+    test('cover JSON chỉ nhận token cũ; ảnh phải qua endpoint multipart', () {
+      expect(PlanPatch(cover: OmniCovers.names.first).toJson(), {
+        'cover': OmniCovers.names.first,
+      });
+      expect(
+        () =>
+            PlanPatch(cover: 'https://cdn.example.com/projects/p1/cover.webp'),
+        throwsAssertionError,
+      );
+      expect(
+        () => PlanPatch(cover: '/api/v1/projects/media/tenant/p1.webp'),
+        throwsAssertionError,
+      );
     });
 
     test('member_ids và member_roles đi cùng nhau', () async {

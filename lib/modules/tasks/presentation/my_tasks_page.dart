@@ -56,6 +56,7 @@ class _MyTasksPageState extends ConsumerState<MyTasksPage> {
     final scheme = Theme.of(context).colorScheme;
     final bucket = ref.watch(taskBucketProvider);
     final tasks = ref.watch(myTasksProvider);
+    final topBarSlot = OmniTopBarSlot.maybeOf(context);
 
     return Scaffold(
       appBar: OmniAppBar(
@@ -79,7 +80,13 @@ class _MyTasksPageState extends ConsumerState<MyTasksPage> {
             // Giữ số cũ trong lúc đếm lại: `valueOrNull` mang giá trị trước
             // qua trạng thái đang tải, nên chuông không nháy về 0.
             unread: ref.watch(unreadNotificationCountProvider).valueOrNull ?? 0,
-            onTap: () => context.pushNamed(NotificationRoutes.centre),
+            onTap: (anchor) {
+              if (topBarSlot case final slot?) {
+                slot.onBell(context, anchor);
+              } else {
+                context.pushNamed(NotificationRoutes.centre);
+              }
+            },
           ),
         ],
         bottom: PreferredSize(
@@ -311,25 +318,41 @@ class _TickOnSwipe extends StatelessWidget {
 ///
 /// 48dp of target, and the count is announced rather than left as a red dot a
 /// screen reader would skip.
-class _BellButton extends StatelessWidget {
+class _BellButton extends StatefulWidget {
   const _BellButton({required this.unread, required this.onTap});
 
   final int unread;
-  final VoidCallback onTap;
+  final ValueChanged<Rect> onTap;
+
+  @override
+  State<_BellButton> createState() => _BellButtonState();
+}
+
+class _BellButtonState extends State<_BellButton> {
+  final _buttonKey = GlobalKey(debugLabel: 'MyTasksBell');
+
+  void _open() {
+    final box = _buttonKey.currentContext?.findRenderObject() as RenderBox?;
+    if (box == null || !box.hasSize) return;
+    widget.onTap(box.localToGlobal(Offset.zero) & box.size);
+  }
 
   @override
   Widget build(BuildContext context) {
     return Semantics(
+      key: _buttonKey,
       button: true,
-      label: unread > 0 ? 'Thông báo, $unread chưa đọc' : 'Thông báo',
+      label: widget.unread > 0
+          ? 'Thông báo, ${widget.unread} chưa đọc'
+          : 'Thông báo',
       child: IconButton(
-        onPressed: onTap,
+        onPressed: _open,
         iconSize: 24,
         icon: Stack(
           clipBehavior: Clip.none,
           children: [
             const Icon(Icons.notifications_none_rounded),
-            if (unread > 0)
+            if (widget.unread > 0)
               Positioned(
                 top: -4,
                 right: -6,
@@ -343,7 +366,7 @@ class _BellButton extends StatelessWidget {
                     borderRadius: OmniRadius.pillAll,
                   ),
                   child: Text(
-                    unread > 99 ? '99+' : '$unread',
+                    widget.unread > 99 ? '99+' : '${widget.unread}',
                     textAlign: TextAlign.center,
                     style: OmniType.micro.copyWith(
                       color: Colors.white,

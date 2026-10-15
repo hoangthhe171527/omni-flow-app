@@ -132,7 +132,7 @@ class _JumpSimulation extends Simulation {
   bool isDone(double time) => true;
 }
 
-/// Một cột của bảng (`.col`): rãnh bo 8, đầu cột 44 (tên, viên đếm, ⋯),
+/// Một cột của bảng (`.col`): rãnh phẳng, đầu cột 44 (tên, viên đếm, ⋯),
 /// thẻ cuộn dọc TRONG cột, đáy "Thêm công việc".
 ///
 /// Có [drag] thì giữ thẻ ~400ms để nhấc lên và thả trong cùng cột hoặc sang
@@ -170,8 +170,9 @@ class BoardColumn extends StatefulWidget {
   /// null = không có quyền tạo việc: ẩn "Thêm công việc".
   final VoidCallback? onAddTask;
 
-  /// null = không sửa được nhóm việc: ẩn ⋯.
-  final VoidCallback? onOptions;
+  /// null = không sửa được nhóm việc: ẩn ⋯. Khi chạm, trả vùng của nút để
+  /// menu nổi neo đúng tại nơi người dùng vừa thao tác.
+  final ValueChanged<Rect>? onOptions;
 
   /// Vị trí của cột trên bảng, để [drag] biết đích là cột nào.
   final int columnIndex;
@@ -365,7 +366,6 @@ class _BoardColumnState extends State<BoardColumn> {
             color: hot
                 ? OmniTaskTones.of(context).today.background
                 : scheme.surfaceContainerHighest,
-            borderRadius: BorderRadius.circular(8),
           ),
           child: Stack(
             fit: StackFit.passthrough,
@@ -415,7 +415,6 @@ class _BoardColumnState extends State<BoardColumn> {
                     key: const Key('column-drop-border'),
                     duration: duration,
                     decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(8),
                       border: Border.all(
                         color: hot ? scheme.primary : Colors.transparent,
                         width: 2,
@@ -471,7 +470,7 @@ class _Header extends StatelessWidget {
 
   final String name;
   final int count;
-  final VoidCallback? onOptions;
+  final ValueChanged<Rect>? onOptions;
 
   @override
   Widget build(BuildContext context) {
@@ -521,23 +520,29 @@ class _Header extends StatelessWidget {
             ),
             if (onOptions != null) ...[
               const SizedBox(width: 8),
-              IconButton(
-                tooltip: 'Tuỳ chọn nhóm việc',
-                onPressed: onOptions,
-                padding: EdgeInsets.zero,
-                constraints: const BoxConstraints.tightFor(
-                  width: 44,
-                  height: 44,
-                ),
-                style: IconButton.styleFrom(
-                  shape: const RoundedRectangleBorder(
-                    borderRadius: BorderRadius.all(Radius.circular(6)),
+              Builder(
+                builder: (buttonContext) => IconButton(
+                  tooltip: 'Tuỳ chọn nhóm việc',
+                  onPressed: () {
+                    final box = buttonContext.findRenderObject() as RenderBox?;
+                    if (box == null || !box.hasSize) return;
+                    onOptions!(box.localToGlobal(Offset.zero) & box.size);
+                  },
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints.tightFor(
+                    width: 44,
+                    height: 44,
                   ),
-                ),
-                icon: Icon(
-                  Icons.more_horiz_rounded,
-                  size: OmniIconSize.md,
-                  color: scheme.onSurfaceVariant,
+                  style: IconButton.styleFrom(
+                    shape: const RoundedRectangleBorder(
+                      borderRadius: BorderRadius.all(Radius.circular(6)),
+                    ),
+                  ),
+                  icon: Icon(
+                    Icons.more_horiz_rounded,
+                    size: OmniIconSize.md,
+                    color: scheme.onSurfaceVariant,
+                  ),
                 ),
               ),
             ],

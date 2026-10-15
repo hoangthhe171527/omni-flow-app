@@ -57,6 +57,7 @@ class MyTasksCard extends ConsumerWidget {
     return OmniCollapsibleCard(
       title: 'Việc của tôi',
       storageKey: 'dashboard.my-tasks',
+      flat: true,
       count: page?.pagination.total,
       footer: items.isEmpty
           ? null

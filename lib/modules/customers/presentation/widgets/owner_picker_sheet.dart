@@ -58,9 +58,16 @@ class _OwnerPickerSheetState extends ConsumerState<_OwnerPickerSheet> {
                 OmniSpacing.sm,
               ),
               child: TextField(
-                decoration: const InputDecoration(
-                  prefixIcon: Icon(Icons.search_rounded),
+                style: OmniType.search.copyWith(
+                  color: scheme.onSurface,
+                  fontStyle: FontStyle.normal,
+                ),
+                decoration: InputDecoration(
+                  prefixIcon: const Icon(Icons.search_rounded),
                   hintText: 'Tìm người',
+                  hintStyle: OmniType.searchHint.copyWith(
+                    color: scheme.onSurfaceVariant,
+                  ),
                 ),
                 onChanged: (v) =>
                     setState(() => _query = v.trim().toLowerCase()),
