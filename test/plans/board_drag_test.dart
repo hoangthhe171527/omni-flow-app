@@ -229,15 +229,16 @@ void main() {
     expect(tasksApi.moves.single, ('t1', 's2', null));
   });
 
-  testWidgets('cột đích viền primary 2px + ô chỗ trống; cột gốc không có ô '
-      'chỗ trống', (t) async {
+  testWidgets('cột đang rê có viền primary 2px + đúng một ô chỗ trống', (
+    t,
+  ) async {
     await pumpBoard(t);
     final g = await lift(t, 'Bảo hành W106');
 
-    // Còn ở cột gốc: viền sáng, chưa có ô chỗ trống.
+    // Cùng-cột cũng có ô chỗ trống để cho biết vị trí sắp xếp mới.
     await g.moveBy(const Offset(0, 8));
     await t.pump(const Duration(milliseconds: 250));
-    expect(find.byKey(const Key('drop-placeholder')), findsNothing);
+    expect(find.byKey(const Key('drop-placeholder')), findsOneWidget);
 
     await g.moveTo(aboveFirstOfColumn2(t));
     await t.pump(const Duration(milliseconds: 250));
@@ -301,11 +302,26 @@ void main() {
     await t.pumpAndSettle();
   });
 
-  testWidgets('thả về cột cũ → không gọi API', (t) async {
+  testWidgets('thả xuống vị trí khác trong cùng nhóm → cập nhật order', (
+    t,
+  ) async {
     await pumpBoard(t);
     final g = await lift(t, 'Bảo hành W106');
     await g.moveTo(
       t.getCenter(find.text('Kiểm tra đàn Kawai ND21')) + const Offset(0, 30),
+    );
+    await t.pump();
+    await g.up();
+    await t.pumpAndSettle();
+
+    expect(tasksApi.moves.single, ('t1', 's1', 3.0));
+  });
+
+  testWidgets('thả lại đúng vị trí cũ → không gọi API', (t) async {
+    await pumpBoard(t);
+    final g = await lift(t, 'Bảo hành W106');
+    await g.moveTo(
+      t.getCenter(find.text('Kiểm tra đàn Kawai ND21')) - const Offset(0, 80),
     );
     await t.pump();
     await g.up();

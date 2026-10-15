@@ -2,11 +2,8 @@ import 'package:flutter/material.dart';
 
 /// Tám nền cho thẻ dự án.
 ///
-/// Là TÊN, không phải ảnh: `cover` trên dự án lưu `teal-1`, và app lẫn web mỗi
-/// bên dịch tên đó thành gradient của riêng mình. Không endpoint upload, không
-/// dung lượng, và — quan trọng nhất — không có bài toán CHỮ ĐÈ LÊN ẢNH: tên dự
-/// án viết bằng chữ trắng trên một tấm ảnh sáng hoặc rối thì không đọc được,
-/// và người tạo không biết trước điều đó lúc bấm chọn.
+/// Các token gradient cũ. API cũng có thể trả URL ảnh trong `cover`; phần nhận
+/// diện URL và fallback màu hệ thống nằm ở `ProjectCoverSurface`.
 ///
 /// Mọi màu ở đây đủ tối cho chữ trắng; `omni_covers_test.dart` giữ điều đó
 /// bằng một ngưỡng độ sáng. Thêm nền mới mà bài kiểm đỏ thì **chỉnh màu, đừng

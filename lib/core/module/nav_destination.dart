@@ -43,6 +43,13 @@ enum NavWeight { primary, secondary }
 /// vàng riêng cho "mới", nên hai loại số không được chung một màu.
 enum NavBadgeTone { unread, alert }
 
+/// Hình thức hiển thị của chỉ báo trên mục điều hướng.
+///
+/// [count] dành cho số liệu cần đọc chính xác (việc trễ, lỗi kênh). [dot]
+/// chỉ trả lời câu hỏi có/không, phù hợp với Hộp thư: số tin trong từng hội
+/// thoại vẫn được giữ trong dữ liệu nhưng không làm thanh điều hướng ồn.
+enum NavBadgeDisplay { count, dot }
+
 /// Một mục điều hướng do module khai báo.
 ///
 /// Thay cho cặp `ModuleDestination` + `ModuleMenuEntry` cũ. Cặp đó bắt module
@@ -64,6 +71,7 @@ class ModuleNavEntry {
     this.access = const AccessRequirement.open(),
     this.badge,
     this.badgeTone = NavBadgeTone.unread,
+    this.badgeDisplay = NavBadgeDisplay.count,
     this.feature,
   });
 
@@ -102,4 +110,7 @@ class ModuleNavEntry {
 
   /// Số đếm là "chưa đọc" hay "cần xử lý" — quyết định màu của huy hiệu.
   final NavBadgeTone badgeTone;
+
+  /// Hiện con số hay chỉ một chấm có/không.
+  final NavBadgeDisplay badgeDisplay;
 }

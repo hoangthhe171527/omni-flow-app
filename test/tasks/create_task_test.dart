@@ -30,6 +30,7 @@ void main() {
   Widget host({
     String? planId = 'p1',
     String? sectionId = 's2',
+    double? order,
     List<TaskSection> withSections = sections,
   }) {
     adapter = _RecordingAdapter();
@@ -50,6 +51,7 @@ void main() {
         home: CreateTaskPage(
           planId: planId,
           sectionId: sectionId,
+          order: order,
           sections: withSections,
         ),
       ),
@@ -116,6 +118,20 @@ void main() {
 
       expect(sentBody()['project_id'], 'p1');
       expect(sentBody()['section_id'], 's2');
+    });
+
+    testWidgets('việc tạo từ bảng giữ order để kéo sắp xếp được về sau', (
+      tester,
+    ) async {
+      await tester.pumpWidget(host(order: 7));
+      await tester.pumpAndSettle();
+
+      await tester.enterText(find.byType(TextField), 'YAMAHA U3');
+      await tester.pump();
+      await tester.tap(find.text('Tạo việc'));
+      await tester.pumpAndSettle();
+
+      expect(sentBody()['order'], 7);
     });
 
     testWidgets('đổi được sang nhóm việc khác', (tester) async {

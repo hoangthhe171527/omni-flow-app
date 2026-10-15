@@ -12,6 +12,7 @@ import 'package:omni_app/modules/plans/presentation/edit_sections_page.dart';
 import 'package:omni_app/modules/plans/presentation/plan_board_page.dart';
 import 'package:omni_app/modules/plans/presentation/section_order_page.dart';
 import 'package:omni_app/modules/plans/presentation/widgets/board_column.dart';
+import 'package:omni_app/modules/plans/presentation/widgets/project_cover.dart';
 import 'package:omni_app/modules/settings/application/appearance_providers.dart';
 import 'package:omni_app/modules/tasks/application/tasks_providers.dart';
 import 'package:omni_app/modules/tasks/data/tasks_api.dart';
@@ -494,8 +495,10 @@ void main() {
   testWidgets('(g) nền là gradient của cover', (tester) async {
     await pumpBoard(tester);
 
+    final surface = find.byKey(const Key('board-background'));
+    expect(tester.widget<ProjectCoverSurface>(surface).cover, 'plum-1');
     final bg = tester.widget<DecoratedBox>(
-      find.byKey(const Key('board-background')),
+      find.descendant(of: surface, matching: find.byType(DecoratedBox)).first,
     );
     expect(
       (bg.decoration as BoxDecoration).gradient,

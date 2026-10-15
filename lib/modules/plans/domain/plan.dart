@@ -177,7 +177,7 @@ class Plan {
   final String? description;
   final String? color;
 
-  /// TÊN nền cho thẻ dự án (`teal-1`), không phải URL.
+  /// Tên gradient cũ (`teal-1`) hoặc URL ảnh do `/projects/{id}/cover` sinh.
   ///
   /// Null với mọi dự án tạo trước tính năng này — `OmniCovers.gradientOf` tự
   /// rơi về nền mặc định, nên không chỗ nào phải kiểm null.

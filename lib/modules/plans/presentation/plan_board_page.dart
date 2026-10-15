@@ -39,6 +39,7 @@ import 'widgets/board_column.dart';
 import 'widgets/board_drag.dart';
 import 'widgets/board_zoom.dart';
 import 'widgets/person_filter_sheet.dart';
+import 'widgets/project_cover.dart';
 import 'widgets/plan_copy_move_sheets.dart';
 import 'widgets/plan_menu_sheet.dart';
 import 'widgets/transfer_owner_sheet.dart';
@@ -100,7 +101,8 @@ class _PlanBoardPageState extends ConsumerState<PlanBoardPage> {
 
   /// Thẻ vừa thả, đang chờ server: bảng vẽ nó ở chỗ mới ngay (lạc quan). Xoá
   /// khi dữ liệu mới về hoặc khi lưu lỗi.
-  ({String taskId, int toColumn, int index, String sectionId})? _pending;
+  ({String taskId, int toColumn, int index, String sectionId, double? order})?
+  _pending;
 
   /// Các ngón đang chạm, theo thứ tự chạm; và ngón đang giữ thẻ (ngón chạm
   /// gần nhất lúc thẻ nhấc lên). Chỉ ngón ấy nhấc lên mới kết thúc lượt kéo.
@@ -244,7 +246,14 @@ class _PlanBoardPageState extends ConsumerState<PlanBoardPage> {
       final pending = _pending;
       if (pending == null || next is! AsyncData<PlanTasks>) return;
       final now = next.value.tasks.where((t) => t.id == pending.taskId);
-      if (now.isEmpty || now.first.sectionId == pending.sectionId) {
+      final saved = now.firstOrNull;
+      final sectionSaved = saved?.sectionId == pending.sectionId;
+      final orderSaved =
+          pending.order == null ||
+          (saved != null &&
+              saved.hasOrder &&
+              (saved.order - pending.order!).abs() < 0.000001);
+      if (saved == null || (sectionSaved && orderSaved)) {
         setState(() => _pending = null);
       }
     });
@@ -272,11 +281,10 @@ class _PlanBoardPageState extends ConsumerState<PlanBoardPage> {
       value: SystemUiOverlayStyle.light,
       child: Scaffold(
         backgroundColor: OmniCovers.colorOf(loaded?.cover),
-        body: DecoratedBox(
+        body: ProjectCoverSurface(
           key: const Key('board-background'),
-          decoration: BoxDecoration(
-            gradient: OmniCovers.gradientOf(loaded?.cover),
-          ),
+          cover: loaded?.cover,
+          color: loaded?.color,
           child: Column(
             children: [
               _GlassHeader(
@@ -461,8 +469,18 @@ class _PlanBoardPageState extends ConsumerState<PlanBoardPage> {
                           canComplete: canComplete,
                           columnIndex: index,
                           // Cột dựng tạm (id rỗng) không có nhóm để thả vào.
-                          drag: canDragTasks && real ? _drag : null,
-                          canDrag: (t) => canDragTasks && !t.isLocked,
+                          drag:
+                              canDragTasks &&
+                                  real &&
+                                  !board.truncated &&
+                                  _pending == null
+                              ? _drag
+                              : null,
+                          canDrag: (t) =>
+                              canDragTasks &&
+                              !board.truncated &&
+                              _pending == null &&
+                              !t.isLocked,
                           onDragUpdate: _onDragUpdate,
                           onDragEnd: _endDrag,
                           onOpenTask: (task) => context.pushNamed(
@@ -574,9 +592,9 @@ class _PlanBoardPageState extends ConsumerState<PlanBoardPage> {
     _drag.clear();
   }
 
-  /// Thả [task] vào cột [toColumn] tại chỗ chèn [index] (R3: về cột cũ thì
-  /// không làm gì). Vẽ ngay, gửi `PUT {section_id, order}`; lỗi thì thẻ về chỗ
-  /// cũ và báo câu của server (R6).
+  /// Thả [task] vào cột [toColumn] tại chỗ chèn [index], kể cả đổi thứ tự
+  /// trong cùng nhóm. Vẽ ngay, gửi `PUT {section_id, order}`; lỗi thì thẻ về
+  /// chỗ cũ và báo câu của server (R6).
   Future<void> _drop(
     BoardBuckets board,
     Task task,
@@ -588,7 +606,14 @@ class _PlanBoardPageState extends ConsumerState<PlanBoardPage> {
     // trước khi lượt thả tới đây.
     final from = board.buckets.indexWhere((b) => b.any((t) => t.id == task.id));
     _endDrag();
-    if (sectionId.isEmpty || from < 0 || from == toColumn) return;
+    if (sectionId.isEmpty || from < 0 || _pending != null) return;
+    final fromIndex = board.buckets[from].indexWhere((t) => t.id == task.id);
+    final targetLength = board.buckets[toColumn]
+        .where((t) => t.id != task.id)
+        .length;
+    final safeIndex = index.clamp(0, targetLength);
+    // Thả lại đúng vị trí cũ không tạo request và không làm danh sách nháy.
+    if (from == toColumn && safeIndex == fromIndex) return;
     // `order` tính trên CẢ cột đích (không lọc người / tìm kiếm): neo vào thẻ
     // thấy được phía trên nhưng không nhảy qua thẻ ẩn nằm ngay sau nó.
     final visible = board.buckets[toColumn];
@@ -607,8 +632,20 @@ class _PlanBoardPageState extends ConsumerState<PlanBoardPage> {
     final order = boardDropOrder(
       others,
       task,
-      fullInsertIndex(others, visible, index),
+      fullInsertIndex(others, visible, safeIndex),
     );
+    // Một số việc legacy không có `order`. Không gửi một request không thể
+    // thay đổi thứ tự trong cùng nhóm; tải lại sẽ lập tức bật thẻ về chỗ cũ.
+    if (from == toColumn && order == null) {
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          const SnackBar(
+            content: Text('Chưa sắp xếp được việc cũ này. Vui lòng thử lại.'),
+          ),
+        );
+      return;
+    }
     final container = ProviderScope.containerOf(context);
     final messenger = ScaffoldMessenger.of(context);
     final api = ref.read(tasksApiProvider);
@@ -616,8 +653,9 @@ class _PlanBoardPageState extends ConsumerState<PlanBoardPage> {
       _pending = (
         taskId: task.id,
         toColumn: toColumn,
-        index: index,
+        index: safeIndex,
         sectionId: sectionId,
+        order: order,
       );
     });
     try {
@@ -691,11 +729,20 @@ class _PlanBoardPageState extends ConsumerState<PlanBoardPage> {
 
   /// Mở màn tạo việc với kế hoạch + nhóm của cột đã chạm điền sẵn.
   Future<void> _createTask(Plan plan, String? sectionId) async {
+    final loaded = ref.read(planTasksProvider(widget.planId)).valueOrNull;
+    final sameSection = loaded?.tasks
+        .where((task) => task.sectionId == sectionId)
+        .toList();
+    final ordered = sameSection?.where((task) => task.hasOrder).toList();
+    final order = ordered == null || ordered.isEmpty
+        ? (sameSection?.length ?? 0).toDouble()
+        : ordered.map((task) => task.order).reduce(math.max) + 1;
     final created = await context.pushNamed<String>(
       TaskRoutes.create,
       extra: CreateTaskArgs(
         planId: plan.id,
         sectionId: sectionId,
+        order: order,
         // Chép sang value type của module tasks: tasks không biết `PlanSection`.
         sections: [
           for (final s in plan.sections) TaskSection(id: s.id, name: s.name),

@@ -3,58 +3,10 @@ import 'package:flutter/material.dart';
 import '../../../../design/components/components.dart';
 import '../../../../design/tokens/tokens.dart';
 import '../../domain/plan.dart';
+import 'project_cover.dart';
 
-/// Chữ cái đầu viết hoa của một tên, cho ô định danh 28×28.
-String initialOf(String name) {
-  final trimmed = name.trim();
-  if (trimmed.isEmpty) return '?';
-
-  return trimmed.characters.first.toUpperCase();
-}
-
-/// Ô vuông 28 bo 6 mang chữ cái đầu (`Main.dc.html .tile`).
-class InitialTile extends StatelessWidget {
-  const InitialTile({
-    super.key,
-    this.tileKey,
-    required this.name,
-    required this.color,
-  });
-
-  /// Khoá đặt lên chính ô màu (để test đọc màu nền).
-  final Key? tileKey;
-
-  final String name;
-  final Color color;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      key: tileKey,
-      width: 28,
-      height: 28,
-      alignment: Alignment.center,
-      decoration: BoxDecoration(
-        color: color,
-        borderRadius: const BorderRadius.all(Radius.circular(6)),
-      ),
-      // Chữ cái đầu là trang trí: tên đầy đủ đã đọc ngay bên cạnh.
-      child: ExcludeSemantics(
-        child: Text(
-          initialOf(name),
-          style: OmniType.micro.copyWith(
-            fontWeight: FontWeight.w600,
-            color: OmniLabelColors.textOn(color),
-            height: 1,
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-/// Một kế hoạch trong nhóm team (`Main.dc.html .pl`): dòng 48, vạch trên, ô 28
-/// màu cover có chữ cái đầu, tên w500 một dòng, "N việc đang mở", "N trễ" đỏ.
+/// Một kế hoạch trong nhóm team (`Main.dc.html .pl`): dòng 48, vạch trên, dấu
+/// cover nhỏ (không giả làm avatar), tên w500, "N việc đang mở", "N trễ" đỏ.
 ///
 /// Ô 44 bên phải là sao Yêu thích (Nhóm 2) khi API gửi `is_favorite` và có
 /// [onToggleFavorite]: sao 19, tô `star` khi bật, viền `faint` khi tắt.
@@ -105,10 +57,10 @@ class PlanTile extends StatelessWidget {
           ),
           child: Row(
             children: [
-              InitialTile(
-                tileKey: const Key('plan-tile-swatch'),
-                name: plan.name,
-                color: OmniCovers.colorOf(plan.cover),
+              ProjectCoverMarker(
+                markerKey: const Key('plan-tile-swatch'),
+                cover: plan.cover,
+                color: plan.color,
               ),
               const SizedBox(width: 10),
               Expanded(

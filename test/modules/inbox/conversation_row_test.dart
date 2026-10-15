@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:omni_app/core/domain/channel.dart';
+import 'package:omni_app/design/components/components.dart';
 import 'package:omni_app/design/tokens/omni_colors.dart';
 import 'package:omni_app/design/theme/omni_theme.dart';
 import 'package:omni_app/modules/inbox/domain/conversation.dart';
@@ -49,7 +50,9 @@ void main() {
     expect(find.textContaining('Trung Nguyên'), findsOneWidget);
     expect(find.bySemanticsLabel('Nhãn: Đặt lịch'), findsOneWidget);
     expect(find.text('HT'), findsOneWidget);
-    expect(find.text('2'), findsOneWidget);
+    expect(find.byType(OmniUnreadDot), findsOneWidget);
+    expect(find.bySemanticsLabel('Chưa đọc'), findsOneWidget);
+    expect(find.text('2'), findsNothing);
   });
 
   test(

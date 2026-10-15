@@ -321,3 +321,42 @@ class OmniCountBadge extends StatelessWidget {
     );
   }
 }
+
+/// Chấm trạng thái chưa đọc — chỉ biểu thị có/không, không lộ số lượng.
+///
+/// Vàng mặt trời là màu đã dành riêng cho “có cái mới” trong Orbit. Vành mực
+/// mảnh giúp chấm 8dp vẫn tách khỏi cả nền sáng lẫn nền ảnh; semantics mặc
+/// định giữ trạng thái cho trình đọc màn hình dù không còn chữ số hữu hình.
+class OmniUnreadDot extends StatelessWidget {
+  const OmniUnreadDot({
+    super.key,
+    this.size = 8,
+    this.excludeSemantics = false,
+  });
+
+  final double size;
+  final bool excludeSemantics;
+
+  @override
+  Widget build(BuildContext context) {
+    final dot = Container(
+      key: const Key('unread-dot'),
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        color: OmniColors.sun,
+        shape: BoxShape.circle,
+        border: Border.all(color: OmniColors.ink, width: 1),
+      ),
+    );
+
+    if (excludeSemantics) return ExcludeSemantics(child: dot);
+
+    return Semantics(
+      container: true,
+      label: 'Chưa đọc',
+      excludeSemantics: true,
+      child: dot,
+    );
+  }
+}

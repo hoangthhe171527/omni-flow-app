@@ -24,6 +24,7 @@ class DirectoryTile {
     required this.onTap,
     this.badge,
     this.badgeTone = NavBadgeTone.unread,
+    this.badgeDisplay = NavBadgeDisplay.count,
     this.id,
   });
 
@@ -37,6 +38,7 @@ class DirectoryTile {
   final VoidCallback onTap;
   final ProviderListenable<int>? badge;
   final NavBadgeTone badgeTone;
+  final NavBadgeDisplay badgeDisplay;
 }
 
 typedef DirectorySection = ({String label, List<DirectoryTile> tiles});
@@ -66,6 +68,7 @@ List<DirectorySection> buildDirectorySections(
     onTap: () => open(e.routeName),
     badge: e.badge,
     badgeTone: e.badgeTone,
+    badgeDisplay: e.badgeDisplay,
     id: e.routeName,
   );
   List<DirectoryTile> of(List<NavArea> areas) => [
@@ -353,9 +356,14 @@ class _FeatureTile extends ConsumerWidget {
     final badgeProvider = tile.badge;
     final count = badgeProvider == null ? 0 : ref.watch(badgeProvider);
 
+    final badgeLabel = count <= 0
+        ? tile.label
+        : tile.badgeDisplay == NavBadgeDisplay.dot
+        ? '${tile.label}, có tin chưa đọc'
+        : '${tile.label}, $count';
     final content = Semantics(
       button: true,
-      label: count > 0 ? '${tile.label}, $count' : tile.label,
+      label: badgeLabel,
       hint: tile.subtitle,
       onTap: tile.onTap,
       excludeSemantics: true,
@@ -399,10 +407,16 @@ class _FeatureTile extends ConsumerWidget {
                 Positioned(
                   top: 4,
                   right: 12,
-                  child: switch (tile.badgeTone) {
-                    NavBadgeTone.unread => OmniCountBadge.unread(count: count),
-                    NavBadgeTone.alert => OmniCountBadge.alert(count: count),
-                  },
+                  child: tile.badgeDisplay == NavBadgeDisplay.dot
+                      ? const OmniUnreadDot(excludeSemantics: true)
+                      : switch (tile.badgeTone) {
+                          NavBadgeTone.unread => OmniCountBadge.unread(
+                            count: count,
+                          ),
+                          NavBadgeTone.alert => OmniCountBadge.alert(
+                            count: count,
+                          ),
+                        },
                 ),
             ],
           ),

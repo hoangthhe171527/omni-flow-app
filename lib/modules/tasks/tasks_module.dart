@@ -61,6 +61,7 @@ class TasksModule extends OmniModule {
         return CreateTaskPage(
           planId: args.planId,
           sectionId: args.sectionId,
+          order: args.order,
           sections: args.sections,
           initialTitle: args.initialTitle,
         );

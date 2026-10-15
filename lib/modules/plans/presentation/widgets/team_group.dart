@@ -8,9 +8,10 @@ import '../../../../design/tokens/tokens.dart';
 import '../../application/plans_providers.dart';
 import '../../domain/plan.dart';
 import 'plan_tile.dart';
+import 'project_cover.dart';
 
 /// Một team gập/mở được (`Main.dc.html .grp`): khung surface viền bo 8, đầu
-/// nhóm 48 (ô 28 màu team, tên, "N kế hoạch", mũi tên xoay 180° khi mở), rồi
+/// nhóm 48 (tên, "N kế hoạch", mũi tên xoay 180° khi mở), rồi
 /// các dòng kế hoạch.
 ///
 /// [plans] là danh sách ĐÃ LỌC theo ô tìm; "N kế hoạch" luôn đếm cả team.
@@ -31,6 +32,8 @@ class TeamGroup extends StatelessWidget {
     this.rise = true,
     this.favoriteOf,
     this.onToggleFavorite,
+    this.canDragPlan,
+    this.onMovePlan,
   });
 
   final TeamWithPlans group;
@@ -60,16 +63,70 @@ class TeamGroup extends StatelessWidget {
   /// Bấm sao (Nhóm 2). null = không có sao (API cũ hoặc không bấm được).
   final ValueChanged<Plan>? onToggleFavorite;
 
-  Widget _tile(Plan plan) => PlanTile(
-    plan: plan,
-    onTap: () => onOpenPlan(plan),
-    favorite: favoriteOf?.call(plan),
-    onToggleFavorite: onToggleFavorite == null
-        ? null
-        : () => onToggleFavorite!(plan),
-  );
+  /// Dự án chỉ nhấc được khi người dùng có quyền quản lý chính dự án đó.
+  final bool Function(Plan plan)? canDragPlan;
 
-  /// Màu ô của team: `color` do server lưu, thiếu hay sai thì xám phụ.
+  /// Thả dự án vào team này. null = team tổng hợp không nhận thả.
+  final ValueChanged<Plan>? onMovePlan;
+
+  Widget _tile(Plan plan) {
+    final tile = PlanTile(
+      plan: plan,
+      onTap: () => onOpenPlan(plan),
+      favorite: favoriteOf?.call(plan),
+      onToggleFavorite: onToggleFavorite == null
+          ? null
+          : () => onToggleFavorite!(plan),
+    );
+    if (canDragPlan?.call(plan) != true || onMovePlan == null) return tile;
+
+    return LongPressDraggable<Plan>(
+      data: plan,
+      delay: const Duration(milliseconds: 400),
+      feedback: Material(
+        elevation: 8,
+        borderRadius: OmniRadius.mdAll,
+        color: Colors.transparent,
+        child: Container(
+          width: 240,
+          height: 48,
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: OmniRadius.mdAll,
+            boxShadow: const [
+              BoxShadow(
+                color: Color(0x29000000),
+                blurRadius: 18,
+                offset: Offset(0, 6),
+              ),
+            ],
+          ),
+          child: Row(
+            children: [
+              ProjectCoverMarker(cover: plan.cover, color: plan.color),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  plan.name,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: OmniType.bodySm.copyWith(
+                    fontWeight: FontWeight.w600,
+                    color: OmniColors.ink,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+      childWhenDragging: Opacity(opacity: .32, child: tile),
+      child: tile,
+    );
+  }
+
+  /// Màu team do server lưu, dùng ở các bề mặt thực sự cần phân biệt màu.
   static Color colorOf(String? raw) {
     return OmniLabelColors.tryParseHex(raw) ?? OmniColors.mutedForeground;
   }
@@ -80,7 +137,7 @@ class TeamGroup extends StatelessWidget {
     final motion = OmniMotion.enabled(context);
     const radius = BorderRadius.all(Radius.circular(8));
 
-    return OmniRise(
+    final card = OmniRise(
       // Trần 6 bước: nhóm thứ 20 không phải chờ cả giây mới hiện.
       delay: OmniRise.step * math.min(index, 6),
       animate: rise,
@@ -107,12 +164,6 @@ class TeamGroup extends StatelessWidget {
                     padding: const EdgeInsets.fromLTRB(12, 0, 6, 0),
                     child: Row(
                       children: [
-                        InitialTile(
-                          tileKey: const Key('team-group-swatch'),
-                          name: group.team.name,
-                          color: colorOf(group.team.color),
-                        ),
-                        const SizedBox(width: 10),
                         Expanded(
                           child: Text(
                             group.team.name,
@@ -187,6 +238,29 @@ class TeamGroup extends StatelessWidget {
             ],
           ],
         ),
+      ),
+    );
+
+    if (onMovePlan == null) return card;
+    return DragTarget<Plan>(
+      onWillAcceptWithDetails: (details) =>
+          details.data.teamId != group.team.id,
+      onAcceptWithDetails: (details) => onMovePlan!(details.data),
+      builder: (context, candidates, _) => AnimatedContainer(
+        duration: motion ? const Duration(milliseconds: 160) : Duration.zero,
+        decoration: BoxDecoration(
+          borderRadius: radius,
+          boxShadow: candidates.isEmpty
+              ? null
+              : [
+                  BoxShadow(
+                    color: scheme.primary.withValues(alpha: .28),
+                    blurRadius: 0,
+                    spreadRadius: 2,
+                  ),
+                ],
+        ),
+        child: card,
       ),
     );
   }

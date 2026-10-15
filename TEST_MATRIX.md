@@ -31,6 +31,7 @@
 | F9 | Physical-device message push | Tester | Login on one iPhone and one Android device, allow notifications, background app, receive a new inbox message, tap alert | One timely alert per message; correct conversation opens; token remains registered after resume; logout removes token | live | BLOCKED — requires build 18 installed on physical devices |
 | F10 | App Review metadata | Account Holder | Select build 19, replace iPhone/iPad screenshots, complete privacy, age rating and review information | All screenshots are final Simulator captures with fictional data; build 19 and demo credentials are selected | live | PENDING |
 | F11 | App Review privacy controls | Developer | Verify legal links, account deletion, Photos purpose strings and privacy manifest | Privacy/Support work before login and in More; deletion requires password and schedules removal; plist/manifest are valid | automated/live | PASS — mobile analyze and 83 tests pass; API flow 13 assertions pass |
+| F12 | Đồng bộ trải nghiệm app/web | Developer | Kiểm tra hộp thư chưa đọc, ảnh nền kế hoạch, avatar người dùng và kéo-thả việc/kế hoạch trên app lẫn web | Hộp thư dùng chấm chưa đọc; ảnh nền và avatar thật hiển thị nhất quán; kéo-thả cùng/khác nhóm và chuyển team tôn trọng quyền | automated/live | PASS — Flutter 2.592 ca đạt, 2 bỏ qua; web 1.889 ca đạt, 25 bỏ qua; analyze/typecheck/lint/build đạt |
 
 ## Cases
 
@@ -62,6 +63,12 @@
 | C24 | Legal links | Signed-out and signed-in user | Public website available | Open Privacy and Support from login and More | Correct HTTPS pages open and include current contact/deletion information | P0 | F11 |
 | C25 | Account deletion | Authenticated owner | Current password known | Confirm deletion from More → Account | API returns 202; account, sessions and push delivery are disabled immediately; scheduled date is within 7 days | P0 | F11 |
 | C26 | App Store-only channels | iOS user with channel write permission | Open connection sheet | Inspect available channels | Only official OAuth/API channels are offered; personal cookie/agent pairing is absent | P0 | F11 |
+| C27 | Chỉ báo hộp thư chưa đọc | User có hội thoại chưa đọc | Hộp thư có một hoặc nhiều tin chưa đọc | Mở danh sách, menu chính và bộ lọc trên app/web | Chỉ hiện một chấm nhỏ “Chưa đọc”, không lộ số lượng; bộ lọc Chưa đọc vẫn hoạt động | P0 | F12 |
+| C28 | Ảnh nền kế hoạch | User xem kế hoạch có URL ảnh, token màu hoặc không có ảnh | Mở danh sách và bảng kế hoạch trên app/web | URL ảnh được ưu tiên; token/màu hệ thống là fallback; ảnh lỗi không làm mất nội dung | P0 | F12 |
+| C29 | Phân cấp team/kế hoạch/việc | User xem cây team → kế hoạch → nhóm việc → việc | Mở danh sách trên app/web | Team, kế hoạch, nhóm việc không dùng avatar giả; chỉ người thật có avatar | P1 | F12 |
+| C30 | Kéo-thả việc | User có quyền ghi việc | Kéo việc trong cùng nhóm và sang nhóm khác | Thứ tự/nhóm cập nhật lạc quan, gửi đúng `section_id`/`order`; lỗi trả trạng thái cũ và báo rõ | P0 | F12 |
+| C31 | Kéo kế hoạch giữa team | Owner/manager hoặc người có quyền quản lý toàn bộ | Giữ kế hoạch và thả sang team khác | `team_id` được cập nhật; viewer/người chỉ có quyền đọc không kéo được | P0 | F12 |
+| C32 | Avatar người thực hiện | Việc có một hoặc nhiều người thực hiện, có/không có ảnh | Mở thẻ việc và bộ chọn người trên web | Ảnh từ API được giữ đúng theo từng người; thiếu ảnh mới dùng chữ viết tắt | P1 | F12 |
 
 ## Known issues / data prerequisites
 
