@@ -19,12 +19,14 @@ class CreateTaskArgs {
   const CreateTaskArgs({
     this.planId,
     this.sectionId,
+    this.order,
     this.sections = const [],
     this.initialTitle,
   });
 
   final String? planId;
   final String? sectionId;
+  final double? order;
   final List<TaskSection> sections;
 
   /// Tên việc điền sẵn (vd "Liên hệ {khách}" từ hộp thư).
@@ -46,6 +48,7 @@ class CreateTaskPage extends ConsumerStatefulWidget {
     super.key,
     this.planId,
     this.sectionId,
+    this.order,
     this.sections = const [],
     this.initialTitle,
   });
@@ -58,6 +61,7 @@ class CreateTaskPage extends ConsumerStatefulWidget {
 
   /// Nhóm việc điền sẵn — cột người dùng đang đứng lúc bấm tạo.
   final String? sectionId;
+  final double? order;
 
   /// Các nhóm việc của dự án, để đổi cột mà không phải gọi mạng lần nữa.
   final List<TaskSection> sections;
@@ -280,6 +284,8 @@ class _CreateTaskPageState extends ConsumerState<CreateTaskPage> {
             title: _title.text.trim(),
             projectId: widget.planId,
             sectionId: _sectionId,
+            // Chỉ giữ vị trí gợi ý khi người dùng không đổi sang nhóm khác.
+            order: _sectionId == widget.sectionId ? widget.order : null,
             assigneeIds: _assigneeIds,
             dueDate: _dueDate,
           );

@@ -129,6 +129,28 @@ void main() {
     expect(board.moved('zz', 1, 0, 's2').buckets[1], isEmpty);
   });
 
+  test('BoardBuckets.moved: đổi thứ tự trong cùng cột', () {
+    const sections = [PlanSection(id: 's1', name: 'A')];
+    final board = BoardBuckets.build(
+      (
+        tasks: [
+          t('t1', 1, section: 's1'),
+          t('t2', 2, section: 's1'),
+          t('t3', 3, section: 's1'),
+        ],
+        truncated: false,
+      ),
+      sections,
+      BoardPerson.everyone,
+    );
+
+    expect(board.moved('t1', 0, 2, 's1').buckets.single.map((e) => e.id), [
+      't2',
+      't3',
+      't1',
+    ]);
+  });
+
   group('Plan.isTaskViewer', () {
     final plan = Plan.fromJson(const {
       'id': 'p',

@@ -6,6 +6,7 @@ import '../../../../design/tokens/tokens.dart';
 import '../../../tasks/application/tasks_providers.dart';
 import '../../../team/team.dart';
 import '../../domain/plan.dart';
+import 'project_cover.dart';
 
 /// Một mục của menu kế hoạch.
 enum PlanMenuAction {
@@ -143,14 +144,11 @@ class PlanMenuSheet extends ConsumerWidget {
               padding: const EdgeInsets.only(bottom: 12),
               child: Row(
                 children: [
-                  Container(
+                  ProjectCoverMarker(
                     key: const Key('plan-menu-cover'),
-                    width: 36,
-                    height: 36,
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(8),
-                      gradient: OmniCovers.gradientOf(plan.cover),
-                    ),
+                    cover: plan.cover,
+                    color: plan.color,
+                    size: 36,
                   ),
                   const SizedBox(width: 10),
                   Expanded(

@@ -334,6 +334,7 @@ class TasksApi {
     required String title,
     String? projectId,
     String? sectionId,
+    double? order,
     List<String> assigneeIds = const [],
     DateTime? dueDate,
   }) async {
@@ -343,6 +344,7 @@ class TasksApi {
         'title': title,
         if (projectId != null && projectId.isNotEmpty) 'project_id': projectId,
         if (sectionId != null && sectionId.isNotEmpty) 'section_id': sectionId,
+        'order': ?order,
         if (assigneeIds.isNotEmpty) 'assignee_ids': assigneeIds,
         // API nhận `YYYY-MM-DD` và tự hiểu theo múi giờ nghiệp vụ. Gửi cả giờ
         // là mời nó lệch một ngày ở hai đầu tháng.

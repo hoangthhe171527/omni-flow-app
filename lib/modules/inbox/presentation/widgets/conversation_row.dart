@@ -13,7 +13,7 @@ import '../../domain/conversation.dart';
 /// Một dòng hội thoại trong hộp thư, theo `InboxPeek.dc.html`.
 ///
 ///   ● [avatar] Tên  OA · Trung Nguyên ........ giờ
-///              tin cuối ................ (2) [HT]
+///              tin cuối ................  ●  [HT]
 ///
 /// Chấm nhãn 7px ở mép trái là nhãn đầu tiên của hội thoại (màu không đứng một
 /// mình: chấm có `Semantics('Nhãn: …')`). Kênh không còn là huy hiệu trên avatar
@@ -265,15 +265,7 @@ class _ConversationRowState extends State<ConversationRow> {
                 ),
               ),
             ),
-            if (unread) ...[
-              const SizedBox(width: 8),
-              OmniCountBadge(
-                count: conversation.unread,
-                color: scheme.primary,
-                foreground: scheme.onPrimary,
-                compact: true,
-              ),
-            ],
+            if (unread) ...[const SizedBox(width: 8), const OmniUnreadDot()],
             const SizedBox(width: 8),
             _AssigneeBox(conversation: conversation),
           ],

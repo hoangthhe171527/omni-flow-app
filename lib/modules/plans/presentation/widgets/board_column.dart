@@ -135,8 +135,9 @@ class _JumpSimulation extends Simulation {
 /// Một cột của bảng (`.col`): rãnh bo 8, đầu cột 44 (tên, viên đếm, ⋯),
 /// thẻ cuộn dọc TRONG cột, đáy "Thêm công việc".
 ///
-/// Có [drag] thì giữ thẻ ~400ms để nhấc lên và thả sang cột khác; cả cột là
-/// một `DragTarget`, ô chỗ trống chèn tại chỉ số tính từ tâm các thẻ.
+/// Có [drag] thì giữ thẻ ~400ms để nhấc lên và thả trong cùng cột hoặc sang
+/// cột khác; cả cột là một `DragTarget`, ô chỗ trống chèn tại chỉ số tính từ
+/// tâm các thẻ.
 class BoardColumn extends StatefulWidget {
   const BoardColumn({
     super.key,
@@ -333,10 +334,25 @@ class _BoardColumnState extends State<BoardColumn> {
     final body = ListenableBuilder(
       listenable: drag ?? const _NoListenable(),
       builder: (context, _) {
-        final hot = drag != null && drag.targetColumn == widget.columnIndex;
+        final hot = drag?.targetColumn == widget.columnIndex;
         final tasks = widget.tasks;
-        final slotAt = hot && drag.fromColumn != widget.columnIndex
-            ? math.min(drag.targetIndex ?? tasks.length, tasks.length)
+        final sameColumn =
+            drag != null && hot && drag.fromColumn == widget.columnIndex;
+        final draggedId = sameColumn ? drag.task?.id : null;
+        // Trong cột nguồn, bỏ thẻ đang kéo khỏi danh sách rồi đặt đúng một ô
+        // chờ ở vị trí mới. Giữ cả `childWhenDragging` lẫn ô chờ sẽ tạo hai
+        // khoảng trống và làm chỉ số thả lệch một hàng.
+        final visibleTasks = draggedId != null
+            ? [
+                for (final task in tasks)
+                  if (task.id != draggedId) task,
+              ]
+            : tasks;
+        final slotAt = hot
+            ? math.min(
+                drag!.targetIndex ?? visibleTasks.length,
+                visibleTasks.length,
+              )
             : null;
         _builtSlot = slotAt;
         final duration = OmniMotion.enabled(context)
@@ -367,7 +383,7 @@ class _BoardColumnState extends State<BoardColumn> {
                     child: ListView.separated(
                       shrinkWrap: true,
                       padding: const EdgeInsets.symmetric(horizontal: 8),
-                      itemCount: tasks.length + (slotAt == null ? 0 : 1),
+                      itemCount: visibleTasks.length + (slotAt == null ? 0 : 1),
                       separatorBuilder: (_, _) => const SizedBox(height: 8),
                       itemBuilder: (context, index) {
                         if (index == slotAt) {
@@ -380,7 +396,7 @@ class _BoardColumnState extends State<BoardColumn> {
                             ? index - 1
                             : index;
 
-                        return _card(tasks[at], at);
+                        return _card(visibleTasks[at], at);
                       },
                     ),
                   ),

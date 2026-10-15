@@ -329,10 +329,9 @@ class _PanelBody extends ConsumerWidget {
     final facets = ref.watch(inboxFacetsProvider).valueOrNull;
     final access = ref.watch(inboxAccessProvider);
 
-    final unread = facets?.unread ?? 0;
     final segments = <(InboxQuickFilter, String)>[
       (InboxQuickFilter.all, 'Tất cả'),
-      (InboxQuickFilter.unread, unread > 0 ? 'Chưa đọc · $unread' : 'Chưa đọc'),
+      (InboxQuickFilter.unread, 'Chưa đọc'),
       if (access.showsAssigneeFilter) (InboxQuickFilter.mine, 'Của tôi'),
       if (access.showsAssigneeFilter) (InboxQuickFilter.unassigned, 'Chưa gán'),
     ];

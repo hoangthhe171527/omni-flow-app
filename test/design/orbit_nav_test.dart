@@ -10,11 +10,12 @@ import 'package:omni_app/modules/tasks/tasks_module.dart';
 /// màn gốc của tab có tiêu đề lớn 24/600.
 void main() {
   group('giọng huy hiệu', () {
-    test('Hộp thư đếm tin CHƯA ĐỌC — huy hiệu vàng', () {
+    test('Hộp thư chỉ báo có tin CHƯA ĐỌC — chấm vàng', () {
       final inbox = const InboxModule().navEntries().firstWhere(
         (e) => e.badge != null,
       );
       expect(inbox.badgeTone, NavBadgeTone.unread);
+      expect(inbox.badgeDisplay, NavBadgeDisplay.dot);
     });
 
     test('Việc của tôi đếm việc TRỄ — huy hiệu đỏ', () {
@@ -22,6 +23,7 @@ void main() {
         (e) => e.badge != null,
       );
       expect(tasks.badgeTone, NavBadgeTone.alert);
+      expect(tasks.badgeDisplay, NavBadgeDisplay.count);
     });
 
     test('huy hiệu vàng mang chữ mực, huy hiệu đỏ mang chữ trắng', () {

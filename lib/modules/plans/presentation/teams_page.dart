@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -150,6 +152,7 @@ class _TeamsPageState extends ConsumerState<TeamsPage> {
       }
     });
     final taskAccess = ref.watch(taskAccessProvider);
+    final currentUserId = ref.watch(sessionProvider.select((s) => s.user?.id));
     final access = ref.watch(accessProvider);
     final isAssigner = taskAccess.isAssigner;
     // Cùng quyền mà API đòi ở đường ghi `/teams` — xem `Interfaces/routes.php`.
@@ -181,6 +184,11 @@ class _TeamsPageState extends ConsumerState<TeamsPage> {
             isAssigner: isAssigner,
             canDeleteTeam: canDeleteTeam,
             canOpenFeed: canOpenFeed,
+            canMovePlan: (plan) =>
+                taskAccess.canUpdate &&
+                (taskAccess.isAssigner ||
+                    (currentUserId != null &&
+                        plan.roleOf(currentUserId).canManagePlan)),
           ),
         ),
       ),
@@ -192,6 +200,7 @@ class _TeamsPageState extends ConsumerState<TeamsPage> {
     required bool isAssigner,
     required bool canDeleteTeam,
     required bool canOpenFeed,
+    required bool Function(Plan plan) canMovePlan,
   }) {
     final needle = foldDiacritics(_query.trim());
     final searching = needle.isNotEmpty;
@@ -267,6 +276,12 @@ class _TeamsPageState extends ConsumerState<TeamsPage> {
           rise: !_introDone,
           favoriteOf: _favoriteOf,
           onToggleFavorite: _favoriteSupported ? _toggleFavorite : null,
+          canDragPlan: canMovePlan,
+          // Team tổng hợp do API thiếu/lệch dữ liệu không phải một đích ghi.
+          // Riêng "Chưa xếp team" (id rỗng) là đích hợp lệ để gỡ team.
+          onMovePlan: !visible[i].$1.synthetic || visible[i].$1.team.id.isEmpty
+              ? (plan) => unawaited(_movePlan(plan, visible[i].$1))
+              : null,
           group: visible[i].$1,
           plans: visible[i].$2,
           closed: visible[i].$3,
@@ -313,6 +328,41 @@ class _TeamsPageState extends ConsumerState<TeamsPage> {
 
   bool _canDelete(TeamWithPlans group, bool canDeleteTeam) =>
       canDeleteTeam && !group.synthetic && group.team.id.isNotEmpty;
+
+  Future<void> _movePlan(Plan plan, TeamWithPlans target) async {
+    final targetId = target.team.id;
+    if ((plan.teamId ?? '') == targetId) return;
+    final messenger = ScaffoldMessenger.of(context);
+    final container = ProviderScope.containerOf(context);
+    try {
+      await container
+          .read(plansApiProvider)
+          .updatePlan(
+            plan.id,
+            targetId.isEmpty
+                ? PlanPatch(clearTeam: true)
+                : PlanPatch(teamId: targetId),
+          );
+      container.read(planRealtimeSignalProvider.notifier).bump();
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(
+            targetId.isEmpty
+                ? 'Đã đưa “${plan.name}” ra khỏi team.'
+                : 'Đã chuyển “${plan.name}” sang ${target.team.name}.',
+          ),
+        ),
+      );
+    } on AppException catch (error) {
+      messenger.showSnackBar(SnackBar(content: Text(error.message)));
+    } on Object {
+      messenger.showSnackBar(
+        const SnackBar(
+          content: Text('Chưa chuyển được dự án. Vui lòng thử lại.'),
+        ),
+      );
+    }
+  }
 
   /// "Tuỳ chọn team" (bấm giữ đầu nhóm): hiện chỉ có Xoá team.
   Future<void> _teamOptions(TeamWithPlans group) async {

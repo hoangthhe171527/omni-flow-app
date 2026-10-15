@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:omni_app/design/theme/omni_theme.dart';
 import 'package:omni_app/design/tokens/tokens.dart';
 import 'package:omni_app/modules/plans/application/plans_providers.dart';
+import 'package:omni_app/modules/plans/data/plans_api.dart';
 import 'package:omni_app/modules/plans/domain/plan.dart';
 import 'package:omni_app/modules/plans/domain/team.dart';
 import 'package:omni_app/modules/plans/domain/workshop_kpi.dart';
@@ -12,6 +13,7 @@ import 'package:omni_app/modules/plans/presentation/create_plan_page.dart';
 import 'package:omni_app/modules/plans/presentation/create_team_page.dart';
 import 'package:omni_app/modules/plans/presentation/teams_page.dart';
 import 'package:omni_app/modules/plans/presentation/widgets/plan_tile.dart';
+import 'package:omni_app/modules/plans/presentation/widgets/project_cover.dart';
 import 'package:omni_app/modules/plans/presentation/widgets/team_group.dart';
 import 'package:omni_app/modules/plans/presentation/widgets/teams_search_row.dart';
 import 'package:omni_app/modules/plans/routes.dart';
@@ -42,11 +44,15 @@ void main() {
     int overdue = 0,
     String? cover,
     String? status,
+    String? teamId,
+    String? ownerId,
   }) => Plan.fromJson({
     'id': 'id-$name',
     'name': name,
     'cover': ?cover,
     'status': ?status,
+    'team_id': ?teamId,
+    'owner_id': ?ownerId,
     'stats': {'total': total, 'done': done, 'overdue': overdue},
   });
 
@@ -85,6 +91,7 @@ void main() {
     bool kpiError = false,
     bool reduceMotion = false,
     bool dark = false,
+    PlansApi? plansApi,
   }) {
     final permissions = <String>{
       ...(assigner ? assignerPerms : worker),
@@ -135,6 +142,7 @@ void main() {
         }),
         taskAccessProvider.overrideWithValue(TaskAccess.of(policy)),
         accessProvider.overrideWithValue(policy),
+        if (plansApi != null) plansApiProvider.overrideWithValue(plansApi),
       ],
       child: MaterialApp.router(
         theme: dark
@@ -187,7 +195,7 @@ void main() {
     expect(find.text('Tìm team, kế hoạch'), findsOneWidget);
   });
 
-  testWidgets('bố cục đúng bản mẫu: nhóm, dòng 48, ô 28, hàng tìm 40', (
+  testWidgets('bố cục đúng bản mẫu: team không avatar, dự án có dấu 12', (
     t,
   ) async {
     phone(t);
@@ -195,30 +203,55 @@ void main() {
     await t.pumpAndSettle();
     expect(t.getSize(find.byType(PlanTile).first).height, 48);
     final tile = t.getSize(find.byKey(const Key('plan-tile-swatch')).first);
-    expect(tile, const Size(28, 28));
-    expect(
-      t.getSize(find.byKey(const Key('team-group-swatch')).first),
-      const Size(28, 28),
-    );
+    expect(tile, const Size(12, 12));
+    expect(find.byKey(const Key('team-group-swatch')), findsNothing);
     expect(t.getSize(header('Tổ kỹ thuật')).height, 48);
     expect(t.getSize(find.byKey(const Key('teams-search-box'))).height, 40);
     expect(
       t.getSize(find.byKey(const Key('teams-add-face'))),
       const Size(44, 40),
     );
-    // Ô màu của kế hoạch là màu cover.
-    final swatch = t.widget<Container>(
-      find.byKey(const Key('plan-tile-swatch')).first,
-    );
+    // Dự án mang dấu cover nhỏ, không giả làm avatar chữ cái.
     expect(
-      (swatch.decoration! as BoxDecoration).color,
-      OmniCovers.colorOf('teal-1'),
+      t.widget<ProjectCoverMarker>(find.byType(ProjectCoverMarker).first).cover,
+      'teal-1',
     );
     // Các nhóm cách nhau 10.
     final first = t.getRect(find.byType(TeamGroup).at(0));
     final second = t.getRect(find.byType(TeamGroup).at(1));
     expect(second.top - first.bottom, 10);
     expect(first.left, 16);
+  });
+
+  testWidgets('quản lý giữ dự án rồi thả sang team khác → cập nhật team_id', (
+    t,
+  ) async {
+    phone(t);
+    final api = _MovePlansApi();
+    await t.pumpWidget(
+      host(
+        groups: [
+          group(
+            'Team A',
+            id: 'ta',
+            plans: [plan('Dự án A', teamId: 'ta', ownerId: 'u1')],
+          ),
+          group('Team B', id: 'tb'),
+        ],
+        assigner: true,
+        plansApi: api,
+      ),
+    );
+    await t.pumpAndSettle();
+
+    final gesture = await t.startGesture(t.getCenter(find.text('Dự án A')));
+    await t.pump(const Duration(milliseconds: 450));
+    await gesture.moveTo(t.getCenter(find.text('Team B')));
+    await t.pump();
+    await gesture.up();
+    await t.pumpAndSettle();
+
+    expect(api.moves, [('id-Dự án A', 'tb')]);
   });
 
   // (b)
@@ -826,4 +859,23 @@ void main() {
       expect(find.text('Xoá team “A”?'), findsNothing);
     });
   }
+}
+
+class _MovePlansApi implements PlansApi {
+  final moves = <(String, String?)>[];
+
+  @override
+  Future<Plan> updatePlan(String planId, PlanPatch patch) async {
+    final body = patch.toJson();
+    moves.add((planId, body['team_id'] as String?));
+
+    return Plan.fromJson({
+      'id': planId,
+      'name': planId,
+      'team_id': body['team_id'],
+    });
+  }
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }

@@ -26,6 +26,7 @@ ModuleNavEntry _entry(
   NavArea area, {
   ProviderListenable<int>? badge,
   NavBadgeTone tone = NavBadgeTone.unread,
+  NavBadgeDisplay display = NavBadgeDisplay.count,
   String? subtitle,
 }) => ModuleNavEntry(
   moduleId: label,
@@ -37,6 +38,7 @@ ModuleNavEntry _entry(
   area: area,
   badge: badge,
   badgeTone: tone,
+  badgeDisplay: display,
 );
 
 class _FakeModule extends OmniModule {
@@ -59,7 +61,12 @@ class _FakeModule extends OmniModule {
       badge: _overdue,
       tone: NavBadgeTone.alert,
     ),
-    _entry('Hộp thư', NavArea.communication, badge: _unread),
+    _entry(
+      'Hộp thư',
+      NavArea.communication,
+      badge: _unread,
+      display: NavBadgeDisplay.dot,
+    ),
     _entry('Khách hàng', NavArea.sales),
     _entry('Nhân viên', NavArea.admin),
     _entry(
@@ -183,17 +190,15 @@ void main() {
     );
   });
 
-  testWidgets('huy hiệu: tin chưa đọc vàng, việc trễ đỏ', (t) async {
+  testWidgets('huy hiệu: tin chưa đọc là chấm, việc trễ vẫn là số đỏ', (
+    t,
+  ) async {
     await pump(t);
-    final badges = t
-        .widgetList<OmniCountBadge>(find.byType(OmniCountBadge))
-        .toList();
-    final unread = badges.singleWhere((b) => b.count == 12);
-    final overdue = badges.singleWhere((b) => b.count == 3);
+    final overdue = t.widget<OmniCountBadge>(find.byType(OmniCountBadge));
 
-    expect(unread.color, OmniColors.sun);
-    expect(unread.foreground, OmniColors.ink);
+    expect(find.byType(OmniUnreadDot), findsOneWidget);
     expect(overdue.color, OmniColors.dangerSurface);
+    expect(overdue.count, 3);
   });
 
   testWidgets('không còn thẻ hồ sơ / không gian / đăng xuất / xoá tài khoản', (
@@ -230,11 +235,15 @@ void main() {
     expect(find.text('ACCOUNT'), findsOneWidget);
   });
 
-  testWidgets('ô là nút ngữ nghĩa có onTap, nhãn kèm số huy hiệu', (t) async {
+  testWidgets('ô là nút ngữ nghĩa có onTap, hộp thư chỉ nói có tin chưa đọc', (
+    t,
+  ) async {
     final handle = t.ensureSemantics();
     await pump(t);
-    final node = t.getSemantics(find.bySemanticsLabel('Hộp thư, 12'));
-    expect(node.label, 'Hộp thư, 12');
+    final node = t.getSemantics(
+      find.bySemanticsLabel('Hộp thư, có tin chưa đọc'),
+    );
+    expect(node.label, 'Hộp thư, có tin chưa đọc');
     expect(node.getSemanticsData().hasAction(SemanticsAction.tap), isTrue);
     handle.dispose();
   });
