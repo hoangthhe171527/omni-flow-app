@@ -15,6 +15,7 @@ class OmniBrandMark extends StatelessWidget {
     super.key,
     this.size = 36,
     this.onInk,
+    this.showTile = true,
     this.frame = OmniBrandFrame.complete,
     this.semanticLabel,
   });
@@ -25,6 +26,10 @@ class OmniBrandMark extends StatelessWidget {
   /// null = theo độ sáng theme; true = ô mực [OmniColors.inkRaised] (logo trên
   /// mặt mực: đăng nhập, mở app); false = ô sáng.
   final bool? onInk;
+
+  /// Vẽ nền ô bo quanh biểu tượng. Header dùng logo trần để đồng bộ với các
+  /// nút hành động không viền; splash và màn đăng nhập vẫn giữ ô nhận diện.
+  final bool showTile;
 
   /// Từng nét đã vẽ tới đâu. Mặc định là logo hoàn chỉnh.
   final OmniBrandFrame frame;
@@ -47,6 +52,7 @@ class OmniBrandMark extends StatelessWidget {
         // Ở cỡ nhỏ thiết kế làm nét dày hơn một chút để logo không mảnh đi.
         strokeWidth: size <= 40 ? 6 : 5.5,
         dotRadius: size <= 40 ? 7 : 6.5,
+        showTile: showTile,
         frame: frame,
       ),
     );
@@ -146,6 +152,7 @@ class OmniBrandMarkPainter extends CustomPainter {
     this.tileBorder,
     required this.strokeWidth,
     required this.dotRadius,
+    this.showTile = true,
     this.frame = OmniBrandFrame.complete,
   });
 
@@ -154,6 +161,7 @@ class OmniBrandMarkPainter extends CustomPainter {
   final Color? tileBorder;
   final double strokeWidth;
   final double dotRadius;
+  final bool showTile;
   final OmniBrandFrame frame;
 
   /// Chiều dài nét của `stroke-dasharray` trong thiết kế.
@@ -194,24 +202,26 @@ class OmniBrandMarkPainter extends CustomPainter {
     canvas.save();
     canvas.scale(size.width / 100, size.height / 100);
 
-    canvas.drawRRect(
-      RRect.fromRectAndRadius(
-        const Rect.fromLTWH(0, 0, 100, 100),
-        const Radius.circular(24),
-      ),
-      Paint()..color = tile,
-    );
-    if (tileBorder != null) {
+    if (showTile) {
       canvas.drawRRect(
         RRect.fromRectAndRadius(
-          const Rect.fromLTWH(1.5, 1.5, 97, 97),
-          const Radius.circular(22.5),
+          const Rect.fromLTWH(0, 0, 100, 100),
+          const Radius.circular(24),
         ),
-        Paint()
-          ..color = tileBorder!
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = 3,
+        Paint()..color = tile,
       );
+      if (tileBorder != null) {
+        canvas.drawRRect(
+          RRect.fromRectAndRadius(
+            const Rect.fromLTWH(1.5, 1.5, 97, 97),
+            const Radius.circular(22.5),
+          ),
+          Paint()
+            ..color = tileBorder!
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = 3,
+        );
+      }
     }
 
     final strokePaint = Paint()
@@ -285,5 +295,6 @@ class OmniBrandMarkPainter extends CustomPainter {
       oldDelegate.tileBorder != tileBorder ||
       oldDelegate.strokeWidth != strokeWidth ||
       oldDelegate.dotRadius != dotRadius ||
+      oldDelegate.showTile != showTile ||
       oldDelegate.frame != frame;
 }

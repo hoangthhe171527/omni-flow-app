@@ -18,8 +18,8 @@ import '../../settings_module.dart';
 class AccountMenuButton extends ConsumerWidget {
   const AccountMenuButton({super.key, this.tile = false});
 
-  /// Ô vuông 36 bo 6 nền mực, chữ cái đầu tên — kiểu của [OmniTopBar]. Mặc
-  /// định vẫn là ảnh tròn của [OmniAppBar].
+  /// Avatar tròn 36 trong vùng chạm 44 — kiểu của [OmniTopBar]. Mặc định vẫn
+  /// là ảnh tròn 32 có đệm ngang của [OmniAppBar].
   final bool tile;
 
   void _open(BuildContext context) => context.pushNamed(SettingsModule.account);
@@ -29,7 +29,7 @@ class AccountMenuButton extends ConsumerWidget {
     final user = ref.watch(sessionProvider).user;
     final name = user?.fullName ?? 'Tài khoản';
 
-    if (tile) return _buildTile(context, name);
+    if (tile) return _buildTile(context, name, user?.avatarUrl);
 
     return Padding(
       // Đệm đều hai bên: nút giờ đứng ở `leading` (góc trái) của OmniAppBar,
@@ -60,44 +60,25 @@ class AccountMenuButton extends ConsumerWidget {
     );
   }
 
-  Widget _buildTile(BuildContext context, String name) {
-    final dark = Theme.of(context).brightness == Brightness.dark;
-    final words = name.trim().split(RegExp(r'\s+'));
-    // Chữ cái đầu của tên gọi (từ cuối), như các avatar chữ khác trong app.
-    final initial = words.last.isEmpty
-        ? '?'
-        : String.fromCharCode(words.last.runes.first).toUpperCase();
-
+  Widget _buildTile(BuildContext context, String name, String? imageUrl) {
     return Semantics(
       button: true,
       label: 'Tài khoản $name',
       excludeSemantics: true,
       onTap: () => _open(context),
-      // Hình 36, vùng chạm 44: lớp ngoài bắt chạm cả phần đệm.
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTap: () => _open(context),
-        child: SizedBox.square(
-          dimension: 44,
+      child: SizedBox.square(
+        dimension: 44,
+        child: InkResponse(
+          radius: 22,
+          onTap: () => _open(context),
           child: Center(
-            child: Material(
-              color: dark ? OmniColors.inkRaised : OmniColors.ink,
-              borderRadius: BorderRadius.circular(6),
-              child: InkWell(
-                onTap: () => _open(context),
-                borderRadius: BorderRadius.circular(6),
-                child: SizedBox.square(
-                  dimension: 36,
-                  child: Center(
-                    child: Text(
-                      initial,
-                      style: OmniType.caption.copyWith(
-                        fontWeight: FontWeight.w600,
-                        color: Colors.white,
-                      ),
-                    ),
-                  ),
-                ),
+            child: AnimatedSwitcher(
+              duration: OmniMotion.of(context).base,
+              child: OmniAvatar(
+                key: ValueKey(imageUrl ?? name),
+                name: name,
+                imageUrl: imageUrl,
+                size: 36,
               ),
             ),
           ),

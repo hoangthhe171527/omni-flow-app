@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:omni_app/design/components/components.dart';
 import 'package:omni_app/design/theme/omni_theme.dart';
 import 'package:omni_app/modules/settings/presentation/widgets/account_menu_button.dart';
 import 'package:omni_app/modules/settings/settings_module.dart';
@@ -49,9 +50,7 @@ void main() {
     await t.pumpAndSettle();
   }
 
-  testWidgets('ô vuông: bấm avatar mở màn Tài khoản, không bật menu', (
-    t,
-  ) async {
+  testWidgets('avatar header: bấm mở màn Tài khoản, không bật menu', (t) async {
     final handle = t.ensureSemantics();
     await pump(t, tile: true);
     await t.tap(find.bySemanticsLabel(RegExp('^Tài khoản')));
@@ -61,20 +60,16 @@ void main() {
     handle.dispose();
   });
 
-  testWidgets('ô vuông: vùng chạm ≥ 44, phần vẽ 36', (t) async {
+  testWidgets('avatar header: vùng chạm ≥ 44, phần vẽ tròn 36', (t) async {
     final handle = t.ensureSemantics();
     await pump(t, tile: true);
     final size = t.getSize(find.bySemanticsLabel(RegExp('^Tài khoản')));
     expect(size.width, greaterThanOrEqualTo(44));
     expect(size.height, greaterThanOrEqualTo(44));
-    expect(
-      t.getSize(
-        find
-            .ancestor(of: find.text('H'), matching: find.byType(Material))
-            .first,
-      ),
-      const Size(36, 36),
-    );
+    final avatar = find.byType(OmniAvatar);
+    expect(avatar, findsOneWidget);
+    expect(t.getSize(avatar), const Size(36, 36));
+    expect(t.widget<OmniAvatar>(avatar).borderRadius, isNull);
     handle.dispose();
   });
 

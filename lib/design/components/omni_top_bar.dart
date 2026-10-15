@@ -115,7 +115,10 @@ class OmniTopBar extends ConsumerWidget implements PreferredSizeWidget {
                               child: Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  const OmniBrandMark(size: 30),
+                                  const OmniBrandMark(
+                                    size: 30,
+                                    showTile: false,
+                                  ),
                                   const SizedBox(width: 8),
                                   OmniWordmark(fontSize: 19, onInk: dark),
                                 ],
@@ -162,53 +165,34 @@ class _BellButton extends StatelessWidget {
       label: unread > 0 ? 'Thông báo, $unread chưa đọc' : 'Thông báo',
       excludeSemantics: true,
       onTap: onTap,
-      // Hình 36, vùng chạm 44: lớp ngoài bắt chạm cả phần đệm.
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTap: onTap,
-        child: SizedBox.square(
-          dimension: 44,
-          child: Center(
-            child: Material(
-              color: scheme.surface.withValues(alpha: 0.9),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(6),
-                side: BorderSide(color: scheme.outline),
+      child: SizedBox.square(
+        dimension: 44,
+        child: InkResponse(
+          radius: 22,
+          onTap: onTap,
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              Icon(
+                Icons.notifications_none_rounded,
+                size: OmniIconSize.md,
+                color: scheme.onSurface,
               ),
-              child: InkWell(
-                onTap: onTap,
-                customBorder: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(6),
-                ),
-                child: SizedBox.square(
-                  dimension: 36,
-                  child: Stack(
-                    alignment: Alignment.center,
-                    children: [
-                      Icon(
-                        Icons.notifications_none_rounded,
-                        size: OmniIconSize.md,
-                        color: scheme.onSurface,
-                      ),
-                      if (unread > 0)
-                        Positioned(
-                          right: 8,
-                          top: 8,
-                          child: Container(
-                            key: const ValueKey('omni-top-bar-bell-dot'),
-                            width: 7,
-                            height: 7,
-                            decoration: BoxDecoration(
-                              color: scheme.error,
-                              shape: BoxShape.circle,
-                            ),
-                          ),
-                        ),
-                    ],
+              if (unread > 0)
+                Positioned(
+                  right: 9,
+                  top: 9,
+                  child: Container(
+                    key: const ValueKey('omni-top-bar-bell-dot'),
+                    width: 7,
+                    height: 7,
+                    decoration: BoxDecoration(
+                      color: scheme.error,
+                      shape: BoxShape.circle,
+                    ),
                   ),
                 ),
-              ),
-            ),
+            ],
           ),
         ),
       ),

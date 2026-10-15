@@ -44,6 +44,10 @@ void main() {
       await tester.pump();
 
       expect(find.byType(OmniBrandMark), findsOneWidget);
+      expect(
+        tester.widget<OmniBrandMark>(find.byType(OmniBrandMark)).showTile,
+        isFalse,
+      );
       expect(find.bySemanticsLabel(RegExp('Thông báo')), findsOneWidget);
       expect(
         find.byKey(const ValueKey('omni-top-bar-bell-dot')),
@@ -70,7 +74,7 @@ void main() {
     expect(taps, 1);
   });
 
-  testWidgets('chuông vẽ 36 nhưng vùng chạm 44; tiêu đề trang là header', (
+  testWidgets('chuông không bọc, vùng chạm 44; tiêu đề trang là header', (
     t,
   ) async {
     final handle = t.ensureSemantics();
@@ -82,18 +86,8 @@ void main() {
     final bell = find.bySemanticsLabel(RegExp('^Thông báo'));
     expect(t.getSize(bell).width, greaterThanOrEqualTo(44));
     expect(t.getSize(bell).height, greaterThanOrEqualTo(44));
-    // Phần vẽ vẫn 36.
-    expect(
-      t.getSize(
-        find
-            .ancestor(
-              of: find.byIcon(Icons.notifications_none_rounded),
-              matching: find.byType(Material),
-            )
-            .first,
-      ),
-      const Size(36, 36),
-    );
+    expect(find.byType(InkResponse), findsOneWidget);
+    expect(find.byType(InkWell), findsNothing);
     final node = t.getSemantics(find.bySemanticsLabel('Hộp thư'));
     expect(node.flagsCollection.isHeader, isTrue);
     expect(node.rect.isEmpty, isFalse);
