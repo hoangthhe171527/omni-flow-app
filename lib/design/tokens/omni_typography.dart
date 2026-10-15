@@ -107,6 +107,26 @@ abstract final class OmniType {
     height: 1.4,
   );
 
+  /// Chữ người dùng đã nhập trong mọi ô tìm kiếm. Cùng thông số với ô tìm
+  /// của tab Việc để chuyển màn không tạo cảm giác chữ phình/co bất chợt.
+  static const TextStyle search = TextStyle(
+    fontFamily: family,
+    fontSize: 14,
+    fontWeight: FontWeight.w400,
+    fontStyle: FontStyle.normal,
+    height: 1.4,
+  );
+
+  /// Nội dung hướng dẫn trong ô tìm kiếm. Giữ nguyên kích thước của [search]
+  /// nhưng in nghiêng để phân biệt với truy vấn thật sau khi người dùng gõ.
+  static const TextStyle searchHint = TextStyle(
+    fontFamily: family,
+    fontSize: 14,
+    fontWeight: FontWeight.w400,
+    fontStyle: FontStyle.italic,
+    height: 1.4,
+  );
+
   /// Phụ, mô tả: 13/18.
   static const TextStyle caption = TextStyle(
     fontFamily: family,

@@ -75,10 +75,11 @@ class _TaskSearchPageState extends ConsumerState<TaskSearchPage> {
         // tìm vẫn cách mép 16.
         titleSpacing: (ModalRoute.of(context)?.canPop ?? false) ? 0 : 16,
         shape: Border(bottom: BorderSide(color: scheme.outlineVariant)),
-        // Ô tìm là khối xám bo 12 như thiết kế, nút xoá nằm TRONG ô.
+        // Ô tìm nằm trực tiếp trên mặt header, không dựng thêm một khung giả.
         title: Padding(
           padding: const EdgeInsets.only(right: 12),
           child: TextField(
+            key: const Key('task-search-flat'),
             controller: _controller,
             autofocus: true,
             textInputAction: TextInputAction.search,
@@ -89,22 +90,24 @@ class _TaskSearchPageState extends ConsumerState<TaskSearchPage> {
               _timer?.cancel();
               ref.read(taskSearchQueryProvider.notifier).state = value;
             },
-            style: OmniType.input.copyWith(
-              fontWeight: FontWeight.w500,
+            style: OmniType.search.copyWith(
               color: scheme.onSurface,
+              fontStyle: FontStyle.normal,
             ),
             decoration: InputDecoration(
               isDense: true,
-              filled: true,
-              fillColor: scheme.surfaceContainerHighest,
+              filled: false,
               contentPadding: const EdgeInsets.symmetric(
-                horizontal: 12,
+                horizontal: 4,
                 vertical: 12,
               ),
-              border: _searchBorder,
-              enabledBorder: _searchBorder,
-              focusedBorder: _searchBorder,
+              border: InputBorder.none,
+              enabledBorder: InputBorder.none,
+              focusedBorder: InputBorder.none,
               hintText: 'Tên cây đàn, số máy, tên khách',
+              hintStyle: OmniType.searchHint.copyWith(
+                color: scheme.onSurfaceVariant,
+              ),
               suffixIcon: _controller.text.isEmpty
                   ? null
                   : IconButton(
@@ -115,18 +118,10 @@ class _TaskSearchPageState extends ConsumerState<TaskSearchPage> {
                         ref.read(taskSearchQueryProvider.notifier).state = '';
                         setState(() {});
                       },
-                      icon: Container(
-                        width: 28,
-                        height: 28,
-                        decoration: BoxDecoration(
-                          color: scheme.outlineVariant,
-                          shape: BoxShape.circle,
-                        ),
-                        child: Icon(
-                          Icons.close_rounded,
-                          size: OmniIconSize.sm,
-                          color: scheme.onSurface,
-                        ),
+                      icon: Icon(
+                        Icons.close_rounded,
+                        size: OmniIconSize.md,
+                        color: scheme.onSurface,
                       ),
                     ),
             ),
@@ -191,8 +186,3 @@ class _TaskSearchPageState extends ConsumerState<TaskSearchPage> {
     );
   }
 }
-
-const _searchBorder = OutlineInputBorder(
-  borderRadius: OmniRadius.mdAll,
-  borderSide: BorderSide.none,
-);

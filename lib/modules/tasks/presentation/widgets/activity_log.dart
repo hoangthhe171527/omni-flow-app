@@ -31,6 +31,7 @@ class ActivityCard extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
 
     return DetailCard(
+      flat: true,
       children: [
         DetailCardHeader(
           icon: Icons.schedule_rounded,

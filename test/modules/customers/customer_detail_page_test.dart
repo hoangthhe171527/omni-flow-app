@@ -364,28 +364,23 @@ void main() {
   });
 
   group('sửa đầy đủ và huy hiệu', () {
-    testWidgets(
-      'canUpdate: nút ⋯ → Sửa đầy đủ thông tin → mở form, về thì tải lại',
-      (tester) async {
-        await open(tester);
-        final before = server.count('/customers/c1');
-        await tester.tap(find.byIcon(Icons.more_horiz_rounded));
-        await tester.pumpAndSettle();
-        await tester.tap(find.text('Sửa đầy đủ thông tin'));
-        await tester.pumpAndSettle();
-        expect(find.text('EDIT'), findsOneWidget);
+    testWidgets('canUpdate: nút sửa mở form, về thì tải lại', (tester) async {
+      await open(tester);
+      final before = server.count('/customers/c1');
+      await tester.tap(find.byTooltip('Sửa đầy đủ thông tin'));
+      await tester.pumpAndSettle();
+      expect(find.text('EDIT'), findsOneWidget);
 
-        router.pop();
-        await tester.pumpAndSettle();
-        expect(find.text('Chú Đức'), findsOneWidget);
-        expect(server.count('/customers/c1'), greaterThan(before));
-        expect(server.count('/customers/c1/summary'), greaterThan(1));
-      },
-    );
+      router.pop();
+      await tester.pumpAndSettle();
+      expect(find.text('Chú Đức'), findsOneWidget);
+      expect(server.count('/customers/c1'), greaterThan(before));
+      expect(server.count('/customers/c1/summary'), greaterThan(1));
+    });
 
-    testWidgets('không canUpdate: không có nút ⋯', (tester) async {
+    testWidgets('không canUpdate: không có nút sửa', (tester) async {
       await open(tester, permissions: {_read});
-      expect(find.byIcon(Icons.more_horiz_rounded), findsNothing);
+      expect(find.byTooltip('Sửa đầy đủ thông tin'), findsNothing);
     });
 
     testWidgets(

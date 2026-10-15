@@ -224,7 +224,7 @@ void main() {
     );
     final deco = groove.decoration as BoxDecoration;
     expect(deco.color, const Color(0xFFEEF1F5));
-    expect(deco.borderRadius, BorderRadius.circular(8));
+    expect(deco.borderRadius, isNull);
   });
 
   testWidgets('(c) "Thêm công việc" mở trang tạo với nhóm của cột', (
@@ -492,7 +492,9 @@ void main() {
     expect(tester.getSize(header).height, 50);
   });
 
-  testWidgets('(g) nền là gradient của cover', (tester) async {
+  testWidgets('(g) token cover màu cũ vẫn dùng renderer tương thích', (
+    tester,
+  ) async {
     await pumpBoard(tester);
 
     final surface = find.byKey(const Key('board-background'));
@@ -632,9 +634,7 @@ void main() {
     expect(find.text('Sửa tên, mô tả, nền'), findsNothing);
   });
 
-  testWidgets('chế độ tối: rãnh cột theo theme, nền vẫn gradient', (
-    tester,
-  ) async {
+  testWidgets('chế độ tối: rãnh cột và nền theo theme', (tester) async {
     tester.view.physicalSize = const Size(390, 844);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.reset);

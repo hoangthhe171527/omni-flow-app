@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:omni_app/core/error/app_exception.dart';
+import 'package:omni_app/design/components/components.dart';
 import 'package:omni_app/design/theme/omni_theme.dart';
 import 'package:omni_app/design/tokens/tokens.dart';
 import 'package:omni_app/modules/plans/routes.dart';
@@ -14,7 +15,6 @@ import 'package:omni_app/modules/tasks/domain/task.dart';
 import 'package:omni_app/modules/tasks/domain/task_label.dart';
 import 'package:omni_app/modules/tasks/domain/task_permissions.dart';
 import 'package:omni_app/modules/tasks/presentation/task_detail_page.dart';
-import 'package:omni_app/modules/tasks/presentation/widgets/task_detail/menu_sheet.dart';
 import 'package:omni_app/modules/tasks/presentation/widgets/task_detail/option_sheet.dart';
 import 'package:omni_app/modules/team/team.dart';
 import 'package:omni_app/security/permissions/access_policy.dart';
@@ -488,6 +488,7 @@ void main() {
       expect(t.getSize(add), const Size(44, 44));
       await t.tap(add);
       await t.pumpAndSettle();
+      expect(find.byKey(const Key('assign-task-menu')), findsOneWidget);
       expect(find.text('Ai làm việc này'), findsOneWidget);
     });
 
@@ -500,6 +501,7 @@ void main() {
       await pump(t, host(data: json(), perms: worker));
       await t.tap(find.bySemanticsLabel('Thêm người làm'));
       await t.pumpAndSettle();
+      expect(find.byKey(const Key('claim-task-menu')), findsOneWidget);
       await t.tap(find.text('Nhận việc này'));
       await t.pumpAndSettle();
       expect(recorded.last, ('claim', me));
@@ -641,8 +643,8 @@ void main() {
       expect(find.text('Sao chép liên kết'), findsOneWidget);
       expect(
         find.descendant(
-          of: find.byWidgetPredicate((w) => w is DetailMenuSheet),
-          matching: find.byType(InkWell),
+          of: find.byKey(const Key('task-actions-menu')),
+          matching: find.byType(OmniAnchoredMenuItem),
         ),
         findsOneWidget,
         reason: 'menu của thợ chỉ có đúng một mục',

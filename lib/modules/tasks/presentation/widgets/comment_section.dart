@@ -55,6 +55,7 @@ class CommentSection extends ConsumerWidget {
     final comments = ready ? thread.items.reversed.toList() : task.comments;
 
     return DetailCard(
+      flat: true,
       children: [
         const DetailCardHeader(
           icon: Icons.chat_bubble_outline_rounded,

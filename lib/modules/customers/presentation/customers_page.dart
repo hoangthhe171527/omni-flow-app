@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 
 import '../../../core/module/extra_segment.dart';
 import '../../../design/components/components.dart';
@@ -8,9 +7,9 @@ import '../../../design/platform/omni_motion_scope.dart';
 import '../../../design/tokens/tokens.dart';
 import '../../../security/permissions/resource_access.dart';
 import '../application/customers_providers.dart';
-import '../customers_module.dart';
 import '../domain/customer.dart';
 import 'widgets/customer_filter_panel.dart';
+import 'widgets/customer_quick_create_menu.dart';
 import 'widgets/customer_row.dart';
 
 /// Tab Khách: hai đoạn — danh sách khách và (khi có quyền + cờ bật) đoạn Cơ
@@ -27,8 +26,8 @@ class CustomersPage extends ConsumerStatefulWidget {
 
 class _CustomersPageState extends ConsumerState<CustomersPage> {
   final _scrollController = ScrollController();
+  final _addCustomerKey = GlobalKey(debugLabel: 'AddCustomerButton');
   bool _filtersOpen = false;
-  bool _oppFiltersOpen = false;
   late int _segment = widget.initialSegment;
 
   /// Chỉ một dòng mở hàng thao tác nhanh một lúc.
@@ -59,6 +58,36 @@ class _CustomersPageState extends ConsumerState<CustomersPage> {
     super.dispose();
   }
 
+  Future<void> _openQuickCreate() async {
+    final saved = await showCustomerCreateDialog(context);
+    if (saved == null || !mounted) return;
+    ref.invalidate(customerListProvider);
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text('Đã thêm ${saved.name}.')));
+  }
+
+  Future<void> _openFilters({
+    required Rect anchor,
+    required int segment,
+    required List<String> labels,
+    required Widget filterContent,
+  }) async {
+    if (_filtersOpen) return;
+    setState(() => _filtersOpen = true);
+    await showCustomerFilterMenu(
+      context: context,
+      anchor: anchor,
+      segment: segment,
+      segmentLabels: labels,
+      onSegmentChanged: (next) {
+        if (mounted) setState(() => _segment = next);
+      },
+      filterContent: filterContent,
+    );
+    if (mounted) setState(() => _filtersOpen = false);
+  }
+
   @override
   Widget build(BuildContext context) {
     final list = ref.watch(customerListProvider);
@@ -77,59 +106,57 @@ class _CustomersPageState extends ConsumerState<CustomersPage> {
     final showSegments = extra != null && extra.visible(ref);
     final segment = showSegments ? _segment.clamp(0, 1) : 0;
     final customerTotal = list.valueOrNull?.pagination.total;
+    final labels = [
+      customerTotal == null ? 'Khách hàng' : 'Khách hàng · $customerTotal',
+      if (showSegments) extra.label(ref),
+    ];
 
     return Scaffold(
       // Header và danh sách cùng một mặt phẳng.
       backgroundColor: scheme.surface,
       appBar: OmniTopBar(
         semanticsTitle: 'Khách',
-        bottom: _KhachHeaderBottom(
-          showSegments: showSegments,
-          segment: segment,
-          labels: [
-            customerTotal == null
-                ? 'Khách hàng'
-                : 'Khách hàng · $customerTotal',
-            if (showSegments) extra.label(ref),
-          ],
-          onSegment: (i) => setState(() => _segment = i),
-          search: segment == 1
-              ? extra!.searchRow(
-                  _oppFiltersOpen,
-                  () => setState(() => _oppFiltersOpen = !_oppFiltersOpen),
-                )
-              : CustomerSearchRow(
-                  filtersOpen: _filtersOpen,
-                  onToggleFilters: () =>
-                      setState(() => _filtersOpen = !_filtersOpen),
-                  trailing: [
-                    // Thanh tab không có "+": Thêm khách là nút vuông ở hàng tìm.
-                    if (access.canCreate) ...[
-                      IconButton(
-                        tooltip: 'Thêm khách',
-                        onPressed: () =>
-                            context.pushNamed(CustomersModule.create),
-                        style: IconButton.styleFrom(
-                          fixedSize: const Size(36, 36),
-                          tapTargetSize: MaterialTapTargetSize.padded,
-                          visualDensity: VisualDensity.standard,
-                          foregroundColor: scheme.onSurface,
-                          side: BorderSide(color: scheme.outlineVariant),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(6),
-                          ),
-                        ),
-                        icon: const Icon(Icons.person_add_alt_rounded),
-                      ),
-                    ],
-                  ],
+        bottom: segment == 1
+            ? extra!.searchRow(
+                _filtersOpen,
+                (anchor) => _openFilters(
+                  anchor: anchor,
+                  segment: segment,
+                  labels: labels,
+                  filterContent: extra.filterContent(),
                 ),
-        ),
+              )
+            : CustomerSearchRow(
+                filtersOpen: _filtersOpen,
+                onOpenFilters: (anchor) => _openFilters(
+                  anchor: anchor,
+                  segment: segment,
+                  labels: labels,
+                  filterContent: const CustomerFilterMenuContent(),
+                ),
+                trailing: [
+                  if (access.canCreate) ...[
+                    IconButton(
+                      key: _addCustomerKey,
+                      tooltip: 'Thêm khách',
+                      onPressed: _openQuickCreate,
+                      style: IconButton.styleFrom(
+                        fixedSize: const Size(36, 36),
+                        tapTargetSize: MaterialTapTargetSize.padded,
+                        visualDensity: VisualDensity.standard,
+                        foregroundColor: scheme.onSurface,
+                        backgroundColor: Colors.transparent,
+                      ),
+                      icon: const Icon(Icons.person_add_alt_rounded),
+                    ),
+                  ],
+                ],
+              ),
       ),
       body: _SegmentSwitcher(
         segment: segment,
         child: segment == 1
-            ? extra!.body(_oppFiltersOpen)
+            ? extra!.body(false)
             : _customersBody(list, filter, access),
       ),
     );
@@ -143,7 +170,6 @@ class _CustomersPageState extends ConsumerState<CustomersPage> {
     return Column(
       key: const ValueKey('khach-seg-khach-hang'),
       children: [
-        CustomerFilterPanel(open: _filtersOpen),
         Expanded(
           child: RefreshIndicator(
             onRefresh: () {
@@ -163,7 +189,7 @@ class _CustomersPageState extends ConsumerState<CustomersPage> {
                     ? 'Khách từ hộp thư sẽ tự động xuất hiện ở đây khi được chuyển đổi.'
                     : 'Thử từ khoá khác hoặc bỏ bớt bộ lọc.',
                 actionLabel: access.canCreate ? 'Thêm khách hàng' : null,
-                onAction: () => context.pushNamed(CustomersModule.create),
+                onAction: _openQuickCreate,
               ),
               data: (state) => ListView.builder(
                 controller: _scrollController,
@@ -196,49 +222,6 @@ class _CustomersPageState extends ConsumerState<CustomersPage> {
             ),
           ),
         ),
-      ],
-    );
-  }
-}
-
-/// Phần dưới header của tab Khách: thanh chọn đoạn (khi có) rồi hàng tìm của
-/// đoạn đang chọn.
-class _KhachHeaderBottom extends StatelessWidget
-    implements PreferredSizeWidget {
-  const _KhachHeaderBottom({
-    required this.showSegments,
-    required this.segment,
-    required this.labels,
-    required this.onSegment,
-    required this.search,
-  });
-
-  final bool showSegments;
-  final int segment;
-  final List<String> labels;
-  final ValueChanged<int> onSegment;
-  final PreferredSizeWidget search;
-
-  @override
-  Size get preferredSize => Size.fromHeight(
-    search.preferredSize.height + (showSegments ? 44 + 8 : 0),
-  );
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        if (showSegments)
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-            child: OmniSegmented(
-              labels: labels,
-              index: segment,
-              onChanged: onSegment,
-            ),
-          ),
-        search,
       ],
     );
   }

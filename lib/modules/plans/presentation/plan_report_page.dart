@@ -61,6 +61,7 @@ class _PlanReportPageState extends ConsumerState<PlanReportPage> {
     final plan = ref.watch(planProvider(widget.planId));
 
     return Scaffold(
+      backgroundColor: Theme.of(context).colorScheme.surface,
       appBar: AppBar(title: const Text('Báo cáo kế hoạch')),
       body: OmniAsyncView(
         value: plan,
@@ -170,10 +171,7 @@ class _StatsBlock extends StatelessWidget {
 
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 4),
-      decoration: BoxDecoration(
-        color: scheme.surface,
-        borderRadius: BorderRadius.circular(8),
-      ),
+      color: scheme.surface,
       child: Row(
         children: [
           for (final (key, label, value, color) in cells)

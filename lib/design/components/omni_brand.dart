@@ -15,7 +15,7 @@ class OmniBrandMark extends StatelessWidget {
     super.key,
     this.size = 36,
     this.onInk,
-    this.showTile = true,
+    this.framed = true,
     this.frame = OmniBrandFrame.complete,
     this.semanticLabel,
   });
@@ -27,9 +27,9 @@ class OmniBrandMark extends StatelessWidget {
   /// mặt mực: đăng nhập, mở app); false = ô sáng.
   final bool? onInk;
 
-  /// Vẽ nền ô bo quanh biểu tượng. Header dùng logo trần để đồng bộ với các
-  /// nút hành động không viền; splash và màn đăng nhập vẫn giữ ô nhận diện.
-  final bool showTile;
+  /// Có vẽ ô nền bo góc quanh biểu tượng hay không. Header dùng logo phẳng để
+  /// không tạo thêm một "nút" giả; splash/login vẫn giữ mặt logo đầy đủ.
+  final bool framed;
 
   /// Từng nét đã vẽ tới đâu. Mặc định là logo hoàn chỉnh.
   final OmniBrandFrame frame;
@@ -47,12 +47,12 @@ class OmniBrandMark extends StatelessWidget {
         tile: dark
             ? (onInk == true ? OmniColors.inkRaised : OmniColors.ink)
             : Colors.white,
-        tileBorder: dark ? null : const Color(0xFFE3E8EF),
+        tileBorder: framed && !dark ? const Color(0xFFE3E8EF) : null,
+        drawTile: framed,
         stroke: dark ? OmniColors.orbit : OmniColors.primary,
         // Ở cỡ nhỏ thiết kế làm nét dày hơn một chút để logo không mảnh đi.
         strokeWidth: size <= 40 ? 6 : 5.5,
         dotRadius: size <= 40 ? 7 : 6.5,
-        showTile: showTile,
         frame: frame,
       ),
     );
@@ -150,18 +150,18 @@ class OmniBrandMarkPainter extends CustomPainter {
     required this.tile,
     required this.stroke,
     this.tileBorder,
+    this.drawTile = true,
     required this.strokeWidth,
     required this.dotRadius,
-    this.showTile = true,
     this.frame = OmniBrandFrame.complete,
   });
 
   final Color tile;
   final Color stroke;
   final Color? tileBorder;
+  final bool drawTile;
   final double strokeWidth;
   final double dotRadius;
-  final bool showTile;
   final OmniBrandFrame frame;
 
   /// Chiều dài nét của `stroke-dasharray` trong thiết kế.
@@ -202,7 +202,7 @@ class OmniBrandMarkPainter extends CustomPainter {
     canvas.save();
     canvas.scale(size.width / 100, size.height / 100);
 
-    if (showTile) {
+    if (drawTile) {
       canvas.drawRRect(
         RRect.fromRectAndRadius(
           const Rect.fromLTWH(0, 0, 100, 100),
@@ -210,18 +210,18 @@ class OmniBrandMarkPainter extends CustomPainter {
         ),
         Paint()..color = tile,
       );
-      if (tileBorder != null) {
-        canvas.drawRRect(
-          RRect.fromRectAndRadius(
-            const Rect.fromLTWH(1.5, 1.5, 97, 97),
-            const Radius.circular(22.5),
-          ),
-          Paint()
-            ..color = tileBorder!
-            ..style = PaintingStyle.stroke
-            ..strokeWidth = 3,
-        );
-      }
+    }
+    if (tileBorder != null) {
+      canvas.drawRRect(
+        RRect.fromRectAndRadius(
+          const Rect.fromLTWH(1.5, 1.5, 97, 97),
+          const Radius.circular(22.5),
+        ),
+        Paint()
+          ..color = tileBorder!
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 3,
+      );
     }
 
     final strokePaint = Paint()
@@ -293,8 +293,8 @@ class OmniBrandMarkPainter extends CustomPainter {
       oldDelegate.tile != tile ||
       oldDelegate.stroke != stroke ||
       oldDelegate.tileBorder != tileBorder ||
+      oldDelegate.drawTile != drawTile ||
       oldDelegate.strokeWidth != strokeWidth ||
       oldDelegate.dotRadius != dotRadius ||
-      oldDelegate.showTile != showTile ||
       oldDelegate.frame != frame;
 }

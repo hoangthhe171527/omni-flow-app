@@ -10,7 +10,11 @@ import 'package:omni_app/security/session/session.dart';
 import 'package:omni_app/security/session/session_controller.dart';
 
 void main() {
-  Future<void> pump(WidgetTester t, {required bool tile}) async {
+  Future<void> pump(
+    WidgetTester t, {
+    required bool tile,
+    String? avatarUrl,
+  }) async {
     final router = GoRouter(
       routes: [
         GoRoute(
@@ -31,12 +35,13 @@ void main() {
       ProviderScope(
         overrides: [
           sessionProvider.overrideWithValue(
-            const Session(
+            Session(
               status: SessionStatus.authenticated,
               user: SessionUser(
                 id: 'u',
                 fullName: 'Trần Huy Hoàng',
                 email: 'h@x.vn',
+                avatarUrl: avatarUrl,
               ),
             ),
           ),
@@ -50,34 +55,59 @@ void main() {
     await t.pumpAndSettle();
   }
 
-  testWidgets('avatar header: bấm mở màn Tài khoản, không bật menu', (t) async {
+  testWidgets('avatar header tròn: mở menu nhanh; chọn Tài khoản mới chuyển', (
+    t,
+  ) async {
     final handle = t.ensureSemantics();
     await pump(t, tile: true);
     await t.tap(find.bySemanticsLabel(RegExp('^Tài khoản')));
     await t.pumpAndSettle();
+    expect(find.byKey(const Key('account-quick-menu')), findsOneWidget);
+    expect(find.text('h@x.vn'), findsOneWidget);
+    expect(find.text('ACCOUNT'), findsNothing);
+    await t.tap(find.text('Tài khoản').last);
+    await t.pumpAndSettle();
     expect(find.text('ACCOUNT'), findsOneWidget);
-    expect(find.byType(PopupMenuItem<String>), findsNothing);
     handle.dispose();
   });
 
-  testWidgets('avatar header: vùng chạm ≥ 44, phần vẽ tròn 36', (t) async {
+  testWidgets('avatar header tròn: vùng chạm ≥ 44, phần vẽ 36', (t) async {
     final handle = t.ensureSemantics();
     await pump(t, tile: true);
     final size = t.getSize(find.bySemanticsLabel(RegExp('^Tài khoản')));
     expect(size.width, greaterThanOrEqualTo(44));
     expect(size.height, greaterThanOrEqualTo(44));
-    final avatar = find.byType(OmniAvatar);
-    expect(avatar, findsOneWidget);
-    expect(t.getSize(avatar), const Size(36, 36));
-    expect(t.widget<OmniAvatar>(avatar).borderRadius, isNull);
+    expect(
+      t.getSize(find.byKey(const ValueKey('account-avatar-face'))),
+      const Size(36, 36),
+    );
+    expect(
+      t
+          .widget<Material>(find.byKey(const ValueKey('account-avatar-face')))
+          .shape,
+      isA<CircleBorder>(),
+    );
     handle.dispose();
   });
 
-  testWidgets('kiểu tròn: bấm avatar cũng mở màn Tài khoản', (t) async {
+  testWidgets('avatar header dùng URL ảnh thay vì luôn hiện chữ cái', (
+    t,
+  ) async {
+    await pump(t, tile: true, avatarUrl: '/api/v1/auth/avatar/avatar-moi.jpg');
+
+    final avatar = t.widget<OmniAvatar>(find.byType(OmniAvatar));
+    expect(avatar.imageUrl, '/api/v1/auth/avatar/avatar-moi.jpg');
+    expect(find.text('H'), findsNothing);
+  });
+
+  testWidgets('kiểu tròn: bấm avatar cũng mở menu nhanh', (t) async {
     await pump(t, tile: false);
     await t.tap(find.byType(InkResponse));
     await t.pumpAndSettle();
+    expect(find.byKey(const Key('account-quick-menu')), findsOneWidget);
+    expect(find.text('ACCOUNT'), findsNothing);
+    await t.tap(find.text('Tài khoản').last);
+    await t.pumpAndSettle();
     expect(find.text('ACCOUNT'), findsOneWidget);
-    expect(find.byType(PopupMenuItem<String>), findsNothing);
   });
 }

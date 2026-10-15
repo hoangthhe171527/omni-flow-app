@@ -242,29 +242,24 @@ class _GroupBlock extends StatelessWidget {
               ),
             ),
           ),
-          DecoratedBox(
-            decoration: BoxDecoration(
-              border: Border.all(color: scheme.outlineVariant),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(7),
-              child: Column(
-                children: [
-                  for (var i = 0; i < items.length; i++) ...[
-                    if (i > 0)
-                      Divider(
-                        height: 1,
-                        thickness: 1,
-                        color: scheme.surfaceContainerHighest,
-                      ),
-                    NotificationRow(
-                      notification: items[i],
-                      onTap: () => onOpen(items[i]),
+          Material(
+            key: ValueKey('notification-group-$label'),
+            color: Colors.transparent,
+            child: Column(
+              children: [
+                for (var i = 0; i < items.length; i++) ...[
+                  if (i > 0)
+                    Divider(
+                      height: 1,
+                      thickness: 1,
+                      color: scheme.surfaceContainerHighest,
                     ),
-                  ],
+                  NotificationRow(
+                    notification: items[i],
+                    onTap: () => onOpen(items[i]),
+                  ),
                 ],
-              ),
+              ],
             ),
           ),
         ],

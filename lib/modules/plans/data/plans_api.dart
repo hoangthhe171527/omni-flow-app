@@ -112,6 +112,21 @@ class PlansApi {
     return Team.fromJson(response.object);
   }
 
+  /// Đổi tên team trên cùng thực thể tổ chức mà web đang dùng.
+  ///
+  /// API: `PUT /teams/{id}` — route yêu cầu đồng thời `tasks.write` và
+  /// `organization.org_units.update`; phản hồi là team đã cập nhật.
+  Future<Team> updateTeam(String teamId, {required String name}) async {
+    final clean = name.trim();
+    if (clean.isEmpty) {
+      throw ArgumentError.value(name, 'name', 'Tên team không được để trống');
+    }
+
+    final response = await _client.put('/teams/$teamId', body: {'name': clean});
+
+    return Team.fromJson(response.object);
+  }
+
   /// Xoá một team rỗng.
   ///
   /// Server trả 409 nếu team còn dự án, kể cả dự án đang ở thùng rác. Không
@@ -387,8 +402,6 @@ class PlansApi {
 /// đi cùng nhau — gửi danh sách người mà thiếu vai (hoặc ngược lại) là để
 /// server giữ một nửa cũ, một nửa mới.
 class PlanPatch {
-  /// Không `const`: kiểm [cover] cần gọi [OmniCovers.names], thứ một hàm tạo
-  /// const không gọi được.
   PlanPatch({
     this.name,
     this.description,
@@ -401,7 +414,7 @@ class PlanPatch {
     this.customFields,
   }) : assert(
          cover == null || OmniCovers.names.contains(cover),
-         'cover phải là một tên trong OmniCovers.names, nhận "$cover"',
+         'cover JSON phải là một tên trong OmniCovers.names, nhận "$cover"',
        ),
        assert(
          !(clearTeam && teamId != null),
@@ -411,8 +424,8 @@ class PlanPatch {
   final String? name;
   final String? description;
 
-  /// TÊN nền (`teal-1`…), không URL. Phải nằm trong [OmniCovers.names] —
-  /// server không có danh sách để từ chối tên lạ.
+  /// Token nền cũ (`teal-1`…). Ảnh mới PHẢI đi qua [PlanCoverApi]; API JSON
+  /// chỉ nhận tối đa 32 ký tự và cố ý không nhận URL do client tự dựng.
   final String? cover;
   final String? color;
   final String? teamId;

@@ -84,12 +84,13 @@ void main() {
   });
 
   testWidgets(
-    '+ mở khay Tạo việc · Mẫu trả lời; API cũ thiếu khoá: không Báo giá/'
+    '+ mở menu Tạo việc · Mẫu trả lời; API cũ thiếu khoá: không Báo giá/'
     'Tệp/Ghi âm',
     (tester) async {
       await tester.pumpWidget(host());
       await tester.tap(find.byTooltip('Thêm'));
       await tester.pumpAndSettle();
+      expect(find.byKey(const Key('composer-tools-menu')), findsOneWidget);
       expect(find.text('Tạo việc'), findsOneWidget);
       expect(find.text('Mẫu trả lời'), findsOneWidget);
       expect(find.text('Báo giá'), findsNothing);
@@ -171,7 +172,7 @@ void main() {
     expect(tasks, 1);
   });
 
-  testWidgets('giảm chuyển động: mở khay không có hoạt ảnh', (tester) async {
+  testWidgets('giảm chuyển động: mở menu không có hoạt ảnh', (tester) async {
     await tester.pumpWidget(host(reduceMotion: true));
     await tester.tap(find.byTooltip('Thêm'));
     await tester.pump();
@@ -193,7 +194,7 @@ void main() {
     );
   });
 
-  testWidgets('khay ẩn Tạo việc khi không có onCreateTask', (tester) async {
+  testWidgets('menu ẩn Tạo việc khi không có onCreateTask', (tester) async {
     await tester.pumpWidget(
       MaterialApp(
         theme: OmniTheme.light(TargetPlatform.android),
@@ -217,13 +218,13 @@ void main() {
     expect(find.text('Mẫu trả lời'), findsOneWidget);
   });
 
-  testWidgets('chạm ô nhập thì khay đóng', (tester) async {
+  testWidgets('chạm ngoài menu thì menu đóng', (tester) async {
     await tester.pumpWidget(host());
     await tester.tap(find.byTooltip('Thêm'));
     await tester.pumpAndSettle();
     expect(find.text('Tạo việc'), findsOneWidget);
 
-    await tester.tap(find.byType(TextField));
+    await tester.tapAt(const Offset(8, 8));
     await tester.pumpAndSettle();
     expect(find.text('Tạo việc'), findsNothing);
   });

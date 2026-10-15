@@ -36,8 +36,11 @@ class AccountPage extends ConsumerStatefulWidget {
   ConsumerState<AccountPage> createState() => _AccountPageState();
 }
 
+enum _AvatarAction { change, remove }
+
 class _AccountPageState extends ConsumerState<AccountPage> {
   bool _busy = false;
+  final _avatarButtonKey = GlobalKey(debugLabel: 'AccountProfileAvatar');
 
   static const _themeModes = [
     ThemeMode.light,
@@ -74,6 +77,7 @@ class _AccountPageState extends ConsumerState<AccountPage> {
     ];
 
     return Scaffold(
+      backgroundColor: scheme.surface,
       appBar: const OmniAppBar(
         title: 'Tài khoản',
         centerTitle: true,
@@ -191,13 +195,14 @@ class _AccountPageState extends ConsumerState<AccountPage> {
           Semantics(
             button: true,
             container: true,
-            label: 'Đổi ảnh đại diện',
+            label: 'Tuỳ chọn ảnh đại diện',
             excludeSemantics: true,
-            onTap: _busy ? null : _pickAndUpload,
+            onTap: _busy ? null : () => _openAvatarMenu(avatarUrl),
             child: InkResponse(
-              onTap: _busy ? null : _pickAndUpload,
+              onTap: _busy ? null : () => _openAvatarMenu(avatarUrl),
               radius: 28,
               child: SizedBox.square(
+                key: _avatarButtonKey,
                 dimension: 48,
                 child: Stack(
                   alignment: Alignment.center,
@@ -260,21 +265,89 @@ class _AccountPageState extends ConsumerState<AccountPage> {
     );
   }
 
-  Future<void> _pickAndUpload() async {
-    // Nén ở CLIENT trước khi gửi. Một ảnh 12MB từ camera điện thoại sẽ bị API
-    // từ chối ở trần 5MB, và "tệp quá lớn" là một cách tệ để nói "máy bạn chụp
-    // ảnh to quá". Cùng tham số `thread_page.dart` và `task_detail_page.dart`
-    // đang dùng.
-    final picked = await ImagePicker().pickImage(
-      source: ImageSource.gallery,
-      imageQuality: 85,
-      maxWidth: 1024,
-      maxHeight: 1024,
+  Future<void> _openAvatarMenu(String? avatarUrl) async {
+    final box =
+        _avatarButtonKey.currentContext?.findRenderObject() as RenderBox?;
+    if (box == null || !box.hasSize) return;
+    final action = await showOmniAnchoredMenu<_AvatarAction>(
+      context: context,
+      anchor: box.localToGlobal(Offset.zero) & box.size,
+      width: 236,
+      menuKey: const Key('profile-avatar-menu'),
+      semanticsLabel: 'Tuỳ chọn ảnh đại diện',
+      builder: (menuContext) => Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          OmniAnchoredMenuItem(
+            icon: Icons.photo_library_outlined,
+            label: 'Đổi ảnh',
+            onTap: () => Navigator.of(menuContext).pop(_AvatarAction.change),
+          ),
+          if (avatarUrl != null && avatarUrl.trim().isNotEmpty)
+            OmniAnchoredMenuItem(
+              icon: Icons.delete_outline_rounded,
+              label: 'Xoá ảnh',
+              divider: true,
+              destructive: true,
+              onTap: () => Navigator.of(menuContext).pop(_AvatarAction.remove),
+            ),
+        ],
+      ),
     );
-    if (picked == null || !mounted) return;
+    if (!mounted || action == null) return;
+    switch (action) {
+      case _AvatarAction.change:
+        await _pickAndUpload();
+      case _AvatarAction.remove:
+        await _removeAvatar();
+    }
+  }
 
+  Future<void> _removeAvatar() async {
+    final confirmed = await showOmniConfirm(
+      context: context,
+      title: 'Xoá ảnh đại diện?',
+      message: 'Viomni sẽ dùng chữ cái tên của bạn thay cho ảnh.',
+      confirmLabel: 'Xoá ảnh',
+      destructive: true,
+    );
+    if (!confirmed || !mounted) return;
     setState(() => _busy = true);
     try {
+      await ref.read(avatarApiProvider).remove();
+      await ref.read(sessionControllerProvider.notifier).refreshContext();
+    } on AppException catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(e.message)));
+      }
+    } on Object {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Chưa xoá được ảnh đại diện.')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  Future<void> _pickAndUpload() async {
+    try {
+      // Nén ở CLIENT trước khi gửi. Một ảnh 12MB từ camera điện thoại sẽ bị API
+      // từ chối ở trần 5MB, và "tệp quá lớn" là một cách tệ để nói "máy bạn chụp
+      // ảnh to quá". Cùng tham số `thread_page.dart` và `task_detail_page.dart`
+      // đang dùng.
+      final picked = await ImagePicker().pickImage(
+        source: ImageSource.gallery,
+        imageQuality: 85,
+        maxWidth: 1024,
+        maxHeight: 1024,
+      );
+      if (picked == null || !mounted) return;
+
+      setState(() => _busy = true);
       await ref.read(avatarApiProvider).upload(picked.path);
       // Đọc lại phiên thay vì tự vá URL vào: server là nơi biết URL cuối cùng,
       // và một bản sao ở client sẽ lệch ngay lần đầu server đổi cách sinh URL.
@@ -284,6 +357,22 @@ class _AccountPageState extends ConsumerState<AccountPage> {
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(SnackBar(content: Text(e.message)));
+      }
+    } on PlatformException {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Không mở được thư viện ảnh. Vui lòng thử lại.'),
+          ),
+        );
+      }
+    } on Object {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Chưa cập nhật được ảnh đại diện. Vui lòng thử lại.'),
+          ),
+        );
       }
     } finally {
       if (mounted) setState(() => _busy = false);
@@ -356,7 +445,8 @@ class _Rise extends StatelessWidget {
   }
 }
 
-/// Thẻ bo 8, viền mảnh.
+/// Mặt phẳng nội dung. Các nhóm cấp trang dùng khoảng cách + divider thay vì
+/// khung bo quanh toàn bộ nội dung.
 class _Card extends StatelessWidget {
   const _Card({required this.child, this.padding = EdgeInsets.zero});
 
@@ -365,17 +455,8 @@ class _Card extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-
-    // Material chứ không DecoratedBox: dòng bên trong vẽ gợn sóng lên Material
-    // gần nhất, và một nền tô giữa hai bên sẽ che mất nó.
     return Material(
-      color: scheme.surface,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(8),
-        side: BorderSide(color: scheme.outlineVariant),
-      ),
-      clipBehavior: Clip.antiAlias,
+      color: Colors.transparent,
       child: Padding(padding: padding, child: child),
     );
   }

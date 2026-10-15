@@ -5,6 +5,7 @@ import '../../../core/error/app_exception.dart';
 import '../../../design/components/components.dart';
 import '../../../design/tokens/tokens.dart';
 import '../application/plans_providers.dart';
+import '../data/plan_cover_upload.dart';
 import '../data/plans_api.dart';
 import '../domain/plan.dart';
 import 'widgets/cover_picker.dart';
@@ -79,8 +80,10 @@ class _EditPlanPageState extends ConsumerState<EditPlanPage> {
   final _name = TextEditingController();
   final _description = TextEditingController();
   Plan? _plan;
-  String _cover = OmniCovers.fallback;
+  String? _coverPath;
+  bool _removeCover = false;
   bool _saving = false;
+  String? _error;
 
   @override
   void dispose() {
@@ -88,9 +91,6 @@ class _EditPlanPageState extends ConsumerState<EditPlanPage> {
     _description.dispose();
     super.dispose();
   }
-
-  static String _coverOf(Plan plan) =>
-      OmniCovers.names.contains(plan.cover) ? plan.cover! : OmniCovers.fallback;
 
   PlanPatch? _patch() {
     final plan = _plan;
@@ -103,16 +103,59 @@ class _EditPlanPageState extends ConsumerState<EditPlanPage> {
       description: description == (plan.description ?? '').trim()
           ? null
           : description,
-      cover: _cover == _coverOf(plan) ? null : _cover,
     );
 
     return patch.isEmpty ? null : patch;
   }
 
-  Future<void> _save(PlanPatch patch) async {
+  bool get _coverChanged {
+    final plan = _plan;
+    if (plan == null) return false;
+    return _coverPath != null ||
+        (_removeCover && resolveProjectCoverUrl(plan.cover) != null);
+  }
+
+  Future<void> _save() async {
+    final patch = _patch();
+    if (patch == null && !_coverChanged) return;
     setState(() => _saving = true);
-    await savePlanPatch(context, widget.planId, patch);
-    if (mounted) setState(() => _saving = false);
+    final messenger = ScaffoldMessenger.of(context);
+    final navigator = Navigator.of(context);
+    try {
+      if (patch != null) {
+        _plan = await ref
+            .read(plansApiProvider)
+            .updatePlan(widget.planId, patch);
+      }
+      if (_coverPath case final path?) {
+        await ref.read(planCoverApiProvider).upload(widget.planId, path);
+      } else if (_removeCover) {
+        await ref.read(planCoverApiProvider).remove(widget.planId);
+      }
+      ref.invalidate(planProvider(widget.planId));
+      ref.invalidate(teamsWithPlansProvider);
+      if (!mounted) return;
+      if (navigator.canPop()) {
+        navigator.pop(true);
+      } else {
+        setState(() => _saving = false);
+      }
+    } on AppException catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _saving = false;
+        _error = error.message;
+      });
+      messenger.showSnackBar(SnackBar(content: Text(error.message)));
+    } on Object {
+      if (!mounted) return;
+      const message = 'Chưa lưu được ảnh nền. Vui lòng thử lại.';
+      setState(() {
+        _saving = false;
+        _error = message;
+      });
+      messenger.showSnackBar(const SnackBar(content: Text(message)));
+    }
   }
 
   @override
@@ -123,10 +166,10 @@ class _EditPlanPageState extends ConsumerState<EditPlanPage> {
       _plan = loaded;
       _name.text = loaded.name;
       _description.text = loaded.description ?? '';
-      _cover = _coverOf(loaded);
     }
     final scheme = Theme.of(context).colorScheme;
     final patch = _patch();
+    final canSave = !_saving && (patch != null || _coverChanged);
 
     return Scaffold(
       backgroundColor: scheme.surface,
@@ -134,10 +177,7 @@ class _EditPlanPageState extends ConsumerState<EditPlanPage> {
         backgroundColor: scheme.surface,
         title: const Text('Sửa kế hoạch'),
         actions: [
-          PlanSaveAction(
-            saving: _saving,
-            onPressed: patch == null ? null : () => _save(patch),
-          ),
+          PlanSaveAction(saving: _saving, onPressed: canSave ? _save : null),
         ],
       ),
       body: _plan == null
@@ -175,7 +215,7 @@ class _EditPlanPageState extends ConsumerState<EditPlanPage> {
                 ),
                 const SizedBox(height: OmniSpacing.lg),
                 Text(
-                  'Nền',
+                  'Ảnh nền',
                   style: OmniType.body.copyWith(
                     fontWeight: FontWeight.w600,
                     color: scheme.onSurface,
@@ -183,9 +223,34 @@ class _EditPlanPageState extends ConsumerState<EditPlanPage> {
                 ),
                 const SizedBox(height: OmniSpacing.sm),
                 CoverPicker(
-                  value: _cover,
-                  onChanged: (value) => setState(() => _cover = value),
+                  localPath: _coverPath,
+                  remoteUrl: _removeCover
+                      ? null
+                      : resolveProjectCoverUrl(_plan?.cover),
+                  title: _name.text.trim(),
+                  busy: _saving && _coverChanged,
+                  onPicked: (path) => setState(() {
+                    _coverPath = path;
+                    _removeCover = false;
+                    _error = null;
+                  }),
+                  onRemove: _coverPath != null
+                      ? () => setState(() => _coverPath = null)
+                      : resolveProjectCoverUrl(_plan?.cover) != null &&
+                            !_removeCover
+                      ? () => setState(() => _removeCover = true)
+                      : null,
+                  onError: (message) => setState(() => _error = message),
                 ),
+                if (_error != null) ...[
+                  const SizedBox(height: OmniSpacing.sm),
+                  Text(
+                    _error!,
+                    style: OmniType.caption.copyWith(
+                      color: OmniColors.dangerTextOf(context),
+                    ),
+                  ),
+                ],
               ],
             ),
     );

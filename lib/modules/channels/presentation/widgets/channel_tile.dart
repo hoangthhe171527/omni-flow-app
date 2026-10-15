@@ -68,6 +68,7 @@ class ChannelTile extends StatelessWidget {
         ('Chưa kết nối', Icons.link_off_rounded, OmniTone.neutral);
 
     return OmniCard(
+      flat: true,
       padding: const EdgeInsets.all(14),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -125,7 +126,7 @@ class ChannelTile extends StatelessWidget {
           ),
           IconButton(
             onPressed: canWrite ? onDisconnect : null,
-            icon: const Icon(Icons.more_vert_rounded),
+            icon: const Icon(Icons.link_off_rounded),
             tooltip: 'Ngắt kết nối',
           ),
         ],

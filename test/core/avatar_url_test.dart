@@ -25,6 +25,17 @@ void main() {
     );
   });
 
+  test('rebases the self-avatar route returned by auth', () {
+    expect(
+      resolveAvatarUrl('http://app:8000/api/v1/auth/avatar/me.jpg'),
+      'https://omni-api.app.sunriseieco.vn/api/v1/auth/avatar/me.jpg',
+    );
+    expect(
+      resolveAvatarUrl('/api/v1/auth/avatar/me.jpg'),
+      'https://omni-api.app.sunriseieco.vn/api/v1/auth/avatar/me.jpg',
+    );
+  });
+
   test('keeps a platform CDN avatar unchanged', () {
     const url = 'https://platform-lookaside.fbsbx.com/avatar.jpg';
     expect(resolveAvatarUrl(url), url);
@@ -33,7 +44,7 @@ void main() {
   test('rebases legacy storage avatars through the public API proxy', () {
     expect(
       resolveAvatarUrl('http://minio/storage/avatars/a.jpg'),
-      'https://omni-api.app.sunriseieco.vn/api/v1/inbox/avatar/a.jpg',
+      'https://omni-api.app.sunriseieco.vn/api/v1/auth/avatar/a.jpg',
     );
   });
 }

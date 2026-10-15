@@ -9,8 +9,8 @@ import 'plan_tile.dart';
 /// Một kế hoạch yêu thích kèm tên team của nó ("Team · N việc").
 typedef FavoritePlan = ({Plan plan, String teamName});
 
-/// Mục "Yêu thích" đầu tab Việc (`Main.dc.html`, Nhóm 2): khung `.grp`, đầu
-/// nhóm 48 với sao 20 màu `star`, "Yêu thích", số, mũi tên xoay 180° khi mở;
+/// Mục "Yêu thích" đầu tab Việc: section phẳng, đầu nhóm 48 với sao 20 màu
+/// `star`, "Yêu thích", số, mũi tên xoay 180° khi mở;
 /// mỗi dòng như dòng kế hoạch nhưng dòng phụ là "Team · N việc" và cuối dòng
 /// là › (bỏ sao ở dòng của team).
 ///
@@ -23,6 +23,8 @@ class FavoritesGroup extends StatelessWidget {
     required this.open,
     required this.onToggle,
     required this.onOpenPlan,
+    this.onLongPressPlan,
+    this.canLongPressPlan,
     this.rise = true,
   });
 
@@ -30,6 +32,8 @@ class FavoritesGroup extends StatelessWidget {
   final bool open;
   final VoidCallback onToggle;
   final ValueChanged<Plan> onOpenPlan;
+  final ValueChanged<Plan>? onLongPressPlan;
+  final bool Function(Plan plan)? canLongPressPlan;
 
   /// Như [TeamGroup.rise]: chỉ khung đầu của màn.
   final bool rise;
@@ -44,11 +48,6 @@ class FavoritesGroup extends StatelessWidget {
       animate: rise,
       child: Material(
         color: scheme.surface,
-        shape: RoundedRectangleBorder(
-          borderRadius: const BorderRadius.all(Radius.circular(8)),
-          side: BorderSide(color: scheme.outlineVariant),
-        ),
-        clipBehavior: Clip.antiAlias,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -61,7 +60,7 @@ class FavoritesGroup extends StatelessWidget {
                   onTap: onToggle,
                   child: Container(
                     constraints: const BoxConstraints(minHeight: 48),
-                    padding: const EdgeInsets.fromLTRB(12, 0, 6, 0),
+                    padding: const EdgeInsets.fromLTRB(16, 0, 10, 0),
                     child: Row(
                       children: [
                         Icon(Icons.star_rounded, size: 20, color: tones.star),
@@ -112,6 +111,11 @@ class FavoritesGroup extends StatelessWidget {
                       '${(f.plan.taskCount - f.plan.doneCount).clamp(0, 1 << 30)}'
                       ' việc',
                   onTap: () => onOpenPlan(f.plan),
+                  onLongPress:
+                      onLongPressPlan != null &&
+                          (canLongPressPlan?.call(f.plan) ?? true)
+                      ? () => onLongPressPlan!(f.plan)
+                      : null,
                 ),
           ],
         ),

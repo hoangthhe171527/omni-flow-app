@@ -181,6 +181,7 @@ class ThreadHeader extends StatelessWidget implements PreferredSizeWidget {
   }
 
   Widget _buildSearchBar(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
     return Padding(
       padding: const EdgeInsets.only(left: 16, right: 4),
       child: Row(
@@ -192,8 +193,15 @@ class ThreadHeader extends StatelessWidget implements PreferredSizeWidget {
               autofocus: true,
               onChanged: onSearchChanged,
               textInputAction: TextInputAction.search,
+              style: OmniType.search.copyWith(
+                color: scheme.onSurface,
+                fontStyle: FontStyle.normal,
+              ),
               decoration: InputDecoration(
                 hintText: 'Tìm trong hội thoại',
+                hintStyle: OmniType.searchHint.copyWith(
+                  color: scheme.onSurfaceVariant,
+                ),
                 border: InputBorder.none,
                 enabledBorder: InputBorder.none,
                 focusedBorder: InputBorder.none,

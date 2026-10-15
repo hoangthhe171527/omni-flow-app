@@ -55,6 +55,7 @@ class _FilesCardState extends ConsumerState<FilesCard> {
     final files = task.attachments;
 
     return DetailCard(
+      flat: true,
       children: [
         DetailCardHeader(
           icon: Icons.attach_file_rounded,
@@ -72,10 +73,17 @@ class _FilesCardState extends ConsumerState<FilesCard> {
                         ),
                       ),
                     )
-                  : DetailHeaderButton(
-                      tooltip: 'Tải tệp lên',
-                      icon: Icons.file_upload_outlined,
-                      onPressed: _upload,
+                  : Builder(
+                      builder: (buttonContext) => DetailHeaderButton(
+                        tooltip: 'Tải tệp lên',
+                        icon: Icons.file_upload_outlined,
+                        onPressed: () {
+                          final box =
+                              buttonContext.findRenderObject() as RenderBox?;
+                          if (box == null || !box.hasSize) return;
+                          _upload(box.localToGlobal(Offset.zero) & box.size);
+                        },
+                      ),
                     ),
           ],
         ),
@@ -111,10 +119,12 @@ class _FilesCardState extends ConsumerState<FilesCard> {
 
   /// Đính ảnh: chụp mới, hoặc lấy ảnh đã có sẵn trong máy (người thợ thường
   /// đã chụp rồi — bắt chụp lại một cây đàn đã lắp xong thì không làm được).
-  Future<void> _upload() async {
+  Future<void> _upload(Rect anchor) async {
     final messenger = ScaffoldMessenger.of(context);
-    final source = await showDetailMenuSheet<ImageSource>(
+    final source = await showDetailAnchoredMenu<ImageSource>(
       context,
+      anchor: anchor,
+      menuKey: const Key('task-attachment-source-menu'),
       semanticsLabel: 'Tải tệp lên',
       groups: const [
         [

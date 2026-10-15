@@ -63,6 +63,7 @@ class CustomFieldsCard extends ConsumerWidget {
     return Padding(
       padding: const EdgeInsets.only(top: 10),
       child: DetailCard(
+        flat: true,
         children: [
           DetailCardHeader(
             icon: Icons.feed_outlined,

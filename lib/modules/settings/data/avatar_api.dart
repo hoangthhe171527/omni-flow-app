@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/error/app_exception.dart';
 import '../../../core/network/api_client.dart';
 
 /// Ảnh đại diện của CHÍNH người đang đăng nhập.
@@ -24,7 +25,14 @@ class AvatarApi {
       filePath: filePath,
     );
 
-    return response.object['avatar']?.toString() ?? '';
+    final avatar = response.object['avatar'];
+    if (avatar is! String || avatar.trim().isEmpty) {
+      throw const ServerException(
+        'Máy chủ chưa trả về ảnh đại diện vừa tải lên.',
+        code: 'avatar_missing',
+      );
+    }
+    return avatar.trim();
   }
 
   Future<void> remove() => _client.delete('/auth/avatar');

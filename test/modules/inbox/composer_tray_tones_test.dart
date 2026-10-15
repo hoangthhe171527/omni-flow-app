@@ -1,11 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:omni_app/design/theme/omni_theme.dart';
-import 'package:omni_app/design/tokens/tokens.dart';
 import 'package:omni_app/modules/inbox/presentation/widgets/message_composer.dart';
 
-/// Ô tròn của khay công cụ lấy màu từ [OmniFeatureTones] (sáng lẫn tối), không
-/// phải hex pastel viết tay.
+/// Menu công cụ dùng đúng surface/màu nhấn của theme ở cả sáng lẫn tối.
 void main() {
   Future<void> pump(WidgetTester tester, ThemeData theme) async {
     await tester.pumpWidget(
@@ -31,37 +29,24 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  Color circleOf(WidgetTester tester, IconData icon) {
-    final box = tester.widget<Container>(
-      find
-          .ancestor(of: find.byIcon(icon), matching: find.byType(Container))
-          .first,
-    );
-    return (box.decoration! as BoxDecoration).color!;
-  }
-
   for (final dark in [false, true]) {
-    testWidgets(
-      'khay công cụ theo OmniFeatureTones (${dark ? 'tối' : 'sáng'})',
-      (tester) async {
-        final theme = dark
-            ? OmniTheme.dark(TargetPlatform.android)
-            : OmniTheme.light(TargetPlatform.android);
-        await pump(tester, theme);
+    testWidgets('menu công cụ theo theme (${dark ? 'tối' : 'sáng'})', (
+      tester,
+    ) async {
+      final theme = dark
+          ? OmniTheme.dark(TargetPlatform.android)
+          : OmniTheme.light(TargetPlatform.android);
+      await pump(tester, theme);
 
-        OmniTaskTone tone(OmniHue hue) => dark
-            ? OmniFeatureTones.dark(hue, theme.colorScheme.surface)
-            : OmniFeatureTones.light(hue);
-
-        expect(
-          circleOf(tester, Icons.task_alt_rounded),
-          tone(OmniHue.orange).background,
-        );
-        expect(
-          circleOf(tester, Icons.bolt_rounded),
-          tone(OmniHue.teal).background,
-        );
-      },
-    );
+      expect(find.byKey(const Key('composer-tools-menu')), findsOneWidget);
+      expect(
+        tester.widget<Icon>(find.byIcon(Icons.task_alt_rounded)).color,
+        theme.colorScheme.primary,
+      );
+      expect(
+        tester.widget<Icon>(find.byIcon(Icons.bolt_rounded)).color,
+        theme.colorScheme.primary,
+      );
+    });
   }
 }

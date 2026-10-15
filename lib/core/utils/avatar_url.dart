@@ -57,13 +57,17 @@ String? resolveAvatarUrlUncached(String? value) {
   if (url == null) return source;
 
   final api = Uri.parse(AppConfig.apiBaseUrl);
-  const avatarPath = '/api/v1/inbox/avatar/';
+  const authAvatarPath = '/api/v1/auth/avatar/';
+  const inboxAvatarPath = '/api/v1/inbox/avatar/';
+  final isAvatarProxyPath =
+      url.path.startsWith(authAvatarPath) ||
+      url.path.startsWith(inboxAvatarPath);
 
   // Unlike a browser, Flutter's NetworkImage cannot resolve a relative URL
   // against the current page origin. The API may return this form when its
   // public APP_URL is configured as a relative path or when an old mirror was
   // stored without the origin.
-  if (!url.hasScheme && url.path.startsWith(avatarPath)) {
+  if (!url.hasScheme && isAvatarProxyPath) {
     return api
         .replace(path: url.path, query: url.hasQuery ? url.query : null)
         .toString();
@@ -85,15 +89,17 @@ String? resolveAvatarUrlUncached(String? value) {
   // proxy is the stable public contract for mobile clients.
   final avatarMarker = '/avatars/';
   final markerIndex = url.path.indexOf(avatarMarker);
-  if (markerIndex >= 0 &&
-      (isInternalHost || !url.path.startsWith(avatarPath))) {
+  if (markerIndex >= 0 && (isInternalHost || !isAvatarProxyPath)) {
     final file = url.path.substring(markerIndex + avatarMarker.length);
     if (file.isNotEmpty && !file.contains('/')) {
-      return api.replace(path: '$avatarPath$file').toString();
+      // Ảnh hồ sơ do người dùng tải lên có route chuyên biệt. Route inbox vẫn
+      // đọc cùng kho cũ, nhưng dùng route auth giúp hợp đồng dữ liệu rõ ràng và
+      // không phụ thuộc module Hộp thư có được bật hay không.
+      return api.replace(path: '$authAvatarPath$file').toString();
     }
   }
 
-  if (!url.path.startsWith(avatarPath)) return source;
+  if (!isAvatarProxyPath) return source;
   final needsHttps = host == api.host.toLowerCase() && url.scheme != api.scheme;
 
   if (!isInternalHost && !needsHttps) return source;

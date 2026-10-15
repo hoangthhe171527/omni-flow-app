@@ -15,6 +15,13 @@ class PipelinePage extends StatefulWidget {
 class _PipelinePageState extends State<PipelinePage> {
   bool _filtersOpen = false;
 
+  Future<void> _openFilters(Rect anchor) async {
+    if (_filtersOpen) return;
+    setState(() => _filtersOpen = true);
+    await showOpportunityFilterMenu(context: context, anchor: anchor);
+    if (mounted) setState(() => _filtersOpen = false);
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -23,10 +30,10 @@ class _PipelinePageState extends State<PipelinePage> {
         semanticsTitle: 'Cơ hội',
         bottom: OpportunitySearchRow(
           filtersOpen: _filtersOpen,
-          onToggleFilters: () => setState(() => _filtersOpen = !_filtersOpen),
+          onOpenFilters: _openFilters,
         ),
       ),
-      body: OpportunitiesSegment(filtersOpen: _filtersOpen),
+      body: const OpportunitiesSegment(),
     );
   }
 }

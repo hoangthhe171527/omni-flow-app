@@ -4,12 +4,11 @@ import '../../../../design/components/components.dart';
 import '../../../../design/platform/omni_motion_scope.dart';
 import '../../../../design/tokens/tokens.dart';
 
-/// Hàng thứ hai của header tab Việc (`Main.dc.html`): ô tìm team/kế hoạch cao
-/// 40 nền xám bo 6, và nút vuông **+** 44×40 bo 6.
+/// Hàng thứ hai của header tab Việc: ô tìm team/kế hoạch và nút **+** đều
+/// phẳng, không dựng thêm khung trang trí quanh điều khiển.
 ///
-/// Nút + nền primary; khi menu của nó mở ([addOpen]) thì nền mực và biểu tượng
-/// xoay 45° thành × trong 300ms. Hình vẽ cao 40 nhưng vùng chạm phủ cả 8px đệm
-/// đáy, thành 44×48.
+/// Khi menu mở ([addOpen]), biểu tượng xoay 45° thành × trong 300ms. Icon chỉ
+/// cao 40 nhưng vùng chạm phủ cả 8px đệm đáy, thành 44×48.
 class TeamsSearchRow extends StatelessWidget implements PreferredSizeWidget {
   const TeamsSearchRow({
     super.key,
@@ -47,45 +46,44 @@ class TeamsSearchRow extends StatelessWidget implements PreferredSizeWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Expanded(
-              child: Container(
+              child: SizedBox(
                 key: const Key('teams-search-box'),
                 height: _fieldHeight,
-                padding: const EdgeInsets.symmetric(horizontal: 12),
-                decoration: BoxDecoration(
-                  color: scheme.surfaceContainerHighest,
-                  borderRadius: const BorderRadius.all(Radius.circular(6)),
-                ),
-                child: Row(
-                  children: [
-                    Icon(
-                      Icons.search_rounded,
-                      size: 17,
-                      color: scheme.onSurfaceVariant,
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: TextField(
-                        controller: controller,
-                        onChanged: onChanged,
-                        textInputAction: TextInputAction.search,
-                        style: OmniType.bodySm.copyWith(
-                          color: scheme.onSurface,
-                        ),
-                        decoration: InputDecoration(
-                          isDense: true,
-                          filled: false,
-                          border: InputBorder.none,
-                          enabledBorder: InputBorder.none,
-                          focusedBorder: InputBorder.none,
-                          contentPadding: EdgeInsets.zero,
-                          hintText: 'Tìm team, kế hoạch',
-                          hintStyle: OmniType.bodySm.copyWith(
-                            color: scheme.onSurfaceVariant,
+                child: Padding(
+                  padding: const EdgeInsets.only(left: 4),
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.search_rounded,
+                        size: 17,
+                        color: scheme.onSurfaceVariant,
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: TextField(
+                          controller: controller,
+                          onChanged: onChanged,
+                          textInputAction: TextInputAction.search,
+                          style: OmniType.search.copyWith(
+                            color: scheme.onSurface,
+                            fontStyle: FontStyle.normal,
+                          ),
+                          decoration: InputDecoration(
+                            isDense: true,
+                            filled: false,
+                            border: InputBorder.none,
+                            enabledBorder: InputBorder.none,
+                            focusedBorder: InputBorder.none,
+                            contentPadding: EdgeInsets.zero,
+                            hintText: 'Tìm team, kế hoạch',
+                            hintStyle: OmniType.searchHint.copyWith(
+                              color: scheme.onSurfaceVariant,
+                            ),
                           ),
                         ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -117,16 +115,6 @@ class _AddButtonState extends State<_AddButton> {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final motion = OmniMotion.enabled(context);
-    final ink = OmniColors.byBrightness(
-      context,
-      OmniColors.ink,
-      OmniColors.darkForeground,
-    );
-    final onInk = OmniColors.byBrightness(
-      context,
-      OmniColors.primaryForeground,
-      OmniColors.ink,
-    );
     final open = widget.open;
 
     // Đo ô chạm (không co khi nhấn) rồi lấy phần vẽ 44×40 ở đỉnh của nó.
@@ -159,16 +147,10 @@ class _AddButtonState extends State<_AddButton> {
             height: TeamsSearchRow._fieldHeight + TeamsSearchRow._bottomPad,
             child: Align(
               alignment: Alignment.topCenter,
-              child: AnimatedContainer(
+              child: SizedBox(
                 key: const Key('teams-add-face'),
                 width: 44,
                 height: TeamsSearchRow._fieldHeight,
-                duration: motion ? OmniDuration.base : Duration.zero,
-                curve: OmniCurves.standard,
-                decoration: BoxDecoration(
-                  color: open ? ink : scheme.primary,
-                  borderRadius: const BorderRadius.all(Radius.circular(6)),
-                ),
                 child: AnimatedRotation(
                   turns: open ? 0.125 : 0,
                   duration: motion
@@ -176,9 +158,10 @@ class _AddButtonState extends State<_AddButton> {
                       : Duration.zero,
                   curve: OmniCurves.standard,
                   child: Icon(
+                    key: const Key('teams-add-icon'),
                     Icons.add_rounded,
-                    size: 20,
-                    color: open ? onInk : scheme.onPrimary,
+                    size: 24,
+                    color: scheme.onSurface,
                   ),
                 ),
               ),
