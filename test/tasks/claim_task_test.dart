@@ -77,6 +77,7 @@ void main() {
 
     await tester.tap(find.byType(OmniDashedCircle));
     await tester.pumpAndSettle();
+    expect(find.byKey(const Key('claim-task-menu')), findsOneWidget);
     await tester.tap(find.text('Nhận việc này'));
     await tester.pumpAndSettle();
 

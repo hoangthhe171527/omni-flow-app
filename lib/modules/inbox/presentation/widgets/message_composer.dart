@@ -20,7 +20,7 @@ import 'voice_record_bar.dart';
 ///
 /// Nút cuối là 👍 khi ô trống (gửi đúng một tin 👍) và đổi thành nút Gửi ngay
 /// khi có chữ hoặc ảnh. Khi gõ, cụm công cụ thu về 0 và để lại `›` để bung lại.
-/// `+` mở khay bốn cột chỉ chứa những việc máy chủ thật sự hỗ trợ.
+/// `+` mở menu nổi tại chỗ, chỉ chứa những việc máy chủ thật sự hỗ trợ.
 ///
 /// Không có chế độ ghi chú nội bộ: gửi nhầm ghi chú cho khách là lỗi không thu
 /// hồi được, nên composer này chỉ có một việc là trả lời khách.
@@ -60,7 +60,7 @@ class MessageComposer extends StatefulWidget {
   /// Take a photo. Null hides the entry rather than offering a dead button.
   final Future<PendingAttachment?> Function()? onTakePhoto;
 
-  /// Chọn tài liệu. Null (hoặc kênh không gửi tệp) ẩn mục "Tệp" trong khay.
+  /// Chọn tài liệu. Null (hoặc kênh không gửi tệp) ẩn mục "Tệp" trong menu.
   final Future<List<PendingAttachment>> Function(int remaining)? onPickFiles;
 
   /// Máy ghi âm (tiêm được; trang hội thoại lấy từ `voiceRecorderProvider`).
@@ -86,7 +86,7 @@ class MessageComposer extends StatefulWidget {
   /// ô nhập — nháp vẫn giữ nguyên.
   final String? errorText;
 
-  /// Mở màn tạo việc. Null ẩn mục "Tạo việc" trong khay (không đủ quyền).
+  /// Mở màn tạo việc. Null ẩn mục "Tạo việc" trong menu (không đủ quyền).
   final VoidCallback? onCreateTask;
 
   /// Nạp danh sách mẫu trả lời. Null ẩn mục "Mẫu trả lời".
@@ -102,13 +102,11 @@ class MessageComposer extends StatefulWidget {
 
 const _likeText = '👍';
 const _toolWidth = 44.0;
-const _slowMotion = Duration(milliseconds: 350);
 
 class _MessageComposerState extends State<MessageComposer> {
   final _controller = TextEditingController();
   final _focus = FocusNode();
   bool _sending = false;
-  bool _trayOpen = false;
   bool _toolsForced = false;
   bool _loadingTemplates = false;
 
@@ -153,7 +151,6 @@ class _MessageComposerState extends State<MessageComposer> {
   void initState() {
     super.initState();
     _controller.addListener(_onTextChanged);
-    _focus.addListener(_onFocusChanged);
   }
 
   @override
@@ -162,21 +159,14 @@ class _MessageComposerState extends State<MessageComposer> {
     // Rời trang khi đang ghi (hoặc còn bản ghi chưa gửi): dừng và xoá tệp.
     if (_voiceActive) unawaited(widget.voiceRecorder?.cancel());
     _controller.removeListener(_onTextChanged);
-    _focus.removeListener(_onFocusChanged);
     _controller.dispose();
     _focus.dispose();
     super.dispose();
   }
 
-  /// Gõ chữ là bỏ qua khay: ô nhập lấy tiêu điểm thì đóng khay `+`.
-  void _onFocusChanged() {
-    if (_focus.hasFocus && _trayOpen) setState(() => _trayOpen = false);
-  }
-
   @override
   void didUpdateWidget(MessageComposer old) {
     super.didUpdateWidget(old);
-    if (!widget.enabled && _trayOpen) _trayOpen = false;
     // Kênh/quyền đổi giữa chừng (mất onSendVoice hoặc máy ghi): thanh ghi
     // không còn nút Gửi dùng được — huỷ lượt ghi trên máy ghi CŨ, xoá tệp.
     // Đang gửi thì để lượt gửi tự kết thúc (tệp đang được tải lên).
@@ -216,7 +206,6 @@ class _MessageComposerState extends State<MessageComposer> {
         if (fromField) _controller.clear();
         _pendingImages.clear();
         _toolsForced = false;
-        _trayOpen = false;
       });
     } catch (_) {
       // The upload error is shown by the thread. Keep the caption and tray so
@@ -240,7 +229,6 @@ class _MessageComposerState extends State<MessageComposer> {
   Future<void> _pickFiles() async {
     final pick = widget.onPickFiles;
     if (pick == null || _full) return;
-    setState(() => _trayOpen = false);
     await _accept(await pick(_remaining));
   }
 
@@ -349,7 +337,6 @@ class _MessageComposerState extends State<MessageComposer> {
         _voiceStopped = false;
         _voicePath = path;
         _voiceElapsed = Duration.zero;
-        _trayOpen = false;
       });
     } on Object {
       _dropVoiceTicks();
@@ -492,18 +479,77 @@ class _MessageComposerState extends State<MessageComposer> {
       builder: (_) => _TemplateSheet(templates: templates),
     );
     if (picked == null || !mounted) return;
-    setState(() => _trayOpen = false);
     _insert(picked);
   }
 
+  bool get _hasExtraTools =>
+      _showFiles || widget.onCreateTask != null || widget.loadTemplates != null;
+
+  Future<void> _openExtraTools(Rect anchor) => showOmniAnchoredMenu<void>(
+    context: context,
+    anchor: anchor,
+    width: 248,
+    menuKey: const Key('composer-tools-menu'),
+    semanticsLabel: 'Thêm vào tin nhắn',
+    builder: (menuContext) => Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        if (_showFiles)
+          OmniAnchoredMenuItem(
+            icon: Icons.attach_file_rounded,
+            label: 'Tệp',
+            trailing: _full
+                ? Text(
+                    'Đủ ${InboxApi.maxAttachmentsPerMessage}',
+                    style: OmniType.micro.copyWith(
+                      color: Theme.of(menuContext).colorScheme.onSurfaceVariant,
+                    ),
+                  )
+                : null,
+            onTap: _full || _sending
+                ? null
+                : () {
+                    Navigator.of(menuContext).pop();
+                    unawaited(_pickFiles());
+                  },
+          ),
+        if (widget.onCreateTask != null)
+          OmniAnchoredMenuItem(
+            icon: Icons.task_alt_rounded,
+            label: 'Tạo việc',
+            onTap: () {
+              Navigator.of(menuContext).pop();
+              widget.onCreateTask!();
+            },
+          ),
+        if (widget.loadTemplates != null)
+          OmniAnchoredMenuItem(
+            icon: Icons.bolt_rounded,
+            label: 'Mẫu trả lời',
+            onTap: () {
+              Navigator.of(menuContext).pop();
+              unawaited(_openTemplates());
+            },
+          ),
+      ],
+    ),
+  );
+
   List<Widget> _tools() => [
-    _ComposerIcon(
-      icon: Icons.add_circle_rounded,
-      tooltip: 'Thêm',
-      rotated: _trayOpen,
-      onTap: widget.enabled
-          ? () => setState(() => _trayOpen = !_trayOpen)
-          : null,
+    Builder(
+      builder: (buttonContext) => _ComposerIcon(
+        icon: Icons.add_circle_rounded,
+        tooltip: 'Thêm',
+        onTap: widget.enabled && _hasExtraTools
+            ? () {
+                final box = buttonContext.findRenderObject() as RenderBox?;
+                if (box == null || !box.hasSize) return;
+                unawaited(
+                  _openExtraTools(box.localToGlobal(Offset.zero) & box.size),
+                );
+              }
+            : null,
+      ),
     ),
     // Đủ 10 tệp: nút vẫn hiện nhưng khoá, nói rõ vì sao.
     if (_showImages && widget.onTakePhoto != null)
@@ -535,27 +581,15 @@ class _MessageComposerState extends State<MessageComposer> {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final motion = OmniMotion.enabled(context);
-    final duration = motion ? _slowMotion : Duration.zero;
+    final duration = OmniMotion.enabled(context)
+        ? OmniDuration.slow
+        : Duration.zero;
     final toolsWidth = _toolWidth * _toolCount;
     final fieldFill = OmniColors.byBrightness(
       context,
       OmniColors.muted,
       scheme.surfaceContainerHighest,
     );
-    final tray = _trayOpen && widget.enabled
-        ? _Tray(
-            onCreateTask: widget.onCreateTask == null
-                ? null
-                : () {
-                    setState(() => _trayOpen = false);
-                    widget.onCreateTask!();
-                  },
-            onTemplates: widget.loadTemplates == null ? null : _openTemplates,
-            showFiles: _showFiles,
-            onFiles: _full || _sending ? null : _pickFiles,
-          )
-        : const SizedBox(width: double.infinity);
     const border = OutlineInputBorder(
       borderRadius: BorderRadius.all(Radius.circular(18)),
       borderSide: BorderSide.none,
@@ -733,144 +767,8 @@ class _MessageComposerState extends State<MessageComposer> {
                         ],
                       ),
               ),
-              // Giảm chuyển động: không dựng AnimatedSize (thời lượng 0 vẫn chạy một
-              // controller và đánh dấu layout trong lúc layout).
-              if (motion)
-                AnimatedSize(
-                  duration: duration,
-                  curve: OmniCurves.standard,
-                  alignment: Alignment.topCenter,
-                  child: tray,
-                )
-              else
-                tray,
             ],
           ),
-        ),
-      ),
-    );
-  }
-}
-
-/// Khay `+`: lưới 4 cột, chỉ những mục có việc thật phía sau.
-class _Tray extends StatelessWidget {
-  const _Tray({
-    required this.onCreateTask,
-    required this.onTemplates,
-    this.showFiles = false,
-    this.onFiles,
-  });
-
-  final VoidCallback? onCreateTask;
-  final VoidCallback? onTemplates;
-
-  /// Mục "Tệp" hiện (kênh gửi được tệp); [onFiles] null = khoá (đủ 10 tệp).
-  final bool showFiles;
-  final VoidCallback? onFiles;
-
-  @override
-  Widget build(BuildContext context) {
-    final items = <Widget>[
-      if (showFiles)
-        _TrayItem(
-          icon: Icons.attach_file_rounded,
-          label: 'Tệp',
-          hue: OmniHue.neutral,
-          onTap: onFiles,
-          disabledLabel: _fullLabel,
-        ),
-      if (onCreateTask != null)
-        _TrayItem(
-          icon: Icons.task_alt_rounded,
-          label: 'Tạo việc',
-          hue: OmniHue.orange,
-          onTap: onCreateTask!,
-        ),
-      if (onTemplates != null)
-        _TrayItem(
-          icon: Icons.bolt_rounded,
-          label: 'Mẫu trả lời',
-          hue: OmniHue.teal,
-          onTap: onTemplates!,
-        ),
-    ];
-    if (items.isEmpty) return const SizedBox(width: double.infinity);
-
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(8, 0, 8, 8),
-      child: Row(
-        children: [
-          for (final item in items) Expanded(child: item),
-          for (var i = items.length; i < 4; i++)
-            const Expanded(child: SizedBox()),
-        ],
-      ),
-    );
-  }
-}
-
-class _TrayItem extends StatelessWidget {
-  const _TrayItem({
-    required this.icon,
-    required this.label,
-    required this.hue,
-    required this.onTap,
-    this.disabledLabel,
-  });
-
-  final IconData icon;
-  final String label;
-  final OmniHue hue;
-  final VoidCallback? onTap;
-
-  /// Semantics khi [onTap] null (vd "Đã đủ 10 tệp").
-  final String? disabledLabel;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    // Cặp nền/chữ theo sắc của tính năng, có bản tối.
-    final tone = OmniFeatureTones.of(context, hue);
-    final enabled = onTap != null;
-    final bg = tone.background;
-    final fg = enabled ? tone.foreground : Theme.of(context).disabledColor;
-
-    return Semantics(
-      button: true,
-      enabled: enabled,
-      hint: enabled ? null : disabledLabel,
-      child: _trayInk(context, scheme, bg, fg),
-    );
-  }
-
-  Widget _trayInk(
-    BuildContext context,
-    ColorScheme scheme,
-    Color bg,
-    Color fg,
-  ) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(12),
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(minHeight: 64),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              width: 36,
-              height: 36,
-              decoration: BoxDecoration(color: bg, shape: BoxShape.circle),
-              child: Icon(icon, size: OmniIconSize.lg, color: fg),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              label,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: OmniType.micro.copyWith(color: scheme.onSurface),
-            ),
-          ],
         ),
       ),
     );
@@ -1006,15 +904,11 @@ class _ComposerIcon extends StatelessWidget {
     required this.icon,
     required this.tooltip,
     required this.onTap,
-    this.rotated = false,
   });
 
   final IconData icon;
   final String tooltip;
   final VoidCallback? onTap;
-
-  /// `+` xoay 45° (thành ×) khi khay đang mở.
-  final bool rotated;
 
   @override
   Widget build(BuildContext context) {
@@ -1022,8 +916,6 @@ class _ComposerIcon extends StatelessWidget {
     final color = onTap == null
         ? theme.disabledColor
         : theme.colorScheme.primary;
-    final turn = OmniMotion.enabled(context) ? _slowMotion : Duration.zero;
-
     return IconButton(
       onPressed: onTap,
       tooltip: tooltip,
@@ -1039,12 +931,7 @@ class _ComposerIcon extends StatelessWidget {
             : NoSplash.splashFactory,
         overlayColor: OmniMotion.enabled(context) ? null : Colors.transparent,
       ),
-      icon: AnimatedRotation(
-        turns: rotated ? 0.125 : 0,
-        duration: turn,
-        curve: OmniCurves.standard,
-        child: Icon(icon, size: OmniIconSize.xl, color: color),
-      ),
+      icon: Icon(icon, size: OmniIconSize.xl, color: color),
     );
   }
 }

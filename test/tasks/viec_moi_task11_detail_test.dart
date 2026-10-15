@@ -472,6 +472,10 @@ void main() {
       );
       await t.tap(find.byTooltip('Đính kèm ảnh hoặc tệp'));
       await t.pumpAndSettle();
+      expect(
+        find.byKey(const Key('comment-attachment-source-menu')),
+        findsOneWidget,
+      );
       await t.tap(find.text('Chọn ảnh có sẵn'));
       await t.pumpAndSettle();
       expect(asked, CommentFileSource.gallery);

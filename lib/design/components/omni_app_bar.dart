@@ -22,7 +22,7 @@ class OmniAccountSlot extends InheritedWidget {
 
   final WidgetBuilder builder;
 
-  /// Biến thể ô vuông 36 chữ cái đầu, dành cho [OmniTopBar].
+  /// Biến thể avatar tròn 36 chữ cái đầu, dành cho [OmniTopBar].
   final WidgetBuilder? tileBuilder;
 
   static WidgetBuilder? maybeTileOf(BuildContext context) => context

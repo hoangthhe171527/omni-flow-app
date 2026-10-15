@@ -32,6 +32,7 @@ class TeamPage extends ConsumerWidget {
         .can('tasks.projects.manage.all');
 
     return Scaffold(
+      backgroundColor: scheme.surface,
       appBar: const OmniAppBar(title: 'Nhân viên'),
       body: OmniAsyncView(
         // Danh bạ nạp cả người đã nghỉ (để tra tên trong lịch sử); màn này giữ
@@ -47,10 +48,12 @@ class TeamPage extends ConsumerWidget {
         data: (list) => ListView.separated(
           padding: const EdgeInsets.all(OmniSpacing.lg),
           itemCount: list.length,
-          separatorBuilder: (_, _) => const SizedBox(height: OmniSpacing.sm),
+          separatorBuilder: (_, _) =>
+              Divider(height: 1, color: scheme.outlineVariant),
           itemBuilder: (context, index) {
             final member = list[index];
             return OmniCard(
+              flat: true,
               // Chạm vào một người là mở TẢI VIỆC của họ — câu hỏi quản đốc
               // hỏi nhiều nhất khi đứng giữa xưởng. Trước đây chạm vào mở
               // sheet liên kết Zalo, một thao tác làm vài lần trong đời một

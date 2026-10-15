@@ -27,6 +27,7 @@ class MyPermissionsPage extends ConsumerWidget {
     // `MPermissions.dc.html`: thẻ mực tóm tắt (tên, vai trò, số quyền màu quỹ
     // đạo sáng), rồi mỗi module một thẻ trắng có tên ở đầu.
     return Scaffold(
+      backgroundColor: scheme.surface,
       appBar: const OmniAppBar(title: 'Quyền của tôi'),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 16, 16, OmniSpacing.xxl),
@@ -35,7 +36,6 @@ class MyPermissionsPage extends ConsumerWidget {
             padding: const EdgeInsets.all(OmniSpacing.lg),
             decoration: BoxDecoration(
               color: dark ? OmniColors.darkMuted : OmniColors.ink,
-              borderRadius: OmniRadius.xlAll,
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -69,6 +69,7 @@ class MyPermissionsPage extends ConsumerWidget {
               Padding(
                 padding: const EdgeInsets.only(top: 14),
                 child: OmniCard(
+                  flat: true,
                   padding: const EdgeInsets.fromLTRB(16, 6, 16, 6),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,

@@ -33,8 +33,18 @@ void main() {
   });
 
   final members = [
-    TeamMember(membershipId: 'm1', userId: 'u1', name: 'Hằng Ni'),
-    TeamMember(membershipId: 'm2', userId: 'u2', name: 'Bảo Khánh'),
+    TeamMember(
+      membershipId: 'm1',
+      userId: 'u1',
+      name: 'Hằng Ni',
+      jobTitle: 'employee',
+    ),
+    TeamMember(
+      membershipId: 'm2',
+      userId: 'u2',
+      name: 'Bảo Khánh',
+      jobTitle: 'admin',
+    ),
     TeamMember(
       membershipId: 'm3',
       userId: 'u3',
@@ -72,7 +82,7 @@ void main() {
     );
   }
 
-  Future<void> openSheet(WidgetTester tester) async {
+  Future<void> openMenu(WidgetTester tester) async {
     // Vòng nét đứt + của dòng "Người làm" (thẻ thông tin).
     await tester.tap(find.byType(OmniDashedCircle));
     await tester.pumpAndSettle();
@@ -85,11 +95,16 @@ void main() {
       await tester.pumpWidget(host());
       await tester.pumpAndSettle();
 
-      await openSheet(tester);
+      await openMenu(tester);
 
+      expect(find.byKey(const Key('assign-task-menu')), findsOneWidget);
       expect(find.text('Ai làm việc này'), findsOneWidget);
       expect(find.text('Hằng Ni'), findsOneWidget);
       expect(find.text('Bảo Khánh'), findsOneWidget);
+      expect(find.text('Nhân viên'), findsOneWidget);
+      expect(find.text('Quản trị viên'), findsOneWidget);
+      expect(find.text('employee'), findsNothing);
+      expect(find.text('admin'), findsNothing);
     });
 
     testWidgets('người NHẬN việc chạm dòng Người làm không mở bộ chọn', (
@@ -111,7 +126,7 @@ void main() {
       // ai nhận.
       await tester.pumpWidget(host());
       await tester.pumpAndSettle();
-      await openSheet(tester);
+      await openMenu(tester);
 
       expect(find.text('Người đã nghỉ'), findsNothing);
     });
@@ -123,7 +138,7 @@ void main() {
       // nhiều-chọn chứ không phải một-chọn.
       await tester.pumpWidget(host());
       await tester.pumpAndSettle();
-      await openSheet(tester);
+      await openMenu(tester);
 
       await tester.tap(find.text('Hằng Ni'));
       await tester.pump();
@@ -145,7 +160,7 @@ void main() {
       await tester.pumpWidget(host(ids: ['u1'], names: ['Hằng Ni']));
       await tester.pumpAndSettle();
 
-      await openSheet(tester);
+      await openMenu(tester);
       await tester.tap(find.text('Hằng Ni'));
       await tester.pump();
 
@@ -163,7 +178,7 @@ void main() {
       await tester.pumpWidget(host(ids: ['u1'], names: ['Hằng Ni']));
       await tester.pumpAndSettle();
 
-      await openSheet(tester);
+      await openMenu(tester);
       await tester.tap(find.text('Giao cho 1 người'));
       await tester.pumpAndSettle();
 
@@ -173,7 +188,7 @@ void main() {
     testWidgets('đóng sheet mà không lưu thì không gọi API', (tester) async {
       await tester.pumpWidget(host());
       await tester.pumpAndSettle();
-      await openSheet(tester);
+      await openMenu(tester);
 
       await tester.tap(find.text('Hằng Ni'));
       await tester.pump();

@@ -487,6 +487,7 @@ void main() {
       expect(t.getSize(add), const Size(44, 44));
       await t.tap(add);
       await t.pumpAndSettle();
+      expect(find.byKey(const Key('assign-task-menu')), findsOneWidget);
       expect(find.text('Ai làm việc này'), findsOneWidget);
     });
 
@@ -499,6 +500,7 @@ void main() {
       await pump(t, host(data: json(), perms: worker));
       await t.tap(find.bySemanticsLabel('Thêm người làm'));
       await t.pumpAndSettle();
+      expect(find.byKey(const Key('claim-task-menu')), findsOneWidget);
       await t.tap(find.text('Nhận việc này'));
       await t.pumpAndSettle();
       expect(recorded.last, ('claim', me));

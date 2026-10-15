@@ -171,6 +171,24 @@ final notificationsProvider =
       NotificationListState
     >(NotificationsController.new);
 
+/// Đánh dấu toàn bộ đã đọc ngay cả khi màn danh sách chưa từng được mở.
+/// [NotificationsController.markAllRead] cần một trang đã nạp để cập nhật lạc
+/// quan; menu chuông ở header thì có thể là lối vào đầu tiên của phiên.
+final markAllNotificationsReadProvider = Provider<Future<void> Function()>((
+  ref,
+) {
+  return () async {
+    try {
+      await ref.read(notificationsApiProvider).markAllRead();
+      ref.invalidate(notificationsProvider);
+      ref.invalidate(unreadNotificationCountProvider);
+    } catch (_) {
+      // Menu đã đóng nhưng chấm chưa đọc vẫn còn, nên người dùng thấy ngay là
+      // thao tác chưa thành công và có thể thử lại; không làm sập màn hiện tại.
+    }
+  };
+});
+
 /// Số trên chuông, đếm ở SERVER.
 ///
 /// Không đọc [notificationsProvider]: chuông hiện trên màn "Việc của tôi" cả

@@ -381,14 +381,24 @@ void main() {
     });
   });
 
-  testWidgets('đổi ảnh đại diện có nhãn và vùng chạm ≥ 44', (t) async {
+  testWidgets('tuỳ chọn ảnh đại diện có nhãn và vùng chạm ≥ 44', (t) async {
     final handle = t.ensureSemantics();
     await pump(t);
-    expect(find.bySemanticsLabel('Đổi ảnh đại diện'), findsOneWidget);
+    expect(find.bySemanticsLabel('Tuỳ chọn ảnh đại diện'), findsOneWidget);
     expect(
-      t.getSize(find.bySemanticsLabel('Đổi ảnh đại diện')).shortestSide,
+      t.getSize(find.bySemanticsLabel('Tuỳ chọn ảnh đại diện')).shortestSide,
       greaterThanOrEqualTo(44),
     );
     handle.dispose();
+  });
+
+  testWidgets('chạm avatar mở menu neo trước khi mở thư viện ảnh', (t) async {
+    await pump(t);
+    await t.tap(find.bySemanticsLabel('Tuỳ chọn ảnh đại diện'));
+    await t.pumpAndSettle();
+
+    expect(find.byKey(const Key('profile-avatar-menu')), findsOneWidget);
+    expect(find.text('Đổi ảnh'), findsOneWidget);
+    expect(find.text('Xoá ảnh'), findsNothing);
   });
 }

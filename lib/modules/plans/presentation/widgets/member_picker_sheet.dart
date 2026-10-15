@@ -41,6 +41,7 @@ class _MemberPickerSheetState extends ConsumerState<_MemberPickerSheet> {
   @override
   Widget build(BuildContext context) {
     final members = ref.watch(teamMembersProvider);
+    final scheme = Theme.of(context).colorScheme;
 
     return SafeArea(
       child: Padding(
@@ -53,9 +54,16 @@ class _MemberPickerSheetState extends ConsumerState<_MemberPickerSheet> {
             Padding(
               padding: const EdgeInsets.all(OmniSpacing.lg),
               child: TextField(
-                decoration: const InputDecoration(
-                  prefixIcon: Icon(Icons.search_rounded),
+                style: OmniType.search.copyWith(
+                  color: scheme.onSurface,
+                  fontStyle: FontStyle.normal,
+                ),
+                decoration: InputDecoration(
+                  prefixIcon: const Icon(Icons.search_rounded),
                   hintText: 'Tìm người',
+                  hintStyle: OmniType.searchHint.copyWith(
+                    color: scheme.onSurfaceVariant,
+                  ),
                 ),
                 onChanged: (v) =>
                     setState(() => _query = v.trim().toLowerCase()),

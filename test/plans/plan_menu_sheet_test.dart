@@ -29,8 +29,8 @@ import 'package:omni_app/security/session/session_controller.dart';
 
 import '../support/fixed_background.dart';
 
-/// Menu kế hoạch (`PlanMenu.dc.html` / `Board.dc.html` `isMenu`): sheet ba
-/// nhóm, mục theo quyền, các lượt ghi đi đúng khoá.
+/// Menu kế hoạch (`PlanMenu.dc.html` / `Board.dc.html` `isMenu`): popover neo
+/// tại nút `…`, chia nhóm theo quyền và các lượt ghi đi đúng khoá.
 void main() {
   const planId = 'p1';
   const managerPerms = {'tasks.read', 'tasks.write', 'system_options.read'};
@@ -167,14 +167,14 @@ void main() {
     expect(find.text('500'), findsNothing);
   });
 
-  testWidgets('(a) quản lý: đủ ba nhóm, đầu sheet, không mục Nhóm 2', (
+  testWidgets('(a) quản lý: menu neo đủ ba nhóm, không mục Nhóm 2', (
     tester,
   ) async {
     await pump(tester);
     await openMenu(tester);
 
-    expect(find.byType(PlanMenuSheet), findsOneWidget);
-    expect(find.text('Tổ kỹ thuật · chủ: Trung Nguyên'), findsOneWidget);
+    expect(find.byType(PlanAnchoredMenu), findsOneWidget);
+    expect(find.byKey(const Key('plan-actions-menu')), findsOneWidget);
     for (final label in [
       'Sửa tên, mô tả, nền',
       'Thành viên',
@@ -238,18 +238,15 @@ void main() {
     expect(find.byKey(const Key('plan-menu-group-2')), findsOneWidget);
   });
 
-  testWidgets('(a) kích thước theo bản mẫu: nhóm surface bo 8, dòng 48', (
-    tester,
-  ) async {
+  testWidgets('(a) cùng mẫu menu + Team: neo tại nút, dòng 52', (tester) async {
     await pump(tester);
+    final button = find.byTooltip('Tuỳ chọn kế hoạch');
+    final buttonBottom = tester.getBottomRight(button).dy;
     await openMenu(tester);
 
-    final group = tester.widget<Container>(
-      find.byKey(const Key('plan-menu-group-0')),
-    );
-    final deco = group.decoration! as BoxDecoration;
-    expect(deco.color, Colors.white);
-    expect(deco.borderRadius, BorderRadius.circular(8));
+    final menu = find.byKey(const Key('plan-actions-menu'));
+    expect(tester.getTopLeft(menu).dy, greaterThan(buttonBottom));
+    expect(tester.getSize(menu).width, 344);
     expect(
       tester
           .getSize(
@@ -259,20 +256,17 @@ void main() {
             ),
           )
           .height,
-      48,
+      52,
     );
     final close = tester.widget<Text>(find.text('Đóng kế hoạch'));
-    expect(close.style?.color, const Color(0xFFB42318));
+    expect(
+      close.style?.color,
+      Theme.of(tester.element(menu)).colorScheme.error,
+    );
     expect(close.style?.fontSize, 15);
     expect(close.style?.fontWeight, FontWeight.w500);
-    expect(
-      tester.getSize(find.byKey(const Key('sheet-handle'))),
-      const Size(36, 4),
-    );
-    expect(
-      tester.getSize(find.byKey(const Key('plan-menu-cover'))),
-      const Size(36, 36),
-    );
+    expect(find.byKey(const Key('sheet-handle')), findsNothing);
+    expect(find.byKey(const Key('plan-menu-cover')), findsNothing);
   });
 
   testWidgets('(a)(d) thợ: "Nhãn màu" chỉ xem cùng ba mục đọc', (tester) async {

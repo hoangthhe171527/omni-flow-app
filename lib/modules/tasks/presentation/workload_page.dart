@@ -33,6 +33,7 @@ class WorkloadPage extends ConsumerWidget {
     final workload = ref.watch(workloadProvider(userId));
 
     return Scaffold(
+      backgroundColor: Theme.of(context).colorScheme.surface,
       appBar: AppBar(
         title: Text(member?.name ?? 'Tải việc'),
         // Vai trò dưới tên: "Hằng Ni · Thợ máy" nói đủ để biết vì sao hàng đợi
@@ -125,7 +126,7 @@ class _Load extends StatelessWidget {
   }
 }
 
-/// Hai con số, cả hai do server đếm — trên thẻ mực như `MWorkload.dc.html`.
+/// Hai con số, cả hai do server đếm — trên dải mực phẳng.
 class _Summary extends StatelessWidget {
   const _Summary({required this.data});
 
@@ -150,7 +151,6 @@ class _Summary extends StatelessWidget {
           padding: const EdgeInsets.all(OmniSpacing.lg),
           decoration: BoxDecoration(
             color: dark ? OmniColors.darkMuted : OmniColors.ink,
-            borderRadius: OmniRadius.xlAll,
           ),
           child: Row(
             children: [

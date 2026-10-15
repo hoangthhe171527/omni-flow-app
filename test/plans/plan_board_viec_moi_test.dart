@@ -221,7 +221,7 @@ void main() {
     );
     final deco = groove.decoration as BoxDecoration;
     expect(deco.color, const Color(0xFFEEF1F5));
-    expect(deco.borderRadius, BorderRadius.circular(8));
+    expect(deco.borderRadius, isNull);
   });
 
   testWidgets('(c) "Thêm công việc" mở trang tạo với nhóm của cột', (
@@ -442,15 +442,18 @@ void main() {
     expect(tester.getSize(header).height, 50);
   });
 
-  testWidgets('(g) nền là gradient của cover', (tester) async {
+  testWidgets('(g) token cover màu cũ rơi về nền surface', (tester) async {
     await pumpBoard(tester);
 
-    final bg = tester.widget<DecoratedBox>(
-      find.byKey(const Key('board-background')),
+    final background = find.byKey(const Key('board-background'));
+    expect(tester.widget<Stack>(background), isA<Stack>());
+    expect(find.byKey(const Key('board-cover-image')), findsNothing);
+    final surface = tester.widget<ColoredBox>(
+      find.descendant(of: background, matching: find.byType(ColoredBox)).first,
     );
     expect(
-      (bg.decoration as BoxDecoration).gradient,
-      OmniCovers.gradientOf('plum-1'),
+      surface.color,
+      Theme.of(tester.element(background)).colorScheme.surface,
     );
   });
 
@@ -580,9 +583,7 @@ void main() {
     expect(find.text('Sửa tên, mô tả, nền'), findsNothing);
   });
 
-  testWidgets('chế độ tối: rãnh cột theo theme, nền vẫn gradient', (
-    tester,
-  ) async {
+  testWidgets('chế độ tối: rãnh cột và nền theo theme', (tester) async {
     tester.view.physicalSize = const Size(390, 844);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.reset);

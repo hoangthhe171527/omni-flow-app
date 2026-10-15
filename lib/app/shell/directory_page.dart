@@ -50,8 +50,8 @@ OmniHue hueOfArea(NavArea area) => switch (area) {
   NavArea.account => OmniHue.neutral,
 };
 
-/// Gom mục của module thành bốn nhóm theo bản mẫu và lọc theo từ khoá. Nhóm
-/// rỗng bị bỏ, để không còn tiêu đề trơ trọi.
+/// Gom mục của module theo khu và lọc theo từ khoá. Dòng việc là một section
+/// riêng để không lẫn với các lối vào thao tác công việc; nhóm rỗng bị bỏ.
 List<DirectorySection> buildDirectorySections(
   Map<NavArea, List<ModuleNavEntry>> groups, {
   required List<DirectoryTile> personal,
@@ -76,7 +76,14 @@ List<DirectorySection> buildDirectorySections(
 
   final raw = <(String, List<DirectoryTile>)>[
     ('Bán hàng', of([NavArea.communication, NavArea.sales])),
-    ('Công việc', of([NavArea.work])),
+    (
+      'Công việc',
+      of([NavArea.work]).where((tile) => tile.label != 'Dòng việc').toList(),
+    ),
+    (
+      'Dòng việc',
+      of([NavArea.work]).where((tile) => tile.label == 'Dòng việc').toList(),
+    ),
     ('Đội & quản trị', of([NavArea.admin])),
     (
       'Cá nhân',
@@ -180,6 +187,7 @@ class _DirectoryPageState extends ConsumerState<DirectoryPage> {
     }
 
     return Scaffold(
+      backgroundColor: scheme.surface,
       appBar: OmniTopBar(
         semanticsTitle: 'Tất cả',
         bottom: _SearchBottom(
@@ -253,7 +261,7 @@ class _SearchBottom extends StatelessWidget implements PreferredSizeWidget {
         height: 44,
         child: OmniSearchField(
           hint: 'Tìm tính năng…',
-          outlined: true,
+          flat: true,
           dense: true,
           onChanged: onChanged,
         ),
@@ -262,9 +270,12 @@ class _SearchBottom extends StatelessWidget implements PreferredSizeWidget {
   }
 }
 
-/// Lưới 4 cột trong một thẻ. Dựng bằng hàng chứ không bằng GridView: ô phải
-/// cao bằng nhau theo ô có nhãn dài nhất trong hàng, và nhãn tiếng Việt hay
-/// xuống hai dòng.
+/// Lưới tính năng thích ứng theo chiều rộng và cỡ chữ.
+///
+/// Điện thoại tiêu chuẩn giữ bốn cột như bản mẫu. Khi màn hẹp hoặc người dùng
+/// phóng chữ, lưới tự giảm cột thay vì ép nhãn/tràn badge. Mỗi ô có cùng kích
+/// thước trong một [Wrap], nên khung nhóm ôm đúng số hàng thực tế; hàng cuối
+/// chỉ dựng số ô thật, không chèn ô rỗng hay để lại khoảng trắng giả.
 class _TileGrid extends StatelessWidget {
   const _TileGrid({
     required this.tiles,
@@ -277,57 +288,66 @@ class _TileGrid extends StatelessWidget {
   final List<DirectoryTile> tiles;
   final int firstIndex;
 
-  static const _columns = 4;
-  static const _gap = 4.0;
+  static const _maxColumns = 4;
+  static const _gap = OmniSpacing.sm;
+  static const _padding = OmniSpacing.sm;
+
+  int _columnCount(double width, TextScaler textScaler) {
+    final labelSize = OmniType.caption.fontSize ?? 13;
+    final scale = (textScaler.scale(labelSize) / labelSize).clamp(1.0, 2.0);
+    // 70dp là bề rộng tối thiểu để nhãn Việt hai dòng vẫn quét nhanh. Cộng
+    // thêm chỗ theo text scale để cỡ chữ trợ năng chủ động làm lưới thưa ra.
+    final minimumCellWidth = 70 + (scale - 1) * 40;
+    return ((width + _gap) / (minimumCellWidth + _gap)).floor().clamp(
+      1,
+      _maxColumns,
+    );
+  }
+
+  double _tileExtent(TextScaler textScaler) {
+    final labelLineHeight =
+        textScaler.scale(OmniType.caption.fontSize ?? 13) *
+        (OmniType.caption.height ?? 1.4);
+    // 16 padding + 44 khung icon/badge + 6 khoảng cách + hai dòng nhãn.
+    return 66 + labelLineHeight * 2;
+  }
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final rows = <Widget>[];
-    for (var i = 0; i < tiles.length; i += _columns) {
-      final slice = tiles.skip(i).take(_columns).toList();
-      rows.add(
-        IntrinsicHeight(
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
+    return Padding(
+      padding: const EdgeInsets.all(_padding),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final textScaler = MediaQuery.textScalerOf(context);
+          final columns = _columnCount(constraints.maxWidth, textScaler);
+          final tileWidth =
+              (constraints.maxWidth - _gap * (columns - 1)) / columns;
+          final tileHeight = _tileExtent(textScaler);
+          return Wrap(
+            key: ValueKey('directory-tile-grid-$firstIndex'),
+            spacing: _gap,
+            runSpacing: _gap,
             children: [
-              for (var c = 0; c < _columns; c++) ...[
-                if (c > 0) const SizedBox(width: _gap),
-                Expanded(
-                  child: c < slice.length
-                      ? _FeatureTile(
-                          key: ValueKey(slice[c].id ?? slice[c].label),
-                          tile: slice[c],
-                          animate: !seen.contains(
-                            slice[c].id ?? slice[c].label,
-                          ),
-                          index: firstIndex + i + c,
-                        )
-                      : const SizedBox.shrink(),
+              for (var index = 0; index < tiles.length; index++)
+                SizedBox(
+                  width: tileWidth,
+                  height: tileHeight,
+                  child: Builder(
+                    builder: (context) {
+                      final tile = tiles[index];
+                      final id = tile.id ?? tile.label;
+                      return _FeatureTile(
+                        key: ValueKey(id),
+                        tile: tile,
+                        animate: !seen.contains(id),
+                        index: firstIndex + index,
+                      );
+                    },
+                  ),
                 ),
-              ],
             ],
-          ),
-        ),
-      );
-    }
-
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: scheme.surface,
-        borderRadius: OmniRadius.lgAll,
-        border: Border.all(color: scheme.outlineVariant),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
-        child: Column(
-          children: [
-            for (var r = 0; r < rows.length; r++) ...[
-              if (r > 0) const SizedBox(height: _gap),
-              rows[r],
-            ],
-          ],
-        ),
+          );
+        },
       ),
     );
   }
@@ -365,24 +385,56 @@ class _FeatureTile extends ConsumerWidget {
         clipBehavior: Clip.antiAlias,
         child: InkWell(
           onTap: tile.onTap,
-          child: Stack(
-            children: [
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 2),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Container(
-                      width: 40,
-                      height: 40,
-                      decoration: BoxDecoration(
-                        color: tone.background,
-                        borderRadius: OmniRadius.xlAll,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(
+              vertical: OmniSpacing.sm,
+              horizontal: OmniSpacing.xs,
+            ),
+            child: Column(
+              children: [
+                SizedBox(
+                  width: 58,
+                  height: 44,
+                  child: Stack(
+                    clipBehavior: Clip.none,
+                    alignment: Alignment.bottomCenter,
+                    children: [
+                      Container(
+                        width: 40,
+                        height: 40,
+                        decoration: BoxDecoration(
+                          color: tone.background,
+                          borderRadius: OmniRadius.xlAll,
+                        ),
+                        child: Icon(
+                          tile.icon,
+                          size: 20,
+                          color: tone.foreground,
+                        ),
                       ),
-                      child: Icon(tile.icon, size: 20, color: tone.foreground),
-                    ),
-                    const SizedBox(height: 6),
-                    Text(
+                      if (count > 0)
+                        Positioned(
+                          top: 0,
+                          right: 0,
+                          child: switch (tile.badgeTone) {
+                            NavBadgeTone.unread => OmniCountBadge.unread(
+                              count: count,
+                              ringColor: scheme.surface,
+                            ),
+                            NavBadgeTone.alert => OmniCountBadge.alert(
+                              count: count,
+                              ringColor: scheme.surface,
+                            ),
+                          },
+                        ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Expanded(
+                  child: Align(
+                    alignment: Alignment.topCenter,
+                    child: Text(
                       tile.label,
                       textAlign: TextAlign.center,
                       maxLines: 2,
@@ -392,19 +444,10 @@ class _FeatureTile extends ConsumerWidget {
                         color: scheme.onSurface,
                       ),
                     ),
-                  ],
+                  ),
                 ),
-              ),
-              if (count > 0)
-                Positioned(
-                  top: 4,
-                  right: 12,
-                  child: switch (tile.badgeTone) {
-                    NavBadgeTone.unread => OmniCountBadge.unread(count: count),
-                    NavBadgeTone.alert => OmniCountBadge.alert(count: count),
-                  },
-                ),
-            ],
+              ],
+            ),
           ),
         ),
       ),

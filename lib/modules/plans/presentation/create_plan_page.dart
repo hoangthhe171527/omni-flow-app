@@ -5,6 +5,7 @@ import '../../../core/error/app_exception.dart';
 import '../../../design/components/components.dart';
 import '../../../design/tokens/tokens.dart';
 import '../application/plans_providers.dart';
+import '../data/plan_cover_upload.dart';
 import '../data/plans_api.dart';
 import 'widgets/cover_picker.dart';
 import '../domain/team.dart';
@@ -50,7 +51,8 @@ class _CreatePlanPageState extends ConsumerState<CreatePlanPage> {
   final _name = TextEditingController();
   final _sections = [...kDefaultSections];
   String? _teamId;
-  String _cover = OmniCovers.fallback;
+  String? _coverPath;
+  String? _createdPlanId;
   bool _saving = false;
   String? _error;
 
@@ -74,7 +76,7 @@ class _CreatePlanPageState extends ConsumerState<CreatePlanPage> {
     final scheme = Theme.of(context).colorScheme;
     final text = Theme.of(context).textTheme;
 
-    // Bố cục `MCreatePlan.dc.html`: nền trắng, xem trước nền dự án, các ô có
+    // Bố cục `MCreatePlan.dc.html`: nền trắng, xem trước ảnh dự án, các ô có
     // nhãn phía trên, nút "Tạo kế hoạch" ghim ở đáy.
     final label = OmniType.body.copyWith(
       fontWeight: FontWeight.w600,
@@ -105,7 +107,11 @@ class _CreatePlanPageState extends ConsumerState<CreatePlanPage> {
                       height: 20,
                       child: CircularProgressIndicator(strokeWidth: 2),
                     )
-                  : const Text('Tạo kế hoạch'),
+                  : Text(
+                      _createdPlanId != null && _coverPath != null
+                          ? 'Thử tải ảnh lại'
+                          : 'Tạo kế hoạch',
+                    ),
             ),
           ),
         ),
@@ -113,51 +119,20 @@ class _CreatePlanPageState extends ConsumerState<CreatePlanPage> {
       body: ListView(
         padding: const EdgeInsets.fromLTRB(20, OmniSpacing.sm, 20, 24),
         children: [
-          // Xem trước NGAY: tên hiện trên chính dải nền trong lúc gõ, nên
-          // người tạo thấy kết quả thật thay vì đoán. Đây cũng là chỗ kiểm
-          // được bằng mắt rằng nền đủ tối cho chữ trắng, ngay tại chỗ chọn.
-          Container(
-            height: 120,
-            clipBehavior: Clip.antiAlias,
-            decoration: BoxDecoration(
-              gradient: OmniCovers.gradientOf(_cover),
-              borderRadius: OmniRadius.xlAll,
-            ),
-            child: Stack(
-              children: [
-                Positioned(
-                  right: -40,
-                  top: -60,
-                  child: Container(
-                    width: 200,
-                    height: 200,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      border: Border.all(
-                        color: Colors.white.withValues(alpha: 0.16),
-                        width: 1.5,
-                      ),
-                    ),
-                  ),
-                ),
-                Positioned(
-                  left: 16,
-                  right: 16,
-                  bottom: 16,
-                  child: Text(
-                    _name.text.trim().isEmpty
-                        ? 'Kế hoạch mới'
-                        : _name.text.trim(),
-                    style: OmniType.title.copyWith(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w600,
-                    ),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-              ],
-            ),
+          CoverPicker(
+            localPath: _coverPath,
+            title: _name.text.trim().isEmpty
+                ? 'Kế hoạch mới'
+                : _name.text.trim(),
+            busy: _saving && _createdPlanId != null && _coverPath != null,
+            onPicked: (path) => setState(() {
+              _coverPath = path;
+              _error = null;
+            }),
+            onRemove: _coverPath == null
+                ? null
+                : () => setState(() => _coverPath = null),
+            onError: (message) => setState(() => _error = message),
           ),
           const SizedBox(height: 18),
           OmniField(
@@ -171,12 +146,6 @@ class _CreatePlanPageState extends ConsumerState<CreatePlanPage> {
             ),
           ),
           const SizedBox(height: 18),
-          Text('Nền', style: label),
-          const SizedBox(height: OmniSpacing.sm),
-          CoverPicker(
-            value: _cover,
-            onChanged: (value) => setState(() => _cover = value),
-          ),
           // Ô chọn team ẩn khi tới từ luồng "vừa tạo team xong": người dùng
           // vừa tạo đúng cái team đó, và cho họ đổi ở đây chỉ mời một cú bấm
           // nhầm ngay sau khi đã quyết định.
@@ -237,27 +206,56 @@ class _CreatePlanPageState extends ConsumerState<CreatePlanPage> {
     });
 
     try {
-      await ref
-          .read(plansApiProvider)
-          .createPlan(
-            name: _name.text.trim(),
-            teamId: _teamId,
-            cover: _cover,
-            // Bỏ dòng trống: người dùng bấm "Thêm nhóm việc" rồi đổi ý là
-            // chuyện thường, và một cột không tên trên bảng thì vô dụng.
-            sectionNames: [
-              for (final s in _sections)
-                if (s.trim().isNotEmpty) s.trim(),
-            ],
-            gatedSectionNames: kGatedDefaultSections,
-          );
+      var planId = _createdPlanId;
+      if (planId == null) {
+        final created = await ref
+            .read(plansApiProvider)
+            .createPlan(
+              name: _name.text.trim(),
+              teamId: _teamId,
+              // Bỏ dòng trống: người dùng bấm "Thêm nhóm việc" rồi đổi ý là
+              // chuyện thường, và một cột không tên trên bảng thì vô dụng.
+              sectionNames: [
+                for (final s in _sections)
+                  if (s.trim().isNotEmpty) s.trim(),
+              ],
+              gatedSectionNames: kGatedDefaultSections,
+            );
+        planId = created.id;
+        _createdPlanId = planId;
+        if (mounted && _coverPath != null) setState(() {});
+      }
+
+      if (_coverPath case final path?) {
+        await ref.read(planCoverApiProvider).upload(planId, path);
+      }
 
       ref.invalidate(teamsWithPlansProvider);
-      if (mounted) Navigator.of(context).pop(true);
+      ref.invalidate(planProvider(planId));
+      if (!mounted) return;
+      final navigator = Navigator.of(context);
+      if (navigator.canPop()) {
+        navigator.pop(true);
+      } else {
+        setState(() => _saving = false);
+      }
     } on AppException catch (e) {
+      if (!mounted) return;
       setState(() {
         _saving = false;
-        _error = e.message;
+        _error = _createdPlanId == null
+            ? e.message
+            : 'Kế hoạch đã được tạo nhưng ảnh nền chưa tải lên. '
+                  '${e.message} Bạn có thể thử lại mà không tạo bản trùng.';
+      });
+    } on Object {
+      if (!mounted) return;
+      setState(() {
+        _saving = false;
+        _error = _createdPlanId == null
+            ? 'Chưa tạo được kế hoạch. Vui lòng thử lại.'
+            : 'Kế hoạch đã được tạo nhưng ảnh nền chưa tải lên. '
+                  'Bạn có thể thử lại mà không tạo bản trùng.';
       });
     }
   }

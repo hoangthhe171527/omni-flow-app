@@ -17,12 +17,8 @@ import 'package:omni_app/security/permissions/access_policy.dart';
 import 'package:omni_app/security/session/session.dart';
 import 'package:omni_app/security/session/session_controller.dart';
 
-/// Chế độ chọn nhiều của hộp thư: chọn hai hội thoại, gắn nhãn → API nhận
-/// đúng hai id đó, một lượt.
-///
-/// Kế hoạch gốc nói "đánh dấu đã đọc", nhưng thanh thao tác hàng loạt chỉ có
-/// Gán và Gắn nhãn; ý đồ — thao tác hàng loạt gửi đúng id đã chọn — kiểm qua
-/// gắn nhãn.
+/// Hộp thư ưu tiên một hàng tìm kiếm thoáng: kết nối kênh và chọn nhiều không
+/// còn chen cạnh ô tìm. Các thao tác hội thoại nằm trong menu nhấn giữ.
 void main() {
   setUpAll(() => initializeDateFormatting('vi_VN'));
 
@@ -60,7 +56,7 @@ void main() {
     await tester.pump();
   }
 
-  testWidgets('chọn 2 hội thoại, gắn nhãn → API nhận đúng 2 id', (
+  testWidgets('hàng tìm kiếm không còn kết nối kênh và chọn nhiều', (
     tester,
   ) async {
     api.conversations = [
@@ -73,51 +69,17 @@ void main() {
     await tester.pump();
     await tester.pump();
     expect(find.text('Thuý Phạm'), findsOneWidget);
-    expect(find.text('Đã chọn 1'), findsNothing);
-
-    // "Chọn nhiều" vào chế độ chọn; chạm một hàng là chọn hàng đó.
-    await tester.tap(find.byTooltip('Chọn nhiều'));
-    await tester.pump();
-    await tester.tap(find.text('Thuý Phạm'));
-    await tester.pump();
-    expect(find.text('Đã chọn 1'), findsOneWidget);
-
-    // Đang chọn thì chạm là chọn thêm, không mở hội thoại.
-    await tester.tap(find.text('Minh Trần'));
-    await tester.pump();
-    expect(find.text('Đã chọn 2'), findsOneWidget);
-
-    await tester.tap(find.text('Gắn nhãn'));
-    await tester.pumpAndSettle();
-    await tester.enterText(
-      find.descendant(
-        of: find.byType(AlertDialog),
-        matching: find.byType(TextField),
-      ),
-      'VIP',
-    );
-    await tester.tap(find.text('Áp dụng'));
-    await tester.pumpAndSettle();
-
-    expect(api.labelCalls, hasLength(1));
-    expect(api.labelCalls.single.ids, ['c1', 'c2']);
-    expect(api.labelCalls.single.labels, ['VIP']);
-    expect(find.text('Đã gắn nhãn cho 2 hội thoại.'), findsOneWidget);
-    expect(
-      find.text('Đã chọn 2'),
-      findsNothing,
-      reason: 'Xong việc thì thoát chế độ chọn.',
-    );
-    expect(
-      api.listCalls,
-      2,
-      reason: 'Tải lại danh sách sau khi gắn nhãn để nhãn hiện lên hàng.',
-    );
+    expect(find.byTooltip('Kết nối kênh'), findsNothing);
+    expect(find.byTooltip('Chọn nhiều'), findsNothing);
+    expect(find.bySemanticsLabel('Bộ lọc'), findsOneWidget);
+    expect(find.byType(TextField), findsOneWidget);
 
     await closePage(tester);
   });
 
-  testWidgets('bỏ chọn một hàng đã chọn thì số đếm giảm', (tester) async {
+  testWidgets('danh sách hội thoại dùng trọn chiều ngang, không bọc card', (
+    tester,
+  ) async {
     api.conversations = [
       _conversation('c1', 'Thuý Phạm'),
       _conversation('c2', 'Minh Trần'),
@@ -126,17 +88,13 @@ void main() {
     await tester.pump();
     await tester.pump();
 
-    await tester.tap(find.byTooltip('Chọn nhiều'));
-    await tester.pump();
-    await tester.tap(find.text('Thuý Phạm'));
-    await tester.pump();
-    await tester.tap(find.text('Minh Trần'));
-    await tester.pump();
-    expect(find.text('Đã chọn 2'), findsOneWidget);
-
-    await tester.tap(find.text('Thuý Phạm'));
-    await tester.pump();
-    expect(find.text('Đã chọn 1'), findsOneWidget);
+    final list = find.byKey(const Key('inbox-conversation-list'));
+    final rect = tester.getRect(list);
+    expect(rect.left, 0);
+    expect(
+      rect.right,
+      tester.view.physicalSize.width / tester.view.devicePixelRatio,
+    );
 
     await closePage(tester);
   });

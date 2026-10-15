@@ -22,8 +22,8 @@ class OmniTopBarSlot extends InheritedWidget {
   /// Số thông báo chưa đọc; được gọi trong `build` nên có thể `ref.watch`.
   final int Function(WidgetRef ref) unreadOf;
 
-  /// Mở trung tâm thông báo.
-  final void Function(BuildContext context) onBell;
+  /// Mở menu thông báo nhanh, neo vào hình chữ nhật của nút chuông.
+  final void Function(BuildContext context, Rect anchor) onBell;
 
   static OmniTopBarSlot? maybeOf(BuildContext context) =>
       context.dependOnInheritedWidgetOfExactType<OmniTopBarSlot>();
@@ -115,7 +115,7 @@ class OmniTopBar extends ConsumerWidget implements PreferredSizeWidget {
                               child: Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  const OmniBrandMark(size: 30),
+                                  const OmniBrandMark(size: 30, framed: false),
                                   const SizedBox(width: 8),
                                   OmniWordmark(fontSize: 19, onInk: dark),
                                 ],
@@ -126,7 +126,7 @@ class OmniTopBar extends ConsumerWidget implements PreferredSizeWidget {
                               unread: unread,
                               onTap: slot == null
                                   ? null
-                                  : () => slot.onBell(context),
+                                  : (anchor) => slot.onBell(context, anchor),
                             ),
                             // Hai ô 44 kề nhau: khoảng 8 giữa hai hình 36 đã nằm
                             // trong đệm của chúng.
@@ -147,11 +147,25 @@ class OmniTopBar extends ConsumerWidget implements PreferredSizeWidget {
   }
 }
 
-class _BellButton extends StatelessWidget {
+class _BellButton extends StatefulWidget {
   const _BellButton({required this.unread, required this.onTap});
 
   final int unread;
-  final VoidCallback? onTap;
+  final ValueChanged<Rect>? onTap;
+
+  @override
+  State<_BellButton> createState() => _BellButtonState();
+}
+
+class _BellButtonState extends State<_BellButton> {
+  final _buttonKey = GlobalKey(debugLabel: 'OmniTopBarBell');
+
+  void _open() {
+    final box = _buttonKey.currentContext?.findRenderObject() as RenderBox?;
+    if (box == null || !box.hasSize) return;
+    final origin = box.localToGlobal(Offset.zero);
+    widget.onTap?.call(origin & box.size);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -159,54 +173,49 @@ class _BellButton extends StatelessWidget {
 
     return Semantics(
       button: true,
-      label: unread > 0 ? 'Thông báo, $unread chưa đọc' : 'Thông báo',
+      label: widget.unread > 0
+          ? 'Thông báo, ${widget.unread} chưa đọc'
+          : 'Thông báo',
       excludeSemantics: true,
-      onTap: onTap,
-      // Hình 36, vùng chạm 44: lớp ngoài bắt chạm cả phần đệm.
+      onTap: widget.onTap == null ? null : _open,
+      // Chỉ vẽ icon; toàn ô 44 là vùng chạm.
       child: GestureDetector(
+        key: _buttonKey,
         behavior: HitTestBehavior.opaque,
-        onTap: onTap,
+        onTap: widget.onTap == null ? null : _open,
         child: SizedBox.square(
           dimension: 44,
-          child: Center(
-            child: Material(
-              color: scheme.surface.withValues(alpha: 0.9),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(6),
-                side: BorderSide(color: scheme.outline),
-              ),
-              child: InkWell(
-                onTap: onTap,
-                customBorder: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(6),
-                ),
-                child: SizedBox.square(
-                  dimension: 36,
-                  child: Stack(
-                    alignment: Alignment.center,
-                    children: [
-                      Icon(
-                        Icons.notifications_none_rounded,
-                        size: OmniIconSize.md,
-                        color: scheme.onSurface,
-                      ),
-                      if (unread > 0)
-                        Positioned(
-                          right: 8,
-                          top: 8,
-                          child: Container(
-                            key: const ValueKey('omni-top-bar-bell-dot'),
-                            width: 7,
-                            height: 7,
-                            decoration: BoxDecoration(
-                              color: scheme.error,
-                              shape: BoxShape.circle,
-                            ),
-                          ),
-                        ),
-                    ],
+          child: Material(
+            key: const ValueKey('omni-top-bar-bell-face'),
+            color: Colors.transparent,
+            child: InkResponse(
+              onTap: widget.onTap == null ? null : _open,
+              radius: 22,
+              containedInkWell: true,
+              highlightShape: BoxShape.circle,
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  Icon(
+                    Icons.notifications_none_rounded,
+                    size: OmniIconSize.md,
+                    color: scheme.onSurface,
                   ),
-                ),
+                  if (widget.unread > 0)
+                    Positioned(
+                      right: 9,
+                      top: 9,
+                      child: Container(
+                        key: const ValueKey('omni-top-bar-bell-dot'),
+                        width: 7,
+                        height: 7,
+                        decoration: BoxDecoration(
+                          color: scheme.error,
+                          shape: BoxShape.circle,
+                        ),
+                      ),
+                    ),
+                ],
               ),
             ),
           ),

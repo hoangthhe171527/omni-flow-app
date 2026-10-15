@@ -177,10 +177,11 @@ class Plan {
   final String? description;
   final String? color;
 
-  /// TÊN nền cho thẻ dự án (`teal-1`), không phải URL.
+  /// URL ảnh nền dự án do API quản lý.
   ///
-  /// Null với mọi dự án tạo trước tính năng này — `OmniCovers.gradientOf` tự
-  /// rơi về nền mặc định, nên không chỗ nào phải kiểm null.
+  /// Null với dự án chưa chọn ảnh. Token màu cũ (`teal-1`…) vẫn có thể xuất
+  /// hiện trong dữ liệu lịch sử; tầng hiển thị phải coi chúng như null và dùng
+  /// màu surface của theme, không cố tải như URL.
   final String? cover;
 
   final String status;

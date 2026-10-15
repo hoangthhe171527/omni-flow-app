@@ -1,3 +1,4 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -5,6 +6,7 @@ import '../../../../design/components/components.dart';
 import '../../../../design/tokens/tokens.dart';
 import '../../../tasks/application/tasks_providers.dart';
 import '../../../team/team.dart';
+import '../../data/plan_cover_upload.dart';
 import '../../domain/plan.dart';
 
 /// Một mục của menu kế hoạch.
@@ -86,6 +88,59 @@ int planMemberCount(Plan plan) => {
   ...plan.memberRoles.keys,
 }.length;
 
+({IconData icon, String label}) _planMenuMeta(PlanMenuAction action) =>
+    switch (action) {
+      PlanMenuAction.edit => (
+        icon: Icons.edit_outlined,
+        label: 'Sửa tên, mô tả, nền',
+      ),
+      PlanMenuAction.members => (
+        icon: Icons.person_add_alt_outlined,
+        label: 'Thành viên',
+      ),
+      PlanMenuAction.labels => (icon: Icons.sell_outlined, label: 'Nhãn màu'),
+      PlanMenuAction.fields => (
+        icon: Icons.list_alt_outlined,
+        label: 'Trường tuỳ chỉnh',
+      ),
+      PlanMenuAction.copy => (
+        icon: Icons.copy_outlined,
+        label: 'Sao chép kế hoạch',
+      ),
+      PlanMenuAction.moveTeam => (
+        icon: Icons.arrow_forward_rounded,
+        label: 'Chuyển sang team khác',
+      ),
+      PlanMenuAction.archived => (
+        icon: Icons.archive_outlined,
+        label: 'Việc đã lưu trữ',
+      ),
+      PlanMenuAction.files => (
+        icon: Icons.attach_file_rounded,
+        label: 'Tệp đính kèm',
+      ),
+      PlanMenuAction.report => (
+        icon: Icons.bar_chart_rounded,
+        label: 'Báo cáo kế hoạch',
+      ),
+      PlanMenuAction.transferOwner => (
+        icon: Icons.how_to_reg_outlined,
+        label: 'Chuyển chủ kế hoạch',
+      ),
+      PlanMenuAction.close => (
+        icon: Icons.lock_outline_rounded,
+        label: 'Đóng kế hoạch',
+      ),
+      PlanMenuAction.reopen => (
+        icon: Icons.lock_open_outlined,
+        label: 'Mở lại kế hoạch',
+      ),
+      PlanMenuAction.delete => (
+        icon: Icons.delete_outline,
+        label: 'Xoá kế hoạch',
+      ),
+    };
+
 /// Mở menu kế hoạch; trả mục đã chọn hoặc null khi đóng.
 Future<PlanMenuAction?> showPlanMenuSheet(
   BuildContext context, {
@@ -96,6 +151,82 @@ Future<PlanMenuAction?> showPlanMenuSheet(
   backgroundColor: Theme.of(context).scaffoldBackgroundColor,
   builder: (_) => PlanMenuSheet(plan: plan, groups: groups),
 );
+
+/// Menu nhanh của nút `…` trong header kế hoạch, neo ngay tại nút giống menu
+/// `+` ở màn Team. Danh sách dài tự cuộn trong vùng an toàn của màn hình.
+Future<PlanMenuAction?> showPlanMenu(
+  BuildContext context, {
+  required Rect anchor,
+  required Plan plan,
+  required List<List<PlanMenuAction>> groups,
+}) => showOmniAnchoredMenu<PlanMenuAction>(
+  context: context,
+  anchor: anchor,
+  width: 344,
+  menuKey: const Key('plan-actions-menu'),
+  semanticsLabel: 'Tuỳ chọn kế hoạch',
+  builder: (_) => PlanAnchoredMenu(plan: plan, groups: groups),
+);
+
+class PlanAnchoredMenu extends ConsumerWidget {
+  const PlanAnchoredMenu({super.key, required this.plan, required this.groups});
+
+  final Plan plan;
+  final List<List<PlanMenuAction>> groups;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final scheme = Theme.of(context).colorScheme;
+    final archived = groups.any((g) => g.contains(PlanMenuAction.archived))
+        ? ref.watch(archivedTasksProvider(plan.id)).valueOrNull
+        : null;
+    final archivedCount = archived == null
+        ? null
+        : archived.truncated
+        ? '${archived.tasks.length}+'
+        : '${archived.tasks.length}';
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        for (var g = 0; g < groups.length; g++)
+          Column(
+            key: Key('plan-menu-group-$g'),
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              for (var i = 0; i < groups[g].length; i++)
+                Builder(
+                  builder: (_) {
+                    final action = groups[g][i];
+                    final meta = _planMenuMeta(action);
+                    final trailing = switch (action) {
+                      PlanMenuAction.members => '${planMemberCount(plan)}',
+                      PlanMenuAction.archived => archivedCount,
+                      _ => null,
+                    };
+                    return OmniAnchoredMenuItem(
+                      icon: meta.icon,
+                      label: meta.label,
+                      divider: g > 0 || i > 0,
+                      destructive: action.danger,
+                      trailing: trailing == null
+                          ? null
+                          : Text(
+                              trailing,
+                              style: OmniType.caption.copyWith(
+                                color: scheme.onSurfaceVariant,
+                              ),
+                            ),
+                      onTap: () => Navigator.of(context).pop(action),
+                    );
+                  },
+                ),
+            ],
+          ),
+      ],
+    );
+  }
+}
 
 /// Menu kế hoạch (`Board.dc.html` `isMenu`): nền `#F5F7FA`, đệm 8/16/30, đầu
 /// sheet có ô màu nền kế hoạch và dòng "Team · chủ: Tên" (tên chủ tra trong
@@ -126,6 +257,7 @@ class PlanMenuSheet extends ConsumerWidget {
         : archived.truncated
         ? '${archived.tasks.length}+'
         : '${archived.tasks.length}';
+    final coverUrl = resolveProjectCoverUrl(plan.cover);
 
     return Semantics(
       scopesRoute: true,
@@ -142,13 +274,32 @@ class PlanMenuSheet extends ConsumerWidget {
               padding: const EdgeInsets.only(bottom: 12),
               child: Row(
                 children: [
-                  Container(
+                  ClipRRect(
                     key: const Key('plan-menu-cover'),
-                    width: 36,
-                    height: 36,
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(8),
-                      gradient: OmniCovers.gradientOf(plan.cover),
+                    borderRadius: BorderRadius.circular(8),
+                    child: SizedBox.square(
+                      dimension: 36,
+                      child: coverUrl == null
+                          ? ColoredBox(
+                              color: scheme.surfaceContainerHighest,
+                              child: Icon(
+                                Icons.folder_outlined,
+                                size: 20,
+                                color: scheme.onSurfaceVariant,
+                              ),
+                            )
+                          : CachedNetworkImage(
+                              imageUrl: coverUrl,
+                              fit: BoxFit.cover,
+                              errorWidget: (_, _, _) => ColoredBox(
+                                color: scheme.surfaceContainerHighest,
+                                child: Icon(
+                                  Icons.folder_outlined,
+                                  size: 20,
+                                  color: scheme.onSurfaceVariant,
+                                ),
+                              ),
+                            ),
                     ),
                   ),
                   const SizedBox(width: 10),
@@ -230,27 +381,7 @@ class _MenuRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final danger = OmniTaskTones.of(context).highPriority.foreground;
-    final (icon, label) = switch (action) {
-      PlanMenuAction.edit => (Icons.edit_outlined, 'Sửa tên, mô tả, nền'),
-      PlanMenuAction.members => (Icons.person_add_alt_outlined, 'Thành viên'),
-      PlanMenuAction.labels => (Icons.sell_outlined, 'Nhãn màu'),
-      PlanMenuAction.fields => (Icons.list_alt_outlined, 'Trường tuỳ chỉnh'),
-      PlanMenuAction.copy => (Icons.copy_outlined, 'Sao chép kế hoạch'),
-      PlanMenuAction.moveTeam => (
-        Icons.arrow_forward_rounded,
-        'Chuyển sang team khác',
-      ),
-      PlanMenuAction.archived => (Icons.archive_outlined, 'Việc đã lưu trữ'),
-      PlanMenuAction.files => (Icons.attach_file_rounded, 'Tệp đính kèm'),
-      PlanMenuAction.report => (Icons.bar_chart_rounded, 'Báo cáo kế hoạch'),
-      PlanMenuAction.transferOwner => (
-        Icons.how_to_reg_outlined,
-        'Chuyển chủ kế hoạch',
-      ),
-      PlanMenuAction.close => (Icons.lock_outline_rounded, 'Đóng kế hoạch'),
-      PlanMenuAction.reopen => (Icons.lock_open_outlined, 'Mở lại kế hoạch'),
-      PlanMenuAction.delete => (Icons.delete_outline, 'Xoá kế hoạch'),
-    };
+    final meta = _planMenuMeta(action);
     final color = action.danger ? danger : scheme.onSurface;
 
     return InkWell(
@@ -262,14 +393,14 @@ class _MenuRow extends StatelessWidget {
           child: Row(
             children: [
               Icon(
-                icon,
+                meta.icon,
                 size: OmniIconSize.lg,
                 color: action.danger ? danger : scheme.onSurfaceVariant,
               ),
               const SizedBox(width: 12),
               Expanded(
                 child: Text(
-                  label,
+                  meta.label,
                   style: OmniType.body.copyWith(
                     fontWeight: FontWeight.w500,
                     color: color,

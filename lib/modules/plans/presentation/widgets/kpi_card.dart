@@ -123,11 +123,7 @@ class KpiCard extends StatelessWidget {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(OmniSpacing.md),
-      decoration: BoxDecoration(
-        color: scheme.surface,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: scheme.outlineVariant),
-      ),
+      color: scheme.surface,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

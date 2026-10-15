@@ -35,7 +35,7 @@ class TaskInfoCard extends StatelessWidget {
   final bool likedByMe;
 
   /// Vòng nét đứt +: người giao việc (giao) hoặc thợ chưa có tên (tự nhận).
-  final VoidCallback? onAddAssignee;
+  final ValueChanged<Rect>? onAddAssignee;
   final VoidCallback? onTime;
 
   /// Chạm sao thứ n (1–5). null = không chấm được.
@@ -52,12 +52,7 @@ class TaskInfoCard extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
 
     return Container(
-      decoration: BoxDecoration(
-        color: scheme.surface,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: scheme.outlineVariant),
-      ),
-      clipBehavior: Clip.antiAlias,
+      decoration: BoxDecoration(color: scheme.surface),
       child: Column(
         children: [
           _Row(
@@ -172,7 +167,7 @@ class _People extends StatelessWidget {
   });
 
   final Task task;
-  final VoidCallback? onAdd;
+  final ValueChanged<Rect>? onAdd;
   final bool showAssigner;
 
   static const _max = 3;
@@ -249,17 +244,23 @@ class _People extends StatelessWidget {
           ),
         ],
         if (onAdd != null)
-          Semantics(
-            button: true,
-            label: 'Thêm người làm',
-            excludeSemantics: true,
-            child: InkWell(
-              onTap: onAdd,
-              borderRadius: BorderRadius.circular(6),
-              child: SizedBox.square(
-                dimension: 44,
-                child: Center(
-                  child: OmniDashedCircle(size: 30, color: scheme.primary),
+          Builder(
+            builder: (buttonContext) => Semantics(
+              button: true,
+              label: 'Thêm người làm',
+              excludeSemantics: true,
+              child: InkWell(
+                onTap: () {
+                  final box = buttonContext.findRenderObject() as RenderBox?;
+                  if (box == null || !box.hasSize) return;
+                  onAdd!(box.localToGlobal(Offset.zero) & box.size);
+                },
+                borderRadius: BorderRadius.circular(6),
+                child: SizedBox.square(
+                  dimension: 44,
+                  child: Center(
+                    child: OmniDashedCircle(size: 30, color: scheme.primary),
+                  ),
                 ),
               ),
             ),

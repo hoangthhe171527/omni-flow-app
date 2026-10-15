@@ -48,12 +48,7 @@ class DescriptionCard extends StatelessWidget {
         );
 
     return Container(
-      decoration: BoxDecoration(
-        color: scheme.surface,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: scheme.outlineVariant),
-      ),
-      clipBehavior: Clip.antiAlias,
+      color: scheme.surface,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [

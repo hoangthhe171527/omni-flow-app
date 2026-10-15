@@ -231,6 +231,24 @@ void main() {
     expect(find.text('Link · 0'), findsOneWidget);
   });
 
+  testWidgets('các nhóm thông tin là section phẳng, không còn card bo', (
+    tester,
+  ) async {
+    await pump(tester, const {'opportunities': true}, permissions: withOpp);
+
+    for (final key in [
+      'thread-info-section-KHÁCH HÀNG',
+      'thread-info-section-BÁN HÀNG',
+      'thread-info-section-ẢNH, TỆP, LIÊN KẾT',
+      'thread-info-section-actions',
+    ]) {
+      final material = tester.widget<Material>(find.byKey(ValueKey(key)));
+      expect(material.shape, isNull, reason: key);
+      expect(material.borderRadius, isNull, reason: key);
+      expect(material.clipBehavior, Clip.none, reason: key);
+    }
+  });
+
   testWidgets('máy hẹp 320: không tràn', (tester) async {
     tester.view.physicalSize = const Size(320, 2400);
     tester.view.devicePixelRatio = 1;

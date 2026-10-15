@@ -221,7 +221,7 @@ class _CommentBarState extends ConsumerState<CommentBar> {
 
   /// Nút ảnh: chọn nguồn, rồi thêm tệp trong giới hạn (10 tệp, 25MB / tệp,
   /// 60MB cả lượt; tệp không rõ cỡ tính 25MB). Tệp vượt bị bỏ kèm câu báo.
-  Future<void> _attach() async {
+  Future<void> _attach(Rect anchor) async {
     final messenger = ScaffoldMessenger.of(context);
     final remaining = kCommentMaxFiles - _files.length;
     if (remaining <= 0) {
@@ -230,8 +230,10 @@ class _CommentBarState extends ConsumerState<CommentBar> {
       );
       return;
     }
-    final source = await showDetailMenuSheet<CommentFileSource>(
+    final source = await showDetailAnchoredMenu<CommentFileSource>(
       context,
+      anchor: anchor,
+      menuKey: const Key('comment-attachment-source-menu'),
       semanticsLabel: 'Đính kèm vào bình luận',
       groups: const [
         [
@@ -391,17 +393,29 @@ class _CommentBarState extends ConsumerState<CommentBar> {
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
                 if (widget.canAttachFiles)
-                  IconButton(
-                    tooltip: 'Đính kèm ảnh hoặc tệp',
-                    onPressed: _sending ? null : _attach,
-                    style: IconButton.styleFrom(
-                      minimumSize: const Size(44, 44),
-                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                      maximumSize: const Size(44, 44),
-                      padding: EdgeInsets.zero,
-                      foregroundColor: secondary,
+                  Builder(
+                    builder: (buttonContext) => IconButton(
+                      tooltip: 'Đính kèm ảnh hoặc tệp',
+                      onPressed: _sending
+                          ? null
+                          : () {
+                              final box =
+                                  buttonContext.findRenderObject()
+                                      as RenderBox?;
+                              if (box == null || !box.hasSize) return;
+                              _attach(
+                                box.localToGlobal(Offset.zero) & box.size,
+                              );
+                            },
+                      style: IconButton.styleFrom(
+                        minimumSize: const Size(44, 44),
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        maximumSize: const Size(44, 44),
+                        padding: EdgeInsets.zero,
+                        foregroundColor: secondary,
+                      ),
+                      icon: const Icon(Icons.image_outlined, size: 22),
                     ),
-                    icon: const Icon(Icons.image_outlined, size: 22),
                   )
                 else
                   const SizedBox(width: 4),

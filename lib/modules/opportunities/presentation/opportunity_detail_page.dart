@@ -31,6 +31,7 @@ class OpportunityDetailPage extends ConsumerWidget {
     // Bố cục `MOppDetail.dc.html`: khối trắng (tên, số tiền lớn, dải giai
     // đoạn), rồi trên nền xám là thẻ thông tin và ghi chú.
     return Scaffold(
+      backgroundColor: scheme.surface,
       appBar: AppBar(
         backgroundColor: scheme.surface,
         title: const Text('Chi tiết cơ hội'),
@@ -97,6 +98,7 @@ class OpportunityDetailPage extends ConsumerWidget {
                     padding: _headerPadding,
                   ),
                   OmniDetailCard(
+                    flat: true,
                     rows: [
                       OmniDetailRow(
                         label: 'Khách hàng',

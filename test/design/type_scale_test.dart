@@ -24,6 +24,8 @@ void main() {
     'bodyStrong': OmniType.bodyStrong,
     'body': OmniType.body,
     'bodySm': OmniType.bodySm,
+    'search': OmniType.search,
+    'searchHint': OmniType.searchHint,
     'caption': OmniType.caption,
     'micro': OmniType.micro,
     'input': OmniType.input,
@@ -32,6 +34,13 @@ void main() {
     'money': OmniType.money,
     'moneyHero': OmniType.moneyHero,
   };
+
+  test('ô tìm chỉ in nghiêng phần hướng dẫn', () {
+    expect(OmniType.search.fontStyle, FontStyle.normal);
+    expect(OmniType.searchHint.fontStyle, FontStyle.italic);
+    expect(OmniType.searchHint.fontSize, OmniType.search.fontSize);
+    expect(OmniType.searchHint.fontWeight, OmniType.search.fontWeight);
+  });
 
   for (final entry in scale.entries) {
     test('${entry.key} không dưới ${floor.toInt()}px', () {

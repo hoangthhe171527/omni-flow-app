@@ -114,7 +114,7 @@ void main() {
     await closePage(tester);
     semantics.dispose();
   });
-  testWidgets('giảm chuyển động: panel mở xong ngay sau một pump', (
+  testWidgets('giảm chuyển động: menu lọc hiện ngay sau một pump', (
     tester,
   ) async {
     final semantics = tester.ensureSemantics();
@@ -123,8 +123,41 @@ void main() {
     await tester.pump(); // danh sách tải xong, vòng chờ không còn quay
     await tester.tap(find.bySemanticsLabel('Bộ lọc'));
     await tester.pump();
-    expect(tester.hasRunningAnimations, isFalse);
+    expect(find.byKey(const Key('inbox-filter-menu')), findsOneWidget);
     expect(find.text('Chưa gán'), findsOneWidget);
+    await closePage(tester);
+    semantics.dispose();
+  });
+
+  testWidgets('menu lọc chia nhóm rõ và không ép nhãn vào một hàng', (
+    tester,
+  ) async {
+    final semantics = tester.ensureSemantics();
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(() {
+      tester.view.resetPhysicalSize();
+      tester.view.resetDevicePixelRatio();
+    });
+
+    await tester.pumpWidget(host(reduceMotion: true));
+    await tester.pump();
+    await tester.pump();
+    await tester.tap(find.bySemanticsLabel('Bộ lọc'));
+    await tester.pump();
+
+    expect(find.text('Lọc hội thoại'), findsOneWidget);
+    expect(find.text('Hiển thị'), findsOneWidget);
+    expect(find.text('Kênh'), findsOneWidget);
+    expect(find.text('Tình trạng'), findsOneWidget);
+
+    for (final name in ['all', 'unread', 'mine', 'unassigned']) {
+      final choice = find.byKey(ValueKey('inbox-filter-quick-$name'));
+      expect(choice, findsOneWidget);
+      expect(tester.getSize(choice).height, greaterThanOrEqualTo(44));
+    }
+    expect(tester.takeException(), isNull);
+
     await closePage(tester);
     semantics.dispose();
   });
@@ -291,7 +324,7 @@ void main() {
     expect(field.style!.color, OmniColors.darkForeground);
   });
 
-  testWidgets('giao diện tối: thẻ danh sách của InboxPage không trắng', (
+  testWidgets('giao diện tối: mặt phẳng của InboxPage không lọt màu sáng', (
     tester,
   ) async {
     await tester.pumpWidget(host(dark: true, reduceMotion: true));
@@ -305,12 +338,10 @@ void main() {
       reason: 'nền trắng tinh lọt vào giao diện tối',
     );
     expect(colors, isNot(contains(OmniColors.border)));
-    expect(colors, contains(OmniColors.darkCard));
-    expect(colors, contains(OmniColors.darkBorder));
     await closePage(tester);
   });
 
-  testWidgets('giao diện sáng giữ nguyên màu cũ', (tester) async {
+  testWidgets('giao diện sáng dùng đúng màu hệ thống', (tester) async {
     await tester.pumpWidget(barHost(OmniTheme.light(TargetPlatform.android)));
     await tester.pumpAndSettle();
     ProviderScope.containerOf(
@@ -324,7 +355,7 @@ void main() {
     expect(colors, contains(OmniColors.accent));
     expect(colors, contains(OmniColors.primary));
     expect(colors, contains(OmniColors.destructive));
-    expect(colors, contains(const Color(0x1F0B1A33)));
+    expect(colors, isNot(contains(const Color(0x1F0B1A33))));
     final field = tester.widget<TextField>(find.byType(TextField));
     expect(field.style!.color, OmniColors.ink);
   });
@@ -345,6 +376,8 @@ void main() {
         expect(find.textContaining('Đã chặn ·'), findsNothing);
 
         api.listCalls.clear();
+        await tester.ensureVisible(find.text('Đã chặn'));
+        await tester.pump();
         await tester.tap(find.text('Đã chặn'));
         await tester.pump();
         await tester.pump();

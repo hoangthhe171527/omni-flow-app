@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:omni_app/design/components/components.dart';
 import 'package:omni_app/design/theme/omni_theme.dart';
-import 'package:omni_app/design/tokens/tokens.dart';
 import 'package:omni_app/modules/plans/application/plans_providers.dart';
 import 'package:omni_app/modules/plans/domain/plan.dart';
 import 'package:omni_app/modules/plans/domain/team.dart';
@@ -20,7 +19,7 @@ import 'package:omni_app/security/session/session_controller.dart';
 import '../support/fixed_background.dart';
 
 /// Bản sửa sau rà soát Task 3: rise không phát lại khi cuộn, nhấn-co huỷ khi
-/// cuộn, màu team, khoá nhóm theo id, ngữ nghĩa menu Tạo mới.
+/// cuộn, icon phân cấp, khoá nhóm theo id, ngữ nghĩa menu Tạo mới.
 void main() {
   const assigner = {'tasks.read', 'tasks.write', 'tasks.projects.manage.all'};
 
@@ -149,6 +148,12 @@ void main() {
   testWidgets('nhấn co .97, kéo cuộn thì huỷ co', (tester) async {
     await pumpTeams(tester, [for (var i = 0; i < 6; i++) teamOf(i)]);
 
+    final teamHeader = find
+        .ancestor(of: find.text('Team 1'), matching: find.byType(InkWell))
+        .first;
+    await tester.tap(teamHeader);
+    await tester.pumpAndSettle();
+
     double scaleOf(Finder tile) => tester
         .widget<AnimatedScale>(
           find.descendant(of: tile, matching: find.byType(AnimatedScale)),
@@ -169,12 +174,35 @@ void main() {
     await tester.pumpAndSettle();
   });
 
-  test('colorOf: sai dạng → xám phụ; đúng màu fallback vẫn giữ', () {
-    expect(TeamGroup.colorOf(null), OmniColors.mutedForeground);
-    expect(TeamGroup.colorOf('xanh'), OmniColors.mutedForeground);
-    expect(TeamGroup.colorOf('#8A95A8'), const Color(0xFF8A95A8));
-    expect(TeamGroup.colorOf('#0A7D76'), const Color(0xFF0A7D76));
-    expect(OmniLabelColors.tryParseHex('zz'), isNull);
+  testWidgets('team/kế hoạch dùng icon ngữ nghĩa, không còn vạch màu', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: OmniTheme.light(TargetPlatform.android),
+        home: Scaffold(
+          body: TeamGroup(
+            group: teamOf(1),
+            plans: teamOf(1).plans,
+            open: true,
+            onToggle: () {},
+            onOpenPlan: (_) {},
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(
+      tester.widget<Icon>(find.byKey(const Key('team-group-icon'))).icon,
+      Icons.groups_2_outlined,
+    );
+    expect(
+      tester.widget<Icon>(find.byKey(const Key('plan-tile-icon'))).icon,
+      Icons.folder_outlined,
+    );
+    expect(find.byKey(const Key('team-group-marker')), findsNothing);
+    expect(find.byKey(const Key('plan-tile-marker')), findsNothing);
   });
 
   testWidgets('nhóm khoá theo id: đổi tên không dựng lại nhóm', (tester) async {
