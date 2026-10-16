@@ -42,6 +42,9 @@ void main() {
     ],
   });
   final plan = planWith('plum-1');
+
+  /// Id các việc được ghim trong lượt chạy (đặt trước [pumpBoard]).
+  var pinned = <String>{};
   List<Map<String, Object?>> seed([int cards = 10]) => [
     for (var s = 0; s < 4; s++)
       for (var i = 0; i < cards; i++)
@@ -52,6 +55,7 @@ void main() {
           'order': i.toDouble(),
           'due_date': '2026-10-20',
           'comment_count': 2,
+          if (pinned.contains('t$s-$i')) 'pinned': true,
         },
   ];
 
@@ -86,6 +90,7 @@ void main() {
   }) async {
     raw = seed(cards);
     failLoad = false;
+    pinned = {};
     current = cover == null ? plan : planWith(cover);
     api = _FakeTasksApi(parse());
     final router = GoRouter(
@@ -940,6 +945,30 @@ void main() {
 
       return g;
     }
+
+    testWidgets('thẻ ghim kéo xuống giữa thẻ thường → kẹp ở cuối khối ghim, '
+        'gửi order, không báo "không xếp được"', (t) async {
+      pinned = {'t0-0', 't0-1'};
+      await pumpBoard(t);
+      final g = await t.startGesture(
+        t.getCenter(find.byKey(const ValueKey('t0-0'))),
+      );
+      await t.pump(const Duration(milliseconds: 450));
+      await t.pump(const Duration(milliseconds: 200));
+      for (var i = 0; i < 40; i++) {
+        await g.moveBy(const Offset(0, 10));
+        await t.pump(const Duration(milliseconds: 16));
+      }
+      expect(targetOf(t), (0, 1), reason: 'ô chỗ trống dừng ở cuối khối ghim');
+
+      await g.up();
+      await t.pumpAndSettle();
+      expect(api.moves.single, ('t0-0', 's0', 2.0));
+      expect(
+        find.text('Chưa sắp xếp được việc cũ này. Vui lòng thử lại.'),
+        findsNothing,
+      );
+    });
 
     testWidgets('bóng mờ gập, đúng một ô chỗ trống tại chỗ cũ, khoảng 8 hai '
         'bên', (t) async {

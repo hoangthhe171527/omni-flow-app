@@ -796,20 +796,24 @@ class _PlanBoardPageState extends ConsumerState<PlanBoardPage>
     _endDrag();
     if (sectionId.isEmpty || from < 0 || _pending != null) return;
     final fromIndex = board.buckets[from].indexWhere((t) => t.id == task.id);
-    final targetLength = board.buckets[toColumn]
-        .where((t) => t.id != task.id)
-        .length;
-    final safeIndex = index.clamp(0, targetLength);
+    final targetOthers = [
+      for (final t in board.buckets[toColumn])
+        if (t.id != task.id) t,
+    ];
+    // Kẹp vào vùng ghim của thẻ (như ô chỗ trống đã hiện): thả thẻ ghim xuống
+    // giữa thẻ thường thì nó nằm cuối khối ghim, không thành "không xếp được".
+    final safeIndex = clampToPinZone(
+      targetOthers,
+      task.isPinned,
+      index.clamp(0, targetOthers.length),
+    );
     // Thả lại đúng vị trí cũ không tạo request và không làm danh sách nháy.
     if (from == toColumn && safeIndex == fromIndex) return;
     // `order` tính trên CẢ cột đích (không lọc người / tìm kiếm): neo vào thẻ
     // thấy được phía trên nhưng không nhảy qua thẻ ẩn nằm ngay sau nó.
     // [safeIndex] đếm trên cột đích ĐÃ bỏ thẻ đang kéo (cùng nhóm thì thẻ ấy
     // vẫn nằm trong cột), nên danh sách thấy được cũng bỏ nó trước khi neo.
-    final visible = [
-      for (final t in board.buckets[toColumn])
-        if (t.id != task.id) t,
-    ];
+    final visible = targetOthers;
     final all = ref.read(planTasksProvider(widget.planId)).valueOrNull;
     final full = all == null
         ? visible
@@ -825,7 +829,11 @@ class _PlanBoardPageState extends ConsumerState<PlanBoardPage>
     final order = boardDropOrder(
       others,
       task,
-      fullInsertIndex(others, visible, safeIndex),
+      clampToPinZone(
+        others,
+        task.isPinned,
+        fullInsertIndex(others, visible, safeIndex),
+      ),
     );
     // Một số việc legacy không có `order`. Không gửi một request không thể
     // thay đổi thứ tự trong cùng nhóm; tải lại sẽ lập tức bật thẻ về chỗ cũ.

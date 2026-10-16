@@ -323,6 +323,7 @@ class _BoardColumnState extends State<BoardColumn> {
   /// dựng (cuộn ra xa) coi như nằm trên hay dưới tuỳ vị trí.
   int _indexAt(double pointerY, Task dragged) {
     final centers = <double>[];
+    final others = <Task>[];
     var seenBuilt = false;
     // Tâm lúc nghỉ = tâm đo − tổng chiều cao hiện tại của các khe phía trên
     // (gồm khe ngay trên thẻ). Khe đang trượt dở cũng trừ đúng phần đã mở, nên
@@ -343,6 +344,7 @@ class _BoardColumnState extends State<BoardColumn> {
         if (!hot && tasks.length > 1) gapAbove += 8;
         continue;
       }
+      others.add(task);
       final box = _keys[task.id]?.currentContext?.findRenderObject();
       if (box is RenderBox && box.attached && box.hasSize) {
         seenBuilt = true;
@@ -358,7 +360,11 @@ class _BoardColumnState extends State<BoardColumn> {
         ? drag.targetIndex
         : null;
 
-    return dropIndexWithHysteresis(centers, pointerY, current);
+    return clampToPinZone(
+      others,
+      dragged.isPinned,
+      dropIndexWithHysteresis(centers, pointerY, current),
+    );
   }
 
   /// Con trỏ Y toàn cục. [DragTargetDetails.offset] là góc trên-trái của bản

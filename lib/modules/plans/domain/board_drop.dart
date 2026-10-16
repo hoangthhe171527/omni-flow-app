@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import '../../tasks/domain/task.dart';
 
 /// `order` để gửi khi thả [moving] vào [column] tại chỗ chèn [index].
@@ -29,6 +31,17 @@ double? boardDropOrder(List<Task> column, Task moving, int index) {
   if (before != null) return before + 1;
 
   return null;
+}
+
+/// Kẹp chỗ chèn [index] vào đúng vùng ghim của thẻ đang kéo trong [target]
+/// (không gồm thẻ ấy; server xếp khối ghim lên đầu): thẻ ghim không xuống
+/// dưới thẻ thường đầu tiên, thẻ thường không lên trên thẻ ghim cuối. Khớp
+/// `clampToPinZone` của web — ô chỗ trống hiện đúng chỗ thẻ sẽ nằm, và
+/// [boardDropOrder] luôn có hàng xóm cùng vùng.
+int clampToPinZone(List<Task> target, bool movingPinned, int index) {
+  final pinned = target.where((t) => t.isPinned).length;
+
+  return movingPinned ? math.min(index, pinned) : math.max(index, pinned);
 }
 
 /// Chỗ chèn theo con trỏ: số thẻ có tâm nằm TRÊN [pointerY].

@@ -145,6 +145,29 @@ void main() {
     expect(board.moved('t1', -1, 0, 's3'), same(board));
   });
 
+  test('clampToPinZone: thẻ ghim không xuống dưới khối ghim, thẻ thường '
+      'không lên trên nó', () {
+    final column = [
+      t('p1', 1, pinned: true),
+      t('p2', 2, pinned: true),
+      t('a', 3),
+      t('b', 4),
+    ];
+    expect(clampToPinZone(column, true, 4), 2);
+    expect(clampToPinZone(column, true, 1), 1);
+    expect(clampToPinZone(column, false, 0), 2);
+    expect(clampToPinZone(column, false, 3), 3);
+    // Sau khi kẹp, luôn có hàng xóm cùng vùng → có order.
+    expect(
+      boardDropOrder(
+        column,
+        t('p0', 0, pinned: true),
+        clampToPinZone(column, true, 4),
+      ),
+      3,
+    );
+  });
+
   test('BoardBuckets.moved: đổi thứ tự trong cùng cột', () {
     const sections = [PlanSection(id: 's1', name: 'A')];
     final board = BoardBuckets.build(
