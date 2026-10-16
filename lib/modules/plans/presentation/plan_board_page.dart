@@ -62,6 +62,13 @@ class PlanBoardPage extends ConsumerStatefulWidget {
   ConsumerState<PlanBoardPage> createState() => _PlanBoardPageState();
 }
 
+/// Ảnh cover (URL đã lưu trong `cover`) cho lớp mờ của header. Tách ra để
+/// test thay bằng ảnh trong bộ nhớ, tải xong lúc nào test quyết định.
+final boardCoverImageProvider = Provider<ImageProvider Function(String cover)>(
+  (_) =>
+      (cover) => CachedNetworkImageProvider(resolveMediaUrl(cover)),
+);
+
 class _PlanBoardPageState extends ConsumerState<PlanBoardPage>
     with SingleTickerProviderStateMixin {
   final _track = ScrollController();
@@ -352,7 +359,9 @@ class _PlanBoardPageState extends ConsumerState<PlanBoardPage>
             builder: (context, box) => Column(
               children: [
                 _GlassHeader(
-                  cover: loaded?.cover,
+                  coverImage: isProjectCoverImage(loaded?.cover)
+                      ? ref.watch(boardCoverImageProvider)(loaded!.cover!)
+                      : null,
                   backdropSize: box.biggest,
                   title: loaded?.name ?? 'Kế hoạch',
                   subtitle: _subtitle(loaded, visible),
@@ -1449,7 +1458,7 @@ class _GlassHeader extends StatelessWidget {
     required this.filterActive,
     required this.onFilter,
     required this.onMenu,
-    this.cover,
+    this.coverImage,
     this.backdropSize,
   });
 
@@ -1465,8 +1474,8 @@ class _GlassHeader extends StatelessWidget {
   final ValueChanged<Rect> onFilter;
   final ValueChanged<Rect>? onMenu;
 
-  /// `cover` của kế hoạch; chỉ URL ảnh mới cần lớp mờ.
-  final String? cover;
+  /// Ảnh cover của kế hoạch; null (nền gradient/màu) thì không cần lớp mờ.
+  final ImageProvider? coverImage;
 
   /// Cỡ của nền toàn màn ([ProjectCoverSurface]) để cắt đúng phần ảnh nằm
   /// dưới header (ảnh phủ kiểu `BoxFit.cover` theo cỡ đó).
@@ -1547,7 +1556,7 @@ class _GlassHeader extends StatelessWidget {
         ),
       ),
     );
-    final image = isProjectCoverImage(cover) ? cover : null;
+    final image = coverImage;
     final size = backdropSize;
 
     return RepaintBoundary(
@@ -1557,7 +1566,7 @@ class _GlassHeader extends StatelessWidget {
           : Stack(
               children: [
                 Positioned.fill(
-                  child: _FrozenCoverBlur(cover: image, size: size),
+                  child: _FrozenCoverBlur(image: image, size: size),
                 ),
                 bar,
               ],
@@ -1567,12 +1576,18 @@ class _GlassHeader extends StatelessWidget {
 }
 
 /// Phần ảnh nền nằm dưới header, mờ [OmniCovers.glassBlur], vẽ MỘT lần thành
-/// ảnh chụp (`SnapshotWidget`): kéo thẻ / trượt dải không làm mờ lại. Ảnh tải
-/// xong (hay đổi cỡ) thì chụp lại.
+/// ảnh chụp (`SnapshotWidget`): kéo thẻ / trượt dải không làm mờ lại.
+///
+/// `SnapshotWidget` không tự chụp lại khi con đổi, nên:
+/// - chỉ cho chụp khi ảnh đã có khung đầu (chụp lúc đang tải là giữ mãi một
+///   tấm trong suốt); trước đó vẽ thẳng;
+/// - đổi ảnh: thôi chụp, chờ khung đầu của ảnh mới rồi chụp lại;
+/// - đổi cỡ nền (xoay, bàn phím): xoá ảnh chụp để chụp lại theo cỡ mới.
+/// Đổi `devicePixelRatio` thì `SnapshotWidget` tự chụp lại.
 class _FrozenCoverBlur extends StatefulWidget {
-  const _FrozenCoverBlur({required this.cover, required this.size});
+  const _FrozenCoverBlur({required this.image, required this.size});
 
-  final String cover;
+  final ImageProvider image;
   final Size size;
 
   @override
@@ -1580,10 +1595,49 @@ class _FrozenCoverBlur extends StatefulWidget {
 }
 
 class _FrozenCoverBlurState extends State<_FrozenCoverBlur> {
-  final _snapshot = SnapshotController(allowSnapshotting: true);
+  final _snapshot = SnapshotController();
+  ImageStream? _stream;
+  late final _listener = ImageStreamListener(
+    (_, _) => _ready(),
+    onError: (_, _) {},
+  );
+
+  /// Ảnh đã có khung: cho chụp, và bỏ tấm cũ (nếu có) để chụp lại.
+  void _ready() {
+    if (!mounted) return;
+    _snapshot
+      ..allowSnapshotting = true
+      ..clear();
+  }
+
+  /// Bắt đầu chờ khung đầu của [_FrozenCoverBlur.image]; trong lúc chờ vẽ
+  /// thẳng, không chụp.
+  void _resolve() {
+    _snapshot.allowSnapshotting = false;
+    _stream?.removeListener(_listener);
+    _stream = widget.image.resolve(createLocalImageConfiguration(context))
+      ..addListener(_listener);
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_stream == null) _resolve();
+  }
+
+  @override
+  void didUpdateWidget(_FrozenCoverBlur old) {
+    super.didUpdateWidget(old);
+    if (old.image != widget.image) {
+      _resolve();
+    } else if (old.size != widget.size) {
+      _snapshot.clear();
+    }
+  }
 
   @override
   void dispose() {
+    _stream?.removeListener(_listener);
     _snapshot.dispose();
     super.dispose();
   }
@@ -1607,11 +1661,11 @@ class _FrozenCoverBlurState extends State<_FrozenCoverBlur> {
             maxWidth: widget.size.width,
             minHeight: widget.size.height,
             maxHeight: widget.size.height,
-            child: CachedNetworkImage(
-              imageUrl: resolveMediaUrl(widget.cover),
+            child: Image(
+              image: widget.image,
               fit: BoxFit.cover,
-              fadeInDuration: Duration.zero,
-              errorWidget: (_, _, _) => const SizedBox.shrink(),
+              gaplessPlayback: true,
+              errorBuilder: (_, _, _) => const SizedBox.shrink(),
             ),
           ),
         ),

@@ -1,3 +1,7 @@
+import 'dart:async';
+import 'dart:ui' as ui;
+
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -67,6 +71,9 @@ void main() {
 
   const phone = Size(390, 844);
 
+  /// Ảnh cover theo URL; test tự `complete` để quyết định lúc ảnh tải xong.
+  final covers = <String, Completer<ui.Image>>{};
+
   Future<void> pumpBoard(
     WidgetTester t, {
     bool reduceMotion = false,
@@ -110,6 +117,9 @@ void main() {
           ),
           plansApiProvider.overrideWithValue(_FakePlansApi(plan)),
           tasksApiProvider.overrideWithValue(api),
+          boardCoverImageProvider.overrideWithValue(
+            (url) => _TestCover(url, covers.putIfAbsent(url, Completer.new)),
+          ),
           sessionProvider.overrideWithValue(
             const Session(
               status: SessionStatus.authenticated,
@@ -637,27 +647,90 @@ void main() {
       expect(glass.color, OmniCovers.glass);
     });
 
-    testWidgets('header nền ảnh: mờ vẽ một lần thành ảnh chụp (SnapshotWidget '
-        '+ ImageFiltered), vẫn KHÔNG BackdropFilter', (t) async {
-      await pumpBoard(
-        t,
-        size: phone,
-        cover: 'https://cdn.example.com/projects/p1/cover.webp',
-      );
-      final header = find.byKey(const Key('board-header'));
-      expect(
-        find.descendant(of: header, matching: find.byType(BackdropFilter)),
-        findsNothing,
-      );
+    group('header nền ảnh', () {
+      const coverA = 'https://cdn.example.com/projects/p1/a.webp';
+      const coverB = 'https://cdn.example.com/projects/p1/b.webp';
       final blur = find.descendant(
-        of: header,
+        of: find.byKey(const Key('board-header')),
         matching: find.byKey(const Key('board-header-blur')),
       );
-      expect(t.widget(blur), isA<SnapshotWidget>());
-      expect(
-        find.descendant(of: blur, matching: find.byType(ImageFiltered)),
-        findsOneWidget,
-      );
+      SnapshotController snapshotOf(WidgetTester t) =>
+          t.widget<SnapshotWidget>(blur).controller;
+
+      setUp(() {
+        covers.clear();
+        imageCache.clear();
+      });
+
+      Future<void> loadCover(WidgetTester t, String url) async {
+        // Ảnh dựng đồng bộ: không `runAsync`, kẻo ảnh nền thật (cache mạng)
+        // của ProjectCoverSurface cũng chạy và gọi plugin không có trong test.
+        final recorder = ui.PictureRecorder();
+        Canvas(recorder).drawColor(const Color(0xFF336699), BlendMode.src);
+        final image = recorder.endRecording().toImageSync(8, 8);
+        covers.putIfAbsent(url, Completer.new).complete(image);
+        await t.pump();
+        await t.pump();
+      }
+
+      testWidgets('mờ bằng ImageFiltered trong SnapshotWidget, KHÔNG '
+          'BackdropFilter; chỉ chụp khi ảnh đã có khung đầu', (t) async {
+        await pumpBoard(t, size: phone, cover: coverA);
+        expect(
+          find.descendant(
+            of: find.byKey(const Key('board-header')),
+            matching: find.byType(BackdropFilter),
+          ),
+          findsNothing,
+        );
+        expect(
+          find.descendant(of: blur, matching: find.byType(ImageFiltered)),
+          findsOneWidget,
+        );
+        expect(
+          snapshotOf(t).allowSnapshotting,
+          isFalse,
+          reason: 'ảnh chưa tải: chụp lúc này là giữ mãi một tấm trong suốt',
+        );
+
+        await loadCover(t, coverA);
+        expect(snapshotOf(t).allowSnapshotting, isTrue);
+      });
+
+      testWidgets('đổi cover khi bảng đang mở → bỏ ảnh chụp cũ, chờ ảnh mới '
+          'rồi chụp lại', (t) async {
+        await pumpBoard(t, size: phone, cover: coverA);
+        await loadCover(t, coverA);
+        expect(snapshotOf(t).allowSnapshotting, isTrue);
+
+        current = planWith(coverB);
+        ProviderScope.containerOf(
+          t.element(find.byType(PlanBoardPage)),
+        ).read(planTick.notifier).state++;
+        await t.pump();
+        await t.pump();
+        expect(snapshotOf(t).allowSnapshotting, isFalse);
+
+        var cleared = 0;
+        snapshotOf(t).addListener(() => cleared++);
+        await loadCover(t, coverB);
+        expect(snapshotOf(t).allowSnapshotting, isTrue);
+        expect(cleared, greaterThan(0));
+      });
+
+      testWidgets('đổi cỡ nền (xoay, bàn phím) → chụp lại', (t) async {
+        await pumpBoard(t, size: phone, cover: coverA);
+        await loadCover(t, coverA);
+        final snapshot = snapshotOf(t);
+        var cleared = 0;
+        snapshot.addListener(() => cleared++);
+
+        t.view.physicalSize = const Size(844, 390);
+        await t.pump();
+        await t.pump();
+        expect(cleared, greaterThan(0));
+        expect(snapshot.allowSnapshotting, isTrue);
+      });
     });
 
     testWidgets('rời mép rồi nhấc tay giữa lúc snap → thả vào cột dưới ngón '
@@ -891,4 +964,28 @@ class _FakeTasksApi implements TasksApi {
 
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
+/// Ảnh cover giả: một khung, có khi [image] hoàn tất.
+class _TestCover extends ImageProvider<_TestCover> {
+  _TestCover(this.url, this.image);
+
+  final String url;
+  final Completer<ui.Image> image;
+
+  @override
+  Future<_TestCover> obtainKey(ImageConfiguration configuration) =>
+      SynchronousFuture(this);
+
+  @override
+  ImageStreamCompleter loadImage(_TestCover key, ImageDecoderCallback decode) =>
+      OneFrameImageStreamCompleter(
+        image.future.then((i) => ImageInfo(image: i.clone())),
+      );
+
+  @override
+  bool operator ==(Object other) => other is _TestCover && other.url == url;
+
+  @override
+  int get hashCode => url.hashCode;
 }
