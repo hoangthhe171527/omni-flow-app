@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -116,14 +117,44 @@ class _SectionOrderPageState extends ConsumerState<SectionOrderPage> {
       onDown: () => _move(i, i + 1),
     );
 
-    Widget box(Widget child) => DecoratedBox(
-      decoration: BoxDecoration(
-        color: scheme.surface,
-        borderRadius: OmniRadius.smAll,
-        border: Border.all(color: scheme.outlineVariant),
-      ),
-      child: ClipRRect(borderRadius: OmniRadius.smAll, child: child),
-    );
+    // Một vùng cuộn duy nhất (K11): bộ tự cuộn ở mép của SliverReorderableList
+    // bám vào chính Scrollable này. Trước đây danh sách shrinkWrap nằm trong
+    // SingleChildScrollView nên bộ tự cuộn bám vào Scrollable bên trong
+    // (max = 0) và kéo tới mép thì đứng im.
+    final rows = reorderable
+        ? SliverReorderableList(
+            itemCount: shown.length,
+            itemBuilder: (context, i) => rowOf(i),
+            // onReorderItem đã trừ sẵn dòng đang kéo khỏi chỉ số đích
+            // (onReorder cũ thì chưa, và đã bị đánh dấu deprecated).
+            onReorderItem: _move,
+            proxyDecorator: (child, _, animation) => AnimatedBuilder(
+              animation: animation,
+              builder: (context, child) {
+                // Bóng lớn dần khi nhấc, nhỏ dần lúc bản nổi bay về (K13).
+                final t = OmniCurves.standard.transform(animation.value);
+                return DecoratedBox(
+                  decoration: BoxDecoration(
+                    color: scheme.surface,
+                    borderRadius: OmniRadius.smAll,
+                    boxShadow: BoxShadow.lerpList(
+                      const [],
+                      OmniShadows.dragging,
+                      t,
+                    ),
+                  ),
+                  child: child,
+                );
+              },
+              child: ClipRRect(
+                borderRadius: OmniRadius.smAll,
+                child: Material(color: scheme.surface, child: child),
+              ),
+            ),
+          )
+        : SliverList.list(
+            children: [for (var i = 0; i < shown.length; i++) rowOf(i)],
+          );
 
     return Scaffold(
       backgroundColor: scheme.surface,
@@ -137,14 +168,10 @@ class _SectionOrderPageState extends ConsumerState<SectionOrderPage> {
           Expanded(
             child: ids == null
                 ? const Center(child: CircularProgressIndicator())
-                : SingleChildScrollView(
-                    padding: const EdgeInsets.only(
-                      bottom: OmniSpacing.bottomSafe,
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Padding(
+                : CustomScrollView(
+                    slivers: [
+                      SliverToBoxAdapter(
+                        child: Padding(
                           padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
                           child: Text.rich(
                             TextSpan(
@@ -166,45 +193,27 @@ class _SectionOrderPageState extends ConsumerState<SectionOrderPage> {
                             ),
                           ),
                         ),
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 16),
-                          child: box(
-                            reorderable
-                                ? ReorderableListView(
-                                    shrinkWrap: true,
-                                    physics:
-                                        const NeverScrollableScrollPhysics(),
-                                    buildDefaultDragHandles: false,
-                                    proxyDecorator: (child, _, _) =>
-                                        DecoratedBox(
-                                          decoration: BoxDecoration(
-                                            color: scheme.surface,
-                                            borderRadius: OmniRadius.smAll,
-                                            boxShadow: OmniShadows.dragging,
-                                          ),
-                                          child: ClipRRect(
-                                            borderRadius: OmniRadius.smAll,
-                                            child: Material(
-                                              color: scheme.surface,
-                                              child: child,
-                                            ),
-                                          ),
-                                        ),
-                                    onReorderItem: _move,
-                                    children: [
-                                      for (var i = 0; i < shown.length; i++)
-                                        rowOf(i),
-                                    ],
-                                  )
-                                : Column(
-                                    children: [
-                                      for (var i = 0; i < shown.length; i++)
-                                        rowOf(i),
-                                    ],
-                                  ),
+                      ),
+                      SliverPadding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        sliver: DecoratedSliver(
+                          decoration: BoxDecoration(
+                            color: scheme.surface,
+                            borderRadius: OmniRadius.smAll,
+                          ),
+                          // Viền vẽ ĐÈ lên nền các dòng, không bị dòng che.
+                          sliver: DecoratedSliver(
+                            position: DecorationPosition.foreground,
+                            decoration: BoxDecoration(
+                              borderRadius: OmniRadius.smAll,
+                              border: Border.all(color: scheme.outlineVariant),
+                            ),
+                            sliver: rows,
                           ),
                         ),
-                        Padding(
+                      ),
+                      SliverToBoxAdapter(
+                        child: Padding(
                           padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
                           child: Text.rich(
                             TextSpan(
@@ -225,8 +234,13 @@ class _SectionOrderPageState extends ConsumerState<SectionOrderPage> {
                             ),
                           ),
                         ),
-                      ],
-                    ),
+                      ),
+                      const SliverPadding(
+                        padding: EdgeInsets.only(
+                          bottom: OmniSpacing.bottomSafe,
+                        ),
+                      ),
+                    ],
                   ),
           ),
         ],
@@ -352,8 +366,17 @@ class _SectionRow extends StatelessWidget {
       ),
     );
 
+    // Dòng đầu/cuối tự bo góc (K11): DecoratedSliver không cắt con, nên nền
+    // vuông của dòng sẽ lòi ra khỏi góc bo của khung viền.
+    const corner = Radius.circular(OmniRadius.sm);
     return Material(
       color: scheme.surface,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(
+          top: first ? corner : Radius.zero,
+          bottom: last ? corner : Radius.zero,
+        ),
+      ),
       child: DecoratedBox(
         decoration: BoxDecoration(
           border: first
@@ -365,7 +388,7 @@ class _SectionRow extends StatelessWidget {
           child: Row(
             children: [
               if (showGrip)
-                ReorderableDragStartListener(
+                _InstantDragStartListener(
                   index: index,
                   child: Semantics(
                     label: 'Kéo để đổi chỗ ${section.name}',
@@ -456,6 +479,46 @@ class _SectionRow extends StatelessWidget {
       ),
     );
   }
+}
+
+/// Tay cầm nhấc ngay (K12): nhận kéo sau 2px thay vì touch slop 18px, nên bản
+/// nổi đi theo ngón từ khung đầu thay vì đứng ở +0 rồi nhảy một phát. Chỉ tay
+/// cầm dùng nó; vuốt ở chỗ khác của dòng vẫn cuộn danh sách như thường.
+class _InstantDragStartListener extends ReorderableDragStartListener {
+  const _InstantDragStartListener({required super.index, required super.child});
+
+  @override
+  MultiDragGestureRecognizer createRecognizer() =>
+      _InstantMultiDragRecognizer(debugOwner: this);
+}
+
+class _InstantMultiDragRecognizer extends MultiDragGestureRecognizer {
+  _InstantMultiDragRecognizer({super.debugOwner});
+
+  @override
+  MultiDragPointerState createNewPointerState(PointerDownEvent event) =>
+      _InstantPointerState(event.position, event.kind, gestureSettings);
+
+  @override
+  String get debugDescription => 'instant multidrag';
+}
+
+class _InstantPointerState extends MultiDragPointerState {
+  _InstantPointerState(
+    super.initialPosition,
+    super.kind,
+    super.gestureSettings,
+  );
+
+  /// Nhận sau 2px thay vì touch slop 18px: bản nổi đi theo ngón ngay.
+  @override
+  void checkForResolutionAfterMove() {
+    if (pendingDelta!.distance > 2) resolve(GestureDisposition.accepted);
+  }
+
+  @override
+  void accepted(GestureMultiDragStartCallback starter) =>
+      starter(initialPosition);
 }
 
 /// Font của app không có ký tự ⋮ và ⋯ (`font_glyph_coverage_test`), nên đoạn
