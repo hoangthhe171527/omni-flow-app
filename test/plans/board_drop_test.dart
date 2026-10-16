@@ -129,6 +129,45 @@ void main() {
     expect(board.moved('zz', 1, 0, 's2').buckets[1], isEmpty);
   });
 
+  test('BoardBuckets.moved: cột đích ngoài bảng (nhóm vừa bị xoá) → trả '
+      'nguyên bảng, không RangeError', () {
+    const sections = [
+      PlanSection(id: 's1', name: 'A'),
+      PlanSection(id: 's2', name: 'B'),
+    ];
+    final board = BoardBuckets.build(
+      (tasks: [t('t1', 1, section: 's1')], truncated: false),
+      sections,
+      BoardPerson.everyone,
+    );
+
+    expect(board.moved('t1', 2, 0, 's3'), same(board));
+    expect(board.moved('t1', -1, 0, 's3'), same(board));
+  });
+
+  test('clampToPinZone: thẻ ghim không xuống dưới khối ghim, thẻ thường '
+      'không lên trên nó', () {
+    final column = [
+      t('p1', 1, pinned: true),
+      t('p2', 2, pinned: true),
+      t('a', 3),
+      t('b', 4),
+    ];
+    expect(clampToPinZone(column, true, 4), 2);
+    expect(clampToPinZone(column, true, 1), 1);
+    expect(clampToPinZone(column, false, 0), 2);
+    expect(clampToPinZone(column, false, 3), 3);
+    // Sau khi kẹp, luôn có hàng xóm cùng vùng → có order.
+    expect(
+      boardDropOrder(
+        column,
+        t('p0', 0, pinned: true),
+        clampToPinZone(column, true, 4),
+      ),
+      3,
+    );
+  });
+
   test('BoardBuckets.moved: đổi thứ tự trong cùng cột', () {
     const sections = [PlanSection(id: 's1', name: 'A')];
     final board = BoardBuckets.build(
@@ -169,6 +208,24 @@ void main() {
       expect(plan.isTaskViewer('u-stranger'), isFalse);
       expect(plan.isTaskViewer('u-owner'), isFalse);
       expect(plan.isTaskViewer(null), isFalse);
+    });
+  });
+
+  group('dropIndexWithHysteresis', () {
+    const centers = [100.0, 200.0, 300.0];
+    test('current null → như dropIndexFor', () {
+      expect(dropIndexWithHysteresis(centers, 150, null), 1);
+    });
+    test('vượt tâm < 12px theo chiều đi → giữ chỗ cũ', () {
+      expect(dropIndexWithHysteresis(centers, 205, 1), 1);
+      expect(dropIndexWithHysteresis(centers, 195, 2), 2);
+    });
+    test('vượt tâm ≥ 12px → đổi', () {
+      expect(dropIndexWithHysteresis(centers, 213, 1), 2);
+      expect(dropIndexWithHysteresis(centers, 187, 2), 1);
+    });
+    test('nhảy xa nhiều thẻ một lượt → tới thẳng chỉ số đúng', () {
+      expect(dropIndexWithHysteresis(centers, 400, 0), 3);
     });
   });
 }

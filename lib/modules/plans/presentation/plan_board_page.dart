@@ -2,7 +2,10 @@ import 'dart:async';
 import 'dart:math' as math;
 import 'dart:ui' show ImageFilter;
 
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart' show ScrollCacheExtent;
+import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -11,6 +14,7 @@ import '../../../core/config/web_links.dart';
 import '../../../core/error/app_exception.dart';
 import '../../../core/utils/client_id.dart';
 import '../../../core/utils/copy_link.dart';
+import '../../../core/utils/media_url.dart';
 import '../../../design/components/components.dart';
 import '../../../design/platform/omni_motion_scope.dart';
 import '../../../design/tokens/tokens.dart';
@@ -58,7 +62,15 @@ class PlanBoardPage extends ConsumerStatefulWidget {
   ConsumerState<PlanBoardPage> createState() => _PlanBoardPageState();
 }
 
-class _PlanBoardPageState extends ConsumerState<PlanBoardPage> {
+/// Ảnh cover (URL đã lưu trong `cover`) cho lớp mờ của header. Tách ra để
+/// test thay bằng ảnh trong bộ nhớ, tải xong lúc nào test quyết định.
+final boardCoverImageProvider = Provider<ImageProvider Function(String cover)>(
+  (_) =>
+      (cover) => CachedNetworkImageProvider(resolveMediaUrl(cover)),
+);
+
+class _PlanBoardPageState extends ConsumerState<PlanBoardPage>
+    with SingleTickerProviderStateMixin {
   final _track = ScrollController();
 
   /// Đang lọc theo ai. Sống trong State của màn: đây là cách người dùng đang
@@ -89,9 +101,27 @@ class _PlanBoardPageState extends ConsumerState<PlanBoardPage> {
   final _drag = BoardDragController();
 
   /// Con trỏ đang ở mép nào của dải: -1 trái, 1 phải, 0 không. Dải sáng 28px
-  /// ở mép đó, và [_edgeTimer] sang cột kế mỗi 700ms.
+  /// ở mép đó, và dải tự trượt: liên tục theo [_edgeTicker], hoặc (giảm
+  /// chuyển động) [_edgeTimer] nhảy sang cột kế mỗi 700ms.
   final _edgeSide = ValueNotifier<int>(0);
   Timer? _edgeTimer;
+
+  /// Trượt mép liên tục, mỗi khung một bước theo vận tốc (xem [_onEdgeTick]).
+  late final Ticker _edgeTicker;
+
+  /// `elapsed` ở tick trước (null: tick đầu sau khi bắt đầu).
+  Duration? _edgeLast;
+
+  /// Độ sâu của ngón trong vùng mép, 0..1 (1 = sát mép màn).
+  double _edgeDepth = 0;
+
+  /// Đã hẹn dò lại đích ở cuối khung này.
+  bool _retargetQueued = false;
+
+  /// Bảng đang vẽ lúc bắt đầu kéo. Trong lượt kéo trang vẽ nó thay cho dữ
+  /// liệu mới về (cùng các `List<Task>`), nên không thẻ nào dựng lại và chỗ
+  /// chèn khớp cái người dùng đang nhìn; kéo xong mới áp dữ liệu mới.
+  BoardBuckets? _frozen;
 
   /// Số ô trên dải (cột + ô "Thêm nhóm việc"), để tự trượt không vượt cuối.
   int _trackCount = 1;
@@ -101,8 +131,42 @@ class _PlanBoardPageState extends ConsumerState<PlanBoardPage> {
 
   /// Thẻ vừa thả, đang chờ server: bảng vẽ nó ở chỗ mới ngay (lạc quan). Xoá
   /// khi dữ liệu mới về hoặc khi lưu lỗi.
-  ({String taskId, int toColumn, int index, String sectionId, double? order})?
-  _pending;
+  ///
+  /// Giữ id nhóm đích chứ không giữ chỉ số cột: chỉ số tính trên bảng đóng
+  /// băng lúc kéo, mà dữ liệu áp sau khi thả có thể đã xoá/đổi thứ tự nhóm.
+  /// [order] là số đã gửi, để biết dữ liệu mới về đã mang thứ tự mới chưa
+  /// (đổi chỗ trong cùng nhóm không đổi `sectionId`).
+  ({String taskId, int index, String sectionId, double? order})? _pendingMove;
+
+  ({String taskId, int index, String sectionId, double? order})? get _pending =>
+      _pendingMove;
+
+  set _pending(
+    ({String taskId, int index, String sectionId, double? order})? value,
+  ) {
+    _pendingMove = value;
+    _liftable.value = value == null;
+    _pendingTimer?.cancel();
+    _pendingTimer = value == null
+        ? null
+        : Timer(pendingTimeout, () {
+            if (mounted && identical(_pendingMove, value)) {
+              setState(() => _pending = null);
+            }
+          });
+  }
+
+  /// Lưới an toàn của [_pending]: không có dữ liệu mới nào khớp (tải lại hỏng
+  /// mà không báo lỗi, server chuẩn hoá thứ tự…) thì sau ngần này cũng bỏ vẽ
+  /// lạc quan, để bảng không kẹt ở chế độ không nhấc được thẻ.
+  static const pendingTimeout = Duration(seconds: 10);
+  Timer? _pendingTimer;
+
+  /// false khi một lượt thả còn chờ server: chưa cho nhấc thẻ khác (thứ tự
+  /// tính trên dữ liệu cũ sẽ lệch). Là `ValueListenable` chứ không đổi tham số
+  /// `drag`/`canDrag` của cột: đổi chúng là dựng lại MỌI thẻ ngay lúc thả, còn
+  /// đây chỉ dựng lại lớp `LongPressDraggable` của từng thẻ.
+  final _liftable = ValueNotifier<bool>(true);
 
   /// Các ngón đang chạm, theo thứ tự chạm; và ngón đang giữ thẻ (ngón chạm
   /// gần nhất lúc thẻ nhấc lên). Chỉ ngón ấy nhấc lên mới kết thúc lượt kéo.
@@ -112,13 +176,25 @@ class _PlanBoardPageState extends ConsumerState<PlanBoardPage> {
   @override
   void initState() {
     super.initState();
+    _edgeTicker = createTicker(_onEdgeTick);
     _drag.addListener(_onDragState);
+    // Dải dời dưới ngón đứng yên (Ticker trượt mép, snap 250ms sau khi rời
+    // mép, nhảy cột khi giảm chuyển động): dò lại đích ở cuối mỗi khung. Lúc
+    // snap dải bỏ qua hit-test nên `DragTarget` không tự báo được.
+    _track.addListener(() {
+      if (_drag.active) _queueRetarget();
+    });
   }
 
   void _onDragState() {
+    assert(
+      _drag.active || _frozen == null,
+      'Chỉ dọn lượt kéo qua _endDrag: nó gỡ băng dữ liệu (_frozen) trước.',
+    );
     if (_drag.active && _dragPointer == null && _pointers.isNotEmpty) {
       _dragPointer = _pointers.last;
     }
+    if (_drag.active && _frozen == null) _frozen = _board;
   }
 
   /// Ngón [pointer] nhấc lên ([drop]) hoặc bị huỷ. Ngón đang giữ thẻ nhấc lên
@@ -128,6 +204,9 @@ class _PlanBoardPageState extends ConsumerState<PlanBoardPage> {
   void _pointerEnded(int pointer, {required bool drop}) {
     _pointers.remove(pointer);
     if (_dragPointer != null && pointer != _dragPointer) return;
+    // Đích của khung gần nhất có thể đã cũ nếu dải vừa dời (snap đang chạy):
+    // dò lại ngay theo vị trí hiện tại trước khi đọc.
+    if (drop && _drag.active) _retarget();
     final task = _drag.task;
     final to = _drag.targetColumn;
     final index = _drag.targetIndex;
@@ -182,8 +261,11 @@ class _PlanBoardPageState extends ConsumerState<PlanBoardPage> {
   void dispose() {
     _drag.removeListener(_onDragState);
     _edgeTimer?.cancel();
+    _pendingTimer?.cancel();
+    _edgeTicker.dispose();
     _edgeSide.dispose();
     _drag.dispose();
+    _liftable.dispose();
     _debounce?.cancel();
     _searchField.dispose();
     _track.dispose();
@@ -244,7 +326,14 @@ class _PlanBoardPageState extends ConsumerState<PlanBoardPage> {
     // là làm thẻ bật về chỗ cũ rồi nhảy lại.
     ref.listen(planTasksProvider(widget.planId), (_, next) {
       final pending = _pending;
-      if (pending == null || next is! AsyncData<PlanTasks>) return;
+      if (pending == null) return;
+      // Tải lại hỏng: không còn gì để đối chiếu, bỏ vẽ lạc quan (PUT có thể
+      // đã xong) thay vì khoá kéo thả tới lượt tải tốt kế tiếp.
+      if (next is AsyncError) {
+        setState(() => _pending = null);
+        return;
+      }
+      if (next is! AsyncData<PlanTasks>) return;
       final now = next.value.tasks.where((t) => t.id == pending.taskId);
       final saved = now.firstOrNull;
       final sectionSaved = saved?.sectionId == pending.sectionId;
@@ -286,78 +375,86 @@ class _PlanBoardPageState extends ConsumerState<PlanBoardPage> {
           key: const Key('board-background'),
           cover: loaded?.cover,
           color: loaded?.color,
-          child: Column(
-            children: [
-              _GlassHeader(
-                title: loaded?.name ?? 'Kế hoạch',
-                subtitle: _subtitle(loaded, visible),
-                searching: _searching,
-                searchField: _searchField,
-                onSearchChanged: _onSearchChanged,
-                onBack: _back,
-                onOpenSearch: () => setState(() => _searching = true),
-                onCloseSearch: _closeSearch,
-                filterActive: _person.chipLabel != null,
-                onFilter: _pickPerson,
-                onMenu: menuGroups.isNotEmpty
-                    ? (anchor) => _planMenu(loaded!, menuGroups, anchor)
-                    : null,
-              ),
-              if (loaded != null && loaded.planStatus != PlanStatus.active)
-                _ClosedBanner(
-                  status: loaded.planStatus,
-                  onReopen: canEditSections
-                      ? () => _patchPlan(
-                          loaded,
-                          PlanPatch(status: PlanStatus.active),
-                          done: 'Đã mở lại kế hoạch.',
-                        )
+          // Cỡ của nền, để header cắt đúng phần ảnh nằm dưới nó (xem
+          // [_GlassHeader.backdropSize]).
+          child: LayoutBuilder(
+            builder: (context, box) => Column(
+              children: [
+                _GlassHeader(
+                  coverImage: isProjectCoverImage(loaded?.cover)
+                      ? ref.watch(boardCoverImageProvider)(loaded!.cover!)
+                      : null,
+                  backdropSize: box.biggest,
+                  title: loaded?.name ?? 'Kế hoạch',
+                  subtitle: _subtitle(loaded, visible),
+                  searching: _searching,
+                  searchField: _searchField,
+                  onSearchChanged: _onSearchChanged,
+                  onBack: _back,
+                  onOpenSearch: () => setState(() => _searching = true),
+                  onCloseSearch: _closeSearch,
+                  filterActive: _person.chipLabel != null,
+                  onFilter: _pickPerson,
+                  onMenu: menuGroups.isNotEmpty
+                      ? (anchor) => _planMenu(loaded!, menuGroups, anchor)
                       : null,
                 ),
-              Expanded(
-                child: OmniAsyncView(
-                  value: plan,
-                  onRetry: () => ref.invalidate(planProvider(widget.planId)),
-                  data: (plan) => OmniAsyncView(
-                    value: buckets,
-                    onRetry: () =>
-                        ref.invalidate(planTasksProvider(widget.planId)),
-                    data: (board) => search == null || result != null
-                        ? _body(
-                            plan,
-                            result == null ? board : board.only(result.ids),
-                            canCreate: taskAccess.canCreate,
-                            canComplete: taskAccess.canComplete,
-                            canDragTasks: canDragTasks,
-                            canEditSections: canEditSections,
-                            searchCapped: result != null && result.capped
-                                ? result.ids.length
-                                : null,
+                if (loaded != null && loaded.planStatus != PlanStatus.active)
+                  _ClosedBanner(
+                    status: loaded.planStatus,
+                    onReopen: canEditSections
+                        ? () => _patchPlan(
+                            loaded,
+                            PlanPatch(status: PlanStatus.active),
+                            done: 'Đã mở lại kế hoạch.',
                           )
-                        : OmniAsyncView(
-                            value: search,
-                            onRetry: () => ref.invalidate(
-                              planTaskSearchProvider((
-                                planId: widget.planId,
-                                query: _query,
-                              )),
-                            ),
-                            data: (found) => _body(
+                        : null,
+                  ),
+                Expanded(
+                  child: OmniAsyncView(
+                    value: plan,
+                    onRetry: () => ref.invalidate(planProvider(widget.planId)),
+                    data: (plan) => OmniAsyncView(
+                      value: buckets,
+                      onRetry: () =>
+                          ref.invalidate(planTasksProvider(widget.planId)),
+                      data: (board) => search == null || result != null
+                          ? _body(
                               plan,
-                              board.only(found.ids),
+                              result == null ? board : board.only(result.ids),
                               canCreate: taskAccess.canCreate,
                               canComplete: taskAccess.canComplete,
                               canDragTasks: canDragTasks,
                               canEditSections: canEditSections,
-                              searchCapped: found.capped
-                                  ? found.ids.length
+                              searchCapped: result != null && result.capped
+                                  ? result.ids.length
                                   : null,
+                            )
+                          : OmniAsyncView(
+                              value: search,
+                              onRetry: () => ref.invalidate(
+                                planTaskSearchProvider((
+                                  planId: widget.planId,
+                                  query: _query,
+                                )),
+                              ),
+                              data: (found) => _body(
+                                plan,
+                                board.only(found.ids),
+                                canCreate: taskAccess.canCreate,
+                                canComplete: taskAccess.canComplete,
+                                canDragTasks: canDragTasks,
+                                canEditSections: canEditSections,
+                                searchCapped: found.capped
+                                    ? found.ids.length
+                                    : null,
+                              ),
                             ),
-                          ),
+                    ),
                   ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
@@ -381,8 +478,13 @@ class _PlanBoardPageState extends ConsumerState<PlanBoardPage> {
     required bool canDragTasks,
     int? searchCapped,
   }) {
-    if (_pending case final p?) {
-      board = board.moved(p.taskId, p.toColumn, p.index, p.sectionId);
+    if (_drag.active && _frozen != null) {
+      board = _frozen!;
+    } else if (_pending case final p?) {
+      // Cột đích tìm theo id trên bảng HIỆN TẠI; nhóm không còn thì vẽ theo
+      // dữ liệu mới, không đặt lạc quan.
+      final to = board.columns.indexWhere((c) => c.id == p.sectionId);
+      if (to >= 0) board = board.moved(p.taskId, to, p.index, p.sectionId);
     }
     final columns = board.columns;
     if (!_introDone) {
@@ -432,7 +534,13 @@ class _PlanBoardPageState extends ConsumerState<PlanBoardPage> {
                   key: const Key('board-track'),
                   controller: _track,
                   scrollDirection: Axis.horizontal,
-                  physics: BoardSnapPhysics(
+                  // Cột kế đã dựng sẵn trước khi dải trượt tới: dựng ≈10 thẻ
+                  // giữa lúc trượt là một khung vọt.
+                  scrollCacheExtent: const ScrollCacheExtent.pixels(
+                    BoardMetrics.pitch,
+                  ),
+                  physics: _TrackPhysics(
+                    sliding: () => _edgeTicker.isActive,
                     count: itemCount,
                     animate: OmniMotion.enabled(context),
                   ),
@@ -470,18 +578,13 @@ class _PlanBoardPageState extends ConsumerState<PlanBoardPage> {
                           canComplete: canComplete,
                           columnIndex: index,
                           // Cột dựng tạm (id rỗng) không có nhóm để thả vào.
-                          drag:
-                              canDragTasks &&
-                                  real &&
-                                  !board.truncated &&
-                                  _pending == null
+                          // Bảng bị cắt bớt: thứ tự tính trên phần thiếu.
+                          drag: canDragTasks && real && !board.truncated
                               ? _drag
                               : null,
                           canDrag: (t) =>
-                              canDragTasks &&
-                              !board.truncated &&
-                              _pending == null &&
-                              !t.isLocked,
+                              canDragTasks && !board.truncated && !t.isLocked,
+                          liftable: _liftable,
                           onDragUpdate: _onDragUpdate,
                           onDragEnd: _endDrag,
                           onOpenTask: (task) => context.pushNamed(
@@ -542,26 +645,103 @@ class _PlanBoardPageState extends ConsumerState<PlanBoardPage> {
     final box = context.findRenderObject();
     if (box is! RenderBox || !box.hasSize) return;
     final x = box.globalToLocal(global).dx;
+    final w = box.size.width;
     final side = x < _edgeZone
         ? -1
-        : x > box.size.width - _edgeZone
+        : x > w - _edgeZone
         ? 1
         : 0;
+    _edgeDepth = side == 0
+        ? 0
+        : ((side < 0 ? _edgeZone - x : x - (w - _edgeZone)) / _edgeZone).clamp(
+            0.0,
+            1.0,
+          );
     if (side == _edgeSide.value) return;
     _edgeSide.value = side;
-    _edgeTimer?.cancel();
-    _edgeTimer = side == 0
-        ? null
-        : Timer.periodic(
-            const Duration(milliseconds: 700),
-            (_) => _slideColumn(side),
-          );
+    if (!OmniMotion.enabled(context)) {
+      // Giảm chuyển động: nhảy từng cột mỗi 700ms, không trượt.
+      _edgeTimer?.cancel();
+      _edgeTimer = side == 0
+          ? null
+          : Timer.periodic(
+              const Duration(milliseconds: 700),
+              (_) => _slideColumn(side),
+            );
+      return;
+    }
+    if (side == 0) {
+      _stopEdge(snap: true);
+    } else {
+      _startEdge();
+    }
   }
 
-  /// Sang cột kế theo [side]: trượt 350ms, hoặc nhảy khi giảm chuyển động.
-  void _slideColumn(int side) {
-    if (!mounted || !_track.hasClients) return;
+  /// Bắt đầu (lại) trượt mép: hệ số khởi động tính từ đây.
+  void _startEdge() {
+    if (_edgeTicker.isActive) _edgeTicker.stop();
+    _edgeLast = null;
+    unawaited(_edgeTicker.start());
+  }
+
+  /// Một khung trượt mép: `v = 150 + 750·độ sâu` px/s, nhân hệ số khởi động
+  /// 0→1 trong 120ms đầu; chạm đầu/cuối dải thì dừng. Dò lại đích ở cuối
+  /// khung (khi các cột đã dựng ở vị trí mới).
+  void _onEdgeTick(Duration elapsed) {
+    final dt = (elapsed - (_edgeLast ?? elapsed)).inMicroseconds / 1e6;
+    _edgeLast = elapsed;
+    if (!_track.hasClients || _edgeSide.value == 0) return;
+    final p = _track.position;
+    final ramp = (elapsed.inMicroseconds / 120000).clamp(0.0, 1.0);
+    final v = (150 + 750 * _edgeDepth) * ramp;
+    final side = _edgeSide.value;
+    final next = (p.pixels + side * v * dt).clamp(
+      p.minScrollExtent,
+      p.maxScrollExtent,
+    );
+    if (next != p.pixels) _track.jumpTo(next);
+    // Chạm đầu/cuối THEO CHIỀU trượt (tick đầu đứng yên ở 0 không tính).
+    if (side > 0 ? next >= p.maxScrollExtent : next <= p.minScrollExtent) {
+      _edgeTicker.stop();
+    }
+    // Dò lại đích: `_track` báo khi `jumpTo` dời dải (xem initState).
+  }
+
+  /// Hẹn [_retarget] ở cuối khung, gộp một lần mỗi khung.
+  void _queueRetarget() {
+    if (_retargetQueued) return;
+    _retargetQueued = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _retargetQueued = false;
+      _retarget();
+    });
+  }
+
+  /// Dừng trượt mép; [snap] thì về cột gần nhất (250ms) rồi dò lại đích.
+  void _stopEdge({required bool snap}) {
+    if (_edgeTicker.isActive) _edgeTicker.stop();
+    _edgeLast = null;
+    if (!snap || !mounted || !_track.hasClients) return;
     final position = _track.position;
+    final target = BoardSnapPhysics.offsetOf(
+      _nearestColumn(position),
+      position,
+    );
+    if ((target - position.pixels).abs() < .5) {
+      _retargetAfterLayout();
+      return;
+    }
+    _track
+        .animateTo(
+          target,
+          duration: const Duration(milliseconds: 250),
+          curve: OmniCurves.standard,
+        )
+        .then((_) => _retargetAfterLayout());
+  }
+
+  /// Ô trên dải có tâm gần giữa màn nhất.
+  int _nearestColumn(ScrollPosition position) {
     final current =
         ((position.pixels +
                     position.viewportDimension / 2 -
@@ -569,29 +749,35 @@ class _PlanBoardPageState extends ConsumerState<PlanBoardPage> {
                     BoardMetrics.columnWidth / 2) /
                 BoardMetrics.pitch)
             .round();
-    final next = math.min(math.max(current + side, 0), _trackCount - 1);
-    final target = BoardSnapPhysics.offsetOf(next, position);
-    if (OmniMotion.enabled(context)) {
-      _track
-          .animateTo(
-            target,
-            duration: const Duration(milliseconds: 350),
-            curve: OmniCurves.standard,
-          )
-          .then((_) => _retargetAfterLayout());
-    } else {
-      _track.jumpTo(target);
-      _retargetAfterLayout();
-    }
+
+    return math.min(math.max(current, 0), _trackCount - 1);
+  }
+
+  /// Giảm chuyển động: nhảy sang cột kế theo [side] rồi dò lại đích.
+  void _slideColumn(int side) {
+    if (!mounted || !_track.hasClients) return;
+    final position = _track.position;
+    final next = math.min(
+      math.max(_nearestColumn(position) + side, 0),
+      _trackCount - 1,
+    );
+    _track.jumpTo(BoardSnapPhysics.offsetOf(next, position));
+    _retargetAfterLayout();
   }
 
   /// Thả, huỷ hay thẻ nguồn rời cây: dọn mọi thứ. Gọi nhiều lần cũng được.
+  /// Đang trượt mép thì dừng và snap về cột gần nhất (nơi gọi đã đọc đích).
   void _endDrag() {
     _edgeTimer?.cancel();
     _edgeTimer = null;
+    final atEdge = _edgeTicker.isActive || _edgeSide.value != 0;
     if (_edgeSide.value != 0) _edgeSide.value = 0;
+    _stopEdge(snap: atEdge && mounted && OmniMotion.enabled(context));
     _dragPointer = null;
+    final wasFrozen = _frozen != null;
+    _frozen = null;
     _drag.clear();
+    if (wasFrozen && mounted) setState(() {});
   }
 
   /// Thả [task] vào cột [toColumn] tại chỗ chèn [index], kể cả đổi thứ tự
@@ -610,15 +796,24 @@ class _PlanBoardPageState extends ConsumerState<PlanBoardPage> {
     _endDrag();
     if (sectionId.isEmpty || from < 0 || _pending != null) return;
     final fromIndex = board.buckets[from].indexWhere((t) => t.id == task.id);
-    final targetLength = board.buckets[toColumn]
-        .where((t) => t.id != task.id)
-        .length;
-    final safeIndex = index.clamp(0, targetLength);
+    final targetOthers = [
+      for (final t in board.buckets[toColumn])
+        if (t.id != task.id) t,
+    ];
+    // Kẹp vào vùng ghim của thẻ (như ô chỗ trống đã hiện): thả thẻ ghim xuống
+    // giữa thẻ thường thì nó nằm cuối khối ghim, không thành "không xếp được".
+    final safeIndex = clampToPinZone(
+      targetOthers,
+      task.isPinned,
+      index.clamp(0, targetOthers.length),
+    );
     // Thả lại đúng vị trí cũ không tạo request và không làm danh sách nháy.
     if (from == toColumn && safeIndex == fromIndex) return;
     // `order` tính trên CẢ cột đích (không lọc người / tìm kiếm): neo vào thẻ
     // thấy được phía trên nhưng không nhảy qua thẻ ẩn nằm ngay sau nó.
-    final visible = board.buckets[toColumn];
+    // [safeIndex] đếm trên cột đích ĐÃ bỏ thẻ đang kéo (cùng nhóm thì thẻ ấy
+    // vẫn nằm trong cột), nên danh sách thấy được cũng bỏ nó trước khi neo.
+    final visible = targetOthers;
     final all = ref.read(planTasksProvider(widget.planId)).valueOrNull;
     final full = all == null
         ? visible
@@ -634,7 +829,11 @@ class _PlanBoardPageState extends ConsumerState<PlanBoardPage> {
     final order = boardDropOrder(
       others,
       task,
-      fullInsertIndex(others, visible, safeIndex),
+      clampToPinZone(
+        others,
+        task.isPinned,
+        fullInsertIndex(others, visible, safeIndex),
+      ),
     );
     // Một số việc legacy không có `order`. Không gửi một request không thể
     // thay đổi thứ tự trong cùng nhóm; tải lại sẽ lập tức bật thẻ về chỗ cũ.
@@ -654,14 +853,32 @@ class _PlanBoardPageState extends ConsumerState<PlanBoardPage> {
     setState(() {
       _pending = (
         taskId: task.id,
-        toColumn: toColumn,
         index: safeIndex,
         sectionId: sectionId,
         order: order,
       );
     });
     try {
-      await api.moveOnBoard(task.id, sectionId: sectionId, order: order);
+      final saved = await api.moveOnBoard(
+        task.id,
+        sectionId: sectionId,
+        order: order,
+      );
+      // Server đã ghi: đối chiếu dữ liệu tải lại với THỨ TỰ server trả về
+      // (có thể đã chuẩn hoá), không phải số app gửi — kẻo không bao giờ khớp.
+      final p = _pending;
+      if (mounted &&
+          p != null &&
+          p.taskId == task.id &&
+          saved.id == task.id &&
+          saved.sectionId == sectionId) {
+        _pending = (
+          taskId: p.taskId,
+          index: p.index,
+          sectionId: p.sectionId,
+          order: saved.hasOrder ? saved.order : null,
+        );
+      }
       container.read(taskRealtimeSignalProvider.notifier).bump();
     } on AppException catch (error) {
       if (mounted) setState(() => _pending = null);
@@ -1190,6 +1407,34 @@ class _PlanBoardPageState extends ConsumerState<PlanBoardPage> {
   }
 }
 
+/// Snap của dải, trừ lúc đang tự trượt mép ([sliding]): `jumpTo` mỗi khung
+/// kết thúc bằng `goBallistic(0)`, và lò xo snap sẽ kéo dải ngược về cột cũ
+/// giữa hai khung. Trượt xong thì trang tự snap ([_PlanBoardPageState]).
+class _TrackPhysics extends BoardSnapPhysics {
+  const _TrackPhysics({
+    super.parent,
+    super.animate,
+    super.count,
+    required this.sliding,
+  });
+
+  final bool Function() sliding;
+
+  @override
+  _TrackPhysics applyTo(ScrollPhysics? ancestor) => _TrackPhysics(
+    parent: buildParent(ancestor),
+    animate: animate,
+    count: count,
+    sliding: sliding,
+  );
+
+  @override
+  Simulation? createBallisticSimulation(
+    ScrollMetrics position,
+    double velocity,
+  ) => sliding() ? null : super.createBallisticSimulation(position, velocity);
+}
+
 enum _SectionAction { rename, remove, reorder, edit }
 
 /// Dải sáng 28px ở mép trái/phải khi kéo thẻ tới sát mép: báo "thả ở đây sẽ
@@ -1240,8 +1485,15 @@ class _EdgeGlow extends StatelessWidget {
   }
 }
 
-/// Header kính tối (`.bar`): `OmniCovers.glass` + blur 20, hàng 44 dưới
-/// safe area, đệm 4 hai bên và 6 ở đáy.
+/// Header kính tối (`.bar`): `OmniCovers.glass` + blur 20 của nền, hàng 44
+/// dưới safe area, đệm 4 hai bên và 6 ở đáy.
+///
+/// Không `BackdropFilter`: lớp mờ đọc lại nền và chạy lại MỖI khung (kéo thẻ,
+/// trượt dải đều vẽ khung mới). Dưới header chỉ có nền tĩnh, nên:
+/// - nền gradient/màu: blur nhìn như không blur, chỉ phủ kính;
+/// - nền ảnh: tự vẽ phần ảnh nằm dưới header, làm mờ một lần rồi giữ thành
+///   ảnh chụp ([_FrozenCoverBlur]) — các khung sau chỉ dán lại ảnh đó.
+/// `RepaintBoundary` tách header khỏi lượt vẽ của bảng.
 class _GlassHeader extends StatelessWidget {
   const _GlassHeader({
     required this.title,
@@ -1255,6 +1507,8 @@ class _GlassHeader extends StatelessWidget {
     required this.filterActive,
     required this.onFilter,
     required this.onMenu,
+    this.coverImage,
+    this.backdropSize,
   });
 
   final String title;
@@ -1269,80 +1523,198 @@ class _GlassHeader extends StatelessWidget {
   final ValueChanged<Rect> onFilter;
   final ValueChanged<Rect>? onMenu;
 
+  /// Ảnh cover của kế hoạch; null (nền gradient/màu) thì không cần lớp mờ.
+  final ImageProvider? coverImage;
+
+  /// Cỡ của nền toàn màn ([ProjectCoverSurface]) để cắt đúng phần ảnh nằm
+  /// dưới header (ảnh phủ kiểu `BoxFit.cover` theo cỡ đó).
+  final Size? backdropSize;
+
+  /// Vùng toàn cục của nút trong [buttonContext], để menu neo tại nút.
+  static Rect? _anchorOf(BuildContext buttonContext) {
+    final box = buttonContext.findRenderObject() as RenderBox?;
+    if (box == null || !box.hasSize) return null;
+
+    return box.localToGlobal(Offset.zero) & box.size;
+  }
+
   @override
   Widget build(BuildContext context) {
     final top = MediaQuery.paddingOf(context).top;
-
-    return ClipRect(
-      key: const Key('board-header'),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(
-          sigmaX: OmniCovers.glassBlur,
-          sigmaY: OmniCovers.glassBlur,
-        ),
-        child: ColoredBox(
-          color: OmniCovers.glass,
-          child: Padding(
-            padding: EdgeInsets.fromLTRB(4, top, 4, 6),
-            child: SizedBox(
-              height: 44,
-              child: Row(
-                children: [
-                  _HeaderButton(
-                    tooltip: 'Quay lại',
-                    icon: Icons.arrow_back_ios_new_rounded,
-                    onTap: onBack,
-                  ),
-                  const SizedBox(width: 2),
-                  Expanded(
-                    child: searching
-                        ? _HeaderSearch(
-                            controller: searchField,
-                            onChanged: onSearchChanged,
-                          )
-                        : _HeaderTitle(title: title, subtitle: subtitle),
-                  ),
-                  if (searching)
-                    _HeaderButton(
-                      tooltip: 'Đóng tìm kiếm',
-                      icon: Icons.close_rounded,
-                      onTap: onCloseSearch,
-                    )
-                  else
-                    _HeaderButton(
-                      tooltip: 'Tìm trong kế hoạch',
-                      icon: Icons.search_rounded,
-                      onTap: onOpenSearch,
-                    ),
-                  Builder(
-                    builder: (buttonContext) => _HeaderButton(
-                      tooltip: 'Lọc theo người',
-                      icon: Icons.person_outline_rounded,
-                      onTap: () {
-                        final box =
-                            buttonContext.findRenderObject() as RenderBox?;
-                        if (box == null || !box.hasSize) return;
-                        onFilter(box.localToGlobal(Offset.zero) & box.size);
-                      },
-                      dot: filterActive,
-                      selected: filterActive,
-                    ),
-                  ),
-                  if (onMenu case final menu?)
-                    Builder(
-                      builder: (buttonContext) => _HeaderButton(
-                        tooltip: 'Tuỳ chọn kế hoạch',
-                        icon: Icons.more_horiz_rounded,
-                        onTap: () {
-                          final box =
-                              buttonContext.findRenderObject() as RenderBox?;
-                          if (box == null || !box.hasSize) return;
-                          menu(box.localToGlobal(Offset.zero) & box.size);
-                        },
-                      ),
-                    ),
-                ],
+    final bar = ColoredBox(
+      color: OmniCovers.glass,
+      child: Padding(
+        padding: EdgeInsets.fromLTRB(4, top, 4, 6),
+        child: SizedBox(
+          height: 44,
+          child: Row(
+            children: [
+              _HeaderButton(
+                tooltip: 'Quay lại',
+                icon: Icons.arrow_back_ios_new_rounded,
+                onTap: onBack,
               ),
+              const SizedBox(width: 2),
+              Expanded(
+                child: searching
+                    ? _HeaderSearch(
+                        controller: searchField,
+                        onChanged: onSearchChanged,
+                      )
+                    : _HeaderTitle(title: title, subtitle: subtitle),
+              ),
+              if (searching)
+                _HeaderButton(
+                  tooltip: 'Đóng tìm kiếm',
+                  icon: Icons.close_rounded,
+                  onTap: onCloseSearch,
+                )
+              else
+                _HeaderButton(
+                  tooltip: 'Tìm trong kế hoạch',
+                  icon: Icons.search_rounded,
+                  onTap: onOpenSearch,
+                ),
+              Builder(
+                builder: (buttonContext) => _HeaderButton(
+                  tooltip: 'Lọc theo người',
+                  icon: Icons.person_outline_rounded,
+                  onTap: () {
+                    if (_anchorOf(buttonContext) case final anchor?) {
+                      onFilter(anchor);
+                    }
+                  },
+                  dot: filterActive,
+                  selected: filterActive,
+                ),
+              ),
+              if (onMenu case final menu?)
+                Builder(
+                  builder: (buttonContext) => _HeaderButton(
+                    tooltip: 'Tuỳ chọn kế hoạch',
+                    icon: Icons.more_horiz_rounded,
+                    onTap: () {
+                      if (_anchorOf(buttonContext) case final anchor?) {
+                        menu(anchor);
+                      }
+                    },
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+    final image = coverImage;
+    final size = backdropSize;
+
+    return RepaintBoundary(
+      key: const Key('board-header'),
+      child: image == null || size == null || size.isEmpty
+          ? bar
+          : Stack(
+              children: [
+                Positioned.fill(
+                  child: _FrozenCoverBlur(image: image, size: size),
+                ),
+                bar,
+              ],
+            ),
+    );
+  }
+}
+
+/// Phần ảnh nền nằm dưới header, mờ [OmniCovers.glassBlur], vẽ MỘT lần thành
+/// ảnh chụp (`SnapshotWidget`): kéo thẻ / trượt dải không làm mờ lại.
+///
+/// `SnapshotWidget` không tự chụp lại khi con đổi, nên:
+/// - chỉ cho chụp khi ảnh đã có khung đầu (chụp lúc đang tải là giữ mãi một
+///   tấm trong suốt); trước đó vẽ thẳng;
+/// - đổi ảnh: thôi chụp, chờ khung đầu của ảnh mới rồi chụp lại;
+/// - đổi cỡ nền (xoay, bàn phím): xoá ảnh chụp để chụp lại theo cỡ mới.
+/// Đổi `devicePixelRatio` thì `SnapshotWidget` tự chụp lại.
+class _FrozenCoverBlur extends StatefulWidget {
+  const _FrozenCoverBlur({required this.image, required this.size});
+
+  final ImageProvider image;
+  final Size size;
+
+  @override
+  State<_FrozenCoverBlur> createState() => _FrozenCoverBlurState();
+}
+
+class _FrozenCoverBlurState extends State<_FrozenCoverBlur> {
+  final _snapshot = SnapshotController();
+  ImageStream? _stream;
+  late final _listener = ImageStreamListener(
+    (_, _) => _ready(),
+    onError: (_, _) {},
+  );
+
+  /// Ảnh đã có khung: cho chụp, và bỏ tấm cũ (nếu có) để chụp lại.
+  void _ready() {
+    if (!mounted) return;
+    _snapshot
+      ..allowSnapshotting = true
+      ..clear();
+  }
+
+  /// Bắt đầu chờ khung đầu của [_FrozenCoverBlur.image]; trong lúc chờ vẽ
+  /// thẳng, không chụp.
+  void _resolve() {
+    _snapshot.allowSnapshotting = false;
+    _stream?.removeListener(_listener);
+    _stream = widget.image.resolve(createLocalImageConfiguration(context))
+      ..addListener(_listener);
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_stream == null) _resolve();
+  }
+
+  @override
+  void didUpdateWidget(_FrozenCoverBlur old) {
+    super.didUpdateWidget(old);
+    if (old.image != widget.image) {
+      _resolve();
+    } else if (old.size != widget.size) {
+      _snapshot.clear();
+    }
+  }
+
+  @override
+  void dispose() {
+    _stream?.removeListener(_listener);
+    _snapshot.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SnapshotWidget(
+      key: const Key('board-header-blur'),
+      controller: _snapshot,
+      mode: SnapshotMode.permissive,
+      child: ClipRect(
+        child: ImageFiltered(
+          imageFilter: ImageFilter.blur(
+            sigmaX: OmniCovers.glassBlur,
+            sigmaY: OmniCovers.glassBlur,
+            tileMode: TileMode.clamp,
+          ),
+          child: OverflowBox(
+            alignment: Alignment.topLeft,
+            minWidth: widget.size.width,
+            maxWidth: widget.size.width,
+            minHeight: widget.size.height,
+            maxHeight: widget.size.height,
+            child: Image(
+              image: widget.image,
+              fit: BoxFit.cover,
+              gaplessPlayback: true,
+              errorBuilder: (_, _, _) => const SizedBox.shrink(),
             ),
           ),
         ),

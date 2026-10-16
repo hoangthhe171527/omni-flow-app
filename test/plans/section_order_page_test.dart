@@ -308,12 +308,16 @@ void main() {
   });
 
   testWidgets(
-    'giảm chuyển động: không ReorderableListView, không tay cầm, còn nút lên/xuống',
+    'giảm chuyển động: không SliverReorderableList, không tay cầm, còn nút lên/xuống',
     (t) async {
       await pump(t, reduceMotion: true);
 
-      expect(find.byType(ReorderableListView), findsNothing);
-      expect(find.byType(ReorderableDragStartListener), findsNothing);
+      expect(find.byType(SliverReorderableList), findsNothing);
+      // byType so đúng runtimeType; tay cầm giờ là lớp con riêng của trang.
+      expect(
+        find.byWidgetPredicate((w) => w is ReorderableDragStartListener),
+        findsNothing,
+      );
       expect(find.byTooltip('Xuống dưới'), findsNWidgets(4));
 
       await t.tap(find.byTooltip('Xuống dưới').first);
