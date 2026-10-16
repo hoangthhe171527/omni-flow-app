@@ -71,6 +71,9 @@ void main() {
 
   const phone = Size(390, 844);
 
+  /// Lượt tải danh sách việc kế tiếp ném lỗi.
+  var failLoad = false;
+
   /// Ảnh cover theo URL; test tự `complete` để quyết định lúc ảnh tải xong.
   final covers = <String, Completer<ui.Image>>{};
 
@@ -82,6 +85,7 @@ void main() {
     String? cover,
   }) async {
     raw = seed(cards);
+    failLoad = false;
     current = cover == null ? plan : planWith(cover);
     api = _FakeTasksApi(parse());
     final router = GoRouter(
@@ -109,6 +113,7 @@ void main() {
           }),
           planTasksProvider(planId).overrideWith((ref) async {
             ref.watch(reloadTick);
+            if (failLoad) throw Exception('mất mạng');
             return (tasks: parse(), truncated: false);
           }),
           backgroundProvider.overrideWith(FixedBackground.new),
@@ -855,6 +860,66 @@ void main() {
     expect(t.widget<Opacity>(fade.first).opacity, 1);
   });
 
+  group('lượt thả chờ server không khoá bảng mãi', () {
+    bool liftable(WidgetTester t) =>
+        t.widget<BoardColumn>(find.byType(BoardColumn).first).liftable!.value;
+
+    void reload(WidgetTester t) => ProviderScope.containerOf(
+      t.element(find.byType(PlanBoardPage)),
+    ).read(reloadTick.notifier).state++;
+
+    Future<void> dropIntoColumn1(WidgetTester t) async {
+      final g = await liftInto(t);
+      await g.up();
+      await t.pump();
+      expect(api.moves, hasLength(1));
+      expect(liftable(t), isFalse, reason: 'đang chờ server');
+    }
+
+    testWidgets('PUT xong mà tải lại hỏng → bỏ vẽ lạc quan, nhấc thẻ được', (
+      t,
+    ) async {
+      await pumpBoard(t);
+      await dropIntoColumn1(t);
+      failLoad = true;
+      reload(t);
+      await t.pumpAndSettle();
+      expect(liftable(t), isTrue);
+    });
+
+    testWidgets('server chuẩn hoá order → tải lại khớp theo số server trả về', (
+      t,
+    ) async {
+      await pumpBoard(t);
+      api.onMove = (id, section, order) {
+        final i = raw.indexWhere((j) => j['id'] == id);
+        raw[i] = {...raw[i], 'section_id': section, 'order': 1000.0};
+        return Task.fromJson(raw[i]);
+      };
+      await dropIntoColumn1(t);
+      await t.pump();
+      reload(t);
+      await t.pumpAndSettle();
+      expect(liftable(t), isTrue);
+      expect(
+        find.descendant(
+          of: columnNamed('Cot 1'),
+          matching: find.byKey(const ValueKey('t0-0'), skipOffstage: false),
+        ),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('không dữ liệu nào khớp → sau 10s cũng mở lại', (t) async {
+      await pumpBoard(t);
+      await dropIntoColumn1(t);
+      await t.pump(const Duration(seconds: 9));
+      expect(liftable(t), isFalse);
+      await t.pump(const Duration(seconds: 2));
+      expect(liftable(t), isTrue);
+    });
+  });
+
   group('đổi thứ tự trong cùng nhóm', () {
     final card = find.byKey(const ValueKey('t0-2'), skipOffstage: false);
     final above = find.byKey(const ValueKey('t0-1'), skipOffstage: false);
@@ -942,6 +1007,9 @@ class _FakeTasksApi implements TasksApi {
   final List<Task> _tasks;
   final moves = <(String, String, double?)>[];
 
+  /// Server trả gì sau khi chuyển (mặc định: việc cũ, chưa đổi).
+  Task Function(String id, String section, double? order)? onMove;
+
   @override
   Future<Paged<Task>> list({
     required String projectId,
@@ -959,7 +1027,8 @@ class _FakeTasksApi implements TasksApi {
   }) async {
     moves.add((taskId, sectionId, order));
 
-    return _tasks.firstWhere((t) => t.id == taskId);
+    return onMove?.call(taskId, sectionId, order) ??
+        _tasks.firstWhere((t) => t.id == taskId);
   }
 
   @override

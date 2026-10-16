@@ -146,7 +146,21 @@ class _PlanBoardPageState extends ConsumerState<PlanBoardPage>
   ) {
     _pendingMove = value;
     _liftable.value = value == null;
+    _pendingTimer?.cancel();
+    _pendingTimer = value == null
+        ? null
+        : Timer(pendingTimeout, () {
+            if (mounted && identical(_pendingMove, value)) {
+              setState(() => _pending = null);
+            }
+          });
   }
+
+  /// Lưới an toàn của [_pending]: không có dữ liệu mới nào khớp (tải lại hỏng
+  /// mà không báo lỗi, server chuẩn hoá thứ tự…) thì sau ngần này cũng bỏ vẽ
+  /// lạc quan, để bảng không kẹt ở chế độ không nhấc được thẻ.
+  static const pendingTimeout = Duration(seconds: 10);
+  Timer? _pendingTimer;
 
   /// false khi một lượt thả còn chờ server: chưa cho nhấc thẻ khác (thứ tự
   /// tính trên dữ liệu cũ sẽ lệch). Là `ValueListenable` chứ không đổi tham số
@@ -247,6 +261,7 @@ class _PlanBoardPageState extends ConsumerState<PlanBoardPage>
   void dispose() {
     _drag.removeListener(_onDragState);
     _edgeTimer?.cancel();
+    _pendingTimer?.cancel();
     _edgeTicker.dispose();
     _edgeSide.dispose();
     _drag.dispose();
@@ -311,7 +326,14 @@ class _PlanBoardPageState extends ConsumerState<PlanBoardPage>
     // là làm thẻ bật về chỗ cũ rồi nhảy lại.
     ref.listen(planTasksProvider(widget.planId), (_, next) {
       final pending = _pending;
-      if (pending == null || next is! AsyncData<PlanTasks>) return;
+      if (pending == null) return;
+      // Tải lại hỏng: không còn gì để đối chiếu, bỏ vẽ lạc quan (PUT có thể
+      // đã xong) thay vì khoá kéo thả tới lượt tải tốt kế tiếp.
+      if (next is AsyncError) {
+        setState(() => _pending = null);
+        return;
+      }
+      if (next is! AsyncData<PlanTasks>) return;
       final now = next.value.tasks.where((t) => t.id == pending.taskId);
       final saved = now.firstOrNull;
       final sectionSaved = saved?.sectionId == pending.sectionId;
@@ -829,7 +851,26 @@ class _PlanBoardPageState extends ConsumerState<PlanBoardPage>
       );
     });
     try {
-      await api.moveOnBoard(task.id, sectionId: sectionId, order: order);
+      final saved = await api.moveOnBoard(
+        task.id,
+        sectionId: sectionId,
+        order: order,
+      );
+      // Server đã ghi: đối chiếu dữ liệu tải lại với THỨ TỰ server trả về
+      // (có thể đã chuẩn hoá), không phải số app gửi — kẻo không bao giờ khớp.
+      final p = _pending;
+      if (mounted &&
+          p != null &&
+          p.taskId == task.id &&
+          saved.id == task.id &&
+          saved.sectionId == sectionId) {
+        _pending = (
+          taskId: p.taskId,
+          index: p.index,
+          sectionId: p.sectionId,
+          order: saved.hasOrder ? saved.order : null,
+        );
+      }
       container.read(taskRealtimeSignalProvider.notifier).bump();
     } on AppException catch (error) {
       if (mounted) setState(() => _pending = null);
