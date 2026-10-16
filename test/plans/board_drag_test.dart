@@ -354,9 +354,10 @@ void main() {
     await t.pumpAndSettle();
   });
 
-  testWidgets('giữ ở mép phải 750ms → dải sang cột 2 (offset = '
-      'BoardSnapPhysics.offsetOf(1)); đích đổi sang cột đang dưới ngón, thả → '
-      'thẻ vào cột đó', (t) async {
+  testWidgets('giữ ở mép phải → dải trượt liền tới cột 2; rời mép → snap '
+      'offsetOf(1); đích đổi sang cột dưới ngón, thả → thẻ vào cột đó', (
+    t,
+  ) async {
     await pumpBoard(t);
     final controller = t
         .widget<ListView>(find.byKey(const Key('board-track')))
@@ -377,35 +378,84 @@ void main() {
       0,
     );
 
-    await t.pump(const Duration(milliseconds: 750));
-    await t.pump(const Duration(milliseconds: 400));
+    // Trượt liền (không chờ 700ms): ngón đứng yên, dải trôi tới khi dưới
+    // ngón là "Chờ linh kiện".
+    var ms = 0;
+    while (find.text('Thả vào “Chờ linh kiện”').evaluate().isEmpty &&
+        ms < 1500) {
+      await t.pump(const Duration(milliseconds: 16));
+      ms += 16;
+    }
+    expect(ms, lessThan(700), reason: 'không chờ nhịp 700ms cũ');
+    expect(
+      controller.offset,
+      greaterThanOrEqualTo(BoardMetrics.pitch / 2),
+      reason: 'sau ${ms}ms',
+    );
+    expect(find.text('Thả vào “Chờ linh kiện”'), findsOneWidget);
+    expectHot(t, 'Chờ linh kiện');
 
+    // Rời mép: dừng trượt, snap về cột gần nhất, đích là cột dưới ngón.
+    await g.moveTo(Offset(200, headerY(t)));
+    await t.pumpAndSettle();
     expect(
       controller.offset,
       moreOrLessEquals(BoardSnapPhysics.offsetOf(1, controller.position)),
     );
-    // Ngón đứng yên nhưng dải đã trượt: dưới ngón giờ là "Chờ linh kiện".
+    expect(
+      t
+          .widget<AnimatedOpacity>(find.byKey(const Key('edge-glow-right')))
+          .opacity,
+      0,
+    );
+    expect(find.text('Thả vào “Đang xử lý”'), findsOneWidget);
+    expectHot(t, 'Đang xử lý');
+    await g.up();
+    await t.pumpAndSettle();
+    // Trên thẻ đầu cột 2 → order 0.
+    expect(tasksApi.moves.single, ('t1', 's2', 0.0));
+  });
+
+  testWidgets('giữ ở mép tới khi sang cột rỗng rồi nhấc tay → thẻ vào cột đó '
+      '(chỉ section_id)', (t) async {
+    await pumpBoard(t);
+    final g = await lift(t, 'Bảo hành W106');
+    await g.moveTo(Offset(385, headerY(t)));
     await t.pump();
-    expect(find.text('Thả vào “Chờ linh kiện”'), findsOneWidget);
-    expectHot(t, 'Chờ linh kiện');
+    var ms = 0;
+    while (find.text('Thả vào “Chờ linh kiện”').evaluate().isEmpty &&
+        ms < 1500) {
+      await t.pump(const Duration(milliseconds: 16));
+      ms += 16;
+    }
     await g.up();
     await t.pumpAndSettle();
     // Cột rỗng: không hàng xóm → chỉ section_id.
     expect(tasksApi.moves.single, ('t1', 's3', null));
   });
 
-  testWidgets('rời vùng mép trước 700ms → không tự trượt', (t) async {
+  testWidgets('vào mép rồi rời ngay (< 50ms) → snap về offsetOf(0), không '
+      'trượt tiếp', (t) async {
     await pumpBoard(t);
     final controller = t
         .widget<ListView>(find.byKey(const Key('board-track')))
         .controller!;
     final g = await lift(t, 'Bảo hành W106');
     await g.moveTo(const Offset(385, 400));
-    await t.pump(const Duration(milliseconds: 500));
+    await t.pump(const Duration(milliseconds: 16));
+    await t.pump(const Duration(milliseconds: 16));
     await g.moveTo(const Offset(200, 400));
+    await t.pumpAndSettle();
+    expect(
+      controller.offset,
+      moreOrLessEquals(BoardSnapPhysics.offsetOf(0, controller.position)),
+    );
     await t.pump(const Duration(milliseconds: 1500));
+    expect(
+      controller.offset,
+      moreOrLessEquals(BoardSnapPhysics.offsetOf(0, controller.position)),
+    );
 
-    expect(controller.offset, 0);
     await g.up();
     await t.pumpAndSettle();
   });

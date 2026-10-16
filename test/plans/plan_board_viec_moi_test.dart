@@ -475,13 +475,15 @@ void main() {
     expect(title.style?.fontWeight, FontWeight.w600);
   });
 
-  testWidgets('header kính tối: glass + blur 20', (tester) async {
+  testWidgets('header kính tối: glass, KHÔNG BackdropFilter', (tester) async {
     await pumpBoard(tester);
 
+    // Bỏ blur (kéo thả mượt, K2): dưới header chỉ là gradient tĩnh, blur 20
+    // nhìn như nhau mà dựng lại lớp mờ mỗi khung khi dải trượt.
     final header = find.byKey(const Key('board-header'));
     expect(
       find.descendant(of: header, matching: find.byType(BackdropFilter)),
-      findsOneWidget,
+      findsNothing,
     );
     final glass = tester.widget<ColoredBox>(
       find.descendant(of: header, matching: find.byType(ColoredBox)).first,

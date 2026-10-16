@@ -1,8 +1,9 @@
 import 'dart:async';
 import 'dart:math' as math;
-import 'dart:ui' show ImageFilter;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart' show ScrollCacheExtent;
+import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -57,7 +58,8 @@ class PlanBoardPage extends ConsumerStatefulWidget {
   ConsumerState<PlanBoardPage> createState() => _PlanBoardPageState();
 }
 
-class _PlanBoardPageState extends ConsumerState<PlanBoardPage> {
+class _PlanBoardPageState extends ConsumerState<PlanBoardPage>
+    with SingleTickerProviderStateMixin {
   final _track = ScrollController();
 
   /// Đang lọc theo ai. Sống trong State của màn: đây là cách người dùng đang
@@ -88,9 +90,27 @@ class _PlanBoardPageState extends ConsumerState<PlanBoardPage> {
   final _drag = BoardDragController();
 
   /// Con trỏ đang ở mép nào của dải: -1 trái, 1 phải, 0 không. Dải sáng 28px
-  /// ở mép đó, và [_edgeTimer] sang cột kế mỗi 700ms.
+  /// ở mép đó, và dải tự trượt: liên tục theo [_edgeTicker], hoặc (giảm
+  /// chuyển động) [_edgeTimer] nhảy sang cột kế mỗi 700ms.
   final _edgeSide = ValueNotifier<int>(0);
   Timer? _edgeTimer;
+
+  /// Trượt mép liên tục, mỗi khung một bước theo vận tốc (xem [_onEdgeTick]).
+  late final Ticker _edgeTicker;
+
+  /// `elapsed` ở tick trước (null: tick đầu sau khi bắt đầu).
+  Duration? _edgeLast;
+
+  /// Độ sâu của ngón trong vùng mép, 0..1 (1 = sát mép màn).
+  double _edgeDepth = 0;
+
+  /// Đã hẹn dò lại đích ở cuối khung này.
+  bool _retargetQueued = false;
+
+  /// Bảng đang vẽ lúc bắt đầu kéo. Trong lượt kéo trang vẽ nó thay cho dữ
+  /// liệu mới về (cùng các `List<Task>`), nên không thẻ nào dựng lại và chỗ
+  /// chèn khớp cái người dùng đang nhìn; kéo xong mới áp dữ liệu mới.
+  BoardBuckets? _frozen;
 
   /// Số ô trên dải (cột + ô "Thêm nhóm việc"), để tự trượt không vượt cuối.
   int _trackCount = 1;
@@ -110,6 +130,7 @@ class _PlanBoardPageState extends ConsumerState<PlanBoardPage> {
   @override
   void initState() {
     super.initState();
+    _edgeTicker = createTicker(_onEdgeTick);
     _drag.addListener(_onDragState);
   }
 
@@ -117,6 +138,7 @@ class _PlanBoardPageState extends ConsumerState<PlanBoardPage> {
     if (_drag.active && _dragPointer == null && _pointers.isNotEmpty) {
       _dragPointer = _pointers.last;
     }
+    if (_drag.active && _frozen == null) _frozen = _board;
   }
 
   /// Ngón [pointer] nhấc lên ([drop]) hoặc bị huỷ. Ngón đang giữ thẻ nhấc lên
@@ -180,6 +202,7 @@ class _PlanBoardPageState extends ConsumerState<PlanBoardPage> {
   void dispose() {
     _drag.removeListener(_onDragState);
     _edgeTimer?.cancel();
+    _edgeTicker.dispose();
     _edgeSide.dispose();
     _drag.dispose();
     _debounce?.cancel();
@@ -372,7 +395,9 @@ class _PlanBoardPageState extends ConsumerState<PlanBoardPage> {
     required bool canDragTasks,
     int? searchCapped,
   }) {
-    if (_pending case final p?) {
+    if (_drag.active && _frozen != null) {
+      board = _frozen!;
+    } else if (_pending case final p?) {
       board = board.moved(p.taskId, p.toColumn, p.index, p.sectionId);
     }
     final columns = board.columns;
@@ -423,7 +448,13 @@ class _PlanBoardPageState extends ConsumerState<PlanBoardPage> {
                   key: const Key('board-track'),
                   controller: _track,
                   scrollDirection: Axis.horizontal,
-                  physics: BoardSnapPhysics(
+                  // Cột kế đã dựng sẵn trước khi dải trượt tới: dựng ≈10 thẻ
+                  // giữa lúc trượt là một khung vọt.
+                  scrollCacheExtent: const ScrollCacheExtent.pixels(
+                    BoardMetrics.pitch,
+                  ),
+                  physics: _TrackPhysics(
+                    sliding: () => _edgeTicker.isActive,
                     count: itemCount,
                     animate: OmniMotion.enabled(context),
                   ),
@@ -522,26 +553,103 @@ class _PlanBoardPageState extends ConsumerState<PlanBoardPage> {
     final box = context.findRenderObject();
     if (box is! RenderBox || !box.hasSize) return;
     final x = box.globalToLocal(global).dx;
+    final w = box.size.width;
     final side = x < _edgeZone
         ? -1
-        : x > box.size.width - _edgeZone
+        : x > w - _edgeZone
         ? 1
         : 0;
+    _edgeDepth = side == 0
+        ? 0
+        : ((side < 0 ? _edgeZone - x : x - (w - _edgeZone)) / _edgeZone).clamp(
+            0.0,
+            1.0,
+          );
     if (side == _edgeSide.value) return;
     _edgeSide.value = side;
-    _edgeTimer?.cancel();
-    _edgeTimer = side == 0
-        ? null
-        : Timer.periodic(
-            const Duration(milliseconds: 700),
-            (_) => _slideColumn(side),
-          );
+    if (!OmniMotion.enabled(context)) {
+      // Giảm chuyển động: nhảy từng cột mỗi 700ms, không trượt.
+      _edgeTimer?.cancel();
+      _edgeTimer = side == 0
+          ? null
+          : Timer.periodic(
+              const Duration(milliseconds: 700),
+              (_) => _slideColumn(side),
+            );
+      return;
+    }
+    if (side == 0) {
+      _stopEdge(snap: true);
+    } else {
+      _startEdge();
+    }
   }
 
-  /// Sang cột kế theo [side]: trượt 350ms, hoặc nhảy khi giảm chuyển động.
-  void _slideColumn(int side) {
-    if (!mounted || !_track.hasClients) return;
+  /// Bắt đầu (lại) trượt mép: hệ số khởi động tính từ đây.
+  void _startEdge() {
+    if (_edgeTicker.isActive) _edgeTicker.stop();
+    _edgeLast = null;
+    unawaited(_edgeTicker.start());
+  }
+
+  /// Một khung trượt mép: `v = 150 + 750·độ sâu` px/s, nhân hệ số khởi động
+  /// 0→1 trong 120ms đầu; chạm đầu/cuối dải thì dừng. Dò lại đích ở cuối
+  /// khung (khi các cột đã dựng ở vị trí mới).
+  void _onEdgeTick(Duration elapsed) {
+    final dt = (elapsed - (_edgeLast ?? elapsed)).inMicroseconds / 1e6;
+    _edgeLast = elapsed;
+    if (!_track.hasClients || _edgeSide.value == 0) return;
+    final p = _track.position;
+    final ramp = (elapsed.inMicroseconds / 120000).clamp(0.0, 1.0);
+    final v = (150 + 750 * _edgeDepth) * ramp;
+    final side = _edgeSide.value;
+    final next = (p.pixels + side * v * dt).clamp(
+      p.minScrollExtent,
+      p.maxScrollExtent,
+    );
+    if (next != p.pixels) _track.jumpTo(next);
+    // Chạm đầu/cuối THEO CHIỀU trượt (tick đầu đứng yên ở 0 không tính).
+    if (side > 0 ? next >= p.maxScrollExtent : next <= p.minScrollExtent) {
+      _edgeTicker.stop();
+    }
+    _queueRetarget();
+  }
+
+  /// Hẹn [_retarget] ở cuối khung, gộp một lần mỗi khung.
+  void _queueRetarget() {
+    if (_retargetQueued) return;
+    _retargetQueued = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _retargetQueued = false;
+      _retarget();
+    });
+  }
+
+  /// Dừng trượt mép; [snap] thì về cột gần nhất (250ms) rồi dò lại đích.
+  void _stopEdge({required bool snap}) {
+    if (_edgeTicker.isActive) _edgeTicker.stop();
+    _edgeLast = null;
+    if (!snap || !mounted || !_track.hasClients) return;
     final position = _track.position;
+    final target = BoardSnapPhysics.offsetOf(
+      _nearestColumn(position),
+      position,
+    );
+    if ((target - position.pixels).abs() < .5) {
+      _retargetAfterLayout();
+      return;
+    }
+    _track
+        .animateTo(
+          target,
+          duration: const Duration(milliseconds: 250),
+          curve: OmniCurves.standard,
+        )
+        .then((_) => _retargetAfterLayout());
+  }
+
+  /// Ô trên dải có tâm gần giữa màn nhất.
+  int _nearestColumn(ScrollPosition position) {
     final current =
         ((position.pixels +
                     position.viewportDimension / 2 -
@@ -549,29 +657,35 @@ class _PlanBoardPageState extends ConsumerState<PlanBoardPage> {
                     BoardMetrics.columnWidth / 2) /
                 BoardMetrics.pitch)
             .round();
-    final next = math.min(math.max(current + side, 0), _trackCount - 1);
-    final target = BoardSnapPhysics.offsetOf(next, position);
-    if (OmniMotion.enabled(context)) {
-      _track
-          .animateTo(
-            target,
-            duration: const Duration(milliseconds: 350),
-            curve: OmniCurves.standard,
-          )
-          .then((_) => _retargetAfterLayout());
-    } else {
-      _track.jumpTo(target);
-      _retargetAfterLayout();
-    }
+
+    return math.min(math.max(current, 0), _trackCount - 1);
+  }
+
+  /// Giảm chuyển động: nhảy sang cột kế theo [side] rồi dò lại đích.
+  void _slideColumn(int side) {
+    if (!mounted || !_track.hasClients) return;
+    final position = _track.position;
+    final next = math.min(
+      math.max(_nearestColumn(position) + side, 0),
+      _trackCount - 1,
+    );
+    _track.jumpTo(BoardSnapPhysics.offsetOf(next, position));
+    _retargetAfterLayout();
   }
 
   /// Thả, huỷ hay thẻ nguồn rời cây: dọn mọi thứ. Gọi nhiều lần cũng được.
+  /// Đang trượt mép thì dừng và snap về cột gần nhất (nơi gọi đã đọc đích).
   void _endDrag() {
     _edgeTimer?.cancel();
     _edgeTimer = null;
+    final atEdge = _edgeTicker.isActive || _edgeSide.value != 0;
     if (_edgeSide.value != 0) _edgeSide.value = 0;
+    _stopEdge(snap: atEdge && mounted && OmniMotion.enabled(context));
     _dragPointer = null;
+    final wasFrozen = _frozen != null;
+    _frozen = null;
     _drag.clear();
+    if (wasFrozen && mounted) setState(() {});
   }
 
   /// Thả [task] vào cột [toColumn] tại chỗ chèn [index] (R3: về cột cũ thì
@@ -1139,6 +1253,34 @@ class _PlanBoardPageState extends ConsumerState<PlanBoardPage> {
   }
 }
 
+/// Snap của dải, trừ lúc đang tự trượt mép ([sliding]): `jumpTo` mỗi khung
+/// kết thúc bằng `goBallistic(0)`, và lò xo snap sẽ kéo dải ngược về cột cũ
+/// giữa hai khung. Trượt xong thì trang tự snap ([_PlanBoardPageState]).
+class _TrackPhysics extends BoardSnapPhysics {
+  const _TrackPhysics({
+    super.parent,
+    super.animate,
+    super.count,
+    required this.sliding,
+  });
+
+  final bool Function() sliding;
+
+  @override
+  _TrackPhysics applyTo(ScrollPhysics? ancestor) => _TrackPhysics(
+    parent: buildParent(ancestor),
+    animate: animate,
+    count: count,
+    sliding: sliding,
+  );
+
+  @override
+  Simulation? createBallisticSimulation(
+    ScrollMetrics position,
+    double velocity,
+  ) => sliding() ? null : super.createBallisticSimulation(position, velocity);
+}
+
 enum _SectionAction { rename, remove, reorder, edit }
 
 /// Dải sáng 28px ở mép trái/phải khi kéo thẻ tới sát mép: báo "thả ở đây sẽ
@@ -1189,8 +1331,12 @@ class _EdgeGlow extends StatelessWidget {
   }
 }
 
-/// Header kính tối (`.bar`): `OmniCovers.glass` + blur 20, hàng 44 dưới
-/// safe area, đệm 4 hai bên và 6 ở đáy.
+/// Header kính tối (`.bar`): `OmniCovers.glass`, hàng 44 dưới safe area,
+/// đệm 4 hai bên và 6 ở đáy.
+///
+/// Không `BackdropFilter` (bản mẫu có blur 20): dưới header chỉ là gradient
+/// tĩnh của nền, blur nhìn như nhau mà lớp mờ phải dựng lại mỗi khung khi dải
+/// trượt. `RepaintBoundary` tách header khỏi lượt vẽ của bảng.
 class _GlassHeader extends StatelessWidget {
   const _GlassHeader({
     required this.title,
@@ -1222,62 +1368,56 @@ class _GlassHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     final top = MediaQuery.paddingOf(context).top;
 
-    return ClipRect(
+    return RepaintBoundary(
       key: const Key('board-header'),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(
-          sigmaX: OmniCovers.glassBlur,
-          sigmaY: OmniCovers.glassBlur,
-        ),
-        child: ColoredBox(
-          color: OmniCovers.glass,
-          child: Padding(
-            padding: EdgeInsets.fromLTRB(4, top, 4, 6),
-            child: SizedBox(
-              height: 44,
-              child: Row(
-                children: [
+      child: ColoredBox(
+        color: OmniCovers.glass,
+        child: Padding(
+          padding: EdgeInsets.fromLTRB(4, top, 4, 6),
+          child: SizedBox(
+            height: 44,
+            child: Row(
+              children: [
+                _HeaderButton(
+                  tooltip: 'Quay lại',
+                  icon: Icons.arrow_back_ios_new_rounded,
+                  onTap: onBack,
+                ),
+                const SizedBox(width: 2),
+                Expanded(
+                  child: searching
+                      ? _HeaderSearch(
+                          controller: searchField,
+                          onChanged: onSearchChanged,
+                        )
+                      : _HeaderTitle(title: title, subtitle: subtitle),
+                ),
+                if (searching)
                   _HeaderButton(
-                    tooltip: 'Quay lại',
-                    icon: Icons.arrow_back_ios_new_rounded,
-                    onTap: onBack,
-                  ),
-                  const SizedBox(width: 2),
-                  Expanded(
-                    child: searching
-                        ? _HeaderSearch(
-                            controller: searchField,
-                            onChanged: onSearchChanged,
-                          )
-                        : _HeaderTitle(title: title, subtitle: subtitle),
-                  ),
-                  if (searching)
-                    _HeaderButton(
-                      tooltip: 'Đóng tìm kiếm',
-                      icon: Icons.close_rounded,
-                      onTap: onCloseSearch,
-                    )
-                  else
-                    _HeaderButton(
-                      tooltip: 'Tìm trong kế hoạch',
-                      icon: Icons.search_rounded,
-                      onTap: onOpenSearch,
-                    ),
+                    tooltip: 'Đóng tìm kiếm',
+                    icon: Icons.close_rounded,
+                    onTap: onCloseSearch,
+                  )
+                else
                   _HeaderButton(
-                    tooltip: 'Lọc theo người',
-                    icon: Icons.person_outline_rounded,
-                    onTap: onFilter,
-                    dot: filterActive,
-                    selected: filterActive,
+                    tooltip: 'Tìm trong kế hoạch',
+                    icon: Icons.search_rounded,
+                    onTap: onOpenSearch,
                   ),
-                  if (onMenu case final menu?)
-                    _HeaderButton(
-                      tooltip: 'Tuỳ chọn kế hoạch',
-                      icon: Icons.more_horiz_rounded,
-                      onTap: menu,
-                    ),
-                ],
-              ),
+                _HeaderButton(
+                  tooltip: 'Lọc theo người',
+                  icon: Icons.person_outline_rounded,
+                  onTap: onFilter,
+                  dot: filterActive,
+                  selected: filterActive,
+                ),
+                if (onMenu case final menu?)
+                  _HeaderButton(
+                    tooltip: 'Tuỳ chọn kế hoạch',
+                    icon: Icons.more_horiz_rounded,
+                    onTap: menu,
+                  ),
+              ],
             ),
           ),
         ),

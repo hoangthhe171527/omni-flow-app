@@ -469,6 +469,8 @@ class _IdleDrop implements ValueListenable<BoardColumnDrop> {
 
 /// Nền và viền đích của cột. Nghe RIÊNG trạng thái kéo của cột này, chỉ đọc
 /// `hot`; thân cột ([child]: đầu cột, thẻ, "Thêm công việc") dựng ngoài nó.
+/// Kế thừa `ValueListenableBuilder` (thay vì dùng thẳng) để có tên lớp riêng:
+/// test đếm lượt dựng lại theo `runtimeType` tách được builder của cột.
 class _ColumnDropBuilder extends ValueListenableBuilder<BoardColumnDrop> {
   const _ColumnDropBuilder({
     required ValueListenable<BoardColumnDrop> drop,
