@@ -1,15 +1,50 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../../../../design/platform/omni_motion_scope.dart';
 import '../../../../design/tokens/tokens.dart';
 import '../../../tasks/domain/task.dart';
 
+/// Trạng thái kéo mà MỘT cột cần: nó có đang là cột đích không ([hot]), và ô
+/// chỗ trống nằm ở chỉ số nào trong nó ([slot]). [slot] null ở cột nguồn và
+/// ở cột không phải đích.
+typedef BoardColumnDrop = ({bool hot, int? slot});
+
 /// Trạng thái một lượt kéo thẻ trên bảng: thẻ nào, từ cột nào, đang lơ lửng
-/// trên cột nào và sẽ chèn ở đâu. Cột, ô chỗ trống và bản nổi cùng nghe nó.
+/// trên cột nào và sẽ chèn ở đâu. Bản nổi nghe cả bộ điều khiển; mỗi cột chỉ
+/// nghe [column] của mình, nên đổi chỗ chèn chỉ dựng lại cột cũ và cột mới.
 ///
 /// Chỉ báo khi một trong các giá trị ĐỔI: con trỏ đi qua lại trong một khe
 /// giữa hai thẻ không dựng lại gì.
 class BoardDragController extends ChangeNotifier {
+  final _columns = <int, ValueNotifier<BoardColumnDrop>>{};
+
+  /// Trạng thái kéo của cột [index] (tạo lười). Chỉ báo khi chính cột này
+  /// đổi (`ValueNotifier` so `==` của record).
+  ValueListenable<BoardColumnDrop> column(int index) =>
+      _columns.putIfAbsent(index, () => ValueNotifier(_stateOf(index)));
+
+  BoardColumnDrop _stateOf(int i) => (
+    hot: targetColumn == i,
+    slot: targetColumn == i && fromColumn != i ? targetIndex : null,
+  );
+
+  /// Gọi sau mỗi lần đổi task/fromColumn/targetColumn/targetIndex.
+  void _syncColumns() {
+    for (final e in _columns.entries) {
+      e.value.value = _stateOf(e.key);
+    }
+  }
+
+  @override
+  void dispose() {
+    for (final n in _columns.values) {
+      n.dispose();
+    }
+    _columns.clear();
+    super.dispose();
+  }
+
   Task? task;
   int? fromColumn;
   int? targetColumn;
@@ -29,6 +64,7 @@ class BoardDragController extends ChangeNotifier {
     targetColumn = null;
     targetIndex = null;
     targetName = '';
+    _syncColumns();
     notifyListeners();
   }
 
@@ -39,6 +75,7 @@ class BoardDragController extends ChangeNotifier {
     targetColumn = column;
     targetIndex = index;
     targetName = name;
+    _syncColumns();
     notifyListeners();
   }
 
@@ -49,6 +86,7 @@ class BoardDragController extends ChangeNotifier {
     targetColumn = null;
     targetIndex = null;
     targetName = '';
+    _syncColumns();
     notifyListeners();
   }
 
@@ -58,6 +96,7 @@ class BoardDragController extends ChangeNotifier {
     targetColumn = null;
     targetIndex = null;
     targetName = '';
+    _syncColumns();
     notifyListeners();
   }
 
@@ -93,6 +132,7 @@ class BoardDragController extends ChangeNotifier {
     targetIndex = null;
     targetName = '';
     pointer = null;
+    _syncColumns();
     notifyListeners();
   }
 }
@@ -170,11 +210,13 @@ class BoardDragFeedback extends StatelessWidget {
       ),
     );
 
+    // Thẻ vẽ một lần vào lớp riêng: kéo chỉ dời offset lớp (và xoay/phóng
+    // trong 180ms đầu), không vẽ lại bóng mỗi khung.
     if (!OmniMotion.enabled(context)) {
       return SizedBox(
         key: const Key('drag-feedback'),
         width: width,
-        child: card,
+        child: RepaintBoundary(child: card),
       );
     }
 
@@ -189,7 +231,7 @@ class BoardDragFeedback extends StatelessWidget {
           angle: -0.0261799 * t,
           child: Transform.scale(scale: 1 + 0.04 * t, child: child),
         ),
-        child: card,
+        child: RepaintBoundary(child: card),
       ),
     );
   }

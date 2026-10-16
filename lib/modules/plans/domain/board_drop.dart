@@ -35,6 +35,26 @@ double? boardDropOrder(List<Task> column, Task moving, int index) {
 int dropIndexFor(List<double> cardCentersY, double pointerY) =>
     cardCentersY.where((c) => c < pointerY).length;
 
+/// Chỗ chèn có vùng đệm [band]: chỉ rời [current] khi con trỏ vượt tâm thẻ
+/// thêm ít nhất [band] theo chiều đi, để rung tay vài px không lật ô chỗ trống.
+///
+/// [current] null (chưa có chỗ chèn trong cột này) thì như [dropIndexFor].
+/// Nhảy xa qua nhiều thẻ một lượt thì tới thẳng chỉ số đúng.
+int dropIndexWithHysteresis(
+  List<double> centers,
+  double pointerY,
+  int? current, {
+  double band = 12,
+}) {
+  if (current == null) return dropIndexFor(centers, pointerY);
+  final down = centers.where((c) => c + band < pointerY).length;
+  final up = centers.where((c) => c - band < pointerY).length;
+  if (current < down) return down;
+  if (current > up) return up;
+
+  return current;
+}
+
 /// Chỗ chèn trong cột đích ĐẦY ĐỦ [full] (không gồm thẻ đang kéo), khi người
 /// dùng chỉ thấy [visible] (đang lọc / tìm) và chọn chỗ chèn [index] trong đó.
 ///

@@ -149,4 +149,22 @@ void main() {
       expect(plan.isTaskViewer(null), isFalse);
     });
   });
+
+  group('dropIndexWithHysteresis', () {
+    const centers = [100.0, 200.0, 300.0];
+    test('current null → như dropIndexFor', () {
+      expect(dropIndexWithHysteresis(centers, 150, null), 1);
+    });
+    test('vượt tâm < 12px theo chiều đi → giữ chỗ cũ', () {
+      expect(dropIndexWithHysteresis(centers, 205, 1), 1);
+      expect(dropIndexWithHysteresis(centers, 195, 2), 2);
+    });
+    test('vượt tâm ≥ 12px → đổi', () {
+      expect(dropIndexWithHysteresis(centers, 213, 1), 2);
+      expect(dropIndexWithHysteresis(centers, 187, 2), 1);
+    });
+    test('nhảy xa nhiều thẻ một lượt → tới thẳng chỉ số đúng', () {
+      expect(dropIndexWithHysteresis(centers, 400, 0), 3);
+    });
+  });
 }
