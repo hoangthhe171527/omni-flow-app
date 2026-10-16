@@ -76,6 +76,9 @@ class _Recorder implements HttpClientAdapter {
     Future<void>? cancelFuture,
   ) async {
     requests.add(options);
+    // Đọc hết thân như adapter thật: tệp multipart mới được đóng, kẻo
+    // Windows không cho xoá thư mục tạm ở tearDown.
+    await requestStream?.drain<void>();
     return ResponseBody.fromString(
       jsonEncode(body),
       200,
