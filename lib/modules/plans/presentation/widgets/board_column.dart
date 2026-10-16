@@ -201,8 +201,13 @@ class _BoardColumnState extends State<BoardColumn> {
 
   /// Thẻ đã dựng, theo id: dùng lại nguyên widget khi việc không đổi
   /// (`identical`) và quyền kéo của nó không đổi, nên lượt kéo không dựng lại
-  /// thẻ nào.
-  final _cards = <String, ({Task task, bool canDrag, Widget widget})>{};
+  /// thẻ nào. Giữ cả `rise`: danh sách lười tạo lại phần tử của thẻ khi cuộn
+  /// về, và widget cache còn `rise: true` từ khung đầu thì `OmniRise` mới phát
+  /// lại hiệu ứng — nên `rise` đổi là dựng lại thẻ, trừ khi phần tử của thẻ
+  /// vẫn đang trong cây (`OmniRise` chỉ đọc `animate` lúc vào cây, nên dùng
+  /// lại là vô hại, và lượt dựng lại cột giữa lượt kéo không dựng lại thẻ).
+  final _cards =
+      <String, ({Task task, bool canDrag, bool rise, Widget widget})>{};
 
   @override
   void initState() {
@@ -304,23 +309,30 @@ class _BoardColumnState extends State<BoardColumn> {
   /// Thẻ [task] ở vị trí [index], lấy từ cache khi được.
   Widget _cardFor(Task task, int index) {
     final canDrag = widget.drag != null && widget.canDrag(task);
+    final rise = widget.firstShow(task.id);
     final cached = _cards[task.id];
     if (cached != null &&
         identical(cached.task, task) &&
-        cached.canDrag == canDrag) {
+        cached.canDrag == canDrag &&
+        (cached.rise == rise || _keys[task.id]?.currentContext != null)) {
       return cached.widget;
     }
-    final built = _card(task, index, canDrag: canDrag);
-    _cards[task.id] = (task: task, canDrag: canDrag, widget: built);
+    final built = _card(task, index, canDrag: canDrag, rise: rise);
+    _cards[task.id] = (task: task, canDrag: canDrag, rise: rise, widget: built);
 
     return built;
   }
 
-  Widget _card(Task task, int index, {required bool canDrag}) {
+  Widget _card(
+    Task task,
+    int index, {
+    required bool canDrag,
+    required bool rise,
+  }) {
     final card = BoardTaskCard(
       key: ValueKey(task.id),
       task: task,
-      rise: widget.firstShow(task.id),
+      rise: rise,
       canComplete: widget.canComplete,
       delay: Duration(milliseconds: 50 * math.min(index, 6)),
       // Đọc `widget` lúc chạm: widget thẻ được cache qua nhiều lần dựng cột.

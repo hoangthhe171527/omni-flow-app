@@ -120,7 +120,10 @@ class _PlanBoardPageState extends ConsumerState<PlanBoardPage>
 
   /// Thẻ vừa thả, đang chờ server: bảng vẽ nó ở chỗ mới ngay (lạc quan). Xoá
   /// khi dữ liệu mới về hoặc khi lưu lỗi.
-  ({String taskId, int toColumn, int index, String sectionId})? _pending;
+  ///
+  /// Giữ id nhóm đích chứ không giữ chỉ số cột: chỉ số tính trên bảng đóng
+  /// băng lúc kéo, mà dữ liệu áp sau khi thả có thể đã xoá/đổi thứ tự nhóm.
+  ({String taskId, int index, String sectionId})? _pending;
 
   /// Các ngón đang chạm, theo thứ tự chạm; và ngón đang giữ thẻ (ngón chạm
   /// gần nhất lúc thẻ nhấc lên). Chỉ ngón ấy nhấc lên mới kết thúc lượt kéo.
@@ -132,9 +135,19 @@ class _PlanBoardPageState extends ConsumerState<PlanBoardPage>
     super.initState();
     _edgeTicker = createTicker(_onEdgeTick);
     _drag.addListener(_onDragState);
+    // Dải dời dưới ngón đứng yên (Ticker trượt mép, snap 250ms sau khi rời
+    // mép, nhảy cột khi giảm chuyển động): dò lại đích ở cuối mỗi khung. Lúc
+    // snap dải bỏ qua hit-test nên `DragTarget` không tự báo được.
+    _track.addListener(() {
+      if (_drag.active) _queueRetarget();
+    });
   }
 
   void _onDragState() {
+    assert(
+      _drag.active || _frozen == null,
+      'Chỉ dọn lượt kéo qua _endDrag: nó gỡ băng dữ liệu (_frozen) trước.',
+    );
     if (_drag.active && _dragPointer == null && _pointers.isNotEmpty) {
       _dragPointer = _pointers.last;
     }
@@ -148,6 +161,9 @@ class _PlanBoardPageState extends ConsumerState<PlanBoardPage>
   void _pointerEnded(int pointer, {required bool drop}) {
     _pointers.remove(pointer);
     if (_dragPointer != null && pointer != _dragPointer) return;
+    // Đích của khung gần nhất có thể đã cũ nếu dải vừa dời (snap đang chạy):
+    // dò lại ngay theo vị trí hiện tại trước khi đọc.
+    if (drop && _drag.active) _retarget();
     final task = _drag.task;
     final to = _drag.targetColumn;
     final index = _drag.targetIndex;
@@ -398,7 +414,10 @@ class _PlanBoardPageState extends ConsumerState<PlanBoardPage>
     if (_drag.active && _frozen != null) {
       board = _frozen!;
     } else if (_pending case final p?) {
-      board = board.moved(p.taskId, p.toColumn, p.index, p.sectionId);
+      // Cột đích tìm theo id trên bảng HIỆN TẠI; nhóm không còn thì vẽ theo
+      // dữ liệu mới, không đặt lạc quan.
+      final to = board.columns.indexWhere((c) => c.id == p.sectionId);
+      if (to >= 0) board = board.moved(p.taskId, to, p.index, p.sectionId);
     }
     final columns = board.columns;
     if (!_introDone) {
@@ -612,7 +631,7 @@ class _PlanBoardPageState extends ConsumerState<PlanBoardPage>
     if (side > 0 ? next >= p.maxScrollExtent : next <= p.minScrollExtent) {
       _edgeTicker.stop();
     }
-    _queueRetarget();
+    // Dò lại đích: `_track` báo khi `jumpTo` dời dải (xem initState).
   }
 
   /// Hẹn [_retarget] ở cuối khung, gộp một lần mỗi khung.
@@ -727,12 +746,7 @@ class _PlanBoardPageState extends ConsumerState<PlanBoardPage>
     final messenger = ScaffoldMessenger.of(context);
     final api = ref.read(tasksApiProvider);
     setState(() {
-      _pending = (
-        taskId: task.id,
-        toColumn: toColumn,
-        index: index,
-        sectionId: sectionId,
-      );
+      _pending = (taskId: task.id, index: index, sectionId: sectionId);
     });
     try {
       await api.moveOnBoard(task.id, sectionId: sectionId, order: order);

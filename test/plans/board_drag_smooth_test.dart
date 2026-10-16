@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:omni_app/core/network/api_envelope.dart';
+import 'package:omni_app/design/components/omni_motion_widgets.dart';
 import 'package:omni_app/design/theme/omni_theme.dart';
 import 'package:omni_app/design/tokens/tokens.dart';
 import 'package:omni_app/modules/plans/application/plans_providers.dart';
@@ -36,9 +37,9 @@ void main() {
       for (var s = 0; s < 4; s++) {'id': 's$s', 'name': 'Cot $s', 'order': s},
     ],
   });
-  List<Map<String, Object?>> seed() => [
+  List<Map<String, Object?>> seed([int cards = 10]) => [
     for (var s = 0; s < 4; s++)
-      for (var i = 0; i < 10; i++)
+      for (var i = 0; i < cards; i++)
         {
           'id': 't$s-$i',
           'title': 'Viec $s-$i tieu de kha dai de xuong dong',
@@ -58,14 +59,21 @@ void main() {
   /// Tăng để mô phỏng một lượt tải lại (realtime) của danh sách việc.
   final reloadTick = StateProvider<int>((_) => 0);
 
+  /// Kế hoạch "server" hiện tại; tăng [planTick] để tải lại nó (realtime đổi
+  /// nhóm việc).
+  late Plan current;
+  final planTick = StateProvider<int>((_) => 0);
+
   const phone = Size(390, 844);
 
   Future<void> pumpBoard(
     WidgetTester t, {
     bool reduceMotion = false,
     Size size = const Size(1300, 844),
+    int cards = 10,
   }) async {
-    raw = seed();
+    raw = seed(cards);
+    current = plan;
     api = _FakeTasksApi(parse());
     final router = GoRouter(
       routes: [
@@ -86,7 +94,10 @@ void main() {
     await t.pumpWidget(
       ProviderScope(
         overrides: [
-          planProvider(planId).overrideWith((ref) async => plan),
+          planProvider(planId).overrideWith((ref) async {
+            ref.watch(planTick);
+            return current;
+          }),
           planTasksProvider(planId).overrideWith((ref) async {
             ref.watch(reloadTick);
             return (tasks: parse(), truncated: false);
@@ -322,7 +333,12 @@ void main() {
       skipOffstage: false,
     );
     expect(t.getSize(placeholder).height, 64);
-    expect(t.hasRunningAnimations, isFalse);
+    // Khe không bọc AnimatedSize khi giảm chuyển động (nhánh tức thì).
+    final slotAnimations = find.descendant(
+      of: find.byType(BoardColumn, skipOffstage: false),
+      matching: find.byType(AnimatedSize, skipOffstage: false),
+    );
+    expect(slotAnimations, findsNothing);
 
     final (_, slot) = targetOf(t);
     final next = find.byKey(ValueKey('t1-$slot'));
@@ -330,7 +346,7 @@ void main() {
     await g.moveTo(Offset(480, t.getCenter(next).dy - 72 + 30));
     await t.pump();
     expect(y0 - t.getTopLeft(next).dy, moreOrLessEquals(72));
-    expect(t.hasRunningAnimations, isFalse);
+    expect(slotAnimations, findsNothing);
 
     await g.up();
     await t.pumpAndSettle();
@@ -544,7 +560,12 @@ void main() {
         isTrue,
         reason: 'offset ${track.pixels} không phải điểm snap $snaps',
       );
-      expect(t.hasRunningAnimations, isFalse);
+      // Ticker đã dừng và snap đã xong: dải đứng yên, không còn hoạt động
+      // cuộn nào, và vài khung sau vẫn ở đúng chỗ.
+      final settled = track.pixels;
+      await t.pump(const Duration(milliseconds: 500));
+      expect(track.pixels, settled);
+      expect(track.isScrollingNotifier.value, isFalse);
     });
 
     testWidgets('dải dựng sẵn cột kế ngoài màn (cacheExtent = 1 pitch)', (
@@ -613,6 +634,127 @@ void main() {
       );
       expect(glass.color, OmniCovers.glass);
     });
+
+    testWidgets('rời mép rồi nhấc tay giữa lúc snap → thả vào cột dưới ngón '
+        'lúc nhấc, không phải đích cũ', (t) async {
+      await pumpBoard(t, size: phone);
+      final track = trackOf(t);
+      final g = await lift(t);
+      await g.moveTo(const Offset(385, 300));
+      await t.pump();
+      await pumpFrames(t, () => track.pixels > BoardMetrics.pitch / 2);
+      // Rời mép, ngón về trên cột 0 (cột nguồn). Snap bắt đầu ngay trong sự
+      // kiện này, và dải đang trượt thì bỏ qua hit-test: `DragTarget` không
+      // nhận ngón, đích chỉ còn nhờ trang dò lại.
+      await g.moveTo(const Offset(100, 300));
+      await t.pump();
+
+      // Giữa lúc snap: dải đã trôi, dưới ngón giờ là cột 1.
+      await t.pump(const Duration(milliseconds: 100));
+      final x = track.pixels + 100 - BoardMetrics.inset;
+      final under = (x / BoardMetrics.pitch).floor();
+      expect(under, 1, reason: 'offset ${track.pixels}');
+      expect(dragOf(t).targetColumn, under, reason: 'đích giữa lúc snap');
+
+      await g.up();
+      await t.pumpAndSettle();
+      expect(api.moves.map((m) => m.$2), ['s$under']);
+    });
+  });
+
+  group('dữ liệu đổi giữa lượt kéo', () {
+    Plan planWith(List<int> order) => Plan.fromJson({
+      'id': planId,
+      'name': 'Muot',
+      'cover': 'plum-1',
+      'sections': [
+        for (var k = 0; k < order.length; k++)
+          {'id': 's${order[k]}', 'name': 'Cot ${order[k]}', 'order': k},
+      ],
+    });
+
+    Finder cardIn(String column, String title) => find.descendant(
+      of: columnNamed(column),
+      matching: find.text(title, skipOffstage: false),
+    );
+
+    Future<void> reloadPlan(WidgetTester t, Plan next) async {
+      current = next;
+      ProviderScope.containerOf(
+        t.element(find.byType(PlanBoardPage)),
+      ).read(planTick.notifier).state++;
+      for (var i = 0; i < 5; i++) {
+        await t.pump(const Duration(milliseconds: 16));
+      }
+    }
+
+    const title = 'Viec 0-0 tieu de kha dai de xuong dong';
+
+    testWidgets('nhóm việc đích bị xoá giữa lượt kéo → thả không lỗi', (
+      t,
+    ) async {
+      await pumpBoard(t);
+      final g = await lift(t);
+      await g.moveTo(const Offset(1100, 120));
+      await t.pump();
+      await t.pump(const Duration(milliseconds: 300));
+      expect(targetOf(t).$1, 3);
+
+      await reloadPlan(t, planWith([0, 1, 2]));
+      await g.up();
+      await t.pumpAndSettle();
+
+      expect(t.takeException(), isNull);
+      expect(api.moves.map((m) => m.$2), ['s3']);
+      // Nhóm không còn: thẻ ở chỗ dữ liệu mới đặt nó (việc của nhóm đã xoá rơi
+      // về cột đầu), không vẽ lạc quan vào một cột khác.
+      expect(cardIn('Cot 0', title), findsOneWidget);
+    });
+
+    testWidgets('nhóm việc đổi thứ tự giữa lượt kéo → thẻ vào đúng nhóm đã '
+        'thả, không theo chỉ số cột cũ', (t) async {
+      await pumpBoard(t);
+      final g = await lift(t);
+      await g.moveTo(const Offset(650, 120));
+      await t.pump();
+      await t.pump(const Duration(milliseconds: 300));
+      expect(find.text('Thả vào “Cot 2”'), findsOneWidget);
+
+      await reloadPlan(t, planWith([0, 2, 1, 3]));
+      await g.up();
+      await t.pumpAndSettle();
+
+      expect(t.takeException(), isNull);
+      expect(api.moves.map((m) => m.$2), ['s2']);
+      expect(cardIn('Cot 2', title), findsOneWidget);
+      expect(cardIn('Cot 1', title), findsNothing);
+    });
+  });
+
+  testWidgets('cột cuộn xuống đáy rồi về đầu: thẻ đầu dựng lại KHÔNG rise '
+      'lại', (t) async {
+    await pumpBoard(t, cards: 15);
+    final inner = t
+        .state<ScrollableState>(
+          find.descendant(
+            of: columnNamed('Cot 1'),
+            matching: find.byType(Scrollable),
+          ),
+        )
+        .position;
+    final first = find.byKey(const ValueKey('t1-0'), skipOffstage: false);
+    expect(first, findsOneWidget);
+
+    inner.jumpTo(inner.maxScrollExtent);
+    await t.pump();
+    expect(first, findsNothing, reason: 'thẻ đầu phải rời cây khi cuộn xa');
+
+    inner.jumpTo(0);
+    await t.pump();
+    final rise = find.descendant(of: first, matching: find.byType(OmniRise));
+    expect(t.widget<OmniRise>(rise).animate, isFalse);
+    final fade = find.descendant(of: rise, matching: find.byType(Opacity));
+    expect(t.widget<Opacity>(fade.first).opacity, 1);
   });
 }
 

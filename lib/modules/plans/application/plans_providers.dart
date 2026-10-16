@@ -359,8 +359,10 @@ class BoardBuckets {
 
   /// Bảng sau khi việc [taskId] được thả vào cột [toColumn] tại chỉ số
   /// [index] (tính trong cột đích SAU khi đã bỏ việc đó), mang `sectionId`
-  /// mới. Số cột giữ nguyên; không có việc đó thì trả nguyên bảng.
+  /// mới. Số cột giữ nguyên; không có việc đó, hoặc [toColumn] nằm ngoài bảng,
+  /// thì trả nguyên bảng.
   BoardBuckets moved(String taskId, int toColumn, int index, String sectionId) {
+    if (toColumn < 0 || toColumn >= buckets.length) return this;
     Task? found;
     for (final bucket in buckets) {
       for (final task in bucket) {

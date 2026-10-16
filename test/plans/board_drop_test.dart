@@ -129,6 +129,22 @@ void main() {
     expect(board.moved('zz', 1, 0, 's2').buckets[1], isEmpty);
   });
 
+  test('BoardBuckets.moved: cột đích ngoài bảng (nhóm vừa bị xoá) → trả '
+      'nguyên bảng, không RangeError', () {
+    const sections = [
+      PlanSection(id: 's1', name: 'A'),
+      PlanSection(id: 's2', name: 'B'),
+    ];
+    final board = BoardBuckets.build(
+      (tasks: [t('t1', 1, section: 's1')], truncated: false),
+      sections,
+      BoardPerson.everyone,
+    );
+
+    expect(board.moved('t1', 2, 0, 's3'), same(board));
+    expect(board.moved('t1', -1, 0, 's3'), same(board));
+  });
+
   group('Plan.isTaskViewer', () {
     final plan = Plan.fromJson(const {
       'id': 'p',
