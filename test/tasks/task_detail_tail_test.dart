@@ -200,6 +200,10 @@ void main() {
     expect(t.getSize(upload), const Size(44, 44));
     await t.tap(upload);
     await t.pumpAndSettle();
+    expect(
+      find.byKey(const Key('task-attachment-source-menu')),
+      findsOneWidget,
+    );
     expect(find.text('Chụp ảnh'), findsOneWidget);
     expect(find.text('Chọn ảnh có sẵn'), findsOneWidget);
   });

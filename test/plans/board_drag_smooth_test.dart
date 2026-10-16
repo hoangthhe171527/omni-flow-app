@@ -29,14 +29,15 @@ import '../support/fixed_background.dart';
 /// vùng dựng lại mỗi lần đổi chỗ chèn, vùng đệm chống lật, khe trượt, bản nổi.
 void main() {
   const planId = 'p1';
-  final plan = Plan.fromJson({
+  Plan planWith(String cover) => Plan.fromJson({
     'id': planId,
     'name': 'Muot',
-    'cover': 'plum-1',
+    'cover': cover,
     'sections': [
       for (var s = 0; s < 4; s++) {'id': 's$s', 'name': 'Cot $s', 'order': s},
     ],
   });
+  final plan = planWith('plum-1');
   List<Map<String, Object?>> seed([int cards = 10]) => [
     for (var s = 0; s < 4; s++)
       for (var i = 0; i < cards; i++)
@@ -71,9 +72,10 @@ void main() {
     bool reduceMotion = false,
     Size size = const Size(1300, 844),
     int cards = 10,
+    String? cover,
   }) async {
     raw = seed(cards);
-    current = plan;
+    current = cover == null ? plan : planWith(cover);
     api = _FakeTasksApi(parse());
     final router = GoRouter(
       routes: [
@@ -635,6 +637,29 @@ void main() {
       expect(glass.color, OmniCovers.glass);
     });
 
+    testWidgets('header nền ảnh: mờ vẽ một lần thành ảnh chụp (SnapshotWidget '
+        '+ ImageFiltered), vẫn KHÔNG BackdropFilter', (t) async {
+      await pumpBoard(
+        t,
+        size: phone,
+        cover: 'https://cdn.example.com/projects/p1/cover.webp',
+      );
+      final header = find.byKey(const Key('board-header'));
+      expect(
+        find.descendant(of: header, matching: find.byType(BackdropFilter)),
+        findsNothing,
+      );
+      final blur = find.descendant(
+        of: header,
+        matching: find.byKey(const Key('board-header-blur')),
+      );
+      expect(t.widget(blur), isA<SnapshotWidget>());
+      expect(
+        find.descendant(of: blur, matching: find.byType(ImageFiltered)),
+        findsOneWidget,
+      );
+    });
+
     testWidgets('rời mép rồi nhấc tay giữa lúc snap → thả vào cột dưới ngón '
         'lúc nhấc, không phải đích cũ', (t) async {
       await pumpBoard(t, size: phone);
@@ -755,6 +780,74 @@ void main() {
     expect(t.widget<OmniRise>(rise).animate, isFalse);
     final fade = find.descendant(of: rise, matching: find.byType(Opacity));
     expect(t.widget<Opacity>(fade.first).opacity, 1);
+  });
+
+  group('đổi thứ tự trong cùng nhóm', () {
+    final card = find.byKey(const ValueKey('t0-2'), skipOffstage: false);
+    final above = find.byKey(const ValueKey('t0-1'), skipOffstage: false);
+    final below = find.byKey(const ValueKey('t0-3'), skipOffstage: false);
+    final placeholder = find.byKey(
+      const Key('drop-placeholder'),
+      skipOffstage: false,
+    );
+
+    /// Nhấc 'Viec 0-2' rồi rê nhẹ trong chính cột 0.
+    Future<TestGesture> liftInPlace(WidgetTester t) async {
+      final g = await t.startGesture(t.getCenter(card));
+      await t.pump(const Duration(milliseconds: 450));
+      await t.pump(const Duration(milliseconds: 200));
+      await g.moveBy(const Offset(0, 4));
+      await t.pump();
+      await t.pump(const Duration(milliseconds: 300));
+
+      return g;
+    }
+
+    testWidgets('bóng mờ gập, đúng một ô chỗ trống tại chỗ cũ, khoảng 8 hai '
+        'bên', (t) async {
+      await pumpBoard(t);
+      final g = await liftInPlace(t);
+
+      expect(targetOf(t), (0, 2));
+      expect(placeholder, findsOneWidget);
+      final slot = t.getRect(placeholder);
+      expect(slot.height, 64);
+      expect(slot.top - t.getRect(above).bottom, moreOrLessEquals(8));
+      expect(t.getRect(below).top - slot.bottom, moreOrLessEquals(8));
+
+      await g.up();
+      await t.pumpAndSettle();
+      expect(api.moves, isEmpty, reason: 'thả lại chỗ cũ không gọi API');
+    });
+
+    testWidgets('đổi chỗ chèn trong cột nguồn: ≤2 BoardTaskCard, 0 '
+        'LongPressDraggable; thả gửi order giữa hai hàng xóm', (t) async {
+      await pumpBoard(t);
+      final g = await liftInPlace(t);
+      final start = targetOf(t);
+
+      final counts = countRebuilds();
+      var changes = 0;
+      var last = start;
+      for (var i = 0; i < 120 && changes < 2; i++) {
+        await g.moveBy(const Offset(0, 2));
+        await t.pump(const Duration(milliseconds: 16));
+        if (targetOf(t) != last) changes++;
+        last = targetOf(t);
+      }
+      debugOnRebuildDirtyWidget = null;
+
+      expect(changes, 2, reason: '$counts');
+      expect(last, (0, 4));
+      expect(counts['BoardTaskCard'] ?? 0, lessThanOrEqualTo(2 * changes));
+      expect(counts['LongPressDraggable<Task>'] ?? 0, 0);
+      expect(placeholder, findsOneWidget);
+
+      await g.up();
+      await t.pumpAndSettle();
+      // Bỏ t0-2 ra: chèn ở 4 là giữa t0-4 (order 4) và t0-5 (order 5).
+      expect(api.moves.single, ('t0-2', 's0', 4.5));
+    });
   });
 }
 

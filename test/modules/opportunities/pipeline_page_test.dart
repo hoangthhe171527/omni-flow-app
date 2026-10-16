@@ -64,7 +64,8 @@ void main() {
 
     await tester.tap(find.bySemanticsLabel('Bộ lọc'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Của tôi'));
+    expect(find.byKey(const Key('opportunity-filter-menu')), findsOneWidget);
+    await tester.tap(find.text('Chỉ cơ hội của tôi'));
     await tester.pumpAndSettle();
 
     expect(api.calls.last.mine, isTrue);

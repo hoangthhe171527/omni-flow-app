@@ -35,11 +35,7 @@ class ThreadInfoPage extends ConsumerWidget {
     final conversation = ref.watch(conversationProvider(conversationId));
 
     return Scaffold(
-      backgroundColor: OmniColors.byBrightness(
-        context,
-        OmniColors.background,
-        OmniColors.darkBackground,
-      ),
+      backgroundColor: Theme.of(context).colorScheme.surface,
       appBar: const _InfoHeader(),
       body: OmniAsyncView(
         value: conversation,
@@ -544,7 +540,8 @@ class _QuickAction extends StatelessWidget {
   }
 }
 
-/// Thẻ trắng viền mảnh bo 8 với tiêu đề viết hoa 11 w600 phía trên.
+/// Section phẳng: tiêu đề + các dòng và vạch ngăn. Không bọc nội dung cấp
+/// trang trong card; thứ bậc đến từ khoảng cách và divider.
 class _Section extends StatelessWidget {
   const _Section({this.title, required this.children, this.padded = true});
 
@@ -573,32 +570,16 @@ class _Section extends StatelessWidget {
               ),
             ),
           ),
-        DecoratedBox(
-          decoration: BoxDecoration(
-            color: OmniColors.byBrightness(
-              context,
-              OmniColors.card,
-              OmniColors.darkCard,
-            ),
-            border: Border.all(
-              color: OmniColors.byBrightness(
-                context,
-                OmniColors.border,
-                OmniColors.darkBorder,
-              ),
-            ),
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(7),
-            child: Column(
-              children: [
-                for (var i = 0; i < children.length; i++) ...[
-                  if (i > 0 && padded) Divider(height: 1, color: divider),
-                  children[i],
-                ],
+        Material(
+          key: ValueKey('thread-info-section-${title ?? 'actions'}'),
+          color: Colors.transparent,
+          child: Column(
+            children: [
+              for (var i = 0; i < children.length; i++) ...[
+                if (i > 0 && padded) Divider(height: 1, color: divider),
+                children[i],
               ],
-            ),
+            ],
           ),
         ),
       ],

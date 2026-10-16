@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../../../../design/components/components.dart';
+import '../../../../../design/tokens/tokens.dart';
 import 'menu_sheet.dart';
 
 /// Mục của menu việc (`TaskMenu.dc.html`).
@@ -87,6 +89,58 @@ Future<TaskMenuAction?> showTaskMenuSheet(
   groups: [
     for (final g in groups) [for (final a in g) _item(a, followerCount)],
   ],
+);
+
+/// Menu nhanh của nút `…` ở header chi tiết công việc.
+///
+/// Chỉ lớp chọn hành động được neo ngay dưới nút, đồng bộ với menu `+` ở màn
+/// Team. Các form chuyên sâu sau khi chọn vẫn do màn chi tiết điều phối.
+Future<TaskMenuAction?> showTaskMenu(
+  BuildContext context, {
+  required Rect anchor,
+  required List<List<TaskMenuAction>> groups,
+  int followerCount = 0,
+}) => showOmniAnchoredMenu<TaskMenuAction>(
+  context: context,
+  anchor: anchor,
+  width: 344,
+  menuKey: const Key('task-actions-menu'),
+  semanticsLabel: 'Tuỳ chọn công việc',
+  builder: (menuContext) => Column(
+    mainAxisSize: MainAxisSize.min,
+    children: [
+      for (var g = 0; g < groups.length; g++)
+        Column(
+          key: Key('detail-menu-group-$g'),
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            for (var i = 0; i < groups[g].length; i++)
+              Builder(
+                builder: (_) {
+                  final item = _item(groups[g][i], followerCount);
+                  return OmniAnchoredMenuItem(
+                    icon: item.icon,
+                    label: item.label,
+                    divider: g > 0 || i > 0,
+                    destructive: item.danger,
+                    trailing: item.trailing == null
+                        ? null
+                        : Text(
+                            item.trailing!,
+                            style: OmniType.caption.copyWith(
+                              color: Theme.of(
+                                menuContext,
+                              ).colorScheme.onSurfaceVariant,
+                            ),
+                          ),
+                    onTap: () => Navigator.of(menuContext).pop(item.value),
+                  );
+                },
+              ),
+          ],
+        ),
+    ],
+  ),
 );
 
 DetailMenuItem<TaskMenuAction> _item(TaskMenuAction a, int followers) =>

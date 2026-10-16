@@ -14,6 +14,7 @@ import 'package:omni_app/modules/customers/application/customers_providers.dart'
 import 'package:omni_app/modules/customers/data/customers_api.dart';
 import 'package:omni_app/modules/customers/customers_module.dart';
 import 'package:omni_app/modules/customers/domain/customer.dart';
+import 'package:omni_app/modules/customers/presentation/customer_form_page.dart';
 import 'package:omni_app/modules/customers/presentation/customers_page.dart';
 import 'package:omni_app/modules/opportunities/application/opportunities_providers.dart';
 import 'package:omni_app/modules/opportunities/data/opportunities_api.dart';
@@ -31,6 +32,9 @@ import '../../support/fixed_background.dart';
 
 class _FakeApi implements CustomersApi {
   final queries = <Map<String, dynamic>>[];
+  Customer? created;
+  DuplicateMatch? duplicate;
+  int createCalls = 0;
 
   @override
   Future<Paged<Customer>> list({
@@ -56,6 +60,24 @@ class _FakeApi implements CustomersApi {
         total: 2,
       ),
     );
+  }
+
+  @override
+  Future<DuplicateMatch?> checkDuplicate({
+    String? phone,
+    String? email,
+  }) async => duplicate;
+
+  @override
+  Future<Customer> create(Customer draft) async {
+    createCalls++;
+    created = draft;
+    return Customer.fromJson({
+      'id': 'new-customer',
+      'display_name': draft.name,
+      'primary_contact_phone': draft.phone,
+      'metadata': {'source': 'zalo'},
+    });
   }
 
   @override
@@ -108,28 +130,38 @@ void main() {
 
   const readAll = ResourceAccess(readScope: AccessScope.all);
 
-  testWidgets('có quyền + cờ bật → thanh đoạn với số; chạm "Cơ hội" → dải giai '
-      'đoạn', (t) async {
-    await t.pumpWidget(host(oppAccess: readAll));
-    await t.pumpAndSettle();
-    expect(find.byType(OmniSegmented), findsOneWidget);
-    expect(find.text('Khách hàng · 2'), findsOneWidget);
-    expect(find.text('Cơ hội · 7'), findsOneWidget);
-    expect(find.text('An Nguyễn'), findsOneWidget);
+  testWidgets(
+    'có quyền + cờ bật → loại dữ liệu nằm trong bộ lọc; chọn "Cơ hội" '
+    '→ dải giai đoạn',
+    (t) async {
+      await t.pumpWidget(host(oppAccess: readAll));
+      await t.pumpAndSettle();
+      expect(find.byType(OmniSegmented), findsNothing);
+      expect(find.byKey(const Key('customer-filter-menu')), findsNothing);
+      expect(find.text('An Nguyễn'), findsOneWidget);
 
-    await t.tap(find.text('Cơ hội · 7'));
-    await t.pumpAndSettle();
-    expect(find.text('Báo giá'), findsOneWidget);
-    expect(find.textContaining('Đang mở · 7'), findsOneWidget);
-    expect(find.text('An Nguyễn'), findsNothing);
-    // Hàng tìm đổi theo đoạn.
-    expect(find.byTooltip('Thêm khách'), findsNothing);
+      await t.tap(find.bySemanticsLabel('Bộ lọc'));
+      await t.pumpAndSettle();
+      expect(find.byKey(const Key('customer-filter-menu')), findsOneWidget);
+      expect(find.text('Khách hàng · 2'), findsOneWidget);
+      expect(find.text('Cơ hội · 7'), findsOneWidget);
 
-    await t.tap(find.text('Khách hàng · 2'));
-    await t.pumpAndSettle();
-    expect(find.text('An Nguyễn'), findsOneWidget);
-    expect(find.text('Báo giá'), findsNothing);
-  });
+      await t.tap(find.text('Cơ hội · 7'));
+      await t.pumpAndSettle();
+      expect(find.text('Báo giá'), findsOneWidget);
+      expect(find.textContaining('Đang mở · 7'), findsOneWidget);
+      expect(find.text('An Nguyễn'), findsNothing);
+      // Hàng tìm đổi theo đoạn.
+      expect(find.byTooltip('Thêm khách'), findsNothing);
+
+      await t.tap(find.bySemanticsLabel('Bộ lọc'));
+      await t.pumpAndSettle();
+      await t.tap(find.text('Khách hàng · 2'));
+      await t.pumpAndSettle();
+      expect(find.text('An Nguyễn'), findsOneWidget);
+      expect(find.text('Báo giá'), findsNothing);
+    },
+  );
 
   testWidgets('initialSegment=1 (?seg=co-hoi) mở thẳng đoạn Cơ hội', (t) async {
     await t.pumpWidget(host(oppAccess: readAll, initialSegment: 1));
@@ -225,7 +257,7 @@ void main() {
     expect(find.text('Hồ sơ'), findsNothing);
   });
 
-  testWidgets('nút lọc: 0 ở mặc định; chọn VIP → 1 và API nhận WARM', (
+  testWidgets('nút lọc: mặc định không hiện 0; chọn VIP → 1 và API nhận WARM', (
     t,
   ) async {
     await t.pumpWidget(host());
@@ -234,7 +266,7 @@ void main() {
       of: find.byKey(const Key('customer-filter-count')),
       matching: find.text(n),
     );
-    expect(count('0'), findsOneWidget);
+    expect(find.byKey(const Key('customer-filter-count')), findsNothing);
 
     await t.tap(find.bySemanticsLabel('Bộ lọc'));
     await t.pumpAndSettle();
@@ -269,6 +301,118 @@ void main() {
     await t.pumpWidget(host());
     await t.pumpAndSettle();
     expect(find.byTooltip('Thêm khách'), findsOneWidget);
+  });
+
+  testWidgets('dấu + mở form đầy đủ tại chỗ và lưu không chuyển trang', (
+    t,
+  ) async {
+    await t.pumpWidget(host());
+    await t.pumpAndSettle();
+
+    await t.tap(find.byTooltip('Thêm khách'));
+    await t.pumpAndSettle();
+    expect(find.byKey(const Key('customer-create-dialog')), findsOneWidget);
+    expect(
+      find.text('Điền thông tin hồ sơ ngay tại danh sách'),
+      findsOneWidget,
+    );
+    expect(find.byType(CustomerFormPage), findsNothing);
+
+    await t.enterText(find.byKey(const Key('customer-form-name')), 'Mai Anh');
+    await t.enterText(
+      find.byKey(const Key('customer-form-phone')),
+      '0901234567',
+    );
+    await t.pump(const Duration(milliseconds: 600));
+    await t.pumpAndSettle();
+    await t.tap(find.byKey(const Key('customer-form-save')));
+    await t.pumpAndSettle();
+
+    expect(api.created?.name, 'Mai Anh');
+    expect(api.created?.phone, '0901234567');
+    expect(find.byKey(const Key('customer-create-dialog')), findsNothing);
+    expect(find.text('Đã thêm Mai Anh.'), findsOneWidget);
+    expect(find.byType(CustomerFormPage), findsNothing);
+  });
+
+  testWidgets('form đầy đủ chặn tạo trùng và không mất dữ liệu khi chạm nền', (
+    t,
+  ) async {
+    api.duplicate = const DuplicateMatch(id: 'existing', name: 'Khách đã có');
+    await t.pumpWidget(host());
+    await t.pumpAndSettle();
+    await t.tap(find.byTooltip('Thêm khách'));
+    await t.pumpAndSettle();
+    await t.enterText(find.byKey(const Key('customer-form-name')), 'Khách mới');
+    await t.enterText(
+      find.byKey(const Key('customer-form-phone')),
+      '0901234567',
+    );
+    await t.pump(const Duration(milliseconds: 600));
+    await t.pumpAndSettle();
+
+    expect(find.textContaining('Số điện thoại này đã tồn tại'), findsOneWidget);
+    expect(find.textContaining('Khách đã có'), findsOneWidget);
+    final save = t.widget<FilledButton>(
+      find.byKey(const Key('customer-form-save')),
+    );
+    expect(save.onPressed, isNull);
+
+    await t.tapAt(const Offset(8, 500));
+    await t.pumpAndSettle();
+    expect(find.byKey(const Key('customer-create-dialog')), findsOneWidget);
+    expect(find.text('Khách mới'), findsOneWidget);
+  });
+
+  testWidgets('modal cân bốn cạnh và chứa đầy đủ trường khách hàng', (t) async {
+    t.view.physicalSize = const Size(390, 844);
+    t.view.devicePixelRatio = 1;
+    addTearDown(t.view.reset);
+    await t.pumpWidget(host());
+    await t.pumpAndSettle();
+    await t.tap(find.byTooltip('Thêm khách'));
+    await t.pumpAndSettle();
+
+    final rect = t.getRect(find.byKey(const Key('customer-create-dialog')));
+    expect(rect.left, 16);
+    expect(390 - rect.right, 16);
+    expect(rect.top, 16);
+    expect(844 - rect.bottom, 16);
+    expect(find.byKey(const Key('customer-form-name')), findsOneWidget);
+    expect(find.byKey(const Key('customer-form-contact')), findsOneWidget);
+    expect(find.byKey(const Key('customer-form-phone')), findsOneWidget);
+
+    await t.drag(
+      find.byType(ListView).last,
+      const Offset(0, -700),
+      warnIfMissed: false,
+    );
+    await t.pumpAndSettle();
+    expect(find.byKey(const Key('customer-form-email')), findsOneWidget);
+    expect(find.byKey(const Key('customer-form-address')), findsOneWidget);
+    expect(find.byKey(const Key('customer-form-note')), findsOneWidget);
+    expect(find.text('Nguồn khách'), findsOneWidget);
+    expect(find.text('Trạng thái'), findsOneWidget);
+  });
+
+  testWidgets('double tap lưu chỉ tạo một khách hàng', (t) async {
+    await t.pumpWidget(host());
+    await t.pumpAndSettle();
+    await t.tap(find.byTooltip('Thêm khách'));
+    await t.pumpAndSettle();
+    await t.enterText(find.byKey(const Key('customer-form-name')), 'Mai Anh');
+    await t.enterText(
+      find.byKey(const Key('customer-form-phone')),
+      '0901234567',
+    );
+    await t.pump(const Duration(milliseconds: 600));
+    await t.pumpAndSettle();
+
+    final save = find.byKey(const Key('customer-form-save'));
+    await t.tap(save, warnIfMissed: false);
+    await t.tap(save, warnIfMissed: false);
+    await t.pumpAndSettle();
+    expect(api.createCalls, 1);
   });
 
   test('activeCountFor: mặc định theo phạm vi tính 0', () {

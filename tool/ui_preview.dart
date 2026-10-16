@@ -301,6 +301,7 @@ class _StubTasksApi implements TasksApi {
     required String title,
     String? projectId,
     String? sectionId,
+    double? order,
     List<String> assigneeIds = const [],
     DateTime? dueDate,
   }) async {
@@ -310,6 +311,7 @@ class _StubTasksApi implements TasksApi {
       'title': title,
       'project_id': projectId,
       'section_id': sectionId,
+      'order': ?order,
       'assignee_ids': assigneeIds,
       'checklist': <Map<String, dynamic>>[],
     };

@@ -133,11 +133,12 @@ class _JumpSimulation extends Simulation {
   bool isDone(double time) => true;
 }
 
-/// Một cột của bảng (`.col`): rãnh bo 8, đầu cột 44 (tên, viên đếm, ⋯),
+/// Một cột của bảng (`.col`): rãnh phẳng, đầu cột 44 (tên, viên đếm, ⋯),
 /// thẻ cuộn dọc TRONG cột, đáy "Thêm công việc".
 ///
-/// Có [drag] thì giữ thẻ ~400ms để nhấc lên và thả sang cột khác; cả cột là
-/// một `DragTarget`, ô chỗ trống chèn tại chỉ số tính từ tâm các thẻ.
+/// Có [drag] thì giữ thẻ ~400ms để nhấc lên và thả trong cùng cột hoặc sang
+/// cột khác; cả cột là một `DragTarget`, ô chỗ trống chèn tại chỉ số tính từ
+/// tâm các thẻ.
 class BoardColumn extends StatefulWidget {
   const BoardColumn({
     super.key,
@@ -153,6 +154,7 @@ class BoardColumn extends StatefulWidget {
     this.canDrag = _never,
     this.onDragUpdate,
     this.onDragEnd,
+    this.liftable,
   });
 
   static bool _never(Task _) => false;
@@ -170,8 +172,9 @@ class BoardColumn extends StatefulWidget {
   /// null = không có quyền tạo việc: ẩn "Thêm công việc".
   final VoidCallback? onAddTask;
 
-  /// null = không sửa được nhóm việc: ẩn ⋯.
-  final VoidCallback? onOptions;
+  /// null = không sửa được nhóm việc: ẩn ⋯. Khi chạm, trả vùng của nút để
+  /// menu nổi neo đúng tại nơi người dùng vừa thao tác.
+  final ValueChanged<Rect>? onOptions;
 
   /// Vị trí của cột trên bảng, để [drag] biết đích là cột nào.
   final int columnIndex;
@@ -187,6 +190,11 @@ class BoardColumn extends StatefulWidget {
 
   /// Kết thúc kéo (thả hay huỷ).
   final VoidCallback? onDragEnd;
+
+  /// false = tạm chưa cho nhấc thẻ (một lượt thả còn chờ server). null = luôn
+  /// cho. Nghe riêng ở lớp `LongPressDraggable` của từng thẻ, nên bật/tắt
+  /// không dựng lại thẻ.
+  final ValueListenable<bool>? liftable;
 
   @override
   State<BoardColumn> createState() => _BoardColumnState();
@@ -221,7 +229,12 @@ class _BoardColumnState extends State<BoardColumn> {
     final ids = {for (final t in widget.tasks) t.id};
     _keys.removeWhere((id, _) => !ids.contains(id));
     _gapKeys.removeWhere((i, _) => i > widget.tasks.length);
-    if (old.canComplete != widget.canComplete || old.drag != widget.drag) {
+    // Thẻ cache giữ `drag.column(columnIndex)` (bóng mờ ở cột nguồn) và
+    // [BoardColumn.liftable]: đổi một trong chúng là dựng lại thẻ.
+    if (old.canComplete != widget.canComplete ||
+        old.drag != widget.drag ||
+        old.columnIndex != widget.columnIndex ||
+        old.liftable != widget.liftable) {
       _cards.clear();
     } else {
       _cards.removeWhere((id, _) => !ids.contains(id));
@@ -262,6 +275,49 @@ class _BoardColumnState extends State<BoardColumn> {
         : 0;
   }
 
+  /// Chỉ số (trong [BoardColumn.tasks]) của thẻ đang được nhấc TỪ cột này;
+  /// −1 nếu lượt kéo không bắt đầu ở đây.
+  int _lifted() {
+    final drag = widget.drag;
+    final id = drag?.task?.id;
+    if (drag == null || id == null || drag.fromColumn != widget.columnIndex) {
+      return -1;
+    }
+
+    return widget.tasks.indexWhere((t) => t.id == id);
+  }
+
+  /// Thẻ nhấc từ cột này đang được rê trong chính nó: bóng mờ của nó gập lại
+  /// (cùng khoảng 8 phía trên), chỉ còn đúng một ô chỗ trống. −1 nếu không.
+  int _collapsed(BoardColumnDrop drop) => drop.hot ? _lifted() : -1;
+
+  /// Khe mở cho chỗ chèn [BoardColumnDrop.slot]. Chỗ chèn đếm trên cột ĐÃ bỏ
+  /// thẻ đang kéo; ở cột nguồn, từ vị trí của thẻ ấy trở đi lệch một khe.
+  int? _gapFor(BoardColumnDrop drop) {
+    final slot = drop.slot;
+    if (slot == null) return null;
+    final f = _collapsed(drop);
+
+    return f >= 0 && slot >= f ? slot + 1 : slot;
+  }
+
+  /// Khoảng trên thẻ thứ [i]: 8 nếu phía trên còn thẻ thấy được.
+  double _spaceAbove(int i, BoardColumnDrop drop) {
+    if (i == 0) return 0;
+    final f = _collapsed(drop);
+    if (f == i || (f == 0 && i == 1)) return 0;
+
+    return 8;
+  }
+
+  /// Khe cuối cần khoảng 8 phía trên khi trong cột còn thẻ thấy được.
+  bool _hasVisibleCards(BoardColumnDrop drop) {
+    final n = widget.tasks.length;
+    if (n == 0) return false;
+
+    return !(n == 1 && _collapsed(drop) == 0);
+  }
+
   /// Chỗ chèn theo con trỏ Y toàn cục: số thẻ có tâm "lúc nghỉ" nằm trên nó,
   /// có vùng đệm (xem [dropIndexWithHysteresis]). Bỏ thẻ đang kéo; thẻ chưa
   /// dựng (cuộn ra xa) coi như nằm trên hay dưới tuỳ vị trí.
@@ -273,10 +329,20 @@ class _BoardColumnState extends State<BoardColumn> {
     // con trỏ đứng yên thì chỗ chèn không nhảy qua lại.
     var gapAbove = 0.0;
     final tasks = widget.tasks;
+    final hot = widget.drag?.column(widget.columnIndex).value.hot ?? false;
     for (var i = 0; i < tasks.length; i++) {
       final task = tasks[i];
       gapAbove += _gapHeight(i);
-      if (task.id == dragged.id) continue;
+      if (task.id == dragged.id) {
+        // Cột nguồn: lúc nghỉ (cột là đích) bóng mờ đã gập cả khoảng 8 phía
+        // trên. Trừ phần nó còn chiếm — kể cả khi đang gập dở.
+        final ghost = _keys[task.id]?.currentContext?.findRenderObject();
+        if (ghost is RenderBox && ghost.attached && ghost.hasSize) {
+          gapAbove += ghost.size.height;
+        }
+        if (!hot && tasks.length > 1) gapAbove += 8;
+        continue;
+      }
       final box = _keys[task.id]?.currentContext?.findRenderObject();
       if (box is RenderBox && box.attached && box.hasSize) {
         seenBuilt = true;
@@ -345,11 +411,28 @@ class _BoardColumnState extends State<BoardColumn> {
     if (!canDrag) {
       return KeyedSubtree(key: _keyOf(task.id), child: card);
     }
+    final feedback = BoardDragFeedback(task: task, controller: drag);
+    final ghost = _LiftedGhost(
+      drop: drag.column(widget.columnIndex),
+      child: Opacity(
+        opacity: .3,
+        child: IgnorePointer(
+          child: BoardTaskCard(
+            task: task,
+            rise: false,
+            canComplete: widget.canComplete,
+            onTap: () {},
+          ),
+        ),
+      ),
+    );
 
-    return LongPressDraggable<Task>(
+    Widget draggable(bool enabled) => LongPressDraggable<Task>(
       key: _keyOf(task.id),
       data: task,
       delay: const Duration(milliseconds: 400),
+      // 0 = không nhấc được, mà không đổi cấu trúc cây (thẻ giữ phần tử).
+      maxSimultaneousDrags: enabled ? null : 0,
       // Không dùng `feedbackOffset`: nó dời cả điểm dò cột đích đi theo bản
       // nổi (hit-test ở `con trỏ + feedbackOffset`). Neo kiểu này dời riêng
       // bản nổi, còn cột đích vẫn dò ngay dưới ngón tay.
@@ -364,19 +447,17 @@ class _BoardColumnState extends State<BoardColumn> {
         widget.onDragUpdate?.call(details.globalPosition);
       },
       onDragEnd: (_) => widget.onDragEnd?.call(),
-      feedback: BoardDragFeedback(task: task, controller: drag),
-      childWhenDragging: Opacity(
-        opacity: .3,
-        child: IgnorePointer(
-          child: BoardTaskCard(
-            task: task,
-            rise: false,
-            canComplete: widget.canComplete,
-            onTap: () {},
-          ),
-        ),
-      ),
+      feedback: feedback,
+      childWhenDragging: ghost,
       child: card,
+    );
+
+    final liftable = widget.liftable;
+    if (liftable == null) return draggable(true);
+
+    return ValueListenableBuilder<bool>(
+      valueListenable: liftable,
+      builder: (_, enabled, _) => draggable(enabled),
     );
   }
 
@@ -387,7 +468,9 @@ class _BoardColumnState extends State<BoardColumn> {
     final dropOf = drag?.column(widget.columnIndex) ?? const _IdleDrop();
 
     // Ô chỗ trống là các khe gắn trước mỗi thẻ (và một khe cuối cột): số mục
-    // không đổi khi kéo, chỉ số không dịch, khoá của thẻ không đổi chỗ.
+    // không đổi khi kéo, chỉ số không dịch, khoá của thẻ không đổi chỗ. Kéo
+    // trong cùng cột thì bóng mờ gập lại ([_LiftedGhost]) chứ không bỏ thẻ
+    // khỏi danh sách, nên cũng không mục nào đổi chỗ.
     final cards = ListView.builder(
       shrinkWrap: true,
       padding: const EdgeInsets.symmetric(horizontal: 8),
@@ -398,18 +481,25 @@ class _BoardColumnState extends State<BoardColumn> {
             key: _gapKeyOf(i),
             drop: dropOf,
             index: i,
+            gapOf: _gapFor,
             last: true,
-            hasCards: tasks.isNotEmpty,
+            hasCards: _hasVisibleCards,
           );
         }
 
-        return Padding(
-          padding: EdgeInsets.only(top: i == 0 ? 0 : 8),
+        return _CardSpacing(
+          drop: dropOf,
+          spaceOf: (drop) => _spaceAbove(i, drop),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              _SlotGap(key: _gapKeyOf(i), drop: dropOf, index: i),
+              _SlotGap(
+                key: _gapKeyOf(i),
+                drop: dropOf,
+                index: i,
+                gapOf: _gapFor,
+              ),
               RepaintBoundary(child: _cardFor(tasks[i], i)),
             ],
           ),
@@ -500,13 +590,13 @@ class _ColumnDropBuilder extends ValueListenableBuilder<BoardColumnDrop> {
         ? const Duration(milliseconds: 200)
         : Duration.zero;
 
+    // Rãnh phẳng, không bo góc (bản 0.1.6 đã duyệt).
     return AnimatedContainer(
       duration: duration,
       decoration: BoxDecoration(
         color: hot
             ? OmniTaskTones.of(context).today.background
             : scheme.surfaceContainerHighest,
-        borderRadius: BorderRadius.circular(8),
       ),
       child: Stack(
         fit: StackFit.passthrough,
@@ -518,7 +608,6 @@ class _ColumnDropBuilder extends ValueListenableBuilder<BoardColumnDrop> {
                 key: const Key('column-drop-border'),
                 duration: duration,
                 decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(8),
                   border: Border.all(
                     color: hot ? scheme.primary : Colors.transparent,
                     width: 2,
@@ -533,6 +622,120 @@ class _ColumnDropBuilder extends ValueListenableBuilder<BoardColumnDrop> {
   }
 }
 
+/// Khoảng phía trên một thẻ ([spaceOf]): 8, hoặc 0 khi thẻ phía trên (hay
+/// chính thẻ này) là bóng mờ đã gập. Chỉ dựng lại khi khoảng ĐỔI — tức lúc
+/// cột nguồn thành/thôi là đích — không phải mỗi lần đổi chỗ chèn.
+class _CardSpacing extends StatefulWidget {
+  const _CardSpacing({
+    required this.drop,
+    required this.spaceOf,
+    required this.child,
+  });
+
+  final ValueListenable<BoardColumnDrop> drop;
+  final double Function(BoardColumnDrop drop) spaceOf;
+  final Widget child;
+
+  @override
+  State<_CardSpacing> createState() => _CardSpacingState();
+}
+
+class _CardSpacingState extends State<_CardSpacing> {
+  late double _space = widget.spaceOf(widget.drop.value);
+
+  void _changed() {
+    final space = widget.spaceOf(widget.drop.value);
+    if (space != _space) setState(() => _space = space);
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    widget.drop.addListener(_changed);
+  }
+
+  @override
+  void didUpdateWidget(_CardSpacing old) {
+    super.didUpdateWidget(old);
+    if (old.drop != widget.drop) {
+      old.drop.removeListener(_changed);
+      widget.drop.addListener(_changed);
+    }
+    _space = widget.spaceOf(widget.drop.value);
+  }
+
+  @override
+  void dispose() {
+    widget.drop.removeListener(_changed);
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: EdgeInsets.only(top: _space),
+    child: widget.child,
+  );
+}
+
+/// Bóng mờ ở chỗ cũ của thẻ đang kéo. Khi thẻ được rê trong CHÍNH cột nguồn
+/// (cột là đích), bóng gập về 0 để chỉ còn một ô chỗ trống ở vị trí mới; rời
+/// cột thì mở lại. Gập/mở trượt 150ms như khe; giảm chuyển động thì tức thì.
+class _LiftedGhost extends StatefulWidget {
+  const _LiftedGhost({required this.drop, required this.child});
+
+  final ValueListenable<BoardColumnDrop> drop;
+  final Widget child;
+
+  @override
+  State<_LiftedGhost> createState() => _LiftedGhostState();
+}
+
+class _LiftedGhostState extends State<_LiftedGhost> {
+  late bool _collapsed = widget.drop.value.hot;
+
+  void _changed() {
+    final collapsed = widget.drop.value.hot;
+    if (collapsed != _collapsed) setState(() => _collapsed = collapsed);
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    widget.drop.addListener(_changed);
+  }
+
+  @override
+  void didUpdateWidget(_LiftedGhost old) {
+    super.didUpdateWidget(old);
+    if (old.drop != widget.drop) {
+      old.drop.removeListener(_changed);
+      widget.drop.addListener(_changed);
+    }
+    _collapsed = widget.drop.value.hot;
+  }
+
+  @override
+  void dispose() {
+    widget.drop.removeListener(_changed);
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final child = _collapsed
+        ? const SizedBox(width: double.infinity)
+        : widget.child;
+    if (!OmniMotion.enabled(context)) return child;
+
+    return AnimatedSize(
+      duration: const Duration(milliseconds: 150),
+      curve: OmniCurves.standard,
+      alignment: Alignment.topCenter,
+      child: child,
+    );
+  }
+}
+
 /// Khe chèn thứ [index] của cột: cao 0 khi đóng, mở thành ô chỗ trống viền
 /// đứt cao 64 (+ khoảng 8) khi chỗ chèn là nó. Mở/đóng trượt 150ms, nên các
 /// thẻ phía sau trượt chứ không nhảy; giảm chuyển động thì tức thì.
@@ -543,9 +746,12 @@ class _SlotGap extends StatefulWidget {
     super.key,
     required this.drop,
     required this.index,
+    required this.gapOf,
     this.last = false,
-    this.hasCards = true,
+    this.hasCards = _always,
   });
+
+  static bool _always(BoardColumnDrop _) => true;
 
   /// Chiều cao ô chỗ trống.
   static const double height = 64;
@@ -553,12 +759,15 @@ class _SlotGap extends StatefulWidget {
   final ValueListenable<BoardColumnDrop> drop;
   final int index;
 
+  /// Khe nào đang mở theo trạng thái kéo của cột (null: không khe nào).
+  final int? Function(BoardColumnDrop drop) gapOf;
+
   /// Khe cuối cột (sau thẻ cuối): khoảng 8 nằm TRÊN ô, và chỗ chèn vượt cuối
   /// cũng mở nó.
   final bool last;
 
-  /// Cột có thẻ (khe cuối mới cần khoảng 8 phía trên).
-  final bool hasCards;
+  /// Cột còn thẻ thấy được (khe cuối mới cần khoảng 8 phía trên).
+  final bool Function(BoardColumnDrop drop) hasCards;
 
   @override
   State<_SlotGap> createState() => _SlotGapState();
@@ -566,17 +775,28 @@ class _SlotGap extends StatefulWidget {
 
 class _SlotGapState extends State<_SlotGap> {
   late bool _open = _isOpen();
+  late bool _lead = _hasLead();
 
   bool _isOpen() {
-    final slot = widget.drop.value.slot;
-    if (slot == null) return false;
+    final gap = widget.gapOf(widget.drop.value);
+    if (gap == null) return false;
 
-    return widget.last ? slot >= widget.index : slot == widget.index;
+    return widget.last ? gap >= widget.index : gap == widget.index;
   }
+
+  bool _hasLead() => widget.last && widget.hasCards(widget.drop.value);
 
   void _changed() {
     final open = _isOpen();
-    if (open != _open) setState(() => _open = open);
+    final lead = _hasLead();
+    if (open != _open || (open && lead != _lead)) {
+      setState(() {
+        _open = open;
+        _lead = lead;
+      });
+    } else {
+      _lead = lead;
+    }
   }
 
   @override
@@ -593,6 +813,7 @@ class _SlotGapState extends State<_SlotGap> {
       widget.drop.addListener(_changed);
     }
     _open = _isOpen();
+    _lead = _hasLead();
   }
 
   @override
@@ -606,7 +827,7 @@ class _SlotGapState extends State<_SlotGap> {
     final child = _open
         ? Padding(
             padding: widget.last
-                ? EdgeInsets.only(top: widget.hasCards ? 8 : 0)
+                ? EdgeInsets.only(top: _lead ? 8 : 0)
                 : const EdgeInsets.only(bottom: 8),
             child: const OmniDashedBox(
               key: Key('drop-placeholder'),
@@ -632,7 +853,7 @@ class _Header extends StatelessWidget {
 
   final String name;
   final int count;
-  final VoidCallback? onOptions;
+  final ValueChanged<Rect>? onOptions;
 
   @override
   Widget build(BuildContext context) {
@@ -682,23 +903,29 @@ class _Header extends StatelessWidget {
             ),
             if (onOptions != null) ...[
               const SizedBox(width: 8),
-              IconButton(
-                tooltip: 'Tuỳ chọn nhóm việc',
-                onPressed: onOptions,
-                padding: EdgeInsets.zero,
-                constraints: const BoxConstraints.tightFor(
-                  width: 44,
-                  height: 44,
-                ),
-                style: IconButton.styleFrom(
-                  shape: const RoundedRectangleBorder(
-                    borderRadius: BorderRadius.all(Radius.circular(6)),
+              Builder(
+                builder: (buttonContext) => IconButton(
+                  tooltip: 'Tuỳ chọn nhóm việc',
+                  onPressed: () {
+                    final box = buttonContext.findRenderObject() as RenderBox?;
+                    if (box == null || !box.hasSize) return;
+                    onOptions!(box.localToGlobal(Offset.zero) & box.size);
+                  },
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints.tightFor(
+                    width: 44,
+                    height: 44,
                   ),
-                ),
-                icon: Icon(
-                  Icons.more_horiz_rounded,
-                  size: OmniIconSize.md,
-                  color: scheme.onSurfaceVariant,
+                  style: IconButton.styleFrom(
+                    shape: const RoundedRectangleBorder(
+                      borderRadius: BorderRadius.all(Radius.circular(6)),
+                    ),
+                  ),
+                  icon: Icon(
+                    Icons.more_horiz_rounded,
+                    size: OmniIconSize.md,
+                    color: scheme.onSurfaceVariant,
+                  ),
                 ),
               ),
             ],

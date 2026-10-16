@@ -8,9 +8,10 @@ import '../../../../design/tokens/tokens.dart';
 import '../../application/plans_providers.dart';
 import '../../domain/plan.dart';
 import 'plan_tile.dart';
+import 'project_cover.dart';
 
-/// Một team gập/mở được (`Main.dc.html .grp`): khung surface viền bo 8, đầu
-/// nhóm 48 (ô 28 màu team, tên, "N kế hoạch", mũi tên xoay 180° khi mở), rồi
+/// Một team gập/mở được: section phẳng, đầu nhóm 48 (biểu tượng team, tên,
+/// "N kế hoạch", mũi tên xoay 180° khi mở), rồi
 /// các dòng kế hoạch.
 ///
 /// [plans] là danh sách ĐÃ LỌC theo ô tìm; "N kế hoạch" luôn đếm cả team.
@@ -27,10 +28,14 @@ class TeamGroup extends StatelessWidget {
     this.closedOpen = false,
     this.onToggleClosed,
     this.onLongPress,
+    this.onLongPressPlan,
+    this.canLongPressPlan,
     this.index = 0,
     this.rise = true,
     this.favoriteOf,
     this.onToggleFavorite,
+    this.canDragPlan,
+    this.onMovePlan,
   });
 
   final TeamWithPlans group;
@@ -47,6 +52,12 @@ class TeamGroup extends StatelessWidget {
 
   /// Bấm giữ đầu nhóm: "Tuỳ chọn team" (Xoá team). Null thì không có.
   final VoidCallback? onLongPress;
+
+  /// Bấm giữ một kế hoạch: mở thẳng thao tác của chính kế hoạch đó.
+  final ValueChanged<Plan>? onLongPressPlan;
+
+  /// Quyền long-press có thể khác nhau theo từng kế hoạch trong cùng team.
+  final bool Function(Plan plan)? canLongPressPlan;
   final int index;
 
   /// false = hiện ngay. Tab Việc chỉ cho nhóm "rise" ở lần dựng ĐẦU của màn;
@@ -60,16 +71,74 @@ class TeamGroup extends StatelessWidget {
   /// Bấm sao (Nhóm 2). null = không có sao (API cũ hoặc không bấm được).
   final ValueChanged<Plan>? onToggleFavorite;
 
-  Widget _tile(Plan plan) => PlanTile(
-    plan: plan,
-    onTap: () => onOpenPlan(plan),
-    favorite: favoriteOf?.call(plan),
-    onToggleFavorite: onToggleFavorite == null
-        ? null
-        : () => onToggleFavorite!(plan),
-  );
+  /// Dự án chỉ nhấc được khi người dùng có quyền quản lý chính dự án đó.
+  final bool Function(Plan plan)? canDragPlan;
 
-  /// Màu ô của team: `color` do server lưu, thiếu hay sai thì xám phụ.
+  /// Thả dự án vào team này. null = team tổng hợp không nhận thả.
+  final ValueChanged<Plan>? onMovePlan;
+
+  Widget _tile(Plan plan) {
+    final canOpenActions =
+        onLongPressPlan != null && (canLongPressPlan?.call(plan) ?? true);
+    final tile = PlanTile(
+      plan: plan,
+      nested: true,
+      onTap: () => onOpenPlan(plan),
+      favorite: favoriteOf?.call(plan),
+      onActions: canOpenActions ? () => onLongPressPlan!(plan) : null,
+      onToggleFavorite: onToggleFavorite == null
+          ? null
+          : () => onToggleFavorite!(plan),
+    );
+    if (canDragPlan?.call(plan) != true || onMovePlan == null) return tile;
+
+    return LongPressDraggable<Plan>(
+      data: plan,
+      delay: const Duration(milliseconds: 400),
+      feedback: Material(
+        elevation: 8,
+        borderRadius: OmniRadius.mdAll,
+        color: Colors.transparent,
+        child: Container(
+          width: 240,
+          height: 48,
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: OmniRadius.mdAll,
+            boxShadow: const [
+              BoxShadow(
+                color: Color(0x29000000),
+                blurRadius: 18,
+                offset: Offset(0, 6),
+              ),
+            ],
+          ),
+          child: Row(
+            children: [
+              ProjectCoverMarker(cover: plan.cover, color: plan.color),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  plan.name,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: OmniType.bodySm.copyWith(
+                    fontWeight: FontWeight.w600,
+                    color: OmniColors.ink,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+      childWhenDragging: Opacity(opacity: .32, child: tile),
+      child: tile,
+    );
+  }
+
+  /// Màu team do server lưu, dùng ở các bề mặt thực sự cần phân biệt màu.
   static Color colorOf(String? raw) {
     return OmniLabelColors.tryParseHex(raw) ?? OmniColors.mutedForeground;
   }
@@ -80,17 +149,12 @@ class TeamGroup extends StatelessWidget {
     final motion = OmniMotion.enabled(context);
     const radius = BorderRadius.all(Radius.circular(8));
 
-    return OmniRise(
+    final card = OmniRise(
       // Trần 6 bước: nhóm thứ 20 không phải chờ cả giây mới hiện.
       delay: OmniRise.step * math.min(index, 6),
       animate: rise,
       child: Material(
         color: scheme.surface,
-        shape: RoundedRectangleBorder(
-          borderRadius: radius,
-          side: BorderSide(color: scheme.outlineVariant),
-        ),
-        clipBehavior: Clip.antiAlias,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -104,13 +168,17 @@ class TeamGroup extends StatelessWidget {
                   onLongPress: onLongPress,
                   child: Container(
                     constraints: const BoxConstraints(minHeight: 48),
-                    padding: const EdgeInsets.fromLTRB(12, 0, 6, 0),
+                    padding: const EdgeInsets.fromLTRB(16, 0, 10, 0),
+                    color: scheme.surfaceContainerLow.withValues(alpha: .55),
                     child: Row(
                       children: [
-                        InitialTile(
-                          tileKey: const Key('team-group-swatch'),
-                          name: group.team.name,
-                          color: colorOf(group.team.color),
+                        ExcludeSemantics(
+                          child: Icon(
+                            Icons.groups_2_outlined,
+                            key: const Key('team-group-icon'),
+                            size: OmniIconSize.md,
+                            color: scheme.primary,
+                          ),
                         ),
                         const SizedBox(width: 10),
                         Expanded(
@@ -167,10 +235,7 @@ class TeamGroup extends StatelessWidget {
                 // lỗi tải. Cũng là chỗ duy nhất team rỗng còn hiện để xoá.
                 Container(
                   width: double.infinity,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 14,
-                  ),
+                  padding: const EdgeInsets.fromLTRB(40, 14, 16, 14),
                   decoration: BoxDecoration(
                     border: Border(
                       top: BorderSide(color: scheme.surfaceContainerHighest),
@@ -187,6 +252,29 @@ class TeamGroup extends StatelessWidget {
             ],
           ],
         ),
+      ),
+    );
+
+    if (onMovePlan == null) return card;
+    return DragTarget<Plan>(
+      onWillAcceptWithDetails: (details) =>
+          details.data.teamId != group.team.id,
+      onAcceptWithDetails: (details) => onMovePlan!(details.data),
+      builder: (context, candidates, _) => AnimatedContainer(
+        duration: motion ? const Duration(milliseconds: 160) : Duration.zero,
+        decoration: BoxDecoration(
+          borderRadius: radius,
+          boxShadow: candidates.isEmpty
+              ? null
+              : [
+                  BoxShadow(
+                    color: scheme.primary.withValues(alpha: .28),
+                    blurRadius: 0,
+                    spreadRadius: 2,
+                  ),
+                ],
+        ),
+        child: card,
       ),
     );
   }
@@ -215,7 +303,7 @@ class _ClosedToggle extends StatelessWidget {
         child: Container(
           key: const Key('team-closed-toggle'),
           constraints: const BoxConstraints(minHeight: 44),
-          padding: const EdgeInsets.fromLTRB(12, 0, 6, 0),
+          padding: const EdgeInsets.fromLTRB(40, 0, 6, 0),
           decoration: BoxDecoration(
             border: Border(
               top: BorderSide(color: scheme.surfaceContainerHighest),

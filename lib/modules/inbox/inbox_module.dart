@@ -68,6 +68,7 @@ class InboxModule extends OmniModule {
       access: const AccessRequirement.any(InboxPermissions.anyRead),
       feature: 'inbox',
       badge: inboxUnreadBadgeProvider,
+      badgeDisplay: NavBadgeDisplay.dot,
     ),
   ];
 }

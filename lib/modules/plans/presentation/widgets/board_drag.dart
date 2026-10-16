@@ -6,8 +6,9 @@ import '../../../../design/tokens/tokens.dart';
 import '../../../tasks/domain/task.dart';
 
 /// Trạng thái kéo mà MỘT cột cần: nó có đang là cột đích không ([hot]), và ô
-/// chỗ trống nằm ở chỉ số nào trong nó ([slot]). [slot] null ở cột nguồn và
-/// ở cột không phải đích.
+/// chỗ trống nằm ở chỉ số nào trong nó ([slot], đếm trên cột đã bỏ thẻ đang
+/// kéo). [slot] null ở cột không phải đích; cột nguồn cũng có [slot] khi thẻ
+/// được rê trong chính nó (đổi thứ tự trong nhóm).
 typedef BoardColumnDrop = ({bool hot, int? slot});
 
 /// Trạng thái một lượt kéo thẻ trên bảng: thẻ nào, từ cột nào, đang lơ lửng
@@ -24,10 +25,8 @@ class BoardDragController extends ChangeNotifier {
   ValueListenable<BoardColumnDrop> column(int index) =>
       _columns.putIfAbsent(index, () => ValueNotifier(_stateOf(index)));
 
-  BoardColumnDrop _stateOf(int i) => (
-    hot: targetColumn == i,
-    slot: targetColumn == i && fromColumn != i ? targetIndex : null,
-  );
+  BoardColumnDrop _stateOf(int i) =>
+      (hot: targetColumn == i, slot: targetColumn == i ? targetIndex : null);
 
   /// Gọi sau mỗi lần đổi task/fromColumn/targetColumn/targetIndex.
   void _syncColumns() {

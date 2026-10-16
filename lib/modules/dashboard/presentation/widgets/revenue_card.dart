@@ -68,8 +68,9 @@ class _RevenueCardState extends ConsumerState<RevenueCard> {
       body = const _Skeleton();
     }
     return OmniCard(
-      padding: const EdgeInsets.fromLTRB(12, 12, 12, 10),
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 10),
       background: scheme.surface,
+      flat: true,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [

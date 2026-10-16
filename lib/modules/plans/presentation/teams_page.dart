@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -6,24 +8,25 @@ import '../../../core/error/app_exception.dart';
 import '../../../core/utils/text_search.dart';
 import '../../../design/components/components.dart';
 import '../../../design/tokens/tokens.dart';
-import '../../../security/guard/access_requirement.dart';
 import '../../../security/session/api_capabilities.dart';
 import '../../../security/session/session_controller.dart';
 import '../../tasks/application/tasks_providers.dart';
-import '../../tasks/domain/task_permissions.dart';
+import '../../tasks/tasks.dart' show showTextEditSheet;
 import '../application/plans_providers.dart';
 import '../data/plans_api.dart';
 import '../domain/plan.dart';
 import '../plans_module.dart';
 import 'create_plan_page.dart';
 import 'create_team_page.dart';
+import 'edit_plan_page.dart';
 import 'widgets/create_choice_sheet.dart';
 import 'widgets/favorites_group.dart';
 import 'widgets/team_group.dart';
 import 'widgets/teams_search_row.dart';
+import 'widgets/work_list_actions_sheet.dart';
 
 /// Gốc tab Việc (`Main.dc.html`): các team gập/mở được, mỗi team chứa các kế
-/// hoạch; ô tìm và nút + ở hàng thứ hai của header; thẻ "Dòng việc" ở cuối.
+/// hoạch; ô tìm và nút + ở hàng thứ hai của header.
 ///
 /// Người NHẬN việc mở màn này để xem kế hoạch mình thuộc về. Người GIAO việc
 /// mở nó để trả lời "cây nào đang ở công đoạn nào, tắc ở đâu" — và chỉ họ mới
@@ -43,8 +46,9 @@ class _TeamsPageState extends ConsumerState<TeamsPage> {
   final _search = TextEditingController();
   String _query = '';
 
-  /// Team đang gập, theo id. Mặc định mọi team mở; không nhớ qua phiên.
-  final _collapsed = <String>{};
+  /// Team đang mở, theo id. Mặc định đóng để màn Việc chỉ hiện cấu trúc cấp
+  /// một; người dùng chủ động mở đúng team cần làm.
+  final _expanded = <String>{};
 
   /// Team đang mở dòng "Đã đóng (N)", theo id. Mặc định gập.
   final _closedOpen = <String>{};
@@ -54,11 +58,12 @@ class _TeamsPageState extends ConsumerState<TeamsPage> {
   /// lại hiệu ứng lúc đó đọc như giật.
   bool _introDone = false;
 
-  /// Menu + đang mở: nút + đổi nền mực và xoay thành ×.
+  /// Menu + đang mở: biểu tượng xoay thành × nhưng vẫn giữ kiểu phẳng.
   bool _menuOpen = false;
 
-  /// Mục "Yêu thích" đang mở. Mặc định mở, như bản mẫu.
-  bool _favoritesOpen = true;
+  /// Mục "Yêu thích" cũng đóng mặc định: không có kế hoạch nào tự bung ra
+  /// trước khi người dùng chọn một nhóm.
+  bool _favoritesOpen = false;
 
   /// Sao đã bấm mà cây chưa tải lại (theo id kế hoạch): lạc quan, rồi theo
   /// `is_favorite` server trả; hỏng thì về giá trị trước lượt bấm.
@@ -150,17 +155,17 @@ class _TeamsPageState extends ConsumerState<TeamsPage> {
       }
     });
     final taskAccess = ref.watch(taskAccessProvider);
+    final currentUserId = ref.watch(sessionProvider.select((s) => s.user?.id));
     final access = ref.watch(accessProvider);
     final isAssigner = taskAccess.isAssigner;
     // Cùng quyền mà API đòi ở đường ghi `/teams` — xem `Interfaces/routes.php`.
     final canCreateTeam = access.can('organization.org_units.create');
+    final canUpdateTeam =
+        taskAccess.canUpdate && access.can('organization.org_units.update');
     final canDeleteTeam =
         taskAccess.canDelete && access.can('organization.org_units.delete');
-    final canOpenFeed = const AccessRequirement.any(
-      TaskPermissions.anyRead,
-    ).isSatisfiedBy(access);
-
     return Scaffold(
+      backgroundColor: Theme.of(context).colorScheme.surface,
       appBar: OmniTopBar(
         semanticsTitle: 'Việc',
         bottom: TeamsSearchRow(
@@ -179,8 +184,14 @@ class _TeamsPageState extends ConsumerState<TeamsPage> {
           data: (list) => _list(
             list,
             isAssigner: isAssigner,
+            currentUserId: currentUserId,
+            canUpdateTeam: canUpdateTeam,
             canDeleteTeam: canDeleteTeam,
-            canOpenFeed: canOpenFeed,
+            canMovePlan: (plan) =>
+                taskAccess.canUpdate &&
+                (taskAccess.isAssigner ||
+                    (currentUserId != null &&
+                        plan.roleOf(currentUserId).canManagePlan)),
           ),
         ),
       ),
@@ -190,8 +201,10 @@ class _TeamsPageState extends ConsumerState<TeamsPage> {
   Widget _list(
     List<TeamWithPlans> list, {
     required bool isAssigner,
+    required String? currentUserId,
+    required bool canUpdateTeam,
     required bool canDeleteTeam,
-    required bool canOpenFeed,
+    required bool Function(Plan plan) canMovePlan,
   }) {
     final needle = foldDiacritics(_query.trim());
     final searching = needle.isNotEmpty;
@@ -259,6 +272,30 @@ class _TeamsPageState extends ConsumerState<TeamsPage> {
             PlansModule.board,
             pathParameters: {'id': plan.id},
           ),
+          onLongPressPlan: (plan) {
+            final canEdit = _canEditPlan(
+              plan,
+              isAssigner: isAssigner,
+              currentUserId: currentUserId,
+            );
+            final canDelete = _canDeletePlan(
+              plan,
+              isAssigner: isAssigner,
+              currentUserId: currentUserId,
+            );
+            _planOptions(plan, canEdit: canEdit, canDelete: canDelete);
+          },
+          canLongPressPlan: (plan) =>
+              _canEditPlan(
+                plan,
+                isAssigner: isAssigner,
+                currentUserId: currentUserId,
+              ) ||
+              _canDeletePlan(
+                plan,
+                isAssigner: isAssigner,
+                currentUserId: currentUserId,
+              ),
         ),
       for (var i = 0; i < visible.length; i++)
         () => TeamGroup(
@@ -267,6 +304,12 @@ class _TeamsPageState extends ConsumerState<TeamsPage> {
           rise: !_introDone,
           favoriteOf: _favoriteOf,
           onToggleFavorite: _favoriteSupported ? _toggleFavorite : null,
+          canDragPlan: canMovePlan,
+          // Team tổng hợp do API thiếu/lệch dữ liệu không phải một đích ghi.
+          // Riêng "Chưa xếp team" (id rỗng) là đích hợp lệ để gỡ team.
+          onMovePlan: !visible[i].$1.synthetic || visible[i].$1.team.id.isEmpty
+              ? (plan) => unawaited(_movePlan(plan, visible[i].$1))
+              : null,
           group: visible[i].$1,
           plans: visible[i].$2,
           closed: visible[i].$3,
@@ -281,27 +324,64 @@ class _TeamsPageState extends ConsumerState<TeamsPage> {
                   final id = visible[i].$1.team.id;
                   if (!_closedOpen.remove(id)) _closedOpen.add(id);
                 }),
-          open: searching || !_collapsed.contains(visible[i].$1.team.id),
+          open: searching || _expanded.contains(visible[i].$1.team.id),
           onToggle: () => setState(() {
             final id = visible[i].$1.team.id;
-            if (!_collapsed.remove(id)) _collapsed.add(id);
+            if (!_expanded.remove(id)) _expanded.add(id);
           }),
           onOpenPlan: (plan) => context.pushNamed(
             PlansModule.board,
             pathParameters: {'id': plan.id},
           ),
-          onLongPress: _canDelete(visible[i].$1, canDeleteTeam)
-              ? () => _teamOptions(visible[i].$1)
+          onLongPress:
+              _canUpdateTeam(visible[i].$1, canUpdateTeam) ||
+                  _canDeleteTeam(visible[i].$1, canDeleteTeam)
+              ? () => _teamOptions(
+                  visible[i].$1,
+                  canEdit: _canUpdateTeam(visible[i].$1, canUpdateTeam),
+                  canDelete: _canDeleteTeam(visible[i].$1, canDeleteTeam),
+                )
               : null,
+          onLongPressPlan: (plan) {
+            final canEdit = _canEditPlan(
+              plan,
+              isAssigner: isAssigner,
+              currentUserId: currentUserId,
+            );
+            final canDelete = _canDeletePlan(
+              plan,
+              isAssigner: isAssigner,
+              currentUserId: currentUserId,
+            );
+            if (canEdit || canDelete) {
+              _planOptions(plan, canEdit: canEdit, canDelete: canDelete);
+            }
+          },
+          canLongPressPlan: (plan) =>
+              _canEditPlan(
+                plan,
+                isAssigner: isAssigner,
+                currentUserId: currentUserId,
+              ) ||
+              _canDeletePlan(
+                plan,
+                isAssigner: isAssigner,
+                currentUserId: currentUserId,
+              ),
         ),
-      if (canOpenFeed) () => const _TimelineCard(),
     ];
 
     return ListView.separated(
       physics: const AlwaysScrollableScrollPhysics(),
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 110),
+      padding: const EdgeInsets.only(top: 4, bottom: 110),
       itemCount: children.length,
-      separatorBuilder: (_, _) => const SizedBox(height: 10),
+      separatorBuilder: (context, _) => Divider(
+        height: 17,
+        thickness: 1,
+        indent: 16,
+        endIndent: 16,
+        color: Theme.of(context).colorScheme.outlineVariant,
+      ),
       itemBuilder: (_, i) => children[i](),
     );
   }
@@ -311,53 +391,164 @@ class _TeamsPageState extends ConsumerState<TeamsPage> {
   static String _groupKey(TeamWithPlans group) =>
       group.synthetic ? 'team-synthetic' : 'team-${group.team.id}';
 
-  bool _canDelete(TeamWithPlans group, bool canDeleteTeam) =>
+  bool _canUpdateTeam(TeamWithPlans group, bool canUpdateTeam) =>
+      canUpdateTeam && !group.synthetic && group.team.id.isNotEmpty;
+
+  bool _canDeleteTeam(TeamWithPlans group, bool canDeleteTeam) =>
       canDeleteTeam && !group.synthetic && group.team.id.isNotEmpty;
 
-  /// "Tuỳ chọn team" (bấm giữ đầu nhóm): hiện chỉ có Xoá team.
-  Future<void> _teamOptions(TeamWithPlans group) async {
-    final delete = await showOmniSheet<bool>(
-      context: context,
-      builder: (ctx) {
-        final scheme = Theme.of(ctx).colorScheme;
-
-        return SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 8),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-                  child: Text(
-                    group.team.name,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: OmniType.bodyStrong.copyWith(
-                      color: scheme.onSurface,
-                    ),
-                  ),
-                ),
-                ListTile(
-                  minTileHeight: 52,
-                  leading: Icon(Icons.delete_outline, color: scheme.error),
-                  title: Text(
-                    'Xoá team',
-                    style: OmniType.body.copyWith(
-                      fontWeight: FontWeight.w500,
-                      color: OmniColors.dangerTextOf(ctx),
-                    ),
-                  ),
-                  onTap: () => Navigator.of(ctx).pop(true),
-                ),
-              ],
-            ),
+  Future<void> _movePlan(Plan plan, TeamWithPlans target) async {
+    final targetId = target.team.id;
+    if ((plan.teamId ?? '') == targetId) return;
+    final messenger = ScaffoldMessenger.of(context);
+    final container = ProviderScope.containerOf(context);
+    try {
+      await container
+          .read(plansApiProvider)
+          .updatePlan(
+            plan.id,
+            targetId.isEmpty
+                ? PlanPatch(clearTeam: true)
+                : PlanPatch(teamId: targetId),
+          );
+      container.read(planRealtimeSignalProvider.notifier).bump();
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(
+            targetId.isEmpty
+                ? 'Đã đưa “${plan.name}” ra khỏi team.'
+                : 'Đã chuyển “${plan.name}” sang ${target.team.name}.',
           ),
-        );
-      },
+        ),
+      );
+    } on AppException catch (error) {
+      messenger.showSnackBar(SnackBar(content: Text(error.message)));
+    } on Object {
+      messenger.showSnackBar(
+        const SnackBar(
+          content: Text('Chưa chuyển được dự án. Vui lòng thử lại.'),
+        ),
+      );
+    }
+  }
+
+  /// Bấm giữ team mở thẳng hai thao tác của đúng team đó.
+  Future<void> _teamOptions(
+    TeamWithPlans group, {
+    required bool canEdit,
+    required bool canDelete,
+  }) async {
+    final choice = await showWorkListActionsSheet(
+      context,
+      title: group.team.name,
+      editLabel: 'Sửa tên team',
+      deleteLabel: 'Xoá team',
+      canEdit: canEdit,
+      canDelete: canDelete,
     );
-    if (delete != true || !mounted) return;
-    await _deleteTeam(group);
+    if (!mounted) return;
+
+    switch (choice) {
+      case WorkListAction.edit:
+        await _renameTeam(group);
+      case WorkListAction.delete:
+        await _deleteTeam(group);
+      case null:
+        break;
+    }
+  }
+
+  Future<void> _renameTeam(TeamWithPlans group) async {
+    final name = await showTextEditSheet(
+      context: context,
+      title: 'Sửa tên team',
+      initial: group.team.name,
+      hint: 'Tên team',
+      maxLength: 255,
+    );
+    if (name == null || !mounted) return;
+
+    final messenger = ScaffoldMessenger.of(context);
+    final container = ProviderScope.containerOf(context);
+    try {
+      await container
+          .read(plansApiProvider)
+          .updateTeam(group.team.id, name: name);
+      container.invalidate(teamsWithPlansProvider);
+      messenger.showSnackBar(const SnackBar(content: Text('Đã đổi tên team.')));
+    } on AppException catch (error) {
+      messenger.showSnackBar(SnackBar(content: Text(error.message)));
+    }
+  }
+
+  bool _canEditPlan(
+    Plan plan, {
+    required bool isAssigner,
+    required String? currentUserId,
+  }) =>
+      ref.read(taskAccessProvider).canUpdate &&
+      (isAssigner ||
+          (currentUserId != null && plan.roleOf(currentUserId).canManagePlan));
+
+  bool _canDeletePlan(
+    Plan plan, {
+    required bool isAssigner,
+    required String? currentUserId,
+  }) =>
+      ref.read(taskAccessProvider).canDelete &&
+      (isAssigner || (currentUserId != null && plan.ownerId == currentUserId));
+
+  Future<void> _planOptions(
+    Plan plan, {
+    required bool canEdit,
+    required bool canDelete,
+  }) async {
+    final choice = await showWorkListActionsSheet(
+      context,
+      title: plan.name,
+      editLabel: 'Sửa kế hoạch',
+      deleteLabel: 'Xoá kế hoạch',
+      canEdit: canEdit,
+      canDelete: canDelete,
+    );
+    if (!mounted) return;
+
+    switch (choice) {
+      case WorkListAction.edit:
+        final container = ProviderScope.containerOf(context);
+        await Navigator.of(context).push<bool>(
+          MaterialPageRoute(builder: (_) => EditPlanPage(planId: plan.id)),
+        );
+        container.invalidate(teamsWithPlansProvider);
+      case WorkListAction.delete:
+        await _deletePlan(plan);
+      case null:
+        break;
+    }
+  }
+
+  Future<void> _deletePlan(Plan plan) async {
+    final confirmed = await showOmniConfirm(
+      context: context,
+      title: 'Xoá kế hoạch “${plan.name}”?',
+      message:
+          'Kế hoạch và các công việc bên trong sẽ biến mất trên cả điện thoại '
+          'và web. Hành động này không thể hoàn tác tại đây.',
+      confirmLabel: 'Xoá kế hoạch',
+      destructive: true,
+    );
+    if (!confirmed || !mounted) return;
+
+    final messenger = ScaffoldMessenger.of(context);
+    final container = ProviderScope.containerOf(context);
+    try {
+      await container.read(plansApiProvider).deletePlan(plan.id);
+      container.invalidate(planProvider(plan.id));
+      container.invalidate(teamsWithPlansProvider);
+      messenger.showSnackBar(const SnackBar(content: Text('Đã xoá kế hoạch.')));
+    } on AppException catch (error) {
+      messenger.showSnackBar(SnackBar(content: Text(error.message)));
+    }
   }
 
   Future<void> _deleteTeam(TeamWithPlans group) async {
@@ -431,88 +622,6 @@ class _NoMatch extends StatelessWidget {
             style: OmniType.caption.copyWith(color: scheme.onSurfaceVariant),
           ),
         ],
-      ),
-    );
-  }
-}
-
-/// Thẻ "Dòng việc" cuối danh sách: lối vào dòng hoạt động và KPI tháng. Khung
-/// như một nhóm team (`.grp`): dòng 48, ô biểu tượng 28, mũi tên.
-class _TimelineCard extends ConsumerWidget {
-  const _TimelineCard();
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final scheme = Theme.of(context).colorScheme;
-    final tones = OmniTaskTones.of(context);
-    // Lỗi / đang tải đều rơi về phụ đề trung tính: thẻ này là lối vào, không
-    // được biến mất chỉ vì con số KPI chưa có.
-    final delivered = ref.watch(workshopKpiProvider).valueOrNull?.delivered;
-    final subtitle = delivered == null
-        ? 'KPI tháng · feed 7 ngày'
-        : 'KPI tháng · $delivered việc xong';
-
-    return Material(
-      color: scheme.surface,
-      shape: RoundedRectangleBorder(
-        borderRadius: const BorderRadius.all(Radius.circular(8)),
-        side: BorderSide(color: scheme.outlineVariant),
-      ),
-      clipBehavior: Clip.antiAlias,
-      child: OmniPressScale(
-        child: InkWell(
-          onTap: () => context.pushNamed(PlansModule.timeline),
-          child: Container(
-            constraints: const BoxConstraints(minHeight: 48),
-            padding: const EdgeInsets.fromLTRB(12, 4, 6, 4),
-            child: Row(
-              children: [
-                Container(
-                  width: 28,
-                  height: 28,
-                  decoration: BoxDecoration(
-                    color: tones.today.background,
-                    borderRadius: const BorderRadius.all(Radius.circular(6)),
-                  ),
-                  child: Icon(
-                    Icons.timeline_rounded,
-                    size: 18,
-                    color: tones.today.foreground,
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Dòng việc',
-                        style: OmniType.bodyStrong.copyWith(
-                          color: scheme.onSurface,
-                        ),
-                      ),
-                      Text(
-                        subtitle,
-                        style: OmniType.micro.copyWith(
-                          fontWeight: FontWeight.w400,
-                          color: scheme.onSurfaceVariant,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                SizedBox.square(
-                  dimension: 44,
-                  child: Icon(
-                    Icons.chevron_right_rounded,
-                    size: 18,
-                    color: tones.faint,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
       ),
     );
   }

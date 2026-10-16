@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:omni_app/core/network/api_client.dart';
+import 'package:omni_app/design/components/components.dart';
 import 'package:omni_app/design/theme/omni_theme.dart';
 import 'package:omni_app/modules/tasks/application/task_controller.dart';
 import 'package:omni_app/modules/tasks/application/tasks_providers.dart';
@@ -13,7 +14,6 @@ import 'package:omni_app/modules/tasks/data/tasks_api.dart';
 import 'package:omni_app/modules/tasks/domain/task.dart';
 import 'package:omni_app/modules/tasks/domain/task_permissions.dart';
 import 'package:omni_app/modules/tasks/presentation/task_detail_page.dart';
-import 'package:omni_app/modules/tasks/presentation/widgets/task_detail/menu_sheet.dart';
 import 'package:omni_app/security/permissions/access_policy.dart';
 
 /// Người giao việc sửa được MỌI thứ ngay trên điện thoại.
@@ -251,8 +251,8 @@ void main() {
       expect(find.text('Sao chép liên kết'), findsOneWidget);
       expect(
         find.descendant(
-          of: find.byWidgetPredicate((w) => w is DetailMenuSheet),
-          matching: find.byType(InkWell),
+          of: find.byKey(const Key('task-actions-menu')),
+          matching: find.byType(OmniAnchoredMenuItem),
         ),
         findsOneWidget,
         reason: 'menu của thợ chỉ có đúng một mục',

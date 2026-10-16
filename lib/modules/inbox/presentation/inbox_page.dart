@@ -7,10 +7,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/domain/channel.dart';
 import '../../../design/components/components.dart';
 import '../../../design/tokens/tokens.dart';
-import '../../../security/session/session_controller.dart';
 import '../../../security/permissions/access_scope.dart';
-import '../../channels/channels_module.dart';
-import '../../channels/domain/channel_permissions.dart';
 import '../../../core/realtime/realtime_client.dart';
 import '../application/inbox_providers.dart';
 import '../application/inbox_realtime.dart';
@@ -21,7 +18,6 @@ import '../domain/conversation.dart';
 import 'widgets/conversation_actions.dart';
 import 'widgets/conversation_peek.dart';
 import 'widgets/conversation_row.dart';
-import 'widgets/inbox_bulk_bar.dart';
 import 'widgets/inbox_filter_bar.dart';
 import 'widgets/inbox_pinned_section.dart';
 
@@ -35,8 +31,6 @@ class InboxPage extends ConsumerStatefulWidget {
 class _InboxPageState extends ConsumerState<InboxPage>
     with WidgetsBindingObserver {
   final _scrollController = ScrollController();
-  final Set<String> _selected = {};
-  bool _selectionMode = false;
   bool _filtersOpen = false;
   Timer? _syncTimer;
 
@@ -121,11 +115,11 @@ class _InboxPageState extends ConsumerState<InboxPage>
     }
   }
 
-  void _toggleSelection(String id) {
-    setState(() {
-      _selectionMode = true;
-      if (!_selected.remove(id)) _selected.add(id);
-    });
+  Future<void> _openFilters(Rect anchor) async {
+    if (_filtersOpen) return;
+    setState(() => _filtersOpen = true);
+    await showInboxFilterMenu(context: context, anchor: anchor);
+    if (mounted) setState(() => _filtersOpen = false);
   }
 
   Future<void> _openPeek(Conversation c) async {
@@ -152,30 +146,15 @@ class _InboxPageState extends ConsumerState<InboxPage>
     );
   }
 
-  Widget _row(Conversation conversation, bool selecting) => ConversationRow(
+  Widget _row(Conversation conversation) => ConversationRow(
     key: ValueKey('row-${conversation.id}'),
     conversation: conversation,
-    selectionMode: selecting,
-    selected: _selected.contains(conversation.id),
     onPeek: () => _openPeek(conversation),
-    onTap: () {
-      if (selecting) {
-        _toggleSelection(conversation.id);
-        return;
-      }
-      context.pushNamed(
-        InboxRoutes.thread,
-        pathParameters: {'id': conversation.id},
-      );
-    },
+    onTap: () => context.pushNamed(
+      InboxRoutes.thread,
+      pathParameters: {'id': conversation.id},
+    ),
   );
-
-  void _clearSelection() {
-    setState(() {
-      _selected.clear();
-      _selectionMode = false;
-    });
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -206,64 +185,22 @@ class _InboxPageState extends ConsumerState<InboxPage>
         const <Conversation>[];
     final lead = pinned.isEmpty ? 0 : 1;
     final scheme = Theme.of(context).colorScheme;
-    final selecting = _selectionMode;
-    final canConnectChannels = ref
-        .watch(accessProvider)
-        .can(ChannelPermissions.write);
 
     return Scaffold(
       // Header and list on ONE plane. The AppBar was painted with `background`
       // (#F8F8FC) while the rows use `surface` (white), so the whole search area
       // read as a tinted panel framing itself — the "khung mờ" around the search
       // field was that seam, not a border on the field.
-      backgroundColor: OmniColors.background,
+      backgroundColor: scheme.surface,
       appBar: OmniTopBar(
         semanticsTitle: 'Hộp thư',
-        // Search line + pill row + the rule under them. "Kết nối kênh" and
-        // "Chọn nhiều" moved here from the old AppBar actions, on the search
-        // row after the filter button.
         bottom: InboxSearchRow(
           filtersOpen: _filtersOpen,
-          onToggleFilters: () => setState(() => _filtersOpen = !_filtersOpen),
-          trailing: [
-            if (canConnectChannels)
-              IconButton(
-                tooltip: 'Kết nối kênh',
-                onPressed: () => context.pushNamed(ChannelsModule.list),
-                style: IconButton.styleFrom(
-                  fixedSize: const Size(36, 36),
-                  tapTargetSize: MaterialTapTargetSize.padded,
-                  visualDensity: VisualDensity.standard,
-                  foregroundColor: scheme.onSurfaceVariant,
-                ),
-                icon: const Icon(Icons.hub_outlined),
-              ),
-            IconButton(
-              tooltip: 'Chọn nhiều',
-              onPressed: access.canLabel
-                  ? () => setState(() {
-                      _selectionMode = !_selectionMode;
-                      if (!_selectionMode) _selected.clear();
-                    })
-                  : null,
-              style: IconButton.styleFrom(
-                fixedSize: const Size(36, 36),
-                tapTargetSize: MaterialTapTargetSize.padded,
-                visualDensity: VisualDensity.standard,
-                foregroundColor: selecting
-                    ? OmniColors.chatPrimary
-                    : scheme.onSurfaceVariant,
-              ),
-              icon: Icon(
-                selecting ? Icons.close_rounded : Icons.checklist_rounded,
-              ),
-            ),
-          ],
+          onOpenFilters: _openFilters,
         ),
       ),
       body: Column(
         children: [
-          InboxFilterPanel(open: _filtersOpen),
           // A member scoped to `inbox.read.own` sees only threads assigned to
           // them — not the unassigned pool. Saying so up front stops "hộp thư
           // trống" being read as a sync failure.
@@ -279,102 +216,69 @@ class _InboxPageState extends ConsumerState<InboxPage>
               ),
             ),
           Expanded(
-            // Danh sách nằm trong một thẻ trắng viền mảnh trên nền xám nhạt
-            // (`main` của bản mẫu: padding 12 16).
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  color: scheme.surface,
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: scheme.outlineVariant),
-                ),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(7),
-                  child: RefreshIndicator(
-                    onRefresh: () =>
-                        ref.read(inboxListProvider.notifier).refresh(),
-                    child: OmniAsyncView(
-                      value: list,
-                      onRetry: () => ref.invalidate(inboxListProvider),
-                      // Rỗng chỉ khi CẢ HAI mục rỗng.
-                      isEmpty: (state) => state.items.isEmpty && pinned.isEmpty,
-                      empty: _empty(),
-                      data: (state) => ListView.separated(
-                        controller: _scrollController,
-                        padding: const EdgeInsets.only(
-                          bottom: OmniSpacing.bottomSafe,
-                        ),
-                        // Mục "Đã ghim" (nếu có) là dòng đầu của CÙNG danh
-                        // sách: một ScrollController, `loadMore` vẫn theo
-                        // `extentAfter`.
-                        itemCount:
-                            lead + state.items.length + (state.hasMore ? 1 : 0),
-                        // Zalo separates rows with a hairline indented past the
-                        // avatar, not a gap. Gaps between bordered cards were what
-                        // made the list read as a table of records.
-                        // Không kẻ vạch ngay dưới mục ghim: mục đó kết thúc
-                        // bằng tiêu đề "Hội thoại", dòng đầu nằm sát dưới.
-                        separatorBuilder: (_, rawIndex) => rawIndex < lead
-                            ? const SizedBox.shrink()
-                            : Divider(
-                                height: 1,
-                                thickness: 1,
-                                indent: 0,
-                                endIndent: 0,
-                                color: OmniColors.byBrightness(
-                                  context,
-                                  OmniColors.divider,
-                                  OmniColors.darkBorder,
-                                ),
-                              ),
-                        itemBuilder: (context, rawIndex) {
-                          if (rawIndex < lead) {
-                            return InboxPinnedSection(
-                              items: pinned,
-                              rowBuilder: (c) => _row(c, selecting),
-                            );
-                          }
-                          final index = rawIndex - lead;
-                          if (index >= state.items.length) {
-                            return const Padding(
-                              padding: EdgeInsets.all(OmniSpacing.lg),
-                              child: Center(
-                                child: SizedBox(
-                                  width: 20,
-                                  height: 20,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                  ),
-                                ),
-                              ),
-                            );
-                          }
-                          return _row(state.items[index], selecting);
-                        },
-                      ),
-                    ),
+            child: RefreshIndicator(
+              key: const Key('inbox-conversation-list'),
+              onRefresh: () => ref.read(inboxListProvider.notifier).refresh(),
+              child: OmniAsyncView(
+                value: list,
+                onRetry: () => ref.invalidate(inboxListProvider),
+                // Rỗng chỉ khi CẢ HAI mục rỗng.
+                isEmpty: (state) => state.items.isEmpty && pinned.isEmpty,
+                empty: _empty(),
+                data: (state) => ListView.separated(
+                  controller: _scrollController,
+                  padding: const EdgeInsets.only(
+                    bottom: OmniSpacing.bottomSafe,
                   ),
+                  // Mục "Đã ghim" (nếu có) là dòng đầu của CÙNG danh
+                  // sách: một ScrollController, `loadMore` vẫn theo
+                  // `extentAfter`.
+                  itemCount:
+                      lead + state.items.length + (state.hasMore ? 1 : 0),
+                  // Zalo separates rows with a hairline indented past the
+                  // avatar, not a gap. Gaps between bordered cards were what
+                  // made the list read as a table of records.
+                  // Không kẻ vạch ngay dưới mục ghim: mục đó kết thúc
+                  // bằng tiêu đề "Hội thoại", dòng đầu nằm sát dưới.
+                  separatorBuilder: (_, rawIndex) => rawIndex < lead
+                      ? const SizedBox.shrink()
+                      : Divider(
+                          height: 1,
+                          thickness: 1,
+                          indent: 0,
+                          endIndent: 0,
+                          color: OmniColors.byBrightness(
+                            context,
+                            OmniColors.divider,
+                            OmniColors.darkBorder,
+                          ),
+                        ),
+                  itemBuilder: (context, rawIndex) {
+                    if (rawIndex < lead) {
+                      return InboxPinnedSection(
+                        items: pinned,
+                        rowBuilder: _row,
+                      );
+                    }
+                    final index = rawIndex - lead;
+                    if (index >= state.items.length) {
+                      return const Padding(
+                        padding: EdgeInsets.all(OmniSpacing.lg),
+                        child: Center(
+                          child: SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          ),
+                        ),
+                      );
+                    }
+                    return _row(state.items[index]);
+                  },
                 ),
               ),
             ),
           ),
-          if (selecting)
-            InboxBulkBar(
-              selectedIds: _selected.toList(),
-              allIds: [
-                for (final c in pinned) c.id,
-                for (final c
-                    in list.valueOrNull?.items ?? const <Conversation>[])
-                  c.id,
-              ],
-              onSelectAll: (ids) => setState(() {
-                _selected
-                  ..clear()
-                  ..addAll(ids);
-              }),
-              onDone: _clearSelection,
-            ),
         ],
       ),
     );

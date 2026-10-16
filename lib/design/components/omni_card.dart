@@ -13,6 +13,7 @@ class OmniCard extends StatelessWidget {
     this.borderColor,
     this.background,
     this.leadingEdge,
+    this.flat = false,
   });
 
   final Widget child;
@@ -21,6 +22,10 @@ class OmniCard extends StatelessWidget {
   final Color? borderColor;
   final Color? background;
 
+  /// Dùng cho các section cấp trang: không viền, không bo góc. Nội dung vẫn
+  /// giữ Material/Ink để phản hồi chạm nhất quán với thẻ thông thường.
+  final bool flat;
+
   /// A 3px coloured strip on the leading edge — how a conversation row encodes
   /// its platform without spending horizontal space.
   final Color? leadingEdge;
@@ -28,6 +33,7 @@ class OmniCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final radius = flat ? BorderRadius.zero : OmniRadius.xlAll;
 
     Widget content = Padding(padding: padding, child: child);
 
@@ -43,16 +49,18 @@ class OmniCard extends StatelessWidget {
 
     return Material(
       color: background ?? scheme.surface,
-      borderRadius: OmniRadius.xlAll,
-      clipBehavior: Clip.antiAlias,
+      borderRadius: radius,
+      clipBehavior: flat ? Clip.none : Clip.antiAlias,
       child: InkWell(
         onTap: onTap,
         child: Ink(
           decoration: BoxDecoration(
-            borderRadius: OmniRadius.xlAll,
+            borderRadius: radius,
             // Viền TRANG TRÍ (outlineVariant, #E3E8EF): thẻ trắng trên nền xám
             // đã tự tách khỏi nền. Viền tương tác 3:1 dành cho ô nhập, nút.
-            border: Border.all(color: borderColor ?? scheme.outlineVariant),
+            border: flat
+                ? null
+                : Border.all(color: borderColor ?? scheme.outlineVariant),
           ),
           child: content,
         ),
@@ -77,7 +85,9 @@ class OmniSectionHeader extends StatelessWidget {
 
   final String title;
   final String? action;
-  final VoidCallback? onAction;
+
+  /// Vùng của nút + để nơi gọi có thể mở menu nhanh neo đúng vị trí.
+  final ValueChanged<Rect>? onAction;
   final EdgeInsets padding;
 
   @override
@@ -97,22 +107,44 @@ class OmniSectionHeader extends StatelessWidget {
             ),
           ),
           if (action != null)
-            GestureDetector(
-              onTap: onAction,
-              child: Row(
-                children: [
-                  Icon(
-                    Icons.add_rounded,
-                    size: OmniIconSize.sm,
-                    color: scheme.primary,
+            Builder(
+              builder: (buttonContext) {
+                void open() {
+                  final box = buttonContext.findRenderObject() as RenderBox?;
+                  if (box == null || !box.hasSize) return;
+                  onAction?.call(box.localToGlobal(Offset.zero) & box.size);
+                }
+
+                return Semantics(
+                  button: true,
+                  label: action,
+                  excludeSemantics: true,
+                  onTap: onAction == null ? null : open,
+                  child: GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onTap: onAction == null ? null : open,
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(minHeight: 44),
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.add_rounded,
+                            size: OmniIconSize.sm,
+                            color: scheme.primary,
+                          ),
+                          const SizedBox(width: 2),
+                          Text(
+                            action!,
+                            style: OmniType.micro.copyWith(
+                              color: scheme.primary,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                   ),
-                  const SizedBox(width: 2),
-                  Text(
-                    action!,
-                    style: OmniType.micro.copyWith(color: scheme.primary),
-                  ),
-                ],
-              ),
+                );
+              },
             ),
         ],
       ),
@@ -180,14 +212,16 @@ class OmniStatTile extends StatelessWidget {
 
 /// Thẻ chứa các [OmniDetailRow], vạch ngăn giữa từng dòng.
 class OmniDetailCard extends StatelessWidget {
-  const OmniDetailCard({super.key, required this.rows});
+  const OmniDetailCard({super.key, required this.rows, this.flat = false});
 
   final List<Widget> rows;
+  final bool flat;
 
   @override
   Widget build(BuildContext context) {
     return OmniCard(
       padding: EdgeInsets.zero,
+      flat: flat,
       child: Column(
         children: [
           for (var i = 0; i < rows.length; i++) ...[

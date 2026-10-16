@@ -1,17 +1,20 @@
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:omni_app/core/network/api_client.dart';
 import 'package:omni_app/design/theme/omni_theme.dart';
 import 'package:omni_app/design/tokens/tokens.dart';
 import 'package:omni_app/modules/plans/application/plans_providers.dart';
+import 'package:omni_app/modules/plans/data/plans_api.dart';
 import 'package:omni_app/modules/plans/domain/plan.dart';
 import 'package:omni_app/modules/plans/domain/team.dart';
-import 'package:omni_app/modules/plans/domain/workshop_kpi.dart';
 import 'package:omni_app/modules/plans/presentation/create_plan_page.dart';
 import 'package:omni_app/modules/plans/presentation/create_team_page.dart';
 import 'package:omni_app/modules/plans/presentation/teams_page.dart';
 import 'package:omni_app/modules/plans/presentation/widgets/plan_tile.dart';
+import 'package:omni_app/modules/plans/presentation/widgets/project_cover.dart';
 import 'package:omni_app/modules/plans/presentation/widgets/team_group.dart';
 import 'package:omni_app/modules/plans/presentation/widgets/teams_search_row.dart';
 import 'package:omni_app/modules/plans/routes.dart';
@@ -42,11 +45,15 @@ void main() {
     int overdue = 0,
     String? cover,
     String? status,
+    String? teamId,
+    String? ownerId,
   }) => Plan.fromJson({
     'id': 'id-$name',
     'name': name,
     'cover': ?cover,
     'status': ?status,
+    'team_id': ?teamId,
+    'owner_id': ?ownerId,
     'stats': {'total': total, 'done': done, 'overdue': overdue},
   });
 
@@ -80,15 +87,16 @@ void main() {
     List<TeamWithPlans>? groups,
     bool assigner = false,
     bool canCreateTeam = false,
+    bool canUpdateTeam = false,
     bool canDeleteTeam = false,
-    int kpiDelivered = 0,
-    bool kpiError = false,
+    PlansApi? plansApi,
     bool reduceMotion = false,
     bool dark = false,
   }) {
     final permissions = <String>{
       ...(assigner ? assignerPerms : worker),
       if (canCreateTeam) 'organization.org_units.create',
+      if (canUpdateTeam) 'organization.org_units.update',
       if (canDeleteTeam) ...[
         'tasks.projects.delete',
         'organization.org_units.delete',
@@ -98,14 +106,6 @@ void main() {
     final router = GoRouter(
       routes: [
         GoRoute(path: '/', builder: (_, _) => const TeamsPage()),
-        GoRoute(
-          path: '/timeline',
-          name: PlanRoutes.timeline,
-          builder: (_, _) {
-            lastPushedRoute = PlanRoutes.timeline;
-            return const Scaffold(body: Text('trang dong viec'));
-          },
-        ),
         GoRoute(
           path: '/plans/:id',
           name: PlanRoutes.board,
@@ -121,18 +121,8 @@ void main() {
     return ProviderScope(
       overrides: [
         backgroundProvider.overrideWith(FixedBackground.new),
+        if (plansApi != null) plansApiProvider.overrideWithValue(plansApi),
         teamsWithPlansProvider.overrideWith((ref) async => groups ?? const []),
-        workshopKpiProvider.overrideWith((ref) async {
-          if (kpiError) throw Exception('kpi hỏng');
-
-          return WorkshopKpi(
-            delivered: kpiDelivered,
-            reachedBonus: 0,
-            daysLeft: 10,
-            tiers: const [],
-            isConfigured: true,
-          );
-        }),
         taskAccessProvider.overrideWithValue(TaskAccess.of(policy)),
         accessProvider.overrideWithValue(policy),
       ],
@@ -175,10 +165,16 @@ void main() {
     expect(find.text('Kinh doanh'), findsOneWidget);
     expect(find.text('2 kế hoạch'), findsOneWidget);
     expect(find.text('1 kế hoạch'), findsOneWidget);
+    // Màn chỉ hiện cấp team lúc vào; kế hoạch không tự bung.
+    expect(find.byType(PlanTile), findsNothing);
+    await t.tap(header('Tổ kỹ thuật'));
+    await t.pumpAndSettle();
     expect(find.text('Bảo hành'), findsOneWidget);
     expect(find.text('9 việc đang mở'), findsOneWidget);
     expect(find.text('2 trễ'), findsOneWidget);
     expect(find.text('6 việc đang mở'), findsOneWidget);
+    await t.tap(header('Kinh doanh'));
+    await t.pumpAndSettle();
     expect(find.text('7 việc đang mở'), findsOneWidget);
     // Chỉ một dòng có việc trễ.
     expect(find.textContaining('trễ'), findsOneWidget);
@@ -187,42 +183,91 @@ void main() {
     expect(find.text('Tìm team, kế hoạch'), findsOneWidget);
   });
 
-  testWidgets('bố cục đúng bản mẫu: nhóm, dòng 48, ô 28, hàng tìm 40', (
+  testWidgets('bố cục phân cấp: team phẳng, dự án thụt cấp và dùng dấu cover', (
     t,
   ) async {
     phone(t);
     await t.pumpWidget(host(groups: twoTeams, assigner: true));
     await t.pumpAndSettle();
+    await t.tap(header('Tổ kỹ thuật'));
+    await t.pumpAndSettle();
     expect(t.getSize(find.byType(PlanTile).first).height, 48);
-    final tile = t.getSize(find.byKey(const Key('plan-tile-swatch')).first);
-    expect(tile, const Size(28, 28));
-    expect(
-      t.getSize(find.byKey(const Key('team-group-swatch')).first),
-      const Size(28, 28),
-    );
+    expect(find.byKey(const Key('plan-tile-swatch')), findsWidgets);
+    expect(find.byKey(const Key('team-group-icon')), findsNWidgets(2));
+    expect(find.byKey(const Key('plan-tile-marker')), findsNothing);
+    expect(find.byKey(const Key('team-group-marker')), findsNothing);
     expect(t.getSize(header('Tổ kỹ thuật')).height, 48);
+    expect(find.byKey(const Key('plan-tree-rail')), findsNothing);
+    expect(
+      t.getTopLeft(find.byKey(const Key('plan-tile-swatch')).first).dx,
+      greaterThan(
+        t.getTopLeft(find.byKey(const Key('team-group-icon')).first).dx + 16,
+      ),
+    );
     expect(t.getSize(find.byKey(const Key('teams-search-box'))).height, 40);
     expect(
       t.getSize(find.byKey(const Key('teams-add-face'))),
       const Size(44, 40),
     );
-    // Ô màu của kế hoạch là màu cover.
-    final swatch = t.widget<Container>(
-      find.byKey(const Key('plan-tile-swatch')).first,
+    expect(
+      t.widget<Icon>(find.byKey(const Key('team-group-icon')).first).icon,
+      Icons.groups_2_outlined,
     );
     expect(
-      (swatch.decoration! as BoxDecoration).color,
-      OmniCovers.colorOf('teal-1'),
+      t.widget<ProjectCoverMarker>(find.byType(ProjectCoverMarker).first).cover,
+      'teal-1',
     );
-    // Các nhóm cách nhau 10.
+    // Section phẳng sát mép; đường chia tạo nhịp 17 giữa các nhóm.
     final first = t.getRect(find.byType(TeamGroup).at(0));
     final second = t.getRect(find.byType(TeamGroup).at(1));
-    expect(second.top - first.bottom, 10);
-    expect(first.left, 16);
+    expect(second.top - first.bottom, 17);
+    expect(first.left, 0);
+    final groupMaterial = t.widget<Material>(
+      find
+          .descendant(
+            of: find.byType(TeamGroup).first,
+            matching: find.byType(Material),
+          )
+          .first,
+    );
+    expect(groupMaterial.shape, isNull);
+  });
+
+  testWidgets('quản lý giữ dự án rồi thả sang team khác → cập nhật team_id', (
+    t,
+  ) async {
+    phone(t);
+    final api = _MovePlansApi();
+    await t.pumpWidget(
+      host(
+        groups: [
+          group(
+            'Team A',
+            id: 'ta',
+            plans: [plan('Dự án A', teamId: 'ta', ownerId: 'u1')],
+          ),
+          group('Team B', id: 'tb'),
+        ],
+        assigner: true,
+        plansApi: api,
+      ),
+    );
+    await t.pumpAndSettle();
+    await t.tap(header('Team A'));
+    await t.pumpAndSettle();
+
+    final gesture = await t.startGesture(t.getCenter(find.text('Dự án A')));
+    await t.pump(const Duration(milliseconds: 450));
+    await gesture.moveTo(t.getCenter(find.text('Team B')));
+    await t.pump();
+    await gesture.up();
+    await t.pumpAndSettle();
+
+    expect(api.moves, [('id-Dự án A', 'tb')]);
   });
 
   // (b)
-  testWidgets('chạm đầu nhóm: kế hoạch ẩn, expanded đổi, mũi tên xoay', (
+  testWidgets('mặc định đóng; chạm đầu nhóm mở/đóng và cập nhật semantics', (
     t,
   ) async {
     phone(t);
@@ -237,6 +282,25 @@ void main() {
           ),
         )
         .turns;
+    expect(turns(), 0);
+    expect(find.text('Bảo hành'), findsNothing);
+    expect(
+      t.getSemantics(header('Tổ kỹ thuật')),
+      matchesSemantics(
+        isButton: true,
+        hasExpandedState: true,
+        isExpanded: false,
+        hasTapAction: true,
+        hasFocusAction: true,
+        isFocusable: true,
+        label: 'Tổ kỹ thuật\n2 kế hoạch',
+      ),
+    );
+
+    await t.tap(header('Tổ kỹ thuật'));
+    await t.pumpAndSettle();
+    expect(find.text('Bảo hành'), findsOneWidget);
+    expect(find.text('Sự kiện tháng 10'), findsNothing);
     expect(turns(), 0.5);
     expect(
       t.getSemantics(header('Tổ kỹ thuật')),
@@ -254,24 +318,6 @@ void main() {
     await t.tap(header('Tổ kỹ thuật'));
     await t.pumpAndSettle();
     expect(find.text('Bảo hành'), findsNothing);
-    expect(find.text('Sự kiện tháng 10'), findsOneWidget);
-    expect(turns(), 0);
-    expect(
-      t.getSemantics(header('Tổ kỹ thuật')),
-      matchesSemantics(
-        isButton: true,
-        hasExpandedState: true,
-        isExpanded: false,
-        hasTapAction: true,
-        hasFocusAction: true,
-        isFocusable: true,
-        label: 'Tổ kỹ thuật\n2 kế hoạch',
-      ),
-    );
-
-    await t.tap(header('Tổ kỹ thuật'));
-    await t.pumpAndSettle();
-    expect(find.text('Bảo hành'), findsOneWidget);
     handle.dispose();
   });
 
@@ -296,9 +342,7 @@ void main() {
     phone(t);
     await t.pumpWidget(host(groups: twoTeams));
     await t.pumpAndSettle();
-    // Gập trước: có query thì nhóm phải tự mở.
-    await t.tap(header('Tổ kỹ thuật'));
-    await t.pumpAndSettle();
+    // Mặc định gập; có query thì nhóm phải tự mở.
     expect(find.text('Bảo hành'), findsNothing);
 
     await t.enterText(find.byType(TextField), 'bảo');
@@ -321,16 +365,18 @@ void main() {
     expect(find.text('Thử tên team hoặc tên kế hoạch khác.'), findsOneWidget);
     expect(find.byType(TeamGroup), findsNothing);
 
-    // Xoá query: về lại trạng thái gập đã chọn.
+    // Xoá query: về lại trạng thái gập mặc định.
     await t.enterText(find.byType(TextField), '');
     await t.pumpAndSettle();
     expect(find.text('Bảo hành'), findsNothing);
-    expect(find.text('Sự kiện tháng 10'), findsOneWidget);
+    expect(find.text('Sự kiện tháng 10'), findsNothing);
   });
 
   testWidgets('chạm dòng kế hoạch mở bảng kế hoạch đó', (t) async {
     phone(t);
     await t.pumpWidget(host(groups: twoTeams));
+    await t.pumpAndSettle();
+    await t.tap(header('Tổ kỹ thuật'));
     await t.pumpAndSettle();
     await t.tap(find.text('Sửa chữa tại nhà'));
     await t.pumpAndSettle();
@@ -383,9 +429,7 @@ void main() {
     expect(t.getSize(row.first).height, greaterThanOrEqualTo(52));
   });
 
-  testWidgets('nút + đổi nền mực và xoay 45° khi menu mở, về lại khi đóng', (
-    t,
-  ) async {
+  testWidgets('nút + phẳng màu chữ và xoay 45° khi menu mở', (t) async {
     phone(t);
     await t.pumpWidget(host(assigner: true, canCreateTeam: true));
     await t.pumpAndSettle();
@@ -397,29 +441,33 @@ void main() {
           ),
         )
         .turns;
-    Color faceColor() =>
-        (t
-                    .widget<AnimatedContainer>(
-                      find.byKey(const Key('teams-add-face')),
-                    )
-                    .decoration!
-                as BoxDecoration)
-            .color!;
     final scheme = Theme.of(t.element(find.byType(TeamsPage))).colorScheme;
     expect(turns(), 0);
-    expect(faceColor(), scheme.primary);
+    expect(
+      t.widget<Icon>(find.byKey(const Key('teams-add-icon'))).color,
+      scheme.onSurface,
+    );
+    expect(
+      find.descendant(
+        of: find.byKey(const Key('teams-add-face')),
+        matching: find.byType(DecoratedBox),
+      ),
+      findsNothing,
+    );
 
     await t.tap(plus());
     await t.pumpAndSettle();
     expect(turns(), 0.125);
-    expect(faceColor(), OmniColors.ink);
+    expect(
+      t.widget<Icon>(find.byKey(const Key('teams-add-icon'))).color,
+      scheme.onSurface,
+    );
 
     // Chạm lớp phủ để đóng.
     await t.tapAt(const Offset(60, 600));
     await t.pumpAndSettle();
     expect(find.text('Tạo kế hoạch'), findsNothing);
     expect(turns(), 0);
-    expect(faceColor(), scheme.primary);
   });
 
   testWidgets('menu + bật xuống 280ms (pop), không tắt chuyển động', (t) async {
@@ -471,35 +519,54 @@ void main() {
     expect(hit.height, greaterThanOrEqualTo(44));
   });
 
+  testWidgets('không lặp Dòng việc trong tab Việc', (t) async {
+    phone(t);
+    await t.pumpWidget(host(groups: twoTeams));
+    await t.pumpAndSettle();
+    expect(find.text('Dòng việc'), findsNothing);
+    expect(find.textContaining('KPI tháng'), findsNothing);
+    expect(find.text('Tổ kỹ thuật'), findsOneWidget);
+  });
+
   // (e)
-  testWidgets('thẻ Dòng việc ở cuối, hiện KPI và mở /timeline', (t) async {
+  testWidgets('bấm giữ team mở thẳng Sửa tên / Xoá theo quyền', (t) async {
     phone(t);
-    await t.pumpWidget(host(groups: twoTeams, kpiDelivered: 64));
-    await t.pumpAndSettle();
-    expect(find.text('KPI tháng · 64 việc xong'), findsOneWidget);
-    final last = t.getRect(find.byType(TeamGroup).last);
-    expect(t.getRect(find.text('Dòng việc')).top, greaterThan(last.bottom));
-    await t.tap(find.text('Dòng việc'));
-    await t.pumpAndSettle();
-    expect(lastPushedRoute, PlanRoutes.timeline);
-  });
-
-  testWidgets('KPI lỗi: phụ đề trung tính, danh sách vẫn hiện', (t) async {
-    phone(t);
-    await t.pumpWidget(host(groups: twoTeams, kpiError: true));
-    await t.pumpAndSettle();
-    expect(find.text('KPI tháng · feed 7 ngày'), findsOneWidget);
-    expect(find.text('Bảo hành'), findsOneWidget);
-  });
-
-  // (f)
-  testWidgets('bấm giữ đầu nhóm: sheet có "Xoá team" khi có quyền', (t) async {
-    phone(t);
-    await t.pumpWidget(host(groups: [group('Tổ mới')], canDeleteTeam: true));
+    await t.pumpWidget(
+      host(groups: [group('Tổ mới')], canUpdateTeam: true, canDeleteTeam: true),
+    );
     await t.pumpAndSettle();
     await t.longPress(header('Tổ mới'));
     await t.pumpAndSettle();
+    expect(find.text('Sửa tên team'), findsOneWidget);
     expect(find.text('Xoá team'), findsOneWidget);
+    expect(find.byKey(const Key('work-list-action-edit')), findsOneWidget);
+    expect(find.byKey(const Key('work-list-action-delete')), findsOneWidget);
+    // `showOmniSheet` tự vẽ thanh kéo trên iOS; nội dung không được vẽ thêm
+    // một thanh nữa, nếu không menu sẽ có hai gạch chồng nhau.
+    expect(find.byKey(const Key('sheet-handle')), findsNothing);
+  });
+
+  testWidgets('sửa tên team gọi PUT thật qua PlansApi rồi báo thành công', (
+    t,
+  ) async {
+    phone(t);
+    final api = _FakePlansApi();
+    await t.pumpWidget(
+      host(groups: [group('Tổ cũ')], canUpdateTeam: true, plansApi: api),
+    );
+    await t.pumpAndSettle();
+
+    await t.longPress(header('Tổ cũ'));
+    await t.pumpAndSettle();
+    await t.tap(find.text('Sửa tên team'));
+    await t.pumpAndSettle();
+    await t.enterText(find.byType(TextField).last, 'Tổ hoàn thiện');
+    await t.pumpAndSettle();
+    await t.tap(find.text('Lưu'));
+    await t.pumpAndSettle();
+
+    expect(api.updatedTeams, [('team-Tổ cũ', 'Tổ hoàn thiện')]);
+    expect(find.text('Đã đổi tên team.'), findsOneWidget);
   });
 
   testWidgets('bấm giữ: không có gì khi thiếu quyền hoặc team tổng hợp', (
@@ -517,6 +584,54 @@ void main() {
     await t.longPress(header('A'));
     await t.pumpAndSettle();
     expect(find.text('Xoá team'), findsNothing);
+  });
+
+  testWidgets('nút kế hoạch mở thẳng Sửa / Xoá, không chọn lại', (t) async {
+    phone(t);
+    await t.pumpWidget(
+      host(
+        groups: [
+          group('A', plans: [plan('P')]),
+        ],
+        assigner: true,
+      ),
+    );
+    await t.pumpAndSettle();
+    await t.tap(header('A'));
+    await t.pumpAndSettle();
+    await t.tap(find.byKey(const Key('plan-actions-id-P')));
+    await t.pumpAndSettle();
+
+    expect(find.text('Sửa kế hoạch'), findsOneWidget);
+    expect(find.text('Xoá kế hoạch'), findsOneWidget);
+    expect(find.textContaining('Chọn kế hoạch'), findsNothing);
+  });
+
+  testWidgets('xoá kế hoạch xác nhận phá huỷ rồi gọi API', (t) async {
+    phone(t);
+    final api = _FakePlansApi();
+    await t.pumpWidget(
+      host(
+        groups: [
+          group('A', plans: [plan('P')]),
+        ],
+        assigner: true,
+        plansApi: api,
+      ),
+    );
+    await t.pumpAndSettle();
+    await t.tap(header('A'));
+    await t.pumpAndSettle();
+    await t.tap(find.byKey(const Key('plan-actions-id-P')));
+    await t.pumpAndSettle();
+    await t.tap(find.text('Xoá kế hoạch'));
+    await t.pumpAndSettle();
+    expect(find.text('Xoá kế hoạch “P”?'), findsOneWidget);
+    await t.tap(find.text('Xoá kế hoạch'));
+    await t.pumpAndSettle();
+
+    expect(api.deletedPlans, ['id-P']);
+    expect(find.text('Đã xoá kế hoạch.'), findsOneWidget);
   });
 
   testWidgets('bấm giữ: không có gì với team tổng hợp', (t) async {
@@ -660,6 +775,9 @@ void main() {
     phone(t);
     await t.pumpWidget(host(groups: [group('Tổ mới')]));
     await t.pumpAndSettle();
+    expect(find.text('Team này chưa có kế hoạch nào.'), findsNothing);
+    await t.tap(header('Tổ mới'));
+    await t.pumpAndSettle();
     expect(find.text('Team này chưa có kế hoạch nào.'), findsOneWidget);
   });
 
@@ -693,6 +811,9 @@ void main() {
     );
     await t.pumpAndSettle();
     expect(find.text('Chưa thuộc team nào'), findsOneWidget);
+    expect(find.text('Kế hoạch cũ'), findsNothing);
+    await t.tap(header('Chưa thuộc team nào'));
+    await t.pumpAndSettle();
     expect(find.text('Kế hoạch cũ'), findsOneWidget);
   });
 
@@ -723,6 +844,8 @@ void main() {
       await t.pumpWidget(host(groups: withClosed));
       await t.pumpAndSettle();
 
+      await t.tap(header('Tổ kỹ thuật'));
+      await t.pumpAndSettle();
       expect(find.text('Đã đóng (2)'), findsOneWidget);
       expect(find.text('Đợt 1 đã xong'), findsNothing);
       // "N kế hoạch" vẫn chỉ đếm kế hoạch đang chạy.
@@ -808,6 +931,8 @@ void main() {
         ),
       );
       await t.pumpAndSettle();
+      await t.tap(header('A'));
+      await t.pumpAndSettle();
       // Không nói "chưa có kế hoạch nào" khi còn kế hoạch đã đóng.
       expect(find.text('Team này chưa có kế hoạch nào.'), findsNothing);
       expect(find.text('Đã đóng (1)'), findsOneWidget);
@@ -825,5 +950,42 @@ void main() {
       );
       expect(find.text('Xoá team “A”?'), findsNothing);
     });
+  }
+}
+
+class _MovePlansApi implements PlansApi {
+  final moves = <(String, String?)>[];
+
+  @override
+  Future<Plan> updatePlan(String planId, PlanPatch patch) async {
+    final body = patch.toJson();
+    moves.add((planId, body['team_id'] as String?));
+
+    return Plan.fromJson({
+      'id': planId,
+      'name': planId,
+      'team_id': body['team_id'],
+    });
+  }
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
+class _FakePlansApi extends PlansApi {
+  _FakePlansApi() : super(ApiClient(Dio()));
+
+  final updatedTeams = <(String, String)>[];
+  final deletedPlans = <String>[];
+
+  @override
+  Future<Team> updateTeam(String teamId, {required String name}) async {
+    updatedTeams.add((teamId, name));
+    return Team(id: teamId, name: name);
+  }
+
+  @override
+  Future<void> deletePlan(String planId) async {
+    deletedPlans.add(planId);
   }
 }

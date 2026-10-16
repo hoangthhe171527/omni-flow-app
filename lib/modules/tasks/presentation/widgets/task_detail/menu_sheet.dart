@@ -48,6 +48,76 @@ Future<T?> showDetailMenuSheet<T>(
   ),
 );
 
+/// Biến thể menu nhanh neo vào nút ⋮. Dùng cho một thực thể cụ thể ngay trên
+/// màn (ví dụ việc con); các sheet form/lịch/xác nhận vẫn mở riêng sau khi
+/// người dùng chọn hành động.
+Future<T?> showDetailAnchoredMenu<T>(
+  BuildContext context, {
+  required Rect anchor,
+  required String semanticsLabel,
+  required List<List<DetailMenuItem<T>>> groups,
+  String? title,
+  Key? menuKey,
+}) {
+  final visible = [
+    for (final group in groups)
+      if (group.isNotEmpty) group,
+  ];
+  return showOmniAnchoredMenu<T>(
+    context: context,
+    anchor: anchor,
+    width: 288,
+    menuKey: menuKey,
+    semanticsLabel: semanticsLabel,
+    builder: (menuContext) => Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        if (title case final text?)
+          Container(
+            constraints: const BoxConstraints(minHeight: 48),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+            alignment: Alignment.centerLeft,
+            child: Text(
+              text,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: OmniType.bodyStrong.copyWith(
+                color: Theme.of(menuContext).colorScheme.onSurface,
+              ),
+            ),
+          ),
+        for (var groupIndex = 0; groupIndex < visible.length; groupIndex++)
+          for (
+            var itemIndex = 0;
+            itemIndex < visible[groupIndex].length;
+            itemIndex++
+          )
+            OmniAnchoredMenuItem(
+              icon: visible[groupIndex][itemIndex].icon,
+              label: visible[groupIndex][itemIndex].label,
+              divider:
+                  (title != null && groupIndex == 0 && itemIndex == 0) ||
+                  (groupIndex > 0 && itemIndex == 0),
+              destructive: visible[groupIndex][itemIndex].danger,
+              trailing: visible[groupIndex][itemIndex].trailing == null
+                  ? null
+                  : Text(
+                      visible[groupIndex][itemIndex].trailing!,
+                      style: OmniType.caption.copyWith(
+                        color: Theme.of(
+                          menuContext,
+                        ).colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+              onTap: () => Navigator.of(
+                menuContext,
+              ).pop(visible[groupIndex][itemIndex].value),
+            ),
+      ],
+    ),
+  );
+}
+
 class DetailMenuSheet<T> extends StatelessWidget {
   const DetailMenuSheet({
     super.key,

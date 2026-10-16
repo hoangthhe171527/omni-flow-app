@@ -3,18 +3,17 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:omni_app/design/tokens/tokens.dart';
 
-/// App và web phải dùng CÙNG bộ tên nền.
+/// App và web phải nhận diện CÙNG bộ token nền cũ.
 ///
-/// Hai bảng gradient riêng là cố ý — app dựng bằng Flutter, web bằng CSS. Thứ
-/// PHẢI đồng bộ là TÊN. Lệch một tên thì một phần số dự án hiện sai nền ở một
-/// trong hai client, và không có gì báo lỗi: `gradientOf`/`coverGradient` đều
-/// rơi về nền mặc định, nên nó trông như một lựa chọn chứ không như một lỗi.
+/// Token này không còn được vẽ thành gradient: cả hai client phải cùng coi nó
+/// là dữ liệu legacy và rơi về surface hệ thống. Lệch một token sẽ khiến chỉ
+/// một bên cố tải nó như URL ảnh.
 ///
 /// Bài này đặt ở PHÍA APP chứ không phía web: kiểm của web chạy trong container
 /// và không với tới kho `omni-flow-app`, còn `flutter test` chạy trên máy thật
 /// nơi hai kho nằm cạnh nhau.
 void main() {
-  test('bộ tên nền khớp với bảng bên web', () {
+  test('bộ token legacy khớp với bảng bên web', () {
     final web = File('../omni-flow/src/lib/project-cover.ts');
 
     if (!web.existsSync()) {
@@ -29,7 +28,9 @@ void main() {
     }
 
     final names = RegExp(
-      r'''^\s*"([a-z]+-\d+)":''',
+      // Web hiện khai báo token làm khoá của object; vẫn chấp nhận dạng
+      // phần tử mảng cũ để bài kiểm không phụ thuộc cách viết bảng.
+      r'''^\s*"([a-z]+-\d+)"\s*[:,]''',
       multiLine: true,
     ).allMatches(web.readAsStringSync()).map((m) => m.group(1)!).toList();
 
@@ -42,8 +43,8 @@ void main() {
       names.toSet(),
       OmniCovers.names.toSet(),
       reason:
-          'Bảng nền của app và web đã lệch nhau. Thêm nền mới thì phải thêm ở '
-          'CẢ HAI: omni_covers.dart và omni-flow/src/lib/project-cover.ts.',
+          'Danh sách token legacy của app và web đã lệch nhau. Phải cập nhật '
+          'CẢ HAI để cùng fallback về nền hệ thống.',
     );
   });
 }

@@ -95,6 +95,7 @@ class _TimelinePageState extends ConsumerState<TimelinePage> {
     final groups = DayGroup.from(data?.entries ?? const []);
 
     return Scaffold(
+      backgroundColor: Theme.of(context).colorScheme.surface,
       appBar: const OmniAppBar(title: 'Dòng việc', centerTitle: true),
       body: RefreshIndicator(
         onRefresh: () async {
@@ -212,7 +213,7 @@ class _Feed extends ConsumerWidget {
   }
 }
 
-/// Thẻ bo 8 bọc các dòng của MỘT ngày, ngăn nhau bằng vạch mảnh.
+/// Nhóm ngày phẳng, ngăn các dòng bằng vạch mảnh.
 class _DayCard extends StatelessWidget {
   const _DayCard({required this.group, required this.fresh});
 
@@ -225,11 +226,6 @@ class _DayCard extends StatelessWidget {
 
     return Material(
       color: scheme.surface,
-      clipBehavior: Clip.antiAlias,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(8),
-        side: BorderSide(color: scheme.outlineVariant),
-      ),
       child: Column(
         children: [
           for (var i = 0; i < group.entries.length; i++) ...[

@@ -6,7 +6,7 @@ import 'package:omni_app/design/components/components.dart';
 Widget _host(
   ProviderContainer c, {
   int unread = 0,
-  void Function(BuildContext)? onBell,
+  void Function(BuildContext, Rect)? onBell,
   PreferredSizeWidget? bottom,
   bool tile = true,
   String? semanticsTitle,
@@ -22,7 +22,7 @@ Widget _host(
             : null,
         child: OmniTopBarSlot(
           unreadOf: (_) => unread,
-          onBell: onBell ?? (_) {},
+          onBell: onBell ?? (_, _) {},
           child: Scaffold(
             appBar: OmniTopBar(bottom: bottom, semanticsTitle: semanticsTitle),
           ),
@@ -44,6 +44,10 @@ void main() {
       await tester.pump();
 
       expect(find.byType(OmniBrandMark), findsOneWidget);
+      expect(
+        tester.widget<OmniBrandMark>(find.byType(OmniBrandMark)).framed,
+        isFalse,
+      );
       expect(find.bySemanticsLabel(RegExp('Thông báo')), findsOneWidget);
       expect(
         find.byKey(const ValueKey('omni-top-bar-bell-dot')),
@@ -61,18 +65,26 @@ void main() {
     final c = ProviderContainer();
     addTearDown(c.dispose);
     var taps = 0;
+    Rect? anchor;
 
-    await tester.pumpWidget(_host(c, onBell: (_) => taps++));
+    await tester.pumpWidget(
+      _host(
+        c,
+        onBell: (_, rect) {
+          taps++;
+          anchor = rect;
+        },
+      ),
+    );
     await tester.pump();
 
     expect(find.byKey(const ValueKey('omni-top-bar-bell-dot')), findsNothing);
     await tester.tap(find.byIcon(Icons.notifications_none_rounded));
     expect(taps, 1);
+    expect(anchor?.size, const Size(44, 44));
   });
 
-  testWidgets('chuông vẽ 36 nhưng vùng chạm 44; tiêu đề trang là header', (
-    t,
-  ) async {
+  testWidgets('chuông phẳng, vùng chạm 44; tiêu đề trang là header', (t) async {
     final handle = t.ensureSemantics();
     final c = ProviderContainer();
     addTearDown(c.dispose);
@@ -82,17 +94,13 @@ void main() {
     final bell = find.bySemanticsLabel(RegExp('^Thông báo'));
     expect(t.getSize(bell).width, greaterThanOrEqualTo(44));
     expect(t.getSize(bell).height, greaterThanOrEqualTo(44));
-    // Phần vẽ vẫn 36.
+    final face = t.widget<Material>(
+      find.byKey(const ValueKey('omni-top-bar-bell-face')),
+    );
+    expect(face.color, Colors.transparent);
     expect(
-      t.getSize(
-        find
-            .ancestor(
-              of: find.byIcon(Icons.notifications_none_rounded),
-              matching: find.byType(Material),
-            )
-            .first,
-      ),
-      const Size(36, 36),
+      t.getSize(find.byKey(const ValueKey('omni-top-bar-bell-face'))),
+      const Size(44, 44),
     );
     final node = t.getSemantics(find.bySemanticsLabel('Hộp thư'));
     expect(node.flagsCollection.isHeader, isTrue);

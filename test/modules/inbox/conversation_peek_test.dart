@@ -173,7 +173,7 @@ void main() {
     await closePage(tester);
   });
 
-  testWidgets('Đánh dấu đã đọc → POST read, số chưa đọc biến mất', (
+  testWidgets('Đánh dấu đã đọc → POST read, chấm chưa đọc biến mất', (
     tester,
   ) async {
     api.conversations = [_conversation('c1', 'Lan Anh', unread: 2)];
@@ -182,7 +182,7 @@ void main() {
     await tester.tap(find.text('Đánh dấu đã đọc'));
     await tester.pumpAndSettle(const Duration(milliseconds: 50));
     expect(api.markReadCalls, ['c1']);
-    expect(find.text('2'), findsNothing);
+    expect(find.bySemanticsLabel('Chưa đọc'), findsNothing);
     await closePage(tester);
   });
 
@@ -460,7 +460,8 @@ void main() {
       await tester.tap(find.text('Đánh dấu chưa đọc'));
       await tester.pumpAndSettle(const Duration(milliseconds: 50));
       expect(api.unreadCalls, ['c1']);
-      expect(find.text('1'), findsOneWidget);
+      expect(find.byKey(const Key('unread-dot')), findsOneWidget);
+      expect(find.text('1'), findsNothing);
       expect(find.text('Đã đánh dấu chưa đọc.'), findsOneWidget);
       await closePage(tester);
     });

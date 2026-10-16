@@ -55,10 +55,10 @@ class SubtaskRow extends StatelessWidget {
   final VoidCallback onDiscard;
 
   /// ⋮ "Tuỳ chọn việc con" (Đổi tên, Giao, Xoá). null = không có nút.
-  final VoidCallback? onMenu;
+  final ValueChanged<Rect>? onMenu;
 
   /// Mở bảng "Ai làm việc này". Null = nút người làm chỉ hiển thị.
-  final VoidCallback? onAssign;
+  final ValueChanged<Rect>? onAssign;
 
   /// Tên / ảnh người đang làm. Tên null mà [Subtask.assigneeId] có = server
   /// không tra ra tên; vẫn là avatar (chữ tắt "?"), không phải nút trống.
@@ -91,35 +91,51 @@ class SubtaskRow extends StatelessWidget {
     final displayName = assigneeName ?? subtask.assigneeName;
 
     final Widget? who = hasAssignee
-        ? Semantics(
-            button: onAssign != null,
-            onTap: onAssign,
-            label: 'Đổi người làm: ${displayName ?? 'người khác'}',
-            excludeSemantics: true,
-            child: InkWell(
-              onTap: onAssign,
-              customBorder: const CircleBorder(),
-              child: SizedBox(
-                width: tapSize,
-                height: tapSize,
-                child: Align(
-                  alignment: Alignment.centerLeft,
-                  child: OmniAvatar(
-                    name: displayName ?? '?',
-                    imageUrl: assigneeAvatar ?? subtask.assigneeAvatar,
-                    size: 28,
+        ? Builder(
+            builder: (buttonContext) {
+              void open() {
+                final box = buttonContext.findRenderObject() as RenderBox?;
+                if (box == null || !box.hasSize) return;
+                onAssign?.call(box.localToGlobal(Offset.zero) & box.size);
+              }
+
+              return Semantics(
+                button: onAssign != null,
+                onTap: onAssign == null ? null : open,
+                label: 'Đổi người làm: ${displayName ?? 'người khác'}',
+                excludeSemantics: true,
+                child: InkWell(
+                  onTap: onAssign == null ? null : open,
+                  customBorder: const CircleBorder(),
+                  child: SizedBox(
+                    width: tapSize,
+                    height: tapSize,
+                    child: Align(
+                      alignment: Alignment.centerLeft,
+                      child: OmniAvatar(
+                        name: displayName ?? '?',
+                        imageUrl: assigneeAvatar ?? subtask.assigneeAvatar,
+                        size: 28,
+                      ),
+                    ),
                   ),
                 ),
-              ),
-            ),
+              );
+            },
           )
         : onAssign == null
         ? null
-        : _MiniButton(
-            semanticsLabel: 'Giao việc con',
-            icon: Icons.add_rounded,
-            label: 'Người làm',
-            onTap: onAssign!,
+        : Builder(
+            builder: (buttonContext) => _MiniButton(
+              semanticsLabel: 'Giao việc con',
+              icon: Icons.add_rounded,
+              label: 'Người làm',
+              onTap: () {
+                final box = buttonContext.findRenderObject() as RenderBox?;
+                if (box == null || !box.hasSize) return;
+                onAssign!(box.localToGlobal(Offset.zero) & box.size);
+              },
+            ),
           );
 
     return DecoratedBox(
@@ -224,16 +240,23 @@ class SubtaskRow extends StatelessWidget {
             if (onMenu != null)
               Padding(
                 padding: const EdgeInsets.only(top: 6),
-                child: IconButton(
-                  tooltip: 'Tuỳ chọn việc con',
-                  onPressed: onMenu,
-                  style: IconButton.styleFrom(
-                    minimumSize: const Size(tapSize, tapSize),
-                    maximumSize: const Size(tapSize, tapSize),
-                    padding: EdgeInsets.zero,
-                    foregroundColor: secondary,
+                child: Builder(
+                  builder: (buttonContext) => IconButton(
+                    tooltip: 'Tuỳ chọn việc con',
+                    onPressed: () {
+                      final box =
+                          buttonContext.findRenderObject() as RenderBox?;
+                      if (box == null || !box.hasSize) return;
+                      onMenu!(box.localToGlobal(Offset.zero) & box.size);
+                    },
+                    style: IconButton.styleFrom(
+                      minimumSize: const Size(tapSize, tapSize),
+                      maximumSize: const Size(tapSize, tapSize),
+                      padding: EdgeInsets.zero,
+                      foregroundColor: secondary,
+                    ),
+                    icon: const Icon(Icons.more_vert_rounded, size: 18),
                   ),
-                  icon: const Icon(Icons.more_vert_rounded, size: 18),
                 ),
               ),
           ],

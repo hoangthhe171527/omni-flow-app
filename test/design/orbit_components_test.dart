@@ -130,11 +130,42 @@ void main() {
       final decoration = tester
           .widget<TextField>(find.byType(TextField))
           .decoration!;
+      final field = tester.widget<TextField>(find.byType(TextField));
       expect(decoration.fillColor, OmniColors.muted);
       expect(
         (decoration.enabledBorder! as OutlineInputBorder).borderSide,
         BorderSide.none,
       );
+      expect(field.style?.fontSize, OmniType.search.fontSize);
+      expect(field.style?.fontStyle, FontStyle.normal);
+      expect(decoration.hintStyle?.fontSize, OmniType.searchHint.fontSize);
+      expect(decoration.hintStyle?.fontStyle, FontStyle.italic);
+    });
+  });
+
+  group('section phẳng', () {
+    testWidgets('OmniCard flat không viền, không bo và không clip', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        host(const OmniCard(flat: true, child: Text('Nội dung'))),
+      );
+
+      final material = tester.widget<Material>(
+        find.descendant(
+          of: find.byType(OmniCard),
+          matching: find.byType(Material),
+        ),
+      );
+      final ink = tester.widget<Ink>(
+        find.descendant(of: find.byType(OmniCard), matching: find.byType(Ink)),
+      );
+      final decoration = ink.decoration as BoxDecoration;
+
+      expect(material.borderRadius, BorderRadius.zero);
+      expect(material.clipBehavior, Clip.none);
+      expect(decoration.borderRadius, BorderRadius.zero);
+      expect(decoration.border, isNull);
     });
   });
 }

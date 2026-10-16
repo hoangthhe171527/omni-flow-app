@@ -251,17 +251,15 @@ void main() {
     await closePage(tester);
   });
 
-  testWidgets('chọn nhiều → "Chọn tất cả" gồm cả mục ghim', (tester) async {
+  testWidgets('có ghim vẫn không hiện nút chọn nhiều ở hàng tìm kiếm', (
+    tester,
+  ) async {
     api.main = [_c('c1', 'Minh Trần')];
     api.pinned = [_c('p1', 'Lan Anh', pinned: true)];
     await open(tester);
-    await tester.tap(find.byTooltip('Chọn nhiều'));
-    await tester.pump();
-    await tester.tap(find.text('Lan Anh'));
-    await tester.pump();
-    await tester.tap(find.text('Minh Trần'));
-    await tester.pump();
-    expect(find.text('Đã chọn 2'), findsOneWidget);
+    expect(find.byTooltip('Chọn nhiều'), findsNothing);
+    expect(find.text('Lan Anh'), findsOneWidget);
+    expect(find.text('Minh Trần'), findsOneWidget);
     await closePage(tester);
   });
 }

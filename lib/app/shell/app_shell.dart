@@ -102,14 +102,23 @@ class AppShell extends ConsumerWidget {
 /// Chung cho thanh dưới và thanh bên để hai nơi không bao giờ tô cùng một số
 /// bằng hai màu khác nhau.
 class _NavBadge extends StatelessWidget {
-  const _NavBadge({required this.count, required this.tone});
+  const _NavBadge({
+    required this.count,
+    required this.tone,
+    required this.display,
+  });
 
   final int count;
   final NavBadgeTone tone;
+  final NavBadgeDisplay display;
 
   @override
   Widget build(BuildContext context) {
     final ring = Theme.of(context).colorScheme.surface;
+
+    if (display == NavBadgeDisplay.dot) {
+      return const OmniUnreadDot(excludeSemantics: true);
+    }
 
     return switch (tone) {
       NavBadgeTone.unread => OmniCountBadge.unread(
@@ -139,17 +148,30 @@ class _ShellNavigationRail extends ConsumerWidget {
     Widget iconFor(ModuleNavEntry destination, {required bool selected}) {
       final badgeProvider = destination.badge;
       final count = badgeProvider == null ? 0 : ref.watch(badgeProvider);
-      return Stack(
-        clipBehavior: Clip.none,
-        children: [
-          Icon(selected ? destination.selectedIcon : destination.icon),
-          if (count > 0)
-            Positioned(
-              right: -12,
-              top: -9,
-              child: _NavBadge(count: count, tone: destination.badgeTone),
-            ),
-        ],
+      final label = count <= 0
+          ? destination.label
+          : destination.badgeDisplay == NavBadgeDisplay.dot
+          ? '${destination.label}, có tin chưa đọc'
+          : '${destination.label}, $count';
+      return Semantics(
+        label: label,
+        excludeSemantics: true,
+        child: Stack(
+          clipBehavior: Clip.none,
+          children: [
+            Icon(selected ? destination.selectedIcon : destination.icon),
+            if (count > 0)
+              Positioned(
+                right: -12,
+                top: -9,
+                child: _NavBadge(
+                  count: count,
+                  tone: destination.badgeTone,
+                  display: destination.badgeDisplay,
+                ),
+              ),
+          ],
+        ),
       );
     }
 
@@ -292,10 +314,16 @@ class _ShellNavItem extends ConsumerWidget {
     final count = badgeProvider == null ? 0 : ref.watch(badgeProvider);
     final text = destination?.label ?? label!;
 
+    final semanticsLabel = count <= 0
+        ? text
+        : destination?.badgeDisplay == NavBadgeDisplay.dot
+        ? '$text, có tin chưa đọc'
+        : '$text, $count';
+
     return Semantics(
       selected: selected,
       button: true,
-      label: count > 0 ? '$text, $count' : text,
+      label: semanticsLabel,
       excludeSemantics: true,
       child: InkWell(
         onTap: onTap,
@@ -345,6 +373,7 @@ class _ShellNavItem extends ConsumerWidget {
                             child: _NavBadge(
                               count: count,
                               tone: destination!.badgeTone,
+                              display: destination!.badgeDisplay,
                             ),
                           ),
                       ],

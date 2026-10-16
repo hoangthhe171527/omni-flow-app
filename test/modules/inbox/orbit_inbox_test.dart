@@ -9,7 +9,7 @@ import 'package:omni_app/modules/inbox/domain/conversation.dart';
 import 'package:omni_app/modules/inbox/presentation/widgets/conversation_row.dart';
 import 'package:omni_app/modules/inbox/presentation/widgets/message_composer.dart';
 
-/// Quy ước Orbit của hộp thư: số chưa đọc vàng chữ mực, chấm khẩn đỏ, chấm
+/// Quy ước Orbit của hộp thư: chấm chưa đọc vàng, chấm khẩn đỏ, chấm
 /// quá hạn trả lời hổ phách; hàng trả lời nhanh chèn câu vào ô nhập.
 void main() {
   setUpAll(() => initializeDateFormatting('vi_VN'));
@@ -48,7 +48,7 @@ void main() {
     return dots.isEmpty ? null : dots.first.color;
   }
 
-  testWidgets('chưa đọc: huy hiệu nền màu chính', (tester) async {
+  testWidgets('chưa đọc: chỉ hiện chấm vàng, không hiện số', (tester) async {
     await tester.pumpWidget(
       host(
         ConversationRow(conversation: conversation(unread: 3), onTap: () {}),
@@ -56,15 +56,9 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    final badge = tester.widget<OmniCountBadge>(find.byType(OmniCountBadge));
-    expect(badge.count, 3);
-    expect(badge.color, OmniColors.primary);
-    expect(
-      badge.foreground,
-      Theme.of(
-        tester.element(find.byType(ConversationRow)),
-      ).colorScheme.onPrimary,
-    );
+    expect(find.byType(OmniUnreadDot), findsOneWidget);
+    expect(find.bySemanticsLabel('Chưa đọc'), findsOneWidget);
+    expect(find.text('3'), findsNothing);
   });
 
   testWidgets('khẩn: chấm đỏ', (tester) async {
