@@ -12,6 +12,8 @@ import 'core/module/extra_segment.dart';
 import 'core/module/module_registry.dart';
 import 'core/module/omni_module.dart';
 import 'core/storage/preferences_store.dart';
+import 'demo/demo_app.dart';
+import 'demo/demo_mode.dart';
 import 'modules/auth/auth_module.dart';
 import 'modules/auth/application/google_identity_gateway.dart';
 import 'modules/auth/data/auth_api.dart';
@@ -72,22 +74,32 @@ Future<Widget> bootstrap() async {
   final preferences = await SharedPreferences.getInstance();
 
   return ProviderScope(
-    overrides: [
-      sharedPreferencesProvider.overrideWithValue(preferences),
-      modulesProvider.overrideWithValue(appModules),
-      // Đoạn Cơ hội của tab Khách: customers không import opportunities (sẽ
-      // đóng vòng), nên đoạn được cắm vào đây.
-      khachExtraSegmentProvider.overrideWithValue(opportunitiesKhachSegment),
-      customerOpportunitiesSectionProvider.overrideWithValue(
-        opportunitiesCustomerSection,
-      ),
-      // Dependency inversion: `security` declares the gateway, `modules/auth`
-      // implements it, and they meet here.
-      authGatewayProvider.overrideWith((ref) => ref.watch(authApiProvider)),
-      googleIdentityGatewayProvider.overrideWith(
-        (ref) => ref.watch(googleIdentityServiceProvider),
-      ),
-    ],
+    overrides: await appOverrides(preferences),
     child: const OmniApp(),
   );
 }
+
+/// Mọi override của app. Tách khỏi [bootstrap] để bài kiểm bản demo dựng đúng
+/// cây provider của app thật.
+Future<List<Override>> appOverrides(
+  SharedPreferences preferences, {
+  bool demo = kDemoMode,
+}) async => [
+  // Bản kiểm thử khép kín (`--dart-define=DEMO_MODE=true`): không đăng
+  // nhập, dữ liệu mẫu trong RAM, không gọi API thật.
+  if (demo) ...await demoOverrides(preferences),
+  sharedPreferencesProvider.overrideWithValue(preferences),
+  modulesProvider.overrideWithValue(appModules),
+  // Đoạn Cơ hội của tab Khách: customers không import opportunities (sẽ
+  // đóng vòng), nên đoạn được cắm vào đây.
+  khachExtraSegmentProvider.overrideWithValue(opportunitiesKhachSegment),
+  customerOpportunitiesSectionProvider.overrideWithValue(
+    opportunitiesCustomerSection,
+  ),
+  // Dependency inversion: `security` declares the gateway, `modules/auth`
+  // implements it, and they meet here.
+  authGatewayProvider.overrideWith((ref) => ref.watch(authApiProvider)),
+  googleIdentityGatewayProvider.overrideWith(
+    (ref) => ref.watch(googleIdentityServiceProvider),
+  ),
+];
