@@ -19,6 +19,10 @@ final refreshBackoffProvider = Provider<Future<void> Function(Duration)>(
 
 final _jitter = Random();
 
+/// Thay lớp mạng của Dio. null = mạng thật. Bản demo (`lib/demo/`) gắn một
+/// máy chủ trong bộ nhớ vào đây từ `bootstrap.dart`; `core` không biết gì về nó.
+final httpClientAdapterProvider = Provider<HttpClientAdapter?>((ref) => null);
+
 final dioProvider = Provider<Dio>((ref) {
   final dio = Dio(
     BaseOptions(
@@ -31,6 +35,8 @@ final dioProvider = Provider<Dio>((ref) {
       },
     ),
   );
+  final adapter = ref.watch(httpClientAdapterProvider);
+  if (adapter != null) dio.httpClientAdapter = adapter;
 
   // Concurrent 401s share one refresh. Otherwise an inbox screen can rotate
   // the same refresh token multiple times and invalidate its own session.

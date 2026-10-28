@@ -36,6 +36,13 @@ on:
         default: android
         type: choice
         options: [android, ios, both]
+      demo:
+        description: >-
+          Bản DEMO cho kiểm thử khép kín: bỏ đăng nhập, chạy trên dữ liệu mẫu
+          trong máy, không gọi API thật, không lưu gì (DEMO_MODE=true).
+        required: false
+        default: false
+        type: boolean
 
 concurrency:
   # Hai bản dựng cùng lúc cùng tiêu một số hiệu là một trong hai bản chết.
@@ -112,7 +119,12 @@ jobs:
 
       - name: Đóng gói AAB
         # AAB chứ không APK: Play chỉ nhận AAB cho ứng dụng mới từ 2021.
-        run: flutter build appbundle --release --build-number=${{ inputs.build_number }}
+        run: flutter build appbundle --release --build-number=${{ inputs.build_number }} --dart-define=DEMO_MODE=${{ inputs.demo }}
+
+      - name: Đóng gói APK (chỉ bản demo)
+        # Bản demo còn được gửi tay cho người kiểm thử cài thẳng, nên kèm APK.
+        if: inputs.demo
+        run: flutter build apk --release --build-number=${{ inputs.build_number }} --dart-define=DEMO_MODE=true
 
       - name: Xác nhận đã ký bằng khoá thật
         # Gradle cố ý KHÔNG chết khi thiếu khoá — nó lùi về khoá debug để một
@@ -128,8 +140,11 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
-          name: viomni-android-${{ inputs.build_number }}
-          path: build/app/outputs/bundle/release/app-release.aab
+          name: viomni-android-${{ inputs.build_number }}${{ inputs.demo && '-demo' || '' }}
+          path: |
+            build/app/outputs/bundle/release/app-release.aab
+            build/app/outputs/flutter-apk/app-release.apk
+          if-no-files-found: warn
           # Tệp này ký bằng khoá phát hành. Giữ lâu trên GitHub không thêm được
           # gì — bản thật sống ở Play Console sau khi tải lên.
           retention-days: 14
@@ -224,6 +239,7 @@ jobs:
         run: |
           flutter build ipa --release \
             --build-number=${{ inputs.build_number }} \
+            --dart-define=DEMO_MODE=${{ inputs.demo }} \
             --export-options-plist=ios/ExportOptions.plist
 
       - name: Tải lên TestFlight
