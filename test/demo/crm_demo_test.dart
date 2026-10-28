@@ -42,7 +42,9 @@ void main() {
       expect(page.hasMore, isTrue);
       final next = await customers.list(page: 2, perPage: 10);
       expect(next.items, isNotEmpty);
-      expect(page.items.first.ownerName, isNotNull);
+      // Thứ tự theo `updated_at` tương đối với giờ chạy — khách đứng đầu có
+      // thể là khách chưa giao ai, nên kiểm trên cả trang.
+      expect(page.items.where((c) => c.ownerName != null), isNotEmpty);
     });
 
     test('tìm theo tên không dấu và theo số điện thoại', () async {
