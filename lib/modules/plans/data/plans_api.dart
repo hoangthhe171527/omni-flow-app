@@ -491,7 +491,8 @@ Future<PlanTasks> loadAllTasksInPlan(PlansApi api, String planId) async {
   final all = <Task>[];
   var reachedEnd = false;
 
-  for (var page = 1; all.length < kMaxTasksOnBoard; page++) {
+  while (all.length < kMaxTasksOnBoard) {
+    const page = 1;
     final result = await api.tasksInPlan(
       planId,
       page: page,
@@ -506,6 +507,39 @@ Future<PlanTasks> loadAllTasksInPlan(PlansApi api, String planId) async {
       reachedEnd = true;
       break;
     }
+
+    const maxPages = kMaxTasksOnBoard ~/ _pageSize;
+    final declaredLast = result.pagination.lastPage;
+    final targetLastPage = declaredLast > 1 && declaredLast <= maxPages
+        ? declaredLast
+        : maxPages;
+    for (
+      var nextPage = 2;
+      nextPage <= targetLastPage && all.length < kMaxTasksOnBoard;
+      nextPage += 2
+    ) {
+      final batchPages = <int>[
+        nextPage,
+        if (nextPage + 1 <= targetLastPage) nextPage + 1,
+      ];
+      final batchResults = await Future.wait(
+        batchPages.map(
+          (p) => api.tasksInPlan(planId, page: p, perPage: _pageSize),
+        ),
+      );
+      for (final pageResult in batchResults) {
+        all.addAll(pageResult.items);
+        if (pageResult.items.length < _pageSize) {
+          reachedEnd = true;
+          break;
+        }
+      }
+      if (reachedEnd) break;
+    }
+    if (declaredLast > 1 && declaredLast < maxPages) {
+      reachedEnd = true;
+    }
+    break;
   }
 
   // Hai lý do vòng lặp kết thúc, và chỉ MỘT trong hai nghĩa là đã thấy hết.

@@ -1,12 +1,57 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/error/app_exception.dart';
 import '../../../core/error/crash_reporting.dart';
+import '../../../core/storage/preferences_store.dart';
+import '../../../core/storage/storage_keys.dart';
 import '../data/inbox_api.dart';
 import '../domain/message.dart';
 import 'inbox_providers.dart';
+
+/// Hàng chờ tin gửi đi chưa được server xác nhận, ghi xuống ĐĨA.
+///
+/// [threadProvider] là autoDispose: rời màn chat là provider bị huỷ. Nếu không
+/// ghi xuống đĩa, một tin gửi lỗi đang chờ bấm "Gửi lại" (hoặc đang gửi dở lúc
+/// nhân viên thoát màn) sẽ biến mất lặng lẽ khi mở lại hội thoại.
+class ThreadOutbox {
+  const ThreadOutbox(this._store);
+
+  final PreferencesStore _store;
+
+  List<Message> read(String conversationId) {
+    final raw = _store.getString(_key(conversationId));
+    if (raw == null || raw.isEmpty) return const [];
+    try {
+      final decoded = jsonDecode(raw);
+      if (decoded is! List) return const [];
+      return [
+        for (final entry in decoded)
+          ?Message.fromOutboxJson(entry),
+      ];
+    } on FormatException {
+      return const [];
+    }
+  }
+
+  Future<void> write(String conversationId, List<Message> pending) {
+    return _store.setString(
+      _key(conversationId),
+      pending.isEmpty
+          ? null
+          : jsonEncode([for (final m in pending) m.toOutboxJson()]),
+    );
+  }
+
+  static String _key(String conversationId) =>
+      '${StorageKeys.threadOutbox}.$conversationId';
+}
+
+final threadOutboxProvider = Provider<ThreadOutbox>((ref) {
+  return ThreadOutbox(ref.watch(preferencesStoreProvider));
+});
 
 class ThreadState {
   ThreadState({
@@ -119,16 +164,23 @@ class ThreadController
   /// was started from (the rep backs out while the request is in flight), and
   /// writing `state` after disposal throws.
   bool _disposed = false;
+  ThreadOutbox? _outbox;
 
   @override
   Future<ThreadState> build(String conversationId) async {
     _disposed = false;
     ref.onDispose(() => _disposed = true);
+    try {
+      _outbox = ref.read(threadOutboxProvider);
+    } on Object {
+      _outbox = null;
+    }
 
     final page = await ref.watch(inboxApiProvider).messages(conversationId);
     return ThreadState(
       // The API returns newest-first; the thread reads oldest-first.
       messages: page.messages.reversed.toList(),
+      pending: _restore(conversationId, page.messages),
       hasMore: page.cursor.hasMore,
       nextBefore: page.cursor.nextBefore,
     );
@@ -775,6 +827,12 @@ class ThreadController
   void _enqueue(Message draft, {String? replacing}) {
     final current = state.valueOrNull ?? ThreadState();
     final superseded = replacing ?? draft.id;
+    final nextPending = [
+      for (final message in current.pending)
+        if (message.id != superseded) message,
+      draft,
+    ];
+    _persistPending(nextPending);
     state = AsyncData(
       current.copyWith(
         pending: [
@@ -794,7 +852,10 @@ class ThreadController
 
   /// The send succeeded: move the bubble out of the outbox and into history.
   void _settle(String draftId, Message resolved) {
-    if (_disposed) return;
+    if (_disposed) {
+      _removePersistedDraft(draftId);
+      return;
+    }
     final current = state.valueOrNull;
     if (current == null) return;
 
@@ -816,57 +877,141 @@ class ThreadController
     final byId = <String, Message>{
       for (final message in [...current.messages, saved]) message.id: message,
     };
+    final nextPending = [
+      for (final message in current.pending)
+        if (message.id != draftId) message,
+    ];
+    _persistPending(nextPending);
 
     state = AsyncData(
       current.copyWith(
         messages: byId.values.toList()..sort(compareMessages),
-        pending: [
-          for (final message in current.pending)
-            if (message.id != draftId) message,
-        ],
+        pending: nextPending,
       ),
     );
   }
 
   /// The send failed: keep the bubble in the outbox, carrying the reason.
   void _fail(String draftId, String reason, {String? errorCode}) {
-    if (_disposed) return;
+    if (_disposed) {
+      _failPersistedDraft(draftId, reason, errorCode: errorCode);
+      return;
+    }
     final current = state.valueOrNull;
     if (current == null) return;
 
-    state = AsyncData(
-      current.copyWith(
-        pending: [
-          for (final message in current.pending)
-            if (message.id == draftId)
-              message.copyWith(
-                status: DeliveryStatus.failed,
-                error: reason,
-                errorCode: errorCode,
-              )
-            else
-              message,
-        ],
-      ),
-    );
+    final nextPending = [
+      for (final message in current.pending)
+        if (message.id == draftId)
+          message.copyWith(
+            status: DeliveryStatus.failed,
+            error: reason,
+            errorCode: errorCode,
+          )
+        else
+          message,
+    ];
+    _persistPending(nextPending);
+
+    state = AsyncData(current.copyWith(pending: nextPending));
   }
 
   /// Drops a failed bubble the rep chose not to retry.
   void discard(String messageId) {
     final current = state.valueOrNull;
     if (current == null) return;
+    final nextPending = [
+      for (final message in current.pending)
+        if (message.id != messageId) message,
+    ];
+    _persistPending(nextPending);
     state = AsyncData(
       current.copyWith(
-        pending: [
-          for (final message in current.pending)
-            if (message.id != messageId) message,
-        ],
+        pending: nextPending,
         messages: [
           for (final message in current.messages)
             if (message.id != messageId) message,
         ],
       ),
     );
+  }
+
+  List<Message> _restore(String conversationId, List<Message> serverMessages) {
+    final outbox = _outbox;
+    if (outbox == null) return const [];
+    try {
+      final saved = outbox.read(conversationId);
+      if (saved.isEmpty) return const [];
+      final settled = {
+        for (final m in serverMessages)
+          if (m.clientId != null && m.clientId!.isNotEmpty) m.clientId,
+      };
+      final unconfirmed = [
+        for (final m in saved)
+          if (!settled.contains(m.clientId)) m,
+      ];
+      if (unconfirmed.length != saved.length) {
+        unawaited(outbox.write(conversationId, unconfirmed));
+      }
+      return unconfirmed;
+    } on Object {
+      return const [];
+    }
+  }
+
+  void _persistPending(List<Message> pending) {
+    final outbox = _outbox;
+    if (outbox == null) return;
+    try {
+      unawaited(outbox.write(arg, pending));
+    } on Object {
+      // Cố ý nuốt: lỗi lưu trữ phụ không được chặn thao tác gửi tin chính.
+    }
+  }
+
+  void _removePersistedDraft(String draftId) {
+    final outbox = _outbox;
+    if (outbox == null) return;
+    try {
+      final saved = outbox.read(arg);
+      if (saved.isEmpty) return;
+      unawaited(
+        outbox.write(arg, [
+          for (final m in saved)
+            if (m.id != draftId) m,
+        ]),
+      );
+    } on Object {
+      // Cố ý nuốt: lỗi lưu trữ phụ không được chặn thao tác chính.
+    }
+  }
+
+  void _failPersistedDraft(
+    String draftId,
+    String reason, {
+    String? errorCode,
+  }) {
+    final outbox = _outbox;
+    if (outbox == null) return;
+    try {
+      final saved = outbox.read(arg);
+      if (saved.isEmpty) return;
+      unawaited(
+        outbox.write(arg, [
+          for (final m in saved)
+            if (m.id == draftId)
+              m.copyWith(
+                status: DeliveryStatus.failed,
+                error: reason,
+                errorCode: errorCode,
+              )
+            else
+              m,
+        ]),
+      );
+    } on Object {
+      // Cố ý nuốt: lỗi lưu trữ phụ không được chặn thao tác chính.
+    }
   }
 }
 

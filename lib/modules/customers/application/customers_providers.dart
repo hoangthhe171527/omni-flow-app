@@ -1,5 +1,9 @@
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'dart:async';
 
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../core/realtime/realtime_client.dart';
+
+import '../../../core/network/active_tenant.dart';
 import '../../../core/network/api_envelope.dart';
 import '../../../security/permissions/access_scope.dart';
 import '../../../security/permissions/resource_access.dart';
@@ -9,6 +13,49 @@ import '../domain/customer.dart';
 import '../domain/customer_activity.dart';
 import '../domain/customer_summary.dart';
 import '../domain/customer_permissions.dart';
+
+final _customerEntityChannelProvider = Provider<String?>((ref) {
+  final tenantId = ref.watch(activeTenantIdProvider);
+  return (tenantId == null || tenantId.isEmpty)
+      ? null
+      : 'tenant.$tenantId.entities';
+});
+
+/// Tín hiệu làm mới danh sách / hồ sơ khách khi thiết bị khác thay đổi
+/// `customer` hoặc `lead` trên kênh `tenant.{id}.entities`.
+final customerRealtimeSignalProvider =
+    NotifierProvider<CustomerRealtimeSignal, int>(CustomerRealtimeSignal.new);
+
+class CustomerRealtimeSignal extends Notifier<int> {
+  static const _coalesceWindow = Duration(milliseconds: 400);
+  Timer? _coalesce;
+
+  @override
+  int build() {
+    final channel = ref.watch(_customerEntityChannelProvider);
+    if (channel != null) {
+      final unsubscribe = ref
+          .watch(realtimeClientProvider)
+          .subscribePrivate(channel, _onEvent);
+      ref.onDispose(unsubscribe);
+    }
+    ref.onDispose(() => _coalesce?.cancel());
+    return 0;
+  }
+
+  void _onEvent(RealtimeEvent event) {
+    if (event.event != 'entity.changed') return;
+    if (!const {'customer', 'lead'}.contains(event.data['type'])) return;
+
+    _coalesce?.cancel();
+    _coalesce = Timer(_coalesceWindow, () => state = state + 1);
+  }
+
+  void bump() {
+    _coalesce?.cancel();
+    state = state + 1;
+  }
+}
 
 final customerAccessProvider = Provider<ResourceAccess>((ref) {
   return CustomerPermissions.of(ref.watch(accessProvider));
@@ -116,6 +163,7 @@ class CustomerListController
     extends AutoDisposeAsyncNotifier<CustomerListState> {
   @override
   Future<CustomerListState> build() async {
+    ref.watch(customerRealtimeSignalProvider);
     final filter = ref.watch(customerFilterProvider);
     final userId = ref.watch(sessionProvider).user?.id;
     final page = await ref
@@ -162,6 +210,7 @@ final customerProvider = FutureProvider.autoDispose.family<Customer, String>((
   ref,
   id,
 ) {
+  ref.watch(customerRealtimeSignalProvider);
   return ref.watch(customersApiProvider).get(id);
 });
 
@@ -170,6 +219,7 @@ final customerProvider = FutureProvider.autoDispose.family<Customer, String>((
 final customerSummaryProvider = FutureProvider.autoDispose
     .family<CustomerSummary?, String>((ref, id) async {
       try {
+        ref.watch(customerRealtimeSignalProvider);
         return await ref.watch(customersApiProvider).summary(id);
       } catch (_) {
         return null;
@@ -184,5 +234,6 @@ final customerActivityAccessProvider = Provider<bool>((ref) {
 
 final customerActivityProvider = FutureProvider.autoDispose
     .family<List<CustomerActivity>, String>((ref, id) {
+      ref.watch(customerRealtimeSignalProvider);
       return ref.watch(customersApiProvider).activities(id);
     });

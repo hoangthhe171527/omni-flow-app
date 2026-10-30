@@ -1,4 +1,7 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../core/realtime/realtime_client.dart';
 
 import '../../../core/network/active_tenant.dart';
 import '../data/team_api.dart';
@@ -11,7 +14,52 @@ import '../domain/team_member.dart';
 /// lọc). Danh sách để CHỌN người thì đọc [teamMembersProvider]. Làm mới (sau
 /// khi mời, ngừng hoạt động, liên kết Zalo, bấm "Thử lại") thì invalidate
 /// provider NÀY — hai provider kia dựng lại theo.
+final _teamEntityChannelProvider = Provider<String?>((ref) {
+  final tenantId = ref.watch(activeTenantIdProvider);
+  return (tenantId == null || tenantId.isEmpty)
+      ? null
+      : 'tenant.$tenantId.entities';
+});
+
+/// Tín hiệu làm mới danh bạ nhân viên khi thiết bị khác thay đổi `user` hoặc
+/// `membership` trên kênh `tenant.{id}.entities`.
+final teamRealtimeSignalProvider = NotifierProvider<TeamRealtimeSignal, int>(
+  TeamRealtimeSignal.new,
+);
+
+class TeamRealtimeSignal extends Notifier<int> {
+  static const _coalesceWindow = Duration(milliseconds: 400);
+  Timer? _coalesce;
+
+  @override
+  int build() {
+    final channel = ref.watch(_teamEntityChannelProvider);
+    if (channel != null) {
+      final unsubscribe = ref
+          .watch(realtimeClientProvider)
+          .subscribePrivate(channel, _onEvent);
+      ref.onDispose(unsubscribe);
+    }
+    ref.onDispose(() => _coalesce?.cancel());
+    return 0;
+  }
+
+  void _onEvent(RealtimeEvent event) {
+    if (event.event != 'entity.changed') return;
+    if (!const {'user', 'membership'}.contains(event.data['type'])) return;
+
+    _coalesce?.cancel();
+    _coalesce = Timer(_coalesceWindow, () => state = state + 1);
+  }
+
+  void bump() {
+    _coalesce?.cancel();
+    state = state + 1;
+  }
+}
+
 final teamDirectoryProvider = FutureProvider<List<TeamMember>>((ref) async {
+  ref.watch(teamRealtimeSignalProvider);
   // Lượt nạp bị bỏ (đổi tenant giữa chừng → provider dựng lại) thì không được
   // bật cờ cho tenant MỚI bằng danh bạ của tenant cũ.
   var alive = true;

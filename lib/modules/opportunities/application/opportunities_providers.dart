@@ -1,6 +1,11 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/realtime/realtime_client.dart';
+
 import '../../../core/error/app_exception.dart';
+import '../../../core/network/active_tenant.dart';
 import '../../../core/network/api_envelope.dart';
 import '../../../security/permissions/access_scope.dart';
 import '../../../security/permissions/resource_access.dart';
@@ -9,6 +14,51 @@ import '../data/opportunities_api.dart';
 import '../domain/opportunity.dart';
 import '../domain/opportunity_permissions.dart';
 import '../domain/pipeline_catalog.dart';
+
+final _opportunityEntityChannelProvider = Provider<String?>((ref) {
+  final tenantId = ref.watch(activeTenantIdProvider);
+  return (tenantId == null || tenantId.isEmpty)
+      ? null
+      : 'tenant.$tenantId.entities';
+});
+
+/// Tín hiệu làm mới bảng / danh sách / hồ sơ cơ hội khi thiết bị khác thay đổi
+/// `opportunity` trên kênh `tenant.{id}.entities`.
+final opportunityRealtimeSignalProvider =
+    NotifierProvider<OpportunityRealtimeSignal, int>(
+      OpportunityRealtimeSignal.new,
+    );
+
+class OpportunityRealtimeSignal extends Notifier<int> {
+  static const _coalesceWindow = Duration(milliseconds: 400);
+  Timer? _coalesce;
+
+  @override
+  int build() {
+    final channel = ref.watch(_opportunityEntityChannelProvider);
+    if (channel != null) {
+      final unsubscribe = ref
+          .watch(realtimeClientProvider)
+          .subscribePrivate(channel, _onEvent);
+      ref.onDispose(unsubscribe);
+    }
+    ref.onDispose(() => _coalesce?.cancel());
+    return 0;
+  }
+
+  void _onEvent(RealtimeEvent event) {
+    if (event.event != 'entity.changed') return;
+    if (event.data['type'] != 'opportunity') return;
+
+    _coalesce?.cancel();
+    _coalesce = Timer(_coalesceWindow, () => state = state + 1);
+  }
+
+  void bump() {
+    _coalesce?.cancel();
+    state = state + 1;
+  }
+}
 
 final opportunityAccessProvider = Provider<ResourceAccess>((ref) {
   return OpportunityPermissions.of(ref.watch(accessProvider));
@@ -61,6 +111,7 @@ final boardPipelineProvider = Provider<PipelineDef?>((ref) {
 });
 
 final pipelineSummaryProvider = FutureProvider<PipelineSummary>((ref) async {
+  ref.watch(opportunityRealtimeSignalProvider);
   final query = await ref.watch(boardQueryProvider.future);
   return ref
       .watch(opportunitiesApiProvider)
@@ -96,6 +147,7 @@ class StageOpportunitiesController
 
   @override
   Future<StageListState> build(String stageCode) async {
+    ref.watch(opportunityRealtimeSignalProvider);
     _generation++;
     final query = await ref.watch(boardQueryProvider.future);
     final page = await ref
@@ -209,6 +261,7 @@ class SegmentOpportunitiesController
 
   @override
   Future<StageListState> build() async {
+    ref.watch(opportunityRealtimeSignalProvider);
     _generation++;
     final filter = _segmentFilter(
       stage: ref.watch(segmentStageProvider),
@@ -291,6 +344,7 @@ final segmentOpportunitiesProvider =
 
 final opportunityProvider = FutureProvider.autoDispose
     .family<Opportunity, String>((ref, id) {
+      ref.watch(opportunityRealtimeSignalProvider);
       return ref.watch(opportunitiesApiProvider).get(id);
     });
 
@@ -375,6 +429,7 @@ Future<Opportunity> moveOpportunityStage(
 /// Cơ hội của một khách (`customer_id`), mọi trạng thái, tối đa 50.
 final customerOpportunitiesProvider = FutureProvider.autoDispose
     .family<List<Opportunity>, String>((ref, customerId) async {
+      ref.watch(opportunityRealtimeSignalProvider);
       final page = await ref
           .watch(opportunitiesApiProvider)
           .list(customerId: customerId, perPage: 50);

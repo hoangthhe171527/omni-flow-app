@@ -130,11 +130,15 @@ class _InlineVideoState extends State<_InlineVideo> {
   bool _refreshed = false;
   bool _failed = false;
 
+  /// Chỉ khởi tạo decoder/player khi người dùng chủ động bấm phát video, tránh
+  /// cấp phát bộ giải mã phần cứng và tải luồng mạng cho mọi bong bóng video
+  /// khi cuộn qua luồng chat.
+  bool _activated = false;
+
   @override
   void initState() {
     super.initState();
-    // Không setState: build đầu chưa chạy.
-    _open(resolveMediaUrl(widget.url));
+    _url = resolveMediaUrl(widget.url);
   }
 
   @override
@@ -146,12 +150,23 @@ class _InlineVideoState extends State<_InlineVideo> {
     setState(() {
       _refreshed = false;
       _failed = false;
-      _open(resolveMediaUrl(widget.url));
+      _url = resolveMediaUrl(widget.url);
+      if (_activated) {
+        _open(_url);
+      }
+    });
+  }
+
+  void _activate() {
+    if (_activated) return;
+    setState(() {
+      _activated = true;
+      _open(_url);
     });
   }
 
   /// Dựng controller cho [url] và bắt đầu mở. Phần đồng bộ; gọi trong
-  /// `setState` ở mọi chỗ trừ `initState`.
+  /// `setState`.
   void _open(String url) {
     _url = url;
     final previous = _controller;
@@ -182,6 +197,7 @@ class _InlineVideoState extends State<_InlineVideo> {
       return;
     }
     if (!mounted || controller != _controller) return;
+    unawaited(controller.play());
     setState(() {});
   }
 
@@ -232,6 +248,58 @@ class _InlineVideoState extends State<_InlineVideo> {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    if (!_activated) {
+      return ClipRRect(
+        borderRadius: BorderRadius.circular(14),
+        child: AspectRatio(
+          aspectRatio: 16 / 9,
+          child: Material(
+            color: scheme.onSurface.withValues(alpha: 0.08),
+            child: InkWell(
+              onTap: _activate,
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  IconButton.filled(
+                    tooltip: 'Phát video',
+                    onPressed: _activate,
+                    icon: const Icon(Icons.play_arrow_rounded),
+                  ),
+                  Positioned(
+                    left: 10,
+                    right: 10,
+                    bottom: 8,
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.videocam_outlined,
+                          size: OmniIconSize.md,
+                          color: scheme.onSurfaceVariant,
+                        ),
+                        const SizedBox(width: 6),
+                        Flexible(
+                          child: Text(
+                            widget.name ?? 'Video',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: OmniType.caption.copyWith(
+                              color: scheme.onSurfaceVariant,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
     final controller = _controller;
     if (_failed || controller == null) {
       return AspectRatio(

@@ -7,7 +7,9 @@ import 'package:omni_app/core/config/app_config.dart';
 import 'package:omni_app/core/error/app_exception.dart';
 import 'package:omni_app/core/network/api_client.dart';
 import 'package:omni_app/core/network/api_envelope.dart';
+import 'package:omni_app/core/storage/preferences_store.dart';
 import 'package:omni_app/modules/inbox/application/thread_controller.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:omni_app/modules/inbox/data/inbox_api.dart';
 import 'package:omni_app/modules/inbox/domain/message.dart';
 
@@ -268,6 +270,62 @@ void main() {
     expect(state.visible, hasLength(1));
     expect(state.visible.single.id, 'srv-1');
   });
+
+  test(
+    'outbox sống sót khi rời màn chat (autoDispose) và xoá khi gửi lại xong',
+    () async {
+      SharedPreferences.setMockInitialValues({});
+      final prefs = await SharedPreferences.getInstance();
+
+      final firstSession = ProviderContainer(
+        overrides: [
+          inboxApiProvider.overrideWithValue(api),
+          sharedPreferencesProvider.overrideWithValue(prefs),
+        ],
+      );
+      addTearDown(firstSession.dispose);
+
+      api.history = [_serverMessage('m1', 'Chào shop')];
+      firstSession.listen(threadProvider('c1'), (_, _) {});
+      await firstSession.read(threadProvider('c1').future);
+
+      api.failNextSend = true;
+      await firstSession
+          .read(threadProvider('c1').notifier)
+          .send('Tin bị rớt mạng');
+      final failedId = firstSession
+          .read(threadProvider('c1'))
+          .requireValue
+          .pending
+          .single
+          .id;
+      firstSession.dispose();
+
+      // Mở lại màn chat trong một container mới: tin gửi lỗi vẫn còn trong pending.
+      final secondSession = ProviderContainer(
+        overrides: [
+          inboxApiProvider.overrideWithValue(api),
+          sharedPreferencesProvider.overrideWithValue(prefs),
+        ],
+      );
+      addTearDown(secondSession.dispose);
+
+      secondSession.listen(threadProvider('c1'), (_, _) {});
+      final restored = await secondSession.read(threadProvider('c1').future);
+      expect(restored.pending, hasLength(1));
+      expect(restored.pending.single.id, failedId);
+      expect(restored.pending.single.text, 'Tin bị rớt mạng');
+      expect(restored.pending.single.status, DeliveryStatus.failed);
+
+      await secondSession
+          .read(threadProvider('c1').notifier)
+          .retry(restored.pending.single);
+      expect(
+        secondSession.read(threadProvider('c1')).requireValue.pending,
+        isEmpty,
+      );
+    },
+  );
 }
 
 /// Server messages are minute-stamped from the digits in their id, so `m1`
