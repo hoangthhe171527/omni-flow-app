@@ -17,4 +17,8 @@ abstract final class StorageKeys {
   /// Tiền tố; khoá thật là `<tiền tố>.<id công việc>`. Hàng chờ tick việc con
   /// chưa được server xác nhận của MỘT công việc — xem `SubtaskOutbox`.
   static const subtaskOutbox = 'omni.tasks.subtask_outbox';
+
+  /// Tiền tố; khoá thật là `<tiền tố>.<id hội thoại>`. Hàng chờ tin nhắn chưa
+  /// được server xác nhận của MỘT hội thoại — xem `ThreadOutbox`.
+  static const threadOutbox = 'omni.inbox.thread_outbox';
 }

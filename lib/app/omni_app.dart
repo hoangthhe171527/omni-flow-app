@@ -10,16 +10,19 @@ import '../core/realtime/realtime_client.dart';
 import '../core/theme/theme_mode_controller.dart';
 import '../design/components/components.dart';
 import '../design/theme/omni_theme.dart';
+import '../modules/customers/application/customers_providers.dart';
 import '../modules/inbox/inbox_routes.dart';
 import '../modules/notifications/application/notifications_providers.dart';
 import '../modules/notifications/application/push_notifications.dart';
 import '../modules/notifications/presentation/notification_quick_menu.dart';
 import '../modules/notifications/routes.dart';
+import '../modules/opportunities/application/opportunities_providers.dart';
 import '../modules/plans/application/plans_providers.dart';
 import '../modules/settings/presentation/widgets/account_menu_button.dart';
 import '../modules/settings/settings_module.dart';
 import '../modules/tasks/application/tasks_providers.dart';
 import '../modules/tasks/tasks_module.dart';
+import '../modules/team/application/team_providers.dart';
 import '../security/session/session_controller.dart';
 import '../security/session/session.dart';
 import 'router/app_router.dart';
@@ -82,6 +85,9 @@ class _OmniAppState extends ConsumerState<OmniApp> with WidgetsBindingObserver {
     unawaited(ref.read(realtimeClientProvider).connect());
     ref.read(taskRealtimeSignalProvider.notifier).bump();
     ref.read(planRealtimeSignalProvider.notifier).bump();
+    ref.read(customerRealtimeSignalProvider.notifier).bump();
+    ref.read(opportunityRealtimeSignalProvider.notifier).bump();
+    ref.read(teamRealtimeSignalProvider.notifier).bump();
   }
 
   @override

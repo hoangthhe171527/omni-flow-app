@@ -13,9 +13,6 @@ import 'package:web_socket_channel/web_socket_channel.dart';
 /// `connected`, nên không còn lượt gọi nào: nhân viên ngồi nhìn hộp thư ngừng
 /// cập nhật, tin khách mới không hiện, và không có thông báo gì. Hồi quy đó chỉ
 /// chữa được ở đây — client phải tự phát hiện ra là mình đã chết.
-///
-/// Nhịp watchdog được tiêm ngắn lại (30ms/90ms, cùng tỉ lệ 1:3 như
-/// 30s/90s thật) để bài kiểm chạy bằng đồng hồ thật mà không chờ 90 giây.
 void main() {
   const config = RealtimeConfig(
     key: 'test-key',
@@ -23,13 +20,15 @@ void main() {
     port: 443,
     useTls: true,
   );
-  const period = Duration(milliseconds: 30);
-  const limit = Duration(milliseconds: 90);
+  const period = Duration(milliseconds: 20);
+  const limit = Duration(seconds: 90);
 
+  late DateTime now;
   late _FakeSocket socket;
   late RealtimeClient client;
 
   setUp(() {
+    now = DateTime(2026, 10, 30, 12);
     socket = _FakeSocket();
     client = RealtimeClient(
       config: config,
@@ -37,6 +36,7 @@ void main() {
       authorizer: (channel, socketId) async => 'key:sig-for-$channel',
       watchdogPeriod: period,
       silenceLimit: limit,
+      clock: () => now,
     );
   });
 
@@ -67,7 +67,8 @@ void main() {
 
     // Không frame nào — kể cả ping của server. Reverb ping khoảng 60 giây một
     // lượt, nên im hết hạn 90 giây là đã chết.
-    await Future<void>.delayed(limit * 2);
+    now = now.add(const Duration(seconds: 91));
+    await Future<void>.delayed(period * 2);
     await settle();
 
     expect(
@@ -86,10 +87,11 @@ void main() {
     await handshake();
 
     // Nhịp ping của server trên một kết nối còn tốt mà không có sự kiện nghiệp
-    // vụ nào: cứ dưới hạn im lặng lại có một frame.
+    // vụ nào: cứ mỗi 45 giây (< 90 giây) lại có một frame ping.
     for (var i = 0; i < 6; i++) {
-      await Future<void>.delayed(limit ~/ 2);
+      now = now.add(const Duration(seconds: 45));
       socket.emit({'event': 'pusher:ping', 'data': {}});
+      await Future<void>.delayed(period * 2);
       await settle();
     }
     await settle();
@@ -111,10 +113,48 @@ void main() {
 
     // Một `Timer.periodic` sống sót sau `disconnect` là một vòng lặp đóng socket
     // trên máy thật, và một bài kiểm đỏ ở chỗ khác ("A Timer is still pending").
-    await Future<void>.delayed(limit * 2);
+    now = now.add(const Duration(seconds: 180));
+    await Future<void>.delayed(period * 2);
 
     expect(client.status.value, RealtimeStatus.disconnected);
   });
+
+  test(
+    'socket nửa chết treo sink.close vẫn rời connected ngay sau 90s im lặng',
+    () async {
+      final sockets = <_FakeSocket>[];
+      final deadClient = RealtimeClient(
+        config: config,
+        socketFactory: (_) {
+          final s = _FakeSocket(hangOnClose: sockets.isEmpty);
+          sockets.add(s);
+          return s;
+        },
+        authorizer: (channel, socketId) async => 'key:sig-for-$channel',
+        watchdogPeriod: period,
+        silenceLimit: limit,
+        clock: () => now,
+      );
+      addTearDown(deadClient.disconnect);
+
+      deadClient.subscribe('private-x', (_) {});
+      await settle();
+      sockets.first.emit({
+        'event': 'pusher:connection_established',
+        'data': jsonEncode({'socket_id': '1.1'}),
+      });
+      await settle();
+      expect(deadClient.status.value, RealtimeStatus.connected);
+
+      // Đẩy đồng hồ vượt ngưỡng 90 giây mà không có frame nào.
+      now = now.add(const Duration(seconds: 91));
+      await Future<void>.delayed(period * 2);
+      await settle();
+
+      expect(sockets.first.closed, isTrue);
+      expect(deadClient.status.value, RealtimeStatus.disconnected);
+    },
+  );
 }
 
 /// Socket mà bài kiểm viết frame vào và đọc lệnh gửi ra.
@@ -122,8 +162,11 @@ void main() {
 /// `sink.close()` đóng luôn đầu đọc, như socket thật: đóng đầu ghi thì đầu đọc
 /// báo `onDone`, và chính `onDone` mới là thứ đưa client về `disconnected`.
 class _FakeSocket implements WebSocketChannel {
+  _FakeSocket({bool hangOnClose = false}) : _hangOnClose = hangOnClose;
+
+  final bool _hangOnClose;
   final _incoming = StreamController<dynamic>.broadcast();
-  late final _sink = _FakeSink(_incoming);
+  late final _sink = _FakeSink(_incoming, hangOnClose: _hangOnClose);
 
   List<String> get sent => _sink.sent;
   bool get closed => _sink.closed;
@@ -143,9 +186,10 @@ class _FakeSocket implements WebSocketChannel {
 }
 
 class _FakeSink implements WebSocketSink {
-  _FakeSink(this._incoming);
+  _FakeSink(this._incoming, {this.hangOnClose = false});
 
   final StreamController<dynamic> _incoming;
+  final bool hangOnClose;
   final List<String> sent = [];
   bool closed = false;
 
@@ -155,6 +199,7 @@ class _FakeSink implements WebSocketSink {
   @override
   Future<void> close([int? closeCode, String? closeReason]) async {
     closed = true;
+    if (hangOnClose) return;
     if (!_incoming.isClosed) await _incoming.close();
   }
 

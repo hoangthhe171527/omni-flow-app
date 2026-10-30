@@ -563,11 +563,52 @@ class _ThreadPageState extends ConsumerState<ThreadPage>
     if (_searchResults.isEmpty) return;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
+      final targetId = _searchResults[_searchIndex].id;
+      if (_messageKeys.lookup(targetId)?.currentContext == null) {
+        _jumpToOffscreenSearchTarget(targetId);
+        return;
+      }
       final key = _messageKeys.lookup(_searchResults[_searchIndex].id);
       final target = key?.currentContext;
       if (target != null) {
         Scrollable.ensureVisible(
           target,
+          duration: OmniMotion.of(context).base,
+          curve: Curves.easeOut,
+          alignment: 0.35,
+        );
+      }
+    });
+  }
+
+  void _jumpToOffscreenSearchTarget(String targetId) {
+    if (!_scrollController.hasClients) return;
+    final visible =
+        ref
+            .read(threadProvider(widget.conversationId))
+            .valueOrNull
+            ?.visible
+            .where((m) => !m.isNote)
+            .toList(growable: false) ??
+        const <Message>[];
+    final idx = visible.indexWhere((m) => m.id == targetId);
+    if (idx < 0 || visible.isEmpty) return;
+    final reversedIndex = visible.length - 1 - idx;
+    final pos = _scrollController.position;
+    final ratio = visible.length <= 1
+        ? 0.0
+        : reversedIndex / (visible.length - 1);
+    final estimatedOffset = (ratio * pos.maxScrollExtent).clamp(
+      pos.minScrollExtent,
+      pos.maxScrollExtent,
+    );
+    _scrollController.jumpTo(estimatedOffset);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final mountedTarget = _messageKeys.lookup(targetId)?.currentContext;
+      if (mountedTarget != null) {
+        Scrollable.ensureVisible(
+          mountedTarget,
           duration: OmniMotion.of(context).base,
           curve: Curves.easeOut,
           alignment: 0.35,

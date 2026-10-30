@@ -34,6 +34,7 @@ class OmniTaskChip extends StatelessWidget {
     final text = Text(
       label,
       maxLines: 1,
+      overflow: TextOverflow.ellipsis,
       style: Theme.of(context).textTheme.labelSmall?.copyWith(
         color: tone.foreground,
         fontWeight: icon == null ? FontWeight.w600 : FontWeight.w500,
@@ -54,7 +55,7 @@ class OmniTaskChip extends StatelessWidget {
                 children: [
                   Icon(icon, size: 13, color: tone.foreground),
                   const SizedBox(width: 4),
-                  text,
+                  Flexible(child: text),
                 ],
               ),
       ),

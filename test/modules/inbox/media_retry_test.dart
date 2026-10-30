@@ -142,11 +142,33 @@ void main() {
           onLoadError: () {},
           resolver: resolver,
           child: const MessageVideoAttachments(
-            attachments: [MessageAttachment(url: old, type: 'video/mp4')],
+            attachments: [
+              MessageAttachment(url: old, type: 'video/mp4', name: 'demo.mp4'),
+            ],
           ),
         ),
       ),
     );
+
+    testWidgets('chỉ dựng decoder khi người dùng bấm Phát video (lazy init)', (
+      tester,
+    ) async {
+      final resolver = MediaUrlResolver(
+        onReload: () async {},
+        lookup: (_) => fresh,
+      );
+
+      await tester.pumpWidget(host(resolver));
+      await tester.pumpAndSettle();
+
+      expect(
+        created,
+        isEmpty,
+        reason: 'Chưa bấm phát thì không khởi tạo VideoPlayerController.',
+      );
+      expect(find.byTooltip('Phát video'), findsOneWidget);
+      expect(find.text('demo.mp4'), findsOneWidget);
+    });
 
     testWidgets('mở không được → xin URL mới MỘT lần rồi dựng lại', (
       tester,
@@ -161,6 +183,7 @@ void main() {
       );
 
       await tester.pumpWidget(host(resolver));
+      await tester.tap(find.byTooltip('Phát video'));
       await tester.pumpAndSettle();
 
       expect(lookups, 1);
@@ -179,6 +202,7 @@ void main() {
       );
 
       await tester.pumpWidget(host(resolver));
+      await tester.tap(find.byTooltip('Phát video'));
       await tester.pumpAndSettle();
 
       // Không có lượt thứ ba.
@@ -199,6 +223,7 @@ void main() {
           ),
         ),
       );
+      await tester.tap(find.byTooltip('Phát video'));
       await tester.pumpAndSettle();
 
       expect(tester.takeException(), isNull);

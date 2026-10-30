@@ -44,13 +44,18 @@ lib/
 │   ├── router/                app_router, AccessBoundary, session refresh
 │   └── shell/                 AppShell (tab bar), MorePage, SplashPage
 │
-└── modules/                   ★ TỰ TRỊ — mỗi module một feature
-    ├── auth/
+└── modules/                   ★ TỰ TRỊ — 11 module, mỗi module một feature
+    ├── auth/                  đăng nhập, chọn workspace
+    ├── dashboard/             tổng quan kinh doanh & xưởng
     ├── inbox/                 hộp thư đa kênh
-    ├── customers/
-    ├── opportunities/
-    ├── team/
-    └── settings/
+    ├── tasks/                 công việc & checklist công đoạn
+    ├── plans/                 kế hoạch / bảng công việc xưởng
+    ├── customers/             khách hàng & lịch sử tương tác
+    ├── opportunities/         cơ hội bán hàng (pipeline)
+    ├── team/                  danh bạ nhân viên & thành viên workspace
+    ├── channels/              kết nối kênh (Zalo, FB, IG, Webhook)
+    ├── notifications/         thông báo trong app & đẩy (FCM)
+    └── settings/              cài đặt tài khoản, giao diện, quyền của tôi
 ```
 
 Mỗi module:
@@ -59,14 +64,16 @@ Mỗi module:
 modules/<name>/
 ├── <name>_module.dart      khai báo route + tab + menu + permission
 ├── <name>.dart             barrel công khai (chỉ export những gì module khác được dùng)
+├── routes.dart             hằng tên route (file lá, không kéo theo presentation/)
 ├── domain/                 model + permission slug của riêng module
 ├── data/                   API client
 ├── application/            provider, controller
 └── presentation/           page + widget (KHÔNG module nào khác được import vào đây)
 ```
 
-**Chiều phụ thuộc:** `modules → security → core → design`. Không bao giờ ngược lại.
-`core/` và `security/` không import bất kỳ file nào trong `modules/`.
+**Chiều phụ thuộc:**
+- Giữa các tầng: `modules → security → core → design`. Không bao giờ ngược lại (`core/` và `security/` không import bất kỳ file nào trong `modules/`).
+- Giữa các module trong `lib/modules/`: đồ thị phụ thuộc là **DAG không chu trình** (được kiểm tự động bởi `test/architecture/module_cycle_test.dart`). Một module chỉ được dùng phần công khai của module khác thông qua barrel `modules/<name>/<name>.dart` hoặc hằng điều hướng `routes.dart`, tuyệt đối không import vào `presentation/` của module khác và barrel không được export `<name>_module.dart` (được kiểm tự động bởi `test/architecture/module_public_surface_test.dart`).
 
 ---
 

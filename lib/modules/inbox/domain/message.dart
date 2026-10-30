@@ -73,6 +73,12 @@ class MessageAttachment {
   bool get isImage => type.toLowerCase().startsWith('image');
   bool get isVideo => type.toLowerCase().startsWith('video');
   bool get isAudio => type.startsWith('audio');
+
+  Map<String, dynamic> toJson() => {
+    'url': url,
+    'type': type,
+    if (name != null) 'name': name,
+  };
 }
 
 class Message {
@@ -298,6 +304,44 @@ class Message {
           (status != null && status != DeliveryStatus.failed
               ? null
               : this.errorCode),
+    );
+  }
+  Map<String, dynamic> toOutboxJson() => {
+    'id': id,
+    'client_id': clientId ?? id,
+    'text': text,
+    if (sentAt != null) 'sent_at': sentAt!.toIso8601String(),
+    if (error != null) 'error': error,
+    if (errorCode != null) 'error_code': errorCode,
+    if (replyToMessageId != null) 'reply_to_message_id': replyToMessageId,
+    if (replyToText != null) 'reply_to_text': replyToText,
+    if (replyToAuthorName != null) 'reply_to_author_name': replyToAuthorName,
+    if (attachments.isNotEmpty)
+      'attachments': [for (final a in attachments) a.toJson()],
+  };
+
+  static Message? fromOutboxJson(Object? raw) {
+    if (raw is! Map) return null;
+    final json = Map<String, dynamic>.from(raw);
+    final id = json.strOr('id', '');
+    final clientId = json.strOr('client_id', id);
+    if (id.isEmpty || clientId.isEmpty) return null;
+    return Message(
+      id: id,
+      clientId: clientId,
+      author: MessageAuthor.agent,
+      text: json.strOr('text', ''),
+      sentAt: DateUtilsX.parse(json['sent_at']),
+      status: DeliveryStatus.failed,
+      error: json.str('error') ?? 'Lần trước chưa gửi xong — bấm Gửi lại.',
+      errorCode: json.str('error_code'),
+      replyToMessageId: json.str('reply_to_message_id'),
+      replyToText: json.str('reply_to_text'),
+      replyToAuthorName: json.str('reply_to_author_name'),
+      attachments: json
+          .mapList('attachments')
+          .map(MessageAttachment.fromUpload)
+          .toList(),
     );
   }
 }

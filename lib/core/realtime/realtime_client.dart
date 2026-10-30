@@ -94,6 +94,7 @@ class RealtimeClient {
     RealtimeSocketFactory? socketFactory,
     @visibleForTesting Duration? watchdogPeriod,
     @visibleForTesting Duration? silenceLimit,
+    @visibleForTesting DateTime Function()? clock,
     @visibleForTesting bool enableWatchdog = true,
   }) : _enableWatchdog = enableWatchdog,
        _config = config,
@@ -101,6 +102,7 @@ class RealtimeClient {
        _openSocket = socketFactory ?? WebSocketChannel.connect,
        _watchdogPeriod = watchdogPeriod ?? defaultWatchdogPeriod,
        _silenceLimit = silenceLimit ?? defaultSilenceLimit,
+       _now = clock ?? DateTime.now,
        _status = ValueNotifier<RealtimeStatus>(
          config.isEnabled
              ? RealtimeStatus.disconnected
@@ -115,6 +117,7 @@ class RealtimeClient {
   /// thật.
   final Duration _watchdogPeriod;
   final Duration _silenceLimit;
+  final DateTime Function() _now;
 
   /// Chỉ bài kiểm đặt `false`, và chỉ bài kiểm KHÔNG nói về watchdog: một
   /// `Timer.periodic` còn chạy lúc bài kiểm kết thúc là lỗi "A Timer is still
@@ -172,7 +175,7 @@ class RealtimeClient {
   Future<void> _open() async {
     _closedDeliberately = false;
     _status.value = RealtimeStatus.connecting;
-    _lastFrameAt = DateTime.now();
+    _lastFrameAt = _now();
     _startWatchdog();
 
     try {
@@ -199,7 +202,7 @@ class RealtimeClient {
   void _onFrame(dynamic raw) {
     // MỌI frame, kể cả `pusher:ping` và một frame không đọc được, là dấu hiệu
     // kết nối còn sống.
-    _lastFrameAt = DateTime.now();
+    _lastFrameAt = _now();
     final frame = PusherProtocol.parse(raw);
     if (frame == null) return;
 
@@ -210,6 +213,7 @@ class RealtimeClient {
 
     if (frame.isConnectionEstablished) {
       _socketId = frame.socketId;
+      _lastFrameAt = _now();
       _status.value = RealtimeStatus.connected;
       _reconnectBackoff = _initialBackoff;
       // Claim everything the app asked for while the socket was down. This is
@@ -262,7 +266,7 @@ class RealtimeClient {
     _watchdog = Timer.periodic(_watchdogPeriod, (_) {
       if (_status.value != RealtimeStatus.connected) return;
       final last = _lastFrameAt;
-      if (last == null || DateTime.now().difference(last) <= _silenceLimit) {
+      if (last == null || _now().difference(last) <= _silenceLimit) {
         return;
       }
       debugPrint(
@@ -270,7 +274,9 @@ class RealtimeClient {
       );
       // `sink.close()` → `onDone` → `_onClosed`: trạng thái, nhịp poll và vòng
       // nối lại đều đi qua đúng một đường như mọi lần rớt khác.
-      unawaited(_socket?.sink.close());
+      final socket = _socket;
+      _onClosed(null);
+      unawaited(socket?.sink.close());
     });
   }
 

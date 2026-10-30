@@ -477,8 +477,8 @@ class _BoardColumnState extends State<BoardColumn> {
     // không đổi khi kéo, chỉ số không dịch, khoá của thẻ không đổi chỗ. Kéo
     // trong cùng cột thì bóng mờ gập lại ([_LiftedGhost]) chứ không bỏ thẻ
     // khỏi danh sách, nên cũng không mục nào đổi chỗ.
-    final cards = ListView.builder(
-      shrinkWrap: true,
+    Widget buildCards({required bool shrinkWrap}) => ListView.builder(
+      shrinkWrap: shrinkWrap,
       padding: const EdgeInsets.symmetric(horizontal: 8),
       itemCount: tasks.length + 1,
       itemBuilder: (context, i) {
@@ -524,7 +524,14 @@ class _BoardColumnState extends State<BoardColumn> {
             count: tasks.length,
             onOptions: widget.onOptions,
           ),
-          Flexible(child: cards),
+          Flexible(
+            child: LayoutBuilder(
+              builder: (_, constraints) => buildCards(
+                shrinkWrap:
+                    !constraints.maxHeight.isFinite || tasks.length <= 12,
+              ),
+            ),
+          ),
           if (widget.onAddTask case final add?)
             Padding(
               padding: const EdgeInsets.fromLTRB(8, 6, 8, 8),
