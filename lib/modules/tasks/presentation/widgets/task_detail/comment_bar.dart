@@ -509,7 +509,9 @@ class _CommentBarState extends ConsumerState<CommentBar> {
                       icon: _sending
                           ? const SizedBox.square(
                               dimension: 18,
-                              child: CircularProgressIndicator(strokeWidth: 2),
+                              child: CircularProgressIndicator.adaptive(
+                                strokeWidth: 2,
+                              ),
                             )
                           : const Icon(Icons.send_rounded, size: 22),
                     );

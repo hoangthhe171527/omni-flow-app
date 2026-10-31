@@ -133,7 +133,7 @@ class _LaunchSplashState extends State<LaunchSplash>
       children: [
         widget.child,
         // Chặn chạm trong lúc phủ: bên dưới là một màn người dùng chưa thấy.
-        AbsorbPointer(
+        IgnorePointer(
           child: AnimatedBuilder(
             animation: controller,
             builder: (context, _) {

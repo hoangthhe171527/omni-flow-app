@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../../design/components/components.dart';
+import '../../../../../design/platform/omni_motion_scope.dart';
 import '../../../../../design/tokens/tokens.dart';
 import '../../../data/tasks_api.dart';
 
@@ -85,7 +87,16 @@ class _MoveTaskSheetState extends ConsumerState<MoveTaskSheet> {
               ],
             ),
             Flexible(
-              child: plan == null ? _planList(context) : _sectionList(plan),
+              child: OmniMotion.enabled(context)
+                  ? AnimatedSize(
+                      duration: OmniMotion.of(context).fast,
+                      curve: Curves.easeOutCubic,
+                      alignment: Alignment.topCenter,
+                      child: plan == null
+                          ? _planList(context)
+                          : _sectionList(plan),
+                    )
+                  : (plan == null ? _planList(context) : _sectionList(plan)),
             ),
           ],
         ),
@@ -117,7 +128,7 @@ class _MoveTaskSheetState extends ConsumerState<MoveTaskSheet> {
       if (plans == null) {
         return const Padding(
           padding: EdgeInsets.all(24),
-          child: Center(child: CircularProgressIndicator()),
+          child: Center(child: CircularProgressIndicator.adaptive()),
         );
       }
 
@@ -210,7 +221,10 @@ class _Option extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
 
     return InkWell(
-      onTap: onTap,
+      onTap: () {
+        HapticFeedback.selectionClick();
+        onTap();
+      },
       child: ConstrainedBox(
         constraints: const BoxConstraints(minHeight: 50),
         child: Padding(

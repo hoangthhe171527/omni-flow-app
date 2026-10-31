@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/error/app_exception.dart';
@@ -85,16 +86,19 @@ class _DeleteAccountDialogState extends State<DeleteAccountDialog> {
               onChanged: (_) => setState(() {}),
             ),
             const SizedBox(height: OmniSpacing.md),
-            CheckboxListTile(
+            CheckboxListTile.adaptive(
               contentPadding: EdgeInsets.zero,
               value: _confirmed,
               controlAffinity: ListTileControlAffinity.leading,
               title: const Text(
                 'Tôi hiểu đây là yêu cầu xóa toàn bộ tài khoản, không phải tạm khóa.',
               ),
-              onChanged: (value) => setState(() {
-                _confirmed = value ?? false;
-              }),
+              onChanged: (value) {
+                HapticFeedback.selectionClick();
+                setState(() {
+                  _confirmed = value ?? false;
+                });
+              },
             ),
           ],
         ),

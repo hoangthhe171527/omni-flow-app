@@ -24,6 +24,9 @@ class PairPage extends ConsumerStatefulWidget {
 
 class _PairPageState extends ConsumerState<PairPage>
     with WidgetsBindingObserver {
+  String? _cachedQrSource;
+  Uint8List? _cachedQrBytes;
+
   @override
   void initState() {
     super.initState();
@@ -118,7 +121,7 @@ class _PairPageState extends ConsumerState<PairPage>
         return Column(
           children: [
             const SizedBox(height: OmniSpacing.xl),
-            const CircularProgressIndicator(),
+            const CircularProgressIndicator.adaptive(),
             const SizedBox(height: OmniSpacing.lg),
             Text(_waitingMessage(state.snapshot.stage), style: OmniType.body),
             if (state.showAgentHint) ...[
@@ -179,14 +182,14 @@ class _PairPageState extends ConsumerState<PairPage>
               ),
             ),
             const SizedBox(height: 18),
-            _Hint(text: 'Mã đổi sau khoảng 100 giây — lưu xong quét luôn.'),
+            const _Hint(text: 'Mã đổi sau khoảng 100 giây — lưu xong quét luôn.'),
           ],
         );
       case PairingView.scanned:
         return Column(
           children: [
             const SizedBox(height: OmniSpacing.xl),
-            const CircularProgressIndicator(),
+            const CircularProgressIndicator.adaptive(),
             const SizedBox(height: OmniSpacing.lg),
             Text('Đã quét. Mở app và bấm Đồng ý.', style: OmniType.bodyStrong),
           ],
@@ -251,8 +254,14 @@ class _PairPageState extends ConsumerState<PairPage>
   }
 
   Uint8List _decodeQr(String dataUrl) {
+    if (_cachedQrSource == dataUrl && _cachedQrBytes != null) {
+      return _cachedQrBytes!;
+    }
     final payload = dataUrl.contains(',') ? dataUrl.split(',').last : dataUrl;
-    return base64Decode(payload);
+    final bytes = base64Decode(payload);
+    _cachedQrSource = dataUrl;
+    _cachedQrBytes = bytes;
+    return bytes;
   }
 
   Future<void> _saveQr(String dataUrl) async {

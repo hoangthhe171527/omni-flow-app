@@ -105,7 +105,7 @@ class _CreatePlanPageState extends ConsumerState<CreatePlanPage> {
                   ? const SizedBox(
                       width: 20,
                       height: 20,
-                      child: CircularProgressIndicator(strokeWidth: 2),
+                      child: CircularProgressIndicator.adaptive(strokeWidth: 2),
                     )
                   : Text(
                       _createdPlanId != null && _coverPath != null
@@ -117,6 +117,7 @@ class _CreatePlanPageState extends ConsumerState<CreatePlanPage> {
         ),
       ),
       body: ListView(
+        keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
         padding: const EdgeInsets.fromLTRB(20, OmniSpacing.sm, 20, 24),
         children: [
           CoverPicker(

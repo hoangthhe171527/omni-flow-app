@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/utils/formatters.dart';
@@ -74,7 +75,10 @@ class _NotificationsPageState extends ConsumerState<NotificationsPage> {
         actions: [
           TextButton(
             onPressed: unread > 0
-                ? () => ref.read(notificationsProvider.notifier).markAllRead()
+                ? () {
+                    HapticFeedback.selectionClick();
+                    ref.read(notificationsProvider.notifier).markAllRead();
+                  }
                 : null,
             child: Text(
               'Đọc hết',
@@ -102,7 +106,7 @@ class _NotificationsPageState extends ConsumerState<NotificationsPage> {
           ),
         ),
       ),
-      body: RefreshIndicator(
+      body: RefreshIndicator.adaptive(
         onRefresh: () => ref.read(notificationsProvider.notifier).refresh(),
         child: OmniAsyncView(
           value: notifications,
@@ -147,6 +151,7 @@ class _NotificationsPageState extends ConsumerState<NotificationsPage> {
   }
 
   void _open(AppNotification notification) {
+    HapticFeedback.selectionClick();
     ref.read(notificationsProvider.notifier).markRead(notification.id);
 
     // Dòng không định tuyến được vẫn đánh dấu đã đọc, chỉ không điều hướng.

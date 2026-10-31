@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../../../../design/components/components.dart';
 import '../../../../design/platform/omni_motion_scope.dart';
@@ -44,6 +45,29 @@ class FavoritesGroup extends StatelessWidget {
     final tones = OmniTaskTones.of(context);
     final motion = OmniMotion.enabled(context);
 
+    final Widget body = open
+        ? Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              for (final f in favorites)
+                PlanTile(
+                  key: ValueKey('favorite-${f.plan.id}'),
+                  plan: f.plan,
+                  subtitle:
+                      '${f.teamName} · '
+                      '${(f.plan.taskCount - f.plan.doneCount).clamp(0, 1 << 30)}'
+                      ' việc',
+                  onTap: () => onOpenPlan(f.plan),
+                  onLongPress:
+                      onLongPressPlan != null &&
+                          (canLongPressPlan?.call(f.plan) ?? true)
+                      ? () => onLongPressPlan!(f.plan)
+                      : null,
+                ),
+            ],
+          )
+        : const SizedBox(width: double.infinity);
+
     return OmniRise(
       animate: rise,
       child: Material(
@@ -57,7 +81,10 @@ class FavoritesGroup extends StatelessWidget {
               child: OmniPressScale(
                 child: InkWell(
                   key: const Key('favorites-header'),
-                  onTap: onToggle,
+                  onTap: () {
+                    HapticFeedback.selectionClick();
+                    onToggle();
+                  },
                   child: Container(
                     constraints: const BoxConstraints(minHeight: 48),
                     padding: const EdgeInsets.fromLTRB(16, 0, 10, 0),
@@ -101,22 +128,15 @@ class FavoritesGroup extends StatelessWidget {
                 ),
               ),
             ),
-            if (open)
-              for (final f in favorites)
-                PlanTile(
-                  key: ValueKey('favorite-${f.plan.id}'),
-                  plan: f.plan,
-                  subtitle:
-                      '${f.teamName} · '
-                      '${(f.plan.taskCount - f.plan.doneCount).clamp(0, 1 << 30)}'
-                      ' việc',
-                  onTap: () => onOpenPlan(f.plan),
-                  onLongPress:
-                      onLongPressPlan != null &&
-                          (canLongPressPlan?.call(f.plan) ?? true)
-                      ? () => onLongPressPlan!(f.plan)
-                      : null,
-                ),
+            if (motion)
+              AnimatedSize(
+                duration: OmniMotion.of(context).base,
+                curve: Curves.easeOutCubic,
+                alignment: Alignment.topCenter,
+                child: body,
+              )
+            else
+              body,
           ],
         ),
       ),

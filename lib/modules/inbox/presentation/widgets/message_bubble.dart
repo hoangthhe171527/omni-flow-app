@@ -534,8 +534,11 @@ class _BubbleDoubleTap extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => GestureDetector(
-    onDoubleTap: () =>
-        context.findAncestorStateOfType<_ReplySwipeState>()?._onDoubleTap(),
+    behavior: HitTestBehavior.translucent,
+    onDoubleTap: () {
+      HapticFeedback.lightImpact();
+      context.findAncestorStateOfType<_ReplySwipeState>()?._onDoubleTap();
+    },
     child: child,
   );
 }
@@ -581,6 +584,8 @@ class _ReplySwipeState extends State<_ReplySwipe>
   AnimationController? _controller;
   double _distance = 0;
   double _drag = 0;
+  double _releaseStart = 0;
+  bool _triggered = false;
 
   @override
   void initState() {
@@ -588,7 +593,11 @@ class _ReplySwipeState extends State<_ReplySwipe>
     _controller = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 180),
-    );
+    )..addListener(() {
+        if (!mounted) return;
+        final t = Curves.easeOutCubic.transform(_controller!.value);
+        setState(() => _distance = _releaseStart * (1 - t));
+      });
   }
 
   @override
@@ -598,25 +607,46 @@ class _ReplySwipeState extends State<_ReplySwipe>
   }
 
   void _reset() {
-    _controller?.forward(from: 0).then((_) {
-      if (mounted) setState(() => _distance = 0);
-    });
+    if (_distance == 0 || !OmniMotion.enabled(context)) {
+      if (_distance != 0 && mounted) setState(() => _distance = 0);
+      return;
+    }
+    _releaseStart = _distance;
+    _controller?.forward(from: 0);
   }
 
   void _onDragUpdate(DragUpdateDetails details) {
+    if (_controller?.isAnimating ?? false) {
+      _controller?.stop();
+    }
     _drag += details.delta.dx;
-    final towardCenter = widget.outbound ? -_drag : _drag;
+    final towardCenter = (widget.outbound ? -_drag : _drag).clamp(
+      0.0,
+      _maxDistance,
+    );
+    if (towardCenter >= _triggerDistance && !_triggered) {
+      _triggered = true;
+      HapticFeedback.selectionClick();
+    } else if (towardCenter < _triggerDistance && _triggered) {
+      _triggered = false;
+    }
     setState(() {
-      _distance = towardCenter.clamp(0, _maxDistance);
+      _distance = towardCenter;
     });
   }
 
   void _onDragEnd(DragEndDetails details) {
     if (_distance >= _triggerDistance) {
-      HapticFeedback.selectionClick();
       widget.onReply?.call();
     }
     _drag = 0;
+    _triggered = false;
+    _reset();
+  }
+
+  void _onDragCancel() {
+    _drag = 0;
+    _triggered = false;
     _reset();
   }
 
@@ -636,14 +666,11 @@ class _ReplySwipeState extends State<_ReplySwipe>
     final react = widget.onReact;
     if (react == null) return;
     final adding = widget.myReaction != _heart;
-    if (adding) {
-      HapticFeedback.lightImpact();
-      if (OmniMotion.enabled(context)) {
-        setState(() {
-          _burst++;
-          _bursting = true;
-        });
-      }
+    if (adding && OmniMotion.enabled(context)) {
+      setState(() {
+        _burst++;
+        _bursting = true;
+      });
     }
     react(_heart);
   }
@@ -725,7 +752,8 @@ class _ReplySwipeState extends State<_ReplySwipe>
                 HorizontalDragGestureRecognizer.new,
                 (recognizer) => recognizer
                   ..onUpdate = _onDragUpdate
-                  ..onEnd = _onDragEnd,
+                  ..onEnd = _onDragEnd
+                  ..onCancel = _onDragCancel,
               ),
         // Bấm đúp KHÔNG bắt ở đây (cả hàng rộng hết màn): chỉ bong bóng mới
         // nhận — xem [_BubbleDoubleTap]. Viên cảm xúc và "Gửi lại" giữ chạm

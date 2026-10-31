@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -76,12 +77,11 @@ class _OpportunityFormPageState extends ConsumerState<OpportunityFormPage> {
 
   Future<void> _pickDate() async {
     final now = DateTime.now();
-    final picked = await showDatePicker(
+    final picked = await pickOmniDate(
       context: context,
       initialDate: _expectedClose ?? now.add(const Duration(days: 14)),
       firstDate: now.subtract(const Duration(days: 365)),
       lastDate: now.add(const Duration(days: 365 * 3)),
-      locale: const Locale('vi'),
     );
     if (picked != null) setState(() => _expectedClose = picked);
   }
@@ -193,6 +193,7 @@ class _OpportunityFormPageState extends ConsumerState<OpportunityFormPage> {
       body: Form(
         key: _formKey,
         child: ListView(
+          keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
           padding: const EdgeInsets.fromLTRB(20, OmniSpacing.sm, 20, 24),
           children: [
             OmniField(
@@ -231,20 +232,23 @@ class _OpportunityFormPageState extends ConsumerState<OpportunityFormPage> {
               ),
             ),
             const SizedBox(height: OmniSpacing.lg),
-            OmniField(
-              label: 'Giá trị (VNĐ)',
-              required: true,
-              hint: _value.text.isEmpty
-                  ? null
-                  : Formatters.vnd(
-                      double.tryParse(
-                        _value.text.replaceAll(RegExp(r'[^0-9]'), ''),
+            ValueListenableBuilder<TextEditingValue>(
+              valueListenable: _value,
+              builder: (context, val, fieldChild) => OmniField(
+                label: 'Giá trị (VNĐ)',
+                required: true,
+                hint: val.text.isEmpty
+                    ? null
+                    : Formatters.vnd(
+                        double.tryParse(
+                          val.text.replaceAll(RegExp(r'[^0-9]'), ''),
+                        ),
                       ),
-                    ),
+                child: fieldChild!,
+              ),
               child: TextFormField(
                 controller: _value,
                 keyboardType: TextInputType.number,
-                onChanged: (_) => setState(() {}),
                 style: OmniType.money.copyWith(
                   fontSize: OmniType.money.fontSize! + 1,
                   color: scheme.onSurface,
@@ -311,7 +315,10 @@ class _OpportunityFormPageState extends ConsumerState<OpportunityFormPage> {
                     label: stage.label,
                     selected: _effectiveStageCode == stage.code,
                     outlined: true,
-                    onTap: () => setState(() => _stageCode = stage.code),
+                    onTap: () {
+                      HapticFeedback.selectionClick();
+                      setState(() => _stageCode = stage.code);
+                    },
                   ),
               ],
             ),
@@ -331,9 +338,11 @@ class _OpportunityFormPageState extends ConsumerState<OpportunityFormPage> {
                     width: 18,
                     height: 18,
                     // Nút đang tắt khi lưu: nền là onSurface 12%, không phải primary.
-                    child: CircularProgressIndicator(
+                    child: CircularProgressIndicator.adaptive(
                       strokeWidth: 2,
-                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      valueColor: AlwaysStoppedAnimation(
+                        Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
                     ),
                   )
                 : Text(widget.isEdit ? 'Lưu thay đổi' : 'Tạo cơ hội'),

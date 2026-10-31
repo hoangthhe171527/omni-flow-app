@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../design/components/components.dart';
@@ -18,9 +19,8 @@ Future<Set<String>?> showMemberPicker(
   BuildContext context, {
   required Set<String> selected,
 }) {
-  return showModalBottomSheet<Set<String>>(
+  return showOmniSheet<Set<String>>(
     context: context,
-    isScrollControlled: true,
     builder: (_) => _MemberPickerSheet(initial: selected),
   );
 }
@@ -44,112 +44,111 @@ class _MemberPickerSheetState extends ConsumerState<_MemberPickerSheet> {
     final scheme = Theme.of(context).colorScheme;
 
     return SafeArea(
-      child: Padding(
-        padding: EdgeInsets.only(
-          bottom: MediaQuery.of(context).viewInsets.bottom,
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Padding(
-              padding: const EdgeInsets.all(OmniSpacing.lg),
-              child: TextField(
-                style: OmniType.search.copyWith(
-                  color: scheme.onSurface,
-                  fontStyle: FontStyle.normal,
-                ),
-                decoration: InputDecoration(
-                  prefixIcon: const Icon(Icons.search_rounded),
-                  hintText: 'Tìm người',
-                  hintStyle: OmniType.searchHint.copyWith(
-                    color: scheme.onSurfaceVariant,
-                  ),
-                ),
-                onChanged: (v) =>
-                    setState(() => _query = v.trim().toLowerCase()),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(OmniSpacing.lg),
+            child: TextField(
+              style: OmniType.search.copyWith(
+                color: scheme.onSurface,
+                fontStyle: FontStyle.normal,
               ),
+              decoration: InputDecoration(
+                prefixIcon: const Icon(Icons.search_rounded),
+                hintText: 'Tìm người',
+                hintStyle: OmniType.searchHint.copyWith(
+                  color: scheme.onSurfaceVariant,
+                ),
+              ),
+              onChanged: (v) => setState(() => _query = v.trim().toLowerCase()),
             ),
-            Flexible(
-              child: members.when(
-                data: (all) {
-                  // `all` chỉ có người chọn được (APP-I10); người đã chọn
-                  // sẵn mà nay không chọn được vẫn hiện để còn bỏ chọn.
-                  final shown =
-                      withPickedMembers(
-                            all,
-                            _selected,
-                            ref.watch(teamMemberByIdProvider),
-                          )
-                          .where(
-                            (m) =>
-                                _query.isEmpty ||
-                                m.name.toLowerCase().contains(_query),
-                          )
-                          .toList();
+          ),
+          Flexible(
+            child: members.when(
+              data: (all) {
+                // `all` chỉ có người chọn được (APP-I10); người đã chọn
+                // sẵn mà nay không chọn được vẫn hiện để còn bỏ chọn.
+                final shown =
+                    withPickedMembers(
+                          all,
+                          _selected,
+                          ref.watch(teamMemberByIdProvider),
+                        )
+                        .where(
+                          (m) =>
+                              _query.isEmpty ||
+                              m.name.toLowerCase().contains(_query),
+                        )
+                        .toList();
 
-                  if (shown.isEmpty) {
-                    return OmniEmptyState(
-                      icon: Icons.person_search_rounded,
-                      title: _query.isEmpty
-                          ? 'Chưa có ai trong workspace'
-                          : 'Không tìm thấy ai',
-                      message: _query.isEmpty
-                          ? 'Mời người vào workspace trước, rồi quay lại đây.'
-                          : 'Thử một cái tên khác.',
-                    );
-                  }
+                if (shown.isEmpty) {
+                  return OmniEmptyState(
+                    icon: Icons.person_search_rounded,
+                    title: _query.isEmpty
+                        ? 'Chưa có ai trong workspace'
+                        : 'Không tìm thấy ai',
+                    message: _query.isEmpty
+                        ? 'Mời người vào workspace trước, rồi quay lại đây.'
+                        : 'Thử một cái tên khác.',
+                  );
+                }
 
-                  return ListView.builder(
-                    shrinkWrap: true,
-                    itemCount: shown.length,
-                    itemBuilder: (context, i) {
-                      final member = shown[i];
-                      final on = _selected.contains(member.userId);
+                return ListView.builder(
+                  shrinkWrap: true,
+                  keyboardDismissBehavior:
+                      ScrollViewKeyboardDismissBehavior.onDrag,
+                  itemCount: shown.length,
+                  itemBuilder: (context, i) {
+                    final member = shown[i];
+                    final on = _selected.contains(member.userId);
 
-                      return CheckboxListTile(
-                        value: on,
-                        secondary: OmniAvatar(
-                          name: member.name,
-                          imageUrl: member.avatarUrl,
-                          size: 36,
-                        ),
-                        title: Text(member.name),
-                        subtitle: member.jobTitle == null
-                            ? null
-                            : Text(member.jobTitle!),
-                        onChanged: (_) => setState(() {
+                    return CheckboxListTile.adaptive(
+                      value: on,
+                      secondary: OmniAvatar(
+                        name: member.name,
+                        imageUrl: member.avatarUrl,
+                        size: 36,
+                      ),
+                      title: Text(member.name),
+                      subtitle: member.jobTitle == null
+                          ? null
+                          : Text(member.jobTitle!),
+                      onChanged: (_) {
+                        HapticFeedback.selectionClick();
+                        setState(() {
                           if (on) {
                             _selected.remove(member.userId);
                           } else {
                             _selected.add(member.userId);
                           }
-                        }),
-                      );
-                    },
-                  );
-                },
-                loading: () => const Padding(
-                  padding: EdgeInsets.all(OmniSpacing.xxl),
-                  child: CircularProgressIndicator(),
-                ),
-                error: (e, _) => OmniErrorView(
-                  error: e,
-                  onRetry: () => ref.invalidate(teamDirectoryProvider),
-                ),
+                        });
+                      },
+                    );
+                  },
+                );
+              },
+              loading: () => const Padding(
+                padding: EdgeInsets.all(OmniSpacing.xxl),
+                child: CircularProgressIndicator.adaptive(),
+              ),
+              error: (e, _) => OmniErrorView(
+                error: e,
+                onRetry: () => ref.invalidate(teamDirectoryProvider),
               ),
             ),
-            Padding(
-              padding: const EdgeInsets.all(OmniSpacing.lg),
-              child: SizedBox(
-                width: double.infinity,
-                child: FilledButton(
-                  onPressed: () => Navigator.of(context).pop(_selected),
-                  child: Text('Xong (${_selected.length})'),
-                ),
+          ),
+          Padding(
+            padding: const EdgeInsets.all(OmniSpacing.lg),
+            child: SizedBox(
+              width: double.infinity,
+              child: FilledButton(
+                onPressed: () => Navigator.of(context).pop(_selected),
+                child: Text('Xong (${_selected.length})'),
               ),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }

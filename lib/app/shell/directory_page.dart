@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -201,6 +202,7 @@ class _DirectoryPageState extends ConsumerState<DirectoryPage> {
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 720),
           child: ListView(
+            keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
             padding: const EdgeInsets.fromLTRB(
               OmniSpacing.xl,
               14,
@@ -392,7 +394,10 @@ class _FeatureTile extends ConsumerWidget {
         borderRadius: OmniRadius.lgAll,
         clipBehavior: Clip.antiAlias,
         child: InkWell(
-          onTap: tile.onTap,
+          onTap: () {
+            HapticFeedback.lightImpact();
+            tile.onTap();
+          },
           child: Padding(
             padding: const EdgeInsets.symmetric(
               vertical: OmniSpacing.sm,
@@ -489,29 +494,35 @@ class _PopIn extends StatefulWidget {
 class _PopInState extends State<_PopIn> with SingleTickerProviderStateMixin {
   static const _animMs = 300;
 
-  late final AnimationController _controller = AnimationController(
-    vsync: this,
-    duration: Duration(milliseconds: widget.delayMs + _animMs),
-  )..value = widget.play ? 0 : 1;
+  AnimationController? _controller;
+  late Animation<double> _t;
 
   @override
   void initState() {
     super.initState();
-    if (widget.play) _controller.forward();
+    if (widget.play) {
+      final ctrl = AnimationController(
+        vsync: this,
+        duration: Duration(milliseconds: widget.delayMs + _animMs),
+      );
+      _controller = ctrl;
+      _t = CurvedAnimation(
+        parent: ctrl,
+        curve: Interval(
+          widget.delayMs / (widget.delayMs + _animMs),
+          1,
+          curve: Curves.easeOutCubic,
+        ),
+      );
+      ctrl.forward();
+    } else {
+      _t = const AlwaysStoppedAnimation<double>(1.0);
+    }
   }
-
-  late final Animation<double> _t = CurvedAnimation(
-    parent: _controller,
-    curve: Interval(
-      widget.delayMs / (widget.delayMs + _animMs),
-      1,
-      curve: Curves.easeOutCubic,
-    ),
-  );
 
   @override
   void dispose() {
-    _controller.dispose();
+    _controller?.dispose();
     super.dispose();
   }
 

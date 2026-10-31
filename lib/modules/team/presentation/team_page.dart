@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -34,128 +35,140 @@ class TeamPage extends ConsumerWidget {
     return Scaffold(
       backgroundColor: scheme.surface,
       appBar: const OmniAppBar(title: 'Nhân viên'),
-      body: OmniAsyncView(
-        // Danh bạ nạp cả người đã nghỉ (để tra tên trong lịch sử); màn này giữ
-        // như trước: người đang làm, kể cả lời mời chưa nhận ("Đang chờ").
-        value: members.whenData((all) => all.where((m) => m.isActive).toList()),
-        onRetry: () => ref.invalidate(teamDirectoryProvider),
-        isEmpty: (list) => list.isEmpty,
-        empty: const OmniEmptyState(
-          icon: Icons.group_outlined,
-          title: 'Chưa có nhân viên',
-          message: 'Mời đồng nghiệp vào workspace để bắt đầu phân công.',
-        ),
-        data: (list) => ListView.separated(
-          padding: const EdgeInsets.all(OmniSpacing.lg),
-          itemCount: list.length,
-          separatorBuilder: (_, _) =>
-              Divider(height: 1, color: scheme.outlineVariant),
-          itemBuilder: (context, index) {
-            final member = list[index];
-            return OmniCard(
-              flat: true,
-              // Chạm vào một người là mở TẢI VIỆC của họ — câu hỏi quản đốc
-              // hỏi nhiều nhất khi đứng giữa xưởng. Trước đây chạm vào mở
-              // sheet liên kết Zalo, một thao tác làm vài lần trong đời một
-              // nhân viên: hành động chính của thẻ phải là thứ người ta làm
-              // hằng ngày, còn cái kia lùi về một nút riêng bên phải.
-              onTap: canSeeLoad
-                  ? () => context.pushNamed(
-                      TaskRoutes.workload,
-                      pathParameters: {'userId': member.userId},
-                    )
-                  : null,
-              padding: const EdgeInsets.all(14),
-              child: Opacity(
-                // Người đã nghỉ vẫn nằm trong danh sách nhưng lùi lại một bậc.
-                opacity: member.isActive ? 1 : 0.7,
-                child: Row(
-                  children: [
-                    OmniAvatar(
-                      name: member.name,
-                      imageUrl: member.avatarUrl,
-                      size: 44,
-                    ),
-                    const SizedBox(width: OmniSpacing.md),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            member.name,
-                            style: OmniType.bodyStrong.copyWith(
-                              fontWeight: FontWeight.w600,
-                              color: scheme.onSurface,
-                            ),
-                          ),
-                          if (member.email != null)
+      body: RefreshIndicator.adaptive(
+        onRefresh: () {
+          ref.invalidate(teamMembersProvider);
+          return ref.refresh(teamDirectoryProvider.future);
+        },
+        child: OmniAsyncView(
+          // Danh bạ nạp cả người đã nghỉ (để tra tên trong lịch sử); màn này giữ
+          // như trước: người đang làm, kể cả lời mời chưa nhận ("Đang chờ").
+          value: members.whenData(
+            (all) => all.where((m) => m.isActive).toList(),
+          ),
+          onRetry: () => ref.invalidate(teamDirectoryProvider),
+          isEmpty: (list) => list.isEmpty,
+          empty: const OmniEmptyState(
+            icon: Icons.group_outlined,
+            title: 'Chưa có nhân viên',
+            message: 'Mời đồng nghiệp vào workspace để bắt đầu phân công.',
+          ),
+          data: (list) => ListView.separated(
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: const EdgeInsets.all(OmniSpacing.lg),
+            itemCount: list.length,
+            separatorBuilder: (_, _) =>
+                Divider(height: 1, color: scheme.outlineVariant),
+            itemBuilder: (context, index) {
+              final member = list[index];
+              return OmniCard(
+                flat: true,
+                // Chạm vào một người là mở TẢI VIỆC của họ — câu hỏi quản đốc
+                // hỏi nhiều nhất khi đứng giữa xưởng. Trước đây chạm vào mở
+                // sheet liên kết Zalo, một thao tác làm vài lần trong đời một
+                // nhân viên: hành động chính của thẻ phải là thứ người ta làm
+                // hằng ngày, còn cái kia lùi về một nút riêng bên phải.
+                onTap: canSeeLoad
+                    ? () {
+                        HapticFeedback.selectionClick();
+                        context.pushNamed(
+                          TaskRoutes.workload,
+                          pathParameters: {'userId': member.userId},
+                        );
+                      }
+                    : null,
+                padding: const EdgeInsets.all(14),
+                child: Opacity(
+                  // Người đã nghỉ vẫn nằm trong danh sách nhưng lùi lại một bậc.
+                  opacity: member.isActive ? 1 : 0.7,
+                  child: Row(
+                    children: [
+                      OmniAvatar(
+                        name: member.name,
+                        imageUrl: member.avatarUrl,
+                        size: 44,
+                      ),
+                      const SizedBox(width: OmniSpacing.md),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
                             Text(
-                              member.email!,
-                              style: OmniType.caption.copyWith(
-                                fontWeight: FontWeight.w400,
-                                color: scheme.onSurfaceVariant,
+                              member.name,
+                              style: OmniType.bodyStrong.copyWith(
+                                fontWeight: FontWeight.w600,
+                                color: scheme.onSurface,
                               ),
                             ),
-                          // Nói ra ai đã liên kết Zalo: không có dòng này thì
-                          // quản đốc phải mở từng người ra mới biết còn thiếu ai,
-                          // và bot thì im lặng từ chối những người chưa liên kết.
-                          if (canLink)
-                            Text(
-                              member.zaloUserId == null
-                                  ? 'Chưa liên kết Zalo'
-                                  : 'Zalo: ${member.zaloUserId}',
-                              style: OmniType.caption.copyWith(
-                                fontWeight: FontWeight.w400,
-                                color: scheme.onSurfaceVariant,
-                                fontStyle: member.zaloUserId == null
-                                    ? FontStyle.italic
-                                    : FontStyle.normal,
+                            if (member.email != null)
+                              Text(
+                                member.email!,
+                                style: OmniType.caption.copyWith(
+                                  fontWeight: FontWeight.w400,
+                                  color: scheme.onSurfaceVariant,
+                                ),
                               ),
+                            // Nói ra ai đã liên kết Zalo: không có dòng này thì
+                            // quản đốc phải mở từng người ra mới biết còn thiếu ai,
+                            // và bot thì im lặng từ chối những người chưa liên kết.
+                            if (canLink)
+                              Text(
+                                member.zaloUserId == null
+                                    ? 'Chưa liên kết Zalo'
+                                    : 'Zalo: ${member.zaloUserId}',
+                                style: OmniType.caption.copyWith(
+                                  fontWeight: FontWeight.w400,
+                                  color: scheme.onSurfaceVariant,
+                                  fontStyle: member.zaloUserId == null
+                                      ? FontStyle.italic
+                                      : FontStyle.normal,
+                                ),
+                              ),
+                            const SizedBox(height: 4),
+                            OmniBadge(
+                              label: member.isPending
+                                  ? 'Đang chờ'
+                                  : member.isActive
+                                  ? member.roleLabel
+                                  : 'Ngừng hoạt động',
+                              tone: member.isPending
+                                  ? OmniTone.warning
+                                  : member.isActive
+                                  ? OmniTone.info
+                                  : OmniTone.neutral,
                             ),
-                          const SizedBox(height: 4),
-                          OmniBadge(
-                            label: member.isPending
-                                ? 'Đang chờ'
-                                : member.isActive
-                                ? member.roleLabel
-                                : 'Ngừng hoạt động',
-                            tone: member.isPending
-                                ? OmniTone.warning
-                                : member.isActive
-                                ? OmniTone.info
-                                : OmniTone.neutral,
-                          ),
-                        ],
-                      ),
-                    ),
-                    // Liên kết Zalo: một nút riêng, có nhãn, thay vì một cú
-                    // chạm vô hình lên cả thẻ.
-                    if (canLink)
-                      IconButton.outlined(
-                        onPressed: () => _linkZalo(context, ref, member),
-                        style: IconButton.styleFrom(
-                          fixedSize: const Size.square(40),
-                          minimumSize: const Size.square(40),
-                          side: BorderSide(color: scheme.outlineVariant),
-                          shape: const RoundedRectangleBorder(
-                            borderRadius: OmniRadius.smAll,
-                          ),
-                        ),
-                        tooltip: member.zaloUserId == null
-                            ? 'Liên kết Zalo — ${member.name}'
-                            : 'Sửa liên kết Zalo — ${member.name}',
-                        icon: Icon(
-                          member.zaloUserId == null
-                              ? Icons.link_off_rounded
-                              : Icons.link_rounded,
-                          color: scheme.onSurfaceVariant,
+                          ],
                         ),
                       ),
-                  ],
+                      // Liên kết Zalo: một nút riêng, có nhãn, thay vì một cú
+                      // chạm vô hình lên cả thẻ.
+                      if (canLink)
+                        IconButton.outlined(
+                          onPressed: () => _linkZalo(context, ref, member),
+                          style: IconButton.styleFrom(
+                            fixedSize: const Size.square(40),
+                            minimumSize: const Size.square(40),
+                            side: BorderSide(color: scheme.outlineVariant),
+                            shape: const RoundedRectangleBorder(
+                              borderRadius: OmniRadius.smAll,
+                            ),
+                          ),
+                          tooltip: member.zaloUserId == null
+                              ? 'Liên kết Zalo — ${member.name}'
+                              : 'Sửa liên kết Zalo — ${member.name}',
+                          icon: Icon(
+                            member.zaloUserId == null
+                                ? Icons.link_off_rounded
+                                : Icons.link_rounded,
+                            color: scheme.onSurfaceVariant,
+                          ),
+                        ),
+                    ],
+                  ),
                 ),
-              ),
-            );
-          },
+              );
+            },
+          ),
         ),
       ),
     );

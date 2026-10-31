@@ -844,6 +844,7 @@ class _MessageList extends StatelessWidget {
     return ListView.builder(
       controller: controller,
       reverse: true,
+      keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
       // Tight gutters: Zalo lets bubbles run close to both edges, which is what
       // makes the left/right split read at a glance.
       padding: const EdgeInsets.fromLTRB(8, OmniSpacing.lg, 8, OmniSpacing.md),
@@ -857,7 +858,7 @@ class _MessageList extends StatelessWidget {
               child: SizedBox(
                 width: 18,
                 height: 18,
-                child: CircularProgressIndicator(strokeWidth: 2),
+                child: CircularProgressIndicator.adaptive(strokeWidth: 2),
               ),
             ),
           );

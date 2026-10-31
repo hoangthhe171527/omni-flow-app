@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -42,6 +43,7 @@ class _ArchivedTasksPageState extends ConsumerState<ArchivedTasksPage> {
   final _busy = <String>{};
 
   Future<void> _restore(Task task) async {
+    HapticFeedback.selectionClick();
     final messenger = ScaffoldMessenger.of(context);
     final container = ProviderScope.containerOf(context);
     setState(() => _busy.add(task.id));
@@ -66,82 +68,88 @@ class _ArchivedTasksPageState extends ConsumerState<ArchivedTasksPage> {
 
     return Scaffold(
       appBar: AppBar(title: const Text('Việc đã lưu trữ')),
-      body: OmniAsyncView(
-        value: archived,
-        onRetry: () => ref.invalidate(archivedTasksProvider(widget.planId)),
-        data: (result) {
-          final tasks = [
-            for (final t in result.tasks)
-              if (!_restored.contains(t.id)) t,
-          ];
-          if (tasks.isEmpty) {
-            return const OmniEmptyState(
-              icon: Icons.inventory_2_outlined,
-              title: 'Chưa có việc nào được lưu trữ',
-              message: 'Việc lưu trữ từ menu của việc sẽ nằm ở đây.',
-            );
-          }
+      body: RefreshIndicator.adaptive(
+        onRefresh: () async =>
+            ref.invalidate(archivedTasksProvider(widget.planId)),
+        child: OmniAsyncView(
+          value: archived,
+          onRetry: () => ref.invalidate(archivedTasksProvider(widget.planId)),
+          data: (result) {
+            final tasks = [
+              for (final t in result.tasks)
+                if (!_restored.contains(t.id)) t,
+            ];
+            if (tasks.isEmpty) {
+              return const OmniEmptyState(
+                icon: Icons.inventory_2_outlined,
+                title: 'Chưa có việc nào được lưu trữ',
+                message: 'Việc lưu trữ từ menu của việc sẽ nằm ở đây.',
+              );
+            }
 
-          return ListView.separated(
-            padding: const EdgeInsets.fromLTRB(
-              OmniSpacing.lg,
-              OmniSpacing.md,
-              OmniSpacing.lg,
-              OmniSpacing.bottomSafe,
-            ),
-            // Dừng ở trần mà server còn nữa: nói ra ở ĐẦU danh sách, không
-            // lặng lẽ dừng ở việc thứ 500.
-            itemCount: tasks.length + (result.truncated ? 1 : 0),
-            separatorBuilder: (_, _) => const SizedBox(height: OmniSpacing.sm),
-            itemBuilder: (context, index) {
-              if (result.truncated && index == 0) {
-                return Text(
-                  'Chỉ hiện $kMaxArchivedTasks việc lưu trữ đầu tiên. '
-                  'Tìm việc cũ hơn trên web.',
-                  style: OmniType.caption.copyWith(
-                    color: scheme.onSurfaceVariant,
-                  ),
-                );
-              }
-              final task = tasks[index - (result.truncated ? 1 : 0)];
-
-              return Column(
-                key: ValueKey('archived-${task.id}'),
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  TaskCard(
-                    task: task,
-                    showPlanName: false,
-                    onTap: () => context.pushNamed(
-                      TasksModule.detail,
-                      pathParameters: {'id': task.id},
+            return ListView.separated(
+              physics: const AlwaysScrollableScrollPhysics(),
+              padding: const EdgeInsets.fromLTRB(
+                OmniSpacing.lg,
+                OmniSpacing.md,
+                OmniSpacing.lg,
+                OmniSpacing.bottomSafe,
+              ),
+              // Dừng ở trần mà server còn nữa: nói ra ở ĐẦU danh sách, không
+              // lặng lẽ dừng ở việc thứ 500.
+              itemCount: tasks.length + (result.truncated ? 1 : 0),
+              separatorBuilder: (_, _) =>
+                  const SizedBox(height: OmniSpacing.sm),
+              itemBuilder: (context, index) {
+                if (result.truncated && index == 0) {
+                  return Text(
+                    'Chỉ hiện $kMaxArchivedTasks việc lưu trữ đầu tiên. '
+                    'Tìm việc cũ hơn trên web.',
+                    style: OmniType.caption.copyWith(
+                      color: scheme.onSurfaceVariant,
                     ),
-                  ),
-                  if (widget.canRestore)
-                    Align(
-                      alignment: Alignment.centerRight,
-                      child: Semantics(
-                        button: true,
-                        label: 'Khôi phục ${task.title}',
-                        excludeSemantics: true,
-                        child: TextButton.icon(
-                          style: TextButton.styleFrom(
-                            minimumSize: const Size(44, 44),
-                            foregroundColor: scheme.primary,
-                          ),
-                          onPressed: _busy.contains(task.id)
-                              ? null
-                              : () => _restore(task),
-                          icon: const Icon(Icons.unarchive_outlined),
-                          label: const Text('Khôi phục'),
-                        ),
+                  );
+                }
+                final task = tasks[index - (result.truncated ? 1 : 0)];
+
+                return Column(
+                  key: ValueKey('archived-${task.id}'),
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    TaskCard(
+                      task: task,
+                      showPlanName: false,
+                      onTap: () => context.pushNamed(
+                        TasksModule.detail,
+                        pathParameters: {'id': task.id},
                       ),
                     ),
-                ],
-              );
-            },
-          );
-        },
+                    if (widget.canRestore)
+                      Align(
+                        alignment: Alignment.centerRight,
+                        child: Semantics(
+                          button: true,
+                          label: 'Khôi phục ${task.title}',
+                          excludeSemantics: true,
+                          child: TextButton.icon(
+                            style: TextButton.styleFrom(
+                              minimumSize: const Size(44, 44),
+                              foregroundColor: scheme.primary,
+                            ),
+                            onPressed: _busy.contains(task.id)
+                                ? null
+                                : () => _restore(task),
+                            icon: const Icon(Icons.unarchive_outlined),
+                            label: const Text('Khôi phục'),
+                          ),
+                        ),
+                      ),
+                  ],
+                );
+              },
+            );
+          },
+        ),
       ),
     );
   }

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -45,11 +46,19 @@ class OpportunityRow extends ConsumerWidget {
         border: Border(top: BorderSide(color: scheme.outlineVariant)),
       ),
       child: InkWell(
-        onTap: () => context.pushNamed(
-          OpportunitiesModule.detail,
-          pathParameters: {'id': opportunity.id},
-        ),
-        onLongPress: canMove ? () => _moveStage(context, ref) : null,
+        onTap: () {
+          HapticFeedback.selectionClick();
+          context.pushNamed(
+            OpportunitiesModule.detail,
+            pathParameters: {'id': opportunity.id},
+          );
+        },
+        onLongPress: canMove
+            ? () {
+                HapticFeedback.selectionClick();
+                _moveStage(context, ref);
+              }
+            : null,
         child: ConstrainedBox(
           constraints: const BoxConstraints(minHeight: 56),
           child: Padding(

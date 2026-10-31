@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../../../../design/platform/omni_motion_scope.dart';
 import '../../../../design/tokens/tokens.dart';
@@ -23,7 +24,10 @@ class BoardZoomButton extends StatelessWidget {
       excludeSemantics: true,
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
-        onTap: onTap,
+        onTap: () {
+          HapticFeedback.selectionClick();
+          onTap();
+        },
         child: Container(
           key: const Key('board-zoom-fab'),
           width: 52,
@@ -149,7 +153,10 @@ class _ZoomTile extends StatelessWidget {
       excludeSemantics: true,
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
-        onTap: onTap,
+        onTap: () {
+          HapticFeedback.selectionClick();
+          onTap();
+        },
         child: Container(
           width: 150,
           constraints: const BoxConstraints(minHeight: 44),
@@ -181,30 +188,13 @@ class _ZoomTile extends StatelessWidget {
               ),
               for (final task in tasks) ...[
                 const SizedBox(height: 5),
-                Opacity(
-                  opacity: task.isDone ? 0.78 : 1,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 6,
-                      vertical: 5,
-                    ),
-                    decoration: BoxDecoration(
-                      color: scheme.surface,
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                    child: Text(
-                      task.title,
-                      maxLines: 1,
-                      softWrap: false,
-                      overflow: TextOverflow.ellipsis,
-                      style: OmniType.micro.copyWith(
-                        fontWeight: FontWeight.w400,
-                        height: 1.3,
-                        color: scheme.onSurface,
-                      ),
-                    ),
-                  ),
-                ),
+                if (task.isDone)
+                  Opacity(
+                    opacity: 0.78,
+                    child: _taskChip(scheme, task.title),
+                  )
+                else
+                  _taskChip(scheme, task.title),
               ],
             ],
           ),
@@ -212,6 +202,25 @@ class _ZoomTile extends StatelessWidget {
       ),
     );
   }
+
+  Widget _taskChip(ColorScheme scheme, String title) => Container(
+    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 5),
+    decoration: BoxDecoration(
+      color: scheme.surface,
+      borderRadius: BorderRadius.circular(4),
+    ),
+    child: Text(
+      title,
+      maxLines: 1,
+      softWrap: false,
+      overflow: TextOverflow.ellipsis,
+      style: OmniType.micro.copyWith(
+        fontWeight: FontWeight.w400,
+        height: 1.3,
+        color: scheme.onSurface,
+      ),
+    ),
+  );
 }
 
 /// `.cnt` trên nền surface.

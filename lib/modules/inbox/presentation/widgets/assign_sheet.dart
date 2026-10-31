@@ -83,6 +83,8 @@ class _AssignSheetState extends ConsumerState<AssignSheet> {
 
                 return ListView.separated(
                   shrinkWrap: true,
+                  keyboardDismissBehavior:
+                      ScrollViewKeyboardDismissBehavior.onDrag,
                   itemCount: filtered.length + 1,
                   separatorBuilder: (_, _) =>
                       const SizedBox(height: OmniSpacing.xs),

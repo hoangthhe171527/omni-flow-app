@@ -1,6 +1,7 @@
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../../../../design/components/components.dart';
 import '../../../../design/tokens/tokens.dart';
@@ -111,7 +112,10 @@ class ThreadHeader extends StatelessWidget implements PreferredSizeWidget {
         if (c != null)
           Expanded(
             child: InkWell(
-              onTap: onInfo,
+              onTap: () {
+                HapticFeedback.selectionClick();
+                onInfo();
+              },
               child: SizedBox(
                 height: rowHeight,
                 child: Row(
@@ -166,7 +170,10 @@ class ThreadHeader extends StatelessWidget implements PreferredSizeWidget {
           const Spacer(),
         IconButton(
           tooltip: 'Thông tin khách',
-          onPressed: onInfo,
+          onPressed: () {
+            HapticFeedback.selectionClick();
+            onInfo();
+          },
           style: IconButton.styleFrom(
             minimumSize: const Size(40, 40),
             maximumSize: const Size(40, 40),
@@ -215,17 +222,30 @@ class ThreadHeader extends StatelessWidget implements PreferredSizeWidget {
           ),
           IconButton(
             tooltip: 'Kết quả trước',
-            onPressed: searchResultCount == 0 ? null : onSearchPrevious,
+            onPressed: searchResultCount == 0
+                ? null
+                : () {
+                    HapticFeedback.selectionClick();
+                    onSearchPrevious();
+                  },
             icon: const Icon(Icons.keyboard_arrow_up_rounded, size: 22),
           ),
           IconButton(
             tooltip: 'Kết quả sau',
-            onPressed: searchResultCount == 0 ? null : onSearchNext,
+            onPressed: searchResultCount == 0
+                ? null
+                : () {
+                    HapticFeedback.selectionClick();
+                    onSearchNext();
+                  },
             icon: const Icon(Icons.keyboard_arrow_down_rounded, size: 22),
           ),
           IconButton(
             tooltip: 'Đóng tìm kiếm',
-            onPressed: onCloseSearch,
+            onPressed: () {
+              HapticFeedback.selectionClick();
+              onCloseSearch();
+            },
             icon: const Icon(Icons.close_rounded, size: 21),
           ),
         ],

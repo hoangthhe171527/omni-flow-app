@@ -1,6 +1,7 @@
 import 'dart:ui' show ImageFilter;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -10,6 +11,7 @@ import '../../core/nav/tab_order.dart';
 import '../../core/module/nav_destination.dart';
 import '../../design/components/components.dart';
 import '../../design/platform/omni_motion_scope.dart';
+import '../../design/platform/omni_platform.dart';
 import '../../design/tokens/tokens.dart';
 
 /// The tab shell.
@@ -45,6 +47,7 @@ class AppShell extends ConsumerWidget {
     final selectedIndex = selected < 0 ? tabs.length : selected;
 
     void select(int index) {
+      HapticFeedback.selectionClick();
       final branch = index >= tabs.length
           ? moreBranchIndex
           : branchEntries.indexOf(tabs[index]);
@@ -329,25 +332,26 @@ class _ShellNavItem extends ConsumerWidget {
         onTap: onTap,
         child: Stack(
           children: [
-            Positioned(
-              top: 0,
-              left: 0,
-              right: 0,
-              child: Center(
-                child: SizedBox(
-                  width: 22,
-                  child: AnimatedContainer(
-                    duration: OmniMotion.of(context).base,
-                    curve: OmniCurves.standard,
-                    height: 2,
-                    decoration: BoxDecoration(
-                      color: selected ? scheme.primary : Colors.transparent,
-                      borderRadius: BorderRadius.circular(2),
+            if (!isApple(context))
+              Positioned(
+                top: 0,
+                left: 0,
+                right: 0,
+                child: Center(
+                  child: SizedBox(
+                    width: 22,
+                    child: AnimatedContainer(
+                      duration: OmniMotion.of(context).base,
+                      curve: OmniCurves.standard,
+                      height: 2,
+                      decoration: BoxDecoration(
+                        color: selected ? scheme.primary : Colors.transparent,
+                        borderRadius: BorderRadius.circular(2),
+                      ),
                     ),
                   ),
                 ),
               ),
-            ),
             Center(
               child: Column(
                 mainAxisSize: MainAxisSize.min,

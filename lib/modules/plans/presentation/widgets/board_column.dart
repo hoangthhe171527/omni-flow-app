@@ -535,7 +535,12 @@ class _BoardColumnState extends State<BoardColumn> {
           if (widget.onAddTask case final add?)
             Padding(
               padding: const EdgeInsets.fromLTRB(8, 6, 8, 8),
-              child: _AddTaskButton(onTap: add),
+              child: _AddTaskButton(
+                onTap: () {
+                  HapticFeedback.selectionClick();
+                  add();
+                },
+              ),
             )
           else
             const SizedBox(height: 8),
@@ -922,6 +927,7 @@ class _Header extends StatelessWidget {
                   onPressed: () {
                     final box = buttonContext.findRenderObject() as RenderBox?;
                     if (box == null || !box.hasSize) return;
+                    HapticFeedback.selectionClick();
                     onOptions!(box.localToGlobal(Offset.zero) & box.size);
                   },
                   padding: EdgeInsets.zero,

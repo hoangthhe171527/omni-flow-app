@@ -41,6 +41,7 @@ class TaskSearchPage extends ConsumerStatefulWidget {
 class _TaskSearchPageState extends ConsumerState<TaskSearchPage> {
   final _controller = TextEditingController();
   Timer? _timer;
+  bool _isEmpty = true;
 
   @override
   void dispose() {
@@ -51,8 +52,11 @@ class _TaskSearchPageState extends ConsumerState<TaskSearchPage> {
 
   void _onChanged(String value) {
     // Nút xoá xuất hiện ngay từ ký tự đầu, không chờ hết quãng lặng: nó nói
-    // về ô nhập, không nói về kết quả.
-    setState(() {});
+    // về ô nhập, không nói về kết quả. Chỉ dựng lại khi trạng thái rỗng đổi.
+    final nextEmpty = value.isEmpty;
+    if (nextEmpty != _isEmpty) {
+      setState(() => _isEmpty = nextEmpty);
+    }
     _timer?.cancel();
     _timer = Timer(kTaskSearchDebounce, () {
       // Widget có thể đã rời cây trong lúc chờ — người dùng bấm quay lại ngay
@@ -108,7 +112,7 @@ class _TaskSearchPageState extends ConsumerState<TaskSearchPage> {
               hintStyle: OmniType.searchHint.copyWith(
                 color: scheme.onSurfaceVariant,
               ),
-              suffixIcon: _controller.text.isEmpty
+              suffixIcon: _isEmpty
                   ? null
                   : IconButton(
                       tooltip: 'Xoá',
@@ -116,7 +120,7 @@ class _TaskSearchPageState extends ConsumerState<TaskSearchPage> {
                         _timer?.cancel();
                         _controller.clear();
                         ref.read(taskSearchQueryProvider.notifier).state = '';
-                        setState(() {});
+                        setState(() => _isEmpty = true);
                       },
                       icon: Icon(
                         Icons.close_rounded,
@@ -148,6 +152,8 @@ class _TaskSearchPageState extends ConsumerState<TaskSearchPage> {
                     'khớp, nên "4713" cũng ra.',
               ),
               data: (list) => ListView.separated(
+                keyboardDismissBehavior:
+                    ScrollViewKeyboardDismissBehavior.onDrag,
                 padding: const EdgeInsets.fromLTRB(
                   OmniSpacing.lg,
                   OmniSpacing.xs,

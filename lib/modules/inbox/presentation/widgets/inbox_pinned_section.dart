@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
+import '../../../../design/platform/omni_motion_scope.dart';
 import '../../../../design/tokens/tokens.dart';
 import '../../domain/conversation.dart';
 
@@ -50,11 +52,28 @@ class _InboxPinnedSectionState extends State<InboxPinnedSection> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         const _SectionHeader('Đã ghim'),
-        for (final c in shown) ...[widget.rowBuilder(c), divider],
+        if (OmniMotion.enabled(context))
+          AnimatedSize(
+            duration: OmniMotion.of(context).fast,
+            curve: Curves.easeOutCubic,
+            alignment: Alignment.topCenter,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                for (final c in shown) ...[widget.rowBuilder(c), divider],
+              ],
+            ),
+          )
+        else
+          for (final c in shown) ...[widget.rowBuilder(c), divider],
         if (hidden > 0) ...[
           InkWell(
             key: const Key('inbox-pinned-more'),
-            onTap: () => setState(() => _expanded = !_expanded),
+            onTap: () {
+              HapticFeedback.selectionClick();
+              setState(() => _expanded = !_expanded);
+            },
             child: Container(
               constraints: const BoxConstraints(minHeight: 44),
               alignment: Alignment.center,

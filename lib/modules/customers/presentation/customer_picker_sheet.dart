@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../design/components/components.dart';
@@ -57,6 +58,8 @@ class _CustomerPickerSheetState extends ConsumerState<CustomerPickerSheet> {
               ),
               data: (list) => ListView.builder(
                 shrinkWrap: true,
+                keyboardDismissBehavior:
+                    ScrollViewKeyboardDismissBehavior.onDrag,
                 itemCount: list.length,
                 itemBuilder: (context, index) {
                   final customer = list[index];
@@ -76,7 +79,10 @@ class _CustomerPickerSheetState extends ConsumerState<CustomerPickerSheet> {
                         color: scheme.onSurfaceVariant,
                       ),
                     ),
-                    onTap: () => Navigator.pop(context, customer),
+                    onTap: () {
+                      HapticFeedback.selectionClick();
+                      Navigator.pop(context, customer);
+                    },
                   );
                 },
               ),

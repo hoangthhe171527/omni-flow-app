@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../design/components/components.dart';
@@ -49,6 +50,7 @@ class CustomerSearchRow extends ConsumerWidget implements PreferredSizeWidget {
                 open: filtersOpen,
                 count: count,
                 onTap: () {
+                  HapticFeedback.selectionClick();
                   final anchored = onOpenFilters;
                   if (anchored == null) {
                     onToggleFilters?.call();
@@ -307,6 +309,7 @@ Future<void> showCustomerFilterMenu({
                     selected: segment == i,
                     onTap: () {
                       if (i == segment) return;
+                      HapticFeedback.selectionClick();
                       Navigator.of(menuContext).pop();
                       onSegmentChanged(i);
                     },
@@ -451,7 +454,10 @@ class CustomerFilterMenuContent extends ConsumerWidget {
             _FilterMenuRow(
               label: quick.label,
               selected: filter.quick == quick,
-              onTap: () => controller.setQuick(quick),
+              onTap: () {
+                HapticFeedback.selectionClick();
+                controller.setQuick(quick);
+              },
             ),
         ],
       ),

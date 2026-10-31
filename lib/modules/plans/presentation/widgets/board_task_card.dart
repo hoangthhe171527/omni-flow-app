@@ -325,15 +325,18 @@ class _BoardTaskCardState extends ConsumerState<BoardTaskCard>
           );
 
     // Mờ .78 bọc CẢ thẻ lẫn ô tích (`.card` opacity): ô tích nằm ngoài thẻ
-    // trong Stack nên đặt Opacity bên trong là bỏ sót nó.
+    // trong Stack nên đặt Opacity bên trong là bỏ sót nó. Chưa xong thì không
+    // bọc Opacity(1.0) để đỡ cấp phát lớp đệm mỗi khung cuộn.
     return OmniRise(
       delay: widget.delay,
       animate: widget.rise,
-      child: Opacity(
-        key: const ValueKey('card-opacity'),
-        opacity: done ? 0.78 : 1,
-        child: body,
-      ),
+      child: done
+          ? Opacity(
+              key: const ValueKey('card-opacity'),
+              opacity: 0.78,
+              child: body,
+            )
+          : body,
     );
   }
 

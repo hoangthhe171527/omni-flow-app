@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../../../../design/components/components.dart';
 import '../../../../design/platform/omni_motion_scope.dart';
@@ -88,13 +89,17 @@ class TeamGroup extends StatelessWidget {
       onActions: canOpenActions ? () => onLongPressPlan!(plan) : null,
       onToggleFavorite: onToggleFavorite == null
           ? null
-          : () => onToggleFavorite!(plan),
+          : () {
+              HapticFeedback.selectionClick();
+              onToggleFavorite!(plan);
+            },
     );
     if (canDragPlan?.call(plan) != true || onMovePlan == null) return tile;
 
     return LongPressDraggable<Plan>(
       data: plan,
       delay: const Duration(milliseconds: 400),
+      onDragStarted: () => HapticFeedback.mediumImpact(),
       feedback: Material(
         elevation: 8,
         borderRadius: OmniRadius.mdAll,
@@ -149,6 +154,47 @@ class TeamGroup extends StatelessWidget {
     final motion = OmniMotion.enabled(context);
     const radius = BorderRadius.all(Radius.circular(8));
 
+    final Widget body = open
+        ? Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              for (final plan in plans) _tile(plan),
+              if (group.closedPlans.isNotEmpty)
+                _ClosedToggle(
+                  count: group.closedPlans.length,
+                  open: closedOpen,
+                  onTap: onToggleClosed == null
+                      ? null
+                      : () {
+                          HapticFeedback.selectionClick();
+                          onToggleClosed!();
+                        },
+                ),
+              if (closedOpen)
+                for (final plan in closed) _tile(plan),
+              if (group.plans.isEmpty && group.closedPlans.isEmpty)
+                // Nói rõ là rỗng: một đầu nhóm không có gì bên dưới đọc như
+                // lỗi tải. Cũng là chỗ duy nhất team rỗng còn hiện để xoá.
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.fromLTRB(40, 14, 16, 14),
+                  decoration: BoxDecoration(
+                    border: Border(
+                      top: BorderSide(color: scheme.surfaceContainerHighest),
+                    ),
+                  ),
+                  child: Text(
+                    'Team này chưa có kế hoạch nào.',
+                    textAlign: TextAlign.center,
+                    style: OmniType.caption.copyWith(
+                      color: scheme.onSurfaceVariant,
+                    ),
+                  ),
+                ),
+            ],
+          )
+        : const SizedBox(width: double.infinity);
+
     final card = OmniRise(
       // Trần 6 bước: nhóm thứ 20 không phải chờ cả giây mới hiện.
       delay: OmniRise.step * math.min(index, 6),
@@ -164,7 +210,10 @@ class TeamGroup extends StatelessWidget {
               onLongPressHint: onLongPress == null ? null : 'Tuỳ chọn team',
               child: OmniPressScale(
                 child: InkWell(
-                  onTap: onToggle,
+                  onTap: () {
+                    HapticFeedback.selectionClick();
+                    onToggle();
+                  },
                   onLongPress: onLongPress,
                   child: Container(
                     constraints: const BoxConstraints(minHeight: 48),
@@ -220,36 +269,15 @@ class TeamGroup extends StatelessWidget {
                 ),
               ),
             ),
-            if (open) ...[
-              for (final plan in plans) _tile(plan),
-              if (group.closedPlans.isNotEmpty)
-                _ClosedToggle(
-                  count: group.closedPlans.length,
-                  open: closedOpen,
-                  onTap: onToggleClosed,
-                ),
-              if (closedOpen)
-                for (final plan in closed) _tile(plan),
-              if (group.plans.isEmpty && group.closedPlans.isEmpty)
-                // Nói rõ là rỗng: một đầu nhóm không có gì bên dưới đọc như
-                // lỗi tải. Cũng là chỗ duy nhất team rỗng còn hiện để xoá.
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.fromLTRB(40, 14, 16, 14),
-                  decoration: BoxDecoration(
-                    border: Border(
-                      top: BorderSide(color: scheme.surfaceContainerHighest),
-                    ),
-                  ),
-                  child: Text(
-                    'Team này chưa có kế hoạch nào.',
-                    textAlign: TextAlign.center,
-                    style: OmniType.caption.copyWith(
-                      color: scheme.onSurfaceVariant,
-                    ),
-                  ),
-                ),
-            ],
+            if (motion)
+              AnimatedSize(
+                duration: OmniMotion.of(context).base,
+                curve: Curves.easeOutCubic,
+                alignment: Alignment.topCenter,
+                child: body,
+              )
+            else
+              body,
           ],
         ),
       ),

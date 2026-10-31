@@ -42,6 +42,7 @@ class _LoginPageState extends ConsumerState<LoginPage>
   }
 
   void _shakeIfAllowed() {
+    HapticFeedback.heavyImpact();
     if (!OmniMotion.enabled(context)) return;
     _shake.forward(from: 0);
   }
@@ -86,6 +87,7 @@ class _LoginPageState extends ConsumerState<LoginPage>
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: SafeArea(
         child: SingleChildScrollView(
+          keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
           padding: const EdgeInsets.fromLTRB(24, 96, 24, 24),
           child: Center(
             child: ConstrainedBox(
@@ -184,11 +186,11 @@ class _LoginPageState extends ConsumerState<LoginPage>
                           child: const Text('Quên mật khẩu?'),
                         ),
                       ),
-                      if (state.error != null) ...[
-                        const SizedBox(height: 4),
-                        AuthErrorBox(message: state.error!),
-                        const SizedBox(height: 12),
-                      ],
+                      if (state.error != null)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 4, bottom: 12),
+                          child: AuthErrorBox(message: state.error!),
+                        ),
                       const SizedBox(height: 8),
                       AuthPrimaryButton(
                         label: 'Đăng nhập',

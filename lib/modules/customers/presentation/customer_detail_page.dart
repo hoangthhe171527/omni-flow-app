@@ -5,6 +5,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/utils/formatters.dart';
 import '../../../design/components/components.dart';
+import '../../../design/platform/omni_motion_scope.dart';
 import '../../../design/tokens/tokens.dart';
 import '../../../core/module/customer_opportunities_section.dart';
 import '../../../security/permissions/access_scope.dart';
@@ -239,7 +240,7 @@ class _CustomerDetailPageState extends ConsumerState<CustomerDetailPage> {
           Future<void> save(CustomerField f, String draft) =>
               _save(data, f, draft, activity: activityOn, opps: oppsOn);
 
-          return RefreshIndicator(
+          return RefreshIndicator.adaptive(
             onRefresh: () => _refresh(activity: activityOn, opps: oppsOn),
             child: ListView(
               physics: const AlwaysScrollableScrollPhysics(),
@@ -277,22 +278,45 @@ class _CustomerDetailPageState extends ConsumerState<CustomerDetailPage> {
                     }),
                   ),
                 ),
-                switch (tab) {
-                  _Tab.overview => _Overview(
-                    customer: data,
-                    canUpdate: canUpdate,
-                    editing: _editing,
-                    onBeginEdit: _beginEdit,
-                    onEndEdit: _endEdit,
-                    onSave: save,
-                    onPickOwner: () =>
-                        _pickOwner(data, activity: activityOn, opps: oppsOn),
-                    onPickTags: () =>
-                        _pickTags(data, activity: activityOn, opps: oppsOn),
-                  ),
-                  _Tab.activity => _ActivityTab(customerId: _id),
-                  _Tab.opportunities => section!.body(_id),
-                },
+                if (OmniMotion.enabled(context))
+                  AnimatedSize(
+                    duration: OmniMotion.of(context).fast,
+                    curve: Curves.easeOutCubic,
+                    alignment: Alignment.topCenter,
+                    child: switch (tab) {
+                      _Tab.overview => _Overview(
+                        customer: data,
+                        canUpdate: canUpdate,
+                        editing: _editing,
+                        onBeginEdit: _beginEdit,
+                        onEndEdit: _endEdit,
+                        onSave: save,
+                        onPickOwner: () =>
+                            _pickOwner(data, activity: activityOn, opps: oppsOn),
+                        onPickTags: () =>
+                            _pickTags(data, activity: activityOn, opps: oppsOn),
+                      ),
+                      _Tab.activity => _ActivityTab(customerId: _id),
+                      _Tab.opportunities => section!.body(_id),
+                    },
+                  )
+                else
+                  switch (tab) {
+                    _Tab.overview => _Overview(
+                      customer: data,
+                      canUpdate: canUpdate,
+                      editing: _editing,
+                      onBeginEdit: _beginEdit,
+                      onEndEdit: _endEdit,
+                      onSave: save,
+                      onPickOwner: () =>
+                          _pickOwner(data, activity: activityOn, opps: oppsOn),
+                      onPickTags: () =>
+                          _pickTags(data, activity: activityOn, opps: oppsOn),
+                    ),
+                    _Tab.activity => _ActivityTab(customerId: _id),
+                    _Tab.opportunities => section!.body(_id),
+                  },
               ],
             ),
           );
@@ -923,7 +947,7 @@ class _ActivityTab extends ConsumerWidget {
       data: (items) => CustomerActivityList(items: items),
       loading: () => const Padding(
         padding: EdgeInsets.all(OmniSpacing.section),
-        child: Center(child: CircularProgressIndicator()),
+        child: Center(child: CircularProgressIndicator.adaptive()),
       ),
       error: (_, _) => Padding(
         padding: const EdgeInsets.all(OmniSpacing.section),

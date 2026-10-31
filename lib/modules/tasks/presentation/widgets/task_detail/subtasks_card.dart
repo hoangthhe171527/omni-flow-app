@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../../core/error/app_exception.dart';
@@ -113,6 +114,7 @@ class SubtasksCard extends ConsumerWidget {
                   shrinkWrap: true,
                   physics: const NeverScrollableScrollPhysics(),
                   buildDefaultDragHandles: false,
+                  onReorderStart: (_) => HapticFeedback.mediumImpact(),
                   itemCount: subtasks.length,
                   onReorderItem: (from, to) =>
                       _reorder(context, subtasks, from, to),
@@ -285,7 +287,7 @@ class SubtasksCard extends ConsumerWidget {
   /// server không kiểm.
   Future<void> _setStart(BuildContext context, Subtask s) async {
     final today = DateUtils.dateOnly(DateTime.now());
-    final chosen = await showDatePicker(
+    final chosen = await pickOmniDate(
       context: context,
       initialDate: s.startDate ?? today,
       firstDate: DateTime(today.year - 1),

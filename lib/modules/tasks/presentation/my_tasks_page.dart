@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -105,7 +106,7 @@ class _MyTasksPageState extends ConsumerState<MyTasksPage> {
           ),
         ),
       ),
-      body: RefreshIndicator(
+      body: RefreshIndicator.adaptive(
         onRefresh: () => ref.read(myTasksProvider.notifier).refresh(),
         child: OmniAsyncView(
           value: tasks,
@@ -134,7 +135,7 @@ class _MyTasksPageState extends ConsumerState<MyTasksPage> {
                     child: SizedBox(
                       width: 18,
                       height: 18,
-                      child: CircularProgressIndicator(strokeWidth: 2),
+                      child: CircularProgressIndicator.adaptive(strokeWidth: 2),
                     ),
                   ),
                 );
@@ -282,6 +283,7 @@ class _TickOnSwipe extends StatelessWidget {
       // Trả false NGAY, không chờ mạng: thẻ trượt về chỗ, tiến độ trên thẻ đã
       // đổi lạc quan, và kết quả thật (hoặc lỗi) tới qua thanh thông báo.
       confirmDismiss: (_) {
+        HapticFeedback.mediumImpact();
         onTick(next);
         return Future.value(false);
       },

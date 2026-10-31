@@ -17,7 +17,7 @@ abstract final class OmniSpacing {
   static const EdgeInsets card = EdgeInsets.all(lg);
 
   /// Bottom padding that clears the tab bar + FAB on scrollable screens.
-  static const double bottomSafe = 96;
+  static const double bottomSafe = 112;
 }
 
 abstract final class OmniRadius {

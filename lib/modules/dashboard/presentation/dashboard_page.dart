@@ -47,7 +47,7 @@ class DashboardPage extends ConsumerWidget {
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.surface,
       appBar: const OmniTopBar(semanticsTitle: 'Tổng quan'),
-      body: RefreshIndicator(
+      body: RefreshIndicator.adaptive(
         onRefresh: () => _refresh(ref),
         child: ListView(
           physics: const AlwaysScrollableScrollPhysics(),

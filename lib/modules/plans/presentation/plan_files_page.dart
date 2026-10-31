@@ -58,6 +58,8 @@ class PlanFilesPage extends ConsumerWidget {
                   .clamp(44.0, 160.0);
 
               return ListView(
+                keyboardDismissBehavior:
+                    ScrollViewKeyboardDismissBehavior.onDrag,
                 padding: const EdgeInsets.fromLTRB(
                   OmniSpacing.lg,
                   OmniSpacing.md,

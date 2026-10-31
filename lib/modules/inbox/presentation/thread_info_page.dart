@@ -1,6 +1,7 @@
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -188,16 +189,18 @@ class _InfoBody extends ConsumerWidget {
                     icon: Icons.notifications_off_outlined,
                     label: c.isMuted ? 'Đã tắt' : 'Tắt TB',
                     active: c.isMuted,
-                    onTap: () => ConversationActions(
-                      ref,
-                      context,
-                    ).setMuted(c, !c.isMuted),
+                    onTap: () {
+                      HapticFeedback.selectionClick();
+                      ConversationActions(ref, context).setMuted(c, !c.isMuted);
+                    },
                   ),
                   _QuickAction(
                     icon: Icons.search_rounded,
                     label: 'Tìm tin',
-                    onTap: () =>
-                        Navigator.of(context).pop(ThreadInfoResult.search),
+                    onTap: () {
+                      HapticFeedback.selectionClick();
+                      Navigator.of(context).pop(ThreadInfoResult.search);
+                    },
                   ),
                 ],
               ),
@@ -268,10 +271,13 @@ class _InfoBody extends ConsumerWidget {
                     child: _InfoRow(
                       label: 'Ghim hội thoại',
                       plainLabel: true,
-                      onTap: () => ConversationActions(
-                        ref,
-                        context,
-                      ).setPinned(c, !c.isPinned),
+                      onTap: () {
+                        HapticFeedback.selectionClick();
+                        ConversationActions(
+                          ref,
+                          context,
+                        ).setPinned(c, !c.isPinned);
+                      },
                       value: _PinSwitch(
                         value: c.isPinned,
                         onChanged: (on) =>
@@ -368,9 +374,12 @@ class _PinSwitch extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     // Không gắn nhãn riêng: dòng chứa công tắc được gộp (MergeSemantics) với
     // chữ "Ghim hội thoại" — gắn thêm thì trình đọc màn hình đọc hai lần.
-    return Switch(
+    return Switch.adaptive(
       value: value,
-      onChanged: onChanged,
+      onChanged: (v) {
+        HapticFeedback.selectionClick();
+        onChanged(v);
+      },
       activeThumbColor: scheme.surface,
       activeTrackColor: OmniColors.byBrightness(
         context,

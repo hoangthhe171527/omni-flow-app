@@ -1,5 +1,6 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:video_player/video_player.dart';
@@ -51,15 +52,29 @@ class _ConversationAssetsSectionState extends State<ConversationAssetsSection> {
                   'Link · ${links.length}',
                 ],
                 selected: _tab,
-                onChanged: (value) => setState(() => _tab = value),
+                onChanged: (value) {
+                  HapticFeedback.selectionClick();
+                  setState(() => _tab = value);
+                },
               ),
               const SizedBox(height: 8),
-              if (_tab == 0)
-                _MediaGrid(items: assets.media)
-              else if (_tab == 1)
-                _FileList(files: assets.files)
+              if (OmniMotion.enabled(context))
+                AnimatedSize(
+                  duration: OmniMotion.of(context).fast,
+                  curve: Curves.easeOutCubic,
+                  alignment: Alignment.topCenter,
+                  child: _tab == 0
+                      ? _MediaGrid(items: assets.media)
+                      : _tab == 1
+                      ? _FileList(files: assets.files)
+                      : _LinkList(links: links),
+                )
               else
-                _LinkList(links: links),
+                _tab == 0
+                    ? _MediaGrid(items: assets.media)
+                    : _tab == 1
+                    ? _FileList(files: assets.files)
+                    : _LinkList(links: links),
             ],
           ),
         );
@@ -367,7 +382,9 @@ class _PlayableVideoState extends State<_PlayableVideo> {
   Widget build(BuildContext context) {
     if (!_controller.value.isInitialized) {
       return const Center(
-        child: CircularProgressIndicator(color: Colors.white),
+        child: CircularProgressIndicator.adaptive(
+          valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+        ),
       );
     }
     return Center(

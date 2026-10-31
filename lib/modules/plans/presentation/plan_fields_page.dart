@@ -103,6 +103,7 @@ class _PlanFieldsPageState extends ConsumerState<PlanFieldsPage> {
               data: (_) => const SizedBox.shrink(),
             )
           : ListView(
+              keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
               padding: const EdgeInsets.fromLTRB(
                 OmniSpacing.lg,
                 OmniSpacing.md,
@@ -238,6 +239,7 @@ class _FieldSheetState extends State<_FieldSheet> {
     final scheme = Theme.of(context).colorScheme;
 
     return SingleChildScrollView(
+      keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 30),
       child: Column(
         mainAxisSize: MainAxisSize.min,

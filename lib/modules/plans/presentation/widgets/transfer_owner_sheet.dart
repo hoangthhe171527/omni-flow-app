@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/utils/text_search.dart';
@@ -78,11 +79,16 @@ class _TransferOwnerSheetState extends ConsumerState<_TransferOwnerSheet> {
                   ),
                   child: ListView(
                     shrinkWrap: true,
+                    keyboardDismissBehavior:
+                        ScrollViewKeyboardDismissBehavior.onDrag,
                     children: [
                       for (final m in _visible(rows))
                         InkWell(
                           key: ValueKey('owner-${m.userId}'),
-                          onTap: () => Navigator.of(context).pop(m),
+                          onTap: () {
+                            HapticFeedback.selectionClick();
+                            Navigator.of(context).pop(m);
+                          },
                           child: ConstrainedBox(
                             constraints: const BoxConstraints(minHeight: 50),
                             child: Padding(

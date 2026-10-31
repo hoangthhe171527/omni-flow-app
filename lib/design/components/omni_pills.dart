@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../../core/domain/channel.dart';
 import '../platform/omni_motion_scope.dart';
@@ -87,7 +88,10 @@ class OmniFilterPill extends StatelessWidget {
       button: true,
       selected: selected,
       child: InkWell(
-        onTap: onTap,
+        onTap: () {
+          HapticFeedback.selectionClick();
+          onTap();
+        },
         customBorder: const RoundedRectangleBorder(
           borderRadius: OmniRadius.chipAll,
         ),

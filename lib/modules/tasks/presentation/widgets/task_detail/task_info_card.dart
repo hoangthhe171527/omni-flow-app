@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../../../../../core/utils/formatters.dart';
 import '../../../../../design/components/components.dart';
@@ -480,7 +481,7 @@ class _TimeSheetState extends State<_TimeSheet> {
     if (initial.isBefore(first)) first = DateTime(initial.year - 1);
     if (initial.isAfter(last)) last = DateTime(initial.year + 1, 12, 31);
 
-    return showDatePicker(
+    return pickOmniDate(
       context: context,
       initialDate: initial,
       firstDate: first,
@@ -565,7 +566,10 @@ class _TimeSheetState extends State<_TimeSheet> {
                   _QuickChip(
                     label: quick[i].$1,
                     on: _due != null && _day(_due!) == quick[i].$2,
-                    onTap: () => setState(() => _due = quick[i].$2),
+                    onTap: () {
+                      HapticFeedback.selectionClick();
+                      setState(() => _due = quick[i].$2);
+                    },
                   ),
               ],
             ),
