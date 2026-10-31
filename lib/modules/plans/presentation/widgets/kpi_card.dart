@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../../../../design/platform/omni_motion_scope.dart';
 import '../../../../design/tokens/tokens.dart';
@@ -227,7 +228,12 @@ class _MonthButton extends StatelessWidget {
 
     return IconButton(
       tooltip: tooltip,
-      onPressed: onPressed,
+      onPressed: onPressed == null
+          ? null
+          : () {
+              HapticFeedback.selectionClick();
+              onPressed!();
+            },
       padding: EdgeInsets.zero,
       constraints: const BoxConstraints.tightFor(width: 44, height: 44),
       style: IconButton.styleFrom(

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../platform/omni_motion_scope.dart';
 import '../tokens/tokens.dart';
@@ -81,7 +82,10 @@ class OmniTabStrip extends StatelessWidget {
                   key: tabs[i].key,
                   tab: tabs[i],
                   selected: i == selected,
-                  onTap: () => onSelected(i),
+                  onTap: () {
+                    if (i != selected) HapticFeedback.selectionClick();
+                    onSelected(i);
+                  },
                 ),
               ],
             ],

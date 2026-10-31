@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../design/components/components.dart';
@@ -57,6 +58,7 @@ class InboxSearchRow extends ConsumerWidget implements PreferredSizeWidget {
                 open: filtersOpen,
                 count: count,
                 onTap: () {
+                  HapticFeedback.selectionClick();
                   final anchored = onOpenFilters;
                   if (anchored == null) {
                     onToggleFilters?.call();
@@ -89,12 +91,14 @@ class _SearchFieldState extends ConsumerState<_SearchField> {
   /// Giá trị ô này đã đẩy lên bộ lọc gần nhất. `search` đổi thành giá trị khác
   /// nghĩa là bị đặt từ nơi khác.
   late String _sent;
+  bool _isEmpty = true;
 
   @override
   void initState() {
     super.initState();
     _sent = ref.read(inboxFilterProvider).search;
     _controller = TextEditingController(text: _sent);
+    _isEmpty = _sent.isEmpty;
   }
 
   @override
@@ -105,7 +109,10 @@ class _SearchFieldState extends ConsumerState<_SearchField> {
   }
 
   void _changed(String value) {
-    setState(() {});
+    final isEmpty = value.isEmpty;
+    if (isEmpty != _isEmpty) {
+      setState(() => _isEmpty = isEmpty);
+    }
     _debounce?.cancel();
     _debounce = Timer(const Duration(milliseconds: 300), () {
       if (!mounted) return;
@@ -117,7 +124,9 @@ class _SearchFieldState extends ConsumerState<_SearchField> {
   void _clear() {
     _debounce?.cancel();
     _controller.clear();
-    setState(() {});
+    if (!_isEmpty) {
+      setState(() => _isEmpty = true);
+    }
     _sent = '';
     ref.read(inboxFilterProvider.notifier).setSearch('');
   }
@@ -129,7 +138,7 @@ class _SearchFieldState extends ConsumerState<_SearchField> {
     _sent = search;
     if (_controller.text != search) {
       _controller.text = search;
-      setState(() {});
+      setState(() => _isEmpty = search.isEmpty);
     }
   }
 
@@ -179,7 +188,7 @@ class _SearchFieldState extends ConsumerState<_SearchField> {
                 ),
               ),
             ),
-            if (_controller.text.isNotEmpty)
+            if (!_isEmpty)
               IconButton(
                 tooltip: 'Xoá tìm kiếm',
                 onPressed: _clear,
@@ -614,7 +623,10 @@ class _QuickFilterChoice extends StatelessWidget {
         child: InkWell(
           splashFactory: _splash(context),
           highlightColor: _highlight(context),
-          onTap: onTap,
+          onTap: () {
+            HapticFeedback.selectionClick();
+            onTap();
+          },
           borderRadius: OmniRadius.mdAll,
           child: ConstrainedBox(
             constraints: const BoxConstraints(minHeight: 44),
@@ -679,7 +691,10 @@ class _ChoiceChip extends StatelessWidget {
         child: InkWell(
           splashFactory: _splash(context),
           highlightColor: _highlight(context),
-          onTap: onTap,
+          onTap: () {
+            HapticFeedback.selectionClick();
+            onTap();
+          },
           customBorder: RoundedRectangleBorder(
             borderRadius: OmniRadius.chipAll,
           ),

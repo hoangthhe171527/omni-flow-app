@@ -336,7 +336,8 @@ class _TaskDetailPageState extends ConsumerState<TaskDetailPage> {
         } else {
           unawaited(
             navigator.push(
-              MaterialPageRoute<void>(
+              omniPageRoute<void>(
+                context: context,
                 builder: (_) => TaskDetailPage(taskId: copy.id),
               ),
             ),
@@ -709,7 +710,7 @@ class _Loaded extends ConsumerWidget {
     return Column(
       children: [
         Expanded(
-          child: RefreshIndicator(
+          child: RefreshIndicator.adaptive(
             onRefresh: controller.refresh,
             child: CustomScrollView(
               controller: scroll,
@@ -802,7 +803,7 @@ class _Loaded extends ConsumerWidget {
         // Khoảng lịch luôn chứa ngày đang có: ngày đặt từ web có thể nằm xa.
         final first = DateTime(now.year - 5);
         final last = DateTime(now.year + 5, 12, 31);
-        final picked = await showDatePicker(
+        final picked = await pickOmniDate(
           context: context,
           initialDate: initial,
           firstDate: initial.isBefore(first) ? initial : first,
@@ -849,6 +850,7 @@ class _Loaded extends ConsumerWidget {
   ) async {
     final messenger = ScaffoldMessenger.of(context);
     try {
+      unawaited(HapticFeedback.selectionClick());
       await controller.toggleLike(myUserId);
     } on Object {
       messenger.showSnackBar(

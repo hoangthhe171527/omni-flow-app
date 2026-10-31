@@ -1,12 +1,14 @@
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/error/app_exception.dart';
 import '../../../core/utils/formatters.dart';
 import '../../../design/components/components.dart';
+import '../../../design/platform/omni_motion_scope.dart';
 import '../../../design/tokens/tokens.dart';
 import '../../customers/routes.dart';
 import '../../team/team.dart';
@@ -53,135 +55,144 @@ class OpportunityDetailPage extends ConsumerWidget {
       body: OmniAsyncView(
         value: opportunity,
         onRetry: () => ref.invalidate(opportunityProvider(opportunityId)),
-        data: (data) => ListView(
-          padding: const EdgeInsets.only(bottom: OmniSpacing.bottomSafe),
-          children: [
-            Container(
-              padding: const EdgeInsets.fromLTRB(16, 4, 16, 20),
-              decoration: BoxDecoration(
-                color: scheme.surface,
-                border: Border(
-                  bottom: BorderSide(color: scheme.outlineVariant),
+        data: (data) => RefreshIndicator.adaptive(
+          onRefresh: () =>
+              ref.refresh(opportunityProvider(opportunityId).future),
+          child: ListView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: const EdgeInsets.only(bottom: OmniSpacing.bottomSafe),
+            children: [
+              Container(
+                padding: const EdgeInsets.fromLTRB(16, 4, 16, 20),
+                decoration: BoxDecoration(
+                  color: scheme.surface,
+                  border: Border(
+                    bottom: BorderSide(color: scheme.outlineVariant),
+                  ),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      data.title,
+                      style: OmniType.title.copyWith(
+                        fontWeight: FontWeight.w600,
+                        color: scheme.onSurface,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      Formatters.vnd(data.value),
+                      // Số tiền là DỮ LIỆU, chữ mực — màu chính chỉ cho hành động.
+                      style: OmniType.moneyHero.copyWith(
+                        color: scheme.onSurface,
+                      ),
+                    ),
+                    const SizedBox(height: 18),
+                    _StageStepper(
+                      opportunity: data,
+                      pipeline: catalog?.pipelineOf(data.pipelineCode),
+                    ),
+                  ],
                 ),
               ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    data.title,
-                    style: OmniType.title.copyWith(
-                      fontWeight: FontWeight.w600,
-                      color: scheme.onSurface,
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                  Text(
-                    Formatters.vnd(data.value),
-                    // Số tiền là DỮ LIỆU, chữ mực — màu chính chỉ cho hành động.
-                    style: OmniType.moneyHero.copyWith(color: scheme.onSurface),
-                  ),
-                  const SizedBox(height: 18),
-                  _StageStepper(
-                    opportunity: data,
-                    pipeline: catalog?.pipelineOf(data.pipelineCode),
-                  ),
-                ],
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  const OmniSectionHeader(
-                    title: 'Thông tin',
-                    padding: _headerPadding,
-                  ),
-                  OmniDetailCard(
-                    flat: true,
-                    rows: [
-                      OmniDetailRow(
-                        label: 'Khách hàng',
-                        value: data.customerName ?? '—',
-                        onTap: data.customerId == null
-                            ? null
-                            : () => context.pushNamed(
-                                CustomerRoutes.detail,
-                                pathParameters: {'id': data.customerId!},
-                              ),
-                      ),
-                      OmniDetailRow(
-                        label: 'Sản phẩm',
-                        value: data.product ?? '—',
-                      ),
-                      OmniDetailRow(
-                        label: 'Xác suất',
-                        value:
-                            '${data.displayPercent(catalog?.pipelineOf(data.pipelineCode))}%',
-                      ),
-                      OmniDetailRow(
-                        label: 'Dự kiến chốt',
-                        value: Formatters.date(data.expectedCloseAt),
-                        valueColor: data.isOverdue
-                            ? OmniColors.dangerTextOf(context)
-                            : null,
-                      ),
-                      OmniDetailRow(
-                        label: 'Phụ trách',
-                        value: _ownerLabel(ref, data),
-                      ),
-                      OmniDetailRow(
-                        label: 'Giá trị kỳ vọng',
-                        value: Formatters.vnd(
-                          data.weightedValue(
-                            catalog?.pipelineOf(data.pipelineCode),
-                          ),
-                        ),
-                        strong: true,
-                      ),
-                    ],
-                  ),
-                  if (data.notes.isNotEmpty) ...[
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
                     const OmniSectionHeader(
-                      title: 'Ghi chú',
+                      title: 'Thông tin',
                       padding: _headerPadding,
                     ),
-                    for (final note in data.notes)
-                      Padding(
-                        padding: const EdgeInsets.only(bottom: OmniSpacing.sm),
-                        child: OmniCard(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 16,
-                            vertical: 14,
+                    OmniDetailCard(
+                      flat: true,
+                      rows: [
+                        OmniDetailRow(
+                          label: 'Khách hàng',
+                          value: data.customerName ?? '—',
+                          onTap: data.customerId == null
+                              ? null
+                              : () => context.pushNamed(
+                                  CustomerRoutes.detail,
+                                  pathParameters: {'id': data.customerId!},
+                                ),
+                        ),
+                        OmniDetailRow(
+                          label: 'Sản phẩm',
+                          value: data.product ?? '—',
+                        ),
+                        OmniDetailRow(
+                          label: 'Xác suất',
+                          value:
+                              '${data.displayPercent(catalog?.pipelineOf(data.pipelineCode))}%',
+                        ),
+                        OmniDetailRow(
+                          label: 'Dự kiến chốt',
+                          value: Formatters.date(data.expectedCloseAt),
+                          valueColor: data.isOverdue
+                              ? OmniColors.dangerTextOf(context)
+                              : null,
+                        ),
+                        OmniDetailRow(
+                          label: 'Phụ trách',
+                          value: _ownerLabel(ref, data),
+                        ),
+                        OmniDetailRow(
+                          label: 'Giá trị kỳ vọng',
+                          value: Formatters.vnd(
+                            data.weightedValue(
+                              catalog?.pipelineOf(data.pipelineCode),
+                            ),
                           ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                note.content,
-                                style: OmniType.bodyStrong.copyWith(
-                                  fontWeight: FontWeight.w400,
-                                  height: 22 / 15,
-                                  color: scheme.onSurface,
+                          strong: true,
+                        ),
+                      ],
+                    ),
+                    if (data.notes.isNotEmpty) ...[
+                      const OmniSectionHeader(
+                        title: 'Ghi chú',
+                        padding: _headerPadding,
+                      ),
+                      for (final note in data.notes)
+                        Padding(
+                          padding: const EdgeInsets.only(
+                            bottom: OmniSpacing.sm,
+                          ),
+                          child: OmniCard(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 14,
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  note.content,
+                                  style: OmniType.bodyStrong.copyWith(
+                                    fontWeight: FontWeight.w400,
+                                    height: 22 / 15,
+                                    color: scheme.onSurface,
+                                  ),
                                 ),
-                              ),
-                              const SizedBox(height: 6),
-                              Text(
-                                '${note.author ?? "Thành viên"} · ${Formatters.relative(note.at)}',
-                                style: OmniType.micro.copyWith(
-                                  fontWeight: FontWeight.w400,
-                                  color: scheme.onSurfaceVariant,
+                                const SizedBox(height: 6),
+                                Text(
+                                  '${note.author ?? "Thành viên"} · ${Formatters.relative(note.at)}',
+                                  style: OmniType.micro.copyWith(
+                                    fontWeight: FontWeight.w400,
+                                    color: scheme.onSurfaceVariant,
+                                  ),
                                 ),
-                              ),
-                            ],
+                              ],
+                            ),
                           ),
                         ),
-                      ),
+                    ],
                   ],
-                ],
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
       bottomNavigationBar: _actionBar(
@@ -229,10 +240,12 @@ class OpportunityDetailPage extends ConsumerWidget {
   Future<void> _moveStage(BuildContext context, WidgetRef ref) async {
     final current = ref.read(opportunityProvider(opportunityId)).valueOrNull;
     if (current == null) return;
+    HapticFeedback.selectionClick();
 
     try {
       final stage = await pickOpportunityStage(context, ref, current);
       if (stage == null) return;
+      HapticFeedback.selectionClick();
       await moveOpportunityStage(ref, current, stage.code);
     } on AppException catch (error) {
       if (!context.mounted) return;
@@ -255,6 +268,7 @@ class OpportunityDetailPage extends ConsumerWidget {
   }
 
   Future<void> _markWon(BuildContext context, WidgetRef ref) async {
+    HapticFeedback.selectionClick();
     final confirmed = await showOmniConfirm(
       context: context,
       title: 'Đánh dấu thắng?',
@@ -301,6 +315,7 @@ class _StageStepper extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final motion = OmniMotion.of(context);
 
     // Thắng/thua theo `opportunity_status` của máy chủ — một quy trình tuỳ
     // biến gọi giai đoạn Thắng là `da_mua`, không phải `won`.
@@ -340,7 +355,8 @@ class _StageStepper extends StatelessWidget {
               Expanded(
                 child: Padding(
                   padding: const EdgeInsets.only(top: 10.5),
-                  child: Container(
+                  child: AnimatedContainer(
+                    duration: motion.fast,
                     height: 3,
                     color: i <= currentIndex
                         ? scheme.primary
@@ -390,8 +406,10 @@ class _Dot extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final motion = OmniMotion.of(context);
 
-    return Container(
+    return AnimatedContainer(
+      duration: motion.fast,
       width: 24,
       height: 24,
       decoration: BoxDecoration(

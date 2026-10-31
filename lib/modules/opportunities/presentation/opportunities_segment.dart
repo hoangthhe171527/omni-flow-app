@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -138,7 +139,7 @@ class _Body extends ConsumerWidget {
                 child: SizedBox(
                   width: 20,
                   height: 20,
-                  child: CircularProgressIndicator(strokeWidth: 2),
+                  child: CircularProgressIndicator.adaptive(strokeWidth: 2),
                 ),
               ),
             );
@@ -156,11 +157,12 @@ class _Body extends ConsumerWidget {
     final items = data?.items ?? const [];
     final tail = status != null ? 1 : items.length + (data!.hasMore ? 1 : 0);
 
-    return RefreshIndicator(
+    return RefreshIndicator.adaptive(
       onRefresh: () =>
           ref.read(segmentOpportunitiesProvider.notifier).refresh(),
       child: ListView.builder(
         controller: controller,
+        keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
         physics: const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.only(bottom: OmniSpacing.bottomSafe),
         itemCount: 2 + tail,
@@ -185,8 +187,10 @@ class _Body extends ConsumerWidget {
                 if (value > 0) Formatters.vndCompact(value),
               ].join(' · '),
               filtered: !closed && stageCode != null,
-              onClear: () =>
-                  ref.read(segmentStageProvider.notifier).state = null,
+              onClear: () {
+                HapticFeedback.selectionClick();
+                ref.read(segmentStageProvider.notifier).state = null;
+              },
               color: scheme.onSurfaceVariant,
             );
           }
@@ -199,7 +203,7 @@ class _Body extends ConsumerWidget {
                 child: SizedBox(
                   width: 20,
                   height: 20,
-                  child: CircularProgressIndicator(strokeWidth: 2),
+                  child: CircularProgressIndicator.adaptive(strokeWidth: 2),
                 ),
               ),
             );
@@ -311,6 +315,7 @@ class OpportunitySearchRow extends ConsumerWidget
                 open: filtersOpen,
                 count: count,
                 onTap: () {
+                  HapticFeedback.selectionClick();
                   final anchored = onOpenFilters;
                   if (anchored == null) {
                     onToggleFilters?.call();
@@ -617,26 +622,34 @@ class OpportunityFilterMenuContent extends ConsumerWidget {
               icon: Icons.account_tree_outlined,
               label: 'Quy trình',
               value: pipeline.label,
-              onTap: () => _pickOpportunityPipeline(
-                context,
-                ref,
-                pipelines,
-                pipeline.code,
-              ),
+              onTap: () {
+                HapticFeedback.selectionClick();
+                _pickOpportunityPipeline(
+                  context,
+                  ref,
+                  pipelines,
+                  pipeline.code,
+                );
+              },
             ),
           _OpportunityMenuRow(
             icon: Icons.person_outline_rounded,
             label: 'Chỉ cơ hội của tôi',
             selected: mine,
-            onTap: () => ref.read(pipelineMineProvider.notifier).state = !mine,
+            onTap: () {
+              HapticFeedback.selectionClick();
+              ref.read(pipelineMineProvider.notifier).state = !mine;
+            },
           ),
           if (hasClosedStage)
             _OpportunityMenuRow(
               icon: Icons.inventory_2_outlined,
               label: 'Cơ hội đã đóng',
               selected: closed,
-              onTap: () =>
-                  ref.read(segmentClosedProvider.notifier).state = !closed,
+              onTap: () {
+                HapticFeedback.selectionClick();
+                ref.read(segmentClosedProvider.notifier).state = !closed;
+              },
             ),
         ],
       ),
@@ -774,15 +787,20 @@ class _PanelBody extends ConsumerWidget {
           OmniFilterPill(
             label: 'Của tôi',
             selected: mine,
-            onTap: () => ref.read(pipelineMineProvider.notifier).state = !mine,
+            onTap: () {
+              HapticFeedback.selectionClick();
+              ref.read(pipelineMineProvider.notifier).state = !mine;
+            },
           ),
           // Xem cơ hội đã thắng/thua thay vì đang mở.
           if (hasClosedStage)
             OmniFilterPill(
               label: 'Đã đóng',
               selected: closed,
-              onTap: () =>
-                  ref.read(segmentClosedProvider.notifier).state = !closed,
+              onTap: () {
+                HapticFeedback.selectionClick();
+                ref.read(segmentClosedProvider.notifier).state = !closed;
+              },
             ),
         ],
       ),
@@ -843,7 +861,10 @@ class PipelinePickerSheet extends StatelessWidget {
                   ? scheme.primary.withValues(alpha: 0.05)
                   : Colors.transparent,
               child: InkWell(
-                onTap: () => Navigator.pop(context, pipeline.code),
+                onTap: () {
+                  HapticFeedback.selectionClick();
+                  Navigator.pop(context, pipeline.code);
+                },
                 child: Padding(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 20,

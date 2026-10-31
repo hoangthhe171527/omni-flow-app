@@ -45,11 +45,7 @@ class _CustomerCreateDialog extends StatelessWidget {
 
     return SafeArea(
       minimum: const EdgeInsets.all(16),
-      child: AnimatedPadding(
-        duration: OmniMotion.enabled(context)
-            ? const Duration(milliseconds: 180)
-            : Duration.zero,
-        curve: OmniCurves.standard,
+      child: Padding(
         padding: EdgeInsets.only(bottom: keyboard),
         child: LayoutBuilder(
           builder: (context, constraints) {

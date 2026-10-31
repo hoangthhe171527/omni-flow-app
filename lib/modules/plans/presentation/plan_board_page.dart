@@ -391,7 +391,10 @@ class _PlanBoardPageState extends ConsumerState<PlanBoardPage>
                   searchField: _searchField,
                   onSearchChanged: _onSearchChanged,
                   onBack: _back,
-                  onOpenSearch: () => setState(() => _searching = true),
+                  onOpenSearch: () {
+                    HapticFeedback.selectionClick();
+                    setState(() => _searching = true);
+                  },
                   onCloseSearch: _closeSearch,
                   filterActive: _person.chipLabel != null,
                   onFilter: _pickPerson,
@@ -932,6 +935,7 @@ class _PlanBoardPageState extends ConsumerState<PlanBoardPage>
   }
 
   void _closeSearch() {
+    HapticFeedback.selectionClick();
     _debounce?.cancel();
     _searchField.clear();
     setState(() {
@@ -996,13 +1000,15 @@ class _PlanBoardPageState extends ConsumerState<PlanBoardPage>
     switch (choice) {
       case PlanMenuAction.edit:
         await navigator.push(
-          MaterialPageRoute<bool>(
+          omniPageRoute<bool>(
+            context: context,
             builder: (_) => EditPlanPage(planId: plan.id),
           ),
         );
       case PlanMenuAction.members:
         await navigator.push(
-          MaterialPageRoute<bool>(
+          omniPageRoute<bool>(
+            context: context,
             builder: (_) => PlanMembersPage(planId: plan.id),
           ),
         );
@@ -1010,7 +1016,8 @@ class _PlanBoardPageState extends ConsumerState<PlanBoardPage>
         await showLabelsSheet(context);
       case PlanMenuAction.fields:
         await navigator.push(
-          MaterialPageRoute<bool>(
+          omniPageRoute<bool>(
+            context: context,
             builder: (_) => PlanFieldsPage(planId: plan.id),
           ),
         );
@@ -1025,7 +1032,8 @@ class _PlanBoardPageState extends ConsumerState<PlanBoardPage>
         );
       case PlanMenuAction.archived:
         await navigator.push(
-          MaterialPageRoute<void>(
+          omniPageRoute<void>(
+            context: context,
             builder: (_) => ArchivedTasksPage(
               planId: plan.id,
               canRestore: _canEditTasks(plan),
@@ -1034,14 +1042,16 @@ class _PlanBoardPageState extends ConsumerState<PlanBoardPage>
         );
       case PlanMenuAction.files:
         await navigator.push(
-          MaterialPageRoute<void>(
+          omniPageRoute<void>(
+            context: context,
             builder: (_) =>
                 PlanFilesPage(planId: plan.id, canDelete: _canEditTasks(plan)),
           ),
         );
       case PlanMenuAction.report:
         await navigator.push(
-          MaterialPageRoute<void>(
+          omniPageRoute<void>(
+            context: context,
             builder: (_) =>
                 PlanReportPage(planId: plan.id, canConfigure: _canManage(plan)),
           ),
@@ -1236,14 +1246,16 @@ class _PlanBoardPageState extends ConsumerState<PlanBoardPage>
         await _removeSection(plan, board, section);
       case _SectionAction.reorder:
         await Navigator.of(context).push<bool>(
-          MaterialPageRoute(
+          omniPageRoute(
+            context: context,
             builder: (_) => SectionOrderPage(planId: widget.planId),
           ),
         );
       case _SectionAction.edit:
         // EditSectionsPage tự invalidate planProvider/planTasksProvider khi lưu.
         await Navigator.of(context).push<bool>(
-          MaterialPageRoute(
+          omniPageRoute(
+            context: context,
             builder: (_) => EditSectionsPage(planId: widget.planId),
           ),
         );

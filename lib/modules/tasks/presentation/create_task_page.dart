@@ -109,6 +109,7 @@ class _CreateTaskPageState extends ConsumerState<CreateTaskPage> {
         title: const Text('Việc mới'),
       ),
       body: ListView(
+        keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
         padding: const EdgeInsets.fromLTRB(20, OmniSpacing.sm, 20, 24),
         children: [
           OmniField(
@@ -209,7 +210,7 @@ class _CreateTaskPageState extends ConsumerState<CreateTaskPage> {
                   ? const SizedBox(
                       width: 20,
                       height: 20,
-                      child: CircularProgressIndicator(strokeWidth: 2),
+                      child: CircularProgressIndicator.adaptive(strokeWidth: 2),
                     )
                   : const Text('Tạo việc'),
             ),
@@ -227,7 +228,7 @@ class _CreateTaskPageState extends ConsumerState<CreateTaskPage> {
       'Chưa xếp nhóm việc';
 
   Future<void> _pickSection() async {
-    final chosen = await showModalBottomSheet<String>(
+    final chosen = await showOmniSheet<String>(
       context: context,
       builder: (context) => SafeArea(
         child: Column(
@@ -260,7 +261,7 @@ class _CreateTaskPageState extends ConsumerState<CreateTaskPage> {
 
   Future<void> _pickDueDate() async {
     final now = DateTime.now();
-    final chosen = await showDatePicker(
+    final chosen = await pickOmniDate(
       context: context,
       initialDate: _dueDate ?? now,
       // Hạn trong quá khứ vẫn chọn được: người ta hay nhập lại việc đã trễ.

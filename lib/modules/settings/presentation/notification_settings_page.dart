@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/error/app_exception.dart';
@@ -40,6 +41,7 @@ class _NotificationSettingsPageState
   }
 
   Future<void> _set(bool value) async {
+    HapticFeedback.selectionClick();
     final previous = _enabled;
     // Gạt ngay rồi mới gọi mạng: một công tắc đứng im nửa giây đọc như hỏng.
     setState(() {
@@ -75,11 +77,11 @@ class _NotificationSettingsPageState
             _load();
           },
         ),
-        (null, _) => const Center(child: CircularProgressIndicator()),
+        (null, _) => const Center(child: CircularProgressIndicator.adaptive()),
         (final bool value, _) => ListView(
           padding: const EdgeInsets.symmetric(vertical: OmniSpacing.sm),
           children: [
-            SwitchListTile(
+            SwitchListTile.adaptive(
               value: value,
               onChanged: _saving ? null : _set,
               title: const Text('Báo khi có công đoạn xong'),

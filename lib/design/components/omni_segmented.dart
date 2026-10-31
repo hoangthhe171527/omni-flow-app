@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../platform/omni_motion_scope.dart';
 import '../tokens/tokens.dart';
@@ -58,7 +59,7 @@ class OmniSegmented extends StatelessWidget {
                             BoxShadow(
                               color: scheme.shadow.withValues(alpha: 0.12),
                               blurRadius: 3,
-                              offset: Offset(0, 1),
+                              offset: const Offset(0, 1),
                             ),
                           ],
                         ),
@@ -74,11 +75,17 @@ class OmniSegmented extends StatelessWidget {
                           button: true,
                           selected: i == sel,
                           label: labels[i],
-                          onTap: () => onChanged(i),
+                          onTap: () {
+                            if (i != sel) HapticFeedback.selectionClick();
+                            onChanged(i);
+                          },
                           excludeSemantics: true,
                           child: InkWell(
                             borderRadius: BorderRadius.circular(4),
-                            onTap: () => onChanged(i),
+                            onTap: () {
+                              if (i != sel) HapticFeedback.selectionClick();
+                              onChanged(i);
+                            },
                             child: Center(
                               child: Text(
                                 labels[i],

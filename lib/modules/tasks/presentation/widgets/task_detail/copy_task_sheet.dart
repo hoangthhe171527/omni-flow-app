@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../../core/utils/formatters.dart';
@@ -254,7 +255,7 @@ class _CopyTaskSheetState extends ConsumerState<CopyTaskSheet> {
     var last = DateTime(now.year + 3, 12, 31);
     if (initial.isBefore(first)) first = DateTime(initial.year - 1);
     if (initial.isAfter(last)) last = DateTime(initial.year + 1, 12, 31);
-    final picked = await showDatePicker(
+    final picked = await pickOmniDate(
       context: context,
       initialDate: initial,
       firstDate: first,
@@ -432,6 +433,7 @@ class _CopyTaskSheetState extends ConsumerState<CopyTaskSheet> {
           ),
           Flexible(
             child: SingleChildScrollView(
+              keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
               padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -570,7 +572,7 @@ class _CopyTaskSheetState extends ConsumerState<CopyTaskSheet> {
       return const [
         Padding(
           padding: EdgeInsets.all(24),
-          child: Center(child: CircularProgressIndicator()),
+          child: Center(child: CircularProgressIndicator.adaptive()),
         ),
       ];
     }
@@ -1039,7 +1041,10 @@ class _SwitchRow extends StatelessWidget {
 
     // Cả dòng chạm được (bật/tắt), không chỉ con công tắc.
     return InkWell(
-      onTap: () => onChanged(!value),
+      onTap: () {
+        HapticFeedback.selectionClick();
+        onChanged(!value);
+      },
       borderRadius: BorderRadius.circular(8),
       child: ConstrainedBox(
         constraints: const BoxConstraints(minHeight: 44),
@@ -1064,7 +1069,13 @@ class _SwitchRow extends StatelessWidget {
             ),
             Semantics(
               label: label,
-              child: Switch(value: value, onChanged: onChanged),
+              child: Switch.adaptive(
+                value: value,
+                onChanged: (v) {
+                  HapticFeedback.selectionClick();
+                  onChanged(v);
+                },
+              ),
             ),
           ],
         ),

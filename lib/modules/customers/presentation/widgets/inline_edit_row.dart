@@ -98,12 +98,14 @@ class _InlineEditRowState extends State<InlineEditRow> {
 
   void _cancel() {
     if (_saving) return;
+    HapticFeedback.selectionClick();
     widget.onEndEdit?.call();
   }
 
   Future<void> _save() async {
     final controller = _controller;
     if (_saving || controller == null) return;
+    HapticFeedback.selectionClick();
     final draft = widget.multiline
         ? controller.text.trimRight()
         : controller.text.trim();
@@ -172,7 +174,14 @@ class _InlineEditRowState extends State<InlineEditRow> {
         borderRadius: BorderRadius.circular(8),
       ),
       constraints: const BoxConstraints(minHeight: 44),
-      child: widget.isEditing ? _editing(context) : _viewing(context),
+      child: motion.enabled
+          ? AnimatedSize(
+              duration: motion.fast,
+              curve: Curves.easeOutCubic,
+              alignment: Alignment.centerLeft,
+              child: widget.isEditing ? _editing(context) : _viewing(context),
+            )
+          : (widget.isEditing ? _editing(context) : _viewing(context)),
     );
   }
 
@@ -203,7 +212,12 @@ class _InlineEditRowState extends State<InlineEditRow> {
         color: widget.valueColor ?? scheme.onSurface,
       ),
     );
-    final onTap = widget.editable ? widget.onStartEdit : widget.onTapValue;
+    final onTap = widget.editable
+        ? () {
+            HapticFeedback.selectionClick();
+            widget.onStartEdit?.call();
+          }
+        : widget.onTapValue;
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(8),
@@ -329,9 +343,9 @@ class _InlineEditRowState extends State<InlineEditRow> {
                 ? SizedBox(
                     width: 16,
                     height: 16,
-                    child: CircularProgressIndicator(
+                    child: CircularProgressIndicator.adaptive(
                       strokeWidth: 2,
-                      color: scheme.primary,
+                      valueColor: AlwaysStoppedAnimation(scheme.primary),
                     ),
                   )
                 : null,

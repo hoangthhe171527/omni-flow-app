@@ -188,12 +188,14 @@ class _MessageComposerState extends State<MessageComposer> {
   Future<void> _send() async {
     final text = _controller.text.trim();
     if ((text.isEmpty && _pendingImages.isEmpty) || _sending) return;
+    HapticFeedback.lightImpact();
     await _dispatch(text, fromField: true);
   }
 
   /// Ô trống và không ảnh: gửi 👍 như Messenger.
   Future<void> _sendLike() async {
     if (_sending) return;
+    HapticFeedback.lightImpact();
     await _dispatch(_likeText);
   }
 
@@ -298,6 +300,7 @@ class _MessageComposerState extends State<MessageComposer> {
   Future<void> _startVoice() async {
     final recorder = widget.voiceRecorder;
     if (recorder == null || _voiceActive || _voiceStarting || _sending) return;
+    HapticFeedback.lightImpact();
     final messenger = ScaffoldMessenger.maybeOf(context);
     _voiceStarting = true;
     try {
@@ -411,6 +414,7 @@ class _MessageComposerState extends State<MessageComposer> {
       _notify(messenger, 'Ghi âm quá ngắn.');
       return;
     }
+    HapticFeedback.lightImpact();
     setState(() => _sending = true);
     try {
       final path = await _stopVoiceRecording();
@@ -450,7 +454,7 @@ class _MessageComposerState extends State<MessageComposer> {
   }
 
   Future<void> _openEmoji() async {
-    final picked = await showModalBottomSheet<String>(
+    final picked = await showOmniSheet<String>(
       context: context,
       showDragHandle: true,
       builder: (_) => const _EmojiSheet(),
@@ -472,10 +476,9 @@ class _MessageComposerState extends State<MessageComposer> {
     _loadingTemplates = false;
     if (!mounted) return;
 
-    final picked = await showModalBottomSheet<String>(
+    final picked = await showOmniSheet<String>(
       context: context,
       showDragHandle: true,
-      isScrollControlled: true,
       builder: (_) => _TemplateSheet(templates: templates),
     );
     if (picked == null || !mounted) return;
@@ -581,9 +584,8 @@ class _MessageComposerState extends State<MessageComposer> {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final duration = OmniMotion.enabled(context)
-        ? OmniDuration.slow
-        : Duration.zero;
+    final motion = OmniMotion.of(context);
+    final duration = motion.enabled ? OmniDuration.slow : Duration.zero;
     final toolsWidth = _toolWidth * _toolCount;
     final fieldFill = OmniColors.byBrightness(
       context,
@@ -1273,9 +1275,11 @@ class _SendButton extends StatelessWidget {
                     ? SizedBox(
                         width: 16,
                         height: 16,
-                        child: CircularProgressIndicator(
+                        child: CircularProgressIndicator.adaptive(
                           strokeWidth: 2,
-                          color: scheme.onPrimary,
+                          valueColor: AlwaysStoppedAnimation<Color>(
+                            scheme.onPrimary,
+                          ),
                         ),
                       )
                     : Icon(

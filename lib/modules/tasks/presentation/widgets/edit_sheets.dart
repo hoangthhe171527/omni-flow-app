@@ -83,7 +83,7 @@ Future<DueDateChoice?> showDueDateSheet({
   required DateTime lastDate,
 }) async {
   Future<DueDateChoice?> pick() async {
-    final chosen = await showDatePicker(
+    final chosen = await pickOmniDate(
       context: context,
       initialDate: current ?? DateTime.now(),
       firstDate: firstDate,

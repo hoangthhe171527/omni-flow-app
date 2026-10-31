@@ -143,6 +143,7 @@ class _ForgotPasswordPageState extends ConsumerState<ForgotPasswordPage>
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: SafeArea(
         child: SingleChildScrollView(
+          keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
           padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
           child: Center(
             child: ConstrainedBox(
@@ -159,7 +160,10 @@ class _ForgotPasswordPageState extends ConsumerState<ForgotPasswordPage>
                     ),
                   ),
                   const SizedBox(height: 8),
-                  if (_sent) _buildSent(scheme) else _buildForm(scheme),
+                  AnimatedSwitcher(
+                    duration: OmniMotion.of(context).base,
+                    child: _sent ? _buildSent(scheme) : _buildForm(scheme),
+                  ),
                 ],
               ),
             ),
@@ -256,7 +260,7 @@ class _ForgotPasswordPageState extends ConsumerState<ForgotPasswordPage>
           child: _busy
               ? const SizedBox.square(
                   dimension: 20,
-                  child: CircularProgressIndicator(strokeWidth: 2),
+                  child: CircularProgressIndicator.adaptive(strokeWidth: 2),
                 )
               : Text(_left > 0 ? 'Gửi lại sau $_left giây' : 'Gửi lại email'),
         ),

@@ -319,7 +319,7 @@ class _CustomerFormEditorState extends ConsumerState<CustomerFormEditor> {
                               padding: EdgeInsets.all(15),
                               child: SizedBox.square(
                                 dimension: 16,
-                                child: CircularProgressIndicator(
+                                child: CircularProgressIndicator.adaptive(
                                   strokeWidth: 2,
                                 ),
                               ),
@@ -511,9 +511,11 @@ class _CustomerActionBar extends StatelessWidget {
               child: saving
                   ? SizedBox.square(
                       dimension: 18,
-                      child: CircularProgressIndicator(
+                      child: CircularProgressIndicator.adaptive(
                         strokeWidth: 2,
-                        color: scheme.onSurfaceVariant,
+                        valueColor: AlwaysStoppedAnimation(
+                          scheme.onSurfaceVariant,
+                        ),
                       ),
                     )
                   : Text(isEdit ? 'Lưu thay đổi' : 'Lưu khách hàng'),

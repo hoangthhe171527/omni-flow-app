@@ -147,7 +147,9 @@ class _RevenueCardState extends ConsumerState<RevenueCard> {
         RevenueChart(
           series: s,
           scrubIndex: i,
-          onScrub: (v) => setState(() => _scrub = v),
+          onScrub: (v) {
+            if (v != _scrub) setState(() => _scrub = v);
+          },
           ringColor: scheme.surface,
         ),
         const SizedBox(height: 4),

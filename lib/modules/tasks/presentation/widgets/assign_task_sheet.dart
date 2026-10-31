@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../design/components/components.dart';
@@ -68,6 +69,7 @@ class _AssignTaskMenuState extends ConsumerState<_AssignTaskMenu> {
   String _search = '';
 
   void _toggle(String userId) {
+    HapticFeedback.selectionClick();
     setState(() {
       if (!_picked.remove(userId)) _picked.add(userId);
     });
@@ -147,6 +149,8 @@ class _AssignTaskMenuState extends ConsumerState<_AssignTaskMenu> {
                 final visible = _visible(rows);
                 return ListView.builder(
                   key: const Key('assign-task-members'),
+                  keyboardDismissBehavior:
+                      ScrollViewKeyboardDismissBehavior.onDrag,
                   padding: const EdgeInsets.symmetric(vertical: 4),
                   itemCount: visible.length,
                   itemBuilder: (context, index) {
@@ -259,7 +263,7 @@ class _AssignMemberRow extends StatelessWidget {
                   ],
                 ),
               ),
-              Checkbox(
+              Checkbox.adaptive(
                 value: selected,
                 onChanged: (_) => onTap(),
                 shape: const CircleBorder(),
@@ -342,19 +346,23 @@ class _AssignTaskSheetState extends ConsumerState<_AssignTaskSheet> {
               message: 'Thử tên khác, hoặc xoá ô tìm kiếm.',
             ),
             data: (rows) => ListView(
+              keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
               shrinkWrap: true,
               padding: const EdgeInsets.only(bottom: OmniSpacing.sm),
               children: [
                 for (final member in _visible(rows))
-                  CheckboxListTile(
+                  CheckboxListTile.adaptive(
                     value: _picked.contains(member.userId),
-                    onChanged: (on) => setState(() {
-                      if (on ?? false) {
-                        _picked.add(member.userId);
-                      } else {
-                        _picked.remove(member.userId);
-                      }
-                    }),
+                    onChanged: (on) {
+                      HapticFeedback.selectionClick();
+                      setState(() {
+                        if (on ?? false) {
+                          _picked.add(member.userId);
+                        } else {
+                          _picked.remove(member.userId);
+                        }
+                      });
+                    },
                     title: Text(member.name),
                     subtitle: Text(_assigneeRoleLabel(member)),
                     controlAffinity: ListTileControlAffinity.leading,

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/module/extra_segment.dart';
@@ -74,6 +75,7 @@ class _CustomersPageState extends ConsumerState<CustomersPage> {
     required Widget filterContent,
   }) async {
     if (_filtersOpen) return;
+    HapticFeedback.selectionClick();
     setState(() => _filtersOpen = true);
     await showCustomerFilterMenu(
       context: context,
@@ -81,6 +83,7 @@ class _CustomersPageState extends ConsumerState<CustomersPage> {
       segment: segment,
       segmentLabels: labels,
       onSegmentChanged: (next) {
+        HapticFeedback.selectionClick();
         if (mounted) setState(() => _segment = next);
       },
       filterContent: filterContent,
@@ -171,7 +174,7 @@ class _CustomersPageState extends ConsumerState<CustomersPage> {
       key: const ValueKey('khach-seg-khach-hang'),
       children: [
         Expanded(
-          child: RefreshIndicator(
+          child: RefreshIndicator.adaptive(
             onRefresh: () {
               setState(() => _openId = null);
               return ref.read(customerListProvider.notifier).refresh();
@@ -193,6 +196,8 @@ class _CustomersPageState extends ConsumerState<CustomersPage> {
               ),
               data: (state) => ListView.builder(
                 controller: _scrollController,
+                keyboardDismissBehavior:
+                    ScrollViewKeyboardDismissBehavior.onDrag,
                 padding: const EdgeInsets.only(bottom: OmniSpacing.bottomSafe),
                 itemCount: state.items.length + (state.hasMore ? 1 : 0),
                 itemBuilder: (context, index) {
@@ -203,7 +208,9 @@ class _CustomersPageState extends ConsumerState<CustomersPage> {
                         child: SizedBox(
                           width: 20,
                           height: 20,
-                          child: CircularProgressIndicator(strokeWidth: 2),
+                          child: CircularProgressIndicator.adaptive(
+                            strokeWidth: 2,
+                          ),
                         ),
                       ),
                     );
@@ -212,10 +219,14 @@ class _CustomersPageState extends ConsumerState<CustomersPage> {
                   return CustomerRow(
                     customer: customer,
                     expanded: _openId == customer.id,
-                    onTap: () => setState(
-                      () =>
-                          _openId = _openId == customer.id ? null : customer.id,
-                    ),
+                    onTap: () {
+                      HapticFeedback.selectionClick();
+                      setState(
+                        () => _openId = _openId == customer.id
+                            ? null
+                            : customer.id,
+                      );
+                    },
                   );
                 },
               ),

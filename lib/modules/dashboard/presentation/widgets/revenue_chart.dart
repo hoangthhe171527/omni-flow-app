@@ -6,6 +6,7 @@ import 'dart:math' as math;
 import 'dart:ui' show PathMetric;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:omni_app/design/platform/omni_motion_scope.dart';
 import 'package:omni_app/design/tokens/omni_colors.dart';
 import 'package:omni_app/design/tokens/omni_motion.dart';
@@ -47,6 +48,13 @@ class _RevenueChartState extends State<RevenueChart>
     curve: OmniCurves.standard,
   );
   bool _started = false;
+  int? _scrub;
+
+  @override
+  void initState() {
+    super.initState();
+    _scrub = widget.scrubIndex;
+  }
 
   @override
   void didChangeDependencies() {
@@ -62,6 +70,7 @@ class _RevenueChartState extends State<RevenueChart>
   @override
   void didUpdateWidget(RevenueChart old) {
     super.didUpdateWidget(old);
+    _scrub = widget.scrubIndex;
     if (old.series != widget.series) _run();
   }
 
@@ -86,10 +95,18 @@ class _RevenueChartState extends State<RevenueChart>
     return ((x / w).clamp(0.0, 1.0) * (_n - 1)).round();
   }
 
+  void _scrubAt(int? v) {
+    if (v != null && v != _scrub) {
+      HapticFeedback.selectionClick();
+    }
+    _scrub = v;
+    widget.onScrub(v);
+  }
+
   void _step(int delta) {
     final k = widget.series.cumCurrent.length - 1;
     final from = widget.scrubIndex ?? math.max(0, k);
-    widget.onScrub((from + delta).clamp(0, _n - 1));
+    _scrubAt((from + delta).clamp(0, _n - 1));
   }
 
   @override
@@ -112,15 +129,15 @@ class _RevenueChartState extends State<RevenueChart>
           final w = c.maxWidth;
           return GestureDetector(
             behavior: HitTestBehavior.opaque,
-            onTapDown: (d) => widget.onScrub(_indexAt(d.localPosition.dx, w)),
-            onTapUp: (_) => widget.onScrub(null),
-            onTapCancel: () => widget.onScrub(null),
+            onTapDown: (d) => _scrubAt(_indexAt(d.localPosition.dx, w)),
+            onTapUp: (_) => _scrubAt(null),
+            onTapCancel: () => _scrubAt(null),
             onHorizontalDragStart: (d) =>
-                widget.onScrub(_indexAt(d.localPosition.dx, w)),
+                _scrubAt(_indexAt(d.localPosition.dx, w)),
             onHorizontalDragUpdate: (d) =>
-                widget.onScrub(_indexAt(d.localPosition.dx, w)),
-            onHorizontalDragEnd: (_) => widget.onScrub(null),
-            onHorizontalDragCancel: () => widget.onScrub(null),
+                _scrubAt(_indexAt(d.localPosition.dx, w)),
+            onHorizontalDragEnd: (_) => _scrubAt(null),
+            onHorizontalDragCancel: () => _scrubAt(null),
             child: SizedBox(
               width: w,
               height: RevenueChart.height,

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../../../../design/platform/omni_motion_scope.dart';
 import '../../../../design/tokens/contrast.dart';
@@ -68,8 +69,10 @@ class StageStrip extends StatelessWidget {
                 count: summary?.totalFor(stage.code).count,
                 filtering: selected != null,
                 isSelected: stage.code == selected,
-                onTap: () =>
-                    onSelected(stage.code == selected ? null : stage.code),
+                onTap: () {
+                  HapticFeedback.selectionClick();
+                  onSelected(stage.code == selected ? null : stage.code);
+                },
               ),
             ),
         ],

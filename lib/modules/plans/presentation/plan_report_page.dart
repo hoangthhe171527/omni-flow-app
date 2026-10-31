@@ -67,6 +67,7 @@ class _PlanReportPageState extends ConsumerState<PlanReportPage> {
         value: plan,
         onRetry: () => ref.invalidate(planProvider(widget.planId)),
         data: (plan) => ListView(
+          keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
           padding: const EdgeInsets.fromLTRB(
             OmniSpacing.lg,
             OmniSpacing.md,
@@ -109,7 +110,8 @@ class _PlanReportPageState extends ConsumerState<PlanReportPage> {
           onNextMonth: atCurrent ? null : () => _go(1, data, before),
           onConfigure: widget.canConfigure
               ? () => Navigator.of(context).push(
-                  MaterialPageRoute<bool>(
+                  omniPageRoute<bool>(
+                    context: context,
                     builder: (_) => EditSectionsPage(planId: widget.planId),
                   ),
                 )

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../../../../design/components/components.dart';
 import '../../../../design/tokens/tokens.dart';
@@ -72,20 +73,26 @@ class _CopyPlanSheetState extends State<_CopyPlanSheet> {
               onSubmitted: (_) => _submit(),
             ),
           ),
-          SwitchListTile(
+          SwitchListTile.adaptive(
             contentPadding: EdgeInsets.zero,
             value: _copyTasks,
             title: const Text('Chép cả công việc'),
-            onChanged: (on) => setState(() => _copyTasks = on),
+            onChanged: (on) {
+              HapticFeedback.selectionClick();
+              setState(() => _copyTasks = on);
+            },
           ),
-          SwitchListTile(
+          SwitchListTile.adaptive(
             contentPadding: EdgeInsets.zero,
             value: _asTemplate,
             title: const Text('Lưu làm mẫu'),
             // App chưa có chỗ dùng mẫu: nói trước, để bật công tắc không dẫn
             // vào ngõ cụt.
             subtitle: const Text('Mẫu chỉ dùng được trên web.'),
-            onChanged: (on) => setState(() => _asTemplate = on),
+            onChanged: (on) {
+              HapticFeedback.selectionClick();
+              setState(() => _asTemplate = on);
+            },
           ),
           const SizedBox(height: 12),
           FilledButton(
@@ -130,7 +137,10 @@ Future<PlanTeamTarget?> showMoveTeamSheet(
       label: selected ? '$label, đang chọn' : label,
       excludeSemantics: true,
       child: InkWell(
-        onTap: () => Navigator.of(ctx).pop(selected ? null : target),
+        onTap: () {
+          HapticFeedback.selectionClick();
+          Navigator.of(ctx).pop(selected ? null : target);
+        },
         child: ConstrainedBox(
           constraints: const BoxConstraints(minHeight: 48),
           child: Row(

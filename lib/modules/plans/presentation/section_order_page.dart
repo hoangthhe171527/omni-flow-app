@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/error/app_exception.dart';
@@ -39,6 +40,7 @@ class _SectionOrderPageState extends ConsumerState<SectionOrderPage> {
     final ids = _ids;
     if (ids == null || _saving) return;
     if (to < 0 || to >= ids.length || from == to) return;
+    HapticFeedback.selectionClick();
     setState(() {
       final next = [...ids];
       next.insert(to, next.removeAt(from));
@@ -127,6 +129,7 @@ class _SectionOrderPageState extends ConsumerState<SectionOrderPage> {
             itemBuilder: (context, i) => rowOf(i),
             // onReorderItem đã trừ sẵn dòng đang kéo khỏi chỉ số đích
             // (onReorder cũ thì chưa, và đã bị đánh dấu deprecated).
+            onReorderStart: (_) => HapticFeedback.mediumImpact(),
             onReorderItem: _move,
             proxyDecorator: (child, _, animation) => AnimatedBuilder(
               animation: animation,
@@ -167,7 +170,7 @@ class _SectionOrderPageState extends ConsumerState<SectionOrderPage> {
           ),
           Expanded(
             child: ids == null
-                ? const Center(child: CircularProgressIndicator())
+                ? const Center(child: CircularProgressIndicator.adaptive())
                 : CustomScrollView(
                     slivers: [
                       SliverToBoxAdapter(
@@ -311,7 +314,9 @@ class _TopBar extends StatelessWidget {
                     ? const SizedBox(
                         width: 18,
                         height: 18,
-                        child: CircularProgressIndicator(strokeWidth: 2),
+                        child: CircularProgressIndicator.adaptive(
+                          strokeWidth: 2,
+                        ),
                       )
                     : const Text('Lưu'),
               ),

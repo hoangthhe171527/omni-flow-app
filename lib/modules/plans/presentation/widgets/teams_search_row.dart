@@ -9,7 +9,7 @@ import '../../../../design/tokens/tokens.dart';
 ///
 /// Khi menu mở ([addOpen]), biểu tượng xoay 45° thành × trong 300ms. Icon chỉ
 /// cao 40 nhưng vùng chạm phủ cả 8px đệm đáy, thành 44×48.
-class TeamsSearchRow extends StatelessWidget implements PreferredSizeWidget {
+class TeamsSearchRow extends StatefulWidget implements PreferredSizeWidget {
   const TeamsSearchRow({
     super.key,
     required this.controller,
@@ -34,11 +34,47 @@ class TeamsSearchRow extends StatelessWidget implements PreferredSizeWidget {
   Size get preferredSize => const Size.fromHeight(_fieldHeight + _bottomPad);
 
   @override
+  State<TeamsSearchRow> createState() => _TeamsSearchRowState();
+}
+
+class _TeamsSearchRowState extends State<TeamsSearchRow> {
+  late bool _hasText = widget.controller.text.isNotEmpty;
+
+  @override
+  void initState() {
+    super.initState();
+    widget.controller.addListener(_onTextChanged);
+  }
+
+  @override
+  void didUpdateWidget(TeamsSearchRow oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.controller != widget.controller) {
+      oldWidget.controller.removeListener(_onTextChanged);
+      _hasText = widget.controller.text.isNotEmpty;
+      widget.controller.addListener(_onTextChanged);
+    }
+  }
+
+  @override
+  void dispose() {
+    widget.controller.removeListener(_onTextChanged);
+    super.dispose();
+  }
+
+  void _onTextChanged() {
+    final hasText = widget.controller.text.isNotEmpty;
+    if (hasText != _hasText) {
+      setState(() => _hasText = hasText);
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
 
     return SizedBox(
-      height: _fieldHeight + _bottomPad,
+      height: TeamsSearchRow._fieldHeight + TeamsSearchRow._bottomPad,
       child: Padding(
         // Bản mẫu: header đệm phải 8 + hàng tìm đệm phải 8 = mép phải 16.
         padding: const EdgeInsets.only(left: 16, right: 16),
@@ -48,7 +84,7 @@ class TeamsSearchRow extends StatelessWidget implements PreferredSizeWidget {
             Expanded(
               child: SizedBox(
                 key: const Key('teams-search-box'),
-                height: _fieldHeight,
+                height: TeamsSearchRow._fieldHeight,
                 child: Padding(
                   padding: const EdgeInsets.only(left: 4),
                   child: Row(
@@ -61,8 +97,8 @@ class TeamsSearchRow extends StatelessWidget implements PreferredSizeWidget {
                       const SizedBox(width: 8),
                       Expanded(
                         child: TextField(
-                          controller: controller,
-                          onChanged: onChanged,
+                          controller: widget.controller,
+                          onChanged: widget.onChanged,
                           textInputAction: TextInputAction.search,
                           style: OmniType.search.copyWith(
                             color: scheme.onSurface,
@@ -87,9 +123,9 @@ class TeamsSearchRow extends StatelessWidget implements PreferredSizeWidget {
                 ),
               ),
             ),
-            if (showAdd) ...[
+            if (widget.showAdd) ...[
               const SizedBox(width: 8),
-              _AddButton(open: addOpen, onAdd: onAdd),
+              _AddButton(open: widget.addOpen, onAdd: widget.onAdd),
             ],
           ],
         ),

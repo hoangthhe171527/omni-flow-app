@@ -1,8 +1,10 @@
 import 'dart:ui' show ImageFilter;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../platform/omni_platform.dart';
 import '../tokens/tokens.dart';
 import 'brand_anchor.dart';
 import 'omni_app_bar.dart';
@@ -36,7 +38,12 @@ class OmniTopBarSlot extends InheritedWidget {
 /// Header chung của ba tab gốc: logo bên trái, chuông + tài khoản bên phải, và
 /// (tuỳ màn) ô tìm / bộ lọc xếp dưới. Nền kính mờ như thanh tab dưới.
 class OmniTopBar extends ConsumerWidget implements PreferredSizeWidget {
-  const OmniTopBar({super.key, this.bottom, this.semanticsTitle});
+  const OmniTopBar({
+    super.key,
+    this.bottom,
+    this.semanticsTitle,
+    this.allowBack = false,
+  });
 
   /// Ô tìm, bộ lọc, nút riêng của màn. Cần biết chiều cao để Scaffold chừa chỗ.
   final PreferredSizeWidget? bottom;
@@ -45,6 +52,11 @@ class OmniTopBar extends ConsumerWidget implements PreferredSizeWidget {
   /// "Viomni", nên không có nó thì tiêu đề trang không tồn tại với người dùng
   /// TalkBack/VoiceOver. Vô hình: chỉ thêm một nút `header` vào cây ngữ nghĩa.
   final String? semanticsTitle;
+
+  /// Hiện nút quay lại (44x44) bên trái logo khi màn này được đẩy lên stack
+  /// (`ModalRoute.of(context)?.canPop == true`), ví dụ `PipelinePage` mở từ
+  /// danh bạ "Tất cả".
+  final bool allowBack;
 
   // Hàng 1 cao 44 để chuông/avatar (vẽ 36) có vùng chạm 44; tổng 54 như cũ.
   static const double _rowHeight = 44;
@@ -66,6 +78,7 @@ class OmniTopBar extends ConsumerWidget implements PreferredSizeWidget {
     final unread = slot?.unreadOf(ref) ?? 0;
     final account = OmniAccountSlot.maybeTileOf(context);
     final dark = Theme.of(context).brightness == Brightness.dark;
+    final showBack = allowBack && (ModalRoute.of(context)?.canPop ?? false);
 
     return ClipRect(
       child: BackdropFilter(
@@ -87,8 +100,8 @@ class OmniTopBar extends ConsumerWidget implements PreferredSizeWidget {
                 Padding(
                   // Phải 12 chứ không 16: ô avatar rộng 44 mà vẽ 36, 4dp đệm
                   // trong ô giữ mép vẽ ở đúng 16.
-                  padding: const EdgeInsets.fromLTRB(
-                    16,
+                  padding: EdgeInsets.fromLTRB(
+                    showBack ? 4 : 16,
                     _topPad,
                     12,
                     _bottomPad,
@@ -110,6 +123,25 @@ class OmniTopBar extends ConsumerWidget implements PreferredSizeWidget {
                           ),
                         Row(
                           children: [
+                            if (showBack)
+                              SizedBox.square(
+                                dimension: 44,
+                                child: IconButton(
+                                  tooltip: 'Quay lại',
+                                  padding: EdgeInsets.zero,
+                                  onPressed: () {
+                                    HapticFeedback.selectionClick();
+                                    Navigator.of(context).maybePop();
+                                  },
+                                  icon: Icon(
+                                    isApple(context)
+                                        ? Icons.arrow_back_ios_new_rounded
+                                        : Icons.arrow_back_rounded,
+                                    size: OmniIconSize.md,
+                                    color: scheme.onSurface,
+                                  ),
+                                ),
+                              ),
                             BrandAnchor(
                               withWordmark: true,
                               child: Row(
@@ -126,7 +158,10 @@ class OmniTopBar extends ConsumerWidget implements PreferredSizeWidget {
                               unread: unread,
                               onTap: slot == null
                                   ? null
-                                  : (anchor) => slot.onBell(context, anchor),
+                                  : (anchor) {
+                                      HapticFeedback.selectionClick();
+                                      slot.onBell(context, anchor);
+                                    },
                             ),
                             // Hai ô 44 kề nhau: khoảng 8 giữa hai hình 36 đã nằm
                             // trong đệm của chúng.

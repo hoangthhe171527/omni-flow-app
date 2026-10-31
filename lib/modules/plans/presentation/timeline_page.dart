@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -97,7 +98,7 @@ class _TimelinePageState extends ConsumerState<TimelinePage> {
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.surface,
       appBar: const OmniAppBar(title: 'Dòng việc', centerTitle: true),
-      body: RefreshIndicator(
+      body: RefreshIndicator.adaptive(
         onRefresh: () async {
           ref.invalidate(workshopFeedProvider);
           ref.invalidate(workshopKpiProvider);
@@ -207,7 +208,7 @@ class _Feed extends ConsumerWidget {
               ),
             ),
           ),
-        const SliverToBoxAdapter(child: SizedBox(height: 30)),
+        const SliverToBoxAdapter(child: SizedBox(height: OmniSpacing.bottomSafe)),
       ],
     );
   }
@@ -313,25 +314,31 @@ class _Kpi extends ConsumerWidget {
     // vào đó một ngày giữa tháng.
     final atCurrentMonth = month.year == now.year && month.month == now.month;
 
-    return kpi.when(
+    final child = kpi.when(
       data: (data) => KpiCard(
         kpi: data,
         month: month,
         // Mốc so sánh đi đường riêng: chưa về hoặc hỏng thì thẻ chỉ thiếu
         // một dòng, con số chính không chờ nó.
         previousDelivered: ref.watch(kpiPreviousDeliveredProvider).valueOrNull,
-        onPrevMonth: () => ref.read(kpiMonthProvider.notifier).state = DateTime(
-          month.year,
-          month.month - 1,
-        ),
+        onPrevMonth: () {
+          HapticFeedback.selectionClick();
+          ref.read(kpiMonthProvider.notifier).state = DateTime(
+            month.year,
+            month.month - 1,
+          );
+        },
         // Không đi tới tương lai: một tháng chưa tới luôn có `delivered = 0`,
         // và số 0 đó trông y hệt "tháng này chưa ai xong cây nào".
         onNextMonth: atCurrentMonth
             ? null
-            : () => ref.read(kpiMonthProvider.notifier).state = DateTime(
-                month.year,
-                month.month + 1,
-              ),
+            : () {
+                HapticFeedback.selectionClick();
+                ref.read(kpiMonthProvider.notifier).state = DateTime(
+                  month.year,
+                  month.month + 1,
+                );
+              },
         // Không có dự án nào trong tay ở màn này, nên đưa người dùng tới danh
         // sách dự án — chỗ gần nhất mở được phần nhóm việc.
         onConfigure: () => context.pushNamed(PlanRoutes.teams),
@@ -342,6 +349,15 @@ class _Kpi extends ConsumerWidget {
       // KPI hỏng không được che mất dòng việc — nó là thứ phụ trên màn này, dù
       // là thứ quan trọng nhất với chủ xưởng.
       error: (_, _) => const SizedBox.shrink(),
+    );
+
+    if (!OmniMotion.enabled(context)) return child;
+
+    return AnimatedSize(
+      duration: OmniMotion.of(context).fast,
+      curve: Curves.easeOutCubic,
+      alignment: Alignment.topCenter,
+      child: child,
     );
   }
 }

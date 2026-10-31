@@ -216,7 +216,7 @@ class _InboxPageState extends ConsumerState<InboxPage>
               ),
             ),
           Expanded(
-            child: RefreshIndicator(
+            child: RefreshIndicator.adaptive(
               key: const Key('inbox-conversation-list'),
               onRefresh: () => ref.read(inboxListProvider.notifier).refresh(),
               child: OmniAsyncView(
@@ -227,6 +227,8 @@ class _InboxPageState extends ConsumerState<InboxPage>
                 empty: _empty(),
                 data: (state) => ListView.separated(
                   controller: _scrollController,
+                  keyboardDismissBehavior:
+                      ScrollViewKeyboardDismissBehavior.onDrag,
                   padding: const EdgeInsets.only(
                     bottom: OmniSpacing.bottomSafe,
                   ),
@@ -236,8 +238,9 @@ class _InboxPageState extends ConsumerState<InboxPage>
                   itemCount:
                       lead + state.items.length + (state.hasMore ? 1 : 0),
                   // Zalo separates rows with a hairline indented past the
-                  // avatar, not a gap. Gaps between bordered cards were what
-                  // made the list read as a table of records.
+                  // avatar (18 + 38 + 10 = 66), not a gap. Gaps between
+                  // bordered cards were what made the list read as a table of
+                  // records.
                   // Không kẻ vạch ngay dưới mục ghim: mục đó kết thúc
                   // bằng tiêu đề "Hội thoại", dòng đầu nằm sát dưới.
                   separatorBuilder: (_, rawIndex) => rawIndex < lead
@@ -245,7 +248,7 @@ class _InboxPageState extends ConsumerState<InboxPage>
                       : Divider(
                           height: 1,
                           thickness: 1,
-                          indent: 0,
+                          indent: 66,
                           endIndent: 0,
                           color: OmniColors.byBrightness(
                             context,
@@ -268,7 +271,9 @@ class _InboxPageState extends ConsumerState<InboxPage>
                           child: SizedBox(
                             width: 20,
                             height: 20,
-                            child: CircularProgressIndicator(strokeWidth: 2),
+                            child: CircularProgressIndicator.adaptive(
+                              strokeWidth: 2,
+                            ),
                           ),
                         ),
                       );

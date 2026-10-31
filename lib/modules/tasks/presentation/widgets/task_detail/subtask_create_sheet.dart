@@ -27,7 +27,7 @@ typedef SubtaskDatePicker =
 Future<DateTime?> _pickWithCalendar(BuildContext context, DateTime initial) {
   final today = DateUtils.dateOnly(DateTime.now());
 
-  return showDatePicker(
+  return pickOmniDate(
     context: context,
     initialDate: initial,
     firstDate: DateTime(today.year - 1),
@@ -248,7 +248,7 @@ class _SubtaskCreateSheetState extends ConsumerState<SubtaskCreateSheet> {
                       child: _busy
                           ? const SizedBox.square(
                               dimension: 18,
-                              child: CircularProgressIndicator(strokeWidth: 2),
+                              child: CircularProgressIndicator.adaptive(strokeWidth: 2),
                             )
                           : const Text('Tạo'),
                     ),
@@ -258,6 +258,8 @@ class _SubtaskCreateSheetState extends ConsumerState<SubtaskCreateSheet> {
             ),
             Expanded(
               child: SingleChildScrollView(
+                keyboardDismissBehavior:
+                    ScrollViewKeyboardDismissBehavior.onDrag,
                 padding: const EdgeInsets.all(16),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,

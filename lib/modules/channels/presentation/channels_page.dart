@@ -181,7 +181,7 @@ class _ChannelsPageState extends ConsumerState<ChannelsPage> {
           label: const Text('Kết nối kênh'),
         ),
       ),
-      body: RefreshIndicator(
+      body: RefreshIndicator.adaptive(
         onRefresh: () async => ref.invalidate(channelsProvider),
         child: OmniAsyncView(
           value: channels,
@@ -201,6 +201,7 @@ class _ChannelsPageState extends ConsumerState<ChannelsPage> {
                 .where((connection) => connection.isPersonal)
                 .toList();
             return ListView(
+              physics: const AlwaysScrollableScrollPhysics(),
               padding: const EdgeInsets.fromLTRB(
                 OmniSpacing.lg,
                 OmniSpacing.lg,

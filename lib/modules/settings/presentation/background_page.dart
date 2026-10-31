@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/error/app_exception.dart';
@@ -20,6 +21,7 @@ class BackgroundPage extends ConsumerWidget {
     final scheme = Theme.of(context).colorScheme;
 
     Future<void> pick(String? name) async {
+      HapticFeedback.selectionClick();
       final messenger = ScaffoldMessenger.of(context);
       try {
         await ref.read(backgroundProvider.notifier).set(name);
@@ -81,9 +83,11 @@ class BackgroundPage extends ConsumerWidget {
                     label: OmniBackdrops.labelOf(n)!,
                     selected: current == n,
                     onTap: () => pick(n),
-                    preview: OmniBackdrop(
-                      name: n,
-                      child: const SizedBox.expand(),
+                    preview: RepaintBoundary(
+                      child: OmniBackdrop(
+                        name: n,
+                        child: const SizedBox.expand(),
+                      ),
                     ),
                   ),
               ],

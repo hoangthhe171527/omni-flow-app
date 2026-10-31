@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/error/app_exception.dart';
@@ -73,7 +74,9 @@ class _EditSectionsPageState extends ConsumerState<EditSectionsPage> {
                     ? const SizedBox(
                         width: 18,
                         height: 18,
-                        child: CircularProgressIndicator(strokeWidth: 2),
+                        child: CircularProgressIndicator.adaptive(
+                          strokeWidth: 2,
+                        ),
                       )
                     : const Text('Lưu'),
               ),
@@ -81,8 +84,9 @@ class _EditSectionsPageState extends ConsumerState<EditSectionsPage> {
         ],
       ),
       body: sections == null
-          ? const Center(child: CircularProgressIndicator())
+          ? const Center(child: CircularProgressIndicator.adaptive())
           : ListView(
+              keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
               padding: const EdgeInsets.fromLTRB(
                 OmniSpacing.lg,
                 OmniSpacing.lg,
@@ -312,16 +316,22 @@ class _SectionRowState extends State<_SectionRow> {
               // giữa xưởng với cái điện thoại, và cho tới giờ hai cờ này chỉ bật
               // được từ web. Nhãn nói HẬU QUẢ chứ không nói tên cờ — bật nhầm thì
               // bảng trông y hệt, chỉ có con số cuối tháng khác đi.
-              SwitchListTile(
+              SwitchListTile.adaptive(
                 value: widget.section.requiresChecklist,
-                onChanged: widget.onGateChanged,
+                onChanged: (on) {
+                  HapticFeedback.selectionClick();
+                  widget.onGateChanged(on);
+                },
                 title: const Text('Chặn vào nhóm khi việc con chưa xong'),
                 dense: true,
                 contentPadding: EdgeInsets.zero,
               ),
-              SwitchListTile(
+              SwitchListTile.adaptive(
                 value: widget.section.countsForKpi,
-                onChanged: widget.onKpiChanged,
+                onChanged: (on) {
+                  HapticFeedback.selectionClick();
+                  widget.onKpiChanged(on);
+                },
                 title: const Text('Nhóm này là đích đếm KPI tháng'),
                 dense: true,
                 contentPadding: EdgeInsets.zero,

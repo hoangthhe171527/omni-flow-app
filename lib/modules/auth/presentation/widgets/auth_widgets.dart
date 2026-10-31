@@ -117,13 +117,15 @@ class AuthPrimaryButton extends StatelessWidget {
     return DecoratedBox(
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(10),
-        boxShadow: [
-          BoxShadow(
-            color: scheme.primary.withValues(alpha: 0.25),
-            blurRadius: 14,
-            offset: const Offset(0, 6),
-          ),
-        ],
+        boxShadow: onPressed != null && !busy
+            ? [
+                BoxShadow(
+                  color: scheme.primary.withValues(alpha: 0.25),
+                  blurRadius: 14,
+                  offset: const Offset(0, 6),
+                ),
+              ]
+            : null,
       ),
       child: FilledButton(
         onPressed: onPressed,
@@ -138,9 +140,9 @@ class AuthPrimaryButton extends StatelessWidget {
             ? SizedBox(
                 width: 20,
                 height: 20,
-                child: CircularProgressIndicator(
+                child: CircularProgressIndicator.adaptive(
                   strokeWidth: 2,
-                  color: scheme.onPrimary,
+                  valueColor: AlwaysStoppedAnimation<Color>(scheme.onPrimary),
                 ),
               )
             : Text(label),
@@ -174,7 +176,7 @@ class AuthGoogleButton extends StatelessWidget {
       icon: busy
           ? const SizedBox.square(
               dimension: 20,
-              child: CircularProgressIndicator(strokeWidth: 2),
+              child: CircularProgressIndicator.adaptive(strokeWidth: 2),
             )
           : const AuthGoogleGlyph(),
       label: Text(label),

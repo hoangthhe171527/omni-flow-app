@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/error/app_exception.dart';
+import '../../../design/components/components.dart';
 import '../../../design/tokens/tokens.dart';
 import '../application/plans_providers.dart';
 import '../data/plans_api.dart';
@@ -38,6 +39,7 @@ class _CreateTeamPageState extends ConsumerState<CreateTeamPage> {
     return Scaffold(
       appBar: AppBar(title: const Text('Team mới')),
       body: ListView(
+        keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
         padding: const EdgeInsets.fromLTRB(
           OmniSpacing.lg,
           OmniSpacing.lg,
@@ -104,7 +106,7 @@ class _CreateTeamPageState extends ConsumerState<CreateTeamPage> {
                 ? const SizedBox(
                     width: 20,
                     height: 20,
-                    child: CircularProgressIndicator(strokeWidth: 2),
+                    child: CircularProgressIndicator.adaptive(strokeWidth: 2),
                   )
                 : const Text('Tạo team'),
           ),
@@ -142,7 +144,8 @@ class _CreateTeamPageState extends ConsumerState<CreateTeamPage> {
       //
       // Thoát ra được từ màn kia: team chưa có dự án vẫn là trạng thái hợp lệ.
       await Navigator.of(context).pushReplacement(
-        MaterialPageRoute<void>(
+        omniPageRoute<void>(
+          context: context,
           builder: (_) => CreatePlanPage(teamId: team.id),
         ),
       );

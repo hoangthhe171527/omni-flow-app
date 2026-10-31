@@ -460,7 +460,7 @@ class _TickButtonState extends State<_TickButton>
         dimension: 22,
         child: Padding(
           padding: EdgeInsets.all(3),
-          child: CircularProgressIndicator(strokeWidth: 2),
+          child: CircularProgressIndicator.adaptive(strokeWidth: 2),
         ),
       );
     } else {

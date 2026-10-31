@@ -1,6 +1,7 @@
 import 'dart:ui' show PathMetric;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/error/app_exception.dart';
@@ -49,6 +50,7 @@ class _LabelsSheetState extends ConsumerState<LabelsSheet> {
   void _toggle(String code) {
     final onToggle = widget.onToggle;
     if (onToggle == null) return;
+    HapticFeedback.selectionClick();
     setState(() => _on.contains(code) ? _on.remove(code) : _on.add(code));
     onToggle(code);
   }
@@ -105,6 +107,7 @@ class _LabelsSheetState extends ConsumerState<LabelsSheet> {
       explicitChildNodes: true,
       label: 'Nhãn màu',
       child: SingleChildScrollView(
+        keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 30),
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -163,7 +166,7 @@ class _LabelsSheetState extends ConsumerState<LabelsSheet> {
               _ => [
                 const Padding(
                   padding: EdgeInsets.all(OmniSpacing.lg),
-                  child: Center(child: CircularProgressIndicator()),
+                  child: Center(child: CircularProgressIndicator.adaptive()),
                 ),
               ],
             },
@@ -352,7 +355,10 @@ class _ColorDot extends StatelessWidget {
       excludeSemantics: true,
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
-        onTap: onTap,
+        onTap: () {
+          HapticFeedback.selectionClick();
+          onTap();
+        },
         child: SizedBox(
           width: 44,
           height: 48,
@@ -439,6 +445,7 @@ class _EditLabelSheetState extends State<_EditLabelSheet> {
     final name = _name.text.trim();
 
     return SingleChildScrollView(
+      keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 30),
       child: Column(
         mainAxisSize: MainAxisSize.min,

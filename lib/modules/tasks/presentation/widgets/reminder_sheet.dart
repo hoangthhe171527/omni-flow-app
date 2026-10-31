@@ -18,7 +18,7 @@ typedef ReminderPicker = Future<DateTime?> Function(BuildContext context);
 Future<DateTime?> pickReminderTime(BuildContext context) async {
   final now = DateTime.now();
   final today = DateUtils.dateOnly(now);
-  final day = await showDatePicker(
+  final day = await pickOmniDate(
     context: context,
     initialDate: today,
     firstDate: today,
@@ -26,7 +26,7 @@ Future<DateTime?> pickReminderTime(BuildContext context) async {
   );
   if (day == null || !context.mounted) return null;
   final next = now.add(const Duration(hours: 1));
-  final time = await showTimePicker(
+  final time = await pickOmniTime(
     context: context,
     initialTime: TimeOfDay(hour: next.hour, minute: 0),
   );
@@ -200,7 +200,7 @@ class _ReminderSheetState extends ConsumerState<ReminderSheet> {
               child: list.when(
                 loading: () => const Padding(
                   padding: EdgeInsets.all(16),
-                  child: Center(child: CircularProgressIndicator()),
+                  child: Center(child: CircularProgressIndicator.adaptive()),
                 ),
                 error: (e, _) => Padding(
                   padding: const EdgeInsets.symmetric(vertical: 16),

@@ -137,6 +137,7 @@ class _RegisterPageState extends ConsumerState<RegisterPage>
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: SafeArea(
         child: SingleChildScrollView(
+          keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
           padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
           child: Center(
             child: ConstrainedBox(
@@ -243,10 +244,11 @@ class _RegisterPageState extends ConsumerState<RegisterPage>
                         agreed: _agreed,
                         onChanged: (v) => setState(() => _agreed = v),
                       ),
-                      if (generalError != null) ...[
-                        const SizedBox(height: 8),
-                        AuthErrorBox(message: generalError),
-                      ],
+                      if (generalError != null)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 8),
+                          child: AuthErrorBox(message: generalError),
+                        ),
                       const SizedBox(height: 16),
                       AnimatedOpacity(
                         key: const ValueKey('register-opacity'),
@@ -321,6 +323,7 @@ class _StrengthMeter extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final duration = OmniMotion.of(context).fast;
     final color = switch (score) {
       <= 1 => OmniColors.destructive,
       2 => OmniColors.warning,
@@ -336,7 +339,9 @@ class _StrengthMeter extends StatelessWidget {
         children: [
           for (var i = 0; i < 4; i++) ...[
             Expanded(
-              child: Container(
+              child: AnimatedContainer(
+                duration: duration,
+                curve: Curves.easeOutCubic,
                 height: 4,
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(2),
@@ -371,6 +376,11 @@ class _TermsRow extends StatelessWidget {
   final bool agreed;
   final ValueChanged<bool> onChanged;
 
+  void _toggle() {
+    HapticFeedback.selectionClick();
+    onChanged(!agreed);
+  }
+
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
@@ -379,17 +389,17 @@ class _TermsRow extends StatelessWidget {
       checked: agreed,
       label: 'Đồng ý Điều khoản sử dụng',
       excludeSemantics: true,
-      onTap: () => onChanged(!agreed),
+      onTap: _toggle,
       child: InkWell(
         key: const ValueKey('terms-checkbox'),
-        onTap: () => onChanged(!agreed),
+        onTap: _toggle,
         borderRadius: BorderRadius.circular(8),
         child: Padding(
           padding: const EdgeInsets.symmetric(vertical: 4),
           child: Row(
             children: [
               IgnorePointer(
-                child: Checkbox(value: agreed, onChanged: (_) {}),
+                child: Checkbox.adaptive(value: agreed, onChanged: (_) {}),
               ),
               Expanded(
                 child: Text(

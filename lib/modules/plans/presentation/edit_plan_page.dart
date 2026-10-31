@@ -37,7 +37,7 @@ class PlanSaveAction extends StatelessWidget {
           ? const SizedBox(
               width: 18,
               height: 18,
-              child: CircularProgressIndicator(strokeWidth: 2),
+              child: CircularProgressIndicator.adaptive(strokeWidth: 2),
             )
           : const Text('Lưu'),
     ),
@@ -187,6 +187,7 @@ class _EditPlanPageState extends ConsumerState<EditPlanPage> {
               data: (_) => const SizedBox.shrink(),
             )
           : ListView(
+              keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
               padding: const EdgeInsets.fromLTRB(20, OmniSpacing.lg, 20, 24),
               children: [
                 OmniField(

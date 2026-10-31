@@ -131,7 +131,8 @@ class _TeamsPageState extends ConsumerState<TeamsPage> {
     // Bắt trước `await`: sau khi trang tạo đóng, widget này có thể đã rời cây.
     final container = ProviderScope.containerOf(context);
     await Navigator.of(context).push<bool>(
-      MaterialPageRoute(
+      omniPageRoute(
+        context: context,
         builder: (_) => switch (choice) {
           CreateChoice.team => const CreateTeamPage(),
           CreateChoice.plan => const CreatePlanPage(),
@@ -176,7 +177,7 @@ class _TeamsPageState extends ConsumerState<TeamsPage> {
           onAdd: (anchor) => _create(anchor, canCreateTeam: canCreateTeam),
         ),
       ),
-      body: RefreshIndicator(
+      body: RefreshIndicator.adaptive(
         onRefresh: () async => ref.invalidate(teamsWithPlansProvider),
         child: OmniAsyncView(
           value: groups,
@@ -373,6 +374,7 @@ class _TeamsPageState extends ConsumerState<TeamsPage> {
 
     return ListView.separated(
       physics: const AlwaysScrollableScrollPhysics(),
+      keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
       padding: const EdgeInsets.only(top: 4, bottom: 110),
       itemCount: children.length,
       separatorBuilder: (context, _) => Divider(
@@ -517,7 +519,10 @@ class _TeamsPageState extends ConsumerState<TeamsPage> {
       case WorkListAction.edit:
         final container = ProviderScope.containerOf(context);
         await Navigator.of(context).push<bool>(
-          MaterialPageRoute(builder: (_) => EditPlanPage(planId: plan.id)),
+          omniPageRoute(
+            context: context,
+            builder: (_) => EditPlanPage(planId: plan.id),
+          ),
         );
         container.invalidate(teamsWithPlansProvider);
       case WorkListAction.delete:

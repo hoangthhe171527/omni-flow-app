@@ -59,7 +59,7 @@ class WorkloadPage extends ConsumerWidget {
                 ),
               ),
       ),
-      body: RefreshIndicator(
+      body: RefreshIndicator.adaptive(
         onRefresh: () async => ref.invalidate(workloadProvider(userId)),
         child: OmniAsyncView(
           value: workload,

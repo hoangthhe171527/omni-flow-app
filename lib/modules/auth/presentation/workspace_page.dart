@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/error/app_exception.dart';
@@ -25,6 +26,7 @@ class _WorkspacePageState extends ConsumerState<WorkspacePage> {
   String? _entering;
 
   Future<void> _enter(TenantOption tenant) async {
+    HapticFeedback.selectionClick();
     setState(() => _entering = tenant.id);
     try {
       await ref
@@ -261,9 +263,9 @@ class _WorkspaceCard extends StatelessWidget {
                   label: 'Đang vào',
                   child: SizedBox.square(
                     dimension: 22,
-                    child: CircularProgressIndicator(
+                    child: CircularProgressIndicator.adaptive(
                       strokeWidth: 2.5,
-                      color: scheme.primary,
+                      valueColor: AlwaysStoppedAnimation<Color>(scheme.primary),
                       backgroundColor: scheme.primaryContainer,
                     ),
                   ),

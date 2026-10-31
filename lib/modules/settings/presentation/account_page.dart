@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart' show PlatformException;
+import 'package:flutter/services.dart' show HapticFeedback, PlatformException;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
@@ -119,9 +119,10 @@ class _AccountPageState extends ConsumerState<AccountPage> {
                     ),
                     _ThemeRow(
                       index: _themeModes.indexOf(themeMode),
-                      onChanged: (i) => ref
-                          .read(themeModeProvider.notifier)
-                          .set(_themeModes[i]),
+                      onChanged: (i) {
+                        HapticFeedback.selectionClick();
+                        ref.read(themeModeProvider.notifier).set(_themeModes[i]);
+                      },
                     ),
                   ],
                 ),
@@ -216,7 +217,9 @@ class _AccountPageState extends ConsumerState<AccountPage> {
                     if (_busy)
                       const SizedBox.square(
                         dimension: 48,
-                        child: CircularProgressIndicator(strokeWidth: 2),
+                        child: CircularProgressIndicator.adaptive(
+                          strokeWidth: 2,
+                        ),
                       ),
                   ],
                 ),
@@ -254,6 +257,7 @@ class _AccountPageState extends ConsumerState<AccountPage> {
             const SizedBox(width: OmniSpacing.sm),
             _SwitchWorkspaceButton(
               onTap: () {
+                HapticFeedback.selectionClick();
                 // Danh sách có thể đã cũ (vừa được thêm vào một công ty mới).
                 ref.invalidate(tenantOptionsProvider);
                 ref.read(sessionControllerProvider.notifier).chooseWorkspace();
@@ -266,6 +270,7 @@ class _AccountPageState extends ConsumerState<AccountPage> {
   }
 
   Future<void> _openAvatarMenu(String? avatarUrl) async {
+    HapticFeedback.selectionClick();
     final box =
         _avatarButtonKey.currentContext?.findRenderObject() as RenderBox?;
     if (box == null || !box.hasSize) return;
@@ -398,6 +403,7 @@ class _AccountPageState extends ConsumerState<AccountPage> {
   }
 
   Future<void> _confirmLogout() async {
+    HapticFeedback.selectionClick();
     final container = ProviderScope.containerOf(context);
     final confirmed = await showOmniConfirm(
       context: context,
@@ -536,7 +542,10 @@ class _AccountRow extends StatelessWidget {
         : scheme.onSurface;
 
     return InkWell(
-      onTap: onTap,
+      onTap: () {
+        HapticFeedback.selectionClick();
+        onTap();
+      },
       child: ConstrainedBox(
         constraints: const BoxConstraints(minHeight: 44),
         child: Padding(

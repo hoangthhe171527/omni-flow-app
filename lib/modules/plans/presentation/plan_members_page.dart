@@ -144,6 +144,7 @@ class _PlanMembersPageState extends ConsumerState<PlanMembersPage> {
               data: (_) => const SizedBox.shrink(),
             )
           : ListView(
+              keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
               padding: const EdgeInsets.fromLTRB(
                 OmniSpacing.lg,
                 OmniSpacing.md,
