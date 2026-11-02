@@ -74,7 +74,7 @@ void main() {
     });
 
     test(
-      'activities: /interaction-logs, customer_id, bỏ VIEW, map loại',
+      'activities: /interaction-logs, customer_id, bỏ VIEW/MESSAGE/ASSIGNMENT, map loại',
       () async {
         final client = _FakeClient()
           ..data = [
@@ -83,6 +83,18 @@ void main() {
               'interaction_type': 'VIEW',
               'content': 'Xem hồ sơ',
               'interacted_at': '2026-10-01T03:00:00Z',
+            },
+            {
+              'id': 'a-msg',
+              'interaction_type': 'MESSAGE',
+              'content': 'Tin nhắn từ inbox đa kênh',
+              'interacted_at': '2026-10-01T04:00:00Z',
+            },
+            {
+              'id': 'a-assign',
+              'interaction_type': 'ASSIGNMENT',
+              'content': 'Phân công từ inbox đa kênh',
+              'interacted_at': '2026-10-01T05:00:00Z',
             },
             {
               'id': 'a2',
@@ -103,7 +115,7 @@ void main() {
         expect(q.path, '/interaction-logs');
         expect(q.query!['customer_id'], 'c1');
         expect(q.query!['per_page'], 5);
-        expect(q.query!['exclude_types'], 'VIEW');
+        expect(q.query!['exclude_types'], 'VIEW,MESSAGE,ASSIGNMENT');
         expect(list.map((a) => a.id), ['a2', 'a3']);
         expect(list.first.kind, ActivityKind.call);
         expect(list.first.text, 'Gọi tư vấn');

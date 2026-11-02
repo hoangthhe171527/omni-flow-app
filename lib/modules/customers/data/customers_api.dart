@@ -59,18 +59,24 @@ class CustomersApi {
   }
 
   /// Nhật ký của khách (`GET /interaction-logs?customer_id=`). `VIEW` (tự ghi
-  /// mỗi lần mở hồ sơ) không phải hoạt động: máy chủ bỏ qua nhờ `exclude_types`
-  /// để nó không ăn chỗ của `per_page`, và app lọc lại phòng API cũ.
+  /// mỗi lần mở hồ sơ) và các hoạt động tự động từ inbox đa kênh (`MESSAGE`,
+  /// `ASSIGNMENT`) không hiển thị ở phần hoạt động: máy chủ bỏ qua nhờ
+  /// `exclude_types` để không ăn chỗ của `per_page`, và app lọc lại phòng API cũ.
   Future<List<CustomerActivity>> activities(
     String id, {
     int perPage = 20,
   }) async {
+    const excluded = {'VIEW', 'MESSAGE', 'ASSIGNMENT'};
     final response = await _client.get(
       '/interaction-logs',
-      query: {'customer_id': id, 'exclude_types': 'VIEW', 'per_page': perPage},
+      query: {
+        'customer_id': id,
+        'exclude_types': 'VIEW,MESSAGE,ASSIGNMENT',
+        'per_page': perPage,
+      },
     );
     return response.list
-        .where((row) => row['interaction_type'] != 'VIEW')
+        .where((row) => !excluded.contains(row['interaction_type']))
         .map(CustomerActivity.fromJson)
         .toList();
   }
