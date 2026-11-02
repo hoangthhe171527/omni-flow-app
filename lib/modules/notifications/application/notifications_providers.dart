@@ -21,6 +21,21 @@ final _userChannelProvider = Provider<String?>((ref) {
   return (userId == null || userId.isEmpty) ? null : 'user.$userId';
 });
 
+/// Chuông chỉ báo các thông báo không liên quan đến tin nhắn; tin nhắn hộp thư
+/// đã có kênh push và tín hiệu inbox riêng.
+bool isInboxMessageRealtimePayload(Map<String, dynamic> data) {
+  final type = (data['notification_type'] ?? data['type'])
+      ?.toString()
+      .toUpperCase();
+  if (type == 'INBOX_MESSAGE' || type == 'MESSAGE') return true;
+  if (data['related_entity_type']?.toString().toLowerCase() == 'conversation') {
+    return true;
+  }
+  final hasConv = (data['conversation_id']?.toString().trim() ?? '').isNotEmpty;
+  final hasTask = (data['task_id']?.toString().trim() ?? '').isNotEmpty;
+  return hasConv && !hasTask;
+}
+
 /// Keeps the bell live for as long as something is watching it.
 final notificationRealtimeProvider = Provider<void>((ref) {
   final channel = ref.watch(_userChannelProvider);
@@ -29,6 +44,7 @@ final notificationRealtimeProvider = Provider<void>((ref) {
   final client = ref.watch(realtimeClientProvider);
   final unsubscribe = client.subscribePrivate(channel, (event) {
     if (event.event != 'notification.created') return;
+    if (isInboxMessageRealtimePayload(event.data)) return;
     final signal = ref.read(notificationSignalProvider.notifier);
     signal.state = signal.state + 1;
   });
@@ -70,7 +86,7 @@ class NotificationsController
         .list(unreadOnly: unreadOnly);
 
     return NotificationListState(
-      items: page.items,
+      items: page.items.where((item) => item.isBellNotification).toList(),
       pagination: page.pagination,
     );
   }
@@ -92,7 +108,10 @@ class NotificationsController
           );
       state = AsyncData(
         NotificationListState(
-          items: [...current.items, ...next.items],
+          items: [
+            ...current.items,
+            ...next.items.where((item) => item.isBellNotification),
+          ],
           pagination: next.pagination,
         ),
       );

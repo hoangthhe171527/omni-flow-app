@@ -80,6 +80,11 @@ class AppNotification {
 
   bool get isUnread => readAt == null;
 
+  /// Chuông thông báo chỉ báo các phần không liên quan đến tin nhắn
+  /// (giao việc, hoàn thành, nhắc lịch...); tin nhắn có push noti riêng.
+  bool get isBellNotification =>
+      kind != NotificationKind.inboxMessage && entityType != 'conversation';
+
   /// The task this notification is about, or null when it points elsewhere.
   ///
   /// Both halves have to agree. A row whose entity type says `task` but carries

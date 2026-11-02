@@ -31,7 +31,10 @@ class NotificationsApi {
     );
 
     return Paged(
-      items: response.list.map(AppNotification.fromJson).toList(),
+      items: response.list
+          .map(AppNotification.fromJson)
+          .where((item) => item.isBellNotification)
+          .toList(),
       pagination: response.pagination ?? const ApiPagination.empty(),
     );
   }

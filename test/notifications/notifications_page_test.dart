@@ -47,10 +47,19 @@ class _FakeApi implements NotificationsApi {
             ),
             AppNotification(
               id: 'n2',
-              kind: NotificationKind.inboxMessage,
+              kind: NotificationKind.taskCompleted,
               title: 'tn2',
               body: 'bn2',
               createdAt: now.subtract(const Duration(days: 1)),
+              entityType: 'task',
+              entityId: 't2',
+            ),
+            AppNotification(
+              id: 'n-msg',
+              kind: NotificationKind.inboxMessage,
+              title: 'Tin nhan bi an khoi chuong',
+              body: 'Khong hien tren chuong',
+              createdAt: now,
               entityType: 'conversation',
               entityId: 'c1',
             ),
@@ -143,6 +152,8 @@ void main() {
     expect(find.text('Hôm nay'), findsOneWidget);
     expect(find.text('Trước đó'), findsOneWidget);
     expect(find.text('Chưa đọc · 2'), findsOneWidget);
+    // Tin nhắn không hiển thị trong phần chuông thông báo.
+    expect(find.text('Tin nhan bi an khoi chuong'), findsNothing);
   });
 
   testWidgets('nhóm ngày phẳng, không còn khung bo ngoài danh sách', (t) async {
@@ -159,15 +170,16 @@ void main() {
   });
 
   testWidgets(
-    'bấm tin nhắn mở hội thoại, bấm việc mở việc, loại lạ không đi đâu',
+    'bấm thông báo việc mở việc, loại lạ không đi đâu, tin nhắn không hiện trên chuông',
     (t) async {
       await pump(t);
+      expect(find.text('Tin nhan bi an khoi chuong'), findsNothing);
       await t.tap(find.text('tn2'));
       await t.tap(find.text('tn1'));
       await t.tap(find.text('tn3'));
       await t.pump();
-      expect(convs, ['c1']);
-      expect(tasks, ['t1']);
+      expect(convs, isEmpty);
+      expect(tasks, ['t2', 't1']);
     },
   );
 
