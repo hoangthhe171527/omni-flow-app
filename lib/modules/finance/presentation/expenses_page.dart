@@ -16,6 +16,7 @@ import 'widgets/finance_palette.dart';
 /// - Tìm kiếm theo số tiền (`450k`, `2.45tr`, `2.450.000`), ngày, loại, chứng từ
 /// - Sắp xếp đa chiều chuẩn iOS (`Ngày ghi nhận`, `Thời gian nhập`, `Ngày thanh toán`, `Loại chi phí`, `Số tiền`)
 /// - Đính kèm chứng từ / phiếu chi
+/// - Hiển thị toàn bộ số tiền rõ ràng, tự co giãn thông minh (`FittedBox`), tuyệt đối không cắt `...`
 class ExpensesPage extends ConsumerStatefulWidget {
   const ExpensesPage({super.key});
 
@@ -161,13 +162,13 @@ class _ExpensesPageState extends ConsumerState<ExpensesPage> {
           Padding(
             padding: const EdgeInsets.only(right: 6),
             child: Tooltip(
-              message: 'Sắp xếp chi phí',
+              message: 'Sắp xếp danh sách',
               child: InkWell(
-                key: _sortBtnKey,
+                key: const ValueKey('finance-sort-btn'),
                 onTap: _openSortMenu,
                 borderRadius: BorderRadius.circular(99),
                 child: Container(
-                  key: const ValueKey('finance-sort-btn'),
+                  key: _sortBtnKey,
                   width: 34,
                   height: 34,
                   decoration: BoxDecoration(
@@ -187,7 +188,7 @@ class _ExpensesPageState extends ConsumerState<ExpensesPage> {
               ),
             ),
           ),
-          // Add expense '+' button
+          // Primary Add button (+)
           Padding(
             padding: const EdgeInsets.only(right: 8),
             child: Tooltip(
@@ -223,10 +224,9 @@ class _ExpensesPageState extends ConsumerState<ExpensesPage> {
       ),
       body: Stack(
         children: [
-          Align(
-            alignment: Alignment.topCenter,
+          Center(
             child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 640),
+              constraints: const BoxConstraints(maxWidth: 680),
               child: Column(
                 children: [
                   // Collapsible search bar + 3-month segmented control
@@ -397,11 +397,20 @@ class _ExpensesPageState extends ConsumerState<ExpensesPage> {
                                 ]
                               : null,
                         ),
-                        child: Text(
-                          FinanceMonthUtils.formatMonthShort(ym),
-                          style: OmniType.caption.copyWith(
-                            color: ym == state.activeMonth ? p.ink : p.muted,
-                            fontWeight: FontWeight.w600,
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 4),
+                          child: FittedBox(
+                            fit: BoxFit.scaleDown,
+                            child: Text(
+                              FinanceMonthUtils.formatMonthShort(ym),
+                              maxLines: 1,
+                              style: OmniType.caption.copyWith(
+                                color: ym == state.activeMonth
+                                    ? p.ink
+                                    : p.muted,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
                           ),
                         ),
                       ),
@@ -452,7 +461,7 @@ class _ExpensesPageState extends ConsumerState<ExpensesPage> {
     final grpBtnActive = state.grpOpen || state.fltGroup != null;
 
     return Container(
-      padding: const EdgeInsets.fromLTRB(16, 15, 16, 13),
+      padding: const EdgeInsets.fromLTRB(15, 13, 15, 12),
       decoration: BoxDecoration(
         color: p.card,
         borderRadius: BorderRadius.circular(16),
@@ -461,106 +470,99 @@ class _ExpensesPageState extends ConsumerState<ExpensesPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // sum-top
+          // Hàng 1: Nhãn "Tổng chi tháng X" bên trái + Pill biến động & nút biểu đồ tròn bên phải
           Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Tổng chi tháng $monthNum',
-                      style: OmniType.caption.copyWith(
-                        color: p.muted,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                    const SizedBox(height: 3),
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.baseline,
-                      textBaseline: TextBaseline.alphabetic,
-                      children: [
-                        Flexible(
-                          child: Text(
-                            FinanceMonthUtils.formatNumber(summary.total),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: OmniType.displayLg.copyWith(
-                              color: p.ink,
-                              fontWeight: FontWeight.w600,
-                              fontFeatures: const [
-                                FontFeature.tabularFigures(),
-                              ],
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 4),
-                        Text(
-                          'đ',
-                          style: OmniType.section.copyWith(
-                            color: p.muted,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
+                child: Text(
+                  'Tổng chi tháng $monthNum',
+                  maxLines: 1,
+                  style: OmniType.caption.copyWith(
+                    color: p.muted,
+                    fontWeight: FontWeight.w500,
+                  ),
                 ),
               ),
-              const SizedBox(width: 8),
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  if (delta != null) ...[
-                    Container(
-                      height: 26,
-                      padding: const EdgeInsets.symmetric(horizontal: 9),
-                      alignment: Alignment.center,
-                      decoration: BoxDecoration(
-                        color: delta.isIncrease ? p.amberSoft : p.okSoft,
-                        borderRadius: BorderRadius.circular(99),
-                      ),
-                      child: Text(
-                        delta.text,
-                        style: OmniType.micro.copyWith(
-                          color: delta.isIncrease ? p.amber : p.ok,
-                          fontWeight: FontWeight.w600,
-                          fontFeatures: const [FontFeature.tabularFigures()],
-                        ),
-                      ),
+              if (delta != null) ...[
+                Container(
+                  height: 24,
+                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    color: delta.isIncrease ? p.amberSoft : p.okSoft,
+                    borderRadius: BorderRadius.circular(99),
+                  ),
+                  child: Text(
+                    delta.text,
+                    style: OmniType.micro.copyWith(
+                      color: delta.isIncrease ? p.amber : p.ok,
+                      fontWeight: FontWeight.w600,
+                      fontFeatures: const [FontFeature.tabularFigures()],
                     ),
-                    const SizedBox(width: 6),
-                  ],
-                  Tooltip(
-                    message: 'Tỷ trọng theo nhóm',
-                    child: InkWell(
-                      key: const ValueKey('finance-grp-toggle'),
-                      onTap: notifier.toggleGroupBreakdown,
-                      borderRadius: BorderRadius.circular(99),
-                      child: Container(
-                        width: 28,
-                        height: 28,
-                        decoration: BoxDecoration(
-                          color: grpBtnActive ? p.primarySoft : p.control,
-                          shape: BoxShape.circle,
-                        ),
-                        alignment: Alignment.center,
-                        child: Icon(
-                          Icons.pie_chart_outline_rounded,
-                          size: 15,
-                          color: grpBtnActive ? p.primaryInk : p.ink2,
-                        ),
-                      ),
+                  ),
+                ),
+                const SizedBox(width: 6),
+              ],
+              Tooltip(
+                message: 'Tỷ trọng theo nhóm',
+                child: InkWell(
+                  key: const ValueKey('finance-grp-toggle'),
+                  onTap: notifier.toggleGroupBreakdown,
+                  borderRadius: BorderRadius.circular(99),
+                  child: Container(
+                    width: 28,
+                    height: 28,
+                    decoration: BoxDecoration(
+                      color: grpBtnActive ? p.primarySoft : p.control,
+                      shape: BoxShape.circle,
+                    ),
+                    alignment: Alignment.center,
+                    child: Icon(
+                      Icons.pie_chart_outline_rounded,
+                      size: 15,
+                      color: grpBtnActive ? p.primaryInk : p.ink2,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 2),
+          // Hàng 2: Số tiền tổng chi chiếm trọn chiều ngang card, tự co giãn vừa khít, không bao giờ cắt "..."
+          Align(
+            alignment: Alignment.centerLeft,
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              alignment: Alignment.centerLeft,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.baseline,
+                textBaseline: TextBaseline.alphabetic,
+                children: [
+                  Text(
+                    FinanceMonthUtils.formatNumber(summary.total),
+                    maxLines: 1,
+                    style: OmniType.displayLg.copyWith(
+                      color: p.ink,
+                      fontWeight: FontWeight.w600,
+                      fontFeatures: const [FontFeature.tabularFigures()],
+                    ),
+                  ),
+                  const SizedBox(width: 4),
+                  Text(
+                    'đ',
+                    style: OmniType.section.copyWith(
+                      color: p.muted,
+                      fontWeight: FontWeight.w600,
                     ),
                   ),
                 ],
               ),
-            ],
+            ),
           ),
-          // 6px progress bar
+          // Thanh tiến độ 6px
           Padding(
-            padding: const EdgeInsets.only(top: 12, bottom: 10),
+            padding: const EdgeInsets.only(top: 10, bottom: 9),
             child: ClipRRect(
               borderRadius: BorderRadius.circular(99),
               child: SizedBox(
@@ -573,7 +575,7 @@ class _ExpensesPageState extends ConsumerState<ExpensesPage> {
               ),
             ),
           ),
-          // Paid / Owed interactive filter buttons (sum-sub)
+          // Hai ô lọc Đã trả / Phải trả: bố cục 2 dòng gọn gàng để số tiền luôn hiển thị trọn vẹn 100%
           Row(
             children: [
               Expanded(
@@ -588,7 +590,7 @@ class _ExpensesPageState extends ConsumerState<ExpensesPage> {
                   onTap: () => notifier.toggleStatusFilter('paid'),
                 ),
               ),
-              const SizedBox(width: 6),
+              const SizedBox(width: 8),
               Expanded(
                 child: _buildSummaryStatusPill(
                   p,
@@ -669,7 +671,7 @@ class _ExpensesPageState extends ConsumerState<ExpensesPage> {
       borderRadius: BorderRadius.circular(10),
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 140),
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 7),
         decoration: BoxDecoration(
           color: active ? p.primarySoft : p.control,
           borderRadius: BorderRadius.circular(10),
@@ -678,33 +680,48 @@ class _ExpensesPageState extends ConsumerState<ExpensesPage> {
             width: 0.5,
           ),
         ),
-        child: Row(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
           children: [
-            Container(
-              width: 8,
-              height: 8,
-              decoration: BoxDecoration(
-                color: dotColor,
-                shape: BoxShape.circle,
-              ),
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 7,
+                  height: 7,
+                  decoration: BoxDecoration(
+                    color: dotColor,
+                    shape: BoxShape.circle,
+                  ),
+                ),
+                const SizedBox(width: 5),
+                Flexible(
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      label,
+                      maxLines: 1,
+                      style: OmniType.micro.copyWith(
+                        color: p.muted,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ),
-            const SizedBox(width: 6),
-            Text(
-              label,
-              style: OmniType.caption.copyWith(
-                color: p.muted,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-            const Spacer(),
-            Flexible(
+            const SizedBox(height: 2),
+            FittedBox(
+              fit: BoxFit.scaleDown,
+              alignment: Alignment.centerLeft,
               child: Text(
                 amountText,
                 maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: OmniType.caption.copyWith(
+                style: OmniType.bodySm.copyWith(
                   color: amountColor,
-                  fontWeight: FontWeight.w600,
+                  fontWeight: FontWeight.w700,
                   fontFeatures: const [FontFeature.tabularFigures()],
                 ),
               ),
@@ -823,71 +840,81 @@ class _ExpensesPageState extends ConsumerState<ExpensesPage> {
               bottom: Radius.circular(state.recurOpen ? 0 : 14),
             ),
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
               child: Row(
                 children: [
                   // Overlapping category color dots
                   SizedBox(
-                    width: 34,
-                    height: 12,
+                    width: 30,
+                    height: 11,
                     child: Stack(
                       children: [
                         for (var i = 0; i < suggestions.length && i < 4; i++)
                           Positioned(
-                            left: i * 6.5,
+                            left: i * 6.0,
                             top: 0.5,
                             child: Container(
-                              width: 11,
-                              height: 11,
+                              width: 10,
+                              height: 10,
                               decoration: BoxDecoration(
                                 color: suggestions[i].resolvedColor,
                                 shape: BoxShape.circle,
-                                border: Border.all(color: p.card, width: 1.5),
+                                border: Border.all(color: p.card, width: 1.4),
                               ),
                             ),
                           ),
                       ],
                     ),
                   ),
-                  const SizedBox(width: 8),
+                  const SizedBox(width: 7),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          'Khoản cố định tháng $monthNum',
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: OmniType.bodySm.copyWith(
-                            color: p.ink,
-                            fontWeight: FontWeight.w600,
+                        FittedBox(
+                          fit: BoxFit.scaleDown,
+                          alignment: Alignment.centerLeft,
+                          child: Text(
+                            'Khoản cố định tháng $monthNum',
+                            maxLines: 1,
+                            style: OmniType.bodySm.copyWith(
+                              color: p.ink,
+                              fontWeight: FontWeight.w600,
+                            ),
                           ),
                         ),
                         const SizedBox(height: 1),
-                        Text(
-                          '${suggestions.length} khoản · ${FinanceMonthUtils.formatVndSpace(state.allRecurringSum)}',
-                          style: OmniType.caption.copyWith(
-                            color: p.muted,
-                            fontFeatures: const [FontFeature.tabularFigures()],
+                        FittedBox(
+                          fit: BoxFit.scaleDown,
+                          alignment: Alignment.centerLeft,
+                          child: Text(
+                            '${suggestions.length} khoản · ${FinanceMonthUtils.formatVndSpace(state.allRecurringSum)}',
+                            maxLines: 1,
+                            style: OmniType.caption.copyWith(
+                              color: p.muted,
+                              fontFeatures: const [
+                                FontFeature.tabularFigures(),
+                              ],
+                            ),
                           ),
                         ),
                       ],
                     ),
                   ),
-                  const SizedBox(width: 8),
+                  const SizedBox(width: 6),
                   // "Ghi tất cả" pill button
                   InkWell(
                     key: const ValueKey('finance-recur-commit-all'),
                     onTap: () => notifier.commitRecurring(all: true),
                     borderRadius: BorderRadius.circular(99),
                     child: Container(
-                      height: 30,
-                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      height: 28,
+                      padding: const EdgeInsets.symmetric(horizontal: 10),
                       alignment: Alignment.center,
                       decoration: BoxDecoration(
                         color: p.card,
                         borderRadius: BorderRadius.circular(99),
-                        border: Border.all(color: p.primary, width: 1.25),
+                        border: Border.all(color: p.primary, width: 1.2),
                       ),
                       child: Text(
                         'Ghi tất cả',
@@ -898,13 +925,13 @@ class _ExpensesPageState extends ConsumerState<ExpensesPage> {
                       ),
                     ),
                   ),
-                  const SizedBox(width: 4),
+                  const SizedBox(width: 2),
                   AnimatedRotation(
                     turns: state.recurOpen ? 0.25 : 0.0,
                     duration: const Duration(milliseconds: 180),
                     child: Icon(
                       Icons.chevron_right_rounded,
-                      size: 18,
+                      size: 17,
                       color: p.muted,
                     ),
                   ),
@@ -923,8 +950,8 @@ class _ExpensesPageState extends ConsumerState<ExpensesPage> {
                   for (var i = 0; i < suggestions.length; i++)
                     Container(
                       padding: const EdgeInsets.symmetric(
-                        horizontal: 14,
-                        vertical: 10,
+                        horizontal: 12,
+                        vertical: 9,
                       ),
                       decoration: BoxDecoration(
                         border: i == suggestions.length - 1
@@ -942,8 +969,8 @@ class _ExpensesPageState extends ConsumerState<ExpensesPage> {
                             onTap: () => notifier.toggleRecurringItem(i),
                             borderRadius: BorderRadius.circular(99),
                             child: Container(
-                              width: 22,
-                              height: 22,
+                              width: 20,
+                              height: 20,
                               decoration: BoxDecoration(
                                 color: state.recurSel[i]
                                     ? p.primary
@@ -953,42 +980,45 @@ class _ExpensesPageState extends ConsumerState<ExpensesPage> {
                                   color: state.recurSel[i]
                                       ? p.primary
                                       : p.muted.withValues(alpha: 0.5),
-                                  width: 1.6,
+                                  width: 1.5,
                                 ),
                               ),
                               alignment: Alignment.center,
                               child: state.recurSel[i]
                                   ? const Icon(
                                       Icons.check_rounded,
-                                      size: 14,
+                                      size: 13,
                                       color: Colors.white,
                                     )
                                   : null,
                             ),
                           ),
-                          const SizedBox(width: 10),
+                          const SizedBox(width: 8),
                           Expanded(
                             child: InkWell(
                               onTap: () => notifier.toggleRecurringItem(i),
                               child: Row(
                                 children: [
                                   Container(
-                                    width: 8,
-                                    height: 8,
+                                    width: 7,
+                                    height: 7,
                                     decoration: BoxDecoration(
                                       color: suggestions[i].resolvedColor,
                                       shape: BoxShape.circle,
                                     ),
                                   ),
-                                  const SizedBox(width: 7),
+                                  const SizedBox(width: 6),
                                   Expanded(
-                                    child: Text(
-                                      suggestions[i].titleForMonth,
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: OmniType.bodySm.copyWith(
-                                        color: p.ink,
-                                        fontWeight: FontWeight.w500,
+                                    child: FittedBox(
+                                      fit: BoxFit.scaleDown,
+                                      alignment: Alignment.centerLeft,
+                                      child: Text(
+                                        suggestions[i].titleForMonth,
+                                        maxLines: 1,
+                                        style: OmniType.bodySm.copyWith(
+                                          color: p.ink,
+                                          fontWeight: FontWeight.w500,
+                                        ),
                                       ),
                                     ),
                                   ),
@@ -996,7 +1026,7 @@ class _ExpensesPageState extends ConsumerState<ExpensesPage> {
                               ),
                             ),
                           ),
-                          const SizedBox(width: 8),
+                          const SizedBox(width: 6),
                           InkWell(
                             onTap: () => _openRecurringAmountKeypad(
                               i,
@@ -1005,9 +1035,9 @@ class _ExpensesPageState extends ConsumerState<ExpensesPage> {
                             ),
                             borderRadius: BorderRadius.circular(8),
                             child: Container(
-                              height: 30,
+                              height: 29,
                               padding: const EdgeInsets.symmetric(
-                                horizontal: 10,
+                                horizontal: 9,
                               ),
                               decoration: BoxDecoration(
                                 color: p.control,
@@ -1021,7 +1051,7 @@ class _ExpensesPageState extends ConsumerState<ExpensesPage> {
                                     FinanceMonthUtils.formatVndSpace(
                                       state.recurAmt[i],
                                     ),
-                                    style: OmniType.bodySm.copyWith(
+                                    style: OmniType.caption.copyWith(
                                       color: p.ink,
                                       fontWeight: FontWeight.w600,
                                       fontFeatures: const [
@@ -1043,7 +1073,7 @@ class _ExpensesPageState extends ConsumerState<ExpensesPage> {
                       ),
                     ),
                   Padding(
-                    padding: const EdgeInsets.fromLTRB(14, 10, 14, 12),
+                    padding: const EdgeInsets.fromLTRB(12, 9, 12, 11),
                     child: SizedBox(
                       width: double.infinity,
                       height: 40,
@@ -1059,14 +1089,19 @@ class _ExpensesPageState extends ConsumerState<ExpensesPage> {
                           ),
                           elevation: 0,
                         ),
-                        child: Text(
-                          selectedCount > 0
-                              ? 'Ghi $selectedCount khoản · ${FinanceMonthUtils.formatVndSpace(selectedSum)}'
-                              : 'Chọn ít nhất 1 khoản',
-                          style: OmniType.bodySm.copyWith(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w600,
-                            fontFeatures: const [FontFeature.tabularFigures()],
+                        child: FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: Text(
+                            selectedCount > 0
+                                ? 'Ghi $selectedCount khoản · ${FinanceMonthUtils.formatVndSpace(selectedSum)}'
+                                : 'Chọn ít nhất 1 khoản',
+                            style: OmniType.bodySm.copyWith(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w600,
+                              fontFeatures: const [
+                                FontFeature.tabularFigures(),
+                              ],
+                            ),
                           ),
                         ),
                       ),

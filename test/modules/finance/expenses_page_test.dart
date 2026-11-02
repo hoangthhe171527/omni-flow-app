@@ -98,6 +98,66 @@ void main() {
     );
 
     testWidgets(
+      'bố cục màn hình hẹp (360px + chữ phóng to 1.15x) vẫn gọn gàng, tuyệt đối KHÔNG cắt cụt số tiền bằng dấu "..."',
+      (tester) async {
+        tester.view.physicalSize = const Size(360, 800);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(() {
+          tester.view.resetPhysicalSize();
+          tester.view.resetDevicePixelRatio();
+        });
+
+        await tester.pumpWidget(
+          ProviderScope(
+            child: MaterialApp(
+              builder: (context, child) => MediaQuery(
+                data: MediaQuery.of(
+                  context,
+                ).copyWith(textScaler: const TextScaler.linear(1.15)),
+                child: child!,
+              ),
+              home: const ExpensesPage(),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+        expect(tester.takeException(), isNull);
+
+        for (final textValue in [
+          '26.650.000',
+          '12.730.000 đ',
+          '13.920.000 đ',
+          'Khoản cố định tháng 11',
+          '5 khoản · 41.350.000 đ',
+          '4.500.000 đ',
+          '2.450.000 đ',
+          '420.000 đ',
+          '1.280.000 đ',
+          '18.000.000 đ',
+          'còn 9.000.000 đ',
+        ]) {
+          final finder = find.text(textValue);
+          expect(
+            finder,
+            findsWidgets,
+            reason: 'Phải hiển thị đầy đủ "$textValue"',
+          );
+          for (final element in finder.evaluate()) {
+            final widget = element.widget;
+            if (widget is Text) {
+              expect(
+                widget.overflow,
+                isNot(TextOverflow.ellipsis),
+                reason:
+                    '"$textValue" không được phép dùng TextOverflow.ellipsis',
+              );
+            }
+          }
+        }
+      },
+    );
+
+    testWidgets(
       'bấm "Ghi tất cả" ghi 5 khoản cố định vào tháng 11 (tổng tăng lên 68.000.000) và có nút Hoàn tác',
       (tester) async {
         await tester.pumpWidget(buildTestApp());

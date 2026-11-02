@@ -79,8 +79,6 @@ class _ConversationRowState extends State<ConversationRow> {
       // thắng, để chọn nhiều vẫn đọc được.
       color: widget.selected
           ? scheme.primary.withValues(alpha: dark ? 0.22 : 0.12)
-          : unread
-          ? scheme.primary.withValues(alpha: dark ? 0.10 : 0.05)
           : scheme.surface,
       child: RawGestureDetector(
         gestures: {
@@ -115,7 +113,7 @@ class _ConversationRowState extends State<ConversationRow> {
             child: Stack(
               children: [
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(18, 10, 12, 10),
+                  padding: const EdgeInsets.fromLTRB(18, 11, 14, 11),
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
@@ -131,7 +129,7 @@ class _ConversationRowState extends State<ConversationRow> {
                         const SizedBox(width: OmniSpacing.md),
                       ],
                       _Avatar(conversation: conversation),
-                      const SizedBox(width: 10),
+                      const SizedBox(width: 12),
                       Expanded(child: _body(context, unread)),
                     ],
                   ),
@@ -376,8 +374,8 @@ class _Avatar extends StatelessWidget {
     return OmniAvatar(
       name: conversation.title,
       imageUrl: conversation.customerAvatar,
-      size: 38,
-      borderRadius: 6,
+      size: 42,
+      borderRadius: 999,
     );
   }
 }

@@ -318,23 +318,23 @@ class _ExpenseRowTileState extends ConsumerState<ExpenseRowTile> {
               child: Stack(
                 children: [
                   ConstrainedBox(
-                    constraints: const BoxConstraints(minHeight: 58),
+                    constraints: const BoxConstraints(minHeight: 56),
                     child: Padding(
                       padding: const EdgeInsets.symmetric(
-                        horizontal: 16,
+                        horizontal: 13,
                         vertical: 9,
                       ),
                       child: Row(
                         children: [
                           Container(
-                            width: 9,
-                            height: 9,
+                            width: 8,
+                            height: 8,
                             decoration: BoxDecoration(
                               color: grp.parsedColor,
                               shape: BoxShape.circle,
                             ),
                           ),
-                          const SizedBox(width: 11),
+                          const SizedBox(width: 9),
                           Expanded(
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
@@ -361,13 +361,14 @@ class _ExpenseRowTileState extends ConsumerState<ExpenseRowTile> {
                               ],
                             ),
                           ),
-                          const SizedBox(width: 11),
+                          const SizedBox(width: 8),
                           Column(
                             crossAxisAlignment: CrossAxisAlignment.end,
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               Text(
                                 FinanceMonthUtils.formatVndSpace(item.amount),
+                                maxLines: 1,
                                 style: OmniType.body.copyWith(
                                   color: p.ink,
                                   fontWeight: FontWeight.w600,
@@ -386,7 +387,7 @@ class _ExpenseRowTileState extends ConsumerState<ExpenseRowTile> {
                   ),
                   if (widget.showBottomDivider)
                     Positioned(
-                      left: 36,
+                      left: 30,
                       right: 0,
                       bottom: 0,
                       child: Container(height: 0.5, color: p.divider),
@@ -411,6 +412,7 @@ class _ExpenseRowTileState extends ConsumerState<ExpenseRowTile> {
     if (paid > 0) {
       return Text(
         'còn ${FinanceMonthUtils.formatVndSpace(left)}',
+        maxLines: 1,
         style: OmniType.micro.copyWith(
           color: p.amber,
           fontWeight: FontWeight.w600,

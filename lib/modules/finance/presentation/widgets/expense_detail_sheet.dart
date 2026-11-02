@@ -603,7 +603,7 @@ class _ExpenseDetailSheetState extends ConsumerState<_ExpenseDetailSheet> {
                     ),
                   ],
                   const SizedBox(height: 10),
-                  // Big tappable amount button
+                  // Big tappable amount button — FittedBox đảm bảo số tiền luôn hiện đủ 100%, không cắt "..."
                   InkWell(
                     onTap: () => _openAmountKeypad(item),
                     borderRadius: BorderRadius.circular(12),
@@ -612,32 +612,36 @@ class _ExpenseDetailSheetState extends ConsumerState<_ExpenseDetailSheet> {
                         horizontal: 10,
                         vertical: 3,
                       ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        crossAxisAlignment: CrossAxisAlignment.baseline,
-                        textBaseline: TextBaseline.alphabetic,
-                        children: [
-                          Text(
-                            FinanceMonthUtils.formatNumber(item.amount),
-                            style: OmniType.displayLg.copyWith(
-                              color: p.ink,
-                              fontWeight: FontWeight.w600,
-                              fontFeatures: const [
-                                FontFeature.tabularFigures(),
-                              ],
+                      child: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.baseline,
+                          textBaseline: TextBaseline.alphabetic,
+                          children: [
+                            Text(
+                              FinanceMonthUtils.formatNumber(item.amount),
+                              maxLines: 1,
+                              style: OmniType.displayLg.copyWith(
+                                color: p.ink,
+                                fontWeight: FontWeight.w600,
+                                fontFeatures: const [
+                                  FontFeature.tabularFigures(),
+                                ],
+                              ),
                             ),
-                          ),
-                          const SizedBox(width: 4),
-                          Text(
-                            'đ',
-                            style: OmniType.title.copyWith(
-                              color: p.muted,
-                              fontWeight: FontWeight.w600,
+                            const SizedBox(width: 4),
+                            Text(
+                              'đ',
+                              style: OmniType.title.copyWith(
+                                color: p.muted,
+                                fontWeight: FontWeight.w600,
+                              ),
                             ),
-                          ),
-                          const SizedBox(width: 5),
-                          Icon(Icons.edit_outlined, size: 15, color: p.muted),
-                        ],
+                            const SizedBox(width: 5),
+                            Icon(Icons.edit_outlined, size: 15, color: p.muted),
+                          ],
+                        ),
                       ),
                     ),
                   ),
@@ -692,22 +696,41 @@ class _ExpenseDetailSheetState extends ConsumerState<_ExpenseDetailSheet> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text(
-                          'Đã trả ${FinanceMonthUtils.formatVndSpace(paid)}',
-                          style: OmniType.bodySm.copyWith(
-                            color: p.ink2,
-                            fontWeight: FontWeight.w600,
-                            fontFeatures: const [FontFeature.tabularFigures()],
+                        Flexible(
+                          child: FittedBox(
+                            fit: BoxFit.scaleDown,
+                            alignment: Alignment.centerLeft,
+                            child: Text(
+                              'Đã trả ${FinanceMonthUtils.formatVndSpace(paid)}',
+                              maxLines: 1,
+                              style: OmniType.bodySm.copyWith(
+                                color: p.ink2,
+                                fontWeight: FontWeight.w600,
+                                fontFeatures: const [
+                                  FontFeature.tabularFigures(),
+                                ],
+                              ),
+                            ),
                           ),
                         ),
-                        Text(
-                          left > 0
-                              ? 'Còn ${FinanceMonthUtils.formatVndSpace(left)}'
-                              : '✓ Đã trả đủ (${item.payments.length} lần)',
-                          style: OmniType.bodySm.copyWith(
-                            color: left > 0 ? p.amber : p.ok,
-                            fontWeight: FontWeight.w600,
-                            fontFeatures: const [FontFeature.tabularFigures()],
+                        const SizedBox(width: 8),
+                        Flexible(
+                          child: FittedBox(
+                            fit: BoxFit.scaleDown,
+                            alignment: Alignment.centerRight,
+                            child: Text(
+                              left > 0
+                                  ? 'Còn ${FinanceMonthUtils.formatVndSpace(left)}'
+                                  : '✓ Đã trả đủ (${item.payments.length} lần)',
+                              maxLines: 1,
+                              style: OmniType.bodySm.copyWith(
+                                color: left > 0 ? p.amber : p.ok,
+                                fontWeight: FontWeight.w600,
+                                fontFeatures: const [
+                                  FontFeature.tabularFigures(),
+                                ],
+                              ),
+                            ),
                           ),
                         ),
                       ],
@@ -786,14 +809,17 @@ class _ExpenseDetailSheetState extends ConsumerState<_ExpenseDetailSheet> {
                             ),
                             elevation: 0,
                           ),
-                          child: Text(
-                            'Trả · ${FinanceMonthUtils.formatVndSpace(left)}',
-                            style: OmniType.bodyStrong.copyWith(
-                              color: Colors.white,
-                              fontWeight: FontWeight.w600,
-                              fontFeatures: const [
-                                FontFeature.tabularFigures(),
-                              ],
+                          child: FittedBox(
+                            fit: BoxFit.scaleDown,
+                            child: Text(
+                              'Trả · ${FinanceMonthUtils.formatVndSpace(left)}',
+                              style: OmniType.bodyStrong.copyWith(
+                                color: Colors.white,
+                                fontWeight: FontWeight.w600,
+                                fontFeatures: const [
+                                  FontFeature.tabularFigures(),
+                                ],
+                              ),
                             ),
                           ),
                         ),
