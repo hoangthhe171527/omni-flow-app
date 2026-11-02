@@ -1,8 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:omni_app/bootstrap.dart';
+import 'package:omni_app/core/module/module_registry.dart';
+import 'package:omni_app/core/module/nav_destination.dart';
 import 'package:omni_app/modules/finance/domain/finance_models.dart';
+import 'package:omni_app/modules/finance/domain/finance_permissions.dart';
+import 'package:omni_app/modules/finance/finance_module.dart';
 import 'package:omni_app/modules/finance/presentation/expenses_page.dart';
+import 'package:omni_app/security/permissions/access_policy.dart';
+import 'package:omni_app/security/session/session.dart';
+import 'package:omni_app/security/session/session_controller.dart';
 
 void main() {
   Widget buildTestApp() {
@@ -12,6 +20,42 @@ void main() {
       ),
     );
   }
+
+  group('FinanceModule — hiển thị trong mục Tất cả (DirectoryPage)', () {
+    for (final perm in [
+      FinancePermissions.base, // 'finance.expenses'
+      FinancePermissions.read, // 'finance.expenses.read'
+      FinancePermissions.ordersCost, // 'orders.cost'
+      FinancePermissions.membersRead, // 'membership.members.read'
+      FinancePermissions.dashboardRead, // 'analytics.dashboard.read'
+    ]) {
+      test('hiện ô "Sổ chi phí" trong nhóm Đội & quản trị khi có quyền $perm', () {
+        final container = ProviderContainer(
+          overrides: [
+            modulesProvider.overrideWithValue(appModules),
+            sessionProvider.overrideWithValue(
+              Session(
+                status: SessionStatus.authenticated,
+                policy: AccessPolicy({perm}),
+              ),
+            ),
+          ],
+        );
+        addTearDown(container.dispose);
+
+        final adminEntries =
+            container.read(directoryGroupsProvider)[NavArea.admin] ?? const [];
+        expect(
+          adminEntries.map((e) => e.label),
+          contains('Sổ chi phí'),
+        );
+        expect(
+          adminEntries.map((e) => e.routeName),
+          contains(FinanceRoutes.expenses),
+        );
+      });
+    }
+  });
 
   group('ExpensesPage — Sổ chi phí (so-chi-phi-mobile.html + PO upgrades)', () {
     testWidgets(

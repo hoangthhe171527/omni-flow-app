@@ -28,6 +28,7 @@ class FinanceModule extends OmniModule {
     ModuleRoute(
       path: FinanceRoutes.expensesPath,
       name: FinanceRoutes.expenses,
+      rootNavigator: true,
       access: const AccessRequirement.any(FinancePermissions.anyRead),
       builder: (_, _) => const ExpensesPage(),
     ),
@@ -43,7 +44,7 @@ class FinanceModule extends OmniModule {
       selectedIcon: Icons.account_balance_wallet_rounded,
       routeName: FinanceRoutes.expenses,
       area: NavArea.admin,
-      weight: NavWeight.primary,
+      weight: NavWeight.secondary,
       order: 25,
       access: AccessRequirement.any(FinancePermissions.anyRead),
     ),
