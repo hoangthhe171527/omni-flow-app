@@ -65,8 +65,7 @@ class _OwnerPickerSheetState extends ConsumerState<_OwnerPickerSheet> {
                   color: scheme.onSurfaceVariant,
                 ),
               ),
-              onChanged: (v) =>
-                  setState(() => _query = v.trim().toLowerCase()),
+              onChanged: (v) => setState(() => _query = v.trim().toLowerCase()),
             ),
           ),
           if (widget.currentId != null ||
@@ -85,8 +84,7 @@ class _OwnerPickerSheetState extends ConsumerState<_OwnerPickerSheet> {
               data: (all) {
                 final shown = [
                   for (final m in all)
-                    if (_query.isEmpty ||
-                        m.name.toLowerCase().contains(_query))
+                    if (_query.isEmpty || m.name.toLowerCase().contains(_query))
                       m,
                 ];
                 if (shown.isEmpty) {

@@ -289,15 +289,17 @@ class _ExpenseAddSheetState extends ConsumerState<_ExpenseAddSheet> {
     final grp = state.groupById(_groupId);
     final cleanTitle = _title.trim().isNotEmpty ? _title.trim() : grp.name;
 
-    ref.read(financeLedgerProvider.notifier).addExpense(
-      title: cleanTitle,
-      amount: _amount,
-      groupId: _groupId,
-      spentOn: _spentOn,
-      isPaid: _isPaid,
-      accountName: _accountName,
-      attachments: List<ExpenseAttachment>.unmodifiable(_attachments),
-    );
+    ref
+        .read(financeLedgerProvider.notifier)
+        .addExpense(
+          title: cleanTitle,
+          amount: _amount,
+          groupId: _groupId,
+          spentOn: _spentOn,
+          isPaid: _isPaid,
+          accountName: _accountName,
+          attachments: List<ExpenseAttachment>.unmodifiable(_attachments),
+        );
     if (mounted) {
       Navigator.of(context).pop();
     }

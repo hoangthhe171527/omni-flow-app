@@ -248,7 +248,9 @@ class _SubtaskCreateSheetState extends ConsumerState<SubtaskCreateSheet> {
                       child: _busy
                           ? const SizedBox.square(
                               dimension: 18,
-                              child: CircularProgressIndicator.adaptive(strokeWidth: 2),
+                              child: CircularProgressIndicator.adaptive(
+                                strokeWidth: 2,
+                              ),
                             )
                           : const Text('Tạo'),
                     ),

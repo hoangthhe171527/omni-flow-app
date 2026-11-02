@@ -189,10 +189,7 @@ class _ZoomTile extends StatelessWidget {
               for (final task in tasks) ...[
                 const SizedBox(height: 5),
                 if (task.isDone)
-                  Opacity(
-                    opacity: 0.78,
-                    child: _taskChip(scheme, task.title),
-                  )
+                  Opacity(opacity: 0.78, child: _taskChip(scheme, task.title))
                 else
                   _taskChip(scheme, task.title),
               ],

@@ -291,8 +291,11 @@ class _CustomerDetailPageState extends ConsumerState<CustomerDetailPage> {
                         onBeginEdit: _beginEdit,
                         onEndEdit: _endEdit,
                         onSave: save,
-                        onPickOwner: () =>
-                            _pickOwner(data, activity: activityOn, opps: oppsOn),
+                        onPickOwner: () => _pickOwner(
+                          data,
+                          activity: activityOn,
+                          opps: oppsOn,
+                        ),
                         onPickTags: () =>
                             _pickTags(data, activity: activityOn, opps: oppsOn),
                       ),

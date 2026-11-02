@@ -611,9 +611,7 @@ class _ExpensesPageState extends ConsumerState<ExpensesPage> {
             Container(
               padding: const EdgeInsets.only(top: 11),
               decoration: BoxDecoration(
-                border: Border(
-                  top: BorderSide(color: p.divider, width: 0.5),
-                ),
+                border: Border(top: BorderSide(color: p.divider, width: 0.5)),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -834,11 +832,7 @@ class _ExpensesPageState extends ConsumerState<ExpensesPage> {
                     height: 12,
                     child: Stack(
                       children: [
-                        for (
-                          var i = 0;
-                          i < suggestions.length && i < 4;
-                          i++
-                        )
+                        for (var i = 0; i < suggestions.length && i < 4; i++)
                           Positioned(
                             left: i * 6.5,
                             top: 0.5,
@@ -922,9 +916,7 @@ class _ExpensesPageState extends ConsumerState<ExpensesPage> {
           if (state.recurOpen)
             Container(
               decoration: BoxDecoration(
-                border: Border(
-                  top: BorderSide(color: p.divider, width: 0.5),
-                ),
+                border: Border(top: BorderSide(color: p.divider, width: 0.5)),
               ),
               child: Column(
                 children: [

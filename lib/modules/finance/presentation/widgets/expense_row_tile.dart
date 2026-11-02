@@ -126,21 +126,12 @@ class _ExpenseRowTileState extends ConsumerState<ExpenseRowTile> {
     if (left <= 0) return;
     final half = ((left / 2) / 1000).round() * 1000;
     final chips = <({String label, int amount})>[
-      (
-        label: 'Tất cả · ${FinanceMonthUtils.formatNumber(left)}',
-        amount: left,
-      ),
+      (label: 'Tất cả · ${FinanceMonthUtils.formatNumber(left)}', amount: left),
       if (half > 0 && half < left)
-        (
-          label: '50% · ${FinanceMonthUtils.formatNumber(half)}',
-          amount: half,
-        ),
+        (label: '50% · ${FinanceMonthUtils.formatNumber(half)}', amount: half),
       for (final preset in [1000000, 5000000])
         if (preset < left)
-          (
-            label: FinanceMonthUtils.formatNumber(preset),
-            amount: preset,
-          ),
+          (label: FinanceMonthUtils.formatNumber(preset), amount: preset),
     ];
 
     final res = await showExpenseKeypadSheet(
@@ -152,11 +143,13 @@ class _ExpenseRowTileState extends ConsumerState<ExpenseRowTile> {
       chips: chips,
     );
     if (res != null && res.amount > 0 && mounted) {
-      ref.read(financeLedgerProvider.notifier).recordPayment(
-        item.id,
-        amount: math.min(res.amount, left),
-        accountName: res.accountName,
-      );
+      ref
+          .read(financeLedgerProvider.notifier)
+          .recordPayment(
+            item.id,
+            amount: math.min(res.amount, left),
+            accountName: res.accountName,
+          );
     }
   }
 
@@ -431,10 +424,7 @@ class _ExpenseRowTileState extends ConsumerState<ExpenseRowTile> {
         Container(
           width: 6,
           height: 6,
-          decoration: BoxDecoration(
-            color: p.amber,
-            shape: BoxShape.circle,
-          ),
+          decoration: BoxDecoration(color: p.amber, shape: BoxShape.circle),
         ),
         const SizedBox(width: 4),
         Text(

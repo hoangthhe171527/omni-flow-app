@@ -5,21 +5,21 @@ import 'core/error/crash_reporting.dart';
 import 'modules/notifications/application/push_notifications.dart';
 
 Future<void> main() async {
-  // FCM needs its background handler registered before runApp. Otherwise a
-  // data-bearing push received while Android starts a killed app can be lost.
-  WidgetsFlutterBinding.ensureInitialized();
-  try {
-    await initializePushRuntime();
-  } catch (_) {
-    // A build without Firebase configuration must still be able to open.
-    // `PushNotifications.start` retries after the user has authenticated.
-  }
-
-  // Everything after this point runs inside the guarded zone, so a failure in
-  // bootstrap() is reported rather than becoming a blank screen nobody can
-  // explain. Push initialisation stays outside it deliberately: it has to
-  // complete before runApp, and it already handles its own absence.
-  await CrashReporting.runGuarded(() async {
-    runApp(await bootstrap());
-  });
+  await CrashReporting.runGuarded(
+    () async {
+      runApp(await bootstrap());
+    },
+    initialize: () async {
+      // Flutter bindings and runApp must be created in the same zone. FCM still
+      // registers before runApp so a data push that wakes a killed app is not
+      // lost, while Crashlytics can start after Firebase is available.
+      WidgetsFlutterBinding.ensureInitialized();
+      try {
+        await initializePushRuntime();
+      } catch (_) {
+        // A build without Firebase configuration must still be able to open.
+        // `PushNotifications.start` retries after authentication.
+      }
+    },
+  );
 }

@@ -49,9 +49,7 @@ class _ExpenseDetailSheetState extends ConsumerState<_ExpenseDetailSheet> {
   @override
   void initState() {
     super.initState();
-    final item = ref
-        .read(financeLedgerProvider)
-        .findItemById(widget.expenseId);
+    final item = ref.read(financeLedgerProvider).findItemById(widget.expenseId);
     _lastSyncedTitle = item?.title ?? '';
     _titleCtrl = TextEditingController(text: _lastSyncedTitle);
     _titleFocus = FocusNode()
@@ -71,9 +69,7 @@ class _ExpenseDetailSheetState extends ConsumerState<_ExpenseDetailSheet> {
 
   void _commitTitle() {
     final text = _titleCtrl.text.trim();
-    final item = ref
-        .read(financeLedgerProvider)
-        .findItemById(widget.expenseId);
+    final item = ref.read(financeLedgerProvider).findItemById(widget.expenseId);
     if (item == null) return;
     if (text.isEmpty) {
       _titleCtrl.text = item.title;
@@ -184,7 +180,9 @@ class _ExpenseDetailSheetState extends ConsumerState<_ExpenseDetailSheet> {
     if (picked == null || !mounted) return;
 
     final nextIdx = item.attachments.length + 1;
-    final dm = FinanceMonthUtils.shortDayMonth(item.spentOn).replaceAll('/', '');
+    final dm = FinanceMonthUtils.shortDayMonth(
+      item.spentOn,
+    ).replaceAll('/', '');
     final att = switch (picked) {
       'photo' => ExpenseAttachment(
         id: 'att_${item.id}_$nextIdx',
@@ -342,21 +340,12 @@ class _ExpenseDetailSheetState extends ConsumerState<_ExpenseDetailSheet> {
     if (left <= 0) return;
     final half = ((left / 2) / 1000).round() * 1000;
     final chips = <({String label, int amount})>[
-      (
-        label: 'Tất cả · ${FinanceMonthUtils.formatNumber(left)}',
-        amount: left,
-      ),
+      (label: 'Tất cả · ${FinanceMonthUtils.formatNumber(left)}', amount: left),
       if (half > 0 && half < left)
-        (
-          label: '50% · ${FinanceMonthUtils.formatNumber(half)}',
-          amount: half,
-        ),
+        (label: '50% · ${FinanceMonthUtils.formatNumber(half)}', amount: half),
       for (final preset in [1000000, 5000000])
         if (preset < left)
-          (
-            label: FinanceMonthUtils.formatNumber(preset),
-            amount: preset,
-          ),
+          (label: FinanceMonthUtils.formatNumber(preset), amount: preset),
     ];
 
     final res = await showExpenseKeypadSheet(
@@ -369,11 +358,9 @@ class _ExpenseDetailSheetState extends ConsumerState<_ExpenseDetailSheet> {
     );
     if (res != null && res.amount > 0 && mounted) {
       final add = math.min(res.amount, left);
-      ref.read(financeLedgerProvider.notifier).recordPayment(
-        item.id,
-        amount: add,
-        accountName: res.accountName,
-      );
+      ref
+          .read(financeLedgerProvider.notifier)
+          .recordPayment(item.id, amount: add, accountName: res.accountName);
       if (add >= left && mounted) {
         Navigator.of(context).pop();
       }
@@ -649,11 +636,7 @@ class _ExpenseDetailSheetState extends ConsumerState<_ExpenseDetailSheet> {
                             ),
                           ),
                           const SizedBox(width: 5),
-                          Icon(
-                            Icons.edit_outlined,
-                            size: 15,
-                            color: p.muted,
-                          ),
+                          Icon(Icons.edit_outlined, size: 15, color: p.muted),
                         ],
                       ),
                     ),
@@ -903,11 +886,7 @@ class _ExpenseDetailSheetState extends ConsumerState<_ExpenseDetailSheet> {
               borderRadius: BorderRadius.circular(99),
               child: Padding(
                 padding: const EdgeInsets.all(3),
-                child: Icon(
-                  Icons.close_rounded,
-                  size: 13,
-                  color: p.muted,
-                ),
+                child: Icon(Icons.close_rounded, size: 13, color: p.muted),
               ),
             ),
           ],
@@ -935,11 +914,7 @@ class _ExpenseDetailSheetState extends ConsumerState<_ExpenseDetailSheet> {
             color: danger ? p.dangerSoft : p.control,
             shape: BoxShape.circle,
           ),
-          child: Icon(
-            icon,
-            size: 15,
-            color: danger ? p.danger : p.ink2,
-          ),
+          child: Icon(icon, size: 15, color: danger ? p.danger : p.ink2),
         ),
       ),
     );

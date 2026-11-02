@@ -14,11 +14,7 @@ import 'package:omni_app/security/session/session_controller.dart';
 
 void main() {
   Widget buildTestApp() {
-    return const ProviderScope(
-      child: MaterialApp(
-        home: ExpensesPage(),
-      ),
-    );
+    return const ProviderScope(child: MaterialApp(home: ExpensesPage()));
   }
 
   group('FinanceModule — hiển thị trong mục Tất cả (DirectoryPage)', () {
@@ -29,31 +25,32 @@ void main() {
       FinancePermissions.membersRead, // 'membership.members.read'
       FinancePermissions.dashboardRead, // 'analytics.dashboard.read'
     ]) {
-      test('hiện ô "Sổ chi phí" trong nhóm Đội & quản trị khi có quyền $perm', () {
-        final container = ProviderContainer(
-          overrides: [
-            modulesProvider.overrideWithValue(appModules),
-            sessionProvider.overrideWithValue(
-              Session(
-                status: SessionStatus.authenticated,
-                policy: AccessPolicy({perm}),
+      test(
+        'hiện ô "Sổ chi phí" trong nhóm Đội & quản trị khi có quyền $perm',
+        () {
+          final container = ProviderContainer(
+            overrides: [
+              modulesProvider.overrideWithValue(appModules),
+              sessionProvider.overrideWithValue(
+                Session(
+                  status: SessionStatus.authenticated,
+                  policy: AccessPolicy({perm}),
+                ),
               ),
-            ),
-          ],
-        );
-        addTearDown(container.dispose);
+            ],
+          );
+          addTearDown(container.dispose);
 
-        final adminEntries =
-            container.read(directoryGroupsProvider)[NavArea.admin] ?? const [];
-        expect(
-          adminEntries.map((e) => e.label),
-          contains('Sổ chi phí'),
-        );
-        expect(
-          adminEntries.map((e) => e.routeName),
-          contains(FinanceRoutes.expenses),
-        );
-      });
+          final adminEntries =
+              container.read(directoryGroupsProvider)[NavArea.admin] ??
+              const [];
+          expect(adminEntries.map((e) => e.label), contains('Sổ chi phí'));
+          expect(
+            adminEntries.map((e) => e.routeName),
+            contains(FinanceRoutes.expenses),
+          );
+        },
+      );
     }
   });
 
@@ -179,10 +176,7 @@ void main() {
         await tester.tap(find.text('Loại chi phí (theo nhóm)'));
         await tester.pumpAndSettle();
 
-        expect(
-          find.text('Đang lọc: Loại chi phí (theo nhóm)'),
-          findsOneWidget,
-        );
+        expect(find.text('Đang lọc: Loại chi phí (theo nhóm)'), findsOneWidget);
         expect(find.text('Nhân sự & tiền lương'), findsWidgets);
         expect(find.text('Tiếp thị & bán hàng'), findsWidgets);
       },
