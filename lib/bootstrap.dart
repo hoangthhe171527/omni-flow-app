@@ -19,6 +19,7 @@ import 'modules/auth/data/google_identity_service.dart';
 import 'modules/channels/channels_module.dart';
 import 'modules/customers/customers_module.dart';
 import 'modules/dashboard/dashboard_module.dart';
+import 'modules/finance/finance_module.dart';
 import 'modules/inbox/inbox_module.dart';
 import 'modules/notifications/notifications_module.dart';
 import 'modules/opportunities/opportunities.dart'
@@ -43,6 +44,7 @@ const List<OmniModule> appModules = [
   PlansModule(),
   CustomersModule(),
   OpportunitiesModule(),
+  FinanceModule(),
   TeamModule(),
   ChannelsModule(),
   NotificationsModule(),
