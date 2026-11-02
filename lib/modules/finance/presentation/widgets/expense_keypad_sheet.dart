@@ -323,69 +323,85 @@ class _ExpenseKeypadSheetState extends State<_ExpenseKeypadSheet> {
                 SizedBox(
                   height: 17,
                   child: _hasOp
-                      ? Text(
-                          '${_prettyExpr(_expr)} =',
-                          style: OmniType.caption.copyWith(
-                            color: p.muted,
-                            fontFeatures: const [FontFeature.tabularFigures()],
+                      ? FittedBox(
+                          fit: BoxFit.scaleDown,
+                          alignment: Alignment.centerRight,
+                          child: Text(
+                            '${_prettyExpr(_expr)} =',
+                            maxLines: 1,
+                            style: OmniType.caption.copyWith(
+                              color: p.muted,
+                              fontFeatures: const [
+                                FontFeature.tabularFigures(),
+                              ],
+                            ),
                           ),
                         )
                       : null,
                 ),
                 const SizedBox(height: 1),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.end,
-                  crossAxisAlignment: CrossAxisAlignment.baseline,
-                  textBaseline: TextBaseline.alphabetic,
-                  children: [
-                    Flexible(
-                      child: AnimatedContainer(
-                        duration: const Duration(milliseconds: 120),
-                        padding: _fresh
-                            ? const EdgeInsets.symmetric(
-                                horizontal: 7,
-                                vertical: 1,
-                              )
-                            : EdgeInsets.zero,
-                        decoration: BoxDecoration(
-                          color: _fresh ? p.primarySoft : Colors.transparent,
-                          borderRadius: BorderRadius.circular(7),
-                        ),
-                        child: Text(
-                          FinanceMonthUtils.formatNumber(val),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: OmniType.moneyHero.copyWith(
-                            color: _fresh ? p.primaryInk : p.ink,
-                            fontWeight: FontWeight.w600,
-                            fontFeatures: const [FontFeature.tabularFigures()],
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: Alignment.centerRight,
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.baseline,
+                      textBaseline: TextBaseline.alphabetic,
+                      children: [
+                        AnimatedContainer(
+                          duration: const Duration(milliseconds: 120),
+                          padding: _fresh
+                              ? const EdgeInsets.symmetric(
+                                  horizontal: 7,
+                                  vertical: 1,
+                                )
+                              : EdgeInsets.zero,
+                          decoration: BoxDecoration(
+                            color: _fresh ? p.primarySoft : Colors.transparent,
+                            borderRadius: BorderRadius.circular(7),
+                          ),
+                          child: Text(
+                            FinanceMonthUtils.formatNumber(val),
+                            maxLines: 1,
+                            style: OmniType.moneyHero.copyWith(
+                              color: _fresh ? p.primaryInk : p.ink,
+                              fontWeight: FontWeight.w600,
+                              fontFeatures: const [
+                                FontFeature.tabularFigures(),
+                              ],
+                            ),
                           ),
                         ),
-                      ),
+                        const SizedBox(width: 4),
+                        Text(
+                          'đ',
+                          style: OmniType.section.copyWith(
+                            color: p.muted,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
                     ),
-                    const SizedBox(width: 4),
-                    Text(
-                      'đ',
-                      style: OmniType.section.copyWith(
-                        color: p.muted,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ],
+                  ),
                 ),
                 const SizedBox(height: 3),
                 SizedBox(
                   height: 16,
                   child: hintText.isNotEmpty
-                      ? Text(
-                          hintText,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: OmniType.micro.copyWith(
-                            color: hintDanger ? p.danger : p.muted,
-                            fontWeight: hintDanger
-                                ? FontWeight.w600
-                                : FontWeight.w500,
+                      ? FittedBox(
+                          fit: BoxFit.scaleDown,
+                          alignment: Alignment.centerRight,
+                          child: Text(
+                            hintText,
+                            maxLines: 1,
+                            style: OmniType.micro.copyWith(
+                              color: hintDanger ? p.danger : p.muted,
+                              fontWeight: hintDanger
+                                  ? FontWeight.w600
+                                  : FontWeight.w500,
+                            ),
                           ),
                         )
                       : null,
