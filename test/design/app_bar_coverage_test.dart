@@ -2,10 +2,10 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 
-/// 12 màn GỐC dùng `OmniAppBar`; màn con thì không.
+/// Các màn GỐC dùng `OmniAppBar`; màn con thì không.
 ///
 /// Bài này đọc MÃ NGUỒN thay vì dựng widget: câu hỏi là "có màn gốc nào bị bỏ
-/// quên không", và không dựng được cả 12 màn trong một bài kiểm. Cùng loại câu
+/// quên không", và không dựng được cả các màn trong một bài kiểm. Cùng loại câu
 /// hỏi đã để lọt lỗi realtime ở "Dòng việc sống" — bốn provider khai là có
 /// realtime, không provider nào mở kênh, và không bài kiểm nào hỏi "còn chỗ
 /// nào chưa nối không".
@@ -15,7 +15,7 @@ import 'package:flutter_test/flutter_test.dart';
 /// Back và một tiêu đề nói rõ đang làm gì, và một nút tài khoản ở đó chỉ mời
 /// người ta đi lạc giữa chừng một việc đang làm dở.
 void main() {
-  /// 11 màn có `ModuleNavEntry` + màn "Thêm".
+  /// Các màn có `ModuleNavEntry` + màn "Thêm".
   const rootScreens = [
     'lib/modules/plans/presentation/timeline_page.dart',
     'lib/modules/plans/presentation/teams_page.dart',
@@ -24,6 +24,7 @@ void main() {
     'lib/modules/notifications/presentation/notifications_page.dart',
     'lib/modules/customers/presentation/customers_page.dart',
     'lib/modules/opportunities/presentation/pipeline_page.dart',
+    'lib/modules/finance/presentation/expenses_page.dart',
     'lib/modules/channels/presentation/channels_page.dart',
     'lib/modules/team/presentation/team_page.dart',
     'lib/modules/settings/presentation/my_permissions_page.dart',
@@ -57,7 +58,7 @@ void main() {
   }
 
   test('danh sách này khớp số màn có ModuleNavEntry', () {
-    // 11 nav entry + 1 màn "Thêm". Thêm một nav entry mới mà quên màn của nó ở
+    // N nav entry + 1 màn "Thêm". Thêm một nav entry mới mà quên màn của nó ở
     // trên thì con số lệch, và bài này nói ra thay vì để nó trôi.
     final entries = Directory('lib/modules')
         .listSync(recursive: true)

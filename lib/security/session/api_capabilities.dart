@@ -23,6 +23,7 @@ abstract final class ApiCapability {
   static const subtaskFields = 'tasks.subtask_fields';
   static const commentAttachments = 'tasks.comment_attachments';
   static const taskCopyOptions = 'tasks.copy_options';
+  static const financeExpenses = 'finance.expenses';
 }
 
 /// `ref.watch(apiSupportsProvider(ApiCapability.taskPin))`. Dựng lại khi phiên
