@@ -121,7 +121,9 @@ class _AccountPageState extends ConsumerState<AccountPage> {
                       index: _themeModes.indexOf(themeMode),
                       onChanged: (i) {
                         HapticFeedback.selectionClick();
-                        ref.read(themeModeProvider.notifier).set(_themeModes[i]);
+                        ref
+                            .read(themeModeProvider.notifier)
+                            .set(_themeModes[i]);
                       },
                     ),
                   ],

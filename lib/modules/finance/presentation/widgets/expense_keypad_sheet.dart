@@ -9,10 +9,7 @@ import 'finance_palette.dart';
 /// Kết quả trả về từ bàn phím số kiêm máy tính (`showExpenseKeypadSheet`).
 @immutable
 class ExpenseKeypadResult {
-  const ExpenseKeypadResult({
-    required this.amount,
-    this.accountName,
-  });
+  const ExpenseKeypadResult({required this.amount, this.accountName});
 
   final int amount;
   final String? accountName;
@@ -129,9 +126,9 @@ class _ExpenseKeypadSheetState extends State<_ExpenseKeypadSheet> {
         if (widget.maxAmount != null && v > widget.maxAmount!) {
           v = widget.maxAmount!;
         }
-        Navigator.of(context).pop(
-          ExpenseKeypadResult(amount: v, accountName: _accountName),
-        );
+        Navigator.of(
+          context,
+        ).pop(ExpenseKeypadResult(amount: v, accountName: _accountName));
         return;
       }
       if (k == '+' || k == '-') {
@@ -477,12 +474,7 @@ class _ExpenseKeypadSheetState extends State<_ExpenseKeypadSheet> {
                   const SizedBox(width: 7),
                   _buildKey(p, label: '0', keyVal: '0'),
                   const SizedBox(width: 7),
-                  _buildKey(
-                    p,
-                    label: 'C',
-                    keyVal: 'c',
-                    tone: _KeyTone.subKey,
-                  ),
+                  _buildKey(p, label: 'C', keyVal: 'c', tone: _KeyTone.subKey),
                   const SizedBox(width: 7),
                   _buildKey(
                     p,
@@ -520,10 +512,7 @@ class _ExpenseKeypadSheetState extends State<_ExpenseKeypadSheet> {
         decoration: BoxDecoration(
           color: active ? p.primarySoft : p.card,
           borderRadius: BorderRadius.circular(99),
-          border: Border.all(
-            color: active ? p.selLine : p.line,
-            width: 0.5,
-          ),
+          border: Border.all(color: active ? p.selLine : p.line, width: 0.5),
         ),
         child: Text(
           chip.label,

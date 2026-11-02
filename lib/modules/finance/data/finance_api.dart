@@ -82,11 +82,7 @@ class FinanceApi {
     final ym = FinanceMonthUtils.toYearMonth(month);
     final resp = await _api.get(
       '/finance/expenses',
-      query: {
-        'month': ym,
-        'group_id': ?groupId,
-        'status': ?status,
-      },
+      query: {'month': ym, 'group_id': ?groupId, 'status': ?status},
     );
     return MonthLedger.fromJson(resp.object);
   }

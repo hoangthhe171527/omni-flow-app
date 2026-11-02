@@ -27,10 +27,7 @@ class ThreadOutbox {
     try {
       final decoded = jsonDecode(raw);
       if (decoded is! List) return const [];
-      return [
-        for (final entry in decoded)
-          ?Message.fromOutboxJson(entry),
-      ];
+      return [for (final entry in decoded) ?Message.fromOutboxJson(entry)];
     } on FormatException {
       return const [];
     }
@@ -986,11 +983,7 @@ class ThreadController
     }
   }
 
-  void _failPersistedDraft(
-    String draftId,
-    String reason, {
-    String? errorCode,
-  }) {
+  void _failPersistedDraft(String draftId, String reason, {String? errorCode}) {
     final outbox = _outbox;
     if (outbox == null) return;
     try {

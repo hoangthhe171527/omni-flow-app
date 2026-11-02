@@ -87,7 +87,8 @@ class ExpenseAttachment {
   final String sizeLabel;
   final String uploadedAt;
 
-  bool get isPdf => kind.toLowerCase() == 'pdf' || name.toLowerCase().endsWith('.pdf');
+  bool get isPdf =>
+      kind.toLowerCase() == 'pdf' || name.toLowerCase().endsWith('.pdf');
 
   Map<String, dynamic> toJson() => {
     'id': id,
@@ -317,10 +318,7 @@ abstract final class FinanceMonthUtils {
       if (!seen.add(dm)) continue;
       final iso = toIsoDate(dm, ym);
       final isToday = dm == defaultDm && ym == '2026-11';
-      result.add((
-        isoDate: iso,
-        label: '${isToday ? 'Hôm nay · ' : ''}$dm/$y',
-      ));
+      result.add((isoDate: iso, label: '${isToday ? 'Hôm nay · ' : ''}$dm/$y'));
     }
     return result;
   }
@@ -703,9 +701,7 @@ class ExpenseItem {
       for (final a in accounts)
         if (!a.archived) a.id,
     };
-    final lastPaymentAcc = payments.isNotEmpty
-        ? payments.last.accountId
-        : null;
+    final lastPaymentAcc = payments.isNotEmpty ? payments.last.accountId : null;
     final cashAcc = accounts
         .where((a) => !a.archived && a.kind == MoneyAccountKind.cash)
         .map((a) => a.id)
@@ -1045,8 +1041,7 @@ class LedgerSummary {
 
   int get owedCount => unpaidCount + partialCount;
 
-  double get paidRatio =>
-      total > 0 ? (paid / total).clamp(0.0, 1.0) : 1.0;
+  double get paidRatio => total > 0 ? (paid / total).clamp(0.0, 1.0) : 1.0;
 
   /// Thông tin pill so sánh với tháng liền trước (`+8% vs T10` hoặc `−14% vs T10`).
   ({String text, bool isIncrease})? get deltaPill {

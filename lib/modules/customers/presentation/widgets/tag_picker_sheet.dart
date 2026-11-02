@@ -193,9 +193,7 @@ class _TagPickerSheetState extends State<_TagPickerSheet> {
               children: [
                 TextButton(
                   onPressed: () => Navigator.of(context).pop(),
-                  style: TextButton.styleFrom(
-                    minimumSize: const Size(44, 44),
-                  ),
+                  style: TextButton.styleFrom(minimumSize: const Size(44, 44)),
                   child: const Text('Huỷ'),
                 ),
                 const Spacer(),

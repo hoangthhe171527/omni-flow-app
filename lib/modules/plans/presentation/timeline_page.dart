@@ -208,7 +208,9 @@ class _Feed extends ConsumerWidget {
               ),
             ),
           ),
-        const SliverToBoxAdapter(child: SizedBox(height: OmniSpacing.bottomSafe)),
+        const SliverToBoxAdapter(
+          child: SizedBox(height: OmniSpacing.bottomSafe),
+        ),
       ],
     );
   }

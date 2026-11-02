@@ -26,13 +26,7 @@ abstract final class FinancePermissions {
     membersRead,
     dashboardRead,
   ];
-  static const List<String> all = [
-    base,
-    read,
-    create,
-    update,
-    delete,
-  ];
+  static const List<String> all = [base, read, create, update, delete];
 
   static ResourceAccess of(AccessPolicy policy) {
     if (policy.canAny(anyRead)) {

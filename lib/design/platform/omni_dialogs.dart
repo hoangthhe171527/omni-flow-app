@@ -322,4 +322,3 @@ PageRoute<T> omniPageRoute<T>({
     fullscreenDialog: fullscreenDialog,
   );
 }
-

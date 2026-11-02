@@ -182,7 +182,9 @@ class _PairPageState extends ConsumerState<PairPage>
               ),
             ),
             const SizedBox(height: 18),
-            const _Hint(text: 'Mã đổi sau khoảng 100 giây — lưu xong quét luôn.'),
+            const _Hint(
+              text: 'Mã đổi sau khoảng 100 giây — lưu xong quét luôn.',
+            ),
           ],
         );
       case PairingView.scanned:

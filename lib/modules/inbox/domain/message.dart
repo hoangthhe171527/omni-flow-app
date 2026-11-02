@@ -306,6 +306,7 @@ class Message {
               : this.errorCode),
     );
   }
+
   Map<String, dynamic> toOutboxJson() => {
     'id': id,
     'client_id': clientId ?? id,

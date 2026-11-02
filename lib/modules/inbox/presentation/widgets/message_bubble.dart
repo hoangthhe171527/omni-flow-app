@@ -590,14 +590,15 @@ class _ReplySwipeState extends State<_ReplySwipe>
   @override
   void initState() {
     super.initState();
-    _controller = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 180),
-    )..addListener(() {
-        if (!mounted) return;
-        final t = Curves.easeOutCubic.transform(_controller!.value);
-        setState(() => _distance = _releaseStart * (1 - t));
-      });
+    _controller =
+        AnimationController(
+          vsync: this,
+          duration: const Duration(milliseconds: 180),
+        )..addListener(() {
+          if (!mounted) return;
+          final t = Curves.easeOutCubic.transform(_controller!.value);
+          setState(() => _distance = _releaseStart * (1 - t));
+        });
   }
 
   @override
