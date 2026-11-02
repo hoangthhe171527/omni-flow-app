@@ -114,6 +114,19 @@ void main() {
       expect(line.style?.color, tones.upcoming.foreground);
       expect(line.style?.color, isNot(tones.late.foreground));
     });
+
+    testWidgets('màn hẹp: chip xuống dòng, không tràn ngang', (tester) async {
+      tester.view.physicalSize = const Size(358, 844);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+
+      await show(tester, kpi(delivered: 28), previousDelivered: 22);
+
+      expect(tester.takeException(), isNull);
+      final number = tester.getRect(find.text('28'));
+      final comparison = tester.getRect(find.text('+6 so với tháng 8'));
+      expect(comparison.top, greaterThan(number.bottom));
+    });
   });
 
   testWidgets('câu "chưa khai bảng mốc" là chữ nhỏ, không tranh với con số', (

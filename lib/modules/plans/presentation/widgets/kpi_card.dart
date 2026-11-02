@@ -282,9 +282,16 @@ class _NumberRow extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     final text = Theme.of(context).textTheme;
     final tones = OmniTaskTones.of(context);
+    final comparison = switch (previousDelivered) {
+      final int previous => _DeltaChip(
+        delta: kpi.delivered - previous,
+        previousMonth: DateTime(month.year, month.month - 1),
+        tone: kpi.delivered > previous ? tones.today : tones.upcoming,
+      ),
+      null => null,
+    };
 
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.end,
+    final summary = Row(
       children: [
         Text(
           '${kpi.delivered}',
@@ -308,13 +315,36 @@ class _NumberRow extends StatelessWidget {
             ),
           ),
         ),
-        if (previousDelivered case final int previous)
-          _DeltaChip(
-            delta: kpi.delivered - previous,
-            previousMonth: DateTime(month.year, month.month - 1),
-            tone: kpi.delivered > previous ? tones.today : tones.upcoming,
-          ),
       ],
+    );
+
+    if (comparison == null) return summary;
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        // Ở chiều rộng nội dung dưới 344px, ba cụm chữ không còn đủ chỗ dù
+        // phần mô tả đã co giãn. Đưa mốc so sánh xuống dòng giữ nguyên cỡ chữ
+        // và thứ bậc đọc, thay vì thu nhỏ hoặc cắt mất thông tin.
+        if (constraints.maxWidth < 344) {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              summary,
+              const SizedBox(height: OmniSpacing.sm),
+              comparison,
+            ],
+          );
+        }
+
+        return Row(
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            Expanded(child: summary),
+            const SizedBox(width: OmniSpacing.sm),
+            comparison,
+          ],
+        );
+      },
     );
   }
 }

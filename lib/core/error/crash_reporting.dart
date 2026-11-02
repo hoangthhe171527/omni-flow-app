@@ -27,12 +27,31 @@ abstract final class CrashReporting {
   /// build without Firebase configuration.
   static bool get isActive => _active;
 
-  /// Installs the handlers, then runs [body] inside a guarded zone.
+  /// Runs [initialize], installs the handlers, then runs [body] inside one
+  /// guarded zone.
   ///
   /// [body] runs whether or not reporting could be started: a build without
   /// Firebase credentials — a fresh clone, or CI without secrets — must still
-  /// open. That mirrors how push initialisation already behaves.
-  static Future<void> runGuarded(Future<void> Function() body) async {
+  /// open. [initialize] exists for platform setup that must happen before the
+  /// reporter starts (Firebase/push and Flutter bindings). Keeping it in the
+  /// same zone as [body] prevents Flutter's `Zone mismatch` startup failure.
+  static Future<void> runGuarded(
+    Future<void> Function() body, {
+    Future<void> Function()? initialize,
+  }) async {
+    await runZonedGuarded(
+      () async {
+        if (initialize != null) await initialize();
+        await _installHandlers();
+        await body();
+      },
+      (error, stack) {
+        _record(error, stack, fatal: true);
+      },
+    );
+  }
+
+  static Future<void> _installHandlers() async {
     try {
       // Debug builds report to the console instead. Sending them would bury the
       // real field crashes under every exception raised while developing.
@@ -56,10 +75,6 @@ abstract final class CrashReporting {
       _active = false;
       debugPrint('Crash reporting unavailable: $error\n$stackTrace');
     }
-
-    await runZonedGuarded(body, (error, stack) {
-      _record(error, stack, fatal: true);
-    });
   }
 
   /// Records a handled error — something the app recovered from but that still
