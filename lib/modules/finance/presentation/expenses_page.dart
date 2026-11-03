@@ -11,11 +11,11 @@ import 'widgets/expense_row_tile.dart';
 import 'widgets/finance_palette.dart';
 
 /// Màn hình gốc **Sổ chi phí** (`lib/modules/finance/presentation/expenses_page.dart`),
-/// khớp 100% thiết kế và tương tác của `so-chi-phi-mobile.html` cùng các nâng cấp:
+/// đồng bộ dữ liệu trực tiếp với API `/api/v1/finance/*` và Web:
 /// - 5 khoản cố định hàng tháng (Chi phí kho, Điện nước, Lương nhân sự, Lãi vay, Lương kế toán dịch vụ)
 /// - Tìm kiếm theo số tiền (`450k`, `2.45tr`, `2.450.000`), ngày, loại, chứng từ
 /// - Sắp xếp đa chiều chuẩn iOS (`Ngày ghi nhận`, `Thời gian nhập`, `Ngày thanh toán`, `Loại chi phí`, `Số tiền`)
-/// - Đính kèm chứng từ / phiếu chi
+/// - Đính kèm chứng từ / phiếu chi thật lên máy chủ
 /// - Hiển thị toàn bộ số tiền rõ ràng, tự co giãn thông minh (`FittedBox`), tuyệt đối không cắt `...`
 class ExpensesPage extends ConsumerStatefulWidget {
   const ExpensesPage({super.key});
@@ -39,7 +39,10 @@ class _ExpensesPageState extends ConsumerState<ExpensesPage> {
 
   Future<void> _openMonthPickerMenu() async {
     final state = ref.read(financeLedgerProvider);
-    final months = FinanceSeedCatalog.allMonths.reversed.toList();
+    final months = FinanceMonthUtils.pickerMonths(
+      activeMonth: state.activeMonth,
+      clock: state.clock,
+    );
     final picked = await showFinancePopoverMenu<String>(
       context: context,
       anchorContext: _segMoreKey.currentContext,
@@ -50,15 +53,16 @@ class _ExpensesPageState extends ConsumerState<ExpensesPage> {
           FinancePopoverItem<String>(
             value: ym,
             label: FinanceMonthUtils.formatMonthFull(ym),
-            subtitle:
-                '${state.statsForMonth(ym).count} khoản · ${FinanceMonthUtils.formatVndSpace(state.statsForMonth(ym).total)}',
+            subtitle: state.statsForMonth(ym).loaded
+                ? '${state.statsForMonth(ym).count} khoản · ${FinanceMonthUtils.formatVndSpace(state.statsForMonth(ym).total)}'
+                : 'Chạm để tải dữ liệu',
             stackSubtitle: true,
             selected: ym == state.activeMonth,
           ),
       ],
     );
     if (picked != null && mounted) {
-      ref.read(financeLedgerProvider.notifier).selectMonth(picked);
+      await ref.read(financeLedgerProvider.notifier).selectMonth(picked);
     }
   }
 
@@ -108,6 +112,7 @@ class _ExpensesPageState extends ConsumerState<ExpensesPage> {
     final notifier = ref.read(financeLedgerProvider.notifier);
     final p = FinancePalette.of(context);
     final sortActive = state.sortMode != ExpenseSortMode.spentDateDesc;
+    final activeLoaded = state.isMonthLoaded(state.activeMonth);
 
     if (_searchCtrl.text != state.searchQuery) {
       _searchCtrl.value = TextEditingValue(
@@ -306,26 +311,50 @@ class _ExpensesPageState extends ConsumerState<ExpensesPage> {
                   ),
                   // Scrollable ledger content
                   Expanded(
-                    child: ListView(
-                      padding: const EdgeInsets.fromLTRB(16, 2, 16, 100),
-                      children: [
-                        // TIER 1: Summary Card
-                        _buildSummaryCard(p, state, notifier),
-                        // TIER 2: Monthly Recurring Card (5 khoản cố định)
-                        if (state.showRecurringCard)
-                          Padding(
-                            padding: const EdgeInsets.only(top: 10),
-                            child: _buildRecurringCard(p, state, notifier),
-                          ),
-                        // Active Filter / Sort Banner
-                        if (state.hasActiveFilter)
-                          Padding(
-                            padding: const EdgeInsets.only(top: 10),
-                            child: _buildActiveFilterBanner(p, state, notifier),
-                          ),
-                        // TIER 3: Grouped Expense List
-                        ..._buildGroupedSections(p, state),
-                      ],
+                    child: RefreshIndicator(
+                      onRefresh: notifier.refresh,
+                      color: p.primary,
+                      child: ListView(
+                        physics: const AlwaysScrollableScrollPhysics(),
+                        padding: const EdgeInsets.fromLTRB(16, 2, 16, 100),
+                        children: [
+                          if (state.isLoading && !activeLoaded)
+                            _buildLoadingCard(p, state)
+                          else if (state.errorMessage != null && !activeLoaded)
+                            _buildErrorCard(p, state.errorMessage!, notifier)
+                          else ...[
+                            if (state.errorMessage != null)
+                              Padding(
+                                padding: const EdgeInsets.only(bottom: 10),
+                                child: _buildInlineErrorBanner(
+                                  p,
+                                  state.errorMessage!,
+                                  notifier,
+                                ),
+                              ),
+                            // TIER 1: Summary Card
+                            _buildSummaryCard(p, state, notifier),
+                            // TIER 2: Monthly Recurring Card (5 khoản cố định)
+                            if (state.showRecurringCard)
+                              Padding(
+                                padding: const EdgeInsets.only(top: 10),
+                                child: _buildRecurringCard(p, state, notifier),
+                              ),
+                            // Active Filter / Sort Banner
+                            if (state.hasActiveFilter)
+                              Padding(
+                                padding: const EdgeInsets.only(top: 10),
+                                child: _buildActiveFilterBanner(
+                                  p,
+                                  state,
+                                  notifier,
+                                ),
+                              ),
+                            // TIER 3: Grouped Expense List
+                            ..._buildGroupedSections(p, state),
+                          ],
+                        ],
+                      ),
                     ),
                   ),
                 ],
@@ -350,16 +379,133 @@ class _ExpensesPageState extends ConsumerState<ExpensesPage> {
     );
   }
 
+  Widget _buildLoadingCard(FinancePalette p, FinanceLedgerState state) {
+    return Container(
+      margin: const EdgeInsets.only(top: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 36),
+      decoration: BoxDecoration(
+        color: p.card,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: p.line, width: 0.5),
+      ),
+      child: Column(
+        children: [
+          SizedBox(
+            width: 24,
+            height: 24,
+            child: CircularProgressIndicator(
+              strokeWidth: 2.4,
+              valueColor: AlwaysStoppedAnimation<Color>(p.primary),
+            ),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            'Đang tải sổ chi phí ${FinanceMonthUtils.formatMonthFull(state.activeMonth)}…',
+            textAlign: TextAlign.center,
+            style: OmniType.bodySm.copyWith(color: p.muted),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildErrorCard(
+    FinancePalette p,
+    String message,
+    FinanceLedgerNotifier notifier,
+  ) {
+    return Container(
+      margin: const EdgeInsets.only(top: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 28),
+      decoration: BoxDecoration(
+        color: p.card,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: p.line, width: 0.5),
+      ),
+      child: Column(
+        children: [
+          Icon(Icons.cloud_off_rounded, size: 32, color: p.danger),
+          const SizedBox(height: 10),
+          Text(
+            message,
+            textAlign: TextAlign.center,
+            style: OmniType.bodySm.copyWith(color: p.ink),
+          ),
+          const SizedBox(height: 14),
+          SizedBox(
+            height: 36,
+            child: FilledButton.icon(
+              onPressed: notifier.refresh,
+              icon: const Icon(Icons.refresh_rounded, size: 16),
+              label: const Text('Thử lại'),
+              style: FilledButton.styleFrom(
+                backgroundColor: p.primary,
+                foregroundColor: Colors.white,
+                elevation: 0,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildInlineErrorBanner(
+    FinancePalette p,
+    String message,
+    FinanceLedgerNotifier notifier,
+  ) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: p.dangerSoft,
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.error_outline_rounded, size: 16, color: p.danger),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              message,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: OmniType.caption.copyWith(color: p.danger),
+            ),
+          ),
+          const SizedBox(width: 8),
+          InkWell(
+            onTap: notifier.refresh,
+            borderRadius: BorderRadius.circular(6),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+              child: Text(
+                'Thử lại',
+                style: OmniType.caption.copyWith(
+                  color: p.danger,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildMonthSegmentedRow(
     FinancePalette p,
     FinanceLedgerState state,
     FinanceLedgerNotifier notifier,
   ) {
-    final defaultSeg = FinanceSeedCatalog.segMonths;
+    final defaultSeg = FinanceMonthUtils.recentThreeMonths(state.clock);
     final inDefaultSeg = defaultSeg.contains(state.activeMonth);
     final slots = inDefaultSeg
         ? defaultSeg
-        : <String>[state.activeMonth, '2026-10', '2026-11'];
+        : <String>[state.activeMonth, defaultSeg[1], defaultSeg[2]];
 
     return Row(
       children: [
@@ -607,6 +753,22 @@ class _ExpensesPageState extends ConsumerState<ExpensesPage> {
               ),
             ],
           ),
+          if (summary.excluded.count > 0 && summary.excluded.total != 0)
+            Padding(
+              padding: const EdgeInsets.only(top: 8),
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  'Ngoài chi phí: ${FinanceMonthUtils.formatVndSpace(summary.excluded.total)} (${summary.excluded.count} khoản không tính CP)',
+                  maxLines: 1,
+                  style: OmniType.micro.copyWith(
+                    color: p.muted,
+                    fontFeatures: const [FontFeature.tabularFigures()],
+                  ),
+                ),
+              ),
+            ),
           // Expandable group breakdown (grp-panel)
           if (state.grpOpen) ...[
             const SizedBox(height: 11),
@@ -638,6 +800,14 @@ class _ExpensesPageState extends ConsumerState<ExpensesPage> {
                       ],
                     ),
                   ),
+                  if (summary.byGroup.isEmpty)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 8),
+                      child: Text(
+                        'Chưa có phát sinh theo nhóm trong kỳ này.',
+                        style: OmniType.caption.copyWith(color: p.muted),
+                      ),
+                    ),
                   for (final g in summary.byGroup)
                     _buildGroupBreakdownRow(
                       p,
@@ -739,8 +909,13 @@ class _ExpensesPageState extends ConsumerState<ExpensesPage> {
     required bool selected,
     required VoidCallback onTap,
   }) {
-    final pct = total > 0 ? (g.amount / total * 100).round() : 0;
-    final ratio = total > 0 ? (g.amount / total).clamp(0.0, 1.0) : 0.0;
+    final isExcluded = !g.countsAsExpense;
+    final pct = (!isExcluded && total > 0 && g.amount > 0)
+        ? (g.amount / total * 100).round()
+        : 0;
+    final ratio = (!isExcluded && total > 0 && g.amount > 0)
+        ? (g.amount / total).clamp(0.0, 1.0)
+        : 0.0;
 
     return InkWell(
       onTap: onTap,
@@ -778,19 +953,23 @@ class _ExpensesPageState extends ConsumerState<ExpensesPage> {
                 ),
                 const SizedBox(width: 8),
                 Text(
-                  '$pct%',
+                  isExcluded ? 'Không tính CP' : '$pct%',
                   style: OmniType.micro.copyWith(
                     color: p.muted,
                     fontFeatures: const [FontFeature.tabularFigures()],
                   ),
                 ),
                 const SizedBox(width: 8),
-                Text(
-                  FinanceMonthUtils.formatVndSpace(g.amount),
-                  style: OmniType.caption.copyWith(
-                    color: p.ink,
-                    fontWeight: FontWeight.w600,
-                    fontFeatures: const [FontFeature.tabularFigures()],
+                FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Text(
+                    FinanceMonthUtils.formatVndSpace(g.amount),
+                    maxLines: 1,
+                    style: OmniType.caption.copyWith(
+                      color: p.ink,
+                      fontWeight: FontWeight.w600,
+                      fontFeatures: const [FontFeature.tabularFigures()],
+                    ),
                   ),
                 ),
               ],
@@ -822,6 +1001,7 @@ class _ExpensesPageState extends ConsumerState<ExpensesPage> {
     final monthNum = FinanceMonthUtils.monthNumberOf(state.activeMonth);
     final selectedCount = state.selectedRecurringCount;
     final selectedSum = state.selectedRecurringSum;
+    final allSum = state.allRecurringSum;
 
     return Container(
       decoration: BoxDecoration(
@@ -888,7 +1068,9 @@ class _ExpensesPageState extends ConsumerState<ExpensesPage> {
                           fit: BoxFit.scaleDown,
                           alignment: Alignment.centerLeft,
                           child: Text(
-                            '${suggestions.length} khoản · ${FinanceMonthUtils.formatVndSpace(state.allRecurringSum)}',
+                            allSum > 0
+                                ? '${suggestions.length} khoản · ${FinanceMonthUtils.formatVndSpace(allSum)}'
+                                : '${suggestions.length} khoản gợi ý · Chạm để nhập số tiền',
                             maxLines: 1,
                             style: OmniType.caption.copyWith(
                               color: p.muted,
@@ -902,10 +1084,12 @@ class _ExpensesPageState extends ConsumerState<ExpensesPage> {
                     ),
                   ),
                   const SizedBox(width: 6),
-                  // "Ghi tất cả" pill button
+                  // "Ghi tất cả" pill button (hoặc mở danh sách nếu chưa có số tiền lịch sử)
                   InkWell(
                     key: const ValueKey('finance-recur-commit-all'),
-                    onTap: () => notifier.commitRecurring(all: true),
+                    onTap: allSum > 0
+                        ? () => notifier.commitRecurring(all: true)
+                        : notifier.toggleRecurringExpanded,
                     borderRadius: BorderRadius.circular(99),
                     child: Container(
                       height: 28,
@@ -917,7 +1101,7 @@ class _ExpensesPageState extends ConsumerState<ExpensesPage> {
                         border: Border.all(color: p.primary, width: 1.2),
                       ),
                       child: Text(
-                        'Ghi tất cả',
+                        allSum > 0 ? 'Ghi tất cả' : 'Mở nhập',
                         style: OmniType.caption.copyWith(
                           color: p.primary,
                           fontWeight: FontWeight.w600,
@@ -1048,11 +1232,15 @@ class _ExpensesPageState extends ConsumerState<ExpensesPage> {
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
                                   Text(
-                                    FinanceMonthUtils.formatVndSpace(
-                                      state.recurAmt[i],
-                                    ),
+                                    state.recurAmt[i] > 0
+                                        ? FinanceMonthUtils.formatVndSpace(
+                                            state.recurAmt[i],
+                                          )
+                                        : 'Nhập số tiền',
                                     style: OmniType.caption.copyWith(
-                                      color: p.ink,
+                                      color: state.recurAmt[i] > 0
+                                          ? p.ink
+                                          : p.primary,
                                       fontWeight: FontWeight.w600,
                                       fontFeatures: const [
                                         FontFeature.tabularFigures(),
@@ -1078,7 +1266,7 @@ class _ExpensesPageState extends ConsumerState<ExpensesPage> {
                       width: double.infinity,
                       height: 40,
                       child: FilledButton(
-                        onPressed: selectedCount > 0
+                        onPressed: selectedCount > 0 && selectedSum > 0
                             ? () => notifier.commitRecurring()
                             : null,
                         style: FilledButton.styleFrom(
@@ -1092,9 +1280,11 @@ class _ExpensesPageState extends ConsumerState<ExpensesPage> {
                         child: FittedBox(
                           fit: BoxFit.scaleDown,
                           child: Text(
-                            selectedCount > 0
+                            selectedCount > 0 && selectedSum > 0
                                 ? 'Ghi $selectedCount khoản · ${FinanceMonthUtils.formatVndSpace(selectedSum)}'
-                                : 'Chọn ít nhất 1 khoản',
+                                : (selectedCount > 0
+                                      ? 'Nhập số tiền cho khoản đã chọn'
+                                      : 'Chọn ít nhất 1 khoản'),
                             style: OmniType.bodySm.copyWith(
                               color: Colors.white,
                               fontWeight: FontWeight.w600,
@@ -1168,6 +1358,8 @@ class _ExpensesPageState extends ConsumerState<ExpensesPage> {
   ) {
     final sections = state.groupedSections;
     if (sections.isEmpty) {
+      final isMonthEmpty =
+          state.activeMonthItems.isEmpty && !state.hasActiveFilter;
       return [
         Container(
           margin: const EdgeInsets.only(top: 12),
@@ -1179,7 +1371,10 @@ class _ExpensesPageState extends ConsumerState<ExpensesPage> {
           ),
           alignment: Alignment.center,
           child: Text(
-            'Không có khoản chi phù hợp bộ lọc.',
+            isMonthEmpty
+                ? 'Chưa có khoản chi nào trong ${FinanceMonthUtils.formatMonthFull(state.activeMonth)}.'
+                : 'Không có khoản chi phù hợp bộ lọc.',
+            textAlign: TextAlign.center,
             style: OmniType.bodySm.copyWith(color: p.muted),
           ),
         ),
@@ -1222,12 +1417,16 @@ class _ExpensesPageState extends ConsumerState<ExpensesPage> {
                 ),
               ),
               const SizedBox(width: 8),
-              Text(
-                FinanceMonthUtils.formatVndSpace(section.totalAmount),
-                style: OmniType.caption.copyWith(
-                  color: p.muted,
-                  fontWeight: FontWeight.w500,
-                  fontFeatures: const [FontFeature.tabularFigures()],
+              FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(
+                  FinanceMonthUtils.formatVndSpace(section.totalAmount),
+                  maxLines: 1,
+                  style: OmniType.caption.copyWith(
+                    color: p.muted,
+                    fontWeight: FontWeight.w500,
+                    fontFeatures: const [FontFeature.tabularFigures()],
+                  ),
                 ),
               ),
             ],

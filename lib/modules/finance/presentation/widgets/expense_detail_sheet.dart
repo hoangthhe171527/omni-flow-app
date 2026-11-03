@@ -1,16 +1,20 @@
 import 'dart:math' as math;
 
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../../../design/tokens/tokens.dart';
 import '../../application/finance_providers.dart';
+import '../../data/finance_api.dart';
 import '../../domain/finance_models.dart';
 import 'expense_keypad_sheet.dart';
+import 'finance_attachment_picker.dart';
 import 'finance_palette.dart';
 
-/// Hiển thị Sheet Chi tiết khoản chi (`fillDetail` trong `so-chi-phi-mobile.html`),
-/// tích hợp thêm chứng từ đính kèm (`attachments`) và thời gian nhập (`createdAt`).
+/// Hiển thị Sheet Chi tiết khoản chi (`fillDetail`),
+/// đồng bộ trực tiếp với API chứng từ, đợt thanh toán và thời gian nhập.
 Future<void> showExpenseDetailSheet({
   required BuildContext context,
   required String expenseId,
@@ -40,6 +44,7 @@ class _ExpenseDetailSheetState extends ConsumerState<_ExpenseDetailSheet> {
   late final TextEditingController _titleCtrl;
   late final FocusNode _titleFocus;
   String? _lastSyncedTitle;
+  bool _uploadingAttachment = false;
 
   final GlobalKey _grpBtnKey = GlobalKey();
   final GlobalKey _dateChipKey = GlobalKey();
@@ -88,15 +93,16 @@ class _ExpenseDetailSheetState extends ConsumerState<_ExpenseDetailSheet> {
       context: context,
       anchorContext: _grpBtnKey.currentContext,
       header: 'Chuyển sang nhóm',
-      width: 244,
+      width: 248,
       items: [
         for (final g in groups)
-          FinancePopoverItem<String>(
-            value: g.id,
-            label: g.name,
-            dotColor: g.parsedColor,
-            selected: g.id == item.groupId,
-          ),
+          if (!g.archived || g.id == item.groupId)
+            FinancePopoverItem<String>(
+              value: g.id,
+              label: g.name,
+              dotColor: g.parsedColor,
+              selected: g.id == item.groupId,
+            ),
       ],
     );
     if (picked != null && mounted) {
@@ -107,21 +113,13 @@ class _ExpenseDetailSheetState extends ConsumerState<_ExpenseDetailSheet> {
   }
 
   Future<void> _openDateMenu(ExpenseItem item) async {
-    final dates = FinanceMonthUtils.quickDatesForMonth(item.month);
-    final currentDm = FinanceMonthUtils.shortDayMonth(item.spentOn);
-    final picked = await showFinancePopoverMenu<String>(
+    final state = ref.read(financeLedgerProvider);
+    final picked = await showFinanceDateSelector(
       context: context,
       anchorContext: _dateChipKey.currentContext,
-      header: 'Ngày ghi nhận',
-      width: 224,
-      items: [
-        for (final d in dates)
-          FinancePopoverItem<String>(
-            value: d.isoDate,
-            label: d.label,
-            selected: FinanceMonthUtils.shortDayMonth(d.isoDate) == currentDm,
-          ),
-      ],
+      currentIsoDate: item.spentOn,
+      monthYm: item.month,
+      clock: state.clock,
     );
     if (picked != null && mounted) {
       ref
@@ -131,18 +129,21 @@ class _ExpenseDetailSheetState extends ConsumerState<_ExpenseDetailSheet> {
   }
 
   Future<void> _openAccountMenu(ExpenseItem item) async {
-    final currentAcc = item.effectiveAccountName ?? 'TK ngân hàng';
+    final state = ref.read(financeLedgerProvider);
+    final accounts = state.usableAccounts;
+    if (accounts.isEmpty) return;
+    final currentAccId = item.defaultPaymentAccountId(state.accounts);
     final picked = await showFinancePopoverMenu<String>(
       context: context,
       anchorContext: _accChipKey.currentContext,
       header: 'Nguồn tiền',
-      width: 224,
+      width: 236,
       items: [
-        for (final acc in FinanceSeedCatalog.defaultAccountNames)
+        for (final acc in accounts)
           FinancePopoverItem<String>(
-            value: acc,
-            label: acc,
-            selected: acc == currentAcc,
+            value: acc.id,
+            label: acc.name,
+            selected: acc.id == currentAccId,
           ),
       ],
     );
@@ -154,62 +155,30 @@ class _ExpenseDetailSheetState extends ConsumerState<_ExpenseDetailSheet> {
   }
 
   Future<void> _openAttachmentMenu(ExpenseItem item) async {
-    final picked = await showFinancePopoverMenu<String>(
-      context: context,
-      anchorContext: _attChipKey.currentContext,
-      header: 'Đính kèm chứng từ đã chi',
-      width: 244,
-      items: const [
-        FinancePopoverItem<String>(
-          value: 'photo',
-          label: 'Chụp ảnh phiếu chi',
-          icon: Icons.camera_alt_outlined,
-        ),
-        FinancePopoverItem<String>(
-          value: 'gallery',
-          label: 'Chọn ảnh hoá đơn',
-          icon: Icons.image_outlined,
-        ),
-        FinancePopoverItem<String>(
-          value: 'pdf',
-          label: 'Đính kèm tệp PDF',
-          icon: Icons.picture_as_pdf_outlined,
-        ),
-      ],
-    );
-    if (picked == null || !mounted) return;
-
-    final nextIdx = item.attachments.length + 1;
-    final dm = FinanceMonthUtils.shortDayMonth(
-      item.spentOn,
-    ).replaceAll('/', '');
-    final att = switch (picked) {
-      'photo' => ExpenseAttachment(
-        id: 'att_${item.id}_$nextIdx',
-        name: 'Phieu-chi-tien-mat-$dm-$nextIdx.jpg',
-        kind: 'image',
-        sizeLabel: '410 KB',
-        uploadedAt: item.createdAt,
-      ),
-      'gallery' => ExpenseAttachment(
-        id: 'att_${item.id}_$nextIdx',
-        name: 'Anh-hoa-don-$dm-$nextIdx.jpg',
-        kind: 'image',
-        sizeLabel: '520 KB',
-        uploadedAt: item.createdAt,
-      ),
-      _ => ExpenseAttachment(
-        id: 'att_${item.id}_$nextIdx',
-        name: 'Chung-tu-thanh-toan-$dm-$nextIdx.pdf',
-        kind: 'pdf',
-        sizeLabel: '240 KB',
-        uploadedAt: item.createdAt,
-      ),
-    };
-
-    ref
-        .read(financeLedgerProvider.notifier)
-        .addAttachmentToExpense(item.id, att);
+    if (_uploadingAttachment) return;
+    setState(() => _uploadingAttachment = true);
+    try {
+      final att = await pickAndUploadFinanceAttachment(
+        context: context,
+        anchorContext: _attChipKey.currentContext,
+        api: ref.read(financeApiProvider),
+        onError: (msg) {
+          if (!mounted) return;
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text(msg)));
+        },
+      );
+      if (att != null && mounted) {
+        await ref
+            .read(financeLedgerProvider.notifier)
+            .addAttachmentToExpense(item.id, att);
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _uploadingAttachment = false);
+      }
+    }
   }
 
   Future<void> _previewAttachment(
@@ -217,6 +186,12 @@ class _ExpenseDetailSheetState extends ConsumerState<_ExpenseDetailSheet> {
     ExpenseAttachment att,
   ) async {
     final p = FinancePalette.of(context);
+    final resolvedUrl = att.resolvedUrl;
+    final metaParts = <String>[
+      if (att.sizeLabel.isNotEmpty) att.sizeLabel,
+      if (att.uploadedAt.isNotEmpty) 'Tải lên ${att.uploadedAt}',
+    ];
+
     await showDialog<void>(
       context: context,
       builder: (dialogCtx) {
@@ -263,11 +238,13 @@ class _ExpenseDetailSheetState extends ConsumerState<_ExpenseDetailSheet> {
                               fontWeight: FontWeight.w600,
                             ),
                           ),
-                          const SizedBox(height: 2),
-                          Text(
-                            '${att.sizeLabel} · Tải lên ${att.uploadedAt}',
-                            style: OmniType.caption.copyWith(color: p.muted),
-                          ),
+                          if (metaParts.isNotEmpty) ...[
+                            const SizedBox(height: 2),
+                            Text(
+                              metaParts.join(' · '),
+                              style: OmniType.caption.copyWith(color: p.muted),
+                            ),
+                          ],
                         ],
                       ),
                     ),
@@ -278,39 +255,63 @@ class _ExpenseDetailSheetState extends ConsumerState<_ExpenseDetailSheet> {
                   ],
                 ),
                 const SizedBox(height: 14),
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: p.bg,
+                if (att.isImage && resolvedUrl.isNotEmpty)
+                  ClipRRect(
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: p.line, width: 0.5),
-                  ),
-                  child: Column(
-                    children: [
-                      Icon(
-                        att.isPdf
-                            ? Icons.description_outlined
-                            : Icons.image_outlined,
-                        size: 40,
-                        color: p.primary,
+                    child: Container(
+                      constraints: const BoxConstraints(maxHeight: 280),
+                      color: p.bg,
+                      child: CachedNetworkImage(
+                        imageUrl: resolvedUrl,
+                        fit: BoxFit.contain,
+                        placeholder: (_, _) => Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 36),
+                          child: Center(
+                            child: SizedBox(
+                              width: 22,
+                              height: 22,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                valueColor: AlwaysStoppedAnimation<Color>(
+                                  p.primary,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                        errorWidget: (_, _, _) =>
+                            _buildAttachmentFallbackCard(p, item, att),
                       ),
-                      const SizedBox(height: 8),
-                      Text(
-                        'Chứng từ khoản chi: ${item.title}',
-                        textAlign: TextAlign.center,
-                        style: OmniType.bodySm.copyWith(
-                          color: p.ink,
-                          fontWeight: FontWeight.w600,
+                    ),
+                  )
+                else
+                  _buildAttachmentFallbackCard(p, item, att),
+                if (resolvedUrl.isNotEmpty) ...[
+                  const SizedBox(height: 12),
+                  SizedBox(
+                    height: 38,
+                    child: OutlinedButton.icon(
+                      onPressed: () async {
+                        final uri = Uri.tryParse(resolvedUrl);
+                        if (uri != null) {
+                          await launchUrl(
+                            uri,
+                            mode: LaunchMode.externalApplication,
+                          );
+                        }
+                      },
+                      icon: const Icon(Icons.open_in_new_rounded, size: 15),
+                      label: const Text('Mở tệp'),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: p.primary,
+                        side: BorderSide(color: p.line),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
                         ),
                       ),
-                      const SizedBox(height: 4),
-                      Text(
-                        '${FinanceMonthUtils.formatVndSpace(item.amount)} · ${item.effectiveAccountName ?? 'TK ngân hàng'}',
-                        style: OmniType.caption.copyWith(color: p.muted),
-                      ),
-                    ],
+                    ),
                   ),
-                ),
+                ],
               ],
             ),
           ),
@@ -319,8 +320,51 @@ class _ExpenseDetailSheetState extends ConsumerState<_ExpenseDetailSheet> {
     );
   }
 
+  Widget _buildAttachmentFallbackCard(
+    FinancePalette p,
+    ExpenseItem item,
+    ExpenseAttachment att,
+  ) {
+    final accText = item.effectiveAccountName;
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: p.bg,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: p.line, width: 0.5),
+      ),
+      child: Column(
+        children: [
+          Icon(
+            att.isPdf ? Icons.description_outlined : Icons.image_outlined,
+            size: 40,
+            color: p.primary,
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Chứng từ khoản chi: ${item.title}',
+            textAlign: TextAlign.center,
+            style: OmniType.bodySm.copyWith(
+              color: p.ink,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            [
+              FinanceMonthUtils.formatVndSpace(item.amount),
+              if (accText != null && accText.isNotEmpty) accText,
+            ].join(' · '),
+            style: OmniType.caption.copyWith(color: p.muted),
+          ),
+        ],
+      ),
+    );
+  }
+
   Future<void> _openAmountKeypad(ExpenseItem item) async {
-    final hist = FinanceSeedCatalog.historyForTitle(item.title);
+    if (item.isRefund) return;
+    final hist = ref.read(financeLedgerProvider).historyForTitle(item.title);
     final chips = FinanceSeedCatalog.buildHistoryChips(hist);
     final res = await showExpenseKeypadSheet(
       context: context,
@@ -336,8 +380,10 @@ class _ExpenseDetailSheetState extends ConsumerState<_ExpenseDetailSheet> {
   }
 
   Future<void> _openPayKeypad(ExpenseItem item) async {
+    if (item.isRefund) return;
     final left = item.remainingAmount;
     if (left <= 0) return;
+    final state = ref.read(financeLedgerProvider);
     final half = ((left / 2) / 1000).round() * 1000;
     final chips = <({String label, int amount})>[
       (label: 'Tất cả · ${FinanceMonthUtils.formatNumber(left)}', amount: left),
@@ -353,14 +399,22 @@ class _ExpenseDetailSheetState extends ConsumerState<_ExpenseDetailSheet> {
       title: 'Trả · ${item.title}',
       initialAmount: left,
       maxAmount: left,
-      initialAccountName: item.effectiveAccountName ?? 'TK ngân hàng',
+      initialAccountId: item.defaultPaymentAccountId(state.accounts),
+      initialAccountName:
+          item.effectiveAccountName ?? state.defaultPaymentAccount?.name,
+      availableAccounts: state.usableAccounts,
       chips: chips,
     );
     if (res != null && res.amount > 0 && mounted) {
       final add = math.min(res.amount, left);
       ref
           .read(financeLedgerProvider.notifier)
-          .recordPayment(item.id, amount: add, accountName: res.accountName);
+          .recordPayment(
+            item.id,
+            amount: add,
+            accountId: res.accountId,
+            accountName: res.accountName,
+          );
       if (add >= left && mounted) {
         Navigator.of(context).pop();
       }
@@ -387,7 +441,7 @@ class _ExpenseDetailSheetState extends ConsumerState<_ExpenseDetailSheet> {
     final paid = item.paidTotal;
     final left = item.remainingAmount;
     final pct = item.amount > 0 ? (paid / item.amount).clamp(0.0, 1.0) : 1.0;
-    final accName = item.effectiveAccountName ?? 'TK ngân hàng';
+    final accName = item.effectiveAccountName ?? 'Chọn nguồn tiền';
     final isSingleFull = item.isSingleFullPayment;
     final paidDateDm = item.payments.isNotEmpty
         ? FinanceMonthUtils.shortDayMonth(item.payments.first.paidOn)
@@ -434,61 +488,69 @@ class _ExpenseDetailSheetState extends ConsumerState<_ExpenseDetailSheet> {
               child: Row(
                 children: [
                   // Group pill button on left
-                  InkWell(
-                    key: _grpBtnKey,
-                    onTap: () => _openGroupMenu(item),
-                    borderRadius: BorderRadius.circular(99),
-                    child: Container(
-                      height: 30,
-                      padding: const EdgeInsets.symmetric(horizontal: 11),
-                      decoration: BoxDecoration(
-                        color: p.card,
-                        borderRadius: BorderRadius.circular(99),
-                        border: Border.all(color: p.line, width: 0.5),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Container(
-                            width: 9,
-                            height: 9,
-                            decoration: BoxDecoration(
-                              color: grp.parsedColor,
-                              shape: BoxShape.circle,
+                  Flexible(
+                    child: InkWell(
+                      key: _grpBtnKey,
+                      onTap: () => _openGroupMenu(item),
+                      borderRadius: BorderRadius.circular(99),
+                      child: Container(
+                        height: 30,
+                        padding: const EdgeInsets.symmetric(horizontal: 11),
+                        decoration: BoxDecoration(
+                          color: p.card,
+                          borderRadius: BorderRadius.circular(99),
+                          border: Border.all(color: p.line, width: 0.5),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Container(
+                              width: 9,
+                              height: 9,
+                              decoration: BoxDecoration(
+                                color: grp.parsedColor,
+                                shape: BoxShape.circle,
+                              ),
                             ),
-                          ),
-                          const SizedBox(width: 7),
-                          Text(
-                            grp.name,
-                            style: OmniType.caption.copyWith(
-                              color: p.ink,
-                              fontWeight: FontWeight.w600,
+                            const SizedBox(width: 7),
+                            Flexible(
+                              child: Text(
+                                grp.name,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: OmniType.caption.copyWith(
+                                  color: p.ink,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
                             ),
-                          ),
-                          const SizedBox(width: 4),
-                          Icon(
-                            Icons.unfold_more_rounded,
-                            size: 13,
-                            color: p.muted,
-                          ),
-                        ],
+                            const SizedBox(width: 4),
+                            Icon(
+                              Icons.unfold_more_rounded,
+                              size: 13,
+                              color: p.muted,
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   ),
-                  const Spacer(),
-                  // 3 circular 30x30 action buttons on right: Copy, Delete, Close
-                  _buildCircleIconBtn(
-                    p,
-                    tooltip: 'Sao chép sang tháng sau',
-                    icon: Icons.content_copy_rounded,
-                    onTap: () {
-                      Navigator.of(context).pop();
-                      ref
-                          .read(financeLedgerProvider.notifier)
-                          .duplicateToNextMonth(item.id);
-                    },
-                  ),
-                  const SizedBox(width: 6),
+                  const SizedBox(width: 8),
+                  // Circular 30x30 action buttons on right: Copy, Delete, Close
+                  if (!item.isRefund) ...[
+                    _buildCircleIconBtn(
+                      p,
+                      tooltip: 'Sao chép sang tháng sau',
+                      icon: Icons.content_copy_rounded,
+                      onTap: () {
+                        Navigator.of(context).pop();
+                        ref
+                            .read(financeLedgerProvider.notifier)
+                            .duplicateToNextMonth(item.id);
+                      },
+                    ),
+                    const SizedBox(width: 6),
+                  ],
                   _buildCircleIconBtn(
                     p,
                     tooltip: 'Xoá khoản chi',
@@ -559,30 +621,36 @@ class _ExpenseDetailSheetState extends ConsumerState<_ExpenseDetailSheet> {
                         ),
                         onTap: () => _openDateMenu(item),
                       ),
-                      _buildMetaChip(
-                        key: _accChipKey,
-                        p: p,
-                        icon: Icons.account_balance_wallet_outlined,
-                        label: accName,
-                        onTap: () => _openAccountMenu(item),
-                      ),
+                      if (!item.isRefund)
+                        _buildMetaChip(
+                          key: _accChipKey,
+                          p: p,
+                          icon: Icons.account_balance_wallet_outlined,
+                          label: accName,
+                          onTap: () => _openAccountMenu(item),
+                        ),
                       _buildMetaChip(
                         key: _attChipKey,
                         p: p,
                         icon: Icons.attach_file_rounded,
-                        label: item.attachments.isNotEmpty
-                            ? '${item.attachments.length} chứng từ'
-                            : 'Đính kèm',
-                        active: item.attachments.isNotEmpty,
+                        label: _uploadingAttachment
+                            ? 'Đang tải…'
+                            : (item.attachments.isNotEmpty
+                                  ? '${item.attachments.length} chứng từ'
+                                  : 'Đính kèm'),
+                        active:
+                            item.attachments.isNotEmpty || _uploadingAttachment,
                         onTap: () => _openAttachmentMenu(item),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 5),
-                  Text(
-                    'Nhập lúc ${item.createdAt}',
-                    style: OmniType.micro.copyWith(color: p.muted),
-                  ),
+                  if (item.createdAt.isNotEmpty) ...[
+                    const SizedBox(height: 5),
+                    Text(
+                      'Nhập lúc ${item.createdAt}',
+                      style: OmniType.micro.copyWith(color: p.muted),
+                    ),
+                  ],
                   if (item.attachments.isNotEmpty) ...[
                     const SizedBox(height: 8),
                     SingleChildScrollView(
@@ -605,7 +673,7 @@ class _ExpenseDetailSheetState extends ConsumerState<_ExpenseDetailSheet> {
                   const SizedBox(height: 10),
                   // Big tappable amount button — FittedBox đảm bảo số tiền luôn hiện đủ 100%, không cắt "..."
                   InkWell(
-                    onTap: () => _openAmountKeypad(item),
+                    onTap: item.isRefund ? null : () => _openAmountKeypad(item),
                     borderRadius: BorderRadius.circular(12),
                     child: Padding(
                       padding: const EdgeInsets.symmetric(
@@ -638,15 +706,45 @@ class _ExpenseDetailSheetState extends ConsumerState<_ExpenseDetailSheet> {
                                 fontWeight: FontWeight.w600,
                               ),
                             ),
-                            const SizedBox(width: 5),
-                            Icon(Icons.edit_outlined, size: 15, color: p.muted),
+                            if (!item.isRefund) ...[
+                              const SizedBox(width: 5),
+                              Icon(
+                                Icons.edit_outlined,
+                                size: 15,
+                                color: p.muted,
+                              ),
+                            ],
                           ],
                         ),
                       ),
                     ),
                   ),
-                  // Khi đã trả đủ trong 1 lần: chỉ hiện 1 dòng pill xanh gọn nhẹ, KHÔNG lặp lại bảng 3 dòng hay card lịch sử
-                  if (isSingleFull) ...[
+                  if (item.isRefund) ...[
+                    const SizedBox(height: 10),
+                    Container(
+                      height: 30,
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      decoration: BoxDecoration(
+                        color: p.control,
+                        borderRadius: BorderRadius.circular(99),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.replay_rounded, size: 14, color: p.muted),
+                          const SizedBox(width: 5),
+                          Text(
+                            'Khoản hoàn / giảm trừ',
+                            style: OmniType.caption.copyWith(
+                              color: p.muted,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ] else if (isSingleFull) ...[
+                    // Khi đã trả đủ trong 1 lần: chỉ hiện 1 dòng pill xanh gọn nhẹ
                     const SizedBox(height: 10),
                     Container(
                       height: 30,
@@ -675,7 +773,7 @@ class _ExpenseDetailSheetState extends ConsumerState<_ExpenseDetailSheet> {
               ),
             ),
             // Khi chưa trả hoặc trả nhiều đợt: hiện thanh tiến độ + danh sách đợt trả + nút Trả
-            if (!isSingleFull) ...[
+            if (!item.isRefund && !isSingleFull) ...[
               Padding(
                 padding: const EdgeInsets.fromLTRB(2, 4, 2, 12),
                 child: Column(
@@ -769,7 +867,18 @@ class _ExpenseDetailSheetState extends ConsumerState<_ExpenseDetailSheet> {
                             children: [
                               Expanded(
                                 child: Text(
-                                  'Lần ${i + 1} · ${FinanceMonthUtils.shortDayMonth(item.payments[i].paidOn)} · ${item.payments[i].accountName ?? accName}',
+                                  [
+                                    'Lần ${i + 1}',
+                                    FinanceMonthUtils.shortDayMonth(
+                                      item.payments[i].paidOn,
+                                    ),
+                                    if ((item.payments[i].accountName ??
+                                            item.effectiveAccountName ??
+                                            '')
+                                        .isNotEmpty)
+                                      (item.payments[i].accountName ??
+                                          item.effectiveAccountName!),
+                                  ].join(' · '),
                                   style: OmniType.bodySm.copyWith(
                                     color: p.ink2,
                                     fontWeight: FontWeight.w500,

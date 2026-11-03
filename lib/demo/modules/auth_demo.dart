@@ -1,8 +1,7 @@
 import '../demo_backend.dart';
 import '../demo_seed.dart';
 
-/// Quyền của vai quản trị (chép danh sách từ `/auth/context` của API, bỏ các
-/// quyền phá dữ liệu và tài chính — app điện thoại không dùng).
+/// Quyền của vai quản trị (chép danh sách từ `/auth/context` của API).
 const _permissions = <String>[
   'analytics.dashboard.read',
   'analytics.reports.read',
@@ -69,6 +68,7 @@ const _permissions = <String>[
   'authorization.roles.revoke',
   'authorization.permissions.read',
   'organization.org_units.read',
+  'finance.expenses',
 ];
 
 const _capabilities = <String>[
@@ -178,6 +178,7 @@ void registerAuthDemo(DemoRoutes r) {
         'reports': true,
         'channels': true,
         'settings': true,
+        'finance': true,
       },
       'api_capabilities': _capabilities,
     }),

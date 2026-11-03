@@ -7,14 +7,28 @@ final financeApiProvider = Provider<FinanceApi>((ref) {
   return FinanceApi(ref.watch(apiClientProvider));
 });
 
+/// Danh mục nhóm chi phí kèm mẫu 5 khoản chi cố định trả về từ `GET /finance/expense-groups`.
+class ExpenseGroupsCatalog {
+  const ExpenseGroupsCatalog({
+    required this.groups,
+    required this.recurringTemplates,
+  });
+
+  final List<ExpenseGroup> groups;
+  final List<RecurringTemplateMeta> recurringTemplates;
+}
+
 /// API client cho Sổ chi phí (`/finance/...`, tương đối với `/api/v1`).
 class FinanceApi {
   const FinanceApi(this._api);
 
   final ApiClient _api;
 
-  Future<List<ExpenseGroup>> fetchGroups() async {
-    final resp = await _api.get('/finance/expense-groups');
+  Future<ExpenseGroupsCatalog> fetchGroupsCatalog({int? year}) async {
+    final resp = await _api.get(
+      '/finance/expense-groups',
+      query: {'year': ?year},
+    );
     final items = resp.list.isNotEmpty
         ? resp.list
         : (resp.object['items'] is List
@@ -23,7 +37,26 @@ class FinanceApi {
                     .map((e) => e.cast<String, dynamic>())
                     .toList()
               : const <Map<String, dynamic>>[]);
-    return [for (final item in items) ExpenseGroup.fromJson(item)];
+    final groups = [for (final item in items) ExpenseGroup.fromJson(item)];
+
+    final rawMeta = resp.raw['meta'];
+    final rawTemplates = rawMeta is Map ? rawMeta['recurring_templates'] : null;
+    final templates = rawTemplates is List
+        ? rawTemplates
+              .whereType<Map>()
+              .map(
+                (e) =>
+                    RecurringTemplateMeta.fromJson(e.cast<String, dynamic>()),
+              )
+              .toList()
+        : const <RecurringTemplateMeta>[];
+
+    return ExpenseGroupsCatalog(groups: groups, recurringTemplates: templates);
+  }
+
+  Future<List<ExpenseGroup>> fetchGroups({int? year}) async {
+    final catalog = await fetchGroupsCatalog(year: year);
+    return catalog.groups;
   }
 
   Future<ExpenseGroup> createGroup({
@@ -77,26 +110,40 @@ class FinanceApi {
   Future<MonthLedger> fetchMonthLedger({
     required String month,
     String? groupId,
+    String? accountId,
     String? status,
+    String? q,
   }) async {
     final ym = FinanceMonthUtils.toYearMonth(month);
     final resp = await _api.get(
       '/finance/expenses',
-      query: {'month': ym, 'group_id': ?groupId, 'status': ?status},
+      query: {
+        'month': ym,
+        'group_id': ?groupId,
+        'account_id': ?accountId,
+        'status': ?status,
+        'q': ?q,
+      },
     );
     return MonthLedger.fromJson(resp.object);
   }
 
+  /// Tạo khoản chi mới (`POST /finance/expenses`).
+  /// Khi truyền `payments` (kể cả mảng rỗng `[]` cho khoản chưa trả theo hợp đồng E5),
+  /// API cấm gửi đồng thời `status` / `paid_amount` (`prohibits:status,paid_amount`).
   Future<ExpenseItem> createExpense({
     required String spentOn,
     required String groupId,
     required String title,
     required int amount,
-    required ExpenseStatus status,
+    ExpenseStatus? status,
     int? paidAmount,
     String? accountId,
     String? note,
+    List<Map<String, dynamic>>? payments,
+    List<Map<String, dynamic>>? attachments,
   }) async {
+    final hasPayments = payments != null;
     final resp = await _api.post(
       '/finance/expenses',
       body: {
@@ -104,10 +151,12 @@ class FinanceApi {
         'group_id': groupId,
         'title': title.trim(),
         'amount': amount,
-        'status': status.apiValue,
-        'paid_amount': ?paidAmount,
+        if (!hasPayments && status != null) 'status': status.apiValue,
+        if (!hasPayments && paidAmount != null) 'paid_amount': paidAmount,
         'account_id': ?accountId,
         'note': ?note,
+        if (hasPayments) 'payments': payments,
+        'attachments': ?attachments,
       },
     );
     final body = resp.object;
@@ -146,5 +195,23 @@ class FinanceApi {
         ? (body['item'] as Map).cast<String, dynamic>()
         : body;
     return ExpenseItem.fromJson(item);
+  }
+
+  /// Tải tệp chứng từ / phiếu chi lên máy chủ (`POST /finance/attachments`).
+  Future<ExpenseAttachment> uploadAttachment({
+    required String filePath,
+    String? filename,
+  }) async {
+    final resp = await _api.upload(
+      '/finance/attachments',
+      field: 'file',
+      filePath: filePath,
+      filename: filename,
+    );
+    final body = resp.object;
+    final item = body['item'] is Map
+        ? (body['item'] as Map).cast<String, dynamic>()
+        : body;
+    return ExpenseAttachment.fromJson(item);
   }
 }

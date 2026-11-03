@@ -11,6 +11,7 @@ import 'demo_backend.dart';
 import 'demo_seed.dart';
 import 'modules/auth_demo.dart';
 import 'modules/crm_demo.dart';
+import 'modules/finance_demo.dart';
 import 'modules/inbox_demo.dart';
 import 'modules/work_demo.dart';
 
@@ -19,6 +20,7 @@ DemoRoutes buildDemoRoutes() {
   final routes = DemoRoutes();
   final links = DemoLinks();
   registerAuthDemo(routes);
+  registerFinanceDemo(routes);
   registerInboxDemo(routes, links);
   // work trước crm: `/system-options/task-labels` (work) phải khớp trước
   // `/system-options/{id}` (crm).
