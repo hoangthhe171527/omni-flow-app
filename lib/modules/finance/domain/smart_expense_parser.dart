@@ -34,7 +34,7 @@ class ParsedExpenseDraft {
   /// Id nguồn tiền đoán được từ danh sách `MoneyAccount`.
   final String? matchedAccountId;
 
-  /// Tên nguồn tiền đoán được (`Tiền mặt`, `TK ngân hàng`, `Ví điện tử`).
+  /// Tên nguồn tiền đoán được (`Tiền mặt`, `ACB`, `Tiền ứng`...).
   final String? matchedAccountName;
 
   /// Loại nguồn tiền đoán được (`cash`, `bank`, `company`, `advance`).
@@ -94,6 +94,8 @@ abstract final class SmartExpenseParser {
       seedId: 'ad',
       groupAliases: [
         'ke toan',
+        'thue & phi',
+        'thue phi',
         'quan ly',
         'hanh chinh',
         'van phong pham',
@@ -177,6 +179,7 @@ abstract final class SmartExpenseParser {
         'marketing',
         'quang cao',
         'tiep khach',
+        'an uong',
         'phuc loi',
       ],
       keywords: [
@@ -300,13 +303,17 @@ abstract final class SmartExpenseParser {
             : null);
 
     String? matchedAccountId = paymentResult.accountId;
+    String? matchedAccountName = paymentResult.accountName;
     if (matchedAccountId == null &&
         paymentResult.accountKind != null &&
         accounts.isNotEmpty) {
-      matchedAccountId = accounts
+      final matchedAcc = accounts
           .where((a) => !a.archived && a.kind == paymentResult.accountKind)
-          .map((a) => a.id)
           .firstOrNull;
+      if (matchedAcc != null) {
+        matchedAccountId = matchedAcc.id;
+        matchedAccountName = matchedAcc.name;
+      }
     }
 
     return ParsedExpenseDraft(
@@ -315,7 +322,7 @@ abstract final class SmartExpenseParser {
       matchedGroupId: groupMatch.groupId,
       matchedGroupKeyword: groupMatch.keyword,
       matchedAccountId: matchedAccountId,
-      matchedAccountName: paymentResult.accountName,
+      matchedAccountName: matchedAccountName,
       matchedAccountKind: paymentResult.accountKind,
       suggestedStatus: suggestedStatus,
       parsedDate: parsedDate,
@@ -530,7 +537,7 @@ abstract final class SmartExpenseParser {
               caseSensitive: false,
             ),
             kind: MoneyAccountKind.advance,
-            accName: 'Ví điện tử',
+            accName: 'Tiền ứng',
             status: ExpenseStatus.paid,
           ),
           (
@@ -636,11 +643,7 @@ abstract final class SmartExpenseParser {
         usableGroups.where((g) => g.countsAsExpense).firstOrNull ??
         usableGroups.firstOrNull;
 
-    return (
-      groupId: fallbackGroup?.id ?? 'op',
-      keyword: null,
-      defaultPaid: null,
-    );
+    return (groupId: fallbackGroup?.id ?? '', keyword: null, defaultPaid: null);
   }
 
   static String _cleanTitle(String raw) {

@@ -10,12 +10,12 @@ import 'expense_detail_sheet.dart';
 import 'expense_keypad_sheet.dart';
 import 'finance_palette.dart';
 
-/// Một dòng khoản chi trong danh sách ngày (`.row-wrap` + `.row` trong `so-chi-phi-mobile.html`),
+/// Một dòng khoản chi trong danh sách ngày (`.row-wrap` + `.row`),
 /// hỗ trợ đầy đủ:
 /// - Chạm mở Sheet Chi tiết
 /// - Vuốt phải (`Trả đủ`) & Vuốt trái (`Tháng sau` / `Xoá`) chuẩn iOS
 /// - Nhấn giữ mở iOS Context Menu
-/// - Hiển thị chứng từ đính kèm (`📎 N`) và giờ nhập khi sắp xếp theo thời gian nhập
+/// - Hiển thị đúng dữ liệu thực tế từ API (nguồn tiền thật, nhóm loại trừ CP, khoản hoàn/giảm trừ)
 class ExpenseRowTile extends ConsumerStatefulWidget {
   const ExpenseRowTile({
     super.key,
@@ -36,7 +36,8 @@ class _ExpenseRowTileState extends ConsumerState<ExpenseRowTile> {
   final GlobalKey _rowKey = GlobalKey();
   double _dragDx = 0;
 
-  bool get _canPay => widget.item.remainingAmount > 0;
+  bool get _canPay => !widget.item.isRefund && widget.item.remainingAmount > 0;
+  bool get _canDuplicate => !widget.item.isRefund;
 
   void _resetSwipe() {
     if (_dragDx != 0) {
@@ -48,15 +49,16 @@ class _ExpenseRowTileState extends ConsumerState<ExpenseRowTile> {
     setState(() {
       final next = _dragDx + details.delta.dx;
       final maxRight = _canPay ? 88.0 : 0.0;
-      _dragDx = next.clamp(-160.0, maxRight);
+      final minLeft = _canDuplicate ? -160.0 : -84.0;
+      _dragDx = next.clamp(minLeft, maxRight);
     });
   }
 
   void _onHorizontalDragEnd(DragEndDetails details) {
     if (_dragDx > 52 && _canPay) {
       setState(() => _dragDx = 78);
-    } else if (_dragDx < -52) {
-      setState(() => _dragDx = -152);
+    } else if (_dragDx < -44) {
+      setState(() => _dragDx = _canDuplicate ? -152 : -76);
     } else {
       setState(() => _dragDx = 0);
     }
@@ -73,7 +75,7 @@ class _ExpenseRowTileState extends ConsumerState<ExpenseRowTile> {
       header: item.title,
       width: 248,
       items: [
-        if (left > 0) ...[
+        if (!item.isRefund && left > 0) ...[
           const FinancePopoverItem<String>(
             value: 'pay_full',
             label: 'Đánh dấu Đã trả đủ',
@@ -85,16 +87,18 @@ class _ExpenseRowTileState extends ConsumerState<ExpenseRowTile> {
             icon: Icons.payments_outlined,
           ),
         ],
-        const FinancePopoverItem<String>(
-          value: 'edit_amount',
-          label: 'Sửa số tiền…',
-          icon: Icons.edit_outlined,
-        ),
-        const FinancePopoverItem<String>(
-          value: 'dup_next',
-          label: 'Sao chép sang tháng sau',
-          icon: Icons.content_copy_rounded,
-        ),
+        if (!item.isRefund) ...[
+          const FinancePopoverItem<String>(
+            value: 'edit_amount',
+            label: 'Sửa số tiền…',
+            icon: Icons.edit_outlined,
+          ),
+          const FinancePopoverItem<String>(
+            value: 'dup_next',
+            label: 'Sao chép sang tháng sau',
+            icon: Icons.content_copy_rounded,
+          ),
+        ],
         const FinancePopoverItem<String>(
           value: 'delete',
           label: 'Xoá khoản này',
@@ -122,8 +126,10 @@ class _ExpenseRowTileState extends ConsumerState<ExpenseRowTile> {
   }
 
   Future<void> _openPartialPayKeypad(ExpenseItem item) async {
+    if (item.isRefund) return;
     final left = item.remainingAmount;
     if (left <= 0) return;
+    final state = ref.read(financeLedgerProvider);
     final half = ((left / 2) / 1000).round() * 1000;
     final chips = <({String label, int amount})>[
       (label: 'Tất cả · ${FinanceMonthUtils.formatNumber(left)}', amount: left),
@@ -139,7 +145,10 @@ class _ExpenseRowTileState extends ConsumerState<ExpenseRowTile> {
       title: 'Trả · ${item.title}',
       initialAmount: half > 0 ? half : left,
       maxAmount: left,
-      initialAccountName: item.effectiveAccountName ?? 'TK ngân hàng',
+      initialAccountId: item.defaultPaymentAccountId(state.accounts),
+      initialAccountName:
+          item.effectiveAccountName ?? state.defaultPaymentAccount?.name,
+      availableAccounts: state.usableAccounts,
       chips: chips,
     );
     if (res != null && res.amount > 0 && mounted) {
@@ -148,13 +157,15 @@ class _ExpenseRowTileState extends ConsumerState<ExpenseRowTile> {
           .recordPayment(
             item.id,
             amount: math.min(res.amount, left),
+            accountId: res.accountId,
             accountName: res.accountName,
           );
     }
   }
 
   Future<void> _openEditAmountKeypad(ExpenseItem item) async {
-    final hist = FinanceSeedCatalog.historyForTitle(item.title);
+    if (item.isRefund) return;
+    final hist = ref.read(financeLedgerProvider).historyForTitle(item.title);
     final chips = FinanceSeedCatalog.buildHistoryChips(hist);
     final res = await showExpenseKeypadSheet(
       context: context,
@@ -171,14 +182,18 @@ class _ExpenseRowTileState extends ConsumerState<ExpenseRowTile> {
 
   String _buildSubtitleText(FinanceLedgerState state, ExpenseGroup grp) {
     final item = widget.item;
-    final acc = item.effectiveAccountName ?? 'TK ngân hàng';
+    final acc = item.effectiveAccountName;
+    final isExcluded = !item.countsAsExpense || !grp.countsAsExpense;
     final parts = <String>[
       if (state.sortMode != ExpenseSortMode.category) grp.name,
-      acc,
-      if (state.sortMode == ExpenseSortMode.createdAtDesc)
+      if (isExcluded) 'Không tính CP',
+      if (acc != null && acc.isNotEmpty) acc,
+      if (state.sortMode == ExpenseSortMode.createdAtDesc &&
+          item.createdTimeOnly.isNotEmpty)
         'Nhập ${item.createdTimeOnly}',
       if (item.attachments.isNotEmpty) '${item.attachments.length} chứng từ',
     ];
+    if (parts.isEmpty) return grp.name;
     return parts.join(' · ');
   }
 
@@ -231,37 +246,38 @@ class _ExpenseRowTileState extends ConsumerState<ExpenseRowTile> {
                     ),
                   ),
                 const Spacer(),
-                GestureDetector(
-                  onTap: () {
-                    _resetSwipe();
-                    ref
-                        .read(financeLedgerProvider.notifier)
-                        .duplicateToNextMonth(item.id);
-                  },
-                  child: Container(
-                    width: 76,
-                    color: p.primary,
-                    alignment: Alignment.center,
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Icon(
-                          Icons.content_copy_rounded,
-                          size: 15,
-                          color: Colors.white,
-                        ),
-                        const SizedBox(height: 3),
-                        Text(
-                          'Tháng sau',
-                          style: OmniType.micro.copyWith(
+                if (_canDuplicate)
+                  GestureDetector(
+                    onTap: () {
+                      _resetSwipe();
+                      ref
+                          .read(financeLedgerProvider.notifier)
+                          .duplicateToNextMonth(item.id);
+                    },
+                    child: Container(
+                      width: 76,
+                      color: p.primary,
+                      alignment: Alignment.center,
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(
+                            Icons.content_copy_rounded,
+                            size: 15,
                             color: Colors.white,
-                            fontWeight: FontWeight.w600,
                           ),
-                        ),
-                      ],
+                          const SizedBox(height: 3),
+                          Text(
+                            'Tháng sau',
+                            style: OmniType.micro.copyWith(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
-                ),
                 GestureDetector(
                   onTap: () {
                     _resetSwipe();
@@ -362,24 +378,37 @@ class _ExpenseRowTileState extends ConsumerState<ExpenseRowTile> {
                             ),
                           ),
                           const SizedBox(width: 8),
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.end,
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Text(
-                                FinanceMonthUtils.formatVndSpace(item.amount),
-                                maxLines: 1,
-                                style: OmniType.body.copyWith(
-                                  color: p.ink,
-                                  fontWeight: FontWeight.w600,
-                                  fontFeatures: const [
-                                    FontFeature.tabularFigures(),
-                                  ],
+                          ConstrainedBox(
+                            constraints: const BoxConstraints(maxWidth: 146),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.end,
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                FittedBox(
+                                  fit: BoxFit.scaleDown,
+                                  alignment: Alignment.centerRight,
+                                  child: Text(
+                                    FinanceMonthUtils.formatVndSpace(
+                                      item.amount,
+                                    ),
+                                    maxLines: 1,
+                                    style: OmniType.body.copyWith(
+                                      color: p.ink,
+                                      fontWeight: FontWeight.w600,
+                                      fontFeatures: const [
+                                        FontFeature.tabularFigures(),
+                                      ],
+                                    ),
+                                  ),
                                 ),
-                              ),
-                              const SizedBox(height: 2),
-                              _buildStatusIndicator(p, left: left, paid: paid),
-                            ],
+                                const SizedBox(height: 2),
+                                _buildStatusIndicator(
+                                  p,
+                                  left: left,
+                                  paid: paid,
+                                ),
+                              ],
+                            ),
                           ),
                         ],
                       ),
@@ -406,17 +435,41 @@ class _ExpenseRowTileState extends ConsumerState<ExpenseRowTile> {
     required int left,
     required int paid,
   }) {
+    if (widget.item.isRefund) {
+      return Text(
+        'Hoàn/giảm',
+        maxLines: 1,
+        style: OmniType.micro.copyWith(
+          color: p.muted,
+          fontWeight: FontWeight.w600,
+        ),
+      );
+    }
     if (left <= 0) {
       return Icon(Icons.check_rounded, size: 12, color: p.ok);
     }
     if (paid > 0) {
+      return FittedBox(
+        fit: BoxFit.scaleDown,
+        alignment: Alignment.centerRight,
+        child: Text(
+          'còn ${FinanceMonthUtils.formatVndSpace(left)}',
+          maxLines: 1,
+          style: OmniType.micro.copyWith(
+            color: p.amber,
+            fontWeight: FontWeight.w600,
+            fontFeatures: const [FontFeature.tabularFigures()],
+          ),
+        ),
+      );
+    }
+    if (widget.item.status == ExpenseStatus.partial) {
       return Text(
-        'còn ${FinanceMonthUtils.formatVndSpace(left)}',
+        'Trả một phần',
         maxLines: 1,
         style: OmniType.micro.copyWith(
           color: p.amber,
           fontWeight: FontWeight.w600,
-          fontFeatures: const [FontFeature.tabularFigures()],
         ),
       );
     }

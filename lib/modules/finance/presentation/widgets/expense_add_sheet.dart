@@ -5,13 +5,15 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../design/tokens/tokens.dart';
 import '../../application/finance_providers.dart';
+import '../../data/finance_api.dart';
 import '../../domain/finance_models.dart';
 import '../../domain/smart_expense_parser.dart';
 import 'expense_keypad_sheet.dart';
+import 'finance_attachment_picker.dart';
 import 'finance_palette.dart';
 
-/// Hiển thị Sheet Thêm khoản chi (`openAdd` trong `so-chi-phi-mobile.html`),
-/// tích hợp 5 mẫu gợi ý nhanh của anh Lê Nguyên và đính kèm chứng từ/phiếu chi.
+/// Hiển thị Sheet Thêm khoản chi (`openAdd`),
+/// tích hợp 5 mẫu gợi ý nhanh từ lịch sử thực tế và tải chứng từ lên máy chủ.
 Future<void> showExpenseAddSheet({required BuildContext context}) {
   return showModalBottomSheet<void>(
     context: context,
@@ -41,7 +43,9 @@ class _ExpenseAddSheetState extends ConsumerState<_ExpenseAddSheet> {
   late String _groupId;
   late String _spentOn;
   late bool _isPaid;
-  late String _accountName;
+  String? _accountId;
+  String _accountName = '';
+  bool _uploadingAttachment = false;
   final List<ExpenseAttachment> _attachments = <ExpenseAttachment>[];
   String _smartHint =
       'Mẹo: Gõ tên kèm số tiền (12tr, 650k, 1.85tr) — tự nhận diện số tiền & nhóm.';
@@ -50,12 +54,17 @@ class _ExpenseAddSheetState extends ConsumerState<_ExpenseAddSheet> {
   void initState() {
     super.initState();
     final state = ref.read(financeLedgerProvider);
+    final defaultAcc = state.defaultPaymentAccount;
     _title = '';
     _amount = 0;
-    _groupId = 'op';
-    _spentOn = FinanceMonthUtils.defaultSpentOnForMonth(state.activeMonth);
+    _groupId = state.defaultGroupId;
+    _spentOn = FinanceMonthUtils.defaultSpentOnForMonth(
+      state.activeMonth,
+      state.clock,
+    );
     _isPaid = true;
-    _accountName = 'TK ngân hàng';
+    _accountId = defaultAcc?.id;
+    _accountName = defaultAcc?.name ?? '';
   }
 
   @override
@@ -78,8 +87,8 @@ class _ExpenseAddSheetState extends ConsumerState<_ExpenseAddSheet> {
     final state = ref.read(financeLedgerProvider);
     final parsed = SmartExpenseParser.parse(
       trimmed,
-      groups: state.groups,
-      accounts: state.accounts,
+      groups: state.usableGroups,
+      accounts: state.usableAccounts,
     );
 
     setState(() {
@@ -96,22 +105,21 @@ class _ExpenseAddSheetState extends ConsumerState<_ExpenseAddSheet> {
       } else {
         final guessed = SmartExpenseParser.guessGroup(
           _title,
-          groups: state.groups,
+          groups: state.usableGroups,
         );
         if (guessed != null) _groupId = guessed;
       }
       if (parsed.suggestedStatus == ExpenseStatus.unpaid) {
         _isPaid = false;
       }
-      if (parsed.matchedAccountName != null) {
+      if (parsed.matchedAccountId != null) {
+        _accountId = parsed.matchedAccountId;
+        _accountName =
+            parsed.matchedAccountName ??
+            state.accountNameById(parsed.matchedAccountId) ??
+            _accountName;
+      } else if (parsed.matchedAccountName != null) {
         _accountName = parsed.matchedAccountName!;
-      } else if (parsed.matchedAccountId != null) {
-        for (final a in state.accounts) {
-          if (a.id == parsed.matchedAccountId) {
-            _accountName = a.name;
-            break;
-          }
-        }
       }
       final grpName = state.groupById(_groupId).name;
       if (_amount > 0) {
@@ -130,21 +138,27 @@ class _ExpenseAddSheetState extends ConsumerState<_ExpenseAddSheet> {
     final grpName = state.groupById(preset.groupId).name;
     setState(() {
       _title = preset.title;
-      _amount = preset.amount;
       _groupId = preset.groupId;
-      _smartCtrl.text =
-          '${preset.title} ${FinanceMonthUtils.formatNumber(preset.amount)}';
-      _smartHint =
-          'Đã chọn mẫu: ${preset.title} · ${FinanceMonthUtils.formatVndSpace(preset.amount)} · $grpName';
+      if (preset.amount > 0) {
+        _amount = preset.amount;
+        _smartCtrl.text =
+            '${preset.title} ${FinanceMonthUtils.formatNumber(preset.amount)}';
+        _smartHint =
+            'Đã chọn mẫu: ${preset.title} · ${FinanceMonthUtils.formatVndSpace(preset.amount)} · $grpName';
+      } else {
+        _smartCtrl.text = preset.title;
+        _smartHint =
+            'Đã chọn mẫu: ${preset.title} · $grpName — chạm "Số tiền" để nhập';
+      }
     });
   }
 
   Future<void> _openAmountKeypad() async {
-    final hist = FinanceSeedCatalog.historyForTitle(_title);
-    final chips = hist != null
+    final hist = ref.read(financeLedgerProvider).historyForTitle(_title);
+    final chips = hist.isNotEmpty
         ? FinanceSeedCatalog.buildHistoryChips(hist)
         : <({String label, int amount})>[
-            for (final v in [1850000, 3000000, 6500000, 12000000, 18000000])
+            for (final v in [500000, 1500000, 3000000, 6500000, 12000000])
               (label: FinanceMonthUtils.formatNumber(v), amount: v),
           ];
 
@@ -160,7 +174,7 @@ class _ExpenseAddSheetState extends ConsumerState<_ExpenseAddSheet> {
   }
 
   Future<void> _openGroupPicker() async {
-    final groups = ref.read(financeLedgerProvider).groups;
+    final groups = ref.read(financeLedgerProvider).usableGroups;
     final picked = await showFinancePopoverMenu<String>(
       context: context,
       anchorContext: _grpRowKey.currentContext,
@@ -182,22 +196,13 @@ class _ExpenseAddSheetState extends ConsumerState<_ExpenseAddSheet> {
   }
 
   Future<void> _openDatePicker() async {
-    final activeMonth = ref.read(financeLedgerProvider).activeMonth;
-    final dates = FinanceMonthUtils.quickDatesForMonth(activeMonth);
-    final currentDm = FinanceMonthUtils.shortDayMonth(_spentOn);
-    final picked = await showFinancePopoverMenu<String>(
+    final state = ref.read(financeLedgerProvider);
+    final picked = await showFinanceDateSelector(
       context: context,
       anchorContext: _dateRowKey.currentContext,
-      header: 'Ngày ghi nhận',
-      width: 224,
-      items: [
-        for (final d in dates)
-          FinancePopoverItem<String>(
-            value: d.isoDate,
-            label: d.label,
-            selected: FinanceMonthUtils.shortDayMonth(d.isoDate) == currentDm,
-          ),
-      ],
+      currentIsoDate: _spentOn,
+      monthYm: state.activeMonth,
+      clock: state.clock,
     );
     if (picked != null && mounted) {
       setState(() => _spentOn = picked);
@@ -205,99 +210,90 @@ class _ExpenseAddSheetState extends ConsumerState<_ExpenseAddSheet> {
   }
 
   Future<void> _openAccountPicker() async {
+    final state = ref.read(financeLedgerProvider);
+    final accounts = state.usableAccounts;
     final picked = await showFinancePopoverMenu<String>(
       context: context,
       anchorContext: _accRowKey.currentContext,
       header: 'Nguồn tiền',
-      width: 224,
+      width: 236,
       items: [
-        for (final acc in FinanceSeedCatalog.defaultAccountNames)
+        if (!_isPaid)
           FinancePopoverItem<String>(
-            value: acc,
-            label: acc,
-            selected: acc == _accountName,
+            value: '__none__',
+            label: 'Chưa chọn nguồn',
+            selected: _accountId == null || _accountId!.isEmpty,
+          ),
+        for (final acc in accounts)
+          FinancePopoverItem<String>(
+            value: acc.id,
+            label: acc.name,
+            selected: acc.id == _accountId,
           ),
       ],
     );
     if (picked != null && mounted) {
-      setState(() => _accountName = picked);
+      setState(() {
+        if (picked == '__none__') {
+          _accountId = null;
+          _accountName = '';
+        } else {
+          _accountId = picked;
+          _accountName = state.accountNameById(picked) ?? '';
+        }
+      });
     }
   }
 
   Future<void> _openAttachmentPicker() async {
-    final picked = await showFinancePopoverMenu<String>(
-      context: context,
-      anchorContext: _attRowKey.currentContext,
-      header: 'Đính kèm chứng từ đã chi',
-      width: 244,
-      items: const [
-        FinancePopoverItem<String>(
-          value: 'photo',
-          label: 'Chụp ảnh phiếu chi',
-          icon: Icons.camera_alt_outlined,
-        ),
-        FinancePopoverItem<String>(
-          value: 'gallery',
-          label: 'Chọn ảnh hoá đơn',
-          icon: Icons.image_outlined,
-        ),
-        FinancePopoverItem<String>(
-          value: 'pdf',
-          label: 'Đính kèm tệp PDF',
-          icon: Icons.picture_as_pdf_outlined,
-        ),
-      ],
-    );
-    if (picked == null || !mounted) return;
-
-    final nextIdx = _attachments.length + 1;
-    final dm = FinanceMonthUtils.shortDayMonth(_spentOn).replaceAll('/', '');
-    final dmSpace = FinanceMonthUtils.shortDayMonth(_spentOn);
-    final att = switch (picked) {
-      'photo' => ExpenseAttachment(
-        id: 'new_att_$nextIdx',
-        name: 'Phieu-chi-tien-mat-$dm-$nextIdx.jpg',
-        kind: 'image',
-        sizeLabel: '410 KB',
-        uploadedAt: '$dmSpace 10:30',
-      ),
-      'gallery' => ExpenseAttachment(
-        id: 'new_att_$nextIdx',
-        name: 'Anh-hoa-don-$dm-$nextIdx.jpg',
-        kind: 'image',
-        sizeLabel: '520 KB',
-        uploadedAt: '$dmSpace 10:30',
-      ),
-      _ => ExpenseAttachment(
-        id: 'new_att_$nextIdx',
-        name: 'Chung-tu-thanh-toan-$dm-$nextIdx.pdf',
-        kind: 'pdf',
-        sizeLabel: '240 KB',
-        uploadedAt: '$dmSpace 10:30',
-      ),
-    };
-
-    setState(() => _attachments.add(att));
+    if (_uploadingAttachment) return;
+    setState(() => _uploadingAttachment = true);
+    try {
+      final att = await pickAndUploadFinanceAttachment(
+        context: context,
+        anchorContext: _attRowKey.currentContext,
+        api: ref.read(financeApiProvider),
+        onError: (msg) {
+          if (!mounted) return;
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text(msg)));
+        },
+      );
+      if (att != null && mounted) {
+        setState(() => _attachments.add(att));
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _uploadingAttachment = false);
+      }
+    }
   }
 
   Future<void> _saveExpense() async {
+    if (_uploadingAttachment) return;
     if (_amount <= 0) {
       await _openAmountKeypad();
       if (_amount <= 0 || !mounted) return;
     }
     final state = ref.read(financeLedgerProvider);
-    final grp = state.groupById(_groupId);
+    final resolvedGroupId = _groupId.isNotEmpty
+        ? _groupId
+        : state.defaultGroupId;
+    final grp = state.groupById(resolvedGroupId);
     final cleanTitle = _title.trim().isNotEmpty ? _title.trim() : grp.name;
 
+    // Fire-and-forget optimistic save synced with API
     ref
         .read(financeLedgerProvider.notifier)
         .addExpense(
           title: cleanTitle,
           amount: _amount,
-          groupId: _groupId,
+          groupId: resolvedGroupId,
           spentOn: _spentOn,
           isPaid: _isPaid,
-          accountName: _accountName,
+          accountId: _accountId,
+          accountName: _accountName.isNotEmpty ? _accountName : null,
           attachments: List<ExpenseAttachment>.unmodifiable(_attachments),
         );
     if (mounted) {
@@ -308,9 +304,21 @@ class _ExpenseAddSheetState extends ConsumerState<_ExpenseAddSheet> {
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(financeLedgerProvider);
+    if (_groupId.isEmpty && state.defaultGroupId.isNotEmpty) {
+      _groupId = state.defaultGroupId;
+    }
+    if (_isPaid && _accountId == null && state.defaultPaymentAccount != null) {
+      _accountId = state.defaultPaymentAccount!.id;
+      _accountName = state.defaultPaymentAccount!.name;
+    }
+
     final p = FinancePalette.of(context);
     final grp = state.groupById(_groupId);
+    final presets = state.quickAddPresets;
     final bottomInset = MediaQuery.paddingOf(context).bottom;
+    final displayAccount = _accountName.isNotEmpty
+        ? _accountName
+        : (_isPaid ? 'Chọn nguồn tiền' : 'Chưa chọn nguồn');
 
     return Container(
       decoration: BoxDecoration(
@@ -411,46 +419,41 @@ class _ExpenseAddSheetState extends ConsumerState<_ExpenseAddSheet> {
               ),
             ),
             // Quick preset chips (5 khoản cố định chuẩn)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 12),
-              child: SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: Row(
-                  children: [
-                    for (
-                      var i = 0;
-                      i < FinanceSeedCatalog.quickAddPresets.length;
-                      i++
-                    ) ...[
-                      if (i > 0) const SizedBox(width: 6),
-                      InkWell(
-                        onTap: () => _applyQuickPreset(
-                          FinanceSeedCatalog.quickAddPresets[i],
-                        ),
-                        borderRadius: BorderRadius.circular(99),
-                        child: Container(
-                          height: 29,
-                          padding: const EdgeInsets.symmetric(horizontal: 11),
-                          alignment: Alignment.center,
-                          decoration: BoxDecoration(
-                            color: p.card,
-                            borderRadius: BorderRadius.circular(99),
-                            border: Border.all(color: p.line, width: 0.5),
-                          ),
-                          child: Text(
-                            FinanceSeedCatalog.quickAddPresets[i].label,
-                            style: OmniType.caption.copyWith(
-                              color: p.ink2,
-                              fontWeight: FontWeight.w600,
+            if (presets.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Row(
+                    children: [
+                      for (var i = 0; i < presets.length; i++) ...[
+                        if (i > 0) const SizedBox(width: 6),
+                        InkWell(
+                          onTap: () => _applyQuickPreset(presets[i]),
+                          borderRadius: BorderRadius.circular(99),
+                          child: Container(
+                            height: 29,
+                            padding: const EdgeInsets.symmetric(horizontal: 11),
+                            alignment: Alignment.center,
+                            decoration: BoxDecoration(
+                              color: p.card,
+                              borderRadius: BorderRadius.circular(99),
+                              border: Border.all(color: p.line, width: 0.5),
+                            ),
+                            child: Text(
+                              presets[i].label,
+                              style: OmniType.caption.copyWith(
+                                color: p.ink2,
+                                fontWeight: FontWeight.w600,
+                              ),
                             ),
                           ),
                         ),
-                      ),
+                      ],
                     ],
-                  ],
+                  ),
                 ),
               ),
-            ),
             // Grouped iOS form card (.card with 6 .kv rows)
             Container(
               margin: const EdgeInsets.only(bottom: 12),
@@ -532,32 +535,38 @@ class _ExpenseAddSheetState extends ConsumerState<_ExpenseAddSheet> {
                             'Nhóm chi phí',
                             style: OmniType.body.copyWith(color: p.muted),
                           ),
-                          Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Container(
-                                width: 9,
-                                height: 9,
-                                decoration: BoxDecoration(
-                                  color: grp.parsedColor,
-                                  shape: BoxShape.circle,
+                          Flexible(
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Container(
+                                  width: 9,
+                                  height: 9,
+                                  decoration: BoxDecoration(
+                                    color: grp.parsedColor,
+                                    shape: BoxShape.circle,
+                                  ),
                                 ),
-                              ),
-                              const SizedBox(width: 7),
-                              Text(
-                                grp.name,
-                                style: OmniType.body.copyWith(
-                                  color: p.ink,
-                                  fontWeight: FontWeight.w500,
+                                const SizedBox(width: 7),
+                                Flexible(
+                                  child: Text(
+                                    grp.name,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: OmniType.body.copyWith(
+                                      color: p.ink,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
                                 ),
-                              ),
-                              const SizedBox(width: 4),
-                              Icon(
-                                Icons.unfold_more_rounded,
-                                size: 15,
-                                color: p.muted,
-                              ),
-                            ],
+                                const SizedBox(width: 4),
+                                Icon(
+                                  Icons.unfold_more_rounded,
+                                  size: 15,
+                                  color: p.muted,
+                                ),
+                              ],
+                            ),
                           ),
                         ],
                       ),
@@ -590,7 +599,9 @@ class _ExpenseAddSheetState extends ConsumerState<_ExpenseAddSheet> {
                               Text(
                                 FinanceMonthUtils.fullDayMonthYear(
                                   _spentOn,
-                                  fallbackMonth: state.activeMonth,
+                                  fallbackMonth: _spentOn.length >= 7
+                                      ? _spentOn.substring(0, 7)
+                                      : state.activeMonth,
                                 ),
                                 style: OmniType.body.copyWith(
                                   color: p.ink,
@@ -646,7 +657,16 @@ class _ExpenseAddSheetState extends ConsumerState<_ExpenseAddSheet> {
                                 p,
                                 label: 'Trả đủ',
                                 active: _isPaid,
-                                onTap: () => setState(() => _isPaid = true),
+                                onTap: () => setState(() {
+                                  _isPaid = true;
+                                  if (_accountId == null &&
+                                      state.defaultPaymentAccount != null) {
+                                    _accountId =
+                                        state.defaultPaymentAccount!.id;
+                                    _accountName =
+                                        state.defaultPaymentAccount!.name;
+                                  }
+                                }),
                               ),
                             ],
                           ),
@@ -679,9 +699,11 @@ class _ExpenseAddSheetState extends ConsumerState<_ExpenseAddSheet> {
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               Text(
-                                _accountName,
+                                displayAccount,
                                 style: OmniType.body.copyWith(
-                                  color: p.ink,
+                                  color: _accountName.isNotEmpty
+                                      ? p.ink
+                                      : p.muted,
                                   fontWeight: FontWeight.w500,
                                 ),
                               ),
@@ -722,20 +744,37 @@ class _ExpenseAddSheetState extends ConsumerState<_ExpenseAddSheet> {
                               Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  Icon(
-                                    Icons.attach_file_rounded,
-                                    size: 15,
-                                    color: _attachments.isNotEmpty
-                                        ? p.primary
-                                        : p.muted,
-                                  ),
-                                  const SizedBox(width: 4),
-                                  Text(
-                                    _attachments.isNotEmpty
-                                        ? '${_attachments.length} chứng từ'
-                                        : 'Đính kèm ảnh / phiếu chi',
-                                    style: OmniType.body.copyWith(
+                                  if (_uploadingAttachment)
+                                    SizedBox(
+                                      width: 14,
+                                      height: 14,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                        valueColor:
+                                            AlwaysStoppedAnimation<Color>(
+                                              p.primary,
+                                            ),
+                                      ),
+                                    )
+                                  else
+                                    Icon(
+                                      Icons.attach_file_rounded,
+                                      size: 15,
                                       color: _attachments.isNotEmpty
+                                          ? p.primary
+                                          : p.muted,
+                                    ),
+                                  const SizedBox(width: 5),
+                                  Text(
+                                    _uploadingAttachment
+                                        ? 'Đang tải chứng từ…'
+                                        : (_attachments.isNotEmpty
+                                              ? '${_attachments.length} chứng từ'
+                                              : 'Đính kèm ảnh / phiếu chi'),
+                                    style: OmniType.body.copyWith(
+                                      color:
+                                          _attachments.isNotEmpty ||
+                                              _uploadingAttachment
                                           ? p.primary
                                           : p.ink2,
                                       fontWeight: _attachments.isNotEmpty
@@ -775,10 +814,17 @@ class _ExpenseAddSheetState extends ConsumerState<_ExpenseAddSheet> {
                                           color: p.primary,
                                         ),
                                         const SizedBox(width: 4),
-                                        Text(
-                                          att.name,
-                                          style: OmniType.caption.copyWith(
-                                            color: p.ink,
+                                        ConstrainedBox(
+                                          constraints: const BoxConstraints(
+                                            maxWidth: 180,
+                                          ),
+                                          child: Text(
+                                            att.name,
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: OmniType.caption.copyWith(
+                                              color: p.ink,
+                                            ),
                                           ),
                                         ),
                                         const SizedBox(width: 3),
@@ -813,7 +859,7 @@ class _ExpenseAddSheetState extends ConsumerState<_ExpenseAddSheet> {
             SizedBox(
               height: 48,
               child: FilledButton(
-                onPressed: _saveExpense,
+                onPressed: _uploadingAttachment ? null : _saveExpense,
                 style: FilledButton.styleFrom(
                   backgroundColor: p.primary,
                   foregroundColor: Colors.white,

@@ -9,9 +9,14 @@ import 'finance_palette.dart';
 /// Kết quả trả về từ bàn phím số kiêm máy tính (`showExpenseKeypadSheet`).
 @immutable
 class ExpenseKeypadResult {
-  const ExpenseKeypadResult({required this.amount, this.accountName});
+  const ExpenseKeypadResult({
+    required this.amount,
+    this.accountId,
+    this.accountName,
+  });
 
   final int amount;
+  final String? accountId;
   final String? accountName;
 }
 
@@ -21,8 +26,9 @@ Future<ExpenseKeypadResult?> showExpenseKeypadSheet({
   required String title,
   required int initialAmount,
   int? maxAmount,
+  String? initialAccountId,
   String? initialAccountName,
-  List<String> availableAccounts = FinanceSeedCatalog.defaultAccountNames,
+  List<MoneyAccount> availableAccounts = const [],
   List<({String label, int amount})> chips = const [],
 }) {
   return showModalBottomSheet<ExpenseKeypadResult>(
@@ -35,6 +41,7 @@ Future<ExpenseKeypadResult?> showExpenseKeypadSheet({
         title: title,
         initialAmount: initialAmount,
         maxAmount: maxAmount,
+        initialAccountId: initialAccountId,
         initialAccountName: initialAccountName,
         availableAccounts: availableAccounts,
         chips: chips,
@@ -48,6 +55,7 @@ class _ExpenseKeypadSheet extends StatefulWidget {
     required this.title,
     required this.initialAmount,
     this.maxAmount,
+    this.initialAccountId,
     this.initialAccountName,
     required this.availableAccounts,
     required this.chips,
@@ -56,8 +64,9 @@ class _ExpenseKeypadSheet extends StatefulWidget {
   final String title;
   final int initialAmount;
   final int? maxAmount;
+  final String? initialAccountId;
   final String? initialAccountName;
-  final List<String> availableAccounts;
+  final List<MoneyAccount> availableAccounts;
   final List<({String label, int amount})> chips;
 
   @override
@@ -68,6 +77,7 @@ class _ExpenseKeypadSheetState extends State<_ExpenseKeypadSheet> {
   late String _expr;
   late int _prev;
   late bool _fresh;
+  String? _accountId;
   String? _accountName;
   final GlobalKey _srcBtnKey = GlobalKey();
 
@@ -77,7 +87,16 @@ class _ExpenseKeypadSheetState extends State<_ExpenseKeypadSheet> {
     _prev = widget.initialAmount;
     _expr = widget.initialAmount > 0 ? '${widget.initialAmount}' : '0';
     _fresh = widget.initialAmount > 0;
+    _accountId = widget.initialAccountId;
     _accountName = widget.initialAccountName;
+    if (_accountId != null && _accountName == null) {
+      for (final a in widget.availableAccounts) {
+        if (a.id == _accountId) {
+          _accountName = a.name;
+          break;
+        }
+      }
+    }
   }
 
   bool get _hasOp =>
@@ -126,9 +145,13 @@ class _ExpenseKeypadSheetState extends State<_ExpenseKeypadSheet> {
         if (widget.maxAmount != null && v > widget.maxAmount!) {
           v = widget.maxAmount!;
         }
-        Navigator.of(
-          context,
-        ).pop(ExpenseKeypadResult(amount: v, accountName: _accountName));
+        Navigator.of(context).pop(
+          ExpenseKeypadResult(
+            amount: v,
+            accountId: _accountId,
+            accountName: _accountName,
+          ),
+        );
         return;
       }
       if (k == '+' || k == '-') {
@@ -160,23 +183,34 @@ class _ExpenseKeypadSheetState extends State<_ExpenseKeypadSheet> {
   }
 
   Future<void> _openSourceMenu() async {
-    if (_accountName == null) return;
-    final picked = await showFinancePopoverMenu<String>(
+    if (widget.availableAccounts.isEmpty) return;
+    final pickedId = await showFinancePopoverMenu<String>(
       context: context,
       anchorContext: _srcBtnKey.currentContext,
       header: 'Nguồn tiền thanh toán',
-      width: 224,
+      width: 236,
       items: [
         for (final acc in widget.availableAccounts)
           FinancePopoverItem<String>(
-            value: acc,
-            label: acc,
-            selected: acc == _accountName,
+            value: acc.id,
+            label: acc.name,
+            subtitle: acc.kind.label,
+            selected:
+                acc.id == _accountId ||
+                (_accountId == null && acc.name == _accountName),
           ),
       ],
     );
-    if (picked != null && mounted) {
-      setState(() => _accountName = picked);
+    if (pickedId != null && mounted) {
+      final matched = widget.availableAccounts
+          .where((a) => a.id == pickedId)
+          .firstOrNull;
+      if (matched != null) {
+        setState(() {
+          _accountId = matched.id;
+          _accountName = matched.name;
+        });
+      }
     }
   }
 
@@ -185,6 +219,9 @@ class _ExpenseKeypadSheetState extends State<_ExpenseKeypadSheet> {
     final p = FinancePalette.of(context);
     final val = _evalExpr(_expr);
     final bottomInset = MediaQuery.paddingOf(context).bottom;
+    final showAccountPicker =
+        widget.availableAccounts.isNotEmpty &&
+        (_accountId != null || _accountName != null);
 
     // Tính dòng gợi ý / cảnh báo bên dưới số tiền
     String hintText = '';
@@ -249,7 +286,7 @@ class _ExpenseKeypadSheetState extends State<_ExpenseKeypadSheet> {
                     ),
                   ),
                 ),
-                if (_accountName != null) ...[
+                if (showAccountPicker) ...[
                   const SizedBox(width: 8),
                   InkWell(
                     key: _srcBtnKey,
@@ -273,7 +310,7 @@ class _ExpenseKeypadSheetState extends State<_ExpenseKeypadSheet> {
                           ),
                           const SizedBox(width: 5),
                           Text(
-                            _accountName!,
+                            _accountName ?? 'Chọn nguồn',
                             style: OmniType.caption.copyWith(
                               color: p.ink,
                               fontWeight: FontWeight.w600,

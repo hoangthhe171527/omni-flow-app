@@ -2,6 +2,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
+import '../../../core/config/app_config.dart';
 import '../../../core/utils/formatters.dart';
 import '../../../design/tokens/tokens.dart';
 
@@ -28,7 +29,7 @@ enum MoneyAccountKind {
   bank('bank', 'TK ngân hàng'),
   company('company', 'Chuyển khoản công ty'),
   cash('cash', 'Tiền mặt'),
-  advance('advance', 'Ví điện tử');
+  advance('advance', 'Tiền ứng');
 
   const MoneyAccountKind(this.apiValue, this.label);
 
@@ -58,83 +59,316 @@ enum ExpenseSortMode {
   final String label;
 }
 
+/// Dựng lại host cho đường dẫn media chứng từ `/api/v1/finance/media/...`
+/// về API origin hiện tại, đồng thời bảo toàn URL S3/CDN công khai.
+String resolveFinanceMediaUrl(String value) {
+  final source = value.trim();
+  if (source.isEmpty) return '';
+  final cut = source.indexOf(RegExp(r'[?#]'));
+  final rawPath = cut < 0 ? source : source.substring(0, cut);
+  String decoded;
+  try {
+    decoded = Uri.decodeFull(rawPath);
+  } catch (_) {
+    decoded = rawPath;
+  }
+  if (RegExp(r'(^|/)\.\.($|/)').hasMatch(decoded.replaceAll(r'\', '/'))) {
+    return '';
+  }
+  final parsed = Uri.tryParse(source);
+  if (parsed == null) return source;
+  final api = Uri.parse(AppConfig.apiBaseUrl);
+  final query = parsed.hasQuery ? parsed.query : null;
+  String rebind(String path) =>
+      api.replace(path: path, query: query).toString();
+
+  if (parsed.path.startsWith('/api/v1/finance/media/')) {
+    return rebind(parsed.path);
+  }
+  if (!parsed.hasScheme && parsed.path.startsWith('/')) {
+    return rebind(parsed.path);
+  }
+  return source;
+}
+
 /// Chứng từ / tệp đính kèm chứng minh khoản chi (ảnh phiếu chi, hoá đơn, PDF).
 @immutable
 class ExpenseAttachment {
   const ExpenseAttachment({
     required this.id,
     required this.name,
+    this.url = '',
+    this.mimeType,
+    this.size,
     this.kind = 'image',
-    this.sizeLabel = '320 KB',
-    this.uploadedAt = '02/11 09:30',
+    this.sizeLabel = '',
+    this.uploadedAt = '',
+    this.rawUploadedAt,
   });
 
   factory ExpenseAttachment.fromJson(Map<String, dynamic> json) {
+    final name = '${json['name'] ?? ''}';
+    final mimeType = _asNullableString(json['mime_type'] ?? json['mimeType']);
+    final size = json['size'] == null ? null : _asInt(json['size']);
+    final rawUploaded = _asNullableString(
+      json['uploaded_at'] ?? json['uploadedAt'],
+    );
+    final explicitKind = _asNullableString(json['kind']);
+    final inferredKind =
+        explicitKind ??
+        ((mimeType?.toLowerCase() == 'application/pdf' ||
+                name.toLowerCase().endsWith('.pdf'))
+            ? 'pdf'
+            : 'image');
+    final explicitSizeLabel = _asNullableString(
+      json['size_label'] ?? json['sizeLabel'],
+    );
+
     return ExpenseAttachment(
       id: '${json['id'] ?? ''}',
-      name: '${json['name'] ?? ''}',
-      kind: '${json['kind'] ?? 'image'}',
-      sizeLabel: '${json['size_label'] ?? json['sizeLabel'] ?? '320 KB'}',
-      uploadedAt: '${json['uploaded_at'] ?? json['uploadedAt'] ?? ''}',
+      name: name,
+      url: '${json['url'] ?? ''}',
+      mimeType: mimeType,
+      size: size,
+      kind: inferredKind,
+      sizeLabel: explicitSizeLabel ?? FinanceMonthUtils.formatByteSize(size),
+      uploadedAt: FinanceMonthUtils.formatServerTimestamp(rawUploaded),
+      rawUploadedAt: rawUploaded,
     );
   }
 
   final String id;
   final String name;
+  final String url;
+  final String? mimeType;
+  final int? size;
 
   /// `'image'` hoặc `'pdf'`.
   final String kind;
   final String sizeLabel;
   final String uploadedAt;
+  final String? rawUploadedAt;
+
+  String get resolvedUrl => resolveFinanceMediaUrl(url);
 
   bool get isPdf =>
-      kind.toLowerCase() == 'pdf' || name.toLowerCase().endsWith('.pdf');
+      mimeType?.toLowerCase() == 'application/pdf' ||
+      kind.toLowerCase() == 'pdf' ||
+      name.toLowerCase().endsWith('.pdf');
+
+  bool get isImage =>
+      !isPdf &&
+      ((mimeType?.toLowerCase().startsWith('image/') ?? false) ||
+          kind.toLowerCase() == 'image' ||
+          RegExp(
+            r'\.(jpg|jpeg|png|webp|gif|heic)$',
+            caseSensitive: false,
+          ).hasMatch(name));
+
+  Map<String, dynamic> toInputJson() => {
+    if (id.isNotEmpty) 'id': id,
+    'name': name,
+    'url': url,
+    if (mimeType != null && mimeType!.isNotEmpty) 'mime_type': mimeType,
+    if (size != null) 'size': size,
+    if (rawUploadedAt != null && rawUploadedAt!.isNotEmpty)
+      'uploaded_at': rawUploadedAt,
+  };
 
   Map<String, dynamic> toJson() => {
     'id': id,
     'name': name,
+    'url': url,
+    if (mimeType != null) 'mime_type': mimeType,
+    if (size != null) 'size': size,
     'kind': kind,
     'size_label': sizeLabel,
-    'uploaded_at': uploadedAt,
+    'uploaded_at': rawUploadedAt ?? uploadedAt,
   };
+}
+
+/// Mẫu khoản chi cố định trả về từ `meta.recurring_templates` của `GET /finance/expense-groups`.
+@immutable
+class RecurringTemplateMeta {
+  const RecurringTemplateMeta({
+    required this.key,
+    required this.title,
+    required this.seedKey,
+    required this.groupName,
+    this.groupId,
+  });
+
+  factory RecurringTemplateMeta.fromJson(Map<String, dynamic> json) {
+    return RecurringTemplateMeta(
+      key: '${json['key'] ?? ''}',
+      title: '${json['title'] ?? ''}',
+      seedKey: '${json['seed_key'] ?? ''}',
+      groupName: '${json['group_name'] ?? ''}',
+      groupId: _asNullableString(json['group_id']),
+    );
+  }
+
+  final String key;
+  final String title;
+  final String seedKey;
+  final String groupName;
+  final String? groupId;
 }
 
 /// Tiện ích tháng `YYYY-MM` / `MM/YYYY` và ngày `YYYY-MM-DD` / `DD/MM`.
 abstract final class FinanceMonthUtils {
-  /// Định dạng số nguyên kiểu `vi-VN` không kèm hậu tố `đ` (vd `12.000.000`).
+  /// Định dạng số nguyên kiểu `vi-VN` không kèm hậu tố `đ` (vd `12.000.000`, `-500.000`).
+  /// Giữ nguyên dấu âm cho khoản hoàn tiền / chiết khấu nhập từ Excel (API Ruling 18).
   static String formatNumber(num? value) {
-    final s = Formatters.vnd((value ?? 0).round().abs());
-    return s.endsWith('đ') ? s.substring(0, s.length - 1) : s;
+    final rounded = (value ?? 0).round();
+    if (rounded == 0) return '0';
+    final s = Formatters.vnd(rounded.abs());
+    final clean = s.endsWith('đ') ? s.substring(0, s.length - 1) : s;
+    return rounded < 0 ? '-$clean' : clean;
   }
 
-  /// Định dạng tiền tệ kèm khoảng trắng `12.000.000 đ` giống hệt mẫu `so-chi-phi-mobile.html`.
+  /// Định dạng tiền tệ kèm khoảng trắng `12.000.000 đ` (hoặc `-500.000 đ`).
   static String formatVndSpace(num? value) => '${formatNumber(value)} đ';
+
+  static String formatByteSize(int? bytes) {
+    if (bytes == null || bytes <= 0) return '';
+    if (bytes < 1024) return '$bytes B';
+    if (bytes < 1024 * 1024) return '${(bytes / 1024).round()} KB';
+    return '${(bytes / (1024 * 1024)).toStringAsFixed(1)} MB';
+  }
+
+  /// Định dạng mốc giờ ISO từ API sang giờ VN (`DD/MM HH:mm`), hoặc giữ nguyên nếu đã định dạng sẵn.
+  static String formatServerTimestamp(String? raw, {String fallback = ''}) {
+    if (raw == null || raw.trim().isEmpty) return fallback;
+    final trimmed = raw.trim();
+    final parsed = DateTime.tryParse(trimmed);
+    if (parsed != null) {
+      final vn = VnTime.of(parsed);
+      final d = vn.day.toString().padLeft(2, '0');
+      final m = vn.month.toString().padLeft(2, '0');
+      final hh = vn.hour.toString().padLeft(2, '0');
+      final mm = vn.minute.toString().padLeft(2, '0');
+      return '$d/$m $hh:$mm';
+    }
+    return trimmed;
+  }
+
+  /// Trích khoá sắp xếp `YYYY-MM-DD HH:mm:ss` theo giờ VN cho `created_at`.
+  static String createdSortKey({
+    String? rawCreatedAt,
+    required String displayCreatedAt,
+    required String fallbackSpentOn,
+    required String month,
+  }) {
+    if (rawCreatedAt != null && rawCreatedAt.trim().isNotEmpty) {
+      final parsed = DateTime.tryParse(rawCreatedAt.trim());
+      if (parsed != null) {
+        final vn = VnTime.of(parsed);
+        final y = vn.year.toString().padLeft(4, '0');
+        final m = vn.month.toString().padLeft(2, '0');
+        final d = vn.day.toString().padLeft(2, '0');
+        final hh = vn.hour.toString().padLeft(2, '0');
+        final mm = vn.minute.toString().padLeft(2, '0');
+        final ss = vn.second.toString().padLeft(2, '0');
+        return '$y-$m-$d $hh:$mm:$ss';
+      }
+    }
+    final parts = displayCreatedAt.trim().split(RegExp(r'\s+'));
+    final dm = parts.isNotEmpty && parts.first.isNotEmpty
+        ? parts.first
+        : shortDayMonth(fallbackSpentOn);
+    final hm = parts.length > 1 ? parts.last : '00:00';
+    final isoDate = toIsoDate(dm, month);
+    return '$isoDate $hm:00';
+  }
+
+  /// Ngày `YYYY-MM-DD` theo giờ VN của thời điểm nhập `created_at`.
+  static String createdDayIso({
+    String? rawCreatedAt,
+    required String displayCreatedAt,
+    required String fallbackSpentOn,
+    required String month,
+  }) {
+    if (rawCreatedAt != null && rawCreatedAt.trim().isNotEmpty) {
+      final parsed = DateTime.tryParse(rawCreatedAt.trim());
+      if (parsed != null) {
+        return formatIsoDate(VnTime.day(parsed));
+      }
+    }
+    final dm = displayCreatedAt.trim().split(RegExp(r'\s+')).first;
+    if (dm.isNotEmpty) {
+      return toIsoDate(dm, month);
+    }
+    return fallbackSpentOn;
+  }
 
   static String currentVnMonth([DateTime? clock]) {
     final now = VnTime.now(clock);
     return '${now.year}-${now.month.toString().padLeft(2, '0')}';
   }
 
+  /// 3 tháng mặc định trên thanh chọn nhanh `[M-2, M-1, M]` theo giờ VN.
+  static List<String> recentThreeMonths([DateTime? clock]) {
+    final cur = currentVnMonth(clock);
+    return [shiftMonth(cur, -2), shiftMonth(cur, -1), cur];
+  }
+
+  /// Danh sách tháng trong menu chọn kỳ (tháng kế tiếp + 12 tháng gần nhất + `activeMonth` nếu nằm ngoài).
+  static List<String> pickerMonths({
+    String? activeMonth,
+    DateTime? clock,
+    int pastMonths = 11,
+  }) {
+    final cur = currentVnMonth(clock);
+    final next = shiftMonth(cur, 1);
+    final list = <String>[
+      next,
+      cur,
+      for (var i = 1; i <= pastMonths; i++) shiftMonth(cur, -i),
+    ];
+    if (activeMonth != null && activeMonth.isNotEmpty) {
+      final normalized = toYearMonth(activeMonth, clock);
+      if (!list.contains(normalized)) {
+        list.add(normalized);
+        list.sort((a, b) => b.compareTo(a));
+      }
+    }
+    return list;
+  }
+
   /// Chuẩn hoá chuỗi tháng bất kỳ (`11/2026` hoặc `2026-11`) về `YYYY-MM`.
-  static String toYearMonth(String raw) {
+  static String toYearMonth(String raw, [DateTime? clock]) {
     final trimmed = raw.trim();
+    final fallbackYear = VnTime.now(clock).year;
     if (trimmed.contains('/')) {
       final parts = trimmed.split('/');
       if (parts.length == 2) {
-        final m = (int.tryParse(parts[0]) ?? 1).toString().padLeft(2, '0');
-        final y = (int.tryParse(parts[1]) ?? 2026).toString().padLeft(4, '0');
+        final m = (int.tryParse(parts[0]) ?? 1)
+            .clamp(1, 12)
+            .toString()
+            .padLeft(2, '0');
+        final y = (int.tryParse(parts[1]) ?? fallbackYear).toString().padLeft(
+          4,
+          '0',
+        );
         return '$y-$m';
       }
     }
     if (trimmed.contains('-')) {
       final parts = trimmed.split('-');
       if (parts.length >= 2) {
-        final y = (int.tryParse(parts[0]) ?? 2026).toString().padLeft(4, '0');
-        final m = (int.tryParse(parts[1]) ?? 1).toString().padLeft(2, '0');
+        final y = (int.tryParse(parts[0]) ?? fallbackYear).toString().padLeft(
+          4,
+          '0',
+        );
+        final m = (int.tryParse(parts[1]) ?? 1)
+            .clamp(1, 12)
+            .toString()
+            .padLeft(2, '0');
         return '$y-$m';
       }
     }
-    return '2026-11';
+    return currentVnMonth(clock);
   }
 
   /// `2026-11` → `11/2026`.
@@ -160,7 +394,9 @@ abstract final class FinanceMonthUtils {
   static int yearOf(String ymOrSlash) {
     final ym = toYearMonth(ymOrSlash);
     final parts = ym.split('-');
-    return parts.isNotEmpty ? (int.tryParse(parts[0]) ?? 2026) : 2026;
+    return parts.isNotEmpty
+        ? (int.tryParse(parts[0]) ?? VnTime.now().year)
+        : VnTime.now().year;
   }
 
   static int monthNumberOf(String ymOrSlash) {
@@ -180,9 +416,25 @@ abstract final class FinanceMonthUtils {
     return '$nextYear-${(nextMonth0 + 1).toString().padLeft(2, '0')}';
   }
 
+  /// Dời ngày `YYYY-MM-DD` sang tháng `targetYm` và kẹp ngày cuối tháng hợp lệ (vd 31/01 -> 28/02).
+  static String shiftDateToMonth(String ymd, String targetYm) {
+    final ym = toYearMonth(targetYm);
+    final dt = parseIsoDate(ymd, fallbackMonth: ym);
+    final maxDay = DateTime.utc(yearOf(ym), monthNumberOf(ym) + 1, 0).day;
+    final clampedDay = math.min(dt.day, maxDay).toString().padLeft(2, '0');
+    return '$ym-$clampedDay';
+  }
+
   static String todayIso([DateTime? clock]) {
     final today = VnTime.today(clock);
     return formatIsoDate(today);
+  }
+
+  /// Kẹp `paid_on <= today` theo giờ VN (API `SaveExpense::checkedPayments` cấm ngày trả tương lai).
+  static String clampPaidOn(String candidateIso, [DateTime? clock]) {
+    final today = todayIso(clock);
+    if (candidateIso.trim().isEmpty) return today;
+    return candidateIso.compareTo(today) <= 0 ? candidateIso : today;
   }
 
   static String formatIsoDate(DateTime date) {
@@ -194,11 +446,16 @@ abstract final class FinanceMonthUtils {
 
   static DateTime parseIsoDate(String ymd, {String? fallbackMonth}) {
     final trimmed = ymd.trim();
+    final fallbackYr = fallbackMonth != null
+        ? yearOf(fallbackMonth)
+        : VnTime.now().year;
     if (trimmed.contains('-') && trimmed.length >= 10) {
       final parts = trimmed.split('-');
-      final y = int.tryParse(parts[0]) ?? 2026;
+      final y = int.tryParse(parts[0]) ?? fallbackYr;
       final m = int.tryParse(parts[1]) ?? 1;
-      final d = int.tryParse(parts[2]) ?? 1;
+      final d =
+          int.tryParse(parts[2].substring(0, math.min(2, parts[2].length))) ??
+          1;
       return DateTime(y, m, d);
     }
     if (trimmed.contains('/')) {
@@ -207,12 +464,12 @@ abstract final class FinanceMonthUtils {
         final d = int.tryParse(parts[0]) ?? 1;
         final m = int.tryParse(parts[1]) ?? 1;
         final y = parts.length >= 3
-            ? (int.tryParse(parts[2]) ?? 2026)
-            : (fallbackMonth != null ? yearOf(fallbackMonth) : 2026);
+            ? (int.tryParse(parts[2]) ?? fallbackYr)
+            : fallbackYr;
         return DateTime(y, m, d);
       }
     }
-    return DateTime.tryParse(trimmed) ?? DateTime(2026, 11, 2);
+    return DateTime.tryParse(trimmed) ?? VnTime.today();
   }
 
   /// Chuẩn hoá `02/11` + `2026-11` → `2026-11-02`.
@@ -225,14 +482,12 @@ abstract final class FinanceMonthUtils {
     final y = yearOf(ym).toString().padLeft(4, '0');
     if (trimmed.contains('/')) {
       final parts = trimmed.split('/');
-      final d = (int.tryParse(parts[0]) ?? 1).toString().padLeft(2, '0');
-      final m = parts.length > 1
-          ? (int.tryParse(parts[1]) ?? monthNumberOf(ym)).toString().padLeft(
-              2,
-              '0',
-            )
-          : monthNumberOf(ym).toString().padLeft(2, '0');
-      return '$y-$m-$d';
+      final mInt = parts.length > 1
+          ? (int.tryParse(parts[1]) ?? monthNumberOf(ym)).clamp(1, 12)
+          : monthNumberOf(ym);
+      final maxDay = DateTime.utc(int.parse(y), mInt + 1, 0).day;
+      final dInt = (int.tryParse(parts[0]) ?? 1).clamp(1, maxDay);
+      return '$y-${mInt.toString().padLeft(2, '0')}-${dInt.toString().padLeft(2, '0')}';
     }
     return '$ym-01';
   }
@@ -270,54 +525,67 @@ abstract final class FinanceMonthUtils {
     return '$ym-${lastDay.toString().padLeft(2, '0')}';
   }
 
-  /// Ngày mặc định trong tháng theo mẫu thiết kế (`02/11` cho T11/2026 hoặc `05/MM`).
+  /// Ngày mặc định trong tháng khớp logic Web (`defaultSpentOn`):
+  /// - Tháng hiện tại (giờ VN): hôm nay
+  /// - Tháng quá khứ: ngày cuối tháng đó
+  /// - Tháng tương lai: ngày 01 của tháng đó
   static String defaultSpentOnForMonth(String ymOrSlash, [DateTime? clock]) {
-    final ym = toYearMonth(ymOrSlash);
-    if (ym == '2026-11') return '2026-11-02';
+    final ym = toYearMonth(ymOrSlash, clock);
     final current = currentVnMonth(clock);
     if (ym == current) return todayIso(clock);
-    return '$ym-05';
+    if (ym.compareTo(current) < 0) return lastDayOfMonth(ym);
+    return '$ym-01';
   }
 
-  /// Nhãn tiêu đề ngày trên danh sách: `Hôm nay · 02/11/2026` hoặc `01/11/2026`.
-  static String dayHeaderLabel(String ymd, {String? activeMonth}) {
-    final full = fullDayMonthYear(ymd, fallbackMonth: activeMonth);
-    final short = shortDayMonth(ymd);
-    final todayShort = shortDayMonth(todayIso());
-    if ((short == '02/11' &&
-            (activeMonth == null || toYearMonth(activeMonth) == '2026-11')) ||
-        short == todayShort) {
+  /// Nhãn tiêu đề ngày trên danh sách: `Hôm nay · DD/MM/YYYY`, `Hôm qua · DD/MM/YYYY` hoặc `DD/MM/YYYY`.
+  static String dayHeaderLabel(
+    String ymd, {
+    String? activeMonth,
+    DateTime? clock,
+  }) {
+    final iso = toIsoDate(ymd, activeMonth ?? currentVnMonth(clock));
+    final full = fullDayMonthYear(iso, fallbackMonth: activeMonth);
+    final today = todayIso(clock);
+    if (iso == today) {
       return 'Hôm nay · $full';
+    }
+    final yesterday = formatIsoDate(
+      VnTime.today(clock).subtract(const Duration(days: 1)),
+    );
+    if (iso == yesterday) {
+      return 'Hôm qua · $full';
     }
     return full;
   }
 
   /// Danh sách các ngày gợi ý nhanh trong popover chọn ngày của tháng `ym`.
   static List<({String isoDate, String label})> quickDatesForMonth(
-    String ymOrSlash,
-  ) {
-    final ym = toYearMonth(ymOrSlash);
+    String ymOrSlash, [
+    DateTime? clock,
+  ]) {
+    final ym = toYearMonth(ymOrSlash, clock);
     final y = yearOf(ym);
     final m = monthNumberOf(ym).toString().padLeft(2, '0');
-    final defaultIso = defaultSpentOnForMonth(ym);
+    final today = todayIso(clock);
+    final defaultIso = defaultSpentOnForMonth(ym, clock);
     final defaultDm = shortDayMonth(defaultIso);
+    final lastDm = shortDayMonth(lastDayOfMonth(ym));
     final candidates = <String>[
       defaultDm,
       '01/$m',
-      '02/$m',
-      '03/$m',
       '05/$m',
       '10/$m',
       '15/$m',
       '20/$m',
       '25/$m',
+      lastDm,
     ];
     final seen = <String>{};
     final result = <({String isoDate, String label})>[];
     for (final dm in candidates) {
       if (!seen.add(dm)) continue;
       final iso = toIsoDate(dm, ym);
-      final isToday = dm == defaultDm && ym == '2026-11';
+      final isToday = iso == today;
       result.add((isoDate: iso, label: '${isToday ? 'Hôm nay · ' : ''}$dm/$y'));
     }
     return result;
@@ -522,7 +790,6 @@ class ExpensePayment {
     'paid_on': paidOn,
     'amount': amount,
     'account_id': accountId,
-    'account_name': accountName,
     'note': note,
   };
 }
@@ -547,7 +814,8 @@ class ExpenseItem {
     required this.outstanding,
     this.note,
     this.importId,
-    this.createdAt = '02/11 09:00',
+    this.createdAt = '',
+    this.rawCreatedAt,
     this.payments = const [],
     this.attachments = const [],
   });
@@ -570,7 +838,9 @@ class ExpenseItem {
     final spentOn = '${json['spent_on'] ?? ''}';
     final month =
         _asNullableString(json['month']) ??
-        (spentOn.length >= 7 ? spentOn.substring(0, 7) : '2026-11');
+        (spentOn.length >= 7
+            ? spentOn.substring(0, 7)
+            : FinanceMonthUtils.currentVnMonth());
     final status = ExpenseStatus.fromString(json['status'] as String?);
     final amount = _asInt(json['amount']);
     final paidAmount = json['paid_amount'] == null
@@ -583,15 +853,19 @@ class ExpenseItem {
     };
     final outstanding = json['outstanding'] != null
         ? _asInt(json['outstanding'])
-        : math.max(0, amount - fallbackPaid);
-    final defaultCreated =
-        '${FinanceMonthUtils.shortDayMonth(spentOn.isNotEmpty ? spentOn : '2026-11-02')} 09:00';
+        : (amount < 0 ? 0 : math.max(0, amount - fallbackPaid));
+    final rawCreated = _asNullableString(
+      json['created_at'] ?? json['createdAt'],
+    );
+    final defaultCreated = spentOn.isNotEmpty
+        ? FinanceMonthUtils.shortDayMonth(spentOn)
+        : '';
 
     return ExpenseItem(
       id: '${json['id'] ?? ''}',
       spentOn: spentOn,
       month: FinanceMonthUtils.toYearMonth(month),
-      groupId: '${json['group_id'] ?? 'op'}',
+      groupId: '${json['group_id'] ?? ''}',
       groupName: _asNullableString(json['group_name']),
       groupColor: _asNullableString(json['group_color']),
       countsAsExpense: json['counts_as_expense'] != false,
@@ -604,9 +878,11 @@ class ExpenseItem {
       outstanding: outstanding,
       note: _asNullableString(json['note']),
       importId: _asNullableString(json['import_id']),
-      createdAt:
-          _asNullableString(json['created_at'] ?? json['createdAt']) ??
-          defaultCreated,
+      createdAt: FinanceMonthUtils.formatServerTimestamp(
+        rawCreated,
+        fallback: defaultCreated,
+      ),
+      rawCreatedAt: rawCreated,
       payments: payments,
       attachments: attachments,
     );
@@ -629,13 +905,20 @@ class ExpenseItem {
   final String? note;
   final String? importId;
 
-  /// Thời điểm nhập khoản chi (`DD/MM HH:mm`, ví dụ `'02/11 09:30'`).
+  /// Thời điểm nhập khoản chi theo giờ VN (`DD/MM HH:mm`, ví dụ `'02/11 09:30'`).
   final String createdAt;
+
+  /// Chuỗi ISO-8601 gốc từ máy chủ (dùng để sắp xếp chính xác theo thời điểm nhập).
+  final String? rawCreatedAt;
   final List<ExpensePayment> payments;
   final List<ExpenseAttachment> attachments;
 
-  /// Tổng tiền đã trả.
+  /// Khoản hoàn tiền / chiết khấu âm nhập từ Excel (API Ruling 18).
+  bool get isRefund => amount < 0;
+
+  /// Tổng tiền đã trả (khớp `ExpenseRules::paidPortion` trên API).
   int get paidTotal {
+    if (amount < 0) return amount;
     if (payments.isNotEmpty) {
       return payments.fold<int>(0, (sum, p) => sum + p.amount);
     }
@@ -646,19 +929,22 @@ class ExpenseItem {
     };
   }
 
-  /// Phần còn phải trả.
+  /// Phần còn phải trả (khớp `ExpenseRules::outstanding` trên API).
   int get remainingAmount {
-    if (payments.isNotEmpty) {
+    if (amount < 0) return 0;
+    if (payments.isNotEmpty && !payments.any((p) => p.isLegacy)) {
       return math.max(0, amount - paidTotal);
     }
     return math.max(0, outstanding);
   }
 
-  bool get isPaid => status == ExpenseStatus.paid || remainingAmount <= 0;
-  bool get isPartial => !isPaid && paidTotal > 0;
-  bool get isUnpaid => !isPaid && paidTotal <= 0;
+  bool get isPaid =>
+      status == ExpenseStatus.paid || (amount > 0 && remainingAmount <= 0);
+  bool get isPartial =>
+      !isPaid && (status == ExpenseStatus.partial || paidTotal > 0);
+  bool get isUnpaid => !isPaid && !isPartial;
 
-  /// Đúng khi khoản này đã được trả đủ trong đúng 1 lần duy nhất (`one = pays.length === 1 && !left`).
+  /// Đúng khi khoản này đã được trả đủ trong đúng 1 lần duy nhất (`one = pays.length <= 1 && !left`).
   bool get isSingleFullPayment => isPaid && payments.length <= 1;
 
   bool get hasPaymentHistory => payments.isNotEmpty || paidTotal > 0;
@@ -684,16 +970,23 @@ class ExpenseItem {
     return resolvedGroupName;
   }
 
-  /// Nguồn tiền hiển thị: ưu tiên nguồn của lần trả cuối, sau đó đến `accountName`.
+  /// Nguồn tiền hiển thị: ưu tiên nguồn của lần trả, sau đó đến `accountName` (không tự bịa khi rỗng).
   String? get effectiveAccountName {
-    for (var i = payments.length - 1; i >= 0; i--) {
-      final name = payments[i].accountName;
-      if (name != null && name.trim().isNotEmpty) return name;
+    final distinctNames = <String>[];
+    for (final p in payments) {
+      final name = p.accountName?.trim();
+      if (name != null && name.isNotEmpty && !distinctNames.contains(name)) {
+        distinctNames.add(name);
+      }
+    }
+    if (distinctNames.length == 1) return distinctNames.first;
+    if (distinctNames.length > 1) {
+      return '${distinctNames.last} (+${distinctNames.length - 1})';
     }
     if (accountName != null && accountName!.trim().isNotEmpty) {
-      return accountName;
+      return accountName!.trim();
     }
-    return 'TK ngân hàng';
+    return null;
   }
 
   String? defaultPaymentAccountId(List<MoneyAccount> accounts) {
@@ -718,16 +1011,15 @@ class ExpenseItem {
     required String paidOn,
     required int paymentAmount,
     String? paymentAccountId,
-    String? paymentAccountName,
     String? note,
   }) {
+    final safePaidOn = FinanceMonthUtils.clampPaidOn(paidOn);
     return [
       for (final p in payments) p.toInputJson(),
       {
-        'paid_on': paidOn,
+        'paid_on': safePaidOn,
         'amount': paymentAmount,
         'account_id': paymentAccountId ?? accountId,
-        'account_name': paymentAccountName ?? effectiveAccountName,
         'note': note,
       },
     ];
@@ -736,7 +1028,6 @@ class ExpenseItem {
   List<Map<String, dynamic>>? buildPayInFullInputs({
     required String today,
     String? defaultAccountId,
-    String? defaultAccountName,
   }) {
     final rest = remainingAmount;
     if (rest <= 0) return null;
@@ -744,7 +1035,6 @@ class ExpenseItem {
       paidOn: today,
       paymentAmount: rest,
       paymentAccountId: defaultAccountId ?? accountId,
-      paymentAccountName: defaultAccountName ?? effectiveAccountName,
     );
   }
 
@@ -789,6 +1079,7 @@ class ExpenseItem {
     int? outstanding,
     String? note,
     String? createdAt,
+    String? rawCreatedAt,
     List<ExpensePayment>? payments,
     List<ExpenseAttachment>? attachments,
   }) {
@@ -810,6 +1101,7 @@ class ExpenseItem {
       note: note ?? this.note,
       importId: importId,
       createdAt: createdAt ?? this.createdAt,
+      rawCreatedAt: rawCreatedAt ?? this.rawCreatedAt,
       payments: payments ?? this.payments,
       attachments: attachments ?? this.attachments,
     );
@@ -951,15 +1243,25 @@ class LedgerSummary {
     );
   }
 
-  /// Tự tính `LedgerSummary` từ danh sách `items` và tổng tháng trước `prevMonthTotal`.
+  /// Tự tính `LedgerSummary` lạc quan từ danh sách `items` (khớp `ExpenseSummary.php`),
+  /// bảo toàn `prevMonth`, `revenue` và `cashOut` của máy chủ.
   factory LedgerSummary.fromItems({
     required List<ExpenseItem> items,
     required List<ExpenseGroup> groups,
-    String prevMonth = '',
-    int prevMonthTotal = 0,
+    LedgerPrevMonthSummary prevMonth = const LedgerPrevMonthSummary(
+      month: '',
+      total: 0,
+    ),
+    int revenue = 0,
+    LedgerCashOutSummary cashOut = const LedgerCashOutSummary(
+      total: 0,
+      earlier: 0,
+    ),
   }) {
     var total = 0;
     var paid = 0;
+    var outstanding = 0;
+    var count = 0;
     var paidCount = 0;
     var unpaidCount = 0;
     var partialCount = 0;
@@ -967,14 +1269,21 @@ class LedgerSummary {
     var excludedCount = 0;
     final groupSums = <String, int>{};
     final groupCounts = <String, int>{};
+    final groupItemMeta = <String, ExpenseItem>{};
+
+    final groupMap = {for (final g in groups) g.id: g};
 
     for (final item in items) {
-      if (!item.countsAsExpense) {
+      final grp = groupMap[item.groupId];
+      final counts = grp?.countsAsExpense ?? item.countsAsExpense;
+      if (!counts) {
         excludedTotal += item.amount;
         excludedCount++;
       } else {
         total += item.amount;
         paid += item.paidTotal;
+        outstanding += item.remainingAmount;
+        count++;
         if (item.isPaid) {
           paidCount++;
         } else if (item.isPartial) {
@@ -985,32 +1294,39 @@ class LedgerSummary {
       }
       groupSums[item.groupId] = (groupSums[item.groupId] ?? 0) + item.amount;
       groupCounts[item.groupId] = (groupCounts[item.groupId] ?? 0) + 1;
+      groupItemMeta.putIfAbsent(item.groupId, () => item);
     }
 
-    final groupMap = {for (final g in groups) g.id: g};
-    final byGroup = <LedgerGroupTotal>[
-      for (final entry in groupSums.entries)
-        if (entry.value > 0)
-          LedgerGroupTotal(
-            groupId: entry.key,
-            name:
-                groupMap[entry.key]?.name ??
-                FinanceSeedCatalog.nameForGroupId(entry.key),
-            color:
-                groupMap[entry.key]?.color ??
-                FinanceSeedCatalog.colorForGroupId(entry.key),
-            countsAsExpense: groupMap[entry.key]?.countsAsExpense ?? true,
-            amount: entry.value,
-            count: groupCounts[entry.key] ?? 1,
-          ),
-    ]..sort((a, b) => b.amount.compareTo(a.amount));
+    final byGroup =
+        <LedgerGroupTotal>[
+          for (final entry in groupSums.entries)
+            LedgerGroupTotal(
+              groupId: entry.key,
+              name:
+                  groupMap[entry.key]?.name ??
+                  groupItemMeta[entry.key]?.groupName ??
+                  FinanceSeedCatalog.nameForGroupId(entry.key),
+              color:
+                  groupMap[entry.key]?.color ??
+                  groupItemMeta[entry.key]?.groupColor ??
+                  FinanceSeedCatalog.colorForGroupId(entry.key),
+              countsAsExpense:
+                  groupMap[entry.key]?.countsAsExpense ??
+                  groupItemMeta[entry.key]?.countsAsExpense ??
+                  true,
+              amount: entry.value,
+              count: groupCounts[entry.key] ?? 1,
+            ),
+        ]..sort((a, b) {
+          final c = b.amount.compareTo(a.amount);
+          return c != 0 ? c : a.resolvedName.compareTo(b.resolvedName);
+        });
 
-    final outstanding = math.max(0, total - paid);
     return LedgerSummary(
       total: total,
       paid: paid,
       outstanding: outstanding,
-      count: items.where((e) => e.countsAsExpense).length,
+      count: count,
       paidCount: paidCount,
       unpaidCount: unpaidCount,
       partialCount: partialCount,
@@ -1019,10 +1335,9 @@ class LedgerSummary {
         count: excludedCount,
       ),
       byGroup: byGroup,
-      prevMonth: LedgerPrevMonthSummary(
-        month: prevMonth,
-        total: prevMonthTotal,
-      ),
+      prevMonth: prevMonth,
+      revenue: revenue,
+      cashOut: cashOut,
     );
   }
 
@@ -1079,7 +1394,9 @@ class MonthLedger {
         : const <String, dynamic>{};
 
     return MonthLedger(
-      month: FinanceMonthUtils.toYearMonth('${json['month'] ?? '2026-11'}'),
+      month: FinanceMonthUtils.toYearMonth(
+        '${json['month'] ?? FinanceMonthUtils.currentVnMonth()}',
+      ),
       items: items,
       truncated: json['truncated'] == true,
       summary: LedgerSummary.fromJson(summaryMap),
@@ -1092,7 +1409,7 @@ class MonthLedger {
   final LedgerSummary summary;
 }
 
-/// Gợi ý khoản chi cố định đầu tháng (`RECUR` trong mẫu thiết kế).
+/// Gợi ý khoản chi cố định đầu tháng (`RECUR`).
 @immutable
 class RecurringExpenseSuggestion {
   const RecurringExpenseSuggestion({
@@ -1105,7 +1422,7 @@ class RecurringExpenseSuggestion {
     required this.suggestedAmount,
     required this.spentOnForMonth,
     this.accountId,
-    this.accountName = 'TK ngân hàng',
+    this.accountName,
     this.history = const [],
   });
 
@@ -1124,8 +1441,42 @@ class RecurringExpenseSuggestion {
   Color get resolvedColor => FinanceMonthUtils.parseHexColor(groupColor);
 }
 
-/// Danh mục nhóm chuẩn Viomni Orbit, 3 nguồn tiền, 5 khoản cố định hàng tháng, lịch sử 3 tháng và dữ liệu mẫu.
+/// Danh mục chuẩn, tiện ích gợi ý lịch sử 3 tháng và dữ liệu mẫu dùng riêng cho Demo Mode / Unit Test.
 abstract final class FinanceSeedCatalog {
+  /// 5 mẫu khoản cố định chuẩn (khớp `DefaultFinanceCatalog::RECURRING_TEMPLATES` trên API).
+  static const List<RecurringTemplateMeta> defaultRecurringTemplates = [
+    RecurringTemplateMeta(
+      key: 'chi_phi_kho',
+      title: 'Chi phí kho',
+      seedKey: 'thue_kho',
+      groupName: 'Thuê kho',
+    ),
+    RecurringTemplateMeta(
+      key: 'dien_nuoc',
+      title: 'Điện nước',
+      seedKey: 'dien_nuoc',
+      groupName: 'Điện nước & tiện ích',
+    ),
+    RecurringTemplateMeta(
+      key: 'luong_nhan_su',
+      title: 'Lương nhân sự',
+      seedKey: 'luong_thuong',
+      groupName: 'Lương & Thưởng',
+    ),
+    RecurringTemplateMeta(
+      key: 'lai_vay',
+      title: 'Lãi vay',
+      seedKey: 'lai_vay',
+      groupName: 'Lãi vay',
+    ),
+    RecurringTemplateMeta(
+      key: 'ke_toan_dich_vu',
+      title: 'Lương kế toán dịch vụ',
+      seedKey: 'thue_phi',
+      groupName: 'Thuế & phí',
+    ),
+  ];
+
   static const List<ExpenseGroup> defaultGroups = [
     ExpenseGroup(
       id: 'op',
@@ -1186,145 +1537,13 @@ abstract final class FinanceSeedCatalog {
     ),
     MoneyAccount(
       id: 'acc_wallet',
-      name: 'Ví điện tử',
+      name: 'Tiền ứng',
       kind: MoneyAccountKind.advance,
       sortOrder: 3,
     ),
   ];
 
-  static const List<String> defaultAccountNames = [
-    'TK ngân hàng',
-    'Tiền mặt',
-    'Ví điện tử',
-  ];
-
-  static const List<String> segMonths = ['2026-09', '2026-10', '2026-11'];
-
-  static const List<String> allMonths = [
-    '2026-06',
-    '2026-07',
-    '2026-08',
-    '2026-09',
-    '2026-10',
-    '2026-11',
-  ];
-
-  /// 5 gợi ý nhanh trong sheet "Thêm chi phí" khớp 5 khoản cố định hàng tháng của anh Lê Nguyên.
-  static const List<({String label, String title, int amount, String groupId})>
-  quickAddPresets = [
-    (
-      label: 'Chi phí kho · 12tr',
-      title: 'Chi phí kho',
-      amount: 12000000,
-      groupId: 'op',
-    ),
-    (
-      label: 'Điện nước · 1,85tr',
-      title: 'Điện nước',
-      amount: 1850000,
-      groupId: 'op',
-    ),
-    (
-      label: 'Lương nhân sự · 18tr',
-      title: 'Lương nhân sự',
-      amount: 18000000,
-      groupId: 'pe',
-    ),
-    (
-      label: 'Lãi vay · 6,5tr',
-      title: 'Lãi vay',
-      amount: 6500000,
-      groupId: 'fn',
-    ),
-    (
-      label: 'Lương kế toán DV · 3tr',
-      title: 'Lương kế toán dịch vụ',
-      amount: 3000000,
-      groupId: 'ad',
-    ),
-  ];
-
-  static List<({String label, String title, int amount, String groupId})>
-  get quickChips => quickAddPresets;
-
-  /// Lịch sử 3 tháng gần nhất (`HIST`) để gợi ý chip 1 chạm trên bàn phím số cho cả 5 khoản cố định.
-  static const Map<String, List<({String monthLabel, int amount})>>
-  historyTable = {
-    'Chi phí kho': [
-      (monthLabel: 'T8', amount: 12000000),
-      (monthLabel: 'T9', amount: 12000000),
-      (monthLabel: 'T10', amount: 12000000),
-    ],
-    'Điện nước': [
-      (monthLabel: 'T8', amount: 1790000),
-      (monthLabel: 'T9', amount: 1920000),
-      (monthLabel: 'T10', amount: 1850000),
-    ],
-    'Lương nhân sự': [
-      (monthLabel: 'T8', amount: 17500000),
-      (monthLabel: 'T9', amount: 18000000),
-      (monthLabel: 'T10', amount: 18000000),
-    ],
-    'Lãi vay': [
-      (monthLabel: 'T8', amount: 6500000),
-      (monthLabel: 'T9', amount: 6500000),
-      (monthLabel: 'T10', amount: 6500000),
-    ],
-    'Lương kế toán dịch vụ': [
-      (monthLabel: 'T8', amount: 3000000),
-      (monthLabel: 'T9', amount: 3000000),
-      (monthLabel: 'T10', amount: 3000000),
-    ],
-    'Tiền thuê mặt bằng': [
-      (monthLabel: 'T8', amount: 12000000),
-      (monthLabel: 'T9', amount: 12000000),
-      (monthLabel: 'T10', amount: 12000000),
-    ],
-    'Internet + Điện nước': [
-      (monthLabel: 'T8', amount: 1790000),
-      (monthLabel: 'T9', amount: 1920000),
-      (monthLabel: 'T10', amount: 1850000),
-    ],
-    'Phí phần mềm CRM': [
-      (monthLabel: 'T8', amount: 1600000),
-      (monthLabel: 'T9', amount: 1600000),
-      (monthLabel: 'T10', amount: 1600000),
-    ],
-    'Lương bộ phận': [
-      (monthLabel: 'T8', amount: 18000000),
-      (monthLabel: 'T9', amount: 18000000),
-      (monthLabel: 'T10', amount: 18000000),
-    ],
-    'Quảng cáo Facebook': [
-      (monthLabel: 'T8', amount: 4200000),
-      (monthLabel: 'T9', amount: 5000000),
-      (monthLabel: 'T10', amount: 4500000),
-    ],
-    'Phí hosting': [
-      (monthLabel: 'T8', amount: 2450000),
-      (monthLabel: 'T9', amount: 2450000),
-      (monthLabel: 'T10', amount: 2450000),
-    ],
-  };
-
-  static Map<String, List<({String monthLabel, int amount})>>
-  get historyByTitlePrefix => historyTable;
-
-  /// Tìm lịch sử 3 tháng cho tiêu đề `title` (khớp tiền tố như `histFor` trong HTML).
-  static List<({String monthLabel, int amount})>? historyForTitle(
-    String title,
-  ) {
-    final trimmed = title.trim();
-    if (trimmed.isEmpty) return null;
-    for (final entry in historyTable.entries) {
-      if (trimmed.toLowerCase().startsWith(entry.key.toLowerCase())) {
-        return entry.value;
-      }
-    }
-    return null;
-  }
-
-  /// Tạo danh sách chip gợi ý trên bàn phím từ lịch sử (`histChips` trong HTML).
+  /// Tạo danh sách chip gợi ý trên bàn phím từ lịch sử 3 tháng gần nhất (`histChips`).
   static List<({String label, int amount})> buildHistoryChips(
     List<({String monthLabel, int amount})>? history,
   ) {
@@ -1353,7 +1572,7 @@ abstract final class FinanceSeedCatalog {
     for (final g in defaultGroups) {
       if (g.id == groupId) return g.name;
     }
-    return 'Chi phí khác';
+    return 'Khác';
   }
 
   static String colorForGroupId(String groupId) {
@@ -1361,398 +1580,6 @@ abstract final class FinanceSeedCatalog {
       if (g.id == groupId) return g.color;
     }
     return '#94A3B8';
-  }
-
-  /// 5 khoản cố định hàng tháng theo yêu cầu của anh Lê Nguyên:
-  /// 1. Chi phí kho (`12.000.000 đ`)
-  /// 2. Điện nước (`1.850.000 đ`)
-  /// 3. Lương nhân sự (`18.000.000 đ`)
-  /// 4. Lãi vay (`6.500.000 đ`)
-  /// 5. Lương kế toán dịch vụ (`3.000.000 đ`)
-  static List<RecurringExpenseSuggestion> defaultRecurringForMonth(
-    String ymOrSlash,
-  ) {
-    final ym = FinanceMonthUtils.toYearMonth(ymOrSlash);
-    final mNum = FinanceMonthUtils.monthNumberOf(ym);
-    final spentOn = '$ym-01';
-    return [
-      RecurringExpenseSuggestion(
-        key: 'recur_warehouse',
-        baseTitle: 'Chi phí kho',
-        titleForMonth: 'Chi phí kho T$mNum',
-        groupId: 'op',
-        groupName: nameForGroupId('op'),
-        groupColor: colorForGroupId('op'),
-        suggestedAmount: 12000000,
-        spentOnForMonth: spentOn,
-        accountId: 'acc_bank',
-        accountName: 'TK ngân hàng',
-        history: historyTable['Chi phí kho']!,
-      ),
-      RecurringExpenseSuggestion(
-        key: 'recur_utilities',
-        baseTitle: 'Điện nước',
-        titleForMonth: 'Điện nước T$mNum',
-        groupId: 'op',
-        groupName: nameForGroupId('op'),
-        groupColor: colorForGroupId('op'),
-        suggestedAmount: 1850000,
-        spentOnForMonth: spentOn,
-        accountId: 'acc_bank',
-        accountName: 'TK ngân hàng',
-        history: historyTable['Điện nước']!,
-      ),
-      RecurringExpenseSuggestion(
-        key: 'recur_payroll',
-        baseTitle: 'Lương nhân sự',
-        titleForMonth: 'Lương nhân sự T$mNum',
-        groupId: 'pe',
-        groupName: nameForGroupId('pe'),
-        groupColor: colorForGroupId('pe'),
-        suggestedAmount: 18000000,
-        spentOnForMonth: spentOn,
-        accountId: 'acc_bank',
-        accountName: 'TK ngân hàng',
-        history: historyTable['Lương nhân sự']!,
-      ),
-      RecurringExpenseSuggestion(
-        key: 'recur_loan_interest',
-        baseTitle: 'Lãi vay',
-        titleForMonth: 'Lãi vay T$mNum',
-        groupId: 'fn',
-        groupName: nameForGroupId('fn'),
-        groupColor: colorForGroupId('fn'),
-        suggestedAmount: 6500000,
-        spentOnForMonth: spentOn,
-        accountId: 'acc_bank',
-        accountName: 'TK ngân hàng',
-        history: historyTable['Lãi vay']!,
-      ),
-      RecurringExpenseSuggestion(
-        key: 'recur_accounting_service',
-        baseTitle: 'Lương kế toán dịch vụ',
-        titleForMonth: 'Lương kế toán dịch vụ T$mNum',
-        groupId: 'ad',
-        groupName: nameForGroupId('ad'),
-        groupColor: colorForGroupId('ad'),
-        suggestedAmount: 3000000,
-        spentOnForMonth: spentOn,
-        accountId: 'acc_bank',
-        accountName: 'TK ngân hàng',
-        history: historyTable['Lương kế toán dịch vụ']!,
-      ),
-    ];
-  }
-
-  static List<RecurringExpenseSuggestion> get recurringTemplates =>
-      defaultRecurringForMonth('2026-11');
-
-  /// Dữ liệu khởi tạo 6 tháng (`06/2026` → `11/2026`) kèm `createdAt` và `attachments` mẫu.
-  static Map<String, List<ExpenseItem>> buildInitialSeedItems() {
-    ExpenseItem paidItem({
-      required int id,
-      required String title,
-      required String groupId,
-      required int amount,
-      required String spentOn,
-      required String accountName,
-      String? createdAt,
-      List<ExpenseAttachment> attachments = const [],
-    }) {
-      final month = spentOn.substring(0, 7);
-      final accId = accountName == 'Tiền mặt' ? 'acc_cash' : 'acc_bank';
-      final defaultCreated =
-          createdAt ?? '${FinanceMonthUtils.shortDayMonth(spentOn)} 09:15';
-      return ExpenseItem(
-        id: '$id',
-        spentOn: spentOn,
-        month: month,
-        groupId: groupId,
-        groupName: nameForGroupId(groupId),
-        groupColor: colorForGroupId(groupId),
-        title: title,
-        amount: amount,
-        accountId: accId,
-        accountName: accountName,
-        status: ExpenseStatus.paid,
-        paidAmount: amount,
-        outstanding: 0,
-        createdAt: defaultCreated,
-        payments: [
-          ExpensePayment(
-            id: 'p_$id',
-            paidOn: spentOn,
-            amount: amount,
-            accountId: accId,
-            accountName: accountName,
-          ),
-        ],
-        attachments: attachments,
-      );
-    }
-
-    return {
-      '2026-06': [
-        paidItem(
-          id: 1,
-          title: 'Lương nhân sự T6',
-          groupId: 'pe',
-          amount: 17500000,
-          spentOn: '2026-06-06',
-          accountName: 'TK ngân hàng',
-          createdAt: '06/06 09:00',
-        ),
-        paidItem(
-          id: 2,
-          title: 'Chi phí kho T6',
-          groupId: 'op',
-          amount: 12000000,
-          spentOn: '2026-06-02',
-          accountName: 'TK ngân hàng',
-          createdAt: '02/06 08:30',
-        ),
-      ],
-      '2026-07': [
-        paidItem(
-          id: 5,
-          title: 'Lương nhân sự T7',
-          groupId: 'pe',
-          amount: 18000000,
-          spentOn: '2026-07-05',
-          accountName: 'TK ngân hàng',
-          createdAt: '05/07 09:00',
-        ),
-        paidItem(
-          id: 6,
-          title: 'Chi phí kho T7',
-          groupId: 'op',
-          amount: 12000000,
-          spentOn: '2026-07-01',
-          accountName: 'TK ngân hàng',
-          createdAt: '01/07 08:45',
-        ),
-      ],
-      '2026-08': [
-        paidItem(
-          id: 8,
-          title: 'Lương nhân sự T8',
-          groupId: 'pe',
-          amount: 18000000,
-          spentOn: '2026-08-05',
-          accountName: 'TK ngân hàng',
-          createdAt: '05/08 09:10',
-        ),
-        paidItem(
-          id: 9,
-          title: 'Chi phí kho T8',
-          groupId: 'op',
-          amount: 12000000,
-          spentOn: '2026-08-01',
-          accountName: 'TK ngân hàng',
-          createdAt: '01/08 08:30',
-        ),
-      ],
-      '2026-09': [
-        paidItem(
-          id: 11,
-          title: 'Lương nhân sự T9',
-          groupId: 'pe',
-          amount: 18000000,
-          spentOn: '2026-09-05',
-          accountName: 'TK ngân hàng',
-          createdAt: '05/09 09:00',
-        ),
-        paidItem(
-          id: 12,
-          title: 'Quảng cáo Facebook T9',
-          groupId: 'mk',
-          amount: 5000000,
-          spentOn: '2026-09-03',
-          accountName: 'TK ngân hàng',
-          createdAt: '03/09 14:20',
-        ),
-        paidItem(
-          id: 13,
-          title: 'Chi phí kho T9',
-          groupId: 'op',
-          amount: 12000000,
-          spentOn: '2026-09-01',
-          accountName: 'TK ngân hàng',
-          createdAt: '01/09 08:30',
-        ),
-        paidItem(
-          id: 14,
-          title: 'Điện nước T9',
-          groupId: 'op',
-          amount: 1920000,
-          spentOn: '2026-09-01',
-          accountName: 'TK ngân hàng',
-          createdAt: '01/09 10:15',
-        ),
-        paidItem(
-          id: 15,
-          title: 'Phí phần mềm CRM T9',
-          groupId: 'sw',
-          amount: 1600000,
-          spentOn: '2026-09-01',
-          accountName: 'TK ngân hàng',
-          createdAt: '01/09 11:00',
-        ),
-      ],
-      '2026-10': [
-        paidItem(
-          id: 21,
-          title: 'Lương bộ phận kinh doanh T10',
-          groupId: 'pe',
-          amount: 18000000,
-          spentOn: '2026-10-05',
-          accountName: 'TK ngân hàng',
-          createdAt: '05/10 09:30',
-        ),
-        paidItem(
-          id: 22,
-          title: 'Quảng cáo Facebook T10',
-          groupId: 'mk',
-          amount: 4500000,
-          spentOn: '2026-10-03',
-          accountName: 'TK ngân hàng',
-          createdAt: '03/10 15:00',
-        ),
-        paidItem(
-          id: 23,
-          title: 'Văn phòng phẩm & in ấn',
-          groupId: 'ad',
-          amount: 650000,
-          spentOn: '2026-10-02',
-          accountName: 'Tiền mặt',
-          createdAt: '02/10 16:10',
-        ),
-        paidItem(
-          id: 24,
-          title: 'Chi phí kho T10',
-          groupId: 'op',
-          amount: 12000000,
-          spentOn: '2026-10-01',
-          accountName: 'TK ngân hàng',
-          createdAt: '01/10 08:30',
-        ),
-        paidItem(
-          id: 25,
-          title: 'Điện nước T10',
-          groupId: 'op',
-          amount: 1850000,
-          spentOn: '2026-10-01',
-          accountName: 'TK ngân hàng',
-          createdAt: '01/10 09:45',
-        ),
-        paidItem(
-          id: 26,
-          title: 'Phí phần mềm CRM T10',
-          groupId: 'sw',
-          amount: 1600000,
-          spentOn: '2026-10-01',
-          accountName: 'TK ngân hàng',
-          createdAt: '01/10 10:30',
-        ),
-      ],
-      '2026-11': [
-        paidItem(
-          id: 31,
-          title: 'Phí hosting tháng 11',
-          groupId: 'sw',
-          amount: 2450000,
-          spentOn: '2026-11-02',
-          accountName: 'TK ngân hàng',
-          createdAt: '02/11 09:15',
-          attachments: const [
-            ExpenseAttachment(
-              id: 'att_31_1',
-              name: 'Hoa-don-VAT-hosting-T11.pdf',
-              kind: 'pdf',
-              sizeLabel: '185 KB',
-              uploadedAt: '02/11 09:15',
-            ),
-          ],
-        ),
-        const ExpenseItem(
-          id: '32',
-          spentOn: '2026-11-02',
-          month: '2026-11',
-          groupId: 'mk',
-          groupName: 'Tiếp thị & bán hàng',
-          groupColor: '#D97706',
-          title: 'Quảng cáo Facebook đầu tháng',
-          amount: 4500000,
-          accountId: 'acc_bank',
-          accountName: 'TK ngân hàng',
-          status: ExpenseStatus.unpaid,
-          paidAmount: 0,
-          outstanding: 4500000,
-          createdAt: '02/11 10:40',
-          payments: [],
-        ),
-        const ExpenseItem(
-          id: '33',
-          spentOn: '2026-11-01',
-          month: '2026-11',
-          groupId: 'pe',
-          groupName: 'Nhân sự & tiền lương',
-          groupColor: '#2563EB',
-          title: 'Tạm ứng lương bộ phận KD',
-          amount: 18000000,
-          accountId: 'acc_bank',
-          accountName: 'TK ngân hàng',
-          status: ExpenseStatus.partial,
-          paidAmount: 9000000,
-          outstanding: 9000000,
-          createdAt: '01/11 11:20',
-          payments: [
-            ExpensePayment(
-              id: 'p_33_1',
-              paidOn: '2026-11-01',
-              amount: 9000000,
-              accountId: 'acc_bank',
-              accountName: 'TK ngân hàng',
-            ),
-          ],
-        ),
-        paidItem(
-          id: 34,
-          title: 'Tiếp khách đối tác chiến lược',
-          groupId: 'mk',
-          amount: 1280000,
-          spentOn: '2026-11-01',
-          accountName: 'Tiền mặt',
-          createdAt: '01/11 14:20',
-          attachments: const [
-            ExpenseAttachment(
-              id: 'att_34_1',
-              name: 'Phieu-chi-tien-mat-0111.jpg',
-              kind: 'image',
-              sizeLabel: '420 KB',
-              uploadedAt: '01/11 14:20',
-            ),
-          ],
-        ),
-        const ExpenseItem(
-          id: '35',
-          spentOn: '2026-11-01',
-          month: '2026-11',
-          groupId: 'ad',
-          groupName: 'Kế toán & hành chính',
-          groupColor: '#64748B',
-          title: 'Văn phòng phẩm & mực in',
-          amount: 420000,
-          accountId: 'acc_cash',
-          accountName: 'Tiền mặt',
-          status: ExpenseStatus.unpaid,
-          paidAmount: 0,
-          outstanding: 420000,
-          createdAt: '01/11 16:05',
-          payments: [],
-        ),
-      ],
-    };
   }
 }
 
