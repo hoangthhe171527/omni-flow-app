@@ -5,12 +5,13 @@ import '../../core/module/nav_destination.dart';
 import '../../core/module/omni_module.dart';
 import '../../security/guard/access_requirement.dart';
 import 'domain/finance_permissions.dart';
+import 'presentation/expense_summary_page.dart';
 import 'presentation/expenses_page.dart';
 import 'routes.dart';
 
 export 'routes.dart';
 
-/// Phân hệ **Sổ chi phí** (`finance.expenses`).
+/// Phân hệ **Tài chính & Chi phí** (`finance.expenses`, `finance.summary`).
 class FinanceModule extends OmniModule {
   const FinanceModule();
 
@@ -32,6 +33,13 @@ class FinanceModule extends OmniModule {
       access: const AccessRequirement.any(FinancePermissions.anyRead),
       builder: (_, _) => const ExpensesPage(),
     ),
+    ModuleRoute(
+      path: FinanceRoutes.expenseSummaryPath,
+      name: FinanceRoutes.expenseSummary,
+      rootNavigator: true,
+      access: const AccessRequirement.any(FinancePermissions.anyRead),
+      builder: (_, _) => const ExpenseSummaryPage(),
+    ),
   ];
 
   @override
@@ -46,6 +54,18 @@ class FinanceModule extends OmniModule {
       area: NavArea.admin,
       weight: NavWeight.secondary,
       order: 25,
+      access: AccessRequirement.any(FinancePermissions.anyRead),
+    ),
+    ModuleNavEntry(
+      moduleId: 'finance',
+      label: 'Tổng hợp chi phí',
+      subtitle: 'Tổng hợp và phân tích chi phí theo tháng, quý, năm',
+      icon: Icons.pie_chart_outline_rounded,
+      selectedIcon: Icons.pie_chart_rounded,
+      routeName: FinanceRoutes.expenseSummary,
+      area: NavArea.admin,
+      weight: NavWeight.secondary,
+      order: 26,
       access: AccessRequirement.any(FinancePermissions.anyRead),
     ),
   ];
