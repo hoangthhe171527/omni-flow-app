@@ -118,12 +118,6 @@ class FinanceDemoStore {
         'group_name': 'Vận hành & kho',
       },
       {
-        'key': 'salary',
-        'title': 'Lương nhân sự',
-        'group_id': 'g_pe',
-        'group_name': 'Nhân sự & lương',
-      },
-      {
         'key': 'loan_interest',
         'title': 'Lãi vay',
         'group_id': 'g_tax',
@@ -131,7 +125,7 @@ class FinanceDemoStore {
       },
       {
         'key': 'accounting_fee',
-        'title': 'Lương kế toán dịch vụ',
+        'title': 'Dịch vụ kế toán',
         'group_id': 'g_sw',
         'group_name': 'Phần mềm & dịch vụ',
       },
@@ -198,13 +192,6 @@ class FinanceDemoStore {
       seedPaid(
         ym: entry.ym,
         day: 5,
-        groupId: 'g_pe',
-        title: 'Lương nhân sự T$mNum',
-        amount: 18000000,
-      );
-      seedPaid(
-        ym: entry.ym,
-        day: 5,
         groupId: 'g_tax',
         title: 'Lãi vay T$mNum',
         amount: 4500000,
@@ -213,7 +200,7 @@ class FinanceDemoStore {
         ym: entry.ym,
         day: 6,
         groupId: 'g_sw',
-        title: 'Lương kế toán dịch vụ T$mNum',
+        title: 'Dịch vụ kế toán T$mNum',
         amount: 3000000,
       );
     }

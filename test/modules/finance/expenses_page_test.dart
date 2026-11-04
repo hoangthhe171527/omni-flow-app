@@ -111,9 +111,9 @@ void main() {
         expect(find.text('4.650.000 đ'), findsOneWidget);
         expect(find.textContaining('vs T10'), findsOneWidget);
 
-        // Thẻ 5 khoản cố định tự nội suy từ lịch sử thực trên API (12tr + 1.85tr + 18tr + 4.5tr + 3tr = 39.35tr)
+        // Thẻ 4 khoản cố định tự nội suy từ tháng trước trên API (12tr + 1.85tr + 4.5tr + 3tr = 21.35tr, không có Lương nhân sự)
         expect(find.text('Khoản cố định tháng 11'), findsOneWidget);
-        expect(find.text('5 khoản · 39.350.000 đ'), findsOneWidget);
+        expect(find.text('4 khoản · 21.350.000 đ'), findsOneWidget);
         expect(find.text('Ghi tất cả'), findsOneWidget);
 
         await tester.tap(find.byKey(const ValueKey('finance-recur-head')));
@@ -121,9 +121,9 @@ void main() {
 
         expect(find.text('Chi phí kho T11'), findsOneWidget);
         expect(find.text('Điện nước T11'), findsOneWidget);
-        expect(find.text('Lương nhân sự T11'), findsOneWidget);
+        expect(find.text('Lương nhân sự T11'), findsNothing);
         expect(find.text('Lãi vay T11'), findsOneWidget);
-        expect(find.text('Lương kế toán dịch vụ T11'), findsOneWidget);
+        expect(find.text('Dịch vụ kế toán T11'), findsOneWidget);
       },
     );
 
@@ -144,7 +144,7 @@ void main() {
         expect(find.text('26.650.000'), findsNothing);
         expect(find.text('5 khoản · 41.350.000 đ'), findsNothing);
         expect(
-          find.text('5 khoản gợi ý · Chạm để nhập số tiền'),
+          find.text('4 khoản gợi ý · Chạm để nhập số tiền'),
           findsOneWidget,
         );
       },
@@ -175,13 +175,13 @@ void main() {
         await tester.pumpWidget(h.app);
         await tester.pumpAndSettle();
 
-        await tester.tap(find.text('Tháng 10'));
+        await tester.tap(find.byKey(const ValueKey('finance-prev-month-btn')));
         await tester.pumpAndSettle();
 
         expect(find.text('Tổng chi tháng 10'), findsOneWidget);
-        expect(find.text('39.350.000'), findsOneWidget);
-        expect(find.text('Lương kế toán dịch vụ T10'), findsOneWidget);
-        expect(find.text('Lương nhân sự T10'), findsOneWidget);
+        expect(find.text('21.350.000'), findsOneWidget);
+        expect(find.text('Dịch vụ kế toán T10'), findsOneWidget);
+        expect(find.text('Lương nhân sự T10'), findsNothing);
 
         await tester.drag(find.byType(ListView).first, const Offset(0, -350));
         await tester.pumpAndSettle();
@@ -222,7 +222,7 @@ void main() {
           '5.450.000 đ',
           '4.650.000 đ',
           'Khoản cố định tháng 11',
-          '5 khoản · 39.350.000 đ',
+          '4 khoản · 21.350.000 đ',
           '2.450.000 đ',
           '6.000.000 đ',
           'còn 3.000.000 đ',
@@ -250,7 +250,7 @@ void main() {
     );
 
     testWidgets(
-      'bấm "Ghi tất cả" tạo thật 5 khoản lên API (POST) và bấm "Hoàn tác" xoá thật trên API (DELETE)',
+      'bấm "Ghi tất cả" tạo thật 4 khoản lên API (POST) và bấm "Hoàn tác" xoá thật trên API (DELETE)',
       (tester) async {
         final h = buildTestHarness();
         final initialNovCount = h.store.expenses
@@ -267,17 +267,17 @@ void main() {
         await tester.pump();
         await tester.pump(const Duration(milliseconds: 50));
 
-        // 3 khoản cũ + 5 khoản cố định vừa POST lên server = 8 khoản
+        // 3 khoản cũ + 4 khoản cố định vừa POST lên server = 7 khoản
         expect(
           h.store.expenses.where((e) => e['month'] == '2026-11').length,
-          8,
+          7,
         );
         expect(find.text('Khoản cố định tháng 11'), findsNothing);
-        // 10.100.000 + 39.350.000 = 49.450.000
-        expect(find.text('49.450.000'), findsOneWidget);
+        // 10.100.000 + 21.350.000 = 31.450.000
+        expect(find.text('31.450.000'), findsOneWidget);
         expect(find.text('Hoàn tác'), findsOneWidget);
 
-        // Bấm Hoàn tác -> gọi DELETE xoá 5 bản ghi trên server
+        // Bấm Hoàn tác -> gọi DELETE xoá 4 bản ghi trên server
         await tester.tap(find.byKey(const ValueKey('finance-undo-btn')));
         await tester.pump(const Duration(seconds: 5));
 
@@ -287,6 +287,40 @@ void main() {
         );
         expect(find.text('Khoản cố định tháng 11'), findsOneWidget);
         expect(find.text('10.100.000'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'xoá khoản chi yêu cầu xác nhận 2 bước (Bước 1/2 -> Bước 2/2) trước khi xoá thật trên API',
+      (tester) async {
+        final h = buildTestHarness();
+        await tester.pumpWidget(h.app);
+        await tester.pumpAndSettle();
+
+        final cashItemFinder = find.text('Tiếp khách đối tác chiến lược');
+        await tester.ensureVisible(cashItemFinder);
+        await tester.pumpAndSettle();
+        await tester.tap(cashItemFinder);
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.byTooltip('Xoá khoản chi'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Bước 1/2 · Kiểm tra mục sắp xoá'), findsOneWidget);
+        await tester.tap(find.byKey(const ValueKey('finance-delete-step1-btn')));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Bước 2/2 · Xác nhận xoá vĩnh viễn'), findsOneWidget);
+        await tester.tap(find.byKey(const ValueKey('finance-delete-step2-btn')));
+        await tester.pumpAndSettle();
+        await tester.pump(const Duration(seconds: 5));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Tiếp khách đối tác chiến lược'), findsNothing);
+        expect(
+          h.store.expenses.where((e) => e['month'] == '2026-11').length,
+          2,
+        );
       },
     );
 
@@ -468,6 +502,76 @@ void main() {
         expect(find.text('Khoản chi riêng Tenant B'), findsOneWidget);
         expect(find.text('15.000.000'), findsOneWidget);
         expect(find.text('Khoản chi riêng Tenant A'), findsNothing);
+      },
+    );
+
+    testWidgets(
+      'Thêm chi phí: gõ "Quảng" gợi ý "Quảng cáo Facebook" + tự gán nhóm Marketing, có Ngày thanh toán riêng và 2 nút Lưu / Lưu & thêm tiếp',
+      (tester) async {
+        final h = buildTestHarness();
+        await tester.pumpWidget(h.app);
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.byKey(const ValueKey('finance-add-btn')));
+        await tester.pumpAndSettle();
+
+        // Khi ô trống: hiện 4 chip cố định trong Wrap gọn gàng, có Ngày thanh toán và 2 nút Lưu
+        expect(find.byKey(const ValueKey('finance-preset-chips')), findsOneWidget);
+        expect(find.byKey(const ValueKey('finance-add-paid-date-row')), findsOneWidget);
+        expect(find.text('Ngày thanh toán'), findsOneWidget);
+        expect(find.byKey(const ValueKey('finance-save-and-continue-btn')), findsOneWidget);
+        expect(find.byKey(const ValueKey('finance-save-btn')), findsOneWidget);
+
+        // Gõ "Quảng" -> hiện gợi ý "Quảng cáo Facebook" và tự gán nhóm "Tiếp thị & khách"
+        await tester.enterText(
+          find.byKey(const ValueKey('finance-smart-input')),
+          'Quảng',
+        );
+        await tester.pumpAndSettle();
+
+        expect(find.byKey(const ValueKey('finance-autocomplete-chips')), findsOneWidget);
+        expect(find.text('Quảng cáo Facebook'), findsOneWidget);
+        expect(find.text('Quảng cáo Google Ads'), findsOneWidget);
+        expect(find.text('Tiếp thị & khách'), findsOneWidget);
+
+        // Chạm vào chip gợi ý "Quảng cáo Facebook" rồi nhập kèm số tiền 2.5tr
+        await tester.tap(find.byKey(const ValueKey('finance-suggest-Quảng cáo Facebook')));
+        await tester.pumpAndSettle();
+        await tester.enterText(
+          find.byKey(const ValueKey('finance-smart-input')),
+          'Quảng cáo Facebook 2.5tr',
+        );
+        await tester.pumpAndSettle();
+
+        // Bấm "Lưu & thêm tiếp" -> tạo khoản chi thứ nhất lên API nhưng giữ sheet mở để nhập tiếp
+        await tester.tap(find.byKey(const ValueKey('finance-save-and-continue-btn')));
+        await tester.pump(const Duration(seconds: 5));
+        await tester.pumpAndSettle();
+
+        expect(
+          h.store.expenses.where((e) => e['month'] == '2026-11').length,
+          4,
+        );
+        // Sheet vẫn mở để nhập khoản tiếp theo
+        expect(find.byKey(const ValueKey('finance-smart-input')), findsOneWidget);
+
+        // Nhập khoản thứ 2 và bấm "Lưu khoản chi" -> lưu và đóng sheet
+        await tester.enterText(
+          find.byKey(const ValueKey('finance-smart-input')),
+          'Cước Internet 1.67tr',
+        );
+        await tester.pumpAndSettle();
+        await tester.tap(find.byKey(const ValueKey('finance-save-btn')));
+        await tester.pumpAndSettle();
+        await tester.pump(const Duration(seconds: 5));
+        await tester.pumpAndSettle();
+
+        expect(
+          h.store.expenses.where((e) => e['month'] == '2026-11').length,
+          5,
+        );
+        expect(find.text('Quảng cáo Facebook'), findsOneWidget);
+        expect(find.text('Cước Internet'), findsOneWidget);
       },
     );
   });

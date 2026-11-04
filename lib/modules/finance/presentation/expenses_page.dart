@@ -503,50 +503,92 @@ class _ExpensesPageState extends ConsumerState<ExpensesPage> {
   ) {
     final defaultSeg = FinanceMonthUtils.recentThreeMonths(state.clock);
     final inDefaultSeg = defaultSeg.contains(state.activeMonth);
-    final slots = inDefaultSeg
-        ? defaultSeg
-        : <String>[state.activeMonth, defaultSeg[1], defaultSeg[2]];
+    final ribbonMonths = <String>{
+      for (var d = -4; d <= 1; d++)
+        FinanceMonthUtils.shiftMonth(state.activeMonth, d),
+      ...defaultSeg,
+      state.activeMonth,
+    }.toList()
+      ..sort();
 
-    return Row(
-      children: [
-        Expanded(
-          child: Container(
-            height: 34,
-            padding: const EdgeInsets.all(2),
-            decoration: BoxDecoration(
-              color: p.track,
-              borderRadius: BorderRadius.circular(9),
+    final prevYm = FinanceMonthUtils.shiftMonth(state.activeMonth, -1);
+    final nextYm = FinanceMonthUtils.shiftMonth(state.activeMonth, 1);
+
+    return GestureDetector(
+      key: const ValueKey('finance-month-carousel'),
+      behavior: HitTestBehavior.translucent,
+      onHorizontalDragEnd: (details) {
+        final vx = details.primaryVelocity ?? 0;
+        if (vx.abs() < 120) return;
+        if (vx < 0) {
+          notifier.selectMonth(nextYm);
+        } else {
+          notifier.selectMonth(prevYm);
+        }
+      },
+      child: Row(
+        children: [
+          InkWell(
+            key: const ValueKey('finance-prev-month-btn'),
+            onTap: () => notifier.selectMonth(prevYm),
+            borderRadius: BorderRadius.circular(9),
+            child: Container(
+              width: 30,
+              height: 34,
+              decoration: BoxDecoration(
+                color: p.track,
+                borderRadius: BorderRadius.circular(9),
+              ),
+              alignment: Alignment.center,
+              child: Icon(
+                Icons.chevron_left_rounded,
+                size: 18,
+                color: p.ink2,
+              ),
             ),
-            child: Row(
-              children: [
-                for (final ym in slots)
-                  Expanded(
-                    child: GestureDetector(
-                      behavior: HitTestBehavior.opaque,
-                      onTap: () => notifier.selectMonth(ym),
-                      child: AnimatedContainer(
-                        duration: const Duration(milliseconds: 180),
-                        curve: Curves.easeOutCubic,
-                        alignment: Alignment.center,
-                        decoration: BoxDecoration(
-                          color: ym == state.activeMonth
-                              ? p.card
-                              : Colors.transparent,
-                          borderRadius: BorderRadius.circular(7),
-                          boxShadow: ym == state.activeMonth
-                              ? [
-                                  BoxShadow(
-                                    color: Colors.black.withValues(alpha: 0.08),
-                                    blurRadius: 4,
-                                    offset: const Offset(0, 1),
-                                  ),
-                                ]
-                              : null,
-                        ),
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 4),
-                          child: FittedBox(
-                            fit: BoxFit.scaleDown,
+          ),
+          const SizedBox(width: 5),
+          Expanded(
+            child: Container(
+              height: 34,
+              padding: const EdgeInsets.all(2),
+              decoration: BoxDecoration(
+                color: p.track,
+                borderRadius: BorderRadius.circular(9),
+              ),
+              child: SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                physics: const BouncingScrollPhysics(),
+                child: Row(
+                  children: [
+                    for (final ym in ribbonMonths)
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 1.5),
+                        child: GestureDetector(
+                          behavior: HitTestBehavior.opaque,
+                          onTap: () => notifier.selectMonth(ym),
+                          child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 180),
+                            curve: Curves.easeOutCubic,
+                            padding: const EdgeInsets.symmetric(horizontal: 10),
+                            alignment: Alignment.center,
+                            decoration: BoxDecoration(
+                              color: ym == state.activeMonth
+                                  ? p.card
+                                  : Colors.transparent,
+                              borderRadius: BorderRadius.circular(7),
+                              boxShadow: ym == state.activeMonth
+                                  ? [
+                                      BoxShadow(
+                                        color: Colors.black.withValues(
+                                          alpha: 0.08,
+                                        ),
+                                        blurRadius: 4,
+                                        offset: const Offset(0, 1),
+                                      ),
+                                    ]
+                                  : null,
+                            ),
                             child: Text(
                               FinanceMonthUtils.formatMonthShort(ym),
                               maxLines: 1,
@@ -554,45 +596,67 @@ class _ExpensesPageState extends ConsumerState<ExpensesPage> {
                                 color: ym == state.activeMonth
                                     ? p.ink
                                     : p.muted,
-                                fontWeight: FontWeight.w600,
+                                fontWeight: ym == state.activeMonth
+                                    ? FontWeight.w700
+                                    : FontWeight.w600,
                               ),
                             ),
                           ),
                         ),
                       ),
-                    ),
-                  ),
-              ],
+                  ],
+                ),
+              ),
             ),
           ),
-        ),
-        const SizedBox(width: 6),
-        Tooltip(
-          message: 'Chọn tháng khác',
-          child: InkWell(
-            key: _segMoreKey,
-            onTap: _openMonthPickerMenu,
+          const SizedBox(width: 5),
+          InkWell(
+            key: const ValueKey('finance-next-month-btn'),
+            onTap: () => notifier.selectMonth(nextYm),
             borderRadius: BorderRadius.circular(9),
             child: Container(
-              width: 34,
+              width: 30,
               height: 34,
               decoration: BoxDecoration(
-                color: !inDefaultSeg ? p.primarySoft : p.track,
+                color: p.track,
                 borderRadius: BorderRadius.circular(9),
-                border: !inDefaultSeg
-                    ? Border.all(color: p.selLine, width: 0.5)
-                    : null,
               ),
               alignment: Alignment.center,
               child: Icon(
-                Icons.calendar_month_outlined,
-                size: 16,
-                color: !inDefaultSeg ? p.primaryInk : p.ink2,
+                Icons.chevron_right_rounded,
+                size: 18,
+                color: p.ink2,
               ),
             ),
           ),
-        ),
-      ],
+          const SizedBox(width: 6),
+          Tooltip(
+            message: 'Chọn tháng khác',
+            child: InkWell(
+              key: _segMoreKey,
+              onTap: _openMonthPickerMenu,
+              borderRadius: BorderRadius.circular(9),
+              child: Container(
+                width: 34,
+                height: 34,
+                decoration: BoxDecoration(
+                  color: !inDefaultSeg ? p.primarySoft : p.track,
+                  borderRadius: BorderRadius.circular(9),
+                  border: !inDefaultSeg
+                      ? Border.all(color: p.selLine, width: 0.5)
+                      : null,
+                ),
+                alignment: Alignment.center,
+                child: Icon(
+                  Icons.calendar_month_outlined,
+                  size: 16,
+                  color: !inDefaultSeg ? p.primaryInk : p.ink2,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 

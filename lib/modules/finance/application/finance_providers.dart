@@ -275,7 +275,7 @@ class FinanceLedgerState {
     );
   }
 
-  /// Tra lịch sử tối đa 3 tháng trước từ dữ liệu thực của workspace theo tiêu đề gốc.
+  /// Tra lịch sử tháng gần nhất từ dữ liệu thực của workspace theo tiêu đề gốc (không cố định 3 tháng).
   List<({String monthLabel, int amount})> historyForTitle(
     String rawTitle, {
     String? beforeMonth,
@@ -286,8 +286,6 @@ class FinanceLedgerState {
     if (base.isEmpty) return const [];
     final anchor = beforeMonth ?? activeMonth;
     final months = <String>[
-      FinanceMonthUtils.shiftMonth(anchor, -3),
-      FinanceMonthUtils.shiftMonth(anchor, -2),
       FinanceMonthUtils.shiftMonth(anchor, -1),
     ];
     final result = <({String monthLabel, int amount})>[];
@@ -317,10 +315,20 @@ class FinanceLedgerState {
     return result;
   }
 
-  List<RecurringTemplateMeta> get _effectiveTemplates =>
-      recurringTemplates.isNotEmpty
-      ? recurringTemplates
-      : FinanceSeedCatalog.defaultRecurringTemplates;
+  List<RecurringTemplateMeta> get _effectiveTemplates {
+    final raw = recurringTemplates.isNotEmpty
+        ? recurringTemplates
+        : FinanceSeedCatalog.defaultRecurringTemplates;
+    return raw
+        .where((tpl) {
+          final k = tpl.key.toLowerCase();
+          final foldedTitle = foldDiacritics(tpl.title);
+          return k != 'luong_nhan_su' &&
+              k != 'salary' &&
+              !foldedTitle.contains('luong nhan su');
+        })
+        .toList(growable: false);
+  }
 
   String _resolveTemplateGroupId(RecurringTemplateMeta tpl) {
     if (tpl.groupId != null && usableGroups.any((g) => g.id == tpl.groupId)) {
@@ -811,6 +819,15 @@ class FinanceLedgerState {
       }
     }
     return null;
+  }
+
+  /// Toàn bộ các khoản chi đã tải trong bộ nhớ (phục vụ gợi ý Autocomplete tên khoản chi).
+  List<ExpenseItem> get allLoadedExpenses {
+    final out = <ExpenseItem>[];
+    for (final list in itemsByMonth.values) {
+      out.addAll(list);
+    }
+    return out;
   }
 
   /// Tổng chi và số khoản của một tháng bất kỳ (dùng cho menu chọn tháng).
@@ -1470,6 +1487,7 @@ class FinanceLedgerNotifier extends Notifier<FinanceLedgerState> {
     required String groupId,
     required String spentOn,
     required bool isPaid,
+    String? paidOn,
     String? accountId,
     String? accountName,
     String? note,
@@ -1495,7 +1513,12 @@ class FinanceLedgerNotifier extends Notifier<FinanceLedgerState> {
     );
     final cleanTitle = title.trim().isNotEmpty ? title.trim() : grp.name;
     final tempId = 'tmp_${state.nextSeq}';
-    final paidOn = FinanceMonthUtils.clampPaidOn(isoDate, state.clock);
+    final effectivePaidOn = (paidOn != null && paidOn.trim().isNotEmpty)
+        ? FinanceMonthUtils.clampPaidOn(
+            FinanceMonthUtils.toIsoDate(paidOn.trim(), targetMonth),
+            state.clock,
+          )
+        : FinanceMonthUtils.clampPaidOn(isoDate, state.clock);
     final nowDisplay =
         createdAt ??
         FinanceMonthUtils.formatServerTimestamp(
@@ -1523,7 +1546,7 @@ class FinanceLedgerNotifier extends Notifier<FinanceLedgerState> {
           ? [
               ExpensePayment(
                 id: 'p_$tempId',
-                paidOn: paidOn,
+                paidOn: effectivePaidOn,
                 amount: amount,
                 accountId: resolvedAcc?.id,
                 accountName: resolvedAcc?.name,
@@ -1555,7 +1578,7 @@ class FinanceLedgerNotifier extends Notifier<FinanceLedgerState> {
     final paymentInputs = isPaid
         ? <Map<String, dynamic>>[
             {
-              'paid_on': paidOn,
+              'paid_on': effectivePaidOn,
               'amount': amount,
               'account_id': resolvedAcc?.id,
               'note': null,
@@ -2169,6 +2192,81 @@ class FinanceLedgerNotifier extends Notifier<FinanceLedgerState> {
       await syncFuture;
       if (_disposed) return;
       await _refreshMonths({prevMonth, newMonth});
+    } catch (e) {
+      if (_disposed) return;
+      state = rollbackState.copyWith(toast: () => null, syncing: false);
+      showToast(_errorMessageOf(e));
+    }
+  }
+
+  /// Đổi ngày thanh toán của khoản chi (`PUT /finance/expenses/{id}/payments`).
+  Future<void> updateExpensePaymentDate(
+    String itemId,
+    String newPaidOnIso, {
+    int paymentIndex = 0,
+  }) async {
+    final found = _locateItem(itemId);
+    if (found == null) return;
+    final item = found.item;
+    if (item.isRefund || item.payments.isEmpty) return;
+    if (paymentIndex < 0 || paymentIndex >= item.payments.length) return;
+
+    final clampedPaidOn = FinanceMonthUtils.clampPaidOn(
+      FinanceMonthUtils.toIsoDate(newPaidOnIso, found.month),
+      state.clock,
+    );
+    final prevPayments = item.payments;
+    if (prevPayments[paymentIndex].paidOn == clampedPaidOn) return;
+
+    final rollbackState = state;
+    final nextPayments = <ExpensePayment>[
+      for (var i = 0; i < prevPayments.length; i++)
+        i == paymentIndex
+            ? prevPayments[i].copyWith(paidOn: clampedPaidOn)
+            : prevPayments[i],
+    ];
+    final updatedItem = item.copyWith(payments: nextPayments);
+    _replaceItemInMonth(found.month, updatedItem, markDirty: true);
+
+    final syncFuture = _api.replacePayments(
+      expenseId: itemId,
+      payments: [
+        for (final p in nextPayments)
+          p
+              .copyWith(
+                paidOn: FinanceMonthUtils.clampPaidOn(p.paidOn, state.clock),
+              )
+              .toInputJson(),
+      ],
+    );
+
+    showToast(
+      'Đã đổi ngày thanh toán · ${FinanceMonthUtils.fullDayMonthYear(clampedPaidOn, fallbackMonth: found.month)}',
+      onUndo: () async {
+        await syncFuture;
+        await _api.replacePayments(
+          expenseId: itemId,
+          payments: [
+            for (final p in prevPayments)
+              p
+                  .copyWith(
+                    paidOn: FinanceMonthUtils.clampPaidOn(
+                      p.paidOn,
+                      state.clock,
+                    ),
+                  )
+                  .toInputJson(),
+          ],
+        );
+        await _refreshMonths({found.month});
+      },
+    );
+
+    try {
+      final serverItem = await syncFuture;
+      if (_disposed) return;
+      _replaceItemInMonth(found.month, serverItem, markDirty: true);
+      await _refreshMonths({found.month});
     } catch (e) {
       if (_disposed) return;
       state = rollbackState.copyWith(toast: () => null, syncing: false);
