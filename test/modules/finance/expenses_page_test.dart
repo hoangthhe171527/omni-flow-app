@@ -409,6 +409,11 @@ void main() {
         await tester.tap(cashItemFinder);
         await tester.pumpAndSettle();
 
+        expect(find.text('Chi tiết khoản chi'), findsOneWidget);
+        expect(find.byKey(const ValueKey('finance-detail-title-btn')), findsOneWidget);
+        expect(find.byKey(const ValueKey('finance-detail-paid-date-cell')), findsOneWidget);
+        expect(find.text('Ngày ghi nhận'), findsOneWidget);
+        expect(find.text('Ngày thanh toán'), findsOneWidget);
         expect(find.text('Đã trả đủ · 02/11'), findsOneWidget);
         expect(find.text('1 chứng từ'), findsOneWidget);
         expect(find.text('Hoa-don-tiep-khach.jpg'), findsOneWidget);

@@ -91,7 +91,7 @@ jobs:
           GOOGLE_SERVICES_JSON: ${{ secrets.GOOGLE_SERVICES_JSON }}
         run: |
           if [ -z "$GOOGLE_SERVICES_JSON" ]; then
-            echo "::error::Thiếu secret GOOGLE_SERVICES_JSON. Bản release đòi cấu hình Firebase của vn.app.sunriseieco.viomni — xem docs/PHAT_HANH.md."
+            echo "::error::Thiếu secret GOOGLE_SERVICES_JSON. Bản release đòi cấu hình Firebase của vn.sunriseieco.viomni — xem docs/PHAT_HANH.md."
             exit 1
           fi
           printf '%s' "$GOOGLE_SERVICES_JSON" > android/app/google-services.json
