@@ -28,7 +28,7 @@ val verifyReleaseGoogleServices by tasks.registering {
             throw GradleException(
                 "Missing android/app/google-services.json. " +
                     "Release builds require Firebase config for " +
-                    "vn.app.sunriseieco.viomni.",
+                    "vn.sunriseieco.viomni.",
             )
         }
     }
@@ -46,10 +46,19 @@ val keystoreProperties = Properties().apply {
     val file = rootProject.file("key.properties")
     if (file.exists()) file.inputStream().use { load(it) }
 }
-val hasSigningConfig = keystoreProperties.containsKey("storeFile")
+val signingStoreFile = keystoreProperties.getProperty("storeFile") ?: System.getenv("ANDROID_KEYSTORE_PATH")
+val signingStorePassword = keystoreProperties.getProperty("storePassword") ?: System.getenv("ANDROID_KEYSTORE_PASSWORD")
+val signingKeyAlias = keystoreProperties.getProperty("keyAlias") ?: System.getenv("ANDROID_KEY_ALIAS")
+val signingKeyPassword = keystoreProperties.getProperty("keyPassword") ?: System.getenv("ANDROID_KEY_PASSWORD")
+val hasSigningConfig = listOf(
+    signingStoreFile,
+    signingStorePassword,
+    signingKeyAlias,
+    signingKeyPassword,
+).all { !it.isNullOrBlank() }
 
 android {
-    namespace = "vn.app.sunriseieco.viomni"
+    namespace = "vn.sunriseieco.viomni"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
@@ -65,7 +74,7 @@ android {
 
     defaultConfig {
         // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
-        applicationId = "vn.app.sunriseieco.viomni"
+        applicationId = "vn.sunriseieco.viomni"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = flutter.minSdkVersion
@@ -77,10 +86,10 @@ android {
     signingConfigs {
         if (hasSigningConfig) {
             create("release") {
-                storeFile = file(keystoreProperties.getProperty("storeFile"))
-                storePassword = keystoreProperties.getProperty("storePassword")
-                keyAlias = keystoreProperties.getProperty("keyAlias")
-                keyPassword = keystoreProperties.getProperty("keyPassword")
+                storeFile = file(signingStoreFile!!)
+                storePassword = signingStorePassword
+                keyAlias = signingKeyAlias
+                keyPassword = signingKeyPassword
             }
         }
     }

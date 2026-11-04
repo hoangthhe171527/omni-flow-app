@@ -29,7 +29,8 @@ Android; mục 3 là iOS và bỏ qua được.
 
 | Thứ | Trạng thái |
 |---|---|
-| Mã định danh ứng dụng | `vn.app.sunriseieco.viomni` (cả hai nền tảng) |
+| Mã định danh Android (Play Console Sunrise IECO) | `vn.sunriseieco.viomni` |
+| Bundle ID iOS (tài khoản hiện tại) | `vn.app.sunriseieco.viomni` |
 | Tên hiện trên máy | Viomni |
 | Địa chỉ API trong bản phát hành | `https://omni-api.app.sunriseieco.vn` (`.env.example`) |
 | Trang chính sách riêng tư | `https://omni.app.sunriseieco.vn/privacy` |
@@ -67,7 +68,7 @@ thư mục dự án. Trình quản lý mật khẩu, hoặc một USB cất két
 ### 2.2 Lấy `google-services.json`
 
 [Firebase Console](https://console.firebase.google.com) → project
-**omnicrm-mobile** → thêm ứng dụng Android với mã `vn.app.sunriseieco.viomni`
+**omnicrm-mobile** → thêm ứng dụng Android với mã `vn.sunriseieco.viomni`
 → tải `google-services.json`.
 
 `google-services.json` chỉ phục vụ Firebase/FCM. Đăng nhập Google của Viomni
@@ -77,9 +78,10 @@ Các OAuth client nằm trong Google Cloud/Firebase project **omnicrm-mobile**,
 cùng project với Web client mà API dùng làm audience:
 
 - Web client: `858803204032-i3lv9du7r7dgcsd57e0r82emie00r8i3.apps.googleusercontent.com`.
-- Android client: package `vn.app.sunriseieco.viomni` và SHA-1 của chứng thư ký.
-  Client cho debug đã tạo. Trước khi phát hành, tạo thêm client cho SHA-1 của
-  khoá upload và SHA-1 **App signing key certificate** trong Play Console.
+- Tạo OAuth Android client cho package `vn.sunriseieco.viomni` với SHA-1 của
+  khoá upload; sau khi Play tạo app-signing key, thêm SHA-1 của **App signing
+  key certificate** trong Play Console. Android client của package cũ không
+  dùng được cho package mới.
 
 `GOOGLE_SSO_CLIENT_ID` trên API phải giữ nguyên bằng Web client ở trên. OAuth
 client ID là định danh công khai, không phải secret.
@@ -133,7 +135,8 @@ bao giờ sai. Workflow in một cảnh báo để không ai tưởng realtime �
 
 GitHub → Actions → **Release** → Run workflow:
 
-- `build_number`: **20** cho lần đầu (pubspec đang ở `+19`), rồi tăng dần.
+- `build_number`: **32** cho lần đầu ở package Android mới (pubspec đang ở
+  `+31`), rồi tăng dần.
   Play từ chối một số đã dùng, và số đã tiêu không lấy lại được.
 - `platform`: `android`
 

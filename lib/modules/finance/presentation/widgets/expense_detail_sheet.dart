@@ -251,6 +251,7 @@ class _ExpenseDetailSheetState extends ConsumerState<_ExpenseDetailSheet> {
   late final TextEditingController _titleCtrl;
   late final FocusNode _titleFocus;
   String? _lastSyncedTitle;
+  bool _editingTitle = false;
   bool _uploadingAttachment = false;
 
   final GlobalKey _grpBtnKey = GlobalKey();
@@ -268,6 +269,9 @@ class _ExpenseDetailSheetState extends ConsumerState<_ExpenseDetailSheet> {
       ..addListener(() {
         if (!_titleFocus.hasFocus) {
           _commitTitle();
+          if (mounted && _editingTitle) {
+            setState(() => _editingTitle = false);
+          }
         }
       });
   }
@@ -511,11 +515,17 @@ class _ExpenseDetailSheetState extends ConsumerState<_ExpenseDetailSheet> {
     final paidDateDm = item.payments.isNotEmpty
         ? FinanceMonthUtils.shortDayMonth(item.payments.first.paidOn)
         : FinanceMonthUtils.shortDayMonth(item.spentOn);
+    final paidDateFull = item.payments.isNotEmpty
+        ? FinanceMonthUtils.fullDayMonthYear(
+            item.payments.first.paidOn,
+            fallbackMonth: item.month,
+          )
+        : 'Chưa trả';
 
     return Container(
       decoration: BoxDecoration(
         color: p.bg,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(22)),
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.25),
@@ -526,7 +536,7 @@ class _ExpenseDetailSheetState extends ConsumerState<_ExpenseDetailSheet> {
       ),
       padding: EdgeInsets.fromLTRB(
         16,
-        6,
+        8,
         16,
         math.max(20, bottomInset + 14) +
             MediaQuery.viewInsetsOf(context).bottom,
@@ -540,68 +550,39 @@ class _ExpenseDetailSheetState extends ConsumerState<_ExpenseDetailSheet> {
               child: Container(
                 width: 36,
                 height: 4,
-                margin: const EdgeInsets.only(bottom: 8),
+                margin: const EdgeInsets.only(bottom: 10),
                 decoration: BoxDecoration(
                   color: p.muted.withValues(alpha: 0.35),
                   borderRadius: BorderRadius.circular(99),
                 ),
               ),
             ),
-            // Top bar: sh-bar
+            // 1. Thanh Header cân đối 2 đầu Trái - Phải
             Padding(
-              padding: const EdgeInsets.only(top: 2, bottom: 8),
+              padding: const EdgeInsets.only(bottom: 10),
               child: Row(
                 children: [
-                  // Group pill button on left
-                  Flexible(
-                    child: InkWell(
-                      key: _grpBtnKey,
-                      onTap: () => _openGroupMenu(item),
-                      borderRadius: BorderRadius.circular(99),
-                      child: Container(
-                        height: 30,
-                        padding: const EdgeInsets.symmetric(horizontal: 11),
-                        decoration: BoxDecoration(
-                          color: p.card,
-                          borderRadius: BorderRadius.circular(99),
-                          border: Border.all(color: p.line, width: 0.5),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Chi tiết khoản chi',
+                          style: OmniType.bodySm.copyWith(
+                            color: p.ink2,
+                            fontWeight: FontWeight.w700,
+                          ),
                         ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Container(
-                              width: 9,
-                              height: 9,
-                              decoration: BoxDecoration(
-                                color: grp.parsedColor,
-                                shape: BoxShape.circle,
-                              ),
-                            ),
-                            const SizedBox(width: 7),
-                            Flexible(
-                              child: Text(
-                                grp.name,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: OmniType.caption.copyWith(
-                                  color: p.ink,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 4),
-                            Icon(
-                              Icons.unfold_more_rounded,
-                              size: 13,
-                              color: p.muted,
-                            ),
-                          ],
-                        ),
-                      ),
+                        if (item.createdAt.isNotEmpty) ...[
+                          const SizedBox(height: 1),
+                          Text(
+                            'Nhập lúc ${item.createdAt}',
+                            style: OmniType.micro.copyWith(color: p.muted),
+                          ),
+                        ],
+                      ],
                     ),
                   ),
-                  const SizedBox(width: 8),
-                  // Circular 30x30 action buttons on right: Copy, Delete, Close
                   if (!item.isRefund) ...[
                     _buildCircleIconBtn(
                       p,
@@ -614,7 +595,7 @@ class _ExpenseDetailSheetState extends ConsumerState<_ExpenseDetailSheet> {
                             .duplicateToNextMonth(item.id);
                       },
                     ),
-                    const SizedBox(width: 6),
+                    const SizedBox(width: 7),
                   ],
                   _buildCircleIconBtn(
                     p,
@@ -634,7 +615,7 @@ class _ExpenseDetailSheetState extends ConsumerState<_ExpenseDetailSheet> {
                           .deleteExpense(item.id);
                     },
                   ),
-                  const SizedBox(width: 6),
+                  const SizedBox(width: 7),
                   _buildCircleIconBtn(
                     p,
                     tooltip: 'Đóng',
@@ -644,118 +625,98 @@ class _ExpenseDetailSheetState extends ConsumerState<_ExpenseDetailSheet> {
                 ],
               ),
             ),
-            // Hero section: inline title + 3 compact chips (Date, Account, Attachments) + attachment pills + big tappable amount + single paid pill (if paid in 1 go)
-            Padding(
-              padding: const EdgeInsets.fromLTRB(4, 2, 4, 14),
+
+            // 2. Khối Tâm điểm (Hero Card): Tên khoản chi + Số tiền lớn + Trạng thái
+            Container(
+              padding: const EdgeInsets.fromLTRB(14, 14, 14, 14),
+              decoration: BoxDecoration(
+                color: p.card,
+                borderRadius: BorderRadius.circular(18),
+                border: Border.all(color: p.line, width: 0.5),
+              ),
               child: Column(
                 children: [
-                  TextField(
-                    controller: _titleCtrl,
-                    focusNode: _titleFocus,
-                    textAlign: TextAlign.center,
-                    textInputAction: TextInputAction.done,
-                    onSubmitted: (_) => _commitTitle(),
-                    style: OmniType.section.copyWith(
-                      color: p.ink,
-                      fontWeight: FontWeight.w600,
-                    ),
-                    decoration: InputDecoration(
-                      isDense: true,
-                      contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 4,
+                  if (_editingTitle)
+                    TextField(
+                      controller: _titleCtrl,
+                      focusNode: _titleFocus,
+                      autofocus: true,
+                      textAlign: TextAlign.center,
+                      textInputAction: TextInputAction.done,
+                      onSubmitted: (_) {
+                        _commitTitle();
+                        setState(() => _editingTitle = false);
+                      },
+                      style: OmniType.section.copyWith(
+                        color: p.ink,
+                        fontWeight: FontWeight.w600,
                       ),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8),
-                        borderSide: BorderSide.none,
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8),
-                        borderSide: BorderSide(color: p.primary, width: 1),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 7),
-                  // Compact inline metadata chips: Date + Account + Attachments
-                  Wrap(
-                    alignment: WrapAlignment.center,
-                    spacing: 6,
-                    runSpacing: 6,
-                    children: [
-                      _buildMetaChip(
-                        key: _dateChipKey,
-                        p: p,
-                        icon: Icons.calendar_today_outlined,
-                        label: FinanceMonthUtils.fullDayMonthYear(
-                          item.spentOn,
-                          fallbackMonth: item.month,
+                      decoration: InputDecoration(
+                        isDense: true,
+                        filled: true,
+                        fillColor: p.bg,
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 7,
                         ),
-                        onTap: () => _openDateMenu(item),
-                      ),
-                      if (!item.isRefund)
-                        _buildMetaChip(
-                          key: _accChipKey,
-                          p: p,
-                          icon: Icons.account_balance_wallet_outlined,
-                          label: accName,
-                          onTap: () => _openAccountMenu(item),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(10),
+                          borderSide: BorderSide(color: p.primary, width: 1),
                         ),
-                      _buildMetaChip(
-                        key: _attChipKey,
-                        p: p,
-                        icon: Icons.attach_file_rounded,
-                        label: _uploadingAttachment
-                            ? 'Đang tải…'
-                            : (item.attachments.isNotEmpty
-                                  ? '${item.attachments.length} chứng từ'
-                                  : 'Đính kèm'),
-                        active:
-                            item.attachments.isNotEmpty || _uploadingAttachment,
-                        onTap: () => _openAttachmentMenu(item),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(10),
+                          borderSide: BorderSide(color: p.primary, width: 1.2),
+                        ),
                       ),
-                    ],
-                  ),
-                  if (item.createdAt.isNotEmpty) ...[
-                    const SizedBox(height: 5),
-                    Text(
-                      'Nhập lúc ${item.createdAt}',
-                      style: OmniType.micro.copyWith(color: p.muted),
+                    )
+                  else
+                    InkWell(
+                      key: const ValueKey('finance-detail-title-btn'),
+                      onTap: () {
+                        setState(() => _editingTitle = true);
+                        WidgetsBinding.instance.addPostFrameCallback((_) {
+                          if (mounted) _titleFocus.requestFocus();
+                        });
+                      },
+                      borderRadius: BorderRadius.circular(10),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 3,
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Flexible(
+                              child: Text(
+                                item.title,
+                                textAlign: TextAlign.center,
+                                style: OmniType.section.copyWith(
+                                  color: p.ink,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 5),
+                            Icon(
+                              Icons.edit_outlined,
+                              size: 14,
+                              color: p.muted,
+                            ),
+                          ],
+                        ),
+                      ),
                     ),
-                  ],
-                  if (item.attachments.isNotEmpty) ...[
-                    const SizedBox(height: 8),
-                    Wrap(
-                      alignment: WrapAlignment.center,
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: [
-                        for (final att in item.attachments)
-                          FinanceAttachmentInlineThumb(
-                            attachment: att,
-                            expenseTitle: item.title,
-                            expenseAmount: item.amount,
-                            accountName: item.effectiveAccountName,
-                            width: 76,
-                            height: 52,
-                            onTap: () => _previewAttachment(item, att),
-                            onRemove: () {
-                              ref
-                                  .read(financeLedgerProvider.notifier)
-                                  .removeAttachmentFromExpense(item.id, att.id);
-                            },
-                          ),
-                      ],
-                    ),
-                  ],
-                  const SizedBox(height: 10),
-                  // Big tappable amount button — FittedBox đảm bảo số tiền luôn hiện đủ 100%, không cắt "..."
+                  const SizedBox(height: 6),
+                  // Số tiền lớn — FittedBox đảm bảo hiển thị đủ 100%, không cắt "..."
                   InkWell(
                     onTap: item.isRefund ? null : () => _openAmountKeypad(item),
                     borderRadius: BorderRadius.circular(12),
                     child: Padding(
                       padding: const EdgeInsets.symmetric(
                         horizontal: 10,
-                        vertical: 3,
+                        vertical: 2,
                       ),
                       child: FittedBox(
                         fit: BoxFit.scaleDown,
@@ -769,7 +730,7 @@ class _ExpenseDetailSheetState extends ConsumerState<_ExpenseDetailSheet> {
                               maxLines: 1,
                               style: OmniType.displayLg.copyWith(
                                 color: p.ink,
-                                fontWeight: FontWeight.w600,
+                                fontWeight: FontWeight.w700,
                                 fontFeatures: const [
                                   FontFeature.tabularFigures(),
                                 ],
@@ -796,10 +757,10 @@ class _ExpenseDetailSheetState extends ConsumerState<_ExpenseDetailSheet> {
                       ),
                     ),
                   ),
-                  if (item.isRefund) ...[
-                    const SizedBox(height: 10),
+                  const SizedBox(height: 8),
+                  if (item.isRefund)
                     Container(
-                      height: 30,
+                      height: 28,
                       padding: const EdgeInsets.symmetric(horizontal: 12),
                       decoration: BoxDecoration(
                         color: p.control,
@@ -819,16 +780,14 @@ class _ExpenseDetailSheetState extends ConsumerState<_ExpenseDetailSheet> {
                           ),
                         ],
                       ),
-                    ),
-                  ] else if (isSingleFull) ...[
-                    // Khi đã trả đủ trong 1 lần: hiện pill xanh gọn nhẹ, chạm để đổi Ngày thanh toán
-                    const SizedBox(height: 10),
+                    )
+                  else if (isSingleFull)
                     InkWell(
                       key: const ValueKey('finance-detail-paid-date-pill'),
                       onTap: () => _openPaymentDateMenu(item, paymentIndex: 0),
                       borderRadius: BorderRadius.circular(99),
                       child: Container(
-                        height: 30,
+                        height: 28,
                         padding: const EdgeInsets.symmetric(horizontal: 12),
                         decoration: BoxDecoration(
                           color: p.okSoft,
@@ -846,24 +805,445 @@ class _ExpenseDetailSheetState extends ConsumerState<_ExpenseDetailSheet> {
                                 fontWeight: FontWeight.w600,
                               ),
                             ),
-                            const SizedBox(width: 3),
-                            Icon(
-                              Icons.keyboard_arrow_down_rounded,
-                              size: 14,
-                              color: p.ok,
+                          ],
+                        ),
+                      ),
+                    )
+                  else
+                    Container(
+                      height: 28,
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      decoration: BoxDecoration(
+                        color: left > 0 ? p.amberSoft : p.okSoft,
+                        borderRadius: BorderRadius.circular(99),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            left > 0
+                                ? Icons.schedule_rounded
+                                : Icons.check_rounded,
+                            size: 14,
+                            color: left > 0 ? p.amber : p.ok,
+                          ),
+                          const SizedBox(width: 5),
+                          Text(
+                            left > 0
+                                ? (paid > 0
+                                      ? 'Trả một phần · Còn ${FinanceMonthUtils.formatVndSpace(left)}'
+                                      : 'Chưa thanh toán')
+                                : 'Đã trả đủ (${item.payments.length} lần)',
+                            style: OmniType.caption.copyWith(
+                              color: left > 0 ? p.amber : p.ok,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                ],
+              ),
+            ),
+
+            const SizedBox(height: 10),
+
+            // 3. Thẻ Thông tin Chuẩn hoá (Inset Grouped Card)
+            Container(
+              decoration: BoxDecoration(
+                color: p.card,
+                borderRadius: BorderRadius.circular(18),
+                border: Border.all(color: p.line, width: 0.5),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  // Hàng 1: Chia 2 cột Ngày ghi nhận | Ngày thanh toán
+                  IntrinsicHeight(
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: InkWell(
+                            key: _dateChipKey,
+                            onTap: () => _openDateMenu(item),
+                            borderRadius: const BorderRadius.only(
+                              topLeft: Radius.circular(18),
+                            ),
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 14,
+                                vertical: 11,
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    children: [
+                                      Icon(
+                                        Icons.calendar_today_outlined,
+                                        size: 12,
+                                        color: p.muted,
+                                      ),
+                                      const SizedBox(width: 5),
+                                      Text(
+                                        'Ngày ghi nhận',
+                                        style: OmniType.micro.copyWith(
+                                          color: p.muted,
+                                          fontWeight: FontWeight.w500,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Row(
+                                    children: [
+                                      Expanded(
+                                        child: Text(
+                                          FinanceMonthUtils.fullDayMonthYear(
+                                            item.spentOn,
+                                            fallbackMonth: item.month,
+                                          ),
+                                          style: OmniType.bodySm.copyWith(
+                                            color: p.ink,
+                                            fontWeight: FontWeight.w600,
+                                            fontFeatures: const [
+                                              FontFeature.tabularFigures(),
+                                            ],
+                                          ),
+                                        ),
+                                      ),
+                                      Icon(
+                                        Icons.keyboard_arrow_down_rounded,
+                                        size: 15,
+                                        color: p.muted,
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                        if (!item.isRefund) ...[
+                          VerticalDivider(
+                            width: 1,
+                            thickness: 0.5,
+                            color: p.divider,
+                          ),
+                          Expanded(
+                            child: InkWell(
+                              key: const ValueKey(
+                                'finance-detail-paid-date-cell',
+                              ),
+                              onTap: item.payments.isNotEmpty
+                                  ? () => _openPaymentDateMenu(
+                                        item,
+                                        paymentIndex: 0,
+                                      )
+                                  : () => _openPayKeypad(item),
+                              borderRadius: const BorderRadius.only(
+                                topRight: Radius.circular(18),
+                              ),
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 14,
+                                  vertical: 11,
+                                ),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Row(
+                                      children: [
+                                        Icon(
+                                          Icons.event_available_outlined,
+                                          size: 12,
+                                          color: p.muted,
+                                        ),
+                                        const SizedBox(width: 5),
+                                        Text(
+                                          'Ngày thanh toán',
+                                          style: OmniType.micro.copyWith(
+                                            color: p.muted,
+                                            fontWeight: FontWeight.w500,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Row(
+                                      children: [
+                                        Expanded(
+                                          child: Text(
+                                            paidDateFull,
+                                            style: OmniType.bodySm.copyWith(
+                                              color: item.payments.isNotEmpty
+                                                  ? p.ok
+                                                  : p.amber,
+                                              fontWeight: FontWeight.w600,
+                                              fontFeatures: const [
+                                                FontFeature.tabularFigures(),
+                                              ],
+                                            ),
+                                          ),
+                                        ),
+                                        Icon(
+                                          Icons.keyboard_arrow_down_rounded,
+                                          size: 15,
+                                          color: p.muted,
+                                        ),
+                                      ],
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                  Divider(height: 1, thickness: 0.5, color: p.divider),
+
+                  // Hàng 2: Nhóm chi phí
+                  InkWell(
+                    key: _grpBtnKey,
+                    onTap: () => _openGroupMenu(item),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 12,
+                      ),
+                      child: Row(
+                        children: [
+                          Text(
+                            'Nhóm chi phí',
+                            style: OmniType.bodySm.copyWith(
+                              color: p.muted,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.end,
+                              children: [
+                                Container(
+                                  width: 9,
+                                  height: 9,
+                                  decoration: BoxDecoration(
+                                    color: grp.parsedColor,
+                                    shape: BoxShape.circle,
+                                  ),
+                                ),
+                                const SizedBox(width: 7),
+                                Flexible(
+                                  child: Text(
+                                    grp.name,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: OmniType.bodySm.copyWith(
+                                      color: p.ink,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 4),
+                                Icon(
+                                  Icons.keyboard_arrow_down_rounded,
+                                  size: 16,
+                                  color: p.muted,
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+
+                  // Hàng 3: Nguồn tiền
+                  if (!item.isRefund) ...[
+                    Divider(height: 1, thickness: 0.5, color: p.divider),
+                    InkWell(
+                      key: _accChipKey,
+                      onTap: () => _openAccountMenu(item),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 14,
+                          vertical: 12,
+                        ),
+                        child: Row(
+                          children: [
+                            Text(
+                              'Nguồn tiền',
+                              style: OmniType.bodySm.copyWith(
+                                color: p.muted,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.end,
+                                children: [
+                                  Icon(
+                                    Icons.account_balance_wallet_outlined,
+                                    size: 14,
+                                    color: p.muted,
+                                  ),
+                                  const SizedBox(width: 6),
+                                  Flexible(
+                                    child: Text(
+                                      accName,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: OmniType.bodySm.copyWith(
+                                        color: p.ink,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Icon(
+                                    Icons.keyboard_arrow_down_rounded,
+                                    size: 16,
+                                    color: p.muted,
+                                  ),
+                                ],
+                              ),
                             ),
                           ],
                         ),
                       ),
                     ),
                   ],
+
+                  // Hàng 4: Chứng từ đính kèm
+                  Divider(height: 1, thickness: 0.5, color: p.divider),
+                  InkWell(
+                    key: _attChipKey,
+                    onTap: () => _openAttachmentMenu(item),
+                    borderRadius: item.attachments.isEmpty
+                        ? const BorderRadius.vertical(
+                            bottom: Radius.circular(18),
+                          )
+                        : null,
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 11,
+                      ),
+                      child: Row(
+                        children: [
+                          Text(
+                            'Chứng từ',
+                            style: OmniType.bodySm.copyWith(
+                              color: p.muted,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                          if (item.attachments.isNotEmpty) ...[
+                            const SizedBox(width: 6),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 7,
+                                vertical: 2,
+                              ),
+                              decoration: BoxDecoration(
+                                color: p.primarySoft,
+                                borderRadius: BorderRadius.circular(99),
+                              ),
+                              child: Text(
+                                '${item.attachments.length} chứng từ',
+                                style: OmniType.micro.copyWith(
+                                  color: p.primaryInk,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                          ],
+                          const Spacer(),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 5,
+                            ),
+                            decoration: BoxDecoration(
+                              color: p.primarySoft,
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  Icons.attach_file_rounded,
+                                  size: 13,
+                                  color: p.primaryInk,
+                                ),
+                                const SizedBox(width: 4),
+                                Text(
+                                  _uploadingAttachment
+                                      ? 'Đang tải…'
+                                      : (item.attachments.isNotEmpty
+                                            ? '+ Thêm tệp'
+                                            : 'Đính kèm'),
+                                  style: OmniType.caption.copyWith(
+                                    color: p.primaryInk,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+
+                  // Ảnh thu nhỏ xem trực tiếp ngay trong thẻ
+                  if (item.attachments.isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(14, 2, 14, 12),
+                      child: Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: [
+                          for (final att in item.attachments)
+                            FinanceAttachmentInlineThumb(
+                              attachment: att,
+                              expenseTitle: item.title,
+                              expenseAmount: item.amount,
+                              accountName: item.effectiveAccountName,
+                              width: 78,
+                              height: 54,
+                              onTap: () => _previewAttachment(item, att),
+                              onRemove: () {
+                                ref
+                                    .read(financeLedgerProvider.notifier)
+                                    .removeAttachmentFromExpense(
+                                      item.id,
+                                      att.id,
+                                    );
+                              },
+                            ),
+                        ],
+                      ),
+                    ),
                 ],
               ),
             ),
-            // Khi chưa trả hoặc trả nhiều đợt: hiện thanh tiến độ + danh sách đợt trả + nút Trả
+
+            // 4. Khi chưa trả hoặc trả nhiều đợt: hiện thẻ tiến độ + danh sách đợt trả + nút Trả
             if (!item.isRefund && !isSingleFull) ...[
-              Padding(
-                padding: const EdgeInsets.fromLTRB(2, 4, 2, 12),
+              const SizedBox(height: 10),
+              Container(
+                padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
+                margin: const EdgeInsets.only(bottom: 10),
+                decoration: BoxDecoration(
+                  color: p.card,
+                  borderRadius: BorderRadius.circular(18),
+                  border: Border.all(color: p.line, width: 0.5),
+                ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
@@ -878,7 +1258,7 @@ class _ExpenseDetailSheetState extends ConsumerState<_ExpenseDetailSheet> {
                         ),
                       ),
                     ),
-                    const SizedBox(height: 7),
+                    const SizedBox(height: 8),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
@@ -921,28 +1301,15 @@ class _ExpenseDetailSheetState extends ConsumerState<_ExpenseDetailSheet> {
                         ),
                       ],
                     ),
-                  ],
-                ),
-              ),
-              if (item.payments.isNotEmpty)
-                Container(
-                  margin: const EdgeInsets.only(bottom: 12),
-                  decoration: BoxDecoration(
-                    color: p.card,
-                    borderRadius: BorderRadius.circular(14),
-                    border: Border.all(color: p.line, width: 0.5),
-                  ),
-                  child: Column(
-                    children: [
+                    if (item.payments.isNotEmpty) ...[
+                      const SizedBox(height: 8),
+                      Divider(height: 1, thickness: 0.5, color: p.divider),
                       for (var i = 0; i < item.payments.length; i++)
                         InkWell(
                           onTap: () =>
                               _openPaymentDateMenu(item, paymentIndex: i),
                           child: Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 14,
-                              vertical: 11,
-                            ),
+                            padding: const EdgeInsets.symmetric(vertical: 9),
                             decoration: BoxDecoration(
                               border: i == item.payments.length - 1
                                   ? null
@@ -992,8 +1359,9 @@ class _ExpenseDetailSheetState extends ConsumerState<_ExpenseDetailSheet> {
                           ),
                         ),
                     ],
-                  ),
+                  ],
                 ),
+              ),
               if (left > 0)
                 Row(
                   children: [
@@ -1077,57 +1445,19 @@ class _ExpenseDetailSheetState extends ConsumerState<_ExpenseDetailSheet> {
         onTap: onTap,
         borderRadius: BorderRadius.circular(99),
         child: Container(
-          width: 30,
-          height: 30,
+          width: 34,
+          height: 34,
           decoration: BoxDecoration(
-            color: danger ? p.dangerSoft : p.control,
+            color: danger ? p.dangerSoft : p.card,
             shape: BoxShape.circle,
+            border: Border.all(
+              color: danger
+                  ? p.danger.withValues(alpha: 0.18)
+                  : p.line,
+              width: 0.5,
+            ),
           ),
-          child: Icon(icon, size: 15, color: danger ? p.danger : p.ink2),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildMetaChip({
-    required Key key,
-    required FinancePalette p,
-    required IconData icon,
-    required String label,
-    required VoidCallback onTap,
-    bool active = false,
-  }) {
-    return InkWell(
-      key: key,
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(7),
-      child: Container(
-        height: 26,
-        padding: const EdgeInsets.symmetric(horizontal: 9),
-        decoration: BoxDecoration(
-          color: active ? p.primarySoft : p.control,
-          borderRadius: BorderRadius.circular(7),
-          border: active ? Border.all(color: p.selLine, width: 0.5) : null,
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, size: 12, color: active ? p.primaryInk : p.muted),
-            const SizedBox(width: 5),
-            Text(
-              label,
-              style: OmniType.caption.copyWith(
-                color: active ? p.primaryInk : p.ink2,
-                fontWeight: active ? FontWeight.w600 : FontWeight.w500,
-              ),
-            ),
-            const SizedBox(width: 3),
-            Icon(
-              Icons.keyboard_arrow_down_rounded,
-              size: 13,
-              color: active ? p.primaryInk : p.muted,
-            ),
-          ],
+          child: Icon(icon, size: 16, color: danger ? p.danger : p.ink2),
         ),
       ),
     );
