@@ -12,6 +12,7 @@ import 'package:omni_app/demo/modules/finance_demo.dart';
 import 'package:omni_app/modules/finance/application/finance_providers.dart';
 import 'package:omni_app/modules/finance/domain/finance_permissions.dart';
 import 'package:omni_app/modules/finance/finance_module.dart';
+import 'package:omni_app/modules/finance/presentation/expense_summary_page.dart';
 import 'package:omni_app/modules/finance/presentation/expenses_page.dart';
 import 'package:omni_app/security/permissions/access_policy.dart';
 import 'package:omni_app/security/session/session.dart';
@@ -83,7 +84,8 @@ void main() {
           final adminEntries =
               container.read(directoryGroupsProvider)[NavArea.admin] ??
               const [];
-          expect(adminEntries.map((e) => e.label), contains('Sổ chi phí'));
+          expect(adminEntries.map((e) => e.label), containsAll(['Sổ chi phí', 'Tổng hợp chi phí']));
+          expect(adminEntries.map((e) => e.routeName), contains(FinanceRoutes.expenseSummary));
           expect(
             adminEntries.map((e) => e.routeName),
             contains(FinanceRoutes.expenses),
@@ -577,6 +579,65 @@ void main() {
         );
         expect(find.text('Quảng cáo Facebook'), findsOneWidget);
         expect(find.text('Cước Internet'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'ExpenseSummaryPage — màn độc lập Tổng hợp chi phí theo Tháng, Quý, Năm gọn gàng, chuyển đổi mượt',
+      (tester) async {
+        tester.view.physicalSize = const Size(840, 2200);
+        tester.view.devicePixelRatio = 2.0;
+        addTearDown(tester.view.resetPhysicalSize);
+        addTearDown(tester.view.resetDevicePixelRatio);
+        final routes = DemoRoutes();
+        registerFinanceDemo(
+          routes,
+          clock: fixedClock,
+          seedInitialData: true,
+        );
+        final dio = Dio(BaseOptions(baseUrl: 'http://demo.local'))
+          ..httpClientAdapter = DemoApiAdapter(routes, latency: Duration.zero);
+
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [
+              dioProvider.overrideWithValue(dio),
+              financeClockProvider.overrideWithValue(fixedClock),
+            ],
+            child: const MaterialApp(home: ExpenseSummaryPage()),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(find.text('Tổng hợp chi phí'), findsOneWidget);
+        expect(find.byKey(const ValueKey('finance-summary-tab-month')), findsOneWidget);
+        expect(find.byKey(const ValueKey('finance-summary-tab-quarter')), findsOneWidget);
+        expect(find.byKey(const ValueKey('finance-summary-tab-year')), findsOneWidget);
+        expect(find.text('Tổng chi Quý 4/2026 (T10 – T12)'), findsOneWidget);
+        expect(find.text('3 THÁNG TRONG QUÝ 4/2026'), findsOneWidget);
+        expect(find.text('Tháng 10/2026'), findsOneWidget);
+        expect(find.text('Tháng 11/2026'), findsOneWidget);
+        expect(find.text('Tháng 12/2026'), findsOneWidget);
+        expect(find.text('CƠ CẤU CHI PHÍ TRONG KỲ'), findsOneWidget);
+
+        final dimAccountBtn = find.byKey(const ValueKey('finance-summary-dim-account'));
+        await tester.ensureVisible(dimAccountBtn);
+        await tester.pumpAndSettle();
+        await tester.tap(dimAccountBtn);
+        await tester.pumpAndSettle();
+        expect(find.textContaining('Tiền mặt'), findsWidgets);
+
+        await tester.tap(find.byKey(const ValueKey('finance-summary-tab-year')));
+        await tester.pumpAndSettle();
+        expect(find.text('Tổng chi Năm 2026 (12 tháng)'), findsOneWidget);
+        expect(find.text('DIỄN BIẾN NĂM 2026'), findsOneWidget);
+        expect(find.byKey(const ValueKey('finance-summary-year-by-quarter')), findsOneWidget);
+        expect(find.byKey(const ValueKey('finance-summary-year-by-month')), findsOneWidget);
+
+        await tester.tap(find.byKey(const ValueKey('finance-summary-tab-month')));
+        await tester.pumpAndSettle();
+        expect(find.text('Tổng hợp Tháng 11/2026'), findsOneWidget);
+        expect(find.text('SO SÁNH 3 THÁNG GẦN NHẤT'), findsOneWidget);
       },
     );
   });

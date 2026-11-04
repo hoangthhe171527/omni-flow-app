@@ -830,6 +830,25 @@ class FinanceLedgerState {
     return out;
   }
 
+  /// Bản tóm tắt của một tháng bất kỳ ym (ưu tiên summariesByMonth, hoặc tính từ itemsByMonth).
+  LedgerSummary summaryForMonth(String ymOrSlash) {
+    final ym = FinanceMonthUtils.toYearMonth(ymOrSlash, clock);
+    final serverSummary = summariesByMonth[ym];
+    if (serverSummary != null && !dirtyMonths.contains(ym)) {
+      return serverSummary;
+    }
+    final list = itemsByMonth[ym] ?? const <ExpenseItem>[];
+    return LedgerSummary.fromItems(
+      items: list,
+      groups: groups,
+      prevMonth: serverSummary?.prevMonth ??
+          const LedgerPrevMonthSummary(month: '', total: 0),
+      revenue: serverSummary?.revenue ?? 0,
+      cashOut: serverSummary?.cashOut ??
+          const LedgerCashOutSummary(total: 0, earlier: 0),
+    );
+  }
+
   /// Tổng chi và số khoản của một tháng bất kỳ (dùng cho menu chọn tháng).
   ({int total, int count, bool loaded}) statsForMonth(String ymOrSlash) {
     final ym = FinanceMonthUtils.toYearMonth(ymOrSlash, clock);
@@ -1152,6 +1171,22 @@ class FinanceLedgerNotifier extends Notifier<FinanceLedgerState> {
   }
 
   /// Chọn tháng (`pickMonth`) và tải dữ liệu thực của tháng đó từ API.
+  /// Đảm bảo tập hợp các tháng `months` đã được tải từ API (phục vụ màn Tổng hợp chi phí Tháng · Quý · Năm).
+  Future<void> ensureMonthsLoaded(
+    Iterable<String> months, {
+    bool forceRefresh = false,
+  }) async {
+    final normalized = <String>{
+      for (final m in months) FinanceMonthUtils.toYearMonth(m, state.clock),
+    };
+    final toFetch = forceRefresh
+        ? normalized
+        : normalized.difference(state.loadedMonths);
+    if (toFetch.isEmpty) return;
+    state = state.copyWith(syncing: true);
+    await _refreshMonths(toFetch);
+  }
+
   Future<void> selectMonth(String ymOrSlash) async {
     final ym = FinanceMonthUtils.toYearMonth(ymOrSlash, state.clock);
     final alreadyLoaded = state.loadedMonths.contains(ym);
