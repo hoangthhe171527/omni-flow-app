@@ -121,7 +121,15 @@ class _ExpenseRowTileState extends ConsumerState<ExpenseRowTile> {
       case 'dup_next':
         notifier.duplicateToNextMonth(item.id);
       case 'delete':
-        notifier.deleteExpense(item.id);
+        final grp = ref.read(financeLedgerProvider).groupById(item.groupId);
+        final ok = await showFinanceDeleteConfirmSheet(
+          context: context,
+          item: item,
+          groupName: grp.name,
+        );
+        if (ok && mounted) {
+          notifier.deleteExpense(item.id);
+        }
     }
   }
 
@@ -279,11 +287,18 @@ class _ExpenseRowTileState extends ConsumerState<ExpenseRowTile> {
                     ),
                   ),
                 GestureDetector(
-                  onTap: () {
+                  onTap: () async {
                     _resetSwipe();
-                    ref
-                        .read(financeLedgerProvider.notifier)
-                        .deleteExpense(item.id);
+                    final ok = await showFinanceDeleteConfirmSheet(
+                      context: context,
+                      item: item,
+                      groupName: grp.name,
+                    );
+                    if (ok && mounted) {
+                      ref
+                          .read(financeLedgerProvider.notifier)
+                          .deleteExpense(item.id);
+                    }
                   },
                   child: Container(
                     width: 76,

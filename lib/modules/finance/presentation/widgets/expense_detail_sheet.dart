@@ -1,9 +1,7 @@
 import 'dart:math' as math;
 
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 import '../../../../design/tokens/tokens.dart';
 import '../../application/finance_providers.dart';
@@ -12,6 +10,215 @@ import '../../domain/finance_models.dart';
 import 'expense_keypad_sheet.dart';
 import 'finance_attachment_picker.dart';
 import 'finance_palette.dart';
+
+/// Hiển thị Sheet xác nhận xoá 2 bước chuẩn công thái học 1 tay (`Thumb-Zone`).
+Future<bool> showFinanceDeleteConfirmSheet({
+  required BuildContext context,
+  required ExpenseItem item,
+  required String groupName,
+}) async {
+  final confirmed = await showModalBottomSheet<bool>(
+    context: context,
+    isScrollControlled: true,
+    backgroundColor: Colors.transparent,
+    barrierColor: Colors.black.withValues(alpha: 0.42),
+    builder: (sheetCtx) {
+      return _FinanceTwoStepDeleteSheet(
+        item: item,
+        groupName: groupName,
+      );
+    },
+  );
+  return confirmed == true;
+}
+
+class _FinanceTwoStepDeleteSheet extends StatefulWidget {
+  const _FinanceTwoStepDeleteSheet({
+    required this.item,
+    required this.groupName,
+  });
+
+  final ExpenseItem item;
+  final String groupName;
+
+  @override
+  State<_FinanceTwoStepDeleteSheet> createState() =>
+      _FinanceTwoStepDeleteSheetState();
+}
+
+class _FinanceTwoStepDeleteSheetState
+    extends State<_FinanceTwoStepDeleteSheet> {
+  int _step = 1;
+
+  @override
+  Widget build(BuildContext context) {
+    final p = FinancePalette.of(context);
+    final bottomInset = MediaQuery.paddingOf(context).bottom;
+    final item = widget.item;
+
+    return Container(
+      decoration: BoxDecoration(
+        color: p.card,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(22)),
+      ),
+      padding: EdgeInsets.fromLTRB(
+        18,
+        10,
+        18,
+        math.max(20, bottomInset + 14),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Center(
+            child: Container(
+              width: 36,
+              height: 4,
+              margin: const EdgeInsets.only(bottom: 12),
+              decoration: BoxDecoration(
+                color: p.muted.withValues(alpha: 0.35),
+                borderRadius: BorderRadius.circular(99),
+              ),
+            ),
+          ),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              decoration: BoxDecoration(
+                color: p.dangerSoft,
+                borderRadius: BorderRadius.circular(99),
+              ),
+              child: Text(
+                _step == 1
+                    ? 'Bước 1/2 · Kiểm tra mục sắp xoá'
+                    : 'Bước 2/2 · Xác nhận xoá vĩnh viễn',
+                style: OmniType.caption.copyWith(
+                  color: p.danger,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 10),
+          Text(
+            'Xoá khoản chi?',
+            style: OmniType.section.copyWith(
+              color: p.ink,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: p.bg,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: p.line, width: 0.5),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  item.title,
+                  style: OmniType.bodyStrong.copyWith(
+                    color: p.ink,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  '${FinanceMonthUtils.formatVndSpace(item.amount)} · ${widget.groupName}',
+                  style: OmniType.bodySm.copyWith(
+                    color: p.danger,
+                    fontWeight: FontWeight.w600,
+                    fontFeatures: const [FontFeature.tabularFigures()],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          if (_step == 2) ...[
+            const SizedBox(height: 10),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+              decoration: BoxDecoration(
+                color: p.dangerSoft,
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Text(
+                'Xác nhận bước cuối: Chọn "Xác nhận xoá" bên dưới để xoá khoản chi này khỏi sổ.',
+                style: OmniType.caption.copyWith(
+                  color: p.danger,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ],
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              Expanded(
+                child: SizedBox(
+                  height: 44,
+                  child: OutlinedButton(
+                    onPressed: () {
+                      if (_step == 2) {
+                        setState(() => _step = 1);
+                      } else {
+                        Navigator.of(context).pop(false);
+                      }
+                    },
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: p.ink,
+                      side: BorderSide(color: p.line),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: Text(_step == 2 ? 'Quay lại' : 'Huỷ'),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: SizedBox(
+                  height: 44,
+                  child: FilledButton(
+                    key: ValueKey(
+                      _step == 1
+                          ? 'finance-delete-step1-btn'
+                          : 'finance-delete-step2-btn',
+                    ),
+                    onPressed: () {
+                      if (_step == 1) {
+                        setState(() => _step = 2);
+                      } else {
+                        Navigator.of(context).pop(true);
+                      }
+                    },
+                    style: FilledButton.styleFrom(
+                      backgroundColor: p.danger,
+                      foregroundColor: Colors.white,
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: Text(
+                      _step == 1 ? 'Tiếp tục xoá' : 'Xác nhận xoá',
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
 
 /// Hiển thị Sheet Chi tiết khoản chi (`fillDetail`),
 /// đồng bộ trực tiếp với API chứng từ, đợt thanh toán và thời gian nhập.
@@ -185,181 +392,39 @@ class _ExpenseDetailSheetState extends ConsumerState<_ExpenseDetailSheet> {
     ExpenseItem item,
     ExpenseAttachment att,
   ) async {
-    final p = FinancePalette.of(context);
-    final resolvedUrl = att.resolvedUrl;
-    final metaParts = <String>[
-      if (att.sizeLabel.isNotEmpty) att.sizeLabel,
-      if (att.uploadedAt.isNotEmpty) 'Tải lên ${att.uploadedAt}',
-    ];
-
-    await showDialog<void>(
+    await showFinanceAttachmentPreviewDialog(
       context: context,
-      builder: (dialogCtx) {
-        return Dialog(
-          backgroundColor: p.card,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(18),
-          ),
-          child: Padding(
-            padding: const EdgeInsets.all(18),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Row(
-                  children: [
-                    Container(
-                      width: 36,
-                      height: 36,
-                      decoration: BoxDecoration(
-                        color: p.primarySoft,
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      alignment: Alignment.center,
-                      child: Icon(
-                        att.isPdf
-                            ? Icons.picture_as_pdf_outlined
-                            : Icons.receipt_long_outlined,
-                        size: 20,
-                        color: p.primaryInk,
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            att.name,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: OmniType.bodyStrong.copyWith(
-                              color: p.ink,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                          if (metaParts.isNotEmpty) ...[
-                            const SizedBox(height: 2),
-                            Text(
-                              metaParts.join(' · '),
-                              style: OmniType.caption.copyWith(color: p.muted),
-                            ),
-                          ],
-                        ],
-                      ),
-                    ),
-                    IconButton(
-                      onPressed: () => Navigator.of(dialogCtx).pop(),
-                      icon: Icon(Icons.close_rounded, color: p.muted),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 14),
-                if (att.isImage && resolvedUrl.isNotEmpty)
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(12),
-                    child: Container(
-                      constraints: const BoxConstraints(maxHeight: 280),
-                      color: p.bg,
-                      child: CachedNetworkImage(
-                        imageUrl: resolvedUrl,
-                        fit: BoxFit.contain,
-                        placeholder: (_, _) => Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 36),
-                          child: Center(
-                            child: SizedBox(
-                              width: 22,
-                              height: 22,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                valueColor: AlwaysStoppedAnimation<Color>(
-                                  p.primary,
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                        errorWidget: (_, _, _) =>
-                            _buildAttachmentFallbackCard(p, item, att),
-                      ),
-                    ),
-                  )
-                else
-                  _buildAttachmentFallbackCard(p, item, att),
-                if (resolvedUrl.isNotEmpty) ...[
-                  const SizedBox(height: 12),
-                  SizedBox(
-                    height: 38,
-                    child: OutlinedButton.icon(
-                      onPressed: () async {
-                        final uri = Uri.tryParse(resolvedUrl);
-                        if (uri != null) {
-                          await launchUrl(
-                            uri,
-                            mode: LaunchMode.externalApplication,
-                          );
-                        }
-                      },
-                      icon: const Icon(Icons.open_in_new_rounded, size: 15),
-                      label: const Text('Mở tệp'),
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: p.primary,
-                        side: BorderSide(color: p.line),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ],
-            ),
-          ),
-        );
-      },
+      att: att,
+      expenseTitle: item.title,
+      expenseAmount: item.amount,
+      accountName: item.effectiveAccountName,
     );
   }
 
-  Widget _buildAttachmentFallbackCard(
-    FinancePalette p,
-    ExpenseItem item,
-    ExpenseAttachment att,
-  ) {
-    final accText = item.effectiveAccountName;
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: p.bg,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: p.line, width: 0.5),
-      ),
-      child: Column(
-        children: [
-          Icon(
-            att.isPdf ? Icons.description_outlined : Icons.image_outlined,
-            size: 40,
-            color: p.primary,
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Chứng từ khoản chi: ${item.title}',
-            textAlign: TextAlign.center,
-            style: OmniType.bodySm.copyWith(
-              color: p.ink,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            [
-              FinanceMonthUtils.formatVndSpace(item.amount),
-              if (accText != null && accText.isNotEmpty) accText,
-            ].join(' · '),
-            style: OmniType.caption.copyWith(color: p.muted),
-          ),
-        ],
-      ),
+  Future<void> _openPaymentDateMenu(
+    ExpenseItem item, {
+    int paymentIndex = 0,
+  }) async {
+    if (item.isRefund || item.payments.isEmpty) return;
+    final state = ref.read(financeLedgerProvider);
+    final currentPaidOn = item.payments[paymentIndex].paidOn;
+    final picked = await showFinanceDateSelector(
+      context: context,
+      anchorContext: null,
+      currentIsoDate: currentPaidOn,
+      monthYm: item.month,
+      header: 'Ngày thanh toán',
+      clock: state.clock,
     );
+    if (picked != null && mounted) {
+      await ref
+          .read(financeLedgerProvider.notifier)
+          .updateExpensePaymentDate(
+            item.id,
+            picked,
+            paymentIndex: paymentIndex,
+          );
+    }
   }
 
   Future<void> _openAmountKeypad(ExpenseItem item) async {
@@ -556,7 +621,13 @@ class _ExpenseDetailSheetState extends ConsumerState<_ExpenseDetailSheet> {
                     tooltip: 'Xoá khoản chi',
                     icon: Icons.delete_outline_rounded,
                     danger: true,
-                    onTap: () {
+                    onTap: () async {
+                      final ok = await showFinanceDeleteConfirmSheet(
+                        context: context,
+                        item: item,
+                        groupName: grp.name,
+                      );
+                      if (!ok || !context.mounted) return;
                       Navigator.of(context).pop();
                       ref
                           .read(financeLedgerProvider.notifier)
@@ -653,21 +724,27 @@ class _ExpenseDetailSheetState extends ConsumerState<_ExpenseDetailSheet> {
                   ],
                   if (item.attachments.isNotEmpty) ...[
                     const SizedBox(height: 8),
-                    SingleChildScrollView(
-                      scrollDirection: Axis.horizontal,
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          for (var i = 0; i < item.attachments.length; i++) ...[
-                            if (i > 0) const SizedBox(width: 6),
-                            _buildAttachmentPill(
-                              p,
-                              item: item,
-                              att: item.attachments[i],
-                            ),
-                          ],
-                        ],
-                      ),
+                    Wrap(
+                      alignment: WrapAlignment.center,
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        for (final att in item.attachments)
+                          FinanceAttachmentInlineThumb(
+                            attachment: att,
+                            expenseTitle: item.title,
+                            expenseAmount: item.amount,
+                            accountName: item.effectiveAccountName,
+                            width: 76,
+                            height: 52,
+                            onTap: () => _previewAttachment(item, att),
+                            onRemove: () {
+                              ref
+                                  .read(financeLedgerProvider.notifier)
+                                  .removeAttachmentFromExpense(item.id, att.id);
+                            },
+                          ),
+                      ],
                     ),
                   ],
                   const SizedBox(height: 10),
@@ -744,28 +821,39 @@ class _ExpenseDetailSheetState extends ConsumerState<_ExpenseDetailSheet> {
                       ),
                     ),
                   ] else if (isSingleFull) ...[
-                    // Khi đã trả đủ trong 1 lần: chỉ hiện 1 dòng pill xanh gọn nhẹ
+                    // Khi đã trả đủ trong 1 lần: hiện pill xanh gọn nhẹ, chạm để đổi Ngày thanh toán
                     const SizedBox(height: 10),
-                    Container(
-                      height: 30,
-                      padding: const EdgeInsets.symmetric(horizontal: 12),
-                      decoration: BoxDecoration(
-                        color: p.okSoft,
-                        borderRadius: BorderRadius.circular(99),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(Icons.check_rounded, size: 14, color: p.ok),
-                          const SizedBox(width: 5),
-                          Text(
-                            'Đã trả đủ · $paidDateDm',
-                            style: OmniType.caption.copyWith(
-                              color: p.ok,
-                              fontWeight: FontWeight.w600,
+                    InkWell(
+                      key: const ValueKey('finance-detail-paid-date-pill'),
+                      onTap: () => _openPaymentDateMenu(item, paymentIndex: 0),
+                      borderRadius: BorderRadius.circular(99),
+                      child: Container(
+                        height: 30,
+                        padding: const EdgeInsets.symmetric(horizontal: 12),
+                        decoration: BoxDecoration(
+                          color: p.okSoft,
+                          borderRadius: BorderRadius.circular(99),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.check_rounded, size: 14, color: p.ok),
+                            const SizedBox(width: 5),
+                            Text(
+                              'Đã trả đủ · $paidDateDm',
+                              style: OmniType.caption.copyWith(
+                                color: p.ok,
+                                fontWeight: FontWeight.w600,
+                              ),
                             ),
-                          ),
-                        ],
+                            const SizedBox(width: 3),
+                            Icon(
+                              Icons.keyboard_arrow_down_rounded,
+                              size: 14,
+                              color: p.ok,
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   ],
@@ -847,56 +935,60 @@ class _ExpenseDetailSheetState extends ConsumerState<_ExpenseDetailSheet> {
                   child: Column(
                     children: [
                       for (var i = 0; i < item.payments.length; i++)
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 14,
-                            vertical: 11,
-                          ),
-                          decoration: BoxDecoration(
-                            border: i == item.payments.length - 1
-                                ? null
-                                : Border(
-                                    bottom: BorderSide(
-                                      color: p.divider,
-                                      width: 0.5,
+                        InkWell(
+                          onTap: () =>
+                              _openPaymentDateMenu(item, paymentIndex: i),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 14,
+                              vertical: 11,
+                            ),
+                            decoration: BoxDecoration(
+                              border: i == item.payments.length - 1
+                                  ? null
+                                  : Border(
+                                      bottom: BorderSide(
+                                        color: p.divider,
+                                        width: 0.5,
+                                      ),
+                                    ),
+                            ),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Expanded(
+                                  child: Text(
+                                    [
+                                      'Lần ${i + 1}',
+                                      FinanceMonthUtils.shortDayMonth(
+                                        item.payments[i].paidOn,
+                                      ),
+                                      if ((item.payments[i].accountName ??
+                                              item.effectiveAccountName ??
+                                              '')
+                                          .isNotEmpty)
+                                        (item.payments[i].accountName ??
+                                            item.effectiveAccountName!),
+                                    ].join(' · '),
+                                    style: OmniType.bodySm.copyWith(
+                                      color: p.ink2,
+                                      fontWeight: FontWeight.w500,
                                     ),
                                   ),
-                          ),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Expanded(
-                                child: Text(
-                                  [
-                                    'Lần ${i + 1}',
-                                    FinanceMonthUtils.shortDayMonth(
-                                      item.payments[i].paidOn,
-                                    ),
-                                    if ((item.payments[i].accountName ??
-                                            item.effectiveAccountName ??
-                                            '')
-                                        .isNotEmpty)
-                                      (item.payments[i].accountName ??
-                                          item.effectiveAccountName!),
-                                  ].join(' · '),
+                                ),
+                                const SizedBox(width: 8),
+                                Text(
+                                  '✓ ${FinanceMonthUtils.formatVndSpace(item.payments[i].amount)}',
                                   style: OmniType.bodySm.copyWith(
-                                    color: p.ink2,
-                                    fontWeight: FontWeight.w500,
+                                    color: p.ok,
+                                    fontWeight: FontWeight.w600,
+                                    fontFeatures: const [
+                                      FontFeature.tabularFigures(),
+                                    ],
                                   ),
                                 ),
-                              ),
-                              const SizedBox(width: 8),
-                              Text(
-                                '✓ ${FinanceMonthUtils.formatVndSpace(item.payments[i].amount)}',
-                                style: OmniType.bodySm.copyWith(
-                                  color: p.ok,
-                                  fontWeight: FontWeight.w600,
-                                  fontFeatures: const [
-                                    FontFeature.tabularFigures(),
-                                  ],
-                                ),
-                              ),
-                            ],
+                              ],
+                            ),
                           ),
                         ),
                     ],
@@ -966,64 +1058,6 @@ class _ExpenseDetailSheetState extends ConsumerState<_ExpenseDetailSheet> {
                   ],
                 ),
             ],
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildAttachmentPill(
-    FinancePalette p, {
-    required ExpenseItem item,
-    required ExpenseAttachment att,
-  }) {
-    return InkWell(
-      onTap: () => _previewAttachment(item, att),
-      borderRadius: BorderRadius.circular(8),
-      child: Container(
-        height: 28,
-        padding: const EdgeInsets.only(left: 9, right: 5),
-        decoration: BoxDecoration(
-          color: p.card,
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: p.line, width: 0.5),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              att.isPdf
-                  ? Icons.picture_as_pdf_outlined
-                  : Icons.receipt_long_outlined,
-              size: 13,
-              color: p.primary,
-            ),
-            const SizedBox(width: 5),
-            ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 160),
-              child: Text(
-                att.name,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: OmniType.caption.copyWith(
-                  color: p.ink,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-            ),
-            const SizedBox(width: 4),
-            InkWell(
-              onTap: () {
-                ref
-                    .read(financeLedgerProvider.notifier)
-                    .removeAttachmentFromExpense(item.id, att.id);
-              },
-              borderRadius: BorderRadius.circular(99),
-              child: Padding(
-                padding: const EdgeInsets.all(3),
-                child: Icon(Icons.close_rounded, size: 13, color: p.muted),
-              ),
-            ),
           ],
         ),
       ),

@@ -51,7 +51,25 @@ class ParsedExpenseDraft {
   bool get isReadyToSave => hasValidAmount && hasValidTitle;
 }
 
-/// Bộ phân tích 1 dòng thông minh cho Sổ chi phí (`parseSmart` + `guessGroup`).
+/// Gợi ý thông minh tên khoản chi kèm nhóm chi phí tự động gán (`Autocomplete`).
+@immutable
+class ExpenseTitleSuggestion {
+  const ExpenseTitleSuggestion({
+    required this.title,
+    required this.groupId,
+    required this.groupName,
+    required this.groupColor,
+    this.suggestedAmount = 0,
+  });
+
+  final String title;
+  final String groupId;
+  final String groupName;
+  final String groupColor;
+  final int suggestedAmount;
+}
+
+/// Bộ phân tích 1 dòng thông minh cho Sổ chi phí (`parseSmart` + `guessGroup` + `suggestTitles`).
 abstract final class SmartExpenseParser {
   static final RegExp _amountTokenRegex = RegExp(
     r'(?<![/\d])(\d+(?:[.,]\d+)*)\s*(tỷ|tỉ|ty|tr|triệu|trieu|m|củ|cu|k|nghìn|ngàn|nghin|ngan|đ|d|vnd)?(\d{1,3})?(?=\s|$)',
@@ -66,6 +84,107 @@ abstract final class SmartExpenseParser {
   static final RegExp _dateTokenRegex = RegExp(
     r'(?:^|\s)(\d{1,2})\/(\d{1,2})(?:\/(\d{4}))?(?=\s|$)',
   );
+
+  static const List<
+    ({
+      String title,
+      String seedId,
+      List<String> groupAliases,
+      List<String> triggers,
+    })
+  >
+  _dictionaryTemplates = [
+    (
+      title: 'Quảng cáo Facebook',
+      seedId: 'mk',
+      groupAliases: ['tiep thi', 'ban hang', 'marketing', 'quang cao'],
+      triggers: ['quang', 'quang cao', 'fb', 'facebook', 'meta', 'ads', 'mar'],
+    ),
+    (
+      title: 'Quảng cáo Google Ads',
+      seedId: 'mk',
+      groupAliases: ['tiep thi', 'ban hang', 'marketing', 'quang cao'],
+      triggers: ['quang', 'quang cao', 'gg', 'google', 'ads', 'mar'],
+    ),
+    (
+      title: 'Quảng cáo TikTok',
+      seedId: 'mk',
+      groupAliases: ['tiep thi', 'ban hang', 'marketing', 'quang cao'],
+      triggers: ['quang', 'quang cao', 'tik', 'tiktok', 'ads', 'mar'],
+    ),
+    (
+      title: 'Quảng cáo Zalo OA',
+      seedId: 'mk',
+      groupAliases: ['tiep thi', 'ban hang', 'marketing', 'quang cao'],
+      triggers: ['quang', 'quang cao', 'zalo', 'oa', 'ads'],
+    ),
+    (
+      title: 'Tiếp khách đối tác',
+      seedId: 'mk',
+      groupAliases: ['tiep thi', 'ban hang', 'marketing', 'tiep khach'],
+      triggers: ['tiep', 'tiep khach', 'khach', 'an trua', 'an toi', 'cafe'],
+    ),
+    (
+      title: 'Cước Internet',
+      seedId: 'op',
+      groupAliases: ['dien nuoc', 'tien ich', 'van hanh'],
+      triggers: ['cuoc', 'internet', 'mang', 'wifi', 'cap quang', 'fpt', 'viettel', 'vnpt'],
+    ),
+    (
+      title: 'Tiền điện văn phòng',
+      seedId: 'op',
+      groupAliases: ['dien nuoc', 'tien ich', 'van hanh'],
+      triggers: ['tien dien', 'dien', 'dien nuoc', 'evn'],
+    ),
+    (
+      title: 'Tiền nước',
+      seedId: 'op',
+      groupAliases: ['dien nuoc', 'tien ich', 'van hanh'],
+      triggers: ['tien nuoc', 'nuoc', 'dien nuoc'],
+    ),
+    (
+      title: 'Phí vận chuyển giao hàng',
+      seedId: 'op',
+      groupAliases: ['van hanh', 'van chuyen', 'kho'],
+      triggers: ['phi van chuyen', 'van chuyen', 'giao hang', 'ship', 'cuoc gui'],
+    ),
+    (
+      title: 'Chi phí thuê kho',
+      seedId: 'op',
+      groupAliases: ['thue kho', 'kho bai', 'van hanh', 'mat bang'],
+      triggers: ['chi phi kho', 'thue kho', 'kho', 'mat bang', 'thue van phong'],
+    ),
+    (
+      title: 'Văn phòng phẩm',
+      seedId: 'ad',
+      groupAliases: ['hanh chinh', 'quan ly', 'van phong', 'thue & phi'],
+      triggers: ['van phong', 'van phong pham', 'giay in', 'muc in', 'in an'],
+    ),
+    (
+      title: 'Dịch vụ kế toán',
+      seedId: 'ad',
+      groupAliases: ['thue & phi', 'ke toan', 'hanh chinh', 'quan ly'],
+      triggers: ['dich vu ke toan', 'ke toan', 'thue'],
+    ),
+    (
+      title: 'Chi phí lãi vay',
+      seedId: 'fn',
+      groupAliases: ['lai vay', 'tai chinh', 'ngan hang'],
+      triggers: ['lai vay', 'vay', 'tra lai', 'ngan hang'],
+    ),
+    (
+      title: 'Phần mềm & Cloud',
+      seedId: 'sw',
+      groupAliases: ['phan mem', 'cntt', 'ten mien', 'van hanh'],
+      triggers: ['phan mem', 'cloud', 'server', 'hosting', 'domain', 'ten mien'],
+    ),
+    (
+      title: 'Lương nhân sự',
+      seedId: 'pe',
+      groupAliases: ['luong', 'thuong', 'nhan su'],
+      triggers: ['luong', 'nhan su', 'tam ung', 'thuong', 'bhxh'],
+    ),
+  ];
 
   static const List<
     ({
@@ -139,13 +258,13 @@ abstract final class SmartExpenseParser {
     (
       seedId: 'op',
       groupAliases: [
+        'dien nuoc',
+        'tien ich',
         'kho bai',
         'van hanh',
         'mat bang',
         'thue van phong',
         'thue kho',
-        'dien nuoc',
-        'tien ich',
         'van chuyen',
       ],
       keywords: [
@@ -158,9 +277,14 @@ abstract final class SmartExpenseParser {
         'tien dien',
         'tien nuoc',
         'dien nuoc',
+        'cuoc internet',
+        'cuoc',
         'internet',
         'wifi',
         'cap quang',
+        'fpt',
+        'viettel',
+        'vnpt',
         'van chuyen',
         'giao hang',
         'ship',
@@ -184,11 +308,17 @@ abstract final class SmartExpenseParser {
       ],
       keywords: [
         'quang cao',
+        'quang',
         'ads',
+        'fb',
         'facebook',
+        'meta',
         'google',
+        'gg',
         'tiktok',
+        'tik',
         'tiep khach',
+        'tiep',
         'ca phe',
         'cafe',
         'coffee',
@@ -220,6 +350,122 @@ abstract final class SmartExpenseParser {
       defaultPaid: true,
     ),
   ];
+
+  /// Gợi ý danh sách tên khoản chi kèm nhóm chi phí tự động gán khi người dùng đang gõ.
+  static List<ExpenseTitleSuggestion> suggestTitles(
+    String rawInput, {
+    required List<ExpenseGroup> groups,
+    List<ExpenseItem> historyItems = const [],
+    int limit = 4,
+  }) {
+    final parsed = parse(rawInput, groups: groups);
+    final queryRaw = parsed.title.isNotEmpty ? parsed.title : rawInput.trim();
+    final q = foldDiacritics(queryRaw).trim();
+    if (q.isEmpty) return const [];
+
+    final usableGroups = groups.where((g) => !g.archived).toList();
+    final seenTitles = <String>{};
+    final out = <ExpenseTitleSuggestion>[];
+
+    ExpenseGroup resolveGroupFor({
+      required String title,
+      String? preferredGroupId,
+      String? seedId,
+      List<String> aliases = const [],
+    }) {
+      if (preferredGroupId != null && preferredGroupId.isNotEmpty) {
+        final hit = usableGroups.where((g) => g.id == preferredGroupId).firstOrNull;
+        if (hit != null) return hit;
+      }
+      if (seedId != null && seedId.isNotEmpty) {
+        final bySeed = usableGroups.where((g) => g.id == seedId).firstOrNull;
+        if (bySeed != null) return bySeed;
+      }
+      for (final alias in aliases) {
+        for (final g in usableGroups) {
+          if (foldDiacritics(g.name).contains(alias)) return g;
+        }
+      }
+      final guessedId = guessGroup(title, groups: usableGroups);
+      if (guessedId != null && guessedId.isNotEmpty) {
+        final byGuessed = usableGroups.where((g) => g.id == guessedId).firstOrNull;
+        if (byGuessed != null) return byGuessed;
+      }
+      return usableGroups.firstOrNull ??
+          const ExpenseGroup(
+            id: 'op',
+            name: 'Chi phí vận hành',
+            color: '#0A7D76',
+          );
+    }
+
+    // 1. Gợi ý từ bộ từ điển chuẩn doanh nghiệp (vd: gõ "Quảng" -> "Quảng cáo Facebook", "Quảng cáo Google Ads"...)
+    for (final tpl in _dictionaryTemplates) {
+      final foldedTplTitle = foldDiacritics(tpl.title);
+      final matched =
+          foldedTplTitle.contains(q) ||
+          tpl.triggers.any((t) => t.startsWith(q) || q.startsWith(t));
+      if (!matched) continue;
+      if (foldedTplTitle == q) continue;
+      if (!seenTitles.add(foldedTplTitle)) continue;
+
+      final grp = resolveGroupFor(
+        title: tpl.title,
+        seedId: tpl.seedId,
+        aliases: tpl.groupAliases,
+      );
+      int histAmount = 0;
+      for (final h in historyItems) {
+        if (h.amount > 0 &&
+            foldDiacritics(
+                  FinanceMonthUtils.normalizeRecurringBaseTitle(h.title),
+                ) ==
+                foldedTplTitle) {
+          histAmount = h.amount;
+          break;
+        }
+      }
+      out.add(
+        ExpenseTitleSuggestion(
+          title: tpl.title,
+          groupId: grp.id,
+          groupName: grp.name,
+          groupColor: grp.color,
+          suggestedAmount: histAmount,
+        ),
+      );
+      if (out.length >= limit) return out;
+    }
+
+    // 2. Gợi ý từ lịch sử các khoản đã từng nhập trong sổ
+    for (final item in historyItems) {
+      if (item.amount <= 0) continue;
+      final baseTitle = FinanceMonthUtils.normalizeRecurringBaseTitle(
+        item.title,
+      );
+      if (baseTitle.isEmpty) continue;
+      final foldedBase = foldDiacritics(baseTitle);
+      if (!foldedBase.contains(q) || foldedBase == q) continue;
+      if (!seenTitles.add(foldedBase)) continue;
+
+      final grp = resolveGroupFor(
+        title: baseTitle,
+        preferredGroupId: item.groupId,
+      );
+      out.add(
+        ExpenseTitleSuggestion(
+          title: baseTitle,
+          groupId: grp.id,
+          groupName: grp.name,
+          groupColor: grp.color,
+          suggestedAmount: item.amount,
+        ),
+      );
+      if (out.length >= limit) break;
+    }
+
+    return out;
+  }
 
   /// Phân tích một cụm số tiền viết tắt đơn lẻ (`650k`, `1.85tr`, `4tr5`, `2.450.000`).
   static int? parseAmountToken(String raw) {

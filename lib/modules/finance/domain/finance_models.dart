@@ -98,6 +98,7 @@ class ExpenseAttachment {
     required this.id,
     required this.name,
     this.url = '',
+    this.localPath,
     this.mimeType,
     this.size,
     this.kind = 'image',
@@ -128,6 +129,7 @@ class ExpenseAttachment {
       id: '${json['id'] ?? ''}',
       name: name,
       url: '${json['url'] ?? ''}',
+      localPath: _asNullableString(json['local_path'] ?? json['localPath']),
       mimeType: mimeType,
       size: size,
       kind: inferredKind,
@@ -140,6 +142,7 @@ class ExpenseAttachment {
   final String id;
   final String name;
   final String url;
+  final String? localPath;
   final String? mimeType;
   final int? size;
 
@@ -150,6 +153,32 @@ class ExpenseAttachment {
   final String? rawUploadedAt;
 
   String get resolvedUrl => resolveFinanceMediaUrl(url);
+
+  ExpenseAttachment copyWith({
+    String? id,
+    String? name,
+    String? url,
+    String? localPath,
+    String? mimeType,
+    int? size,
+    String? kind,
+    String? sizeLabel,
+    String? uploadedAt,
+    String? rawUploadedAt,
+  }) {
+    return ExpenseAttachment(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      url: url ?? this.url,
+      localPath: localPath ?? this.localPath,
+      mimeType: mimeType ?? this.mimeType,
+      size: size ?? this.size,
+      kind: kind ?? this.kind,
+      sizeLabel: sizeLabel ?? this.sizeLabel,
+      uploadedAt: uploadedAt ?? this.uploadedAt,
+      rawUploadedAt: rawUploadedAt ?? this.rawUploadedAt,
+    );
+  }
 
   bool get isPdf =>
       mimeType?.toLowerCase() == 'application/pdf' ||
@@ -1458,12 +1487,6 @@ abstract final class FinanceSeedCatalog {
       groupName: 'Điện nước & tiện ích',
     ),
     RecurringTemplateMeta(
-      key: 'luong_nhan_su',
-      title: 'Lương nhân sự',
-      seedKey: 'luong_thuong',
-      groupName: 'Lương & Thưởng',
-    ),
-    RecurringTemplateMeta(
       key: 'lai_vay',
       title: 'Lãi vay',
       seedKey: 'lai_vay',
@@ -1471,7 +1494,7 @@ abstract final class FinanceSeedCatalog {
     ),
     RecurringTemplateMeta(
       key: 'ke_toan_dich_vu',
-      title: 'Lương kế toán dịch vụ',
+      title: 'Dịch vụ kế toán',
       seedKey: 'thue_phi',
       groupName: 'Thuế & phí',
     ),
@@ -1543,29 +1566,19 @@ abstract final class FinanceSeedCatalog {
     ),
   ];
 
-  /// Tạo danh sách chip gợi ý trên bàn phím từ lịch sử 3 tháng gần nhất (`histChips`).
+  /// Tạo danh sách chip gợi ý trên bàn phím từ tháng gần nhất (không hiển thị cố định 3 tháng).
   static List<({String label, int amount})> buildHistoryChips(
     List<({String monthLabel, int amount})>? history,
   ) {
     if (history == null || history.isEmpty) return const [];
-    final chips = <({String label, int amount})>[
-      for (final item in history.reversed)
-        (
-          label:
-              '${item.monthLabel} · ${FinanceMonthUtils.formatNumber(item.amount)}',
-          amount: item.amount,
-        ),
+    final latest = history.last;
+    return [
+      (
+        label:
+            '${latest.monthLabel} · ${FinanceMonthUtils.formatNumber(latest.amount)}',
+        amount: latest.amount,
+      ),
     ];
-    final firstVal = history.first.amount;
-    if (history.any((x) => x.amount != firstVal)) {
-      final sum = history.fold<int>(0, (s, x) => s + x.amount);
-      final avg = (sum / history.length).round();
-      chips.add((
-        label: 'TB 3 tháng · ${FinanceMonthUtils.formatNumber(avg)}',
-        amount: avg,
-      ));
-    }
-    return chips;
   }
 
   static String nameForGroupId(String groupId) {
