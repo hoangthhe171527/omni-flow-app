@@ -246,10 +246,15 @@ class _ShellNavBar extends StatelessWidget {
 
     return ClipRect(
       child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: isApple(context) ? 20 : 10, sigmaY: isApple(context) ? 20 : 10),
+        filter: ImageFilter.blur(
+          sigmaX: isApple(context) ? 20 : 10,
+          sigmaY: isApple(context) ? 20 : 10,
+        ),
         child: DecoratedBox(
           decoration: BoxDecoration(
-            color: scheme.surface.withValues(alpha: isApple(context) ? 0.8 : 0.9),
+            color: scheme.surface.withValues(
+              alpha: isApple(context) ? 0.8 : 0.9,
+            ),
             border: Border(
               top: BorderSide(color: scheme.onSurface.withValues(alpha: 0.07)),
             ),

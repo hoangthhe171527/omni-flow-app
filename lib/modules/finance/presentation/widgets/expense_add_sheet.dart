@@ -460,7 +460,8 @@ class _ExpenseAddSheetState extends ConsumerState<_ExpenseAddSheet> {
                 fontWeight: FontWeight.w500,
               ),
               decoration: InputDecoration(
-                hintText: 'Tên khoản chi hoặc gõ kèm số tiền (vd: Quảng cáo FB 2.5tr)',
+                hintText:
+                    'Tên khoản chi hoặc gõ kèm số tiền (vd: Quảng cáo FB 2.5tr)',
                 hintStyle: OmniType.body.copyWith(color: p.muted),
                 filled: true,
                 fillColor: p.card,
