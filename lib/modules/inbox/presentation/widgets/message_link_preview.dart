@@ -138,6 +138,10 @@ class _LinkPreviewCardState extends State<MessageLinkPreview> {
                       child: CachedNetworkImage(
                         imageUrl: meta.imageUrl!,
                         fit: BoxFit.cover,
+                        memCacheWidth:
+                            (320 * MediaQuery.devicePixelRatioOf(context))
+                                .round()
+                                .clamp(320, 960),
                         errorWidget: (_, _, _) => const SizedBox.shrink(),
                       ),
                     ),

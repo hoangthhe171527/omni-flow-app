@@ -191,12 +191,14 @@ Widget buildFinanceAttachmentImageContent({
   bool compact = false,
 }) {
   final localPath = att.localPath;
+  final decodeWidth = ((compact ? 120 : 720) * MediaQuery.devicePixelRatioOf(context)).round().clamp(120, 1600);
   if (localPath != null && localPath.isNotEmpty) {
     final file = File(localPath);
     if (file.existsSync()) {
       return Image.file(
         file,
         fit: fit,
+        cacheWidth: decodeWidth,
         errorBuilder: (_, _, _) => _buildReceiptVisualFallback(
           palette,
           att: att,
@@ -214,6 +216,7 @@ Widget buildFinanceAttachmentImageContent({
     return Image.memory(
       memoryBytes,
       fit: fit,
+      cacheWidth: decodeWidth,
       errorBuilder: (_, _, _) => _buildReceiptVisualFallback(
         palette,
         att: att,
@@ -233,6 +236,7 @@ Widget buildFinanceAttachmentImageContent({
     return CachedNetworkImage(
       imageUrl: resolvedUrl,
       fit: fit,
+      memCacheWidth: decodeWidth,
       placeholder: (_, _) => _buildReceiptVisualFallback(
         palette,
         att: att,
