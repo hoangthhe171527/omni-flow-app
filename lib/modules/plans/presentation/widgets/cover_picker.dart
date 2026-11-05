@@ -194,17 +194,21 @@ class _CoverPickerState extends State<CoverPicker> {
   Widget _preview(ColorScheme scheme) {
     final local = widget.localPath;
     if (local != null && local.isNotEmpty) {
+      final decodeWidth = (MediaQuery.sizeOf(context).width * MediaQuery.devicePixelRatioOf(context)).round().clamp(360, 1440);
       return Image.file(
         File(local),
         fit: BoxFit.cover,
+        cacheWidth: decodeWidth,
         errorBuilder: (_, _, _) => _emptyPreview(scheme),
       );
     }
     final remote = widget.remoteUrl;
     if (remote != null && remote.isNotEmpty) {
+      final decodeWidth = (MediaQuery.sizeOf(context).width * MediaQuery.devicePixelRatioOf(context)).round().clamp(360, 1440);
       return CachedNetworkImage(
         imageUrl: remote,
         fit: BoxFit.cover,
+        memCacheWidth: decodeWidth,
         placeholder: (_, _) => Center(
           child: CircularProgressIndicator(
             strokeWidth: 2,
