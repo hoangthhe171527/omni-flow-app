@@ -34,6 +34,10 @@ class NotificationsPage extends ConsumerStatefulWidget {
 class _NotificationsPageState extends ConsumerState<NotificationsPage> {
   final _scrollController = ScrollController();
 
+  /// Người dùng đã cuộn: các dòng dựng sau đó hiện ngay, không chạy hiệu ứng
+  /// hiện dần (khối cũ chỉ hiện dần một lần lúc mở màn).
+  bool _entered = false;
+
   @override
   void initState() {
     super.initState();
@@ -48,6 +52,7 @@ class _NotificationsPageState extends ConsumerState<NotificationsPage> {
   }
 
   void _onScroll() {
+    _entered = true;
     if (_scrollController.position.extentAfter < 400) {
       ref.read(notificationsProvider.notifier).loadMore();
     }
@@ -122,8 +127,23 @@ class _NotificationsPageState extends ConsumerState<NotificationsPage> {
                 ),
           data: (state) {
             final groups = groupNotificationsByDay(state.items);
+            // Phẳng: tiêu đề nhóm + từng dòng là một mục của builder, nên mỗi
+            // lần "tải thêm" chỉ dựng các dòng đang hiện, không dựng lại cả
+            // khối nhóm. Trông y hệt khối cũ (nhóm không có khung bo).
+            final entries = <_Entry>[
+              for (final group in groups) ...[
+                _Entry.header(group.label),
+                for (var i = 0; i < group.items.length; i++)
+                  _Entry.row(
+                    group.label,
+                    group.items[i],
+                    divider: i > 0,
+                    lastInGroup: i == group.items.length - 1,
+                  ),
+              ],
+            ];
 
-            return ListView(
+            return ListView.builder(
               physics: const AlwaysScrollableScrollPhysics(),
               controller: _scrollController,
               padding: const EdgeInsets.fromLTRB(
@@ -132,17 +152,21 @@ class _NotificationsPageState extends ConsumerState<NotificationsPage> {
                 16,
                 OmniSpacing.bottomSafe,
               ),
-              children: [
-                for (final group in groups)
-                  _Rise(
-                    key: ValueKey(group.label),
-                    child: _GroupBlock(
-                      label: group.label,
-                      items: group.items,
-                      onOpen: _open,
-                    ),
-                  ),
-              ],
+              itemCount: entries.length,
+              itemBuilder: (context, index) {
+                final entry = entries[index];
+                final child = entry.notification == null
+                    ? _GroupHeader(label: entry.label)
+                    : _GroupRow(
+                        label: entry.label,
+                        notification: entry.notification!,
+                        divider: entry.divider,
+                        lastInGroup: entry.lastInGroup,
+                        onOpen: _open,
+                      );
+                // Hiện dần chỉ ở lượt mở đầu; dòng cuộn tới sau thì hiện ngay.
+                return _entered ? child : _Rise(child: child);
+              },
             );
           },
         ),
@@ -191,7 +215,7 @@ class _AllReadEmpty extends StatelessWidget {
 
 /// `rise`: hiện dần và trượt lên 10px trong 450ms. Tắt khi giảm chuyển động.
 class _Rise extends StatelessWidget {
-  const _Rise({super.key, required this.child});
+  const _Rise({required this.child});
 
   final Widget child;
 
@@ -215,15 +239,63 @@ class _Rise extends StatelessWidget {
   }
 }
 
-class _GroupBlock extends StatelessWidget {
-  const _GroupBlock({
+/// Một mục của danh sách phẳng: tiêu đề nhóm ([notification] null) hoặc một dòng.
+class _Entry {
+  const _Entry.header(this.label)
+    : notification = null,
+      divider = false,
+      lastInGroup = false;
+
+  const _Entry.row(
+    this.label,
+    AppNotification this.notification, {
+    required this.divider,
+    required this.lastInGroup,
+  });
+
+  final String label;
+  final AppNotification? notification;
+  final bool divider;
+  final bool lastInGroup;
+}
+
+class _GroupHeader extends StatelessWidget {
+  const _GroupHeader({required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(2, 0, 2, 8),
+      child: Semantics(
+        header: true,
+        child: Text(
+          label,
+          style: OmniType.overline.copyWith(
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Một dòng của nhóm: vạch trên (trừ dòng đầu) + dòng thông báo; dòng cuối nhóm
+/// chừa 16px như khối nhóm cũ. Dòng đầu mang khoá `notification-group-<nhãn>`.
+class _GroupRow extends StatelessWidget {
+  const _GroupRow({
     required this.label,
-    required this.items,
+    required this.notification,
+    required this.divider,
+    required this.lastInGroup,
     required this.onOpen,
   });
 
   final String label;
-  final List<AppNotification> items;
+  final AppNotification notification;
+  final bool divider;
+  final bool lastInGroup;
   final void Function(AppNotification) onOpen;
 
   @override
@@ -231,43 +303,24 @@ class _GroupBlock extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
 
     return Padding(
-      padding: const EdgeInsets.only(bottom: 16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(2, 0, 2, 8),
-            child: Semantics(
-              header: true,
-              child: Text(
-                label,
-                style: OmniType.overline.copyWith(
-                  color: scheme.onSurfaceVariant,
-                ),
+      padding: EdgeInsets.only(bottom: lastInGroup ? 16 : 0),
+      child: Material(
+        key: divider ? null : ValueKey('notification-group-$label'),
+        color: Colors.transparent,
+        child: Column(
+          children: [
+            if (divider)
+              Divider(
+                height: 1,
+                thickness: 1,
+                color: scheme.surfaceContainerHighest,
               ),
+            NotificationRow(
+              notification: notification,
+              onTap: () => onOpen(notification),
             ),
-          ),
-          Material(
-            key: ValueKey('notification-group-$label'),
-            color: Colors.transparent,
-            child: Column(
-              children: [
-                for (var i = 0; i < items.length; i++) ...[
-                  if (i > 0)
-                    Divider(
-                      height: 1,
-                      thickness: 1,
-                      color: scheme.surfaceContainerHighest,
-                    ),
-                  NotificationRow(
-                    notification: items[i],
-                    onTap: () => onOpen(items[i]),
-                  ),
-                ],
-              ],
-            ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
