@@ -191,7 +191,10 @@ Widget buildFinanceAttachmentImageContent({
   bool compact = false,
 }) {
   final localPath = att.localPath;
-  final decodeWidth = ((compact ? 120 : 720) * MediaQuery.devicePixelRatioOf(context)).round().clamp(120, 1600);
+  final decodeWidth =
+      ((compact ? 120 : 720) * MediaQuery.devicePixelRatioOf(context))
+          .round()
+          .clamp(120, 1600);
   if (localPath != null && localPath.isNotEmpty) {
     final file = File(localPath);
     if (file.existsSync()) {
@@ -596,4 +599,3 @@ Future<void> showFinanceAttachmentPreviewDialog({
     },
   );
 }
-

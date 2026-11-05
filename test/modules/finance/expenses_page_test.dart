@@ -84,8 +84,14 @@ void main() {
           final adminEntries =
               container.read(directoryGroupsProvider)[NavArea.admin] ??
               const [];
-          expect(adminEntries.map((e) => e.label), containsAll(['Sổ chi phí', 'Tổng hợp chi phí']));
-          expect(adminEntries.map((e) => e.routeName), contains(FinanceRoutes.expenseSummary));
+          expect(
+            adminEntries.map((e) => e.label),
+            containsAll(['Sổ chi phí', 'Tổng hợp chi phí']),
+          );
+          expect(
+            adminEntries.map((e) => e.routeName),
+            contains(FinanceRoutes.expenseSummary),
+          );
           expect(
             adminEntries.map((e) => e.routeName),
             contains(FinanceRoutes.expenses),
@@ -309,11 +315,15 @@ void main() {
         await tester.pumpAndSettle();
 
         expect(find.text('Bước 1/2 · Kiểm tra mục sắp xoá'), findsOneWidget);
-        await tester.tap(find.byKey(const ValueKey('finance-delete-step1-btn')));
+        await tester.tap(
+          find.byKey(const ValueKey('finance-delete-step1-btn')),
+        );
         await tester.pumpAndSettle();
 
         expect(find.text('Bước 2/2 · Xác nhận xoá vĩnh viễn'), findsOneWidget);
-        await tester.tap(find.byKey(const ValueKey('finance-delete-step2-btn')));
+        await tester.tap(
+          find.byKey(const ValueKey('finance-delete-step2-btn')),
+        );
         await tester.pumpAndSettle();
         await tester.pump(const Duration(seconds: 5));
         await tester.pumpAndSettle();
@@ -412,8 +422,14 @@ void main() {
         await tester.pumpAndSettle();
 
         expect(find.text('Chi tiết khoản chi'), findsOneWidget);
-        expect(find.byKey(const ValueKey('finance-detail-title-btn')), findsOneWidget);
-        expect(find.byKey(const ValueKey('finance-detail-paid-date-cell')), findsOneWidget);
+        expect(
+          find.byKey(const ValueKey('finance-detail-title-btn')),
+          findsOneWidget,
+        );
+        expect(
+          find.byKey(const ValueKey('finance-detail-paid-date-cell')),
+          findsOneWidget,
+        );
         expect(find.text('Ngày ghi nhận'), findsOneWidget);
         expect(find.text('Ngày thanh toán'), findsOneWidget);
         expect(find.text('Đã trả đủ · 02/11'), findsOneWidget);
@@ -523,10 +539,19 @@ void main() {
         await tester.pumpAndSettle();
 
         // Khi ô trống: hiện 4 chip cố định trong Wrap gọn gàng, có Ngày thanh toán và 2 nút Lưu
-        expect(find.byKey(const ValueKey('finance-preset-chips')), findsOneWidget);
-        expect(find.byKey(const ValueKey('finance-add-paid-date-row')), findsOneWidget);
+        expect(
+          find.byKey(const ValueKey('finance-preset-chips')),
+          findsOneWidget,
+        );
+        expect(
+          find.byKey(const ValueKey('finance-add-paid-date-row')),
+          findsOneWidget,
+        );
         expect(find.text('Ngày thanh toán'), findsOneWidget);
-        expect(find.byKey(const ValueKey('finance-save-and-continue-btn')), findsOneWidget);
+        expect(
+          find.byKey(const ValueKey('finance-save-and-continue-btn')),
+          findsOneWidget,
+        );
         expect(find.byKey(const ValueKey('finance-save-btn')), findsOneWidget);
 
         // Gõ "Quảng" -> hiện gợi ý "Quảng cáo Facebook" và tự gán nhóm "Tiếp thị & khách"
@@ -536,13 +561,18 @@ void main() {
         );
         await tester.pumpAndSettle();
 
-        expect(find.byKey(const ValueKey('finance-autocomplete-chips')), findsOneWidget);
+        expect(
+          find.byKey(const ValueKey('finance-autocomplete-chips')),
+          findsOneWidget,
+        );
         expect(find.text('Quảng cáo Facebook'), findsOneWidget);
         expect(find.text('Quảng cáo Google Ads'), findsOneWidget);
         expect(find.text('Tiếp thị & khách'), findsOneWidget);
 
         // Chạm vào chip gợi ý "Quảng cáo Facebook" rồi nhập kèm số tiền 2.5tr
-        await tester.tap(find.byKey(const ValueKey('finance-suggest-Quảng cáo Facebook')));
+        await tester.tap(
+          find.byKey(const ValueKey('finance-suggest-Quảng cáo Facebook')),
+        );
         await tester.pumpAndSettle();
         await tester.enterText(
           find.byKey(const ValueKey('finance-smart-input')),
@@ -551,7 +581,9 @@ void main() {
         await tester.pumpAndSettle();
 
         // Bấm "Lưu & thêm tiếp" -> tạo khoản chi thứ nhất lên API nhưng giữ sheet mở để nhập tiếp
-        await tester.tap(find.byKey(const ValueKey('finance-save-and-continue-btn')));
+        await tester.tap(
+          find.byKey(const ValueKey('finance-save-and-continue-btn')),
+        );
         await tester.pump(const Duration(seconds: 5));
         await tester.pumpAndSettle();
 
@@ -560,7 +592,10 @@ void main() {
           4,
         );
         // Sheet vẫn mở để nhập khoản tiếp theo
-        expect(find.byKey(const ValueKey('finance-smart-input')), findsOneWidget);
+        expect(
+          find.byKey(const ValueKey('finance-smart-input')),
+          findsOneWidget,
+        );
 
         // Nhập khoản thứ 2 và bấm "Lưu khoản chi" -> lưu và đóng sheet
         await tester.enterText(
@@ -590,11 +625,7 @@ void main() {
         addTearDown(tester.view.resetPhysicalSize);
         addTearDown(tester.view.resetDevicePixelRatio);
         final routes = DemoRoutes();
-        registerFinanceDemo(
-          routes,
-          clock: fixedClock,
-          seedInitialData: true,
-        );
+        registerFinanceDemo(routes, clock: fixedClock, seedInitialData: true);
         final dio = Dio(BaseOptions(baseUrl: 'http://demo.local'))
           ..httpClientAdapter = DemoApiAdapter(routes, latency: Duration.zero);
 
@@ -610,9 +641,18 @@ void main() {
         await tester.pumpAndSettle();
 
         expect(find.text('Tổng hợp chi phí'), findsOneWidget);
-        expect(find.byKey(const ValueKey('finance-summary-tab-month')), findsOneWidget);
-        expect(find.byKey(const ValueKey('finance-summary-tab-quarter')), findsOneWidget);
-        expect(find.byKey(const ValueKey('finance-summary-tab-year')), findsOneWidget);
+        expect(
+          find.byKey(const ValueKey('finance-summary-tab-month')),
+          findsOneWidget,
+        );
+        expect(
+          find.byKey(const ValueKey('finance-summary-tab-quarter')),
+          findsOneWidget,
+        );
+        expect(
+          find.byKey(const ValueKey('finance-summary-tab-year')),
+          findsOneWidget,
+        );
         expect(find.text('Tổng chi Quý 4/2026 (T10 – T12)'), findsOneWidget);
         expect(find.text('3 THÁNG TRONG QUÝ 4/2026'), findsOneWidget);
         expect(find.text('Tháng 10/2026'), findsOneWidget);
@@ -620,21 +660,33 @@ void main() {
         expect(find.text('Tháng 12/2026'), findsOneWidget);
         expect(find.text('CƠ CẤU CHI PHÍ TRONG KỲ'), findsOneWidget);
 
-        final dimAccountBtn = find.byKey(const ValueKey('finance-summary-dim-account'));
+        final dimAccountBtn = find.byKey(
+          const ValueKey('finance-summary-dim-account'),
+        );
         await tester.ensureVisible(dimAccountBtn);
         await tester.pumpAndSettle();
         await tester.tap(dimAccountBtn);
         await tester.pumpAndSettle();
         expect(find.textContaining('Tiền mặt'), findsWidgets);
 
-        await tester.tap(find.byKey(const ValueKey('finance-summary-tab-year')));
+        await tester.tap(
+          find.byKey(const ValueKey('finance-summary-tab-year')),
+        );
         await tester.pumpAndSettle();
         expect(find.text('Tổng chi Năm 2026 (12 tháng)'), findsOneWidget);
         expect(find.text('DIỄN BIẾN NĂM 2026'), findsOneWidget);
-        expect(find.byKey(const ValueKey('finance-summary-year-by-quarter')), findsOneWidget);
-        expect(find.byKey(const ValueKey('finance-summary-year-by-month')), findsOneWidget);
+        expect(
+          find.byKey(const ValueKey('finance-summary-year-by-quarter')),
+          findsOneWidget,
+        );
+        expect(
+          find.byKey(const ValueKey('finance-summary-year-by-month')),
+          findsOneWidget,
+        );
 
-        await tester.tap(find.byKey(const ValueKey('finance-summary-tab-month')));
+        await tester.tap(
+          find.byKey(const ValueKey('finance-summary-tab-month')),
+        );
         await tester.pumpAndSettle();
         expect(find.text('Tổng hợp Tháng 11/2026'), findsOneWidget);
         expect(find.text('SO SÁNH 3 THÁNG GẦN NHẤT'), findsOneWidget);

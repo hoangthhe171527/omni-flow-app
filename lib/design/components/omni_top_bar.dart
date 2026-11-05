@@ -82,10 +82,27 @@ class OmniTopBar extends ConsumerWidget implements PreferredSizeWidget {
 
     return ClipRect(
       child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: (Theme.of(context).platform == TargetPlatform.iOS || Theme.of(context).platform == TargetPlatform.macOS) ? 20 : 10, sigmaY: (Theme.of(context).platform == TargetPlatform.iOS || Theme.of(context).platform == TargetPlatform.macOS) ? 20 : 10),
+        filter: ImageFilter.blur(
+          sigmaX:
+              (Theme.of(context).platform == TargetPlatform.iOS ||
+                  Theme.of(context).platform == TargetPlatform.macOS)
+              ? 20
+              : 10,
+          sigmaY:
+              (Theme.of(context).platform == TargetPlatform.iOS ||
+                  Theme.of(context).platform == TargetPlatform.macOS)
+              ? 20
+              : 10,
+        ),
         child: DecoratedBox(
           decoration: BoxDecoration(
-            color: scheme.surface.withValues(alpha: (Theme.of(context).platform == TargetPlatform.iOS || Theme.of(context).platform == TargetPlatform.macOS) ? 0.8 : 0.9),
+            color: scheme.surface.withValues(
+              alpha:
+                  (Theme.of(context).platform == TargetPlatform.iOS ||
+                      Theme.of(context).platform == TargetPlatform.macOS)
+                  ? 0.8
+                  : 0.9,
+            ),
             border: Border(
               bottom: BorderSide(
                 color: scheme.onSurface.withValues(alpha: 0.06),

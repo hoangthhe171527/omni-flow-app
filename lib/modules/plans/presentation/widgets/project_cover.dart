@@ -67,7 +67,11 @@ class ProjectCoverSurface extends StatelessWidget {
             CachedNetworkImage(
               imageUrl: resolveMediaUrl(cover!),
               fit: BoxFit.cover,
-              memCacheWidth: (MediaQuery.sizeOf(context).width * MediaQuery.devicePixelRatioOf(context)).round().clamp(360, 1600),
+              memCacheWidth:
+                  (MediaQuery.sizeOf(context).width *
+                          MediaQuery.devicePixelRatioOf(context))
+                      .round()
+                      .clamp(360, 1600),
               fadeInDuration: const Duration(milliseconds: 180),
               errorWidget: (_, _, _) => const SizedBox.shrink(),
             ),
@@ -108,7 +112,9 @@ class ProjectCoverMarker extends StatelessWidget {
             ? CachedNetworkImage(
                 imageUrl: resolveMediaUrl(cover!),
                 fit: BoxFit.cover,
-                memCacheWidth: (size * MediaQuery.devicePixelRatioOf(context)).round().clamp(24, 192),
+                memCacheWidth: (size * MediaQuery.devicePixelRatioOf(context))
+                    .round()
+                    .clamp(24, 192),
                 errorWidget: (_, _, _) => _fallback(),
               )
             : _fallback(),

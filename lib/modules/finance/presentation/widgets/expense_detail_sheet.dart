@@ -23,10 +23,7 @@ Future<bool> showFinanceDeleteConfirmSheet({
     backgroundColor: Colors.transparent,
     barrierColor: Colors.black.withValues(alpha: 0.42),
     builder: (sheetCtx) {
-      return _FinanceTwoStepDeleteSheet(
-        item: item,
-        groupName: groupName,
-      );
+      return _FinanceTwoStepDeleteSheet(item: item, groupName: groupName);
     },
   );
   return confirmed == true;
@@ -61,12 +58,7 @@ class _FinanceTwoStepDeleteSheetState
         color: p.card,
         borderRadius: const BorderRadius.vertical(top: Radius.circular(22)),
       ),
-      padding: EdgeInsets.fromLTRB(
-        18,
-        10,
-        18,
-        math.max(20, bottomInset + 14),
-      ),
+      padding: EdgeInsets.fromLTRB(18, 10, 18, math.max(20, bottomInset + 14)),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -206,9 +198,7 @@ class _FinanceTwoStepDeleteSheetState
                         borderRadius: BorderRadius.circular(12),
                       ),
                     ),
-                    child: Text(
-                      _step == 1 ? 'Tiếp tục xoá' : 'Xác nhận xoá',
-                    ),
+                    child: Text(_step == 1 ? 'Tiếp tục xoá' : 'Xác nhận xoá'),
                   ),
                 ),
               ),
@@ -699,11 +689,7 @@ class _ExpenseDetailSheetState extends ConsumerState<_ExpenseDetailSheet> {
                               ),
                             ),
                             const SizedBox(width: 5),
-                            Icon(
-                              Icons.edit_outlined,
-                              size: 14,
-                              color: p.muted,
-                            ),
+                            Icon(Icons.edit_outlined, size: 14, color: p.muted),
                           ],
                         ),
                       ),
@@ -937,9 +923,9 @@ class _ExpenseDetailSheetState extends ConsumerState<_ExpenseDetailSheet> {
                               ),
                               onTap: item.payments.isNotEmpty
                                   ? () => _openPaymentDateMenu(
-                                        item,
-                                        paymentIndex: 0,
-                                      )
+                                      item,
+                                      paymentIndex: 0,
+                                    )
                                   : () => _openPayKeypad(item),
                               borderRadius: const BorderRadius.only(
                                 topRight: Radius.circular(18),
@@ -1451,9 +1437,7 @@ class _ExpenseDetailSheetState extends ConsumerState<_ExpenseDetailSheet> {
             color: danger ? p.dangerSoft : p.card,
             shape: BoxShape.circle,
             border: Border.all(
-              color: danger
-                  ? p.danger.withValues(alpha: 0.18)
-                  : p.line,
+              color: danger ? p.danger.withValues(alpha: 0.18) : p.line,
               width: 0.5,
             ),
           ),

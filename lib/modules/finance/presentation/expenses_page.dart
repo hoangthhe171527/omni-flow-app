@@ -508,8 +508,7 @@ class _ExpensesPageState extends ConsumerState<ExpensesPage> {
         FinanceMonthUtils.shiftMonth(state.activeMonth, d),
       ...defaultSeg,
       state.activeMonth,
-    }.toList()
-      ..sort();
+    }.toList()..sort();
 
     final prevYm = FinanceMonthUtils.shiftMonth(state.activeMonth, -1);
     final nextYm = FinanceMonthUtils.shiftMonth(state.activeMonth, 1);
@@ -540,11 +539,7 @@ class _ExpensesPageState extends ConsumerState<ExpensesPage> {
                 borderRadius: BorderRadius.circular(9),
               ),
               alignment: Alignment.center,
-              child: Icon(
-                Icons.chevron_left_rounded,
-                size: 18,
-                color: p.ink2,
-              ),
+              child: Icon(Icons.chevron_left_rounded, size: 18, color: p.ink2),
             ),
           ),
           const SizedBox(width: 5),
@@ -622,11 +617,7 @@ class _ExpensesPageState extends ConsumerState<ExpensesPage> {
                 borderRadius: BorderRadius.circular(9),
               ),
               alignment: Alignment.center,
-              child: Icon(
-                Icons.chevron_right_rounded,
-                size: 18,
-                color: p.ink2,
-              ),
+              child: Icon(Icons.chevron_right_rounded, size: 18, color: p.ink2),
             ),
           ),
           const SizedBox(width: 6),

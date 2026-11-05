@@ -285,9 +285,7 @@ class FinanceLedgerState {
     );
     if (base.isEmpty) return const [];
     final anchor = beforeMonth ?? activeMonth;
-    final months = <String>[
-      FinanceMonthUtils.shiftMonth(anchor, -1),
-    ];
+    final months = <String>[FinanceMonthUtils.shiftMonth(anchor, -1)];
     final result = <({String monthLabel, int amount})>[];
     for (final ym in months) {
       final list = itemsByMonth[ym];
@@ -841,10 +839,12 @@ class FinanceLedgerState {
     return LedgerSummary.fromItems(
       items: list,
       groups: groups,
-      prevMonth: serverSummary?.prevMonth ??
+      prevMonth:
+          serverSummary?.prevMonth ??
           const LedgerPrevMonthSummary(month: '', total: 0),
       revenue: serverSummary?.revenue ?? 0,
-      cashOut: serverSummary?.cashOut ??
+      cashOut:
+          serverSummary?.cashOut ??
           const LedgerCashOutSummary(total: 0, earlier: 0),
     );
   }

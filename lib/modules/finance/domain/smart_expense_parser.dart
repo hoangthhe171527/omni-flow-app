@@ -128,7 +128,16 @@ abstract final class SmartExpenseParser {
       title: 'Cước Internet',
       seedId: 'op',
       groupAliases: ['dien nuoc', 'tien ich', 'van hanh'],
-      triggers: ['cuoc', 'internet', 'mang', 'wifi', 'cap quang', 'fpt', 'viettel', 'vnpt'],
+      triggers: [
+        'cuoc',
+        'internet',
+        'mang',
+        'wifi',
+        'cap quang',
+        'fpt',
+        'viettel',
+        'vnpt',
+      ],
     ),
     (
       title: 'Tiền điện văn phòng',
@@ -146,13 +155,25 @@ abstract final class SmartExpenseParser {
       title: 'Phí vận chuyển giao hàng',
       seedId: 'op',
       groupAliases: ['van hanh', 'van chuyen', 'kho'],
-      triggers: ['phi van chuyen', 'van chuyen', 'giao hang', 'ship', 'cuoc gui'],
+      triggers: [
+        'phi van chuyen',
+        'van chuyen',
+        'giao hang',
+        'ship',
+        'cuoc gui',
+      ],
     ),
     (
       title: 'Chi phí thuê kho',
       seedId: 'op',
       groupAliases: ['thue kho', 'kho bai', 'van hanh', 'mat bang'],
-      triggers: ['chi phi kho', 'thue kho', 'kho', 'mat bang', 'thue van phong'],
+      triggers: [
+        'chi phi kho',
+        'thue kho',
+        'kho',
+        'mat bang',
+        'thue van phong',
+      ],
     ),
     (
       title: 'Văn phòng phẩm',
@@ -176,7 +197,14 @@ abstract final class SmartExpenseParser {
       title: 'Phần mềm & Cloud',
       seedId: 'sw',
       groupAliases: ['phan mem', 'cntt', 'ten mien', 'van hanh'],
-      triggers: ['phan mem', 'cloud', 'server', 'hosting', 'domain', 'ten mien'],
+      triggers: [
+        'phan mem',
+        'cloud',
+        'server',
+        'hosting',
+        'domain',
+        'ten mien',
+      ],
     ),
     (
       title: 'Lương nhân sự',
@@ -374,7 +402,9 @@ abstract final class SmartExpenseParser {
       List<String> aliases = const [],
     }) {
       if (preferredGroupId != null && preferredGroupId.isNotEmpty) {
-        final hit = usableGroups.where((g) => g.id == preferredGroupId).firstOrNull;
+        final hit = usableGroups
+            .where((g) => g.id == preferredGroupId)
+            .firstOrNull;
         if (hit != null) return hit;
       }
       if (seedId != null && seedId.isNotEmpty) {
@@ -388,7 +418,9 @@ abstract final class SmartExpenseParser {
       }
       final guessedId = guessGroup(title, groups: usableGroups);
       if (guessedId != null && guessedId.isNotEmpty) {
-        final byGuessed = usableGroups.where((g) => g.id == guessedId).firstOrNull;
+        final byGuessed = usableGroups
+            .where((g) => g.id == guessedId)
+            .firstOrNull;
         if (byGuessed != null) return byGuessed;
       }
       return usableGroups.firstOrNull ??

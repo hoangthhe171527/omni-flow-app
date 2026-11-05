@@ -253,8 +253,7 @@ class _ExpenseSummaryPageState extends ConsumerState<ExpenseSummaryPage> {
     final years = <int>{
       for (var i = 0; i <= 3; i++) currentYear - i,
       _selectedYear,
-    }.toList()
-      ..sort((a, b) => b.compareTo(a));
+    }.toList()..sort((a, b) => b.compareTo(a));
 
     final picked = await showFinancePopoverMenu<int>(
       context: context,
@@ -320,11 +319,7 @@ class _ExpenseSummaryPageState extends ConsumerState<ExpenseSummaryPage> {
                             ),
                           ),
                         )
-                      : Icon(
-                          Icons.refresh_rounded,
-                          size: 17,
-                          color: p.ink,
-                        ),
+                      : Icon(Icons.refresh_rounded, size: 17, color: p.ink),
                 ),
               ),
             ),
@@ -483,8 +478,7 @@ class _ExpenseSummaryPageState extends ConsumerState<ExpenseSummaryPage> {
       currentYear - 1,
       currentYear,
       _selectedYear,
-    }.toList()
-      ..sort();
+    }.toList()..sort();
 
     return Row(
       children: [
@@ -692,7 +686,11 @@ class _ExpenseSummaryPageState extends ConsumerState<ExpenseSummaryPage> {
       case ExpenseSummaryScope.month:
         final ym = periodMonths.first;
         titleText = 'Tổng hợp Tháng $_selectedMonth/$_selectedYear';
-        final days = DateTime.utc(FinanceMonthUtils.yearOf(ym), FinanceMonthUtils.monthNumberOf(ym) + 1, 0).day;
+        final days = DateTime.utc(
+          FinanceMonthUtils.yearOf(ym),
+          FinanceMonthUtils.monthNumberOf(ym) + 1,
+          0,
+        ).day;
         avgPrefix = 'TB ngày: ';
         avgAmount = days > 0 ? (total / days).round() : 0;
         final summary = state.summaryForMonth(ym);
@@ -961,9 +959,7 @@ class _ExpenseSummaryPageState extends ConsumerState<ExpenseSummaryPage> {
     if (_scope == ExpenseSummaryScope.quarter) {
       headerTitle = '3 THÁNG TRONG QUÝ $_selectedQuarter/$_selectedYear';
       final months = _monthsForQuarter(_selectedYear, _selectedQuarter);
-      final totals = [
-        for (final ym in months) state.summaryForMonth(ym).total,
-      ];
+      final totals = [for (final ym in months) state.summaryForMonth(ym).total];
       final sumTotal = totals.fold<int>(0, (s, v) => s + v);
       final maxVal = totals.fold<int>(0, math.max);
 
@@ -1081,9 +1077,7 @@ class _ExpenseSummaryPageState extends ConsumerState<ExpenseSummaryPage> {
         FinanceMonthUtils.shiftMonth(activeYm, -1),
         activeYm,
       ];
-      final totals = [
-        for (final ym in months) state.summaryForMonth(ym).total,
-      ];
+      final totals = [for (final ym in months) state.summaryForMonth(ym).total];
       final sumTotal = totals.fold<int>(0, (s, v) => s + v);
       final maxVal = totals.fold<int>(0, math.max);
 
@@ -1398,7 +1392,10 @@ class _ExpenseSummaryPageState extends ConsumerState<ExpenseSummaryPage> {
           _SummaryDimensionRow(
             id: grp.id,
             name: grp.name,
-            color: FinanceMonthUtils.parseHexColor(grp.color, fallback: p.primary),
+            color: FinanceMonthUtils.parseHexColor(
+              grp.color,
+              fallback: p.primary,
+            ),
             amount: amt,
             count: items.length,
             countLabel: '${items.length} khoản',
@@ -1574,7 +1571,7 @@ class _ExpenseSummaryPageState extends ConsumerState<ExpenseSummaryPage> {
         children: [
           for (final v in values)
             GestureDetector(
-              key: ValueKey('$keyPrefix-${ (v as Enum).name }'),
+              key: ValueKey('$keyPrefix-${(v as Enum).name}'),
               behavior: HitTestBehavior.opaque,
               onTap: () => onSelected(v),
               child: AnimatedContainer(
