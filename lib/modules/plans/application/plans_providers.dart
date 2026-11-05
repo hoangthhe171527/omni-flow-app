@@ -184,7 +184,10 @@ List<TeamWithPlans> groupTeamsWithPlans(List<Team> teams, List<Plan> plans) {
   return grouped;
 }
 
-final planProvider = FutureProvider.family<Plan, String>((ref, id) {
+/// autoDispose có ân hạn như các provider của bảng (xem [kBoardKeepAlive]):
+/// trước đây mọi kế hoạch từng mở trong phiên vẫn tải lại ở mỗi tick realtime.
+final planProvider = FutureProvider.autoDispose.family<Plan, String>((ref, id) {
+  ref.lingerAfterLastListener();
   ref.watch(planRealtimeSignalProvider);
   return ref.watch(plansApiProvider).plan(id);
 });

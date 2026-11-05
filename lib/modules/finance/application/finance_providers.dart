@@ -643,8 +643,15 @@ class FinanceLedgerState {
     return false;
   }
 
+  /// Kết quả [groupedSections] theo từng bản state. State bất biến nên một bản
+  /// chỉ lọc + sắp + gom một lần, dù màn đọc getter bao nhiêu lần mỗi build.
+  static final Expando<List<ExpenseListSection>> _sectionsCache = Expando();
+
   /// Gom nhóm danh sách khoản chi đã lọc theo `sortMode` hiện hành.
-  List<ExpenseListSection> get groupedSections {
+  List<ExpenseListSection> get groupedSections =>
+      _sectionsCache[this] ??= _computeGroupedSections();
+
+  List<ExpenseListSection> _computeGroupedSections() {
     final list = filteredItems;
     if (list.isEmpty) return const [];
 
