@@ -25,6 +25,7 @@ void main() {
     'lib/modules/customers/presentation/customers_page.dart',
     'lib/modules/opportunities/presentation/pipeline_page.dart',
     'lib/modules/finance/presentation/expenses_page.dart',
+    'lib/modules/finance/presentation/expense_summary_page.dart',
     'lib/modules/channels/presentation/channels_page.dart',
     'lib/modules/team/presentation/team_page.dart',
     'lib/modules/settings/presentation/my_permissions_page.dart',

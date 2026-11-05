@@ -592,8 +592,8 @@ class _ExpensesPageState extends ConsumerState<ExpensesPage> {
                                     ? p.ink
                                     : p.muted,
                                 fontWeight: ym == state.activeMonth
-                                    ? FontWeight.w700
-                                    : FontWeight.w600,
+                                    ? FontWeight.w600
+                                    : FontWeight.w500,
                               ),
                             ),
                           ),
@@ -946,7 +946,7 @@ class _ExpensesPageState extends ConsumerState<ExpensesPage> {
                 maxLines: 1,
                 style: OmniType.bodySm.copyWith(
                   color: amountColor,
-                  fontWeight: FontWeight.w700,
+                  fontWeight: FontWeight.w600,
                   fontFeatures: const [FontFeature.tabularFigures()],
                 ),
               ),

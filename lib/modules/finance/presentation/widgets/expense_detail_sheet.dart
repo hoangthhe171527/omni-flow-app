@@ -98,7 +98,7 @@ class _FinanceTwoStepDeleteSheetState
             'Xoá khoản chi?',
             style: OmniType.section.copyWith(
               color: p.ink,
-              fontWeight: FontWeight.w700,
+              fontWeight: FontWeight.w600,
             ),
           ),
           const SizedBox(height: 8),
@@ -560,7 +560,7 @@ class _ExpenseDetailSheetState extends ConsumerState<_ExpenseDetailSheet> {
                           'Chi tiết khoản chi',
                           style: OmniType.bodySm.copyWith(
                             color: p.ink2,
-                            fontWeight: FontWeight.w700,
+                            fontWeight: FontWeight.w600,
                           ),
                         ),
                         if (item.createdAt.isNotEmpty) ...[
@@ -716,7 +716,7 @@ class _ExpenseDetailSheetState extends ConsumerState<_ExpenseDetailSheet> {
                               maxLines: 1,
                               style: OmniType.displayLg.copyWith(
                                 color: p.ink,
-                                fontWeight: FontWeight.w700,
+                                fontWeight: FontWeight.w600,
                                 fontFeatures: const [
                                   FontFeature.tabularFigures(),
                                 ],
