@@ -416,7 +416,7 @@ class _ExpenseSummaryPageState extends ConsumerState<ExpenseSummaryPage> {
                           style: OmniType.caption.copyWith(
                             color: _scope == s ? p.primaryInk : p.muted,
                             fontWeight: _scope == s
-                                ? FontWeight.w700
+                                ? FontWeight.w600
                                 : FontWeight.w600,
                           ),
                         ),
@@ -450,7 +450,7 @@ class _ExpenseSummaryPageState extends ConsumerState<ExpenseSummaryPage> {
                     '$_selectedYear',
                     style: OmniType.caption.copyWith(
                       color: p.primaryInk,
-                      fontWeight: FontWeight.w700,
+                      fontWeight: FontWeight.w600,
                       fontFeatures: const [FontFeature.tabularFigures()],
                     ),
                   ),
@@ -616,7 +616,7 @@ class _ExpenseSummaryPageState extends ConsumerState<ExpenseSummaryPage> {
         maxLines: 1,
         style: OmniType.caption.copyWith(
           color: active ? p.ink : p.muted,
-          fontWeight: active ? FontWeight.w700 : FontWeight.w600,
+          fontWeight: active ? FontWeight.w600 : FontWeight.w600,
         ),
       ),
     );
@@ -790,7 +790,7 @@ class _ExpenseSummaryPageState extends ConsumerState<ExpenseSummaryPage> {
                     maxLines: 1,
                     style: OmniType.displayLg.copyWith(
                       color: p.ink,
-                      fontWeight: FontWeight.w700,
+                      fontWeight: FontWeight.w600,
                       fontFeatures: const [FontFeature.tabularFigures()],
                     ),
                   ),
@@ -936,7 +936,7 @@ class _ExpenseSummaryPageState extends ConsumerState<ExpenseSummaryPage> {
               maxLines: 1,
               style: OmniType.bodySm.copyWith(
                 color: amountColor,
-                fontWeight: FontWeight.w700,
+                fontWeight: FontWeight.w600,
                 fontFeatures: const [FontFeature.tabularFigures()],
               ),
             ),
@@ -1122,7 +1122,7 @@ class _ExpenseSummaryPageState extends ConsumerState<ExpenseSummaryPage> {
                   headerTitle,
                   style: OmniType.overline.copyWith(
                     color: p.muted,
-                    fontWeight: FontWeight.w700,
+                    fontWeight: FontWeight.w600,
                     letterSpacing: 0.4,
                   ),
                 ),
@@ -1233,7 +1233,7 @@ class _ExpenseSummaryPageState extends ConsumerState<ExpenseSummaryPage> {
                   FinanceMonthUtils.formatVndSpace(row.amount),
                   style: OmniType.caption.copyWith(
                     color: p.ink,
-                    fontWeight: FontWeight.w700,
+                    fontWeight: FontWeight.w600,
                     fontFeatures: const [FontFeature.tabularFigures()],
                   ),
                 ),
@@ -1297,7 +1297,7 @@ class _ExpenseSummaryPageState extends ConsumerState<ExpenseSummaryPage> {
                   'CƠ CẤU CHI PHÍ TRONG KỲ',
                   style: OmniType.overline.copyWith(
                     color: p.muted,
-                    fontWeight: FontWeight.w700,
+                    fontWeight: FontWeight.w600,
                     letterSpacing: 0.4,
                   ),
                 ),
@@ -1503,7 +1503,7 @@ class _ExpenseSummaryPageState extends ConsumerState<ExpenseSummaryPage> {
                   FinanceMonthUtils.formatVndSpace(row.amount),
                   style: OmniType.caption.copyWith(
                     color: p.ink,
-                    fontWeight: FontWeight.w700,
+                    fontWeight: FontWeight.w600,
                     fontFeatures: const [FontFeature.tabularFigures()],
                   ),
                 ),
@@ -1659,7 +1659,7 @@ class _ExpenseSummaryPageState extends ConsumerState<ExpenseSummaryPage> {
                               overflow: TextOverflow.ellipsis,
                               style: OmniType.body.copyWith(
                                 color: p.ink,
-                                fontWeight: FontWeight.w700,
+                                fontWeight: FontWeight.w600,
                               ),
                             ),
                             Text(

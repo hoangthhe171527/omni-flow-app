@@ -301,9 +301,8 @@ Widget _buildReceiptVisualFallback(
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: OmniType.micro.copyWith(
-                    fontSize: 8,
                     color: p.primaryInk,
-                    fontWeight: FontWeight.w700,
+                    fontWeight: FontWeight.w600,
                   ),
                 ),
               ),
@@ -316,9 +315,8 @@ Widget _buildReceiptVisualFallback(
               child: Text(
                 FinanceMonthUtils.formatNumber(expenseAmount),
                 style: OmniType.micro.copyWith(
-                  fontSize: 9,
                   color: p.ink,
-                  fontWeight: FontWeight.w700,
+                  fontWeight: FontWeight.w600,
                 ),
               ),
             ),
@@ -327,7 +325,6 @@ Widget _buildReceiptVisualFallback(
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: OmniType.micro.copyWith(
-              fontSize: 7.5,
               color: p.ink2,
               fontWeight: FontWeight.w600,
             ),

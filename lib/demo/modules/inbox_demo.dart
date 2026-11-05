@@ -1728,19 +1728,25 @@ class _InboxDemo {
           : noContent;
     });
 
-    // Thông báo.
+    // Thông báo: chuông chỉ đếm và hiện các thông báo không phải tin nhắn hộp thư.
+    bool isBellNotif(Map<String, dynamic> n) =>
+        n['notification_type'] != 'INBOX_MESSAGE' &&
+        n['related_entity_type'] != 'conversation';
+
     r.get('/notifications', (req) {
       _flush();
       final unreadOnly = _truthy(req.q('unread'));
       return paged(req, [
         for (final n in _sortedNotifications())
-          if (!unreadOnly || n['read_at'] == null) n,
+          if (isBellNotif(n) && (!unreadOnly || n['read_at'] == null)) n,
       ]);
     });
     r.get('/notifications/unread-count', (_) {
       _flush();
       return ok({
-        'count': _notifications.where((n) => n['read_at'] == null).length,
+        'count': _notifications
+            .where((n) => isBellNotif(n) && n['read_at'] == null)
+            .length,
       });
     });
     r.post('/notifications/mark-all-read', (_) {

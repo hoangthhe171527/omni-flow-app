@@ -326,17 +326,12 @@ void main() {
   group('Thông báo', () {
     test('danh sách, chưa đọc, đánh dấu đã đọc', () async {
       final page = await notifications.list();
-      expect(page.items.length, greaterThanOrEqualTo(8));
+      expect(page.items.length, greaterThanOrEqualTo(7));
       expect(
         page.items.any((n) => n.kind == NotificationKind.inboxMessage),
-        isTrue,
+        isFalse,
       );
       expect(page.items.any((n) => n.kind.isTask), isTrue);
-      final inboxNote = page.items.firstWhere(
-        (n) => n.kind == NotificationKind.inboxMessage,
-      );
-      expect(inboxNote.conversationId, isNotNull);
-      expect(await inbox.get(inboxNote.conversationId!), isA<Conversation>());
 
       final unread = await notifications.unreadCount();
       expect(unread, greaterThan(0));

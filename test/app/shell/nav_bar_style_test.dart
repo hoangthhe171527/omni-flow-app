@@ -65,6 +65,9 @@ Future<void> pumpShell(WidgetTester tester, {Widget? firstPage}) async {
 
 void main() {
   testWidgets('thanh tab có lớp kính mờ và body vẽ dưới nó', (tester) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
     await pumpShell(tester);
 
     expect(
