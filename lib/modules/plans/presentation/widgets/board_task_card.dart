@@ -151,6 +151,10 @@ class _BoardTaskCardState extends ConsumerState<BoardTaskCard>
     final task = widget.task;
     final scheme = Theme.of(context).colorScheme;
     final done = _done;
+    final canCompleteThis =
+        widget.canComplete &&
+        !task.isLocked &&
+        (done || !task.hasSubtasks || task.doneCount >= task.totalCount);
     final catalog = ref.watch(taskLabelsProvider).valueOrNull ?? const [];
     final byCode = {for (final l in catalog) l.code: l};
     final labels = [for (final code in task.labels) ?byCode[code]];
@@ -221,7 +225,7 @@ class _BoardTaskCardState extends ConsumerState<BoardTaskCard>
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // `.ck` 44 lề âm −10/−8: chiếm 26 × 22 trong dòng, cách 6.
-            if (widget.canComplete) const SizedBox(width: 32, height: 22),
+            if (canCompleteThis) const SizedBox(width: 32, height: 22),
             Expanded(
               child: Text(
                 task.title,
@@ -253,7 +257,7 @@ class _BoardTaskCardState extends ConsumerState<BoardTaskCard>
           ],
         ),
         Padding(
-          padding: EdgeInsets.only(top: 8, left: widget.canComplete ? 28 : 0),
+          padding: EdgeInsets.only(top: 8, left: canCompleteThis ? 28 : 0),
           child: Row(
             children: [
               Expanded(
@@ -303,7 +307,7 @@ class _BoardTaskCardState extends ConsumerState<BoardTaskCard>
       ),
     );
 
-    final body = !widget.canComplete
+    final body = !canCompleteThis
         ? card
         : Stack(
             clipBehavior: Clip.none,

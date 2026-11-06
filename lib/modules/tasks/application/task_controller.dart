@@ -157,14 +157,22 @@ class TaskDetailState {
   Task get visible {
     if (pending.isEmpty) return task;
 
+    final nextSubtasks = [
+      for (final subtask in task.subtasks)
+        switch (pendingFor(subtask.id)) {
+          final tick? => subtask.copyWith(done: tick.done),
+          null => subtask,
+        },
+    ];
+    final nextStatus = nextSubtasks.isNotEmpty
+        ? (nextSubtasks.every((s) => s.done)
+              ? 'done'
+              : (task.status == 'done' ? 'doing' : task.status))
+        : task.status;
+
     return task.copyWith(
-      subtasks: [
-        for (final subtask in task.subtasks)
-          switch (pendingFor(subtask.id)) {
-            final tick? => subtask.copyWith(done: tick.done),
-            null => subtask,
-          },
-      ],
+      subtasks: nextSubtasks,
+      status: nextStatus,
     );
   }
 

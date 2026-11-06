@@ -425,8 +425,9 @@ class _PlanBoardPageState extends ConsumerState<PlanBoardPage>
                           ? _body(
                               plan,
                               result == null ? board : board.only(result.ids),
-                              canCreate: taskAccess.canCreate,
-                              canComplete: taskAccess.canComplete,
+                              canCreate: canEditSections && taskAccess.canCreate,
+                              canComplete:
+                                  canEditSections && taskAccess.canComplete,
                               canDragTasks: canDragTasks,
                               canEditSections: canEditSections,
                               searchCapped: result != null && result.capped
@@ -444,8 +445,10 @@ class _PlanBoardPageState extends ConsumerState<PlanBoardPage>
                               data: (found) => _body(
                                 plan,
                                 board.only(found.ids),
-                                canCreate: taskAccess.canCreate,
-                                canComplete: taskAccess.canComplete,
+                                canCreate:
+                                    canEditSections && taskAccess.canCreate,
+                                canComplete:
+                                    canEditSections && taskAccess.canComplete,
                                 canDragTasks: canDragTasks,
                                 canEditSections: canEditSections,
                                 searchCapped: found.capped

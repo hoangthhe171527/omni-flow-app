@@ -230,7 +230,7 @@ void main() {
   testWidgets('(c) "Thêm công việc" mở trang tạo với nhóm của cột', (
     tester,
   ) async {
-    await pumpBoard(tester, perms: worker);
+    await pumpBoard(tester);
 
     final add = find.descendant(
       of: column('Tiếp nhận'),
@@ -250,6 +250,14 @@ void main() {
     expect(createdWith?.planId, planId);
     expect(createdWith?.sectionId, 's1');
     expect(createdWith?.sections.map((s) => s.id), ['s1', 's2', 's3', 's4']);
+  });
+
+  testWidgets('nhân viên (worker) không có "Thêm công việc" trên cột', (
+    tester,
+  ) async {
+    await pumpBoard(tester, perms: worker);
+
+    expect(find.text('Thêm công việc', skipOffstage: false), findsNothing);
   });
 
   testWidgets('(c) cột hai gửi đúng nhóm của cột hai', (tester) async {

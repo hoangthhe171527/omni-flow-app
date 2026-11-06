@@ -200,13 +200,30 @@ class _TeamsPageState extends ConsumerState<TeamsPage> {
   }
 
   Widget _list(
-    List<TeamWithPlans> list, {
+    List<TeamWithPlans> rawList, {
     required bool isAssigner,
     required String? currentUserId,
     required bool canUpdateTeam,
     required bool canDeleteTeam,
     required bool Function(Plan plan) canMovePlan,
   }) {
+    final hasTeamMemberships =
+        !isAssigner &&
+        currentUserId != null &&
+        rawList.any((g) => g.team.memberIds.isNotEmpty);
+    final list = !hasTeamMemberships
+        ? rawList
+        : [
+            for (final g in rawList)
+              if (g.team.memberIds.contains(currentUserId) ||
+                  [...g.plans, ...g.closedPlans].any(
+                    (p) =>
+                        p.ownerId == currentUserId ||
+                        p.memberIds.contains(currentUserId) ||
+                        p.memberRoles.containsKey(currentUserId),
+                  ))
+                g,
+          ];
     final needle = foldDiacritics(_query.trim());
     final searching = needle.isNotEmpty;
     bool hit(String name) => foldDiacritics(name).contains(needle);

@@ -6,6 +6,7 @@ import '../../../../../core/error/app_exception.dart';
 import '../../../../../design/components/components.dart';
 import '../../../../../design/platform/omni_motion_scope.dart';
 import '../../../../../design/tokens/tokens.dart';
+import '../../../../../security/session/session_controller.dart';
 import '../../../../team/team.dart';
 import '../../../application/task_controller.dart';
 import '../../../domain/task.dart';
@@ -55,6 +56,7 @@ class SubtasksCard extends ConsumerWidget {
     final subtasks = task.subtasks;
     final done = subtasks.where((s) => s.done).length;
     final byId = ref.watch(teamMemberByIdProvider);
+    final currentUserId = ref.watch(sessionProvider.select((s) => s.user?.id));
     final fraction = subtasks.isEmpty ? 0.0 : done / subtasks.length;
     final motion = OmniMotion.enabled(context);
 
@@ -122,6 +124,7 @@ class SubtasksCard extends ConsumerWidget {
                     context,
                     subtasks[i],
                     byId,
+                    currentUserId: currentUserId,
                     first: i == 0,
                     handle: ReorderableDragStartListener(
                       index: i,
@@ -132,7 +135,13 @@ class SubtasksCard extends ConsumerWidget {
               : Column(
                   children: [
                     for (var i = 0; i < subtasks.length; i++)
-                      _row(context, subtasks[i], byId, first: i == 0),
+                      _row(
+                        context,
+                        subtasks[i],
+                        byId,
+                        currentUserId: currentUserId,
+                        first: i == 0,
+                      ),
                   ],
                 ),
         ),
@@ -145,10 +154,25 @@ class SubtasksCard extends ConsumerWidget {
     BuildContext context,
     Subtask s,
     Map<String, TeamMember> byId, {
+    required String? currentUserId,
     required bool first,
     Widget? handle,
   }) {
     final known = s.assigneeId == null ? null : byId[s.assigneeId!];
+    final canTickThis =
+        canTick &&
+        task.canTickSubtask(
+          s,
+          currentUserId: currentUserId,
+          canManage: canEdit,
+        );
+    final canAssignThis =
+        canEdit ||
+        (canTick &&
+            (s.assigneeId == null ||
+                s.assigneeId!.isEmpty ||
+                currentUserId == null ||
+                s.assigneeId == currentUserId));
 
     return SubtaskRow(
       key: ValueKey(s.id),
@@ -157,7 +181,7 @@ class SubtasksCard extends ConsumerWidget {
       dragHandle: handle,
       onSetDue: details && canEdit ? () => _setDue(context, s) : null,
       pending: state.pendingFor(s.id),
-      enabled: canTick,
+      enabled: canTickThis,
       assigneeName: s.assigneeName ?? known?.name,
       assigneeAvatar: s.assigneeAvatar ?? known?.avatarUrl,
       onToggle: (value) => controller.toggleSubtask(s.id, done: value),
@@ -166,8 +190,10 @@ class SubtasksCard extends ConsumerWidget {
         done: state.pendingFor(s.id)?.done ?? s.done,
       ),
       onDiscard: () => controller.discard(s.id),
-      onMenu: canEdit || canTick ? (anchor) => _menu(context, s, anchor) : null,
-      onAssign: canTick ? (anchor) => _assign(context, s, anchor) : null,
+      onMenu: canEdit || canAssignThis
+          ? (anchor) => _menu(context, s, anchor, canAssign: canAssignThis)
+          : null,
+      onAssign: canAssignThis ? (anchor) => _assign(context, s, anchor) : null,
     );
   }
 
@@ -324,7 +350,12 @@ class SubtasksCard extends ConsumerWidget {
 
   /// ⋮: Đổi tên, Giao, Xoá (đường hiện có); "Chuyển lên / xuống" khi
   /// [canReorder] — đường không cần kéo (trình đọc màn hình, tắt chuyển động).
-  Future<void> _menu(BuildContext context, Subtask s, Rect anchor) async {
+  Future<void> _menu(
+    BuildContext context,
+    Subtask s,
+    Rect anchor, {
+    required bool canAssign,
+  }) async {
     final messenger = ScaffoldMessenger.of(context);
     final shown = task.subtasks;
     final at = shown.indexWhere((x) => x.id == s.id);
@@ -344,7 +375,7 @@ class SubtasksCard extends ConsumerWidget {
               icon: Icons.edit_outlined,
               label: 'Đổi tên',
             ),
-          if (canTick)
+          if (canAssign)
             const DetailMenuItem(
               value: _SubAction.assign,
               icon: Icons.person_add_alt_outlined,

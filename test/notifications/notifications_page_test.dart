@@ -244,8 +244,16 @@ void main() {
     expect(t.hasRunningAnimations, isFalse);
   });
 
-  testWidgets('có chuyển động: mỗi nhóm dùng hiệu ứng rise', (t) async {
-    await pump(t);
-    expect(find.byType(TweenAnimationBuilder<double>), findsNWidgets(2));
-  });
+  testWidgets(
+    'có chuyển động: lượt mở đầu, mọi mục (2 tiêu đề nhóm + các dòng) cùng rise',
+    (t) async {
+      await pump(t);
+      final rows = find.byType(NotificationRow).evaluate().length;
+      expect(rows, greaterThan(0));
+      expect(
+        find.byType(TweenAnimationBuilder<double>),
+        findsNWidgets(rows + 2),
+      );
+    },
+  );
 }

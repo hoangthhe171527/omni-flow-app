@@ -9,6 +9,7 @@ import '../../../core/utils/client_id.dart';
 import '../../../design/components/components.dart';
 import '../../../design/platform/omni_motion_scope.dart';
 import '../../../design/tokens/tokens.dart';
+import '../../../security/session/session_controller.dart';
 import '../../notifications/application/notifications_providers.dart';
 import '../../notifications/routes.dart';
 import '../application/tasks_providers.dart';
@@ -57,6 +58,8 @@ class _MyTasksPageState extends ConsumerState<MyTasksPage> {
     final scheme = Theme.of(context).colorScheme;
     final bucket = ref.watch(taskBucketProvider);
     final tasks = ref.watch(myTasksProvider);
+    final currentUserId = ref.watch(sessionProvider.select((s) => s.user?.id));
+    final canManageAll = ref.watch(taskAccessProvider.select((a) => a.isAssigner));
     final topBarSlot = OmniTopBarSlot.maybeOf(context);
 
     return Scaffold(
@@ -145,6 +148,8 @@ class _MyTasksPageState extends ConsumerState<MyTasksPage> {
 
               return _TickOnSwipe(
                 task: task,
+                currentUserId: currentUserId,
+                canManage: canManageAll,
                 onTick: (next) => _tick(task, next, done: true),
                 child: TaskCard(
                   task: task,
@@ -259,17 +264,24 @@ class _MyTasksPageState extends ConsumerState<MyTasksPage> {
 class _TickOnSwipe extends StatelessWidget {
   const _TickOnSwipe({
     required this.task,
+    required this.currentUserId,
+    required this.canManage,
     required this.onTick,
     required this.child,
   });
 
   final Task task;
+  final String? currentUserId;
+  final bool canManage;
   final ValueChanged<Subtask> onTick;
   final Widget child;
 
   @override
   Widget build(BuildContext context) {
-    final next = task.nextOpenSubtask;
+    final next = task.nextOpenSubtaskFor(
+      currentUserId: currentUserId,
+      canManage: canManage,
+    );
     // Không còn gì để tick thì không phải là thứ vuốt được — không dải, không
     // đàn hồi, để người dùng không tưởng mình vuốt hụt.
     if (next == null) return child;

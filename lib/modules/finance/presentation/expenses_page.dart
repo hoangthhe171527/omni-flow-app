@@ -314,7 +314,9 @@ class _ExpensesPageState extends ConsumerState<ExpensesPage> {
                     child: RefreshIndicator(
                       onRefresh: notifier.refresh,
                       color: p.primary,
-                      child: ListView(
+                      // builder: tháng đông khoản chi chỉ dựng các nhóm ngày
+                      // đang hiện trên màn, không dựng cả tháng một lượt.
+                      child: _lazyList(
                         physics: const AlwaysScrollableScrollPhysics(),
                         padding: const EdgeInsets.fromLTRB(16, 2, 16, 100),
                         children: [
@@ -376,6 +378,19 @@ class _ExpensesPageState extends ConsumerState<ExpensesPage> {
             ),
         ],
       ),
+    );
+  }
+
+  static Widget _lazyList({
+    required ScrollPhysics physics,
+    required EdgeInsetsGeometry padding,
+    required List<Widget> children,
+  }) {
+    return ListView.builder(
+      physics: physics,
+      padding: padding,
+      itemCount: children.length,
+      itemBuilder: (_, i) => children[i],
     );
   }
 
