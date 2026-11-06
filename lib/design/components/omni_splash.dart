@@ -41,8 +41,8 @@ class OmniSplash extends StatelessWidget {
   static const String tagline = 'Mọi khách hàng, một quỹ đạo';
 
   /// Vòng sáng trên nền sáng — chỉ dùng ở đây nên không thành token.
-  static const _lightHaloOuter = Color(0xFFEAF4F3);
-  static const _lightHaloInner = Color(0xFFE1F0EE);
+  static const _lightHaloOuter = Color(0xFFEBF3FF);
+  static const _lightHaloInner = Color(0xFFDCEBFF);
 
   @override
   Widget build(BuildContext context) {
