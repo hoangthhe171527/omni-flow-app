@@ -274,11 +274,14 @@ Future<T?> showOmniSheet<T>({
   double? radius,
   bool? showDragHandle,
   AnimationStyle? animationStyle,
+  // Phủ cả thanh tab dưới (navigator gốc) thay vì nằm trong tab hiện tại.
+  bool useRootNavigator = false,
 }) {
   final apple = isApple(context);
 
   return showModalBottomSheet<T>(
     context: context,
+    useRootNavigator: useRootNavigator,
     isScrollControlled: true,
     useSafeArea: true,
     backgroundColor: backgroundColor,

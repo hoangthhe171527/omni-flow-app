@@ -37,16 +37,19 @@ final declaredNavEntriesProvider = Provider<List<ModuleNavEntry>>((ref) {
   return entries;
 });
 
-/// Mục thành branch của shell — mọi mục primary, KHÔNG lọc quyền.
+/// Mục lên được thanh tab: mọi khu trừ "Tài khoản" (hồ sơ, nền, quyền của tôi
+/// là chỗ chỉnh, không phải chỗ làm việc). Người dùng tự chọn 4 mục trong số
+/// này ở màn "Sửa menu" (`tab_order.dart`).
+bool isTabEligible(ModuleNavEntry entry) => entry.area != NavArea.account;
+
+/// Mục thành branch của shell — mọi mục lên được tab, KHÔNG lọc quyền.
 ///
 /// Router và shell cùng đọc provider này để đánh chỉ số branch. Hai nơi tự lọc
 /// lấy là hai nơi có thể lệch nhau, và lệch chỉ số branch nghĩa là bấm tab này
-/// ra màn kia.
+/// ra màn kia. Branch dựng lười: navigator của một mục chỉ sinh ra khi mục đó
+/// được mở lần đầu.
 final branchNavEntriesProvider = Provider<List<ModuleNavEntry>>((ref) {
-  return ref
-      .watch(declaredNavEntriesProvider)
-      .where((entry) => entry.weight == NavWeight.primary)
-      .toList();
+  return ref.watch(declaredNavEntriesProvider).where(isTabEligible).toList();
 });
 
 /// Mục phiên hiện tại được phép thấy. Tính lại khi quyền đổi (chuyển tenant,
@@ -71,6 +74,11 @@ final primaryNavEntriesProvider = Provider<List<ModuleNavEntry>>((ref) {
       .watch(visibleNavEntriesProvider)
       .where((entry) => entry.weight == NavWeight.primary)
       .toList();
+});
+
+/// Mục phiên hiện tại được phép đưa lên thanh tab (màn "Sửa menu").
+final pinnableNavEntriesProvider = Provider<List<ModuleNavEntry>>((ref) {
+  return ref.watch(visibleNavEntriesProvider).where(isTabEligible).toList();
 });
 
 /// Danh bạ "Tất cả", gom theo nhóm. Nhóm không còn mục nào thì biến mất hẳn —

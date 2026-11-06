@@ -62,4 +62,89 @@ void main() {
     addTearDown(c.dispose);
     expect(c.read(tabEntriesProvider).map((x) => x.routeName), ['inbox.list']);
   });
+
+  group('tự chọn thanh menu', () {
+    final all = [
+      e('dashboard.home'),
+      e('inbox.list'),
+      e(CustomerRoutes.list),
+      e(PlanRoutes.teams),
+      e('finance.expenses'),
+      e('notifications.centre'),
+    ];
+
+    test('giữ đúng thứ tự người dùng xếp, tối đa 4', () {
+      final got = resolveTabs(
+        saved: [
+          'finance.expenses',
+          'inbox.list',
+          'notifications.centre',
+          PlanRoutes.teams,
+          'dashboard.home',
+        ],
+        allowed: all,
+      );
+      expect(got.map((x) => x.routeName), [
+        'finance.expenses',
+        'inbox.list',
+        'notifications.centre',
+        PlanRoutes.teams,
+      ]);
+    });
+
+    test('mục bị thu quyền rơi khỏi thanh; mất hết thì về mặc định', () {
+      expect(
+        resolveTabs(
+          saved: ['finance.expenses', 'inbox.list'],
+          allowed: [e('inbox.list'), e('dashboard.home')],
+        ).map((x) => x.routeName),
+        ['inbox.list'],
+      );
+      expect(
+        resolveTabs(
+          saved: ['finance.expenses'],
+          allowed: [e('inbox.list'), e('dashboard.home')],
+        ).map((x) => x.routeName),
+        ['dashboard.home', 'inbox.list'],
+      );
+    });
+
+    test('lưu xong thanh đổi ngay và còn sau khi mở lại app', () async {
+      SharedPreferences.setMockInitialValues({});
+      ProviderContainer boot() => ProviderContainer(
+        overrides: [
+          primaryNavEntriesProvider.overrideWithValue(all.take(4).toList()),
+          pinnableNavEntriesProvider.overrideWithValue(all),
+        ],
+      );
+
+      final c = boot();
+      addTearDown(c.dispose);
+      await c.read(tabPinsProvider.future);
+      expect(c.read(tabEntriesProvider).map((x) => x.routeName), tabRouteOrder);
+
+      await c.read(tabPinsProvider.notifier).save([
+        'finance.expenses',
+        'inbox.list',
+      ]);
+      expect(c.read(tabEntriesProvider).map((x) => x.routeName), [
+        'finance.expenses',
+        'inbox.list',
+      ]);
+
+      final again = boot();
+      addTearDown(again.dispose);
+      await again.read(tabPinsProvider.future);
+      expect(again.read(tabEntriesProvider).map((x) => x.routeName), [
+        'finance.expenses',
+        'inbox.list',
+      ]);
+
+      await again.read(tabPinsProvider.notifier).reset();
+      expect(
+        again.read(tabEntriesProvider).map((x) => x.routeName),
+        tabRouteOrder,
+      );
+    });
+  });
 }

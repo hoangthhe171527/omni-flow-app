@@ -20,10 +20,8 @@ final routerProvider = Provider<GoRouter>((ref) {
   // Sống cùng router: một router mới (đổi quyền, đổi tenant) bắt đầu lại từ
   // trống, đúng như mong đợi.
   final pending = _PendingDestination();
-  // Chỉ mục PRIMARY thành branch, và branch dựng từ danh sách KHÔNG lọc quyền.
-  // Một tab phải giữ ngăn xếp điều hướng riêng, còn biến mọi mục thành branch
-  // nghĩa là 20 module thành 20 navigator. Mục secondary là "chỗ để ghé" — mở
-  // từ danh bạ, phủ lên shell, đóng lại là xong.
+  // Mọi mục lên được tab (isTabEligible) thành branch, dựng từ danh sách KHÔNG
+  // lọc quyền — người dùng tự chọn mục nào nằm trên thanh. Branch dựng lười.
   final branchEntries = ref.watch(branchNavEntriesProvider);
   final moduleRoutes = ref.watch(moduleRoutesProvider);
 
@@ -55,7 +53,7 @@ final routerProvider = Provider<GoRouter>((ref) {
             StatefulShellBranch(
               routes: [
                 if (tabRoutes[entry.routeName] case final route?)
-                  _toGoRoute(route, rootKey),
+                  _toGoRoute(route, rootKey, tabRoot: true),
               ],
             ),
           // The "Thêm" tab belongs to the shell, not to a module: it is where
@@ -76,11 +74,18 @@ final routerProvider = Provider<GoRouter>((ref) {
   );
 });
 
-GoRoute _toGoRoute(ModuleRoute route, GlobalKey<NavigatorState> rootKey) {
+/// [tabRoot]: gốc của một branch nằm TRONG shell, nên bỏ qua
+/// `rootNavigator` (Sổ chi phí, Thông báo… khai báo mở toàn màn khi còn là
+/// mục phụ; go_router không cho gốc branch đặt navigator cha khác).
+GoRoute _toGoRoute(
+  ModuleRoute route,
+  GlobalKey<NavigatorState> rootKey, {
+  bool tabRoot = false,
+}) {
   return GoRoute(
     path: route.path,
     name: route.name,
-    parentNavigatorKey: route.rootNavigator ? rootKey : null,
+    parentNavigatorKey: route.rootNavigator && !tabRoot ? rootKey : null,
     builder: (context, state) => AccessBoundary(
       requirement: route.access,
       child: route.builder(context, state),
@@ -154,7 +159,7 @@ String _afterSignIn(Ref ref, _PendingDestination pending) {
   return destination;
 }
 
-/// Landing screen after sign-in: the first TAB (fixed order, see tab_order.dart)
+/// Landing screen after sign-in: the first TAB (user's pick, see tab_order.dart)
 /// this user can actually see. A rep with only inbox rights lands in the inbox.
 /// With no tab at all, the first permitted primary entry (e.g. opportunities)
 /// is used; only a user with nothing to show lands on "More".

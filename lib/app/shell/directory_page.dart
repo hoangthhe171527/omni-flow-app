@@ -12,6 +12,7 @@ import '../../design/components/components.dart';
 import '../../design/platform/omni_motion_scope.dart';
 import '../../design/tokens/tokens.dart';
 import '../../modules/settings/settings_module.dart';
+import 'tab_bar_editor_sheet.dart';
 
 export '../../core/utils/text_search.dart' show foldDiacritics, matchesQuery;
 
@@ -249,7 +250,8 @@ class _DirectoryPageState extends ConsumerState<DirectoryPage> {
   }
 }
 
-/// Ô tìm dưới thanh trên: cao 44 (gọn mắt), đệm `16, 0, 16, 10`.
+/// Ô tìm dưới thanh trên: cao 44 (gọn mắt), đệm `16, 0, 16, 10`; bên phải là
+/// nút viền "Sửa menu" mở màn chọn tính năng cho thanh dưới.
 class _SearchBottom extends StatelessWidget implements PreferredSizeWidget {
   const _SearchBottom({required this.onChanged});
 
@@ -264,11 +266,21 @@ class _SearchBottom extends StatelessWidget implements PreferredSizeWidget {
       padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
       child: SizedBox(
         height: 44,
-        child: OmniSearchField(
-          hint: 'Tìm tính năng…',
-          flat: true,
-          dense: true,
-          onChanged: onChanged,
+        child: Row(
+          // Giãn dọc: ô tìm và nút đều cao đúng 44, không co về 40.
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Expanded(
+              child: OmniSearchField(
+                hint: 'Tìm tính năng…',
+                flat: true,
+                dense: true,
+                onChanged: onChanged,
+              ),
+            ),
+            const SizedBox(width: OmniSpacing.sm),
+            const _EditMenuButton(),
+          ],
         ),
       ),
     );
@@ -533,6 +545,30 @@ class _PopInState extends State<_PopIn> with SingleTickerProviderStateMixin {
       child: ScaleTransition(
         scale: Tween<double>(begin: 0.85, end: 1).animate(_t),
         child: widget.child,
+      ),
+    );
+  }
+}
+
+/// Nút viền màu chính, không tô đặc (gu đã duyệt).
+class _EditMenuButton extends StatelessWidget {
+  const _EditMenuButton();
+
+  @override
+  Widget build(BuildContext context) {
+    final primary = Theme.of(context).colorScheme.primary;
+
+    return OutlinedButton.icon(
+      onPressed: () => showTabBarEditor(context),
+      icon: const Icon(Icons.tune_rounded, size: 18),
+      label: const Text('Sửa menu'),
+      style: OutlinedButton.styleFrom(
+        foregroundColor: primary,
+        minimumSize: const Size(0, 44),
+        padding: const EdgeInsets.symmetric(horizontal: 14),
+        side: BorderSide(color: primary, width: 1.5),
+        shape: const StadiumBorder(),
+        textStyle: OmniType.bodyStrong,
       ),
     );
   }
