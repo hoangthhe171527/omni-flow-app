@@ -109,7 +109,7 @@ void main() {
         await tester.pumpWidget(h.app);
         await tester.pumpAndSettle();
 
-        expect(find.text('Sổ chi phí'), findsOneWidget);
+        expect(find.text('Sổ chi phí'), findsNothing);
         expect(find.text('Tổng chi tháng 11'), findsOneWidget);
         // 2.450.000 + 6.000.000 + 1.650.000 = 10.100.000
         expect(find.text('10.100.000'), findsOneWidget);
@@ -395,8 +395,12 @@ void main() {
         await tester.pumpAndSettle();
 
         final searchInput = find.byKey(const ValueKey('finance-search-input'));
+        expect(find.text('Tìm khoản chi, số tiền hoặc ngày…'), findsOneWidget);
+        expect(find.byTooltip('Xoá tìm kiếm'), findsNothing);
+
         await tester.enterText(searchInput, '2.45tr');
         await tester.pumpAndSettle();
+        expect(find.byTooltip('Xoá tìm kiếm'), findsOneWidget);
         expect(find.text('Tiếp khách đối tác chiến lược'), findsOneWidget);
         expect(find.text('Vật tư đóng gói & vận đơn'), findsNothing);
 
@@ -405,8 +409,9 @@ void main() {
         expect(find.text('Tiếp khách đối tác chiến lược'), findsOneWidget);
 
         // Xoá tìm kiếm & sắp xếp theo nhóm
-        await tester.enterText(searchInput, '');
+        await tester.tap(find.byTooltip('Xoá tìm kiếm'));
         await tester.pumpAndSettle();
+        expect(find.byTooltip('Xoá tìm kiếm'), findsNothing);
 
         await tester.tap(find.byKey(const ValueKey('finance-sort-btn')));
         await tester.pumpAndSettle();

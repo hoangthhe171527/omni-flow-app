@@ -29,9 +29,22 @@ class _ExpensesPageState extends ConsumerState<ExpensesPage> {
   final FocusNode _searchFocus = FocusNode();
   final GlobalKey _segMoreKey = GlobalKey();
   final GlobalKey _sortBtnKey = GlobalKey();
+  bool _searchFocused = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _searchFocus.addListener(_handleSearchFocus);
+  }
+
+  void _handleSearchFocus() {
+    if (!mounted) return;
+    setState(() => _searchFocused = _searchFocus.hasFocus);
+  }
 
   @override
   void dispose() {
+    _searchFocus.removeListener(_handleSearchFocus);
     _searchFocus.dispose();
     _searchCtrl.dispose();
     super.dispose();
@@ -124,7 +137,7 @@ class _ExpensesPageState extends ConsumerState<ExpensesPage> {
     return Scaffold(
       backgroundColor: p.bg,
       appBar: OmniAppBar(
-        title: 'Sổ chi phí',
+        title: '',
         backgroundColor: p.bg,
         actions: [
           // Search toggle button
@@ -241,25 +254,42 @@ class _ExpensesPageState extends ConsumerState<ExpensesPage> {
                       children: [
                         if (state.searchOpen)
                           Padding(
-                            padding: const EdgeInsets.only(bottom: 8),
-                            child: Container(
-                              height: 36,
+                            padding: const EdgeInsets.only(bottom: 10),
+                            child: AnimatedContainer(
+                              duration: const Duration(milliseconds: 160),
+                              curve: Curves.easeOutCubic,
+                              height: 46,
                               padding: const EdgeInsets.symmetric(
-                                horizontal: 11,
+                                horizontal: 14,
                               ),
                               decoration: BoxDecoration(
                                 color: p.card,
-                                borderRadius: BorderRadius.circular(10),
-                                border: Border.all(color: p.line, width: 0.5),
+                                borderRadius: BorderRadius.circular(14),
+                                border: Border.all(
+                                  color: _searchFocused
+                                      ? p.selLine
+                                      : Colors.transparent,
+                                  width: _searchFocused ? 1.2 : 1,
+                                ),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: (_searchFocused ? p.primary : p.ink)
+                                        .withValues(
+                                          alpha: _searchFocused ? 0.09 : 0.04,
+                                        ),
+                                    blurRadius: _searchFocused ? 14 : 8,
+                                    offset: const Offset(0, 3),
+                                  ),
+                                ],
                               ),
                               child: Row(
                                 children: [
                                   Icon(
                                     Icons.search_rounded,
-                                    size: 15,
-                                    color: p.muted,
+                                    size: 19,
+                                    color: _searchFocused ? p.primary : p.muted,
                                   ),
-                                  const SizedBox(width: 7),
+                                  const SizedBox(width: 10),
                                   Expanded(
                                     child: TextField(
                                       key: const ValueKey(
@@ -268,39 +298,47 @@ class _ExpensesPageState extends ConsumerState<ExpensesPage> {
                                       controller: _searchCtrl,
                                       focusNode: _searchFocus,
                                       onChanged: notifier.setSearchQuery,
-                                      style: OmniType.bodySm.copyWith(
+                                      textInputAction: TextInputAction.search,
+                                      textAlignVertical:
+                                          TextAlignVertical.center,
+                                      style: OmniType.search.copyWith(
                                         color: p.ink,
+                                        fontStyle: FontStyle.normal,
                                       ),
                                       decoration: InputDecoration(
                                         isDense: true,
+                                        filled: false,
                                         hintText:
-                                            'Tìm tên, số tiền (450k, 2.45tr), ngày, loại…',
-                                        hintStyle: OmniType.bodySm.copyWith(
+                                            'Tìm khoản chi, số tiền hoặc ngày…',
+                                        hintStyle: OmniType.searchHint.copyWith(
                                           color: p.muted,
                                         ),
                                         border: InputBorder.none,
+                                        enabledBorder: InputBorder.none,
+                                        focusedBorder: InputBorder.none,
                                         contentPadding: EdgeInsets.zero,
                                       ),
                                     ),
                                   ),
-                                  InkWell(
-                                    onTap: notifier.clearSearch,
-                                    borderRadius: BorderRadius.circular(99),
-                                    child: Container(
-                                      width: 18,
-                                      height: 18,
-                                      decoration: BoxDecoration(
-                                        color: p.control,
-                                        shape: BoxShape.circle,
-                                      ),
-                                      alignment: Alignment.center,
-                                      child: Icon(
+                                  if (state.searchQuery.isNotEmpty)
+                                    IconButton(
+                                      tooltip: 'Xoá tìm kiếm',
+                                      onPressed: () {
+                                        notifier.clearSearch();
+                                        _searchFocus.requestFocus();
+                                      },
+                                      padding: EdgeInsets.zero,
+                                      constraints:
+                                          const BoxConstraints.tightFor(
+                                            width: 40,
+                                            height: 44,
+                                          ),
+                                      icon: Icon(
                                         Icons.close_rounded,
-                                        size: 12,
+                                        size: 18,
                                         color: p.muted,
                                       ),
                                     ),
-                                  ),
                                 ],
                               ),
                             ),
