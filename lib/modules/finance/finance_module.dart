@@ -30,14 +30,14 @@ class FinanceModule extends OmniModule {
       path: FinanceRoutes.expensesPath,
       name: FinanceRoutes.expenses,
       rootNavigator: true,
-      access: const AccessRequirement.any(FinancePermissions.anyRead),
+      access: const AccessRequirement.all(FinancePermissions.adminOnly),
       builder: (_, _) => const ExpensesPage(),
     ),
     ModuleRoute(
       path: FinanceRoutes.expenseSummaryPath,
       name: FinanceRoutes.expenseSummary,
       rootNavigator: true,
-      access: const AccessRequirement.any(FinancePermissions.anyRead),
+      access: const AccessRequirement.all(FinancePermissions.adminOnly),
       builder: (_, _) => const ExpenseSummaryPage(),
     ),
   ];
@@ -54,7 +54,7 @@ class FinanceModule extends OmniModule {
       area: NavArea.admin,
       weight: NavWeight.secondary,
       order: 25,
-      access: AccessRequirement.any(FinancePermissions.anyRead),
+      access: AccessRequirement.all(FinancePermissions.adminOnly),
     ),
     ModuleNavEntry(
       moduleId: 'finance',
@@ -66,7 +66,7 @@ class FinanceModule extends OmniModule {
       area: NavArea.admin,
       weight: NavWeight.secondary,
       order: 26,
-      access: AccessRequirement.any(FinancePermissions.anyRead),
+      access: AccessRequirement.all(FinancePermissions.adminOnly),
     ),
   ];
 }

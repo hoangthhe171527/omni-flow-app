@@ -4,32 +4,21 @@ import '../../../security/permissions/resource_access.dart';
 
 /// Quyền truy cập phân hệ Sổ chi phí (`finance.expenses`).
 ///
-/// Theo chuẩn API (`PermissionCatalog.php` & `routes.php`), quyền của Sổ chi phí
-/// là slug `finance.expenses` (không có hậu tố `.read`). Ngoài ra hỗ trợ các quyền
-/// quản trị / kinh doanh để mục "Sổ chi phí" luôn hiển thị trong danh bạ "Tất cả"
-/// kể cả trên các workspace chưa chạy lệnh cấp bổ sung quyền mới.
+/// Theo chuẩn API (`PermissionCatalog.php`, `SystemRolePresets.php` và
+/// `routes.php`), quyền của Sổ chi phí là slug đơn `finance.expenses` và chỉ
+/// preset Admin được cấp quyền này. Không dùng quyền bán hàng, nhân sự hay
+/// dashboard làm quyền dự phòng: chúng khiến người không phải Admin nhìn thấy
+/// giao diện tài chính rồi bị API từ chối khi thao tác.
 abstract final class FinancePermissions {
   static const String base = 'finance.expenses';
 
-  static const String read = '$base.read';
-  static const String create = '$base.create';
-  static const String update = '$base.update';
-  static const String delete = '$base.delete';
-  static const String ordersCost = 'orders.cost';
-  static const String membersRead = 'membership.members.read';
-  static const String dashboardRead = 'analytics.dashboard.read';
-
-  static const List<String> anyRead = [
-    base,
-    read,
-    ordersCost,
-    membersRead,
-    dashboardRead,
-  ];
-  static const List<String> all = [base, read, create, update, delete];
+  /// Dùng cùng một yêu cầu cho menu và route để deep link cũng không lách qua
+  /// được lớp ẩn giao diện.
+  static const List<String> adminOnly = [base];
+  static const List<String> all = adminOnly;
 
   static ResourceAccess of(AccessPolicy policy) {
-    if (policy.canAny(anyRead)) {
+    if (policy.can(base)) {
       return const ResourceAccess(
         readScope: AccessScope.all,
         canCreate: true,
@@ -37,6 +26,6 @@ abstract final class FinancePermissions {
         canDelete: true,
       );
     }
-    return policy.crud(base);
+    return ResourceAccess.denied;
   }
 }
