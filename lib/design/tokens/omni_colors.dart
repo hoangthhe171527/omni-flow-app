@@ -32,7 +32,7 @@ abstract final class OmniColors {
   ///
   /// Trên nền sáng nó chỉ đạt khoảng 1.9:1 — không bao giờ làm chữ hay nền
   /// mang chữ trắng ở chế độ sáng.
-  static const orbit = Color(0xFF14D3C8);
+  static const orbit = Color(0xFF2DABFF);
 
   /// Mặt trời. Chấm "tin mới" của logo và huy hiệu CHƯA ĐỌC — chỉ hai chỗ đó
   /// được dùng màu vàng, để vàng luôn có nghĩa là "có cái mới".
@@ -45,20 +45,20 @@ abstract final class OmniColors {
   /// Quỹ đạo. Nút chính, liên kết, tab đang chọn.
   ///
   /// 4.99:1 trên thẻ, 4.65:1 trên nền trang — xem `contrast_test.dart`.
-  static const primary = Color(0xFF0A7D76);
+  static const primary = Color(0xFF0159DB);
   static const primaryForeground = Color(0xFFFFFFFF);
 
   /// Nút chính khi đang nhấn, và màu chữ/icon của tab đang chọn (đặt trên
   /// [accent] thì cần tối hơn [primary] một bậc mới đọc rõ).
-  static const primaryPressed = Color(0xFF075E59);
+  static const primaryPressed = Color(0xFF0147B3);
 
   /// Nền nhạt sau bề mặt được chọn: viên tab đang chọn, ô icon khu Công việc,
   /// chip xem trước trên màn chọn tab.
-  static const accent = Color(0xFFDDF5F2);
+  static const accent = Color(0xFFEBF3FF);
   static const accentForeground = primaryPressed;
 
   /// Bản nhạt hơn nữa của [accent] — vầng sáng quanh ô nhập đang focus.
-  static const accentSoft = Color(0xFFE3F8F6);
+  static const accentSoft = Color(0xFFF2F7FF);
 
   // ---- Bề mặt -------------------------------------------------------------
   static const background = Color(0xFFF5F7FA);
@@ -203,8 +203,8 @@ abstract final class OmniColors {
 
   /// Bản tối của [accent] và [accentForeground]: nền nhấn phải TỐI đi cùng
   /// chiều với nền trang, chứ không giữ nguyên khối sáng.
-  static const darkAccent = Color(0xFF0E3438);
-  static const darkAccentForeground = Color(0xFF9FEDE6);
+  static const darkAccent = Color(0xFF102A52);
+  static const darkAccentForeground = Color(0xFFADCFFF);
 
   /// Bản tối của các cặp nền nhạt / chữ đậm theo khu: ô icon trong "Tất cả",
   /// ô chữ viết tắt ở màn chọn không gian, nhãn trạng thái. Nền nhạt của chế
@@ -215,7 +215,7 @@ abstract final class OmniColors {
 
   /// Nền dòng thông báo chưa đọc (`Notifications.dc.html`); tối dùng primary
   /// alpha .08.
-  static const unreadRow = Color(0xFFF3FAF9);
+  static const unreadRow = Color(0xFFF3F8FF);
 
   /// Chọn bản sáng/tối của một cặp màu theo chế độ đang bật.
   static Color byBrightness(BuildContext context, Color light, Color dark) =>
@@ -223,14 +223,14 @@ abstract final class OmniColors {
 
   static const darkForeground = Color(0xFFE8EEF6);
   static const darkMutedForeground = Color(0xFF9AA8BD);
-  static const darkPrimary = Color(0xFF2EE0D5);
+  static const darkPrimary = Color(0xFF5AAEFF);
 
   /// Chữ trên nút chính ở nền tối.
   ///
   /// Nền tối buộc [darkPrimary] phải sáng, nên chữ trên nút chính là chữ TỐI
   /// (9.30:1) — đây là chỗ hai chế độ buộc phải khác nhau, không phải chỗ đảo
   /// màu là xong.
-  static const darkPrimaryForeground = Color(0xFF062A28);
+  static const darkPrimaryForeground = Color(0xFF051833);
 
   // ---- Chat ---------------------------------------------------------------
   /// Messaging surfaces follow Zalo's visual language rather than the CRM

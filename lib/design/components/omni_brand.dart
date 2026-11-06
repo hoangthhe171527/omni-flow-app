@@ -4,12 +4,11 @@ import 'package:flutter/material.dart';
 
 import '../tokens/tokens.dart';
 
-/// Logo Viomni: hành tinh‑bong bóng chat trên quỹ đạo, chấm vàng là "tin mới".
+/// Logo Viomni V-Orbit: chữ V dải ruy-băng 3D kết hợp vành đai quỹ đạo nghiêng.
 ///
-/// Vẽ bằng [CustomPainter] theo đúng SVG của artifact giao diện
-/// (`Main.dc.html`, viewBox 0 0 100 100) chứ không nạp một tệp ảnh: app chưa
-/// có `flutter_svg`, và thêm một phụ thuộc chỉ để vẽ năm hình là không đáng.
-/// Vẽ bằng tay còn cho phép màn mở app VẼ DẦN từng nét (xem [OmniBrandFrame]).
+/// Vẽ bằng [CustomPainter] theo đúng SVG của logo Viomni V-Orbit
+/// (viewBox 0 0 100 100) chứ không nạp một tệp ảnh: app chưa có `flutter_svg`,
+/// và vẽ bằng tay còn cho phép màn mở app VẼ DẦN từng nét (xem [OmniBrandFrame]).
 class OmniBrandMark extends StatelessWidget {
   const OmniBrandMark({
     super.key,
@@ -103,7 +102,7 @@ class OmniWordmark extends StatelessWidget {
 ///
 /// Bốn nét dùng đúng quy tắc của CSS `stroke-dasharray: 170` trong
 /// `Splash.dc.html`: ở tiến độ p, mỗi nét hiện `170 × p` đơn vị chiều dài
-/// (tối đa là cả nét). Vì thế nét ngắn (đuôi) xong sớm, vòng tròn xong muộn —
+/// (tối đa là cả nét). Vì thế nét ngắn xong sớm, nét dài xong muộn —
 /// giống hệt bản thiết kế, không phải cả bốn cùng về đích.
 @immutable
 class OmniBrandFrame {
@@ -124,7 +123,7 @@ class OmniBrandFrame {
   final double backArc;
   final double frontArc;
 
-  /// Góc (độ) chấm vàng đang lệch khỏi chỗ nghỉ, quay quanh tâm (50, 44).
+  /// Góc (độ) chấm sáng đang lệch khỏi chỗ nghỉ, quay quanh tâm (50, 44).
   final double dotTurn;
   final double dotScale;
   final double dotOpacity;
@@ -184,18 +183,14 @@ class OmniBrandMarkPainter extends CustomPainter {
       clockwise: false,
     );
 
-  // SVG vẽ vòng tròn bắt đầu từ điểm 3 giờ, theo chiều kim đồng hồ.
+  // Cánh phải và cánh trái của chữ V (V-Orbit).
   static final Path _ring = Path()
-    ..addArc(
-      Rect.fromCircle(center: const Offset(49, 45), radius: 21),
-      0,
-      2 * math.pi,
-    );
+    ..moveTo(47, 70)
+    ..lineTo(72, 26);
 
   static final Path _tail = Path()
-    ..moveTo(37, 62)
-    ..lineTo(33.5, 75)
-    ..lineTo(46, 66.5);
+    ..moveTo(26, 26)
+    ..lineTo(47, 70);
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -224,40 +219,50 @@ class OmniBrandMarkPainter extends CustomPainter {
       );
     }
 
-    final strokePaint = Paint()
+    final orbitPaint = Paint()
       ..color = stroke
       ..style = PaintingStyle.stroke
       ..strokeWidth = strokeWidth
       ..strokeCap = StrokeCap.round
       ..strokeJoin = StrokeJoin.round;
 
-    _drawPartial(canvas, _backArc, frame.backArc, strokePaint);
+    _drawPartial(canvas, _backArc, frame.backArc, orbitPaint);
 
-    // Mặt hành tinh luôn đặc — nó che nửa sau của quỹ đạo ngay từ đầu, kể cả
-    // khi viền của nó còn chưa vẽ xong.
-    canvas.drawCircle(const Offset(49, 45), 21, Paint()..color = tile);
-    _drawPartial(
-      canvas,
-      _ring,
-      frame.ring,
-      strokePaint..strokeCap = StrokeCap.butt,
-    );
-    strokePaint.strokeCap = StrokeCap.round;
-    _drawPartial(canvas, _tail, frame.tail, strokePaint);
-    _drawPartial(canvas, _frontArc, frame.frontArc, strokePaint);
+    // Hai cánh chữ V dày tạo khối V-Orbit trung tâm, che nửa sau quỹ đạo.
+    final vWingPaint = Paint()
+      ..color = stroke
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = strokeWidth * 2.15
+      ..strokeCap = StrokeCap.round
+      ..strokeJoin = StrokeJoin.round;
+
+    _drawPartial(canvas, _ring, frame.ring, vWingPaint);
+    _drawPartial(canvas, _tail, frame.tail, vWingPaint);
+
+    // Đường cắt âm bản dọc theo cung quỹ đạo trước để tạo chiều sâu V-Orbit.
+    if (frame.frontArc > 0) {
+      final cutoutPaint = Paint()
+        ..color = tile
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = strokeWidth + 4.5
+        ..strokeCap = StrokeCap.round
+        ..strokeJoin = StrokeJoin.round;
+      _drawPartial(canvas, _frontArc, frame.frontArc, cutoutPaint);
+    }
+    _drawPartial(canvas, _frontArc, frame.frontArc, orbitPaint);
 
     if (frame.dotOpacity > 0 && frame.dotScale > 0) {
       canvas.save();
       canvas.translate(50, 44);
       canvas.rotate(frame.dotTurn * math.pi / 180);
       canvas.translate(-50, -44);
-      canvas.translate(73, 26);
+      canvas.translate(82, 24);
       canvas.scale(frame.dotScale);
       final alpha = frame.dotOpacity.clamp(0.0, 1.0);
       canvas.drawCircle(
         Offset.zero,
         dotRadius,
-        Paint()..color = OmniColors.sun.withValues(alpha: alpha),
+        Paint()..color = OmniColors.orbit.withValues(alpha: alpha),
       );
       canvas.drawCircle(
         Offset.zero,
