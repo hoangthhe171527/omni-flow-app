@@ -192,6 +192,19 @@ void main() {
     expect(find.text('Chuyển KH'), findsOneWidget);
   });
 
+  testWidgets('nút Việc theo quyền tạo việc (chuyển từ đầu hội thoại về)', (
+    tester,
+  ) async {
+    await pump(tester, const {});
+    expect(find.text('Việc'), findsNothing);
+    await pump(
+      tester,
+      const {},
+      permissions: const {'inbox.read', 'inbox.write', 'tasks.write'},
+    );
+    expect(find.text('Việc'), findsOneWidget);
+  });
+
   testWidgets('đã gắn khách có số: Gọi + số điện thoại hiện', (tester) async {
     await pump(
       tester,

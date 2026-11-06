@@ -42,20 +42,20 @@ void main() {
     expect(c(null).sourceAccount, isNull);
   });
 
-  test('mốc giờ kiểu 21:02, THỨ 5 theo giờ VN', () {
+  test('mốc giờ kiểu 21:02, Thứ 5 theo giờ VN', () {
     final clock = DateTime.utc(2026, 10, 9, 5); // 12:00 thứ Sáu giờ VN
     // 09:40 hôm nay giờ VN = 02:40Z
     expect(
       Formatters.threadStamp(DateTime.utc(2026, 10, 9, 2, 40), clock: clock),
-      '09:40, HÔM NAY',
+      '09:40, Hôm nay',
     );
     expect(
       Formatters.threadStamp(DateTime.utc(2026, 10, 8, 14, 2), clock: clock),
-      '21:02, HÔM QUA',
+      '21:02, Hôm qua',
     );
     expect(
       Formatters.threadStamp(DateTime.utc(2026, 10, 6, 14, 2), clock: clock),
-      '21:02, THỨ 3',
+      '21:02, Thứ 3',
     );
     expect(
       Formatters.threadStamp(DateTime.utc(2026, 9, 20, 14, 2), clock: clock),

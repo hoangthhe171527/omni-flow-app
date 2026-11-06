@@ -332,6 +332,7 @@ class _ThreadPageState extends ConsumerState<ThreadPage>
         onCloseSearch: _closeSearch,
       ),
       body: SurfaceBackdrop(
+        showPattern: false,
         child: ComposerSnackBarScope(
           barKey: _bottomBarKey,
           child: Column(
@@ -835,6 +836,10 @@ class _MessageList extends StatelessWidget {
         !state.hasMore && conversation != null && !conversation.isGroup;
     final isGroup = conversation?.isGroup ?? false;
     final count = visible.length;
+    // "Đã nhận / Đã xem" chỉ ghi chữ dưới tin GỬI mới nhất, như Messenger.
+    final latestOutbound = visible.reversed
+        .where((m) => m.isOutbound)
+        .firstOrNull;
     // The list runs newest→oldest: reversed index i is visible[count - 1 - i].
     Message? at(int reversedIndex) =>
         reversedIndex < 0 || reversedIndex >= count
@@ -845,9 +850,13 @@ class _MessageList extends StatelessWidget {
       controller: controller,
       reverse: true,
       keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-      // Tight gutters: Zalo lets bubbles run close to both edges, which is what
-      // makes the left/right split read at a glance.
-      padding: const EdgeInsets.fromLTRB(8, OmniSpacing.lg, 8, OmniSpacing.md),
+      // 12 đều hai bên: cột tin vào (sau avatar) và cột tin ra soi gương nhau.
+      padding: const EdgeInsets.fromLTRB(
+        12,
+        OmniSpacing.lg,
+        12,
+        OmniSpacing.md,
+      ),
       itemCount: count + (state.hasMore ? 1 : 0) + (showIntro ? 1 : 0),
       itemBuilder: (context, index) {
         if (index >= count) {
@@ -896,6 +905,7 @@ class _MessageList extends StatelessWidget {
                 showSender: isGroup && !message.isOutbound && !grouped,
                 groupedWithPrevious: grouped,
                 isLastInGroup: isLastInGroup,
+                isLatestOutbound: identical(message, latestOutbound),
                 // Kênh không có đường gửi đi: gửi lại không bao giờ được.
                 onRetry:
                     message.status == DeliveryStatus.failed &&
@@ -946,21 +956,21 @@ class _DaySeparator extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
 
-    // Mốc giờ trần, giữa: "09:40, HÔM NAY". Cỡ 12 (sàn đọc được của design
-    // system; bản thiết kế ghi 10) w600 giãn chữ .5, lề trên 10 dưới 6.
+    // Mốc giờ trần, giữa: "09:40, Hôm nay". Cỡ 12 w500, chữ thường: mốc là
+    // phụ, không to bằng tin. Lề trên 24 tách hẳn khỏi cụm trước; tin đầu cụm
+    // sau đã tự cách 16.
     final color = OmniColors.byBrightness(
       context,
       const Color(0xFF8A95A8),
       scheme.onSurfaceVariant,
     );
     return Padding(
-      padding: const EdgeInsets.only(top: 10, bottom: 6),
+      padding: const EdgeInsets.only(top: 24),
       child: Center(
         child: Text(
           Formatters.threadStamp(date),
           style: OmniType.micro.copyWith(
-            fontWeight: FontWeight.w600,
-            letterSpacing: 0.5,
+            fontWeight: FontWeight.w500,
             color: color,
           ),
         ),

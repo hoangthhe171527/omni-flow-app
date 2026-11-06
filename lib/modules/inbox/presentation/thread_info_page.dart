@@ -13,6 +13,9 @@ import '../../../design/tokens/tokens.dart';
 import '../../../security/session/session_controller.dart';
 import '../../customers/customers.dart';
 import '../../opportunities/opportunities.dart';
+import '../../tasks/domain/task_permissions.dart';
+import '../../tasks/routes.dart';
+import '../../tasks/tasks.dart';
 import '../application/inbox_providers.dart';
 import '../domain/conversation.dart';
 import '../inbox_routes.dart';
@@ -128,6 +131,7 @@ class _InfoBody extends ConsumerWidget {
     final canOpenCustomer = policy.canAny(CustomerPermissions.anyRead);
     final canCreateOpportunity =
         opportunitiesOn && policy.can(OpportunityPermissions.create);
+    final canCreateTask = policy.can(TaskPermissions.write);
     final phone = customer?.phone.trim() ?? '';
     final assets = ref.watch(conversationAssetsProvider(c.id));
     final closed = c.status == ConversationStatus.closed;
@@ -182,6 +186,18 @@ class _InfoBody extends ConsumerWidget {
                       icon: Icons.person_add_alt_rounded,
                       label: 'Chuyển KH',
                       onTap: () => convertConversation(context, ref, c.id),
+                    ),
+                  // Chuyển từ đầu hội thoại về đây để tin nhắn có chỗ.
+                  if (canCreateTask)
+                    _QuickAction(
+                      icon: Icons.task_alt_rounded,
+                      label: 'Việc',
+                      onTap: () => context.pushNamed(
+                        TaskRoutes.create,
+                        extra: CreateTaskArgs(
+                          initialTitle: 'Liên hệ ${c.title}',
+                        ),
+                      ),
                     ),
                   // Sở thích riêng, quyền đọc là đủ. Đổi theo phản hồi
                   // server (trang dựng lại từ `conversationProvider`).

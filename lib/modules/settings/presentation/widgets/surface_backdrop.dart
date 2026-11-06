@@ -9,11 +9,21 @@ import '../../application/appearance_providers.dart';
 /// Mảnh nối duy nhất giữa provider (module settings) và widget vẽ (design):
 /// hai màn kia chỉ bọc thân mình trong đây, không màn nào phải nhớ provider.
 class SurfaceBackdrop extends ConsumerWidget {
-  const SurfaceBackdrop({super.key, required this.child});
+  const SurfaceBackdrop({
+    super.key,
+    required this.child,
+    this.showPattern = true,
+  });
 
   final Widget child;
 
+  /// Xem [OmniBackdrop.showPattern].
+  final bool showPattern;
+
   @override
-  Widget build(BuildContext context, WidgetRef ref) =>
-      OmniBackdrop(name: ref.watch(backgroundProvider), child: child);
+  Widget build(BuildContext context, WidgetRef ref) => OmniBackdrop(
+    name: ref.watch(backgroundProvider),
+    showPattern: showPattern,
+    child: child,
+  );
 }

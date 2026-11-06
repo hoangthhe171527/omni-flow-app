@@ -93,21 +93,23 @@ void main() {
     await closeThread(tester);
   });
 
-  testWidgets('khối giới thiệu: chưa gắn khách → Chuyển KH, không "Khách từ"', (
+  testWidgets('khối giới thiệu không còn lối tắt: chúng ở trang Thông tin', (
     tester,
   ) async {
     api.history = [_serverMessage('m1', 'Chào shop')];
-    await openThread(tester);
+    await openThread(
+      tester,
+      extra: const {'tasks.write', 'crm.sales_opportunities.create'},
+    );
     expect(find.byType(ThreadIntro), findsOneWidget);
-    expect(find.text('Chuyển KH'), findsOneWidget);
     expect(find.textContaining('Khách từ'), findsNothing);
-    expect(find.text('Việc'), findsOneWidget);
+    for (final label in ['Chuyển KH', 'Hồ sơ', 'Cơ hội', 'Việc']) {
+      expect(find.text(label), findsNothing, reason: label);
+    }
     await closeThread(tester);
   });
 
-  testWidgets('đã gắn khách: Hồ sơ + "Khách từ dd/MM · 3,6 tr"', (
-    tester,
-  ) async {
+  testWidgets('đã gắn khách: "Khách từ dd/MM · 3,6 tr"', (tester) async {
     api.customerId = 'cu1';
     api.history = [_serverMessage('m1', 'Chào shop')];
     await openThread(
@@ -124,53 +126,7 @@ void main() {
         ),
       ],
     );
-    expect(find.text('Hồ sơ'), findsOneWidget);
-    expect(find.text('Chuyển KH'), findsNothing);
     expect(find.text('Khách từ 14/03 · 3,6 tr'), findsOneWidget);
-    await closeThread(tester);
-  });
-
-  testWidgets('không có quyền tạo việc: không có nút Việc', (tester) async {
-    api.history = [_serverMessage('m1', 'Chào shop')];
-    await openThread(tester, extra: const {});
-    expect(find.byType(ThreadIntro), findsOneWidget);
-    expect(find.text('Việc'), findsNothing);
-    await closeThread(tester);
-  });
-
-  testWidgets('đã gắn khách nhưng không có quyền xem khách: không có Hồ sơ', (
-    tester,
-  ) async {
-    api.customerId = 'cu1';
-    api.history = [_serverMessage('m1', 'Chào shop')];
-    await openThread(tester, overrides: [_customerOverride]);
-    expect(find.text('Hồ sơ'), findsNothing);
-    expect(find.text('Chuyển KH'), findsNothing);
-    await closeThread(tester);
-  });
-
-  testWidgets('có quyền xem khách: có Hồ sơ', (tester) async {
-    api.customerId = 'cu1';
-    api.history = [_serverMessage('m1', 'Chào shop')];
-    await openThread(
-      tester,
-      overrides: [_customerOverride],
-      extra: const {'tasks.write', 'crm.customers.read'},
-    );
-    expect(find.text('Hồ sơ'), findsOneWidget);
-    await closeThread(tester);
-  });
-
-  testWidgets('quyền tạo cơ hội quyết định nút Cơ hội', (tester) async {
-    api.history = [_serverMessage('m1', 'Chào shop')];
-    await openThread(tester);
-    expect(find.text('Cơ hội'), findsNothing);
-    await closeThread(tester);
-    await openThread(
-      tester,
-      extra: const {'tasks.write', 'crm.sales_opportunities.create'},
-    );
-    expect(find.text('Cơ hội'), findsOneWidget);
     await closeThread(tester);
   });
 
@@ -201,10 +157,10 @@ void main() {
     await closeThread(tester);
   });
 
-  testWidgets('mốc giờ kiểu 09:40, HÔM NAY', (tester) async {
+  testWidgets('mốc giờ kiểu 09:40, Hôm nay', (tester) async {
     api.history = [_serverMessage('m1', 'Chào shop', sentAt: DateTime.now())];
     await openThread(tester);
-    expect(find.textContaining(', HÔM NAY'), findsOneWidget);
+    expect(find.textContaining(', Hôm nay'), findsOneWidget);
     await closeThread(tester);
   });
 
@@ -218,7 +174,7 @@ void main() {
     await closeThread(tester);
   });
 
-  testWidgets('bong bóng 18/4: đầu, giữa và cuối nhóm tin ra', (tester) async {
+  testWidgets('bong bóng 20/4: đầu, giữa và cuối nhóm tin ra', (tester) async {
     api.history = [
       _serverMessage('m1', 'AAA', from: 'agent'),
       _serverMessage('m2', 'BBB', from: 'agent'),
@@ -236,13 +192,13 @@ void main() {
     }
 
     // Danh sách vẽ ngược nhưng nhóm tính theo thời gian: m1 đầu nhóm.
-    expect(radius('AAA').topRight.x, 18);
+    expect(radius('AAA').topRight.x, 20);
     expect(radius('AAA').bottomRight.x, 4);
     expect(radius('BBB').topRight.x, 4);
     expect(radius('BBB').bottomRight.x, 4);
     expect(radius('CCC').topRight.x, 4);
-    expect(radius('CCC').bottomRight.x, 18);
-    expect(radius('CCC').topLeft.x, 18);
+    expect(radius('CCC').bottomRight.x, 20);
+    expect(radius('CCC').topLeft.x, 20);
     await closeThread(tester);
   });
 }
@@ -325,7 +281,3 @@ class _FakeInboxApi extends InboxApi {
     bool? pinned,
   }) async => const CursorPaged.empty();
 }
-
-final _customerOverride = customerProvider(
-  'cu1',
-).overrideWith((ref) async => Customer(id: 'cu1', name: 'Thuý Phạm'));

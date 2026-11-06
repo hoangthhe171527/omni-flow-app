@@ -9,10 +9,19 @@ import '../tokens/tokens.dart';
 /// theme hiện tại, phủ hoạ tiết mờ ([OmniBackdrops.patternAlpha]) bằng màu
 /// chữ của chế độ. Không chuyển động — nền là nền.
 class OmniBackdrop extends StatelessWidget {
-  const OmniBackdrop({super.key, required this.name, required this.child});
+  const OmniBackdrop({
+    super.key,
+    required this.name,
+    required this.child,
+    this.showPattern = true,
+  });
 
   final String? name;
   final Widget child;
+
+  /// false = chỉ gradient, không hoạ tiết. Màn chat tắt: chấm/sọc sau bong
+  /// bóng trắng làm rối mắt khi đọc một chuỗi tin dài.
+  final bool showPattern;
 
   @override
   Widget build(BuildContext context) {
@@ -34,7 +43,7 @@ class OmniBackdrop extends StatelessWidget {
           colors: [spec.top, spec.bottom],
         ),
       ),
-      child: spec.pattern == OmniBackdropPattern.none
+      child: !showPattern || spec.pattern == OmniBackdropPattern.none
           ? null
           : CustomPaint(
               size: Size.infinite,

@@ -25,6 +25,7 @@ class MessageBubble extends StatelessWidget {
     this.showSender = false,
     this.groupedWithPrevious = false,
     this.isLastInGroup = true,
+    this.isLatestOutbound = false,
     this.onRetry,
     this.onDiscard,
     this.onReply,
@@ -50,6 +51,10 @@ class MessageBubble extends StatelessWidget {
   /// Last of a run from the same side. Only this one wears the avatar, the way
   /// Zalo does; the others reserve the space so the column stays aligned.
   final bool isLastInGroup;
+
+  /// Tin GỬI mới nhất của hội thoại: chỉ tin này ghi chữ "Đã nhận / Đã xem"
+  /// (như Messenger); tin gửi cũ hơn chỉ còn dấu tích.
+  final bool isLatestOutbound;
 
   final VoidCallback? onRetry;
   final VoidCallback? onDiscard;
@@ -126,13 +131,13 @@ class MessageBubble extends StatelessWidget {
         : outbound && !failed
         ? Colors.white.withValues(alpha: 0.9)
         : OmniColors.chatMeta;
-    // Góc ngoài 18; phía "đuôi" (phải với tin ra, trái với tin vào) chỉ bo 4
-    // khi tin nằm trong một nhóm: đầu nhóm giữ 18 ở trên, cuối nhóm giữ 18 ở
-    // dưới, tin giữa nhóm cả hai góc 4.
+    // Góc ngoài 20; phía "đuôi" (phải với tin ra, trái với tin vào) chỉ bo 4
+    // khi tin nằm trong một nhóm: đầu nhóm giữ 20 ở trên, cuối nhóm giữ 20 ở
+    // dưới, tin giữa nhóm cả hai góc 4. Tin một dòng ra dáng viên thuốc.
     final onPrimaryBubble = outbound && !dark && !failed;
-    final tailTop = Radius.circular(groupedWithPrevious ? 4 : 18);
-    final tailBottom = Radius.circular(isLastInGroup ? 18 : 4);
-    const round = Radius.circular(18);
+    final tailTop = Radius.circular(groupedWithPrevious ? 4 : 20);
+    final tailBottom = Radius.circular(isLastInGroup ? 20 : 4);
+    const round = Radius.circular(20);
     final bubbleRadius = outbound
         ? BorderRadius.only(
             topLeft: round,
@@ -183,8 +188,7 @@ class MessageBubble extends StatelessWidget {
           _DeliveryReceipt(
             status: message.status,
             fallbackColor: color,
-            showLabel: isLastInGroup,
-            onPrimary: onPrimaryBubble,
+            showLabel: isLatestOutbound,
           ),
         ],
         if (message.pinned) ...[
@@ -196,11 +200,10 @@ class MessageBubble extends StatelessWidget {
 
     final bubble = Container(
       constraints: BoxConstraints(
-        maxWidth: math.min(MediaQuery.sizeOf(context).width * 0.76, 560),
+        // 72%: tin dài không lấn sang phía bên kia, hai cột còn khoảng thở.
+        maxWidth: math.min(MediaQuery.sizeOf(context).width * 0.72, 560),
       ),
-      // Symmetric vertical padding. The 6 at the bottom against 8 at the top
-      // made every bubble sit slightly high in its own box.
-      padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
       decoration: BoxDecoration(
         color: bubbleColor,
         borderRadius: bubbleRadius,
@@ -255,12 +258,6 @@ class MessageBubble extends StatelessWidget {
             MessageLinkPreview(
               url: _urlPattern.firstMatch(message.text)!.group(0)!,
             ),
-          // Time and tick inside the bubble, bottom-LEFT. Zalo puts them there
-          // on both sides — checked against the real app, not from memory — and
-          // they used to sit on their own line underneath, costing a full row of
-          // vertical space per message.
-          const SizedBox(height: 4),
-          messageMeta(metaColor),
         ],
       ),
     );
@@ -274,11 +271,6 @@ class MessageBubble extends StatelessWidget {
         if (images.isNotEmpty)
           MessageImageGallery(images: images, heroPrefix: mediaHeroPrefix),
         if (videos.isNotEmpty) MessageVideoAttachments(attachments: videos),
-        if (images.isNotEmpty && !hasBubbleContent)
-          Padding(
-            padding: const EdgeInsets.only(top: 4, left: 4, right: 4),
-            child: messageMeta(metaColor),
-          ),
         if (hasBubbleContent) ...[
           if (images.isNotEmpty) const SizedBox(height: 4),
           bubble,
@@ -286,22 +278,27 @@ class MessageBubble extends StatelessWidget {
       ],
     );
 
-    // Incoming messages sit beside the sender's avatar — Zalo shows one on
-    // every incoming message, 1-1 threads included, and it is what anchors the
-    // left column visually. Outgoing has none, so the right side stays clean.
-    final avatarGutter = outbound
-        ? const SizedBox(width: 8)
-        : Padding(
-            padding: const EdgeInsets.only(right: 6),
-            child: isLastInGroup
-                ? OmniAvatar(
-                    name: message.senderName ?? '?',
-                    imageUrl: message.senderAvatar,
-                    size: OmniIconSize.hero,
-                  )
-                // Reserve the width so bubbles above stay in the same column.
-                : const SizedBox(width: 32),
-          );
+    // Tin vào: avatar 28 ở tin cuối cụm, các tin khác chừa ĐÚNG bề rộng đó
+    // (trước đây avatar 44 mà chỉ chừa 32 nên tin có avatar lệch 12). Tin ra
+    // không có gì: lề danh sách đã đủ.
+    final avatarGutter = Padding(
+      padding: const EdgeInsets.only(right: _avatarGap),
+      child: isLastInGroup
+          ? OmniAvatar(
+              name: message.senderName ?? '?',
+              imageUrl: message.senderAvatar,
+              size: _avatarSize,
+            )
+          : const SizedBox(width: _avatarSize),
+    );
+
+    // Giờ + tích nằm DƯỚI bong bóng, chỉ ở tin cuối cụm (hoặc tin ghim); tin
+    // khác chạm vào mới hiện. Trước đây mỗi bong bóng một dòng giờ riêng, tin
+    // ngắn cũng cao hai dòng và cả chuỗi dày đặc.
+    final showMetaByDefault = isLastInGroup || message.pinned;
+    final underMetaColor = dark
+        ? Colors.white.withValues(alpha: 0.6)
+        : OmniColors.chatMeta;
 
     final myReaction = myUserId == null
         ? null
@@ -324,9 +321,9 @@ class MessageBubble extends StatelessWidget {
       onCreateTask: onCreateTask,
       onCreateOpportunity: onCreateOpportunity,
       child: Padding(
-        // 2 within a run, 10 when the speaker changes: the gap is what tells the
-        // eye where one person stopped and the other started.
-        padding: EdgeInsets.only(top: groupedWithPrevious ? 2 : 10),
+        // 2 trong cụm, 16 khi đổi người: khoảng hở cho mắt biết ai dừng, ai
+        // bắt đầu.
+        padding: EdgeInsets.only(top: groupedWithPrevious ? 2 : 16),
         child: Row(
           mainAxisAlignment: outbound
               ? MainAxisAlignment.end
@@ -335,89 +332,138 @@ class MessageBubble extends StatelessWidget {
           children: [
             if (!outbound) avatarGutter,
             Flexible(
-              child: Column(
-                crossAxisAlignment: outbound
-                    ? CrossAxisAlignment.end
-                    : CrossAxisAlignment.start,
-                children: [
-                  if (showSender && message.senderName != null)
-                    Padding(
-                      padding: const EdgeInsets.only(left: 4, bottom: 3),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          OmniAvatar(
-                            name: message.senderName!,
-                            imageUrl: message.senderAvatar,
-                            size: OmniIconSize.sm,
-                          ),
-                          const SizedBox(width: 5),
-                          Text(
-                            message.senderName!,
-                            style: OmniType.micro.copyWith(
-                              color: scheme.onSurfaceVariant,
+              child: _TapToRevealMeta(
+                alwaysShow: showMetaByDefault,
+                builder: (context, revealed, toggle) => Column(
+                  crossAxisAlignment: outbound
+                      ? CrossAxisAlignment.end
+                      : CrossAxisAlignment.start,
+                  children: [
+                    if (showSender && message.senderName != null)
+                      Padding(
+                        padding: const EdgeInsets.only(left: 4, bottom: 3),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            OmniAvatar(
+                              name: message.senderName!,
+                              imageUrl: message.senderAvatar,
+                              size: OmniIconSize.sm,
                             ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  Stack(
-                    clipBehavior: Clip.none,
-                    children: [
-                      onReact == null
-                          ? content
-                          : _BubbleDoubleTap(child: content),
-                      // Cảm xúc của KHÁCH: vòng tròn ở góc bong bóng. Cảm xúc
-                      // nội bộ của đội là viên riêng bên dưới — hai thứ không
-                      // bao giờ đè nhau.
-                      if (hasCustomerReaction)
-                        Positioned(
-                          right: outbound ? null : -6,
-                          left: outbound ? -6 : null,
-                          bottom: -8,
-                          child: Semantics(
-                            label: 'Cảm xúc của khách: ${message.reaction}',
-                            excludeSemantics: true,
-                            child: Container(
-                              padding: const EdgeInsets.all(3),
-                              decoration: BoxDecoration(
-                                color: scheme.surface,
-                                shape: BoxShape.circle,
-                                border: Border.all(color: scheme.outline),
-                              ),
-                              child: Text(
-                                message.reaction!,
-                                style: OmniChatType.meta,
+                            const SizedBox(width: 5),
+                            Text(
+                              message.senderName!,
+                              style: OmniType.micro.copyWith(
+                                color: scheme.onSurfaceVariant,
                               ),
                             ),
-                          ),
+                          ],
                         ),
-                    ],
-                  ),
-                  // Luôn dựng (rỗng thì không vẽ gì): giữ state qua các lần
-                  // đổi cảm xúc, để viên MỚI nảy vào còn viên cũ thì không.
-                  TeamReactionChips(
-                    reactions: message.teamReactions,
-                    myUserId: myUserId,
-                    myName: myName,
-                    memberNames: memberNames,
-                    alignEnd: outbound,
-                    lift: !hasCustomerReaction,
-                  ),
-                  _MetaLine(
-                    message: message,
-                    onRetry: onRetry,
-                    onDiscard: onDiscard,
-                  ),
-                ],
+                      ),
+                    Stack(
+                      clipBehavior: Clip.none,
+                      children: [
+                        GestureDetector(
+                          behavior: HitTestBehavior.translucent,
+                          onTap: toggle,
+                          child: onReact == null
+                              ? content
+                              : _BubbleDoubleTap(child: content),
+                        ),
+                        // Cảm xúc của KHÁCH: vòng tròn ở góc bong bóng. Cảm xúc
+                        // nội bộ của đội là viên riêng bên dưới — hai thứ không
+                        // bao giờ đè nhau.
+                        if (hasCustomerReaction)
+                          Positioned(
+                            right: outbound ? null : -6,
+                            left: outbound ? -6 : null,
+                            bottom: -8,
+                            child: Semantics(
+                              label: 'Cảm xúc của khách: ${message.reaction}',
+                              excludeSemantics: true,
+                              child: Container(
+                                padding: const EdgeInsets.all(3),
+                                decoration: BoxDecoration(
+                                  color: scheme.surface,
+                                  shape: BoxShape.circle,
+                                  border: Border.all(color: scheme.outline),
+                                ),
+                                child: Text(
+                                  message.reaction!,
+                                  style: OmniChatType.meta,
+                                ),
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                    // Luôn dựng (rỗng thì không vẽ gì): giữ state qua các lần
+                    // đổi cảm xúc, để viên MỚI nảy vào còn viên cũ thì không.
+                    TeamReactionChips(
+                      reactions: message.teamReactions,
+                      myUserId: myUserId,
+                      myName: myName,
+                      memberNames: memberNames,
+                      alignEnd: outbound,
+                      lift: !hasCustomerReaction,
+                    ),
+                    if (showMetaByDefault || revealed)
+                      // Nút đọc riêng: không thì giờ nhập vào nhãn của viên
+                      // cảm xúc ngay phía trên.
+                      Semantics(
+                        container: true,
+                        child: Padding(
+                          padding: const EdgeInsets.fromLTRB(4, 4, 4, 0),
+                          child: messageMeta(underMetaColor),
+                        ),
+                      ),
+                    _MetaLine(
+                      message: message,
+                      onRetry: onRetry,
+                      onDiscard: onDiscard,
+                    ),
+                  ],
+                ),
               ),
             ),
-            if (outbound) avatarGutter,
           ],
         ),
       ),
     );
   }
+}
+
+const double _avatarSize = 28;
+const double _avatarGap = 8;
+
+/// Giữ trạng thái "đã chạm để xem giờ" của một bong bóng qua các lần danh sách
+/// dựng lại. Khi giờ đã luôn hiện (tin cuối cụm) thì `toggle` là null: chạm
+/// không làm gì, và không bắt chạm. Chạm vào link hay ảnh vẫn thuộc về link,
+/// ảnh: bộ nhận dạng nằm sâu hơn thắng trước.
+class _TapToRevealMeta extends StatefulWidget {
+  const _TapToRevealMeta({required this.alwaysShow, required this.builder});
+
+  final bool alwaysShow;
+  final Widget Function(
+    BuildContext context,
+    bool revealed,
+    VoidCallback? toggle,
+  )
+  builder;
+
+  @override
+  State<_TapToRevealMeta> createState() => _TapToRevealMetaState();
+}
+
+class _TapToRevealMetaState extends State<_TapToRevealMeta> {
+  bool _revealed = false;
+
+  @override
+  Widget build(BuildContext context) => widget.builder(
+    context,
+    _revealed,
+    widget.alwaysShow ? null : () => setState(() => _revealed = !_revealed),
+  );
 }
 
 final _urlPattern = RegExp(
@@ -949,22 +995,18 @@ class _DeliveryReceipt extends StatelessWidget {
     required this.status,
     required this.fallbackColor,
     required this.showLabel,
-    this.onPrimary = false,
   });
 
   final DeliveryStatus status;
   final Color fallbackColor;
   final bool showLabel;
 
-  /// Trên bong bóng nền primary: "đã xem" là trắng, không phải xanh kênh.
-  final bool onPrimary;
-
   @override
   Widget build(BuildContext context) {
     final read = status == DeliveryStatus.read;
     final failed = status == DeliveryStatus.failed;
     final color = read
-        ? (onPrimary ? Colors.white : OmniColors.chatPrimary)
+        ? OmniColors.chatPrimary
         : failed
         ? Theme.of(context).colorScheme.error
         : fallbackColor;
