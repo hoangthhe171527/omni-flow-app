@@ -534,16 +534,19 @@ class _Loaded extends ConsumerWidget {
     // bình luận — nên ẩn hết như việc đã khoá.
     final viewer = _isPlanViewer(ref, task, myUserId);
     final locked = task.isLocked;
-    final isAssigner = access.isAssigner && !locked && !viewer;
-    final canWrite =
-        (access.canUpdate || access.canComplete) && !locked && !viewer;
-    final canComplete = access.canComplete && !locked && !viewer;
-    final canComment = access.canComplete && !viewer;
-    final canLike = (access.canUpdate || access.canComplete) && !viewer;
-    // Xoá bình luận người khác: như `ProjectAccessService::canManage`.
+    // Xoá bình luận người khác & quản lý việc: như `ProjectAccessService::canManage`.
     final canModerate =
         !viewer &&
         canManageTask(ref, task, myUserId, manageAll: access.isAssigner);
+    final isAssigner = access.isAssigner && !locked && !viewer;
+    final canManage = canModerate && !locked;
+    final canWrite =
+        (access.canUpdate || access.canComplete) && !locked && !viewer;
+    final canComplete = access.canComplete && !locked && !viewer;
+    final canCompleteParent =
+        canComplete && task.canCompleteParentTask(canManage: canManage);
+    final canComment = access.canComplete && !viewer;
+    final canLike = (access.canUpdate || access.canComplete) && !viewer;
     final controller = ref.read(taskDetailProvider(taskId).notifier);
     final actions = TaskDetailActions(controller);
     final catalog = ref.watch(taskLabelsProvider).valueOrNull ?? const [];
@@ -592,7 +595,7 @@ class _Loaded extends ConsumerWidget {
           child: TaskTitleRow(
             task: task,
             taskId: taskId,
-            canComplete: canComplete,
+            canComplete: canCompleteParent,
           ),
         ),
         if (task.projectName != null || sectionName != null) ...[

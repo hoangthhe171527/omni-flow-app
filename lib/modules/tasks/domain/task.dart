@@ -25,6 +25,7 @@ class Subtask {
     this.dueDate,
     this.description,
     this.startDate,
+    this.doneBy,
   });
 
   factory Subtask.fromJson(Map<String, dynamic> json) => Subtask(
@@ -40,6 +41,7 @@ class Subtask {
     // như không có (`json.str` bỏ null và chuỗi rỗng).
     description: json.str('description'),
     startDate: DateUtilsX.parse(json['start_date']),
+    doneBy: json.str('done_by'),
   );
 
   final String id;
@@ -56,6 +58,9 @@ class Subtask {
   /// Ngày bắt đầu. Server KHÔNG kiểm `start ≤ due`; app tự chặn.
   final DateTime? startDate;
 
+  /// Id người đã đánh dấu hoàn thành việc con này (nếu có).
+  final String? doneBy;
+
   /// Bản sao lạc quan (tick): chép ĐỦ mọi trường — thiếu một là trường đó
   /// biến khỏi màn ngay khi tick.
   Subtask copyWith({bool? done}) => Subtask(
@@ -68,6 +73,7 @@ class Subtask {
     dueDate: dueDate,
     description: description,
     startDate: startDate,
+    doneBy: doneBy,
   );
 }
 
@@ -532,6 +538,57 @@ class Task {
     }
 
     return null;
+  }
+
+  /// Người cầm máy có được tick / bỏ tick việc con [s] không:
+  ///  * Quản lý ([canManage]) tick được mọi việc con.
+  ///  * Nhân viên chỉ được tick việc con giao cho chính mình, hoặc việc con
+  ///    chưa giao ai (miễn chưa bị người khác đánh dấu hoàn thành).
+  bool canTickSubtask(
+    Subtask s, {
+    required String? currentUserId,
+    required bool canManage,
+  }) {
+    if (isLocked) return false;
+    if (canManage) return true;
+    final assignee = s.assigneeId;
+    if (assignee != null && assignee.isNotEmpty) {
+      return currentUserId != null && assignee == currentUserId;
+    }
+    final completer = s.doneBy;
+    if (s.done && completer != null && completer.isNotEmpty) {
+      return currentUserId != null && completer == currentUserId;
+    }
+
+    return true;
+  }
+
+  /// Công đoạn chưa xong đứng đầu danh sách mà người cầm máy ĐƯỢC PHÉP tick.
+  Subtask? nextOpenSubtaskFor({
+    required String? currentUserId,
+    required bool canManage,
+  }) {
+    for (final s in subtasks) {
+      if (!s.done &&
+          canTickSubtask(
+            s,
+            currentUserId: currentUserId,
+            canManage: canManage,
+          )) {
+        return s;
+      }
+    }
+
+    return null;
+  }
+
+  /// Có được bấm ô tích hoàn thành công việc lớn (công việc cha) không:
+  ///  * Nhân viên (`!canManage`) không được phép tích hoàn thành công việc lớn.
+  ///  * Công việc lớn có việc con chỉ hoàn thành khi đã xong toàn bộ việc con.
+  bool canCompleteParentTask({required bool canManage}) {
+    if (isLocked || !canManage) return false;
+
+    return isDone || !hasSubtasks || doneCount >= totalCount;
   }
 
   /// Days past the deadline, or null when it is not overdue.

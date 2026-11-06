@@ -214,7 +214,7 @@ void main() {
     tw('chữ 20 w600; ô 26 bo 6 viền 2; chạm gửi done và báo quản lý', (
       t,
     ) async {
-      await pump(t, host(data: json(), perms: worker));
+      await pump(t, host(data: json()));
       final title = t.widget<Text>(find.byKey(const ValueKey('detail-title')));
       expect(title.style?.fontSize, 20);
       expect(title.style?.fontWeight, FontWeight.w600);
@@ -242,7 +242,6 @@ void main() {
         t,
         host(
           data: json(status: 'done'),
-          perms: worker,
         ),
       );
       await t.tap(find.bySemanticsLabel('Bỏ đánh dấu xong'));
@@ -254,7 +253,7 @@ void main() {
     tw('422 thì hiện lời server, mất mạng thì nhắc mạng; ô về như cũ', (
       t,
     ) async {
-      await pump(t, host(data: json(), perms: worker));
+      await pump(t, host(data: json()));
       stub.statusError = const ValidationException(
         'Không thể hoàn thành: còn công việc phụ thuộc chưa xong.',
       );
@@ -276,7 +275,7 @@ void main() {
     });
 
     tw('giảm chuyển động: chạm ô tích không để lại khung hoạt ảnh', (t) async {
-      await pump(t, host(data: json(), perms: worker, reduceMotion: true));
+      await pump(t, host(data: json(), reduceMotion: true));
       await t.tap(find.bySemanticsLabel('Đánh dấu xong'));
       await t.pump();
       // (SnackBar "Đã báo hoàn thành" là của Scaffold, không phải ô tích.)
@@ -291,7 +290,7 @@ void main() {
     });
 
     tw('bật chuyển động: ô tích nảy 350ms', (t) async {
-      await pump(t, host(data: json(), perms: worker));
+      await pump(t, host(data: json()));
       await t.tap(find.bySemanticsLabel('Đánh dấu xong'));
       await t.pump();
       await t.pump(const Duration(milliseconds: 140));
@@ -300,6 +299,16 @@ void main() {
       );
       expect(bounce.scale.value, greaterThan(1.1));
       await t.pumpAndSettle();
+    });
+
+    tw('nhân viên (worker): ô tích việc lớn không bấm được', (t) async {
+      await pump(t, host(data: json(), perms: worker));
+      await t.tap(
+        find.byKey(const ValueKey('title-tick-box')),
+        warnIfMissed: false,
+      );
+      await t.pumpAndSettle();
+      expect(recorded, isEmpty);
     });
 
     tw('chỉ đọc (tasks.read): ô tích không bấm được', (t) async {
