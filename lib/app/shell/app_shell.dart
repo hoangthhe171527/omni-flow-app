@@ -13,6 +13,7 @@ import '../../design/components/components.dart';
 import '../../design/platform/omni_motion_scope.dart';
 import '../../design/platform/omni_platform.dart';
 import '../../design/tokens/tokens.dart';
+import 'tab_bar_editor_sheet.dart';
 
 /// The tab shell.
 ///
@@ -66,10 +67,12 @@ class AppShell extends ConsumerWidget {
           return Scaffold(
             body: Row(
               children: [
-                _ShellNavigationRail(
-                  tabs: tabs,
-                  selectedIndex: selectedIndex,
-                  onSelected: select,
+                _EditOnLongPress(
+                  child: _ShellNavigationRail(
+                    tabs: tabs,
+                    selectedIndex: selectedIndex,
+                    onSelected: select,
+                  ),
                 ),
                 VerticalDivider(
                   width: 1,
@@ -88,14 +91,38 @@ class AppShell extends ConsumerWidget {
             // Body vẽ dưới thanh kính mờ; màn danh sách tự chừa chỗ ở đáy.
             extendBody: true,
             body: navigationShell,
-            bottomNavigationBar: _ShellNavBar(
-              tabs: tabs,
-              selectedIndex: selectedIndex,
-              onSelected: select,
+            bottomNavigationBar: _EditOnLongPress(
+              child: _ShellNavBar(
+                tabs: tabs,
+                selectedIndex: selectedIndex,
+                onSelected: select,
+              ),
             ),
           ),
         );
       },
+    );
+  }
+}
+
+/// Nhấn giữ thanh điều hướng mở màn "Sửa menu". Lối vào thứ hai là nút ở
+/// "Tất cả" — thanh không mang thêm nút nào ngoài các mục của nó. Mục tab
+/// (InkWell) không bắt nhấn giữ nên cử chỉ này về tay thanh.
+class _EditOnLongPress extends StatelessWidget {
+  const _EditOnLongPress({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      onLongPressHint: 'Sửa menu',
+      onLongPress: () => showTabBarEditor(context),
+      child: GestureDetector(
+        behavior: HitTestBehavior.translucent,
+        onLongPress: () => showTabBarEditor(context),
+        child: child,
+      ),
     );
   }
 }

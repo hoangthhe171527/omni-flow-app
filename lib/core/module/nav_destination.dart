@@ -31,9 +31,9 @@ enum NavArea {
 /// kỳ ai. Còn "chính xác 4 mục nào lên tab" thì phụ thuộc người dùng, nên
 /// không ai khai báo — nó được tính ra từ quyền.
 ///
-/// Chỉ mục [primary] mới thành branch của shell và mới ghim được: một tab phải
-/// giữ được ngăn xếp điều hướng riêng, và biến mọi mục thành branch nghĩa là
-/// 20 module thành 20 navigator.
+/// [primary] là ứng viên tab mặc định và lối vào khi chưa có tab nào. Mọi mục
+/// ngoài khu "Tài khoản" đều thành branch và người dùng tự ghim được
+/// (`isTabEligible`); branch dựng lười nên mục chưa mở không tốn navigator.
 enum NavWeight { primary, secondary }
 
 /// Giọng của số đếm trên tab.

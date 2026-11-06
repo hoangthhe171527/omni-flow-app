@@ -196,16 +196,26 @@ void main() {
     );
   });
 
-  test('branch chỉ gồm mục primary', () {
+  test('branch gồm mọi mục ngoài khu Tài khoản, kể cả secondary', () {
+    // Người dùng tự chọn tab (màn "Sửa menu"), nên mục secondary như Thông
+    // báo cũng phải là branch; branch dựng lười nên không tốn navigator.
     final c = _containerFor({}, all);
     addTearDown(c.dispose);
 
     expect(c.read(branchNavEntriesProvider).map((e) => e.label), [
       'Việc',
       'Hộp thư',
+      'Thông báo',
+      'Kênh',
       'Khách',
       'Cơ hội',
     ]);
+    expect(
+      isTabEligible(
+        _entry(label: 'Nền', area: NavArea.account, permission: 'x'),
+      ),
+      isFalse,
+    );
   });
 
   test('order chỉ so trong cùng nhóm, không phải số toàn cục', () {
