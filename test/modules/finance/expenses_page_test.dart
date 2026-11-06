@@ -58,47 +58,67 @@ void main() {
   }
 
   group('FinanceModule — hiển thị trong mục Tất cả (DirectoryPage)', () {
-    for (final perm in [
-      FinancePermissions.base, // 'finance.expenses'
-      FinancePermissions.read, // 'finance.expenses.read'
-      FinancePermissions.ordersCost, // 'orders.cost'
-      FinancePermissions.membersRead, // 'membership.members.read'
-      FinancePermissions.dashboardRead, // 'analytics.dashboard.read'
+    ProviderContainer containerFor(Set<String> permissions) {
+      final container = ProviderContainer(
+        overrides: [
+          modulesProvider.overrideWithValue(appModules),
+          sessionProvider.overrideWithValue(
+            Session(
+              status: SessionStatus.authenticated,
+              policy: AccessPolicy(permissions),
+            ),
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+      return container;
+    }
+
+    test('Admin có finance.expenses thấy đủ hai lối vào chi phí', () {
+      final container = containerFor({FinancePermissions.base});
+      final adminEntries =
+          container.read(directoryGroupsProvider)[NavArea.admin] ?? const [];
+
+      expect(
+        adminEntries.map((e) => e.label),
+        containsAll(['Sổ chi phí', 'Tổng hợp chi phí']),
+      );
+      expect(
+        adminEntries.map((e) => e.routeName),
+        containsAll([FinanceRoutes.expenses, FinanceRoutes.expenseSummary]),
+      );
+    });
+
+    for (final permission in const [
+      'finance.expenses.read',
+      'orders.cost',
+      'membership.members.read',
+      'analytics.dashboard.read',
     ]) {
       test(
-        'hiện ô "Sổ chi phí" trong nhóm Đội & quản trị khi có quyền $perm',
+        'quyền không phải Admin $permission không thấy giao diện chi phí',
         () {
-          final container = ProviderContainer(
-            overrides: [
-              modulesProvider.overrideWithValue(appModules),
-              sessionProvider.overrideWithValue(
-                Session(
-                  status: SessionStatus.authenticated,
-                  policy: AccessPolicy({perm}),
-                ),
-              ),
-            ],
-          );
-          addTearDown(container.dispose);
+          final container = containerFor({permission});
+          final labels = container
+              .read(visibleNavEntriesProvider)
+              .map((entry) => entry.label);
 
-          final adminEntries =
-              container.read(directoryGroupsProvider)[NavArea.admin] ??
-              const [];
-          expect(
-            adminEntries.map((e) => e.label),
-            containsAll(['Sổ chi phí', 'Tổng hợp chi phí']),
-          );
-          expect(
-            adminEntries.map((e) => e.routeName),
-            contains(FinanceRoutes.expenseSummary),
-          );
-          expect(
-            adminEntries.map((e) => e.routeName),
-            contains(FinanceRoutes.expenses),
-          );
+          expect(labels, isNot(contains('Sổ chi phí')));
+          expect(labels, isNot(contains('Tổng hợp chi phí')));
         },
       );
     }
+
+    test('route và menu dùng cùng điều kiện Admin', () {
+      final financeRoutes = const FinanceModule().routes();
+      final adminPolicy = AccessPolicy({FinancePermissions.base});
+      final nonAdminPolicy = AccessPolicy({'membership.members.read'});
+
+      for (final route in financeRoutes) {
+        expect(route.access.isSatisfiedBy(adminPolicy), isTrue);
+        expect(route.access.isSatisfiedBy(nonAdminPolicy), isFalse);
+      }
+    });
   });
 
   group('ExpensesPage — đồng bộ chuẩn 100% với API & Web', () {
