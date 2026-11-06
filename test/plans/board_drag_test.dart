@@ -31,6 +31,7 @@ import '../support/fixed_background.dart';
 void main() {
   const planId = 'p1';
   const worker = {'tasks.read', 'tasks.write'};
+  const manager = {'tasks.read', 'tasks.write', 'tasks.projects.manage.all'};
 
   Plan makePlan([Map<String, Object?> extra = const {}]) => Plan.fromJson({
     'id': planId,
@@ -598,7 +599,9 @@ void main() {
   testWidgets(
     'cột đích có thẻ khoá ở giữa: thả dưới thẻ cuối → order = cuối + 1',
     (t) async {
-      await pumpBoard(t, lockedMiddle: true);
+      // Quản lý: cột còn nút «Thêm việc» ở cuối (ẩn với nhân viên từ e20f24e),
+      // nên điểm thả 60px dưới thẻ cuối vẫn nằm trong cột.
+      await pumpBoard(t, lockedMiddle: true, perms: manager);
       final g = await lift(t, 'Bảo hành W106');
       await g.moveTo(
         Offset(340, t.getCenter(find.text('Làm phím CLP920')).dy + 60),
@@ -701,7 +704,9 @@ void main() {
   testWidgets('ô tích vẫn tích được trong LongPressDraggable, không nhấc thẻ', (
     t,
   ) async {
-    await pumpBoard(t);
+    // Ô tích hoàn thành việc lớn chỉ hiện cho người quản lý kế hoạch
+    // (nhân viên không được tích việc cha — commit e20f24e).
+    await pumpBoard(t, perms: manager);
     expect(find.byType(LongPressDraggable<Task>), findsWidgets);
 
     await t.tap(find.byKey(const ValueKey('tick-target')).first);

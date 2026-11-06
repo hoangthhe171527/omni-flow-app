@@ -170,10 +170,7 @@ class TaskDetailState {
               : (task.status == 'done' ? 'doing' : task.status))
         : task.status;
 
-    return task.copyWith(
-      subtasks: nextSubtasks,
-      status: nextStatus,
-    );
+    return task.copyWith(subtasks: nextSubtasks, status: nextStatus);
   }
 
   TaskDetailState copyWith({Task? task, List<PendingTick>? pending}) =>
