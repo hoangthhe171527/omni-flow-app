@@ -59,7 +59,9 @@ class _MyTasksPageState extends ConsumerState<MyTasksPage> {
     final bucket = ref.watch(taskBucketProvider);
     final tasks = ref.watch(myTasksProvider);
     final currentUserId = ref.watch(sessionProvider.select((s) => s.user?.id));
-    final canManageAll = ref.watch(taskAccessProvider.select((a) => a.isAssigner));
+    final canManageAll = ref.watch(
+      taskAccessProvider.select((a) => a.isAssigner),
+    );
     final topBarSlot = OmniTopBarSlot.maybeOf(context);
 
     return Scaffold(

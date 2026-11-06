@@ -573,47 +573,48 @@ void main() {
       expect(t.hasRunningAnimations, isFalse);
     });
 
-    tw('nhân viên không được tick việc con của người khác, chỉ tick được việc của mình', (
-      t,
-    ) async {
-      await pump(
-        t,
-        host(
-          data: json(
-            checklist: [
-              {
-                'id': 'c-other',
-                'title': 'Việc của Khánh',
-                'done': false,
-                'assignee_id': 'u1',
-                'assignee_name': 'Khánh',
-              },
-              {
-                'id': 'c-mine',
-                'title': 'Việc của Hùng',
-                'done': false,
-                'assignee_id': me,
-                'assignee_name': 'Thợ Hùng',
-              },
-            ],
+    tw(
+      'nhân viên không được tick việc con của người khác, chỉ tick được việc của mình',
+      (t) async {
+        await pump(
+          t,
+          host(
+            data: json(
+              checklist: [
+                {
+                  'id': 'c-other',
+                  'title': 'Việc của Khánh',
+                  'done': false,
+                  'assignee_id': 'u1',
+                  'assignee_name': 'Khánh',
+                },
+                {
+                  'id': 'c-mine',
+                  'title': 'Việc của Hùng',
+                  'done': false,
+                  'assignee_id': me,
+                  'assignee_name': 'Thợ Hùng',
+                },
+              ],
+            ),
+            perms: worker,
           ),
-          perms: worker,
-        ),
-      );
+        );
 
-      // Chạm vào ô tích của việc con giao cho Khánh (u1) → không gửi gì.
-      await t.tap(
-        find.byKey(const ValueKey('subtask-tick-box')).first,
-        warnIfMissed: false,
-      );
-      await t.pump();
-      expect(recorded, isEmpty);
+        // Chạm vào ô tích của việc con giao cho Khánh (u1) → không gửi gì.
+        await t.tap(
+          find.byKey(const ValueKey('subtask-tick-box')).first,
+          warnIfMissed: false,
+        );
+        await t.pump();
+        expect(recorded, isEmpty);
 
-      // Chạm vào ô tích của việc con giao cho chính mình (u9) → gửi toggle!
-      await t.tap(find.byKey(const ValueKey('subtask-tick-box')).last);
-      await t.pump();
-      expect(recorded.last, ('toggle', ('c-mine', true)));
-    });
+        // Chạm vào ô tích của việc con giao cho chính mình (u9) → gửi toggle!
+        await t.tap(find.byKey(const ValueKey('subtask-tick-box')).last);
+        await t.pump();
+        expect(recorded.last, ('toggle', ('c-mine', true)));
+      },
+    );
   });
 
   group('(f) tệp', () {

@@ -425,7 +425,8 @@ class _PlanBoardPageState extends ConsumerState<PlanBoardPage>
                           ? _body(
                               plan,
                               result == null ? board : board.only(result.ids),
-                              canCreate: canEditSections && taskAccess.canCreate,
+                              canCreate:
+                                  canEditSections && taskAccess.canCreate,
                               canComplete:
                                   canEditSections && taskAccess.canComplete,
                               canDragTasks: canDragTasks,

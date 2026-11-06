@@ -238,12 +238,7 @@ void main() {
     });
 
     tw('đã xong: chạm gửi doing, "Đã mở lại công việc."', (t) async {
-      await pump(
-        t,
-        host(
-          data: json(status: 'done'),
-        ),
-      );
+      await pump(t, host(data: json(status: 'done')));
       await t.tap(find.bySemanticsLabel('Bỏ đánh dấu xong'));
       await t.pumpAndSettle();
       expect(recorded.last, ('status', 'doing'));
