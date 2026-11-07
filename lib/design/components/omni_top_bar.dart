@@ -226,7 +226,7 @@ class _OmniTopBarState extends ConsumerState<OmniTopBar> {
               action,
               const SizedBox(width: 8),
             ],
-            _GlassCircle(
+            OmniGlassCircle(
               child: _BellButton(
                 unread: unread,
                 onTap: slot == null
@@ -239,7 +239,7 @@ class _OmniTopBarState extends ConsumerState<OmniTopBar> {
             ),
             if (account != null) ...[
               const SizedBox(width: 8),
-              _GlassCircle(child: account(context)),
+              OmniGlassCircle(child: account(context)),
             ],
           ],
         ],
@@ -421,10 +421,12 @@ class OmniTopBarAction extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return _GlassCircle(
+    return OmniGlassCircle(
       child: IconButton(
         tooltip: tooltip,
         padding: EdgeInsets.zero,
+        // Vùng chạm 44 đầy viên kính (mặc định IconButton chỉ 40).
+        constraints: const BoxConstraints.tightFor(width: 44, height: 44),
         onPressed: () {
           HapticFeedback.selectionClick();
           onPressed();
@@ -439,8 +441,9 @@ class OmniTopBarAction extends StatelessWidget {
   }
 }
 
-class _GlassCircle extends StatelessWidget {
-  const _GlassCircle({required this.child});
+/// Viên kính tròn 44 bọc một nút có sẵn (chuông, avatar, ⋯ của màn riêng).
+class OmniGlassCircle extends StatelessWidget {
+  const OmniGlassCircle({super.key, required this.child});
 
   final Widget child;
 

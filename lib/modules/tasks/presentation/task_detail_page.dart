@@ -154,6 +154,8 @@ class _TaskDetailPageState extends ConsumerState<TaskDetailPage> {
 
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.surface,
+      // Nội dung chạy dưới các nút kính và nhoè dần (OmniScrollEdge).
+      extendBodyBehindAppBar: true,
       appBar: DetailHeader(
         title: loadedTask?.title ?? '',
         titleShown: _titleShown,
@@ -173,9 +175,7 @@ class _TaskDetailPageState extends ConsumerState<TaskDetailPage> {
                   minimumSize: const Size(44, 44),
                   maximumSize: const Size(44, 44),
                   padding: EdgeInsets.zero,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(6),
-                  ),
+                  shape: const CircleBorder(),
                 ),
                 icon: Icon(
                   Icons.visibility_outlined,
@@ -195,9 +195,7 @@ class _TaskDetailPageState extends ConsumerState<TaskDetailPage> {
                   minimumSize: const Size(44, 44),
                   maximumSize: const Size(44, 44),
                   padding: EdgeInsets.zero,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(6),
-                  ),
+                  shape: const CircleBorder(),
                 ),
                 icon: Icon(
                   Icons.more_horiz_rounded,
@@ -206,14 +204,16 @@ class _TaskDetailPageState extends ConsumerState<TaskDetailPage> {
                 ),
               ),
       ),
-      body: OmniAsyncView(
-        value: detail,
-        onRetry: () => ref.invalidate(taskDetailProvider(taskId)),
-        data: (state) => _Loaded(
-          taskId: taskId,
-          state: state,
-          scroll: _scroll,
-          titleKey: _titleKey,
+      body: OmniTopBarOverlap.wrap(
+        child: OmniAsyncView(
+          value: detail,
+          onRetry: () => ref.invalidate(taskDetailProvider(taskId)),
+          data: (state) => _Loaded(
+            taskId: taskId,
+            state: state,
+            scroll: _scroll,
+            titleKey: _titleKey,
+          ),
         ),
       ),
     );
@@ -714,6 +714,7 @@ class _Loaded extends ConsumerWidget {
       children: [
         Expanded(
           child: RefreshIndicator.adaptive(
+            edgeOffset: OmniTopBarOverlap.of(context),
             onRefresh: controller.refresh,
             child: CustomScrollView(
               controller: scroll,
@@ -722,7 +723,12 @@ class _Loaded extends ConsumerWidget {
               physics: const AlwaysScrollableScrollPhysics(),
               slivers: [
                 SliverPadding(
-                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+                  padding: EdgeInsets.fromLTRB(
+                    16,
+                    12 + OmniTopBarOverlap.of(context),
+                    16,
+                    0,
+                  ),
                   sliver: SliverToBoxAdapter(child: _Rise(child: top)),
                 ),
                 SliverPadding(
