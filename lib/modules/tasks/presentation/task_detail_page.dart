@@ -153,7 +153,8 @@ class _TaskDetailPageState extends ConsumerState<TaskDetailPage> {
         loadedTask != null && api(ApiCapability.taskFollow) && access.canRead;
 
     return Scaffold(
-      backgroundColor: Theme.of(context).colorScheme.surface,
+      // Nền xám để các thẻ nhóm lồng nổi lên.
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       // Nội dung chạy dưới các nút kính và nhoè dần (OmniScrollEdge).
       extendBodyBehindAppBar: true,
       appBar: DetailHeader(

@@ -52,8 +52,13 @@ class TaskInfoCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
 
+    // Thẻ nhóm lồng bo 18 (viomni-apple-uiux.html "Chi tiết việc").
     return Container(
-      decoration: BoxDecoration(color: scheme.surface),
+      clipBehavior: Clip.antiAlias,
+      decoration: BoxDecoration(
+        color: scheme.surface,
+        borderRadius: BorderRadius.circular(18),
+      ),
       child: Column(
         children: [
           _Row(

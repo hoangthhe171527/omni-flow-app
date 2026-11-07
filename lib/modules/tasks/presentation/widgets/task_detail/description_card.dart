@@ -47,8 +47,13 @@ class DescriptionCard extends StatelessWidget {
           icon: Icon(icon, size: OmniIconSize.md),
         );
 
+    // Thẻ nhóm lồng bo 18 (viomni-apple-uiux.html "Chi tiết việc").
     return Container(
-      color: scheme.surface,
+      clipBehavior: Clip.antiAlias,
+      decoration: BoxDecoration(
+        color: scheme.surface,
+        borderRadius: BorderRadius.circular(18),
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
