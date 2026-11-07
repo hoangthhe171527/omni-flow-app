@@ -24,11 +24,15 @@ class CustomerRow extends ConsumerWidget {
     required this.customer,
     required this.expanded,
     required this.onTap,
+    this.divider = true,
   });
 
   final Customer customer;
   final bool expanded;
   final VoidCallback onTap;
+
+  /// Vạch mảnh phía trên; dòng đầu của thẻ nhóm lồng thì không.
+  final bool divider;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -42,7 +46,9 @@ class CustomerRow extends ConsumerWidget {
     return DecoratedBox(
       decoration: BoxDecoration(
         color: scheme.surface,
-        border: Border(top: BorderSide(color: scheme.outlineVariant)),
+        border: divider
+            ? Border(top: BorderSide(color: scheme.outlineVariant))
+            : null,
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,

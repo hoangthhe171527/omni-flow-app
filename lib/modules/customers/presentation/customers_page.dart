@@ -116,8 +116,8 @@ class _CustomersPageState extends ConsumerState<CustomersPage> {
 
     return Scaffold(
       extendBodyBehindAppBar: true,
-      // Header và danh sách cùng một mặt phẳng.
-      backgroundColor: scheme.surface,
+      // Nền xám để thẻ nhóm lồng của danh sách nổi lên.
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: OmniTopBar(
         semanticsTitle: 'Khách',
         bottom: segment == 1
@@ -240,17 +240,33 @@ class _CustomersPageState extends ConsumerState<CustomersPage> {
                     );
                   }
                   final customer = state.items[index];
-                  return CustomerRow(
-                    customer: customer,
-                    expanded: _openId == customer.id,
-                    onTap: () {
-                      HapticFeedback.selectionClick();
-                      setState(
-                        () => _openId = _openId == customer.id
-                            ? null
-                            : customer.id,
-                      );
-                    },
+                  // Nhóm lồng (viomni-apple-uiux.html `.group`): cả danh sách
+                  // là một thẻ bo 18 cách mép 16 trên nền xám.
+                  const r = Radius.circular(18);
+                  final first = index == 0;
+                  final last =
+                      index == state.items.length - 1 && !state.hasMore;
+                  return Padding(
+                    padding: EdgeInsets.fromLTRB(16, first ? 8 : 0, 16, 0),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.vertical(
+                        top: first ? r : Radius.zero,
+                        bottom: last ? r : Radius.zero,
+                      ),
+                      child: CustomerRow(
+                        customer: customer,
+                        divider: !first,
+                        expanded: _openId == customer.id,
+                        onTap: () {
+                          HapticFeedback.selectionClick();
+                          setState(
+                            () => _openId = _openId == customer.id
+                                ? null
+                                : customer.id,
+                          );
+                        },
+                      ),
+                    ),
                   );
                 },
               ),

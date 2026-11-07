@@ -71,7 +71,8 @@ class _NotificationsPageState extends ConsumerState<NotificationsPage> {
     final unread = unreadCount ?? 0;
 
     return Scaffold(
-      backgroundColor: scheme.surface,
+      // Nền xám để các thẻ nhóm lồng nổi lên.
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       // Thanh trên kiểu B (viomni-apple-uiux.html "Thông báo"): tiêu đề lớn,
       // "Đọc hết" là viên kính chữ; không chuông — đang ở chính trang này.
       extendBodyBehindAppBar: true,
@@ -317,11 +318,19 @@ class _GroupRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
 
+    // Nhóm lồng (viomni-apple-uiux.html `.group`): mỗi ngày là một thẻ bo 18
+    // trên nền xám — dòng đầu bo trên, dòng cuối bo dưới.
+    const r = Radius.circular(18);
     return Padding(
       padding: EdgeInsets.only(bottom: lastInGroup ? 16 : 0),
       child: Material(
         key: divider ? null : ValueKey('notification-group-$label'),
-        color: Colors.transparent,
+        color: scheme.surface,
+        clipBehavior: Clip.antiAlias,
+        borderRadius: BorderRadius.vertical(
+          top: divider ? Radius.zero : r,
+          bottom: lastInGroup ? r : Radius.zero,
+        ),
         child: Column(
           children: [
             if (divider)
