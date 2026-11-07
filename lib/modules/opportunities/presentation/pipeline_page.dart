@@ -26,7 +26,7 @@ class _PipelinePageState extends State<PipelinePage> {
   Widget build(BuildContext context) {
     return Scaffold(
       extendBodyBehindAppBar: true,
-      backgroundColor: Theme.of(context).colorScheme.surface,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: OmniTopBar(
         allowBack: true,
         semanticsTitle: 'Cơ hội',

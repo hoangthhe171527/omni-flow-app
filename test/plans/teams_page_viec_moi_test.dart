@@ -183,56 +183,60 @@ void main() {
     expect(find.text('Tìm team, kế hoạch'), findsOneWidget);
   });
 
-  testWidgets('bố cục phân cấp: team phẳng, dự án thụt cấp và dùng dấu cover', (
-    t,
-  ) async {
-    phone(t);
-    await t.pumpWidget(host(groups: twoTeams, assigner: true));
-    await t.pumpAndSettle();
-    await t.tap(header('Tổ kỹ thuật'));
-    await t.pumpAndSettle();
-    expect(t.getSize(find.byType(PlanTile).first).height, 48);
-    expect(find.byKey(const Key('plan-tile-swatch')), findsWidgets);
-    expect(find.byKey(const Key('team-group-icon')), findsNWidgets(2));
-    expect(find.byKey(const Key('plan-tile-marker')), findsNothing);
-    expect(find.byKey(const Key('team-group-marker')), findsNothing);
-    expect(t.getSize(header('Tổ kỹ thuật')).height, 48);
-    expect(find.byKey(const Key('plan-tree-rail')), findsNothing);
-    expect(
-      t.getTopLeft(find.byKey(const Key('plan-tile-swatch')).first).dx,
-      greaterThan(
-        t.getTopLeft(find.byKey(const Key('team-group-icon')).first).dx + 16,
-      ),
-    );
-    // Dải tìm trong viên kính của thanh trên cao 44 (viomni-apple-uiux.html).
-    expect(t.getSize(find.byKey(const Key('teams-search-box'))).height, 44);
-    expect(
-      t.getSize(find.byKey(const Key('teams-add-face'))),
-      const Size(44, 44),
-    );
-    expect(
-      t.widget<Icon>(find.byKey(const Key('team-group-icon')).first).icon,
-      Icons.groups_2_outlined,
-    );
-    expect(
-      t.widget<ProjectCoverMarker>(find.byType(ProjectCoverMarker).first).cover,
-      'teal-1',
-    );
-    // Section phẳng sát mép; đường chia tạo nhịp 17 giữa các nhóm.
-    final first = t.getRect(find.byType(TeamGroup).at(0));
-    final second = t.getRect(find.byType(TeamGroup).at(1));
-    expect(second.top - first.bottom, 17);
-    expect(first.left, 0);
-    final groupMaterial = t.widget<Material>(
-      find
-          .descendant(
-            of: find.byType(TeamGroup).first,
-            matching: find.byType(Material),
-          )
-          .first,
-    );
-    expect(groupMaterial.shape, isNull);
-  });
+  testWidgets(
+    'bố cục phân cấp: team là thẻ lồng, dự án thụt cấp và dùng dấu cover',
+    (t) async {
+      phone(t);
+      await t.pumpWidget(host(groups: twoTeams, assigner: true));
+      await t.pumpAndSettle();
+      await t.tap(header('Tổ kỹ thuật'));
+      await t.pumpAndSettle();
+      expect(t.getSize(find.byType(PlanTile).first).height, 48);
+      expect(find.byKey(const Key('plan-tile-swatch')), findsWidgets);
+      expect(find.byKey(const Key('team-group-icon')), findsNWidgets(2));
+      expect(find.byKey(const Key('plan-tile-marker')), findsNothing);
+      expect(find.byKey(const Key('team-group-marker')), findsNothing);
+      expect(t.getSize(header('Tổ kỹ thuật')).height, 48);
+      expect(find.byKey(const Key('plan-tree-rail')), findsNothing);
+      expect(
+        t.getTopLeft(find.byKey(const Key('plan-tile-swatch')).first).dx,
+        greaterThan(
+          t.getTopLeft(find.byKey(const Key('team-group-icon')).first).dx + 16,
+        ),
+      );
+      // Dải tìm trong viên kính của thanh trên cao 44 (viomni-apple-uiux.html).
+      expect(t.getSize(find.byKey(const Key('teams-search-box'))).height, 44);
+      expect(
+        t.getSize(find.byKey(const Key('teams-add-face'))),
+        const Size(44, 44),
+      );
+      expect(
+        t.widget<Icon>(find.byKey(const Key('team-group-icon')).first).icon,
+        Icons.groups_2_outlined,
+      );
+      expect(
+        t
+            .widget<ProjectCoverMarker>(find.byType(ProjectCoverMarker).first)
+            .cover,
+        'teal-1',
+      );
+      // Nhóm lồng (viomni-apple-uiux.html): mỗi team là thẻ cách mép 16,
+      // hai thẻ cách nhau 12.
+      final first = t.getRect(find.byType(TeamGroup).at(0));
+      final second = t.getRect(find.byType(TeamGroup).at(1));
+      expect(second.top - first.bottom, 12);
+      expect(first.left, 16);
+      final groupMaterial = t.widget<Material>(
+        find
+            .descendant(
+              of: find.byType(TeamGroup).first,
+              matching: find.byType(Material),
+            )
+            .first,
+      );
+      expect(groupMaterial.shape, isNull);
+    },
+  );
 
   testWidgets('quản lý giữ dự án rồi thả sang team khác → cập nhật team_id', (
     t,

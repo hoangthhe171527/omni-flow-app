@@ -208,10 +208,24 @@ class _Body extends ConsumerWidget {
               ),
             );
           }
-          return OpportunityRow(
-            opportunity: items[at],
-            pipeline: pipeline,
-            canMove: access.canUpdate,
+          // Nhóm lồng (viomni-apple-uiux.html "Cơ hội" `.group`): danh sách
+          // là một thẻ bo 18 cách mép 16 trên nền xám.
+          const r = Radius.circular(18);
+          final last = at == items.length - 1 && tail == items.length;
+          return Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: ClipRRect(
+              borderRadius: BorderRadius.vertical(
+                top: at == 0 ? r : Radius.zero,
+                bottom: last ? r : Radius.zero,
+              ),
+              child: OpportunityRow(
+                opportunity: items[at],
+                pipeline: pipeline,
+                canMove: access.canUpdate,
+                divider: at > 0,
+              ),
+            ),
           );
         },
       ),

@@ -23,11 +23,15 @@ class OpportunityRow extends ConsumerWidget {
     required this.opportunity,
     required this.pipeline,
     this.canMove = false,
+    this.divider = true,
   });
 
   final Opportunity opportunity;
   final PipelineDef? pipeline;
   final bool canMove;
+
+  /// Vạch mảnh phía trên; dòng đầu của thẻ nhóm lồng thì không.
+  final bool divider;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -43,7 +47,9 @@ class OpportunityRow extends ConsumerWidget {
     return DecoratedBox(
       decoration: BoxDecoration(
         color: scheme.surface,
-        border: Border(top: BorderSide(color: scheme.outlineVariant)),
+        border: divider
+            ? Border(top: BorderSide(color: scheme.outlineVariant))
+            : null,
       ),
       child: InkWell(
         onTap: () {

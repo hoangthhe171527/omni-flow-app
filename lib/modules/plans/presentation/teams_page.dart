@@ -167,7 +167,8 @@ class _TeamsPageState extends ConsumerState<TeamsPage> {
         taskAccess.canDelete && access.can('organization.org_units.delete');
     return Scaffold(
       extendBodyBehindAppBar: true,
-      backgroundColor: Theme.of(context).colorScheme.surface,
+      // Nền xám để các thẻ team nổi lên.
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: OmniTopBar(
         semanticsTitle: 'Việc',
         bottom: TeamsSearchRow(
@@ -405,14 +406,18 @@ class _TeamsPageState extends ConsumerState<TeamsPage> {
       keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
       padding: EdgeInsets.only(top: topInset + 4, bottom: 110),
       itemCount: children.length,
-      separatorBuilder: (context, _) => Divider(
-        height: 17,
-        thickness: 1,
-        indent: 16,
-        endIndent: 16,
-        color: Theme.of(context).colorScheme.outlineVariant,
+      // Nhóm lồng (viomni-apple-uiux.html "Việc" `.group`): mỗi team (và
+      // Yêu thích) là một thẻ bo 18 cách mép 16 trên nền xám, cách nhau 12.
+      separatorBuilder: (context, _) => const SizedBox(height: 12),
+      itemBuilder: (context, i) => Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        child: Material(
+          color: Theme.of(context).colorScheme.surface,
+          borderRadius: BorderRadius.circular(18),
+          clipBehavior: Clip.antiAlias,
+          child: children[i](),
+        ),
       ),
-      itemBuilder: (_, i) => children[i](),
     );
   }
 
