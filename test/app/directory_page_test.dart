@@ -142,6 +142,30 @@ void main() {
     expect(sections.last.tiles.map((tile) => tile.label), ['Dòng việc']);
   });
 
+  test('Sổ chi phí, Tổng hợp chi phí nằm nhóm Tài chính riêng như web', () {
+    final sections = buildDirectorySections(
+      {
+        NavArea.admin: [_entry('Nhân viên', NavArea.admin)],
+        NavArea.finance: [
+          _entry('Sổ chi phí', NavArea.finance),
+          _entry('Tổng hợp chi phí', NavArea.finance),
+        ],
+      },
+      personal: const [],
+      open: (_) {},
+      query: '',
+    );
+
+    expect(sections.map((section) => section.label), [
+      'Đội & quản trị',
+      'Tài chính',
+    ]);
+    expect(sections.last.tiles.map((tile) => tile.label), [
+      'Sổ chi phí',
+      'Tổng hợp chi phí',
+    ]);
+  });
+
   Future<void> pump(
     WidgetTester tester, {
     OmniModule module = const _FakeModule(),

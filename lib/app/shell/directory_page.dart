@@ -51,6 +51,7 @@ OmniHue hueOfArea(NavArea area) => switch (area) {
   NavArea.sales => OmniHue.orange,
   NavArea.work => OmniHue.blue,
   NavArea.admin => OmniHue.violet,
+  NavArea.finance => OmniHue.violet,
   NavArea.account => OmniHue.neutral,
 };
 
@@ -90,6 +91,7 @@ List<DirectorySection> buildDirectorySections(
       of([NavArea.work]).where((tile) => tile.label == 'Dòng việc').toList(),
     ),
     ('Đội & quản trị', of([NavArea.admin])),
+    ('Tài chính', of([NavArea.finance])),
     (
       'Cá nhân',
       [
