@@ -14,6 +14,8 @@ import '../../tasks/routes.dart';
 import '../application/team_providers.dart';
 import '../data/team_api.dart';
 import '../domain/team_member.dart';
+import '../domain/team_permissions.dart';
+import 'add_member_sheet.dart';
 
 class TeamPage extends ConsumerWidget {
   const TeamPage({super.key});
@@ -31,10 +33,34 @@ class TeamPage extends ConsumerWidget {
     final canSeeLoad = ref
         .watch(accessProvider)
         .can('tasks.projects.manage.all');
+    // Thêm người là việc của quản lý / admin; thợ không thấy nút.
+    final canAdd = ref.watch(accessProvider).can(TeamPermissions.membersCreate);
 
     return Scaffold(
       backgroundColor: scheme.surface,
-      appBar: const OmniAppBar(title: 'Nhân viên'),
+      appBar: OmniAppBar(
+        title: 'Nhân viên',
+        actions: [
+          if (canAdd)
+            Padding(
+              padding: const EdgeInsets.only(right: OmniSpacing.sm),
+              child: OutlinedButton.icon(
+                onPressed: () => showAddMemberSheet(context),
+                icon: const Icon(Icons.person_add_alt_rounded, size: 20),
+                label: const Text('Thêm'),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: scheme.primary,
+                  minimumSize: const Size(0, 36),
+                  padding: const EdgeInsets.symmetric(horizontal: 14),
+                  side: BorderSide(color: scheme.primary, width: 1.5),
+                  shape: const StadiumBorder(),
+                  tapTargetSize: MaterialTapTargetSize.padded,
+                  textStyle: OmniType.bodyStrong,
+                ),
+              ),
+            ),
+        ],
+      ),
       body: RefreshIndicator.adaptive(
         onRefresh: () {
           ref.invalidate(teamMembersProvider);
