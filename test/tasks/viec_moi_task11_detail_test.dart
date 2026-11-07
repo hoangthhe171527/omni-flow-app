@@ -354,6 +354,43 @@ void main() {
     expect(find.text('Chuyển lên'), findsOneWidget);
   });
 
+  testWidgets('ấn giữ dòng rồi thả: nhấc lên, mở menu ngay dòng đó có '
+      '"Đánh dấu xong" và "Đặt hạn"', (t) async {
+    await pump(t);
+    final g = await t.startGesture(t.getCenter(find.text('Bộ máy')));
+    await t.pump(const Duration(milliseconds: 600));
+    expect(find.byKey(const ValueKey('subtask-lifted')), findsOneWidget);
+    await g.up();
+    await t.pumpAndSettle();
+    expect(find.byKey(const Key('subtask-options-menu')), findsOneWidget);
+    expect(find.text('Đánh dấu xong'), findsOneWidget);
+    expect(find.text('Đặt hạn'), findsOneWidget);
+    expect(find.text('Chuyển lên'), findsOneWidget);
+    expect(api.calls.where((c) => c.$1 == 'move'), isEmpty);
+  });
+
+  testWidgets('ấn giữ rồi kéo: đổi thứ tự, không mở menu', (t) async {
+    await pump(t);
+    final g = await t.startGesture(t.getCenter(find.text('Bộ máy')));
+    await t.pump(const Duration(milliseconds: 600));
+    for (var i = 0; i < 20; i++) {
+      await g.moveBy(const Offset(0, -20));
+      await t.pump(const Duration(milliseconds: 16));
+    }
+    await g.up();
+    await t.pumpAndSettle();
+    expect(api.calls.last, ('move', ('c3', null)));
+    expect(find.byKey(const Key('subtask-options-menu')), findsNothing);
+  });
+
+  testWidgets('tắt chuyển động: ấn giữ dòng vẫn mở menu', (t) async {
+    await pump(t, motion: false);
+    await t.longPress(find.text('Bộ máy'));
+    await t.pumpAndSettle();
+    expect(find.byKey(const Key('subtask-options-menu')), findsOneWidget);
+    expect(find.text('Chuyển lên'), findsOneWidget);
+  });
+
   testWidgets('bật chuyển động: ⋮ vẫn có "Chuyển lên" — đường trợ năng', (
     t,
   ) async {
