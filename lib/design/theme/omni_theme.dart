@@ -286,14 +286,20 @@ abstract final class OmniTheme {
       // nền thẻ mờ; đang chọn là viên trắng mờ viền sáng, chữ màu chủ đạo
       // (gu người dùng: mục chọn trắng mờ, không tô đặc).
       chipTheme: ChipThemeData(
-        backgroundColor: surface.withValues(
-          alpha: brightness == Brightness.dark ? .55 : .70,
-        ),
+        // Chưa chọn: nền trong (chỉ viền) — để viên chọn trắng mờ nổi lên.
+        backgroundColor: Colors.transparent,
+
         selectedColor: brightness == Brightness.dark
             ? Colors.white.withValues(alpha: .16)
             : Colors.white.withValues(alpha: .95),
         checkmarkColor: primary,
-        side: BorderSide(color: borderInteractive),
+        side: WidgetStateBorderSide.resolveWith(
+          (states) => BorderSide(
+            color: states.contains(WidgetState.selected)
+                ? primary.withValues(alpha: .45)
+                : borderInteractive,
+          ),
+        ),
         labelStyle: OmniType.caption.copyWith(
           color: onSurface,
           fontWeight: FontWeight.w500,

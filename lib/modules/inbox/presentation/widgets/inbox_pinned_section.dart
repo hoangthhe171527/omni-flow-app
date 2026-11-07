@@ -40,54 +40,79 @@ class _InboxPinnedSectionState extends State<InboxPinnedSection> {
     final divider = Divider(
       height: 1,
       thickness: 1,
+      indent: 66,
       color: OmniColors.byBrightness(
         context,
         OmniColors.divider,
         OmniColors.darkBorder,
       ),
     );
+    final rows = <Widget>[
+      for (var i = 0; i < shown.length; i++) ...[
+        if (i > 0) divider,
+        widget.rowBuilder(shown[i]),
+      ],
+    ];
+
+    // Nhóm lồng (viomni-apple-uiux.html `.group`): các dòng ghim (và "Xem
+    // thêm") là MỘT thẻ bo 18 cách mép 16 trên nền xám.
+    final group = <Widget>[
+      if (OmniMotion.enabled(context))
+        AnimatedSize(
+          duration: OmniMotion.of(context).fast,
+          curve: Curves.easeOutCubic,
+          alignment: Alignment.topCenter,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: rows,
+          ),
+        )
+      else
+        ...rows,
+      if (hidden > 0) ...[
+        divider,
+        InkWell(
+          key: const Key('inbox-pinned-more'),
+          onTap: () {
+            HapticFeedback.selectionClick();
+            setState(() => _expanded = !_expanded);
+          },
+          child: Container(
+            constraints: const BoxConstraints(minHeight: 44),
+            alignment: Alignment.center,
+            child: Text(
+              _expanded ? 'Thu gọn' : 'Xem thêm $hidden',
+              style: OmniType.caption.copyWith(
+                color: scheme.primary,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ),
+      ],
+    ];
 
     return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         const _SectionHeader('Đã ghim'),
-        if (OmniMotion.enabled(context))
-          AnimatedSize(
-            duration: OmniMotion.of(context).fast,
-            curve: Curves.easeOutCubic,
-            alignment: Alignment.topCenter,
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: Material(
+            key: const Key('inbox-pinned-group'),
+            color: scheme.surface,
+            borderRadius: BorderRadius.circular(18),
+            clipBehavior: Clip.antiAlias,
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                for (final c in shown) ...[widget.rowBuilder(c), divider],
-              ],
-            ),
-          )
-        else
-          for (final c in shown) ...[widget.rowBuilder(c), divider],
-        if (hidden > 0) ...[
-          InkWell(
-            key: const Key('inbox-pinned-more'),
-            onTap: () {
-              HapticFeedback.selectionClick();
-              setState(() => _expanded = !_expanded);
-            },
-            child: Container(
-              constraints: const BoxConstraints(minHeight: 44),
-              alignment: Alignment.center,
-              child: Text(
-                _expanded ? 'Thu gọn' : 'Xem thêm $hidden',
-                style: OmniType.caption.copyWith(
-                  color: scheme.primary,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
+              children: group,
             ),
           ),
-          divider,
-        ],
+        ),
+        const SizedBox(height: 8),
         const _SectionHeader('Hội thoại'),
       ],
     );
@@ -107,7 +132,7 @@ class _SectionHeader extends StatelessWidget {
       child: Container(
         constraints: const BoxConstraints(minHeight: 32),
         alignment: Alignment.centerLeft,
-        padding: const EdgeInsets.symmetric(horizontal: 16),
+        padding: const EdgeInsets.symmetric(horizontal: 20),
         child: Text(
           title,
           maxLines: 1,

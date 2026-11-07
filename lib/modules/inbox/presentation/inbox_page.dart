@@ -183,7 +183,8 @@ class _InboxPageState extends ConsumerState<InboxPage>
     final pinned =
         ref.watch(pinnedConversationsProvider).valueOrNull ??
         const <Conversation>[];
-    final lead = pinned.isEmpty ? 0 : 1;
+    // Dòng đầu: hàng chip lọc nhanh; rồi mục "Đã ghim" nếu có.
+    final lead = pinned.isEmpty ? 1 : 2;
     final scheme = Theme.of(context).colorScheme;
 
     return Scaffold(
@@ -192,7 +193,8 @@ class _InboxPageState extends ConsumerState<InboxPage>
       // (#F8F8FC) while the rows use `surface` (white), so the whole search area
       // read as a tinted panel framing itself — the "khung mờ" around the search
       // field was that seam, not a border on the field.
-      backgroundColor: scheme.surface,
+      // Nền xám để thẻ nhóm lồng nổi lên.
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: OmniTopBar(
         semanticsTitle: 'Hộp thư',
         bottom: InboxSearchRow(
@@ -255,18 +257,29 @@ class _InboxPageState extends ConsumerState<InboxPage>
                         // bằng tiêu đề "Hội thoại", dòng đầu nằm sát dưới.
                         separatorBuilder: (_, rawIndex) => rawIndex < lead
                             ? const SizedBox.shrink()
-                            : Divider(
-                                height: 1,
-                                thickness: 1,
-                                indent: 66,
-                                endIndent: 0,
-                                color: OmniColors.byBrightness(
-                                  context,
-                                  OmniColors.divider,
-                                  OmniColors.darkBorder,
+                            : Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 16,
+                                ),
+                                child: ColoredBox(
+                                  color: scheme.surface,
+                                  child: Divider(
+                                    height: 1,
+                                    thickness: 1,
+                                    indent: 66,
+                                    endIndent: 0,
+                                    color: OmniColors.byBrightness(
+                                      context,
+                                      OmniColors.divider,
+                                      OmniColors.darkBorder,
+                                    ),
+                                  ),
                                 ),
                               ),
                         itemBuilder: (context, rawIndex) {
+                          if (rawIndex == 0) {
+                            return const InboxQuickChips();
+                          }
                           if (rawIndex < lead) {
                             return InboxPinnedSection(
                               items: pinned,
@@ -288,7 +301,23 @@ class _InboxPageState extends ConsumerState<InboxPage>
                               ),
                             );
                           }
-                          return _row(state.items[index]);
+                          // Nhóm lồng (viomni-apple-uiux.html `.group`): cả
+                          // danh sách hội thoại là một thẻ bo 18 cách mép 16.
+                          const r = Radius.circular(18);
+                          final last =
+                              index == state.items.length - 1 && !state.hasMore;
+                          return Padding(
+                            padding: EdgeInsets.fromLTRB(16, 0, 16, 0),
+                            child: Material(
+                              color: scheme.surface,
+                              clipBehavior: Clip.antiAlias,
+                              borderRadius: BorderRadius.vertical(
+                                top: index == 0 ? r : Radius.zero,
+                                bottom: last ? r : Radius.zero,
+                              ),
+                              child: _row(state.items[index]),
+                            ),
+                          );
                         },
                       ),
                     ),
