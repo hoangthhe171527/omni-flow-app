@@ -77,7 +77,7 @@ void main() {
     test('Admin có finance.expenses thấy đủ hai lối vào chi phí', () {
       final container = containerFor({FinancePermissions.base});
       final adminEntries =
-          container.read(directoryGroupsProvider)[NavArea.admin] ?? const [];
+          container.read(directoryGroupsProvider)[NavArea.finance] ?? const [];
 
       expect(
         adminEntries.map((e) => e.label),

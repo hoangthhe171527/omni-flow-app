@@ -16,6 +16,9 @@ enum NavArea {
   communication('Trao đổi'),
   sales('Bán hàng'),
   admin('Quản trị'),
+  // Tách khỏi "Quản trị" cho giống menu web (bug sheet 07/11): Sổ chi phí,
+  // Tổng hợp chi phí nằm chung nhóm "Tài chính".
+  finance('Tài chính'),
   account('Tài khoản');
 
   const NavArea(this.label);
