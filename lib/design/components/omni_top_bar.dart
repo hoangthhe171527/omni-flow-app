@@ -1,5 +1,3 @@
-import 'dart:ui' show ImageFilter;
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -9,6 +7,7 @@ import '../tokens/tokens.dart';
 import 'brand_anchor.dart';
 import 'omni_app_bar.dart';
 import 'omni_brand.dart';
+import 'omni_glass.dart';
 
 /// Chỗ cắm cho phần của [OmniTopBar] thuộc về `modules/`: số thông báo chưa đọc
 /// và nơi nút chuông dẫn tới. Cùng lý do với [OmniAccountSlot] — `design/` chỉ
@@ -58,10 +57,11 @@ class OmniTopBar extends ConsumerWidget implements PreferredSizeWidget {
   /// danh bạ "Tất cả".
   final bool allowBack;
 
-  // Hàng 1 cao 44 để chuông/avatar (vẽ 36) có vùng chạm 44; tổng 54 như cũ.
-  static const double _rowHeight = 44;
+  // Hàng 1 là viên kính cao 56 (liquid glass, `liquid-glass-uiux.html`),
+  // cách mép 12; chuông/avatar vẫn có vùng chạm 44.
+  static const double _rowHeight = 56;
   static const double _topPad = 4;
-  static const double _bottomPad = 6;
+  static const double _bottomPad = 8;
 
   @override
   Size get preferredSize => Size.fromHeight(
@@ -80,108 +80,86 @@ class OmniTopBar extends ConsumerWidget implements PreferredSizeWidget {
     final dark = Theme.of(context).brightness == Brightness.dark;
     final showBack = allowBack && (ModalRoute.of(context)?.canPop ?? false);
 
-    return ClipRect(
-      child: BackdropFilter(
-        filter: ImageFilter.blur(
-          sigmaX: isApple(context) ? 20 : 10,
-          sigmaY: isApple(context) ? 20 : 10,
-        ),
-        child: DecoratedBox(
-          decoration: BoxDecoration(
-            color: scheme.surface.withValues(
-              alpha: isApple(context) ? 0.8 : 0.9,
-            ),
-            border: Border(
-              bottom: BorderSide(
-                color: scheme.onSurface.withValues(alpha: 0.06),
+    return Padding(
+      padding: EdgeInsets.only(top: MediaQuery.paddingOf(context).top),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(12, _topPad, 12, _bottomPad),
+            child: OmniGlass(
+              radius: _rowHeight / 2,
+              // Phải 6 chứ không 14 bên phải: ô avatar rộng 44 mà vẽ 36.
+              padding: EdgeInsets.fromLTRB(showBack ? 4 : 14, 0, 6, 0),
+              child: SizedBox(
+                height: _rowHeight,
+                child: Stack(
+                  children: [
+                    // Phủ cả hàng: một nút ngữ nghĩa rỗng (0x0) bị bỏ khỏi
+                    // cây, nên tiêu đề phải có hình chữ nhật thật.
+                    if (semanticsTitle != null)
+                      Positioned.fill(
+                        child: Semantics(
+                          header: true,
+                          container: true,
+                          label: semanticsTitle,
+                          child: const SizedBox.expand(),
+                        ),
+                      ),
+                    Row(
+                      children: [
+                        if (showBack)
+                          SizedBox.square(
+                            dimension: 44,
+                            child: IconButton(
+                              tooltip: 'Quay lại',
+                              padding: EdgeInsets.zero,
+                              onPressed: () {
+                                HapticFeedback.selectionClick();
+                                Navigator.of(context).maybePop();
+                              },
+                              icon: Icon(
+                                isApple(context)
+                                    ? Icons.arrow_back_ios_new_rounded
+                                    : Icons.arrow_back_rounded,
+                                size: OmniIconSize.md,
+                                color: scheme.onSurface,
+                              ),
+                            ),
+                          ),
+                        BrandAnchor(
+                          withWordmark: true,
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const OmniBrandMark(size: 30, framed: false),
+                              const SizedBox(width: 8),
+                              OmniWordmark(fontSize: 19, onInk: dark),
+                            ],
+                          ),
+                        ),
+                        const Spacer(),
+                        _BellButton(
+                          unread: unread,
+                          onTap: slot == null
+                              ? null
+                              : (anchor) {
+                                  HapticFeedback.selectionClick();
+                                  slot.onBell(context, anchor);
+                                },
+                        ),
+                        // Hai ô 44 kề nhau: khoảng 8 giữa hai hình 36 đã nằm
+                        // trong đệm của chúng.
+                        if (account != null) account(context),
+                      ],
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
-          child: Padding(
-            padding: EdgeInsets.only(top: MediaQuery.paddingOf(context).top),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Padding(
-                  // Phải 12 chứ không 16: ô avatar rộng 44 mà vẽ 36, 4dp đệm
-                  // trong ô giữ mép vẽ ở đúng 16.
-                  padding: EdgeInsets.fromLTRB(
-                    showBack ? 4 : 16,
-                    _topPad,
-                    12,
-                    _bottomPad,
-                  ),
-                  child: SizedBox(
-                    height: _rowHeight,
-                    child: Stack(
-                      children: [
-                        // Phủ cả hàng: một nút ngữ nghĩa rỗng (0x0) bị bỏ khỏi
-                        // cây, nên tiêu đề phải có hình chữ nhật thật.
-                        if (semanticsTitle != null)
-                          Positioned.fill(
-                            child: Semantics(
-                              header: true,
-                              container: true,
-                              label: semanticsTitle,
-                              child: const SizedBox.expand(),
-                            ),
-                          ),
-                        Row(
-                          children: [
-                            if (showBack)
-                              SizedBox.square(
-                                dimension: 44,
-                                child: IconButton(
-                                  tooltip: 'Quay lại',
-                                  padding: EdgeInsets.zero,
-                                  onPressed: () {
-                                    HapticFeedback.selectionClick();
-                                    Navigator.of(context).maybePop();
-                                  },
-                                  icon: Icon(
-                                    isApple(context)
-                                        ? Icons.arrow_back_ios_new_rounded
-                                        : Icons.arrow_back_rounded,
-                                    size: OmniIconSize.md,
-                                    color: scheme.onSurface,
-                                  ),
-                                ),
-                              ),
-                            BrandAnchor(
-                              withWordmark: true,
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  const OmniBrandMark(size: 30, framed: false),
-                                  const SizedBox(width: 8),
-                                  OmniWordmark(fontSize: 19, onInk: dark),
-                                ],
-                              ),
-                            ),
-                            const Spacer(),
-                            _BellButton(
-                              unread: unread,
-                              onTap: slot == null
-                                  ? null
-                                  : (anchor) {
-                                      HapticFeedback.selectionClick();
-                                      slot.onBell(context, anchor);
-                                    },
-                            ),
-                            // Hai ô 44 kề nhau: khoảng 8 giữa hai hình 36 đã nằm
-                            // trong đệm của chúng.
-                            if (account != null) account(context),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-                ?bottom,
-              ],
-            ),
-          ),
-        ),
+          ?bottom,
+        ],
       ),
     );
   }

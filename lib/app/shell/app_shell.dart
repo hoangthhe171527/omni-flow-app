@@ -1,5 +1,3 @@
-import 'dart:ui' show ImageFilter;
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -11,7 +9,6 @@ import '../../core/nav/tab_order.dart';
 import '../../core/module/nav_destination.dart';
 import '../../design/components/components.dart';
 import '../../design/platform/omni_motion_scope.dart';
-import '../../design/platform/omni_platform.dart';
 import '../../design/tokens/tokens.dart';
 import 'tab_bar_editor_sheet.dart';
 
@@ -269,46 +266,34 @@ class _ShellNavBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
+    // Viên kính nổi cách mép 12 (`liquid-glass-uiux.html`): nội dung cuộn
+    // chạy bên dưới (Scaffold.extendBody). Đáy: vùng an toàn, tối thiểu 12.
+    final bottom = MediaQuery.viewPaddingOf(context).bottom;
 
-    return ClipRect(
-      child: BackdropFilter(
-        filter: ImageFilter.blur(
-          sigmaX: isApple(context) ? 20 : 10,
-          sigmaY: isApple(context) ? 20 : 10,
-        ),
-        child: DecoratedBox(
-          decoration: BoxDecoration(
-            color: scheme.surface.withValues(
-              alpha: isApple(context) ? 0.8 : 0.9,
-            ),
-            border: Border(
-              top: BorderSide(color: scheme.onSurface.withValues(alpha: 0.07)),
-            ),
-          ),
-          child: SafeArea(
-            top: false,
-            child: SizedBox(
-              height: ShellBarInset.barHeight,
-              child: Row(
-                children: [
-                  for (var i = 0; i < tabs.length; i++)
-                    Expanded(
-                      child: _ShellNavItem(
-                        destination: tabs[i],
-                        selected: selectedIndex == i,
-                        onTap: () => onSelected(i),
-                      ),
-                    ),
-                  Expanded(
-                    child: _ShellNavItem.more(
-                      selected: selectedIndex == tabs.length,
-                      onTap: () => onSelected(tabs.length),
-                    ),
+    return Padding(
+      padding: EdgeInsets.fromLTRB(12, 0, 12, bottom > 12 ? bottom : 12),
+      child: OmniGlass(
+        radius: ShellBarInset.pillHeight / 2,
+        padding: const EdgeInsets.symmetric(horizontal: 6),
+        child: SizedBox(
+          height: ShellBarInset.pillHeight,
+          child: Row(
+            children: [
+              for (var i = 0; i < tabs.length; i++)
+                Expanded(
+                  child: _ShellNavItem(
+                    destination: tabs[i],
+                    selected: selectedIndex == i,
+                    onTap: () => onSelected(i),
                   ),
-                ],
+                ),
+              Expanded(
+                child: _ShellNavItem.more(
+                  selected: selectedIndex == tabs.length,
+                  onTap: () => onSelected(tabs.length),
+                ),
               ),
-            ),
+            ],
           ),
         ),
       ),
@@ -341,8 +326,7 @@ class _ShellNavItem extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final scheme = Theme.of(context).colorScheme;
-    // Mục đang chọn: icon màu chính + vạch 2px ở mép trên + chữ mực 600. Không
-    // còn viên nền teal nhạt — nền màu cho một mục điều hướng là trang trí.
+    // Mục đang chọn: viên trắng mờ trong kính + icon và chữ màu chính.
     final iconColor = selected ? scheme.primary : scheme.onSurfaceVariant;
     final labelColor = selected ? scheme.primary : scheme.onSurfaceVariant;
     final badgeProvider = destination?.badge;
@@ -360,75 +344,83 @@ class _ShellNavItem extends ConsumerWidget {
       button: true,
       label: semanticsLabel,
       excludeSemantics: true,
-      child: InkWell(
-        onTap: onTap,
-        child: Stack(
-          children: [
-            if (!isApple(context))
-              Positioned(
-                top: 0,
-                left: 0,
-                right: 0,
-                child: Center(
-                  child: SizedBox(
-                    width: 22,
-                    child: AnimatedContainer(
-                      duration: OmniMotion.of(context).base,
-                      curve: OmniCurves.standard,
-                      height: 2,
-                      decoration: BoxDecoration(
-                        color: selected ? scheme.primary : Colors.transparent,
-                        borderRadius: BorderRadius.circular(2),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 6),
+        child: Material(
+          type: MaterialType.transparency,
+          child: InkWell(
+            onTap: onTap,
+            customBorder: const StadiumBorder(),
+            // Mục đang chọn: viên trắng mờ trong kính, icon + chữ màu chính.
+            child: AnimatedContainer(
+              duration: OmniMotion.of(context).base,
+              curve: OmniCurves.standard,
+              decoration: ShapeDecoration(
+                shape: const StadiumBorder(),
+                color: selected
+                    ? OmniGlass.selectionOf(context)
+                    : Colors.transparent,
+                shadows: selected
+                    ? [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.12),
+                          blurRadius: 3,
+                          offset: const Offset(0, 1),
+                        ),
+                      ]
+                    : const [],
+              ),
+              child: Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    SizedBox(
+                      width: 44,
+                      height: 26,
+                      child: Stack(
+                        clipBehavior: Clip.none,
+                        alignment: Alignment.center,
+                        children: [
+                          Icon(
+                            selected
+                                ? (destination?.selectedIcon ?? selectedIcon!)
+                                : (destination?.icon ?? icon!),
+                            size: 21,
+                            color: iconColor,
+                          ),
+                          if (count > 0)
+                            Positioned(
+                              right: -4,
+                              top: -4,
+                              child: _NavBadge(
+                                count: count,
+                                tone: destination!.badgeTone,
+                                display: destination!.badgeDisplay,
+                              ),
+                            ),
+                        ],
                       ),
                     ),
-                  ),
+                    const SizedBox(height: 1),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 2),
+                      child: Text(
+                        text,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: OmniType.micro.copyWith(
+                          color: labelColor,
+                          fontWeight: selected
+                              ? FontWeight.w600
+                              : FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
-            Center(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  SizedBox(
-                    width: 44,
-                    height: 28,
-                    child: Stack(
-                      clipBehavior: Clip.none,
-                      alignment: Alignment.center,
-                      children: [
-                        Icon(
-                          selected
-                              ? (destination?.selectedIcon ?? selectedIcon!)
-                              : (destination?.icon ?? icon!),
-                          size: 21,
-                          color: iconColor,
-                        ),
-                        if (count > 0)
-                          Positioned(
-                            right: -4,
-                            top: -4,
-                            child: _NavBadge(
-                              count: count,
-                              tone: destination!.badgeTone,
-                              display: destination!.badgeDisplay,
-                            ),
-                          ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    text,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: OmniType.micro.copyWith(
-                      color: labelColor,
-                      fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
-                    ),
-                  ),
-                ],
-              ),
             ),
-          ],
+          ),
         ),
       ),
     );
