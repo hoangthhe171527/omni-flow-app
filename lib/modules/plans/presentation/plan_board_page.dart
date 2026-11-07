@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'dart:math' as math;
-import 'dart:ui' show ImageFilter;
 
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
@@ -1557,10 +1556,22 @@ class _GlassHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final top = MediaQuery.paddingOf(context).top;
-    final bar = ColoredBox(
-      color: OmniCovers.glass,
+    // Nút kính rời trên ảnh bìa (viomni-apple-uiux.html "Bảng kế hoạch":
+    // "Thanh trên màu đặc → nút kính trên ảnh bìa"). Không còn dải kính tối;
+    // chỉ một lớp chuyển tối mảnh để chữ trắng đọc được trên ảnh sáng.
+    final bar = DecoratedBox(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [
+            Colors.black.withValues(alpha: .28),
+            Colors.black.withValues(alpha: 0),
+          ],
+        ),
+      ),
       child: Padding(
-        padding: EdgeInsets.fromLTRB(4, top, 4, 6),
+        padding: EdgeInsets.fromLTRB(12, top + 4, 12, 8),
         child: SizedBox(
           height: 44,
           child: Row(
@@ -1570,7 +1581,7 @@ class _GlassHeader extends StatelessWidget {
                 icon: Icons.arrow_back_ios_new_rounded,
                 onTap: onBack,
               ),
-              const SizedBox(width: 2),
+              const SizedBox(width: 10),
               Expanded(
                 child: searching
                     ? _HeaderSearch(
@@ -1579,6 +1590,7 @@ class _GlassHeader extends StatelessWidget {
                       )
                     : _HeaderTitle(title: title, subtitle: subtitle),
               ),
+              const SizedBox(width: 8),
               if (searching)
                 _HeaderButton(
                   tooltip: 'Đóng tìm kiếm',
@@ -1591,6 +1603,7 @@ class _GlassHeader extends StatelessWidget {
                   icon: Icons.search_rounded,
                   onTap: onOpenSearch,
                 ),
+              const SizedBox(width: 8),
               Builder(
                 builder: (buttonContext) => _HeaderButton(
                   tooltip: 'Lọc theo người',
@@ -1604,7 +1617,8 @@ class _GlassHeader extends StatelessWidget {
                   selected: filterActive,
                 ),
               ),
-              if (onMenu case final menu?)
+              if (onMenu case final menu?) ...[
+                const SizedBox(width: 8),
                 Builder(
                   builder: (buttonContext) => _HeaderButton(
                     tooltip: 'Tuỳ chọn kế hoạch',
@@ -1616,126 +1630,14 @@ class _GlassHeader extends StatelessWidget {
                     },
                   ),
                 ),
+              ],
             ],
           ),
         ),
       ),
     );
-    final image = coverImage;
-    final size = backdropSize;
 
-    return RepaintBoundary(
-      key: const Key('board-header'),
-      child: image == null || size == null || size.isEmpty
-          ? bar
-          : Stack(
-              children: [
-                Positioned.fill(
-                  child: _FrozenCoverBlur(image: image, size: size),
-                ),
-                bar,
-              ],
-            ),
-    );
-  }
-}
-
-/// Phần ảnh nền nằm dưới header, mờ [OmniCovers.glassBlur], vẽ MỘT lần thành
-/// ảnh chụp (`SnapshotWidget`): kéo thẻ / trượt dải không làm mờ lại.
-///
-/// `SnapshotWidget` không tự chụp lại khi con đổi, nên:
-/// - chỉ cho chụp khi ảnh đã có khung đầu (chụp lúc đang tải là giữ mãi một
-///   tấm trong suốt); trước đó vẽ thẳng;
-/// - đổi ảnh: thôi chụp, chờ khung đầu của ảnh mới rồi chụp lại;
-/// - đổi cỡ nền (xoay, bàn phím): xoá ảnh chụp để chụp lại theo cỡ mới.
-/// Đổi `devicePixelRatio` thì `SnapshotWidget` tự chụp lại.
-class _FrozenCoverBlur extends StatefulWidget {
-  const _FrozenCoverBlur({required this.image, required this.size});
-
-  final ImageProvider image;
-  final Size size;
-
-  @override
-  State<_FrozenCoverBlur> createState() => _FrozenCoverBlurState();
-}
-
-class _FrozenCoverBlurState extends State<_FrozenCoverBlur> {
-  final _snapshot = SnapshotController();
-  ImageStream? _stream;
-  late final _listener = ImageStreamListener(
-    (_, _) => _ready(),
-    onError: (_, _) {},
-  );
-
-  /// Ảnh đã có khung: cho chụp, và bỏ tấm cũ (nếu có) để chụp lại.
-  void _ready() {
-    if (!mounted) return;
-    _snapshot
-      ..allowSnapshotting = true
-      ..clear();
-  }
-
-  /// Bắt đầu chờ khung đầu của [_FrozenCoverBlur.image]; trong lúc chờ vẽ
-  /// thẳng, không chụp.
-  void _resolve() {
-    _snapshot.allowSnapshotting = false;
-    _stream?.removeListener(_listener);
-    _stream = widget.image.resolve(createLocalImageConfiguration(context))
-      ..addListener(_listener);
-  }
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    if (_stream == null) _resolve();
-  }
-
-  @override
-  void didUpdateWidget(_FrozenCoverBlur old) {
-    super.didUpdateWidget(old);
-    if (old.image != widget.image) {
-      _resolve();
-    } else if (old.size != widget.size) {
-      _snapshot.clear();
-    }
-  }
-
-  @override
-  void dispose() {
-    _stream?.removeListener(_listener);
-    _snapshot.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return SnapshotWidget(
-      key: const Key('board-header-blur'),
-      controller: _snapshot,
-      mode: SnapshotMode.permissive,
-      child: ClipRect(
-        child: ImageFiltered(
-          imageFilter: ImageFilter.blur(
-            sigmaX: OmniCovers.glassBlur,
-            sigmaY: OmniCovers.glassBlur,
-            tileMode: TileMode.clamp,
-          ),
-          child: OverflowBox(
-            alignment: Alignment.topLeft,
-            minWidth: widget.size.width,
-            maxWidth: widget.size.width,
-            minHeight: widget.size.height,
-            maxHeight: widget.size.height,
-            child: Image(
-              image: widget.image,
-              fit: BoxFit.cover,
-              gaplessPlayback: true,
-              errorBuilder: (_, _, _) => const SizedBox.shrink(),
-            ),
-          ),
-        ),
-      ),
-    );
+    return RepaintBoundary(key: const Key('board-header'), child: bar);
   }
 }
 
@@ -1827,39 +1729,66 @@ class _HeaderButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return Semantics(
       selected: selected,
-      child: IconButton(
-        tooltip: tooltip,
-        onPressed: onTap,
-        padding: EdgeInsets.zero,
-        constraints: const BoxConstraints.tightFor(width: 44, height: 44),
-        style: IconButton.styleFrom(
-          foregroundColor: Colors.white,
-          shape: const RoundedRectangleBorder(
-            borderRadius: BorderRadius.all(Radius.circular(6)),
+      child: _CoverGlass(
+        child: IconButton(
+          tooltip: tooltip,
+          onPressed: onTap,
+          padding: EdgeInsets.zero,
+          constraints: const BoxConstraints.tightFor(width: 44, height: 44),
+          style: IconButton.styleFrom(
+            foregroundColor: Colors.white,
+            shape: const RoundedRectangleBorder(
+              borderRadius: BorderRadius.all(Radius.circular(6)),
+            ),
           ),
-        ),
-        icon: Stack(
-          clipBehavior: Clip.none,
-          children: [
-            Icon(icon, size: OmniIconSize.lg, color: Colors.white),
-            if (dot)
-              Positioned(
-                right: -2,
-                top: -2,
-                child: Container(
-                  key: const Key('filter-dot'),
-                  width: 8,
-                  height: 8,
-                  decoration: BoxDecoration(
-                    color: OmniTaskTones.of(context).priorityNormal,
-                    shape: BoxShape.circle,
-                    border: Border.all(color: Colors.white, width: 1.5),
+          icon: Stack(
+            clipBehavior: Clip.none,
+            children: [
+              Icon(icon, size: OmniIconSize.lg, color: Colors.white),
+              if (dot)
+                Positioned(
+                  right: -2,
+                  top: -2,
+                  child: Container(
+                    key: const Key('filter-dot'),
+                    width: 8,
+                    height: 8,
+                    decoration: BoxDecoration(
+                      color: OmniTaskTones.of(context).priorityNormal,
+                      shape: BoxShape.circle,
+                      border: Border.all(color: Colors.white, width: 1.5),
+                    ),
                   ),
                 ),
-              ),
-          ],
+            ],
+          ),
         ),
       ),
+    );
+  }
+}
+
+/// Viên kính tròn 44 trên ảnh bìa: trắng mờ, viền sáng.
+///
+/// KHÔNG BackdropFilter (board_drag_smooth_test): kéo thẻ qua bảng mà nhoè
+/// lại ảnh mỗi khung hình là giật. Trên ảnh bìa tối, lớp trắng 18% + viền
+/// sáng đã đọc ra là kính.
+class _CoverGlass extends StatelessWidget {
+  const _CoverGlass({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final solid = MediaQuery.highContrastOf(context);
+    return DecoratedBox(
+      key: const Key('board-glass-button'),
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: solid ? OmniCovers.glass : Colors.white.withValues(alpha: .18),
+        border: Border.all(color: Colors.white.withValues(alpha: .32)),
+      ),
+      child: SizedBox.square(dimension: 44, child: Center(child: child)),
     );
   }
 }

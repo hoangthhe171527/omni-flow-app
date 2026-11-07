@@ -9,7 +9,6 @@ import 'package:go_router/go_router.dart';
 import 'package:omni_app/core/network/api_envelope.dart';
 import 'package:omni_app/design/components/omni_motion_widgets.dart';
 import 'package:omni_app/design/theme/omni_theme.dart';
-import 'package:omni_app/design/tokens/tokens.dart';
 import 'package:omni_app/modules/plans/application/plans_providers.dart';
 import 'package:omni_app/modules/plans/data/plans_api.dart';
 import 'package:omni_app/modules/plans/domain/plan.dart';
@@ -642,105 +641,24 @@ void main() {
       );
     });
 
-    testWidgets('header: glass, KHÔNG BackdropFilter, nằm trong '
-        'RepaintBoundary', (t) async {
-      await pumpBoard(t, size: phone);
+    testWidgets('header: nút kính rời trên ảnh bìa, KHÔNG BackdropFilter, '
+        'nằm trong RepaintBoundary', (t) async {
+      // Kéo thẻ qua bảng mà nhoè lại ảnh mỗi khung hình là giật: viên kính
+      // trên bìa chỉ là lớp trắng mờ + viền sáng (viomni-apple-uiux.html).
+      await pumpBoard(t, size: phone, cover: 'https://cdn.example.com/a.webp');
       final header = find.byKey(const Key('board-header'));
       expect(t.widget(header), isA<RepaintBoundary>());
       expect(
         find.descendant(of: header, matching: find.byType(BackdropFilter)),
         findsNothing,
       );
-      final glass = t.widget<ColoredBox>(
-        find.descendant(of: header, matching: find.byType(ColoredBox)).first,
+      expect(
+        find.descendant(
+          of: header,
+          matching: find.byKey(const Key('board-glass-button')),
+        ),
+        findsAtLeastNWidgets(3),
       );
-      expect(glass.color, OmniCovers.glass);
-    });
-
-    group('header nền ảnh', () {
-      const coverA = 'https://cdn.example.com/projects/p1/a.webp';
-      const coverB = 'https://cdn.example.com/projects/p1/b.webp';
-      final blur = find.descendant(
-        of: find.byKey(const Key('board-header')),
-        matching: find.byKey(const Key('board-header-blur')),
-      );
-      SnapshotController snapshotOf(WidgetTester t) =>
-          t.widget<SnapshotWidget>(blur).controller;
-
-      setUp(() {
-        covers.clear();
-        imageCache.clear();
-      });
-
-      Future<void> loadCover(WidgetTester t, String url) async {
-        // Ảnh dựng đồng bộ: không `runAsync`, kẻo ảnh nền thật (cache mạng)
-        // của ProjectCoverSurface cũng chạy và gọi plugin không có trong test.
-        final recorder = ui.PictureRecorder();
-        Canvas(recorder).drawColor(const Color(0xFF336699), BlendMode.src);
-        final image = recorder.endRecording().toImageSync(8, 8);
-        covers.putIfAbsent(url, Completer.new).complete(image);
-        await t.pump();
-        await t.pump();
-      }
-
-      testWidgets('mờ bằng ImageFiltered trong SnapshotWidget, KHÔNG '
-          'BackdropFilter; chỉ chụp khi ảnh đã có khung đầu', (t) async {
-        await pumpBoard(t, size: phone, cover: coverA);
-        expect(
-          find.descendant(
-            of: find.byKey(const Key('board-header')),
-            matching: find.byType(BackdropFilter),
-          ),
-          findsNothing,
-        );
-        expect(
-          find.descendant(of: blur, matching: find.byType(ImageFiltered)),
-          findsOneWidget,
-        );
-        expect(
-          snapshotOf(t).allowSnapshotting,
-          isFalse,
-          reason: 'ảnh chưa tải: chụp lúc này là giữ mãi một tấm trong suốt',
-        );
-
-        await loadCover(t, coverA);
-        expect(snapshotOf(t).allowSnapshotting, isTrue);
-      });
-
-      testWidgets('đổi cover khi bảng đang mở → bỏ ảnh chụp cũ, chờ ảnh mới '
-          'rồi chụp lại', (t) async {
-        await pumpBoard(t, size: phone, cover: coverA);
-        await loadCover(t, coverA);
-        expect(snapshotOf(t).allowSnapshotting, isTrue);
-
-        current = planWith(coverB);
-        ProviderScope.containerOf(
-          t.element(find.byType(PlanBoardPage)),
-        ).read(planTick.notifier).state++;
-        await t.pump();
-        await t.pump();
-        expect(snapshotOf(t).allowSnapshotting, isFalse);
-
-        var cleared = 0;
-        snapshotOf(t).addListener(() => cleared++);
-        await loadCover(t, coverB);
-        expect(snapshotOf(t).allowSnapshotting, isTrue);
-        expect(cleared, greaterThan(0));
-      });
-
-      testWidgets('đổi cỡ nền (xoay, bàn phím) → chụp lại', (t) async {
-        await pumpBoard(t, size: phone, cover: coverA);
-        await loadCover(t, coverA);
-        final snapshot = snapshotOf(t);
-        var cleared = 0;
-        snapshot.addListener(() => cleared++);
-
-        t.view.physicalSize = const Size(844, 390);
-        await t.pump();
-        await t.pump();
-        expect(cleared, greaterThan(0));
-        expect(snapshot.allowSnapshotting, isTrue);
-      });
     });
 
     testWidgets('rời mép rồi nhấc tay giữa lúc snap → thả vào cột dưới ngón '

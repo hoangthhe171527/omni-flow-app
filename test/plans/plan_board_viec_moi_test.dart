@@ -222,9 +222,10 @@ void main() {
           )
           .first,
     );
+    // Khung kính trên ảnh bìa (viomni-apple-uiux.html): trắng mờ, bo 20.
     final deco = groove.decoration as BoxDecoration;
-    expect(deco.color, const Color(0xFFEEF1F5));
-    expect(deco.borderRadius, isNull);
+    expect(deco.color, Colors.white.withValues(alpha: .62));
+    expect(deco.borderRadius, BorderRadius.circular(20));
   });
 
   testWidgets('(c) "Thêm công việc" mở trang tạo với nhóm của cột', (
@@ -494,12 +495,16 @@ void main() {
       find.descendant(of: header, matching: find.byType(BackdropFilter)),
       findsNothing,
     );
-    final glass = tester.widget<ColoredBox>(
-      find.descendant(of: header, matching: find.byType(ColoredBox)).first,
+    // Nút kính rời trên ảnh bìa, không dải kính tối.
+    expect(
+      find.descendant(
+        of: header,
+        matching: find.byKey(const Key('board-glass-button')),
+      ),
+      findsAtLeastNWidgets(3),
     );
-    expect(glass.color, OmniCovers.glass);
-    // Header = safe area (0 trong test) + 44 + 6.
-    expect(tester.getSize(header).height, 50);
+    // Header = safe area (0 trong test) + 4 + 44 + 8.
+    expect(tester.getSize(header).height, 56);
   });
 
   testWidgets('(g) token cover màu cũ vẫn dùng renderer tương thích', (
@@ -678,7 +683,8 @@ void main() {
     );
     expect(
       (groove.decoration as BoxDecoration).color,
-      Theme.of(ctx).colorScheme.surfaceContainerHighest,
+      const Color(0xFF1C283C).withValues(alpha: .62),
+      reason: 'khung kính tối theo theme (${Theme.of(ctx).brightness})',
     );
   });
 }
