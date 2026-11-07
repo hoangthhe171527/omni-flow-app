@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:omni_app/core/utils/formatters.dart';
 import 'package:omni_app/modules/tasks/domain/task.dart';
 
 /// Reading what the API actually sends, and the arithmetic the card leads with.
@@ -224,14 +225,17 @@ void main() {
     test('overdue is measured in whole days, not hours', () {
       // A task due today at 09:00 is not overdue at 10:00 to somebody standing
       // at a workbench.
-      final today = DateTime.now();
+      // "Hôm nay" theo giờ VN như app tính, không theo giờ máy: CI chạy giờ
+      // UTC, sau 17:00 UTC thì VN đã sang ngày mai và bài từng đỏ oan.
+      // 09:00 giờ VN = 02:00 UTC cùng ngày.
+      final today = VnTime.today();
       final task = Task.fromJson({
         'id': 't1',
-        'due_date': DateTime(
+        'due_date': DateTime.utc(
           today.year,
           today.month,
           today.day,
-          9,
+          2,
         ).toIso8601String(),
       });
 
