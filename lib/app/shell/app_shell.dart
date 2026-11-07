@@ -289,23 +289,48 @@ class _ShellNavBar extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 6),
             child: SizedBox(
               height: ShellBarInset.pillHeight,
-              child: Row(
-                children: [
-                  for (var i = 0; i < tabs.length; i++)
-                    Expanded(
-                      child: _ShellNavItem(
-                        destination: tabs[i],
-                        selected: selectedIndex == i,
-                        onTap: () => onSelected(i),
+              child: LayoutBuilder(
+                builder: (context, box) {
+                  final count = tabs.length + 1;
+                  final slot = box.maxWidth / count;
+                  final motion = OmniMotion.enabled(context);
+
+                  return Stack(
+                    children: [
+                      // MỘT viên chọn trượt từ tab cũ sang tab mới, nảy nhẹ
+                      // như lò xo iOS — không phải mỗi mục tự bật/tắt nền.
+                      AnimatedPositioned(
+                        duration: motion
+                            ? const Duration(milliseconds: 420)
+                            : Duration.zero,
+                        curve: const Cubic(0.34, 1.36, 0.64, 1),
+                        left: slot * selectedIndex.clamp(0, count - 1),
+                        top: 6,
+                        bottom: 6,
+                        width: slot,
+                        child: const _GlassLens(),
                       ),
-                    ),
-                  Expanded(
-                    child: _ShellNavItem.more(
-                      selected: selectedIndex == tabs.length,
-                      onTap: () => onSelected(tabs.length),
-                    ),
-                  ),
-                ],
+                      Row(
+                        children: [
+                          for (var i = 0; i < tabs.length; i++)
+                            Expanded(
+                              child: _ShellNavItem(
+                                destination: tabs[i],
+                                selected: selectedIndex == i,
+                                onTap: () => onSelected(i),
+                              ),
+                            ),
+                          Expanded(
+                            child: _ShellNavItem.more(
+                              selected: selectedIndex == tabs.length,
+                              onTap: () => onSelected(tabs.length),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  );
+                },
               ),
             ),
           ),
@@ -342,7 +367,6 @@ class _ShellNavItem extends ConsumerWidget {
     final scheme = Theme.of(context).colorScheme;
     // Mục đang chọn: viên trắng mờ trong kính + icon và chữ màu chính.
     final iconColor = selected ? scheme.primary : scheme.onSurfaceVariant;
-    final labelColor = selected ? scheme.primary : scheme.onSurfaceVariant;
     final badgeProvider = destination?.badge;
     final count = badgeProvider == null ? 0 : ref.watch(badgeProvider);
     final text = destination?.label ?? label!;
@@ -358,84 +382,103 @@ class _ShellNavItem extends ConsumerWidget {
       button: true,
       label: semanticsLabel,
       excludeSemantics: true,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 6),
-        child: Material(
-          type: MaterialType.transparency,
-          child: InkWell(
-            onTap: onTap,
-            customBorder: const StadiumBorder(),
-            // Mục đang chọn: viên trắng mờ trong kính, icon + chữ màu chính.
-            child: AnimatedContainer(
-              duration: OmniMotion.of(context).base,
-              curve: OmniCurves.standard,
-              decoration: ShapeDecoration(
-                shape: const StadiumBorder(),
-                color: selected
-                    ? OmniGlass.selectionOf(context)
-                    : Colors.transparent,
-                shadows: selected
-                    ? [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.12),
-                          blurRadius: 3,
-                          offset: const Offset(0, 1),
-                        ),
-                      ]
-                    : const [],
-              ),
-              child: Center(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    SizedBox(
-                      width: 44,
-                      height: 26,
-                      child: Stack(
-                        clipBehavior: Clip.none,
-                        alignment: Alignment.center,
-                        children: [
-                          Icon(
-                            selected
-                                ? (destination?.selectedIcon ?? selectedIcon!)
-                                : (destination?.icon ?? icon!),
-                            size: 21,
-                            color: iconColor,
+      // Không gợn, không tô khi rê chuột: iOS không có, và lớp tô hover của
+      // Material trên web làm một mục trông "đậm" hơn các mục khác.
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: onTap,
+        child: TweenAnimationBuilder<Color?>(
+          duration: OmniMotion.of(context).base,
+          curve: OmniCurves.standard,
+          tween: ColorTween(end: iconColor),
+          builder: (context, color, _) => Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                SizedBox(
+                  width: 44,
+                  height: 26,
+                  child: Stack(
+                    clipBehavior: Clip.none,
+                    alignment: Alignment.center,
+                    children: [
+                      Icon(
+                        selected
+                            ? (destination?.selectedIcon ?? selectedIcon!)
+                            : (destination?.icon ?? icon!),
+                        size: 21,
+                        color: color,
+                      ),
+                      if (count > 0)
+                        Positioned(
+                          right: -4,
+                          top: -4,
+                          child: _NavBadge(
+                            count: count,
+                            tone: destination!.badgeTone,
+                            display: destination!.badgeDisplay,
                           ),
-                          if (count > 0)
-                            Positioned(
-                              right: -4,
-                              top: -4,
-                              child: _NavBadge(
-                                count: count,
-                                tone: destination!.badgeTone,
-                                display: destination!.badgeDisplay,
-                              ),
-                            ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 1),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 2),
-                      child: Text(
-                        text,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: OmniType.micro.copyWith(
-                          color: labelColor,
-                          fontWeight: selected
-                              ? FontWeight.w600
-                              : FontWeight.w500,
                         ),
-                      ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-              ),
+                const SizedBox(height: 1),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 2),
+                  child: Text(
+                    text,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: OmniType.micro.copyWith(
+                      color: color,
+                      fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+/// Viên chọn của thanh tab: "kính trong kính" — sáng hơn nền kính, viền
+/// sáng, vệt sáng trên, bóng nhỏ; không phải khối trắng đặc.
+class _GlassLens extends StatelessWidget {
+  const _GlassLens();
+
+  @override
+  Widget build(BuildContext context) {
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    return DecoratedBox(
+      decoration: ShapeDecoration(
+        shape: StadiumBorder(
+          side: BorderSide(
+            color: Colors.white.withValues(alpha: dark ? 0.22 : 0.95),
+          ),
+        ),
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: dark
+              ? [
+                  Colors.white.withValues(alpha: 0.20),
+                  Colors.white.withValues(alpha: 0.08),
+                ]
+              : [
+                  Colors.white.withValues(alpha: 0.95),
+                  Colors.white.withValues(alpha: 0.55),
+                ],
+        ),
+        shadows: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: dark ? 0.30 : 0.10),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
     );
   }

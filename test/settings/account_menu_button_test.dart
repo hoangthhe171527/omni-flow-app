@@ -55,18 +55,15 @@ void main() {
     await t.pumpAndSettle();
   }
 
-  testWidgets('avatar header tròn: mở menu nhanh; chọn Tài khoản mới chuyển', (
-    t,
-  ) async {
+  testWidgets('avatar header tròn: bấm là mở thẳng màn Tài khoản', (t) async {
+    // Bỏ menu nhỏ 2 dòng ở giữa (`tat-ca-tai-khoan-uiux.html`): thêm một chạm
+    // mà không thêm gì.
     final handle = t.ensureSemantics();
     await pump(t, tile: true);
+    expect(find.text('ACCOUNT'), findsNothing);
     await t.tap(find.bySemanticsLabel(RegExp('^Tài khoản')));
     await t.pumpAndSettle();
-    expect(find.byKey(const Key('account-quick-menu')), findsOneWidget);
-    expect(find.text('h@x.vn'), findsOneWidget);
-    expect(find.text('ACCOUNT'), findsNothing);
-    await t.tap(find.text('Tài khoản').last);
-    await t.pumpAndSettle();
+    expect(find.byKey(const Key('account-quick-menu')), findsNothing);
     expect(find.text('ACCOUNT'), findsOneWidget);
     handle.dispose();
   });
@@ -100,13 +97,9 @@ void main() {
     expect(find.text('H'), findsNothing);
   });
 
-  testWidgets('kiểu tròn: bấm avatar cũng mở menu nhanh', (t) async {
+  testWidgets('kiểu tròn: bấm avatar cũng mở thẳng màn Tài khoản', (t) async {
     await pump(t, tile: false);
     await t.tap(find.byType(InkResponse));
-    await t.pumpAndSettle();
-    expect(find.byKey(const Key('account-quick-menu')), findsOneWidget);
-    expect(find.text('ACCOUNT'), findsNothing);
-    await t.tap(find.text('Tài khoản').last);
     await t.pumpAndSettle();
     expect(find.text('ACCOUNT'), findsOneWidget);
   });

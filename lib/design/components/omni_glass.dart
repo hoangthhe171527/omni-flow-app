@@ -38,14 +38,14 @@ class OmniGlass extends StatelessWidget {
     final fill = solid
         ? scheme.surface
         : dark
-        ? const Color(0xFF182438).withValues(alpha: 0.55)
-        : Colors.white.withValues(alpha: 0.72);
+        ? const Color(0xFF182438).withValues(alpha: 0.42)
+        : Colors.white.withValues(alpha: 0.52);
     final edge = dark
         ? Colors.white.withValues(alpha: 0.14)
         : Colors.white.withValues(alpha: 0.85);
     final highlight = dark
-        ? Colors.white.withValues(alpha: 0.12)
-        : Colors.white.withValues(alpha: 0.75);
+        ? Colors.white.withValues(alpha: 0.16)
+        : Colors.white.withValues(alpha: 0.85);
 
     final body = DecoratedBox(
       decoration: BoxDecoration(
@@ -57,11 +57,32 @@ class OmniGlass extends StatelessWidget {
             : LinearGradient(
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,
-                stops: const [0, 0.55],
+                stops: const [0, 0.45],
                 colors: [highlight, highlight.withValues(alpha: 0)],
               ),
       ),
-      child: Padding(padding: padding, child: child),
+      // Đường sáng mảnh sát mép trên — "mép kính bắt sáng" như iOS.
+      position: DecorationPosition.background,
+      child: DecoratedBox(
+        position: DecorationPosition.foreground,
+        decoration: BoxDecoration(
+          borderRadius: shape,
+          gradient: solid
+              ? null
+              : LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  stops: const [0, 0.06, 0.94, 1],
+                  colors: [
+                    Colors.white.withValues(alpha: dark ? 0.28 : 0.9),
+                    Colors.white.withValues(alpha: 0),
+                    Colors.white.withValues(alpha: 0),
+                    Colors.black.withValues(alpha: dark ? 0.18 : 0.05),
+                  ],
+                ),
+        ),
+        child: Padding(padding: padding, child: child),
+      ),
     );
 
     return DecoratedBox(
