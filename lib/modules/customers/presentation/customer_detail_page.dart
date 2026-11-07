@@ -213,7 +213,8 @@ class _CustomerDetailPageState extends ConsumerState<CustomerDetailPage> {
 
     return Scaffold(
       extendBodyBehindAppBar: true,
-      backgroundColor: Theme.of(context).colorScheme.surface,
+      // Nền xám để các thẻ nhóm lồng nổi lên.
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: OmniTopBar(
         semanticsTitle: 'Khách hàng',
         onBack: () {

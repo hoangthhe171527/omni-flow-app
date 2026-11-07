@@ -144,7 +144,7 @@ void main() {
   });
 
   group('section phẳng', () {
-    testWidgets('OmniCard flat không viền, không bo và không clip', (
+    testWidgets('OmniCard flat: thẻ nhóm lồng bo 18, không viền', (
       tester,
     ) async {
       await tester.pumpWidget(
@@ -162,9 +162,9 @@ void main() {
       );
       final decoration = ink.decoration as BoxDecoration;
 
-      expect(material.borderRadius, BorderRadius.zero);
-      expect(material.clipBehavior, Clip.none);
-      expect(decoration.borderRadius, BorderRadius.zero);
+      expect(material.borderRadius, BorderRadius.circular(18));
+      expect(material.clipBehavior, Clip.antiAlias);
+      expect(decoration.borderRadius, BorderRadius.circular(18));
       expect(decoration.border, isNull);
     });
   });
