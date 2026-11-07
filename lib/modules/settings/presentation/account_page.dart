@@ -47,7 +47,8 @@ class _AccountPageState extends ConsumerState<AccountPage> {
     final scheme = Theme.of(context).colorScheme;
 
     return Scaffold(
-      backgroundColor: scheme.surface,
+      // Nền xám để các thẻ nhóm lồng nổi lên.
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: const OmniAppBar(
         title: 'Tài khoản',
         centerTitle: true,
@@ -390,8 +391,11 @@ class _Card extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Thẻ nhóm lồng bo 18 trên nền xám (viomni-apple-uiux.html `.group`).
     return Material(
-      color: Colors.transparent,
+      color: Theme.of(context).colorScheme.surface,
+      borderRadius: BorderRadius.circular(18),
+      clipBehavior: Clip.antiAlias,
       child: Padding(padding: padding, child: child),
     );
   }
@@ -572,7 +576,7 @@ class _LogoutButton extends StatelessWidget {
         backgroundColor: scheme.surface,
         minimumSize: const Size.fromHeight(44),
         side: BorderSide(color: scheme.outlineVariant),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+        shape: const StadiumBorder(),
         textStyle: OmniType.chip.copyWith(fontWeight: FontWeight.w600),
       ),
       child: const Text('Đăng xuất'),

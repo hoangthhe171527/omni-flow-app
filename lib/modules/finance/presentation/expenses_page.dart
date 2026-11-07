@@ -139,102 +139,59 @@ class _ExpensesPageState extends ConsumerState<ExpensesPage> {
       appBar: OmniAppBar(
         title: '',
         backgroundColor: p.bg,
+        // Viên kính rời của thanh trên (OmniAppBar tự bọc): chỉ còn biểu
+        // tượng một tông; đang bật thì màu chủ đạo. "+" là biểu tượng xanh,
+        // không tô đặc (gu người dùng).
         actions: [
-          // Search toggle button
-          Padding(
-            padding: const EdgeInsets.only(right: 6),
-            child: Tooltip(
-              message: 'Tìm kiếm',
-              child: InkWell(
-                key: const ValueKey('finance-search-toggle'),
-                onTap: () {
-                  notifier.toggleSearch();
-                  if (!state.searchOpen) {
-                    Future.delayed(const Duration(milliseconds: 60), () {
-                      if (mounted) _searchFocus.requestFocus();
-                    });
-                  }
-                },
-                borderRadius: BorderRadius.circular(99),
-                child: Container(
-                  width: 34,
-                  height: 34,
-                  decoration: BoxDecoration(
-                    color: state.searchOpen ? p.primarySoft : p.card,
-                    shape: BoxShape.circle,
-                    border: Border.all(
-                      color: state.searchOpen ? p.selLine : p.line,
-                      width: 0.5,
-                    ),
-                  ),
-                  child: Icon(
-                    Icons.search_rounded,
-                    size: 17,
-                    color: state.searchOpen ? p.primaryInk : p.ink,
-                  ),
+          Tooltip(
+            message: 'Tìm kiếm',
+            child: InkWell(
+              key: const ValueKey('finance-search-toggle'),
+              customBorder: const CircleBorder(),
+              onTap: () {
+                notifier.toggleSearch();
+                if (!state.searchOpen) {
+                  Future.delayed(const Duration(milliseconds: 60), () {
+                    if (mounted) _searchFocus.requestFocus();
+                  });
+                }
+              },
+              child: SizedBox.square(
+                dimension: 44,
+                child: Icon(
+                  Icons.search_rounded,
+                  size: 20,
+                  color: state.searchOpen ? p.primaryInk : p.ink,
                 ),
               ),
             ),
           ),
-          // Sort popover button
-          Padding(
-            padding: const EdgeInsets.only(right: 6),
-            child: Tooltip(
-              message: 'Sắp xếp danh sách',
-              child: InkWell(
-                key: const ValueKey('finance-sort-btn'),
-                onTap: _openSortMenu,
-                borderRadius: BorderRadius.circular(99),
-                child: Container(
-                  key: _sortBtnKey,
-                  width: 34,
-                  height: 34,
-                  decoration: BoxDecoration(
-                    color: sortActive ? p.primarySoft : p.card,
-                    shape: BoxShape.circle,
-                    border: Border.all(
-                      color: sortActive ? p.selLine : p.line,
-                      width: 0.5,
-                    ),
-                  ),
-                  child: Icon(
-                    Icons.swap_vert_rounded,
-                    size: 17,
-                    color: sortActive ? p.primaryInk : p.ink,
-                  ),
+          Tooltip(
+            message: 'Sắp xếp danh sách',
+            child: InkWell(
+              key: const ValueKey('finance-sort-btn'),
+              customBorder: const CircleBorder(),
+              onTap: _openSortMenu,
+              child: SizedBox.square(
+                key: _sortBtnKey,
+                dimension: 44,
+                child: Icon(
+                  Icons.swap_vert_rounded,
+                  size: 20,
+                  color: sortActive ? p.primaryInk : p.ink,
                 ),
               ),
             ),
           ),
-          // Primary Add button (+)
-          Padding(
-            padding: const EdgeInsets.only(right: 8),
-            child: Tooltip(
-              message: 'Thêm khoản chi',
-              child: InkWell(
-                key: const ValueKey('finance-add-btn'),
-                onTap: () => showExpenseAddSheet(context: context),
-                borderRadius: BorderRadius.circular(99),
-                child: Container(
-                  width: 34,
-                  height: 34,
-                  decoration: BoxDecoration(
-                    color: p.primary,
-                    shape: BoxShape.circle,
-                    boxShadow: [
-                      BoxShadow(
-                        color: p.primary.withValues(alpha: 0.28),
-                        blurRadius: 10,
-                        offset: const Offset(0, 3),
-                      ),
-                    ],
-                  ),
-                  child: const Icon(
-                    Icons.add_rounded,
-                    size: 20,
-                    color: Colors.white,
-                  ),
-                ),
+          Tooltip(
+            message: 'Thêm khoản chi',
+            child: InkWell(
+              key: const ValueKey('finance-add-btn'),
+              customBorder: const CircleBorder(),
+              onTap: () => showExpenseAddSheet(context: context),
+              child: SizedBox.square(
+                dimension: 44,
+                child: Icon(Icons.add_rounded, size: 24, color: p.primary),
               ),
             ),
           ),

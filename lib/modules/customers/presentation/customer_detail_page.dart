@@ -534,8 +534,10 @@ class _ActButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final enabled = onTap != null;
-    final background = primary ? scheme.primary : scheme.surface;
-    final foreground = primary ? scheme.onPrimary : scheme.onSurface;
+    // Nút viền (gu người dùng: không tô đặc): nút chính viền + chữ màu chủ
+    // đạo, nút phụ viền nhạt chữ mực; dạng viên thuốc.
+    final background = scheme.surface;
+    final foreground = primary ? scheme.primary : scheme.onSurface;
 
     return Semantics(
       button: true,
@@ -556,10 +558,11 @@ class _ActButton extends StatelessWidget {
                 alignment: Alignment.center,
                 decoration: BoxDecoration(
                   color: background,
-                  borderRadius: BorderRadius.circular(6),
-                  border: primary
-                      ? null
-                      : Border.all(color: scheme.outlineVariant),
+                  borderRadius: BorderRadius.circular(18),
+                  border: Border.all(
+                    color: primary ? scheme.primary : scheme.outlineVariant,
+                    width: primary ? 1.5 : 1,
+                  ),
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
@@ -632,13 +635,17 @@ class _Stats extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: 2),
-                    Text(
-                      cells[i].$2,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: OmniType.bodyStrong.copyWith(
-                        color: scheme.onSurface,
-                        fontFeatures: OmniType.tabular,
+                    // Tiền không bao giờ cắt "…": thu nhỏ vừa ô.
+                    FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        cells[i].$2,
+                        maxLines: 1,
+                        style: OmniType.bodyStrong.copyWith(
+                          color: scheme.onSurface,
+                          fontFeatures: OmniType.tabular,
+                        ),
                       ),
                     ),
                   ],
