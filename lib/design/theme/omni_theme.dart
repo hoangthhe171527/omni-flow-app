@@ -132,14 +132,30 @@ abstract final class OmniTheme {
       ),
       dividerTheme: DividerThemeData(color: border, thickness: 1, space: 1),
       // Nút cao 48, bo 8, chữ 15/600 (bảng token: "Nút — 48 (giữ)").
+      // Nút chính là nút VIỀN xanh, không tô đặc (gu người dùng; liquid
+      // glass, viomni-apple-uiux.html `.btn-o`): nền trong, viền 1.5 màu chủ
+      // đạo, chữ màu chủ đạo, dạng viên thuốc.
       filledButtonTheme: FilledButtonThemeData(
-        style: FilledButton.styleFrom(
-          backgroundColor: primary,
-          foregroundColor: onPrimary,
-          minimumSize: const Size.fromHeight(48),
-          elevation: 0,
-          textStyle: OmniType.bodyStrong,
-          shape: const RoundedRectangleBorder(borderRadius: OmniRadius.mdAll),
+        style: ButtonStyle(
+          minimumSize: const WidgetStatePropertyAll(Size.fromHeight(48)),
+          elevation: const WidgetStatePropertyAll(0),
+          textStyle: const WidgetStatePropertyAll(OmniType.bodyStrong),
+          shape: const WidgetStatePropertyAll(StadiumBorder()),
+          backgroundColor: const WidgetStatePropertyAll(Colors.transparent),
+          foregroundColor: WidgetStateProperty.resolveWith(
+            (s) => s.contains(WidgetState.disabled)
+                ? onSurface.withValues(alpha: .38)
+                : primary,
+          ),
+          overlayColor: WidgetStatePropertyAll(primary.withValues(alpha: .08)),
+          side: WidgetStateProperty.resolveWith(
+            (s) => BorderSide(
+              width: 1.5,
+              color: s.contains(WidgetState.disabled)
+                  ? onSurface.withValues(alpha: .14)
+                  : primary,
+            ),
+          ),
         ),
       ),
       outlinedButtonTheme: OutlinedButtonThemeData(
@@ -148,7 +164,7 @@ abstract final class OmniTheme {
           minimumSize: const Size.fromHeight(48),
           side: BorderSide(color: borderInteractive),
           textStyle: OmniType.bodyStrong,
-          shape: const RoundedRectangleBorder(borderRadius: OmniRadius.mdAll),
+          shape: const StadiumBorder(),
         ),
       ),
       textButtonTheme: TextButtonThemeData(

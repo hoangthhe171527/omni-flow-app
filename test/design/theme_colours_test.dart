@@ -89,7 +89,9 @@ void main() {
       test('$name: chữ trên nút chính đọc được', () {
         final style = theme.filledButtonTheme.style!;
         final fg = style.foregroundColor!.resolve({})!;
-        final bg = style.backgroundColor!.resolve({})!;
+        // Nút viền nền trong (gu người dùng): chữ nằm thẳng trên nền màn.
+        var bg = style.backgroundColor!.resolve({})!;
+        if (bg.a == 0) bg = theme.scaffoldBackgroundColor;
         final r = contrastRatio(fg, bg);
 
         expect(
