@@ -25,6 +25,7 @@ class _PipelinePageState extends State<PipelinePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      extendBodyBehindAppBar: true,
       backgroundColor: Theme.of(context).colorScheme.surface,
       appBar: OmniTopBar(
         allowBack: true,
@@ -34,7 +35,16 @@ class _PipelinePageState extends State<PipelinePage> {
           onOpenFilters: _openFilters,
         ),
       ),
-      body: const OpportunitiesSegment(),
+      body: Builder(
+        builder: (context) => Padding(
+          padding: EdgeInsets.only(top: MediaQuery.paddingOf(context).top),
+          child: MediaQuery.removePadding(
+            context: context,
+            removeTop: true,
+            child: const OpportunitiesSegment(),
+          ),
+        ),
+      ),
     );
   }
 }

@@ -194,6 +194,7 @@ class _DirectoryPageState extends ConsumerState<DirectoryPage> {
     }
 
     return Scaffold(
+      extendBodyBehindAppBar: true,
       backgroundColor: scheme.surface,
       appBar: OmniTopBar(
         semanticsTitle: 'Tất cả',
@@ -201,51 +202,59 @@ class _DirectoryPageState extends ConsumerState<DirectoryPage> {
           onChanged: (value) => setState(() => _query = value),
         ),
       ),
-      body: Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 720),
-          child: ListView(
-            keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-            padding: const EdgeInsets.fromLTRB(
-              OmniSpacing.xl,
-              14,
-              OmniSpacing.xl,
-              OmniSpacing.bottomSafe,
-            ),
-            children: [
-              if (sections.isEmpty)
-                Padding(
-                  padding: const EdgeInsets.only(top: 40),
-                  child: Text(
-                    'Không tìm thấy tính năng “$_query”',
-                    textAlign: TextAlign.center,
-                    style: OmniType.body.copyWith(
-                      color: scheme.onSurfaceVariant,
-                    ),
+      body: OmniTopBarOverlap.wrap(
+        child: Builder(
+          builder: (context) {
+            final topInset = OmniTopBarOverlap.of(context);
+            return Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 720),
+                child: ListView(
+                  keyboardDismissBehavior:
+                      ScrollViewKeyboardDismissBehavior.onDrag,
+                  padding: EdgeInsets.fromLTRB(
+                    OmniSpacing.xl,
+                    topInset + 14,
+                    OmniSpacing.xl,
+                    OmniSpacing.bottomSafe,
                   ),
-                ),
-              for (final section in sections) ...[
-                if (section != sections.first) const SizedBox(height: 16),
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(4, 0, 4, 8),
-                  child: Semantics(
-                    header: true,
-                    child: Text(
-                      section.label,
-                      style: OmniType.overline.copyWith(
-                        color: scheme.onSurfaceVariant,
+                  children: [
+                    if (sections.isEmpty)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 40),
+                        child: Text(
+                          'Không tìm thấy tính năng “$_query”',
+                          textAlign: TextAlign.center,
+                          style: OmniType.body.copyWith(
+                            color: scheme.onSurfaceVariant,
+                          ),
+                        ),
                       ),
-                    ),
-                  ),
+                    for (final section in sections) ...[
+                      if (section != sections.first) const SizedBox(height: 16),
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(4, 0, 4, 8),
+                        child: Semantics(
+                          header: true,
+                          child: Text(
+                            section.label,
+                            style: OmniType.overline.copyWith(
+                              color: scheme.onSurfaceVariant,
+                            ),
+                          ),
+                        ),
+                      ),
+                      _TileGrid(
+                        tiles: section.tiles,
+                        firstIndex: starts[sections.indexOf(section)],
+                        seen: _seen,
+                      ),
+                    ],
+                  ],
                 ),
-                _TileGrid(
-                  tiles: section.tiles,
-                  firstIndex: starts[sections.indexOf(section)],
-                  seen: _seen,
-                ),
-              ],
-            ],
-          ),
+              ),
+            );
+          },
         ),
       ),
     );

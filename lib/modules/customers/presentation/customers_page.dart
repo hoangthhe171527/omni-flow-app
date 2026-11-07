@@ -115,6 +115,7 @@ class _CustomersPageState extends ConsumerState<CustomersPage> {
     ];
 
     return Scaffold(
+      extendBodyBehindAppBar: true,
       // Header và danh sách cùng một mặt phẳng.
       backgroundColor: scheme.surface,
       appBar: OmniTopBar(
@@ -156,11 +157,29 @@ class _CustomersPageState extends ConsumerState<CustomersPage> {
                 ],
               ),
       ),
-      body: _SegmentSwitcher(
-        segment: segment,
-        child: segment == 1
-            ? extra!.body(false)
-            : _customersBody(list, filter, access),
+      body: OmniTopBarOverlap.wrap(
+        child: Builder(
+          builder: (context) {
+            final topInset = OmniTopBarOverlap.of(context);
+            return _SegmentSwitcher(
+              segment: segment,
+              child: segment == 1
+                  // Đoạn Cơ hội có bảng lọc + hàng giai đoạn ở đầu: dời xuống dưới
+                  // thanh, không cuộn dưới kính.
+                  ? Padding(
+                      padding: EdgeInsets.only(top: topInset),
+                      child: MediaQuery.removePadding(
+                        context: context,
+                        removeTop: true,
+                        child: OmniTopBarOverlap.wrap(
+                          child: extra!.body(false),
+                        ),
+                      ),
+                    )
+                  : _customersBody(list, filter, access, topInset),
+            );
+          },
+        ),
       ),
     );
   }
@@ -169,12 +188,14 @@ class _CustomersPageState extends ConsumerState<CustomersPage> {
     AsyncValue<CustomerListState> list,
     CustomerFilter filter,
     ResourceAccess access,
+    double topInset,
   ) {
     return Column(
       key: const ValueKey('khach-seg-khach-hang'),
       children: [
         Expanded(
           child: RefreshIndicator.adaptive(
+            edgeOffset: topInset,
             onRefresh: () {
               setState(() => _openId = null);
               return ref.read(customerListProvider.notifier).refresh();
@@ -198,7 +219,10 @@ class _CustomersPageState extends ConsumerState<CustomersPage> {
                 controller: _scrollController,
                 keyboardDismissBehavior:
                     ScrollViewKeyboardDismissBehavior.onDrag,
-                padding: const EdgeInsets.only(bottom: OmniSpacing.bottomSafe),
+                padding: EdgeInsets.only(
+                  top: topInset,
+                  bottom: OmniSpacing.bottomSafe,
+                ),
                 itemCount: state.items.length + (state.hasMore ? 1 : 0),
                 itemBuilder: (context, index) {
                   if (index >= state.items.length) {

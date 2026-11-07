@@ -99,3 +99,84 @@ const List<double> _saturate180 = <double>[
   -0.1698, -0.5722, 1.7420, 0, 0, //
   0, 0, 0, 1, 0,
 ];
+
+/// Dải mờ dần ở mép màn hình (scroll edge effect của iOS 26): nội dung chạy
+/// tới gần thanh trên / thanh tab thì nhoè và nhạt dần thay vì bị cắt sắc.
+///
+/// Mờ tăng dần theo 3 dải (2 → 5 → 9) và phủ màu nền từ trong suốt tới 85% ở
+/// sát mép. Không nhận chạm.
+class OmniScrollEdge extends StatelessWidget {
+  const OmniScrollEdge({super.key, required this.atTop});
+
+  /// true = mép trên (đậm nhất ở trên cùng); false = mép dưới.
+  final bool atTop;
+
+  static const _sigmas = [2.0, 5.0, 9.0];
+
+  @override
+  Widget build(BuildContext context) {
+    final base = Theme.of(context).scaffoldBackgroundColor;
+    final solid = MediaQuery.highContrastOf(context);
+    // Thứ tự từ phía nội dung → mép màn hình.
+    final strips = [
+      for (final sigma in _sigmas)
+        Expanded(
+          child: solid
+              ? const SizedBox.expand()
+              : ClipRect(
+                  child: BackdropFilter(
+                    filter: ImageFilter.blur(sigmaX: sigma, sigmaY: sigma),
+                    child: const SizedBox.expand(),
+                  ),
+                ),
+        ),
+    ];
+
+    return IgnorePointer(
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          Column(children: atTop ? strips.reversed.toList() : strips),
+          DecoratedBox(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: atTop ? Alignment.bottomCenter : Alignment.topCenter,
+                end: atTop ? Alignment.topCenter : Alignment.bottomCenter,
+                colors: [
+                  base.withValues(alpha: 0),
+                  base.withValues(alpha: solid ? 1 : 0.85),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Màn có thân chạy BÊN DƯỚI [OmniTopBar] (`extendBodyBehindAppBar`) bọc thân
+/// bằng widget này: nó ghi lại chiều cao thanh trên để danh sách cộng vào đệm
+/// trên ([of]) và [OmniAsyncView] chừa chỗ cho trạng thái tải / trống / lỗi.
+class OmniTopBarOverlap extends InheritedWidget {
+  const OmniTopBarOverlap._({required this.inset, required super.child});
+
+  /// Bọc thân màn; đọc chiều cao từ đệm trên mà Scaffold đã cộng thanh trên.
+  static Widget wrap({required Widget child}) => Builder(
+    builder: (context) => OmniTopBarOverlap._(
+      inset: MediaQuery.paddingOf(context).top,
+      child: child,
+    ),
+  );
+
+  final double inset;
+
+  /// Chiều cao thanh trên đè lên thân; 0 khi thân không chạy dưới thanh.
+  static double of(BuildContext context) =>
+      context.dependOnInheritedWidgetOfExactType<OmniTopBarOverlap>()?.inset ??
+      0;
+
+  @override
+  bool updateShouldNotify(OmniTopBarOverlap oldWidget) =>
+      inset != oldWidget.inset;
+}

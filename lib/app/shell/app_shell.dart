@@ -270,33 +270,47 @@ class _ShellNavBar extends StatelessWidget {
     // chạy bên dưới (Scaffold.extendBody). Đáy: vùng an toàn, tối thiểu 12.
     final bottom = MediaQuery.viewPaddingOf(context).bottom;
 
-    return Padding(
-      padding: EdgeInsets.fromLTRB(12, 0, 12, bottom > 12 ? bottom : 12),
-      child: OmniGlass(
-        radius: ShellBarInset.pillHeight / 2,
-        padding: const EdgeInsets.symmetric(horizontal: 6),
-        child: SizedBox(
-          height: ShellBarInset.pillHeight,
-          child: Row(
-            children: [
-              for (var i = 0; i < tabs.length; i++)
-                Expanded(
-                  child: _ShellNavItem(
-                    destination: tabs[i],
-                    selected: selectedIndex == i,
-                    onTap: () => onSelected(i),
+    // Dải mờ dần sau viên kính, lan 12 lên trên: nội dung chạy tới đáy nhoè
+    // và nhạt dần (kể cả ở khe hai bên viên kính) như iOS.
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        const Positioned(
+          left: 0,
+          right: 0,
+          top: -12,
+          bottom: 0,
+          child: OmniScrollEdge(atTop: false),
+        ),
+        Padding(
+          padding: EdgeInsets.fromLTRB(12, 0, 12, bottom > 12 ? bottom : 12),
+          child: OmniGlass(
+            radius: ShellBarInset.pillHeight / 2,
+            padding: const EdgeInsets.symmetric(horizontal: 6),
+            child: SizedBox(
+              height: ShellBarInset.pillHeight,
+              child: Row(
+                children: [
+                  for (var i = 0; i < tabs.length; i++)
+                    Expanded(
+                      child: _ShellNavItem(
+                        destination: tabs[i],
+                        selected: selectedIndex == i,
+                        onTap: () => onSelected(i),
+                      ),
+                    ),
+                  Expanded(
+                    child: _ShellNavItem.more(
+                      selected: selectedIndex == tabs.length,
+                      onTap: () => onSelected(tabs.length),
+                    ),
                   ),
-                ),
-              Expanded(
-                child: _ShellNavItem.more(
-                  selected: selectedIndex == tabs.length,
-                  onTap: () => onSelected(tabs.length),
-                ),
+                ],
               ),
-            ],
+            ),
           ),
         ),
-      ),
+      ],
     );
   }
 }
