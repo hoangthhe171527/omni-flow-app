@@ -267,31 +267,41 @@ void main() {
     t.view.viewInsets = const FakeViewPadding(bottom: 300);
     t.view.padding = FakeViewPadding.zero;
     await t.pumpAndSettle();
-    // 844 - bàn phím 300 = đáy thân; nút cách đáy đúng đệm 8.
-    expect(544 - t.getRect(send).bottom, closeTo(8, 1.01));
+    // 844 - bàn phím 300 = đáy thân; nút cách đáy đúng đệm 8 + đệm trong
+    // viên kính 5 — không cộng thêm khoảng thanh home.
+    expect(544 - t.getRect(send).bottom, closeTo(13, 1.01));
   });
 
-  tw('ô bình luận đáy: nền .82, KHÔNG BackdropFilter, không TaskActionBar', (
-    t,
-  ) async {
-    await pump(t, host(task: task(), perms: worker));
-    // Bỏ blur (rà soát Task 9): một BackdropFilter cố định đáy dựng lại lớp
-    // mờ mỗi khung cuộn. Nền .82 vẫn che chữ cuộn bên dưới.
-    expect(
-      find.ancestor(
-        of: find.byKey(const ValueKey('comment-bar')),
-        matching: find.byType(BackdropFilter),
-      ),
-      findsNothing,
-    );
-    final bar = t.widget<DecoratedBox>(
-      find.byKey(const ValueKey('comment-bar')),
-    );
-    expect((bar.decoration as BoxDecoration).color!.a, closeTo(0.82, 0.01));
-    expect(find.bySemanticsLabel('Chụp ảnh'), findsNothing);
-    // Nhóm 2: nút ảnh đính kèm bình luận chưa có khoá API.
-    expect(find.byTooltip('Đính kèm ảnh hoặc tệp'), findsNothing);
-  });
+  tw(
+    'ô bình luận đáy: viên kính nền .92, KHÔNG BackdropFilter, không TaskActionBar',
+    (t) async {
+      await pump(t, host(task: task(), perms: worker));
+      // Bỏ blur (rà soát Task 9): một BackdropFilter cố định đáy dựng lại lớp
+      // mờ mỗi khung cuộn.
+      expect(
+        find.ancestor(
+          of: find.byKey(const ValueKey('comment-bar')),
+          matching: find.byType(BackdropFilter),
+        ),
+        findsNothing,
+      );
+      // Viên kính nổi bo 27, nền .92 che chữ cuộn bên dưới.
+      final bar = t.widget<DecoratedBox>(
+        find
+            .descendant(
+              of: find.byKey(const ValueKey('comment-bar')),
+              matching: find.byType(DecoratedBox),
+            )
+            .first,
+      );
+      final deco = bar.decoration as BoxDecoration;
+      expect(deco.color!.a, closeTo(0.92, 0.01));
+      expect(deco.borderRadius, BorderRadius.circular(27));
+      expect(find.bySemanticsLabel('Chụp ảnh'), findsNothing);
+      // Nhóm 2: nút ảnh đính kèm bình luận chưa có khoá API.
+      expect(find.byTooltip('Đính kèm ảnh hoặc tệp'), findsNothing);
+    },
+  );
 }
 
 class _TailDetail extends TaskController {

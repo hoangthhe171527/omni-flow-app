@@ -587,11 +587,9 @@ class _MessageComposerState extends State<MessageComposer> {
     final motion = OmniMotion.of(context);
     final duration = motion.enabled ? OmniDuration.slow : Duration.zero;
     final toolsWidth = _toolWidth * _toolCount;
-    final fieldFill = OmniColors.byBrightness(
-      context,
-      OmniColors.muted,
-      scheme.surfaceContainerHighest,
-    );
+    // Liền khối với viên kính: ô chữ không nền riêng.
+    const fieldFill = Colors.transparent;
+    final dark = Theme.of(context).brightness == Brightness.dark;
     const border = OutlineInputBorder(
       borderRadius: BorderRadius.all(Radius.circular(18)),
       borderSide: BorderSide.none,
@@ -599,177 +597,201 @@ class _MessageComposerState extends State<MessageComposer> {
 
     // Lớp vẽ riêng: gõ phím, nháy con trỏ, đổi nút gửi — chỉ composer raster
     // lại, danh sách tin nhắn và nền phía trên nó thì không.
+    //
+    // Viên kính nổi (viomni-apple-uiux.html `.composer.glass`): cách mép 12,
+    // bo 27, nền .94, viền sáng, bóng nhẹ. Không BackdropFilter — thanh đáy
+    // cố định nhoè lại mỗi khung cuộn danh sách tin.
     return RepaintBoundary(
-      child: Container(
-        decoration: BoxDecoration(
-          color: scheme.surface,
-          border: Border(
-            top: BorderSide(color: scheme.outline.withValues(alpha: 0.5)),
-          ),
-        ),
-        child: SafeArea(
-          top: false,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              if (widget.replyTo != null)
-                _ReplyPreview(
-                  message: widget.replyTo!,
-                  onClose: widget.onCancelReply,
+      child: SafeArea(
+        top: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(12, 6, 12, 8),
+          child: DecoratedBox(
+            key: const ValueKey('composer-glass'),
+            decoration: BoxDecoration(
+              color: scheme.surface.withValues(alpha: .94),
+              borderRadius: BorderRadius.circular(27),
+              border: Border.all(
+                color: Colors.white.withValues(alpha: dark ? .10 : .70),
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: dark ? .35 : .10),
+                  blurRadius: 24,
+                  offset: const Offset(0, 6),
                 ),
-              if (_pendingImages.isNotEmpty)
-                _ImageTray(
-                  images: _pendingImages,
-                  onRemove: (image) =>
-                      setState(() => _pendingImages.remove(image)),
-                ),
-              if (widget.errorText != null)
-                _ComposerError(text: widget.errorText!),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(6, 6, 6, 6),
-                // Đang ghi âm: thanh ghi thay cả hàng — các nút khác khoá.
-                child: _voiceActive
-                    ? VoiceRecordBar(
-                        elapsed: _voiceElapsed,
-                        stopped: _voiceStopped && !_sending,
-                        onCancel: _sending ? null : _cancelVoice,
-                        sendButton: _SendButton(
-                          sending: _sending,
-                          tooltip: 'Gửi ghi âm',
-                          onTap: widget.enabled ? _sendVoice : null,
-                        ),
-                      )
-                    : Row(
-                        crossAxisAlignment: CrossAxisAlignment.end,
-                        children: [
-                          // Chỉ cụm công cụ và cụm nút cuối nghe controller. Trước đây
-                          // cả composer `setState` theo từng ký tự — dựng lại ô nhập
-                          // và khay ảnh cho một phím gõ.
-                          ValueListenableBuilder<TextEditingValue>(
-                            valueListenable: _controller,
-                            builder: (context, value, _) {
-                              final typing = value.text.isNotEmpty;
-                              final collapsed = typing && !_toolsForced;
-                              return Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  ExcludeFocus(
-                                    excluding: collapsed,
-                                    child: ExcludeSemantics(
-                                      excluding: collapsed,
-                                      child: IgnorePointer(
-                                        ignoring: collapsed,
-                                        child: AnimatedContainer(
-                                          duration: duration,
-                                          curve: OmniCurves.standard,
-                                          width: collapsed ? 0 : toolsWidth,
-                                          height: _toolWidth,
-                                          child: ClipRect(
-                                            child: OverflowBox(
-                                              alignment: Alignment.centerLeft,
-                                              minWidth: 0,
-                                              maxWidth: toolsWidth,
-                                              child: Row(children: _tools()),
+              ],
+            ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(27),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (widget.replyTo != null)
+                    _ReplyPreview(
+                      message: widget.replyTo!,
+                      onClose: widget.onCancelReply,
+                    ),
+                  if (_pendingImages.isNotEmpty)
+                    _ImageTray(
+                      images: _pendingImages,
+                      onRemove: (image) =>
+                          setState(() => _pendingImages.remove(image)),
+                    ),
+                  if (widget.errorText != null)
+                    _ComposerError(text: widget.errorText!),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(6, 6, 6, 6),
+                    // Đang ghi âm: thanh ghi thay cả hàng — các nút khác khoá.
+                    child: _voiceActive
+                        ? VoiceRecordBar(
+                            elapsed: _voiceElapsed,
+                            stopped: _voiceStopped && !_sending,
+                            onCancel: _sending ? null : _cancelVoice,
+                            sendButton: _SendButton(
+                              sending: _sending,
+                              tooltip: 'Gửi ghi âm',
+                              onTap: widget.enabled ? _sendVoice : null,
+                            ),
+                          )
+                        : Row(
+                            crossAxisAlignment: CrossAxisAlignment.end,
+                            children: [
+                              // Chỉ cụm công cụ và cụm nút cuối nghe controller. Trước đây
+                              // cả composer `setState` theo từng ký tự — dựng lại ô nhập
+                              // và khay ảnh cho một phím gõ.
+                              ValueListenableBuilder<TextEditingValue>(
+                                valueListenable: _controller,
+                                builder: (context, value, _) {
+                                  final typing = value.text.isNotEmpty;
+                                  final collapsed = typing && !_toolsForced;
+                                  return Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      ExcludeFocus(
+                                        excluding: collapsed,
+                                        child: ExcludeSemantics(
+                                          excluding: collapsed,
+                                          child: IgnorePointer(
+                                            ignoring: collapsed,
+                                            child: AnimatedContainer(
+                                              duration: duration,
+                                              curve: OmniCurves.standard,
+                                              width: collapsed ? 0 : toolsWidth,
+                                              height: _toolWidth,
+                                              child: ClipRect(
+                                                child: OverflowBox(
+                                                  alignment:
+                                                      Alignment.centerLeft,
+                                                  minWidth: 0,
+                                                  maxWidth: toolsWidth,
+                                                  child: Row(
+                                                    children: _tools(),
+                                                  ),
+                                                ),
+                                              ),
                                             ),
                                           ),
                                         ),
                                       ),
-                                    ),
-                                  ),
-                                  if (collapsed)
-                                    _ComposerIcon(
-                                      icon: Icons.chevron_right_rounded,
-                                      tooltip: 'Hiện công cụ',
-                                      onTap: () =>
-                                          setState(() => _toolsForced = true),
-                                    ),
-                                ],
-                              );
-                            },
-                          ),
-                          Expanded(
-                            child: ConstrainedBox(
-                              constraints: const BoxConstraints(
-                                minHeight: 44,
-                                maxHeight: 120,
+                                      if (collapsed)
+                                        _ComposerIcon(
+                                          icon: Icons.chevron_right_rounded,
+                                          tooltip: 'Hiện công cụ',
+                                          onTap: () => setState(
+                                            () => _toolsForced = true,
+                                          ),
+                                        ),
+                                    ],
+                                  );
+                                },
                               ),
-                              child: TextField(
-                                controller: _controller,
-                                focusNode: _focus,
-                                enabled: widget.enabled,
-                                minLines: 1,
-                                maxLines: null,
-                                textCapitalization:
-                                    TextCapitalization.sentences,
-                                style: OmniType.input.copyWith(
-                                  color: scheme.onSurface,
-                                ),
-                                decoration: InputDecoration(
-                                  hintText: 'Nhắn tin…',
-                                  hintStyle: OmniType.input.copyWith(
-                                    color: scheme.onSurfaceVariant,
-                                  ),
-                                  isDense: true,
-                                  filled: true,
-                                  fillColor: fieldFill,
-                                  border: border,
-                                  enabledBorder: border,
-                                  focusedBorder: border,
-                                  disabledBorder: border,
-                                  contentPadding: const EdgeInsets.fromLTRB(
-                                    14,
-                                    8,
-                                    4,
-                                    8,
-                                  ),
-                                  suffixIconConstraints: const BoxConstraints(
-                                    minWidth: 44,
+                              Expanded(
+                                child: ConstrainedBox(
+                                  constraints: const BoxConstraints(
                                     minHeight: 44,
+                                    maxHeight: 120,
                                   ),
-                                  suffixIcon: IconButton(
-                                    onPressed: widget.enabled
-                                        ? _openEmoji
-                                        : null,
-                                    tooltip: 'Biểu tượng cảm xúc',
-                                    padding: EdgeInsets.zero,
-                                    style: IconButton.styleFrom(
-                                      fixedSize: const Size(44, 44),
-                                      minimumSize: const Size(44, 44),
-                                      tapTargetSize:
-                                          MaterialTapTargetSize.shrinkWrap,
+                                  child: TextField(
+                                    controller: _controller,
+                                    focusNode: _focus,
+                                    enabled: widget.enabled,
+                                    minLines: 1,
+                                    maxLines: null,
+                                    textCapitalization:
+                                        TextCapitalization.sentences,
+                                    style: OmniType.input.copyWith(
+                                      color: scheme.onSurface,
                                     ),
-                                    icon: Icon(
-                                      Icons.emoji_emotions_outlined,
-                                      size: OmniIconSize.xl,
-                                      color: scheme.onSurfaceVariant,
+                                    decoration: InputDecoration(
+                                      hintText: 'Nhắn tin…',
+                                      hintStyle: OmniType.input.copyWith(
+                                        color: scheme.onSurfaceVariant,
+                                      ),
+                                      isDense: true,
+                                      filled: true,
+                                      fillColor: fieldFill,
+                                      border: border,
+                                      enabledBorder: border,
+                                      focusedBorder: border,
+                                      disabledBorder: border,
+                                      contentPadding: const EdgeInsets.fromLTRB(
+                                        14,
+                                        8,
+                                        4,
+                                        8,
+                                      ),
+                                      suffixIconConstraints:
+                                          const BoxConstraints(
+                                            minWidth: 44,
+                                            minHeight: 44,
+                                          ),
+                                      suffixIcon: IconButton(
+                                        onPressed: widget.enabled
+                                            ? _openEmoji
+                                            : null,
+                                        tooltip: 'Biểu tượng cảm xúc',
+                                        padding: EdgeInsets.zero,
+                                        style: IconButton.styleFrom(
+                                          fixedSize: const Size(44, 44),
+                                          minimumSize: const Size(44, 44),
+                                          tapTargetSize:
+                                              MaterialTapTargetSize.shrinkWrap,
+                                        ),
+                                        icon: Icon(
+                                          Icons.emoji_emotions_outlined,
+                                          size: OmniIconSize.xl,
+                                          color: scheme.onSurfaceVariant,
+                                        ),
+                                      ),
                                     ),
+                                    onSubmitted: (_) => _send(),
                                   ),
                                 ),
-                                onSubmitted: (_) => _send(),
                               ),
-                            ),
+                              ValueListenableBuilder<TextEditingValue>(
+                                valueListenable: _controller,
+                                builder: (context, value, _) {
+                                  final canSend =
+                                      value.text.trim().isNotEmpty ||
+                                      _pendingImages.isNotEmpty;
+                                  if (canSend || _sending) {
+                                    return _SendButton(
+                                      sending: _sending,
+                                      onTap: widget.enabled ? _send : null,
+                                    );
+                                  }
+                                  return _LikeButton(
+                                    onTap: widget.enabled ? _sendLike : null,
+                                  );
+                                },
+                              ),
+                            ],
                           ),
-                          ValueListenableBuilder<TextEditingValue>(
-                            valueListenable: _controller,
-                            builder: (context, value, _) {
-                              final canSend =
-                                  value.text.trim().isNotEmpty ||
-                                  _pendingImages.isNotEmpty;
-                              if (canSend || _sending) {
-                                return _SendButton(
-                                  sending: _sending,
-                                  onTap: widget.enabled ? _send : null,
-                                );
-                              }
-                              return _LikeButton(
-                                onTap: widget.enabled ? _sendLike : null,
-                              );
-                            },
-                          ),
-                        ],
-                      ),
+                  ),
+                ],
               ),
-            ],
+            ),
           ),
         ),
       ),
