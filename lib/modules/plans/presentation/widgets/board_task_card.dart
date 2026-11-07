@@ -151,10 +151,9 @@ class _BoardTaskCardState extends ConsumerState<BoardTaskCard>
     final task = widget.task;
     final scheme = Theme.of(context).colorScheme;
     final done = _done;
-    final canCompleteThis =
-        widget.canComplete &&
-        !task.isLocked &&
-        (done || !task.hasSubtasks || task.doneCount >= task.totalCount);
+    // `canComplete` chỉ bật cho quản lý (bảng tính từ quyền quản lý kế
+    // hoạch): quản lý tích nhanh được kể cả khi việc con còn mở.
+    final canCompleteThis = widget.canComplete && !task.isLocked;
     final catalog = ref.watch(taskLabelsProvider).valueOrNull ?? const [];
     final byCode = {for (final l in catalog) l.code: l};
     final labels = [for (final code in task.labels) ?byCode[code]];

@@ -584,12 +584,10 @@ class Task {
 
   /// Có được bấm ô tích hoàn thành công việc lớn (công việc cha) không:
   ///  * Nhân viên (`!canManage`) không được phép tích hoàn thành công việc lớn.
-  ///  * Công việc lớn có việc con chỉ hoàn thành khi đã xong toàn bộ việc con.
-  bool canCompleteParentTask({required bool canManage}) {
-    if (isLocked || !canManage) return false;
-
-    return isDone || !hasSubtasks || doneCount >= totalCount;
-  }
+  ///  * Quản lý / admin tích nhanh được kể cả khi việc con còn mở — server
+  ///    cùng luật (`UpdateTaskStatus`).
+  bool canCompleteParentTask({required bool canManage}) =>
+      !isLocked && canManage;
 
   /// Days past the deadline, or null when it is not overdue.
   ///
