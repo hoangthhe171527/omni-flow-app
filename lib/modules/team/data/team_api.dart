@@ -5,6 +5,7 @@ import '../../../core/error/app_exception.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/network/api_envelope.dart';
 import '../../../core/utils/json.dart';
+import '../domain/new_member.dart';
 import '../domain/team_member.dart';
 
 class TeamApi {
@@ -30,6 +31,49 @@ class TeamApi {
   /// một liên kết người có thẩm quyền đã tự tay tạo (§G4).
   Future<void> setZaloUserId(String membershipId, String zaloUserId) => _client
       .put('/memberships/$membershipId', body: {'zalo_user_id': zaloUserId});
+
+  /// Tạo tài khoản và gắn vào workspace ngay (`POST /memberships/add-user`).
+  ///
+  /// Cho thợ ở xưởng: quản lý cấp mật khẩu tạm tại chỗ, không cần chờ người
+  /// đó mở email nhận lời mời. Cần quyền `membership.members.create`.
+  Future<AddedMember> addUser({
+    required String email,
+    required String fullName,
+    String? phone,
+    required String password,
+    String? roleSlug,
+  }) async {
+    final response = await _client.post(
+      '/memberships/add-user',
+      body: {
+        'email': email,
+        'full_name': fullName,
+        if (phone != null && phone.isNotEmpty) 'phone': phone,
+        'member_type': 'employee',
+        'password': password,
+        if (roleSlug != null && roleSlug.isNotEmpty) 'role_slug': roleSlug,
+      },
+    );
+    final data = response.object;
+    return AddedMember(userCreated: data['user_created'] != false);
+  }
+
+  /// Mời qua email (`POST /memberships/invite`), như nút Mời trên web. Server
+  /// gán vai mặc định `worker`.
+  Future<void> invite(String email) => _client.post(
+    '/memberships/invite',
+    body: {'email': email, 'member_type': 'employee'},
+  );
+
+  /// Vai của workspace (`GET /authorization/roles`), đã lọc cho màn thêm nhân
+  /// viên — xem [roleOptionsFrom].
+  Future<List<RoleOption>> assignableRoles() async {
+    final response = await _client.get(
+      '/authorization/roles',
+      query: {'per_page': AppConfig.maxPerPage},
+    );
+    return roleOptionsFrom(response.list);
+  }
 
   /// Trần đọc danh bạ: 60 trang × 100 = 6.000 người, như `fetchAllPages` của
   /// web. Hiện không tenant nào gần mức này (TK-20).

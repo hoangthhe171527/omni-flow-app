@@ -5,7 +5,10 @@ import '../../../core/realtime/realtime_client.dart';
 
 import '../../../core/network/active_tenant.dart';
 import '../data/team_api.dart';
+import '../../../security/session/session_controller.dart';
+import '../domain/new_member.dart';
 import '../domain/team_member.dart';
+import '../domain/team_permissions.dart';
 
 /// Danh bạ ĐẦY ĐỦ, giữ suốt phiên: MỌI trạng thái, kể cả người đã nghỉ và lời
 /// mời chưa nhận — để tên trong lịch sử (việc, hội thoại cũ) vẫn tra được.
@@ -137,3 +140,14 @@ List<TeamMember> withPickedMembers(
       if (!shown.contains(userId)) ?byId[userId],
   ];
 }
+
+/// Vai chọn được ở màn thêm nhân viên. Không có quyền đọc vai thì rỗng — màn
+/// đó ẩn phần chọn vai và server gán `worker`.
+final assignableRolesProvider = FutureProvider.autoDispose<List<RoleOption>>((
+  ref,
+) async {
+  if (!ref.watch(accessProvider).can(TeamPermissions.rolesRead)) {
+    return const [];
+  }
+  return ref.watch(teamApiProvider).assignableRoles();
+});
