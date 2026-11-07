@@ -103,20 +103,20 @@ class _RevenueCardState extends ConsumerState<RevenueCard> {
         RevenueRange.month => 'Doanh thu tháng này',
         RevenueRange.year => 'Doanh thu năm nay',
       };
-      big = formatCompactVnd(s.headline);
+      big = formatFullVnd(s.headline);
       final k = s.cumCurrent.length - 1;
       final pv = s.cumPrevious.isEmpty
           ? null
           : s.cumPrevious[math.min(math.max(k, 0), s.cumPrevious.length - 1)];
       sub =
-          '${pv == null ? 'Chưa có số cùng kỳ' : 'So với cùng kỳ ${formatCompactVnd(pv)}'}'
-          ' · dự kiến ${formatCompactVnd(s.projectedEnd)}';
+          '${pv == null ? 'Chưa có số cùng kỳ' : 'So với cùng kỳ ${formatFullVnd(pv)}'}'
+          ' · dự kiến ${formatFullVnd(s.projectedEnd)}';
     } else {
       caption = revenueSlotLabel(s.range, i);
       final v = s.valueAt(i);
-      big = v == null ? 'Chưa tới' : formatCompactVnd(v);
+      big = v == null ? 'Chưa tới' : formatFullVnd(v);
       final p = s.previousAt(i);
-      sub = 'Kỳ trước: ${p == null ? '—' : formatCompactVnd(p)}';
+      sub = 'Kỳ trước: ${p == null ? '—' : formatFullVnd(p)}';
     }
 
     final target = s.targetRatio;

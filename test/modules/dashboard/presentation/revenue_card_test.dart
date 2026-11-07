@@ -58,7 +58,7 @@ void main() {
       }),
     );
     await t.pumpAndSettle();
-    expect(find.text('1 tỷ'), findsOneWidget); // 10 × 100tr
+    expect(find.text('1.000.000.000 đ'), findsOneWidget); // 10 × 100tr
     expect(find.text('11%'), findsOneWidget); // 1000/900
     expect(find.byIcon(Icons.arrow_drop_up_rounded), findsOneWidget);
     expect(find.textContaining('cùng kỳ'), findsOneWidget);
@@ -112,12 +112,12 @@ void main() {
     await t.pumpAndSettle();
     t.widget<RevenueChart>(find.byType(RevenueChart)).onScrub(4); // ngày 5
     await t.pump();
-    expect(find.text('500 tr'), findsWidgets);
-    expect(find.text('Kỳ trước: 450 tr'), findsOneWidget);
+    expect(find.text('500.000.000 đ'), findsWidgets);
+    expect(find.text('Kỳ trước: 450.000.000 đ'), findsOneWidget);
     expect(find.text('Ngày 5'), findsOneWidget);
     t.widget<RevenueChart>(find.byType(RevenueChart)).onScrub(null);
     await t.pump();
-    expect(find.text('1 tỷ'), findsOneWidget);
+    expect(find.text('1.000.000.000 đ'), findsOneWidget);
   });
 
   testWidgets('provider null → không có gì của thẻ', (t) async {
@@ -202,11 +202,11 @@ void main() {
       }),
     );
     await t.pumpAndSettle();
-    expect(find.text('1 tỷ'), findsOneWidget);
+    expect(find.text('1.000.000.000 đ'), findsOneWidget);
     await t.tap(find.text('Năm'));
     await t.pumpAndSettle();
     expect(find.text('Thử lại'), findsOneWidget);
-    expect(find.text('1 tỷ'), findsNothing);
+    expect(find.text('1.000.000.000 đ'), findsNothing);
   });
 
   testWidgets('đang tải kỳ mới → nội dung cũ mờ đi', (t) async {

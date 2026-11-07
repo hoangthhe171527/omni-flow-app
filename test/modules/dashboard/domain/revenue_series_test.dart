@@ -160,12 +160,12 @@ void main() {
     );
     expect(
       x.summary(),
-      'Tháng này 830 tr, tăng 12% so với cùng kỳ; dự kiến 830 tr; đạt 69% chỉ tiêu',
+      'Tháng này 830.000.000 đ, tăng 12% so với cùng kỳ; dự kiến 830.000.000 đ; đạt 69% chỉ tiêu',
     );
     final y = s([100e6], [200e6], slots: 2);
     expect(
       y.summary(),
-      'Tháng này 100 tr, giảm 50% so với cùng kỳ; dự kiến 200 tr',
+      'Tháng này 100.000.000 đ, giảm 50% so với cùng kỳ; dự kiến 200.000.000 đ',
     );
     final z = RevenueSeries(
       range: RevenueRange.week,
@@ -174,6 +174,6 @@ void main() {
       target: null,
       slots: 7,
     );
-    expect(z.summary(), 'Tuần này 1 tr; dự kiến 7 tr');
+    expect(z.summary(), 'Tuần này 1.000.000 đ; dự kiến 7.000.000 đ');
   });
 }

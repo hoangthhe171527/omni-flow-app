@@ -88,15 +88,15 @@ void main() {
     await t.pumpWidget(host(s, scrubIndex: 20, animations: false));
     await t.pump();
     expect(find.textContaining('Chưa tới'), findsOneWidget);
-    expect(find.textContaining('Kỳ trước 1,89 tỷ'), findsOneWidget);
+    expect(find.textContaining('Kỳ trước 1.890.000.000 đ'), findsOneWidget);
     expect(painterOf(t).scrubIndex, 20);
   });
 
   testWidgets('ngày đã qua → hiện giá trị kỳ này', (t) async {
     await t.pumpWidget(host(series(), scrubIndex: 4, animations: false));
     await t.pump();
-    expect(find.textContaining('500 tr'), findsOneWidget);
-    expect(find.textContaining('Kỳ trước 450 tr'), findsOneWidget);
+    expect(find.textContaining('500.000.000 đ'), findsOneWidget);
+    expect(find.textContaining('Kỳ trước 450.000.000 đ'), findsOneWidget);
   });
 
   testWidgets('Semantics tóm tắt + tăng/giảm dời ngày', (t) async {
