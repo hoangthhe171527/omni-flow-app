@@ -324,4 +324,23 @@ void main() {
       expect(Task.fromJson({'id': 't', 'status': 'review'}).isDone, isFalse);
     });
   });
+
+  group('tích xong việc cha', () {
+    final open = Task.fromJson({
+      'id': 't1',
+      'title': 'KAWAI K300',
+      'checklist': [
+        {'id': 'a', 'title': 'Chỉnh máy', 'done': true},
+        {'id': 'b', 'title': 'Lên dây', 'done': false},
+      ],
+    });
+
+    test('quản lý tích được kể cả khi việc con còn mở', () {
+      expect(open.canCompleteParentTask(canManage: true), isTrue);
+    });
+
+    test('nhân viên không tích được', () {
+      expect(open.canCompleteParentTask(canManage: false), isFalse);
+    });
+  });
 }
