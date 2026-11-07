@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- Modify this file to customize your launch splash screen -->
 <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
-    <!-- Màu mực của hiệu ứng mở app (OmniColors.ink): không loé trắng trước khung Flutter đầu tiên. -->
+    <!-- Nền sáng = OmniColors.background, đúng nền màn mở app Flutter ở giao diện sáng: không loé tối trước khung đầu tiên. Giao diện tối: drawable-night. -->
     <item>
-        <color android:color="#FF0B1A33" />
+        <color android:color="#FFF5F7FA" />
     </item>
 
     <!-- You can insert your own image assets here -->

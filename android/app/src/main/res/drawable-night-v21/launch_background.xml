@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Giao diện tối: màu mực (OmniColors.ink) như màn mở app Flutter ở nền tối. -->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item>
+        <color android:color="#FF0B1A33" />
+    </item>
+</layer-list>
