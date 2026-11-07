@@ -8,16 +8,10 @@ import 'package:omni_app/modules/opportunities/domain/opportunity.dart';
 void main() {
   setUpAll(() => initializeDateFormatting('vi_VN'));
 
-  group('vndCompact — như formatMoneyCompact của web', () {
-    test('dấu phẩy thập phân, hậu tố tr/tỷ, nghìn là "k" không cách', () {
-      expect(Formatters.vndCompact(34900000), '34,9 tr');
-      expect(Formatters.vndCompact(1200000000), '1,2 tỷ');
-      expect(Formatters.vndCompact(12000), '12k');
-      expect(Formatters.vndCompact(1000000), '1 tr');
-      expect(Formatters.vndCompact(-2500000), '-2,5 tr');
-      expect(Formatters.vndCompact(999), '999');
-      expect(Formatters.vndCompact(null), '—');
-    });
+  // Không còn tiền rút gọn "34,9 tr": tiền luôn đầy đủ (gu người dùng).
+  test('vnd luôn đầy đủ', () {
+    expect(Formatters.vnd(34900000), '34.900.000đ');
+    expect(Formatters.vnd(null), '—');
   });
 
   group('ngày giờ theo giờ VN', () {

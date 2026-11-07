@@ -872,7 +872,7 @@ class _SalesCard extends ConsumerWidget {
                           Text(
                             o.budget == null
                                 ? 'Cơ hội'
-                                : 'Cơ hội · ${Formatters.vndCompact(o.budget)}',
+                                : 'Cơ hội · ${Formatters.vnd(o.budget)}',
                             style: OmniType.micro.copyWith(
                               color: _muted(context),
                             ),
@@ -900,10 +900,7 @@ class _SalesCard extends ConsumerWidget {
         if (bought > 0)
           _InfoRow(
             label: 'Đã mua',
-            value: Text(
-              Formatters.vndCompact(bought),
-              style: _valueStyle(context),
-            ),
+            value: Text(Formatters.vnd(bought), style: _valueStyle(context)),
           ),
         if (showCreate)
           _InfoRow(

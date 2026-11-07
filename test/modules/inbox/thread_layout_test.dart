@@ -109,7 +109,7 @@ void main() {
     await closeThread(tester);
   });
 
-  testWidgets('đã gắn khách: "Khách từ dd/MM · 3,6 tr"', (tester) async {
+  testWidgets('đã gắn khách: "Khách từ dd/MM · 3.600.000đ"', (tester) async {
     api.customerId = 'cu1';
     api.history = [_serverMessage('m1', 'Chào shop')];
     await openThread(
@@ -126,7 +126,7 @@ void main() {
         ),
       ],
     );
-    expect(find.text('Khách từ 14/03 · 3,6 tr'), findsOneWidget);
+    expect(find.text('Khách từ 14/03 · 3.600.000đ'), findsOneWidget);
     await closeThread(tester);
   });
 

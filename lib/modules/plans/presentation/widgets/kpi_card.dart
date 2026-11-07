@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../../../../core/utils/formatters.dart';
 import '../../../../design/platform/omni_motion_scope.dart';
 import '../../../../design/tokens/tokens.dart';
 import '../../domain/workshop_kpi.dart';
@@ -563,9 +564,9 @@ class _BonusRow extends StatelessWidget {
             TextSpan(
               text: isCurrentMonth
                   ? 'Còn ${next.remaining} việc tới mốc ${next.count} · '
-                        'thưởng ${next.bonus} triệu'
+                        'thưởng ${_bonusMoney(next.bonus)}'
                   : 'Thiếu ${next.remaining} việc so với mốc ${next.count} · '
-                        'thưởng ${next.bonus} triệu',
+                        'thưởng ${_bonusMoney(next.bonus)}',
               style: TextStyle(
                 fontWeight: FontWeight.w600,
                 color: scheme.onSurface,
@@ -595,7 +596,7 @@ class _BonusRow extends StatelessWidget {
               borderRadius: OmniRadius.pillAll,
             ),
             child: Text(
-              'Đã đạt ${kpi.reachedBonus} triệu',
+              'Đã đạt ${_bonusMoney(kpi.reachedBonus)}',
               style: OmniType.micro.copyWith(
                 fontWeight: FontWeight.w600,
                 color: OmniColors.sunForeground,
@@ -622,3 +623,11 @@ class _BonusRow extends StatelessWidget {
     );
   }
 }
+
+/// Tiền thưởng đầy đủ (`3.000.000đ`, không `3 triệu`).
+///
+/// Bảng mốc trên web nhập theo đơn vị TRIỆU ("Bonus (millions)") nhưng có nơi
+/// đã nhập thẳng số đồng (1500000) → app từng hiện "thưởng 1500000 triệu".
+/// Dưới 1000 thì là triệu; từ 1000 trở lên coi là đã là đồng.
+String _bonusMoney(int bonus) =>
+    Formatters.vnd(bonus >= 1000 ? bonus : bonus * 1000000);

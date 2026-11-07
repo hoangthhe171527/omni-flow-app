@@ -6,10 +6,10 @@ import '../../../../core/error/app_exception.dart';
 import '../../../../design/tokens/tokens.dart';
 import '../../../../security/session/session_controller.dart';
 
-/// Hỏi mật khẩu + xác nhận rồi gửi yêu cầu xóa tài khoản (bắt buộc bởi cửa
-/// hàng ứng dụng). Sau khi server nhận, phiên bị xóa và router đưa về đăng nhập.
+/// Hỏi mật khẩu + xác nhận rồi gửi yêu cầu xoá tài khoản (bắt buộc bởi cửa
+/// hàng ứng dụng). Sau khi server nhận, phiên bị xoá và router đưa về đăng nhập.
 ///
-/// Container và messenger bắt TRƯỚC `await`: khi xóa thành công phiên đổi sang
+/// Container và messenger bắt TRƯỚC `await`: khi xoá thành công phiên đổi sang
 /// chưa đăng nhập, màn gọi bị gỡ khỏi cây — `context`/`ref` của nó không còn
 /// dùng được nữa.
 Future<void> requestAccountDeletion(BuildContext context) async {
@@ -56,14 +56,14 @@ class _DeleteAccountDialogState extends State<DeleteAccountDialog> {
     // đúng là chỗ nên bắt người dùng chậm lại — xoá tài khoản không được dễ
     // như bấm "Đồng ý".
     return AlertDialog(
-      title: const Text('Xóa tài khoản?'),
+      title: const Text('Xoá tài khoản?'),
       content: SingleChildScrollView(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Text(
-              'Tài khoản sẽ bị vô hiệu hóa ngay. Yêu cầu xóa tài khoản và dữ liệu cá nhân sẽ được hoàn tất trong vòng 7 ngày.',
+              'Tài khoản sẽ bị vô hiệu hoá ngay. Yêu cầu xoá tài khoản và dữ liệu cá nhân sẽ được hoàn tất trong vòng 7 ngày.',
             ),
             const SizedBox(height: OmniSpacing.lg),
             TextField(
@@ -91,7 +91,7 @@ class _DeleteAccountDialogState extends State<DeleteAccountDialog> {
               value: _confirmed,
               controlAffinity: ListTileControlAffinity.leading,
               title: const Text(
-                'Tôi hiểu đây là yêu cầu xóa toàn bộ tài khoản, không phải tạm khóa.',
+                'Tôi hiểu đây là yêu cầu xoá toàn bộ tài khoản, không phải tạm khoá.',
               ),
               onChanged: (value) {
                 HapticFeedback.selectionClick();
@@ -106,7 +106,7 @@ class _DeleteAccountDialogState extends State<DeleteAccountDialog> {
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(context),
-          child: const Text('Hủy'),
+          child: const Text('Huỷ'),
         ),
         FilledButton(
           onPressed: _confirmed && _password.text.isNotEmpty
@@ -115,7 +115,7 @@ class _DeleteAccountDialogState extends State<DeleteAccountDialog> {
           style: FilledButton.styleFrom(
             backgroundColor: Theme.of(context).colorScheme.error,
           ),
-          child: const Text('Xác nhận xóa'),
+          child: const Text('Xác nhận xoá'),
         ),
       ],
     );

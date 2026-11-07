@@ -275,12 +275,12 @@ class _CustomerDetailPageState extends ConsumerState<CustomerDetailPage> {
                       ),
                       if (summary != null)
                         _Stats(
-                          bought: Formatters.vndCompact(summary.ordersTotal),
+                          bought: Formatters.vnd(summary.ordersTotal),
                           orders: '${summary.ordersCount}',
                           open: oppsOn
                               ? (oppStats == null
                                     ? '—'
-                                    : Formatters.vndCompact(oppStats.openValue))
+                                    : Formatters.vnd(oppStats.openValue))
                               : null,
                         ),
                       Padding(

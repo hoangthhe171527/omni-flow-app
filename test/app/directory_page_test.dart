@@ -387,7 +387,7 @@ void main() {
     expect(find.text('Trần Huy Hoàng'), findsNothing);
     expect(find.text('Không gian làm việc'), findsNothing);
     expect(find.text('Đăng xuất'), findsNothing);
-    expect(find.text('Xóa tài khoản'), findsNothing);
+    expect(find.text('Xoá tài khoản'), findsNothing);
   });
 
   testWidgets('tìm không dấu "giao dien" ra cả cài đặt', (t) async {

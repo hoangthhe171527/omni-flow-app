@@ -107,7 +107,7 @@ class OpportunityRow extends ConsumerWidget {
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
                     Text(
-                      Formatters.vndCompact(opportunity.value),
+                      Formatters.vnd(opportunity.value),
                       style: OmniType.bodyStrong.copyWith(
                         color: scheme.onSurface,
                         fontFeatures: OmniType.tabular,

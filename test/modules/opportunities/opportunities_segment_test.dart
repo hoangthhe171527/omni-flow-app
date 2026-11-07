@@ -81,7 +81,7 @@ void main() {
     expect(api.calls.last.status, 'OPEN');
     expect(find.textContaining('Đang mở ·'), findsOneWidget);
     // Tổng tiền các giai đoạn mở (chỉ Báo giá có 3 triệu).
-    expect(find.text('Đang mở · 7 · 3 tr'), findsOneWidget);
+    expect(find.text('Đang mở · 7 · 3.000.000đ'), findsOneWidget);
   });
 
   testWidgets('chạm ô "Báo giá" → lọc stage=bao_gia; chạm lại → bỏ lọc', (
@@ -96,7 +96,7 @@ void main() {
     expect(api.calls.last.stageCode, 'bao_gia');
     expect(api.calls.last.status, isNull);
     expect(find.text('Bỏ lọc'), findsOneWidget);
-    expect(find.text('Báo giá · 2 · 3 tr'), findsOneWidget);
+    expect(find.text('Báo giá · 2 · 3.000.000đ'), findsOneWidget);
 
     await t.tap(find.text('Bỏ lọc'));
     await t.pumpAndSettle();

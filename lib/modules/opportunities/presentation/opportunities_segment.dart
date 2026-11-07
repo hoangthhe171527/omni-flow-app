@@ -184,7 +184,7 @@ class _Body extends ConsumerWidget {
               title: [
                 stage?.label ?? 'Đang mở',
                 '$total',
-                if (value > 0) Formatters.vndCompact(value),
+                if (value > 0) Formatters.vnd(value),
               ].join(' · '),
               filtered: !closed && stageCode != null,
               onClear: () {

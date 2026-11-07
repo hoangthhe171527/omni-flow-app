@@ -890,7 +890,7 @@ class _ReplyPreview extends StatelessWidget {
             ),
           ),
           IconButton(
-            tooltip: 'Hủy trả lời',
+            tooltip: 'Huỷ trả lời',
             onPressed: onClose,
             icon: const Icon(Icons.close_rounded, size: 20),
             visualDensity: VisualDensity.compact,

@@ -78,7 +78,7 @@ class ThreadIntro extends ConsumerWidget {
             Text(
               lifetime > 0
                   ? 'Khách từ ${Formatters.dayMonth(since)} · '
-                        '${Formatters.vndCompact(lifetime)}'
+                        '${Formatters.vnd(lifetime)}'
                   : 'Khách từ ${Formatters.dayMonth(since)}',
               style: OmniType.micro.copyWith(color: muted),
             ),

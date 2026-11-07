@@ -62,8 +62,8 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('Đã mua'), findsOneWidget);
-      expect(find.text('3,2 tr'), findsOneWidget);
-      expect(find.text('9 tr'), findsNothing);
+      expect(find.text('3.200.000đ'), findsOneWidget);
+      expect(find.text('9.000.000đ'), findsNothing);
       expect(find.text('Đơn hàng'), findsOneWidget);
       expect(find.text('7'), findsOneWidget);
       // Không đọc được cơ hội → không có ô "Đang mở".
@@ -79,7 +79,7 @@ void main() {
 
     expect(find.text('Chú Đức'), findsOneWidget);
     expect(find.text('Đã mua'), findsNothing);
-    expect(find.text('9 tr'), findsNothing);
+    expect(find.text('9.000.000đ'), findsNothing);
   });
 
   testWidgets('summary chưa có đơn: tổng null hiện —', (tester) async {
