@@ -122,7 +122,7 @@ void main() {
     );
   });
 
-  testWidgets('chiều cao gồm hàng 44 và phần bottom; bottom được vẽ', (
+  testWidgets('chiều cao gồm viên kính 56 và phần bottom; bottom được vẽ', (
     tester,
   ) async {
     final c = ProviderContainer();
@@ -134,7 +134,8 @@ void main() {
         child: SizedBox(key: ValueKey('bottom'), height: 40),
       ),
     );
-    expect(bar.preferredSize.height, 4 + 44 + 6 + 40);
+    // Hàng 1 là viên kính cao 56 (liquid glass), đệm trên 4, dưới 8.
+    expect(bar.preferredSize.height, 4 + 56 + 8 + 40);
 
     await tester.pumpWidget(
       _host(

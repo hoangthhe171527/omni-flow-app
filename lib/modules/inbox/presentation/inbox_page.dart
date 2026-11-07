@@ -187,6 +187,7 @@ class _InboxPageState extends ConsumerState<InboxPage>
     final scheme = Theme.of(context).colorScheme;
 
     return Scaffold(
+      extendBodyBehindAppBar: access.readScope != AccessScope.own,
       // Header and list on ONE plane. The AppBar was painted with `background`
       // (#F8F8FC) while the rows use `surface` (white), so the whole search area
       // read as a tinted panel framing itself — the "khung mờ" around the search
@@ -199,92 +200,104 @@ class _InboxPageState extends ConsumerState<InboxPage>
           onOpenFilters: _openFilters,
         ),
       ),
-      body: Column(
-        children: [
-          // A member scoped to `inbox.read.own` sees only threads assigned to
-          // them — not the unassigned pool. Saying so up front stops "hộp thư
-          // trống" being read as a sync failure.
-          if (access.readScope == AccessScope.own)
-            // A quiet line, not a coloured banner. It is a standing fact about
-            // this rep's scope, not an alert — a filled strip gave it the weight
-            // of a warning every single time the screen opened.
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 2, 16, 8),
-              child: Text(
-                'Bạn đang xem các hội thoại được gán cho mình.',
-                style: OmniType.micro.copyWith(color: scheme.onSurfaceVariant),
-              ),
-            ),
-          Expanded(
-            child: RefreshIndicator.adaptive(
-              key: const Key('inbox-conversation-list'),
-              onRefresh: () => ref.read(inboxListProvider.notifier).refresh(),
-              child: OmniAsyncView(
-                value: list,
-                onRetry: () => ref.invalidate(inboxListProvider),
-                // Rỗng chỉ khi CẢ HAI mục rỗng.
-                isEmpty: (state) => state.items.isEmpty && pinned.isEmpty,
-                empty: _empty(),
-                data: (state) => ListView.separated(
-                  controller: _scrollController,
-                  keyboardDismissBehavior:
-                      ScrollViewKeyboardDismissBehavior.onDrag,
-                  padding: const EdgeInsets.only(
-                    bottom: OmniSpacing.bottomSafe,
+      body: OmniTopBarOverlap.wrap(
+        child: Builder(
+          builder: (context) {
+            final topInset = OmniTopBarOverlap.of(context);
+            return Column(
+              children: [
+                // A member scoped to `inbox.read.own` sees only threads assigned to
+                // them — not the unassigned pool. Saying so up front stops "hộp thư
+                // trống" being read as a sync failure.
+                if (access.readScope == AccessScope.own)
+                  // A quiet line, not a coloured banner. It is a standing fact about
+                  // this rep's scope, not an alert — a filled strip gave it the weight
+                  // of a warning every single time the screen opened.
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 2, 16, 8),
+                    child: Text(
+                      'Bạn đang xem các hội thoại được gán cho mình.',
+                      style: OmniType.micro.copyWith(
+                        color: scheme.onSurfaceVariant,
+                      ),
+                    ),
                   ),
-                  // Mục "Đã ghim" (nếu có) là dòng đầu của CÙNG danh
-                  // sách: một ScrollController, `loadMore` vẫn theo
-                  // `extentAfter`.
-                  itemCount:
-                      lead + state.items.length + (state.hasMore ? 1 : 0),
-                  // Zalo separates rows with a hairline indented past the
-                  // avatar (18 + 38 + 10 = 66), not a gap. Gaps between
-                  // bordered cards were what made the list read as a table of
-                  // records.
-                  // Không kẻ vạch ngay dưới mục ghim: mục đó kết thúc
-                  // bằng tiêu đề "Hội thoại", dòng đầu nằm sát dưới.
-                  separatorBuilder: (_, rawIndex) => rawIndex < lead
-                      ? const SizedBox.shrink()
-                      : Divider(
-                          height: 1,
-                          thickness: 1,
-                          indent: 66,
-                          endIndent: 0,
-                          color: OmniColors.byBrightness(
-                            context,
-                            OmniColors.divider,
-                            OmniColors.darkBorder,
-                          ),
+                Expanded(
+                  child: RefreshIndicator.adaptive(
+                    key: const Key('inbox-conversation-list'),
+                    edgeOffset: topInset,
+                    onRefresh: () =>
+                        ref.read(inboxListProvider.notifier).refresh(),
+                    child: OmniAsyncView(
+                      value: list,
+                      onRetry: () => ref.invalidate(inboxListProvider),
+                      // Rỗng chỉ khi CẢ HAI mục rỗng.
+                      isEmpty: (state) => state.items.isEmpty && pinned.isEmpty,
+                      empty: _empty(),
+                      data: (state) => ListView.separated(
+                        controller: _scrollController,
+                        keyboardDismissBehavior:
+                            ScrollViewKeyboardDismissBehavior.onDrag,
+                        padding: EdgeInsets.only(
+                          top: topInset,
+                          bottom: OmniSpacing.bottomSafe,
                         ),
-                  itemBuilder: (context, rawIndex) {
-                    if (rawIndex < lead) {
-                      return InboxPinnedSection(
-                        items: pinned,
-                        rowBuilder: _row,
-                      );
-                    }
-                    final index = rawIndex - lead;
-                    if (index >= state.items.length) {
-                      return const Padding(
-                        padding: EdgeInsets.all(OmniSpacing.lg),
-                        child: Center(
-                          child: SizedBox(
-                            width: 20,
-                            height: 20,
-                            child: CircularProgressIndicator.adaptive(
-                              strokeWidth: 2,
-                            ),
-                          ),
-                        ),
-                      );
-                    }
-                    return _row(state.items[index]);
-                  },
+                        // Mục "Đã ghim" (nếu có) là dòng đầu của CÙNG danh
+                        // sách: một ScrollController, `loadMore` vẫn theo
+                        // `extentAfter`.
+                        itemCount:
+                            lead + state.items.length + (state.hasMore ? 1 : 0),
+                        // Zalo separates rows with a hairline indented past the
+                        // avatar (18 + 38 + 10 = 66), not a gap. Gaps between
+                        // bordered cards were what made the list read as a table of
+                        // records.
+                        // Không kẻ vạch ngay dưới mục ghim: mục đó kết thúc
+                        // bằng tiêu đề "Hội thoại", dòng đầu nằm sát dưới.
+                        separatorBuilder: (_, rawIndex) => rawIndex < lead
+                            ? const SizedBox.shrink()
+                            : Divider(
+                                height: 1,
+                                thickness: 1,
+                                indent: 66,
+                                endIndent: 0,
+                                color: OmniColors.byBrightness(
+                                  context,
+                                  OmniColors.divider,
+                                  OmniColors.darkBorder,
+                                ),
+                              ),
+                        itemBuilder: (context, rawIndex) {
+                          if (rawIndex < lead) {
+                            return InboxPinnedSection(
+                              items: pinned,
+                              rowBuilder: _row,
+                            );
+                          }
+                          final index = rawIndex - lead;
+                          if (index >= state.items.length) {
+                            return const Padding(
+                              padding: EdgeInsets.all(OmniSpacing.lg),
+                              child: Center(
+                                child: SizedBox(
+                                  width: 20,
+                                  height: 20,
+                                  child: CircularProgressIndicator.adaptive(
+                                    strokeWidth: 2,
+                                  ),
+                                ),
+                              ),
+                            );
+                          }
+                          return _row(state.items[index]);
+                        },
+                      ),
+                    ),
+                  ),
                 ),
-              ),
-            ),
-          ),
-        ],
+              ],
+            );
+          },
+        ),
       ),
     );
   }

@@ -1,5 +1,3 @@
-import 'dart:ui' show ImageFilter;
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -9,6 +7,7 @@ import '../tokens/tokens.dart';
 import 'brand_anchor.dart';
 import 'omni_app_bar.dart';
 import 'omni_brand.dart';
+import 'omni_glass.dart';
 
 /// Chỗ cắm cho phần của [OmniTopBar] thuộc về `modules/`: số thông báo chưa đọc
 /// và nơi nút chuông dẫn tới. Cùng lý do với [OmniAccountSlot] — `design/` chỉ
@@ -58,10 +57,11 @@ class OmniTopBar extends ConsumerWidget implements PreferredSizeWidget {
   /// danh bạ "Tất cả".
   final bool allowBack;
 
-  // Hàng 1 cao 44 để chuông/avatar (vẽ 36) có vùng chạm 44; tổng 54 như cũ.
-  static const double _rowHeight = 44;
+  // Hàng 1 là viên kính cao 56 (liquid glass, `liquid-glass-uiux.html`),
+  // cách mép 12; chuông/avatar vẫn có vùng chạm 44.
+  static const double _rowHeight = 56;
   static const double _topPad = 4;
-  static const double _bottomPad = 6;
+  static const double _bottomPad = 8;
 
   @override
   Size get preferredSize => Size.fromHeight(
@@ -80,37 +80,30 @@ class OmniTopBar extends ConsumerWidget implements PreferredSizeWidget {
     final dark = Theme.of(context).brightness == Brightness.dark;
     final showBack = allowBack && (ModalRoute.of(context)?.canPop ?? false);
 
-    return ClipRect(
-      child: BackdropFilter(
-        filter: ImageFilter.blur(
-          sigmaX: isApple(context) ? 20 : 10,
-          sigmaY: isApple(context) ? 20 : 10,
+    // Dải mờ dần phủ vùng thanh: nội dung cuộn dưới thanh (màn bật
+    // `extendBodyBehindAppBar`) nhoè dần thay vì bị cắt sắc. Không lan xuống
+    // thân — lúc chưa cuộn, dòng đầu phải sắc nét.
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        const Positioned(
+          left: 0,
+          right: 0,
+          top: 0,
+          bottom: 0,
+          child: OmniScrollEdge(atTop: true),
         ),
-        child: DecoratedBox(
-          decoration: BoxDecoration(
-            color: scheme.surface.withValues(
-              alpha: isApple(context) ? 0.8 : 0.9,
-            ),
-            border: Border(
-              bottom: BorderSide(
-                color: scheme.onSurface.withValues(alpha: 0.06),
-              ),
-            ),
-          ),
-          child: Padding(
-            padding: EdgeInsets.only(top: MediaQuery.paddingOf(context).top),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Padding(
-                  // Phải 12 chứ không 16: ô avatar rộng 44 mà vẽ 36, 4dp đệm
-                  // trong ô giữ mép vẽ ở đúng 16.
-                  padding: EdgeInsets.fromLTRB(
-                    showBack ? 4 : 16,
-                    _topPad,
-                    12,
-                    _bottomPad,
-                  ),
+        Padding(
+          padding: EdgeInsets.only(top: MediaQuery.paddingOf(context).top),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(12, _topPad, 12, _bottomPad),
+                child: OmniGlass(
+                  radius: _rowHeight / 2,
+                  // Phải 6 chứ không 14 bên phải: ô avatar rộng 44 mà vẽ 36.
+                  padding: EdgeInsets.fromLTRB(showBack ? 4 : 14, 0, 6, 0),
                   child: SizedBox(
                     height: _rowHeight,
                     child: Stack(
@@ -177,12 +170,12 @@ class OmniTopBar extends ConsumerWidget implements PreferredSizeWidget {
                     ),
                   ),
                 ),
-                ?bottom,
-              ],
-            ),
+              ),
+              ?bottom,
+            ],
           ),
         ),
-      ),
+      ],
     );
   }
 }

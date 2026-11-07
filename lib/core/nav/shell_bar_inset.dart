@@ -8,8 +8,12 @@ import 'package:flutter/widgets.dart';
 class ShellBarInset extends InheritedWidget {
   const ShellBarInset({super.key, required this.height, required super.child});
 
-  /// Chiều cao cố định của thanh, chưa tính vùng an toàn (Scaffold đã tự cộng).
-  static const double barHeight = 62;
+  /// Chiều cao viên kính của thanh tab (liquid glass).
+  static const double pillHeight = 66;
+
+  /// Phần thanh che lên body, chưa tính vùng an toàn: viên kính + khe 12 ở
+  /// đáy (Scaffold đã tự cộng vùng an toàn).
+  static const double barHeight = pillHeight + 12;
 
   final double height;
 

@@ -45,30 +45,39 @@ class DashboardPage extends ConsumerWidget {
     }
     final none = !revenueVisible && !cards.tasks && !cards.inbox;
     return Scaffold(
+      extendBodyBehindAppBar: true,
       backgroundColor: Theme.of(context).colorScheme.surface,
       appBar: const OmniTopBar(semanticsTitle: 'Tổng quan'),
-      body: RefreshIndicator.adaptive(
-        onRefresh: () => _refresh(ref),
-        child: ListView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          padding: const EdgeInsets.only(
-            top: 4,
-            bottom: OmniSpacing.bottomSafe,
-          ),
-          children: none
-              ? const [
-                  OmniEmptyState(
-                    icon: Icons.dashboard_outlined,
-                    title: emptyMessage,
-                  ),
-                ]
-              : const [
-                  RevenueCard(),
-                  _SectionDivider(),
-                  MyTasksCard(),
-                  _SectionDivider(),
-                  AwaitingReplyCard(),
-                ],
+      body: OmniTopBarOverlap.wrap(
+        child: Builder(
+          builder: (context) {
+            final topInset = OmniTopBarOverlap.of(context);
+            return RefreshIndicator.adaptive(
+              edgeOffset: topInset,
+              onRefresh: () => _refresh(ref),
+              child: ListView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: EdgeInsets.only(
+                  top: topInset + 4,
+                  bottom: OmniSpacing.bottomSafe,
+                ),
+                children: none
+                    ? const [
+                        OmniEmptyState(
+                          icon: Icons.dashboard_outlined,
+                          title: emptyMessage,
+                        ),
+                      ]
+                    : const [
+                        RevenueCard(),
+                        _SectionDivider(),
+                        MyTasksCard(),
+                        _SectionDivider(),
+                        AwaitingReplyCard(),
+                      ],
+              ),
+            );
+          },
         ),
       ),
     );

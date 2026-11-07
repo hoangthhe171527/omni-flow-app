@@ -212,6 +212,7 @@ class _CustomerDetailPageState extends ConsumerState<CustomerDetailPage> {
     final oppCount = summary?.opportunitiesCount ?? oppStats?.count;
 
     return Scaffold(
+      extendBodyBehindAppBar: true,
       backgroundColor: Theme.of(context).colorScheme.surface,
       appBar: OmniTopBar(
         semanticsTitle: 'Khách hàng',
@@ -228,102 +229,124 @@ class _CustomerDetailPageState extends ConsumerState<CustomerDetailPage> {
               : null,
         ),
       ),
-      body: OmniAsyncView(
-        value: customer,
-        onRetry: () => ref.invalidate(customerProvider(_id)),
-        data: (loaded) {
-          _lastLoaded = loaded;
-          final data = _saved != null && identical(_savedBase, loaded)
-              ? _saved!
-              : loaded;
-          final canUpdate = access.canUpdate;
-          Future<void> save(CustomerField f, String draft) =>
-              _save(data, f, draft, activity: activityOn, opps: oppsOn);
+      body: OmniTopBarOverlap.wrap(
+        child: Builder(
+          builder: (context) {
+            final topInset = OmniTopBarOverlap.of(context);
+            return OmniAsyncView(
+              value: customer,
+              onRetry: () => ref.invalidate(customerProvider(_id)),
+              data: (loaded) {
+                _lastLoaded = loaded;
+                final data = _saved != null && identical(_savedBase, loaded)
+                    ? _saved!
+                    : loaded;
+                final canUpdate = access.canUpdate;
+                Future<void> save(CustomerField f, String draft) =>
+                    _save(data, f, draft, activity: activityOn, opps: oppsOn);
 
-          return RefreshIndicator.adaptive(
-            onRefresh: () => _refresh(activity: activityOn, opps: oppsOn),
-            child: ListView(
-              physics: const AlwaysScrollableScrollPhysics(),
-              padding: const EdgeInsets.only(bottom: OmniSpacing.bottomSafe),
-              children: [
-                _Header(customer: data),
-                _Actions(
-                  customer: data,
-                  canCreateTask: taskWrite,
-                  canCreateOpportunity: canCreateOpp,
-                ),
-                if (summary != null)
-                  _Stats(
-                    bought: Formatters.vndCompact(summary.ordersTotal),
-                    orders: '${summary.ordersCount}',
-                    open: oppsOn
-                        ? (oppStats == null
-                              ? '—'
-                              : Formatters.vndCompact(oppStats.openValue))
-                        : null,
-                  ),
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-                  child: OmniSegmented(
-                    labels: [
-                      'Tổng quan',
-                      if (activityOn) 'Hoạt động',
-                      if (oppsOn)
-                        oppCount == null ? 'Cơ hội' : 'Cơ hội · $oppCount',
-                    ],
-                    index: tabs.indexOf(tab),
-                    onChanged: (i) => setState(() {
-                      _tab = tabs[i];
-                      _editing = null;
-                    }),
-                  ),
-                ),
-                if (OmniMotion.enabled(context))
-                  AnimatedSize(
-                    duration: OmniMotion.of(context).fast,
-                    curve: Curves.easeOutCubic,
-                    alignment: Alignment.topCenter,
-                    child: switch (tab) {
-                      _Tab.overview => _Overview(
-                        customer: data,
-                        canUpdate: canUpdate,
-                        editing: _editing,
-                        onBeginEdit: _beginEdit,
-                        onEndEdit: _endEdit,
-                        onSave: save,
-                        onPickOwner: () => _pickOwner(
-                          data,
-                          activity: activityOn,
-                          opps: oppsOn,
-                        ),
-                        onPickTags: () =>
-                            _pickTags(data, activity: activityOn, opps: oppsOn),
-                      ),
-                      _Tab.activity => _ActivityTab(customerId: _id),
-                      _Tab.opportunities => section!.body(_id),
-                    },
-                  )
-                else
-                  switch (tab) {
-                    _Tab.overview => _Overview(
-                      customer: data,
-                      canUpdate: canUpdate,
-                      editing: _editing,
-                      onBeginEdit: _beginEdit,
-                      onEndEdit: _endEdit,
-                      onSave: save,
-                      onPickOwner: () =>
-                          _pickOwner(data, activity: activityOn, opps: oppsOn),
-                      onPickTags: () =>
-                          _pickTags(data, activity: activityOn, opps: oppsOn),
+                return RefreshIndicator.adaptive(
+                  edgeOffset: topInset,
+                  onRefresh: () => _refresh(activity: activityOn, opps: oppsOn),
+                  child: ListView(
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    padding: EdgeInsets.only(
+                      top: topInset,
+                      bottom: OmniSpacing.bottomSafe,
                     ),
-                    _Tab.activity => _ActivityTab(customerId: _id),
-                    _Tab.opportunities => section!.body(_id),
-                  },
-              ],
-            ),
-          );
-        },
+                    children: [
+                      _Header(customer: data),
+                      _Actions(
+                        customer: data,
+                        canCreateTask: taskWrite,
+                        canCreateOpportunity: canCreateOpp,
+                      ),
+                      if (summary != null)
+                        _Stats(
+                          bought: Formatters.vndCompact(summary.ordersTotal),
+                          orders: '${summary.ordersCount}',
+                          open: oppsOn
+                              ? (oppStats == null
+                                    ? '—'
+                                    : Formatters.vndCompact(oppStats.openValue))
+                              : null,
+                        ),
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+                        child: OmniSegmented(
+                          labels: [
+                            'Tổng quan',
+                            if (activityOn) 'Hoạt động',
+                            if (oppsOn)
+                              oppCount == null
+                                  ? 'Cơ hội'
+                                  : 'Cơ hội · $oppCount',
+                          ],
+                          index: tabs.indexOf(tab),
+                          onChanged: (i) => setState(() {
+                            _tab = tabs[i];
+                            _editing = null;
+                          }),
+                        ),
+                      ),
+                      if (OmniMotion.enabled(context))
+                        AnimatedSize(
+                          duration: OmniMotion.of(context).fast,
+                          curve: Curves.easeOutCubic,
+                          alignment: Alignment.topCenter,
+                          child: switch (tab) {
+                            _Tab.overview => _Overview(
+                              customer: data,
+                              canUpdate: canUpdate,
+                              editing: _editing,
+                              onBeginEdit: _beginEdit,
+                              onEndEdit: _endEdit,
+                              onSave: save,
+                              onPickOwner: () => _pickOwner(
+                                data,
+                                activity: activityOn,
+                                opps: oppsOn,
+                              ),
+                              onPickTags: () => _pickTags(
+                                data,
+                                activity: activityOn,
+                                opps: oppsOn,
+                              ),
+                            ),
+                            _Tab.activity => _ActivityTab(customerId: _id),
+                            _Tab.opportunities => section!.body(_id),
+                          },
+                        )
+                      else
+                        switch (tab) {
+                          _Tab.overview => _Overview(
+                            customer: data,
+                            canUpdate: canUpdate,
+                            editing: _editing,
+                            onBeginEdit: _beginEdit,
+                            onEndEdit: _endEdit,
+                            onSave: save,
+                            onPickOwner: () => _pickOwner(
+                              data,
+                              activity: activityOn,
+                              opps: oppsOn,
+                            ),
+                            onPickTags: () => _pickTags(
+                              data,
+                              activity: activityOn,
+                              opps: oppsOn,
+                            ),
+                          ),
+                          _Tab.activity => _ActivityTab(customerId: _id),
+                          _Tab.opportunities => section!.body(_id),
+                        },
+                    ],
+                  ),
+                );
+              },
+            );
+          },
+        ),
       ),
     );
   }

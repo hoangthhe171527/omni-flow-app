@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/error/app_exception.dart';
 import '../platform/omni_motion_scope.dart';
 import '../tokens/tokens.dart';
+import 'omni_glass.dart';
 
 /// Every async screen renders through here, so loading, empty, error and
 /// permission-denied always look and behave the same across modules.
@@ -31,18 +32,27 @@ class OmniAsyncView<T> extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cached = value.valueOrNull;
+    // Thân chạy dưới thanh trên kính: trạng thái tải / trống / lỗi không được
+    // nằm khuất sau thanh. Danh sách (`data`) tự cộng đệm để cuộn dưới kính.
+    final inset = OmniTopBarOverlap.of(context);
+    Widget clear(Widget child) => inset == 0
+        ? child
+        : Padding(
+            padding: EdgeInsets.only(top: inset),
+            child: child,
+          );
 
     if (value.isLoading && cached == null) {
-      return loading ?? const OmniSkeletonList();
+      return clear(loading ?? const OmniSkeletonList());
     }
     if (value.hasError && cached == null) {
-      return OmniErrorView(error: value.error!, onRetry: onRetry);
+      return clear(OmniErrorView(error: value.error!, onRetry: onRetry));
     }
     if (cached == null) {
-      return loading ?? const OmniSkeletonList();
+      return clear(loading ?? const OmniSkeletonList());
     }
     if (isEmpty?.call(cached) == true) {
-      return empty ?? const OmniEmptyState(title: 'Chưa có dữ liệu');
+      return clear(empty ?? const OmniEmptyState(title: 'Chưa có dữ liệu'));
     }
     return data(cached);
   }

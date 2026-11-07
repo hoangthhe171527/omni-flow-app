@@ -8,7 +8,7 @@ import '../../../../design/tokens/tokens.dart';
 import '../../../../security/session/session_controller.dart';
 import '../../settings_module.dart';
 
-/// Avatar ở góc trên bên phải; bấm vào mở menu nhanh tại chỗ.
+/// Avatar ở góc trên bên phải; bấm vào mở màn Tài khoản.
 ///
 /// Cắm vào [OmniAccountSlot] một lần ở gốc app, nên mọi màn dựng [OmniAppBar]
 /// đều có nó mà không phải nhớ gì.
@@ -26,61 +26,12 @@ class AccountMenuButton extends ConsumerStatefulWidget {
   ConsumerState<AccountMenuButton> createState() => _AccountMenuButtonState();
 }
 
-enum _AccountQuickAction { account, permissions }
-
 class _AccountMenuButtonState extends ConsumerState<AccountMenuButton> {
   final _buttonKey = GlobalKey(debugLabel: 'AccountMenuButton');
 
-  Rect? _anchor() {
-    final box = _buttonKey.currentContext?.findRenderObject() as RenderBox?;
-    if (box == null || !box.hasSize) return null;
-    final origin = box.localToGlobal(Offset.zero);
-    return origin & box.size;
-  }
-
-  Future<void> _open() async {
-    final anchor = _anchor();
-    if (anchor == null) return;
-    final session = ref.read(sessionProvider);
-    final user = session.user;
-    final action = await showOmniAnchoredMenu<_AccountQuickAction>(
-      context: context,
-      anchor: anchor,
-      width: 272,
-      menuKey: const Key('account-quick-menu'),
-      semanticsLabel: 'Tài khoản nhanh',
-      builder: (menuContext) => Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          _AccountSummary(
-            name: user?.fullName ?? 'Tài khoản',
-            email: user?.email ?? '',
-          ),
-          OmniAnchoredMenuItem(
-            icon: Icons.person_outline_rounded,
-            label: 'Tài khoản',
-            divider: true,
-            onTap: () =>
-                Navigator.pop(menuContext, _AccountQuickAction.account),
-          ),
-          OmniAnchoredMenuItem(
-            icon: Icons.shield_outlined,
-            label: 'Quyền của tôi',
-            divider: true,
-            onTap: () =>
-                Navigator.pop(menuContext, _AccountQuickAction.permissions),
-          ),
-        ],
-      ),
-    );
-    if (!mounted || action == null) return;
-    switch (action) {
-      case _AccountQuickAction.account:
-        context.pushNamed(SettingsModule.account);
-      case _AccountQuickAction.permissions:
-        context.pushNamed(SettingsModule.myPermissions);
-    }
-  }
+  /// Bấm avatar mở thẳng màn Tài khoản (`tat-ca-tai-khoan-uiux.html`): menu
+  /// nhỏ 2 dòng ở giữa chỉ thêm một chạm.
+  void _open() => context.pushNamed(SettingsModule.account);
 
   @override
   Widget build(BuildContext context) {
@@ -158,42 +109,6 @@ class _AccountMenuButtonState extends ConsumerState<AccountMenuButton> {
             ),
           ),
         ),
-      ),
-    );
-  }
-}
-
-class _AccountSummary extends StatelessWidget {
-  const _AccountSummary({required this.name, required this.email});
-
-  final String name;
-  final String email;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return Container(
-      constraints: const BoxConstraints(minHeight: 64),
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-      alignment: Alignment.centerLeft,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            name,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: OmniType.bodyStrong.copyWith(color: scheme.onSurface),
-          ),
-          if (email.isNotEmpty)
-            Text(
-              email,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: OmniType.micro.copyWith(color: scheme.onSurfaceVariant),
-            ),
-        ],
       ),
     );
   }

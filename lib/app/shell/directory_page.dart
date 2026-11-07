@@ -7,6 +7,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../core/config/app_config.dart';
 import '../../core/module/module_registry.dart';
 import '../../core/module/nav_destination.dart';
+import '../../core/theme/theme_mode_controller.dart';
 import '../../core/utils/text_search.dart';
 import '../../design/components/components.dart';
 import '../../design/platform/omni_motion_scope.dart';
@@ -55,11 +56,14 @@ OmniHue hueOfArea(NavArea area) => switch (area) {
   NavArea.account => OmniHue.neutral,
 };
 
-/// Gom mục của module theo khu và lọc theo từ khoá. Dòng việc là một section
-/// riêng để không lẫn với các lối vào thao tác công việc; nhóm rỗng bị bỏ.
+/// Gom mục của module thành 4 nhóm nghiệp vụ (`tat-ca-tai-khoan-uiux.html`,
+/// duyệt 07/11) và lọc theo từ khoá; nhóm rỗng bị bỏ.
+///
+/// Bán hàng · Vận hành (công việc, dòng việc, thông báo) · Tài chính · Đội &
+/// quản trị. Mục khu Tài khoản (nền, cài đặt thông báo, quyền của tôi) KHÔNG
+/// lên lưới: cài đặt nằm ở danh sách "Cài đặt ứng dụng", quyền ở màn Tài khoản.
 List<DirectorySection> buildDirectorySections(
   Map<NavArea, List<ModuleNavEntry>> groups, {
-  required List<DirectoryTile> personal,
   required void Function(String routeName) open,
   required String query,
 }) {
@@ -79,26 +83,28 @@ List<DirectorySection> buildDirectorySections(
   ];
   bool keep(DirectoryTile t) =>
       matchesQuery(label: t.label, subtitle: t.subtitle, query: query);
+  // Thông báo khai báo ở khu "Trao đổi" nhưng là việc hằng ngày của vận hành.
+  bool isNotifications(DirectoryTile t) => t.id == _notificationsRoute;
+  final sales = of([NavArea.communication, NavArea.sales]);
 
   final raw = <(String, List<DirectoryTile>)>[
-    ('Bán hàng', of([NavArea.communication, NavArea.sales])),
     (
-      'Công việc',
-      of([NavArea.work]).where((tile) => tile.label != 'Dòng việc').toList(),
-    ),
-    (
-      'Dòng việc',
-      of([NavArea.work]).where((tile) => tile.label == 'Dòng việc').toList(),
-    ),
-    ('Đội & quản trị', of([NavArea.admin])),
-    ('Tài chính', of([NavArea.finance])),
-    (
-      'Cá nhân',
+      'Bán hàng',
       [
-        ...of([NavArea.account]),
-        ...personal,
+        for (final t in sales)
+          if (!isNotifications(t)) t,
       ],
     ),
+    (
+      'Vận hành',
+      [
+        ...of([NavArea.work]),
+        for (final t in sales)
+          if (isNotifications(t)) t,
+      ],
+    ),
+    ('Tài chính', of([NavArea.finance])),
+    ('Đội & quản trị', of([NavArea.admin])),
   ];
 
   return [
@@ -108,13 +114,17 @@ List<DirectorySection> buildDirectorySections(
   ];
 }
 
+/// Tên route trung tâm thông báo (`NotificationRoutes.centre`) — chép chuỗi
+/// để shell không import route của module thông báo.
+const _notificationsRoute = 'notifications.centre';
+
 /// Danh bạ "Tất cả": MỌI tính năng người dùng có quyền dùng, gom theo nhóm,
 /// tìm được bằng từ khoá (không cần gõ dấu).
 ///
 /// Không có gì viết cứng theo module — module khai báo mục, registry lọc theo
-/// quyền và cờ tính năng, màn này dựng bất cứ thứ gì nhận được. Hồ sơ, không
-/// gian làm việc, giao diện, pháp lý, đăng xuất và xoá tài khoản nằm ở màn
-/// Tài khoản; ở đây chỉ có ô lối vào.
+/// quyền và cờ tính năng, màn này dựng bất cứ thứ gì nhận được. Bên dưới lưới:
+/// "Cài đặt ứng dụng" (thông báo, giao diện, nền) và "Trợ giúp". Hồ sơ, mật
+/// khẩu, workspace, đăng xuất nằm ở màn Tài khoản (bấm avatar).
 class DirectoryPage extends ConsumerStatefulWidget {
   const DirectoryPage({super.key});
 
@@ -128,15 +138,12 @@ class _DirectoryPageState extends ConsumerState<DirectoryPage> {
   /// Ô đã từng hiện: chỉ lần dựng đầu tiên mới chạy hoạt ảnh, gõ tìm không phát lại.
   final _seen = <String>{};
 
-  Future<void> _openSupport() async {
+  Future<void> _openLink(Uri url) async {
     // Chụp trước khi await: màn có thể đã bị đóng khi trình duyệt trả về.
     final messenger = ScaffoldMessenger.of(context);
     var opened = false;
     try {
-      opened = await launchUrl(
-        AppConfig.supportUrl,
-        mode: LaunchMode.externalApplication,
-      );
+      opened = await launchUrl(url, mode: LaunchMode.externalApplication);
     } on Object {
       opened = false;
     }
@@ -153,31 +160,50 @@ class _DirectoryPageState extends ConsumerState<DirectoryPage> {
     final groups = ref.watch(directoryGroupsProvider);
     final sections = buildDirectorySections(
       groups,
-      personal: [
-        DirectoryTile(
-          label: 'Tài khoản',
-          icon: Icons.person_outline_rounded,
-          hue: OmniHue.neutral,
-          onTap: () => context.pushNamed(SettingsModule.account),
-        ),
-        DirectoryTile(
-          label: 'Giao diện',
-          subtitle: 'Sáng tối',
-          icon: Icons.light_mode_outlined,
-          hue: OmniHue.neutral,
-          onTap: () => context.pushNamed(SettingsModule.account),
-        ),
-        DirectoryTile(
-          label: 'Hỗ trợ',
-          subtitle: 'Liên hệ hỗ trợ',
-          icon: Icons.help_outline_rounded,
-          hue: OmniHue.neutral,
-          onTap: _openSupport,
-        ),
-      ],
       open: (name) => context.pushNamed(name),
       query: _query,
     );
+    bool shows(String label) =>
+        matchesQuery(label: label, subtitle: null, query: _query);
+    final settingsRows = <Widget>[
+      if (shows('Thông báo'))
+        _ListRow(
+          icon: Icons.notifications_none_rounded,
+          label: 'Thông báo',
+          onTap: () => context.pushNamed(SettingsModule.notifications),
+        ),
+      if (shows('Giao diện sáng tối')) const _ThemeRow(),
+      if (shows('Nền'))
+        _ListRow(
+          icon: Icons.wallpaper_outlined,
+          label: 'Nền',
+          onTap: () => context.pushNamed(SettingsModule.background),
+        ),
+    ];
+    final helpRows = <Widget>[
+      if (shows('Trung tâm hỗ trợ'))
+        _ListRow(
+          icon: Icons.help_outline_rounded,
+          label: 'Trung tâm hỗ trợ',
+          external: true,
+          onTap: () => _openLink(AppConfig.supportUrl),
+        ),
+      if (shows('Chính sách quyền riêng tư'))
+        _ListRow(
+          icon: Icons.policy_outlined,
+          label: 'Chính sách quyền riêng tư',
+          external: true,
+          onTap: () => _openLink(AppConfig.privacyPolicyUrl),
+        ),
+      if (shows('Phiên bản'))
+        _ListRow(
+          icon: Icons.info_outline_rounded,
+          label: 'Phiên bản',
+          value: AppConfig.appVersion,
+        ),
+    ];
+    final nothing =
+        sections.isEmpty && settingsRows.isEmpty && helpRows.isEmpty;
     // Đánh dấu "đã hiện" SAU khung này (ô được dựng sau build của trang).
     final ids = [
       for (final s in sections)
@@ -194,58 +220,69 @@ class _DirectoryPageState extends ConsumerState<DirectoryPage> {
     }
 
     return Scaffold(
-      backgroundColor: scheme.surface,
+      extendBodyBehindAppBar: true,
+      // Nền xám nhạt để các khung nhóm trắng tách bạch (bố cục ERP).
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: OmniTopBar(
         semanticsTitle: 'Tất cả',
         bottom: _SearchBottom(
           onChanged: (value) => setState(() => _query = value),
         ),
       ),
-      body: Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 720),
-          child: ListView(
-            keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-            padding: const EdgeInsets.fromLTRB(
-              OmniSpacing.xl,
-              14,
-              OmniSpacing.xl,
-              OmniSpacing.bottomSafe,
-            ),
-            children: [
-              if (sections.isEmpty)
-                Padding(
-                  padding: const EdgeInsets.only(top: 40),
-                  child: Text(
-                    'Không tìm thấy tính năng “$_query”',
-                    textAlign: TextAlign.center,
-                    style: OmniType.body.copyWith(
-                      color: scheme.onSurfaceVariant,
-                    ),
+      body: OmniTopBarOverlap.wrap(
+        child: Builder(
+          builder: (context) {
+            final topInset = OmniTopBarOverlap.of(context);
+            return Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 720),
+                child: ListView(
+                  keyboardDismissBehavior:
+                      ScrollViewKeyboardDismissBehavior.onDrag,
+                  padding: EdgeInsets.fromLTRB(
+                    OmniSpacing.xl,
+                    topInset + 14,
+                    OmniSpacing.xl,
+                    OmniSpacing.bottomSafe,
                   ),
-                ),
-              for (final section in sections) ...[
-                if (section != sections.first) const SizedBox(height: 16),
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(4, 0, 4, 8),
-                  child: Semantics(
-                    header: true,
-                    child: Text(
-                      section.label,
-                      style: OmniType.overline.copyWith(
-                        color: scheme.onSurfaceVariant,
+                  children: [
+                    if (nothing)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 40),
+                        child: Text(
+                          'Không tìm thấy “$_query”',
+                          textAlign: TextAlign.center,
+                          style: OmniType.body.copyWith(
+                            color: scheme.onSurfaceVariant,
+                          ),
+                        ),
                       ),
-                    ),
-                  ),
+                    for (final section in sections) ...[
+                      if (section != sections.first) const SizedBox(height: 16),
+                      _SectionLabel(section.label),
+                      _GroupCard(
+                        child: _TileGrid(
+                          tiles: section.tiles,
+                          firstIndex: starts[sections.indexOf(section)],
+                          seen: _seen,
+                        ),
+                      ),
+                    ],
+                    if (settingsRows.isNotEmpty) ...[
+                      const SizedBox(height: 16),
+                      const _SectionLabel('Cài đặt ứng dụng'),
+                      _GroupCard(child: Column(children: settingsRows)),
+                    ],
+                    if (helpRows.isNotEmpty) ...[
+                      const SizedBox(height: 16),
+                      const _SectionLabel('Trợ giúp'),
+                      _GroupCard(child: Column(children: helpRows)),
+                    ],
+                  ],
                 ),
-                _TileGrid(
-                  tiles: section.tiles,
-                  firstIndex: starts[sections.indexOf(section)],
-                  seen: _seen,
-                ),
-              ],
-            ],
-          ),
+              ),
+            );
+          },
         ),
       ),
     );
@@ -388,7 +425,10 @@ class _FeatureTile extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final scheme = Theme.of(context).colorScheme;
-    final tone = OmniFeatureTones.of(context, tile.hue);
+    // Một tông màu cho mọi ô (app liquid glass): nền xanh nhạt, icon màu
+    // chính. Chỉ huy hiệu giữ màu riêng vì là tín hiệu.
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    final toneBackground = scheme.primary.withValues(alpha: dark ? 0.16 : 0.09);
     final badgeProvider = tile.badge;
     final count = badgeProvider == null ? 0 : ref.watch(badgeProvider);
 
@@ -430,14 +470,10 @@ class _FeatureTile extends ConsumerWidget {
                         width: 40,
                         height: 40,
                         decoration: BoxDecoration(
-                          color: tone.background,
+                          color: toneBackground,
                           borderRadius: OmniRadius.xlAll,
                         ),
-                        child: Icon(
-                          tile.icon,
-                          size: 20,
-                          color: tone.foreground,
-                        ),
+                        child: Icon(tile.icon, size: 20, color: scheme.primary),
                       ),
                       if (count > 0)
                         Positioned(
@@ -571,6 +607,172 @@ class _EditMenuButton extends StatelessWidget {
         side: BorderSide(color: primary, width: 1.5),
         shape: const StadiumBorder(),
         textStyle: OmniType.bodyStrong,
+      ),
+    );
+  }
+}
+
+class _SectionLabel extends StatelessWidget {
+  const _SectionLabel(this.label);
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(4, 0, 4, 8),
+      child: Semantics(
+        header: true,
+        child: Text(
+          label,
+          style: OmniType.overline.copyWith(
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Khung nhóm: nền thẻ, viền mảnh, bo 20 — tách các nhóm rõ ràng.
+class _GroupCard extends StatelessWidget {
+  const _GroupCard({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: scheme.surface,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: scheme.outlineVariant),
+      ),
+      child: ClipRRect(borderRadius: BorderRadius.circular(20), child: child),
+    );
+  }
+}
+
+/// Icon một tông màu cho dòng danh sách (cùng tông với ô lưới).
+class _MonoIcon extends StatelessWidget {
+  const _MonoIcon(this.icon);
+
+  final IconData icon;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    return Container(
+      width: 34,
+      height: 34,
+      decoration: BoxDecoration(
+        color: scheme.primary.withValues(alpha: dark ? 0.16 : 0.09),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Icon(icon, size: 19, color: scheme.primary),
+    );
+  }
+}
+
+class _ListRow extends StatelessWidget {
+  const _ListRow({
+    required this.icon,
+    required this.label,
+    this.onTap,
+    this.value,
+    this.external = false,
+  });
+
+  final IconData icon;
+  final String label;
+  final VoidCallback? onTap;
+  final String? value;
+  final bool external;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final row = ConstrainedBox(
+      constraints: const BoxConstraints(minHeight: 54),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        child: Row(
+          children: [
+            _MonoIcon(icon),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                label,
+                style: OmniType.body.copyWith(color: scheme.onSurface),
+              ),
+            ),
+            if (value != null)
+              Text(
+                value!,
+                style: OmniType.caption.copyWith(
+                  color: scheme.onSurfaceVariant,
+                  fontFeatures: const [FontFeature.tabularFigures()],
+                ),
+              ),
+            if (onTap != null)
+              Icon(
+                external
+                    ? Icons.open_in_new_rounded
+                    : Icons.chevron_right_rounded,
+                size: 18,
+                color: scheme.onSurfaceVariant,
+              ),
+          ],
+        ),
+      ),
+    );
+    if (onTap == null) return row;
+    return InkWell(
+      onTap: () {
+        HapticFeedback.selectionClick();
+        onTap!();
+      },
+      child: row,
+    );
+  }
+}
+
+/// Giao diện đổi ngay tại chỗ: Theo máy · Sáng · Tối.
+class _ThemeRow extends ConsumerWidget {
+  const _ThemeRow();
+
+  static const _modes = [ThemeMode.system, ThemeMode.light, ThemeMode.dark];
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final scheme = Theme.of(context).colorScheme;
+    final mode = ref.watch(themeModeProvider);
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      child: Row(
+        children: [
+          const _MonoIcon(Icons.contrast_rounded),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              'Giao diện',
+              style: OmniType.body.copyWith(color: scheme.onSurface),
+            ),
+          ),
+          SizedBox(
+            width: 168,
+            child: OmniSegmented(
+              labels: const ['Máy', 'Sáng', 'Tối'],
+              index: _modes.indexOf(mode).clamp(0, 2),
+              onChanged: (i) {
+                HapticFeedback.selectionClick();
+                ref.read(themeModeProvider.notifier).set(_modes[i]);
+              },
+            ),
+          ),
+        ],
       ),
     );
   }

@@ -166,6 +166,7 @@ class _TeamsPageState extends ConsumerState<TeamsPage> {
     final canDeleteTeam =
         taskAccess.canDelete && access.can('organization.org_units.delete');
     return Scaffold(
+      extendBodyBehindAppBar: true,
       backgroundColor: Theme.of(context).colorScheme.surface,
       appBar: OmniTopBar(
         semanticsTitle: 'Việc',
@@ -177,23 +178,32 @@ class _TeamsPageState extends ConsumerState<TeamsPage> {
           onAdd: (anchor) => _create(anchor, canCreateTeam: canCreateTeam),
         ),
       ),
-      body: RefreshIndicator.adaptive(
-        onRefresh: () async => ref.invalidate(teamsWithPlansProvider),
-        child: OmniAsyncView(
-          value: groups,
-          onRetry: () => ref.invalidate(teamsWithPlansProvider),
-          data: (list) => _list(
-            list,
-            isAssigner: isAssigner,
-            currentUserId: currentUserId,
-            canUpdateTeam: canUpdateTeam,
-            canDeleteTeam: canDeleteTeam,
-            canMovePlan: (plan) =>
-                taskAccess.canUpdate &&
-                (taskAccess.isAssigner ||
-                    (currentUserId != null &&
-                        plan.roleOf(currentUserId).canManagePlan)),
-          ),
+      body: OmniTopBarOverlap.wrap(
+        child: Builder(
+          builder: (context) {
+            final topInset = OmniTopBarOverlap.of(context);
+            return RefreshIndicator.adaptive(
+              edgeOffset: topInset,
+              onRefresh: () async => ref.invalidate(teamsWithPlansProvider),
+              child: OmniAsyncView(
+                value: groups,
+                onRetry: () => ref.invalidate(teamsWithPlansProvider),
+                data: (list) => _list(
+                  list,
+                  topInset: topInset,
+                  isAssigner: isAssigner,
+                  currentUserId: currentUserId,
+                  canUpdateTeam: canUpdateTeam,
+                  canDeleteTeam: canDeleteTeam,
+                  canMovePlan: (plan) =>
+                      taskAccess.canUpdate &&
+                      (taskAccess.isAssigner ||
+                          (currentUserId != null &&
+                              plan.roleOf(currentUserId).canManagePlan)),
+                ),
+              ),
+            );
+          },
         ),
       ),
     );
@@ -201,6 +211,7 @@ class _TeamsPageState extends ConsumerState<TeamsPage> {
 
   Widget _list(
     List<TeamWithPlans> rawList, {
+    required double topInset,
     required bool isAssigner,
     required String? currentUserId,
     required bool canUpdateTeam,
@@ -392,7 +403,7 @@ class _TeamsPageState extends ConsumerState<TeamsPage> {
     return ListView.separated(
       physics: const AlwaysScrollableScrollPhysics(),
       keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-      padding: const EdgeInsets.only(top: 4, bottom: 110),
+      padding: EdgeInsets.only(top: topInset + 4, bottom: 110),
       itemCount: children.length,
       separatorBuilder: (context, _) => Divider(
         height: 17,
