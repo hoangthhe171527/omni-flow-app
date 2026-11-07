@@ -35,7 +35,7 @@ class PlanFilesPage extends ConsumerWidget {
     final scheme = Theme.of(context).colorScheme;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Tệp đính kèm')),
+      appBar: OmniAppBar(title: 'Tệp đính kèm'),
       body: OmniAsyncView(
         value: tasks,
         onRetry: () => ref.invalidate(planTasksProvider(planId)),

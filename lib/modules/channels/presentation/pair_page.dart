@@ -80,10 +80,7 @@ class _PairPageState extends ConsumerState<PairPage>
 
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.surface,
-      appBar: AppBar(
-        backgroundColor: Theme.of(context).colorScheme.surface,
-        title: Text('Ghép nối ${meta.name}'),
-      ),
+      appBar: OmniAppBar(title: 'Ghép nối ${meta.name}'),
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),

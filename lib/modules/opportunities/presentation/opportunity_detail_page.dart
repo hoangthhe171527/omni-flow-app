@@ -34,9 +34,8 @@ class OpportunityDetailPage extends ConsumerWidget {
     // đoạn), rồi trên nền xám là thẻ thông tin và ghi chú.
     return Scaffold(
       backgroundColor: scheme.surface,
-      appBar: AppBar(
-        backgroundColor: scheme.surface,
-        title: const Text('Chi tiết cơ hội'),
+      appBar: OmniAppBar(
+        title: 'Chi tiết cơ hội',
         actions: [
           if (access.canUpdate)
             TextButton(

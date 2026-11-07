@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
-import '../tokens/tokens.dart';
+import 'omni_glass.dart';
+import 'omni_top_bar.dart';
 
 /// Chỗ cắm cho nút tài khoản ở góc phải mọi [OmniAppBar].
 ///
@@ -40,17 +41,16 @@ class OmniAccountSlot extends InheritedWidget {
       oldWidget.builder != builder || oldWidget.tileBuilder != tileBuilder;
 }
 
-/// AppBar của app, với nút tài khoản ở góc phải là MẶC ĐỊNH.
+/// Thanh trên của các màn còn lại, kiểu nút kính rời (viomni-apple-uiux.html,
+/// duyệt 07/11) — dựng bằng [OmniTopBar] để mọi màn cùng một diện mạo:
 ///
-/// Vì sao là một widget chứ không phải một hàm trợ giúp để mỗi màn tự chèn vào
-/// `actions:`: một mảnh thứ hai phải nhớ nối là đúng hình dạng lỗi đã sửa ở dự
-/// án con "Dòng việc sống" — bốn trong năm chỗ đã quên `ref.watch` thứ hai của
-/// tín hiệu realtime, và cái quên đó im lặng suốt nhiều tháng. Ở đây, quên
-/// nghĩa là VẪN CÓ nút.
+///  * Màn ĐẨY VÀO (quay lại được): kiểu màn con — nút kính quay lại (hoặc ✕
+///    khi [close]), tiêu đề 17/600 ở giữa, nút riêng của màn bên phải, không
+///    chuông/tài khoản: chúng chỉ mời người ta đi lạc giữa một việc dở.
+///  * Màn GỐC: tiêu đề lớn bên trái, nút riêng, chuông và tài khoản.
 ///
-/// Chỉ dùng cho **màn gốc của các tab**. Màn chi tiết và form giữ `AppBar`
-/// trơn: một nút tài khoản ở góc màn "Team mới" chỉ mời người ta đi lạc giữa
-/// chừng một việc đang làm dở.
+/// Nút riêng ([actions]) tự được bọc viên kính ([OmniGlassAction]); [bottom]
+/// vẽ ngay dưới hàng tiêu đề (không coi là ô tìm).
 class OmniAppBar extends StatelessWidget implements PreferredSizeWidget {
   const OmniAppBar({
     super.key,
@@ -58,6 +58,9 @@ class OmniAppBar extends StatelessWidget implements PreferredSizeWidget {
     this.actions = const [],
     this.showAccount = true,
     this.bottom,
+    this.close = false,
+    // Ba tham số dưới đây thuộc AppBar cũ; giữ để màn cũ dựng được, không còn
+    // tác dụng với thanh kính.
     this.backgroundColor,
     this.titleSpacing,
     this.toolbarHeight,
@@ -66,9 +69,7 @@ class OmniAppBar extends StatelessWidget implements PreferredSizeWidget {
 
   final String title;
 
-  /// Nút riêng của màn. Chúng đứng TRƯỚC nút tài khoản: nút tài khoản là thứ
-  /// luôn có mặt, nên nó thuộc về mép ngoài cùng và không được xê dịch theo
-  /// từng màn.
+  /// Nút riêng của màn, đứng trước chuông / tài khoản.
   final List<Widget> actions;
 
   /// Chỉ tắt cho màn cố ý không muốn nút tài khoản.
@@ -76,60 +77,49 @@ class OmniAppBar extends StatelessWidget implements PreferredSizeWidget {
 
   final PreferredSizeWidget? bottom;
 
-  /// Ba tham số dưới đây chỉ là ống dẫn thẳng xuống [AppBar].
-  ///
-  /// Có mặt vì các màn gốc SẴN CÓ đang đặt chúng, và chuyển sang [OmniAppBar]
-  /// mà bỏ qua là lặng lẽ đổi diện mạo của sáu màn — kiểu thay đổi không ai
-  /// nhìn ra trong một bản diff, chỉ nhận ra khi mở app lên và thấy nó "hơi
-  /// khác". Cố ý KHÔNG mở thêm ống dẫn nào ngoài ba cái đang thật sự dùng.
+  /// Form tạo/sửa toàn màn: nút đóng ✕ thay cho mũi tên quay lại.
+  final bool close;
+
   final Color? backgroundColor;
   final double? titleSpacing;
   final double? toolbarHeight;
-
-  /// Tiêu đề căn GIỮA cỡ thanh trên (17/600) thay vì tiêu đề lớn canh trái:
-  /// dành cho màn gốc kiểu "Dòng việc" (`Timeline.dc.html`).
   final bool centerTitle;
 
-  @override
-  Size get preferredSize => Size.fromHeight(
-    (toolbarHeight ?? kToolbarHeight) + (bottom?.preferredSize.height ?? 0),
+  OmniTopBar _bar(bool canPop, VoidCallback? back) => OmniTopBar(
+    semanticsTitle: title,
+    onBack: canPop ? back : null,
+    backIcon: close ? Icons.close_rounded : null,
+    showAccount: showAccount,
+    searchBottom: false,
+    bottom: bottom,
+    actions: [for (final a in actions) OmniGlassAction(child: a)],
   );
 
   @override
+  Size get preferredSize => _bar(false, null).preferredSize;
+
+  @override
   Widget build(BuildContext context) {
-    // Nút tài khoản ở GÓC TRÁI, trước tiêu đề — như Slack, Zalo, Google: mắt
-    // đọc trái→phải và danh tính đứng đầu dòng; nút riêng của màn (tìm,
-    // chuông) giữ mép phải nên hai mép cân nhau. Bản đầu đặt nó ở mép phải
-    // và người dùng nhìn ảnh chụp thấy lệch.
-    //
-    // `leading` chỉ có một chỗ: màn ĐẨY VÀO đã có nút quay lại ở đó, và màn
-    // đẩy vào cũng không nên có nút tài khoản (xem doc lớp) — nên chỉ màn gốc
-    // (không quay lại được) mới vẽ.
     final canPop = ModalRoute.of(context)?.canPop ?? false;
-    final account = showAccount && !canPop
-        ? OmniAccountSlot.maybeOf(context)
-        : null;
+    return _bar(canPop, () => Navigator.of(context).maybePop());
+  }
+}
 
-    // Màn gốc của tab dùng tiêu đề LỚN (24/600) canh trái, như mọi màn gốc
-    // trong bộ Orbit; màn đẩy vào giữ tiêu đề thường của theme.
-    final scheme = Theme.of(context).colorScheme;
+/// Bọc một nút có sẵn (IconButton, TextButton "Lưu") thành viên kính cao 44:
+/// tròn khi là nút biểu tượng, viên thuốc khi có chữ.
+class OmniGlassAction extends StatelessWidget {
+  const OmniGlassAction({super.key, required this.child});
 
-    return AppBar(
-      leading: account == null ? null : account(context),
-      // 32dp ảnh + 12dp mỗi bên: khớp lề 16dp của tiêu đề khi không có nút.
-      leadingWidth: account == null ? null : 56,
-      title: Text(title, maxLines: 1, overflow: TextOverflow.ellipsis),
-      titleTextStyle: canPop
-          ? null
-          : (centerTitle ? OmniType.navTitle : OmniType.largeTitle).copyWith(
-              color: scheme.onSurface,
-            ),
-      centerTitle: centerTitle ? true : (canPop ? null : false),
-      bottom: bottom,
-      backgroundColor: backgroundColor,
-      titleSpacing: titleSpacing,
-      toolbarHeight: toolbarHeight,
-      actions: actions,
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return OmniGlass(
+      radius: 22,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
+        child: Center(widthFactor: 1, child: child),
+      ),
     );
   }
 }

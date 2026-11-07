@@ -131,8 +131,8 @@ class _PlanMembersPageState extends ConsumerState<PlanMembersPage> {
     final draft = _draft;
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Thành viên'),
+      appBar: OmniAppBar(
+        title: 'Thành viên',
         actions: [
           PlanSaveAction(saving: _saving, onPressed: _dirty ? _save : null),
         ],

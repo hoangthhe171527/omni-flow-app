@@ -37,7 +37,7 @@ class _CreateTeamPageState extends ConsumerState<CreateTeamPage> {
     final text = Theme.of(context).textTheme;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Team mới')),
+      appBar: OmniAppBar(title: 'Team mới', close: true),
       body: ListView(
         keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
         padding: const EdgeInsets.fromLTRB(

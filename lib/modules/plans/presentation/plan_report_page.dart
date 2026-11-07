@@ -62,7 +62,7 @@ class _PlanReportPageState extends ConsumerState<PlanReportPage> {
 
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.surface,
-      appBar: AppBar(title: const Text('Báo cáo kế hoạch')),
+      appBar: OmniAppBar(title: 'Báo cáo kế hoạch'),
       body: OmniAsyncView(
         value: plan,
         onRetry: () => ref.invalidate(planProvider(widget.planId)),

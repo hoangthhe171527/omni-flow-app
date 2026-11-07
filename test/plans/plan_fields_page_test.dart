@@ -59,7 +59,7 @@ void main() {
     await tester.pump();
     await tester.tap(find.widgetWithText(FilledButton, 'Xong'));
     await tester.pumpAndSettle();
-    await tester.tap(find.widgetWithText(FilledButton, 'Lưu'));
+    await tester.tap(find.widgetWithText(TextButton, 'Lưu'));
     await tester.pumpAndSettle();
 
     final sent = api.patches.single.toJson();
@@ -98,7 +98,7 @@ void main() {
     await tester.pump();
     await tester.tap(find.widgetWithText(FilledButton, 'Xong'));
     await tester.pumpAndSettle();
-    await tester.tap(find.widgetWithText(FilledButton, 'Lưu'));
+    await tester.tap(find.widgetWithText(TextButton, 'Lưu'));
     await tester.pumpAndSettle();
 
     final fields = api.patches.single.toJson()['custom_fields'] as List;
@@ -175,7 +175,7 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.widgetWithText(TextButton, 'Xoá trường'));
     await tester.pumpAndSettle();
-    await tester.tap(find.widgetWithText(FilledButton, 'Lưu'));
+    await tester.tap(find.widgetWithText(TextButton, 'Lưu'));
     await tester.pumpAndSettle();
 
     final fields = api.patches.single.toJson()['custom_fields'] as List;
@@ -191,7 +191,7 @@ void main() {
     await tester.pump();
     await tester.tap(find.widgetWithText(FilledButton, 'Xong'));
     await tester.pumpAndSettle();
-    await tester.tap(find.widgetWithText(FilledButton, 'Lưu'));
+    await tester.tap(find.widgetWithText(TextButton, 'Lưu'));
     await tester.pumpAndSettle();
 
     final fields = api.patches.single.toJson()['custom_fields'] as List;

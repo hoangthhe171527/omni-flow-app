@@ -34,26 +34,19 @@ class WorkloadPage extends ConsumerWidget {
 
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.surface,
-      appBar: AppBar(
-        title: Text(member?.name ?? 'Tải việc'),
+      appBar: OmniAppBar(
+        title: member?.name ?? 'Tải việc',
         // Vai trò dưới tên: "Hằng Ni · Thợ máy" nói đủ để biết vì sao hàng đợi
-        // của người này trông như thế.
+        // của người này trông như thế. Căn giữa theo tiêu đề màn con.
         bottom: member == null
             ? null
             : PreferredSize(
                 preferredSize: const Size.fromHeight(20),
-                child: Padding(
-                  padding: const EdgeInsets.only(
-                    left: OmniSpacing.lg,
-                    bottom: OmniSpacing.sm,
-                  ),
-                  child: Align(
-                    alignment: Alignment.centerLeft,
-                    child: Text(
-                      member.roleLabel,
-                      style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                        color: Theme.of(context).colorScheme.onSurfaceVariant,
-                      ),
+                child: Center(
+                  child: Text(
+                    member.roleLabel,
+                    style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
                     ),
                   ),
                 ),

@@ -124,7 +124,9 @@ void main() {
     await tester.enterText(find.byType(TextField).first, '   ');
     await tester.pump();
 
-    final save = tester.widget<FilledButton>(find.byType(FilledButton));
+    final save = tester.widget<TextButton>(
+      find.widgetWithText(TextButton, 'Lưu'),
+    );
     expect(save.onPressed, isNull);
   });
 

@@ -23,24 +23,22 @@ class PlanSaveAction extends StatelessWidget {
   final VoidCallback? onPressed;
 
   @override
-  Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.only(right: 12),
-    child: FilledButton(
-      onPressed: saving ? null : onPressed,
-      style: FilledButton.styleFrom(
-        minimumSize: const Size(0, 40),
-        padding: const EdgeInsets.symmetric(horizontal: 16),
-        shape: const RoundedRectangleBorder(borderRadius: OmniRadius.smAll),
-        textStyle: OmniType.body.copyWith(fontWeight: FontWeight.w600),
-      ),
-      child: saving
-          ? const SizedBox(
-              width: 18,
-              height: 18,
-              child: CircularProgressIndicator.adaptive(strokeWidth: 2),
-            )
-          : const Text('Lưu'),
+  Widget build(BuildContext context) => TextButton(
+    // Chữ màu chủ đạo trong viên kính của thanh trên — không nút tô đặc.
+    onPressed: saving ? null : onPressed,
+    style: TextButton.styleFrom(
+      minimumSize: const Size(0, 44),
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      shape: const StadiumBorder(),
+      textStyle: OmniType.body.copyWith(fontWeight: FontWeight.w600),
     ),
+    child: saving
+        ? const SizedBox(
+            width: 18,
+            height: 18,
+            child: CircularProgressIndicator.adaptive(strokeWidth: 2),
+          )
+        : const Text('Lưu'),
   );
 }
 
@@ -173,9 +171,8 @@ class _EditPlanPageState extends ConsumerState<EditPlanPage> {
 
     return Scaffold(
       backgroundColor: scheme.surface,
-      appBar: AppBar(
-        backgroundColor: scheme.surface,
-        title: const Text('Sửa kế hoạch'),
+      appBar: OmniAppBar(
+        title: 'Sửa kế hoạch',
         actions: [
           PlanSaveAction(saving: _saving, onPressed: canSave ? _save : null),
         ],

@@ -32,7 +32,7 @@ class CustomerFormPage extends ConsumerWidget {
       initial = existing.valueOrNull;
       if (initial == null) {
         return Scaffold(
-          appBar: AppBar(title: const Text('Sửa khách hàng')),
+          appBar: OmniAppBar(title: 'Sửa khách hàng', close: true),
           body: OmniAsyncView(value: existing, data: (_) => const SizedBox()),
         );
       }
@@ -40,10 +40,9 @@ class CustomerFormPage extends ConsumerWidget {
 
     return Scaffold(
       backgroundColor: scheme.surface,
-      appBar: AppBar(
-        backgroundColor: scheme.surface,
-        leading: const CloseButton(),
-        title: Text(isEdit ? 'Sửa khách hàng' : 'Thêm khách hàng'),
+      appBar: OmniAppBar(
+        title: isEdit ? 'Sửa khách hàng' : 'Thêm khách hàng',
+        close: true,
       ),
       body: CustomerFormEditor(
         key: ValueKey(customerId ?? 'new-customer'),

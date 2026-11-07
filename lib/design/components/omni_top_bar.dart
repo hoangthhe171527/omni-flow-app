@@ -44,7 +44,7 @@ class OmniTopBarSlot extends InheritedWidget {
 /// Chạm ô tìm: thân màn mờ hẳn, thanh tab trượt ẩn ([searchModeProvider]),
 /// hiện "Huỷ". Gõ chữ là lớp mờ tan để thấy kết quả lọc; "Huỷ" xoá chữ (qua
 /// đúng `onChanged` của ô, nên bộ lọc của màn cũng về trống) rồi thoát.
-class OmniTopBar extends ConsumerStatefulWidget implements PreferredSizeWidget {
+class OmniTopBar extends StatefulWidget implements PreferredSizeWidget {
   const OmniTopBar({
     super.key,
     this.bottom,
@@ -54,6 +54,8 @@ class OmniTopBar extends ConsumerStatefulWidget implements PreferredSizeWidget {
     this.actions = const [],
     this.searchBottom = true,
     this.showBell = true,
+    this.showAccount = true,
+    this.backIcon,
   });
 
   /// Ô tìm, bộ lọc, nút riêng của màn. Cần biết chiều cao để Scaffold chừa chỗ.
@@ -71,6 +73,13 @@ class OmniTopBar extends ConsumerStatefulWidget implements PreferredSizeWidget {
 
   /// False trên chính trang Thông báo: chuông ở đó chỉ mở lại trang đang xem.
   final bool showBell;
+
+  /// False cho màn cố ý không muốn nút tài khoản.
+  final bool showAccount;
+
+  /// Biểu tượng nút quay lại của màn con; null = mũi tên theo nền tảng. Form
+  /// tạo/sửa mở toàn màn dùng ✕ (đóng, không lưu).
+  final IconData? backIcon;
 
   /// Màn con (chi tiết, sửa): có thì thanh đổi sang kiểu màn con — nút kính
   /// quay lại, tiêu đề nhỏ ở giữa, nút riêng bên phải, không chuông/avatar.
@@ -94,21 +103,31 @@ class OmniTopBar extends ConsumerStatefulWidget implements PreferredSizeWidget {
   );
 
   @override
-  ConsumerState<OmniTopBar> createState() => _OmniTopBarState();
+  State<OmniTopBar> createState() => _OmniTopBarState();
 }
 
-class _OmniTopBarState extends ConsumerState<OmniTopBar> {
+/// Không phải ConsumerStatefulWidget: OmniAppBar dựng thanh này ở mọi màn,
+/// kể cả bài kiểm một màn lẻ không có ProviderScope. Riverpod chỉ được chạm
+/// khi thật sự cần — số chuông (chỉ khi app đã cắm [OmniTopBarSlot]) và cờ
+/// chế độ tìm (chỉ khi ô tìm có focus).
+class _OmniTopBarState extends State<OmniTopBar> {
   final _portal = OverlayPortalController();
   final _barKey = GlobalKey(debugLabel: 'OmniTopBar');
-  late final StateController<bool> _mode;
+  StateController<bool>? _mode;
   EditableTextState? _field;
   bool _focused = false;
   bool _hasQuery = false;
 
-  @override
-  void initState() {
-    super.initState();
-    _mode = ref.read(searchModeProvider.notifier);
+  StateController<bool>? _searchMode() {
+    if (_mode != null) return _mode;
+    try {
+      return _mode = ProviderScope.containerOf(
+        context,
+        listen: false,
+      ).read(searchModeProvider.notifier);
+    } on StateError {
+      return null; // Không có ProviderScope (bài kiểm một màn lẻ).
+    }
   }
 
   @override
@@ -120,7 +139,7 @@ class _OmniTopBarState extends ConsumerState<OmniTopBar> {
       final mode = _mode;
       Future.microtask(() {
         // Cả ProviderScope có thể đã bị gỡ cùng lúc (đăng xuất, đóng app).
-        if (mode.mounted) mode.state = false;
+        if (mode != null && mode.mounted) mode.state = false;
       });
     }
     super.dispose();
@@ -149,7 +168,7 @@ class _OmniTopBarState extends ConsumerState<OmniTopBar> {
       _portal.hide();
     }
     setState(() => _focused = focused);
-    _mode.state = focused;
+    _searchMode()?.state = focused;
   }
 
   void _cancel() {
@@ -169,8 +188,10 @@ class _OmniTopBarState extends ConsumerState<OmniTopBar> {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final slot = OmniTopBarSlot.maybeOf(context);
-    final unread = slot?.unreadOf(ref) ?? 0;
-    final account = OmniAccountSlot.maybeTileOf(context);
+    // Avatar tròn 36 nếu app cắm; không thì nút tài khoản thường.
+    final account =
+        OmniAccountSlot.maybeTileOf(context) ??
+        OmniAccountSlot.maybeOf(context);
     final onBack = widget.onBack;
     final subPage = onBack != null;
     final showBack =
@@ -186,9 +207,11 @@ class _OmniTopBarState extends ConsumerState<OmniTopBar> {
         children: [
           if (showBack) ...[
             OmniTopBarAction(
-              icon: isApple(context)
-                  ? Icons.arrow_back_ios_new_rounded
-                  : Icons.arrow_back_rounded,
+              icon:
+                  widget.backIcon ??
+                  (isApple(context)
+                      ? Icons.arrow_back_ios_new_rounded
+                      : Icons.arrow_back_rounded),
               tooltip: 'Quay lại',
               onPressed: onBack ?? () => Navigator.of(context).maybePop(),
             ),
@@ -237,17 +260,20 @@ class _OmniTopBarState extends ConsumerState<OmniTopBar> {
             ],
             if (widget.showBell)
               OmniGlassCircle(
-                child: _BellButton(
-                  unread: unread,
-                  onTap: slot == null
-                      ? null
-                      : (anchor) {
-                          HapticFeedback.selectionClick();
-                          slot.onBell(context, anchor);
-                        },
-                ),
+                // Không có slot (bài kiểm một màn lẻ) thì không cần Riverpod.
+                child: slot == null
+                    ? const _BellButton(unread: 0, onTap: null)
+                    : Consumer(
+                        builder: (context, ref, _) => _BellButton(
+                          unread: slot.unreadOf(ref),
+                          onTap: (anchor) {
+                            HapticFeedback.selectionClick();
+                            slot.onBell(context, anchor);
+                          },
+                        ),
+                      ),
               ),
-            if (account != null) ...[
+            if (account != null && widget.showAccount) ...[
               const SizedBox(width: 8),
               OmniGlassCircle(child: account(context)),
             ],

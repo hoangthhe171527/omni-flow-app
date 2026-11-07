@@ -90,8 +90,8 @@ class _PlanFieldsPageState extends ConsumerState<PlanFieldsPage> {
     final scheme = Theme.of(context).colorScheme;
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Trường tuỳ chỉnh'),
+      appBar: OmniAppBar(
+        title: 'Trường tuỳ chỉnh',
         actions: [
           PlanSaveAction(saving: _saving, onPressed: _dirty ? _save : null),
         ],

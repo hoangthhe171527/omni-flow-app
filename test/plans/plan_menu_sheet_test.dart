@@ -379,7 +379,7 @@ void main() {
     );
     expect(page.canRestore, isFalse);
 
-    await tester.pageBack();
+    await tester.tap(find.byTooltip('Quay lại'));
     await tester.pumpAndSettle();
     await openMenu(tester);
     await tester.tap(find.text('Tệp đính kèm'));
@@ -403,7 +403,7 @@ void main() {
       isTrue,
     );
 
-    await tester.pageBack();
+    await tester.tap(find.byTooltip('Quay lại'));
     await tester.pumpAndSettle();
     await openMenu(tester);
     await tester.tap(find.text('Báo cáo kế hoạch'));

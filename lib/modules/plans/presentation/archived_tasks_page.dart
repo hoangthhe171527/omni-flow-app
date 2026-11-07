@@ -67,7 +67,7 @@ class _ArchivedTasksPageState extends ConsumerState<ArchivedTasksPage> {
     final scheme = Theme.of(context).colorScheme;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Việc đã lưu trữ')),
+      appBar: OmniAppBar(title: 'Việc đã lưu trữ'),
       body: RefreshIndicator.adaptive(
         onRefresh: () async =>
             ref.invalidate(archivedTasksProvider(widget.planId)),

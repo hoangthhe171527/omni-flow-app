@@ -103,11 +103,7 @@ class _CreateTaskPageState extends ConsumerState<CreateTaskPage> {
     // "nhãn — giá trị", lời nhắc, và nút "Tạo việc" ghim ở đáy.
     return Scaffold(
       backgroundColor: scheme.surface,
-      appBar: AppBar(
-        backgroundColor: scheme.surface,
-        leading: const CloseButton(),
-        title: const Text('Việc mới'),
-      ),
+      appBar: OmniAppBar(title: 'Việc mới', close: true),
       body: ListView(
         keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
         padding: const EdgeInsets.fromLTRB(20, OmniSpacing.sm, 20, 24),
@@ -195,27 +191,19 @@ class _CreateTaskPageState extends ConsumerState<CreateTaskPage> {
           ),
         ],
       ),
-      bottomNavigationBar: DecoratedBox(
-        decoration: BoxDecoration(
-          color: scheme.surface,
-          border: Border(top: BorderSide(color: scheme.outlineVariant)),
-        ),
-        child: SafeArea(
-          top: false,
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
-            child: FilledButton(
-              onPressed: _canSave ? _save : null,
-              child: _saving
-                  ? const SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator.adaptive(strokeWidth: 2),
-                    )
-                  : const Text('Tạo việc'),
-            ),
+      bottomNavigationBar: OmniActionBar(
+        children: [
+          FilledButton(
+            onPressed: _canSave ? _save : null,
+            child: _saving
+                ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator.adaptive(strokeWidth: 2),
+                  )
+                : const Text('Tạo việc'),
           ),
-        ),
+        ],
       ),
     );
   }

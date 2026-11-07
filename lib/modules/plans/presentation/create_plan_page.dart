@@ -85,36 +85,24 @@ class _CreatePlanPageState extends ConsumerState<CreatePlanPage> {
 
     return Scaffold(
       backgroundColor: scheme.surface,
-      appBar: AppBar(
-        backgroundColor: scheme.surface,
-        leading: const CloseButton(),
-        title: const Text('Kế hoạch mới'),
-      ),
-      bottomNavigationBar: DecoratedBox(
-        decoration: BoxDecoration(
-          color: scheme.surface,
-          border: Border(top: BorderSide(color: scheme.outlineVariant)),
-        ),
-        child: SafeArea(
-          top: false,
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
-            child: FilledButton(
-              onPressed: _canSave ? _save : null,
-              child: _saving
-                  ? const SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator.adaptive(strokeWidth: 2),
-                    )
-                  : Text(
-                      _createdPlanId != null && _coverPath != null
-                          ? 'Thử tải ảnh lại'
-                          : 'Tạo kế hoạch',
-                    ),
-            ),
+      appBar: OmniAppBar(title: 'Kế hoạch mới', close: true),
+      bottomNavigationBar: OmniActionBar(
+        children: [
+          FilledButton(
+            onPressed: _canSave ? _save : null,
+            child: _saving
+                ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator.adaptive(strokeWidth: 2),
+                  )
+                : Text(
+                    _createdPlanId != null && _coverPath != null
+                        ? 'Thử tải ảnh lại'
+                        : 'Tạo kế hoạch',
+                  ),
           ),
-        ),
+        ],
       ),
       body: ListView(
         keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,

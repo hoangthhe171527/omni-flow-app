@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+
+import '../../../design/components/components.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -52,20 +54,18 @@ class _EditSectionsPageState extends ConsumerState<EditSectionsPage> {
     return Scaffold(
       // "Lưu" nằm trên thanh trên như thiết kế (`MEditSections.dc.html`): danh
       // sách dài thì nút ở cuối trang phải cuộn mới thấy.
-      appBar: AppBar(
-        title: const Text('Nhóm việc'),
+      appBar: OmniAppBar(
+        title: 'Nhóm việc',
         actions: [
           if (sections != null)
             Padding(
-              padding: const EdgeInsets.only(right: 12),
-              child: FilledButton(
+              padding: EdgeInsets.zero,
+              child: TextButton(
                 onPressed: _canSave(sections) ? () => _save(sections) : null,
-                style: FilledButton.styleFrom(
-                  minimumSize: const Size(0, 40),
+                style: TextButton.styleFrom(
+                  minimumSize: const Size(0, 44),
                   padding: const EdgeInsets.symmetric(horizontal: 16),
-                  shape: const RoundedRectangleBorder(
-                    borderRadius: OmniRadius.smAll,
-                  ),
+                  shape: const StadiumBorder(),
                   textStyle: OmniType.body.copyWith(
                     fontWeight: FontWeight.w600,
                   ),

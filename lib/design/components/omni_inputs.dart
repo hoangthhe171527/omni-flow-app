@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../platform/omni_motion_scope.dart';
 import '../platform/omni_platform.dart';
 import '../tokens/tokens.dart';
+import 'omni_glass.dart';
 
 /// Debounced search field. Debouncing lives here rather than in each screen so
 /// no list ever fires a request per keystroke.
@@ -211,7 +212,13 @@ class OmniField extends StatelessWidget {
   }
 }
 
-/// Sticky bottom action bar for forms and detail screens.
+/// Thanh hành động đáy của form và màn chi tiết — viên kính nổi
+/// (viomni-apple-uiux.html `.actbar.glass`): cách mép 12, bo 30, đệm 7.
+///
+/// Nút trong thanh là nút VIỀN (gu người dùng: không nút tô đặc): nút chính
+/// (FilledButton) viền + chữ màu chủ đạo, nút phụ (OutlinedButton) viền nhạt
+/// chữ phụ; cao 46, dạng viên thuốc. Nút phụ ôm chữ của nó, nút chính cuối
+/// hàng chiếm phần còn lại — chia đều làm chữ nút phụ gãy dòng ở màn 390dp.
 class OmniActionBar extends StatelessWidget {
   const OmniActionBar({super.key, required this.children});
 
@@ -220,41 +227,76 @@ class OmniActionBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    const height = 46.0;
+    final label = OmniType.body.copyWith(fontWeight: FontWeight.w600);
 
-    return Container(
+    Color tone(Set<WidgetState> s, Color on) => s.contains(WidgetState.disabled)
+        ? scheme.onSurface.withValues(alpha: .38)
+        : on;
+
+    final primary = ButtonStyle(
+      minimumSize: const WidgetStatePropertyAll(Size(0, height)),
+      padding: const WidgetStatePropertyAll(
+        EdgeInsets.symmetric(horizontal: 18),
+      ),
+      shape: const WidgetStatePropertyAll(StadiumBorder()),
+      elevation: const WidgetStatePropertyAll(0),
+      textStyle: WidgetStatePropertyAll(label),
+      backgroundColor: const WidgetStatePropertyAll(Colors.transparent),
+      foregroundColor: WidgetStateProperty.resolveWith(
+        (s) => tone(s, scheme.primary),
+      ),
+      overlayColor: WidgetStatePropertyAll(
+        scheme.primary.withValues(alpha: .08),
+      ),
+      side: WidgetStateProperty.resolveWith(
+        (s) => BorderSide(
+          width: 1.5,
+          color: s.contains(WidgetState.disabled)
+              ? scheme.onSurface.withValues(alpha: .14)
+              : scheme.primary,
+        ),
+      ),
+    );
+    final secondary = primary.copyWith(
+      foregroundColor: WidgetStateProperty.resolveWith(
+        (s) => tone(s, scheme.onSurfaceVariant),
+      ),
+      overlayColor: WidgetStatePropertyAll(
+        scheme.onSurface.withValues(alpha: .06),
+      ),
+      side: WidgetStatePropertyAll(
+        BorderSide(width: 1.5, color: scheme.outlineVariant),
+      ),
+    );
+
+    return Padding(
       padding: EdgeInsets.fromLTRB(
-        OmniSpacing.lg,
-        OmniSpacing.md,
-        OmniSpacing.lg,
-        OmniSpacing.md + MediaQuery.paddingOf(context).bottom,
+        12,
+        8,
+        12,
+        14 + MediaQuery.paddingOf(context).bottom,
       ),
-      decoration: BoxDecoration(
-        color: scheme.surface,
-        border: Border(top: BorderSide(color: scheme.outlineVariant)),
-      ),
-      // Bộ Orbit: nút phụ ôm lấy chữ của nó ("Huỷ", "Đánh dấu thắng"), nút
-      // chính cuối hàng chiếm phần còn lại. Chia đều bề ngang làm chữ nút phụ
-      // gãy thành ba dòng trên màn 390dp.
-      child: Row(
-        children: [
-          for (var i = 0; i < children.length; i++) ...[
-            if (i > 0) const SizedBox(width: 10),
-            if (i == children.length - 1)
-              Expanded(child: children[i])
-            else
-              OutlinedButtonTheme(
-                data: OutlinedButtonThemeData(
-                  style: Theme.of(context).outlinedButtonTheme.style?.copyWith(
-                    minimumSize: const WidgetStatePropertyAll(Size(0, 48)),
-                    padding: const WidgetStatePropertyAll(
-                      EdgeInsets.symmetric(horizontal: 18),
-                    ),
-                  ),
-                ),
-                child: children[i],
-              ),
-          ],
-        ],
+      child: OmniGlass(
+        radius: 30,
+        padding: const EdgeInsets.all(7),
+        child: FilledButtonTheme(
+          data: FilledButtonThemeData(style: primary),
+          child: OutlinedButtonTheme(
+            data: OutlinedButtonThemeData(style: secondary),
+            child: Row(
+              children: [
+                for (var i = 0; i < children.length; i++) ...[
+                  if (i > 0) const SizedBox(width: 8),
+                  if (i == children.length - 1)
+                    Expanded(child: children[i])
+                  else
+                    children[i],
+                ],
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }
