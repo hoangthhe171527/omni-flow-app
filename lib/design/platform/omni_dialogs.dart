@@ -19,54 +19,97 @@ Future<bool> showOmniConfirm({
   String cancelLabel = 'Huỷ',
   bool destructive = false,
 }) async {
-  final answer = isApple(context)
-      ? await showCupertinoDialog<bool>(
-          context: context,
-          barrierDismissible: true,
-          builder: (context) => CupertinoAlertDialog(
-            title: Text(title),
-            content: Padding(
-              padding: const EdgeInsets.only(top: 6),
-              child: Text(message),
+  // Thẻ kính giữa màn kiểu iOS cho CẢ hai nền tảng (viomni-apple-uiux.html
+  // `.alert.glass`): tiêu đề 17, lời nhắn 14 phụ, hai nút chữ chia đôi ngăn
+  // bằng vạch — "Huỷ" | hành động (đỏ khi phá huỷ, đậm hơn). Vẫn là một
+  // AlertDialog để các bài kiểm / trợ năng nhận ra hộp thoại.
+  final answer = await showDialog<bool>(
+    context: context,
+    barrierColor: OmniColors.ink.withValues(alpha: .28),
+    builder: (context) {
+      final scheme = Theme.of(context).colorScheme;
+      final dark = Theme.of(context).brightness == Brightness.dark;
+      final line = scheme.onSurface.withValues(alpha: .10);
+      Widget action(String label, bool value, {bool strong = false}) =>
+          Expanded(
+            child: TextButton(
+              onPressed: () {
+                if (value) HapticFeedback.selectionClick();
+                Navigator.of(context).pop(value);
+              },
+              style: TextButton.styleFrom(
+                minimumSize: const Size(0, 46),
+                shape: const RoundedRectangleBorder(),
+                foregroundColor: value && destructive
+                    ? scheme.error
+                    : scheme.primary,
+                textStyle: OmniType.body.copyWith(
+                  fontSize: 16,
+                  fontWeight: strong ? FontWeight.w600 : FontWeight.w500,
+                ),
+              ),
+              child: Text(label),
             ),
-            actions: [
-              CupertinoDialogAction(
-                onPressed: () => Navigator.of(context).pop(false),
-                child: Text(cancelLabel),
-              ),
-              CupertinoDialogAction(
-                isDestructiveAction: destructive,
-                // Trên iOS, hành động phá huỷ KHÔNG được là mặc định: mặc định
-                // là cái người dùng bấm khi không đọc kỹ.
-                isDefaultAction: !destructive,
-                onPressed: () => Navigator.of(context).pop(true),
-                child: Text(confirmLabel),
-              ),
-            ],
+          );
+
+      return AlertDialog(
+        backgroundColor: scheme.surface.withValues(alpha: dark ? .90 : .94),
+        surfaceTintColor: Colors.transparent,
+        elevation: 0,
+        insetPadding: const EdgeInsets.symmetric(horizontal: 40),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(24),
+          side: BorderSide(
+            color: Colors.white.withValues(alpha: dark ? .10 : .70),
           ),
-        )
-      : await showDialog<bool>(
-          context: context,
-          builder: (context) => AlertDialog(
-            title: Text(title),
-            content: Text(message),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(false),
-                child: Text(cancelLabel),
-              ),
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(true),
-                style: destructive
-                    ? TextButton.styleFrom(
-                        foregroundColor: Theme.of(context).colorScheme.error,
-                      )
-                    : null,
-                child: Text(confirmLabel),
-              ),
-            ],
+        ),
+        clipBehavior: Clip.antiAlias,
+        titlePadding: const EdgeInsets.fromLTRB(18, 20, 18, 0),
+        contentPadding: const EdgeInsets.fromLTRB(18, 8, 18, 16),
+        actionsPadding: EdgeInsets.zero,
+        buttonPadding: EdgeInsets.zero,
+        title: Text(
+          title,
+          textAlign: TextAlign.center,
+          style: OmniType.body.copyWith(
+            fontSize: 17,
+            fontWeight: FontWeight.w600,
+            color: scheme.onSurface,
           ),
-        );
+        ),
+        content: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 290),
+          child: Text(
+            message,
+            textAlign: TextAlign.center,
+            style: OmniType.body.copyWith(
+              fontSize: 14,
+              height: 1.45,
+              color: scheme.onSurfaceVariant,
+            ),
+          ),
+        ),
+        actions: [
+          DecoratedBox(
+            decoration: BoxDecoration(
+              border: Border(top: BorderSide(color: line)),
+            ),
+            child: IntrinsicHeight(
+              child: Row(
+                children: [
+                  action(cancelLabel, false),
+                  VerticalDivider(width: 1, thickness: 1, color: line),
+                  // Phá huỷ thì KHÔNG đậm: nút đậm là "mặc định", cái người ta
+                  // bấm khi không đọc kỹ — xoá không được nằm ở đó (HIG).
+                  action(confirmLabel, true, strong: !destructive),
+                ],
+              ),
+            ),
+          ),
+        ],
+      );
+    },
+  );
 
   return answer ?? false;
 }

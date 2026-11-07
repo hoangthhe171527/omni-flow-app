@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:ui' show ImageFilter;
 
 import 'package:flutter/material.dart';
 
@@ -168,12 +169,15 @@ class OmniField extends StatelessWidget {
       children: [
         Row(
           children: [
-            Text(
-              label,
-              // 14/600 màu chữ chính — nhãn của mọi biểu mẫu trong bộ Orbit.
-              style: OmniType.body.copyWith(
-                color: scheme.onSurface,
-                fontWeight: FontWeight.w600,
+            // Nhãn dài (sheet trong viên kính hẹp hơn 16) xuống dòng, không tràn.
+            Flexible(
+              child: Text(
+                label,
+                // 14/600 màu chữ chính — nhãn của mọi biểu mẫu trong bộ Orbit.
+                style: OmniType.body.copyWith(
+                  color: scheme.onSurface,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
             ),
             if (required)
@@ -320,13 +324,18 @@ Future<T?> showOmniSheet<T>({
   bool useRootNavigator = false,
 }) {
   final apple = isApple(context);
+  final fill = backgroundColor ?? Theme.of(context).colorScheme.surface;
 
+  // Viên kính nổi (viomni-apple-uiux.html `.sheet.glass`): cách mép 8, bo 30,
+  // nền thẻ ~86% + nhoè. Tấm Material của sheet để trong suốt; viên kính
+  // [OmniGlassSheet] vẽ nền, bo và thanh kéo.
   return showModalBottomSheet<T>(
     context: context,
     useRootNavigator: useRootNavigator,
     isScrollControlled: true,
     useSafeArea: true,
-    backgroundColor: backgroundColor,
+    backgroundColor: Colors.transparent,
+    elevation: 0,
     barrierColor: barrierColor,
     constraints: maxHeight == null
         ? null
@@ -335,22 +344,102 @@ Future<T?> showOmniSheet<T>({
     sheetAnimationStyle: OmniMotion.enabled(context)
         ? animationStyle
         : AnimationStyle.noAnimation,
-    // iOS bo góc rõ hơn Material và luôn có thanh kéo — đó là dấu hiệu người
-    // dùng iPhone đọc để biết sheet này kéo xuống đóng được. Trên Android thì
-    // nút back của hệ thống đã nói điều đó rồi.
-    showDragHandle: showDragHandle ?? apple,
-    shape: RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(
-        top: Radius.circular(radius ?? (apple ? 14 : OmniRadius.xxl)),
-      ),
-    ),
+    showDragHandle: false,
     builder: (context) => Padding(
       padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
-      child: expand
-          ? FractionallySizedBox(heightFactor: 0.9, child: builder(context))
-          : builder(context),
+      child: OmniGlassSheet(
+        fill: fill,
+        radius: radius ?? 30,
+        // iOS luôn có thanh kéo — dấu hiệu người dùng iPhone đọc để biết sheet
+        // kéo xuống đóng được. Trên Android nút back đã nói điều đó.
+        handle: showDragHandle ?? apple,
+        expand: expand,
+        child: builder(context),
+      ),
     ),
   );
+}
+
+/// Viên kính chứa nội dung của [showOmniSheet].
+class OmniGlassSheet extends StatelessWidget {
+  const OmniGlassSheet({
+    super.key,
+    required this.fill,
+    required this.child,
+    this.radius = 30,
+    this.handle = false,
+    this.expand = false,
+  });
+
+  final Color fill;
+  final double radius;
+  final bool handle;
+  final bool expand;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    final solid = MediaQuery.highContrastOf(context);
+    final shape = BorderRadius.circular(radius);
+    final body = Material(
+      key: const Key('omni-glass-sheet'),
+      color: solid ? fill : fill.withValues(alpha: dark ? .80 : .86),
+      shape: RoundedRectangleBorder(
+        borderRadius: shape,
+        side: BorderSide(
+          color: Colors.white.withValues(alpha: dark ? .10 : .70),
+        ),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Column(
+        mainAxisSize: expand ? MainAxisSize.max : MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          if (handle)
+            const Padding(
+              padding: EdgeInsets.only(top: 8),
+              child: OmniSheetHandle(gap: 2),
+            ),
+          Flexible(fit: expand ? FlexFit.tight : FlexFit.loose, child: child),
+        ],
+      ),
+    );
+
+    final sheet = Padding(
+      padding: EdgeInsets.fromLTRB(
+        8,
+        0,
+        8,
+        8 + MediaQuery.paddingOf(context).bottom,
+      ),
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          borderRadius: shape,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: dark ? .40 : .14),
+              blurRadius: 36,
+              offset: const Offset(0, 12),
+            ),
+          ],
+        ),
+        child: solid
+            ? body
+            : ClipRRect(
+                borderRadius: shape,
+                child: BackdropFilter(
+                  filter: ImageFilter.blur(sigmaX: 24, sigmaY: 24),
+                  child: body,
+                ),
+              ),
+      ),
+    );
+
+    return expand
+        ? FractionallySizedBox(heightFactor: 0.9, child: sheet)
+        : sheet;
+  }
 }
 
 /// Sheet chia nhóm của màn Việc (`Board.dc.html` menu kế hoạch,
@@ -365,9 +454,8 @@ Future<T?> showOmniViecSheet<T>({
   context: context,
   builder: builder,
   backgroundColor: backgroundColor,
-  barrierColor: OmniColors.ink.withValues(alpha: 0.4),
+  barrierColor: OmniColors.ink.withValues(alpha: 0.28),
   maxHeight: 740,
-  radius: OmniRadius.fab,
   showDragHandle: false,
   animationStyle: const AnimationStyle(
     duration: OmniDuration.sheet,
