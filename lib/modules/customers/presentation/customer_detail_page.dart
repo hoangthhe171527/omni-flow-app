@@ -216,18 +216,30 @@ class _CustomerDetailPageState extends ConsumerState<CustomerDetailPage> {
       backgroundColor: Theme.of(context).colorScheme.surface,
       appBar: OmniTopBar(
         semanticsTitle: 'Khách hàng',
-        bottom: _BackBar(
-          onFullEdit: access.canUpdate
-              ? () async {
-                  await context.pushNamed(
-                    CustomerRoutes.edit,
-                    pathParameters: {'id': _id},
-                  );
-                  if (!mounted) return;
-                  _invalidateDetail(activity: activityOn, opps: oppsOn);
-                }
-              : null,
-        ),
+        onBack: () {
+          if (context.canPop()) {
+            context.pop();
+          } else {
+            context.goNamed(CustomerRoutes.list);
+          }
+        },
+        actions: [
+          // Chỉ có đúng một hành động thì dùng nút trực tiếp; dấu ⋯ rồi mở
+          // menu một dòng chỉ tạo thêm một lần chạm không có giá trị.
+          if (access.canUpdate)
+            OmniTopBarAction(
+              icon: Icons.edit_note_rounded,
+              tooltip: 'Sửa đầy đủ thông tin',
+              onPressed: () async {
+                await context.pushNamed(
+                  CustomerRoutes.edit,
+                  pathParameters: {'id': _id},
+                );
+                if (!mounted) return;
+                _invalidateDetail(activity: activityOn, opps: oppsOn);
+              },
+            ),
+        ],
       ),
       body: OmniTopBarOverlap.wrap(
         child: Builder(
@@ -353,57 +365,6 @@ class _CustomerDetailPageState extends ConsumerState<CustomerDetailPage> {
 }
 
 /// Nút ‹ "Khách hàng" dưới thanh kính (bản mẫu: không nút Sửa).
-class _BackBar extends StatelessWidget implements PreferredSizeWidget {
-  const _BackBar({this.onFullEdit});
-
-  /// Có khi được sửa: mục "Sửa đầy đủ thông tin" trong nút ⋯.
-  final VoidCallback? onFullEdit;
-
-  @override
-  Size get preferredSize => const Size.fromHeight(44);
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return SizedBox(
-      height: 44,
-      child: Row(
-        children: [
-          Padding(
-            padding: const EdgeInsets.only(left: 8),
-            child: TextButton.icon(
-              onPressed: () {
-                if (context.canPop()) {
-                  context.pop();
-                } else {
-                  context.goNamed(CustomerRoutes.list);
-                }
-              },
-              icon: const Icon(Icons.chevron_left_rounded, size: 24),
-              label: const Text('Khách hàng'),
-              style: TextButton.styleFrom(
-                minimumSize: const Size(44, 44),
-                foregroundColor: scheme.primary,
-              ),
-            ),
-          ),
-          const Spacer(),
-          // Chỉ có đúng một hành động thì dùng nút trực tiếp; dấu ⋯ rồi mở
-          // menu một dòng chỉ tạo thêm một lần chạm không có giá trị.
-          if (onFullEdit != null)
-            IconButton(
-              tooltip: 'Sửa đầy đủ thông tin',
-              onPressed: onFullEdit,
-              style: IconButton.styleFrom(minimumSize: const Size(44, 44)),
-              icon: const Icon(Icons.edit_note_rounded),
-            ),
-          const SizedBox(width: 8),
-        ],
-      ),
-    );
-  }
-}
-
 class _Header extends StatelessWidget {
   const _Header({required this.customer});
 

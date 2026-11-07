@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/module/module_registry.dart';
+import '../../core/nav/search_mode.dart';
 import '../../core/nav/shell_bar_inset.dart';
 import '../../core/nav/tab_order.dart';
 import '../../core/module/nav_destination.dart';
@@ -35,6 +36,7 @@ class AppShell extends ConsumerWidget {
     final branchEntries = ref.watch(branchNavEntriesProvider);
     final tabs = ref.watch(tabEntriesProvider).take(maxTabs).toList();
     final moreBranchIndex = branchEntries.length;
+    final searching = ref.watch(searchModeProvider);
 
     // Branch index the shell is currently showing, expressed in tab terms.
     final currentBranch = navigationShell.currentIndex;
@@ -88,11 +90,25 @@ class AppShell extends ConsumerWidget {
             // Body vẽ dưới thanh kính mờ; màn danh sách tự chừa chỗ ở đáy.
             extendBody: true,
             body: navigationShell,
-            bottomNavigationBar: _EditOnLongPress(
-              child: _ShellNavBar(
-                tabs: tabs,
-                selectedIndex: selectedIndex,
-                onSelected: select,
+            // Đang tìm (ô tìm của thanh trên có focus): thanh tab trượt xuống
+            // ẩn, chỉ còn ô tìm và kết quả — như Thư viện ứng dụng iOS.
+            bottomNavigationBar: IgnorePointer(
+              ignoring: searching,
+              child: AnimatedSlide(
+                offset: searching ? const Offset(0, 1.4) : Offset.zero,
+                duration: OmniMotion.of(context).base,
+                curve: OmniCurves.standard,
+                child: AnimatedOpacity(
+                  opacity: searching ? 0 : 1,
+                  duration: OmniMotion.of(context).base,
+                  child: _EditOnLongPress(
+                    child: _ShellNavBar(
+                      tabs: tabs,
+                      selectedIndex: selectedIndex,
+                      onSelected: select,
+                    ),
+                  ),
+                ),
               ),
             ),
           ),

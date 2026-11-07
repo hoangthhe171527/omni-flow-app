@@ -225,6 +225,13 @@ class _DirectoryPageState extends ConsumerState<DirectoryPage> {
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: OmniTopBar(
         semanticsTitle: 'Tất cả',
+        actions: [
+          OmniTopBarAction(
+            icon: Icons.tune_rounded,
+            tooltip: 'Sửa menu',
+            onPressed: () => showTabBarEditor(context),
+          ),
+        ],
         bottom: _SearchBottom(
           onChanged: (value) => setState(() => _query = value),
         ),
@@ -289,20 +296,20 @@ class _DirectoryPageState extends ConsumerState<DirectoryPage> {
   }
 }
 
-/// Ô tìm dưới thanh trên: cao 44 (gọn mắt), đệm `16, 0, 16, 10`; bên phải là
-/// nút viền "Sửa menu" mở màn chọn tính năng cho thanh dưới.
+/// Ô tìm dưới thanh trên (nằm trong viên kính của [OmniTopBar]): cao 44.
+/// "Sửa menu" là nút kính tròn trên thanh trên.
 class _SearchBottom extends StatelessWidget implements PreferredSizeWidget {
   const _SearchBottom({required this.onChanged});
 
   final ValueChanged<String> onChanged;
 
   @override
-  Size get preferredSize => const Size.fromHeight(54);
+  Size get preferredSize => const Size.fromHeight(44);
 
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
+      padding: const EdgeInsets.fromLTRB(6, 0, 6, 0),
       child: SizedBox(
         height: 44,
         child: Row(
@@ -317,8 +324,6 @@ class _SearchBottom extends StatelessWidget implements PreferredSizeWidget {
                 onChanged: onChanged,
               ),
             ),
-            const SizedBox(width: OmniSpacing.sm),
-            const _EditMenuButton(),
           ],
         ),
       ),
@@ -583,30 +588,6 @@ class _PopInState extends State<_PopIn> with SingleTickerProviderStateMixin {
       child: ScaleTransition(
         scale: Tween<double>(begin: 0.85, end: 1).animate(_t),
         child: widget.child,
-      ),
-    );
-  }
-}
-
-/// Nút viền màu chính, không tô đặc (gu đã duyệt).
-class _EditMenuButton extends StatelessWidget {
-  const _EditMenuButton();
-
-  @override
-  Widget build(BuildContext context) {
-    final primary = Theme.of(context).colorScheme.primary;
-
-    return OutlinedButton.icon(
-      onPressed: () => showTabBarEditor(context),
-      icon: const Icon(Icons.tune_rounded, size: 18),
-      label: const Text('Sửa menu'),
-      style: OutlinedButton.styleFrom(
-        foregroundColor: primary,
-        minimumSize: const Size(0, 44),
-        padding: const EdgeInsets.symmetric(horizontal: 14),
-        side: BorderSide(color: primary, width: 1.5),
-        shape: const StadiumBorder(),
-        textStyle: OmniType.bodyStrong,
       ),
     );
   }

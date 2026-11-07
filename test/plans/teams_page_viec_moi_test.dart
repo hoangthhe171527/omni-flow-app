@@ -204,10 +204,11 @@ void main() {
         t.getTopLeft(find.byKey(const Key('team-group-icon')).first).dx + 16,
       ),
     );
-    expect(t.getSize(find.byKey(const Key('teams-search-box'))).height, 40);
+    // Dải tìm trong viên kính của thanh trên cao 44 (viomni-apple-uiux.html).
+    expect(t.getSize(find.byKey(const Key('teams-search-box'))).height, 44);
     expect(
       t.getSize(find.byKey(const Key('teams-add-face'))),
-      const Size(44, 40),
+      const Size(44, 44),
     );
     expect(
       t.widget<Icon>(find.byKey(const Key('team-group-icon')).first).icon,
@@ -408,7 +409,7 @@ void main() {
     expect(find.byType(CreatePlanPage), findsOneWidget);
   });
 
-  testWidgets('menu +: hộp 220 bo 8 neo phải 16 ngay dưới nút, dòng 52', (
+  testWidgets('menu +: hộp 220 bo 8 neo phải 14 ngay dưới nút, dòng 52', (
     t,
   ) async {
     phone(t);
@@ -419,7 +420,8 @@ void main() {
     await t.pumpAndSettle();
     final menu = t.getRect(find.byKey(const Key('create-menu')));
     expect(menu.width, 220);
-    expect(menu.right, 390 - 16);
+    // Thanh trên lề phải 12 + hàng tìm 2.
+    expect(menu.right, 390 - 14);
     expect(menu.right, face.right);
     expect(menu.top, face.bottom + 6);
     final row = find.ancestor(

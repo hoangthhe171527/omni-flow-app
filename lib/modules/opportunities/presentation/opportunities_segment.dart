@@ -285,7 +285,8 @@ class OpportunitySearchRow extends ConsumerWidget
   final ValueChanged<Rect>? onOpenFilters;
 
   @override
-  Size get preferredSize => const Size.fromHeight(46);
+  // Nằm trong viên kính của OmniTopBar: cao 44, lề ngang nhỏ.
+  Size get preferredSize => const Size.fromHeight(44);
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -303,9 +304,9 @@ class OpportunitySearchRow extends ConsumerWidget
         (searching ? 1 : 0);
 
     return SizedBox(
-      height: 46,
+      height: 44,
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 0, 16, 2),
+        padding: const EdgeInsets.fromLTRB(6, 0, 2, 0),
         child: Row(
           children: [
             const Expanded(child: _SearchField()),
