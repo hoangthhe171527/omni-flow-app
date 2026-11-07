@@ -1,5 +1,3 @@
-import 'dart:ui';
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -40,7 +38,7 @@ class ThreadInfoPage extends ConsumerWidget {
 
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.surface,
-      appBar: const _InfoHeader(),
+      appBar: const OmniAppBar(title: 'Thông tin'),
       body: OmniAsyncView(
         value: conversation,
         onRetry: () => ref.invalidate(conversationProvider(conversationId)),
@@ -51,67 +49,6 @@ class ThreadInfoPage extends ConsumerWidget {
 }
 
 /// Header kính: ‹ và "Thông tin" giữa.
-class _InfoHeader extends StatelessWidget implements PreferredSizeWidget {
-  const _InfoHeader();
-
-  @override
-  Size get preferredSize => const Size.fromHeight(52);
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final glass = OmniColors.byBrightness(
-      context,
-      OmniColors.background.withValues(alpha: 0.82),
-      OmniColors.darkBackground.withValues(alpha: 0.82),
-    );
-
-    return ClipRect(
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-        child: DecoratedBox(
-          decoration: BoxDecoration(
-            color: glass,
-            border: Border(bottom: BorderSide(color: scheme.outlineVariant)),
-          ),
-          child: SafeArea(
-            bottom: false,
-            child: SizedBox(
-              height: 52,
-              child: Stack(
-                alignment: Alignment.center,
-                children: [
-                  Text(
-                    'Thông tin',
-                    style: OmniType.bodyStrong.copyWith(
-                      color: scheme.onSurface,
-                    ),
-                  ),
-                  Align(
-                    alignment: Alignment.centerLeft,
-                    child: Padding(
-                      padding: const EdgeInsets.only(left: 6),
-                      child: IconButton(
-                        tooltip: 'Quay lại',
-                        onPressed: () => Navigator.of(context).maybePop(),
-                        style: IconButton.styleFrom(
-                          minimumSize: const Size(44, 44),
-                          foregroundColor: scheme.onSurface,
-                        ),
-                        icon: const Icon(Icons.chevron_left_rounded, size: 28),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
 class _InfoBody extends ConsumerWidget {
   const _InfoBody({required this.conversation});
 

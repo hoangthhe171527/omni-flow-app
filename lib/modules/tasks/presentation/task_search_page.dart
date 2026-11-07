@@ -73,61 +73,70 @@ class _TaskSearchPageState extends ConsumerState<TaskSearchPage> {
     final scheme = Theme.of(context).colorScheme;
 
     return Scaffold(
-      appBar: AppBar(
-        backgroundColor: scheme.surface,
-        // Luôn là màn đẩy vào; nếu mở thẳng (không có nút quay lại) thì ô
-        // tìm vẫn cách mép 16.
-        titleSpacing: (ModalRoute.of(context)?.canPop ?? false) ? 0 : 16,
-        shape: Border(bottom: BorderSide(color: scheme.outlineVariant)),
-        // Ô tìm nằm trực tiếp trên mặt header, không dựng thêm một khung giả.
-        title: Padding(
-          padding: const EdgeInsets.only(right: 12),
-          child: TextField(
-            key: const Key('task-search-flat'),
-            controller: _controller,
-            autofocus: true,
-            textInputAction: TextInputAction.search,
-            onChanged: _onChanged,
-            // Enter là "tìm NGAY", không phải chờ hết quãng lặng: người đã bấm
-            // xong thì không có gì để chờ nữa.
-            onSubmitted: (value) {
-              _timer?.cancel();
-              ref.read(taskSearchQueryProvider.notifier).state = value;
-            },
-            style: OmniType.search.copyWith(
-              color: scheme.onSurface,
-              fontStyle: FontStyle.normal,
-            ),
-            decoration: InputDecoration(
-              isDense: true,
-              filled: false,
-              contentPadding: const EdgeInsets.symmetric(
-                horizontal: 4,
-                vertical: 12,
+      // Màn con kính (viomni-apple-uiux.html "Tìm cây đàn"): nút quay lại,
+      // tiêu đề giữa; ô tìm trong viên kính ngay dưới.
+      appBar: OmniAppBar(
+        title: 'Tìm cây đàn',
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(44),
+          child: OmniGlass(
+            radius: 22,
+            child: Padding(
+              padding: const EdgeInsets.only(left: 6),
+              child: TextField(
+                key: const Key('task-search-flat'),
+                controller: _controller,
+                autofocus: true,
+                textInputAction: TextInputAction.search,
+                onChanged: _onChanged,
+                // Enter là "tìm NGAY", không phải chờ hết quãng lặng: người đã bấm
+                // xong thì không có gì để chờ nữa.
+                onSubmitted: (value) {
+                  _timer?.cancel();
+                  ref.read(taskSearchQueryProvider.notifier).state = value;
+                },
+                style: OmniType.search.copyWith(
+                  color: scheme.onSurface,
+                  fontStyle: FontStyle.normal,
+                ),
+                decoration: InputDecoration(
+                  isDense: true,
+                  filled: false,
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 4,
+                    vertical: 12,
+                  ),
+                  border: InputBorder.none,
+                  enabledBorder: InputBorder.none,
+                  focusedBorder: InputBorder.none,
+                  prefixIcon: Icon(
+                    Icons.search_rounded,
+                    color: scheme.onSurfaceVariant,
+                    size: OmniIconSize.lg,
+                  ),
+                  hintText: 'Tên cây đàn, số máy, tên khách',
+                  hintStyle: OmniType.searchHint.copyWith(
+                    color: scheme.onSurfaceVariant,
+                  ),
+                  suffixIcon: _isEmpty
+                      ? null
+                      : IconButton(
+                          tooltip: 'Xoá',
+                          onPressed: () {
+                            _timer?.cancel();
+                            _controller.clear();
+                            ref.read(taskSearchQueryProvider.notifier).state =
+                                '';
+                            setState(() => _isEmpty = true);
+                          },
+                          icon: Icon(
+                            Icons.close_rounded,
+                            size: OmniIconSize.md,
+                            color: scheme.onSurface,
+                          ),
+                        ),
+                ),
               ),
-              border: InputBorder.none,
-              enabledBorder: InputBorder.none,
-              focusedBorder: InputBorder.none,
-              hintText: 'Tên cây đàn, số máy, tên khách',
-              hintStyle: OmniType.searchHint.copyWith(
-                color: scheme.onSurfaceVariant,
-              ),
-              suffixIcon: _isEmpty
-                  ? null
-                  : IconButton(
-                      tooltip: 'Xoá',
-                      onPressed: () {
-                        _timer?.cancel();
-                        _controller.clear();
-                        ref.read(taskSearchQueryProvider.notifier).state = '';
-                        setState(() => _isEmpty = true);
-                      },
-                      icon: Icon(
-                        Icons.close_rounded,
-                        size: OmniIconSize.md,
-                        color: scheme.onSurface,
-                      ),
-                    ),
             ),
           ),
         ),
