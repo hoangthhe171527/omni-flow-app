@@ -52,6 +52,8 @@ class OmniTopBar extends ConsumerStatefulWidget implements PreferredSizeWidget {
     this.allowBack = false,
     this.onBack,
     this.actions = const [],
+    this.searchBottom = true,
+    this.showBell = true,
   });
 
   /// Ô tìm, bộ lọc, nút riêng của màn. Cần biết chiều cao để Scaffold chừa chỗ.
@@ -62,6 +64,13 @@ class OmniTopBar extends ConsumerStatefulWidget implements PreferredSizeWidget {
 
   /// Hiện nút kính quay lại khi màn này được đẩy lên stack.
   final bool allowBack;
+
+  /// [bottom] là ô tìm (bọc viên kính, chạm vào là chế độ tìm). False khi
+  /// [bottom] tự là một viên kính khác, vd bộ chọn nhóm việc.
+  final bool searchBottom;
+
+  /// False trên chính trang Thông báo: chuông ở đó chỉ mở lại trang đang xem.
+  final bool showBell;
 
   /// Màn con (chi tiết, sửa): có thì thanh đổi sang kiểu màn con — nút kính
   /// quay lại, tiêu đề nhỏ ở giữa, nút riêng bên phải, không chuông/avatar.
@@ -226,17 +235,18 @@ class _OmniTopBarState extends ConsumerState<OmniTopBar> {
               action,
               const SizedBox(width: 8),
             ],
-            OmniGlassCircle(
-              child: _BellButton(
-                unread: unread,
-                onTap: slot == null
-                    ? null
-                    : (anchor) {
-                        HapticFeedback.selectionClick();
-                        slot.onBell(context, anchor);
-                      },
+            if (widget.showBell)
+              OmniGlassCircle(
+                child: _BellButton(
+                  unread: unread,
+                  onTap: slot == null
+                      ? null
+                      : (anchor) {
+                          HapticFeedback.selectionClick();
+                          slot.onBell(context, anchor);
+                        },
+                ),
               ),
-            ),
             if (account != null) ...[
               const SizedBox(width: 8),
               OmniGlassCircle(child: account(context)),
@@ -267,6 +277,8 @@ class _OmniTopBarState extends ConsumerState<OmniTopBar> {
 
     final searchStrip = bottom == null
         ? null
+        : !widget.searchBottom
+        ? SizedBox(height: bottom.preferredSize.height, child: bottom)
         : Focus(
             canRequestFocus: false,
             skipTraversal: true,

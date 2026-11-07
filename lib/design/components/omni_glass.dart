@@ -201,3 +201,43 @@ class OmniTopBarOverlap extends InheritedWidget {
   bool updateShouldNotify(OmniTopBarOverlap oldWidget) =>
       inset != oldWidget.inset;
 }
+
+/// Thấu kính chọn bên trong kính (thanh tab, bộ chọn đoạn): viên trắng mờ
+/// dạng viên thuốc, viền sáng, bóng nhẹ — mục đang chọn "nổi" trên kính.
+class OmniGlassLens extends StatelessWidget {
+  const OmniGlassLens({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    return DecoratedBox(
+      decoration: ShapeDecoration(
+        shape: StadiumBorder(
+          side: BorderSide(
+            color: Colors.white.withValues(alpha: dark ? 0.22 : 0.95),
+          ),
+        ),
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: dark
+              ? [
+                  Colors.white.withValues(alpha: 0.20),
+                  Colors.white.withValues(alpha: 0.08),
+                ]
+              : [
+                  Colors.white.withValues(alpha: 0.95),
+                  Colors.white.withValues(alpha: 0.55),
+                ],
+        ),
+        shadows: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: dark ? 0.30 : 0.10),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+    );
+  }
+}

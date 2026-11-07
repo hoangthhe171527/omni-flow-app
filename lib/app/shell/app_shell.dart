@@ -324,7 +324,7 @@ class _ShellNavBar extends StatelessWidget {
                         top: 6,
                         bottom: 6,
                         width: slot,
-                        child: const _GlassLens(),
+                        child: const OmniGlassLens(),
                       ),
                       Row(
                         children: [
@@ -441,13 +441,19 @@ class _ShellNavItem extends ConsumerWidget {
                 const SizedBox(height: 1),
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 2),
-                  child: Text(
-                    text,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: OmniType.micro.copyWith(
-                      color: color,
-                      fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
+                  // Màn hẹp (360): "Tổng quan" từng thành "Tổng qu…". Thu nhỏ
+                  // vừa ô thay vì cắt chữ.
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Text(
+                      text,
+                      maxLines: 1,
+                      style: OmniType.micro.copyWith(
+                        color: color,
+                        fontWeight: selected
+                            ? FontWeight.w600
+                            : FontWeight.w500,
+                      ),
                     ),
                   ),
                 ),
@@ -462,40 +468,3 @@ class _ShellNavItem extends ConsumerWidget {
 
 /// Viên chọn của thanh tab: "kính trong kính" — sáng hơn nền kính, viền
 /// sáng, vệt sáng trên, bóng nhỏ; không phải khối trắng đặc.
-class _GlassLens extends StatelessWidget {
-  const _GlassLens();
-
-  @override
-  Widget build(BuildContext context) {
-    final dark = Theme.of(context).brightness == Brightness.dark;
-    return DecoratedBox(
-      decoration: ShapeDecoration(
-        shape: StadiumBorder(
-          side: BorderSide(
-            color: Colors.white.withValues(alpha: dark ? 0.22 : 0.95),
-          ),
-        ),
-        gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: dark
-              ? [
-                  Colors.white.withValues(alpha: 0.20),
-                  Colors.white.withValues(alpha: 0.08),
-                ]
-              : [
-                  Colors.white.withValues(alpha: 0.95),
-                  Colors.white.withValues(alpha: 0.55),
-                ],
-        ),
-        shadows: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: dark ? 0.30 : 0.10),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-    );
-  }
-}

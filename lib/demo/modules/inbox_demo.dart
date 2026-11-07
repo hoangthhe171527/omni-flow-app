@@ -934,8 +934,8 @@ const _notifSeeds = <_N>[
   _N(
     'TASK_COMPLETED',
     1440,
-    'Nguyễn Đức Long hoàn thành việc',
-    'Lắp đặt tủ lạnh cho khách tại Quận 7.',
+    'Nguyễn Đức Long đã hoàn thành',
+    'Lắp đặt tủ lạnh cho khách tại Quận 7 · 4/4 việc con',
     read: true,
   ),
   _N(
