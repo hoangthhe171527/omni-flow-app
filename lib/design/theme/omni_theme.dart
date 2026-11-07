@@ -282,14 +282,27 @@ abstract final class OmniTheme {
         ),
         overlayColor: WidgetStatePropertyAll(primary.withValues(alpha: 0.06)),
       ),
+      // Chip kiểu kính (viomni-apple-uiux.html `.chip.glass`): viên thuốc,
+      // nền thẻ mờ; đang chọn là viên trắng mờ viền sáng, chữ màu chủ đạo
+      // (gu người dùng: mục chọn trắng mờ, không tô đặc).
       chipTheme: ChipThemeData(
-        backgroundColor: surface,
+        backgroundColor: surface.withValues(
+          alpha: brightness == Brightness.dark ? .55 : .70,
+        ),
+        selectedColor: brightness == Brightness.dark
+            ? Colors.white.withValues(alpha: .16)
+            : Colors.white.withValues(alpha: .95),
+        checkmarkColor: primary,
         side: BorderSide(color: borderInteractive),
         labelStyle: OmniType.caption.copyWith(
           color: onSurface,
           fontWeight: FontWeight.w500,
         ),
-        shape: const RoundedRectangleBorder(borderRadius: OmniRadius.chipAll),
+        secondaryLabelStyle: OmniType.caption.copyWith(
+          color: primary,
+          fontWeight: FontWeight.w600,
+        ),
+        shape: const StadiumBorder(),
         padding: const EdgeInsets.symmetric(horizontal: OmniSpacing.sm),
       ),
       snackBarTheme: SnackBarThemeData(
