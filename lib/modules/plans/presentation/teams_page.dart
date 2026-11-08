@@ -5,6 +5,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/error/app_exception.dart';
+import '../../../core/nav/search_mode.dart';
+import '../../../core/nav/shell_bar_inset.dart';
 import '../../../core/utils/text_search.dart';
 import '../../../design/components/components.dart';
 import '../../../design/tokens/tokens.dart';
@@ -16,10 +18,9 @@ import '../application/plans_providers.dart';
 import '../data/plans_api.dart';
 import '../domain/plan.dart';
 import '../plans_module.dart';
-import 'create_plan_page.dart';
-import 'create_team_page.dart';
 import 'edit_plan_page.dart';
 import 'widgets/create_choice_sheet.dart';
+import 'widgets/quick_create_sheets.dart';
 import 'widgets/favorites_group.dart';
 import 'widgets/team_group.dart';
 import 'widgets/teams_search_row.dart';
@@ -128,18 +129,33 @@ class _TeamsPageState extends ConsumerState<TeamsPage> {
     setState(() => _menuOpen = false);
     if (choice == null) return;
 
-    // Bắt trước `await`: sau khi trang tạo đóng, widget này có thể đã rời cây.
-    final container = ProviderScope.containerOf(context);
-    await Navigator.of(context).push<bool>(
-      omniPageRoute(
-        context: context,
-        builder: (_) => switch (choice) {
-          CreateChoice.team => const CreateTeamPage(),
-          CreateChoice.plan => const CreatePlanPage(),
-        },
+    // Tạo nhanh ngay trên màn (viec-quick-create-uiux.html): sheet, không
+    // chuyển trang. Tạo xong báo "Đã tạo" kèm nút mở bảng.
+    final messenger = ScaffoldMessenger.of(context);
+    final router = GoRouter.maybeOf(context);
+    final created = await switch (choice) {
+      CreateChoice.team => showQuickCreateTeam(context),
+      CreateChoice.plan => showQuickCreatePlan(context),
+    };
+    if (created == null) return;
+    messenger.showSnackBar(
+      SnackBar(
+        content: Text(
+          created.isTeam
+              ? 'Đã tạo team «${created.name}»'
+              : 'Đã tạo kế hoạch «${created.name}»',
+        ),
+        action: created.isTeam || router == null
+            ? null
+            : SnackBarAction(
+                label: 'Mở bảng',
+                onPressed: () => router.pushNamed(
+                  PlansModule.board,
+                  pathParameters: {'id': created.id},
+                ),
+              ),
       ),
     );
-    container.invalidate(teamsWithPlansProvider);
   }
 
   @override
@@ -174,38 +190,62 @@ class _TeamsPageState extends ConsumerState<TeamsPage> {
         bottom: TeamsSearchRow(
           controller: _search,
           onChanged: (value) => setState(() => _query = value),
-          showAdd: isAssigner,
-          addOpen: _menuOpen,
-          onAdd: (anchor) => _create(anchor, canCreateTeam: canCreateTeam),
+          // Dấu + chuyển xuống nút kính lỏng góc dưới phải.
+          showAdd: false,
         ),
       ),
-      body: OmniTopBarOverlap.wrap(
-        child: Builder(
-          builder: (context) {
-            final topInset = OmniTopBarOverlap.of(context);
-            return RefreshIndicator.adaptive(
-              edgeOffset: topInset,
-              onRefresh: () async => ref.invalidate(teamsWithPlansProvider),
-              child: OmniAsyncView(
-                value: groups,
-                onRetry: () => ref.invalidate(teamsWithPlansProvider),
-                data: (list) => _list(
-                  list,
-                  topInset: topInset,
-                  isAssigner: isAssigner,
-                  currentUserId: currentUserId,
-                  canUpdateTeam: canUpdateTeam,
-                  canDeleteTeam: canDeleteTeam,
-                  canMovePlan: (plan) =>
-                      taskAccess.canUpdate &&
-                      (taskAccess.isAssigner ||
-                          (currentUserId != null &&
-                              plan.roleOf(currentUserId).canManagePlan)),
+      body: Stack(
+        children: [
+          Positioned.fill(
+            child: OmniTopBarOverlap.wrap(
+              child: Builder(
+                builder: (context) {
+                  final topInset = OmniTopBarOverlap.of(context);
+                  return RefreshIndicator.adaptive(
+                    edgeOffset: topInset,
+                    onRefresh: () async =>
+                        ref.invalidate(teamsWithPlansProvider),
+                    child: OmniAsyncView(
+                      value: groups,
+                      onRetry: () => ref.invalidate(teamsWithPlansProvider),
+                      data: (list) => _list(
+                        list,
+                        topInset: topInset,
+                        isAssigner: isAssigner,
+                        currentUserId: currentUserId,
+                        canUpdateTeam: canUpdateTeam,
+                        canDeleteTeam: canDeleteTeam,
+                        canMovePlan: (plan) =>
+                            taskAccess.canUpdate &&
+                            (taskAccess.isAssigner ||
+                                (currentUserId != null &&
+                                    plan.roleOf(currentUserId).canManagePlan)),
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+          ),
+          if (isAssigner)
+            Positioned(
+              right: 20,
+              // Ngay trên thanh tab kính, vừa tầm ngón cái.
+              bottom:
+                  ShellBarInset.of(context) +
+                  MediaQuery.viewPaddingOf(context).bottom +
+                  16,
+              child: _HideWhileSearching(
+                child: OmniLiquidFab(
+                  key: const Key('work-create-fab'),
+                  tooltip: 'Tạo mới',
+                  open: _menuOpen,
+                  onPressed: (anchor) =>
+                      _create(anchor, canCreateTeam: canCreateTeam),
                 ),
               ),
-            );
-          },
-        ),
+            ),
+        ],
       ),
     );
   }
@@ -660,6 +700,26 @@ class _NoMatch extends StatelessWidget {
             style: OmniType.caption.copyWith(color: scheme.onSurfaceVariant),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// Ẩn nút + khi đang tìm (thanh tab cũng trượt xuống ẩn lúc đó).
+class _HideWhileSearching extends ConsumerWidget {
+  const _HideWhileSearching({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final searching = ref.watch(searchModeProvider);
+    return IgnorePointer(
+      ignoring: searching,
+      child: AnimatedOpacity(
+        opacity: searching ? 0 : 1,
+        duration: const Duration(milliseconds: 200),
+        child: child,
       ),
     );
   }
