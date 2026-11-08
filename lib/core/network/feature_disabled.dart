@@ -50,7 +50,7 @@ class FeatureFlagRefresher {
       try {
         await _refresh();
       } on Object catch (error) {
-        debugPrint('Feature flag refresh failed: $error');
+        if (kDebugMode) debugPrint('Feature flag refresh failed: $error');
       }
     }();
     _inFlight = run;

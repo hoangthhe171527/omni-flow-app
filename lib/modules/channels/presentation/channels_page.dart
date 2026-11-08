@@ -28,14 +28,55 @@ class ChannelsPage extends ConsumerStatefulWidget {
   ConsumerState<ChannelsPage> createState() => _ChannelsPageState();
 }
 
-class _ChannelsPageState extends ConsumerState<ChannelsPage> {
+class _ChannelsPageState extends ConsumerState<ChannelsPage>
+    with WidgetsBindingObserver {
   Timer? _oauthWatch;
   bool _connecting = false;
 
+  // Trạng thái chờ OAuth. Đồng hồ hạn chỉ chạy lúc app ở tiền cảnh: người dùng
+  // đang ở trình duyệt thì app không poll, và quay lại sau 5 phút vẫn còn đủ
+  // hạn để kiểm tra.
+  Set<String>? _watchBefore;
+  Duration _watchForeground = Duration.zero;
+  DateTime? _foregroundSince;
+  int _watchAttempt = 0;
+  bool _checking = false;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _oauthWatch?.cancel();
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (_watchBefore == null) return;
+    switch (state) {
+      case AppLifecycleState.paused:
+      case AppLifecycleState.hidden:
+        final since = _foregroundSince;
+        if (since == null) return;
+        _watchForeground += DateTime.now().difference(since);
+        _foregroundSince = null;
+        _oauthWatch?.cancel();
+        _oauthWatch = null;
+      case AppLifecycleState.resumed:
+        if (_foregroundSince != null) return;
+        _foregroundSince = DateTime.now();
+        // Người dùng vừa từ trình duyệt về: kiểm đúng 1 lần ngay, rồi 3→5→8s.
+        _watchAttempt = 0;
+        unawaited(_checkConnection());
+      case AppLifecycleState.inactive:
+      case AppLifecycleState.detached:
+        break;
+    }
   }
 
   Future<void> _disconnect(ChannelConnection connection) async {
@@ -135,25 +176,63 @@ class _ChannelsPageState extends ConsumerState<ChannelsPage> {
 
   void _watchForConnection(Set<String> before) {
     _oauthWatch?.cancel();
-    final startedAt = DateTime.now();
-    _oauthWatch = Timer.periodic(oauthWatchInterval, (timer) async {
-      if (DateTime.now().difference(startedAt) > oauthWatchTimeout) {
-        timer.cancel();
-        return;
-      }
-      try {
-        final fresh = await ref.read(channelsApiProvider).list();
-        if (firstNewId(before, fresh) == null) return;
-        timer.cancel();
+    _watchBefore = before;
+    _watchForeground = Duration.zero;
+    _foregroundSince = DateTime.now();
+    _watchAttempt = 0;
+    _scheduleCheck();
+  }
+
+  void _stopWatching() {
+    _oauthWatch?.cancel();
+    _oauthWatch = null;
+    _watchBefore = null;
+    _foregroundSince = null;
+  }
+
+  Duration get _watchElapsed {
+    final since = _foregroundSince;
+    return since == null
+        ? _watchForeground
+        : _watchForeground + DateTime.now().difference(since);
+  }
+
+  void _scheduleCheck() {
+    _oauthWatch?.cancel();
+    _oauthWatch = null;
+    // Ở nền thì không hẹn: `resumed` sẽ kiểm một lượt.
+    if (_watchBefore == null || _foregroundSince == null) return;
+    _oauthWatch = Timer(oauthWatchDelay(_watchAttempt), _checkConnection);
+  }
+
+  Future<void> _checkConnection() async {
+    _oauthWatch = null;
+    final before = _watchBefore;
+    if (before == null || _checking || !mounted) return;
+    if (_watchElapsed > oauthWatchTimeout) {
+      _stopWatching();
+      return;
+    }
+    _checking = true;
+    try {
+      final fresh = await ref.read(channelsApiProvider).list();
+      if (!mounted || _watchBefore == null) return;
+      if (firstNewId(before, fresh) != null) {
+        _stopWatching();
         ref.invalidate(channelsProvider);
-        if (!mounted) return;
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(const SnackBar(content: Text('Đã nối kênh mới.')));
-      } catch (_) {
-        // Do not terminate a successful OAuth wait due to one failed request.
+        return;
       }
-    });
+    } catch (_) {
+      // Do not terminate a successful OAuth wait due to one failed request.
+    } finally {
+      _checking = false;
+    }
+    if (!mounted) return;
+    _watchAttempt++;
+    _scheduleCheck();
   }
 
   @override

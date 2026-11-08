@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:record/record.dart';
@@ -53,7 +54,7 @@ const kVoiceRecordConfig = RecordConfig(
 
 /// Bản thật trên gói `record` (Android: `RECORD_AUDIO` trong manifest; iOS:
 /// `NSMicrophoneUsageDescription` trong Info.plist).
-class RecordVoiceRecorder implements VoiceRecorder {
+class RecordVoiceRecorder with WidgetsBindingObserver implements VoiceRecorder {
   RecordVoiceRecorder({AudioRecorder? recorder}) : _made = recorder;
 
   // Tạo lười: mở trang hội thoại không đụng kênh nền tảng cho tới lần bấm
@@ -81,6 +82,7 @@ class RecordVoiceRecorder implements VoiceRecorder {
     await _recorder.start(kVoiceRecordConfig, path: path);
     _path = path;
     _recording = true;
+    WidgetsBinding.instance.addObserver(this);
     _clock
       ..reset()
       ..start();
@@ -92,7 +94,22 @@ class RecordVoiceRecorder implements VoiceRecorder {
     );
   }
 
+  /// App vào nền khi đang ghi: dừng micro + nhịp 200ms (pin, và hệ điều hành
+  /// có thể chặn micro nền). Tệp giữ nguyên — `stop()` sau đó vẫn trả đúng
+  /// đường dẫn đó để người dùng Gửi hoặc Huỷ khi quay lại.
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (!_recording) return;
+    if (state != AppLifecycleState.paused &&
+        state != AppLifecycleState.hidden) {
+      return;
+    }
+    _halt();
+    unawaited(_recorder.stop().then<void>((_) {}, onError: (Object _) {}));
+  }
+
   void _halt() {
+    WidgetsBinding.instance.removeObserver(this);
     _timer?.cancel();
     _timer = null;
     _clock.stop();

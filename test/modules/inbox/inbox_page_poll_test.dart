@@ -7,7 +7,6 @@ import 'package:omni_app/core/network/api_client.dart';
 import 'package:omni_app/core/realtime/realtime_client.dart';
 import 'package:omni_app/design/theme/omni_theme.dart';
 import 'package:omni_app/modules/inbox/application/inbox_providers.dart';
-import 'package:omni_app/modules/inbox/application/inbox_realtime.dart';
 import 'package:omni_app/modules/inbox/data/inbox_api.dart';
 import 'package:omni_app/modules/inbox/domain/inbox_filter.dart';
 import 'package:omni_app/modules/inbox/presentation/inbox_page.dart';
@@ -54,7 +53,8 @@ void main() {
     );
     await tester.pump();
 
-    await tester.pump(RealtimePolling.inboxFallback);
+    // Nhịp 5 giây có nhiễu ±20%: chờ tới cận trên.
+    await tester.pump(const Duration(milliseconds: 6100));
     await tester.pump();
 
     expect(api.changesCalls, greaterThanOrEqualTo(1));

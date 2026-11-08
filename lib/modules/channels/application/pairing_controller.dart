@@ -39,6 +39,8 @@ class PairingController
     extends AutoDisposeFamilyNotifier<PairingState, Channel> {
   Timer? _timer;
   int _ticks = 0;
+  int _errors = 0;
+  bool _paused = false;
   bool _sawQr = false;
 
   /// Tăng mỗi lần mở phiên mới (và khi huỷ). Phản hồi của phiên cũ về muộn
@@ -66,6 +68,8 @@ class PairingController
     final session = ++_session;
     _inFlight = false;
     _ticks = 0;
+    _errors = 0;
+    _paused = false;
     _sawQr = false;
     state = const PairingState(
       snapshot: PairingSnapshot(view: PairingView.preparing),
@@ -97,9 +101,13 @@ class PairingController
     }
   }
 
-  void pause() => _timer?.cancel();
+  void pause() {
+    _paused = true;
+    _timer?.cancel();
+  }
 
   void resume() {
+    _paused = false;
     if (_isFinished || state.connectionId == null) return;
     if (!_inFlight) unawaited(_poll());
     _startPolling();
@@ -111,8 +119,14 @@ class PairingController
   };
 
   void _startPolling() {
+    // Hẹn MỘT lượt rồi tự đặt lại sau mỗi lượt poll xong: nhịp giãn dần theo số
+    // lượt và lùi khi lỗi, mà chu kỳ của `Timer.periodic` thì cố định.
     _timer?.cancel();
-    _timer = Timer.periodic(pairingPollInterval, (_) => _poll());
+    if (_paused) return;
+    _timer = Timer(
+      pairingPollDelay(ticks: _ticks, errors: _errors),
+      () => unawaited(_poll()),
+    );
   }
 
   void _stop() {
@@ -134,6 +148,7 @@ class PairingController
     try {
       final status = await ref.read(channelsApiProvider).pairStatus(id);
       if (_stale(session, id)) return;
+      _errors = 0;
       final snapshot = resolvePairing(status);
       if (snapshot.view == PairingView.qr) _sawQr = true;
       state = state.copyWith(
@@ -158,9 +173,13 @@ class PairingController
       if (_stale(session, id)) return;
       // Lỗi mạng tạm thời không được cắt ngang phiên ghép nối 30 phút…
       // …nhưng cũng không được quay mãi.
+      _errors++;
       if (_ticks >= pairingMaxPolls) _expire();
     } finally {
-      if (session == _session) _inFlight = false;
+      if (session == _session) {
+        _inFlight = false;
+        if (!_isFinished && state.connectionId == id) _startPolling();
+      }
     }
   }
 

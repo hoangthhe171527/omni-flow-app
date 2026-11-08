@@ -69,10 +69,12 @@ Future<void> initializePushRuntime() async {
     FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
     _pushRuntimeInitialized = true;
   } catch (error, stackTrace) {
-    debugPrint(
-      'Push runtime initialization failed [$platform]: '
-      '$error\n$stackTrace',
-    );
+    if (kDebugMode) {
+      debugPrint(
+        'Push runtime initialization failed [$platform]: '
+        '$error\n$stackTrace',
+      );
+    }
     rethrow;
   }
 }
@@ -190,7 +192,13 @@ class PushNotifications {
   StreamSubscription<RemoteMessage>? _openedMessages;
   Timer? _startupRetry;
   Timer? _registrationRetry;
-  Timer? _registrationHeartbeat;
+
+  /// Lần POST đăng ký thành công gần nhất. Thay cho heartbeat 15 phút: token
+  /// đổi đã có `onTokenRefresh`, còn "hàng server bị mất" thì `ensureRegistered`
+  /// (resume sau > 60s ở nền) sửa, nhưng không quá một lần mỗi 12 giờ.
+  String? _lastRegisteredToken;
+  DateTime? _lastRegisteredAt;
+  static const _registrationFreshness = Duration(hours: 12);
   bool _started = false;
   bool _firebaseReady = false;
   bool _registering = false;
@@ -235,9 +243,11 @@ class PushNotifications {
         provisional: false,
       );
       if (!_isActive(generation)) return;
-      debugPrint(
-        'Push authorization [$platform]: ${settings.authorizationStatus}',
-      );
+      if (kDebugMode) {
+        debugPrint(
+          'Push authorization [$platform]: ${settings.authorizationStatus}',
+        );
+      }
       if (platform == 'ios') {
         await FirebaseMessaging.instance
             .setForegroundNotificationPresentationOptions(
@@ -250,11 +260,6 @@ class PushNotifications {
       if (!_isActive(generation)) return;
       if (_token != null) await _register(_token!);
       if (!_isActive(generation)) return;
-      _registrationHeartbeat?.cancel();
-      _registrationHeartbeat = Timer.periodic(
-        const Duration(minutes: 15),
-        (_) => unawaited(ensureRegistered()),
-      );
       final initial = await FirebaseMessaging.instance.getInitialMessage();
       if (initial != null) _openFromNotificationTap(initial);
     } catch (error, stackTrace) {
@@ -265,7 +270,9 @@ class PushNotifications {
       _firebaseReady = false;
       _started = false;
       await _cancelListeners();
-      debugPrint('Push startup failed [$platform]: $error\n$stackTrace');
+      if (kDebugMode) {
+        debugPrint('Push startup failed [$platform]: $error\n$stackTrace');
+      }
       _startupRetry?.cancel();
       _startupRetry = Timer(const Duration(seconds: 30), start);
     }
@@ -277,10 +284,10 @@ class PushNotifications {
     _firebaseReady = false;
     _startupRetry?.cancel();
     _registrationRetry?.cancel();
-    _registrationHeartbeat?.cancel();
     _startupRetry = null;
     _registrationRetry = null;
-    _registrationHeartbeat = null;
+    _lastRegisteredToken = null;
+    _lastRegisteredAt = null;
     final token = _token;
     _token = null;
     _registrationAttempts = 0;
@@ -301,14 +308,24 @@ class PushNotifications {
     }
     if (!_firebaseReady) return;
 
+    final lastAt = _lastRegisteredAt;
+    if (_token != null &&
+        _token == _lastRegisteredToken &&
+        lastAt != null &&
+        DateTime.now().difference(lastAt) < _registrationFreshness) {
+      return;
+    }
+
     try {
       final token = await _getFcmToken(platform);
       if (token != null && token.isNotEmpty) await _register(token);
     } catch (error, stackTrace) {
-      debugPrint(
-        'Push registration refresh failed [$platform]: '
-        '$error\n$stackTrace',
-      );
+      if (kDebugMode) {
+        debugPrint(
+          'Push registration refresh failed [$platform]: '
+          '$error\n$stackTrace',
+        );
+      }
       if (_started) _scheduleRegistrationRetry();
     }
   }
@@ -363,13 +380,19 @@ class PushNotifications {
       _registrationAttempts = 0;
       _registrationRetry?.cancel();
       _registrationRetry = null;
-      debugPrint('Push token registered with Viomni [$platform].');
+      _lastRegisteredToken = registeringToken;
+      _lastRegisteredAt = DateTime.now();
+      if (kDebugMode) {
+        debugPrint('Push token registered with Viomni [$platform].');
+      }
     } catch (error, stackTrace) {
       // Token refresh must never break the authenticated session. Retry with a
       // capped backoff: this covers an API deploy/restart and flaky mobile data.
-      debugPrint(
-        'Push token registration failed [$platform]: $error\n$stackTrace',
-      );
+      if (kDebugMode) {
+        debugPrint(
+          'Push token registration failed [$platform]: $error\n$stackTrace',
+        );
+      }
       if (_isActive(generation)) _scheduleRegistrationRetry();
     } finally {
       _registering = false;
@@ -557,7 +580,9 @@ class PushNotifications {
         _ref.read(pushIntentProvider.notifier).state = intent;
       }
     } catch (error) {
-      debugPrint('Push local notification payload ignored: $error');
+      if (kDebugMode) {
+        debugPrint('Push local notification payload ignored: $error');
+      }
     }
   }
 
@@ -588,9 +613,11 @@ class PushNotifications {
     try {
       await subscription?.cancel();
     } catch (error, stackTrace) {
-      debugPrint(
-        'Push listener cancellation failed [$label]: $error\n$stackTrace',
-      );
+      if (kDebugMode) {
+        debugPrint(
+          'Push listener cancellation failed [$label]: $error\n$stackTrace',
+        );
+      }
     }
   }
 
@@ -601,7 +628,11 @@ class PushNotifications {
       // Local logout wins. A stale token is harmless because the next login
       // moves it to the current tenant/user, and invalid tokens are pruned by
       // the server's delivery path.
-      debugPrint('Push token unregister failed [$reason]: $error\n$stackTrace');
+      if (kDebugMode) {
+        debugPrint(
+          'Push token unregister failed [$reason]: $error\n$stackTrace',
+        );
+      }
     }
   }
 }

@@ -8,9 +8,26 @@ const pairingAgentHintTicks = 16;
 /// của nó, poll dày hơn không nhận được sớm hơn, chỉ tốn pin và data.
 const pairingPollInterval = Duration(milliseconds: 2500);
 
-/// Trần số lần poll một phiên: 720 × 2,5 giây = 30 phút, bằng web. Quá trần
-/// mà vẫn chỉ gặp lỗi mạng thì coi như phiên đã hết hạn.
-const pairingMaxPolls = 720;
+/// Sau chừng này lượt (≈ 2,5 phút) mà vẫn chưa xong thì giãn nhịp ra gấp đôi.
+const pairingSlowAfterPolls = 60;
+
+/// Trần số lần poll một phiên: 60 lượt × 2,5 giây + 330 lượt × 5 giây ≈ 30
+/// phút, bằng web. Quá trần mà vẫn chỉ gặp lỗi mạng thì coi như phiên đã hết
+/// hạn.
+const pairingMaxPolls = 390;
+
+/// Nhịp tới của lượt poll sau lượt thứ [ticks], với [errors] lượt lỗi mạng liên
+/// tiếp: 2,5 giây, giãn 5 giây sau [pairingSlowAfterPolls] lượt, và lùi gấp đôi
+/// theo mỗi lỗi liên tiếp (trần 20 giây).
+Duration pairingPollDelay({required int ticks, int errors = 0}) {
+  var ms = ticks >= pairingSlowAfterPolls
+      ? pairingPollInterval.inMilliseconds * 2
+      : pairingPollInterval.inMilliseconds;
+  for (var i = 0; i < errors && ms < 20000; i++) {
+    ms *= 2;
+  }
+  return Duration(milliseconds: ms > 20000 ? 20000 : ms);
+}
 
 /// Kết quả `POST /channels/pair/start`.
 class PairingStart {

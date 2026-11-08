@@ -114,11 +114,13 @@ class _PeekOverlay extends ConsumerWidget {
       child: Stack(
         children: [
           // Không có con: không nuốt chạm, để rào chắn của route đóng hộp.
-          Positioned.fill(
-            child: BackdropFilter(
-              filter: ImageFilter.blur(sigmaX: 6, sigmaY: 6),
+          // Làm mờ toàn màn chỉ ở bậc hiệu năng đầy đủ (lớp đắt nhất).
+          if (OmniPerformance.scrimBlur(context))
+            Positioned.fill(
+              child: BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: 6, sigmaY: 6),
+              ),
             ),
-          ),
           Positioned(
             left: 16,
             right: 16,
@@ -441,8 +443,8 @@ class _PeekMenu extends StatelessWidget {
       ),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(12),
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 24, sigmaY: 24),
+        child: OmniBackdropBlur(
+          sigma: 24,
           child: Container(
             width: 230,
             color: OmniColors.byBrightness(

@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -96,7 +97,9 @@ class RealtimeClient {
     @visibleForTesting Duration? silenceLimit,
     @visibleForTesting DateTime Function()? clock,
     @visibleForTesting bool enableWatchdog = true,
+    @visibleForTesting Random? random,
   }) : _enableWatchdog = enableWatchdog,
+       _random = random ?? Random(),
        _config = config,
        _authorize = authorizer,
        _openSocket = socketFactory ?? WebSocketChannel.connect,
@@ -126,6 +129,11 @@ class RealtimeClient {
   final bool _enableWatchdog;
 
   final ValueNotifier<RealtimeStatus> _status;
+  final Random _random;
+
+  /// Đang tạm ngắt vì app ở nền: socket đóng, danh sách kênh/listener còn giữ.
+  /// Không hẹn nối lại cho tới khi [connect]/[resume] được gọi.
+  bool _paused = false;
 
   WebSocketChannel? _socket;
   StreamSubscription<dynamic>? _frames;
@@ -168,7 +176,9 @@ class RealtimeClient {
   /// Connects if configured. Concurrent calls share one attempt; calling again
   /// while connected does nothing.
   Future<void> connect() {
-    if (!_config.isEnabled || _socket != null) return Future.value();
+    if (!_config.isEnabled) return Future.value();
+    _paused = false;
+    if (_socket != null) return Future.value();
     return _connecting ??= _open().whenComplete(() => _connecting = null);
   }
 
@@ -226,7 +236,7 @@ class RealtimeClient {
     }
 
     if (frame.isError) {
-      debugPrint('Realtime error frame: ${frame.data}');
+      if (kDebugMode) debugPrint('Realtime error frame: ${frame.data}');
       return;
     }
 
@@ -269,9 +279,11 @@ class RealtimeClient {
       if (last == null || _now().difference(last) <= _silenceLimit) {
         return;
       }
-      debugPrint(
-        'Realtime: không frame nào trong $_silenceLimit, đóng socket.',
-      );
+      if (kDebugMode) {
+        debugPrint(
+          'Realtime: không frame nào trong $_silenceLimit, đóng socket.',
+        );
+      }
       // `sink.close()` → `onDone` → `_onClosed`: trạng thái, nhịp poll và vòng
       // nối lại đều đi qua đúng một đường như mọi lần rớt khác.
       final socket = _socket;
@@ -286,7 +298,9 @@ class RealtimeClient {
   }
 
   void _onClosed(Object? error) {
-    if (error != null) debugPrint('Realtime socket closed: $error');
+    if (error != null && kDebugMode) {
+      debugPrint('Realtime socket closed: $error');
+    }
 
     _stopWatchdog();
     unawaited(_frames?.cancel());
@@ -300,20 +314,26 @@ class RealtimeClient {
 
     // A deliberate disconnect (logout, disposal) must not reconnect, and there
     // is nothing to reconnect for if nobody is listening.
-    if (_closedDeliberately || _listeners.isEmpty) return;
+    if (_closedDeliberately || _paused || _listeners.isEmpty) return;
     _scheduleReconnect();
   }
 
   void _scheduleReconnect() {
     if (_reconnectTimer?.isActive ?? false) return;
 
-    final delay = _reconnectBackoff;
-    final next = delay * 2;
+    final base = _reconnectBackoff;
+    final next = base * 2;
     _reconnectBackoff = next > _maxBackoff ? _maxBackoff : next;
+    // Jitter ±20%: sau một lần server khởi động lại, mọi máy rớt cùng lúc và
+    // sẽ quay về cùng một giây nếu backoff cố định.
+    final delay = Duration(
+      milliseconds: (base.inMilliseconds * (0.8 + _random.nextDouble() * 0.4))
+          .round(),
+    );
 
     _reconnectTimer = Timer(delay, () {
       _reconnectTimer = null;
-      if (_listeners.isNotEmpty) unawaited(connect());
+      if (!_paused && _listeners.isNotEmpty) unawaited(connect());
     });
   }
 
@@ -321,7 +341,7 @@ class RealtimeClient {
     try {
       _socket?.sink.add(payload);
     } catch (error) {
-      debugPrint('Realtime send failed: $error');
+      if (kDebugMode) debugPrint('Realtime send failed: $error');
     }
   }
 
@@ -339,7 +359,9 @@ class RealtimeClient {
     } catch (error) {
       // A refused subscription is not fatal: that screen falls back to polling,
       // which is why polling still exists.
-      debugPrint('Realtime subscribe to $channel failed: $error');
+      if (kDebugMode) {
+        debugPrint('Realtime subscribe to $channel failed: $error');
+      }
     }
   }
 
@@ -370,7 +392,7 @@ class RealtimeClient {
     final isFirst = !_listeners.containsKey(channel);
     _listeners.putIfAbsent(channel, () => {}).add(onEvent);
 
-    if (isFirst) {
+    if (isFirst && !_paused) {
       unawaited(
         connect().then((_) {
           if (_listeners.containsKey(channel)) return _subscribe(channel);
@@ -391,6 +413,35 @@ class RealtimeClient {
     };
   }
 
+  /// Tạm ngắt khi app ở nền lâu: đóng socket, dừng watchdog, huỷ hẹn nối lại,
+  /// nhưng GIỮ danh sách kênh và listener để [resume] khôi phục đúng như cũ.
+  /// Tin lúc nền đi qua push (FCM), không cần giữ một socket sống tốn pin.
+  Future<void> pause() async {
+    if (!_config.isEnabled || _paused) return;
+    _paused = true;
+    _stopWatchdog();
+    _reconnectTimer?.cancel();
+    _reconnectTimer = null;
+    _reconnectBackoff = _initialBackoff;
+    _subscribed.clear();
+
+    final socket = _socket;
+    _socket = null;
+    _socketId = null;
+    await _frames?.cancel();
+    _frames = null;
+    _status.value = RealtimeStatus.disconnected;
+
+    try {
+      await socket?.sink.close();
+    } catch (_) {}
+  }
+
+  /// Nối lại sau [pause]; các kênh được đăng ký lại khi bắt tay xong.
+  Future<void> resume() => connect();
+
+  bool get isPaused => _paused;
+
   /// Drops the connection and every subscription.
   ///
   /// Called on logout: the socket was authorized with the previous session's
@@ -398,6 +449,7 @@ class RealtimeClient {
   /// the next sign-in.
   Future<void> disconnect() async {
     _closedDeliberately = true;
+    _paused = false;
     _stopWatchdog();
     _reconnectTimer?.cancel();
     _reconnectTimer = null;

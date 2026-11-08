@@ -9,6 +9,12 @@ abstract final class StorageKeys {
   static const locale = 'omni.locale';
   static const themeMode = 'omni.theme_mode';
 
+  /// Hiệu ứng (bậc hiệu năng) người dùng chọn: auto / full / reduced / minimal.
+  static const perfPreference = 'omni.perf_preference';
+
+  /// Bậc đã tự hạ vì đo thấy giật ở chế độ Tự động.
+  static const perfLearnedTier = 'omni.perf_learned_tier';
+
   /// Nền cả app đã chọn lần cuối, để mở app không nháy nền trước khi
   /// `/auth/me` về. Nguồn sự thật là tài khoản; đây chỉ là bản chép.
   static const background = 'omni.background';

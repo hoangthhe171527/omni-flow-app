@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../../design/platform/omni_motion_scope.dart';
+import '../../../../design/components/components.dart';
 import '../../../../design/tokens/tokens.dart';
 import '../../domain/customer.dart';
 import '../customer_form_page.dart';
@@ -65,55 +66,60 @@ class _CustomerCreateDialog extends StatelessWidget {
                     borderRadius: OmniRadius.xlAll,
                     side: BorderSide(color: scheme.outlineVariant),
                   ),
-                  child: Column(
-                    children: [
-                      Container(
-                        constraints: const BoxConstraints(minHeight: 60),
-                        padding: const EdgeInsets.only(left: 18, right: 8),
-                        decoration: BoxDecoration(
-                          color: scheme.surfaceContainerLow,
-                          border: Border(
-                            bottom: BorderSide(color: scheme.outlineVariant),
+                  // Hộp trắng: nút "Huỷ / Lưu khách hàng" là kính nhuộm tông
+                  // — kính trắng chìm vào nền trắng (phương án B, 08/11).
+                  child: OmniTintedButtons(
+                    child: Column(
+                      children: [
+                        Container(
+                          constraints: const BoxConstraints(minHeight: 60),
+                          padding: const EdgeInsets.only(left: 18, right: 8),
+                          decoration: BoxDecoration(
+                            color: scheme.surfaceContainerLow,
+                            border: Border(
+                              bottom: BorderSide(color: scheme.outlineVariant),
+                            ),
+                          ),
+                          child: Row(
+                            children: [
+                              Expanded(
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'Thêm khách hàng',
+                                      style: OmniType.bodyStrong.copyWith(
+                                        color: scheme.onSurface,
+                                      ),
+                                    ),
+                                    Text(
+                                      'Điền thông tin hồ sơ ngay tại danh sách',
+                                      style: OmniType.micro.copyWith(
+                                        color: scheme.onSurfaceVariant,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              IconButton(
+                                tooltip: 'Đóng',
+                                onPressed: () => Navigator.of(context).pop(),
+                                icon: const Icon(Icons.close_rounded),
+                              ),
+                            ],
                           ),
                         ),
-                        child: Row(
-                          children: [
-                            Expanded(
-                              child: Column(
-                                mainAxisSize: MainAxisSize.min,
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    'Thêm khách hàng',
-                                    style: OmniType.bodyStrong.copyWith(
-                                      color: scheme.onSurface,
-                                    ),
-                                  ),
-                                  Text(
-                                    'Điền thông tin hồ sơ ngay tại danh sách',
-                                    style: OmniType.micro.copyWith(
-                                      color: scheme.onSurfaceVariant,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            IconButton(
-                              tooltip: 'Đóng',
-                              onPressed: () => Navigator.of(context).pop(),
-                              icon: const Icon(Icons.close_rounded),
-                            ),
-                          ],
+                        Expanded(
+                          child: CustomerFormEditor(
+                            embedded: true,
+                            onCancel: () => Navigator.of(context).pop(),
+                            onSaved: (saved) =>
+                                Navigator.of(context).pop(saved),
+                          ),
                         ),
-                      ),
-                      Expanded(
-                        child: CustomerFormEditor(
-                          embedded: true,
-                          onCancel: () => Navigator.of(context).pop(),
-                          onSaved: (saved) => Navigator.of(context).pop(saved),
-                        ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
               ),

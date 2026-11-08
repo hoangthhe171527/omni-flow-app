@@ -13,6 +13,7 @@ import '../../design/components/components.dart';
 import '../../design/platform/omni_motion_scope.dart';
 import '../../design/tokens/tokens.dart';
 import '../../modules/settings/settings_module.dart';
+import '../perf/performance_controller.dart';
 import 'tab_bar_editor_sheet.dart';
 
 export '../../core/utils/text_search.dart' show foldDiacritics, matchesQuery;
@@ -173,6 +174,7 @@ class _DirectoryPageState extends ConsumerState<DirectoryPage> {
           onTap: () => context.pushNamed(SettingsModule.notifications),
         ),
       if (shows('Giao diện sáng tối')) const _ThemeRow(),
+      if (shows('Hiệu ứng mượt pin')) const _PerfRow(),
       if (shows('Nền'))
         _ListRow(
           icon: Icons.wallpaper_outlined,
@@ -785,6 +787,120 @@ class _ListRow extends StatelessWidget {
       },
       child: row,
     );
+  }
+}
+
+String _perfLabel(PerfPreference p) => switch (p) {
+  PerfPreference.auto => 'Tự động',
+  PerfPreference.full => 'Đầy đủ',
+  PerfPreference.reduced => 'Giảm',
+  PerfPreference.minimal => 'Tối giản',
+};
+
+String _tierLabel(OmniPerfTier t) => switch (t) {
+  OmniPerfTier.full => 'Đầy đủ',
+  OmniPerfTier.reduced => 'Giảm',
+  OmniPerfTier.minimal => 'Tối giản',
+};
+
+/// Hiệu ứng kính (bậc hiệu năng): Tự động theo máy / Đầy đủ / Giảm / Tối
+/// giản. Máy yếu, nóng, tốn pin thì hạ để làm mờ nhẹ hoặc tắt hẳn.
+class _PerfRow extends ConsumerWidget {
+  const _PerfRow();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final scheme = Theme.of(context).colorScheme;
+    final pref = ref.watch(performanceControllerProvider).preference;
+    final tier = ref.watch(effectivePerfTierProvider);
+    final value = pref == PerfPreference.auto
+        ? 'Tự động · ${_tierLabel(tier)}'
+        : _perfLabel(pref);
+
+    return Semantics(
+      button: true,
+      label: 'Hiệu ứng: $value',
+      excludeSemantics: true,
+      child: InkWell(
+        key: const Key('directory-perf-row'),
+        onTap: () => _pick(context, ref, pref),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+          child: Row(
+            children: [
+              const _MonoIcon(Icons.auto_awesome_outlined),
+              const SizedBox(width: 12),
+              // Giá trị là dòng phụ dưới nhãn, không chung hàng: "Tự động ·
+              // Đầy đủ" cạnh nhãn tràn ở màn 360 / chữ phóng to.
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      'Hiệu ứng',
+                      style: OmniType.body.copyWith(color: scheme.onSurface),
+                    ),
+                    Text(
+                      value,
+                      style: OmniType.caption.copyWith(
+                        color: scheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 4),
+              Icon(
+                Icons.chevron_right_rounded,
+                size: 18,
+                color: OmniTaskTones.of(context).chevron,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _pick(
+    BuildContext context,
+    WidgetRef ref,
+    PerfPreference current,
+  ) async {
+    final picked = await showOmniSheet<PerfPreference>(
+      context: context,
+      builder: (sheetContext) => OmniSheetBody(
+        semanticsLabel: 'Hiệu ứng',
+        header: const OmniSheetHeader(title: 'Hiệu ứng'),
+        children: [
+          OmniGroupSection(
+            dividerIndent: 14,
+            children: [
+              for (final (p, sub) in const [
+                (PerfPreference.auto, 'Theo máy, tự giảm khi giật'),
+                (PerfPreference.full, 'Kính mờ đầy đủ'),
+                (PerfPreference.reduced, 'Mờ nhẹ, đỡ nóng máy'),
+                (PerfPreference.minimal, 'Không làm mờ, mượt và đỡ pin nhất'),
+              ])
+                OmniGroupRow(
+                  key: Key('perf-option-${p.name}'),
+                  title: _perfLabel(p),
+                  subtitle: sub,
+                  selected: p == current,
+                  chevron: false,
+                  onTap: () => Navigator.of(sheetContext).pop(p),
+                ),
+            ],
+          ),
+        ],
+      ),
+    );
+    if (picked != null) {
+      await ref
+          .read(performanceControllerProvider.notifier)
+          .setPreference(picked);
+    }
   }
 }
 

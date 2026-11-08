@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../tokens/tokens.dart';
+import 'omni_tinted_buttons.dart';
 
 /// The single surface primitive: white, a hairline E3E8EF border, radius 10,
 /// NO shadow — hierarchy comes from spacing and borders, not elevation.
@@ -36,7 +37,10 @@ class OmniCard extends StatelessWidget {
     // `flat`: thẻ nhóm lồng bo 18 không viền (viomni-apple-uiux.html `.group`).
     final radius = flat ? BorderRadius.circular(18) : OmniRadius.xlAll;
 
-    Widget content = Padding(padding: padding, child: child);
+    // Thẻ trắng: nút bên trong là kính nhuộm tông, không chìm.
+    Widget content = OmniTintedButtons(
+      child: Padding(padding: padding, child: child),
+    );
 
     if (leadingEdge != null) {
       content = Row(

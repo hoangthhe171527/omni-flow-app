@@ -2,6 +2,8 @@ import 'dart:ui' show ImageFilter;
 
 import 'package:flutter/material.dart';
 
+import '../platform/omni_performance.dart';
+
 /// Nút + tròn kính lỏng nổi ở góc dưới phải (viec-quick-create-uiux.html,
 /// duyệt 2026-11-08).
 ///
@@ -185,7 +187,8 @@ class _OmniLiquidFabState extends State<OmniLiquidFab>
           ],
         ),
         child: ClipOval(
-          child: solid
+          // Viên 54 σ8: chỉ làm mờ ở bậc hiệu năng đầy đủ.
+          child: solid || OmniPerformance.tierOf(context) != OmniPerfTier.full
               ? glass
               : BackdropFilter(
                   filter: ImageFilter.compose(

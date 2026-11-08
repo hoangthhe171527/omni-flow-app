@@ -78,16 +78,28 @@ void main() {
     expect(api.mineCalls, 0);
   });
 
-  test('tín hiệu realtime thì đếm lại', () async {
+  testWidgets('tín hiệu realtime thì đếm lại — sau debounce 5 giây, gộp loạt', (
+    tester,
+  ) async {
     api.overdue = 3;
-    await openTab();
+    container.listen(taskBadgeProvider, (_, _) {});
+    await tester.pump();
+    expect(api.overdueCalls, 1);
 
     api.overdue = 2;
-    container.read(taskRealtimeSignalProvider.notifier).bump();
-    await container.read(taskOverdueCountProvider.future);
+    final signal = container.read(taskRealtimeSignalProvider.notifier);
+    signal.bump();
+    await tester.pump(const Duration(seconds: 2));
+    signal.bump();
+    await tester.pump(const Duration(seconds: 4));
+    expect(api.overdueCalls, 1, reason: 'chưa đủ 5 giây từ tín hiệu cuối');
+    expect(container.read(taskBadgeProvider), 3);
+
+    await tester.pump(const Duration(seconds: 2));
+    await tester.pump();
 
     expect(container.read(taskBadgeProvider), 2);
-    expect(api.overdueCalls, 2);
+    expect(api.overdueCalls, 2, reason: 'hai tín hiệu = MỘT lượt đếm lại');
   });
 
   test('chưa đăng nhập thì 0 và không hỏi server', () async {

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -278,27 +280,67 @@ class _PlayableVideo extends StatefulWidget {
   State<_PlayableVideo> createState() => _PlayableVideoState();
 }
 
-class _PlayableVideoState extends State<_PlayableVideo> {
-  late final VideoPlayerController _controller =
-      VideoPlayerController.networkUrl(Uri.parse(widget.url));
+class _PlayableVideoState extends State<_PlayableVideo>
+    with WidgetsBindingObserver {
+  /// Chỉ dựng decoder + mở luồng mạng khi người dùng bấm phát: lướt qua một
+  /// video trong trình xem không được tốn data và bộ giải mã.
+  VideoPlayerController? _controller;
+  bool _activated = false;
 
   @override
   void initState() {
     super.initState();
-    _controller.initialize().then((_) {
-      if (mounted) setState(() {});
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  void _activate() {
+    if (_activated) return;
+    final controller = VideoPlayerController.networkUrl(Uri.parse(widget.url));
+    setState(() {
+      _activated = true;
+      _controller = controller;
+    });
+    controller.initialize().then((_) {
+      if (!mounted) return;
+      setState(() {});
+      unawaited(controller.play());
     });
   }
 
   @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    // Vào nền thì dừng: không tiếp tục giải mã/tải luồng cho màn không ai nhìn.
+    if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.hidden) {
+      final controller = _controller;
+      if (controller != null && controller.value.isPlaying) {
+        unawaited(controller.pause());
+        if (mounted) setState(() {});
+      }
+    }
+  }
+
+  @override
   void dispose() {
-    _controller.dispose();
+    WidgetsBinding.instance.removeObserver(this);
+    _controller?.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    if (!_controller.value.isInitialized) {
+    final controller = _controller;
+    if (!_activated) {
+      return Center(
+        child: IconButton.filled(
+          onPressed: _activate,
+          tooltip: 'Phát video',
+          iconSize: 40,
+          icon: const Icon(Icons.play_arrow_rounded),
+        ),
+      );
+    }
+    if (controller == null || !controller.value.isInitialized) {
       return const Center(
         child: CircularProgressIndicator.adaptive(
           valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
@@ -307,19 +349,19 @@ class _PlayableVideoState extends State<_PlayableVideo> {
     }
     return Center(
       child: AspectRatio(
-        aspectRatio: _controller.value.aspectRatio,
+        aspectRatio: controller.value.aspectRatio,
         child: Stack(
           alignment: Alignment.center,
           children: [
-            VideoPlayer(_controller),
+            VideoPlayer(controller),
             IconButton.filled(
               onPressed: () => setState(() {
-                _controller.value.isPlaying
-                    ? _controller.pause()
-                    : _controller.play();
+                controller.value.isPlaying
+                    ? controller.pause()
+                    : controller.play();
               }),
               icon: Icon(
-                _controller.value.isPlaying
+                controller.value.isPlaying
                     ? Icons.pause_rounded
                     : Icons.play_arrow_rounded,
               ),

@@ -243,15 +243,15 @@ class _ExpenseRowTileState extends ConsumerState<ExpenseRowTile> {
     }
   }
 
-  String _buildSubtitleText(FinanceLedgerState state, ExpenseGroup grp) {
+  String _buildSubtitleText(ExpenseSortMode sortMode, ExpenseGroup grp) {
     final item = widget.item;
     final acc = item.effectiveAccountName;
     final isExcluded = !item.countsAsExpense || !grp.countsAsExpense;
     final parts = <String>[
-      if (state.sortMode != ExpenseSortMode.category) grp.name,
+      if (sortMode != ExpenseSortMode.category) grp.name,
       if (isExcluded) 'Không tính CP',
       if (acc != null && acc.isNotEmpty) acc,
-      if (state.sortMode == ExpenseSortMode.createdAtDesc &&
+      if (sortMode == ExpenseSortMode.createdAtDesc &&
           item.createdTimeOnly.isNotEmpty)
         'Nhập ${item.createdTimeOnly}',
       if (item.attachments.isNotEmpty) '${item.attachments.length} chứng từ',
@@ -264,8 +264,13 @@ class _ExpenseRowTileState extends ConsumerState<ExpenseRowTile> {
   Widget build(BuildContext context) {
     final p = FinancePalette.of(context);
     final item = widget.item;
-    final state = ref.watch(financeLedgerProvider);
-    final grp = state.groupById(item.groupId);
+    // Chỉ phần dòng này cần: nhóm của item và kiểu sắp xếp. Watch cả state thì
+    // mọi thay đổi (toast, flash, tìm kiếm, lạc quan) dựng lại TOÀN BỘ dòng.
+    final (grp, sortMode) = ref.watch(
+      financeLedgerProvider.select(
+        (s) => (s.groupById(item.groupId), s.sortMode),
+      ),
+    );
     final left = item.remainingAmount;
     final paid = item.paidTotal;
 
@@ -406,7 +411,7 @@ class _ExpenseRowTileState extends ConsumerState<ExpenseRowTile> {
                                         ),
                                         const SizedBox(height: 2),
                                         Text(
-                                          _buildSubtitleText(state, grp),
+                                          _buildSubtitleText(sortMode, grp),
                                           maxLines: 2,
                                           overflow: TextOverflow.ellipsis,
                                           style: OmniType.caption.copyWith(

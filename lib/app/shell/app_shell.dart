@@ -94,13 +94,15 @@ class AppShell extends ConsumerWidget {
             // ẩn, chỉ còn ô tìm và kết quả — như Thư viện ứng dụng iOS.
             bottomNavigationBar: IgnorePointer(
               ignoring: searching,
+              // Chỉ trượt, không mờ dần: AnimatedOpacity bọc viên kính làm
+              // mờ = thêm một lớp vẽ (saveLayer) chứa BackdropFilter suốt lúc
+              // ẩn/hiện; thanh trượt hẳn khỏi màn nên mờ dần là thừa.
+              // RepaintBoundary: thấu kính trượt khi đổi tab chỉ vẽ lại thanh.
               child: AnimatedSlide(
                 offset: searching ? const Offset(0, 1.4) : Offset.zero,
                 duration: OmniMotion.of(context).base,
                 curve: OmniCurves.standard,
-                child: AnimatedOpacity(
-                  opacity: searching ? 0 : 1,
-                  duration: OmniMotion.of(context).base,
+                child: RepaintBoundary(
                   child: _EditOnLongPress(
                     child: _ShellNavBar(
                       tabs: tabs,

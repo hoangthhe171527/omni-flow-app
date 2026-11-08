@@ -134,9 +134,27 @@ class InboxListController
   /// Bumped by every (re)build; see [loadMore].
   int _generation = 0;
 
+  /// Hẹn làm mới số đếm (badge tab + pill) sau một loạt `conversation.updated`.
+  Timer? _facetsTimer;
+
+  /// Số đếm hộp thư chỉ cần đúng trong vài giây: tenant sôi động bắn
+  /// `conversation.updated` liên tục, và mỗi lô từng kéo theo một GET facets.
+  /// Gộp mọi lô trong 3 giây thành MỘT lượt (lượt đầu mở cửa sổ, các lô sau
+  /// trong cửa sổ đi chung).
+  static const facetsDebounce = Duration(seconds: 3);
+
+  void _invalidateFacetsSoon() {
+    if (_facetsTimer?.isActive ?? false) return;
+    _facetsTimer = Timer(facetsDebounce, () {
+      _facetsTimer = null;
+      ref.invalidate(inboxFacetsProvider);
+    });
+  }
+
   @override
   Future<ConversationListState> build() async {
     _generation++;
+    ref.onDispose(() => _facetsTimer?.cancel());
     // `message.created` (đã gộp nhịp 400ms) KHÔNG dựng lại danh sách về trang
     // 1 — đang cuộn tới trang 3 mà nhảy về 30 dòng đầu là mất chỗ đang đọc
     // (APP-I3). Chỉ gộp trang 1 lên đầu. `listen` cũng giữ tín hiệu sống, nên
@@ -352,7 +370,7 @@ class InboxListController
     }
     if (!merge && deleted.isEmpty && fetch.isEmpty) return;
 
-    ref.invalidate(inboxFacetsProvider);
+    _invalidateFacetsSoon();
     if (deleted.isNotEmpty) _remove(deleted);
 
     final api = ref.read(inboxApiProvider);

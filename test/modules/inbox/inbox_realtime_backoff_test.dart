@@ -113,14 +113,26 @@ void main() {
       );
     });
 
-    test('bản dựng không có realtime thì poll ở nhịp gốc, không nhiễu', () {
+    test('bản dựng không có realtime cũng giãn + nhiễu, trần 60 giây', () {
       final realtime = InboxRealtime.forTest(state: RealtimeStatus.disabled);
 
-      // Không có kênh nào để chờ, cũng không có đợt nối lại đồng loạt nào để
-      // dàn ra — nhịp cố định như trước.
-      expect(realtime.pollInterval, RealtimePolling.inboxFallback);
-      realtime.tickBackoff();
-      expect(realtime.pollInterval, RealtimePolling.inboxFallback);
+      // Trước đây cố định 5 giây (720 request/giờ cho một màn để mở).
+      expect(
+        realtime.pollInterval!.inMilliseconds,
+        inInclusiveRange(4000, 6000),
+      );
+      for (var i = 0; i < 10; i++) {
+        realtime.tickBackoff();
+      }
+      expect(realtime.backoffStep, InboxRealtime.maxBackoffSteps);
+      expect(
+        realtime.pollInterval!.inMilliseconds,
+        inInclusiveRange(16000, 24000),
+      );
+      expect(
+        realtime.pollInterval!,
+        lessThanOrEqualTo(InboxRealtime.maxInterval * 1.2),
+      );
     });
 
     test('màn chat lấy nhịp gốc 8 giây của nó', () {

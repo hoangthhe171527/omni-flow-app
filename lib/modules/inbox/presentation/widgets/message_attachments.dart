@@ -119,7 +119,8 @@ class _InlineVideo extends StatefulWidget {
   State<_InlineVideo> createState() => _InlineVideoState();
 }
 
-class _InlineVideoState extends State<_InlineVideo> {
+class _InlineVideoState extends State<_InlineVideo>
+    with WidgetsBindingObserver {
   VideoPlayerController? _controller;
 
   /// URL đang dùng — có thể là bản ký mới, khác `widget.url`.
@@ -138,7 +139,21 @@ class _InlineVideoState extends State<_InlineVideo> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _url = resolveMediaUrl(widget.url);
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    // Vào nền thì dừng video: không giải mã/tải luồng cho màn không ai nhìn.
+    if (state != AppLifecycleState.paused &&
+        state != AppLifecycleState.hidden) {
+      return;
+    }
+    final controller = _controller;
+    if (controller != null && controller.value.isPlaying) {
+      unawaited(controller.pause());
+    }
   }
 
   @override
@@ -240,6 +255,7 @@ class _InlineVideoState extends State<_InlineVideo> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _disposeSafely(_controller);
     _controller = null;
     super.dispose();

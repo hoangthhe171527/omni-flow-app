@@ -489,7 +489,11 @@ class _Rise extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (!OmniMotion.enabled(context)) return child;
+    // Bậc hiệu năng thấp: hiện ngay (mỗi mục hiện dần = một lớp vẽ mờ).
+    if (!OmniMotion.enabled(context) ||
+        !OmniPerformance.riseOnScroll(context)) {
+      return child;
+    }
 
     return TweenAnimationBuilder<double>(
       tween: Tween(begin: 0, end: 1),
