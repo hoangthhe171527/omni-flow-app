@@ -14,12 +14,10 @@ import '../modules/customers/application/customers_providers.dart';
 import '../modules/inbox/inbox_routes.dart';
 import '../modules/notifications/application/notifications_providers.dart';
 import '../modules/notifications/application/push_notifications.dart';
-import '../modules/notifications/presentation/notification_quick_menu.dart';
 import '../modules/notifications/routes.dart';
 import '../modules/opportunities/application/opportunities_providers.dart';
 import '../modules/plans/application/plans_providers.dart';
 import '../modules/settings/presentation/widgets/account_menu_button.dart';
-import '../modules/settings/settings_module.dart';
 import '../modules/tasks/application/tasks_providers.dart';
 import '../modules/tasks/tasks_module.dart';
 import '../modules/team/application/team_providers.dart';
@@ -134,26 +132,10 @@ class _OmniAppState extends ConsumerState<OmniApp> with WidgetsBindingObserver {
             child: OmniTopBarSlot(
               unreadOf: (ref) =>
                   ref.watch(unreadNotificationCountProvider).valueOrNull ?? 0,
-              onBell: (context, anchor) async {
-                final unread =
-                    ref.read(unreadNotificationCountProvider).valueOrNull ?? 0;
-                final action = await showNotificationQuickMenu(
-                  context,
-                  anchor: anchor,
-                  unread: unread,
-                );
-                if (!context.mounted || action == null) return;
-                switch (action) {
-                  case NotificationQuickAction.openAll:
-                    GoRouter.of(context).pushNamed(NotificationRoutes.centre);
-                  case NotificationQuickAction.markAllRead:
-                    await ref.read(markAllNotificationsReadProvider)();
-                  case NotificationQuickAction.settings:
-                    GoRouter.of(
-                      context,
-                    ).pushNamed(SettingsModule.notifications);
-                }
-              },
+              // Chuông mở thẳng trang Thông báo (người dùng 2026-11-08): "Đọc
+              // hết" đã ở trang đó, Cài đặt thông báo nằm trong "Tất cả".
+              onBell: (context, _) =>
+                  GoRouter.of(context).pushNamed(NotificationRoutes.centre),
               // Hiệu ứng mở app phủ lên router, không nằm trong nó — xem
               // docblock của LaunchSplash về lý do không làm chậm điều hướng.
               child: LaunchSplash(child: child ?? const SizedBox.shrink()),
