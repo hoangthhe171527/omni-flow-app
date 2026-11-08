@@ -118,7 +118,13 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('Hằng Ni'), findsOneWidget);
+    // Màn đứng gốc trong bài kiểm: logo thay chữ, tên chỉ để đọc.
+    expect(
+      find.byWidgetPredicate(
+        (w) => w is Semantics && w.properties.label == 'Hằng Ni',
+      ),
+      findsOneWidget,
+    );
     expect(find.text('Thợ máy'), findsOneWidget);
     expect(find.textContaining('u-hang-ni'), findsNothing);
   });
