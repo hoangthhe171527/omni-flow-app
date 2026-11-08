@@ -56,10 +56,10 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  testWidgets('ô Thành viên nói rõ bỏ qua được', (tester) async {
+  testWidgets('ô Thành viên không kèm chữ giải thích dư', (tester) async {
     await pump(tester);
 
-    expect(find.text('Chưa chọn ai — thêm sau cũng được'), findsOneWidget);
+    expect(find.text('Thành viên'), findsOneWidget);
   });
 
   testWidgets('bỏ qua thành viên vẫn tạo được team', (tester) async {
@@ -99,7 +99,7 @@ void main() {
   testWidgets('chọn người rồi thì ô hiện số lượng', (tester) async {
     await pump(tester);
 
-    await tester.tap(find.text('Chưa chọn ai — thêm sau cũng được'));
+    await tester.tap(find.text('Thành viên'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Hằng Ni'));
     await tester.pump();
@@ -114,7 +114,7 @@ void main() {
     // chỉ chưa bao giờ gửi. Chọn trên màn mà không tới server thì im lặng.
     final api = await pump(tester);
 
-    await tester.tap(find.text('Chưa chọn ai — thêm sau cũng được'));
+    await tester.tap(find.text('Thành viên'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Hằng Ni'));
     await tester.pump();

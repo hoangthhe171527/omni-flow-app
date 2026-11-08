@@ -20,7 +20,7 @@ typedef SubtaskDraft = ({
   DateTime? dueDate,
 });
 
-/// Chọn một ngày (mặc định `showDatePicker`); tiêm được để test.
+/// Chọn một ngày (mặc định `pickOmniDate`); tiêm được để test.
 typedef SubtaskDatePicker =
     Future<DateTime?> Function(BuildContext context, DateTime initial);
 
@@ -57,11 +57,8 @@ Future<void> showSubtaskCreateSheet(
 
   return showOmniSheet<void>(
     context: context,
-    backgroundColor: Theme.of(context).scaffoldBackgroundColor,
     barrierColor: OmniColors.ink.withValues(alpha: 0.4),
     maxHeight: height - 54,
-    radius: OmniRadius.fab,
-    showDragHandle: false,
     animationStyle: const AnimationStyle(
       duration: OmniDuration.sheet,
       curve: OmniCurves.sheet,
@@ -192,256 +189,199 @@ class _SubtaskCreateSheetState extends ConsumerState<SubtaskCreateSheet> {
     final secondary = detailSecondary(context);
     final picked = _assigneeId;
     final member = picked == null ? null : _member(picked);
-    final focusRing = OutlineInputBorder(
-      borderRadius: BorderRadius.circular(8),
-      borderSide: BorderSide(color: scheme.primary),
-    );
 
     return Semantics(
       scopesRoute: true,
       explicitChildNodes: true,
       label: 'Tạo việc con',
-      child: SizedBox(
-        height: double.infinity,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(4),
-              decoration: BoxDecoration(
-                border: Border(
-                  bottom: BorderSide(color: scheme.outlineVariant),
+      child: OmniSheetBody(
+        header: Padding(
+          padding: const EdgeInsets.fromLTRB(4, 8, 4, 8),
+          child: Row(
+            children: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                style: TextButton.styleFrom(
+                  minimumSize: const Size(64, 44),
+                  foregroundColor: secondary,
+                  textStyle: OmniType.body.copyWith(
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                child: const Text('Huỷ'),
+              ),
+              Expanded(
+                child: Text(
+                  'Việc con mới',
+                  textAlign: TextAlign.center,
+                  style: OmniType.section.copyWith(color: scheme.onSurface),
                 ),
               ),
+              ValueListenableBuilder<TextEditingValue>(
+                valueListenable: _name,
+                builder: (context, _, _) => TextButton(
+                  onPressed: _canCreate ? _create : null,
+                  style: TextButton.styleFrom(
+                    minimumSize: const Size(64, 44),
+                    foregroundColor: scheme.primary,
+                    disabledForegroundColor: scheme.primary.withValues(
+                      alpha: 0.4,
+                    ),
+                    textStyle: OmniType.bodyStrong,
+                  ),
+                  child: _busy
+                      ? const SizedBox.square(
+                          dimension: 18,
+                          child: CircularProgressIndicator.adaptive(
+                            strokeWidth: 2,
+                          ),
+                        )
+                      : const Text('Tạo'),
+                ),
+              ),
+            ],
+          ),
+        ),
+        children: [
+          TextField(
+            controller: _name,
+            autofocus: true,
+            enabled: !_busy,
+            textCapitalization: TextCapitalization.sentences,
+            textInputAction: TextInputAction.done,
+            onSubmitted: (_) => _create(),
+            style: OmniType.body.copyWith(color: scheme.onSurface),
+            decoration: const InputDecoration(hintText: 'Tên việc con'),
+          ),
+          if (widget.details)
+            TextField(
+              key: const ValueKey('subtask-create-description'),
+              controller: _description,
+              enabled: !_busy,
+              minLines: 3,
+              maxLines: 6,
+              // `CreateChecklistItemRequest` `description` `max:2000`.
+              maxLength: 2000,
+              textCapitalization: TextCapitalization.sentences,
+              style: OmniType.body.copyWith(color: scheme.onSurface),
+              decoration: const InputDecoration(
+                hintText: 'Mô tả (không bắt buộc)',
+              ),
+            ),
+          if (widget.canAssign)
+            OmniGroupSection(
+              dividerIndent: 14,
+              children: [
+                ConstrainedBox(
+                  constraints: const BoxConstraints(minHeight: 48),
+                  child: Padding(
+                    padding: const EdgeInsets.only(left: 14, right: 6),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            'Người làm',
+                            style: OmniType.body.copyWith(
+                              fontWeight: FontWeight.w500,
+                              color: scheme.onSurface,
+                            ),
+                          ),
+                        ),
+                        if (picked != null)
+                          Semantics(
+                            label: 'Người làm: ${member?.name ?? 'đã chọn'}',
+                            excludeSemantics: true,
+                            child: OmniAvatar(
+                              name: member?.name ?? '?',
+                              imageUrl: member?.avatarUrl,
+                              size: 30,
+                            ),
+                          ),
+                        Semantics(
+                          button: true,
+                          label: 'Chọn người làm',
+                          excludeSemantics: true,
+                          child: InkWell(
+                            onTap: _busy ? null : _pickAssignee,
+                            customBorder: const CircleBorder(),
+                            child: SizedBox.square(
+                              dimension: 44,
+                              child: Center(
+                                child: OmniDashedCircle(
+                                  size: 30,
+                                  color: scheme.primary,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          if (widget.details)
+            Row(
+              children: [
+                Expanded(
+                  child: _DateBox(
+                    key: const ValueKey('subtask-create-start'),
+                    empty: 'Ngày bắt đầu',
+                    prefix: 'Bắt đầu',
+                    value: _start,
+                    clearLabel: 'Xoá ngày bắt đầu',
+                    onTap: _busy ? null : () => _pick(start: true),
+                    onClear: _busy ? null : () => setState(() => _start = null),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: _DateBox(
+                    key: const ValueKey('subtask-create-due'),
+                    empty: 'Hạn',
+                    prefix: 'Hạn',
+                    value: _due,
+                    clearLabel: 'Xoá hạn',
+                    onTap: _busy ? null : () => _pick(start: false),
+                    onClear: _busy ? null : () => setState(() => _due = null),
+                  ),
+                ),
+              ],
+            ),
+          if (widget.details)
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
               child: Row(
                 children: [
-                  TextButton(
-                    onPressed: () => Navigator.of(context).pop(),
-                    style: TextButton.styleFrom(
-                      minimumSize: const Size(64, 44),
-                      foregroundColor: secondary,
-                      textStyle: OmniType.body.copyWith(
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                    child: const Text('Huỷ'),
-                  ),
-                  Expanded(
-                    child: Text(
-                      'Việc con mới',
-                      textAlign: TextAlign.center,
-                      style: OmniType.section.copyWith(color: scheme.onSurface),
-                    ),
-                  ),
-                  ValueListenableBuilder<TextEditingValue>(
-                    valueListenable: _name,
-                    builder: (context, _, _) => TextButton(
-                      onPressed: _canCreate ? _create : null,
-                      style: TextButton.styleFrom(
-                        minimumSize: const Size(64, 44),
-                        foregroundColor: scheme.primary,
-                        disabledForegroundColor: scheme.primary.withValues(
-                          alpha: 0.4,
-                        ),
-                        textStyle: OmniType.bodyStrong,
-                      ),
-                      child: _busy
-                          ? const SizedBox.square(
-                              dimension: 18,
-                              child: CircularProgressIndicator.adaptive(
-                                strokeWidth: 2,
+                  for (final (label, days) in const [
+                    ('Hôm nay', 0),
+                    ('Ngày mai', 1),
+                    ('Tuần sau', 7),
+                  ])
+                    Padding(
+                      padding: const EdgeInsets.only(right: 8),
+                      child: _QuickChip(
+                        label: label,
+                        on: _due == _today().add(Duration(days: days)),
+                        onTap: _busy
+                            ? null
+                            : () => setState(
+                                () => _due = _today().add(Duration(days: days)),
                               ),
-                            )
-                          : const Text('Tạo'),
+                      ),
                     ),
-                  ),
                 ],
               ),
             ),
-            Expanded(
-              child: SingleChildScrollView(
-                keyboardDismissBehavior:
-                    ScrollViewKeyboardDismissBehavior.onDrag,
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    TextField(
-                      controller: _name,
-                      autofocus: true,
-                      enabled: !_busy,
-                      textCapitalization: TextCapitalization.sentences,
-                      textInputAction: TextInputAction.done,
-                      onSubmitted: (_) => _create(),
-                      style: OmniType.body.copyWith(color: scheme.onSurface),
-                      decoration: InputDecoration(
-                        hintText: 'Tên việc con',
-                        filled: true,
-                        fillColor: scheme.surface,
-                        constraints: const BoxConstraints(minHeight: 48),
-                        contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 13,
-                        ),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(8),
-                          borderSide: BorderSide(color: scheme.outlineVariant),
-                        ),
-                        enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(8),
-                          borderSide: BorderSide(color: scheme.outlineVariant),
-                        ),
-                        focusedBorder: focusRing,
-                      ),
-                    ),
-                    if (widget.details) ...[
-                      const SizedBox(height: 12),
-                      TextField(
-                        key: const ValueKey('subtask-create-description'),
-                        controller: _description,
-                        enabled: !_busy,
-                        minLines: 3,
-                        maxLines: 6,
-                        // `CreateChecklistItemRequest` `description` `max:2000`.
-                        maxLength: 2000,
-                        textCapitalization: TextCapitalization.sentences,
-                        style: OmniType.body.copyWith(color: scheme.onSurface),
-                        decoration: InputDecoration(
-                          hintText: 'Mô tả (không bắt buộc)',
-                          filled: true,
-                          fillColor: scheme.surface,
-                          constraints: const BoxConstraints(minHeight: 76),
-                          contentPadding: const EdgeInsets.all(12),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(8),
-                            borderSide: BorderSide(
-                              color: scheme.outlineVariant,
-                            ),
-                          ),
-                          enabledBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(8),
-                            borderSide: BorderSide(
-                              color: scheme.outlineVariant,
-                            ),
-                          ),
-                          focusedBorder: focusRing,
-                        ),
-                      ),
-                    ],
-                    if (widget.canAssign) ...[
-                      const SizedBox(height: 12),
-                      DetailCard(
-                        flat: false,
-                        children: [
-                          DetailRow(
-                            label: 'Người làm',
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.end,
-                              children: [
-                                if (picked != null)
-                                  Semantics(
-                                    label:
-                                        'Người làm: ${member?.name ?? 'đã chọn'}',
-                                    excludeSemantics: true,
-                                    child: OmniAvatar(
-                                      name: member?.name ?? '?',
-                                      imageUrl: member?.avatarUrl,
-                                      size: 30,
-                                    ),
-                                  ),
-                                Semantics(
-                                  button: true,
-                                  label: 'Chọn người làm',
-                                  excludeSemantics: true,
-                                  child: InkWell(
-                                    onTap: _busy ? null : _pickAssignee,
-                                    borderRadius: BorderRadius.circular(6),
-                                    child: SizedBox.square(
-                                      dimension: 44,
-                                      child: Center(
-                                        child: OmniDashedCircle(
-                                          size: 30,
-                                          color: scheme.primary,
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                    if (widget.details) ...[
-                      const SizedBox(height: 12),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: _DateBox(
-                              key: const ValueKey('subtask-create-start'),
-                              empty: 'Ngày bắt đầu',
-                              prefix: 'Bắt đầu',
-                              value: _start,
-                              clearLabel: 'Xoá ngày bắt đầu',
-                              onTap: _busy ? null : () => _pick(start: true),
-                              onClear: _busy
-                                  ? null
-                                  : () => setState(() => _start = null),
-                            ),
-                          ),
-                          const SizedBox(width: 10),
-                          Expanded(
-                            child: _DateBox(
-                              key: const ValueKey('subtask-create-due'),
-                              empty: 'Hạn',
-                              prefix: 'Hạn',
-                              value: _due,
-                              clearLabel: 'Xoá hạn',
-                              onTap: _busy ? null : () => _pick(start: false),
-                              onClear: _busy
-                                  ? null
-                                  : () => setState(() => _due = null),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 4),
-                      Wrap(
-                        spacing: 8,
-                        children: [
-                          for (final (label, days) in const [
-                            ('Hôm nay', 0),
-                            ('Ngày mai', 1),
-                            ('Tuần sau', 7),
-                          ])
-                            _QuickChip(
-                              label: label,
-                              on: _due == _today().add(Duration(days: days)),
-                              onTap: _busy
-                                  ? null
-                                  : () => setState(
-                                      () => _due = _today().add(
-                                        Duration(days: days),
-                                      ),
-                                    ),
-                            ),
-                        ],
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-            ),
-          ],
-        ),
+        ],
       ),
     );
   }
 }
 
-/// Ô ngày (`.in` của bản mẫu): cao 48, viền `#E3E8EF`; có giá trị thì viền
-/// màu chính, chữ chính và nút × 44 để xoá.
+/// Ô ngày: nền mờ của ô nhập (theme), bo 14, không viền; có giá trị thì
+/// chữ màu chính và nút × 44 để xoá.
 class _DateBox extends StatelessWidget {
   const _DateBox({
     super.key,
@@ -464,15 +404,11 @@ class _DateBox extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final date = value;
+    final dark = Theme.of(context).brightness == Brightness.dark;
 
     return Material(
-      color: scheme.surface,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(8),
-        side: BorderSide(
-          color: date == null ? scheme.outlineVariant : scheme.primary,
-        ),
-      ),
+      color: scheme.onSurface.withValues(alpha: dark ? .08 : .05),
+      borderRadius: BorderRadius.circular(14),
       clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: onTap,
@@ -480,16 +416,17 @@ class _DateBox extends StatelessWidget {
           height: 48,
           child: Row(
             children: [
-              const SizedBox(width: 12),
+              const SizedBox(width: 14),
               Expanded(
                 child: Text(
                   date == null ? empty : '$prefix ${Formatters.dayMonth(date)}',
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: OmniType.bodySm.copyWith(
+                    fontWeight: date == null ? null : FontWeight.w600,
                     color: date == null
                         ? detailSecondary(context)
-                        : scheme.onSurface,
+                        : scheme.primary,
                   ),
                 ),
               ),
@@ -516,8 +453,7 @@ class _DateBox extends StatelessWidget {
   }
 }
 
-/// Chip nhanh `.qc`: cao 36 (vùng chạm 44), viền `#E3E8EF`; bật thì nền
-/// `#E6F3F2` chữ `#075E59` viền màu chính.
+/// Chip ngày nhanh: chip kính, chọn = trắng mờ.
 class _QuickChip extends StatelessWidget {
   const _QuickChip({
     required this.label,
@@ -531,43 +467,17 @@ class _QuickChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final tone = OmniTaskTones.of(context).today;
-
     return Semantics(
-      button: true,
-      selected: on,
       label: 'Hạn: $label',
       excludeSemantics: true,
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
+      button: true,
+      selected: on,
+      onTap: onTap,
+      child: OmniChoicePill(
+        key: ValueKey('quick-chip-$label'),
+        label: label,
+        selected: on,
         onTap: onTap,
-        child: SizedBox(
-          height: 44,
-          child: Center(
-            widthFactor: 1,
-            child: Container(
-              key: ValueKey('quick-chip-$label'),
-              height: 36,
-              padding: const EdgeInsets.symmetric(horizontal: 12),
-              alignment: Alignment.center,
-              decoration: BoxDecoration(
-                color: on ? tone.background : scheme.surface,
-                borderRadius: BorderRadius.circular(6),
-                border: Border.all(
-                  color: on ? scheme.primary : scheme.outlineVariant,
-                ),
-              ),
-              child: Text(
-                label,
-                style: OmniType.caption.copyWith(
-                  fontWeight: FontWeight.w500,
-                  color: on ? tone.foreground : detailSecondary(context),
-                ),
-              ),
-            ),
-          ),
-        ),
       ),
     );
   }

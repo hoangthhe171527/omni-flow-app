@@ -7,6 +7,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/domain/channel.dart';
 import '../../../core/error/app_exception.dart';
+import '../../../core/nav/shell_bar_inset.dart';
 import '../../../design/components/components.dart';
 import '../../../design/tokens/tokens.dart';
 import '../../../security/session/session_controller.dart';
@@ -157,7 +158,6 @@ class _ChannelsPageState extends ConsumerState<ChannelsPage> {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
     final channels = ref.watch(channelsProvider);
     final access = ref.watch(accessProvider);
     final canWrite = access.can(ChannelPermissions.write);
@@ -166,19 +166,23 @@ class _ChannelsPageState extends ConsumerState<ChannelsPage> {
     final canPick =
         canConnectCompany || (canWrite && ConnectableChannels.pair.isNotEmpty);
     return Scaffold(
-      backgroundColor: scheme.surface,
       appBar: const OmniAppBar(title: 'Kết nối kênh'),
+      // Scaffold lồng đặt nút nổi theo viewPadding, không theo thanh tab kính
+      // của shell — không nhấc lên thì nút nằm hẳn dưới lớp mờ.
       floatingActionButton: Builder(
-        builder: (buttonContext) => FloatingActionButton.extended(
-          onPressed: _connecting || !canPick
-              ? null
-              : () {
-                  final box = buttonContext.findRenderObject() as RenderBox?;
-                  if (box == null || !box.hasSize) return;
-                  _pickChannel(box.localToGlobal(Offset.zero) & box.size);
-                },
-          icon: const Icon(Icons.add_link_rounded),
-          label: const Text('Kết nối kênh'),
+        builder: (buttonContext) => Padding(
+          padding: EdgeInsets.only(bottom: ShellBarInset.of(context)),
+          child: FloatingActionButton.extended(
+            onPressed: _connecting || !canPick
+                ? null
+                : () {
+                    final box = buttonContext.findRenderObject() as RenderBox?;
+                    if (box == null || !box.hasSize) return;
+                    _pickChannel(box.localToGlobal(Offset.zero) & box.size);
+                  },
+            icon: const Icon(Icons.add_link_rounded),
+            label: const Text('Kết nối kênh'),
+          ),
         ),
       ),
       body: RefreshIndicator.adaptive(
@@ -202,49 +206,44 @@ class _ChannelsPageState extends ConsumerState<ChannelsPage> {
                 .toList();
             return ListView(
               physics: const AlwaysScrollableScrollPhysics(),
-              padding: const EdgeInsets.fromLTRB(
-                OmniSpacing.lg,
-                OmniSpacing.lg,
-                OmniSpacing.lg,
-                OmniSpacing.xxl,
+              // Chừa thanh tab kính + vùng an toàn + nút nổi phía trên nó.
+              padding: EdgeInsets.fromLTRB(
+                16,
+                12,
+                16,
+                ShellBarInset.of(context) +
+                    MediaQuery.viewPaddingOf(context).bottom +
+                    OmniSpacing.xxl +
+                    56,
               ),
               children: [
-                if (official.isNotEmpty) ...[
-                  const OmniSectionHeader(
-                    title: 'Kênh chính thức',
-                    padding: EdgeInsets.only(bottom: OmniSpacing.sm),
-                  ),
-                  const SizedBox(height: OmniSpacing.sm),
-                  for (var i = 0; i < official.length; i++) ...[
-                    ChannelTile(
-                      connection: official[i],
-                      canWrite: canWrite,
-                      canReconnect: canConnectCompany,
-                      onReconnect: () => _startOauth(official[i].channel),
-                      onDisconnect: () => _disconnect(official[i]),
-                    ),
-                    if (i < official.length - 1)
-                      Divider(height: 1, color: scheme.outlineVariant),
+                OmniGroupSection(
+                  title: 'Kênh chính thức',
+                  children: [
+                    for (final connection in official)
+                      ChannelTile(
+                        connection: connection,
+                        canWrite: canWrite,
+                        canReconnect: canConnectCompany,
+                        onReconnect: () => _startOauth(connection.channel),
+                        onDisconnect: () => _disconnect(connection),
+                      ),
                   ],
-                ],
-                if (personal.isNotEmpty) ...[
-                  const SizedBox(height: OmniSpacing.md),
-                  const OmniSectionHeader(
-                    title: 'Tài khoản cá nhân',
-                    padding: EdgeInsets.only(bottom: OmniSpacing.sm),
-                  ),
-                  const SizedBox(height: OmniSpacing.sm),
-                  for (var i = 0; i < personal.length; i++) ...[
-                    ChannelTile(
-                      connection: personal[i],
-                      canWrite: canWrite,
-                      onReconnect: () => _openPair(personal[i].channel),
-                      onDisconnect: () => _disconnect(personal[i]),
-                    ),
-                    if (i < personal.length - 1)
-                      Divider(height: 1, color: scheme.outlineVariant),
+                ),
+                if (official.isNotEmpty && personal.isNotEmpty)
+                  const SizedBox(height: OmniGroupSection.gap),
+                OmniGroupSection(
+                  title: 'Tài khoản cá nhân',
+                  children: [
+                    for (final connection in personal)
+                      ChannelTile(
+                        connection: connection,
+                        canWrite: canWrite,
+                        onReconnect: () => _openPair(connection.channel),
+                        onDisconnect: () => _disconnect(connection),
+                      ),
                   ],
-                ],
+                ),
               ],
             );
           },

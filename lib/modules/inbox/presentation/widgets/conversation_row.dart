@@ -71,16 +71,14 @@ class _ConversationRowState extends State<ConversationRow> {
     final conversation = widget.conversation;
     final scheme = Theme.of(context).colorScheme;
     final unread = conversation.isUnread;
-    final dark = Theme.of(context).brightness == Brightness.dark;
     final tag = conversation.tags.isEmpty ? null : conversation.tags.first;
     final motion = OmniMotion.enabled(context);
 
     return Material(
       // Hàng chưa đọc phủ một lớp mòng màu chính; hàng được chọn đậm hơn và
       // thắng, để chọn nhiều vẫn đọc được.
-      color: widget.selected
-          ? scheme.primary.withValues(alpha: dark ? 0.22 : 0.12)
-          : scheme.surface,
+      // Chọn nhiều: dòng đã chọn không tô nền — avatar đổi thành dấu ✓ kính.
+      color: scheme.surface,
       child: RawGestureDetector(
         gestures: {
           if (widget.onPeek != null && !widget.selectionMode)
@@ -118,18 +116,28 @@ class _ConversationRowState extends State<ConversationRow> {
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
-                      if (widget.selectionMode) ...[
+                      if (widget.selectionMode && !widget.selected) ...[
                         Icon(
-                          widget.selected
-                              ? Icons.check_circle_rounded
-                              : Icons.radio_button_unchecked_rounded,
-                          color: widget.selected
-                              ? scheme.primary
-                              : scheme.outline,
+                          Icons.radio_button_unchecked_rounded,
+                          color: scheme.outline,
                         ),
                         const SizedBox(width: OmniSpacing.md),
+                      ] else if (widget.selectionMode) ...[
+                        // Giữ lề của dòng chưa chọn để avatar không nhảy.
+                        const SizedBox(width: 24 + OmniSpacing.md),
                       ],
-                      _Avatar(conversation: conversation),
+                      if (widget.selectionMode && widget.selected)
+                        Semantics(
+                          label: 'Đã chọn',
+                          child: OmniGlassCircle(
+                            child: Icon(
+                              Icons.check_rounded,
+                              color: scheme.primary,
+                            ),
+                          ),
+                        )
+                      else
+                        _Avatar(conversation: conversation),
                       const SizedBox(width: 12),
                       Expanded(child: _body(context, unread)),
                     ],
@@ -171,16 +179,16 @@ class _ConversationRowState extends State<ConversationRow> {
     final overdue = conversation.breachesSla;
     final ink = OmniColors.byBrightness(
       context,
-      const Color(0xFF0B1A33),
+      OmniColors.ink,
       scheme.onSurface,
     );
     final muted = OmniColors.byBrightness(
       context,
-      const Color(0xFF56637A),
+      OmniColors.mutedForeground,
       scheme.onSurfaceVariant,
     );
     final stampColor = conversation.urgent && unread
-        ? const Color(0xFFC2410C)
+        ? OmniColors.warningTextOf(context)
         : muted;
 
     return Column(
@@ -286,7 +294,7 @@ class _SourceLine extends StatelessWidget {
     final account = conversation.sourceAccount;
     final muted = OmniColors.byBrightness(
       context,
-      const Color(0xFF56637A),
+      OmniColors.mutedForeground,
       Theme.of(context).colorScheme.onSurfaceVariant,
     );
 

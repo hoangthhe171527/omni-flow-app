@@ -32,81 +32,50 @@ Future<int?> showOptionSheet(
   String? emptyMessage,
 }) => showOmniSheet<int>(
   context: context,
-  builder: (ctx) {
-    final text = Theme.of(ctx).textTheme;
-    final scheme = Theme.of(ctx).colorScheme;
-
-    return SafeArea(
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              title,
-              style: text.titleMedium?.copyWith(fontWeight: FontWeight.w600),
+  // Sheet liquid chuẩn: đầu sheet có lề, các mục trong một nhóm lồng.
+  builder: (ctx) => OmniSheetBody(
+    semanticsLabel: title,
+    header: OmniSheetHeader(title: title),
+    children: [
+      if (items.isEmpty && emptyMessage != null)
+        Padding(
+          padding: const EdgeInsets.fromLTRB(12, 0, 12, 4),
+          child: Text(
+            emptyMessage,
+            style: OmniType.body.copyWith(
+              color: Theme.of(ctx).colorScheme.onSurfaceVariant,
             ),
-            const SizedBox(height: 4),
-            if (items.isEmpty && emptyMessage != null)
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: 12),
-                child: Text(
-                  emptyMessage,
-                  style: text.bodyMedium?.copyWith(
-                    color: scheme.onSurfaceVariant,
-                  ),
-                ),
-              ),
+          ),
+        )
+      else
+        OmniGroupSection(
+          dividerIndent: 38,
+          children: [
             for (var i = 0; i < items.length; i++)
-              InkWell(
-                onTap: () => Navigator.of(ctx).pop(i),
-                child: Container(
-                  height: 46,
-                  decoration: BoxDecoration(
-                    border: i == 0
-                        ? null
-                        : Border(
-                            top: BorderSide(color: OmniColors.trackOf(ctx)),
-                          ),
-                  ),
-                  padding: const EdgeInsets.symmetric(horizontal: 4),
-                  child: Row(
-                    children: [
-                      Container(
-                        width: 8,
-                        height: 8,
-                        decoration: BoxDecoration(
-                          color: items[i].color,
-                          borderRadius: BorderRadius.circular(
-                            items[i].round ? 4 : 2,
-                          ),
+              OmniGroupRow(
+                title: items[i].label,
+                selected: i == selected,
+                // Danh sách chọn, không phải điều hướng: không mũi tên ›.
+                chevron: false,
+                leading: SizedBox(
+                  width: 12,
+                  child: Center(
+                    child: Container(
+                      width: 8,
+                      height: 8,
+                      decoration: BoxDecoration(
+                        color: items[i].color,
+                        borderRadius: BorderRadius.circular(
+                          items[i].round ? 4 : 2,
                         ),
                       ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: Text(
-                          items[i].label,
-                          style: text.bodyLarge?.copyWith(
-                            fontWeight: i == selected
-                                ? FontWeight.w600
-                                : FontWeight.w400,
-                          ),
-                        ),
-                      ),
-                      if (i == selected)
-                        Icon(
-                          Icons.check_rounded,
-                          size: 18,
-                          color: scheme.primary,
-                        ),
-                    ],
+                    ),
                   ),
                 ),
+                onTap: () => Navigator.of(ctx).pop(i),
               ),
           ],
         ),
-      ),
-    );
-  },
+    ],
+  ),
 );

@@ -1,5 +1,3 @@
-import 'dart:ui' show PathMetric;
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -37,15 +35,11 @@ class LabelsSheet extends ConsumerStatefulWidget {
 
 class _LabelsSheetState extends ConsumerState<LabelsSheet> {
   late final Set<String> _on = {...?widget.selected};
-  final _newName = TextEditingController();
-  Color _newColor = OmniLabelColors.quickPicks.first;
-  bool _creating = false;
 
-  @override
-  void dispose() {
-    _newName.dispose();
-    super.dispose();
-  }
+  /// Đang sửa / tạo nhãn: nội dung sheet đổi sang khung sửa (không chồng sheet
+  /// thứ hai). `_editing` null + `_adding` false = danh sách.
+  TaskLabel? _editing;
+  bool _adding = false;
 
   void _toggle(String code) {
     final onToggle = widget.onToggle;
@@ -55,42 +49,28 @@ class _LabelsSheetState extends ConsumerState<LabelsSheet> {
     onToggle(code);
   }
 
-  Future<void> _create() async {
-    final name = _newName.text.trim();
-    if (name.isEmpty || _creating) return;
-    final container = ProviderScope.containerOf(context);
-    final messenger = ScaffoldMessenger.of(context);
-    setState(() => _creating = true);
-    try {
-      await container
-          .read(tasksApiProvider)
-          .createLabel(label: name, color: OmniLabelColors.toHex(_newColor));
-      container.invalidate(taskLabelsProvider);
-      if (mounted) _newName.clear();
-    } on AppException catch (error) {
-      messenger.showSnackBar(SnackBar(content: Text(error.message)));
-    } finally {
-      if (mounted) setState(() => _creating = false);
-    }
-  }
+  void _back() => setState(() {
+    _editing = null;
+    _adding = false;
+  });
 
-  Future<void> _edit(TaskLabel label) async {
+  Future<void> _save(String name, Color color) async {
     final container = ProviderScope.containerOf(context);
     final messenger = ScaffoldMessenger.of(context);
-    final result = await showOmniViecSheet<(String, Color)>(
-      context: context,
-      builder: (_) => _EditLabelSheet(label: label),
-    );
-    if (result == null) return;
+    final editing = _editing;
+    final api = container.read(tasksApiProvider);
     try {
-      await container
-          .read(tasksApiProvider)
-          .updateLabel(
-            label.id,
-            label: result.$1,
-            color: OmniLabelColors.toHex(result.$2),
-          );
+      if (editing == null) {
+        await api.createLabel(label: name, color: OmniLabelColors.toHex(color));
+      } else {
+        await api.updateLabel(
+          editing.id,
+          label: name,
+          color: OmniLabelColors.toHex(color),
+        );
+      }
       container.invalidate(taskLabelsProvider);
+      if (mounted) _back();
     } on AppException catch (error) {
       messenger.showSnackBar(SnackBar(content: Text(error.message)));
     }
@@ -102,139 +82,83 @@ class _LabelsSheetState extends ConsumerState<LabelsSheet> {
     final canEdit = ref.watch(taskAccessProvider).canEditLabels;
     final labels = ref.watch(taskLabelsProvider);
 
+    if (_adding || _editing != null) {
+      return _EditLabelPane(
+        key: ValueKey('label-pane-${_editing?.id ?? 'new'}'),
+        label: _editing,
+        onBack: _back,
+        onSave: _save,
+      );
+    }
+
     return Semantics(
       scopesRoute: true,
       explicitChildNodes: true,
       label: 'Nhãn màu',
-      child: SingleChildScrollView(
-        keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-        padding: const EdgeInsets.fromLTRB(16, 8, 16, 30),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            const OmniSheetHandle(gap: 6),
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    'Nhãn màu',
-                    style: OmniType.section.copyWith(color: scheme.onSurface),
-                  ),
-                ),
-                TextButton(
-                  style: TextButton.styleFrom(
-                    minimumSize: const Size(44, 44),
-                    padding: const EdgeInsets.symmetric(horizontal: 8),
-                    foregroundColor: scheme.primary,
-                    textStyle: OmniType.bodyStrong,
-                  ),
-                  onPressed: () => Navigator.of(context).maybePop(),
-                  child: const Text('Xong'),
-                ),
-              ],
+      child: OmniSheetBody(
+        header: OmniSheetHeader(
+          title: 'Nhãn màu',
+          trailing: TextButton(
+            style: TextButton.styleFrom(
+              minimumSize: const Size(44, 44),
+              padding: const EdgeInsets.symmetric(horizontal: 8),
+              foregroundColor: scheme.primary,
+              textStyle: OmniType.bodyStrong,
             ),
-            Padding(
-              padding: const EdgeInsets.only(bottom: 8),
-              child: Text(
-                'Nhãn dùng chung cho cả công ty',
-                style: OmniType.caption.copyWith(
-                  color: scheme.onSurfaceVariant,
-                ),
-              ),
-            ),
-            ...switch (labels) {
-              AsyncData(:final value) => [
-                for (final label in value) ...[
-                  _LabelRow(
-                    label: label,
-                    on: _on.contains(label.code),
-                    onTap: widget.onToggle == null
-                        ? null
-                        : () => _toggle(label.code),
-                    onEdit: canEdit ? () => _edit(label) : null,
-                  ),
-                  const SizedBox(height: 8),
-                ],
-              ],
-              AsyncError(:final error) => [
-                OmniErrorView(
-                  error: error,
-                  onRetry: () => ref.invalidate(taskLabelsProvider),
-                ),
-              ],
-              _ => [
-                const Padding(
-                  padding: EdgeInsets.all(OmniSpacing.lg),
-                  child: Center(child: CircularProgressIndicator.adaptive()),
-                ),
-              ],
-            },
-            if (canEdit) _newRow(context),
-          ],
-        ),
-      ),
-    );
-  }
-
-  /// Dòng "Nhãn mới…": viền nét đứt `#9AA5B8`, ba chấm màu, nút +.
-  Widget _newRow(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-
-    return Padding(
-      padding: const EdgeInsets.only(top: 2),
-      child: CustomPaint(
-        painter: _DashedBorder(color: OmniTaskTones.of(context).faint),
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(minHeight: 48),
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(12, 0, 4, 0),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Semantics(
-                    label: 'Tên nhãn mới',
-                    textField: true,
-                    child: TextField(
-                      controller: _newName,
-                      maxLength: 255,
-                      style: OmniType.body.copyWith(color: scheme.onSurface),
-                      decoration: const InputDecoration(
-                        hintText: 'Nhãn mới…',
-                        border: InputBorder.none,
-                        enabledBorder: InputBorder.none,
-                        focusedBorder: InputBorder.none,
-                        filled: false,
-                        counterText: '',
-                        isDense: true,
-                        contentPadding: EdgeInsets.zero,
-                      ),
-                      onSubmitted: (_) => _create(),
-                    ),
-                  ),
-                ),
-                for (final color in OmniLabelColors.quickPicks)
-                  _ColorDot(
-                    color: color,
-                    selected: color == _newColor,
-                    onTap: () => setState(() => _newColor = color),
-                  ),
-                IconButton(
-                  tooltip: 'Thêm nhãn',
-                  onPressed: _creating ? null : _create,
-                  icon: const Icon(Icons.add_rounded, size: 20),
-                ),
-              ],
-            ),
+            onPressed: () => Navigator.of(context).maybePop(),
+            child: const Text('Xong'),
           ),
         ),
+        children: [
+          ...switch (labels) {
+            AsyncData(:final value) => [
+              OmniGroupSection(
+                dividerIndent: 14,
+                children: [
+                  for (final label in value)
+                    _LabelRow(
+                      label: label,
+                      on: _on.contains(label.code),
+                      onTap: widget.onToggle == null
+                          ? null
+                          : () => _toggle(label.code),
+                      onEdit: canEdit
+                          ? () => setState(() => _editing = label)
+                          : null,
+                    ),
+                ],
+              ),
+            ],
+            AsyncError(:final error) => [
+              OmniErrorView(
+                error: error,
+                onRetry: () => ref.invalidate(taskLabelsProvider),
+              ),
+            ],
+            _ => [
+              const Padding(
+                padding: EdgeInsets.all(OmniSpacing.lg),
+                child: Center(child: CircularProgressIndicator.adaptive()),
+              ),
+            ],
+          },
+          if (canEdit)
+            OmniGroupSection(
+              children: [
+                OmniGroupRow.add(
+                  title: 'Nhãn mới',
+                  onTap: () => setState(() => _adding = true),
+                ),
+              ],
+            ),
+        ],
       ),
     );
   }
 }
 
-/// Một nhãn: dải 48 bo 8 tô màu nhãn (chữ trắng w600 15, hoặc mực khi màu
-/// quá sáng), ✓ khi bật; bút sửa 44×48 nền `#EEF1F5`.
+/// Một nhãn: chấm màu + tên trong nhóm, ✓ màu chính khi đang gắn, bút sửa
+/// nhỏ cùng tông (vùng chạm 44×48).
 class _LabelRow extends StatelessWidget {
   const _LabelRow({
     required this.label,
@@ -252,87 +176,49 @@ class _LabelRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final color = OmniLabelColors.parseHex(label.color);
-    final ink = OmniLabelColors.textOn(color);
 
     return Row(
       children: [
         Expanded(
-          child: Semantics(
-            button: onTap != null,
-            toggled: onTap == null ? null : on,
-            child: Material(
-              type: MaterialType.transparency,
-              child: InkWell(
-                key: Key('label-row-${label.code}'),
-                borderRadius: BorderRadius.circular(8),
-                onTap: onTap,
-                child: Ink(
-                  decoration: BoxDecoration(
-                    color: color,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: ConstrainedBox(
-                    constraints: const BoxConstraints(minHeight: 48),
-                    child: Padding(
-                      padding: const EdgeInsets.fromLTRB(12, 0, 4, 0),
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: Text(
-                              label.label,
-                              style: OmniType.bodyStrong.copyWith(color: ink),
-                            ),
-                          ),
-                          if (onTap != null && on)
-                            Padding(
-                              padding: const EdgeInsets.only(right: 8),
-                              child: Icon(
-                                Icons.check_rounded,
-                                size: OmniIconSize.lg,
-                                color: ink,
-                              ),
-                            ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-              ),
+          child: OmniGroupRow(
+            key: Key('label-row-${label.code}'),
+            title: label.label,
+            leading: Container(
+              width: 14,
+              height: 14,
+              margin: const EdgeInsets.symmetric(horizontal: 7),
+              decoration: BoxDecoration(color: color, shape: BoxShape.circle),
             ),
+            selected: onTap != null && on,
+            onTap: onTap,
+            chevron: false,
           ),
         ),
-        if (onEdit != null) ...[
-          const SizedBox(width: 6),
+        if (onEdit != null)
           Semantics(
             button: true,
             label: 'Sửa nhãn ${label.label}',
             excludeSemantics: true,
-            child: Material(
-              color: scheme.surfaceContainerHighest,
-              borderRadius: BorderRadius.circular(8),
-              child: InkWell(
-                borderRadius: BorderRadius.circular(8),
-                onTap: onEdit,
-                child: SizedBox(
-                  width: 44,
-                  height: 48,
-                  child: Icon(
-                    Icons.edit_outlined,
-                    size: OmniIconSize.md,
-                    color: scheme.onSurfaceVariant,
-                  ),
+            child: InkWell(
+              customBorder: const CircleBorder(),
+              onTap: onEdit,
+              child: SizedBox(
+                width: 44,
+                height: 48,
+                child: Icon(
+                  Icons.edit_outlined,
+                  size: OmniIconSize.md,
+                  color: scheme.onSurfaceVariant,
                 ),
               ),
             ),
           ),
-        ],
       ],
     );
   }
 }
 
-/// Chấm màu 20 trong vùng chạm 44×48; chấm đang chọn có vành 2 trắng + 2
-/// cùng màu (`box-shadow:0 0 0 2px #fff,0 0 0 4px màu`).
+/// Chấm màu 20 trong vùng chạm 44×48; chấm đang chọn có vành trắng mờ.
 class _ColorDot extends StatelessWidget {
   const _ColorDot({
     required this.color,
@@ -384,49 +270,30 @@ class _ColorDot extends StatelessWidget {
   }
 }
 
-/// Viền nét đứt 1px bo 8.
-class _DashedBorder extends CustomPainter {
-  const _DashedBorder({required this.color});
+/// Sửa (hoặc tạo, khi [label] null) tên và màu một nhãn — thay nội dung sheet
+/// nhãn, nút ‹ quay lại danh sách. Mã không đổi (server bỏ qua `code`).
+class _EditLabelPane extends StatefulWidget {
+  const _EditLabelPane({
+    super.key,
+    required this.label,
+    required this.onBack,
+    required this.onSave,
+  });
 
-  final Color color;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = color
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1;
-    final path = Path()
-      ..addRRect(
-        RRect.fromRectAndRadius(
-          (Offset.zero & size).deflate(0.5),
-          const Radius.circular(8),
-        ),
-      );
-    for (final PathMetric metric in path.computeMetrics()) {
-      for (var d = 0.0; d < metric.length; d += 7) {
-        canvas.drawPath(metric.extractPath(d, d + 4), paint);
-      }
-    }
-  }
+  final TaskLabel? label;
+  final VoidCallback onBack;
+  final Future<void> Function(String name, Color color) onSave;
 
   @override
-  bool shouldRepaint(_DashedBorder old) => old.color != color;
+  State<_EditLabelPane> createState() => _EditLabelPaneState();
 }
 
-/// Sửa tên và màu một nhãn. Mã không đổi (server bỏ qua `code`).
-class _EditLabelSheet extends StatefulWidget {
-  const _EditLabelSheet({required this.label});
-
-  final TaskLabel label;
-
-  @override
-  State<_EditLabelSheet> createState() => _EditLabelSheetState();
-}
-
-class _EditLabelSheetState extends State<_EditLabelSheet> {
-  late final _name = TextEditingController(text: widget.label.label);
-  late Color _color = OmniLabelColors.parseHex(widget.label.color);
+class _EditLabelPaneState extends State<_EditLabelPane> {
+  late final _name = TextEditingController(text: widget.label?.label ?? '');
+  late Color _color = widget.label == null
+      ? OmniLabelColors.quickPicks.first
+      : OmniLabelColors.parseHex(widget.label!.color);
+  bool _busy = false;
 
   @override
   void dispose() {
@@ -434,29 +301,47 @@ class _EditLabelSheetState extends State<_EditLabelSheet> {
     super.dispose();
   }
 
+  Future<void> _submit(String name) async {
+    if (_busy) return;
+    setState(() => _busy = true);
+    await widget.onSave(name, _color);
+    if (mounted) setState(() => _busy = false);
+  }
+
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final current = OmniLabelColors.parseHex(widget.label.color);
+    final current = widget.label == null
+        ? _color
+        : OmniLabelColors.parseHex(widget.label!.color);
     final colors = [
       ...OmniLabelColors.palette,
       if (!OmniLabelColors.palette.contains(current)) current,
     ];
     final name = _name.text.trim();
 
-    return SingleChildScrollView(
-      keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 30),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          const OmniSheetHandle(gap: 6),
-          Text(
-            'Sửa nhãn',
-            style: OmniType.section.copyWith(color: scheme.onSurface),
+    return Semantics(
+      scopesRoute: true,
+      explicitChildNodes: true,
+      label: widget.label == null ? 'Nhãn mới' : 'Sửa nhãn',
+      child: OmniSheetBody(
+        header: OmniSheetHeader(
+          title: widget.label == null ? 'Nhãn mới' : 'Sửa nhãn',
+          leading: IconButton(
+            tooltip: 'Quay lại',
+            onPressed: widget.onBack,
+            icon: Icon(
+              Icons.chevron_left_rounded,
+              color: scheme.onSurface,
+              size: 28,
+            ),
           ),
-          const SizedBox(height: 12),
+        ),
+        footer: FilledButton(
+          onPressed: name.isEmpty || _busy ? null : () => _submit(name),
+          child: const Text('Lưu'),
+        ),
+        children: [
           OmniField(
             label: 'Tên nhãn',
             child: TextField(
@@ -466,22 +351,23 @@ class _EditLabelSheetState extends State<_EditLabelSheet> {
               onChanged: (_) => setState(() {}),
             ),
           ),
-          Wrap(
+          OmniGroupSection(
+            dividerIndent: 14,
             children: [
-              for (final color in colors)
-                _ColorDot(
-                  color: color,
-                  selected: color == _color,
-                  onTap: () => setState(() => _color = color),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                child: Wrap(
+                  children: [
+                    for (final color in colors)
+                      _ColorDot(
+                        color: color,
+                        selected: color == _color,
+                        onTap: () => setState(() => _color = color),
+                      ),
+                  ],
                 ),
+              ),
             ],
-          ),
-          const SizedBox(height: 16),
-          FilledButton(
-            onPressed: name.isEmpty
-                ? null
-                : () => Navigator.of(context).pop((name, _color)),
-            child: const Text('Lưu'),
           ),
         ],
       ),

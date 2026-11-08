@@ -37,7 +37,6 @@ class ThreadInfoPage extends ConsumerWidget {
     final conversation = ref.watch(conversationProvider(conversationId));
 
     return Scaffold(
-      backgroundColor: Theme.of(context).colorScheme.surface,
       appBar: const OmniAppBar(title: 'Thông tin'),
       body: OmniAsyncView(
         value: conversation,
@@ -162,9 +161,10 @@ class _InfoBody extends ConsumerWidget {
             _Rise(
               index: 1,
               child: _Section(
-                title: 'KHÁCH HÀNG',
+                title: 'Khách hàng',
                 children: [
                   _InfoRow(
+                    icon: Icons.person_outline_rounded,
                     label: 'Phụ trách',
                     onTap: access.canAssign
                         ? () => ConversationActions(ref, context).assign(c)
@@ -173,6 +173,7 @@ class _InfoBody extends ConsumerWidget {
                   ),
                   if (phone.isNotEmpty)
                     _InfoRow(
+                      icon: Icons.call_outlined,
                       label: 'Điện thoại',
                       onTap: call,
                       value: Text(
@@ -187,6 +188,7 @@ class _InfoBody extends ConsumerWidget {
                       ),
                     ),
                   _InfoRow(
+                    icon: Icons.label_outline_rounded,
                     label: 'Nhãn',
                     onTap: access.canLabel
                         ? () => ConversationActions(ref, context).addLabel(c)
@@ -206,8 +208,7 @@ class _InfoBody extends ConsumerWidget {
             _Rise(
               index: 3,
               child: _Section(
-                title: 'ẢNH, TỆP, LIÊN KẾT',
-                padded: false,
+                title: 'Ảnh, tệp, liên kết',
                 children: [ConversationAssetsSection(assets: assets)],
               ),
             ),
@@ -217,11 +218,13 @@ class _InfoBody extends ConsumerWidget {
             _Rise(
               index: 4,
               child: _Section(
+                title: 'Thao tác',
                 children: [
                   // Một nút cho trình đọc màn hình: "Ghim hội thoại, công
                   // tắc, bật". Nhãn lấy từ chữ của dòng, công tắc không lặp.
                   MergeSemantics(
                     child: _InfoRow(
+                      icon: Icons.push_pin_outlined,
                       label: 'Ghim hội thoại',
                       plainLabel: true,
                       onTap: () {
@@ -241,6 +244,7 @@ class _InfoBody extends ConsumerWidget {
                   // Đã chặn: API trả 422 `conversation_blocked` cho /unread.
                   if (access.canUpdate && !c.isUnread && !c.isBlocked)
                     _InfoRow(
+                      icon: Icons.mark_chat_unread_outlined,
                       label: 'Đánh dấu chưa đọc',
                       plainLabel: true,
                       // Ở lại hội thoại là đang đọc: dấu "chưa đọc" mất
@@ -252,6 +256,9 @@ class _InfoBody extends ConsumerWidget {
                     ),
                   if (access.canUpdate)
                     _InfoRow(
+                      icon: closed
+                          ? Icons.unarchive_outlined
+                          : Icons.archive_outlined,
                       label: closed ? 'Mở lại hội thoại' : 'Lưu trữ hội thoại',
                       plainLabel: true,
                       onTap: () => ConversationActions(
@@ -259,25 +266,28 @@ class _InfoBody extends ConsumerWidget {
                         context,
                       ).setArchived(c, !closed),
                     ),
-                  if (access.canBlock && !c.isBlocked)
-                    _InfoRow(
-                      label: 'Chặn hội thoại',
-                      plainLabel: true,
-                      labelColor: _danger(context),
-                      // Hội thoại đã chặn ẩn khỏi Hộp thư: về đó luôn.
-                      onTap: () => _thenInbox(
-                        context,
-                        ConversationActions(ref, context).setBlocked(c, true),
-                      ),
-                    ),
                   if (access.canBlock && c.isBlocked)
                     _InfoRow(
+                      icon: Icons.lock_open_outlined,
                       label: 'Bỏ chặn hội thoại',
                       plainLabel: true,
                       onTap: () => ConversationActions(
                         ref,
                         context,
                       ).setBlocked(c, false),
+                    ),
+                  // Chặn: dòng đỏ, cuối nhóm.
+                  if (access.canBlock && !c.isBlocked)
+                    _InfoRow(
+                      icon: Icons.block_outlined,
+                      label: 'Chặn hội thoại',
+                      plainLabel: true,
+                      destructive: true,
+                      // Hội thoại đã chặn ẩn khỏi Hộp thư: về đó luôn.
+                      onTap: () => _thenInbox(
+                        context,
+                        ConversationActions(ref, context).setBlocked(c, true),
+                      ),
                     ),
                 ],
               ),
@@ -298,13 +308,6 @@ Color _muted(BuildContext context) => OmniColors.byBrightness(
   context,
   OmniColors.mutedForeground,
   OmniColors.darkMutedForeground,
-);
-
-/// Chữ nguy hiểm (#B42318 sáng / dangerTextDark tối), như menu xem trước.
-Color _danger(BuildContext context) => OmniColors.byBrightness(
-  context,
-  OmniFeatureTones.light(OmniHue.red).foreground,
-  OmniColors.dangerTextDark,
 );
 
 /// Chờ thao tác xong rồi về Hộp thư — chỉ khi server đã nhận. Router lấy
@@ -424,7 +427,7 @@ class _Hero extends StatelessWidget {
   }
 }
 
-/// Nút tròn 40 viền #E3E8EF, nhãn 11 w600 bên dưới; vùng chạm 64×≥44.
+/// Nút kính tròn 44, nhãn 11 w600 bên dưới; vùng chạm 64×≥44.
 class _QuickAction extends StatelessWidget {
   const _QuickAction({
     required this.icon,
@@ -437,8 +440,7 @@ class _QuickAction extends StatelessWidget {
   final String label;
   final VoidCallback onTap;
 
-  /// Nút đang bật (vd "Đã tắt" thông báo): nền mực, biểu tượng nền —
-  /// `muteBg`/`muteFg` của bản mẫu, đảo đúng ở giao diện tối.
+  /// Nút đang bật (vd "Đã tắt" thông báo): icon màu chính, không khối đặc.
   final bool active;
 
   @override
@@ -455,32 +457,11 @@ class _QuickAction extends StatelessWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Container(
-                width: 40,
-                height: 40,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: active
-                      ? scheme.onSurface
-                      : OmniColors.byBrightness(
-                          context,
-                          OmniColors.card,
-                          OmniColors.darkCard,
-                        ),
-                  border: Border.all(
-                    color: active
-                        ? scheme.onSurface
-                        : OmniColors.byBrightness(
-                            context,
-                            OmniColors.border,
-                            OmniColors.darkBorder,
-                          ),
-                  ),
-                ),
+              OmniGlassCircle(
                 child: Icon(
                   icon,
                   size: 18,
-                  color: active ? scheme.surface : scheme.onSurface,
+                  color: active ? scheme.primary : scheme.onSurface,
                 ),
               ),
               const SizedBox(height: 5),
@@ -502,116 +483,57 @@ class _QuickAction extends StatelessWidget {
   }
 }
 
-/// Section phẳng: tiêu đề + các dòng và vạch ngăn. Không bọc nội dung cấp
-/// trang trong card; thứ bậc đến từ khoảng cách và divider.
+/// Nhóm lồng liquid: nhãn xám ngoài thẻ, thẻ trắng bo 18, vạch thụt.
 class _Section extends StatelessWidget {
-  const _Section({this.title, required this.children, this.padded = true});
+  const _Section({required this.title, required this.children});
 
-  final String? title;
+  final String title;
   final List<Widget> children;
-  final bool padded;
 
   @override
-  Widget build(BuildContext context) {
-    final divider = OmniColors.byBrightness(
-      context,
-      OmniColors.divider,
-      OmniColors.darkBorder,
-    );
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        if (title != null)
-          Padding(
-            padding: const EdgeInsets.fromLTRB(4, 0, 4, 6),
-            child: Text(
-              title!,
-              style: OmniType.overline.copyWith(
-                letterSpacing: 0.5,
-                color: _muted(context),
-              ),
-            ),
-          ),
-        Material(
-          key: ValueKey('thread-info-section-${title ?? 'actions'}'),
-          color: Colors.transparent,
-          child: Column(
-            children: [
-              for (var i = 0; i < children.length; i++) ...[
-                if (i > 0 && padded) Divider(height: 1, color: divider),
-                children[i],
-              ],
-            ],
-          ),
-        ),
-      ],
-    );
-  }
+  Widget build(BuildContext context) => OmniGroupSection(
+    key: ValueKey('thread-info-section-$title'),
+    title: title,
+    children: children,
+  );
 }
 
-/// Dòng trong thẻ: nhãn mờ bên trái, giá trị đậm bên phải, mũi tên khi bấm
-/// được. [onTap] null = chỉ xem.
+/// Dòng trong nhóm: icon, nhãn bên trái, giá trị (widget) bên phải, mũi tên
+/// khi bấm được. [onTap] null = chỉ xem.
 class _InfoRow extends StatelessWidget {
   const _InfoRow({
     required this.label,
+    this.icon,
     this.value,
     this.onTap,
     this.plainLabel = false,
-    this.labelColor,
+    this.destructive = false,
   });
 
   final String label;
+  final IconData? icon;
   final Widget? value;
   final VoidCallback? onTap;
 
-  /// Nhãn là chữ chính (màu mực) — dòng hành động không có giá trị.
+  /// Dòng hành động không có giá trị: không mũi tên.
   final bool plainLabel;
 
-  /// Màu chữ nhãn riêng (vd chữ nguy hiểm của "Chặn hội thoại").
-  final Color? labelColor;
+  /// Chữ đỏ (vd "Chặn hội thoại").
+  final bool destructive;
 
   @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final labelText = Text(
-      label,
-      style: OmniType.body.copyWith(
-        color: labelColor ?? (plainLabel ? scheme.onSurface : _muted(context)),
-      ),
-    );
-    return InkWell(
-      onTap: onTap,
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(minHeight: 44),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12),
-          child: Row(
-            children: [
-              if (value == null) Expanded(child: labelText) else labelText,
-              if (value != null) ...[
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Align(alignment: Alignment.centerRight, child: value),
-                ),
-              ],
-              if (onTap != null && !plainLabel) ...[
-                const SizedBox(width: 6),
-                Icon(
-                  Icons.chevron_right_rounded,
-                  size: 16,
-                  color: OmniColors.byBrightness(
-                    context,
-                    OmniColors.mutedForeground,
-                    OmniColors.darkMutedForeground,
-                  ),
-                ),
-              ],
-            ],
+  Widget build(BuildContext context) => OmniGroupRow(
+    icon: icon,
+    title: label,
+    trailing: value == null
+        ? null
+        : Flexible(
+            child: Align(alignment: Alignment.centerRight, child: value),
           ),
-        ),
-      ),
-    );
-  }
+    onTap: onTap,
+    destructive: destructive,
+    chevron: onTap != null && !plainLabel && !destructive,
+  );
 }
 
 class _Assignee extends StatelessWidget {
@@ -716,7 +638,14 @@ class _Labels extends StatelessWidget {
             children: [
               _LabelDot(label: tag, size: 7),
               const SizedBox(width: 6),
-              Text(tag, style: _valueStyle(context)),
+              Flexible(
+                child: Text(
+                  tag,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: _valueStyle(context),
+                ),
+              ),
             ],
           ),
       ],
@@ -759,7 +688,6 @@ class _SalesCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final scheme = Theme.of(context).colorScheme;
     final contextData = ref.watch(conversationContextProvider(conversation.id));
     final catalog = ref.watch(pipelineCatalogProvider).valueOrNull;
     final opportunities = contextData.valueOrNull?.opportunities ?? const [];
@@ -772,77 +700,42 @@ class _SalesCard extends ConsumerWidget {
     }
 
     final card = _Section(
-      title: 'BÁN HÀNG',
+      title: 'Bán hàng',
       children: [
         if (failed)
           _InfoRow(
+            icon: Icons.refresh_rounded,
             label: 'Không tải được cơ hội. Thử lại',
             plainLabel: true,
             onTap: () =>
                 ref.invalidate(conversationContextProvider(conversation.id)),
           ),
         for (final o in opportunities)
-          InkWell(
+          OmniGroupRow(
+            icon: Icons.trending_up_rounded,
+            title: o.title,
+            maxTitleLines: 1,
+            subtitle: o.budget == null
+                ? 'Cơ hội'
+                : 'Cơ hội · ${Formatters.vnd(o.budget)}',
+            trailing: o.stage == null
+                ? null
+                : _StageChip(label: catalog?.stageLabel(o.stage!) ?? o.stage!),
+            chevron: true,
             onTap: () => context.pushNamed(
               OpportunityRoutes.detail,
               pathParameters: {'id': o.id},
             ),
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(minHeight: 44),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 6,
-                ),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            o.title,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: _valueStyle(context),
-                          ),
-                          Text(
-                            o.budget == null
-                                ? 'Cơ hội'
-                                : 'Cơ hội · ${Formatters.vnd(o.budget)}',
-                            style: OmniType.micro.copyWith(
-                              color: _muted(context),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    if (o.stage != null) ...[
-                      const SizedBox(width: 8),
-                      _StageChip(
-                        label: catalog?.stageLabel(o.stage!) ?? o.stage!,
-                      ),
-                    ],
-                    const SizedBox(width: 6),
-                    Icon(
-                      Icons.chevron_right_rounded,
-                      size: 16,
-                      color: scheme.onSurfaceVariant,
-                    ),
-                  ],
-                ),
-              ),
-            ),
           ),
         if (bought > 0)
-          _InfoRow(
-            label: 'Đã mua',
-            value: Text(Formatters.vnd(bought), style: _valueStyle(context)),
+          OmniGroupRow(
+            icon: Icons.shopping_bag_outlined,
+            title: 'Đã mua',
+            value: Formatters.vnd(bought),
           ),
         if (showCreate)
-          _InfoRow(
-            label: 'Tạo cơ hội',
-            plainLabel: true,
+          OmniGroupRow.add(
+            title: 'Tạo cơ hội',
             onTap: () => context.pushNamed(
               OpportunityRoutes.create,
               queryParameters: {
@@ -874,7 +767,7 @@ class _StageChip extends StatelessWidget {
         OmniColors.accent,
         OmniColors.darkAccent,
       ),
-      borderRadius: BorderRadius.circular(10),
+      borderRadius: BorderRadius.circular(999),
     ),
     child: Text(
       label,

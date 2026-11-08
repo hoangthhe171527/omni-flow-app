@@ -184,7 +184,6 @@ class _OpportunityFormPageState extends ConsumerState<OpportunityFormPage> {
     }
 
     return Scaffold(
-      backgroundColor: scheme.surface,
       appBar: OmniAppBar(
         title: widget.isEdit ? 'Sửa cơ hội' : 'Cơ hội mới',
         close: true,
@@ -193,229 +192,235 @@ class _OpportunityFormPageState extends ConsumerState<OpportunityFormPage> {
         key: _formKey,
         child: ListView(
           keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-          padding: const EdgeInsets.fromLTRB(20, OmniSpacing.sm, 20, 24),
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
           children: [
-            OmniField(
-              label: 'Tên cơ hội',
-              required: true,
-              child: TextFormField(
-                controller: _title,
-                textCapitalization: TextCapitalization.sentences,
-                decoration: const InputDecoration(
-                  hintText: 'VD: Mua iPhone 15 Pro Max 256GB',
+            OmniGroupSection(
+              dividerIndent: 14,
+              children: [
+                _FormRow(
+                  label: 'Tên cơ hội',
+                  required: true,
+                  child: TextFormField(
+                    controller: _title,
+                    textCapitalization: TextCapitalization.sentences,
+                    decoration: _bare(
+                      const InputDecoration(
+                        hintText: 'VD: Mua iPhone 15 Pro Max 256GB',
+                      ),
+                    ),
+                    validator: (value) => (value ?? '').trim().isEmpty
+                        ? 'Vui lòng nhập tên'
+                        : null,
+                  ),
                 ),
-                validator: (value) =>
-                    (value ?? '').trim().isEmpty ? 'Vui lòng nhập tên' : null,
-              ),
-            ),
-            const SizedBox(height: OmniSpacing.lg),
-            OmniField(
-              label: 'Khách hàng',
-              child: _PickerBox(
-                onTap: _pickCustomer,
-                height: 56,
-                leading: _customer == null
-                    ? Icon(
-                        Icons.person_outline_rounded,
-                        size: OmniIconSize.md,
-                        color: scheme.onSurfaceVariant,
-                      )
-                    : OmniAvatar(name: _customer!.name, size: 32),
-                label: _customer?.name ?? 'Chọn khách hàng',
-                placeholder: _customer == null,
-                strong: true,
-                trailing: Icon(
-                  Icons.chevron_right_rounded,
-                  color: scheme.outline,
+                OmniGroupRow(
+                  leading: _customer == null
+                      ? OmniIconTile(Icons.person_outline_rounded)
+                      : OmniAvatar(name: _customer!.name, size: 28),
+                  title: _customer?.name ?? 'Chọn khách hàng',
+                  maxTitleLines: 1,
+                  chevron: true,
+                  onTap: _pickCustomer,
                 ),
-              ),
-            ),
-            const SizedBox(height: OmniSpacing.lg),
-            ValueListenableBuilder<TextEditingValue>(
-              valueListenable: _value,
-              builder: (context, val, fieldChild) => OmniField(
-                label: 'Giá trị (VNĐ)',
-                required: true,
-                hint: val.text.isEmpty
-                    ? null
-                    : Formatters.vnd(
-                        double.tryParse(
-                          val.text.replaceAll(RegExp(r'[^0-9]'), ''),
+                ValueListenableBuilder<TextEditingValue>(
+                  valueListenable: _value,
+                  builder: (context, val, fieldChild) => _FormRow(
+                    label: 'Giá trị (VNĐ)',
+                    required: true,
+                    hint: val.text.isEmpty
+                        ? null
+                        : Formatters.vnd(
+                            double.tryParse(
+                              val.text.replaceAll(RegExp(r'[^0-9]'), ''),
+                            ),
+                          ),
+                    child: fieldChild!,
+                  ),
+                  child: TextFormField(
+                    controller: _value,
+                    keyboardType: TextInputType.number,
+                    style: OmniType.money.copyWith(
+                      fontSize: OmniType.money.fontSize! + 1,
+                      color: scheme.onSurface,
+                    ),
+                    decoration: _bare(
+                      InputDecoration(
+                        hintText: '0',
+                        suffixText: '₫',
+                        suffixStyle: OmniType.bodyStrong.copyWith(
+                          fontWeight: FontWeight.w400,
+                          color: scheme.onSurfaceVariant,
                         ),
                       ),
-                child: fieldChild!,
-              ),
-              child: TextFormField(
-                controller: _value,
-                keyboardType: TextInputType.number,
-                style: OmniType.money.copyWith(
-                  fontSize: OmniType.money.fontSize! + 1,
-                  color: scheme.onSurface,
-                ),
-                decoration: InputDecoration(
-                  hintText: '0',
-                  suffixText: '₫',
-                  suffixStyle: OmniType.bodyStrong.copyWith(
-                    fontWeight: FontWeight.w400,
-                    color: scheme.onSurfaceVariant,
-                  ),
-                ),
-                validator: (value) {
-                  final parsed = double.tryParse(
-                    (value ?? '').replaceAll(RegExp(r'[^0-9]'), ''),
-                  );
-                  return (parsed == null || parsed <= 0)
-                      ? 'Vui lòng nhập giá trị'
-                      : null;
-                },
-              ),
-            ),
-            const SizedBox(height: OmniSpacing.lg),
-            OmniField(
-              label: 'Sản phẩm / dịch vụ',
-              child: TextFormField(
-                controller: _product,
-                decoration: const InputDecoration(
-                  hintText: 'VD: iPhone 15 Pro Max',
-                ),
-              ),
-            ),
-            const SizedBox(height: OmniSpacing.lg),
-            OmniField(
-              label: 'Dự kiến chốt',
-              child: _PickerBox(
-                onTap: _pickDate,
-                leading: Icon(
-                  Icons.event_outlined,
-                  size: OmniIconSize.md,
-                  color: scheme.onSurfaceVariant,
-                ),
-                label: _expectedClose == null
-                    ? 'Chọn ngày'
-                    : Formatters.date(_expectedClose),
-                placeholder: _expectedClose == null,
-              ),
-            ),
-            const SizedBox(height: OmniSpacing.lg),
-            Text(
-              'Giai đoạn',
-              style: OmniType.body.copyWith(
-                color: scheme.onSurface,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            const SizedBox(height: OmniSpacing.sm),
-            Wrap(
-              spacing: OmniSpacing.sm,
-              runSpacing: OmniSpacing.sm,
-              children: [
-                for (final stage in _pipeline?.stages ?? const [])
-                  OmniFilterPill(
-                    label: stage.label,
-                    selected: _effectiveStageCode == stage.code,
-                    outlined: true,
-                    onTap: () {
-                      HapticFeedback.selectionClick();
-                      setState(() => _stageCode = stage.code);
+                    ),
+                    validator: (value) {
+                      final parsed = double.tryParse(
+                        (value ?? '').replaceAll(RegExp(r'[^0-9]'), ''),
+                      );
+                      return (parsed == null || parsed <= 0)
+                          ? 'Vui lòng nhập giá trị'
+                          : null;
                     },
                   ),
+                ),
+              ],
+            ),
+            const SizedBox(height: OmniGroupSection.gap),
+            OmniGroupSection(
+              dividerIndent: 14,
+              children: [
+                _FormRow(
+                  label: 'Sản phẩm / dịch vụ',
+                  child: TextFormField(
+                    controller: _product,
+                    decoration: _bare(
+                      const InputDecoration(hintText: 'VD: iPhone 15 Pro Max'),
+                    ),
+                  ),
+                ),
+                OmniGroupRow(
+                  icon: Icons.event_outlined,
+                  title: 'Dự kiến chốt',
+                  value: _expectedClose == null
+                      ? 'Chọn ngày'
+                      : Formatters.date(_expectedClose),
+                  chevron: true,
+                  onTap: _pickDate,
+                ),
+              ],
+            ),
+            const SizedBox(height: OmniGroupSection.gap),
+            OmniGroupSection(
+              title: 'Giai đoạn',
+              dividerIndent: 14,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: Wrap(
+                    spacing: OmniSpacing.sm,
+                    runSpacing: OmniSpacing.sm,
+                    children: [
+                      for (final stage in _pipeline?.stages ?? const [])
+                        OmniChoicePill(
+                          label: stage.label,
+                          selected: _effectiveStageCode == stage.code,
+                          onTap: () {
+                            HapticFeedback.selectionClick();
+                            setState(() => _stageCode = stage.code);
+                          },
+                        ),
+                    ],
+                  ),
+                ),
               ],
             ),
           ],
         ),
       ),
-      bottomNavigationBar: OmniActionBar(
-        children: [
-          OutlinedButton(
-            onPressed: _saving ? null : () => context.pop(),
-            child: const Text('Huỷ'),
+      // Thanh đáy: hai nút kính (bỏ viền xanh), không vạch trên.
+      bottomNavigationBar: SafeArea(
+        top: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+          child: Row(
+            children: [
+              OutlinedButton(
+                style: OutlinedButton.styleFrom(minimumSize: const Size(0, 48)),
+                onPressed: _saving ? null : () => context.pop(),
+                child: const Text('Huỷ'),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: FilledButton(
+                  onPressed: _saving ? null : _save,
+                  child: _saving
+                      ? SizedBox(
+                          width: 18,
+                          height: 18,
+                          // Nút đang tắt khi lưu: nền là onSurface 12%, không
+                          // phải primary.
+                          child: CircularProgressIndicator.adaptive(
+                            strokeWidth: 2,
+                            valueColor: AlwaysStoppedAnimation(
+                              Theme.of(context).colorScheme.onSurfaceVariant,
+                            ),
+                          ),
+                        )
+                      : Text(widget.isEdit ? 'Lưu thay đổi' : 'Tạo cơ hội'),
+                ),
+              ),
+            ],
           ),
-          FilledButton(
-            onPressed: _saving ? null : _save,
-            child: _saving
-                ? SizedBox(
-                    width: 18,
-                    height: 18,
-                    // Nút đang tắt khi lưu: nền là onSurface 12%, không phải primary.
-                    child: CircularProgressIndicator.adaptive(
-                      strokeWidth: 2,
-                      valueColor: AlwaysStoppedAnimation(
-                        Theme.of(context).colorScheme.onSurfaceVariant,
-                      ),
-                    ),
-                  )
-                : Text(widget.isEdit ? 'Lưu thay đổi' : 'Tạo cơ hội'),
-          ),
-        ],
+        ),
       ),
     );
   }
 }
 
-/// Ô chọn trông như ô nhập (viền tương tác bo 12), mở một bảng chọn khi chạm:
-/// khách hàng, ngày chốt.
-class _PickerBox extends StatelessWidget {
-  const _PickerBox({
-    required this.onTap,
-    required this.leading,
+/// Ô nhập nằm TRONG một dòng nhóm: bỏ nền và viền của theme (dòng đã là thẻ).
+InputDecoration _bare(InputDecoration base) => base.copyWith(
+  filled: false,
+  isDense: true,
+  border: InputBorder.none,
+  enabledBorder: InputBorder.none,
+  focusedBorder: InputBorder.none,
+  errorBorder: InputBorder.none,
+  focusedErrorBorder: InputBorder.none,
+  disabledBorder: InputBorder.none,
+  contentPadding: const EdgeInsets.symmetric(vertical: 6),
+);
+
+/// Một ô của form trong nhóm lồng: nhãn nhỏ phía trên, giá trị bên dưới.
+class _FormRow extends StatelessWidget {
+  const _FormRow({
     required this.label,
-    this.placeholder = false,
-    this.strong = false,
-    this.trailing,
-    this.height = 52,
+    required this.child,
+    this.required = false,
+    this.hint,
   });
 
-  final VoidCallback onTap;
-  final Widget leading;
   final String label;
-  final bool placeholder;
-  final bool strong;
-  final Widget? trailing;
-  final double height;
+  final Widget child;
+  final bool required;
+  final String? hint;
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-
-    return Material(
-      color: scheme.surface,
-      shape: RoundedRectangleBorder(
-        borderRadius: OmniRadius.mdAll,
-        side: BorderSide(color: scheme.outline),
-      ),
-      child: InkWell(
-        onTap: onTap,
-        customBorder: const RoundedRectangleBorder(
-          borderRadius: OmniRadius.mdAll,
-        ),
-        child: SizedBox(
-          height: height,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 14),
-            child: Row(
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(14, 10, 14, 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text.rich(
+            TextSpan(
+              text: label,
               children: [
-                leading,
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    label,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: OmniType.input.copyWith(
-                      fontWeight: strong && !placeholder
-                          ? FontWeight.w600
-                          : FontWeight.w400,
-                      color: placeholder
-                          ? scheme.onSurfaceVariant
-                          : scheme.onSurface,
-                    ),
+                if (required)
+                  TextSpan(
+                    text: ' *',
+                    style: TextStyle(color: scheme.error),
                   ),
-                ),
-                ?trailing,
               ],
             ),
+            style: OmniType.caption.copyWith(
+              fontWeight: FontWeight.w600,
+              color: scheme.onSurfaceVariant,
+            ),
           ),
-        ),
+          const SizedBox(height: 2),
+          child,
+          if (hint != null)
+            Padding(
+              padding: const EdgeInsets.only(top: 2),
+              child: Text(
+                hint!,
+                style: OmniType.caption.copyWith(
+                  color: scheme.onSurfaceVariant,
+                ),
+              ),
+            ),
+        ],
       ),
     );
   }

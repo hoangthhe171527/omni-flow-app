@@ -396,7 +396,7 @@ class _TermsRow extends StatelessWidget {
       child: InkWell(
         key: const ValueKey('terms-checkbox'),
         onTap: _toggle,
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(12),
         child: Padding(
           padding: const EdgeInsets.symmetric(vertical: 4),
           child: Row(

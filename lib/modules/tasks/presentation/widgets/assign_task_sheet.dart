@@ -308,93 +308,75 @@ class _AssignTaskSheetState extends ConsumerState<_AssignTaskSheet> {
 
   @override
   Widget build(BuildContext context) {
-    final text = Theme.of(context).textTheme;
     final members = ref.watch(teamMembersProvider);
 
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(
-            OmniSpacing.lg,
-            OmniSpacing.sm,
-            OmniSpacing.lg,
-            OmniSpacing.md,
-          ),
+    return Semantics(
+      scopesRoute: true,
+      explicitChildNodes: true,
+      label: widget.title,
+      child: OmniSheetBody(
+        header: OmniSheetHeader(
+          title: widget.title,
+          subtitle: _picked.isEmpty ? null : '${_picked.length} đã chọn',
+        ),
+        footer: FilledButton(
+          onPressed: () => Navigator.of(context).pop(_picked.toList()),
+          // Nói ra số người đã chọn: bỏ chọn hết là một lựa chọn hợp lệ
+          // (trả việc về hàng đợi chung), nên nút phải phân biệt được nó
+          // với việc bấm nhầm.
           child: Text(
-            widget.title,
-            style: text.titleMedium?.copyWith(fontWeight: FontWeight.w600),
+            widget.confirmLabel?.call(_picked.length) ??
+                (_picked.isEmpty
+                    ? 'Bỏ gán tất cả'
+                    : 'Giao cho ${_picked.length} người'),
           ),
         ),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: OmniSpacing.lg),
-          child: OmniSearchField(
+        children: [
+          OmniSearchField(
             hint: 'Tìm người...',
             onChanged: (value) => setState(() => _search = value),
           ),
-        ),
-        const SizedBox(height: OmniSpacing.sm),
-        Flexible(
-          child: OmniAsyncView(
-            value: members,
-            onRetry: () => ref.invalidate(teamDirectoryProvider),
-            isEmpty: (rows) => _visible(rows).isEmpty,
-            empty: const OmniEmptyState(
-              icon: Icons.person_search_outlined,
-              title: 'Không tìm thấy ai',
-              message: 'Thử tên khác, hoặc xoá ô tìm kiếm.',
+          // Không dùng OmniAsyncView: trạng thái tải / trống của nó là một
+          // ListView, mà thân sheet đã cuộn.
+          switch (members) {
+            AsyncError(:final error) => OmniErrorView(
+              error: error,
+              onRetry: () => ref.invalidate(teamDirectoryProvider),
             ),
-            data: (rows) => ListView(
-              keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-              shrinkWrap: true,
-              padding: const EdgeInsets.only(bottom: OmniSpacing.sm),
+            AsyncData(:final value) when _visible(value).isEmpty =>
+              const OmniEmptyState(
+                icon: Icons.person_search_outlined,
+                title: 'Không tìm thấy ai',
+                message: 'Thử tên khác, hoặc xoá ô tìm kiếm.',
+              ),
+            AsyncData(:final value) => OmniGroupSection(
+              dividerIndent: 58,
               children: [
-                for (final member in _visible(rows))
-                  CheckboxListTile.adaptive(
-                    value: _picked.contains(member.userId),
-                    onChanged: (on) {
-                      HapticFeedback.selectionClick();
-                      setState(() {
-                        if (on ?? false) {
-                          _picked.add(member.userId);
-                        } else {
-                          _picked.remove(member.userId);
-                        }
-                      });
-                    },
-                    title: Text(member.name),
-                    subtitle: Text(_assigneeRoleLabel(member)),
-                    controlAffinity: ListTileControlAffinity.leading,
+                for (final member in _visible(value))
+                  OmniGroupRow(
+                    leading: OmniAvatar(
+                      name: member.name,
+                      imageUrl: member.avatarUrl,
+                      size: 32,
+                    ),
+                    title: member.name,
+                    subtitle: _assigneeRoleLabel(member),
+                    selected: _picked.contains(member.userId),
+                    onTap: () => setState(() {
+                      if (!_picked.add(member.userId)) {
+                        _picked.remove(member.userId);
+                      }
+                    }),
                   ),
               ],
             ),
-          ),
-        ),
-        Padding(
-          padding: const EdgeInsets.fromLTRB(
-            OmniSpacing.lg,
-            OmniSpacing.sm,
-            OmniSpacing.lg,
-            OmniSpacing.lg,
-          ),
-          child: SizedBox(
-            width: double.infinity,
-            child: FilledButton(
-              onPressed: () => Navigator.of(context).pop(_picked.toList()),
-              // Nói ra số người đã chọn: bỏ chọn hết là một lựa chọn hợp lệ
-              // (trả việc về hàng đợi chung), nên nút phải phân biệt được nó
-              // với việc bấm nhầm.
-              child: Text(
-                widget.confirmLabel?.call(_picked.length) ??
-                    (_picked.isEmpty
-                        ? 'Bỏ gán tất cả'
-                        : 'Giao cho ${_picked.length} người'),
-              ),
+            _ => const Padding(
+              padding: EdgeInsets.all(OmniSpacing.lg),
+              child: Center(child: CircularProgressIndicator.adaptive()),
             ),
-          ),
-        ),
-      ],
+          },
+        ],
+      ),
     );
   }
 

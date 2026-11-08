@@ -808,51 +808,37 @@ class _TemplateSheet extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
 
-    return SafeArea(
-      child: ConstrainedBox(
-        constraints: BoxConstraints(
-          maxHeight: MediaQuery.sizeOf(context).height * 0.6,
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
+    return ConstrainedBox(
+      constraints: BoxConstraints(
+        maxHeight: MediaQuery.sizeOf(context).height * 0.6,
+      ),
+      child: OmniSheetBody(
+        header: const OmniSheetHeader(title: 'Mẫu trả lời'),
+        children: [
+          if (templates.isEmpty)
             Padding(
-              padding: const EdgeInsets.fromLTRB(
-                OmniSpacing.lg,
-                0,
-                OmniSpacing.lg,
-                OmniSpacing.sm,
+              padding: const EdgeInsets.all(OmniSpacing.lg),
+              child: Text(
+                'Chưa có mẫu trả lời nào.',
+                style: OmniType.caption.copyWith(
+                  color: scheme.onSurfaceVariant,
+                ),
               ),
-              child: Text('Mẫu trả lời', style: OmniType.bodyStrong),
-            ),
-            if (templates.isEmpty)
-              Padding(
-                padding: const EdgeInsets.all(OmniSpacing.lg),
-                child: Text(
-                  'Chưa có mẫu trả lời nào.',
-                  style: OmniType.caption.copyWith(
-                    color: scheme.onSurfaceVariant,
+            )
+          else
+            OmniGroupSection(
+              dividerIndent: 14,
+              children: [
+                for (final text in templates)
+                  OmniGroupRow(
+                    title: text,
+                    maxTitleLines: 3,
+                    chevron: false,
+                    onTap: () => Navigator.pop(context, text),
                   ),
-                ),
-              )
-            else
-              Flexible(
-                child: ListView(
-                  shrinkWrap: true,
-                  children: [
-                    for (final text in templates)
-                      ListTile(
-                        dense: true,
-                        title: Text(text, style: OmniType.caption),
-                        onTap: () => Navigator.pop(context, text),
-                      ),
-                  ],
-                ),
-              ),
-            const SizedBox(height: OmniSpacing.md),
-          ],
-        ),
+              ],
+            ),
+        ],
       ),
     );
   }

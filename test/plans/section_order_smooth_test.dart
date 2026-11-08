@@ -231,7 +231,7 @@ void main() {
   });
 
   testWidgets(
-    'khung viền bo góc giữ nguyên: DecoratedSliver viền outlineVariant, bo smAll',
+    'khung nhóm lồng: DecoratedSliver nền surface, bo 18, không viền',
     (t) async {
       await pump(t);
       final scheme = Theme.of(
@@ -245,16 +245,9 @@ void main() {
       expect(
         slivers.any(
           (d) =>
-              d.borderRadius == OmniRadius.smAll &&
-              d.border == Border.all(color: scheme.outlineVariant),
-        ),
-        isTrue,
-        reason: '$slivers',
-      );
-      expect(
-        slivers.any(
-          (d) =>
-              d.borderRadius == OmniRadius.smAll && d.color == scheme.surface,
+              d.borderRadius == BorderRadius.circular(18) &&
+              d.color == scheme.surface &&
+              d.border == null,
         ),
         isTrue,
         reason: '$slivers',

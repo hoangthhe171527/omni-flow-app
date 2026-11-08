@@ -140,9 +140,8 @@ void main() {
     final sentence = tester.widget<Text>(
       find.text('Workspace chưa khai bảng mốc thưởng.'),
     );
-    final theme = Theme.of(tester.element(find.byType(KpiCard))).textTheme;
 
-    expect(sentence.style?.fontSize, theme.labelSmall?.fontSize);
+    expect(sentence.style?.fontSize, lessThan(OmniType.body.fontSize!));
   });
 
   test(

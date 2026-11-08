@@ -110,7 +110,11 @@ void main() {
       await tester.tap(find.byKey(const ValueKey('time-due')));
       await tester.pumpAndSettle();
 
-      expect(find.text('OK'), findsOneWidget, reason: 'lịch phải mở ngay');
+      expect(
+        find.byKey(const Key('omni-date-done')),
+        findsOneWidget,
+        reason: 'lịch phải mở ngay',
+      );
     });
 
     testWidgets('đã có hạn thì XOÁ được', (tester) async {

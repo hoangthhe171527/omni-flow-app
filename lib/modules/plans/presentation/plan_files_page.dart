@@ -128,52 +128,23 @@ class PlanFilesPage extends ConsumerWidget {
     Task task,
     TaskAttachment file,
   ) async {
-    final danger = OmniTaskTones.of(context).highPriority.foreground;
-    final remove = await showOmniViecSheet<bool>(
+    final remove = await showOmniSheet<bool>(
       context: context,
-      builder: (sheet) => SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
+      builder: (sheet) => OmniSheetBody(
+        header: OmniSheetHeader(title: file.name),
+        children: [
+          OmniGroupSection(
+            dividerIndent: 14,
             children: [
-              const OmniSheetHandle(),
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: 8),
-                child: Text(
-                  file.name,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: OmniType.section,
-                ),
-              ),
-              InkWell(
+              OmniGroupRow(
+                icon: Icons.delete_outline,
+                title: 'Xoá tệp',
+                destructive: true,
                 onTap: () => Navigator.of(sheet).pop(true),
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(minHeight: 48),
-                  child: Row(
-                    children: [
-                      Icon(
-                        Icons.delete_outline,
-                        size: OmniIconSize.lg,
-                        color: danger,
-                      ),
-                      const SizedBox(width: 12),
-                      Text(
-                        'Xoá tệp',
-                        style: OmniType.body.copyWith(
-                          fontWeight: FontWeight.w500,
-                          color: danger,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
               ),
             ],
           ),
-        ),
+        ],
       ),
     );
     if (remove != true || !context.mounted) return;

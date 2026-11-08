@@ -22,6 +22,7 @@ import 'edit_plan_page.dart';
 import 'widgets/create_choice_sheet.dart';
 import 'widgets/quick_create_sheets.dart';
 import 'widgets/favorites_group.dart';
+import 'widgets/project_cover.dart';
 import 'widgets/team_group.dart';
 import 'widgets/teams_search_row.dart';
 import 'widgets/work_list_actions_sheet.dart';
@@ -581,6 +582,13 @@ class _TeamsPageState extends ConsumerState<TeamsPage> {
     final choice = await showWorkListActionsSheet(
       context,
       title: plan.name,
+      coverColor: OmniCovers.names.contains(plan.cover)
+          ? OmniCovers.colorOf(plan.cover)
+          : projectSystemColor(plan.color),
+      subtitle: [
+        if ((plan.teamName ?? '').isNotEmpty) plan.teamName!,
+        '${plan.taskCount} việc',
+      ].join(' · '),
       editLabel: 'Sửa kế hoạch',
       deleteLabel: 'Xoá kế hoạch',
       canEdit: canEdit,

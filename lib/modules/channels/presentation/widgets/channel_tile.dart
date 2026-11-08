@@ -67,29 +67,29 @@ class ChannelTile extends StatelessWidget {
         _statusLabels[connection.status] ??
         ('Chưa kết nối', Icons.link_off_rounded, OmniTone.neutral);
 
-    return OmniCard(
-      flat: true,
-      padding: const EdgeInsets.all(14),
+    // Một dòng của nhóm lồng (vạch thụt 54 do nhóm vẽ): icon kênh MỘT TÔNG,
+    // tên, viên trạng thái + số tin, nút "Kết nối lại" kính nhỏ khi lỗi, và
+    // menu ⋯ chứa "Ngắt kết nối" (không còn icon lặp ở từng dòng).
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(14, 10, 6, 10),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            width: 44,
-            height: 44,
-            decoration: BoxDecoration(
-              color: meta.tint,
-              borderRadius: OmniRadius.mdAll,
-            ),
-            child: Icon(meta.icon, size: OmniIconSize.lg, color: meta.color),
+          Padding(
+            padding: const EdgeInsets.only(top: 2),
+            child: OmniIconTile(meta.icon),
           ),
-          const SizedBox(width: OmniSpacing.md),
+          const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   connection.label,
-                  style: OmniType.bodyStrong.copyWith(color: scheme.onSurface),
+                  style: OmniType.body.copyWith(
+                    fontWeight: FontWeight.w500,
+                    color: scheme.onSurface,
+                  ),
                 ),
                 const SizedBox(height: OmniSpacing.xs),
                 // Wrap chứ không Row: trên màn 360–390dp viên trạng thái dài
@@ -110,13 +110,13 @@ class ChannelTile extends StatelessWidget {
                 ),
                 if (_needsReconnect) ...[
                   const SizedBox(height: OmniSpacing.sm),
-                  TextButton.icon(
+                  OutlinedButton.icon(
                     onPressed: (canReconnect ?? canWrite) ? onReconnect : null,
-                    icon: const Icon(Icons.refresh_rounded, size: 18),
+                    icon: const Icon(Icons.refresh_rounded, size: 16),
                     label: const Text('Kết nối lại'),
-                    style: TextButton.styleFrom(
-                      padding: EdgeInsets.zero,
-                      minimumSize: const Size(0, 32),
+                    style: OutlinedButton.styleFrom(
+                      minimumSize: const Size(0, 36),
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
                       tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                     ),
                   ),
@@ -124,12 +124,54 @@ class ChannelTile extends StatelessWidget {
               ],
             ),
           ),
-          IconButton(
-            onPressed: canWrite ? onDisconnect : null,
-            icon: const Icon(Icons.link_off_rounded),
-            tooltip: 'Ngắt kết nối',
-          ),
+          if (canWrite) _MoreButton(onDisconnect: onDisconnect),
         ],
+      ),
+    );
+  }
+}
+
+/// Nút ⋯ của dòng: mở menu neo, trong đó "Ngắt kết nối" (đỏ). Vẫn hỏi xác
+/// nhận như cũ ở nơi gọi.
+class _MoreButton extends StatelessWidget {
+  const _MoreButton({required this.onDisconnect});
+
+  final VoidCallback onDisconnect;
+
+  @override
+  Widget build(BuildContext context) {
+    return Builder(
+      builder: (buttonContext) => IconButton(
+        tooltip: 'Tuỳ chọn kênh',
+        constraints: const BoxConstraints.tightFor(width: 44, height: 44),
+        icon: const Icon(Icons.more_horiz_rounded),
+        onPressed: () async {
+          final box = buttonContext.findRenderObject() as RenderBox?;
+          if (box == null || !box.hasSize) return;
+          final disconnect = await showOmniAnchoredMenu<bool>(
+            context: buttonContext,
+            anchor: box.localToGlobal(Offset.zero) & box.size,
+            width: 220,
+            menuKey: const Key('channel-row-menu'),
+            semanticsLabel: 'Tuỳ chọn kênh',
+            scrollable: false,
+            builder: (menuContext) => Padding(
+              padding: const EdgeInsets.all(6),
+              child: OmniGroupSection(
+                dividerIndent: 14,
+                children: [
+                  OmniGroupRow(
+                    icon: Icons.link_off_rounded,
+                    title: 'Ngắt kết nối',
+                    destructive: true,
+                    onTap: () => Navigator.of(menuContext).pop(true),
+                  ),
+                ],
+              ),
+            ),
+          );
+          if (disconnect == true) onDisconnect();
+        },
       ),
     );
   }

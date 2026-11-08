@@ -150,9 +150,8 @@ Future<PlanMenuAction?> showPlanMenuSheet(
   BuildContext context, {
   required Plan plan,
   required List<List<PlanMenuAction>> groups,
-}) => showOmniViecSheet<PlanMenuAction>(
+}) => showOmniSheet<PlanMenuAction>(
   context: context,
-  backgroundColor: Theme.of(context).scaffoldBackgroundColor,
   builder: (_) => PlanMenuSheet(plan: plan, groups: groups),
 );
 
@@ -232,9 +231,8 @@ class PlanAnchoredMenu extends ConsumerWidget {
   }
 }
 
-/// Menu kế hoạch (`Board.dc.html` `isMenu`): nền `#F5F7FA`, đệm 8/16/30, đầu
-/// sheet có ô màu nền kế hoạch và dòng "Team · chủ: Tên" (tên chủ tra trong
-/// danh bạ), các nhóm `.og` nền surface bo 8.
+/// Menu kế hoạch liquid: đầu sheet có ô màu nền kế hoạch và dòng "Team · chủ:
+/// Tên" (tên chủ tra trong danh bạ); các nhóm lồng cách nhau 10.
 class PlanMenuSheet extends ConsumerWidget {
   const PlanMenuSheet({super.key, required this.plan, required this.groups});
 
@@ -243,7 +241,6 @@ class PlanMenuSheet extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final scheme = Theme.of(context).colorScheme;
     final ownerName = plan.ownerId == null
         ? null
         : ref.watch(teamMemberByIdProvider)[plan.ownerId]?.name;
@@ -261,143 +258,40 @@ class PlanMenuSheet extends ConsumerWidget {
         : archived.truncated
         ? '${archived.tasks.length}+'
         : '${archived.tasks.length}';
-    return Semantics(
-      scopesRoute: true,
-      explicitChildNodes: true,
-      label: 'Tuỳ chọn kế hoạch',
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.fromLTRB(16, 8, 16, 30),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const OmniSheetHandle(),
-            Padding(
-              padding: const EdgeInsets.only(bottom: 12),
-              child: Row(
-                children: [
-                  ProjectCoverMarker(
-                    key: const Key('plan-menu-cover'),
-                    cover: plan.cover,
-                    color: plan.color,
-                    size: 36,
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          plan.name,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: OmniType.section.copyWith(
-                            color: scheme.onSurface,
-                            height: 1.25,
-                          ),
-                        ),
-                        if (subtitle.isNotEmpty)
-                          Text(
-                            subtitle,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: OmniType.micro.copyWith(
-                              fontWeight: FontWeight.w400,
-                              color: scheme.onSurfaceVariant,
-                            ),
-                          ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            for (var g = 0; g < groups.length; g++) ...[
-              if (g > 0) const SizedBox(height: 10),
-              Container(
-                key: Key('plan-menu-group-$g'),
-                padding: const EdgeInsets.symmetric(horizontal: 12),
-                decoration: BoxDecoration(
-                  color: scheme.surface,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Column(
-                  children: [
-                    for (var i = 0; i < groups[g].length; i++) ...[
-                      if (i > 0)
-                        Divider(
-                          height: 1,
-                          thickness: 1,
-                          color: scheme.surfaceContainerHighest,
-                        ),
-                      _MenuRow(
-                        action: groups[g][i],
-                        trailing: switch (groups[g][i]) {
-                          PlanMenuAction.members => '${planMemberCount(plan)}',
-                          PlanMenuAction.archived => archivedCount,
-                          _ => null,
-                        },
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-            ],
-          ],
+
+    return OmniSheetBody(
+      semanticsLabel: 'Tuỳ chọn kế hoạch',
+      header: OmniSheetHeader(
+        title: plan.name,
+        subtitle: subtitle,
+        leading: ProjectCoverMarker(
+          key: const Key('plan-menu-cover'),
+          cover: plan.cover,
+          color: plan.color,
+          size: 36,
         ),
       ),
-    );
-  }
-}
-
-/// Một dòng `.op`: cao 48, biểu tượng 20 màu phụ, chữ 15 w500.
-class _MenuRow extends StatelessWidget {
-  const _MenuRow({required this.action, this.trailing});
-
-  final PlanMenuAction action;
-  final String? trailing;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final danger = OmniTaskTones.of(context).highPriority.foreground;
-    final meta = _planMenuMeta(action);
-    final color = action.danger ? danger : scheme.onSurface;
-
-    return InkWell(
-      onTap: () => Navigator.of(context).pop(action),
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(minHeight: 48),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 4),
-          child: Row(
+      children: [
+        for (var g = 0; g < groups.length; g++)
+          OmniGroupSection(
+            key: Key('plan-menu-group-$g'),
             children: [
-              Icon(
-                meta.icon,
-                size: OmniIconSize.lg,
-                color: action.danger ? danger : scheme.onSurfaceVariant,
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Text(
-                  meta.label,
-                  style: OmniType.body.copyWith(
-                    fontWeight: FontWeight.w500,
-                    color: color,
-                  ),
-                ),
-              ),
-              if (trailing case final value?)
-                Text(
-                  value,
-                  style: OmniType.caption.copyWith(
-                    color: scheme.onSurfaceVariant,
-                  ),
+              for (final action in groups[g])
+                OmniGroupRow(
+                  icon: _planMenuMeta(action).icon,
+                  title: _planMenuMeta(action).label,
+                  destructive: action.danger,
+                  chevron: false,
+                  value: switch (action) {
+                    PlanMenuAction.members => '${planMemberCount(plan)}',
+                    PlanMenuAction.archived => archivedCount,
+                    _ => null,
+                  },
+                  onTap: () => Navigator.of(context).pop(action),
                 ),
             ],
           ),
-        ),
-      ),
+      ],
     );
   }
 }

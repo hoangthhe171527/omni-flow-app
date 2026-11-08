@@ -53,6 +53,7 @@ class _CreatePlanPageState extends ConsumerState<CreatePlanPage> {
   String? _teamId;
   String? _coverPath;
   String? _createdPlanId;
+  int _generation = 0;
   bool _saving = false;
   String? _error;
 
@@ -73,18 +74,15 @@ class _CreatePlanPageState extends ConsumerState<CreatePlanPage> {
   @override
   Widget build(BuildContext context) {
     final teams = ref.watch(teamsWithPlansProvider);
-    final scheme = Theme.of(context).colorScheme;
     final text = Theme.of(context).textTheme;
 
-    // Bố cục `MCreatePlan.dc.html`: nền trắng, xem trước ảnh dự án, các ô có
-    // nhãn phía trên, nút "Tạo kế hoạch" ghim ở đáy.
-    final label = OmniType.body.copyWith(
-      fontWeight: FontWeight.w600,
-      color: scheme.onSurface,
-    );
+    final realTeams = <Team>[
+      for (final TeamWithPlans group in teams.valueOrNull ?? const [])
+        if (group.team.id.isNotEmpty) group.team,
+    ];
+    final teamName = realTeams.where((t) => t.id == _teamId).firstOrNull?.name;
 
     return Scaffold(
-      backgroundColor: scheme.surface,
       appBar: OmniAppBar(title: 'Kế hoạch mới', close: true),
       bottomNavigationBar: OmniActionBar(
         children: [
@@ -106,7 +104,7 @@ class _CreatePlanPageState extends ConsumerState<CreatePlanPage> {
       ),
       body: ListView(
         keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-        padding: const EdgeInsets.fromLTRB(20, OmniSpacing.sm, 20, 24),
+        padding: const EdgeInsets.fromLTRB(16, OmniGroupSection.gap, 16, 24),
         children: [
           CoverPicker(
             localPath: _coverPath,
@@ -123,56 +121,62 @@ class _CreatePlanPageState extends ConsumerState<CreatePlanPage> {
                 : () => setState(() => _coverPath = null),
             onError: (message) => setState(() => _error = message),
           ),
-          const SizedBox(height: 18),
-          OmniField(
-            label: 'Tên kế hoạch',
-            child: TextField(
-              controller: _name,
-              autofocus: true,
-              textCapitalization: TextCapitalization.sentences,
-              decoration: const InputDecoration(hintText: 'Đàn cơ'),
-              onChanged: (_) => setState(() {}),
-            ),
+          const SizedBox(height: OmniGroupSection.gap),
+          OmniGroupSection(
+            dividerIndent: 14,
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(14, 6, 14, 6),
+                child: OmniField(
+                  label: 'Tên kế hoạch',
+                  child: TextField(
+                    controller: _name,
+                    autofocus: true,
+                    textCapitalization: TextCapitalization.sentences,
+                    decoration: const InputDecoration(hintText: 'Đàn cơ'),
+                    onChanged: (_) => setState(() {}),
+                  ),
+                ),
+              ),
+              // Dòng chọn team ẩn khi tới từ luồng "vừa tạo team xong": người
+              // dùng vừa tạo đúng cái team đó, và cho họ đổi ở đây chỉ mời một
+              // cú bấm nhầm ngay sau khi đã quyết định. Chưa có team nào thì
+              // không hỏi: dự án không thuộc team vẫn chạy được.
+              if (widget.teamId == null && realTeams.isNotEmpty)
+                OmniGroupRow(
+                  icon: Icons.groups_2_outlined,
+                  title: 'Thuộc team',
+                  value: teamName ?? 'Chưa thuộc team nào',
+                  onTap: () => _pickTeam(realTeams),
+                ),
+            ],
           ),
-          const SizedBox(height: 18),
-          // Ô chọn team ẩn khi tới từ luồng "vừa tạo team xong": người dùng
-          // vừa tạo đúng cái team đó, và cho họ đổi ở đây chỉ mời một cú bấm
-          // nhầm ngay sau khi đã quyết định.
-          if (widget.teamId == null) ...[
-            const SizedBox(height: OmniSpacing.lg),
-            _TeamPicker(
-              teams: [
-                for (final group in teams.valueOrNull ?? const []) group.team,
-              ],
-              selected: _teamId,
-              onChanged: (id) => setState(() => _teamId = id),
-            ),
-          ],
-          const SizedBox(height: OmniSpacing.xxl),
-          Text('Nhóm việc', style: label),
-          const SizedBox(height: OmniSpacing.xs),
-          Text(
-            'Mỗi nhóm việc là một cột trên bảng.',
-            style: text.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
-          ),
-          const SizedBox(height: OmniSpacing.md),
-          for (var i = 0; i < _sections.length; i++)
-            _SectionRow(
-              key: ValueKey('section-$i'),
-              index: i,
-              name: _sections[i],
-              onChanged: (value) => _sections[i] = value,
-              onRemove: _sections.length > 1
-                  ? () => setState(() => _sections.removeAt(i))
-                  : null,
-            ),
-          Align(
-            alignment: Alignment.centerLeft,
-            child: TextButton.icon(
-              onPressed: () => setState(() => _sections.add('')),
-              icon: const Icon(Icons.add_rounded),
-              label: const Text('Thêm nhóm việc'),
-            ),
+          const SizedBox(height: OmniGroupSection.gap),
+          OmniGroupSection(
+            title: 'Nhóm việc',
+            dividerIndent: 14,
+            children: [
+              for (var i = 0; i < _sections.length; i++)
+                _SectionRow(
+                  key: ValueKey('section-$i'),
+                  rowKey: ValueKey('section-$_generation-$i'),
+                  index: i,
+                  name: _sections[i],
+                  onChanged: (value) => _sections[i] = value,
+                  // Vuốt ngang để bỏ (thay cho nút X mỗi dòng). Còn ít nhất
+                  // một cột, nếu không bảng không còn chỗ nào để hiện việc.
+                  onRemove: _sections.length > 1
+                      ? () => setState(() {
+                          _sections.removeAt(i);
+                          _generation++;
+                        })
+                      : null,
+                ),
+              OmniGroupRow.add(
+                title: 'Thêm nhóm việc',
+                onTap: () => setState(() => _sections.add('')),
+              ),
+            ],
           ),
           if (_error != null) ...[
             const SizedBox(height: OmniSpacing.lg),
@@ -186,6 +190,35 @@ class _CreatePlanPageState extends ConsumerState<CreatePlanPage> {
         ],
       ),
     );
+  }
+
+  /// Sheet chọn team thay cho Dropdown Material.
+  Future<void> _pickTeam(List<Team> teams) async {
+    final picked = await showOmniSheet<({String? id})>(
+      context: context,
+      builder: (sheet) => OmniSheetBody(
+        header: const OmniSheetHeader(title: 'Thuộc team'),
+        children: [
+          OmniGroupSection(
+            dividerIndent: 14,
+            children: [
+              OmniGroupRow(
+                title: 'Chưa thuộc team nào',
+                selected: _teamId == null,
+                onTap: () => Navigator.of(sheet).pop((id: null)),
+              ),
+              for (final team in teams)
+                OmniGroupRow(
+                  title: team.name,
+                  selected: _teamId == team.id,
+                  onTap: () => Navigator.of(sheet).pop((id: team.id)),
+                ),
+            ],
+          ),
+        ],
+      ),
+    );
+    if (picked != null && mounted) setState(() => _teamId = picked.id);
   }
 
   Future<void> _save() async {
@@ -250,46 +283,19 @@ class _CreatePlanPageState extends ConsumerState<CreatePlanPage> {
   }
 }
 
-class _TeamPicker extends StatelessWidget {
-  const _TeamPicker({
-    required this.teams,
-    required this.selected,
-    required this.onChanged,
-  });
-
-  final List<Team> teams;
-  final String? selected;
-  final ValueChanged<String?> onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    // Chưa có team nào thì không hỏi: dự án không thuộc team vẫn chạy được,
-    // và một ô chọn rỗng chỉ làm người dùng tưởng mình thiếu bước nào đó.
-    final real = teams.where((t) => t.id.isNotEmpty).toList();
-    if (real.isEmpty) return const SizedBox.shrink();
-
-    return DropdownButtonFormField<String?>(
-      initialValue: selected,
-      decoration: const InputDecoration(labelText: 'Thuộc team'),
-      items: [
-        const DropdownMenuItem(value: null, child: Text('Chưa thuộc team nào')),
-        for (final team in real)
-          DropdownMenuItem(value: team.id, child: Text(team.name)),
-      ],
-      onChanged: onChanged,
-    );
-  }
-}
-
 class _SectionRow extends StatefulWidget {
   const _SectionRow({
     super.key,
+    required this.rowKey,
     required this.index,
     required this.name,
     required this.onChanged,
     this.onRemove,
   });
 
+  /// Khoá của lớp vuốt-để-bỏ; đổi khi danh sách đổi để ô nhập dựng lại đúng
+  /// chữ của dòng mới đứng ở chỗ đó.
+  final Key rowKey;
   final int index;
   final String name;
   final ValueChanged<String> onChanged;
@@ -310,26 +316,39 @@ class _SectionRowState extends State<_SectionRow> {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: OmniSpacing.sm),
-      child: Row(
-        children: [
-          Expanded(
-            child: TextField(
-              controller: _controller,
-              decoration: InputDecoration(
-                hintText: 'Tên nhóm việc ${widget.index + 1}',
-                isDense: true,
-              ),
-              onChanged: widget.onChanged,
-            ),
-          ),
-          IconButton(
-            onPressed: widget.onRemove,
-            icon: const Icon(Icons.close_rounded),
-            tooltip: 'Bỏ nhóm việc này',
-          ),
-        ],
+    final field = Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 14),
+      child: TextField(
+        controller: _controller,
+        decoration: InputDecoration(
+          hintText: 'Tên nhóm việc ${widget.index + 1}',
+          isDense: true,
+          filled: false,
+          border: InputBorder.none,
+          enabledBorder: InputBorder.none,
+          focusedBorder: InputBorder.none,
+        ),
+        onChanged: widget.onChanged,
+      ),
+    );
+    if (widget.onRemove == null) return field;
+
+    return Dismissible(
+      key: widget.rowKey,
+      direction: DismissDirection.endToStart,
+      onDismissed: (_) => widget.onRemove!(),
+      background: Container(
+        alignment: Alignment.centerRight,
+        padding: const EdgeInsets.only(right: 16),
+        color: OmniColors.dangerTextOf(context).withValues(alpha: .12),
+        child: Icon(
+          Icons.delete_outline_rounded,
+          color: OmniColors.dangerTextOf(context),
+        ),
+      ),
+      child: ColoredBox(
+        color: Theme.of(context).colorScheme.surface,
+        child: field,
       ),
     );
   }

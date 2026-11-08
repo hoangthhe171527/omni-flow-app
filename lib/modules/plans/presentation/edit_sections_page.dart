@@ -42,7 +42,6 @@ class _EditSectionsPageState extends ConsumerState<EditSectionsPage> {
   @override
   Widget build(BuildContext context) {
     final plan = ref.watch(planProvider(widget.planId));
-    final scheme = Theme.of(context).colorScheme;
     final text = Theme.of(context).textTheme;
 
     final loaded = plan.valueOrNull;
@@ -94,17 +93,6 @@ class _EditSectionsPageState extends ConsumerState<EditSectionsPage> {
                 OmniSpacing.bottomSafe,
               ),
               children: [
-                Text(
-                  'Mỗi nhóm việc là một cột trên bảng.',
-                  style: OmniType.body.copyWith(
-                    color: OmniColors.byBrightness(
-                      context,
-                      OmniColors.secondaryForeground,
-                      scheme.onSurfaceVariant,
-                    ),
-                  ),
-                ),
-                const SizedBox(height: OmniSpacing.md),
                 for (var i = 0; i < sections.length; i++)
                   _SectionRow(
                     key: ValueKey(sections[i].id),
@@ -150,32 +138,24 @@ class _EditSectionsPageState extends ConsumerState<EditSectionsPage> {
                         ? () => setState(() => sections.removeAt(i))
                         : null,
                   ),
-                Align(
-                  alignment: Alignment.centerLeft,
-                  child: TextButton.icon(
-                    onPressed: () => setState(() {
-                      sections.add(
-                        PlanSection(
-                          // Id ngẫu nhiên như server và web: id đoán được
-                          // (`sN`) có thể trùng nhóm đã xoá mà việc còn trỏ
-                          // tới, và các việc đó sẽ lặng lẽ hiện vào nhóm mới.
-                          id: newClientId(),
-                          name: '',
-                          order: sections.length,
-                        ),
-                      );
-                    }),
-                    icon: const Icon(Icons.add_rounded),
-                    label: const Text('Thêm nhóm việc'),
-                  ),
-                ),
-                const SizedBox(height: OmniSpacing.lg),
-                Text(
-                  'Xoá một nhóm không xoá việc trong đó — việc sẽ hiện ở cột '
-                  'đầu tiên cho tới khi được xếp lại.',
-                  style: text.bodySmall?.copyWith(
-                    color: scheme.onSurfaceVariant,
-                  ),
+                OmniGroupSection(
+                  children: [
+                    OmniGroupRow.add(
+                      title: 'Thêm nhóm việc',
+                      onTap: () => setState(() {
+                        sections.add(
+                          PlanSection(
+                            // Id ngẫu nhiên như server và web: id đoán được
+                            // (`sN`) có thể trùng nhóm đã xoá mà việc còn trỏ
+                            // tới, và các việc đó sẽ lặng lẽ hiện vào nhóm mới.
+                            id: newClientId(),
+                            name: '',
+                            order: sections.length,
+                          ),
+                        );
+                      }),
+                    ),
+                  ],
                 ),
                 if (_error != null) ...[
                   const SizedBox(height: OmniSpacing.lg),
@@ -265,80 +245,112 @@ class _SectionRowState extends State<_SectionRow> {
     super.dispose();
   }
 
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final gated =
-        widget.section.requiresChecklist || widget.section.countsForKpi;
-
-    // Mỗi nhóm là một thẻ trắng viền mảnh bo 16.
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
-      child: Material(
-        color: scheme.surface,
-        shape: RoundedRectangleBorder(
-          borderRadius: OmniRadius.xlAll,
-          side: BorderSide(color: scheme.outlineVariant),
+  /// Xoá không lặp ở từng nhóm: vào menu ⋯ của dòng tên, rồi hỏi xác nhận.
+  Future<void> _options() async {
+    final remove = await showOmniSheet<bool>(
+      context: context,
+      builder: (sheet) => OmniSheetBody(
+        header: OmniSheetHeader(
+          title: widget.section.name.trim().isEmpty
+              ? 'Nhóm việc'
+              : widget.section.name.trim(),
         ),
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(14, 10, 4, 6),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          OmniGroupSection(
+            dividerIndent: 14,
             children: [
-              Row(
-                children: [
-                  Expanded(
-                    child: TextField(
-                      controller: _controller,
-                      decoration: InputDecoration(
-                        hintText: 'Tên nhóm việc',
-                        isDense: true,
-                        // Nói ra nhóm nào đang mang quy tắc, để người sửa biết
-                        // mình đang đụng vào thứ gì trước khi xoá nó.
-                        helperText: gated ? _rulesOf(widget.section) : null,
-                      ),
-                      onChanged: widget.onChanged,
-                    ),
-                  ),
-                  IconButton(
-                    onPressed: widget.onRemove,
-                    icon: Icon(
-                      Icons.close_rounded,
-                      color: widget.onRemove == null
-                          ? scheme.onSurfaceVariant
-                          : null,
-                    ),
-                    tooltip: 'Bỏ nhóm việc này',
-                  ),
-                ],
-              ),
-              // Đặt ngay tại đây chứ không giấu sau một màn khác: quản đốc đứng
-              // giữa xưởng với cái điện thoại, và cho tới giờ hai cờ này chỉ bật
-              // được từ web. Nhãn nói HẬU QUẢ chứ không nói tên cờ — bật nhầm thì
-              // bảng trông y hệt, chỉ có con số cuối tháng khác đi.
-              SwitchListTile.adaptive(
-                value: widget.section.requiresChecklist,
-                onChanged: (on) {
-                  HapticFeedback.selectionClick();
-                  widget.onGateChanged(on);
-                },
-                title: const Text('Chặn vào nhóm khi việc con chưa xong'),
-                dense: true,
-                contentPadding: EdgeInsets.zero,
-              ),
-              SwitchListTile.adaptive(
-                value: widget.section.countsForKpi,
-                onChanged: (on) {
-                  HapticFeedback.selectionClick();
-                  widget.onKpiChanged(on);
-                },
-                title: const Text('Nhóm này là đích đếm KPI tháng'),
-                dense: true,
-                contentPadding: EdgeInsets.zero,
+              OmniGroupRow(
+                icon: Icons.delete_outline_rounded,
+                title: 'Xoá nhóm việc',
+                destructive: true,
+                onTap: () => Navigator.of(sheet).pop(true),
               ),
             ],
           ),
-        ),
+        ],
+      ),
+    );
+    if (remove != true || !mounted) return;
+
+    final confirmed = await showOmniConfirm(
+      context: context,
+      title: 'Xoá nhóm việc này?',
+      message:
+          'Xoá một nhóm không xoá việc trong đó — việc sẽ hiện ở cột đầu '
+          'tiên cho tới khi được xếp lại.',
+      confirmLabel: 'Xoá nhóm',
+      destructive: true,
+    );
+    if (confirmed && mounted) widget.onRemove?.call();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final gated =
+        widget.section.requiresChecklist || widget.section.countsForKpi;
+
+    // Mỗi nhóm việc là một nhóm lồng: dòng tên (chạm để đổi tên), hai dòng
+    // công tắc.
+    return Padding(
+      padding: const EdgeInsets.only(bottom: OmniGroupSection.gap),
+      child: OmniGroupSection(
+        dividerIndent: 14,
+        children: [
+          Padding(
+            padding: const EdgeInsets.only(left: 14, right: 4),
+            child: Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _controller,
+                    decoration: InputDecoration(
+                      hintText: 'Tên nhóm việc',
+                      isDense: true,
+                      filled: false,
+                      border: InputBorder.none,
+                      enabledBorder: InputBorder.none,
+                      focusedBorder: InputBorder.none,
+                      // Nói ra nhóm nào đang mang quy tắc, để người sửa biết
+                      // mình đang đụng vào thứ gì trước khi xoá nó.
+                      helperText: gated ? _rulesOf(widget.section) : null,
+                    ),
+                    onChanged: widget.onChanged,
+                  ),
+                ),
+                if (widget.onRemove != null)
+                  IconButton(
+                    onPressed: _options,
+                    icon: const Icon(Icons.more_horiz_rounded),
+                    tooltip: 'Tuỳ chọn nhóm việc',
+                  ),
+              ],
+            ),
+          ),
+          // Đặt ngay tại đây chứ không giấu sau một màn khác: quản đốc đứng
+          // giữa xưởng với cái điện thoại, và cho tới giờ hai cờ này chỉ bật
+          // được từ web. Nhãn nói HẬU QUẢ chứ không nói tên cờ — bật nhầm thì
+          // bảng trông y hệt, chỉ có con số cuối tháng khác đi.
+          OmniGroupRow(
+            title: 'Chặn vào nhóm khi việc con chưa xong',
+            trailing: Switch.adaptive(
+              value: widget.section.requiresChecklist,
+              onChanged: (on) {
+                HapticFeedback.selectionClick();
+                widget.onGateChanged(on);
+              },
+            ),
+          ),
+          OmniGroupRow(
+            title: 'Nhóm này là đích đếm KPI tháng',
+            trailing: Switch.adaptive(
+              value: widget.section.countsForKpi,
+              onChanged: (on) {
+                HapticFeedback.selectionClick();
+                widget.onKpiChanged(on);
+              },
+            ),
+          ),
+        ],
       ),
     );
   }

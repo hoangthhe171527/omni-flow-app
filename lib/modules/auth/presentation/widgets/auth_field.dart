@@ -4,8 +4,8 @@ import 'package:flutter/material.dart';
 
 import '../../../../design/tokens/tokens.dart';
 
-/// Ô nhập một dòng: cao 50, bo 10, viền thường / viền `primary` + vầng 3px khi
-/// focus / viền đỏ + rung + chữ lỗi dưới ô.
+/// Ô nhập một dòng theo ô của theme (nền mờ lõm, bo 14, viền xám mảnh): cao
+/// 50, viền `primary` nhạt khi focus, viền đỏ + rung + chữ lỗi dưới ô.
 class AuthField extends StatefulWidget {
   const AuthField({
     super.key,
@@ -67,15 +67,19 @@ class _AuthFieldState extends State<AuthField> {
       builder: (field) {
         final error = field.errorText ?? widget.serverError;
         final focused = _focus.hasFocus;
-        final border = error != null
-            ? OmniColors.destructive
+        // Lấy nền, bo và viền từ theme ô nhập — không tự vẽ lại bo 10 / vầng sáng.
+        final theme = Theme.of(context).inputDecorationTheme;
+        BorderSide sideOf(InputBorder? b, BorderSide fallback) =>
+            b is OutlineInputBorder ? b.borderSide : fallback;
+        final plain = sideOf(
+          theme.enabledBorder,
+          BorderSide(color: scheme.outlineVariant),
+        );
+        final side = error != null
+            ? const BorderSide(color: OmniColors.destructive)
             : focused
-            ? scheme.primary
-            : OmniColors.byBrightness(
-                context,
-                const Color(0xFFE3E8EF),
-                OmniColors.darkBorder,
-              );
+            ? sideOf(theme.focusedBorder, BorderSide(color: scheme.primary))
+            : plain;
 
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -92,17 +96,9 @@ class _AuthFieldState extends State<AuthField> {
               child: Container(
                 height: 50,
                 decoration: BoxDecoration(
-                  color: scheme.surface,
-                  borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: border),
-                  boxShadow: focused && error == null
-                      ? [
-                          BoxShadow(
-                            color: scheme.primary.withValues(alpha: 0.14),
-                            spreadRadius: 3,
-                          ),
-                        ]
-                      : null,
+                  color: theme.fillColor ?? scheme.surfaceContainerHighest,
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.fromBorderSide(side),
                 ),
                 child: Row(
                   children: [

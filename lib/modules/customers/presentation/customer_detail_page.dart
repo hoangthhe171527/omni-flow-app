@@ -547,7 +547,7 @@ class _ActButton extends StatelessWidget {
       onTap: onTap,
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(6),
+        borderRadius: BorderRadius.circular(18),
         child: SizedBox(
           height: 44,
           child: Center(
@@ -581,75 +581,29 @@ class _ActButton extends StatelessWidget {
   }
 }
 
+/// Ba số của hồ sơ thành ba dòng "nhãn — số" trong một nhóm lồng (hết dải KPI
+/// ba ô). Tiền luôn đủ số.
 class _Stats extends StatelessWidget {
   const _Stats({required this.bought, required this.orders, this.open});
 
   final String bought;
   final String orders;
 
-  /// null = người dùng không đọc được cơ hội: không có ô này.
+  /// null = người dùng không đọc được cơ hội: không có dòng này.
   final String? open;
 
   @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final cells = [
-      ('Đã mua', bought),
-      ('Đơn hàng', orders),
-      if (open != null) ('Đang mở', open!),
-    ];
-
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-      child: Row(
-        children: [
-          for (var i = 0; i < cells.length; i++) ...[
-            if (i > 0) const SizedBox(width: 8),
-            Expanded(
-              child: Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 8,
-                ),
-                decoration: BoxDecoration(
-                  color: scheme.surfaceContainerLowest,
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: scheme.outlineVariant),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      cells[i].$1,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: OmniType.micro.copyWith(
-                        color: scheme.onSurfaceVariant,
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    // Tiền không bao giờ cắt "…": thu nhỏ vừa ô.
-                    FittedBox(
-                      fit: BoxFit.scaleDown,
-                      alignment: Alignment.centerLeft,
-                      child: Text(
-                        cells[i].$2,
-                        maxLines: 1,
-                        style: OmniType.bodyStrong.copyWith(
-                          color: scheme.onSurface,
-                          fontFeatures: OmniType.tabular,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ],
-        ],
-      ),
-    );
-  }
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+    child: OmniGroupSection(
+      dividerIndent: 14,
+      children: [
+        OmniGroupRow(title: 'Đã mua', value: bought),
+        OmniGroupRow(title: 'Đơn hàng', value: orders),
+        if (open != null) OmniGroupRow(title: 'Đang mở', value: open),
+      ],
+    ),
+  );
 }
 
 class _Overview extends StatelessWidget {
@@ -679,6 +633,7 @@ class _Overview extends StatelessWidget {
     TextInputType? keyboardType,
     int? maxLength,
     bool multiline = false,
+    int viewMaxLines = 1,
     Color? valueColor,
     VoidCallback? onTapValue,
   }) => InlineEditRow(
@@ -687,6 +642,7 @@ class _Overview extends StatelessWidget {
     value: value,
     editable: canUpdate,
     multiline: multiline,
+    viewMaxLines: viewMaxLines,
     keyboardType: keyboardType,
     maxLength: maxLength,
     valueColor: valueColor,
@@ -738,7 +694,12 @@ class _Overview extends StatelessWidget {
                           'Không mở được ứng dụng email.',
                         ),
                 ),
-                _row(CustomerField.address, c.address, maxLength: 500),
+                _row(
+                  CustomerField.address,
+                  c.address,
+                  maxLength: 500,
+                  viewMaxLines: 3,
+                ),
                 _row(CustomerField.note, c.note ?? '', multiline: true),
               ],
             ),
@@ -790,7 +751,7 @@ class _PickerRow extends StatelessWidget {
     final scheme = theme.colorScheme;
     return InkWell(
       onTap: editable ? onTap : null,
-      borderRadius: BorderRadius.circular(8),
+      borderRadius: BorderRadius.circular(12),
       child: ConstrainedBox(
         constraints: const BoxConstraints(minHeight: 44),
         child: Padding(
@@ -809,15 +770,6 @@ class _PickerRow extends StatelessWidget {
               Expanded(
                 child: Align(alignment: Alignment.centerRight, child: child),
               ),
-              if (editable) ...[
-                const SizedBox(width: 8),
-                Icon(
-                  Icons.edit_outlined,
-                  size: 16,
-                  color: scheme.outline,
-                  semanticLabel: 'Sửa $label',
-                ),
-              ],
             ],
           ),
         ),

@@ -79,16 +79,19 @@ class _NotificationSettingsPageState
         ),
         (null, _) => const Center(child: CircularProgressIndicator.adaptive()),
         (final bool value, _) => ListView(
-          padding: const EdgeInsets.symmetric(vertical: OmniSpacing.sm),
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, OmniSpacing.xxl),
           children: [
-            SwitchListTile.adaptive(
-              value: value,
-              onChanged: _saving ? null : _set,
-              title: const Text('Báo khi có công đoạn xong'),
-              subtitle: const Text(
-                'Tắt thì máy không rung nữa, nhưng chuông trong app vẫn nhận '
-                'đủ — bạn không mất tin nào.',
-              ),
+            OmniGroupSection(
+              dividerIndent: 14,
+              children: [
+                OmniGroupRow(
+                  title: 'Báo khi có công đoạn xong',
+                  trailing: Switch.adaptive(
+                    value: value,
+                    onChanged: _saving ? null : _set,
+                  ),
+                ),
+              ],
             ),
           ],
         ),

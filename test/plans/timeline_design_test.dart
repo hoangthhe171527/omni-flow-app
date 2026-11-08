@@ -124,14 +124,14 @@ void main() {
     await host(t, kpiValue: kpi(next: (80, 16, 16)), previous: 58);
     await t.pumpAndSettle();
     expect(find.text('64'), findsOneWidget);
-    expect(find.text('việc xong trong tháng'), findsOneWidget);
+    expect(find.text('Việc xong trong tháng'), findsOneWidget);
     // Tháng liền trước tháng đang xem (tháng hiện tại), kể cả tháng 1 -> 12.
     final prevMonth = DateTime(DateTime.now().year, DateTime.now().month - 1);
     expect(find.text('+6 so với tháng ${prevMonth.month}'), findsOneWidget);
     expect(find.textContaining('Còn 16 việc tới mốc 80'), findsOneWidget);
     expect(find.text('Mốc 80 việc'), findsOneWidget);
     expect(find.text('1 lần làm lại'), findsOneWidget);
-    expect(find.byKey(const Key('kpi-tier-mark')), findsNWidgets(3));
+    expect(find.byKey(const Key('kpi-tier-mark')), findsOneWidget);
   });
 
   testWidgets('tháng hiện tại: "Tháng sau" vô hiệu', (t) async {

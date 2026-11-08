@@ -311,7 +311,6 @@ void main() {
     await tester.tap(find.text('Nhãn màu'));
     await tester.pumpAndSettle();
     expect(find.text('Khẩn cấp'), findsOneWidget);
-    expect(find.text('Nhãn dùng chung cho cả công ty'), findsOneWidget);
     expect(find.bySemanticsLabel('Sửa nhãn Khẩn cấp'), findsNothing);
     expect(find.text('Nhãn mới…'), findsNothing);
   });
@@ -653,13 +652,15 @@ void main() {
     );
     await tester.pumpAndSettle();
     final ctx = tester.element(find.byType(PlanMenuSheet));
-    final group = tester.widget<Container>(
-      find.byKey(const Key('plan-menu-group-0')),
+    final group = tester.widget<Material>(
+      find
+          .descendant(
+            of: find.byKey(const Key('plan-menu-group-0')),
+            matching: find.byType(Material),
+          )
+          .first,
     );
-    expect(
-      (group.decoration! as BoxDecoration).color,
-      Theme.of(ctx).colorScheme.surface,
-    );
+    expect(group.color, Theme.of(ctx).colorScheme.surface);
     expect(find.text('Tổ kỹ thuật'), findsOneWidget);
   });
 }

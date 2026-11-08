@@ -97,54 +97,30 @@ class _DisclosureRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    return Semantics(
-      button: true,
-      expanded: expanded,
-      child: InkWell(
-        onTap: onTap,
-        child: Container(
-          constraints: const BoxConstraints(minHeight: 48),
-          decoration: BoxDecoration(
-            border: Border(
-              top: BorderSide(color: scheme.onSurface.withValues(alpha: .08)),
-            ),
-          ),
-          padding: const EdgeInsets.symmetric(vertical: 10),
-          child: Row(
-            children: [
-              Icon(icon, size: 20, color: scheme.onSurfaceVariant),
-              const SizedBox(width: 12),
-              Text(
-                label,
-                style: OmniType.body.copyWith(color: scheme.onSurface),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Text(
-                  value,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  textAlign: TextAlign.end,
-                  style: OmniType.caption.copyWith(
-                    color: scheme.onSurfaceVariant,
+    return Padding(
+      padding: const EdgeInsets.only(bottom: OmniGroupSection.sheetGap),
+      child: OmniGroupSection(
+        children: [
+          OmniGroupRow(
+            icon: icon,
+            title: label,
+            value: value,
+            semanticsLabel: null,
+            chevron: false,
+            onTap: onTap,
+            trailing: expanded == null
+                ? null
+                : AnimatedRotation(
+                    turns: expanded! ? 0.25 : 0,
+                    duration: OmniMotion.of(context).fast,
+                    child: Icon(
+                      Icons.chevron_right_rounded,
+                      size: 18,
+                      color: scheme.onSurfaceVariant,
+                    ),
                   ),
-                ),
-              ),
-              if (expanded != null) ...[
-                const SizedBox(width: 4),
-                AnimatedRotation(
-                  turns: expanded! ? 0.25 : 0,
-                  duration: OmniMotion.of(context).fast,
-                  child: Icon(
-                    Icons.chevron_right_rounded,
-                    size: 20,
-                    color: scheme.onSurfaceVariant,
-                  ),
-                ),
-              ],
-            ],
           ),
-        ),
+        ],
       ),
     );
   }
@@ -374,17 +350,25 @@ class _QuickCreatePlanFormState extends ConsumerState<QuickCreatePlanForm> {
                 onTap: () => setState(() => _teamOpen = !_teamOpen),
               ),
               if (_teamOpen)
-                RadioGroup<String?>(
-                  groupValue: _teamId,
-                  onChanged: (id) => setState(() {
-                    _teamId = id;
-                    _teamOpen = false;
-                  }),
-                  child: Column(
+                Padding(
+                  padding: const EdgeInsets.only(
+                    bottom: OmniGroupSection.sheetGap,
+                  ),
+                  child: OmniGroupSection(
+                    dividerIndent: 14,
                     children: [
-                      const _TeamOption(id: null, name: 'Chưa thuộc team'),
-                      for (final t in teams)
-                        _TeamOption(id: t.id, name: t.name),
+                      for (final (id, name) in <(String?, String)>[
+                        (null, 'Chưa thuộc team'),
+                        for (final t in teams) (t.id, t.name),
+                      ])
+                        OmniGroupRow(
+                          title: name,
+                          selected: _teamId == id,
+                          onTap: () => setState(() {
+                            _teamId = id;
+                            _teamOpen = false;
+                          }),
+                        ),
                     ],
                   ),
                 ),
@@ -479,22 +463,6 @@ class _QuickCreatePlanFormState extends ConsumerState<QuickCreatePlanForm> {
       ),
     );
   }
-}
-
-class _TeamOption extends StatelessWidget {
-  const _TeamOption({required this.id, required this.name});
-
-  final String? id;
-  final String name;
-
-  @override
-  Widget build(BuildContext context) => RadioListTile<String?>.adaptive(
-    value: id,
-    dense: true,
-    contentPadding: const EdgeInsets.only(left: 32),
-    controlAffinity: ListTileControlAffinity.trailing,
-    title: Text(name),
-  );
 }
 
 // ---------------------------------------------------------------------------
@@ -666,34 +634,33 @@ class _QuickCreateTeamSheetState extends ConsumerState<_QuickCreateTeamSheet> {
                       ),
                     );
                   }
-                  return ListView.builder(
+                  return ListView(
                     shrinkWrap: true,
-                    itemCount: shown.length,
-                    itemBuilder: (context, i) {
-                      final m = shown[i];
-                      final on = _memberIds.contains(m.userId);
-                      return CheckboxListTile.adaptive(
-                        dense: true,
-                        contentPadding: const EdgeInsets.only(left: 4),
-                        value: on,
-                        secondary: OmniAvatar(
-                          name: m.name,
-                          imageUrl: m.avatarUrl,
-                          size: 32,
-                        ),
-                        title: Text(m.name),
-                        onChanged: (_) {
-                          HapticFeedback.selectionClick();
-                          setState(() {
-                            if (on) {
-                              _memberIds.remove(m.userId);
-                            } else {
-                              _memberIds.add(m.userId);
-                            }
-                          });
-                        },
-                      );
-                    },
+                    padding: const EdgeInsets.only(
+                      bottom: OmniGroupSection.sheetGap,
+                    ),
+                    children: [
+                      OmniGroupSection(
+                        dividerIndent: 58,
+                        children: [
+                          for (final m in shown)
+                            OmniGroupRow(
+                              leading: OmniAvatar(
+                                name: m.name,
+                                imageUrl: m.avatarUrl,
+                                size: 32,
+                              ),
+                              title: m.name,
+                              selected: _memberIds.contains(m.userId),
+                              onTap: () => setState(() {
+                                if (!_memberIds.remove(m.userId)) {
+                                  _memberIds.add(m.userId);
+                                }
+                              }),
+                            ),
+                        ],
+                      ),
+                    ],
                   );
                 },
                 loading: () => const Padding(

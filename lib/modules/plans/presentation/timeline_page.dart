@@ -96,7 +96,6 @@ class _TimelinePageState extends ConsumerState<TimelinePage> {
     final groups = DayGroup.from(data?.entries ?? const []);
 
     return Scaffold(
-      backgroundColor: Theme.of(context).colorScheme.surface,
       appBar: const OmniAppBar(title: 'Dòng việc', centerTitle: true),
       body: RefreshIndicator.adaptive(
         onRefresh: () async {
@@ -152,9 +151,9 @@ class _Feed extends ConsumerWidget {
           const SliverPadding(
             padding: EdgeInsets.fromLTRB(
               OmniSpacing.lg,
-              14,
+              OmniGroupSection.gap,
               OmniSpacing.lg,
-              14,
+              OmniGroupSection.gap,
             ),
             sliver: SliverToBoxAdapter(child: _Kpi()),
           ),
@@ -216,7 +215,8 @@ class _Feed extends ConsumerWidget {
   }
 }
 
-/// Nhóm ngày phẳng, ngăn các dòng bằng vạch mảnh.
+/// Mỗi ngày một nhóm lồng; đầu ngày là nhãn nhỏ ngoài nhóm kèm số việc, vạch
+/// chia thụt sau avatar.
 class _DayCard extends StatelessWidget {
   const _DayCard({required this.group, required this.fresh});
 
@@ -225,23 +225,16 @@ class _DayCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-
-    return Material(
-      color: scheme.surface,
-      child: Column(
-        children: [
-          for (var i = 0; i < group.entries.length; i++) ...[
-            if (i > 0)
-              Divider(height: 1, thickness: 1, color: scheme.outlineVariant),
-            _SlideInOnce(
-              key: ValueKey(group.entries[i].id),
-              enabled: fresh.contains(group.entries[i].id),
-              child: _Row(entry: group.entries[i]),
-            ),
-          ],
-        ],
-      ),
+    return OmniGroupSection(
+      dividerIndent: 52,
+      children: [
+        for (final entry in group.entries)
+          _SlideInOnce(
+            key: ValueKey(entry.id),
+            enabled: fresh.contains(entry.id),
+            child: _Row(entry: entry),
+          ),
+      ],
     );
   }
 }

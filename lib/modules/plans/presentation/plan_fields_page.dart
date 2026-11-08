@@ -18,6 +18,17 @@ String customFieldTypeLabel(CustomFieldType type) => switch (type) {
   CustomFieldType.select => 'Chọn',
 };
 
+/// Icon một tông theo kiểu trường: Aa chữ, # số, ◷ ngày, ☰ chọn.
+IconData customFieldTypeIcon(CustomFieldType type) => switch (type) {
+  CustomFieldType.text => Icons.text_fields_rounded,
+  CustomFieldType.number => Icons.tag_rounded,
+  CustomFieldType.date => Icons.schedule_rounded,
+  CustomFieldType.select => Icons.view_list_rounded,
+};
+
+/// Kết quả của sheet sửa trường: lưu [field], hoặc xoá trường đang sửa.
+typedef _FieldResult = ({CustomFieldDef? field, bool remove});
+
 /// Định nghĩa trường tuỳ chỉnh của kế hoạch.
 ///
 /// `PUT /projects/{id}` THAY cả mảng `custom_fields`, nên lưu gửi đủ mảng,
@@ -48,22 +59,30 @@ class _PlanFieldsPageState extends ConsumerState<PlanFieldsPage> {
 
   Future<void> _edit([int? index]) async {
     final fields = _fields!;
-    final result = await showOmniViecSheet<CustomFieldDef>(
+    final result = await showOmniSheet<_FieldResult>(
       context: context,
       builder: (_) =>
           _FieldSheet(initial: index == null ? null : fields[index]),
     );
     if (result == null || !mounted) return;
+    if (result.remove) {
+      if (index != null) await _remove(index);
+      return;
+    }
+    final field = result.field;
+    if (field == null) return;
     setState(() {
       if (index == null) {
-        fields.add(result);
+        fields.add(field);
       } else {
-        fields[index] = result;
+        fields[index] = field;
       }
       _dirty = true;
     });
   }
 
+  /// Xoá không lặp ở từng dòng: vào sheet sửa trường, nhóm đỏ riêng, vẫn hỏi
+  /// xác nhận.
   Future<void> _remove(int index) async {
     final field = _fields![index];
     final confirmed = await showOmniConfirm(
@@ -87,7 +106,6 @@ class _PlanFieldsPageState extends ConsumerState<PlanFieldsPage> {
       _fields = List.of(plan.customFields);
     }
     final fields = _fields;
-    final scheme = Theme.of(context).colorScheme;
 
     return Scaffold(
       appBar: OmniAppBar(
@@ -106,66 +124,28 @@ class _PlanFieldsPageState extends ConsumerState<PlanFieldsPage> {
               keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
               padding: const EdgeInsets.fromLTRB(
                 OmniSpacing.lg,
-                OmniSpacing.md,
+                OmniGroupSection.gap,
                 OmniSpacing.lg,
                 OmniSpacing.bottomSafe,
               ),
               children: [
-                Text(
-                  'Mỗi việc trong kế hoạch có thêm các ô này.',
-                  style: OmniType.body.copyWith(color: scheme.onSurfaceVariant),
-                ),
-                const SizedBox(height: OmniSpacing.sm),
-                for (var i = 0; i < fields.length; i++)
-                  InkWell(
-                    onTap: () => _edit(i),
-                    child: ConstrainedBox(
-                      constraints: const BoxConstraints(minHeight: 56),
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  fields[i].name,
-                                  style: OmniType.body.copyWith(
-                                    fontWeight: FontWeight.w500,
-                                    color: scheme.onSurface,
-                                  ),
-                                ),
-                                Text(
-                                  fields[i].type == CustomFieldType.select
-                                      ? '${customFieldTypeLabel(fields[i].type)}'
-                                            ' · ${fields[i].options.length} '
-                                            'lựa chọn'
-                                      : customFieldTypeLabel(fields[i].type),
-                                  style: OmniType.caption.copyWith(
-                                    color: scheme.onSurfaceVariant,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          IconButton(
-                            tooltip: 'Xoá trường ${fields[i].name}',
-                            icon: const Icon(Icons.delete_outline),
-                            color: scheme.onSurfaceVariant,
-                            onPressed: () => _remove(i),
-                          ),
-                        ],
+                OmniGroupSection(
+                  children: [
+                    for (var i = 0; i < fields.length; i++)
+                      OmniGroupRow(
+                        icon: customFieldTypeIcon(fields[i].type),
+                        title: fields[i].name,
+                        subtitle: fields[i].type == CustomFieldType.select
+                            ? '${customFieldTypeLabel(fields[i].type)}'
+                                  ' · ${fields[i].options.length} lựa chọn'
+                            : customFieldTypeLabel(fields[i].type),
+                        onTap: () => _edit(i),
                       ),
+                    OmniGroupRow.add(
+                      title: 'Thêm trường',
+                      onTap: () => _edit(),
                     ),
-                  ),
-                const SizedBox(height: OmniSpacing.sm),
-                Align(
-                  alignment: Alignment.centerLeft,
-                  child: TextButton.icon(
-                    style: TextButton.styleFrom(minimumSize: const Size(0, 44)),
-                    onPressed: () => _edit(),
-                    icon: const Icon(Icons.add_rounded),
-                    label: const Text('Thêm trường'),
-                  ),
+                  ],
                 ),
               ],
             ),
@@ -174,7 +154,7 @@ class _PlanFieldsPageState extends ConsumerState<PlanFieldsPage> {
 }
 
 /// Sheet thêm / sửa một trường: tên (≤128), kiểu, lựa chọn (mỗi dòng một,
-/// ≤128) khi kiểu là "Chọn".
+/// ≤128) khi kiểu là "Chọn". Sửa thì có thêm nhóm đỏ "Xoá trường".
 class _FieldSheet extends StatefulWidget {
   const _FieldSheet({this.initial});
 
@@ -224,84 +204,93 @@ class _FieldSheetState extends State<_FieldSheet> {
 
   void _submit() {
     if (!_valid) return;
-    Navigator.of(context).pop(
-      CustomFieldDef(
+    Navigator.of(context).pop((
+      field: CustomFieldDef(
         id: widget.initial?.id ?? newClientId(),
         name: _name.text.trim(),
         type: _type,
         options: _type == CustomFieldType.select ? _optionList : const [],
       ),
-    );
+      remove: false,
+    ));
   }
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
+    const types = CustomFieldType.values;
 
-    return SingleChildScrollView(
-      keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 30),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          const OmniSheetHandle(gap: 6),
-          Text(
-            widget.initial == null ? 'Thêm trường' : 'Sửa trường',
-            style: OmniType.section.copyWith(color: scheme.onSurface),
-          ),
-          const SizedBox(height: 12),
-          OmniField(
-            label: 'Tên trường',
-            child: TextField(
-              key: const Key('field-name'),
-              controller: _name,
-              maxLength: 128,
-              autofocus: widget.initial == null,
-              textCapitalization: TextCapitalization.sentences,
-              onChanged: (_) => setState(() {}),
-            ),
-          ),
-          const SizedBox(height: 8),
-          Wrap(
-            spacing: 8,
-            children: [
-              for (final type in CustomFieldType.values)
-                ChoiceChip(
-                  label: Text(customFieldTypeLabel(type)),
-                  selected: _type == type,
-                  materialTapTargetSize: MaterialTapTargetSize.padded,
-                  onSelected: (_) => setState(() => _type = type),
+    return OmniSheetBody(
+      header: OmniSheetHeader(
+        title: widget.initial == null ? 'Thêm trường' : 'Sửa trường',
+      ),
+      footer: FilledButton(
+        onPressed: _valid ? _submit : null,
+        child: const Text('Xong'),
+      ),
+      children: [
+        OmniGroupSection(
+          dividerIndent: 14,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(14, 10, 14, 10),
+              child: OmniField(
+                label: 'Tên trường',
+                child: TextField(
+                  key: const Key('field-name'),
+                  controller: _name,
+                  maxLength: 128,
+                  autofocus: widget.initial == null,
+                  textCapitalization: TextCapitalization.sentences,
+                  onChanged: (_) => setState(() {}),
                 ),
-            ],
-          ),
-          if (_type == CustomFieldType.select) ...[
-            const SizedBox(height: 12),
-            OmniField(
-              label: 'Lựa chọn (mỗi dòng một)',
-              child: TextField(
-                key: const Key('field-options'),
-                controller: _options,
-                minLines: 3,
-                maxLines: 8,
-                decoration: InputDecoration(
-                  errorText: switch (_tooLongOption) {
-                    final line? =>
-                      'Mỗi lựa chọn tối đa $_maxOption ký tự (dòng $line).',
-                    null => null,
-                  },
-                ),
-                onChanged: (_) => setState(() {}),
               ),
             ),
+            // Kiểu trường: bốn lựa chọn loại trừ.
+            Padding(
+              padding: const EdgeInsets.fromLTRB(14, 10, 14, 10),
+              child: OmniSegmented(
+                labels: [for (final type in types) customFieldTypeLabel(type)],
+                index: types.indexOf(_type),
+                onChanged: (i) => setState(() => _type = types[i]),
+              ),
+            ),
+            if (_type == CustomFieldType.select)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(14, 10, 14, 10),
+                child: OmniField(
+                  label: 'Lựa chọn (mỗi dòng một)',
+                  child: TextField(
+                    key: const Key('field-options'),
+                    controller: _options,
+                    minLines: 3,
+                    maxLines: 8,
+                    decoration: InputDecoration(
+                      errorText: switch (_tooLongOption) {
+                        final line? =>
+                          'Mỗi lựa chọn tối đa $_maxOption ký tự (dòng $line).',
+                        null => null,
+                      },
+                    ),
+                    onChanged: (_) => setState(() {}),
+                  ),
+                ),
+              ),
           ],
-          const SizedBox(height: 16),
-          FilledButton(
-            onPressed: _valid ? _submit : null,
-            child: const Text('Xong'),
+        ),
+        if (widget.initial != null)
+          OmniGroupSection(
+            dividerIndent: 14,
+            children: [
+              OmniGroupRow(
+                icon: Icons.delete_outline_rounded,
+                title: 'Xoá trường',
+                destructive: true,
+                onTap: () =>
+                    Navigator.of(context).pop((field: null, remove: true)),
+              ),
+            ],
           ),
-        ],
-      ),
+      ],
     );
   }
 }

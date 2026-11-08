@@ -323,8 +323,10 @@ Future<T?> showOmniSheet<T>({
   double? radius,
   bool? showDragHandle,
   AnimationStyle? animationStyle,
-  // Phủ cả thanh tab dưới (navigator gốc) thay vì nằm trong tab hiện tại.
-  bool useRootNavigator = false,
+  // Mặc định mở ở navigator gốc: màn trong tab nằm ở navigator lồng, còn
+  // thanh tab kính vẽ bên ngoài nó — sheet mở trong tab bị thanh tab đè lên
+  // đáy. Chỉ truyền `false` khi sheet thật sự phải nằm dưới thanh tab.
+  bool useRootNavigator = true,
 }) {
   final apple = isApple(context);
   final fill = backgroundColor ?? Theme.of(context).colorScheme.surface;
@@ -403,7 +405,11 @@ class OmniGlassSheet extends StatelessWidget {
             const Padding(
               padding: EdgeInsets.only(top: 8),
               child: OmniSheetHandle(gap: 2),
-            ),
+            )
+          else
+            // Không thanh kéo (Android/web): chừa mép trên để tiêu đề không
+            // nằm trong đường cong bo 30 của viên kính.
+            const SizedBox(height: 12),
           Flexible(fit: expand ? FlexFit.tight : FlexFit.loose, child: child),
         ],
       ),

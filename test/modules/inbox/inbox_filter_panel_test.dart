@@ -349,12 +349,10 @@ void main() {
     ).read(inboxFilterProvider.notifier).setQuick(InboxQuickFilter.urgent);
     await tester.pumpAndSettle();
     final colors = surfaceColors(tester);
+    // Liquid: chip kính (chọn = trắng mờ) thay nền xanh nhạt / viền primary.
     expect(colors, contains(Colors.white));
-    expect(colors, contains(OmniColors.border));
-    expect(colors, contains(OmniColors.muted));
-    expect(colors, contains(OmniColors.accent));
-    expect(colors, contains(OmniColors.primary));
     expect(colors, contains(OmniColors.destructive));
+    expect(colors, isNot(contains(OmniColors.accent)));
     expect(colors, isNot(contains(const Color(0x1F0B1A33))));
     final field = tester.widget<TextField>(find.byType(TextField));
     expect(field.style!.color, OmniColors.ink);

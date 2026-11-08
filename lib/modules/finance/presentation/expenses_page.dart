@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/nav/shell_bar_inset.dart';
 import '../../../design/components/components.dart';
 import '../../../design/tokens/tokens.dart';
 import '../application/finance_providers.dart';
@@ -313,7 +314,16 @@ class _ExpensesPageState extends ConsumerState<ExpensesPage> {
                       // đang hiện trên màn, không dựng cả tháng một lượt.
                       child: _lazyList(
                         physics: const AlwaysScrollableScrollPhysics(),
-                        padding: const EdgeInsets.fromLTRB(16, 2, 16, 100),
+                        // Chừa thanh tab kính + vùng an toàn (iPhone có thanh
+                        // home 34: hằng 100 vẫn bị che dòng cuối).
+                        padding: EdgeInsets.fromLTRB(
+                          16,
+                          2,
+                          16,
+                          ShellBarInset.of(context) +
+                              MediaQuery.viewPaddingOf(context).bottom +
+                              24,
+                        ),
                         children: [
                           if (state.isLoading && !activeLoaded)
                             _buildLoadingCard(p, state)
@@ -395,8 +405,7 @@ class _ExpensesPageState extends ConsumerState<ExpensesPage> {
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 36),
       decoration: BoxDecoration(
         color: p.card,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: p.line, width: 0.5),
+        borderRadius: BorderRadius.circular(18),
       ),
       child: Column(
         children: [
@@ -429,8 +438,7 @@ class _ExpensesPageState extends ConsumerState<ExpensesPage> {
       padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 28),
       decoration: BoxDecoration(
         color: p.card,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: p.line, width: 0.5),
+        borderRadius: BorderRadius.circular(18),
       ),
       child: Column(
         children: [
@@ -448,12 +456,6 @@ class _ExpensesPageState extends ConsumerState<ExpensesPage> {
               onPressed: notifier.refresh,
               icon: const Icon(Icons.refresh_rounded, size: 16),
               label: const Text('Thử lại'),
-              style: FilledButton.styleFrom(
-                foregroundColor: p.primary,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10),
-                ),
-              ),
             ),
           ),
         ],
@@ -673,8 +675,7 @@ class _ExpensesPageState extends ConsumerState<ExpensesPage> {
       padding: const EdgeInsets.fromLTRB(15, 13, 15, 12),
       decoration: BoxDecoration(
         color: p.card,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: p.line, width: 0.5),
+        borderRadius: BorderRadius.circular(18),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -1070,7 +1071,6 @@ class _ExpensesPageState extends ConsumerState<ExpensesPage> {
       decoration: BoxDecoration(
         color: p.card,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: p.line, width: 0.5),
       ),
       child: Column(
         children: [
@@ -1158,11 +1158,7 @@ class _ExpensesPageState extends ConsumerState<ExpensesPage> {
                       height: 28,
                       padding: const EdgeInsets.symmetric(horizontal: 10),
                       alignment: Alignment.center,
-                      decoration: BoxDecoration(
-                        color: p.card,
-                        borderRadius: BorderRadius.circular(99),
-                        border: Border.all(color: p.primary, width: 1.2),
-                      ),
+                      decoration: OmniGlass.buttonDecoration(context),
                       child: Text(
                         allSum > 0 ? 'Ghi tất cả' : 'Mở nhập',
                         style: OmniType.caption.copyWith(
@@ -1256,16 +1252,12 @@ class _ExpensesPageState extends ConsumerState<ExpensesPage> {
                                   ),
                                   const SizedBox(width: 6),
                                   Expanded(
-                                    child: FittedBox(
-                                      fit: BoxFit.scaleDown,
-                                      alignment: Alignment.centerLeft,
-                                      child: Text(
-                                        suggestions[i].titleForMonth,
-                                        maxLines: 1,
-                                        style: OmniType.bodySm.copyWith(
-                                          color: p.ink,
-                                          fontWeight: FontWeight.w500,
-                                        ),
+                                    child: Text(
+                                      suggestions[i].titleForMonth,
+                                      maxLines: 2,
+                                      style: OmniType.bodySm.copyWith(
+                                        color: p.ink,
+                                        fontWeight: FontWeight.w500,
                                       ),
                                     ),
                                   ),
@@ -1280,7 +1272,7 @@ class _ExpensesPageState extends ConsumerState<ExpensesPage> {
                               suggestions[i],
                               state.recurAmt[i],
                             ),
-                            borderRadius: BorderRadius.circular(8),
+                            borderRadius: BorderRadius.circular(12),
                             child: Container(
                               height: 29,
                               padding: const EdgeInsets.symmetric(
@@ -1288,8 +1280,7 @@ class _ExpensesPageState extends ConsumerState<ExpensesPage> {
                               ),
                               decoration: BoxDecoration(
                                 color: p.control,
-                                borderRadius: BorderRadius.circular(8),
-                                border: Border.all(color: p.line, width: 0.5),
+                                borderRadius: BorderRadius.circular(12),
                               ),
                               child: Row(
                                 mainAxisSize: MainAxisSize.min,
@@ -1332,13 +1323,6 @@ class _ExpensesPageState extends ConsumerState<ExpensesPage> {
                         onPressed: selectedCount > 0 && selectedSum > 0
                             ? () => notifier.commitRecurring()
                             : null,
-                        style: FilledButton.styleFrom(
-                          foregroundColor: p.primary,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          elevation: 0,
-                        ),
                         child: FittedBox(
                           fit: BoxFit.scaleDown,
                           child: Text(
@@ -1428,7 +1412,6 @@ class _ExpensesPageState extends ConsumerState<ExpensesPage> {
           decoration: BoxDecoration(
             color: p.card,
             borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: p.line, width: 0.5),
           ),
           alignment: Alignment.center,
           child: Text(
@@ -1497,7 +1480,6 @@ class _ExpensesPageState extends ConsumerState<ExpensesPage> {
           decoration: BoxDecoration(
             color: p.card,
             borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: p.line, width: 0.5),
           ),
           clipBehavior: Clip.antiAlias,
           child: Column(

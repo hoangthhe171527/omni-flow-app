@@ -1,5 +1,8 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
-import 'package:flutter/semantics.dart';
+import 'package:flutter/rendering.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
@@ -104,6 +107,32 @@ class _FiveSalesModule extends OmniModule {
   List<ModuleNavEntry> navEntries() => [
     for (var index = 1; index <= 5; index++)
       _entry('Bán hàng $index', NavArea.sales),
+  ];
+}
+
+class _LongLabelModule extends OmniModule {
+  const _LongLabelModule();
+
+  static const labels = [
+    'Kênh kết nối',
+    'Việc của tôi',
+    'Tổng hợp chi phí',
+    'Thông báo',
+    'Khách',
+  ];
+
+  @override
+  String get id => 'long-labels';
+
+  @override
+  String get title => 'Long labels';
+
+  @override
+  List<ModuleRoute> routes() => const [];
+
+  @override
+  List<ModuleNavEntry> navEntries() => [
+    for (final label in labels) _entry(label, NavArea.sales),
   ];
 }
 
@@ -313,9 +342,17 @@ void main() {
       greaterThan(firstRow.single),
     );
 
+    // Ô là SizedBox con trực tiếp của Wrap — xa nhất trong lưới; nhãn hai
+    // dòng cân (_BalancedLabel) có SizedBox riêng nằm gần chữ hơn.
     final firstTile = find
-        .ancestor(of: find.text('Bán hàng 1'), matching: find.byType(SizedBox))
-        .first;
+        .ancestor(
+          of: find.text('Bán hàng 1'),
+          matching: find.descendant(
+            of: gridFinder,
+            matching: find.byType(SizedBox),
+          ),
+        )
+        .last;
     expect(
       t.getSize(gridFinder).height,
       moreOrLessEquals(t.getSize(firstTile).height * 2 + grid.runSpacing),
@@ -480,6 +517,48 @@ void main() {
     expect(hueOfArea(NavArea.work), OmniHue.blue);
     expect(hueOfArea(NavArea.admin), OmniHue.violet);
     expect(hueOfArea(NavArea.account), OmniHue.neutral);
+  });
+
+  // ĐỂ CUỐI: nạp phông thật cho cả tiến trình test của file — các bài phía
+  // trên đo kích thước bằng phông thử mặc định.
+  testWidgets('nhãn hai chữ trở lên xuống dòng cân, không bị cắt "…"', (
+    t,
+  ) async {
+    // Phông thử mặc định mỗi ký tự rộng bằng cỡ chữ → "kết nối" 91px không
+    // vừa ô 70px dù trên máy thật (Be Vietnam Pro) chỉ ~50px. Phải đo bằng
+    // phông thật thì bài này mới có nghĩa.
+    await t.runAsync(() async {
+      final loader = FontLoader('Be Vietnam Pro');
+      for (final f in ['Regular', 'Medium', 'SemiBold']) {
+        final bytes = File(
+          'assets/fonts/BeVietnamPro-$f.ttf',
+        ).readAsBytesSync();
+        loader.addFont(Future.value(ByteData.view(bytes.buffer)));
+      }
+      await loader.load();
+    });
+    // Bản trước đo nhãn bằng style trơn (không gộp DefaultTextStyle) nên
+    // khung thu quá hẹp: "Kênh kết n…", "Tổng hợp chi…".
+    await pump(t, module: const _LongLabelModule());
+
+    for (final label in _LongLabelModule.labels) {
+      // Có nhãn trùng với mục của module khác (vd "Thông báo") → kiểm hết.
+      for (final element in find.text(label).evaluate()) {
+        final paragraph = element.renderObject! as RenderParagraph;
+        expect(paragraph.didExceedMaxLines, isFalse, reason: label);
+      }
+    }
+    // Nhãn vừa một dòng thì giữ một dòng, không bị ép xuống dòng.
+    final short = t.renderObject<RenderParagraph>(find.text('Khách').first);
+    expect(
+      short
+          .getBoxesForSelection(
+            const TextSelection(baseOffset: 0, extentOffset: 5),
+          )
+          .map((b) => b.top)
+          .toSet(),
+      hasLength(1),
+    );
   });
 }
 

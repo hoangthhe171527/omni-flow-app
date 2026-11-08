@@ -16,10 +16,7 @@ class UnsupportedPairPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-
     return Scaffold(
-      backgroundColor: scheme.surface,
       appBar: OmniAppBar(title: 'Ghép nối ${channel.meta.name}'),
       body: const OmniEmptyState(
         icon: Icons.phonelink_off_rounded,

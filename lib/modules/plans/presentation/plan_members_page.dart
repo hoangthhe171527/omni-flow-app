@@ -101,7 +101,7 @@ class _PlanMembersPageState extends ConsumerState<PlanMembersPage> {
   Future<void> _change(String userId, String name) async {
     final draft = _draft!;
     final current = draft[userId];
-    final choice = await showOmniViecSheet<_RoleChoice>(
+    final choice = await showOmniSheet<_RoleChoice>(
       context: context,
       builder: (ctx) => _RoleSheet(name: name, current: current),
     );
@@ -126,7 +126,6 @@ class _PlanMembersPageState extends ConsumerState<PlanMembersPage> {
       _draft = Map.of(_initial);
     }
     final byId = ref.watch(teamMemberByIdProvider);
-    final scheme = Theme.of(context).colorScheme;
     final plan = _plan;
     final draft = _draft;
 
@@ -147,95 +146,60 @@ class _PlanMembersPageState extends ConsumerState<PlanMembersPage> {
               keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
               padding: const EdgeInsets.fromLTRB(
                 OmniSpacing.lg,
-                OmniSpacing.md,
+                OmniGroupSection.gap,
                 OmniSpacing.lg,
                 OmniSpacing.bottomSafe,
               ),
               children: [
-                // Chủ luôn đứng đầu, kể cả khi không nằm trong `member_ids`.
-                if (plan.ownerId case final owner?
-                    when owner.isNotEmpty && !draft.containsKey(owner))
-                  _MemberRow(
-                    name: byId[owner]?.name ?? 'Chủ kế hoạch',
-                    avatarUrl: byId[owner]?.avatarUrl,
-                    role: PlanRole.owner,
-                  ),
-                for (final entry in draft.entries)
-                  _MemberRow(
-                    name: byId[entry.key]?.name ?? 'Người dùng đã rời',
-                    avatarUrl: byId[entry.key]?.avatarUrl,
-                    role: entry.value,
-                    onTap: entry.value == PlanRole.owner
-                        ? null
-                        : () => _change(
-                            entry.key,
-                            byId[entry.key]?.name ?? 'Người dùng đã rời',
-                          ),
-                  ),
-                const SizedBox(height: OmniSpacing.sm),
-                Align(
-                  alignment: Alignment.centerLeft,
-                  child: TextButton.icon(
-                    style: TextButton.styleFrom(
-                      minimumSize: const Size(0, 44),
-                      foregroundColor: scheme.primary,
+                OmniGroupSection(
+                  dividerIndent: 62,
+                  children: [
+                    OmniGroupRow.add(
+                      title: 'Thêm thành viên',
+                      icon: Icons.person_add_alt_outlined,
+                      onTap: _add,
                     ),
-                    onPressed: _add,
-                    icon: const Icon(Icons.person_add_alt_outlined),
-                    label: const Text('Thêm thành viên'),
-                  ),
+                    // Chủ luôn đứng đầu, kể cả khi không nằm trong
+                    // `member_ids`.
+                    if (plan.ownerId case final owner?
+                        when owner.isNotEmpty && !draft.containsKey(owner))
+                      _memberRow(
+                        name: byId[owner]?.name ?? 'Chủ kế hoạch',
+                        avatarUrl: byId[owner]?.avatarUrl,
+                        role: PlanRole.owner,
+                      ),
+                    for (final entry in draft.entries)
+                      _memberRow(
+                        name: byId[entry.key]?.name ?? 'Người dùng đã rời',
+                        avatarUrl: byId[entry.key]?.avatarUrl,
+                        role: entry.value,
+                        onTap: entry.value == PlanRole.owner
+                            ? null
+                            : () => _change(
+                                entry.key,
+                                byId[entry.key]?.name ?? 'Người dùng đã rời',
+                              ),
+                      ),
+                  ],
                 ),
               ],
             ),
     );
   }
-}
 
-class _MemberRow extends StatelessWidget {
-  const _MemberRow({
-    required this.name,
-    required this.role,
-    this.avatarUrl,
-    this.onTap,
-  });
-
-  final String name;
-  final String? avatarUrl;
-  final PlanRole role;
-  final VoidCallback? onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final row = ConstrainedBox(
-      constraints: const BoxConstraints(minHeight: 56),
-      child: Row(
-        children: [
-          OmniAvatar(name: name, imageUrl: avatarUrl, size: 36),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Text(
-              name,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: OmniType.body.copyWith(
-                fontWeight: FontWeight.w500,
-                color: scheme.onSurface,
-              ),
-            ),
-          ),
-          Text(
-            planRoleLabel(role),
-            style: OmniType.caption.copyWith(color: scheme.onSurfaceVariant),
-          ),
-          if (onTap != null)
-            Icon(
-              Icons.expand_more_rounded,
-              size: OmniIconSize.lg,
-              color: scheme.onSurfaceVariant,
-            ),
-        ],
-      ),
+  /// Vai là chữ phụ kèm ›, riêng Chủ không có › (không đổi được ở đây).
+  Widget _memberRow({
+    required String name,
+    required PlanRole role,
+    String? avatarUrl,
+    VoidCallback? onTap,
+  }) {
+    final row = OmniGroupRow(
+      leading: OmniAvatar(name: name, imageUrl: avatarUrl, size: 36),
+      title: name,
+      maxTitleLines: 1,
+      value: planRoleLabel(role),
+      onTap: onTap,
     );
     if (onTap == null) return row;
 
@@ -243,7 +207,8 @@ class _MemberRow extends StatelessWidget {
       button: true,
       label: 'Đổi vai $name',
       excludeSemantics: true,
-      child: InkWell(onTap: onTap, child: row),
+      onTap: onTap,
+      child: row,
     );
   }
 }
@@ -269,62 +234,36 @@ class _RoleSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final danger = OmniTaskTones.of(context).highPriority.foreground;
-
-    Widget row(String label, _RoleChoice value, {bool selected = false}) {
-      final isDanger = value is _Remove;
-
-      return InkWell(
-        onTap: () => Navigator.of(context).pop(value),
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(minHeight: 48),
-          child: Row(
-            children: [
-              Expanded(
-                child: Text(
-                  label,
-                  style: OmniType.body.copyWith(
-                    fontWeight: FontWeight.w500,
-                    color: isDanger ? danger : scheme.onSurface,
-                  ),
-                ),
+    return OmniSheetBody(
+      header: OmniSheetHeader(title: name),
+      children: [
+        // Vai hiện tại trắng mờ và có ✓.
+        OmniGroupSection(
+          dividerIndent: 14,
+          children: [
+            for (final role in const [
+              PlanRole.manager,
+              PlanRole.member,
+              PlanRole.viewer,
+            ])
+              OmniGroupRow(
+                title: planRoleLabel(role),
+                selected: role == current,
+                onTap: () => Navigator.of(context).pop(_SetRole(role)),
               ),
-              if (selected)
-                Icon(
-                  Icons.check_rounded,
-                  size: OmniIconSize.lg,
-                  color: scheme.primary,
-                ),
-            ],
-          ),
+          ],
         ),
-      );
-    }
-
-    return SingleChildScrollView(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 30),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          const OmniSheetHandle(gap: 6),
-          Text(
-            name,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: OmniType.section.copyWith(color: scheme.onSurface),
-          ),
-          const SizedBox(height: 8),
-          for (final role in const [
-            PlanRole.manager,
-            PlanRole.member,
-            PlanRole.viewer,
-          ])
-            row(planRoleLabel(role), _SetRole(role), selected: role == current),
-          row('Gỡ khỏi kế hoạch', const _Remove()),
-        ],
-      ),
+        OmniGroupSection(
+          dividerIndent: 14,
+          children: [
+            OmniGroupRow(
+              title: 'Gỡ khỏi kế hoạch',
+              destructive: true,
+              onTap: () => Navigator.of(context).pop(const _Remove()),
+            ),
+          ],
+        ),
+      ],
     );
   }
 }

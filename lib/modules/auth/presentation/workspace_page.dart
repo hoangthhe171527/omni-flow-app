@@ -68,11 +68,11 @@ class _WorkspacePageState extends ConsumerState<WorkspacePage> {
                       children: [
                         const OmniBrandMark(semanticLabel: 'Viomni'),
                         const Spacer(),
-                        TextButton(
+                        OutlinedButton(
                           onPressed: () => ref
                               .read(sessionControllerProvider.notifier)
                               .logout(),
-                          style: TextButton.styleFrom(
+                          style: OutlinedButton.styleFrom(
                             minimumSize: const Size(0, 44),
                           ),
                           child: const Text('Đăng xuất'),
@@ -99,14 +99,6 @@ class _WorkspacePageState extends ConsumerState<WorkspacePage> {
                             ),
                           ),
                         ),
-                        const SizedBox(height: 6),
-                        Text(
-                          'Tài khoản của bạn đang tham gia nhiều không gian.',
-                          style: OmniType.bodyStrong.copyWith(
-                            fontWeight: FontWeight.w400,
-                            color: scheme.onSurfaceVariant,
-                          ),
-                        ),
                       ],
                     ),
                   ),
@@ -122,27 +114,30 @@ class _WorkspacePageState extends ConsumerState<WorkspacePage> {
                             'Liên hệ quản trị viên để được thêm vào công ty của '
                             'bạn.',
                       ),
-                      data: (list) => ListView.separated(
+                      data: (list) => ListView(
                         padding: const EdgeInsets.fromLTRB(
                           OmniSpacing.xl,
                           0,
                           OmniSpacing.xl,
                           OmniSpacing.section,
                         ),
-                        itemCount: list.length,
-                        separatorBuilder: (_, _) =>
-                            const SizedBox(height: OmniSpacing.md),
-                        itemBuilder: (context, index) {
-                          final tenant = list[index];
-                          return _WorkspaceCard(
-                            tenant: tenant,
-                            tone: _WorkspaceTone.at(context, index),
-                            busy: _entering == tenant.id,
-                            onTap: _entering == null
-                                ? () => _enter(tenant)
-                                : null,
-                          );
-                        },
+                        children: [
+                          // Mỗi workspace một dòng trong nhóm bo 18, không viền.
+                          OmniGroupSection(
+                            dividerIndent: 76,
+                            children: [
+                              for (var i = 0; i < list.length; i++)
+                                _WorkspaceCard(
+                                  tenant: list[i],
+                                  tone: _WorkspaceTone.at(context, i),
+                                  busy: _entering == list[i].id,
+                                  onTap: _entering == null
+                                      ? () => _enter(list[i])
+                                      : null,
+                                ),
+                            ],
+                          ),
+                        ],
                       ),
                     ),
                   ),
@@ -202,19 +197,15 @@ class _WorkspaceCard extends StatelessWidget {
       if (tenant.planLabel != null) tenant.planLabel!,
     ].join(' · ');
 
+    // Dòng đang vào = nền trắng mờ + vòng xoay (không viền primary dày).
     return Material(
-      color: scheme.surface,
-      shape: RoundedRectangleBorder(
-        borderRadius: OmniRadius.xlAll,
-        side: busy
-            ? BorderSide(color: scheme.primary, width: 2)
-            : BorderSide(color: scheme.outlineVariant),
-      ),
-      clipBehavior: Clip.antiAlias,
+      color: busy
+          ? scheme.onSurface.withValues(alpha: .06)
+          : Colors.transparent,
       child: InkWell(
         onTap: onTap,
         child: Padding(
-          padding: const EdgeInsets.all(OmniSpacing.lg),
+          padding: const EdgeInsets.all(OmniSpacing.md),
           child: Row(
             children: [
               Container(

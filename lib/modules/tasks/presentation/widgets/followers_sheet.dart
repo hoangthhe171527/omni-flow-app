@@ -25,7 +25,6 @@ Future<void> showFollowersSheet(
 
   return showOmniViecSheet<void>(
     context: context,
-    backgroundColor: Theme.of(context).scaffoldBackgroundColor,
     builder: (_) => FollowersSheet(
       taskId: taskId,
       myUserId: myUserId,
@@ -96,49 +95,22 @@ class _FollowersSheetState extends ConsumerState<FollowersSheet> {
     final me = widget.myUserId;
     final following = me != null && ids.contains(me);
 
-    Widget action({
-      required IconData icon,
-      required String label,
-      required VoidCallback onTap,
-    }) => InkWell(
-      onTap: _busy ? null : onTap,
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(minHeight: 50),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 4),
-          child: Row(
-            children: [
-              Icon(icon, size: OmniIconSize.lg, color: scheme.primary),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Text(
-                  label,
-                  style: OmniType.body.copyWith(
-                    fontWeight: FontWeight.w500,
-                    color: scheme.onSurface,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-
     final actions = [
       if (me != null)
-        action(
+        OmniGroupRow(
           icon: following
               ? Icons.visibility_off_outlined
               : Icons.visibility_outlined,
-          label: following ? 'Bỏ theo dõi' : 'Theo dõi việc này',
-          onTap: () => _run(() => _controller.setFollowing(!following)),
+          title: following ? 'Bỏ theo dõi' : 'Theo dõi việc này',
+          onTap: _busy
+              ? null
+              : () => _run(() => _controller.setFollowing(!following)),
         ),
       if (widget.canEditOthers)
-        action(
+        OmniGroupRow(
           icon: Icons.person_add_alt_outlined,
-          label: 'Thêm người theo dõi',
-          onTap: () => _addOthers(ids),
+          title: 'Thêm người theo dõi',
+          onTap: _busy ? null : () => _addOthers(ids),
         ),
     ];
 
@@ -146,61 +118,45 @@ class _FollowersSheetState extends ConsumerState<FollowersSheet> {
       scopesRoute: true,
       explicitChildNodes: true,
       label: 'Người theo dõi',
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.fromLTRB(16, 8, 16, 30),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const OmniSheetHandle(gap: 12),
-            Padding(
-              padding: const EdgeInsets.only(bottom: 10, left: 4),
-              child: Text(
-                'Người theo dõi (${followers.length})',
-                style: OmniType.section.copyWith(color: scheme.onSurface),
-              ),
-            ),
-            if (actions.isNotEmpty) _Group(children: actions),
-            const SizedBox(height: 10),
-            _Group(
-              children: [
-                if (followers.isEmpty)
-                  Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    child: Text(
-                      'Chưa ai theo dõi việc này.',
-                      textAlign: TextAlign.center,
-                      style: OmniType.bodySm.copyWith(
-                        color: scheme.onSurfaceVariant,
-                      ),
+      child: OmniSheetBody(
+        header: OmniSheetHeader(title: 'Người theo dõi (${followers.length})'),
+        children: [
+          OmniGroupSection(
+            children: [
+              ...actions,
+              if (followers.isEmpty)
+                Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 16,
+                  ),
+                  child: Text(
+                    'Chưa ai theo dõi việc này.',
+                    textAlign: TextAlign.center,
+                    style: OmniType.bodySm.copyWith(
+                      color: scheme.onSurfaceVariant,
                     ),
                   ),
+                ),
+            ],
+          ),
+          if (followers.isNotEmpty)
+            OmniGroupSection(
+              children: [
                 for (final f in followers)
-                  ConstrainedBox(
+                  OmniGroupRow(
                     key: ValueKey('follower-${f.id}'),
-                    constraints: const BoxConstraints(minHeight: 50),
-                    child: Row(
-                      children: [
-                        OmniAvatar(
-                          name: f.name ?? '?',
-                          imageUrl: f.avatar,
-                          size: 30,
-                        ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: Text(
-                            f.id == me
-                                ? '${f.name ?? 'Bạn'} (bạn)'
-                                : (f.name ?? 'Người đã rời'),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: OmniType.body.copyWith(
-                              color: scheme.onSurface,
-                            ),
-                          ),
-                        ),
-                        if (widget.canEditOthers)
-                          IconButton(
+                    leading: OmniAvatar(
+                      name: f.name ?? '?',
+                      imageUrl: f.avatar,
+                      size: 30,
+                    ),
+                    title: f.id == me
+                        ? '${f.name ?? 'Bạn'} (bạn)'
+                        : (f.name ?? 'Người đã rời'),
+                    maxTitleLines: 1,
+                    trailing: widget.canEditOthers
+                        ? IconButton(
                             tooltip:
                                 'Bỏ ${f.name ?? 'người này'} khỏi theo dõi',
                             onPressed: _busy
@@ -219,44 +175,11 @@ class _FollowersSheetState extends ConsumerState<FollowersSheet> {
                               size: OmniIconSize.md,
                               color: scheme.onSurfaceVariant,
                             ),
-                          ),
-                      ],
-                    ),
+                          )
+                        : null,
                   ),
               ],
             ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-/// Nhóm `.og`: nền surface bo 8, vạch giữa các dòng.
-class _Group extends StatelessWidget {
-  const _Group({required this.children});
-
-  final List<Widget> children;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Column(
-        children: [
-          for (var i = 0; i < children.length; i++) ...[
-            if (i > 0)
-              Divider(
-                height: 1,
-                thickness: 1,
-                color: OmniColors.trackOf(context),
-              ),
-            children[i],
-          ],
         ],
       ),
     );

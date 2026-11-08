@@ -254,10 +254,10 @@ class _AddMemberSheetState extends ConsumerState<AddMemberSheet> {
                       runSpacing: OmniSpacing.sm,
                       children: [
                         for (final r in roles)
-                          ChoiceChip(
-                            label: Text(r.label),
+                          OmniChoicePill(
+                            label: r.label,
                             selected: _role == r.slug,
-                            onSelected: (_) => setState(() => _role = r.slug),
+                            onTap: () => setState(() => _role = r.slug),
                           ),
                       ],
                     ),
@@ -349,22 +349,13 @@ class _AddMemberSheetState extends ConsumerState<AddMemberSheet> {
           ),
           if (!done.invited) ...[
             const SizedBox(height: OmniSpacing.lg),
-            DecoratedBox(
-              decoration: BoxDecoration(
-                border: Border.all(color: scheme.outlineVariant),
-                borderRadius: OmniRadius.xxlAll,
-              ),
-              child: Column(
-                children: [
-                  line('Email', done.email),
-                  if (done.password case final pw?) ...[
-                    Divider(height: 1, color: scheme.outlineVariant),
-                    line('Mật khẩu tạm', pw),
-                  ],
-                  Divider(height: 1, color: scheme.outlineVariant),
-                  line('Vai trò', done.role),
-                ],
-              ),
+            OmniGroupSection(
+              dividerIndent: 14,
+              children: [
+                line('Email', done.email),
+                if (done.password case final pw?) line('Mật khẩu tạm', pw),
+                line('Vai trò', done.role),
+              ],
             ),
           ],
           const SizedBox(height: OmniSpacing.lg),
@@ -400,7 +391,7 @@ class _AddMemberSheetState extends ConsumerState<AddMemberSheet> {
   }
 }
 
-/// Nút viền màu chính, không tô đặc (gu đã duyệt); cao 48.
+/// Nút viền kính (theme `OutlinedButton`), cao 48.
 class _OutlineButton extends StatelessWidget {
   const _OutlineButton({
     required this.label,
@@ -417,12 +408,6 @@ class _OutlineButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final primary = Theme.of(context).colorScheme.primary;
-    final style = OutlinedButton.styleFrom(
-      foregroundColor: primary,
-      minimumSize: const Size.fromHeight(48),
-      shape: const StadiumBorder(),
-      textStyle: OmniType.bodyStrong,
-    );
     final child = busy
         ? SizedBox.square(
             dimension: 20,
@@ -431,10 +416,9 @@ class _OutlineButton extends StatelessWidget {
         : Text(label);
 
     return icon == null
-        ? OutlinedButton(onPressed: onPressed, style: style, child: child)
+        ? OutlinedButton(onPressed: onPressed, child: child)
         : OutlinedButton.icon(
             onPressed: onPressed,
-            style: style,
             icon: Icon(icon, size: 18),
             label: child,
           );

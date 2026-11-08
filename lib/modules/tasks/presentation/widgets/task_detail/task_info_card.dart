@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 
 import '../../../../../core/utils/formatters.dart';
 import '../../../../../design/components/components.dart';
@@ -480,7 +479,7 @@ class _TimeSheetState extends State<_TimeSheet> {
     final now = DateTime.now();
     final initial = current ?? now;
     // Khoảng chọn luôn chứa ngày đang có: ngày đặt từ web có thể nằm ngoài
-    // ±vài năm, và showDatePicker ném lỗi khi ngày đầu nằm ngoài khoảng.
+    // ±vài năm, và pickOmniDate ném lỗi khi ngày đầu nằm ngoài khoảng.
     var first = DateTime(now.year - 1);
     var last = DateTime(now.year + 3, 12, 31);
     if (initial.isBefore(first)) first = DateTime(initial.year - 1);
@@ -504,88 +503,79 @@ class _TimeSheetState extends State<_TimeSheet> {
       ('Tuần sau', today.add(const Duration(days: 7))),
     ];
 
-    return SafeArea(
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            const OmniSheetHandle(gap: 6),
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    'Thời gian',
-                    style: OmniType.section.copyWith(color: scheme.onSurface),
-                  ),
-                ),
-                TextButton(
-                  onPressed: () => Navigator.of(
-                    context,
-                  ).pop(TaskTimeChoice(start: _start, due: _due)),
-                  style: TextButton.styleFrom(
-                    minimumSize: const Size(44, 44),
-                    foregroundColor: scheme.primary,
-                    textStyle: OmniType.bodyStrong,
-                  ),
-                  child: const Text('Lưu'),
-                ),
-              ],
+    return Semantics(
+      scopesRoute: true,
+      explicitChildNodes: true,
+      label: 'Thời gian',
+      child: OmniSheetBody(
+        header: OmniSheetHeader(
+          title: 'Thời gian',
+          trailing: TextButton(
+            onPressed: () => Navigator.of(
+              context,
+            ).pop(TaskTimeChoice(start: _start, due: _due)),
+            style: TextButton.styleFrom(
+              minimumSize: const Size(44, 44),
+              foregroundColor: scheme.primary,
+              textStyle: OmniType.bodyStrong,
             ),
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                Expanded(
-                  child: _DateField(
-                    key: const ValueKey('time-start'),
-                    label: 'Ngày bắt đầu',
-                    value: _start,
-                    onTap: () async {
-                      final d = await _pick(_start);
-                      if (d != null && mounted) setState(() => _start = d);
-                    },
-                    onClear: () => setState(() => _start = null),
-                  ),
+            child: const Text('Lưu'),
+          ),
+        ),
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: _DateField(
+                  key: const ValueKey('time-start'),
+                  label: 'Ngày bắt đầu',
+                  value: _start,
+                  onTap: () async {
+                    final d = await _pick(_start);
+                    if (d != null && mounted) setState(() => _start = d);
+                  },
+                  onClear: () => setState(() => _start = null),
                 ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: _DateField(
-                    key: const ValueKey('time-due'),
-                    label: 'Hạn',
-                    value: _due,
-                    onTap: () async {
-                      final d = await _pick(_due);
-                      if (d != null && mounted) setState(() => _due = d);
-                    },
-                    onClear: () => setState(() => _due = null),
-                  ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: _DateField(
+                  key: const ValueKey('time-due'),
+                  label: 'Hạn',
+                  value: _due,
+                  onTap: () async {
+                    final d = await _pick(_due);
+                    if (d != null && mounted) setState(() => _due = d);
+                  },
+                  onClear: () => setState(() => _due = null),
                 ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            Wrap(
-              spacing: 8,
+              ),
+            ],
+          ),
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
               children: [
                 for (var i = 0; i < quick.length; i++)
-                  _QuickChip(
-                    label: quick[i].$1,
-                    on: _due != null && _day(_due!) == quick[i].$2,
-                    onTap: () {
-                      HapticFeedback.selectionClick();
-                      setState(() => _due = quick[i].$2);
-                    },
+                  Padding(
+                    padding: const EdgeInsets.only(right: 8),
+                    child: OmniChoicePill(
+                      label: quick[i].$1,
+                      selected: _due != null && _day(_due!) == quick[i].$2,
+                      onTap: () => setState(() => _due = quick[i].$2),
+                    ),
                   ),
               ],
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
 }
 
-/// `.in`: ô cao 48, viền `#E3E8EF` (có giá trị thì viền primary), bo 8.
+/// Ô ngày: nền mờ của ô nhập (theme), bo 14, không viền; có giá trị thì chữ
+/// màu chính, hiện đủ "08/11/2026".
 class _DateField extends StatelessWidget {
   const _DateField({
     super.key,
@@ -603,38 +593,51 @@ class _DateField extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final dark = Theme.of(context).brightness == Brightness.dark;
     final v = value;
 
     return Material(
-      color: scheme.surface,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(8),
-        side: BorderSide(
-          color: v == null ? scheme.outlineVariant : scheme.primary,
-        ),
-      ),
+      color: scheme.onSurface.withValues(alpha: dark ? .08 : .05),
+      borderRadius: BorderRadius.circular(14),
       clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: onTap,
         child: ConstrainedBox(
-          constraints: const BoxConstraints(minHeight: 48),
+          constraints: const BoxConstraints(minHeight: 52),
           child: Row(
             children: [
-              const SizedBox(width: 12),
+              const SizedBox(width: 14),
+              // Hai tầng: nhãn nhỏ + ngày đủ năm riêng một dòng. Gộp
+              // "Hạn 08/11/2026" vào nửa bề ngang sheet bị cắt "Hạn 08/11/20…".
               Expanded(
-                child: Text(
-                  v == null
-                      ? label
-                      : '${label == 'Hạn' ? 'Hạn ' : ''}'
+                child: v == null
+                    ? Text(
+                        label,
+                        style: OmniType.bodySm.copyWith(
+                          color: scheme.onSurfaceVariant,
+                        ),
+                      )
+                    : Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            label,
+                            style: OmniType.micro.copyWith(
+                              fontWeight: FontWeight.w400,
+                              color: scheme.onSurfaceVariant,
+                            ),
+                          ),
+                          Text(
                             '${Formatters.dayMonth(v)}/${v.year}',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: OmniType.bodySm.copyWith(
-                    color: v == null
-                        ? scheme.onSurfaceVariant
-                        : scheme.onSurface,
-                  ),
-                ),
+                            style: OmniType.bodySm.copyWith(
+                              fontWeight: FontWeight.w600,
+                              color: scheme.primary,
+                              fontFeatures: OmniType.tabular,
+                            ),
+                          ),
+                        ],
+                      ),
               ),
               if (v != null)
                 IconButton(
@@ -653,58 +656,6 @@ class _DateField extends StatelessWidget {
               else
                 const SizedBox(width: 12),
             ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-/// `.qc`: chip 36 cao (vùng chạm 44), bật nền `#E6F3F2` chữ `#075E59`.
-class _QuickChip extends StatelessWidget {
-  const _QuickChip({
-    required this.label,
-    required this.on,
-    required this.onTap,
-  });
-
-  final String label;
-  final bool on;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final tone = OmniTaskTones.of(context).today;
-
-    return Semantics(
-      button: true,
-      selected: on,
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 4),
-          child: Container(
-            height: 36,
-            padding: const EdgeInsets.symmetric(horizontal: 12),
-            alignment: Alignment.center,
-            decoration: BoxDecoration(
-              color: on ? tone.background : scheme.surface,
-              borderRadius: BorderRadius.circular(6),
-              border: Border.all(
-                color: on ? scheme.primary : scheme.outlineVariant,
-              ),
-            ),
-            child: Text(
-              label,
-              style: OmniType.caption.copyWith(
-                fontWeight: FontWeight.w500,
-                color: on
-                    ? tone.foreground
-                    : OmniTaskTones.of(context).upcoming.foreground,
-              ),
-            ),
           ),
         ),
       ),

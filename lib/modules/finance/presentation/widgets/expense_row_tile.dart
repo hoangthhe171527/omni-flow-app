@@ -393,9 +393,11 @@ class _ExpenseRowTileState extends ConsumerState<ExpenseRowTile> {
                                           CrossAxisAlignment.start,
                                       mainAxisSize: MainAxisSize.min,
                                       children: [
+                                        // Tên khoản xuống tối đa hai dòng
+                                        // thay vì cắt (đợt 3 liquid).
                                         Text(
                                           item.title,
-                                          maxLines: 1,
+                                          maxLines: 2,
                                           overflow: TextOverflow.ellipsis,
                                           style: OmniType.body.copyWith(
                                             color: p.ink,
@@ -405,7 +407,7 @@ class _ExpenseRowTileState extends ConsumerState<ExpenseRowTile> {
                                         const SizedBox(height: 2),
                                         Text(
                                           _buildSubtitleText(state, grp),
-                                          maxLines: 1,
+                                          maxLines: 2,
                                           overflow: TextOverflow.ellipsis,
                                           style: OmniType.caption.copyWith(
                                             color: p.muted,

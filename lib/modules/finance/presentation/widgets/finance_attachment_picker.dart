@@ -9,12 +9,13 @@ import 'package:image_picker/image_picker.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../../../core/error/app_exception.dart';
+import '../../../../design/components/components.dart';
 import '../../../../design/tokens/tokens.dart';
 import '../../data/finance_api.dart';
 import '../../domain/finance_models.dart';
 import 'finance_palette.dart';
 
-/// Mở menu chọn ngày nhanh trong tháng kèm tuỳ chọn mở lịch đầy đủ (`showDatePicker`).
+/// Mở menu chọn ngày nhanh trong tháng kèm tuỳ chọn mở lịch đầy đủ (`pickOmniDate`).
 Future<String?> showFinanceDateSelector({
   required BuildContext context,
   required BuildContext? anchorContext,
@@ -69,7 +70,7 @@ Future<String?> showFinanceDateSelector({
     normalizedCurrent,
     fallbackMonth: monthYm,
   );
-  final chosenDate = await showDatePicker(
+  final chosenDate = await pickOmniDate(
     context: context,
     initialDate: initialDt,
     firstDate: DateTime(2000, 1, 1),
@@ -411,7 +412,7 @@ class FinanceAttachmentInlineThumb extends StatelessWidget {
         height: height,
         decoration: BoxDecoration(
           color: p.card,
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(12),
           border: Border.all(color: p.selLine, width: 1),
           boxShadow: [
             BoxShadow(
@@ -422,7 +423,7 @@ class FinanceAttachmentInlineThumb extends StatelessWidget {
           ],
         ),
         child: ClipRRect(
-          borderRadius: BorderRadius.circular(7),
+          borderRadius: BorderRadius.circular(11),
           child: Stack(
             fit: StackFit.expand,
             children: [
@@ -482,115 +483,58 @@ Future<void> showFinanceAttachmentPreviewDialog({
     if (att.uploadedAt.isNotEmpty) 'Tải lên ${att.uploadedAt}',
   ];
 
-  await showDialog<void>(
+  await showOmniGlassDialog<void>(
     context: context,
     builder: (dialogCtx) {
-      return Dialog(
-        backgroundColor: p.card,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Row(
-                children: [
-                  Container(
-                    width: 34,
-                    height: 34,
-                    decoration: BoxDecoration(
-                      color: p.primarySoft,
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    alignment: Alignment.center,
-                    child: Icon(
-                      att.isPdf
-                          ? Icons.picture_as_pdf_outlined
-                          : Icons.image_outlined,
-                      size: 18,
-                      color: p.primaryInk,
-                    ),
+      return OmniGlassAlert(
+        title: att.name.isNotEmpty ? att.name : 'Ảnh chứng từ',
+        message: metaParts.isEmpty ? null : metaParts.join(' · '),
+        body: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            ClipRRect(
+              borderRadius: BorderRadius.circular(14),
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxHeight: 340),
+                child: InteractiveViewer(
+                  minScale: 1.0,
+                  maxScale: 4.0,
+                  child: buildFinanceAttachmentImageContent(
+                    context: dialogCtx,
+                    att: att,
+                    palette: p,
+                    fit: BoxFit.contain,
+                    expenseTitle: expenseTitle,
+                    expenseAmount: expenseAmount,
+                    accountName: accountName,
+                    compact: false,
                   ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          att.name.isNotEmpty ? att.name : 'Ảnh chứng từ',
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: OmniType.bodyStrong.copyWith(
-                            color: p.ink,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                        if (metaParts.isNotEmpty) ...[
-                          const SizedBox(height: 2),
-                          Text(
-                            metaParts.join(' · '),
-                            style: OmniType.caption.copyWith(color: p.muted),
-                          ),
-                        ],
-                      ],
-                    ),
-                  ),
-                  IconButton(
-                    onPressed: () => Navigator.of(dialogCtx).pop(),
-                    icon: Icon(Icons.close_rounded, color: p.muted),
-                  ),
-                ],
+                ),
               ),
+            ),
+            if (resolvedUrl.isNotEmpty) ...[
               const SizedBox(height: 12),
-              ClipRRect(
-                borderRadius: BorderRadius.circular(12),
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxHeight: 340),
-                  child: InteractiveViewer(
-                    minScale: 1.0,
-                    maxScale: 4.0,
-                    child: buildFinanceAttachmentImageContent(
-                      context: dialogCtx,
-                      att: att,
-                      palette: p,
-                      fit: BoxFit.contain,
-                      expenseTitle: expenseTitle,
-                      expenseAmount: expenseAmount,
-                      accountName: accountName,
-                      compact: false,
-                    ),
-                  ),
-                ),
+              OutlinedButton.icon(
+                onPressed: () async {
+                  final uri = Uri.tryParse(resolvedUrl);
+                  if (uri != null) {
+                    await launchUrl(uri, mode: LaunchMode.externalApplication);
+                  }
+                },
+                icon: const Icon(Icons.open_in_new_rounded, size: 16),
+                label: const Text('Mở tệp'),
               ),
-              if (resolvedUrl.isNotEmpty) ...[
-                const SizedBox(height: 12),
-                SizedBox(
-                  height: 38,
-                  child: OutlinedButton.icon(
-                    onPressed: () async {
-                      final uri = Uri.tryParse(resolvedUrl);
-                      if (uri != null) {
-                        await launchUrl(
-                          uri,
-                          mode: LaunchMode.externalApplication,
-                        );
-                      }
-                    },
-                    icon: const Icon(Icons.open_in_new_rounded, size: 15),
-                    label: const Text('Mở tệp'),
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: p.primary,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                    ),
-                  ),
-                ),
-              ],
             ],
-          ),
+          ],
         ),
+        actions: [
+          OmniAlertAction(
+            label: 'Đóng',
+            strong: true,
+            onPressed: () => Navigator.of(dialogCtx).pop(),
+          ),
+        ],
       );
     },
   );

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:omni_app/design/components/components.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:omni_app/core/module/customer_opportunities_section.dart';
 import 'package:omni_app/design/theme/omni_theme.dart';
@@ -89,7 +90,7 @@ void main() {
     expect(find.text('Đã mua'), findsOneWidget);
     final stat = find.ancestor(
       of: find.text('Đã mua'),
-      matching: find.byType(Column),
+      matching: find.byType(OmniGroupRow),
     );
     expect(
       find.descendant(of: stat.first, matching: find.text('—')),

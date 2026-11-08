@@ -504,11 +504,8 @@ class _FeatureTile extends ConsumerWidget {
                 Expanded(
                   child: Align(
                     alignment: Alignment.topCenter,
-                    child: Text(
+                    child: _BalancedLabel(
                       tile.label,
-                      textAlign: TextAlign.center,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
                       style: OmniType.caption.copyWith(
                         fontWeight: FontWeight.w500,
                         color: scheme.onSurface,
@@ -615,7 +612,8 @@ class _SectionLabel extends StatelessWidget {
   }
 }
 
-/// Khung nhóm: nền thẻ, viền mảnh, bo 20 — tách các nhóm rõ ràng.
+/// Khung nhóm: thẻ nền surface, bo 18, KHÔNG viền (cùng nhóm lồng của Tài
+/// khoản) — tách khỏi nền xám bằng màu nền, không bằng nét.
 class _GroupCard extends StatelessWidget {
   const _GroupCard({required this.child});
 
@@ -624,13 +622,83 @@ class _GroupCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: scheme.surface,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: scheme.outlineVariant),
-      ),
-      child: ClipRRect(borderRadius: BorderRadius.circular(20), child: child),
+    return Material(
+      color: scheme.surface,
+      borderRadius: BorderRadius.circular(18),
+      clipBehavior: Clip.antiAlias,
+      child: child,
+    );
+  }
+}
+
+/// Nhãn ô tối đa hai dòng, CÂN nhau: khi phải xuống dòng thì bề ngang thu về
+/// cỡ dòng dài nhất, nên "Kênh kết nối" thành "Kênh / kết nối" chứ không rớt
+/// một chữ lẻ xuống dòng hai. Nội dung `Text` giữ nguyên (không chèn ký tự xuống
+/// dòng).
+class _BalancedLabel extends StatelessWidget {
+  const _BalancedLabel(this.label, {required this.style});
+
+  final String label;
+  final TextStyle style;
+
+  @override
+  Widget build(BuildContext context) {
+    final scaler = MediaQuery.textScalerOf(context);
+    final direction = Directionality.of(context);
+    // Đo bằng ĐÚNG kiểu chữ mà Text sẽ vẽ (gộp DefaultTextStyle: họ font,
+    // cỡ, khoảng chữ). Đo bằng `style` trơn lệch vài px nên khung thu quá hẹp
+    // và chữ thứ hai bị cắt "Kênh kết n…".
+    final effective = DefaultTextStyle.of(context).style.merge(style);
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final max = constraints.maxWidth;
+
+        // Bề ngang MỘT dòng (không xuống dòng) của một đoạn chữ.
+        double lineWidth(String text) {
+          final painter = TextPainter(
+            text: TextSpan(text: text, style: effective),
+            textDirection: direction,
+            textScaler: scaler,
+            maxLines: 1,
+          )..layout();
+          final w = painter.width;
+          painter.dispose();
+          return w;
+        }
+
+        // Chừa 6px: đo và vẽ có thể lệch nhau vài phần pixel (web).
+        const slack = 6.0;
+        var width = max;
+        // Chỉ xuống dòng khi chữ thật sự không vừa — chừa `slack` ở đây sẽ
+        // ép "Tổng quan" (vừa một dòng) thành hai dòng.
+        if (lineWidth(label) > max) {
+          // Phải xuống dòng: thử từng chỗ ngắt ở dấu cách, chọn chỗ mà dòng
+          // dài hơn là ngắn nhất ("Kênh / kết nối", không "Kênh kết / nối").
+          // Không chỗ nào vừa (một chữ dài hơn ô) thì để nguyên bề ngang.
+          final words = label.split(' ');
+          for (var i = 1; i < words.length; i++) {
+            final w =
+                [
+                  lineWidth(words.sublist(0, i).join(' ')),
+                  lineWidth(words.sublist(i).join(' ')),
+                ].reduce((a, b) => a > b ? a : b) +
+                slack;
+            if (w <= max && (width == max || w < width)) width = w;
+          }
+        }
+
+        return SizedBox(
+          width: width,
+          child: Text(
+            label,
+            textAlign: TextAlign.center,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: style,
+          ),
+        );
+      },
     );
   }
 }

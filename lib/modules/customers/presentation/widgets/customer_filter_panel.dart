@@ -248,7 +248,7 @@ class _FilterButton extends StatelessWidget {
                           alignment: Alignment.center,
                           decoration: BoxDecoration(
                             color: OmniColors.destructive,
-                            borderRadius: BorderRadius.circular(8),
+                            borderRadius: BorderRadius.circular(999),
                             border: Border.all(
                               color: scheme.surface,
                               width: 1.5,
@@ -300,27 +300,16 @@ Future<void> showCustomerFilterMenu({
         const _MenuSectionLabel(label: 'Loại dữ liệu'),
         Padding(
           padding: const EdgeInsets.fromLTRB(12, 0, 12, 10),
-          child: Row(
-            children: [
-              for (var i = 0; i < segmentLabels.length; i++) ...[
-                if (i > 0) const SizedBox(width: 8),
-                Expanded(
-                  child: _SegmentChoice(
-                    label: segmentLabels[i],
-                    selected: segment == i,
-                    onTap: () {
-                      if (i == segment) return;
-                      HapticFeedback.selectionClick();
-                      Navigator.of(menuContext).pop();
-                      onSegmentChanged(i);
-                    },
-                  ),
-                ),
-              ],
-            ],
+          child: OmniSegmented(
+            labels: segmentLabels,
+            index: segment,
+            onChanged: (i) {
+              if (i == segment) return;
+              Navigator.of(menuContext).pop();
+              onSegmentChanged(i);
+            },
           ),
         ),
-        Divider(height: 1, color: Theme.of(context).colorScheme.outlineVariant),
       ],
       const _MenuSectionLabel(label: 'Hiển thị'),
       filterContent,
@@ -338,15 +327,14 @@ class _FilterMenuHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     return Container(
-      constraints: const BoxConstraints(minHeight: 56),
-      padding: const EdgeInsets.only(left: 16, right: 6),
-      color: scheme.surfaceContainerLow.withValues(alpha: .7),
+      constraints: const BoxConstraints(minHeight: 60),
+      padding: const EdgeInsets.only(left: 16, right: 8, top: 8, bottom: 4),
       child: Row(
         children: [
           Icon(
             Icons.tune_rounded,
             size: OmniIconSize.md,
-            color: scheme.primary,
+            color: scheme.onSurface,
           ),
           const SizedBox(width: 10),
           Expanded(
@@ -355,10 +343,13 @@ class _FilterMenuHeader extends StatelessWidget {
               style: OmniType.bodyStrong.copyWith(color: scheme.onSurface),
             ),
           ),
-          IconButton(
-            tooltip: 'Đóng bộ lọc',
-            onPressed: onClose,
-            icon: const Icon(Icons.close_rounded),
+          // Nút đóng là viên kính tròn.
+          OmniGlassCircle(
+            child: IconButton(
+              tooltip: 'Đóng bộ lọc',
+              onPressed: onClose,
+              icon: const Icon(Icons.close_rounded),
+            ),
           ),
         ],
       ),
@@ -381,60 +372,6 @@ class _MenuSectionLabel extends StatelessWidget {
       ),
     ),
   );
-}
-
-class _SegmentChoice extends StatelessWidget {
-  const _SegmentChoice({
-    required this.label,
-    required this.selected,
-    required this.onTap,
-  });
-
-  final String label;
-  final bool selected;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return Material(
-      color: selected ? scheme.primaryContainer : scheme.surface,
-      shape: RoundedRectangleBorder(
-        borderRadius: OmniRadius.mdAll,
-        side: BorderSide(
-          color: selected ? scheme.primary : scheme.outlineVariant,
-        ),
-      ),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: OmniRadius.mdAll,
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(minHeight: 44),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Flexible(
-                  child: Text(
-                    label,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: OmniType.caption.copyWith(
-                      color: selected
-                          ? scheme.onPrimaryContainer
-                          : scheme.onSurface,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
 }
 
 /// Nội dung lọc riêng của danh sách khách, đặt trong popover chung của tab.
@@ -466,6 +403,8 @@ class CustomerFilterMenuContent extends ConsumerWidget {
   }
 }
 
+/// Dòng "Hiển thị" (chọn một): chọn = viên trắng mờ + ✓, không vòng radio,
+/// không nền xanh đục.
 class _FilterMenuRow extends StatelessWidget {
   const _FilterMenuRow({
     required this.label,
@@ -480,37 +419,52 @@ class _FilterMenuRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    return Material(
-      color: selected
-          ? scheme.primary.withValues(alpha: .08)
-          : Colors.transparent,
-      borderRadius: OmniRadius.mdAll,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: OmniRadius.mdAll,
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(minHeight: 44),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 10),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    label,
-                    style: OmniType.body.copyWith(
-                      color: scheme.onSurface,
-                      fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
-                    ),
+    return Semantics(
+      button: true,
+      selected: selected,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 2),
+        child: Material(
+          type: MaterialType.transparency,
+          child: InkWell(
+            onTap: onTap,
+            customBorder: RoundedRectangleBorder(
+              borderRadius: OmniRadius.mdAll,
+            ),
+            child: Ink(
+              decoration: selected
+                  ? OmniGlass.buttonDecoration(context).copyWith(
+                      color: OmniGlass.selectionOf(context),
+                      borderRadius: OmniRadius.mdAll,
+                    )
+                  : null,
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(minHeight: 44),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          label,
+                          style: OmniType.body.copyWith(
+                            color: scheme.onSurface,
+                            fontWeight: selected
+                                ? FontWeight.w600
+                                : FontWeight.w400,
+                          ),
+                        ),
+                      ),
+                      if (selected)
+                        Icon(
+                          Icons.check_rounded,
+                          size: OmniIconSize.md,
+                          color: scheme.primary,
+                        ),
+                    ],
                   ),
                 ),
-                Icon(
-                  selected
-                      ? Icons.radio_button_checked
-                      : Icons.radio_button_off,
-                  size: OmniIconSize.md,
-                  color: selected ? scheme.primary : scheme.onSurfaceVariant,
-                ),
-              ],
+              ),
             ),
           ),
         ),

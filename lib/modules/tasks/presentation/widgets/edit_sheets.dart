@@ -27,35 +27,22 @@ Future<String?> showPrioritySheet({
   required String current,
 }) => showOmniSheet<String>(
   context: context,
-  builder: (context) => SafeArea(
-    child: Column(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(
-            OmniSpacing.lg,
-            OmniSpacing.sm,
-            OmniSpacing.lg,
-            OmniSpacing.sm,
-          ),
-          child: Text(
-            'Mức ưu tiên',
-            style: Theme.of(
-              context,
-            ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
-          ),
-        ),
-        for (final entry in kPriorities.entries)
-          ListTile(
-            title: Text(entry.value),
-            trailing: entry.key == (current == 'medium' ? 'med' : current)
-                ? const Icon(Icons.check_rounded)
-                : null,
-            onTap: () => Navigator.of(context).pop(entry.key),
-          ),
-      ],
-    ),
+  builder: (context) => OmniSheetBody(
+    semanticsLabel: 'Mức ưu tiên',
+    header: const OmniSheetHeader(title: 'Mức ưu tiên'),
+    children: [
+      OmniGroupSection(
+        dividerIndent: 14,
+        children: [
+          for (final entry in kPriorities.entries)
+            OmniGroupRow(
+              title: entry.value,
+              selected: entry.key == (current == 'medium' ? 'med' : current),
+              onTap: () => Navigator.of(context).pop(entry.key),
+            ),
+        ],
+      ),
+    ],
   ),
 );
 
@@ -97,23 +84,26 @@ Future<DueDateChoice?> showDueDateSheet({
 
   final action = await showOmniSheet<String>(
     context: context,
-    builder: (context) => SafeArea(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          ListTile(
-            leading: const Icon(Icons.event_outlined),
-            title: const Text('Chọn ngày khác'),
-            onTap: () => Navigator.of(context).pop('pick'),
-          ),
-          ListTile(
-            leading: const Icon(Icons.event_busy_outlined),
-            title: const Text('Xoá hạn'),
-            subtitle: const Text('Việc vẫn còn, chỉ là chưa hẹn ngày'),
-            onTap: () => Navigator.of(context).pop('clear'),
-          ),
-        ],
-      ),
+    builder: (context) => OmniSheetBody(
+      semanticsLabel: 'Hạn',
+      header: const SizedBox(height: 14),
+      children: [
+        OmniGroupSection(
+          children: [
+            OmniGroupRow(
+              icon: Icons.event_outlined,
+              title: 'Chọn ngày khác',
+              onTap: () => Navigator.of(context).pop('pick'),
+            ),
+            OmniGroupRow(
+              icon: Icons.event_busy_outlined,
+              title: 'Xoá hạn',
+              subtitle: 'Việc vẫn còn, chỉ là chưa hẹn ngày',
+              onTap: () => Navigator.of(context).pop('clear'),
+            ),
+          ],
+        ),
+      ],
     ),
   );
 

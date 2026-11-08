@@ -185,11 +185,6 @@ class _ForgotPasswordPageState extends ConsumerState<ForgotPasswordPage>
             'Quên mật khẩu?',
             style: OmniType.largeTitle.copyWith(color: scheme.onSurface),
           ),
-          const SizedBox(height: 8),
-          Text(
-            'Nhận liên kết đặt lại qua email.',
-            style: OmniType.body.copyWith(color: scheme.onSurfaceVariant),
-          ),
           const SizedBox(height: 24),
           AuthField(
             controller: _email,
@@ -255,9 +250,7 @@ class _ForgotPasswordPageState extends ConsumerState<ForgotPasswordPage>
           onPressed: canResend ? () => _send(_sentTo) : null,
           style: OutlinedButton.styleFrom(
             minimumSize: const Size.fromHeight(50),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(10),
-            ),
+            shape: const StadiumBorder(),
           ),
           child: _busy
               ? const SizedBox.square(

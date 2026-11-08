@@ -46,7 +46,6 @@ class DashboardPage extends ConsumerWidget {
     final none = !revenueVisible && !cards.tasks && !cards.inbox;
     return Scaffold(
       extendBodyBehindAppBar: true,
-      backgroundColor: Theme.of(context).colorScheme.surface,
       appBar: const OmniTopBar(semanticsTitle: 'Tổng quan'),
       body: OmniTopBarOverlap.wrap(
         child: Builder(
@@ -58,7 +57,9 @@ class DashboardPage extends ConsumerWidget {
               child: ListView(
                 physics: const AlwaysScrollableScrollPhysics(),
                 padding: EdgeInsets.only(
-                  top: topInset + 4,
+                  top: topInset + 12,
+                  left: 16,
+                  right: 16,
                   bottom: OmniSpacing.bottomSafe,
                 ),
                 children: none
@@ -68,13 +69,7 @@ class DashboardPage extends ConsumerWidget {
                           title: emptyMessage,
                         ),
                       ]
-                    : const [
-                        RevenueCard(),
-                        _SectionDivider(),
-                        MyTasksCard(),
-                        _SectionDivider(),
-                        AwaitingReplyCard(),
-                      ],
+                    : const [RevenueCard(), MyTasksCard(), AwaitingReplyCard()],
               ),
             );
           },
@@ -82,17 +77,4 @@ class DashboardPage extends ConsumerWidget {
       ),
     );
   }
-}
-
-class _SectionDivider extends StatelessWidget {
-  const _SectionDivider();
-
-  @override
-  Widget build(BuildContext context) => Divider(
-    height: 17,
-    thickness: 1,
-    indent: OmniSpacing.lg,
-    endIndent: OmniSpacing.lg,
-    color: Theme.of(context).colorScheme.outlineVariant,
-  );
 }

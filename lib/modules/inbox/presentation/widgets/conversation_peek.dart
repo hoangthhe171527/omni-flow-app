@@ -462,6 +462,7 @@ class _PeekMenu extends StatelessWidget {
                       Divider(
                         height: 1,
                         thickness: 1,
+                        indent: 16,
                         color: Theme.of(context).colorScheme.outlineVariant,
                       ),
                     _PeekMenuRow(item: items[i], onTap: onAction),

@@ -92,46 +92,35 @@ class _ActivityLogSheetState extends State<ActivityLogSheet> {
     // trước vì đó là thứ tự nó ghi.
     final newestFirst = widget.task.activity.reversed.toList();
     final shown = newestFirst.take(_shown).toList();
-    final scheme = Theme.of(context).colorScheme;
 
     return Semantics(
       scopesRoute: true,
       explicitChildNodes: true,
       label: 'Nhật ký hoạt động',
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.fromLTRB(16, 8, 16, 30),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const OmniSheetHandle(),
-            Padding(
-              padding: const EdgeInsets.only(bottom: 8),
-              child: Text(
-                'Nhật ký hoạt động (${newestFirst.length})',
-                style: OmniType.section.copyWith(color: scheme.onSurface),
-              ),
-            ),
-            for (final entry in shown)
-              _Line(entry: entry, sections: widget.task.planSections),
-            if (newestFirst.length > shown.length)
-              Align(
-                alignment: Alignment.centerLeft,
-                child: TextButton(
-                  onPressed: () => setState(
+      child: OmniSheetBody(
+        header: OmniSheetHeader(
+          title: 'Nhật ký hoạt động (${newestFirst.length})',
+        ),
+        children: [
+          OmniGroupSection(
+            dividerIndent: 14,
+            children: [
+              for (final entry in shown)
+                _Line(entry: entry, sections: widget.task.planSections),
+              if (newestFirst.length > shown.length)
+                OmniGroupRow(
+                  title: 'Xem thêm ${newestFirst.length - shown.length} dòng',
+                  accent: true,
+                  onTap: () => setState(
                     () => _shown = (_shown + _pageSize).clamp(
                       0,
                       newestFirst.length,
                     ),
                   ),
-                  style: TextButton.styleFrom(minimumSize: const Size(44, 44)),
-                  child: Text(
-                    'Xem thêm ${newestFirst.length - shown.length} dòng',
-                  ),
                 ),
-              ),
-          ],
-        ),
+            ],
+          ),
+        ],
       ),
     );
   }
@@ -159,52 +148,55 @@ class _Line extends StatelessWidget {
       color: muted,
     );
 
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.only(top: 4),
-          child: Icon(_icon, size: OmniIconSize.sm, color: muted),
-        ),
-        const SizedBox(width: OmniSpacing.sm),
-        Expanded(
-          child: Text(
-            // Tên người đứng trước hành động khi biết được: "Hằng Ni đã chuyển
-            // Nhập xưởng → Chờ QC" đọc như một câu, còn thiếu tên thì vẫn là
-            // một câu — chỉ là câu không có chủ ngữ, và một UUID ở đó còn tệ
-            // hơn.
-            entry.userName == null
-                ? entry.summary(sections)
-                : '${entry.userName} ${entry.summary(sections)}',
-            style: style,
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.only(top: 4),
+            child: Icon(_icon, size: OmniIconSize.sm, color: muted),
           ),
-        ),
-        const SizedBox(width: OmniSpacing.sm),
-        // NGÀY và giờ, không phải "2 giờ trước": một cây đàn nằm ở xưởng hàng
-        // tuần, nên "3 ngày trước" không đối chiếu được với ca làm nào cả. Ngày
-        // trên, giờ dưới — hai dòng hẹp thay vì một dòng dài ăn mất chỗ của
-        // câu bên trái.
-        if (entry.at != null)
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Text(
-                Formatters.date(entry.at),
-                style: style.copyWith(
-                  height: 1.4,
-                  fontFeatures: OmniType.tabular,
-                ),
-              ),
-              Text(
-                Formatters.time(entry.at),
-                style: style.copyWith(
-                  height: 1.4,
-                  fontFeatures: OmniType.tabular,
-                ),
-              ),
-            ],
+          const SizedBox(width: OmniSpacing.sm),
+          Expanded(
+            child: Text(
+              // Tên người đứng trước hành động khi biết được: "Hằng Ni đã chuyển
+              // Nhập xưởng → Chờ QC" đọc như một câu, còn thiếu tên thì vẫn là
+              // một câu — chỉ là câu không có chủ ngữ, và một UUID ở đó còn tệ
+              // hơn.
+              entry.userName == null
+                  ? entry.summary(sections)
+                  : '${entry.userName} ${entry.summary(sections)}',
+              style: style,
+            ),
           ),
-      ],
+          const SizedBox(width: OmniSpacing.sm),
+          // NGÀY và giờ, không phải "2 giờ trước": một cây đàn nằm ở xưởng hàng
+          // tuần, nên "3 ngày trước" không đối chiếu được với ca làm nào cả. Ngày
+          // trên, giờ dưới — hai dòng hẹp thay vì một dòng dài ăn mất chỗ của
+          // câu bên trái.
+          if (entry.at != null)
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Text(
+                  Formatters.date(entry.at),
+                  style: style.copyWith(
+                    height: 1.4,
+                    fontFeatures: OmniType.tabular,
+                  ),
+                ),
+                Text(
+                  Formatters.time(entry.at),
+                  style: style.copyWith(
+                    height: 1.4,
+                    fontFeatures: OmniType.tabular,
+                  ),
+                ),
+              ],
+            ),
+        ],
+      ),
     );
   }
 

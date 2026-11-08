@@ -65,6 +65,16 @@ void main() {
     await tester.pumpAndSettle();
   }
 
+  /// Xoá nhóm đầu tiên: menu ⋯ của dòng tên → "Xoá nhóm việc" → xác nhận.
+  Future<void> removeFirst(WidgetTester tester) async {
+    await tester.tap(find.byTooltip('Tuỳ chọn nhóm việc').first);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Xoá nhóm việc'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Xoá nhóm'));
+    await tester.pumpAndSettle();
+  }
+
   testWidgets('đổi tên GIỮ NGUYÊN id của nhóm', (tester) async {
     // `section_id` trên từng công việc trỏ vào chính những id này. Sinh id mới
     // cho một nhóm chỉ đổi tên sẽ làm mọi công việc trong nhóm rơi về cột đầu.
@@ -99,8 +109,7 @@ void main() {
     // mới như thể ai đó vừa xếp chúng vào.
     await pumpApp(tester);
 
-    await tester.tap(find.byIcon(Icons.close_rounded).first); // bỏ s1
-    await tester.pumpAndSettle();
+    await removeFirst(tester); // bỏ s1
     await tester.tap(find.text('Thêm nhóm việc'));
     await tester.pumpAndSettle();
     await tester.enterText(find.byType(TextField).last, 'Đóng gói');
@@ -135,18 +144,10 @@ void main() {
     // hiện việc.
     await pumpApp(tester);
 
-    for (var i = 0; i < 2; i++) {
-      await tester.tap(find.byIcon(Icons.close_rounded).first);
-      await tester.pumpAndSettle();
-    }
+    await removeFirst(tester);
+    await removeFirst(tester);
 
-    final remove = tester.widget<IconButton>(
-      find.ancestor(
-        of: find.byIcon(Icons.close_rounded),
-        matching: find.byType(IconButton),
-      ),
-    );
-    expect(remove.onPressed, isNull);
+    expect(find.byTooltip('Tuỳ chọn nhóm việc'), findsNothing);
   });
 
   testWidgets('nhóm mang quy tắc thì nói ra, để người sửa biết đang đụng gì', (

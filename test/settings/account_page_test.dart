@@ -285,11 +285,11 @@ void main() {
     await t.scrollUntilVisible(find.text('Xoá tài khoản'), 200);
     await t.tap(find.text('Xoá tài khoản'));
     await t.pumpAndSettle();
-    expect(find.widgetWithText(FilledButton, 'Xác nhận xoá'), findsOneWidget);
+    expect(find.widgetWithText(TextButton, 'Xác nhận xoá'), findsOneWidget);
     await t.enterText(find.byType(TextField), 'sai');
-    await t.tap(find.byType(CheckboxListTile));
+    await t.tap(find.byKey(const Key('delete-account-confirm')));
     await t.pump();
-    await t.tap(find.widgetWithText(FilledButton, 'Xác nhận xoá'));
+    await t.tap(find.widgetWithText(TextButton, 'Xác nhận xoá'));
     await t.pumpAndSettle();
     expect(find.text('Mật khẩu không đúng.'), findsOneWidget);
     expect(s.deletionCalls, ['sai']);

@@ -30,31 +30,40 @@ class InboxBulkBar extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final scheme = Theme.of(context).colorScheme;
+    final allSelected = selectedIds.length == allIds.length;
+    // Nút kính viên thuốc nhỏ (theme OutlinedButton là kính).
+    final pill = OutlinedButton.styleFrom(
+      minimumSize: const Size(0, 40),
+      padding: const EdgeInsets.symmetric(horizontal: 14),
+    );
 
-    return Container(
+    // Thanh thành viên kính nổi cách mép, bo 28 — không nền đặc / vạch viền.
+    return Padding(
       padding: EdgeInsets.fromLTRB(
-        OmniSpacing.lg,
-        OmniSpacing.md,
-        OmniSpacing.lg,
-        OmniSpacing.md + MediaQuery.paddingOf(context).bottom,
+        12,
+        8,
+        12,
+        10 + MediaQuery.paddingOf(context).bottom,
       ),
-      decoration: BoxDecoration(
-        color: scheme.surface,
-        // A hairline, and no shadow. OmniShadows.sheet threw a dark halo that
-        // does nothing on a dark canvas except muddy the edge, and the bar is
-        // already separated by the rule and by sitting against the list.
-        border: Border(
-          top: BorderSide(color: scheme.outline.withValues(alpha: 0.5)),
+      child: OmniGlass(
+        radius: 28,
+        padding: const EdgeInsets.fromLTRB(
+          OmniSpacing.md,
+          OmniSpacing.sm,
+          OmniSpacing.md,
+          OmniSpacing.sm,
         ),
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Row(
-            children: [
-              Expanded(
-                child: Text(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // Được phép xuống dòng: Row cố định làm tràn trên Android hẹp.
+            Wrap(
+              crossAxisAlignment: WrapCrossAlignment.center,
+              spacing: 8,
+              runSpacing: 6,
+              children: [
+                Text(
                   'Đã chọn ${selectedIds.length}',
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
@@ -63,57 +72,39 @@ class InboxBulkBar extends ConsumerWidget {
                     fontWeight: FontWeight.w600,
                   ),
                 ),
-              ),
-              TextButton(
-                onPressed: onDone,
-                style: TextButton.styleFrom(
-                  minimumSize: const Size(48, 40),
-                  padding: const EdgeInsets.symmetric(horizontal: 8),
-                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                OutlinedButton(
+                  onPressed: allIds.isEmpty
+                      ? null
+                      : () => onSelectAll(allSelected ? const [] : allIds),
+                  style: pill,
+                  child: Text(allSelected ? 'Bỏ tất cả' : 'Chọn tất cả'),
                 ),
-                child: const Text('Bỏ chọn'),
-              ),
-            ],
-          ),
-          const SizedBox(height: 4),
-          // Actions are allowed to move to a second line. A fixed Row here
-          // made the selection footer overflow on narrow Android screens.
-          Wrap(
-            alignment: WrapAlignment.end,
-            crossAxisAlignment: WrapCrossAlignment.center,
-            spacing: 4,
-            runSpacing: 4,
-            children: [
-              TextButton(
-                onPressed: allIds.isEmpty
-                    ? null
-                    : () => onSelectAll(
-                        selectedIds.length == allIds.length ? const [] : allIds,
-                      ),
-                style: TextButton.styleFrom(
-                  minimumSize: const Size(48, 40),
-                  padding: const EdgeInsets.symmetric(horizontal: 8),
-                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                OutlinedButton(
+                  onPressed: onDone,
+                  style: pill,
+                  child: const Text('Bỏ chọn'),
                 ),
-                child: Text(
-                  selectedIds.length == allIds.length
-                      ? 'Bỏ tất cả'
-                      : 'Chọn tất cả',
+              ],
+            ),
+            const SizedBox(height: 6),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                _BulkAction(
+                  icon: Icons.person_add_alt_rounded,
+                  label: 'Gán',
+                  onTap: () => _assign(context, ref),
                 ),
-              ),
-              _BulkAction(
-                icon: Icons.person_add_alt_rounded,
-                label: 'Gán',
-                onTap: () => _assign(context, ref),
-              ),
-              _BulkAction(
-                icon: Icons.sell_outlined,
-                label: 'Gắn nhãn',
-                onTap: () => _label(context, ref),
-              ),
-            ],
-          ),
-        ],
+                const SizedBox(width: 24),
+                _BulkAction(
+                  icon: Icons.sell_outlined,
+                  label: 'Gắn nhãn',
+                  onTap: () => _label(context, ref),
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -168,8 +159,7 @@ class InboxBulkBar extends ConsumerWidget {
   }
 }
 
-/// One bulk action. Uses the inbox accent rather than the CRM indigo the
-/// default TextButton inherited, so the bar belongs to the screen it sits on.
+/// Một thao tác hàng loạt: nút kính tròn có nhãn nhỏ phía dưới.
 class _BulkAction extends StatelessWidget {
   const _BulkAction({
     required this.icon,
@@ -183,15 +173,36 @@ class _BulkAction extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return TextButton.icon(
-      onPressed: onTap,
-      icon: Icon(icon, size: 18),
-      label: Text(label, style: OmniType.body),
-      style: TextButton.styleFrom(
-        foregroundColor: OmniColors.chatPrimary,
-        padding: const EdgeInsets.symmetric(horizontal: 10),
-        minimumSize: const Size(0, 40),
-        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+    final scheme = Theme.of(context).colorScheme;
+    return Semantics(
+      button: true,
+      label: label,
+      excludeSemantics: true,
+      onTap: onTap,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(minWidth: 64),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              OmniGlassCircle(
+                child: Icon(icon, size: 20, color: scheme.onSurface),
+              ),
+              const SizedBox(height: 3),
+              Text(
+                label,
+                maxLines: 1,
+                style: OmniType.micro.copyWith(
+                  fontWeight: FontWeight.w600,
+                  color: scheme.onSurface,
+                ),
+              ),
+              const SizedBox(height: 2),
+            ],
+          ),
+        ),
       ),
     );
   }

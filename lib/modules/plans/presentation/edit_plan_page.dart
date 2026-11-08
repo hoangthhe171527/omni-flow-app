@@ -165,12 +165,10 @@ class _EditPlanPageState extends ConsumerState<EditPlanPage> {
       _name.text = loaded.name;
       _description.text = loaded.description ?? '';
     }
-    final scheme = Theme.of(context).colorScheme;
     final patch = _patch();
     final canSave = !_saving && (patch != null || _coverChanged);
 
     return Scaffold(
-      backgroundColor: scheme.surface,
       appBar: OmniAppBar(
         title: 'Sửa kế hoạch',
         actions: [
@@ -185,41 +183,15 @@ class _EditPlanPageState extends ConsumerState<EditPlanPage> {
             )
           : ListView(
               keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-              padding: const EdgeInsets.fromLTRB(20, OmniSpacing.lg, 20, 24),
+              padding: const EdgeInsets.fromLTRB(
+                16,
+                OmniGroupSection.gap,
+                16,
+                24,
+              ),
               children: [
-                OmniField(
-                  label: 'Tên kế hoạch',
-                  child: TextField(
-                    controller: _name,
-                    maxLength: 255,
-                    textCapitalization: TextCapitalization.sentences,
-                    onChanged: (_) => setState(() {}),
-                  ),
-                ),
-                const SizedBox(height: OmniSpacing.lg),
-                OmniField(
-                  label: 'Mô tả',
-                  child: TextField(
-                    controller: _description,
-                    minLines: 3,
-                    maxLines: 6,
-                    maxLength: 2000,
-                    textCapitalization: TextCapitalization.sentences,
-                    decoration: const InputDecoration(
-                      hintText: 'Kế hoạch này dùng để làm gì',
-                    ),
-                    onChanged: (_) => setState(() {}),
-                  ),
-                ),
-                const SizedBox(height: OmniSpacing.lg),
-                Text(
-                  'Ảnh nền',
-                  style: OmniType.body.copyWith(
-                    fontWeight: FontWeight.w600,
-                    color: scheme.onSurface,
-                  ),
-                ),
-                const SizedBox(height: OmniSpacing.sm),
+                // Ảnh nền là khung xem trước, tên kế hoạch đè lên bằng viên
+                // kính — đổi tên là thấy ngay.
                 CoverPicker(
                   localPath: _coverPath,
                   remoteUrl: _removeCover
@@ -239,6 +211,41 @@ class _EditPlanPageState extends ConsumerState<EditPlanPage> {
                       ? () => setState(() => _removeCover = true)
                       : null,
                   onError: (message) => setState(() => _error = message),
+                ),
+                const SizedBox(height: OmniGroupSection.gap),
+                OmniGroupSection(
+                  dividerIndent: 14,
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(14, 6, 14, 6),
+                      child: OmniField(
+                        label: 'Tên kế hoạch',
+                        child: TextField(
+                          controller: _name,
+                          maxLength: 255,
+                          textCapitalization: TextCapitalization.sentences,
+                          onChanged: (_) => setState(() {}),
+                        ),
+                      ),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(14, 6, 14, 6),
+                      child: OmniField(
+                        label: 'Mô tả',
+                        child: TextField(
+                          controller: _description,
+                          minLines: 3,
+                          maxLines: 6,
+                          maxLength: 2000,
+                          textCapitalization: TextCapitalization.sentences,
+                          decoration: const InputDecoration(
+                            hintText: 'Kế hoạch này dùng để làm gì',
+                          ),
+                          onChanged: (_) => setState(() {}),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
                 if (_error != null) ...[
                   const SizedBox(height: OmniSpacing.sm),

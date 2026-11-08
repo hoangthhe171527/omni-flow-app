@@ -8,6 +8,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../../../../../core/error/app_exception.dart';
+import '../../../../../design/components/components.dart';
 import '../../../../../design/tokens/tokens.dart';
 import '../../../application/task_controller.dart';
 import '../../../domain/mention.dart';
@@ -375,12 +376,11 @@ class _CommentBarState extends ConsumerState<CommentBar> {
                     runSpacing: OmniSpacing.xs,
                     children: [
                       for (final person in hits)
-                        ActionChip(
+                        OmniChoicePill(
                           key: ValueKey('mention:${person.key}'),
-                          label: Text('@${person.value}'),
-                          onPressed: _sending
-                              ? null
-                              : () => _pick(person.value),
+                          label: '@${person.value}',
+                          selected: false,
+                          onTap: _sending ? null : () => _pick(person.value),
                         ),
                     ],
                   ),

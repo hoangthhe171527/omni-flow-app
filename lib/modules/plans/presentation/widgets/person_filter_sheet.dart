@@ -47,121 +47,101 @@ class _PersonFilterSheet extends ConsumerWidget {
     final members = ref.watch(teamMembersProvider);
     final text = Theme.of(context).textTheme;
 
+    // Danh sách người có thể chưa tải xong, hoặc tải hỏng. Cả hai đều KHÔNG
+    // được che mất hai lựa chọn đầu: "Tất cả" và "Chưa giao ai" không cần biết
+    // ai là ai, và "Chưa giao ai" đúng là lựa chọn hay dùng nhất ở đây.
     final content = Column(
       mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(
-            OmniSpacing.lg,
-            OmniSpacing.md,
-            OmniSpacing.lg,
-            OmniSpacing.sm,
-          ),
-          child: Text(
-            'Lọc theo người',
-            style: text.titleMedium?.copyWith(fontWeight: FontWeight.w600),
-          ),
-        ),
-        _Row(
-          icon: Icons.groups_outlined,
-          label: 'Tất cả mọi người',
-          selected: current.isEveryone,
-          onTap: () => Navigator.of(context).pop(BoardPerson.everyone),
-        ),
-        _Row(
-          icon: Icons.person_add_alt_outlined,
-          label: 'Chưa giao ai',
-          selected: current.isUnassigned,
-          onTap: () => Navigator.of(context).pop(BoardPerson.unassigned),
-        ),
-        const Divider(height: 1),
-        // Danh sách người có thể chưa tải xong, hoặc tải hỏng. Cả hai đều
-        // KHÔNG được che mất hai lựa chọn ở trên: "Tất cả" và "Chưa giao ai"
-        // không cần biết ai là ai, và "Chưa giao ai" đúng là lựa chọn hay
-        // dùng nhất ở đây.
+        const OmniSheetHeader(title: 'Lọc theo người'),
         Flexible(
-          child: members.when(
-            data: (list) => ListView(
-              shrinkWrap: true,
-              padding: EdgeInsets.zero,
-              children: [
-                // `list` chỉ có người chọn được (APP-I10); người đang lọc
-                // mà nay không chọn được vẫn hiện để thấy mình lọc ai.
-                for (final member in withPickedMembers(list, [
-                  ?current.userId,
-                ], ref.watch(teamMemberByIdProvider)))
-                  _Row(
-                    avatarName: member.name,
-                    label: member.name,
-                    selected: current.userId == member.userId,
-                    onTap: () => Navigator.of(
-                      context,
-                    ).pop(BoardPerson.person(member.userId, member.name)),
+          child: ListView(
+            shrinkWrap: true,
+            padding: const EdgeInsets.fromLTRB(10, 0, 10, 14),
+            children: [
+              OmniGroupSection(
+                children: [
+                  _row(
+                    icon: Icons.groups_outlined,
+                    label: 'Tất cả mọi người',
+                    selected: current.isEveryone,
+                    onTap: () =>
+                        Navigator.of(context).pop(BoardPerson.everyone),
                   ),
-              ],
-            ),
-            loading: () => const Padding(
-              padding: EdgeInsets.all(OmniSpacing.lg),
-              child: Center(
-                child: SizedBox(
-                  width: 18,
-                  height: 18,
-                  child: CircularProgressIndicator(strokeWidth: 2),
+                  _row(
+                    icon: Icons.person_add_alt_outlined,
+                    label: 'Chưa giao ai',
+                    selected: current.isUnassigned,
+                    onTap: () =>
+                        Navigator.of(context).pop(BoardPerson.unassigned),
+                  ),
+                ],
+              ),
+              const SizedBox(height: OmniGroupSection.sheetGap),
+              members.when(
+                data: (list) => OmniGroupSection(
+                  dividerIndent: 54,
+                  children: [
+                    // `list` chỉ có người chọn được (APP-I10); người đang lọc
+                    // mà nay không chọn được vẫn hiện để thấy mình lọc ai.
+                    for (final member in withPickedMembers(list, [
+                      ?current.userId,
+                    ], ref.watch(teamMemberByIdProvider)))
+                      _row(
+                        avatarName: member.name,
+                        label: member.name,
+                        selected: current.userId == member.userId,
+                        onTap: () => Navigator.of(
+                          context,
+                        ).pop(BoardPerson.person(member.userId, member.name)),
+                      ),
+                  ],
+                ),
+                loading: () => const Padding(
+                  padding: EdgeInsets.all(OmniSpacing.lg),
+                  child: Center(
+                    child: SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    ),
+                  ),
+                ),
+                error: (_, _) => Padding(
+                  padding: const EdgeInsets.all(OmniSpacing.lg),
+                  child: Text(
+                    'Chưa tải được danh sách người. Vẫn lọc được "Chưa giao ai".',
+                    style: text.bodySmall?.copyWith(
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
+                  ),
                 ),
               ),
-            ),
-            error: (_, _) => Padding(
-              padding: const EdgeInsets.all(OmniSpacing.lg),
-              child: Text(
-                'Chưa tải được danh sách người. Vẫn lọc được "Chưa giao ai".',
-                style: text.bodySmall?.copyWith(
-                  color: Theme.of(context).colorScheme.onSurfaceVariant,
-                ),
-              ),
-            ),
+            ],
           ),
         ),
       ],
     );
     return inMenu ? content : SafeArea(child: content);
   }
-}
 
-class _Row extends StatelessWidget {
-  const _Row({
-    this.icon,
-    this.avatarName,
-    required this.label,
-    required this.selected,
-    required this.onTap,
-  });
-
-  final IconData? icon;
-
-  /// Có tên thì vẽ ảnh đại diện 28 thay cho biểu tượng — một người, không
-  /// phải một lựa chọn chung như "Chưa giao ai".
-  final String? avatarName;
-  final String label;
-  final bool selected;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-
-    return ListTile(
-      leading: avatarName != null
-          ? OmniAvatar(name: avatarName!, size: 28)
-          : Icon(icon, color: scheme.onSurfaceVariant),
-      title: Text(label),
-      // Dấu tick chứ không chỉ đổi màu chữ: trong ánh sáng xưởng và với người
-      // mù màu, một sắc độ khác đi không phải là một tín hiệu.
-      trailing: selected
-          ? Icon(Icons.check_rounded, color: scheme.primary)
-          : null,
-      selected: selected,
-      onTap: onTap,
-    );
-  }
+  /// Dấu ✓ chứ không chỉ đổi màu chữ: trong ánh sáng xưởng và với người mù
+  /// màu, một sắc độ khác đi không phải là một tín hiệu. Có tên thì vẽ ảnh
+  /// đại diện 28 thay cho biểu tượng — một người, không phải một lựa chọn
+  /// chung như "Chưa giao ai".
+  Widget _row({
+    IconData? icon,
+    String? avatarName,
+    required String label,
+    required bool selected,
+    required VoidCallback onTap,
+  }) => OmniGroupRow(
+    icon: avatarName == null ? icon : null,
+    leading: avatarName == null ? null : OmniAvatar(name: avatarName, size: 28),
+    title: label,
+    maxTitleLines: 1,
+    selected: selected,
+    onTap: onTap,
+  );
 }

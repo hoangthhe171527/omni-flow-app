@@ -152,7 +152,7 @@ class TeamGroup extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final motion = OmniMotion.enabled(context);
-    const radius = BorderRadius.all(Radius.circular(8));
+    const radius = BorderRadius.all(Radius.circular(14));
 
     final Widget body = open
         ? Column(

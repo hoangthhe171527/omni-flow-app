@@ -1020,10 +1020,10 @@ class BoardAddSectionTile extends StatelessWidget {
       height: 52,
       child: Material(
         color: Colors.white.withValues(alpha: .18),
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(14),
         child: InkWell(
           onTap: onTap,
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(14),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [

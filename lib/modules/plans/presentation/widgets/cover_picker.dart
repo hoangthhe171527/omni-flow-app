@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 
+import '../../../../design/components/components.dart';
 import '../../../../design/tokens/tokens.dart';
 
 typedef ProjectCoverImagePicker = Future<String?> Function();
@@ -86,7 +87,7 @@ class _CoverPickerState extends State<CoverPicker> {
         children: [
           ClipRRect(
             key: const Key('cover-preview'),
-            borderRadius: OmniRadius.lgAll,
+            borderRadius: BorderRadius.circular(18),
             child: AspectRatio(
               aspectRatio: 2.5,
               child: Stack(
@@ -109,18 +110,30 @@ class _CoverPickerState extends State<CoverPicker> {
                     ),
                   if (widget.title?.trim().isNotEmpty ?? false)
                     Positioned(
-                      left: 16,
-                      right: 16,
-                      bottom: 14,
-                      child: Text(
-                        widget.title!.trim(),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: OmniType.section.copyWith(
-                          color: _hasImage
-                              ? Colors.white
-                              : scheme.onSurfaceVariant,
-                          fontWeight: FontWeight.w600,
+                      left: 12,
+                      right: 12,
+                      bottom: 12,
+                      // Tên kế hoạch đè lên ảnh bằng viên kính (đổi tên là
+                      // thấy ngay).
+                      child: Align(
+                        alignment: Alignment.centerLeft,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 6,
+                          ),
+                          decoration: OmniGlass.buttonDecoration(
+                            context,
+                            radius: 14,
+                          ),
+                          child: Text(
+                            widget.title!.trim(),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: OmniType.bodyStrong.copyWith(
+                              color: scheme.onSurface,
+                            ),
+                          ),
                         ),
                       ),
                     ),
@@ -155,36 +168,29 @@ class _CoverPickerState extends State<CoverPicker> {
               ),
             ),
           ),
-          const SizedBox(height: OmniSpacing.sm),
-          Row(
+          const SizedBox(height: OmniGroupSection.gap),
+          // "Chọn / Thay ảnh" và "Bỏ ảnh nền" là hai dòng trong nhóm lồng,
+          // Bỏ ảnh chữ đỏ — hết nút viền xanh, hết dòng gợi ý kích thước.
+          OmniGroupSection(
+            dividerIndent: 54,
             children: [
-              Expanded(
-                child: OutlinedButton.icon(
-                  key: const Key('cover-pick'),
-                  onPressed: busy ? null : _pick,
-                  icon: Icon(
-                    _hasImage
-                        ? Icons.wallpaper_outlined
-                        : Icons.add_photo_alternate_outlined,
-                  ),
-                  label: Text(_hasImage ? 'Thay ảnh' : 'Chọn ảnh'),
-                ),
+              OmniGroupRow(
+                key: const Key('cover-pick'),
+                icon: _hasImage
+                    ? Icons.wallpaper_outlined
+                    : Icons.add_photo_alternate_outlined,
+                title: _hasImage ? 'Thay ảnh' : 'Chọn ảnh',
+                onTap: busy ? null : _pick,
               ),
-              if (_hasImage && widget.onRemove != null) ...[
-                const SizedBox(width: OmniSpacing.sm),
-                IconButton.outlined(
+              if (_hasImage && widget.onRemove != null)
+                OmniGroupRow(
                   key: const Key('cover-remove'),
-                  onPressed: busy ? null : widget.onRemove,
-                  tooltip: 'Bỏ ảnh nền',
-                  icon: const Icon(Icons.delete_outline_rounded),
+                  icon: Icons.delete_outline_rounded,
+                  title: 'Bỏ ảnh nền',
+                  destructive: true,
+                  onTap: busy ? null : widget.onRemove,
                 ),
-              ],
             ],
-          ),
-          const SizedBox(height: OmniSpacing.xs),
-          Text(
-            'Ảnh ngang từ 1200 px cho kết quả tốt nhất. Ảnh sẽ được cắt vừa màn hình.',
-            style: OmniType.micro.copyWith(color: scheme.onSurfaceVariant),
           ),
         ],
       ),

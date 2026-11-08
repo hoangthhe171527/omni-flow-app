@@ -376,10 +376,26 @@ void main() {
       await t.tap(find.text('12/10'));
       await t.pumpAndSettle();
       expect(find.text('Thời gian'), findsWidgets);
+      // Ô ngày hai tầng: nhãn nhỏ "Hạn" + ngày đủ năm riêng một dòng — gộp
+      // "Hạn 18/10/2030" vào nửa bề ngang sheet bị cắt thành "Hạn 18/10/20…".
+      expect(
+        find.descendant(
+          of: find.byKey(const ValueKey('time-due')),
+          matching: find.text('18/10/2030'),
+        ),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(
+          of: find.byKey(const ValueKey('time-start')),
+          matching: find.text('12/10/2030'),
+        ),
+        findsOneWidget,
+      );
       await t.tap(find.byKey(const ValueKey('time-start')));
       await t.pumpAndSettle();
       await t.tap(find.text('15'));
-      await t.tap(find.text('OK'));
+      await t.tap(find.byKey(const Key('omni-date-done')));
       await t.pumpAndSettle();
       await t.tap(find.text('Lưu'));
       await t.pumpAndSettle();
@@ -657,7 +673,7 @@ void main() {
   });
 
   // Chuyển từ task_detail_coordination_test.dart (đã xoá cùng CoordinationCard).
-  testWidgets('showOptionSheet: trả chỉ số; ✓ ở mục đang chọn; dòng cao 46', (
+  testWidgets('showOptionSheet: trả chỉ số; ✓ ở mục đang chọn; dòng cao 48', (
     t,
   ) async {
     int? picked;
@@ -693,7 +709,7 @@ void main() {
                 .first,
           )
           .height,
-      46,
+      48,
     );
     await t.tap(find.text('A'));
     await t.pumpAndSettle();

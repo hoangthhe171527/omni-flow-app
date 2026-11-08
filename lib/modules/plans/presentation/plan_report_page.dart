@@ -61,7 +61,6 @@ class _PlanReportPageState extends ConsumerState<PlanReportPage> {
     final plan = ref.watch(planProvider(widget.planId));
 
     return Scaffold(
-      backgroundColor: Theme.of(context).colorScheme.surface,
       appBar: OmniAppBar(title: 'Báo cáo kế hoạch'),
       body: OmniAsyncView(
         value: plan,
@@ -76,7 +75,7 @@ class _PlanReportPageState extends ConsumerState<PlanReportPage> {
           ),
           children: [
             _StatsBlock(plan: plan),
-            const SizedBox(height: OmniSpacing.lg),
+            const SizedBox(height: OmniGroupSection.gap),
             _kpi(),
           ],
         ),
@@ -144,7 +143,7 @@ class _PlanReportPageState extends ConsumerState<PlanReportPage> {
   }
 }
 
-/// Bốn ô số: tổng / xong / trễ / tiến độ.
+/// Bốn dòng "nhãn — số": tổng / xong / trễ / tiến độ. Trễ hạn đỏ khi > 0.
 class _StatsBlock extends StatelessWidget {
   const _StatsBlock({required this.plan});
 
@@ -171,40 +170,23 @@ class _StatsBlock extends StatelessWidget {
       ),
     ];
 
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 4),
-      color: scheme.surface,
-      child: Row(
-        children: [
-          for (final (key, label, value, color) in cells)
-            Expanded(
-              child: Semantics(
-                container: true,
-                label: '$label: $value',
-                excludeSemantics: true,
-                child: Column(
-                  key: Key(key),
-                  children: [
-                    Text(
-                      value,
-                      style: OmniType.title.copyWith(
-                        color: color ?? scheme.onSurface,
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      label,
-                      style: OmniType.micro.copyWith(
-                        fontWeight: FontWeight.w400,
-                        color: scheme.onSurfaceVariant,
-                      ),
-                    ),
-                  ],
-                ),
+    return OmniGroupSection(
+      dividerIndent: 14,
+      children: [
+        for (final (key, label, value, color) in cells)
+          OmniGroupRow(
+            key: Key(key),
+            title: label,
+            semanticsLabel: '$label: $value',
+            trailing: Text(
+              value,
+              style: OmniType.bodyStrong.copyWith(
+                color: color ?? scheme.onSurface,
+                fontFeatures: OmniType.tabular,
               ),
             ),
-        ],
-      ),
+          ),
+      ],
     );
   }
 }

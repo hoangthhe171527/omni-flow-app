@@ -334,10 +334,12 @@ class _GroupRow extends StatelessWidget {
         child: Column(
           children: [
             if (divider)
+              // Vạch chia thụt sau icon (18 + 32 + 10), không chạy full ngang.
               Divider(
                 height: 1,
                 thickness: 1,
-                color: scheme.surfaceContainerHighest,
+                indent: 60,
+                color: scheme.outlineVariant.withValues(alpha: .7),
               ),
             NotificationRow(
               notification: notification,
@@ -376,13 +378,9 @@ class NotificationRow extends StatelessWidget {
       onTap: onTap,
       excludeSemantics: true,
       child: Material(
-        color: unread
-            ? OmniColors.byBrightness(
-                context,
-                OmniColors.unreadRow,
-                scheme.primary.withValues(alpha: 0.08),
-              )
-            : scheme.surface,
+        // Chưa đọc = chấm màu chính ở lề trái + tiêu đề đậm; không tô nền
+        // xanh phẳng (đợt 3 liquid).
+        color: scheme.surface,
         child: InkWell(
           onTap: onTap,
           child: ConstrainedBox(

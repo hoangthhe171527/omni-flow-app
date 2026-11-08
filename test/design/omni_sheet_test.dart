@@ -74,6 +74,109 @@ void main() {
     expect(find.byKey(const Key('sheet-handle')), findsNothing);
   });
 
+  testWidgets('Android: tiêu đề không dính mép trên bo 30 của viên kính', (
+    tester,
+  ) async {
+    // Không có thanh kéo (Android/web) → nội dung bắt đầu ngay mép trên.
+    // Sheet tự đệm 8 (vd "Tên việc") khiến chữ nằm trong đường cong bo 30.
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: ThemeData(platform: TargetPlatform.android),
+        home: Scaffold(
+          body: Builder(
+            builder: (context) => TextButton(
+              onPressed: () => showOmniSheet<void>(
+                context: context,
+                builder: (_) => const Padding(
+                  padding: EdgeInsets.fromLTRB(16, 8, 16, 16),
+                  child: Text('Tên việc'),
+                ),
+              ),
+              child: const Text('mở'),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.tap(find.text('mở'));
+    await tester.pumpAndSettle();
+
+    final glass = tester.getRect(find.byKey(const Key('omni-glass-sheet')));
+    final title = tester.getRect(find.text('Tên việc'));
+    expect(title.top - glass.top, greaterThanOrEqualTo(18));
+  });
+
+  testWidgets('OmniSheetBody: hàng cuối không dính mép dưới bo 30', (
+    tester,
+  ) async {
+    // Chip "Hôm nay / Ngày mai" của sheet Thời gian từng nằm trong đường cong
+    // góc dưới vì thân sheet chỉ chừa đáy 14.
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: ThemeData(platform: TargetPlatform.android),
+        home: Scaffold(
+          body: Builder(
+            builder: (context) => TextButton(
+              onPressed: () => showOmniSheet<void>(
+                context: context,
+                builder: (_) => const OmniSheetBody(
+                  header: OmniSheetHeader(title: 'Thời gian'),
+                  children: [SizedBox(height: 36, child: Text('Hôm nay'))],
+                ),
+              ),
+              child: const Text('mở'),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.tap(find.text('mở'));
+    await tester.pumpAndSettle();
+
+    final glass = tester.getRect(find.byKey(const Key('omni-glass-sheet')));
+    final last = tester.getRect(
+      find
+          .ancestor(of: find.text('Hôm nay'), matching: find.byType(SizedBox))
+          .first,
+    );
+    expect(glass.bottom - last.bottom, greaterThanOrEqualTo(20));
+  });
+
+  testWidgets('mở từ trong một tab: sheet phủ cả thanh tab (navigator gốc)', (
+    tester,
+  ) async {
+    // Màn trong tab nằm ở navigator lồng của StatefulShellRoute; thanh tab
+    // kính vẽ bên ngoài navigator đó. Sheet mở ở navigator lồng sẽ bị thanh
+    // tab đè lên đáy (menu "..." ở màn Việc).
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: Navigator(
+            onGenerateRoute: (_) => MaterialPageRoute<void>(
+              builder: (context) => TextButton(
+                onPressed: () => showOmniSheet<void>(
+                  context: context,
+                  builder: (_) =>
+                      const SizedBox(height: 200, child: Text('nội dung')),
+                ),
+                child: const Text('mở'),
+              ),
+            ),
+          ),
+          bottomNavigationBar: const SizedBox(height: 80),
+        ),
+      ),
+    );
+    await tester.tap(find.text('mở'));
+    await tester.pumpAndSettle();
+
+    final navigators = find.ancestor(
+      of: find.text('nội dung'),
+      matching: find.byType(Navigator),
+    );
+    expect(navigators, findsOneWidget);
+  });
+
   testWidgets('giảm chuyển động: sheet hiện ngay, không hoạt ảnh', (
     tester,
   ) async {
