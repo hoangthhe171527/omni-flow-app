@@ -356,7 +356,6 @@ ButtonStyle _glassButtonStyle(
           ? own.style?.shape?.resolve(states)
           : null) {
         final OutlinedBorder s => s.copyWith(side: BorderSide.none),
-        final ShapeBorder s => s,
         null => const StadiumBorder(),
       };
       if (MediaQuery.highContrastOf(context)) {
