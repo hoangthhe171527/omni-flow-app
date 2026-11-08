@@ -4,8 +4,10 @@ import 'dart:ui' show ImageFilter;
 import 'package:flutter/material.dart';
 
 import '../platform/omni_motion_scope.dart';
+import '../platform/omni_performance.dart';
 import '../platform/omni_platform.dart';
 import '../tokens/tokens.dart';
+import 'omni_tinted_buttons.dart';
 import 'omni_glass.dart';
 
 /// Debounced search field. Debouncing lives here rather than in each screen so
@@ -78,68 +80,79 @@ class _OmniSearchFieldState extends State<OmniSearchField> {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
 
-    return TextField(
-      controller: _controller,
-      onChanged: _onChanged,
-      textInputAction: TextInputAction.search,
-      style: OmniType.search.copyWith(
-        color: scheme.onSurface,
-        fontStyle: FontStyle.normal,
-      ),
-      textAlignVertical: TextAlignVertical.center,
-      decoration: InputDecoration(
-        hintText: widget.hint,
-        hintStyle: OmniType.searchHint.copyWith(color: scheme.onSurfaceVariant),
-        prefixIcon: Icon(
-          Icons.search_rounded,
-          color: scheme.onSurfaceVariant,
-          size: OmniIconSize.lg,
+    // Center: nơi gọi hay ép ô cao đúng 44 (hàng `stretch`, viên kính). Bị ép
+    // thì ô nhập dồn nội dung lên mép trên — với phông thật (dòng cao hơn
+    // phông thử) kính lúp và chữ lệch lên ~3px trong viên kính. Center để ô
+    // giữ chiều cao tự nhiên và nằm đúng giữa khung.
+    return Center(
+      child: TextField(
+        controller: _controller,
+        onChanged: _onChanged,
+        textInputAction: TextInputAction.search,
+        style: OmniType.search.copyWith(
+          color: scheme.onSurface,
+          fontStyle: FontStyle.normal,
         ),
-        prefixIconConstraints: widget.dense
-            ? const BoxConstraints(minWidth: 36, minHeight: 36)
-            : null,
-        suffixIconConstraints: widget.dense
-            ? const BoxConstraints(minWidth: 36, minHeight: 36)
-            : null,
-        suffixIcon: _controller.text.isEmpty
-            ? widget.trailing
-            : IconButton(
-                padding: widget.dense ? EdgeInsets.zero : null,
-                constraints: widget.dense
-                    ? const BoxConstraints(minWidth: 36, minHeight: 36)
-                    : null,
-                tooltip: 'Xoá nội dung tìm',
-                icon: Icon(
-                  Icons.close_rounded,
-                  size: OmniIconSize.md,
-                  color: scheme.onSurfaceVariant,
+        textAlignVertical: TextAlignVertical.center,
+        decoration: InputDecoration(
+          hintText: widget.hint,
+          hintStyle: OmniType.searchHint.copyWith(
+            color: scheme.onSurfaceVariant,
+          ),
+          prefixIcon: Icon(
+            Icons.search_rounded,
+            color: scheme.onSurfaceVariant,
+            size: OmniIconSize.lg,
+          ),
+          prefixIconConstraints: widget.dense
+              ? const BoxConstraints(minWidth: 36, minHeight: 36)
+              : null,
+          suffixIconConstraints: widget.dense
+              ? const BoxConstraints(minWidth: 36, minHeight: 36)
+              : null,
+          suffixIcon: _controller.text.isEmpty
+              ? widget.trailing
+              : IconButton(
+                  padding: widget.dense ? EdgeInsets.zero : null,
+                  constraints: widget.dense
+                      ? const BoxConstraints(minWidth: 36, minHeight: 36)
+                      : null,
+                  tooltip: 'Xoá nội dung tìm',
+                  icon: Icon(
+                    Icons.close_rounded,
+                    size: OmniIconSize.md,
+                    color: scheme.onSurfaceVariant,
+                  ),
+                  onPressed: () {
+                    _controller.clear();
+                    _onChanged('');
+                  },
                 ),
-                onPressed: () {
-                  _controller.clear();
-                  _onChanged('');
-                },
-              ),
-        isDense: true,
-        contentPadding: EdgeInsets.symmetric(vertical: widget.dense ? 10 : 12),
-        filled: !widget.flat,
-        fillColor: widget.flat
-            ? Colors.transparent
-            : widget.outlined
-            ? scheme.surface
-            : scheme.surfaceContainerHighest,
-        border: widget.flat ? InputBorder.none : _border(scheme),
-        enabledBorder: widget.flat ? InputBorder.none : _border(scheme),
-        focusedBorder: !widget.flat && widget.outlined
-            ? OutlineInputBorder(
-                borderRadius: OmniRadius.lgAll,
-                borderSide: BorderSide(
-                  color: scheme.primary.withValues(alpha: .55),
-                  width: 1.5,
-                ),
-              )
-            : widget.flat
-            ? InputBorder.none
-            : _border(scheme),
+          isDense: true,
+          // Đệm 12 cho cả bản dense: 12 + dòng 20 + 12 = đúng 44, khớp viên kính
+          // / hàng ép vào. Đệm 10 thì nội dung chỉ cao 40, nằm sát mép trên khung
+          // 44 → kính lúp và chữ lệch lên 2px (thấy rõ trên viên kính).
+          contentPadding: const EdgeInsets.symmetric(vertical: 12),
+          filled: !widget.flat,
+          fillColor: widget.flat
+              ? Colors.transparent
+              : widget.outlined
+              ? scheme.surface
+              : scheme.surfaceContainerHighest,
+          border: widget.flat ? InputBorder.none : _border(scheme),
+          enabledBorder: widget.flat ? InputBorder.none : _border(scheme),
+          focusedBorder: !widget.flat && widget.outlined
+              ? OutlineInputBorder(
+                  borderRadius: OmniRadius.lgAll,
+                  borderSide: BorderSide(
+                    color: scheme.primary.withValues(alpha: .55),
+                    width: 1.5,
+                  ),
+                )
+              : widget.flat
+              ? InputBorder.none
+              : _border(scheme),
+        ),
       ),
     );
   }
@@ -386,10 +399,14 @@ class OmniGlassSheet extends StatelessWidget {
   Widget build(BuildContext context) {
     final dark = Theme.of(context).brightness == Brightness.dark;
     final solid = MediaQuery.highContrastOf(context);
+    // Bậc hiệu năng tối giản: không nhoè, nền gần đặc.
+    final noBlur = OmniPerformance.solidGlass(context);
     final shape = BorderRadius.circular(radius);
     final body = Material(
       key: const Key('omni-glass-sheet'),
-      color: solid ? fill : fill.withValues(alpha: dark ? .80 : .86),
+      color: solid
+          ? fill
+          : fill.withValues(alpha: noBlur ? .97 : (dark ? .80 : .86)),
       shape: RoundedRectangleBorder(
         borderRadius: shape,
         side: BorderSide(
@@ -410,7 +427,11 @@ class OmniGlassSheet extends StatelessWidget {
             // Không thanh kéo (Android/web): chừa mép trên để tiêu đề không
             // nằm trong đường cong bo 30 của viên kính.
             const SizedBox(height: 12),
-          Flexible(fit: expand ? FlexFit.tight : FlexFit.loose, child: child),
+          // Sheet gần trắng: nút bên trong là kính nhuộm tông, không chìm.
+          Flexible(
+            fit: expand ? FlexFit.tight : FlexFit.loose,
+            child: OmniTintedButtons(child: child),
+          ),
         ],
       ),
     );
@@ -433,12 +454,15 @@ class OmniGlassSheet extends StatelessWidget {
             ),
           ],
         ),
-        child: solid
+        child: solid || noBlur
             ? body
             : ClipRRect(
                 borderRadius: shape,
                 child: BackdropFilter(
-                  filter: ImageFilter.blur(sigmaX: 24, sigmaY: 24),
+                  filter: ImageFilter.blur(
+                    sigmaX: OmniPerformance.glassSigma(context, full: 24),
+                    sigmaY: OmniPerformance.glassSigma(context, full: 24),
+                  ),
                   child: body,
                 ),
               ),

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../tokens/tokens.dart';
+import 'omni_tinted_buttons.dart';
 import 'omni_glass.dart';
 
 /// Nhóm lồng liquid (viomni-apple-uiux.html `.group`, đợt 1–3 duyệt
@@ -79,21 +80,24 @@ class OmniGroupSection extends StatelessWidget {
           color: background ?? scheme.surface,
           borderRadius: BorderRadius.circular(18),
           clipBehavior: Clip.antiAlias,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              for (var i = 0; i < children.length; i++) ...[
-                if (i > 0)
-                  Divider(
-                    height: 1,
-                    thickness: 1,
-                    indent: indent,
-                    color: scheme.outlineVariant.withValues(alpha: .7),
-                  ),
-                children[i],
+          // Thẻ trắng: nút bên trong là kính nhuộm tông, không chìm.
+          child: OmniTintedButtons(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                for (var i = 0; i < children.length; i++) ...[
+                  if (i > 0)
+                    Divider(
+                      height: 1,
+                      thickness: 1,
+                      indent: indent,
+                      color: scheme.outlineVariant.withValues(alpha: .7),
+                    ),
+                  children[i],
+                ],
               ],
-            ],
+            ),
           ),
         ),
         if (footer != null)

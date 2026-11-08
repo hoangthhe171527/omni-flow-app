@@ -4,6 +4,7 @@ import 'dart:ui' show ImageFilter;
 import 'package:flutter/material.dart';
 
 import '../../../../design/platform/omni_motion_scope.dart';
+import '../../../../design/platform/omni_performance.dart';
 import '../../../../design/tokens/tokens.dart';
 
 /// Một mục trong menu bấm giữ tin.
@@ -124,11 +125,13 @@ class _MessageActionsOverlay extends StatelessWidget {
       child: Stack(
         children: [
           // Không có con: không nuốt chạm, để rào chắn của route đóng hộp.
-          Positioned.fill(
-            child: BackdropFilter(
-              filter: ImageFilter.blur(sigmaX: 6, sigmaY: 6),
+          // Làm mờ toàn màn chỉ ở bậc hiệu năng đầy đủ (lớp đắt nhất).
+          if (OmniPerformance.scrimBlur(context))
+            Positioned.fill(
+              child: BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: 6, sigmaY: 6),
+              ),
             ),
-          ),
           Positioned.fill(
             // Bọc NGOÀI vùng cuộn: vùng cuộn phủ cả màn nên nuốt chạm trước cả
             // rào chắn của route; bấm vào khoảng trống phải tự đóng.
@@ -389,8 +392,8 @@ class _GlassMenu extends StatelessWidget {
       ),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(14),
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 24, sigmaY: 24),
+        child: OmniBackdropBlur(
+          sigma: 24,
           child: Container(
             width: _menuWidth,
             color: OmniColors.byBrightness(

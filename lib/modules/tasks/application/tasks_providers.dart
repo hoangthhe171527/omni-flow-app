@@ -237,6 +237,9 @@ final taskSearchProvider = FutureProvider.autoDispose<List<Task>>((ref) async {
   return page.items;
 });
 
+/// Nhịp debounce của badge việc trễ sau tín hiệu realtime.
+const overdueCountDebounce = Duration(seconds: 5);
+
 /// Số việc TRỄ của người đang đăng nhập, server đếm.
 ///
 /// Không đọc [myTasksProvider]: badge từng là số việc trễ trên TRANG ĐẦU của
@@ -250,7 +253,16 @@ final taskOverdueCountProvider = FutureProvider.autoDispose<int>((ref) async {
   final userId = ref.watch(sessionProvider.select((s) => s.user?.id));
   if (userId == null || userId.isEmpty) return 0;
 
-  ref.watch(taskRealtimeSignalProvider);
+  // Debounce 5 giây riêng cho badge: thanh tab giữ provider này sống suốt phiên
+  // nên mỗi `entity.changed` của task trong tenant từng là một GET đếm, dù
+  // người dùng không nhìn thấy con số. Trễ vài giây là đủ cho một badge.
+  Timer? debounce;
+  ref.onDispose(() => debounce?.cancel());
+  ref.listen<int>(taskRealtimeSignalProvider, (previous, next) {
+    if (previous == next) return;
+    debounce?.cancel();
+    debounce = Timer(overdueCountDebounce, ref.invalidateSelf);
+  });
 
   return ref.watch(tasksApiProvider).overdueCount(userId);
 });

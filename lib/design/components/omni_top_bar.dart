@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/nav/search_mode.dart';
 import '../platform/omni_motion_scope.dart';
+import '../platform/omni_performance.dart';
 import '../platform/omni_platform.dart';
 import '../tokens/tokens.dart';
 import 'brand_anchor.dart';
@@ -464,6 +465,10 @@ class _SearchVeil extends StatelessWidget {
               child: ClipRect(
                 child: solid
                     ? ColoredBox(color: base)
+                    // Làm mờ toàn màn là lớp đắt nhất: bậc hiệu năng thấp chỉ
+                    // phủ màu nền gần đặc.
+                    : !OmniPerformance.scrimBlur(context)
+                    ? ColoredBox(color: base.withValues(alpha: 0.92))
                     : BackdropFilter(
                         filter: ImageFilter.blur(sigmaX: 24, sigmaY: 24),
                         child: ColoredBox(color: base.withValues(alpha: 0.5)),
@@ -520,7 +525,9 @@ class OmniGlassCircle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Viên 44: làm mờ không nhìn ra, chỉ tốn một lớp đè nội dung cuộn.
     return OmniGlass(
+      blur: false,
       radius: 22,
       child: SizedBox.square(dimension: 44, child: Center(child: child)),
     );

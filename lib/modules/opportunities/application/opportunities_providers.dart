@@ -7,6 +7,7 @@ import '../../../core/realtime/realtime_client.dart';
 import '../../../core/error/app_exception.dart';
 import '../../../core/network/active_tenant.dart';
 import '../../../core/network/api_envelope.dart';
+import '../../../core/utils/linger.dart';
 import '../../../security/permissions/access_scope.dart';
 import '../../../security/permissions/resource_access.dart';
 import '../../../security/session/session_controller.dart';
@@ -110,7 +111,12 @@ final boardPipelineProvider = Provider<PipelineDef?>((ref) {
   return catalog?.pipelineOf(ref.watch(selectedPipelineProvider));
 });
 
-final pipelineSummaryProvider = FutureProvider<PipelineSummary>((ref) async {
+/// autoDispose + linger: không thì sau lần mở đầu, mọi `entity.changed` cơ hội
+/// trong tenant gọi lại summary suốt phiên.
+final pipelineSummaryProvider = FutureProvider.autoDispose<PipelineSummary>((
+  ref,
+) async {
+  ref.lingerFor();
   ref.watch(opportunityRealtimeSignalProvider);
   final query = await ref.watch(boardQueryProvider.future);
   return ref

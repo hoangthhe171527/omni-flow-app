@@ -4,6 +4,7 @@ import 'dart:ui' show ImageFilter;
 import 'package:flutter/material.dart';
 
 import '../platform/omni_motion_scope.dart';
+import '../platform/omni_performance.dart';
 import '../tokens/tokens.dart';
 import 'omni_motion_widgets.dart';
 
@@ -161,7 +162,8 @@ class _OmniAnchoredMenuRoute<T> extends PopupRoute<T> {
   ) {
     final blurred = FadeTransition(
       opacity: fade,
-      child: MediaQuery.highContrastOf(context)
+      // Lớp phủ toàn màn: chỉ làm mờ ở bậc hiệu năng đầy đủ.
+      child: !OmniPerformance.scrimBlur(context)
           ? ColoredBox(color: scrim)
           : BackdropFilter(
               // Mờ vừa (người dùng 2026-11-08: 18 quá mờ, mất ngữ cảnh).
@@ -207,12 +209,17 @@ class _MenuSurface extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     final dark = Theme.of(context).brightness == Brightness.dark;
     final solid = MediaQuery.highContrastOf(context);
+    final noBlur = OmniPerformance.solidGlass(context);
     // Viên kính rời bo 22 (`.pop.glass`): nền thẻ ~78% + nhoè 22 + viền sáng
     // 1px. Đậm hơn thanh tab vì chữ menu phải đọc được trên mọi nội dung.
+    // Bậc hiệu năng tối giản: không nhoè, nền gần đặc để chữ vẫn đọc rõ.
     const radius = BorderRadius.all(Radius.circular(22));
     final fill = solid
         ? scheme.surface
+        : noBlur
+        ? scheme.surface.withValues(alpha: .96)
         : scheme.surface.withValues(alpha: dark ? .72 : .78);
+    final sigma = OmniPerformance.glassSigma(context);
 
     final surface = Material(
       color: fill,
@@ -250,15 +257,17 @@ class _MenuSurface extends StatelessWidget {
           ),
         ],
       ),
-      child: solid
+      child: solid || noBlur
           ? surface
           : ClipRRect(
               borderRadius: radius,
               child: BackdropFilter(
-                filter: ImageFilter.compose(
-                  outer: ImageFilter.blur(sigmaX: 22, sigmaY: 22),
-                  inner: const ColorFilter.matrix(_saturate),
-                ),
+                filter: OmniPerformance.saturate(context)
+                    ? ImageFilter.compose(
+                        outer: ImageFilter.blur(sigmaX: sigma, sigmaY: sigma),
+                        inner: const ColorFilter.matrix(_saturate),
+                      )
+                    : ImageFilter.blur(sigmaX: sigma, sigmaY: sigma),
                 child: surface,
               ),
             ),

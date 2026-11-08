@@ -2,6 +2,8 @@ import 'dart:ui' show ImageFilter;
 
 import 'package:flutter/material.dart';
 
+import '../platform/omni_performance.dart';
+
 /// Viên kính nổi kiểu "liquid glass" (`liquid-glass-uiux.html`, duyệt 07/11).
 ///
 /// Mờ 22 + tăng bão hoà màu nền phía sau, viền sáng 1px, vệt sáng ở nửa trên,
@@ -16,11 +18,17 @@ class OmniGlass extends StatelessWidget {
     required this.child,
     required this.radius,
     this.padding = EdgeInsets.zero,
+    this.blur = true,
   });
 
   final Widget child;
   final double radius;
   final EdgeInsetsGeometry padding;
+
+  /// false: viên nhỏ (nút tròn 44 của thanh trên) — làm mờ σ22 trên 44px
+  /// không nhìn ra khác biệt mà vẫn tốn một lớp BackdropFilter đè nội dung
+  /// cuộn. Vẽ nền mờ đặc, giữ vệt sáng / mép sáng.
+  final bool blur;
 
   /// Màu viên chọn bên trong kính (mục đang chọn của thanh tab): trắng mờ.
   static Color selectionOf(BuildContext context) =>
@@ -74,11 +82,19 @@ class OmniGlass extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final dark = Theme.of(context).brightness == Brightness.dark;
+    // `solid`: tương phản cao (trợ năng) — nền đặc + viền đậm, không vệt sáng.
+    // `noBlur`: thêm bậc hiệu năng tối giản / [blur] = false — bỏ làm mờ
+    // nhưng GIỮ dáng kính (vệt sáng, mép sáng) với nền mờ đặc hơn bù lại.
     final solid = MediaQuery.highContrastOf(context);
+    final noBlur = !blur || OmniPerformance.solidGlass(context);
     final shape = BorderRadius.circular(radius);
 
     final fill = solid
         ? scheme.surface
+        : noBlur
+        ? (dark
+              ? const Color(0xFF1C2A42).withValues(alpha: 0.86)
+              : Colors.white.withValues(alpha: 0.84))
         : dark
         ? const Color(0xFF182438).withValues(alpha: 0.42)
         : Colors.white.withValues(alpha: 0.52);
@@ -127,28 +143,36 @@ class OmniGlass extends StatelessWidget {
       ),
     );
 
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        borderRadius: shape,
-        // Bóng nhẹ: nền kính trong suốt nên bóng đậm lộ qua và làm kính xám.
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: dark ? 0.28 : 0.07),
-            blurRadius: 16,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: ClipRRect(
-        borderRadius: shape,
-        child: solid
+    final sigma = OmniPerformance.glassSigma(context);
+    // RepaintBoundary: đổi nội dung viên (huy hiệu, gõ chữ) không kéo vẽ lại
+    // vùng chứa, và cuộn bên dưới không vẽ lại nội dung viên.
+    return RepaintBoundary(
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          borderRadius: shape,
+          // Bóng nhẹ: nền kính trong suốt nên bóng đậm lộ qua và làm kính xám.
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: dark ? 0.28 : 0.07),
+              blurRadius: 16,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: noBlur || solid
+            // Không làm mờ thì không cần ClipRRect (cắt bo góc tốn một lớp).
             ? body
-            : BackdropFilter(
-                filter: ImageFilter.compose(
-                  outer: ImageFilter.blur(sigmaX: 22, sigmaY: 22),
-                  inner: const ColorFilter.matrix(_saturate180),
+            : ClipRRect(
+                borderRadius: shape,
+                child: BackdropFilter(
+                  filter: OmniPerformance.saturate(context)
+                      ? ImageFilter.compose(
+                          outer: ImageFilter.blur(sigmaX: sigma, sigmaY: sigma),
+                          inner: const ColorFilter.matrix(_saturate180),
+                        )
+                      : ImageFilter.blur(sigmaX: sigma, sigmaY: sigma),
+                  child: body,
                 ),
-                child: body,
               ),
       ),
     );
@@ -174,26 +198,26 @@ class OmniScrollEdge extends StatelessWidget {
   /// true = mép trên (đậm nhất ở trên cùng); false = mép dưới.
   final bool atTop;
 
-  static const _sigmas = [2.0, 5.0, 9.0];
-
   @override
   Widget build(BuildContext context) {
     final base = Theme.of(context).scaffoldBackgroundColor;
     final solid = MediaQuery.highContrastOf(context);
-    // Thứ tự từ phía nội dung → mép màn hình.
-    final strips = [
-      for (final sigma in _sigmas)
-        Expanded(
-          child: solid
-              ? const SizedBox.expand()
-              : ClipRect(
-                  child: BackdropFilter(
-                    filter: ImageFilter.blur(sigmaX: sigma, sigmaY: sigma),
-                    child: const SizedBox.expand(),
-                  ),
+    // MỘT lớp mờ σ6 ở nửa sát mép (trước: 3 dải σ2/5/9 = 3 BackdropFilter mỗi
+    // mép, 6 lớp mỗi màn tab đè nội dung cuộn). Dải màu chuyển dần phía trên
+    // vẫn tạo cảm giác "nhoè dần". Bậc hiệu năng thấp: chỉ dải màu.
+    final blurStrip = OmniPerformance.edgeBlur(context)
+        ? Expanded(
+            child: RepaintBoundary(
+              child: ClipRect(
+                child: BackdropFilter(
+                  filter: ImageFilter.blur(sigmaX: 6, sigmaY: 6),
+                  child: const SizedBox.expand(),
                 ),
-        ),
-    ];
+              ),
+            ),
+          )
+        : const Expanded(child: SizedBox.expand());
+    final strips = [const Expanded(child: SizedBox.expand()), blurStrip];
 
     return IgnorePointer(
       child: Stack(

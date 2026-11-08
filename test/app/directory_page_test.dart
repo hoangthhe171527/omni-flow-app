@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:omni_app/app/perf/performance_controller.dart';
 import 'package:omni_app/app/shell/directory_page.dart';
 import 'package:omni_app/core/module/module_registry.dart';
 import 'package:omni_app/core/module/module_route.dart';
@@ -507,6 +508,30 @@ void main() {
           .first,
     );
     expect(fade.opacity.value, 1.0);
+  });
+
+  testWidgets('Hiệu ứng: chọn Tối giản thì cả app bỏ làm mờ và nhớ lựa chọn', (
+    tester,
+  ) async {
+    await pump(tester);
+    final row = find.byKey(const Key('directory-perf-row'));
+    await tester.scrollUntilVisible(
+      row,
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
+    expect(find.text('Tự động · Đầy đủ'), findsOneWidget);
+
+    await tester.tap(row);
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('perf-option-minimal')));
+    await tester.pumpAndSettle();
+
+    final container = ProviderScope.containerOf(tester.element(row));
+    expect(container.read(effectivePerfTierProvider), OmniPerfTier.minimal);
+    expect(find.text('Tối giản'), findsOneWidget);
+    final prefs = await SharedPreferences.getInstance();
+    expect(prefs.getString('omni.perf_preference'), 'minimal');
   });
 
   _searchFieldTests();

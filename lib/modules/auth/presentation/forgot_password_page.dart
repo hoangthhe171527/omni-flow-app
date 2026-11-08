@@ -41,13 +41,15 @@ class _ForgotPasswordPageState extends ConsumerState<ForgotPasswordPage>
   bool _busy = false;
   bool _sent = false;
   String _sentTo = '';
-  int _left = 0;
+  // Đếm ngược chỉ làm lại cái nút Gửi lại, không dựng lại cả trang mỗi giây.
+  final ValueNotifier<int> _left = ValueNotifier<int>(0);
   String? _error;
   String? _fieldError;
 
   @override
   void dispose() {
     _timer?.cancel();
+    _left.dispose();
     _shake.dispose();
     _email.dispose();
     super.dispose();
@@ -60,11 +62,11 @@ class _ForgotPasswordPageState extends ConsumerState<ForgotPasswordPage>
 
   void _startCountdown() {
     _timer?.cancel();
-    setState(() => _left = _resendSeconds);
+    _left.value = _resendSeconds;
     _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
       if (!mounted) return;
-      setState(() => _left--);
-      if (_left <= 0) timer.cancel();
+      _left.value--;
+      if (_left.value <= 0) timer.cancel();
     });
   }
 
@@ -223,7 +225,6 @@ class _ForgotPasswordPageState extends ConsumerState<ForgotPasswordPage>
   }
 
   Widget _buildSent(ColorScheme scheme) {
-    final canResend = _left <= 0 && !_busy;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -246,18 +247,21 @@ class _ForgotPasswordPageState extends ConsumerState<ForgotPasswordPage>
         const SizedBox(height: 24),
         AuthPrimaryButton(label: 'Mở ứng dụng email', onPressed: _openMail),
         const SizedBox(height: 12),
-        OutlinedButton(
-          onPressed: canResend ? () => _send(_sentTo) : null,
-          style: OutlinedButton.styleFrom(
-            minimumSize: const Size.fromHeight(50),
-            shape: const StadiumBorder(),
+        ValueListenableBuilder<int>(
+          valueListenable: _left,
+          builder: (context, left, _) => OutlinedButton(
+            onPressed: left <= 0 && !_busy ? () => _send(_sentTo) : null,
+            style: OutlinedButton.styleFrom(
+              minimumSize: const Size.fromHeight(50),
+              shape: const StadiumBorder(),
+            ),
+            child: _busy
+                ? const SizedBox.square(
+                    dimension: 20,
+                    child: CircularProgressIndicator.adaptive(strokeWidth: 2),
+                  )
+                : Text(left > 0 ? 'Gửi lại sau $left giây' : 'Gửi lại email'),
           ),
-          child: _busy
-              ? const SizedBox.square(
-                  dimension: 20,
-                  child: CircularProgressIndicator.adaptive(strokeWidth: 2),
-                )
-              : Text(_left > 0 ? 'Gửi lại sau $_left giây' : 'Gửi lại email'),
         ),
       ],
     );

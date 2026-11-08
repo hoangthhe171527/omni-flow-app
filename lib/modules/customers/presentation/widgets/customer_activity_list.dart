@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../../core/utils/formatters.dart';
 import '../../../../design/platform/omni_motion_scope.dart';
+import '../../../../design/platform/omni_performance.dart';
 import '../../../../design/tokens/tokens.dart';
 import '../../domain/customer_activity.dart';
 
@@ -54,7 +55,11 @@ class _Rise extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (!OmniMotion.enabled(context)) return child;
+    // Bậc hiệu năng thấp: hiện ngay (mỗi mục hiện dần = một lớp vẽ mờ).
+    if (!OmniMotion.enabled(context) ||
+        !OmniPerformance.riseOnScroll(context)) {
+      return child;
+    }
     final step = index.clamp(0, 10);
     final total = 300 + 50 * step;
     return TweenAnimationBuilder<double>(

@@ -63,9 +63,16 @@ class PlanBoardPage extends ConsumerStatefulWidget {
 
 /// Ảnh cover (URL đã lưu trong `cover`) cho lớp mờ của header. Tách ra để
 /// test thay bằng ảnh trong bộ nhớ, tải xong lúc nào test quyết định.
+///
+/// Giải mã tối đa rộng 800: ảnh chỉ làm nền đã làm mờ của header, giải mã
+/// kích thước gốc (tới 2400px ≈ 17 MB bộ nhớ) là phí trên máy RAM thấp.
 final boardCoverImageProvider = Provider<ImageProvider Function(String cover)>(
   (_) =>
-      (cover) => CachedNetworkImageProvider(resolveMediaUrl(cover)),
+      (cover) => ResizeImage(
+        CachedNetworkImageProvider(resolveMediaUrl(cover)),
+        width: 800,
+        policy: ResizeImagePolicy.fit,
+      ),
 );
 
 class _PlanBoardPageState extends ConsumerState<PlanBoardPage>

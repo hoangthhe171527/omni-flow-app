@@ -94,6 +94,8 @@ void main() {
     await tester.pump(const Duration(milliseconds: 700));
     await h.container.read(inboxListProvider.future);
     expect(h.api.listCalls, 2);
+    // Số đếm (facets) gộp nhịp 3 giây: chờ hết hẹn để không còn Timer treo.
+    await tester.pump(const Duration(seconds: 4));
   });
 
   // Fix vòng 1 (I2): `read`/`sent` tới mọi máy trong tenant. Tải lại trang 1
@@ -137,6 +139,8 @@ void main() {
       expect(h.api.getCalls, ['p1-3']);
       expect(list(h).items[3].id, 'p1-3');
       expect(list(h).items[3].lastMessage, 'mới');
+      // Số đếm (facets) gộp nhịp 3 giây: chờ hết hẹn để không còn Timer treo.
+      await tester.pump(const Duration(seconds: 4));
     });
 
     testWidgets(
@@ -164,6 +168,8 @@ void main() {
         expect(list(h).items.first.id, 'moi');
         expect(list(h).items, hasLength(41));
         expect(list(h).cursor.nextBefore, 'p3', reason: 'Giữ trang đã tải.');
+        // Số đếm (facets) gộp nhịp 3 giây: chờ hết hẹn để không còn Timer treo.
+        await tester.pump(const Duration(seconds: 4));
       },
     );
 
@@ -194,6 +200,8 @@ void main() {
 
       expect(list(h).items.map((c) => c.id), isNot(contains('p1-3')));
       expect(list(h).items, hasLength(19));
+      // Số đếm (facets) gộp nhịp 3 giây: chờ hết hẹn để không còn Timer treo.
+      await tester.pump(const Duration(seconds: 4));
     });
 
     testWidgets('tab "Tất cả": hội thoại vừa đóng rời danh sách', (
@@ -214,6 +222,8 @@ void main() {
       await tester.pump(const Duration(milliseconds: 700));
 
       expect(list(h).items.map((c) => c.id), isNot(contains('p1-0')));
+      // Số đếm (facets) gộp nhịp 3 giây: chờ hết hẹn để không còn Timer treo.
+      await tester.pump(const Duration(seconds: 4));
     });
 
     testWidgets('đang tìm kiếm (không tự xét được): vá rồi hỏi lại trang 1', (
@@ -240,6 +250,8 @@ void main() {
       await tester.pump(const Duration(milliseconds: 700));
 
       expect(h.api.listCalls, before + 1);
+      // Số đếm (facets) gộp nhịp 3 giây: chờ hết hẹn để không còn Timer treo.
+      await tester.pump(const Duration(seconds: 4));
     });
 
     testWidgets('read của hội thoại không có trên màn: không hỏi gì', (

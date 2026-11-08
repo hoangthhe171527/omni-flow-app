@@ -25,6 +25,7 @@ export 'omni_segmented.dart';
 export 'omni_splash.dart';
 export 'omni_states.dart';
 export 'omni_tabs.dart';
+export 'omni_tinted_buttons.dart';
 export 'omni_task_chip.dart';
 export 'omni_top_bar.dart';
 
@@ -32,3 +33,4 @@ export 'omni_top_bar.dart';
 /// biết iOS hay Android, và cũng không được phép biết — xem
 /// test/architecture/platform_boundary_test.dart.
 export '../platform/omni_dialogs.dart';
+export '../platform/omni_performance.dart';

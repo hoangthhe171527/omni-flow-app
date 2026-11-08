@@ -73,7 +73,9 @@ void main() {
     addTearDown(tester.view.reset);
     await pumpShell(tester);
 
-    // Viên kính (OmniGlass) + dải mờ dần ở mép dưới (OmniScrollEdge, 3 dải).
+    // Viên kính (OmniGlass) + dải mờ dần ở mép dưới (OmniScrollEdge). Dải mép
+    // còn MỘT lớp làm mờ (trước 3 — rà soát hiệu năng 08/11/2026: mỗi lớp đè
+    // nội dung cuộn phải vẽ lại mỗi khung).
     expect(
       find.descendant(
         of: find.byType(AppShell),
@@ -93,7 +95,7 @@ void main() {
         of: find.byType(AppShell),
         matching: find.byType(BackdropFilter),
       ),
-      findsNWidgets(4),
+      findsNWidgets(2),
     );
     final scaffold = tester.widget<Scaffold>(
       find

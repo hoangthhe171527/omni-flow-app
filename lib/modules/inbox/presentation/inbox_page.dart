@@ -39,11 +39,25 @@ class _InboxPageState extends ConsumerState<InboxPage>
   String? _syncCursor;
   bool _syncing = false;
 
+  /// Tab Hộp thư đang hiện? Một tab nằm trong `IndexedStack` vẫn sống nhưng
+  /// `TickerMode` tắt; poll dự phòng cho một màn không ai nhìn là request phí.
+  bool _tabVisible = true;
+
   @override
   void initState() {
     super.initState();
     _scrollController.addListener(_onScroll);
     WidgetsBinding.instance.addObserver(this);
+    _startRealtimeFallback();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final visible = TickerMode.valuesOf(context).enabled;
+    if (visible == _tabVisible) return;
+    _tabVisible = visible;
+    // Hiện lại thì dựng lại hẹn giờ; ẩn đi thì `_startRealtimeFallback` chỉ huỷ.
     _startRealtimeFallback();
   }
 
@@ -75,6 +89,7 @@ class _InboxPageState extends ConsumerState<InboxPage>
   void _startRealtimeFallback() {
     _syncTimer?.cancel();
     _syncTimer = null;
+    if (!_tabVisible) return;
     final period = _realtime.pollInterval;
     if (period == null) return;
     _syncTimer = Timer(period, _pollTick);

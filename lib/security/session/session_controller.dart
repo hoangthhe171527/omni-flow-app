@@ -192,7 +192,9 @@ class SessionController extends Notifier<Session> {
       await _preLogout.run();
     } catch (error, stackTrace) {
       // Feature cleanup is best-effort and must never trap a user in session.
-      debugPrint('Pre-logout cleanup failed: $error\n$stackTrace');
+      if (kDebugMode) {
+        debugPrint('Pre-logout cleanup failed: $error\n$stackTrace');
+      }
     }
     try {
       await _gateway.logout();

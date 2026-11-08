@@ -6,6 +6,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:go_router/go_router.dart';
 
 import '../core/config/app_config.dart';
+import '../core/lifecycle/background_policy.dart';
 import '../core/realtime/realtime_client.dart';
 import '../core/theme/theme_mode_controller.dart';
 import '../design/components/components.dart';
@@ -23,6 +24,7 @@ import '../modules/tasks/tasks_module.dart';
 import '../modules/team/application/team_providers.dart';
 import '../security/session/session_controller.dart';
 import '../security/session/session.dart';
+import 'perf/performance_scope_host.dart';
 import 'router/app_router.dart';
 import 'shell/launch_splash.dart';
 
@@ -36,10 +38,15 @@ class OmniApp extends ConsumerStatefulWidget {
 class _OmniAppState extends ConsumerState<OmniApp> with WidgetsBindingObserver {
   late final ProviderSubscription<Session> _sessionListener;
   late final void Function() _unregisterPreLogout;
+  late final BackgroundPolicy _background;
 
   @override
   void initState() {
     super.initState();
+    _background = BackgroundPolicy(
+      onSettled: _onLongBackground,
+      onResumed: _onResumed,
+    );
     WidgetsBinding.instance.addObserver(this);
     final push = ref.read(pushNotificationsProvider);
     _unregisterPreLogout = ref
@@ -63,24 +70,47 @@ class _OmniAppState extends ConsumerState<OmniApp> with WidgetsBindingObserver {
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    _background.dispose();
     _unregisterPreLogout();
     _sessionListener.close();
     super.dispose();
   }
 
   @override
-  void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state != AppLifecycleState.resumed ||
-        !ref.read(sessionProvider).isAuthenticated) {
-      return;
-    }
+  void didChangeAppLifecycleState(AppLifecycleState state) =>
+      _background.onState(state);
+
+  @override
+  void didHaveMemoryPressure() {
+    // Hệ điều hành sắp giết app: xả cache ảnh đã giải mã (tải lại được từ đĩa).
+    PaintingBinding.instance.imageCache
+      ..clear()
+      ..clearLiveImages();
+  }
+
+  /// Ở nền quá 60 giây: tạm ngắt socket (giữ kênh/listener). Tin lúc nền đã có
+  /// push; giữ socket sống chỉ tốn pin và dữ liệu.
+  void _onLongBackground() {
+    if (!ref.read(sessionProvider).isAuthenticated) return;
+    unawaited(ref.read(realtimeClientProvider).pause());
+  }
+
+  void _onResumed(bool afterLongBackground) {
+    if (!ref.read(sessionProvider).isAuthenticated) return;
+
+    // Nối lại là no-op khi socket còn sống; cũng là cách đưa socket đã tạm ngắt
+    // về trạng thái cũ.
+    unawaited(ref.read(realtimeClientProvider).connect());
+    // Quay lại sau vài giây (kéo thanh thông báo, hộp thoại quyền...) thì không
+    // có gì để làm mới.
+    if (!afterLongBackground) return;
+
     unawaited(ref.read(pushNotificationsProvider).ensureRegistered());
 
     // Socket có thể đã chết LẶNG trong lúc app ở nền: proxy hết hạn chờ, nhà
     // mạng cắt kết nối dài, máy ngủ. Màn hình lúc ấy hiện dữ liệu cũ mà trông y
     // hệt dữ liệu mới — trên dòng việc, "đứng yên" đọc giống hệt "chưa ai làm
     // gì". Nên nối lại VÀ buộc một lượt tải lại, không tin vào socket.
-    unawaited(ref.read(realtimeClientProvider).connect());
     ref.read(taskRealtimeSignalProvider.notifier).bump();
     ref.read(planRealtimeSignalProvider.notifier).bump();
     ref.read(customerRealtimeSignalProvider.notifier).bump();
@@ -136,9 +166,13 @@ class _OmniAppState extends ConsumerState<OmniApp> with WidgetsBindingObserver {
               // hết" đã ở trang đó, Cài đặt thông báo nằm trong "Tất cả".
               onBell: (context, _) =>
                   GoRouter.of(context).pushNamed(NotificationRoutes.centre),
-              // Hiệu ứng mở app phủ lên router, không nằm trong nó — xem
-              // docblock của LaunchSplash về lý do không làm chậm điều hướng.
-              child: LaunchSplash(child: child ?? const SizedBox.shrink()),
+              // Bậc hiệu năng (làm mờ đầy đủ / giảm / tối giản) cho cả app,
+              // tự hạ khi đo thấy giật — rà soát hiệu năng 08/11/2026.
+              child: PerformanceScopeHost(
+                // Hiệu ứng mở app phủ lên router, không nằm trong nó — xem
+                // docblock của LaunchSplash về lý do không làm chậm điều hướng.
+                child: LaunchSplash(child: child ?? const SizedBox.shrink()),
+              ),
             ),
           ),
         );

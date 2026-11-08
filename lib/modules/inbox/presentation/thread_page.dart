@@ -138,6 +138,7 @@ class _ThreadPageState extends ConsumerState<ThreadPage>
     _searchDebounce?.cancel();
     WidgetsBinding.instance.removeObserver(this);
     _syncTimer?.cancel();
+    _sideRefreshTimer?.cancel();
     super.dispose();
   }
 
@@ -181,7 +182,9 @@ class _ThreadPageState extends ConsumerState<ThreadPage>
       if (!mounted) return;
       _syncCursor = changes.cursor.isEmpty ? _syncCursor : changes.cursor;
       if (changes.count > 0) {
-        _refreshThread();
+        // Chỉ luồng tin cần tươi ngay; hội thoại + số đếm đợi 10 giây (một lượt
+        // poll có đổi từng bắn 3 request).
+        _refreshThread(immediateSide: false);
       }
     } catch (_) {
       // The next cursor poll retries without clearing the visible thread.
@@ -190,7 +193,9 @@ class _ThreadPageState extends ConsumerState<ThreadPage>
     }
   }
 
-  void _refreshThread() {
+  Timer? _sideRefreshTimer;
+
+  void _refreshThread({bool immediateSide = true}) {
     // refresh(), not invalidate(). Invalidating rebuilt the thread from the
     // server every few seconds, which erased everything the server does not know
     // about: a failed send waiting to be retried (gone before the rep could act
@@ -205,6 +210,19 @@ class _ThreadPageState extends ConsumerState<ThreadPage>
             // retries. Nothing here should surface as an error to the rep.
           }),
     );
+    if (immediateSide) {
+      _sideRefreshTimer?.cancel();
+      _sideRefreshTimer = null;
+      _invalidateSide();
+    } else if (!(_sideRefreshTimer?.isActive ?? false)) {
+      _sideRefreshTimer = Timer(const Duration(seconds: 10), () {
+        _sideRefreshTimer = null;
+        if (mounted) _invalidateSide();
+      });
+    }
+  }
+
+  void _invalidateSide() {
     ref.invalidate(conversationProvider(widget.conversationId));
     ref.invalidate(inboxFacetsProvider);
   }

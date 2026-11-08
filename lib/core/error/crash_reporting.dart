@@ -73,7 +73,9 @@ abstract final class CrashReporting {
       // No Firebase configuration, or it failed to initialise. Keep the app
       // usable and say so once, rather than crashing at launch over telemetry.
       _active = false;
-      debugPrint('Crash reporting unavailable: $error\n$stackTrace');
+      if (kDebugMode) {
+        debugPrint('Crash reporting unavailable: $error\n$stackTrace');
+      }
     }
   }
 
@@ -111,7 +113,11 @@ abstract final class CrashReporting {
     if (error is AppException) return;
 
     if (!_active) {
-      debugPrint('Unreported error (${reason ?? 'uncaught'}): $error\n$stack');
+      if (kDebugMode) {
+        debugPrint(
+          'Unreported error (${reason ?? 'uncaught'}): $error\n$stack',
+        );
+      }
       return;
     }
 

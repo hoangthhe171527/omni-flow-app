@@ -1,6 +1,7 @@
 import 'package:flutter/widgets.dart';
 
 import '../platform/omni_motion_scope.dart';
+import '../platform/omni_performance.dart';
 import '../tokens/omni_motion.dart';
 
 /// `rise` của bản mẫu Việc mới: mờ → rõ và trượt lên 8px trong 350ms
@@ -54,7 +55,9 @@ class _OmniRiseState extends State<OmniRise>
     super.didChangeDependencies();
     if (_started) return;
     _started = true;
-    if (widget.animate && OmniMotion.enabled(context)) {
+    if (widget.animate &&
+        OmniMotion.enabled(context) &&
+        OmniPerformance.riseOnScroll(context)) {
       _controller.forward();
     } else {
       _controller.value = 1;

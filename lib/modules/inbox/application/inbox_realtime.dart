@@ -82,6 +82,9 @@ class InboxRealtime {
   /// ở màn chat.
   static const maxBackoffSteps = 2;
 
+  /// Trần tuyệt đối của một nhịp poll (trước nhiễu).
+  static const maxInterval = Duration(seconds: 60);
+
   /// Nhiễu ±20% quanh nhịp đã tính.
   static const jitterRatio = 0.2;
 
@@ -101,10 +104,10 @@ class InboxRealtime {
   /// cho mỗi lượt hẹn giờ, đừng so hai lượt đọc với nhau.
   Duration? get pollInterval {
     if (_status == RealtimeStatus.connected) return null;
-    // Bản dựng không cấu hình realtime: không có kênh nào để chờ, cũng không
-    // có đợt nối lại đồng loạt nào để dàn ra. Nhịp gốc, cố định, như trước.
-    if (_status == RealtimeStatus.disabled) return _fallback;
-    return _withJitter(_fallback * (1 << _step));
+    // Bản không cấu hình realtime (`disabled`) cũng giãn + nhiễu như mọi bản
+    // khác: poll cố định 5s/8s là 720/450 request mỗi giờ cho một màn để mở.
+    final raw = _fallback * (1 << _step);
+    return _withJitter(raw > maxInterval ? maxInterval : raw);
   }
 
   /// Chế độ hẹn giờ của một trạng thái: không poll (`connected`), poll nhịp
@@ -142,10 +145,7 @@ class InboxRealtime {
 
   /// Một lượt poll đã chạy mà kênh vẫn chưa về: lượt sau giãn ra.
   void tickBackoff() {
-    if (_status == RealtimeStatus.connected ||
-        _status == RealtimeStatus.disabled) {
-      return;
-    }
+    if (_status == RealtimeStatus.connected) return;
     if (_step < maxBackoffSteps) _step++;
   }
 

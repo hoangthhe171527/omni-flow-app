@@ -56,6 +56,13 @@ const List<OmniModule> appModules = [
 Future<Widget> bootstrap() async {
   WidgetsFlutterBinding.ensureInitialized();
 
+  // Mặc định của Flutter là 1000 ảnh / 100 MB — quá rộng cho máy Android RAM
+  // thấp. Ảnh đã giải mã nằm cả trong bộ nhớ lẫn heap GPU; hạ trần để hệ điều
+  // hành đỡ phải giết app nền (và `didHaveMemoryPressure` xả sạch, xem OmniApp).
+  PaintingBinding.instance.imageCache
+    ..maximumSizeBytes = 60 << 20
+    ..maximumSize = 300;
+
   try {
     await dotenv.load(fileName: '.env');
   } catch (_) {

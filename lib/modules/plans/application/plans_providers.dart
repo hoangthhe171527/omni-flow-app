@@ -82,7 +82,13 @@ class PlanRealtimeSignal extends Notifier<int> {
 /// Gọi hai lần rồi ghép ở client thay vì thêm một endpoint gộp: hai danh sách
 /// này nhỏ (một xưởng có một team và hai dự án), và endpoint gộp sẽ là một
 /// hình dạng thứ ba phải giữ đồng bộ với hai cái đã có.
-final teamsWithPlansProvider = FutureProvider<List<TeamWithPlans>>((ref) async {
+///
+/// autoDispose + [kBoardKeepAlive]: không autoDispose thì cả phiên mỗi sự kiện
+/// project/org_unit kéo theo hai request cho một màn không ai nhìn.
+final teamsWithPlansProvider = FutureProvider.autoDispose<List<TeamWithPlans>>((
+  ref,
+) async {
+  ref.lingerAfterLastListener();
   ref.watch(planRealtimeSignalProvider);
   final api = ref.watch(plansApiProvider);
   final (teams, plans) = await (api.teams(), api.plans()).wait;
