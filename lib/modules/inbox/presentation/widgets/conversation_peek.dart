@@ -116,7 +116,7 @@ class _PeekOverlay extends ConsumerWidget {
           // Không có con: không nuốt chạm, để rào chắn của route đóng hộp.
           Positioned.fill(
             child: BackdropFilter(
-              filter: ImageFilter.blur(sigmaX: 14, sigmaY: 14),
+              filter: ImageFilter.blur(sigmaX: 6, sigmaY: 6),
             ),
           ),
           Positioned(
@@ -462,6 +462,7 @@ class _PeekMenu extends StatelessWidget {
                       Divider(
                         height: 1,
                         thickness: 1,
+                        indent: 16,
                         color: Theme.of(context).colorScheme.outlineVariant,
                       ),
                     _PeekMenuRow(item: items[i], onTap: onAction),

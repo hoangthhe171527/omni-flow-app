@@ -23,7 +23,6 @@ class TeamPage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final members = ref.watch(teamDirectoryProvider);
-    final scheme = Theme.of(context).colorScheme;
     // Liên kết Zalo là thao tác của người có thẩm quyền — xem doc của
     // `TeamMember.zaloUserId`. Ai không có quyền thì thẻ chỉ đọc như cũ.
     final canLink = ref.watch(accessProvider).can('membership.members.update');
@@ -37,27 +36,14 @@ class TeamPage extends ConsumerWidget {
     final canAdd = ref.watch(accessProvider).can(TeamPermissions.membersCreate);
 
     return Scaffold(
-      backgroundColor: scheme.surface,
       appBar: OmniAppBar(
         title: 'Nhân viên',
         actions: [
           if (canAdd)
-            Padding(
-              padding: const EdgeInsets.only(right: OmniSpacing.sm),
-              child: OutlinedButton.icon(
-                onPressed: () => showAddMemberSheet(context),
-                icon: const Icon(Icons.person_add_alt_rounded, size: 20),
-                label: const Text('Thêm'),
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: scheme.primary,
-                  minimumSize: const Size(0, 36),
-                  padding: const EdgeInsets.symmetric(horizontal: 14),
-                  side: BorderSide(color: scheme.primary, width: 1.5),
-                  shape: const StadiumBorder(),
-                  tapTargetSize: MaterialTapTargetSize.padded,
-                  textStyle: OmniType.bodyStrong,
-                ),
-              ),
+            TextButton.icon(
+              onPressed: () => showAddMemberSheet(context),
+              icon: const Icon(Icons.person_add_alt_rounded, size: 20),
+              label: const Text('Thêm'),
             ),
         ],
       ),
@@ -79,121 +65,150 @@ class TeamPage extends ConsumerWidget {
             title: 'Chưa có nhân viên',
             message: 'Mời đồng nghiệp vào workspace để bắt đầu phân công.',
           ),
-          data: (list) => ListView.separated(
+          // Nền xám; cả danh sách là MỘT nhóm lồng, vạch chia thụt sau avatar.
+          data: (list) => ListView(
             physics: const AlwaysScrollableScrollPhysics(),
-            padding: const EdgeInsets.all(OmniSpacing.lg),
-            itemCount: list.length,
-            separatorBuilder: (_, _) =>
-                Divider(height: 1, color: scheme.outlineVariant),
-            itemBuilder: (context, index) {
-              final member = list[index];
-              return OmniCard(
-                flat: true,
-                // Chạm vào một người là mở TẢI VIỆC của họ — câu hỏi quản đốc
-                // hỏi nhiều nhất khi đứng giữa xưởng. Trước đây chạm vào mở
-                // sheet liên kết Zalo, một thao tác làm vài lần trong đời một
-                // nhân viên: hành động chính của thẻ phải là thứ người ta làm
-                // hằng ngày, còn cái kia lùi về một nút riêng bên phải.
-                onTap: canSeeLoad
-                    ? () {
-                        HapticFeedback.selectionClick();
-                        context.pushNamed(
-                          TaskRoutes.workload,
-                          pathParameters: {'userId': member.userId},
-                        );
-                      }
-                    : null,
-                padding: const EdgeInsets.all(14),
-                child: Opacity(
-                  // Người đã nghỉ vẫn nằm trong danh sách nhưng lùi lại một bậc.
-                  opacity: member.isActive ? 1 : 0.7,
-                  child: Row(
-                    children: [
-                      OmniAvatar(
-                        name: member.name,
-                        imageUrl: member.avatarUrl,
-                        size: 44,
+            padding: const EdgeInsets.fromLTRB(
+              16,
+              OmniGroupSection.gap,
+              16,
+              OmniSpacing.bottomSafe,
+            ),
+            children: [
+              OmniGroupSection(
+                dividerIndent: 70,
+                children: [
+                  for (final member in list)
+                    _MemberTile(
+                      member: member,
+                      canLink: canLink,
+                      // Chạm vào một người là mở TẢI VIỆC của họ — câu hỏi
+                      // quản đốc hỏi nhiều nhất khi đứng giữa xưởng. Liên kết
+                      // Zalo lùi về một nút riêng bên phải.
+                      onTap: canSeeLoad
+                          ? () {
+                              HapticFeedback.selectionClick();
+                              context.pushNamed(
+                                TaskRoutes.workload,
+                                pathParameters: {'userId': member.userId},
+                              );
+                            }
+                          : null,
+                      onLinkZalo: () => _linkZalo(context, ref, member),
+                    ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Một người trong danh sách: avatar, tên, email, trạng thái Zalo, pill vai.
+class _MemberTile extends StatelessWidget {
+  const _MemberTile({
+    required this.member,
+    required this.canLink,
+    required this.onTap,
+    required this.onLinkZalo,
+  });
+
+  final TeamMember member;
+  final bool canLink;
+  final VoidCallback? onTap;
+  final VoidCallback onLinkZalo;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+
+    return InkWell(
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        child: Opacity(
+          // Người đã nghỉ vẫn nằm trong danh sách nhưng lùi lại một bậc.
+          opacity: member.isActive ? 1 : 0.7,
+          child: Row(
+            children: [
+              OmniAvatar(
+                name: member.name,
+                imageUrl: member.avatarUrl,
+                size: 44,
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      member.name,
+                      style: OmniType.bodyStrong.copyWith(
+                        fontWeight: FontWeight.w600,
+                        color: scheme.onSurface,
                       ),
-                      const SizedBox(width: OmniSpacing.md),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              member.name,
-                              style: OmniType.bodyStrong.copyWith(
-                                fontWeight: FontWeight.w600,
-                                color: scheme.onSurface,
-                              ),
-                            ),
-                            if (member.email != null)
-                              Text(
-                                member.email!,
-                                style: OmniType.caption.copyWith(
-                                  fontWeight: FontWeight.w400,
-                                  color: scheme.onSurfaceVariant,
-                                ),
-                              ),
-                            // Nói ra ai đã liên kết Zalo: không có dòng này thì
-                            // quản đốc phải mở từng người ra mới biết còn thiếu ai,
-                            // và bot thì im lặng từ chối những người chưa liên kết.
-                            if (canLink)
-                              Text(
-                                member.zaloUserId == null
-                                    ? 'Chưa liên kết Zalo'
-                                    : 'Zalo: ${member.zaloUserId}',
-                                style: OmniType.caption.copyWith(
-                                  fontWeight: FontWeight.w400,
-                                  color: scheme.onSurfaceVariant,
-                                  fontStyle: member.zaloUserId == null
-                                      ? FontStyle.italic
-                                      : FontStyle.normal,
-                                ),
-                              ),
-                            const SizedBox(height: 4),
-                            OmniBadge(
-                              label: member.isPending
-                                  ? 'Đang chờ'
-                                  : member.isActive
-                                  ? member.roleLabel
-                                  : 'Ngừng hoạt động',
-                              tone: member.isPending
-                                  ? OmniTone.warning
-                                  : member.isActive
-                                  ? OmniTone.info
-                                  : OmniTone.neutral,
-                            ),
-                          ],
+                    ),
+                    if (member.email != null)
+                      Text(
+                        member.email!,
+                        style: OmniType.caption.copyWith(
+                          fontWeight: FontWeight.w400,
+                          color: scheme.onSurfaceVariant,
                         ),
                       ),
-                      // Liên kết Zalo: một nút riêng, có nhãn, thay vì một cú
-                      // chạm vô hình lên cả thẻ.
-                      if (canLink)
-                        IconButton.outlined(
-                          onPressed: () => _linkZalo(context, ref, member),
-                          style: IconButton.styleFrom(
-                            fixedSize: const Size.square(40),
-                            minimumSize: const Size.square(40),
-                            side: BorderSide(color: scheme.outlineVariant),
-                            shape: const RoundedRectangleBorder(
-                              borderRadius: OmniRadius.smAll,
-                            ),
-                          ),
-                          tooltip: member.zaloUserId == null
-                              ? 'Liên kết Zalo — ${member.name}'
-                              : 'Sửa liên kết Zalo — ${member.name}',
-                          icon: Icon(
-                            member.zaloUserId == null
-                                ? Icons.link_off_rounded
-                                : Icons.link_rounded,
-                            color: scheme.onSurfaceVariant,
-                          ),
+                    // Nói ra ai đã liên kết Zalo: không có dòng này thì quản
+                    // đốc phải mở từng người ra mới biết còn thiếu ai, và bot
+                    // thì im lặng từ chối những người chưa liên kết.
+                    if (canLink)
+                      Text(
+                        member.zaloUserId == null
+                            ? 'Chưa liên kết Zalo'
+                            : 'Zalo: ${member.zaloUserId}',
+                        style: OmniType.caption.copyWith(
+                          fontWeight: FontWeight.w400,
+                          color: scheme.onSurfaceVariant,
+                          fontStyle: member.zaloUserId == null
+                              ? FontStyle.italic
+                              : FontStyle.normal,
                         ),
-                    ],
+                      ),
+                    const SizedBox(height: 4),
+                    // Pill vai giữ viên thuốc nhạt, không tô đặc.
+                    OmniBadge(
+                      label: member.isPending
+                          ? 'Đang chờ'
+                          : member.isActive
+                          ? member.roleLabel
+                          : 'Ngừng hoạt động',
+                      tone: member.isPending
+                          ? OmniTone.warning
+                          : member.isActive
+                          ? OmniTone.info
+                          : OmniTone.neutral,
+                    ),
+                  ],
+                ),
+              ),
+              // Liên kết Zalo: nút kính tròn riêng, có nhãn, thay vì một cú
+              // chạm vô hình lên cả dòng.
+              if (canLink)
+                OmniGlassCircle(
+                  child: IconButton(
+                    onPressed: onLinkZalo,
+                    tooltip: member.zaloUserId == null
+                        ? 'Liên kết Zalo — ${member.name}'
+                        : 'Sửa liên kết Zalo — ${member.name}',
+                    icon: Icon(
+                      member.zaloUserId == null
+                          ? Icons.link_off_rounded
+                          : Icons.link_rounded,
+                      color: scheme.onSurfaceVariant,
+                    ),
                   ),
                 ),
-              );
-            },
+            ],
           ),
         ),
       ),
@@ -260,46 +275,27 @@ class _LinkZaloSheetState extends State<_LinkZaloSheet> {
     final text = Theme.of(context).textTheme;
     final scheme = Theme.of(context).colorScheme;
 
-    // Phần bàn phím `showOmniSheet` đã đệm; đệm thêm lần nữa là nút "Lưu"
-    // tràn ra ngoài khung nhận chạm.
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(
-        OmniSpacing.lg,
-        OmniSpacing.sm,
-        OmniSpacing.lg,
-        OmniSpacing.lg,
+    return OmniSheetBody(
+      header: OmniSheetHeader(title: 'Liên kết Zalo — ${widget.member.name}'),
+      footer: FilledButton(
+        onPressed: () => Navigator.of(context).pop(_controller.text.trim()),
+        child: const Text('Lưu'),
       ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Liên kết Zalo — ${widget.member.name}',
-            style: text.titleMedium?.copyWith(fontWeight: FontWeight.w600),
-          ),
-          const SizedBox(height: OmniSpacing.xs),
-          Text(
+      children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 8),
+          child: Text(
             'Id Zalo của người này. Sau khi liên kết, tin họ nhắn trong nhóm '
             'xưởng sẽ được ghi nhận đúng tên. Để trống là gỡ liên kết.',
             style: text.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
           ),
-          const SizedBox(height: OmniSpacing.md),
-          TextField(
-            controller: _controller,
-            autofocus: true,
-            decoration: const InputDecoration(hintText: 'Ví dụ: 79000012345'),
-          ),
-          const SizedBox(height: OmniSpacing.lg),
-          SizedBox(
-            width: double.infinity,
-            child: FilledButton(
-              onPressed: () =>
-                  Navigator.of(context).pop(_controller.text.trim()),
-              child: const Text('Lưu'),
-            ),
-          ),
-        ],
-      ),
+        ),
+        TextField(
+          controller: _controller,
+          autofocus: true,
+          decoration: const InputDecoration(hintText: 'Ví dụ: 79000012345'),
+        ),
+      ],
     );
   }
 }

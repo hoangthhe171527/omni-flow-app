@@ -182,7 +182,14 @@ void main() {
     await tester.tap(find.text('Đánh dấu đã đọc'));
     await tester.pumpAndSettle(const Duration(milliseconds: 50));
     expect(api.markReadCalls, ['c1']);
-    expect(find.bySemanticsLabel('Chưa đọc'), findsNothing);
+    // Trong dòng hội thoại — chip lọc "Chưa đọc" đầu danh sách không tính.
+    expect(
+      find.descendant(
+        of: find.byKey(const ValueKey('row-c1')),
+        matching: find.bySemanticsLabel('Chưa đọc'),
+      ),
+      findsNothing,
+    );
     await closePage(tester);
   });
 

@@ -141,30 +141,32 @@ class _ForgotPasswordPageState extends ConsumerState<ForgotPasswordPage>
 
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      body: SafeArea(
-        child: SingleChildScrollView(
-          keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-          padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
-          child: Center(
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 420),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Align(
-                    alignment: Alignment.centerLeft,
-                    child: IconButton(
-                      tooltip: 'Quay lại',
-                      onPressed: _back,
-                      icon: const Icon(Icons.arrow_back_rounded),
+      body: AuthBackdrop(
+        child: SafeArea(
+          child: SingleChildScrollView(
+            keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+            padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
+            child: Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 420),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: IconButton(
+                        tooltip: 'Quay lại',
+                        onPressed: _back,
+                        icon: const Icon(Icons.arrow_back_rounded),
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 8),
-                  AnimatedSwitcher(
-                    duration: OmniMotion.of(context).base,
-                    child: _sent ? _buildSent(scheme) : _buildForm(scheme),
-                  ),
-                ],
+                    const SizedBox(height: 8),
+                    AnimatedSwitcher(
+                      duration: OmniMotion.of(context).base,
+                      child: _sent ? _buildSent(scheme) : _buildForm(scheme),
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
@@ -182,11 +184,6 @@ class _ForgotPasswordPageState extends ConsumerState<ForgotPasswordPage>
           Text(
             'Quên mật khẩu?',
             style: OmniType.largeTitle.copyWith(color: scheme.onSurface),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Nhận liên kết đặt lại qua email.',
-            style: OmniType.body.copyWith(color: scheme.onSurfaceVariant),
           ),
           const SizedBox(height: 24),
           AuthField(
@@ -253,9 +250,7 @@ class _ForgotPasswordPageState extends ConsumerState<ForgotPasswordPage>
           onPressed: canResend ? () => _send(_sentTo) : null,
           style: OutlinedButton.styleFrom(
             minimumSize: const Size.fromHeight(50),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(10),
-            ),
+            shape: const StadiumBorder(),
           ),
           child: _busy
               ? const SizedBox.square(

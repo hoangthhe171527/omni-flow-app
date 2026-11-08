@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+
+import 'widgets/auth_widgets.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -47,103 +49,100 @@ class _WorkspacePageState extends ConsumerState<WorkspacePage> {
     final scheme = Theme.of(context).colorScheme;
 
     return Scaffold(
-      body: SafeArea(
-        child: Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 640),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(
-                    OmniSpacing.xl,
-                    OmniSpacing.sm,
-                    OmniSpacing.sm,
-                    OmniSpacing.sm,
-                  ),
-                  child: Row(
-                    children: [
-                      const OmniBrandMark(semanticLabel: 'Viomni'),
-                      const Spacer(),
-                      TextButton(
-                        onPressed: () => ref
-                            .read(sessionControllerProvider.notifier)
-                            .logout(),
-                        style: TextButton.styleFrom(
-                          minimumSize: const Size(0, 44),
+      body: AuthBackdrop(
+        child: SafeArea(
+          child: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 640),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(
+                      OmniSpacing.xl,
+                      OmniSpacing.sm,
+                      OmniSpacing.sm,
+                      OmniSpacing.sm,
+                    ),
+                    child: Row(
+                      children: [
+                        const OmniBrandMark(semanticLabel: 'Viomni'),
+                        const Spacer(),
+                        OutlinedButton(
+                          onPressed: () => ref
+                              .read(sessionControllerProvider.notifier)
+                              .logout(),
+                          style: OutlinedButton.styleFrom(
+                            minimumSize: const Size(0, 44),
+                          ),
+                          child: const Text('Đăng xuất'),
                         ),
-                        child: const Text('Đăng xuất'),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(
-                    OmniSpacing.xl,
-                    OmniSpacing.md,
-                    OmniSpacing.xl,
-                    OmniSpacing.xl,
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Semantics(
-                        header: true,
-                        child: Text(
-                          'Chọn không gian làm việc',
-                          style: OmniType.largeTitle.copyWith(
-                            color: scheme.onSurface,
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(
+                      OmniSpacing.xl,
+                      OmniSpacing.md,
+                      OmniSpacing.xl,
+                      OmniSpacing.xl,
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Semantics(
+                          header: true,
+                          child: Text(
+                            'Chọn không gian làm việc',
+                            style: OmniType.largeTitle.copyWith(
+                              color: scheme.onSurface,
+                            ),
                           ),
                         ),
+                      ],
+                    ),
+                  ),
+                  Expanded(
+                    child: OmniAsyncView(
+                      value: tenants,
+                      onRetry: () => ref.invalidate(tenantOptionsProvider),
+                      isEmpty: (list) => list.isEmpty,
+                      empty: const OmniEmptyState(
+                        icon: Icons.workspaces_outline,
+                        title: 'Tài khoản chưa thuộc workspace nào',
+                        message:
+                            'Liên hệ quản trị viên để được thêm vào công ty của '
+                            'bạn.',
                       ),
-                      const SizedBox(height: 6),
-                      Text(
-                        'Tài khoản của bạn đang tham gia nhiều không gian.',
-                        style: OmniType.bodyStrong.copyWith(
-                          fontWeight: FontWeight.w400,
-                          color: scheme.onSurfaceVariant,
+                      data: (list) => ListView(
+                        padding: const EdgeInsets.fromLTRB(
+                          OmniSpacing.xl,
+                          0,
+                          OmniSpacing.xl,
+                          OmniSpacing.section,
                         ),
+                        children: [
+                          // Mỗi workspace một dòng trong nhóm bo 18, không viền.
+                          OmniGroupSection(
+                            dividerIndent: 76,
+                            children: [
+                              for (var i = 0; i < list.length; i++)
+                                _WorkspaceCard(
+                                  tenant: list[i],
+                                  tone: _WorkspaceTone.at(context, i),
+                                  busy: _entering == list[i].id,
+                                  onTap: _entering == null
+                                      ? () => _enter(list[i])
+                                      : null,
+                                ),
+                            ],
+                          ),
+                        ],
                       ),
-                    ],
-                  ),
-                ),
-                Expanded(
-                  child: OmniAsyncView(
-                    value: tenants,
-                    onRetry: () => ref.invalidate(tenantOptionsProvider),
-                    isEmpty: (list) => list.isEmpty,
-                    empty: const OmniEmptyState(
-                      icon: Icons.workspaces_outline,
-                      title: 'Tài khoản chưa thuộc workspace nào',
-                      message:
-                          'Liên hệ quản trị viên để được thêm vào công ty của '
-                          'bạn.',
-                    ),
-                    data: (list) => ListView.separated(
-                      padding: const EdgeInsets.fromLTRB(
-                        OmniSpacing.xl,
-                        0,
-                        OmniSpacing.xl,
-                        OmniSpacing.section,
-                      ),
-                      itemCount: list.length,
-                      separatorBuilder: (_, _) =>
-                          const SizedBox(height: OmniSpacing.md),
-                      itemBuilder: (context, index) {
-                        final tenant = list[index];
-                        return _WorkspaceCard(
-                          tenant: tenant,
-                          tone: _WorkspaceTone.at(context, index),
-                          busy: _entering == tenant.id,
-                          onTap: _entering == null
-                              ? () => _enter(tenant)
-                              : null,
-                        );
-                      },
                     ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ),
@@ -198,19 +197,15 @@ class _WorkspaceCard extends StatelessWidget {
       if (tenant.planLabel != null) tenant.planLabel!,
     ].join(' · ');
 
+    // Dòng đang vào = nền trắng mờ + vòng xoay (không viền primary dày).
     return Material(
-      color: scheme.surface,
-      shape: RoundedRectangleBorder(
-        borderRadius: OmniRadius.xlAll,
-        side: busy
-            ? BorderSide(color: scheme.primary, width: 2)
-            : BorderSide(color: scheme.outlineVariant),
-      ),
-      clipBehavior: Clip.antiAlias,
+      color: busy
+          ? scheme.onSurface.withValues(alpha: .06)
+          : Colors.transparent,
       child: InkWell(
         onTap: onTap,
         child: Padding(
-          padding: const EdgeInsets.all(OmniSpacing.lg),
+          padding: const EdgeInsets.all(OmniSpacing.md),
           child: Row(
             children: [
               Container(

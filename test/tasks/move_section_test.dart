@@ -117,7 +117,8 @@ void main() {
     expect(find.text('Dự án này chưa khai báo nhóm việc nào.'), findsOneWidget);
   });
 
-  testWidgets('mỗi dòng cao 46', (tester) async {
+  // Dòng chuẩn của nhóm lồng liquid (OmniGroupRow): 48, trên sàn chạm 44.
+  testWidgets('mỗi dòng cao 48', (tester) async {
     await open(tester);
 
     final row = tester.getSize(
@@ -126,6 +127,6 @@ void main() {
           .first,
     );
 
-    expect(row.height, 46);
+    expect(row.height, 48);
   });
 }

@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 
 import '../platform/omni_motion_scope.dart';
 import '../tokens/tokens.dart';
+import 'omni_glass.dart';
 import 'omni_status_chip.dart';
 
 /// Một tab trong [OmniTabStrip].
@@ -32,63 +33,86 @@ class OmniTab {
   final Key? key;
 }
 
-/// MỘT kiểu tab cho cả app: gạch chân 2px màu chính, chữ mực 600; tab chưa
-/// chọn chữ phụ 500; số đếm xám (`SPrinciples.dc.html` §8).
+/// MỘT kiểu tab cho cả app, kiểu kính (viomni-apple-uiux.html "Việc của
+/// tôi": "Tab thành bộ chọn đoạn kính"): viên kính dạng viên thuốc, các tab
+/// chia đều, thấu kính trắng mờ trượt tới tab đang chọn; chữ tab chọn màu chủ
+/// đạo 600, tab khác chữ phụ 500; số đếm xám, số "cần xử lý" là chip đỏ.
 ///
-/// Thay cho hai kiểu tab phân đoạn cũ — rãnh xám có ô trắng nổi bóng ("Việc
-/// của tôi") và dải viên trên nền mực (bảng dự án). Ba kiểu tab trên một app
-/// là ba thứ phải học; một kiểu là một.
+/// Chia đều nhưng không cắt chữ: chữ dài thì thu nhỏ vừa ô (FittedBox) thay
+/// vì thành "Hôm …".
 class OmniTabStrip extends StatelessWidget {
   const OmniTabStrip({
     super.key,
     required this.tabs,
     required this.selected,
     required this.onSelected,
-    this.padding = const EdgeInsets.symmetric(horizontal: 20),
-    this.gap = 20,
+    this.padding = const EdgeInsets.symmetric(horizontal: 16),
   });
 
   final List<OmniTab> tabs;
   final int selected;
   final ValueChanged<int> onSelected;
 
+  /// Lề ngoài của viên kính.
   final EdgeInsets padding;
-  final double gap;
+
+  /// Cao của viên kính.
+  static const double height = 44;
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
+    final n = tabs.length;
+    if (n == 0) return const SizedBox.shrink();
+    final sel = selected.clamp(0, n - 1);
+    final motion = OmniMotion.enabled(context);
 
-    // Mỗi tab rộng đúng bằng chữ của nó, đứng sát trái; hết chỗ thì dải cuộn
-    // ngang. Không chia đều bề ngang: chia đều là cắt "Hôm nay 4" thành
-    // "Hôm …" trong khi "Tất cả" bên cạnh còn thừa chỗ.
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: scheme.surface,
-        border: Border(bottom: BorderSide(color: scheme.outlineVariant)),
-      ),
-      child: SizedBox(
-        width: double.infinity,
-        height: 44,
-        child: SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          padding: padding,
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              for (var i = 0; i < tabs.length; i++) ...[
-                if (i > 0) SizedBox(width: gap),
-                OmniTabItem(
-                  key: tabs[i].key,
-                  tab: tabs[i],
-                  selected: i == selected,
-                  onTap: () {
-                    if (i != selected) HapticFeedback.selectionClick();
-                    onSelected(i);
-                  },
-                ),
-              ],
-            ],
+    return Padding(
+      padding: padding,
+      child: OmniGlass(
+        radius: height / 2,
+        child: SizedBox(
+          height: height,
+          child: LayoutBuilder(
+            builder: (context, box) {
+              const inset = 4.0;
+              final w = (box.maxWidth - inset * 2) / n;
+              return Stack(
+                children: [
+                  AnimatedPositioned(
+                    duration: motion
+                        ? const Duration(milliseconds: 420)
+                        : Duration.zero,
+                    curve: const Cubic(0.34, 1.36, 0.64, 1),
+                    left: inset + w * sel,
+                    top: 4,
+                    bottom: 4,
+                    width: w,
+                    child: const OmniGlassLens(),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: inset),
+                    child: Row(
+                      children: [
+                        for (var i = 0; i < n; i++)
+                          Expanded(
+                            child: OmniTabItem(
+                              key: tabs[i].key,
+                              tab: tabs[i],
+                              selected: i == sel,
+                              onTap: () {
+                                if (i != sel) {
+                                  HapticFeedback.selectionClick();
+                                }
+                                onSelected(i);
+                              },
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                ],
+              );
+            },
           ),
         ),
       ),
@@ -122,45 +146,46 @@ class OmniTabItem extends StatelessWidget {
       label: tab.label,
       value: tab.semanticValue ?? (hasCount ? '$count' : null),
       excludeSemantics: true,
-      child: InkWell(
+      // Không gợn sóng: kính đổi chọn bằng thấu kính trượt.
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
         onTap: onTap,
-        child: AnimatedContainer(
-          duration: OmniMotion.of(context).fast,
-          padding: const EdgeInsets.symmetric(horizontal: 1),
-          decoration: BoxDecoration(
-            border: Border(
-              bottom: BorderSide(
-                color: selected ? scheme.primary : Colors.transparent,
-                width: 2,
-              ),
-            ),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                tab.label,
-                maxLines: 1,
-                style: OmniType.body.copyWith(
-                  color: selected ? scheme.onSurface : scheme.onSurfaceVariant,
-                  fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
-                ),
-              ),
-              if (hasCount) ...[
-                const SizedBox(width: 6),
-                if (tab.alert)
-                  OmniBadge(label: '$count', tone: OmniTone.danger)
-                else
+        child: Center(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 6),
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
                   Text(
-                    '$count',
-                    style: OmniType.caption.copyWith(
-                      color: scheme.onSurfaceVariant,
-                      fontWeight: FontWeight.w500,
-                      fontFeatures: OmniType.tabular,
+                    tab.label,
+                    maxLines: 1,
+                    style: OmniType.body.copyWith(
+                      fontSize: 14,
+                      color: selected
+                          ? scheme.primary
+                          : scheme.onSurfaceVariant,
+                      fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
                     ),
                   ),
-              ],
-            ],
+                  if (hasCount) ...[
+                    const SizedBox(width: 5),
+                    if (tab.alert)
+                      OmniBadge(label: '$count', tone: OmniTone.danger)
+                    else
+                      Text(
+                        '$count',
+                        style: OmniType.caption.copyWith(
+                          color: scheme.onSurfaceVariant,
+                          fontWeight: FontWeight.w500,
+                          fontFeatures: OmniType.tabular,
+                        ),
+                      ),
+                  ],
+                ],
+              ),
+            ),
           ),
         ),
       ),

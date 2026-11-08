@@ -170,7 +170,7 @@ class BoardDragFeedback extends StatelessWidget {
       child: DecoratedBox(
         decoration: BoxDecoration(
           color: scheme.surface,
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(14),
           boxShadow: OmniShadows.lifted,
         ),
         child: Padding(

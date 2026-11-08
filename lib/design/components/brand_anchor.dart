@@ -48,7 +48,12 @@ class _BrandAnchorState extends State<BrandAnchor> {
     // Sau khung hình: đang dựng, mà người nghe provider có thể cũng đang dựng.
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted || _active != active) return;
-      _container ??= ProviderScope.containerOf(context, listen: false);
+      // Không có ProviderScope (bài kiểm một thanh trên lẻ): không neo gì.
+      try {
+        _container ??= ProviderScope.containerOf(context, listen: false);
+      } catch (_) {
+        return;
+      }
       final notifier = _container!.read(brandAnchorProvider.notifier);
       if (active) {
         notifier.state = _key;

@@ -6,8 +6,8 @@ import '../../../../design/tokens/tokens.dart';
 import '../../../tasks/domain/task.dart';
 import '../../domain/plan.dart';
 
-/// Nút kính lúp nổi của bảng: 52×52 bo 12, nền surface, biểu tượng primary,
-/// bóng `0 8 22 ink/.28`. − để thu nhỏ, + để phóng to lại.
+/// Nút kính lúp nổi của bảng: viên kính tròn 52, nền surface .86, biểu
+/// tượng primary. − để thu nhỏ, + để phóng to lại.
 class BoardZoomButton extends StatelessWidget {
   const BoardZoomButton({super.key, required this.zoomed, required this.onTap});
 
@@ -32,14 +32,17 @@ class BoardZoomButton extends StatelessWidget {
           key: const Key('board-zoom-fab'),
           width: 52,
           height: 52,
+          // Viên kính tròn trên ảnh bìa (viomni-apple-uiux.html): trắng mờ,
+          // viền sáng, bóng nhẹ. Không nhoè — bảng cuộn ngang bên dưới.
           decoration: BoxDecoration(
-            color: scheme.surface,
-            borderRadius: BorderRadius.circular(12),
+            color: scheme.surface.withValues(alpha: .86),
+            shape: BoxShape.circle,
+            border: Border.all(color: Colors.white.withValues(alpha: .7)),
             boxShadow: [
               BoxShadow(
-                color: OmniColors.ink.withValues(alpha: 0.28),
-                offset: const Offset(0, 8),
-                blurRadius: 22,
+                color: OmniColors.ink.withValues(alpha: 0.22),
+                offset: const Offset(0, 6),
+                blurRadius: 18,
               ),
             ],
           ),
@@ -163,7 +166,7 @@ class _ZoomTile extends StatelessWidget {
           padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
             color: scheme.surfaceContainerHighest.withValues(alpha: 0.96),
-            borderRadius: BorderRadius.circular(8),
+            borderRadius: BorderRadius.circular(14),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,

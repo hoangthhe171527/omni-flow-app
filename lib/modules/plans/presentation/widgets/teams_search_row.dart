@@ -27,8 +27,9 @@ class TeamsSearchRow extends StatefulWidget implements PreferredSizeWidget {
   /// Nhận hình chữ nhật (toạ độ màn) của nút để neo menu ngay dưới nó.
   final ValueChanged<Rect>? onAdd;
 
-  static const double _fieldHeight = 40;
-  static const double _bottomPad = 8;
+  static const double _fieldHeight = 44;
+  // Nằm trong viên kính của OmniTopBar: không chừa đáy, lề ngang nhỏ.
+  static const double _bottomPad = 0;
 
   @override
   Size get preferredSize => const Size.fromHeight(_fieldHeight + _bottomPad);
@@ -77,7 +78,7 @@ class _TeamsSearchRowState extends State<TeamsSearchRow> {
       height: TeamsSearchRow._fieldHeight + TeamsSearchRow._bottomPad,
       child: Padding(
         // Bản mẫu: header đệm phải 8 + hàng tìm đệm phải 8 = mép phải 16.
-        padding: const EdgeInsets.only(left: 16, right: 16),
+        padding: const EdgeInsets.only(left: 6, right: 2),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [

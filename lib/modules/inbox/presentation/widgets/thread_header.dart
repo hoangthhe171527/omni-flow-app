@@ -1,9 +1,8 @@
-import 'dart:ui';
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../../../../design/components/components.dart';
+import '../../../../design/platform/omni_platform.dart';
 import '../../../../design/tokens/tokens.dart';
 import '../../domain/conversation.dart';
 
@@ -27,7 +26,8 @@ class ThreadHeader extends StatelessWidget implements PreferredSizeWidget {
     required this.onCloseSearch,
   });
 
-  static const rowHeight = 52.0;
+  /// Đệm trên 4 + hàng kính 44 + đệm 8.
+  static const rowHeight = 56.0;
   static const searchBarHeight = 48.0;
 
   final Conversation? conversation;
@@ -48,36 +48,34 @@ class ThreadHeader extends StatelessWidget implements PreferredSizeWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final glass = OmniColors.byBrightness(
-      context,
-      OmniColors.background.withValues(alpha: 0.82),
-      OmniColors.darkBackground.withValues(alpha: 0.82),
-    );
-
-    return ClipRect(
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-        child: DecoratedBox(
-          decoration: BoxDecoration(
-            color: glass,
-            border: Border(bottom: BorderSide(color: scheme.outlineVariant)),
-          ),
-          child: SafeArea(
-            bottom: false,
+    // Kiểu nút kính rời (viomni-apple-uiux.html "Hội thoại"): không dải nền;
+    // quay lại và ⓘ là viên kính tròn, danh tính khách là một viên kính dạng
+    // viên thuốc ở giữa. Nội dung dưới thanh nhoè dần (OmniScrollEdge).
+    return Stack(
+      children: [
+        const Positioned.fill(child: OmniScrollEdge(atTop: true)),
+        SafeArea(
+          bottom: false,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(12, 4, 12, 0),
             child: Column(
               children: [
-                SizedBox(height: rowHeight, child: _buildRow(context)),
+                SizedBox(height: 44, child: _buildRow(context)),
+                const SizedBox(height: 8),
                 if (searchMode)
                   SizedBox(
-                    height: searchBarHeight,
-                    child: _buildSearchBar(context),
+                    height: searchBarHeight - 8,
+                    child: OmniGlass(
+                      radius: 20,
+                      child: _buildSearchBar(context),
+                    ),
                   ),
+                if (searchMode) const SizedBox(height: 8),
               ],
             ),
           ),
         ),
-      ),
+      ],
     );
   }
 
@@ -93,96 +91,86 @@ class ThreadHeader extends StatelessWidget implements PreferredSizeWidget {
 
     return Row(
       children: [
-        if (canPop)
-          IconButton(
+        if (canPop) ...[
+          OmniTopBarAction(
+            icon: isApple(context)
+                ? Icons.arrow_back_ios_new_rounded
+                : Icons.arrow_back_rounded,
             tooltip: 'Quay lại',
             onPressed: () => Navigator.of(context).maybePop(),
-            style: IconButton.styleFrom(
-              minimumSize: const Size(36, 36),
-              maximumSize: const Size(36, 36),
-              padding: EdgeInsets.zero,
-              backgroundColor: Colors.transparent,
-              foregroundColor: scheme.onSurface,
-              tapTargetSize: MaterialTapTargetSize.padded,
-            ),
-            icon: const Icon(Icons.chevron_left_rounded, size: 28),
-          )
-        else
-          const SizedBox(width: 12),
+          ),
+          const SizedBox(width: 8),
+        ],
         if (c != null)
           Expanded(
-            child: InkWell(
-              onTap: () {
-                HapticFeedback.selectionClick();
-                onInfo();
-              },
-              child: SizedBox(
-                height: rowHeight,
-                child: Row(
-                  children: [
-                    const SizedBox(width: 4),
-                    c.isGroup
-                        ? OmniGroupAvatar(
-                            names: c.groupMembers
-                                .map((m) => m.name ?? '?')
-                                .toList(),
-                            size: 30,
-                          )
-                        : OmniAvatar(
-                            name: c.title,
-                            imageUrl: c.customerAvatar,
-                            size: 30,
-                          ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            c.title,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: OmniType.bodyStrong.copyWith(
-                              fontWeight: FontWeight.w600,
-                              height: 1.2,
-                              color: scheme.onSurface,
+            child: OmniGlass(
+              radius: 22,
+              child: InkWell(
+                customBorder: const StadiumBorder(),
+                onTap: () {
+                  HapticFeedback.selectionClick();
+                  onInfo();
+                },
+                child: SizedBox(
+                  height: 44,
+                  child: Row(
+                    children: [
+                      const SizedBox(width: 6),
+                      c.isGroup
+                          ? OmniGroupAvatar(
+                              names: c.groupMembers
+                                  .map((m) => m.name ?? '?')
+                                  .toList(),
+                              size: 32,
+                            )
+                          : OmniAvatar(
+                              name: c.title,
+                              imageUrl: c.customerAvatar,
+                              size: 32,
                             ),
-                          ),
-                          Text(
-                            _sourceLine(c),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: OmniType.micro.copyWith(
-                              height: 1.2,
-                              color: muted,
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              c.title,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: OmniType.bodyStrong.copyWith(
+                                fontWeight: FontWeight.w600,
+                                height: 1.2,
+                                color: scheme.onSurface,
+                              ),
                             ),
-                          ),
-                        ],
+                            Text(
+                              _sourceLine(c),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: OmniType.micro.copyWith(
+                                height: 1.2,
+                                color: muted,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
-                    ),
-                  ],
+                      const SizedBox(width: 12),
+                    ],
+                  ),
                 ),
               ),
             ),
           )
         else
           const Spacer(),
-        IconButton(
+        const SizedBox(width: 8),
+        OmniTopBarAction(
+          icon: Icons.info_outline_rounded,
           tooltip: 'Thông tin khách',
-          onPressed: () {
-            HapticFeedback.selectionClick();
-            onInfo();
-          },
-          style: IconButton.styleFrom(
-            minimumSize: const Size(40, 40),
-            maximumSize: const Size(40, 40),
-            padding: EdgeInsets.zero,
-            foregroundColor: scheme.primary,
-          ),
-          icon: const Icon(Icons.info_outline_rounded, size: 22),
+          onPressed: onInfo,
         ),
-        const SizedBox(width: 6),
       ],
     );
   }

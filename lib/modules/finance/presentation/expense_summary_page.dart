@@ -4,6 +4,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/nav/shell_bar_inset.dart';
 import '../../../design/components/components.dart';
 import '../../../design/tokens/tokens.dart';
 import '../application/finance_providers.dart';
@@ -305,7 +306,6 @@ class _ExpenseSummaryPageState extends ConsumerState<ExpenseSummaryPage> {
                   decoration: BoxDecoration(
                     color: p.card,
                     shape: BoxShape.circle,
-                    border: Border.all(color: p.line, width: 0.5),
                   ),
                   alignment: Alignment.center,
                   child: state.syncing
@@ -349,7 +349,16 @@ class _ExpenseSummaryPageState extends ConsumerState<ExpenseSummaryPage> {
                   color: p.primary,
                   child: ListView(
                     physics: const AlwaysScrollableScrollPhysics(),
-                    padding: const EdgeInsets.fromLTRB(16, 2, 16, 48),
+                    // Thanh tab kính phủ lên body: chừa đúng chiều cao thanh
+                    // + vùng an toàn, nếu không dòng cuối nằm mãi dưới lớp mờ.
+                    padding: EdgeInsets.fromLTRB(
+                      16,
+                      2,
+                      16,
+                      ShellBarInset.of(context) +
+                          MediaQuery.viewPaddingOf(context).bottom +
+                          24,
+                    ),
                     children: [
                       if ((state.isLoading || state.syncing) && !anyLoaded)
                         _buildLoadingCard(p)
@@ -628,8 +637,7 @@ class _ExpenseSummaryPageState extends ConsumerState<ExpenseSummaryPage> {
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 36),
       decoration: BoxDecoration(
         color: p.card,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: p.line, width: 0.5),
+        borderRadius: BorderRadius.circular(18),
       ),
       child: Column(
         children: [
@@ -733,8 +741,7 @@ class _ExpenseSummaryPageState extends ConsumerState<ExpenseSummaryPage> {
       padding: const EdgeInsets.fromLTRB(15, 13, 15, 13),
       decoration: BoxDecoration(
         color: p.card,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: p.line, width: 0.5),
+        borderRadius: BorderRadius.circular(18),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -744,8 +751,7 @@ class _ExpenseSummaryPageState extends ConsumerState<ExpenseSummaryPage> {
               Expanded(
                 child: Text(
                   titleText,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
+                  maxLines: 2,
                   style: OmniType.caption.copyWith(
                     color: p.muted,
                     fontWeight: FontWeight.w600,
@@ -953,11 +959,9 @@ class _ExpenseSummaryPageState extends ConsumerState<ExpenseSummaryPage> {
     final currentVnMonth = FinanceMonthUtils.monthNumberOf(currentVnYm);
     final currentVnQuarter = ((currentVnMonth - 1) ~/ 3) + 1;
 
-    final String headerTitle;
     final List<_SummaryTrendRow> rows = [];
 
     if (_scope == ExpenseSummaryScope.quarter) {
-      headerTitle = '3 THÁNG TRONG QUÝ $_selectedQuarter/$_selectedYear';
       final months = _monthsForQuarter(_selectedYear, _selectedQuarter);
       final totals = [for (final ym in months) state.summaryForMonth(ym).total];
       final sumTotal = totals.fold<int>(0, (s, v) => s + v);
@@ -990,7 +994,6 @@ class _ExpenseSummaryPageState extends ConsumerState<ExpenseSummaryPage> {
         );
       }
     } else if (_scope == ExpenseSummaryScope.year) {
-      headerTitle = 'DIỄN BIẾN NĂM $_selectedYear';
       if (_yearTrend == YearTrendBreakdown.quarter) {
         final qTotals = <int>[];
         for (var q = 1; q <= 4; q++) {
@@ -1069,7 +1072,6 @@ class _ExpenseSummaryPageState extends ConsumerState<ExpenseSummaryPage> {
         }
       }
     } else {
-      headerTitle = 'SO SÁNH 3 THÁNG GẦN NHẤT';
       final activeYm =
           '$_selectedYear-${_selectedMonth.toString().padLeft(2, '0')}';
       final months = [
@@ -1109,24 +1111,14 @@ class _ExpenseSummaryPageState extends ConsumerState<ExpenseSummaryPage> {
       padding: const EdgeInsets.fromLTRB(15, 13, 15, 13),
       decoration: BoxDecoration(
         color: p.card,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: p.line, width: 0.5),
+        borderRadius: BorderRadius.circular(18),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Row(
             children: [
-              Expanded(
-                child: Text(
-                  headerTitle,
-                  style: OmniType.overline.copyWith(
-                    color: p.muted,
-                    fontWeight: FontWeight.w600,
-                    letterSpacing: 0.4,
-                  ),
-                ),
-              ),
+              const Expanded(child: SizedBox.shrink()),
               if (_scope == ExpenseSummaryScope.year)
                 _buildMiniSegmentedToggle<YearTrendBreakdown>(
                   p,
@@ -1135,18 +1127,10 @@ class _ExpenseSummaryPageState extends ConsumerState<ExpenseSummaryPage> {
                   labelOf: (v) => v.label,
                   keyPrefix: 'finance-summary-year-by',
                   onSelected: (v) => setState(() => _yearTrend = v),
-                )
-              else
-                Text(
-                  'Chạm để xem kỳ ›',
-                  style: OmniType.micro.copyWith(
-                    color: p.primary,
-                    fontWeight: FontWeight.w600,
-                  ),
                 ),
             ],
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 4),
           for (var i = 0; i < rows.length; i++) ...[
             if (i > 0) const SizedBox(height: 7),
             _buildTrendRowItem(p, rows[i]),
@@ -1164,12 +1148,8 @@ class _ExpenseSummaryPageState extends ConsumerState<ExpenseSummaryPage> {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
         decoration: BoxDecoration(
-          color: row.isCurrent ? p.primarySoft : p.control,
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(
-            color: row.isCurrent ? p.selLine : Colors.transparent,
-            width: 0.5,
-          ),
+          color: row.isCurrent ? p.control : Colors.transparent,
+          borderRadius: BorderRadius.circular(12),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -1186,45 +1166,11 @@ class _ExpenseSummaryPageState extends ConsumerState<ExpenseSummaryPage> {
                         row.label,
                         style: OmniType.caption.copyWith(
                           color: p.ink,
-                          fontWeight: FontWeight.w600,
+                          fontWeight: row.isCurrent
+                              ? FontWeight.w600
+                              : FontWeight.w500,
                         ),
                       ),
-                      if (row.isPeak)
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 6,
-                            vertical: 1.5,
-                          ),
-                          decoration: BoxDecoration(
-                            color: p.amberSoft,
-                            borderRadius: BorderRadius.circular(99),
-                          ),
-                          child: Text(
-                            'Cao nhất',
-                            style: OmniType.micro.copyWith(
-                              color: p.amber,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ),
-                      if (row.isCurrent)
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 6,
-                            vertical: 1.5,
-                          ),
-                          decoration: BoxDecoration(
-                            color: p.primary,
-                            borderRadius: BorderRadius.circular(99),
-                          ),
-                          child: Text(
-                            row.currentLabel,
-                            style: OmniType.micro.copyWith(
-                              color: Colors.white,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ),
                     ],
                   ),
                 ),
@@ -1239,11 +1185,13 @@ class _ExpenseSummaryPageState extends ConsumerState<ExpenseSummaryPage> {
                 ),
                 const SizedBox(width: 6),
                 SizedBox(
-                  width: 38,
+                  width: 50,
                   child: Text(
                     row.amount > 0
                         ? '${row.sharePct.toStringAsFixed(1).replaceAll('.', ',')}%'
                         : '0%',
+                    maxLines: 1,
+                    softWrap: false,
                     textAlign: TextAlign.right,
                     style: OmniType.micro.copyWith(
                       color: p.muted,
@@ -1284,24 +1232,14 @@ class _ExpenseSummaryPageState extends ConsumerState<ExpenseSummaryPage> {
       padding: const EdgeInsets.fromLTRB(15, 13, 15, 13),
       decoration: BoxDecoration(
         color: p.card,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: p.line, width: 0.5),
+        borderRadius: BorderRadius.circular(18),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Row(
             children: [
-              Expanded(
-                child: Text(
-                  'CƠ CẤU CHI PHÍ TRONG KỲ',
-                  style: OmniType.overline.copyWith(
-                    color: p.muted,
-                    fontWeight: FontWeight.w600,
-                    letterSpacing: 0.4,
-                  ),
-                ),
-              ),
+              Expanded(child: SizedBox.shrink()),
               _buildMiniSegmentedToggle<SummaryDimension>(
                 p,
                 values: SummaryDimension.values,
@@ -1494,8 +1432,7 @@ class _ExpenseSummaryPageState extends ConsumerState<ExpenseSummaryPage> {
                         ),
                       ],
                     ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
+                    maxLines: 2,
                   ),
                 ),
                 const SizedBox(width: 8),
@@ -1509,7 +1446,7 @@ class _ExpenseSummaryPageState extends ConsumerState<ExpenseSummaryPage> {
                 ),
                 const SizedBox(width: 6),
                 Container(
-                  constraints: const BoxConstraints(minWidth: 44),
+                  constraints: const BoxConstraints(minWidth: 52),
                   padding: const EdgeInsets.symmetric(
                     horizontal: 6,
                     vertical: 2,
@@ -1520,6 +1457,8 @@ class _ExpenseSummaryPageState extends ConsumerState<ExpenseSummaryPage> {
                   ),
                   child: Text(
                     '${row.sharePct.toStringAsFixed(1).replaceAll('.', ',')}%',
+                    maxLines: 1,
+                    softWrap: false,
                     textAlign: TextAlign.right,
                     style: OmniType.micro.copyWith(
                       color: p.muted,
@@ -1563,8 +1502,7 @@ class _ExpenseSummaryPageState extends ConsumerState<ExpenseSummaryPage> {
       padding: const EdgeInsets.all(2),
       decoration: BoxDecoration(
         color: p.control,
-        borderRadius: BorderRadius.circular(7),
-        border: Border.all(color: p.line, width: 0.5),
+        borderRadius: BorderRadius.circular(12),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -1609,118 +1547,56 @@ class _ExpenseSummaryPageState extends ConsumerState<ExpenseSummaryPage> {
     final sorted = List<ExpenseItem>.from(row.items)
       ..sort((a, b) => b.spentOn.compareTo(a.spentOn));
 
-    await showModalBottomSheet<void>(
+    await showOmniSheet<void>(
       context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
+      maxHeight: MediaQuery.sizeOf(context).height * 0.78,
       builder: (ctx) {
-        return Container(
-          constraints: BoxConstraints(
-            maxHeight: MediaQuery.sizeOf(ctx).height * 0.78,
-          ),
-          decoration: BoxDecoration(
-            color: p.bg,
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-          ),
-          child: SafeArea(
-            top: false,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const SizedBox(height: 8),
-                Container(
-                  width: 38,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: p.muted.withValues(alpha: 0.35),
-                    borderRadius: BorderRadius.circular(99),
-                  ),
+        return OmniSheetBody(
+          semanticsLabel: row.name,
+          header: OmniSheetHeader(
+            title: row.name,
+            subtitle:
+                '${row.countLabel} · ${FinanceMonthUtils.formatVndSpace(row.amount)}',
+            leading: Container(
+              width: 10,
+              height: 10,
+              decoration: BoxDecoration(
+                color: row.color,
+                borderRadius: BorderRadius.circular(3),
+              ),
+            ),
+            trailing: InkWell(
+              onTap: () => Navigator.of(ctx).pop(),
+              borderRadius: BorderRadius.circular(99),
+              child: Container(
+                width: 32,
+                height: 32,
+                decoration: BoxDecoration(
+                  color: p.control,
+                  shape: BoxShape.circle,
                 ),
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 10),
-                  child: Row(
-                    children: [
-                      Container(
-                        width: 10,
-                        height: 10,
-                        decoration: BoxDecoration(
-                          color: row.color,
-                          borderRadius: BorderRadius.circular(3),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              row.name,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: OmniType.body.copyWith(
-                                color: p.ink,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                            Text(
-                              '${row.countLabel} · ${FinanceMonthUtils.formatVndSpace(row.amount)}',
-                              style: OmniType.micro.copyWith(
-                                color: p.muted,
-                                fontFeatures: const [
-                                  FontFeature.tabularFigures(),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      InkWell(
-                        onTap: () => Navigator.of(ctx).pop(),
-                        borderRadius: BorderRadius.circular(99),
-                        child: Container(
-                          width: 32,
-                          height: 32,
-                          decoration: BoxDecoration(
-                            color: p.card,
-                            shape: BoxShape.circle,
-                            border: Border.all(color: p.line, width: 0.5),
-                          ),
-                          child: Icon(
-                            Icons.close_rounded,
-                            size: 16,
-                            color: p.ink2,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                Flexible(
-                  child: ListView.separated(
-                    shrinkWrap: true,
-                    padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
-                    itemCount: sorted.length,
-                    separatorBuilder: (_, _) => const SizedBox(height: 6),
-                    itemBuilder: (_, idx) {
-                      final item = sorted[idx];
-                      return Container(
-                        decoration: BoxDecoration(
-                          color: p.card,
-                          borderRadius: BorderRadius.circular(14),
-                          border: Border.all(color: p.line, width: 0.5),
-                        ),
-                        child: ExpenseRowTile(
-                          item: item,
-                          showBottomDivider: false,
-                          isFlashed: false,
-                        ),
-                      );
-                    },
-                  ),
-                ),
-              ],
+                child: Icon(Icons.close_rounded, size: 16, color: p.ink2),
+              ),
             ),
           ),
+          // Các khoản gom trong MỘT nhóm lồng, không từng thẻ viền.
+          children: [
+            Material(
+              color: p.card,
+              borderRadius: BorderRadius.circular(18),
+              clipBehavior: Clip.antiAlias,
+              child: Column(
+                children: [
+                  for (var i = 0; i < sorted.length; i++)
+                    ExpenseRowTile(
+                      item: sorted[i],
+                      showBottomDivider: i < sorted.length - 1,
+                      isFlashed: false,
+                    ),
+                ],
+              ),
+            ),
+          ],
         );
       },
     );

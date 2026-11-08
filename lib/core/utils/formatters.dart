@@ -5,10 +5,6 @@ import 'package:intl/intl.dart';
 /// format and two screens never disagree.
 abstract final class Formatters {
   static final _money = NumberFormat.decimalPattern('vi_VN');
-  static final _compact1 = NumberFormat.decimalPattern('vi_VN')
-    ..maximumFractionDigits = 1;
-  static final _compact0 = NumberFormat.decimalPattern('vi_VN')
-    ..maximumFractionDigits = 0;
   static final _dayMonth = DateFormat('dd/MM', 'vi_VN');
   static final _dayMonthYear = DateFormat('dd/MM/yyyy', 'vi_VN');
   static final _time = DateFormat('HH:mm', 'vi_VN');
@@ -39,23 +35,6 @@ abstract final class Formatters {
   static String vnd(num? amount) {
     if (amount == null) return '—';
     return '${_money.format(amount)}đ';
-  }
-
-  /// Tiền rút gọn cho thẻ dày đặc — kiểu vi-VN như `formatMoneyCompact` của
-  /// web: `34,9 tr`, `1,2 tỷ`, `12k` (APP-I14).
-  static String vndCompact(num? amount) {
-    if (amount == null) return '—';
-    final value = amount.abs();
-    if (value >= 1000000000) {
-      return '${_compact1.format(amount / 1000000000)} tỷ';
-    }
-    if (value >= 1000000) {
-      return '${_compact1.format(amount / 1000000)} tr';
-    }
-    if (value >= 1000) {
-      return '${_compact0.format(amount / 1000)}k';
-    }
-    return _money.format(amount);
   }
 
   static String date(DateTime? value) =>

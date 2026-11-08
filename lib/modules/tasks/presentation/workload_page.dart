@@ -33,27 +33,19 @@ class WorkloadPage extends ConsumerWidget {
     final workload = ref.watch(workloadProvider(userId));
 
     return Scaffold(
-      backgroundColor: Theme.of(context).colorScheme.surface,
-      appBar: AppBar(
-        title: Text(member?.name ?? 'Tải việc'),
+      appBar: OmniAppBar(
+        title: member?.name ?? 'Tải việc',
         // Vai trò dưới tên: "Hằng Ni · Thợ máy" nói đủ để biết vì sao hàng đợi
-        // của người này trông như thế.
+        // của người này trông như thế. Căn giữa theo tiêu đề màn con.
         bottom: member == null
             ? null
             : PreferredSize(
                 preferredSize: const Size.fromHeight(20),
-                child: Padding(
-                  padding: const EdgeInsets.only(
-                    left: OmniSpacing.lg,
-                    bottom: OmniSpacing.sm,
-                  ),
-                  child: Align(
-                    alignment: Alignment.centerLeft,
-                    child: Text(
-                      member.roleLabel,
-                      style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                        color: Theme.of(context).colorScheme.onSurfaceVariant,
-                      ),
+                child: Center(
+                  child: Text(
+                    member.roleLabel,
+                    style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
                     ),
                   ),
                 ),
@@ -93,7 +85,7 @@ class _Load extends StatelessWidget {
         OmniSpacing.bottomSafe,
       ),
       itemCount: sorted.length + 1,
-      separatorBuilder: (_, _) => const SizedBox(height: OmniSpacing.md),
+      separatorBuilder: (_, _) => const SizedBox(height: OmniGroupSection.gap),
       itemBuilder: (context, index) {
         if (index == 0) return _Summary(data: data);
 
@@ -126,7 +118,7 @@ class _Load extends StatelessWidget {
   }
 }
 
-/// Hai con số, cả hai do server đếm — trên dải mực phẳng.
+/// Hai dòng "nhãn — số", cả hai do server đếm, trong một nhóm lồng.
 class _Summary extends StatelessWidget {
   const _Summary({required this.data});
 
@@ -142,90 +134,36 @@ class _Summary extends StatelessWidget {
       );
     }
 
-    final dark = Theme.of(context).brightness == Brightness.dark;
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Container(
-          padding: const EdgeInsets.all(OmniSpacing.lg),
-          decoration: BoxDecoration(
-            color: dark ? OmniColors.darkMuted : OmniColors.ink,
-          ),
-          child: Row(
-            children: [
-              Expanded(
-                child: _Figure(
-                  value: data.total,
-                  label: 'việc đang gánh',
-                  color: OmniColors.orbit,
-                ),
-              ),
-              const SizedBox(width: OmniSpacing.md),
-              Expanded(
-                child: _Figure(
-                  value: data.overdue,
-                  label: 'quá hạn',
-                  // Số 0 KHÔNG tô đỏ: một màu cảnh báo trên một con số không
-                  // có gì đáng cảnh báo là cách người ta học được thói quen
-                  // bỏ qua nó.
-                  color: data.overdue > 0
-                      ? OmniColors.dangerOnInk
-                      : OmniColors.inkMutedForeground,
-                ),
-              ),
-            ],
-          ),
-        ),
-        Padding(
-          padding: const EdgeInsets.fromLTRB(4, 12, 4, 0),
-          child: Text(
-            // Danh sách bị cắt thì phải NÓI RA. Con số ở trên do server đếm
-            // và luôn đúng; danh sách dưới nó thì chỉ có một trang.
-            data.total > data.tasks.length
-                ? 'Hạn gần nhất lên trước · đang hiện ${data.tasks.length} '
-                      'việc đầu'
-                : 'Hạn gần nhất lên trước',
-            style: OmniType.caption.copyWith(
-              fontWeight: FontWeight.w400,
-              color: Theme.of(context).colorScheme.onSurfaceVariant,
-            ),
-          ),
-        ),
-      ],
+    final scheme = Theme.of(context).colorScheme;
+    Widget figure(int value, Color color) => Text(
+      '$value',
+      style: OmniType.bodyStrong.copyWith(
+        color: color,
+        fontFeatures: OmniType.tabular,
+      ),
     );
-  }
-}
 
-class _Figure extends StatelessWidget {
-  const _Figure({
-    required this.value,
-    required this.label,
-    required this.color,
-  });
-
-  final int value;
-  final String label;
-  final Color color;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+    return OmniGroupSection(
+      dividerIndent: 14,
+      // Danh sách bị cắt thì phải NÓI RA. Con số ở trên do server đếm và
+      // luôn đúng; danh sách dưới nó thì chỉ có một trang.
+      footer: data.total > data.tasks.length
+          ? 'Hạn gần nhất lên trước · đang hiện ${data.tasks.length} việc đầu'
+          : 'Hạn gần nhất lên trước',
       children: [
-        Text(
-          '$value',
-          style: OmniType.moneyHero.copyWith(
-            fontSize: OmniType.moneyHero.fontSize! + 4,
-            fontWeight: FontWeight.w600,
-            color: color,
-          ),
+        OmniGroupRow(
+          title: 'Việc đang gánh',
+          trailing: figure(data.total, scheme.onSurface),
         ),
-        Text(
-          label,
-          style: OmniType.caption.copyWith(
-            fontWeight: FontWeight.w400,
-            color: OmniColors.inkMutedForeground,
+        OmniGroupRow(
+          title: 'Quá hạn',
+          // Số 0 KHÔNG tô đỏ: một màu cảnh báo trên một con số không có gì
+          // đáng cảnh báo là cách người ta học được thói quen bỏ qua nó.
+          trailing: figure(
+            data.overdue,
+            data.overdue > 0
+                ? OmniColors.dangerTextOf(context)
+                : scheme.onSurface,
           ),
         ),
       ],

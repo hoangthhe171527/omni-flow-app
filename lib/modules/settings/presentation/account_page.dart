@@ -3,32 +3,24 @@ import 'package:flutter/services.dart' show HapticFeedback, PlatformException;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:url_launcher/url_launcher.dart';
 
-import '../../../core/config/app_config.dart';
 import '../../../core/error/app_exception.dart';
-import '../../../core/theme/theme_mode_controller.dart';
 import '../../../design/components/components.dart';
 import '../../../design/platform/omni_motion_scope.dart';
 import '../../../design/tokens/tokens.dart';
-import '../../../security/guard/access_requirement.dart';
 import '../../../security/session/session_controller.dart';
 import '../../auth/application/login_controller.dart';
-import '../../channels/application/channels_providers.dart';
-import '../../channels/channels_module.dart';
-import '../../channels/domain/channel_permissions.dart';
-import '../../team/team.dart';
-import '../../team/team_module.dart';
 import '../data/avatar_api.dart';
 import '../settings_module.dart';
+import 'change_password_sheet.dart';
 import 'widgets/delete_account_dialog.dart';
 
-/// Màn Tài khoản (`Me.dc.html`): hồ sơ, đổi không gian, lối tắt làm việc, ứng
-/// dụng (thông báo, nền, giao diện), hỗ trợ, xóa tài khoản, đăng xuất.
+/// Màn Tài khoản — mở khi bấm avatar (`tat-ca-tai-khoan-uiux.html`, duyệt
+/// 07/11): CHỈ việc của tài khoản — hồ sơ (ảnh, tên, vai trò · workspace, đổi
+/// workspace), bảo mật (đổi mật khẩu), quyền của tôi, đăng xuất, xoá tài khoản.
 ///
-/// Gộp mọi việc từng nằm trong menu avatar cũ (đổi ảnh, nền, thông báo, quyền,
-/// đăng xuất) và danh bạ "Tất cả" (đổi không gian, giao diện, chính sách, hỗ
-/// trợ, xóa tài khoản). Dòng nào cần quyền thì ẩn khi thiếu quyền.
+/// Thông báo, nền, giao diện, hỗ trợ, quyền riêng tư đã chuyển về "Tất cả";
+/// Đội nhóm, Kênh kết nối vốn có ô ở "Tất cả".
 class AccountPage extends ConsumerStatefulWidget {
   const AccountPage({super.key});
 
@@ -42,42 +34,21 @@ class _AccountPageState extends ConsumerState<AccountPage> {
   bool _busy = false;
   final _avatarButtonKey = GlobalKey(debugLabel: 'AccountProfileAvatar');
 
-  static const _themeModes = [
-    ThemeMode.light,
-    ThemeMode.dark,
-    ThemeMode.system,
-  ];
+  Future<void> _changePassword() async {
+    final messenger = ScaffoldMessenger.of(context);
+    final changed = await showChangePasswordSheet(context);
+    if (changed == true) {
+      messenger.showSnackBar(const SnackBar(content: Text('Đã đổi mật khẩu.')));
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final policy = ref.watch(sessionProvider.select((s) => s.policy));
-    final channelsOn = ref.watch(
-      sessionProvider.select((s) => s.featureEnabled('channels')),
-    );
-    final themeMode = ref.watch(themeModeProvider);
-
-    final canSeeTeam = const AccessRequirement.any([
-      TeamPermissions.membersRead,
-    ]).isSatisfiedBy(policy);
-    final canSeeChannels =
-        channelsOn &&
-        const AccessRequirement.any(
-          ChannelPermissions.anyRead,
-        ).isSatisfiedBy(policy);
-
-    final workRows = <Widget>[
-      if (canSeeTeam) const _TeamRow(),
-      if (canSeeChannels) const _ChannelsRow(),
-      _AccountRow(
-        icon: Icons.shield_outlined,
-        label: 'Quyền của tôi',
-        onTap: () => context.pushNamed(SettingsModule.myPermissions),
-      ),
-    ];
 
     return Scaffold(
-      backgroundColor: scheme.surface,
+      // Nền xám để các thẻ nhóm lồng nổi lên.
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: const OmniAppBar(
         title: 'Tài khoản',
         centerTitle: true,
@@ -98,73 +69,48 @@ class _AccountPageState extends ConsumerState<AccountPage> {
               const SizedBox(height: 14),
               _Rise(
                 delay: 50,
-                child: _Section(title: 'Làm việc', children: workRows),
-              ),
-              const SizedBox(height: 14),
-              _Rise(
-                delay: 100,
                 child: _Section(
-                  title: 'Ứng dụng',
+                  title: 'Bảo mật',
                   children: [
                     _AccountRow(
-                      icon: Icons.notifications_outlined,
-                      label: 'Thông báo',
-                      onTap: () =>
-                          context.pushNamed(SettingsModule.notifications),
-                    ),
-                    _AccountRow(
-                      icon: Icons.wallpaper_outlined,
-                      label: 'Nền',
-                      onTap: () => context.pushNamed(SettingsModule.background),
-                    ),
-                    _ThemeRow(
-                      index: _themeModes.indexOf(themeMode),
-                      onChanged: (i) {
-                        HapticFeedback.selectionClick();
-                        ref
-                            .read(themeModeProvider.notifier)
-                            .set(_themeModes[i]);
-                      },
+                      icon: Icons.key_outlined,
+                      label: 'Đổi mật khẩu',
+                      onTap: _changePassword,
                     ),
                   ],
                 ),
               ),
               const SizedBox(height: 14),
               _Rise(
+                delay: 100,
+                child: _Section(
+                  title: 'Không gian làm việc',
+                  children: [
+                    _AccountRow(
+                      icon: Icons.shield_outlined,
+                      label: 'Quyền của tôi',
+                      onTap: () =>
+                          context.pushNamed(SettingsModule.myPermissions),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 18),
+              _Rise(
                 delay: 150,
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    _Section(
-                      title: 'Hỗ trợ',
-                      children: [
-                        _AccountRow(
-                          label: 'Trung tâm hỗ trợ',
-                          external: true,
-                          onTap: () => _openLink(AppConfig.supportUrl),
-                        ),
-                        _AccountRow(
-                          label: 'Chính sách quyền riêng tư',
-                          external: true,
-                          onTap: () => _openLink(AppConfig.privacyPolicyUrl),
-                        ),
-                        _AccountRow(
-                          label: 'Xóa tài khoản',
-                          destructive: true,
-                          onTap: () => requestAccountDeletion(context),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 14),
                     _LogoutButton(onPressed: _confirmLogout),
-                    const SizedBox(height: 14),
+                    const SizedBox(height: 4),
                     Center(
-                      child: Text(
-                        'Viomni ${AppConfig.appVersion}',
-                        style: OmniType.micro.copyWith(
-                          fontWeight: FontWeight.w400,
-                          color: scheme.onSurfaceVariant,
+                      child: TextButton(
+                        style: TextButton.styleFrom(
+                          foregroundColor: scheme.error,
+                          minimumSize: const Size(44, 44),
                         ),
+                        onPressed: () => requestAccountDeletion(context),
+                        child: const Text('Xoá tài khoản'),
                       ),
                     ),
                   ],
@@ -386,24 +332,6 @@ class _AccountPageState extends ConsumerState<AccountPage> {
     }
   }
 
-  Future<void> _openLink(Uri url) async {
-    final messenger = ScaffoldMessenger.of(context);
-    // `launchUrl` có thể ném PlatformException (không có ứng dụng xử lý, bị
-    // chính sách chặn) chứ không chỉ trả false; cả hai đều là "không mở được".
-    var opened = false;
-    try {
-      opened = await launchUrl(url, mode: LaunchMode.externalApplication);
-    } on PlatformException {
-      opened = false;
-    }
-    if (opened) return;
-    messenger.showSnackBar(
-      const SnackBar(
-        content: Text('Không mở được liên kết. Vui lòng thử lại.'),
-      ),
-    );
-  }
-
   Future<void> _confirmLogout() async {
     HapticFeedback.selectionClick();
     final container = ProviderScope.containerOf(context);
@@ -463,8 +391,11 @@ class _Card extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Thẻ nhóm lồng bo 18 trên nền xám (viomni-apple-uiux.html `.group`).
     return Material(
-      color: Colors.transparent,
+      color: Theme.of(context).colorScheme.surface,
+      borderRadius: BorderRadius.circular(18),
+      clipBehavior: Clip.antiAlias,
       child: Padding(padding: padding, child: child),
     );
   }
@@ -518,30 +449,15 @@ class _Section extends StatelessWidget {
 /// Một dòng: ô icon 28, nhãn, giá trị phụ, mũi tên. Dòng nguy hiểm tô đỏ và
 /// không có mũi tên.
 class _AccountRow extends StatelessWidget {
-  const _AccountRow({
-    required this.label,
-    required this.onTap,
-    this.icon,
-    this.value,
-    this.destructive = false,
-    this.external = false,
-  });
+  const _AccountRow({required this.label, required this.onTap, this.icon});
 
   final String label;
   final VoidCallback onTap;
   final IconData? icon;
-  final Widget? value;
-  final bool destructive;
-
-  /// Mở ra ngoài app (trình duyệt): mũi tên chéo thay cho chevron.
-  final bool external;
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final foreground = destructive
-        ? OmniColors.dangerTextOf(context)
-        : scheme.onSurface;
 
     return InkWell(
       onTap: () {
@@ -559,22 +475,17 @@ class _AccountRow extends StatelessWidget {
                 child: Text(
                   label,
                   style: OmniType.chip.copyWith(
-                    fontWeight: destructive ? FontWeight.w600 : FontWeight.w400,
-                    color: foreground,
+                    fontWeight: FontWeight.w400,
+                    color: scheme.onSurface,
                   ),
                 ),
               ),
-              ?value,
-              if (!destructive) ...[
-                const SizedBox(width: 6),
-                Icon(
-                  external
-                      ? Icons.open_in_new_rounded
-                      : Icons.chevron_right_rounded,
-                  size: 16,
-                  color: OmniTaskTones.of(context).chevron,
-                ),
-              ],
+              const SizedBox(width: 6),
+              Icon(
+                Icons.chevron_right_rounded,
+                size: 16,
+                color: OmniTaskTones.of(context).chevron,
+              ),
             ],
           ),
         ),
@@ -604,141 +515,6 @@ class _IconTile extends StatelessWidget {
   }
 }
 
-class _ValueText extends StatelessWidget {
-  const _ValueText(this.text);
-
-  final String text;
-
-  @override
-  Widget build(BuildContext context) {
-    return Text(
-      text,
-      style: OmniType.caption.copyWith(
-        color: Theme.of(context).colorScheme.onSurfaceVariant,
-      ),
-    );
-  }
-}
-
-class _Dot extends StatelessWidget {
-  const _Dot(this.color);
-
-  final Color color;
-
-  @override
-  Widget build(BuildContext context) {
-    return DecoratedBox(
-      decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-      child: const SizedBox.square(dimension: 6),
-    );
-  }
-}
-
-class _TeamRow extends ConsumerWidget {
-  const _TeamRow();
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final members = ref.watch(teamDirectoryProvider).valueOrNull;
-    final active = members?.where((m) => m.isActive).length;
-
-    return _AccountRow(
-      icon: Icons.group_outlined,
-      label: 'Đội nhóm',
-      value: active == null ? null : _ValueText('$active người'),
-      onTap: () => context.pushNamed(TeamModule.list),
-    );
-  }
-}
-
-class _ChannelsRow extends ConsumerWidget {
-  const _ChannelsRow();
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final scheme = Theme.of(context).colorScheme;
-    final health = ref.watch(channelHealthProvider);
-
-    return _AccountRow(
-      icon: Icons.chat_bubble_outline_rounded,
-      label: 'Kênh kết nối',
-      value: health == null
-          ? null
-          // Chấm màu và số rời nhau không có nghĩa với trình đọc màn hình:
-          // gộp thành một câu.
-          : Semantics(
-              container: true,
-              excludeSemantics: true,
-              label: '${health.running} chạy, ${health.failing} lỗi',
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  _Dot(scheme.primary),
-                  const SizedBox(width: 6),
-                  _ValueText('${health.running}'),
-                  if (health.failing > 0) ...[
-                    const SizedBox(width: 6),
-                    const _ValueText('·'),
-                    const SizedBox(width: 6),
-                    _Dot(scheme.error),
-                    const SizedBox(width: 6),
-                    _ValueText('${health.failing} lỗi'),
-                  ],
-                ],
-              ),
-            ),
-      onTap: () => context.pushNamed(ChannelsModule.list),
-    );
-  }
-}
-
-/// Dòng "Giao diện" không bấm; bộ chọn ba ngăn nằm dưới nhãn.
-class _ThemeRow extends StatelessWidget {
-  const _ThemeRow({required this.index, required this.onChanged});
-
-  final int index;
-  final ValueChanged<int> onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(
-        OmniSpacing.md,
-        10,
-        OmniSpacing.md,
-        OmniSpacing.md,
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Row(
-            children: [
-              const _IconTile(Icons.wb_sunny_outlined),
-              const SizedBox(width: 10),
-              Text(
-                'Giao diện',
-                style: OmniType.chip.copyWith(
-                  fontWeight: FontWeight.w400,
-                  color: scheme.onSurface,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          OmniSegmented(
-            labels: const ['Sáng', 'Tối', 'Theo máy'],
-            index: index < 0 ? 2 : index,
-            onChanged: onChanged,
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-/// Nút "Đổi" vẽ cao 30, vùng chạm 44.
 class _SwitchWorkspaceButton extends StatelessWidget {
   const _SwitchWorkspaceButton({required this.onTap});
 
@@ -791,16 +567,12 @@ class _LogoutButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-
     return OutlinedButton(
       onPressed: onPressed,
       style: OutlinedButton.styleFrom(
         foregroundColor: OmniColors.dangerTextOf(context),
-        backgroundColor: scheme.surface,
         minimumSize: const Size.fromHeight(44),
-        side: BorderSide(color: scheme.outlineVariant),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+        shape: const StadiumBorder(),
         textStyle: OmniType.chip.copyWith(fontWeight: FontWeight.w600),
       ),
       child: const Text('Đăng xuất'),

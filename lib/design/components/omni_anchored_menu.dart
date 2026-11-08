@@ -105,10 +105,12 @@ class _OmniAnchoredMenuRoute<T> extends PopupRoute<T> {
       ),
     );
     final pop = CurvedAnimation(parent: animation, curve: _popCurve);
+    // Màn sau mờ hẳn như menu ngữ cảnh iOS (viomni-apple-uiux.html `.veil2`):
+    // mắt chỉ còn bám vào menu. Tương phản cao: chỉ phủ màu, không nhoè.
     final scrim = OmniColors.byBrightness(
       context,
-      OmniColors.ink.withValues(alpha: .22),
-      Colors.black.withValues(alpha: .4),
+      OmniColors.ink.withValues(alpha: .12),
+      Colors.black.withValues(alpha: .35),
     );
 
     return Stack(
@@ -159,10 +161,13 @@ class _OmniAnchoredMenuRoute<T> extends PopupRoute<T> {
   ) {
     final blurred = FadeTransition(
       opacity: fade,
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 2, sigmaY: 2),
-        child: ColoredBox(color: scrim),
-      ),
+      child: MediaQuery.highContrastOf(context)
+          ? ColoredBox(color: scrim)
+          : BackdropFilter(
+              // Mờ vừa (người dùng 2026-11-08: 18 quá mờ, mất ngữ cảnh).
+              filter: ImageFilter.blur(sigmaX: 6, sigmaY: 6),
+              child: ColoredBox(color: scrim),
+            ),
     );
     if (!dismissOnOutsideTap) {
       return ExcludeSemantics(child: AbsorbPointer(child: blurred));
@@ -200,25 +205,28 @@ class _MenuSurface extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    const radius = BorderRadius.all(Radius.circular(8));
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    final solid = MediaQuery.highContrastOf(context);
+    // Viên kính rời bo 22 (`.pop.glass`): nền thẻ ~78% + nhoè 22 + viền sáng
+    // 1px. Đậm hơn thanh tab vì chữ menu phải đọc được trên mọi nội dung.
+    const radius = BorderRadius.all(Radius.circular(22));
+    final fill = solid
+        ? scheme.surface
+        : scheme.surface.withValues(alpha: dark ? .72 : .78);
 
-    return Container(
-      width: width,
-      constraints: BoxConstraints(maxHeight: maxHeight),
-      decoration: BoxDecoration(
+    final surface = Material(
+      color: fill,
+      shape: RoundedRectangleBorder(
         borderRadius: radius,
-        boxShadow: [
-          BoxShadow(
-            offset: const Offset(0, 12),
-            blurRadius: 32,
-            color: OmniColors.ink.withValues(alpha: .18),
-          ),
-        ],
+        side: BorderSide(
+          color: dark
+              ? Colors.white.withValues(alpha: .10)
+              : Colors.white.withValues(alpha: .70),
+        ),
       ),
-      child: Material(
-        color: scheme.surface,
-        borderRadius: radius,
-        clipBehavior: Clip.antiAlias,
+      clipBehavior: Clip.antiAlias,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 6),
         child: Semantics(
           scopesRoute: true,
           namesRoute: true,
@@ -228,8 +236,43 @@ class _MenuSurface extends StatelessWidget {
         ),
       ),
     );
+
+    return Container(
+      width: width,
+      constraints: BoxConstraints(maxHeight: maxHeight),
+      decoration: BoxDecoration(
+        borderRadius: radius,
+        boxShadow: [
+          BoxShadow(
+            offset: const Offset(0, 12),
+            blurRadius: 36,
+            color: OmniColors.ink.withValues(alpha: dark ? .40 : .14),
+          ),
+        ],
+      ),
+      child: solid
+          ? surface
+          : ClipRRect(
+              borderRadius: radius,
+              child: BackdropFilter(
+                filter: ImageFilter.compose(
+                  outer: ImageFilter.blur(sigmaX: 22, sigmaY: 22),
+                  inner: const ColorFilter.matrix(_saturate),
+                ),
+                child: surface,
+              ),
+            ),
+    );
   }
 }
+
+/// Bão hoà 1.8 như `saturate(180%)` của kính CSS.
+const List<double> _saturate = [
+  1.6302, -0.5722, -0.0580, 0, 0, //
+  -0.1698, 1.2278, -0.0580, 0, 0, //
+  -0.1698, -0.5722, 1.7420, 0, 0, //
+  0, 0, 0, 1, 0,
+];
 
 /// Một dòng hành động trong [showOmniAnchoredMenu].
 class OmniAnchoredMenuItem extends StatelessWidget {
@@ -269,7 +312,9 @@ class OmniAnchoredMenuItem extends StatelessWidget {
           decoration: divider
               ? BoxDecoration(
                   border: Border(
-                    top: BorderSide(color: scheme.surfaceContainerHighest),
+                    top: BorderSide(
+                      color: scheme.onSurface.withValues(alpha: .08),
+                    ),
                   ),
                 )
               : null,
@@ -278,11 +323,12 @@ class OmniAnchoredMenuItem extends StatelessWidget {
               Icon(
                 icon,
                 size: OmniIconSize.md,
+                // Một tông màu (gu liquid glass): icon theo màu chữ.
                 color: !enabled
                     ? scheme.onSurfaceVariant.withValues(alpha: .45)
                     : destructive
                     ? scheme.error
-                    : scheme.primary,
+                    : scheme.onSurface.withValues(alpha: .78),
               ),
               const SizedBox(width: 12),
               Expanded(

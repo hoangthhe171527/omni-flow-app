@@ -480,12 +480,12 @@ void main() {
     expect(find.text('Ưu tiên cao'), findsOneWidget);
   });
 
-  testWidgets('thẻ: nền surface, bo 8, đệm 10/10/10/8, bóng 0 1 2', (t) async {
+  testWidgets('thẻ: nền surface, bo 14, đệm 10/10/10/8, bóng 0 1 2', (t) async {
     await t.pumpWidget(wrap(BoardTaskCard(task: task(), onTap: () {})));
     await t.pumpAndSettle();
     final shell = t.widget<Container>(find.byKey(const ValueKey('card-shell')));
     final deco = shell.decoration! as BoxDecoration;
-    expect(deco.borderRadius, BorderRadius.circular(8));
+    expect(deco.borderRadius, BorderRadius.circular(14));
     expect(deco.boxShadow!.single.offset, const Offset(0, 1));
     expect(deco.boxShadow!.single.blurRadius, 2);
     expect(shell.padding, const EdgeInsets.fromLTRB(8, 10, 10, 10));

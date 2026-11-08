@@ -95,7 +95,6 @@ class _SheetState extends ConsumerState<_Sheet> {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final text = Theme.of(context).textTheme;
     final members = _members();
     final byId = ref.watch(teamMemberByIdProvider);
     final currentId = widget.subtask.assigneeId;
@@ -170,34 +169,11 @@ class _SheetState extends ConsumerState<_Sheet> {
               ],
             ),
           )
-        else ...[
-          Padding(
-            padding: const EdgeInsets.fromLTRB(
-              OmniSpacing.lg,
-              OmniSpacing.sm,
-              OmniSpacing.lg,
-              0,
-            ),
-            child: Text(
-              'Ai làm việc này',
-              style: text.titleMedium?.copyWith(fontWeight: FontWeight.w600),
-            ),
+        else
+          OmniSheetHeader(
+            title: 'Ai làm việc này',
+            subtitle: 'Việc con: ${widget.subtask.title}',
           ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(
-              OmniSpacing.lg,
-              2,
-              OmniSpacing.lg,
-              OmniSpacing.md,
-            ),
-            child: Text(
-              'Việc con: ${widget.subtask.title}',
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: OmniType.micro.copyWith(color: scheme.onSurfaceVariant),
-            ),
-          ),
-        ],
         Padding(
           padding: EdgeInsets.fromLTRB(
             widget.inMenu ? 12 : OmniSpacing.lg,
@@ -246,15 +222,20 @@ class _SheetState extends ConsumerState<_Sheet> {
                         ),
                   data: (rows) => ListView(
                     shrinkWrap: true,
-                    padding: const EdgeInsets.only(bottom: OmniSpacing.sm),
+                    padding: const EdgeInsets.fromLTRB(10, 0, 10, 10),
                     children: [
-                      for (final m in visible(rows))
-                        _MemberRow(
-                          member: m,
-                          subtitle: m.jobTitle,
-                          selected: m.userId == currentId,
-                          onTap: () => _pick(m),
-                        ),
+                      OmniGroupSection(
+                        dividerIndent: 58,
+                        children: [
+                          for (final m in visible(rows))
+                            _MemberRow(
+                              member: m,
+                              subtitle: m.jobTitle,
+                              selected: m.userId == currentId,
+                              onTap: () => _pick(m),
+                            ),
+                        ],
+                      ),
                     ],
                   ),
                 ),
@@ -275,13 +256,6 @@ class _SheetState extends ConsumerState<_Sheet> {
               child: OutlinedButton(
                 onPressed: () =>
                     Navigator.of(context).pop(const SubtaskUnassign()),
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: OmniColors.dangerTextOf(context),
-                  side: BorderSide(color: OmniColors.controlBorderOf(context)),
-                  shape: const RoundedRectangleBorder(
-                    borderRadius: OmniRadius.xsAll,
-                  ),
-                ),
                 child: const Text('Bỏ gán'),
               ),
             ),
@@ -398,55 +372,15 @@ class _MemberRow extends StatelessWidget {
   final VoidCallback onTap;
 
   @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final text = Theme.of(context).textTheme;
-
-    return InkWell(
-      onTap: onTap,
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(minHeight: 46),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(
-            horizontal: OmniSpacing.lg,
-            vertical: 7,
-          ),
-          child: Row(
-            children: [
-              OmniAvatar(
-                name: member.name,
-                imageUrl: member.avatarUrl,
-                size: 32,
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      member.name,
-                      style: text.bodyLarge?.copyWith(
-                        fontWeight: selected
-                            ? FontWeight.w600
-                            : FontWeight.w400,
-                      ),
-                    ),
-                    if (subtitle != null && subtitle!.isNotEmpty)
-                      Text(
-                        subtitle!,
-                        style: OmniType.micro.copyWith(
-                          color: scheme.onSurfaceVariant,
-                        ),
-                      ),
-                  ],
-                ),
-              ),
-              if (selected)
-                Icon(Icons.check_rounded, size: 20, color: scheme.primary),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
+  Widget build(BuildContext context) => OmniGroupRow(
+    leading: OmniAvatar(
+      name: member.name,
+      imageUrl: member.avatarUrl,
+      size: 32,
+    ),
+    title: member.name,
+    subtitle: subtitle,
+    selected: selected,
+    onTap: onTap,
+  );
 }

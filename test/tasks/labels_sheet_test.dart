@@ -10,7 +10,7 @@ import 'package:omni_app/modules/tasks/tasks.dart';
 import 'package:omni_app/security/permissions/access_policy.dart';
 
 /// Sheet Nhãn màu (`TaskDetail.dc.html` `isLabels`): dải 48 tô màu nhãn, bút
-/// sửa 44×48, dòng "Nhãn mới…" nét đứt — bút và dòng mới chỉ khi có
+/// sửa 44×48, dòng "+ Nhãn mới" — bút và dòng mới chỉ khi có
 /// `system_options.write`.
 void main() {
   late _FakeTasksApi api;
@@ -50,42 +50,43 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  testWidgets('dải nhãn 48, bo 8, màu nhãn, chữ trắng w600 15', (tester) async {
+  testWidgets('nhãn = chấm màu + tên trong nhóm, bút sửa 44×48', (
+    tester,
+  ) async {
     await pump(tester);
 
     expect(find.text('Nhãn màu'), findsOneWidget);
     expect(find.text('Xong'), findsOneWidget);
     final row = find.byKey(const Key('label-row-khan_cap'));
-    expect(tester.getSize(row).height, 48);
-    final deco =
-        tester
-                .widget<Ink>(
-                  find.descendant(of: row, matching: find.byType(Ink)),
-                )
-                .decoration!
-            as BoxDecoration;
-    expect(deco.color, const Color(0xFFB42318));
-    expect(deco.borderRadius, BorderRadius.circular(8));
-    final text = tester.widget<Text>(find.text('Khẩn cấp'));
-    expect(text.style?.color, Colors.white);
-    expect(text.style?.fontSize, 15);
-    expect(text.style?.fontWeight, FontWeight.w600);
+    expect(tester.getSize(row).height, greaterThanOrEqualTo(48));
+    final dot = tester.widget<Container>(
+      find
+          .descendant(of: row, matching: find.byType(Container))
+          .evaluate()
+          .map((e) => find.byWidget(e.widget))
+          .firstWhere((f) {
+            final w = tester.widget<Container>(f);
+            final d = w.decoration;
+            return d is BoxDecoration && d.shape == BoxShape.circle;
+          }),
+    );
+    expect((dot.decoration! as BoxDecoration).color, const Color(0xFFB42318));
+    expect(find.text('Khẩn cấp'), findsOneWidget);
     expect(
       tester.getSize(find.bySemanticsLabel('Sửa nhãn Khẩn cấp')),
       const Size(44, 48),
     );
-    expect(find.text('Nhãn dùng chung cho cả công ty'), findsOneWidget);
+    expect(find.text('Nhãn dùng chung cho cả công ty'), findsNothing);
   });
 
-  testWidgets('(h) thiếu quyền sửa nhãn: không bút, không "Nhãn mới…"', (
+  testWidgets('(h) thiếu quyền sửa nhãn: không bút, không "Nhãn mới"', (
     tester,
   ) async {
     await pump(tester, perms: const {'system_options.read'});
 
     expect(find.text('Khẩn cấp'), findsOneWidget);
     expect(find.bySemanticsLabel('Sửa nhãn Khẩn cấp'), findsNothing);
-    expect(find.text('Nhãn mới…'), findsNothing);
-    expect(find.byTooltip('Thêm nhãn'), findsNothing);
+    expect(find.text('Nhãn mới'), findsNothing);
   });
 
   testWidgets('chỉ xem (từ kế hoạch): chạm dải không bật/tắt, không ✓', (
@@ -123,17 +124,21 @@ void main() {
   testWidgets('tạo nhãn mới với màu chọn nhanh', (tester) async {
     await pump(tester);
 
-    expect(find.text('Nhãn mới…'), findsOneWidget);
+    expect(find.text('Nhãn mới'), findsOneWidget);
+    await tester.tap(find.text('Nhãn mới'));
+    await tester.pumpAndSettle();
     await tester.enterText(
-      find.bySemanticsLabel('Tên nhãn mới'),
+      find.byKey(const Key('label-name')),
       'Chờ linh kiện',
     );
     await tester.tap(find.bySemanticsLabel('Màu #2563EB'));
     await tester.pump();
-    await tester.tap(find.byTooltip('Thêm nhãn'));
+    await tester.tap(find.widgetWithText(FilledButton, 'Lưu'));
     await tester.pumpAndSettle();
 
     expect(api.created, [('Chờ linh kiện', '#2563EB')]);
+    // Lưu xong quay về danh sách trong cùng sheet.
+    expect(find.text('Nhãn màu'), findsOneWidget);
   });
 
   testWidgets('sửa nhãn gửi tên và màu theo id', (tester) async {

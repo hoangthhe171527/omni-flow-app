@@ -115,8 +115,9 @@ class _CustomersPageState extends ConsumerState<CustomersPage> {
     ];
 
     return Scaffold(
-      // Header và danh sách cùng một mặt phẳng.
-      backgroundColor: scheme.surface,
+      extendBodyBehindAppBar: true,
+      // Nền xám để thẻ nhóm lồng của danh sách nổi lên.
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: OmniTopBar(
         semanticsTitle: 'Khách',
         bottom: segment == 1
@@ -156,11 +157,29 @@ class _CustomersPageState extends ConsumerState<CustomersPage> {
                 ],
               ),
       ),
-      body: _SegmentSwitcher(
-        segment: segment,
-        child: segment == 1
-            ? extra!.body(false)
-            : _customersBody(list, filter, access),
+      body: OmniTopBarOverlap.wrap(
+        child: Builder(
+          builder: (context) {
+            final topInset = OmniTopBarOverlap.of(context);
+            return _SegmentSwitcher(
+              segment: segment,
+              child: segment == 1
+                  // Đoạn Cơ hội có bảng lọc + hàng giai đoạn ở đầu: dời xuống dưới
+                  // thanh, không cuộn dưới kính.
+                  ? Padding(
+                      padding: EdgeInsets.only(top: topInset),
+                      child: MediaQuery.removePadding(
+                        context: context,
+                        removeTop: true,
+                        child: OmniTopBarOverlap.wrap(
+                          child: extra!.body(false),
+                        ),
+                      ),
+                    )
+                  : _customersBody(list, filter, access, topInset),
+            );
+          },
+        ),
       ),
     );
   }
@@ -169,12 +188,14 @@ class _CustomersPageState extends ConsumerState<CustomersPage> {
     AsyncValue<CustomerListState> list,
     CustomerFilter filter,
     ResourceAccess access,
+    double topInset,
   ) {
     return Column(
       key: const ValueKey('khach-seg-khach-hang'),
       children: [
         Expanded(
           child: RefreshIndicator.adaptive(
+            edgeOffset: topInset,
             onRefresh: () {
               setState(() => _openId = null);
               return ref.read(customerListProvider.notifier).refresh();
@@ -198,7 +219,10 @@ class _CustomersPageState extends ConsumerState<CustomersPage> {
                 controller: _scrollController,
                 keyboardDismissBehavior:
                     ScrollViewKeyboardDismissBehavior.onDrag,
-                padding: const EdgeInsets.only(bottom: OmniSpacing.bottomSafe),
+                padding: EdgeInsets.only(
+                  top: topInset,
+                  bottom: OmniSpacing.bottomSafe,
+                ),
                 itemCount: state.items.length + (state.hasMore ? 1 : 0),
                 itemBuilder: (context, index) {
                   if (index >= state.items.length) {
@@ -216,17 +240,33 @@ class _CustomersPageState extends ConsumerState<CustomersPage> {
                     );
                   }
                   final customer = state.items[index];
-                  return CustomerRow(
-                    customer: customer,
-                    expanded: _openId == customer.id,
-                    onTap: () {
-                      HapticFeedback.selectionClick();
-                      setState(
-                        () => _openId = _openId == customer.id
-                            ? null
-                            : customer.id,
-                      );
-                    },
+                  // Nhóm lồng (viomni-apple-uiux.html `.group`): cả danh sách
+                  // là một thẻ bo 18 cách mép 16 trên nền xám.
+                  const r = Radius.circular(18);
+                  final first = index == 0;
+                  final last =
+                      index == state.items.length - 1 && !state.hasMore;
+                  return Padding(
+                    padding: EdgeInsets.fromLTRB(16, first ? 8 : 0, 16, 0),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.vertical(
+                        top: first ? r : Radius.zero,
+                        bottom: last ? r : Radius.zero,
+                      ),
+                      child: CustomerRow(
+                        customer: customer,
+                        divider: !first,
+                        expanded: _openId == customer.id,
+                        onTap: () {
+                          HapticFeedback.selectionClick();
+                          setState(
+                            () => _openId = _openId == customer.id
+                                ? null
+                                : customer.id,
+                          );
+                        },
+                      ),
+                    ),
                   );
                 },
               ),

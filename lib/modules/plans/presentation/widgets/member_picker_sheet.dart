@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../design/components/components.dart';
@@ -48,7 +47,7 @@ class _MemberPickerSheetState extends ConsumerState<_MemberPickerSheet> {
         mainAxisSize: MainAxisSize.min,
         children: [
           Padding(
-            padding: const EdgeInsets.all(OmniSpacing.lg),
+            padding: const EdgeInsets.fromLTRB(10, 6, 10, 10),
             child: TextField(
               style: OmniType.search.copyWith(
                 color: scheme.onSurface,
@@ -94,38 +93,34 @@ class _MemberPickerSheetState extends ConsumerState<_MemberPickerSheet> {
                   );
                 }
 
-                return ListView.builder(
+                return ListView(
                   shrinkWrap: true,
+                  padding: const EdgeInsets.fromLTRB(10, 0, 10, 10),
                   keyboardDismissBehavior:
                       ScrollViewKeyboardDismissBehavior.onDrag,
-                  itemCount: shown.length,
-                  itemBuilder: (context, i) {
-                    final member = shown[i];
-                    final on = _selected.contains(member.userId);
-
-                    return CheckboxListTile.adaptive(
-                      value: on,
-                      secondary: OmniAvatar(
-                        name: member.name,
-                        imageUrl: member.avatarUrl,
-                        size: 36,
-                      ),
-                      title: Text(member.name),
-                      subtitle: member.jobTitle == null
-                          ? null
-                          : Text(member.jobTitle!),
-                      onChanged: (_) {
-                        HapticFeedback.selectionClick();
-                        setState(() {
-                          if (on) {
-                            _selected.remove(member.userId);
-                          } else {
-                            _selected.add(member.userId);
-                          }
-                        });
-                      },
-                    );
-                  },
+                  children: [
+                    OmniGroupSection(
+                      dividerIndent: 62,
+                      children: [
+                        for (final member in shown)
+                          OmniGroupRow(
+                            leading: OmniAvatar(
+                              name: member.name,
+                              imageUrl: member.avatarUrl,
+                              size: 36,
+                            ),
+                            title: member.name,
+                            subtitle: member.jobTitle,
+                            selected: _selected.contains(member.userId),
+                            onTap: () => setState(() {
+                              if (!_selected.remove(member.userId)) {
+                                _selected.add(member.userId);
+                              }
+                            }),
+                          ),
+                      ],
+                    ),
+                  ],
                 );
               },
               loading: () => const Padding(
@@ -139,7 +134,7 @@ class _MemberPickerSheetState extends ConsumerState<_MemberPickerSheet> {
             ),
           ),
           Padding(
-            padding: const EdgeInsets.all(OmniSpacing.lg),
+            padding: const EdgeInsets.fromLTRB(10, 12, 10, 14),
             child: SizedBox(
               width: double.infinity,
               child: FilledButton(

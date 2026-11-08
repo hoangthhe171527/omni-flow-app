@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/error/app_exception.dart';
+import '../../../design/components/components.dart';
 import '../../../design/platform/omni_motion_scope.dart';
 import '../../../design/tokens/tokens.dart';
 import '../application/plans_providers.dart';
@@ -92,7 +93,6 @@ class _SectionOrderPageState extends ConsumerState<SectionOrderPage> {
     }
     final ids = _ids;
     final scheme = Theme.of(context).colorScheme;
-    final tones = OmniTaskTones.of(context);
     final byId = {
       for (final s in plan?.sections ?? const <PlanSection>[]) s.id: s,
     };
@@ -139,7 +139,7 @@ class _SectionOrderPageState extends ConsumerState<SectionOrderPage> {
                 return DecoratedBox(
                   decoration: BoxDecoration(
                     color: scheme.surface,
-                    borderRadius: OmniRadius.smAll,
+                    borderRadius: BorderRadius.circular(18),
                     boxShadow: BoxShadow.lerpList(
                       const [],
                       OmniShadows.dragging,
@@ -150,7 +150,7 @@ class _SectionOrderPageState extends ConsumerState<SectionOrderPage> {
                 );
               },
               child: ClipRRect(
-                borderRadius: OmniRadius.smAll,
+                borderRadius: BorderRadius.circular(18),
                 child: Material(color: scheme.surface, child: child),
               ),
             ),
@@ -160,170 +160,46 @@ class _SectionOrderPageState extends ConsumerState<SectionOrderPage> {
           );
 
     return Scaffold(
-      backgroundColor: scheme.surface,
-      body: Column(
-        children: [
-          _TopBar(
-            dirty: _dirty,
-            saving: _saving,
-            onSave: _dirty && !_saving ? _save : null,
-          ),
-          Expanded(
-            child: ids == null
-                ? const Center(child: CircularProgressIndicator.adaptive())
-                : CustomScrollView(
-                    slivers: [
-                      SliverToBoxAdapter(
-                        child: Padding(
-                          padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-                          child: Text.rich(
-                            TextSpan(
-                              children: [
-                                const TextSpan(text: 'Giữ tay cầm '),
-                                _glyph(
-                                  Icons.drag_indicator_rounded,
-                                  scheme.onSurfaceVariant,
-                                ),
-                                const TextSpan(
-                                  text:
-                                      ' rồi kéo lên/xuống, hoặc dùng mũi tên. '
-                                      'Thứ tự này là thứ tự cột trên bảng.',
-                                ),
-                              ],
-                            ),
-                            style: OmniType.caption.copyWith(
-                              color: scheme.onSurfaceVariant,
-                            ),
-                          ),
-                        ),
-                      ),
-                      SliverPadding(
-                        padding: const EdgeInsets.symmetric(horizontal: 16),
-                        sliver: DecoratedSliver(
-                          decoration: BoxDecoration(
-                            color: scheme.surface,
-                            borderRadius: OmniRadius.smAll,
-                          ),
-                          // Viền vẽ ĐÈ lên nền các dòng, không bị dòng che.
-                          sliver: DecoratedSliver(
-                            position: DecorationPosition.foreground,
-                            decoration: BoxDecoration(
-                              borderRadius: OmniRadius.smAll,
-                              border: Border.all(color: scheme.outlineVariant),
-                            ),
-                            sliver: rows,
-                          ),
-                        ),
-                      ),
-                      SliverToBoxAdapter(
-                        child: Padding(
-                          padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-                          child: Text.rich(
-                            TextSpan(
-                              children: [
-                                const TextSpan(
-                                  text:
-                                      'Chỉ chủ hoặc quản lý kế hoạch thấy màn này. '
-                                      'Đổi tên, xoá, cờ QC/KPI: mục “Sửa nhóm việc” '
-                                      'trong menu ',
-                                ),
-                                _glyph(Icons.more_horiz_rounded, tones.faint),
-                                const TextSpan(text: ' của cột.'),
-                              ],
-                            ),
-                            style: OmniType.micro.copyWith(
-                              color: tones.faint,
-                              fontWeight: FontWeight.w400,
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SliverPadding(
-                        padding: EdgeInsets.only(
-                          bottom: OmniSpacing.bottomSafe,
-                        ),
-                      ),
-                    ],
-                  ),
+      appBar: OmniAppBar(
+        title: 'Sắp xếp nhóm việc',
+        showAccount: false,
+        actions: [
+          TextButton(
+            onPressed: _dirty && !_saving ? _save : null,
+            child: _saving
+                ? const SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator.adaptive(strokeWidth: 2),
+                  )
+                : const Text('Lưu'),
           ),
         ],
       ),
-    );
-  }
-}
-
-class _TopBar extends StatelessWidget {
-  const _TopBar({
-    required this.dirty,
-    required this.saving,
-    required this.onSave,
-  });
-
-  final bool dirty;
-  final bool saving;
-  final VoidCallback? onSave;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final tones = OmniTaskTones.of(context);
-
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: scheme.surface.withValues(alpha: 0.92),
-        border: Border(bottom: BorderSide(color: scheme.outlineVariant)),
-      ),
-      child: Padding(
-        padding: EdgeInsets.fromLTRB(
-          4,
-          MediaQuery.paddingOf(context).top,
-          8,
-          0,
-        ),
-        child: SizedBox(
-          height: 52,
-          child: Row(
-            children: [
-              IconButton(
-                tooltip: 'Quay lại',
-                constraints: const BoxConstraints.tightFor(
-                  width: 44,
-                  height: 44,
-                ),
-                onPressed: () => Navigator.of(context).maybePop(),
-                icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 20),
-              ),
-              Expanded(
-                child: Text(
-                  'Sắp xếp nhóm việc',
-                  style: OmniType.section.copyWith(color: scheme.onSurface),
-                ),
-              ),
-              TextButton(
-                onPressed: onSave,
-                style: TextButton.styleFrom(
-                  minimumSize: const Size(44, 44),
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
-                  foregroundColor: scheme.primary,
-                  disabledForegroundColor: tones.faint,
-                  textStyle: OmniType.body.copyWith(
-                    fontWeight: FontWeight.w600,
+      body: ids == null
+          ? const Center(child: CircularProgressIndicator.adaptive())
+          : CustomScrollView(
+              slivers: [
+                SliverPadding(
+                  padding: const EdgeInsets.fromLTRB(
+                    16,
+                    OmniGroupSection.gap,
+                    16,
+                    0,
+                  ),
+                  sliver: DecoratedSliver(
+                    decoration: BoxDecoration(
+                      color: scheme.surface,
+                      borderRadius: BorderRadius.circular(18),
+                    ),
+                    sliver: rows,
                   ),
                 ),
-                child: saving
-                    ? const SizedBox(
-                        width: 18,
-                        height: 18,
-                        child: CircularProgressIndicator.adaptive(
-                          strokeWidth: 2,
-                        ),
-                      )
-                    : const Text('Lưu'),
-              ),
-            ],
-          ),
-        ),
-      ),
+                const SliverPadding(
+                  padding: EdgeInsets.only(bottom: OmniSpacing.bottomSafe),
+                ),
+              ],
+            ),
     );
   }
 }
@@ -373,7 +249,7 @@ class _SectionRow extends StatelessWidget {
 
     // Dòng đầu/cuối tự bo góc (K11): DecoratedSliver không cắt con, nên nền
     // vuông của dòng sẽ lòi ra khỏi góc bo của khung viền.
-    const corner = Radius.circular(OmniRadius.sm);
+    const corner = Radius.circular(18);
     return Material(
       color: scheme.surface,
       shape: RoundedRectangleBorder(
@@ -382,105 +258,115 @@ class _SectionRow extends StatelessWidget {
           bottom: last ? corner : Radius.zero,
         ),
       ),
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          border: first
-              ? null
-              : Border(top: BorderSide(color: OmniColors.trackOf(context))),
-        ),
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(minHeight: 56),
-          child: Row(
-            children: [
-              if (showGrip)
-                _InstantDragStartListener(
-                  index: index,
-                  child: Semantics(
-                    label: 'Kéo để đổi chỗ ${section.name}',
-                    child: ExcludeSemantics(
-                      // Nền trong suốt chứ không SizedBox trần: chỉ ColoredBox
-                      // mới nhận chạm trên cả vùng 44, không chỉ nét biểu tượng.
-                      child: ColoredBox(
-                        color: Colors.transparent,
-                        child: SizedBox(
-                          width: 44,
-                          height: 44,
-                          child: Icon(
-                            Icons.drag_indicator_rounded,
-                            size: 16,
-                            color: tones.faint,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (!first)
+            Divider(
+              height: 1,
+              thickness: 1,
+              indent: 44,
+              color: scheme.outlineVariant.withValues(alpha: .7),
+            ),
+          ConstrainedBox(
+            constraints: const BoxConstraints(minHeight: 56),
+            child: Row(
+              children: [
+                if (showGrip)
+                  _InstantDragStartListener(
+                    index: index,
+                    child: Semantics(
+                      label: 'Kéo để đổi chỗ ${section.name}',
+                      child: ExcludeSemantics(
+                        // Nền trong suốt chứ không SizedBox trần: chỉ ColoredBox
+                        // mới nhận chạm trên cả vùng 44, không chỉ nét biểu tượng.
+                        child: ColoredBox(
+                          color: Colors.transparent,
+                          child: SizedBox(
+                            width: 44,
+                            height: 44,
+                            child: Icon(
+                              Icons.drag_indicator_rounded,
+                              size: 16,
+                              color: tones.faint,
+                            ),
                           ),
                         ),
                       ),
                     ),
-                  ),
-                )
-              else
-                const SizedBox(width: 12),
-              Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 8),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        section.name,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: OmniType.body.copyWith(
-                          fontWeight: FontWeight.w500,
-                          color: scheme.onSurface,
-                        ),
-                      ),
-                      if (count != null)
+                  )
+                else
+                  const SizedBox(width: 12),
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
                         Text(
-                          count!,
-                          style: OmniType.micro.copyWith(
-                            fontWeight: FontWeight.w400,
-                            color: scheme.onSurfaceVariant,
+                          section.name,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: OmniType.body.copyWith(
+                            fontWeight: FontWeight.w500,
+                            color: scheme.onSurface,
                           ),
                         ),
-                    ],
+                        if (count != null)
+                          Text(
+                            count!,
+                            style: OmniType.micro.copyWith(
+                              fontWeight: FontWeight.w400,
+                              color: scheme.onSurfaceVariant,
+                            ),
+                          ),
+                      ],
+                    ),
                   ),
                 ),
-              ),
-              if (section.requiresChecklist)
-                Padding(
-                  padding: const EdgeInsets.only(left: 8, right: 4),
-                  child: DecoratedBox(
-                    decoration: BoxDecoration(
-                      color: OmniColors.byBrightness(
-                        context,
-                        OmniColors.warningSoft,
-                        OmniColors.darkWarningSoft,
+                if (section.requiresChecklist)
+                  Padding(
+                    padding: const EdgeInsets.only(left: 8, right: 4),
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        color: OmniColors.byBrightness(
+                          context,
+                          OmniColors.warningSoft,
+                          OmniColors.darkWarningSoft,
+                        ),
+                        borderRadius: OmniRadius.xsAll,
                       ),
-                      borderRadius: OmniRadius.xsAll,
-                    ),
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 6,
-                        vertical: 2,
-                      ),
-                      child: Text(
-                        'QC',
-                        style: OmniType.micro.copyWith(
-                          fontWeight: FontWeight.w600,
-                          color: OmniColors.warningTextOf(context),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 6,
+                          vertical: 2,
+                        ),
+                        child: Text(
+                          'QC',
+                          style: OmniType.micro.copyWith(
+                            fontWeight: FontWeight.w600,
+                            color: OmniColors.warningTextOf(context),
+                          ),
                         ),
                       ),
                     ),
                   ),
+                arrow(
+                  'Lên trên',
+                  Icons.keyboard_arrow_up_rounded,
+                  !first,
+                  onUp,
                 ),
-              arrow('Lên trên', Icons.keyboard_arrow_up_rounded, !first, onUp),
-              arrow(
-                'Xuống dưới',
-                Icons.keyboard_arrow_down_rounded,
-                !last,
-                onDown,
-              ),
-            ],
+                arrow(
+                  'Xuống dưới',
+                  Icons.keyboard_arrow_down_rounded,
+                  !last,
+                  onDown,
+                ),
+              ],
+            ),
           ),
-        ),
+        ],
       ),
     );
   }
@@ -525,10 +411,3 @@ class _InstantPointerState extends MultiDragPointerState {
   void accepted(GestureMultiDragStartCallback starter) =>
       starter(initialPosition);
 }
-
-/// Font của app không có ký tự ⋮ và ⋯ (`font_glyph_coverage_test`), nên đoạn
-/// chữ nhắc tới tay cầm và nút ⋯ dùng chính biểu tượng đó chen vào dòng.
-InlineSpan _glyph(IconData icon, Color color) => WidgetSpan(
-  alignment: PlaceholderAlignment.middle,
-  child: Icon(icon, size: 16, color: color),
-);

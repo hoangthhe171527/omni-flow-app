@@ -1,8 +1,10 @@
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../design/components/components.dart';
 import '../../../../design/tokens/tokens.dart';
 import '../../application/finance_providers.dart';
 import '../../domain/finance_models.dart';
@@ -13,7 +15,8 @@ import 'finance_palette.dart';
 /// Một dòng khoản chi trong danh sách ngày (`.row-wrap` + `.row`),
 /// hỗ trợ đầy đủ:
 /// - Chạm mở Sheet Chi tiết
-/// - Vuốt phải (`Trả đủ`) & Vuốt trái (`Tháng sau` / `Xoá`) chuẩn iOS
+/// - Vuốt phải (`Trả đủ`) & Vuốt trái (`Tháng sau` / `Xoá`): vòng kính hiện
+///   dần theo tay; kéo trái hết cỡ để hỏi xoá ngay (expense-swipe-uiux.html B)
 /// - Nhấn giữ mở iOS Context Menu
 /// - Hiển thị đúng dữ liệu thực tế từ API (nguồn tiền thật, nhóm loại trừ CP, khoản hoàn/giảm trừ)
 class ExpenseRowTile extends ConsumerStatefulWidget {
@@ -35,33 +38,85 @@ class ExpenseRowTile extends ConsumerStatefulWidget {
 class _ExpenseRowTileState extends ConsumerState<ExpenseRowTile> {
   final GlobalKey _rowKey = GlobalKey();
   double _dragDx = 0;
+  bool _dragging = false;
+
+  /// Kéo trái quá 60% bề ngang: nút Xoá đỏ đặc, thả tay là hỏi xoá ngay.
+  bool _armed = false;
+  double _width = 360;
+
+  // Vuốt kiểu vòng kính (expense-swipe-uiux.html phương án B).
+  static const double _actionWidth = 64;
+  static const double _actionGap = 6;
+  static const double _actionPad = 8;
 
   bool get _canPay => !widget.item.isRefund && widget.item.remainingAmount > 0;
   bool get _canDuplicate => !widget.item.isRefund;
 
+  double get _openLeft =>
+      _actionPad * 2 +
+      _actionWidth * (_canDuplicate ? 2 : 1) +
+      (_canDuplicate ? _actionGap : 0);
+  double get _openRight => _canPay ? _actionPad * 2 + _actionWidth : 0;
+
   void _resetSwipe() {
-    if (_dragDx != 0) {
-      setState(() => _dragDx = 0);
+    if (_dragDx != 0 || _armed) {
+      setState(() {
+        _dragDx = 0;
+        _armed = false;
+      });
     }
   }
 
+  void _onHorizontalDragStart(DragStartDetails _) =>
+      setState(() => _dragging = true);
+
   void _onHorizontalDragUpdate(DragUpdateDetails details) {
+    var next = _dragDx + details.delta.dx;
+    // Quá chỗ mở bên phải: kéo nặng dần (cao su).
+    final maxRight = _openRight;
+    if (next > maxRight) next = maxRight + (next - maxRight) * .2;
+    if (next < -_width) next = -_width;
+    final armed = -next > _width * .6;
+    if (armed && !_armed) HapticFeedback.mediumImpact();
     setState(() {
-      final next = _dragDx + details.delta.dx;
-      final maxRight = _canPay ? 88.0 : 0.0;
-      final minLeft = _canDuplicate ? -160.0 : -84.0;
-      _dragDx = next.clamp(minLeft, maxRight);
+      _dragDx = next;
+      _armed = armed;
     });
   }
 
   void _onHorizontalDragEnd(DragEndDetails details) {
-    if (_dragDx > 52 && _canPay) {
-      setState(() => _dragDx = 78);
-    } else if (_dragDx < -44) {
-      setState(() => _dragDx = _canDuplicate ? -152 : -76);
-    } else {
-      setState(() => _dragDx = 0);
+    final v = details.primaryVelocity ?? 0;
+    if (_armed) {
+      setState(() {
+        _dragging = false;
+        _dragDx = -_width;
+      });
+      _confirmDelete();
+      return;
     }
+    setState(() {
+      _dragging = false;
+      if ((_dragDx > _openRight * .55 || v > 600) && _canPay) {
+        _dragDx = _openRight;
+      } else if (_dragDx < -_openLeft * .4 || v < -600) {
+        _dragDx = -_openLeft;
+      } else {
+        _dragDx = 0;
+      }
+    });
+  }
+
+  Future<void> _confirmDelete() async {
+    final item = widget.item;
+    final grp = ref.read(financeLedgerProvider).groupById(item.groupId);
+    final ok = await showFinanceDeleteConfirmSheet(
+      context: context,
+      item: item,
+      groupName: grp.name,
+    );
+    if (!mounted) return;
+    _resetSwipe();
+    if (ok) ref.read(financeLedgerProvider.notifier).deleteExpense(item.id);
   }
 
   Future<void> _openContextMenu() async {
@@ -214,234 +269,210 @@ class _ExpenseRowTileState extends ConsumerState<ExpenseRowTile> {
     final left = item.remainingAmount;
     final paid = item.paidTotal;
 
-    return ClipRect(
-      child: Stack(
-        children: [
-          // Background swipe actions
-          Positioned.fill(
-            child: Row(
-              children: [
-                if (_canPay)
-                  GestureDetector(
-                    onTap: () {
-                      _resetSwipe();
-                      ref
-                          .read(financeLedgerProvider.notifier)
-                          .markPaidFull(item.id);
-                    },
-                    child: Container(
-                      width: 78,
-                      color: p.ok,
-                      alignment: Alignment.center,
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Icon(
-                            Icons.check_rounded,
-                            size: 16,
-                            color: Colors.white,
-                          ),
-                          const SizedBox(height: 3),
-                          Text(
-                            'Trả đủ',
-                            style: OmniType.micro.copyWith(
-                              color: Colors.white,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                const Spacer(),
-                if (_canDuplicate)
-                  GestureDetector(
-                    onTap: () {
-                      _resetSwipe();
-                      ref
-                          .read(financeLedgerProvider.notifier)
-                          .duplicateToNextMonth(item.id);
-                    },
-                    child: Container(
-                      width: 76,
-                      color: p.primary,
-                      alignment: Alignment.center,
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Icon(
-                            Icons.content_copy_rounded,
-                            size: 15,
-                            color: Colors.white,
-                          ),
-                          const SizedBox(height: 3),
-                          Text(
-                            'Tháng sau',
-                            style: OmniType.micro.copyWith(
-                              color: Colors.white,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                GestureDetector(
-                  onTap: () async {
-                    _resetSwipe();
-                    final ok = await showFinanceDeleteConfirmSheet(
-                      context: context,
-                      item: item,
-                      groupName: grp.name,
-                    );
-                    if (ok && mounted) {
-                      ref
-                          .read(financeLedgerProvider.notifier)
-                          .deleteExpense(item.id);
-                    }
-                  },
-                  child: Container(
-                    width: 76,
-                    color: p.danger,
-                    alignment: Alignment.center,
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Icon(
-                          Icons.delete_outline_rounded,
-                          size: 16,
-                          color: Colors.white,
-                        ),
-                        const SizedBox(height: 3),
-                        Text(
-                          'Xoá',
-                          style: OmniType.micro.copyWith(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          // Foreground row content
-          AnimatedContainer(
-            duration: const Duration(milliseconds: 160),
-            curve: Curves.easeOutCubic,
-            transform: Matrix4.translationValues(_dragDx, 0, 0),
-            color: widget.isFlashed ? p.primarySoft : p.card,
-            child: GestureDetector(
-              key: _rowKey,
-              behavior: HitTestBehavior.opaque,
-              onHorizontalDragUpdate: _onHorizontalDragUpdate,
-              onHorizontalDragEnd: _onHorizontalDragEnd,
-              onLongPress: _openContextMenu,
-              onTap: () {
-                if (_dragDx != 0) {
-                  _resetSwipe();
-                  return;
-                }
-                showExpenseDetailSheet(context: context, expenseId: item.id);
-              },
+    return LayoutBuilder(
+      builder: (context, box) {
+        if (box.maxWidth.isFinite) _width = box.maxWidth;
+        // Dòng và vùng nút chạy CHUNG một giá trị: lúc lắng về, vùng nút lớn
+        // đúng bằng phần dòng đã lộ — dòng không bao giờ che lên nút.
+        // Kéo: bám tay; thả: lắng về chỗ mở (bật nhẹ) / đóng (êm).
+        return TweenAnimationBuilder<double>(
+          tween: Tween(end: _dragDx),
+          duration: _dragging
+              ? Duration.zero
+              : const Duration(milliseconds: 380),
+          curve: _dragDx == 0 ? Curves.easeOutCubic : Curves.easeOutBack,
+          builder: (context, dx, _) {
+            final revealLeft = math.max(0.0, -dx);
+            final revealRight = math.max(0.0, dx);
+            return ClipRect(
               child: Stack(
                 children: [
-                  ConstrainedBox(
-                    constraints: const BoxConstraints(minHeight: 56),
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 13,
-                        vertical: 9,
-                      ),
-                      child: Row(
+                  // Nút chỉ nằm trong khoảng vừa lộ ra: hẹp thì cả cụm thu nhỏ,
+                  // không nút nào bị dòng đè lên hay chồng lên nhau.
+                  if (revealRight > 0 && _canPay)
+                    Positioned(
+                      left: 0,
+                      top: 0,
+                      bottom: 0,
+                      width: revealRight,
+                      child: _SwipeActions(
+                        progress: (revealRight / _openRight).clamp(0.0, 1.0),
                         children: [
-                          Container(
-                            width: 8,
-                            height: 8,
-                            decoration: BoxDecoration(
-                              color: grp.parsedColor,
-                              shape: BoxShape.circle,
-                            ),
+                          _SwipeAction(
+                            key: const ValueKey('swipe-pay'),
+                            icon: Icons.check_rounded,
+                            label: 'Trả đủ',
+                            color: p.ok,
+                            onTap: () {
+                              _resetSwipe();
+                              ref
+                                  .read(financeLedgerProvider.notifier)
+                                  .markPaidFull(item.id);
+                            },
                           ),
-                          const SizedBox(width: 9),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Text(
-                                  item.title,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: OmniType.body.copyWith(
-                                    color: p.ink,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                                const SizedBox(height: 2),
-                                Text(
-                                  _buildSubtitleText(state, grp),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: OmniType.caption.copyWith(
-                                    color: p.muted,
-                                  ),
-                                ),
-                              ],
+                        ],
+                      ),
+                    ),
+                  if (revealLeft > 0)
+                    Positioned(
+                      right: 0,
+                      top: 0,
+                      bottom: 0,
+                      width: revealLeft,
+                      child: _SwipeActions(
+                        progress: (revealLeft / _openLeft).clamp(0.0, 1.0),
+                        children: [
+                          if (_canDuplicate && !_armed)
+                            _SwipeAction(
+                              key: const ValueKey('swipe-dup'),
+                              icon: Icons.content_copy_rounded,
+                              label: 'Tháng sau',
+                              color: p.primary,
+                              onTap: () {
+                                _resetSwipe();
+                                ref
+                                    .read(financeLedgerProvider.notifier)
+                                    .duplicateToNextMonth(item.id);
+                              },
                             ),
+                          _SwipeAction(
+                            key: const ValueKey('swipe-del'),
+                            icon: Icons.delete_outline_rounded,
+                            label: 'Xoá',
+                            color: p.danger,
+                            solid: _armed,
+                            onTap: _confirmDelete,
                           ),
-                          const SizedBox(width: 8),
+                        ],
+                      ),
+                    ),
+                  // Foreground row content
+                  Container(
+                    transform: Matrix4.translationValues(dx, 0, 0),
+                    color: widget.isFlashed ? p.primarySoft : p.card,
+                    child: GestureDetector(
+                      key: _rowKey,
+                      behavior: HitTestBehavior.opaque,
+                      onHorizontalDragStart: _onHorizontalDragStart,
+                      onHorizontalDragUpdate: _onHorizontalDragUpdate,
+                      onHorizontalDragEnd: _onHorizontalDragEnd,
+                      onLongPress: _openContextMenu,
+                      onTap: () {
+                        if (_dragDx != 0) {
+                          _resetSwipe();
+                          return;
+                        }
+                        showExpenseDetailSheet(
+                          context: context,
+                          expenseId: item.id,
+                        );
+                      },
+                      child: Stack(
+                        children: [
                           ConstrainedBox(
-                            constraints: const BoxConstraints(maxWidth: 146),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.end,
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                FittedBox(
-                                  fit: BoxFit.scaleDown,
-                                  alignment: Alignment.centerRight,
-                                  child: Text(
-                                    FinanceMonthUtils.formatVndSpace(
-                                      item.amount,
+                            constraints: const BoxConstraints(minHeight: 56),
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 13,
+                                vertical: 9,
+                              ),
+                              child: Row(
+                                children: [
+                                  Container(
+                                    width: 8,
+                                    height: 8,
+                                    decoration: BoxDecoration(
+                                      color: grp.parsedColor,
+                                      shape: BoxShape.circle,
                                     ),
-                                    maxLines: 1,
-                                    style: OmniType.body.copyWith(
-                                      color: p.ink,
-                                      fontWeight: FontWeight.w600,
-                                      fontFeatures: const [
-                                        FontFeature.tabularFigures(),
+                                  ),
+                                  const SizedBox(width: 9),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        // Tên khoản xuống tối đa hai dòng
+                                        // thay vì cắt (đợt 3 liquid).
+                                        Text(
+                                          item.title,
+                                          maxLines: 2,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: OmniType.body.copyWith(
+                                            color: p.ink,
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 2),
+                                        Text(
+                                          _buildSubtitleText(state, grp),
+                                          maxLines: 2,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: OmniType.caption.copyWith(
+                                            color: p.muted,
+                                          ),
+                                        ),
                                       ],
                                     ),
                                   ),
-                                ),
-                                const SizedBox(height: 2),
-                                _buildStatusIndicator(
-                                  p,
-                                  left: left,
-                                  paid: paid,
-                                ),
-                              ],
+                                  const SizedBox(width: 8),
+                                  ConstrainedBox(
+                                    constraints: const BoxConstraints(
+                                      maxWidth: 146,
+                                    ),
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.end,
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        FittedBox(
+                                          fit: BoxFit.scaleDown,
+                                          alignment: Alignment.centerRight,
+                                          child: Text(
+                                            FinanceMonthUtils.formatVndSpace(
+                                              item.amount,
+                                            ),
+                                            maxLines: 1,
+                                            style: OmniType.body.copyWith(
+                                              color: p.ink,
+                                              fontWeight: FontWeight.w600,
+                                              fontFeatures: const [
+                                                FontFeature.tabularFigures(),
+                                              ],
+                                            ),
+                                          ),
+                                        ),
+                                        const SizedBox(height: 2),
+                                        _buildStatusIndicator(
+                                          p,
+                                          left: left,
+                                          paid: paid,
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
                           ),
+                          if (widget.showBottomDivider)
+                            Positioned(
+                              left: 30,
+                              right: 0,
+                              bottom: 0,
+                              child: Container(height: 0.5, color: p.divider),
+                            ),
                         ],
                       ),
                     ),
                   ),
-                  if (widget.showBottomDivider)
-                    Positioned(
-                      left: 30,
-                      right: 0,
-                      bottom: 0,
-                      child: Container(height: 0.5, color: p.divider),
-                    ),
                 ],
               ),
-            ),
-          ),
-        ],
-      ),
+            );
+          },
+        );
+      },
     );
   }
 
@@ -505,6 +536,118 @@ class _ExpenseRowTileState extends ConsumerState<ExpenseRowTile> {
           ),
         ),
       ],
+    );
+  }
+}
+
+/// Cụm nút vuốt nằm gọn trong khoảng đã lộ: [progress] 0→1 là mức lộ so với
+/// chỗ mở; nút to dần và rõ dần theo tay. Thiếu chỗ thì thu nhỏ cả cụm.
+class _SwipeActions extends StatelessWidget {
+  const _SwipeActions({required this.progress, required this.children});
+
+  final double progress;
+  final List<Widget> children;
+
+  @override
+  Widget build(BuildContext context) {
+    final k = Curves.easeOut.transform(progress);
+    return ColoredBox(
+      color: FinancePalette.of(context).card,
+      child: Opacity(
+        opacity: k,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(
+            horizontal: _ExpenseRowTileState._actionPad,
+          ),
+          child: Center(
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Transform.scale(
+                scale: .6 + .4 * k,
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    for (var i = 0; i < children.length; i++) ...[
+                      if (i > 0)
+                        const SizedBox(width: _ExpenseRowTileState._actionGap),
+                      children[i],
+                    ],
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Một nút vuốt: vòng kính 40, màu chỉ ở biểu tượng, nhãn xám dưới.
+/// [solid] (sắp xoá thật): vòng đặc màu nút, biểu tượng trắng.
+class _SwipeAction extends StatelessWidget {
+  const _SwipeAction({
+    super.key,
+    required this.icon,
+    required this.label,
+    required this.color,
+    required this.onTap,
+    this.solid = false,
+  });
+
+  final IconData icon;
+  final String label;
+  final Color color;
+  final VoidCallback onTap;
+  final bool solid;
+
+  @override
+  Widget build(BuildContext context) {
+    final p = FinancePalette.of(context);
+    return Semantics(
+      button: true,
+      label: label,
+      excludeSemantics: true,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: onTap,
+        child: SizedBox(
+          width: _ExpenseRowTileState._actionWidth,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              AnimatedContainer(
+                duration: const Duration(milliseconds: 180),
+                width: 40,
+                height: 40,
+                transform: Matrix4.diagonal3Values(
+                  solid ? 1.12 : 1,
+                  solid ? 1.12 : 1,
+                  1,
+                ),
+                transformAlignment: Alignment.center,
+                decoration: solid
+                    ? BoxDecoration(color: color, shape: BoxShape.circle)
+                    : OmniGlass.buttonDecoration(context, radius: 20),
+                child: Icon(
+                  icon,
+                  size: 19,
+                  color: solid ? Colors.white : color,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                label,
+                maxLines: 1,
+                style: OmniType.micro.copyWith(
+                  color: solid ? color : p.muted,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

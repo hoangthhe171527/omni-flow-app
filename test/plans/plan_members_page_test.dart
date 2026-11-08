@@ -69,7 +69,7 @@ void main() {
     await tester.pump();
     await tester.tap(find.textContaining('Xong ('));
     await tester.pumpAndSettle();
-    await tester.tap(find.widgetWithText(FilledButton, 'Lưu'));
+    await tester.tap(find.widgetWithText(TextButton, 'Lưu'));
     await tester.pumpAndSettle();
 
     final json = api.patches.single.toJson();
@@ -105,7 +105,7 @@ void main() {
     await tester.tap(find.text('Gỡ khỏi kế hoạch'));
     await tester.pumpAndSettle();
 
-    await tester.tap(find.widgetWithText(FilledButton, 'Lưu'));
+    await tester.tap(find.widgetWithText(TextButton, 'Lưu'));
     await tester.pumpAndSettle();
 
     expect(api.patches.single.toJson(), {
@@ -129,7 +129,7 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('Quản lý'));
     await tester.pumpAndSettle();
-    await tester.tap(find.widgetWithText(FilledButton, 'Lưu'));
+    await tester.tap(find.widgetWithText(TextButton, 'Lưu'));
     await tester.pumpAndSettle();
 
     expect(api.patches.single.toJson(), {

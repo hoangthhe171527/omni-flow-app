@@ -1,5 +1,8 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
-import 'package:flutter/semantics.dart';
+import 'package:flutter/rendering.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
@@ -11,6 +14,7 @@ import 'package:omni_app/core/module/omni_module.dart';
 import 'package:omni_app/core/storage/preferences_store.dart';
 import 'package:omni_app/design/components/components.dart';
 import 'package:omni_app/design/theme/omni_theme.dart';
+import 'package:omni_app/core/theme/theme_mode_controller.dart';
 import 'package:omni_app/design/tokens/tokens.dart';
 import 'package:omni_app/modules/settings/settings_module.dart';
 import 'package:omni_app/security/permissions/access_policy.dart';
@@ -106,6 +110,32 @@ class _FiveSalesModule extends OmniModule {
   ];
 }
 
+class _LongLabelModule extends OmniModule {
+  const _LongLabelModule();
+
+  static const labels = [
+    'Kênh kết nối',
+    'Việc của tôi',
+    'Tổng hợp chi phí',
+    'Thông báo',
+    'Khách',
+  ];
+
+  @override
+  String get id => 'long-labels';
+
+  @override
+  String get title => 'Long labels';
+
+  @override
+  List<ModuleRoute> routes() => const [];
+
+  @override
+  List<ModuleNavEntry> navEntries() => [
+    for (final label in labels) _entry(label, NavArea.sales),
+  ];
+}
+
 const _session = Session(
   status: SessionStatus.authenticated,
   user: SessionUser(id: 'u', fullName: 'Trần Huy Hoàng', email: 'h@x.vn'),
@@ -121,25 +151,37 @@ class _FakeSession extends SessionController {
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  test('Dòng việc được tách khỏi nhóm Công việc trong mục Tất cả', () {
+  test('4 nhóm nghiệp vụ: Vận hành gộp công việc, dòng việc và thông báo', () {
     final sections = buildDirectorySections(
       {
         NavArea.work: [
           _entry('Việc', NavArea.work),
           _entry('Dòng việc', NavArea.work),
         ],
+        NavArea.communication: [
+          _entry('Hộp thư', NavArea.communication),
+          ModuleNavEntry(
+            moduleId: 'notifications',
+            label: 'Thông báo',
+            routeName: 'notifications.centre',
+            icon: Icons.circle_outlined,
+            selectedIcon: Icons.circle,
+            area: NavArea.communication,
+          ),
+        ],
+        NavArea.account: [_entry('Quyền của tôi', NavArea.account)],
       },
-      personal: const [],
       open: (_) {},
       query: '',
     );
 
-    expect(sections.map((section) => section.label), [
-      'Công việc',
+    expect(sections.map((section) => section.label), ['Bán hàng', 'Vận hành']);
+    expect(sections.first.tiles.map((tile) => tile.label), ['Hộp thư']);
+    expect(sections.last.tiles.map((tile) => tile.label), [
+      'Việc',
       'Dòng việc',
+      'Thông báo',
     ]);
-    expect(sections.first.tiles.map((tile) => tile.label), ['Việc']);
-    expect(sections.last.tiles.map((tile) => tile.label), ['Dòng việc']);
   });
 
   test('Sổ chi phí, Tổng hợp chi phí nằm nhóm Tài chính riêng như web', () {
@@ -151,16 +193,15 @@ void main() {
           _entry('Tổng hợp chi phí', NavArea.finance),
         ],
       },
-      personal: const [],
       open: (_) {},
       query: '',
     );
 
     expect(sections.map((section) => section.label), [
-      'Đội & quản trị',
       'Tài chính',
+      'Đội & quản trị',
     ]);
-    expect(sections.last.tiles.map((tile) => tile.label), [
+    expect(sections.first.tiles.map((tile) => tile.label), [
       'Sổ chi phí',
       'Tổng hợp chi phí',
     ]);
@@ -188,6 +229,11 @@ void main() {
           name: SettingsModule.account,
           builder: (_, _) => const Text('ACCOUNT'),
         ),
+        GoRoute(
+          path: '/notification-settings',
+          name: SettingsModule.notifications,
+          builder: (_, _) => const Text('NOTIFICATION SETTINGS'),
+        ),
       ],
     );
     addTearDown(router.dispose);
@@ -214,7 +260,7 @@ void main() {
     if (settle) await tester.pumpAndSettle();
   }
 
-  testWidgets('nhóm theo bản mẫu: Bán hàng gộp Trao đổi + Bán hàng', (t) async {
+  testWidgets('nhóm theo bố cục mới, cài đặt và trợ giúp ở cuối', (t) async {
     await pump(t);
     final labels = t
         .widgetList<Text>(
@@ -226,51 +272,52 @@ void main() {
           ),
         )
         .map((e) => e.data)
+        // Logo của thanh trên cũng là header (chữ Viomni là Text.rich).
+        .where((l) => l != null && l != 'Tất cả')
         .toList();
-    expect(labels, ['Bán hàng', 'Công việc', 'Đội & quản trị', 'Cá nhân']);
-  });
-
-  testWidgets('lưới 4 cột: 4 ô Cá nhân nằm cùng một hàng', (t) async {
-    await pump(t);
-    final ys = [
-      'Quyền của tôi',
-      'Tài khoản',
-      'Giao diện',
-      'Hỗ trợ',
-    ].map((l) => t.getCenter(find.text(l)).dy).toSet();
-    expect(ys.length, 1);
+    expect(labels, [
+      'Bán hàng',
+      'Vận hành',
+      'Đội & quản trị',
+      'Cài đặt ứng dụng',
+      'Trợ giúp',
+    ]);
   });
 
   testWidgets('màn hẹp tự giảm còn 3 cột và không tràn', (t) async {
-    await pump(t, size: const Size(320, 1600));
+    await pump(
+      t,
+      module: const _FiveSalesModule(),
+      size: const Size(320, 1600),
+    );
 
-    final personalCenters = [
-      'Quyền của tôi',
-      'Tài khoản',
-      'Giao diện',
+    final firstRow = [
+      'Bán hàng 1',
+      'Bán hàng 2',
+      'Bán hàng 3',
     ].map((label) => t.getCenter(find.text(label)).dy).toSet();
-    expect(personalCenters, hasLength(1));
+    expect(firstRow, hasLength(1));
     expect(
-      t.getCenter(find.text('Hỗ trợ')).dy,
-      greaterThan(personalCenters.single),
+      t.getCenter(find.text('Bán hàng 4')).dy,
+      greaterThan(firstRow.single),
     );
     expect(t.takeException(), isNull);
   });
 
   testWidgets('cỡ chữ lớn tự giảm cột, nhãn tối đa hai dòng', (t) async {
-    await pump(t, textScale: 1.6);
+    await pump(t, module: const _FiveSalesModule(), textScale: 1.6);
 
-    final personalCenters = [
-      'Quyền của tôi',
-      'Tài khoản',
-      'Giao diện',
+    final firstRow = [
+      'Bán hàng 1',
+      'Bán hàng 2',
+      'Bán hàng 3',
     ].map((label) => t.getCenter(find.text(label)).dy).toSet();
-    expect(personalCenters, hasLength(1));
+    expect(firstRow, hasLength(1));
     expect(
-      t.getCenter(find.text('Hỗ trợ')).dy,
-      greaterThan(personalCenters.single),
+      t.getCenter(find.text('Bán hàng 4')).dy,
+      greaterThan(firstRow.single),
     );
-    expect(t.widget<Text>(find.text('Quyền của tôi')).maxLines, 2);
+    expect(t.widget<Text>(find.text('Bán hàng 1')).maxLines, 2);
     expect(t.takeException(), isNull);
   });
 
@@ -295,9 +342,17 @@ void main() {
       greaterThan(firstRow.single),
     );
 
+    // Ô là SizedBox con trực tiếp của Wrap — xa nhất trong lưới; nhãn hai
+    // dòng cân (_BalancedLabel) có SizedBox riêng nằm gần chữ hơn.
     final firstTile = find
-        .ancestor(of: find.text('Bán hàng 1'), matching: find.byType(SizedBox))
-        .first;
+        .ancestor(
+          of: find.text('Bán hàng 1'),
+          matching: find.descendant(
+            of: gridFinder,
+            matching: find.byType(SizedBox),
+          ),
+        )
+        .last;
     expect(
       t.getSize(gridFinder).height,
       moreOrLessEquals(t.getSize(firstTile).height * 2 + grid.runSpacing),
@@ -329,20 +384,26 @@ void main() {
     expect(iconCenters, hasLength(1));
   });
 
-  testWidgets('ô có màu theo nhóm (tím cho Quản trị, sáng)', (t) async {
+  testWidgets('mọi ô cùng một tông màu (nền xanh nhạt, icon màu chính)', (
+    t,
+  ) async {
     await pump(t);
-    final box = t.widget<Container>(
-      find
-          .ancestor(
-            of: find.byIcon(Icons.circle_outlined).at(3), // 'Nhân viên'
-            matching: find.byType(Container),
-          )
-          .first,
-    );
-    expect(
-      (box.decoration! as BoxDecoration).color,
-      OmniFeatureTones.light(OmniHue.violet).background,
-    );
+    Color? tileColor(int index) =>
+        (t
+                    .widget<Container>(
+                      find
+                          .ancestor(
+                            of: find.byIcon(Icons.circle_outlined).at(index),
+                            matching: find.byType(Container),
+                          )
+                          .first,
+                    )
+                    .decoration!
+                as BoxDecoration)
+            .color;
+    final primary = OmniTheme.light().colorScheme.primary;
+    expect(tileColor(0), primary.withValues(alpha: 0.09));
+    expect(tileColor(2), tileColor(0));
   });
 
   testWidgets('huy hiệu: tin chưa đọc là chấm, việc trễ vẫn là số đỏ', (
@@ -363,31 +424,45 @@ void main() {
     expect(find.text('Trần Huy Hoàng'), findsNothing);
     expect(find.text('Không gian làm việc'), findsNothing);
     expect(find.text('Đăng xuất'), findsNothing);
-    expect(find.text('Xóa tài khoản'), findsNothing);
+    expect(find.text('Xoá tài khoản'), findsNothing);
   });
 
-  testWidgets('tìm không dấu "tai khoan" chỉ còn nhóm Cá nhân', (t) async {
+  testWidgets('tìm không dấu "giao dien" ra cả cài đặt', (t) async {
     await pump(t);
-    await t.enterText(find.byType(TextField), 'tai khoan');
+    await t.enterText(find.byType(TextField), 'giao dien');
     await t.pump(const Duration(milliseconds: 400)); // debounce của ô tìm
     await t.pumpAndSettle();
-    expect(find.text('Tài khoản'), findsOneWidget);
+    expect(find.text('Giao diện'), findsOneWidget);
     expect(find.text('Bán hàng'), findsNothing);
   });
 
-  testWidgets('không khớp → Không tìm thấy tính năng “…”', (t) async {
+  testWidgets('Giao diện đổi ngay tại chỗ: Máy / Sáng / Tối', (t) async {
+    await pump(t);
+    final container = ProviderScope.containerOf(
+      t.element(find.byType(DirectoryPage)),
+    );
+    expect(container.read(themeModeProvider), ThemeMode.system);
+    await t.tap(find.text('Tối'));
+    await t.pumpAndSettle();
+    expect(container.read(themeModeProvider), ThemeMode.dark);
+    await t.tap(find.text('Sáng'));
+    await t.pumpAndSettle();
+    expect(container.read(themeModeProvider), ThemeMode.light);
+  });
+
+  testWidgets('không khớp → Không tìm thấy “…”', (t) async {
     await pump(t);
     await t.enterText(find.byType(TextField), 'zzz');
     await t.pump(const Duration(milliseconds: 400)); // debounce của ô tìm
     await t.pumpAndSettle();
-    expect(find.text('Không tìm thấy tính năng “zzz”'), findsOneWidget);
+    expect(find.text('Không tìm thấy “zzz”'), findsOneWidget);
   });
 
-  testWidgets('Tài khoản mở route settings.account', (t) async {
+  testWidgets('Cài đặt thông báo mở route settings.notifications', (t) async {
     await pump(t);
-    await t.tap(find.text('Tài khoản'));
+    await t.tap(find.text('Thông báo'));
     await t.pumpAndSettle();
-    expect(find.text('ACCOUNT'), findsOneWidget);
+    expect(find.text('NOTIFICATION SETTINGS'), findsOneWidget);
   });
 
   testWidgets('ô là nút ngữ nghĩa có onTap, hộp thư chỉ nói có tin chưa đọc', (
@@ -442,6 +517,48 @@ void main() {
     expect(hueOfArea(NavArea.work), OmniHue.blue);
     expect(hueOfArea(NavArea.admin), OmniHue.violet);
     expect(hueOfArea(NavArea.account), OmniHue.neutral);
+  });
+
+  // ĐỂ CUỐI: nạp phông thật cho cả tiến trình test của file — các bài phía
+  // trên đo kích thước bằng phông thử mặc định.
+  testWidgets('nhãn hai chữ trở lên xuống dòng cân, không bị cắt "…"', (
+    t,
+  ) async {
+    // Phông thử mặc định mỗi ký tự rộng bằng cỡ chữ → "kết nối" 91px không
+    // vừa ô 70px dù trên máy thật (Be Vietnam Pro) chỉ ~50px. Phải đo bằng
+    // phông thật thì bài này mới có nghĩa.
+    await t.runAsync(() async {
+      final loader = FontLoader('Be Vietnam Pro');
+      for (final f in ['Regular', 'Medium', 'SemiBold']) {
+        final bytes = File(
+          'assets/fonts/BeVietnamPro-$f.ttf',
+        ).readAsBytesSync();
+        loader.addFont(Future.value(ByteData.view(bytes.buffer)));
+      }
+      await loader.load();
+    });
+    // Bản trước đo nhãn bằng style trơn (không gộp DefaultTextStyle) nên
+    // khung thu quá hẹp: "Kênh kết n…", "Tổng hợp chi…".
+    await pump(t, module: const _LongLabelModule());
+
+    for (final label in _LongLabelModule.labels) {
+      // Có nhãn trùng với mục của module khác (vd "Thông báo") → kiểm hết.
+      for (final element in find.text(label).evaluate()) {
+        final paragraph = element.renderObject! as RenderParagraph;
+        expect(paragraph.didExceedMaxLines, isFalse, reason: label);
+      }
+    }
+    // Nhãn vừa một dòng thì giữ một dòng, không bị ép xuống dòng.
+    final short = t.renderObject<RenderParagraph>(find.text('Khách').first);
+    expect(
+      short
+          .getBoxesForSelection(
+            const TextSelection(baseOffset: 0, extentOffset: 5),
+          )
+          .map((b) => b.top)
+          .toSet(),
+      hasLength(1),
+    );
   });
 }
 

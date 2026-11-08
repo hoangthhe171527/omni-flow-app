@@ -4,7 +4,6 @@ library;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:omni_app/design/components/components.dart';
 
 import '../../../inbox/application/inbox_providers.dart';
 import '../../../inbox/domain/conversation.dart';
@@ -30,54 +29,52 @@ class AwaitingReplyCard extends ConsumerWidget {
     final page = async.valueOrNull;
     final items = page?.items.take(limit).toList() ?? const <Conversation>[];
 
-    final Widget body;
+    Widget? placeholder;
+    var rows = const <Widget>[];
     if (async.hasError && !async.isLoading) {
-      body = DashboardCardError(
+      placeholder = DashboardCardError(
         error: async.error!,
         onRetry: () => ref.invalidate(dashboardAwaitingReplyProvider),
       );
     } else if (page == null) {
-      body = const DashboardCardSkeleton();
+      placeholder = const DashboardCardSkeleton();
     } else if (items.isEmpty) {
-      body = const DashboardEmptyLine('Đã trả lời hết');
+      placeholder = const DashboardEmptyLine('Đã trả lời hết');
     } else {
-      body = Column(
-        children: [
-          for (final c in items)
-            ConversationRow(
-              conversation: c,
-              onTap: () => context.pushNamed(
-                InboxRoutes.thread,
-                pathParameters: {'id': c.id},
-              ),
+      rows = [
+        for (final c in items)
+          ConversationRow(
+            conversation: c,
+            onTap: () => context.pushNamed(
+              InboxRoutes.thread,
+              pathParameters: {'id': c.id},
             ),
-        ],
-      );
+          ),
+      ];
     }
 
-    return OmniCollapsibleCard(
+    return DashboardGroup(
       title: 'Chờ phản hồi',
       storageKey: 'dashboard.awaiting',
-      flat: true,
       // Con trỏ không có tổng: chỉ đếm được khi đã thấy hết.
       count: page == null || page.hasMore ? null : page.items.length,
-      footer: items.isEmpty
+      rows: rows,
+      placeholder: placeholder,
+      dividerIndent: 68,
+      onSeeAll: items.isEmpty
           ? null
-          : DashboardSeeAll(
-              onPressed: () {
-                // Bắt container trước khi `go`: sau khi chuyển màn, thẻ này
-                // có thể đã bị tháo và `ref` không còn dùng được.
-                final container = ProviderScope.containerOf(
-                  context,
-                  listen: false,
-                );
-                container
-                    .read(inboxFilterProvider.notifier)
-                    .setQuick(InboxQuickFilter.unread);
-                context.goNamed(InboxRoutes.list);
-              },
-            ),
-      child: body,
+          : () {
+              // Bắt container trước khi `go`: sau khi chuyển màn, thẻ này
+              // có thể đã bị tháo và `ref` không còn dùng được.
+              final container = ProviderScope.containerOf(
+                context,
+                listen: false,
+              );
+              container
+                  .read(inboxFilterProvider.notifier)
+                  .setQuick(InboxQuickFilter.unread);
+              context.goNamed(InboxRoutes.list);
+            },
     );
   }
 }

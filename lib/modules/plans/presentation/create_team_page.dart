@@ -37,69 +37,9 @@ class _CreateTeamPageState extends ConsumerState<CreateTeamPage> {
     final text = Theme.of(context).textTheme;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Team mới')),
-      body: ListView(
-        keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-        padding: const EdgeInsets.fromLTRB(
-          OmniSpacing.lg,
-          OmniSpacing.lg,
-          OmniSpacing.lg,
-          OmniSpacing.bottomSafe,
-        ),
+      appBar: OmniAppBar(title: 'Team mới', close: true),
+      bottomNavigationBar: OmniActionBar(
         children: [
-          TextField(
-            controller: _name,
-            autofocus: true,
-            textCapitalization: TextCapitalization.sentences,
-            decoration: const InputDecoration(
-              labelText: 'Tên team',
-              hintText: 'Tổ sản xuất, Nhóm kinh doanh…',
-            ),
-            onChanged: (_) => setState(() {}),
-          ),
-          const SizedBox(height: OmniSpacing.lg),
-          TextField(
-            controller: _description,
-            textCapitalization: TextCapitalization.sentences,
-            maxLines: 3,
-            decoration: const InputDecoration(
-              labelText: 'Mô tả',
-              hintText: 'Tổ phục chế đàn cơ và đàn điện',
-            ),
-          ),
-          const SizedBox(height: OmniSpacing.lg),
-          // Chọn người NGAY TRONG form, không phải một màn thứ ba: ba màn nối
-          // tiếp cho một việc hai trường là bắt người dùng bấm "Tiếp" hai lần
-          // để làm cái họ đã nhìn thấy hết ngay từ đầu.
-          ListTile(
-            contentPadding: EdgeInsets.zero,
-            title: const Text('Thành viên'),
-            subtitle: Text(
-              _memberIds.isEmpty
-                  // Nói rõ bỏ qua là HỢP LỆ. Một ô trống không chú thích đọc
-                  // như một chỗ mình đang bỏ sót.
-                  ? 'Chưa chọn ai — thêm sau cũng được'
-                  : '${_memberIds.length} người',
-            ),
-            trailing: const Icon(Icons.chevron_right_rounded),
-            onTap: () async {
-              final picked = await showMemberPicker(
-                context,
-                selected: _memberIds,
-              );
-              if (picked != null) setState(() => _memberIds = picked);
-            },
-          ),
-          if (_error != null) ...[
-            const SizedBox(height: OmniSpacing.lg),
-            Text(
-              _error!,
-              style: text.bodyMedium?.copyWith(
-                color: OmniColors.dangerTextOf(context),
-              ),
-            ),
-          ],
-          const SizedBox(height: OmniSpacing.xxl),
           FilledButton(
             onPressed: _canSave ? _save : null,
             child: _saving
@@ -110,6 +50,78 @@ class _CreateTeamPageState extends ConsumerState<CreateTeamPage> {
                   )
                 : const Text('Tạo team'),
           ),
+        ],
+      ),
+      body: ListView(
+        keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+        padding: const EdgeInsets.fromLTRB(
+          16,
+          OmniGroupSection.gap,
+          16,
+          OmniSpacing.bottomSafe,
+        ),
+        children: [
+          OmniGroupSection(
+            dividerIndent: 14,
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(14, 6, 14, 6),
+                child: TextField(
+                  controller: _name,
+                  autofocus: true,
+                  textCapitalization: TextCapitalization.sentences,
+                  decoration: const InputDecoration(
+                    labelText: 'Tên team',
+                    hintText: 'Tổ sản xuất, Nhóm kinh doanh…',
+                  ),
+                  onChanged: (_) => setState(() {}),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(14, 6, 14, 6),
+                child: TextField(
+                  controller: _description,
+                  textCapitalization: TextCapitalization.sentences,
+                  maxLines: 3,
+                  minLines: 1,
+                  decoration: const InputDecoration(
+                    labelText: 'Mô tả',
+                    hintText: 'Tổ phục chế đàn cơ và đàn điện',
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: OmniGroupSection.gap),
+          // Chọn người NGAY TRONG form, không phải một màn thứ ba: ba màn nối
+          // tiếp cho một việc hai trường là bắt người dùng bấm "Tiếp" hai lần
+          // để làm cái họ đã nhìn thấy hết ngay từ đầu. Bỏ qua là HỢP LỆ nên
+          // không cần chữ giải thích; chọn rồi thì dòng hiện "N người".
+          OmniGroupSection(
+            children: [
+              OmniGroupRow(
+                icon: Icons.person_add_alt_outlined,
+                title: 'Thành viên',
+                value: _memberIds.isEmpty ? null : '${_memberIds.length} người',
+                onTap: () async {
+                  final picked = await showMemberPicker(
+                    context,
+                    selected: _memberIds,
+                  );
+                  if (picked != null) setState(() => _memberIds = picked);
+                },
+              ),
+            ],
+          ),
+          if (_error != null) ...[
+            const SizedBox(height: OmniSpacing.lg),
+            Text(
+              _error!,
+              style: text.bodyMedium?.copyWith(
+                color: OmniColors.dangerTextOf(context),
+              ),
+            ),
+          ],
         ],
       ),
     );

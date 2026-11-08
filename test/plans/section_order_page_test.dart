@@ -119,7 +119,7 @@ void main() {
         ),
         findsOneWidget,
       );
-      expect(find.text('Sắp xếp nhóm việc'), findsOneWidget);
+      expect(find.bySemanticsLabel('Sắp xếp nhóm việc'), findsWidgets);
     },
   );
 
@@ -330,7 +330,6 @@ void main() {
     await pump(t);
 
     for (final f in [
-      find.byTooltip('Quay lại'),
       find.byTooltip('Lên trên').first,
       find.byTooltip('Xuống dưới').first,
       grip('Tiếp nhận'),

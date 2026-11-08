@@ -1,10 +1,11 @@
-import 'dart:ui';
-
 import 'package:flutter/material.dart';
 
+import '../../../../design/components/components.dart';
 import '../../../../design/tokens/tokens.dart';
 
-/// Bảng màu Viomni Orbit chuẩn 100% theo `so-chi-phi-mobile.html` (Light & Dark).
+/// Bảng màu của Sổ chi phí. Nền, thẻ, chữ, nét kẻ và màu điều khiển lấy từ
+/// theme chung (liquid, duyệt 08/11/2026); chỉ giữ riêng ba màu NGỮ NGHĨA
+/// của trạng thái tiền: đã trả (`ok`), còn phải trả (`amber`), lỗi (`danger`).
 @immutable
 class FinancePalette {
   const FinancePalette({
@@ -31,8 +32,33 @@ class FinancePalette {
   });
 
   factory FinancePalette.of(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    return isDark ? dark : light;
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final isDark = theme.brightness == Brightness.dark;
+    final status = isDark ? dark : light;
+
+    return FinancePalette(
+      isDark: isDark,
+      bg: theme.scaffoldBackgroundColor,
+      card: scheme.surface,
+      ink: scheme.onSurface,
+      ink2: scheme.onSurface.withValues(alpha: .78),
+      muted: scheme.onSurfaceVariant,
+      line: scheme.outlineVariant,
+      divider: scheme.outlineVariant.withValues(alpha: .7),
+      track: scheme.onSurface.withValues(alpha: isDark ? .12 : .07),
+      control: scheme.onSurface.withValues(alpha: isDark ? .10 : .05),
+      selLine: scheme.primary.withValues(alpha: .35),
+      primary: scheme.primary,
+      primarySoft: scheme.primary.withValues(alpha: isDark ? .18 : .10),
+      primaryInk: scheme.primary,
+      amber: status.amber,
+      amberSoft: status.amberSoft,
+      ok: status.ok,
+      okSoft: status.okSoft,
+      danger: status.danger,
+      dangerSoft: status.dangerSoft,
+    );
   }
 
   static const FinancePalette light = FinancePalette(
@@ -127,7 +153,10 @@ class FinancePopoverItem<T> {
   final bool stackSubtitle;
 }
 
-/// Hiển thị iOS Popover Menu neo tại vị trí của widget (`anchorContext` hoặc `anchorRect`).
+/// Hiển thị menu kính neo tại vị trí của widget (`anchorContext` hoặc
+/// `anchorRect`) — cùng kiểu menu nổi của app ([showOmniAnchoredMenu]): nền
+/// mờ + blur, bo 22, không vạch chia, không tiêu đề IN HOA (nhãn đã có ngay ở
+/// dòng gọi nó; [header] chỉ còn làm nhãn trợ năng).
 Future<T?> showFinancePopoverMenu<T>({
   required BuildContext context,
   String? header,
@@ -155,244 +184,111 @@ Future<T?> showFinancePopoverMenu<T>({
     }
   }
 
-  return showGeneralDialog<T>(
+  return showOmniAnchoredMenu<T>(
     context: context,
-    barrierDismissible: true,
-    barrierLabel: 'Đóng menu',
-    barrierColor: Colors.black.withValues(alpha: 0.14),
-    transitionDuration: const Duration(milliseconds: 160),
-    pageBuilder: (dialogContext, animation, secondaryAnimation) {
-      return _FinancePopoverOverlay<T>(
-        header: header,
-        items: items,
-        anchorRect: resolvedAnchor,
-        width: width,
-      );
-    },
-    transitionBuilder: (context, animation, secondaryAnimation, child) {
-      final curved = CurvedAnimation(
-        parent: animation,
-        curve: Curves.easeOutCubic,
-      );
-      return FadeTransition(
-        opacity: curved,
-        child: ScaleTransition(
-          scale: Tween<double>(begin: 0.94, end: 1.0).animate(curved),
-          child: child,
-        ),
-      );
-    },
+    anchor: resolvedAnchor,
+    width: width,
+    semanticsLabel: header ?? 'Tuỳ chọn',
+    builder: (menuContext) => Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [for (final item in items) _FinanceMenuRow<T>(item: item)],
+    ),
   );
 }
 
-class _FinancePopoverOverlay<T> extends StatelessWidget {
-  const _FinancePopoverOverlay({
-    required this.header,
-    required this.items,
-    required this.anchorRect,
-    required this.width,
-  });
+class _FinanceMenuRow<T> extends StatelessWidget {
+  const _FinanceMenuRow({required this.item});
 
-  final String? header;
-  final List<FinancePopoverItem<T>> items;
-  final Rect anchorRect;
-  final double width;
+  final FinancePopoverItem<T> item;
 
   @override
   Widget build(BuildContext context) {
     final p = FinancePalette.of(context);
-    final screen = MediaQuery.sizeOf(context);
-    final pad = MediaQuery.paddingOf(context);
+    final scheme = Theme.of(context).colorScheme;
+    final textColor = item.destructive ? p.danger : p.ink;
+    final weight = item.selected ? FontWeight.w600 : FontWeight.w500;
 
-    final estimatedHeight =
-        (header != null ? 34.0 : 0.0) + items.length * 46.0 + 16.0;
-    final spaceBelow = screen.height - pad.bottom - anchorRect.bottom - 12;
-    final openUp =
-        spaceBelow < estimatedHeight && anchorRect.top > estimatedHeight;
-
-    final left = (anchorRect.right - width).clamp(
-      14.0,
-      screen.width - width - 14.0,
-    );
-    final top = openUp
-        ? (anchorRect.top - estimatedHeight - 6).clamp(
-            pad.top + 8.0,
-            screen.height - 80.0,
-          )
-        : (anchorRect.bottom + 6).clamp(
-            pad.top + 8.0,
-            screen.height - estimatedHeight.clamp(0.0, 360.0) - 14.0,
-          );
-
-    return Material(
-      type: MaterialType.transparency,
-      child: Stack(
-        children: [
-          Positioned.fill(
-            child: GestureDetector(
-              behavior: HitTestBehavior.opaque,
-              onTap: () => Navigator.of(context).pop(),
-              child: const SizedBox.expand(),
-            ),
-          ),
-          Positioned(
-            left: left,
-            top: top,
-            width: width,
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(14),
-              child: BackdropFilter(
-                filter: ImageFilter.blur(sigmaX: 24, sigmaY: 24),
-                child: DecoratedBox(
+    return Semantics(
+      button: true,
+      selected: item.selected,
+      child: InkWell(
+        onTap: () => Navigator.of(context).pop(item.value),
+        child: Container(
+          constraints: const BoxConstraints(minHeight: 46),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          // Mục đang chọn: nền mờ nhẹ (trắng mờ trên kính) + ✓, không chữ màu.
+          color: item.selected
+              ? scheme.onSurface.withValues(alpha: p.isDark ? .10 : .05)
+              : null,
+          child: Row(
+            children: [
+              if (item.dotColor != null) ...[
+                Container(
+                  width: 9,
+                  height: 9,
                   decoration: BoxDecoration(
-                    color: p.isDark
-                        ? const Color(0xF5192338)
-                        : const Color(0xFAFFFFFF),
-                    borderRadius: BorderRadius.circular(14),
-                    border: Border.all(color: p.line, width: 0.5),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.18),
-                        blurRadius: 32,
-                        offset: const Offset(0, 12),
-                      ),
-                    ],
+                    color: item.dotColor,
+                    shape: BoxShape.circle,
                   ),
-                  child: ConstrainedBox(
-                    constraints: const BoxConstraints(maxHeight: 340),
-                    child: SingleChildScrollView(
-                      child: Column(
+                ),
+                const SizedBox(width: 10),
+              ] else if (item.icon != null) ...[
+                Icon(item.icon, size: 18, color: textColor),
+                const SizedBox(width: 10),
+              ],
+              Expanded(
+                child: item.stackSubtitle && item.subtitle != null
+                    ? Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         mainAxisSize: MainAxisSize.min,
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
-                          if (header != null)
-                            Container(
-                              padding: const EdgeInsets.fromLTRB(14, 9, 14, 7),
-                              decoration: BoxDecoration(
-                                border: Border(
-                                  bottom: BorderSide(
-                                    color: p.divider,
-                                    width: 0.5,
-                                  ),
-                                ),
-                              ),
-                              child: Text(
-                                header!.toUpperCase(),
-                                style: OmniType.overline.copyWith(
-                                  color: p.muted,
-                                  fontWeight: FontWeight.w600,
-                                  letterSpacing: 0.4,
-                                ),
-                              ),
+                          Text(
+                            item.label,
+                            style: OmniType.body.copyWith(
+                              color: textColor,
+                              fontWeight: weight,
                             ),
-                          for (var i = 0; i < items.length; i++)
-                            _buildItem(
-                              context,
-                              p,
-                              items[i],
-                              isLast: i == items.length - 1,
+                          ),
+                          const SizedBox(height: 1),
+                          Text(
+                            item.subtitle!,
+                            style: OmniType.caption.copyWith(
+                              color: p.muted,
+                              fontFeatures: const [
+                                FontFeature.tabularFigures(),
+                              ],
                             ),
+                          ),
                         ],
+                      )
+                    : Text(
+                        item.label,
+                        style: OmniType.body.copyWith(
+                          color: textColor,
+                          fontWeight: weight,
+                        ),
                       ),
-                    ),
+              ),
+              if (!item.stackSubtitle && item.subtitle != null) ...[
+                const SizedBox(width: 8),
+                Text(
+                  item.subtitle!,
+                  style: OmniType.caption.copyWith(
+                    color: p.muted,
+                    fontFeatures: const [FontFeature.tabularFigures()],
                   ),
                 ),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildItem(
-    BuildContext context,
-    FinancePalette p,
-    FinancePopoverItem<T> item, {
-    required bool isLast,
-  }) {
-    final textColor = item.destructive
-        ? p.danger
-        : (item.selected ? p.primary : p.ink);
-
-    return InkWell(
-      onTap: () => Navigator.of(context).pop(item.value),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
-        decoration: BoxDecoration(
-          border: isLast
-              ? null
-              : Border(bottom: BorderSide(color: p.divider, width: 0.5)),
-        ),
-        child: Row(
-          children: [
-            if (item.dotColor != null) ...[
-              Container(
-                width: 9,
-                height: 9,
-                decoration: BoxDecoration(
-                  color: item.dotColor,
-                  shape: BoxShape.circle,
-                ),
-              ),
-              const SizedBox(width: 10),
-            ] else if (item.icon != null) ...[
-              Icon(item.icon, size: 17, color: textColor),
-              const SizedBox(width: 10),
-            ],
-            Expanded(
-              child: item.stackSubtitle && item.subtitle != null
-                  ? Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          item.label,
-                          style: OmniType.body.copyWith(
-                            color: textColor,
-                            fontWeight: item.selected
-                                ? FontWeight.w600
-                                : FontWeight.w500,
-                          ),
-                        ),
-                        const SizedBox(height: 1),
-                        Text(
-                          item.subtitle!,
-                          style: OmniType.caption.copyWith(
-                            color: p.muted,
-                            fontFeatures: const [FontFeature.tabularFigures()],
-                          ),
-                        ),
-                      ],
-                    )
-                  : Text(
-                      item.label,
-                      style: OmniType.body.copyWith(
-                        color: textColor,
-                        fontWeight: item.selected
-                            ? FontWeight.w600
-                            : FontWeight.w500,
-                      ),
-                    ),
-            ),
-            if (!item.stackSubtitle && item.subtitle != null) ...[
+              ],
               const SizedBox(width: 8),
-              Text(
-                item.subtitle!,
-                style: OmniType.caption.copyWith(
-                  color: p.muted,
-                  fontFeatures: const [FontFeature.tabularFigures()],
-                ),
+              SizedBox(
+                width: 18,
+                child: item.selected
+                    ? Icon(Icons.check_rounded, size: 18, color: p.primary)
+                    : null,
               ),
             ],
-            const SizedBox(width: 8),
-            SizedBox(
-              width: 16,
-              child: item.selected
-                  ? Icon(Icons.check_rounded, size: 16, color: p.primary)
-                  : null,
-            ),
-          ],
+          ),
         ),
       ),
     );

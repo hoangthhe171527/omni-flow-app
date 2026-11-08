@@ -41,11 +41,13 @@ void main() {
       expect(find.byKey(const Key('composer-tools-menu')), findsOneWidget);
       expect(
         tester.widget<Icon>(find.byIcon(Icons.task_alt_rounded)).color,
-        theme.colorScheme.primary,
+        // Menu kính: icon một tông theo màu chữ (viomni-apple-uiux.html).
+        theme.colorScheme.onSurface.withValues(alpha: .78),
       );
       expect(
         tester.widget<Icon>(find.byIcon(Icons.bolt_rounded)).color,
-        theme.colorScheme.primary,
+        // Menu kính: icon một tông theo màu chữ (viomni-apple-uiux.html).
+        theme.colorScheme.onSurface.withValues(alpha: .78),
       );
     });
   }

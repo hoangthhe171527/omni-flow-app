@@ -135,174 +135,177 @@ class _RegisterPageState extends ConsumerState<RegisterPage>
 
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      body: SafeArea(
-        child: SingleChildScrollView(
-          keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-          padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
-          child: Center(
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 420),
-              child: AutofillGroup(
-                child: Form(
-                  key: _formKey,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      Align(
-                        alignment: Alignment.centerLeft,
-                        child: IconButton(
-                          tooltip: 'Quay lại',
-                          onPressed: _back,
-                          icon: const Icon(Icons.arrow_back_rounded),
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        'Tạo tài khoản',
-                        style: OmniType.largeTitle.copyWith(
-                          color: scheme.onSurface,
-                        ),
-                      ),
-                      const SizedBox(height: 24),
-                      AuthField(
-                        controller: _name,
-                        hint: 'Họ và tên',
-                        icon: Icons.person_outline_rounded,
-                        shake: _shake,
-                        serverError: state.errorFor('full_name'),
-                        textInputAction: TextInputAction.next,
-                        autofillHints: const [AutofillHints.name],
-                        style: inputText,
-                        validator: (v) => (v ?? '').trim().isEmpty
-                            ? 'Vui lòng nhập họ tên'
-                            : null,
-                      ),
-                      const SizedBox(height: 14),
-                      AuthField(
-                        controller: _email,
-                        hint: 'Email làm việc',
-                        icon: Icons.mail_outline_rounded,
-                        shake: _shake,
-                        serverError: state.errorFor('email'),
-                        keyboardType: TextInputType.emailAddress,
-                        textInputAction: TextInputAction.next,
-                        autofillHints: const [AutofillHints.email],
-                        style: inputText,
-                        validator: (v) {
-                          final text = v?.trim() ?? '';
-                          if (text.isEmpty) return 'Vui lòng nhập email';
-                          if (!looksLikeEmail(text)) {
-                            return 'Email chưa hợp lệ';
-                          }
-                          return null;
-                        },
-                      ),
-                      const SizedBox(height: 14),
-                      AuthField(
-                        controller: _company,
-                        hint: 'Tên công ty',
-                        icon: Icons.business_outlined,
-                        shake: _shake,
-                        serverError: state.errorFor('company_name'),
-                        textInputAction: TextInputAction.next,
-                        autofillHints: const [AutofillHints.organizationName],
-                        style: inputText,
-                        validator: (v) => (v ?? '').trim().isEmpty
-                            ? 'Vui lòng nhập tên công ty'
-                            : null,
-                      ),
-                      const SizedBox(height: 14),
-                      AuthField(
-                        controller: _password,
-                        hint: 'Mật khẩu (8+ ký tự)',
-                        icon: Icons.lock_outline_rounded,
-                        shake: _shake,
-                        serverError: state.errorFor('password'),
-                        obscure: _obscure,
-                        textInputAction: TextInputAction.done,
-                        autofillHints: const [AutofillHints.newPassword],
-                        onSubmitted: (_) => _submit(),
-                        style: inputText,
-                        validator: (v) => (v ?? '').length < 8
-                            ? 'Mật khẩu cần ít nhất 8 ký tự'
-                            : null,
-                        suffix: IconButton(
-                          tooltip: _obscure ? 'Hiện mật khẩu' : 'Ẩn mật khẩu',
-                          icon: Icon(
-                            _obscure
-                                ? Icons.visibility_outlined
-                                : Icons.visibility_off_outlined,
-                            size: OmniIconSize.lg,
+      body: AuthBackdrop(
+        child: SafeArea(
+          child: SingleChildScrollView(
+            keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+            padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
+            child: Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 420),
+                child: AutofillGroup(
+                  child: Form(
+                    key: _formKey,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Align(
+                          alignment: Alignment.centerLeft,
+                          child: IconButton(
+                            tooltip: 'Quay lại',
+                            onPressed: _back,
+                            icon: const Icon(Icons.arrow_back_rounded),
                           ),
-                          onPressed: () => setState(() => _obscure = !_obscure),
                         ),
-                      ),
-                      const SizedBox(height: 10),
-                      _StrengthMeter(score: passwordScore(_password.text)),
-                      const SizedBox(height: 12),
-                      _TermsRow(
-                        agreed: _agreed,
-                        onChanged: (v) => setState(() => _agreed = v),
-                      ),
-                      if (generalError != null)
-                        Padding(
-                          padding: const EdgeInsets.only(top: 8),
-                          child: AuthErrorBox(message: generalError),
+                        const SizedBox(height: 8),
+                        Text(
+                          'Tạo tài khoản',
+                          style: OmniType.largeTitle.copyWith(
+                            color: scheme.onSurface,
+                          ),
                         ),
-                      const SizedBox(height: 16),
-                      AnimatedOpacity(
-                        key: const ValueKey('register-opacity'),
-                        duration: OmniMotion.enabled(context)
-                            ? OmniDuration.fast
-                            : Duration.zero,
-                        opacity: _ready ? 1 : 0.45,
-                        child: AuthPrimaryButton(
-                          key: const ValueKey('register-submit'),
-                          label: 'Tạo tài khoản',
-                          busy: state.submitting,
-                          onPressed: (_ready && !busy) ? _submit : null,
+                        const SizedBox(height: 24),
+                        AuthField(
+                          controller: _name,
+                          hint: 'Họ và tên',
+                          icon: Icons.person_outline_rounded,
+                          shake: _shake,
+                          serverError: state.errorFor('full_name'),
+                          textInputAction: TextInputAction.next,
+                          autofillHints: const [AutofillHints.name],
+                          style: inputText,
+                          validator: (v) => (v ?? '').trim().isEmpty
+                              ? 'Vui lòng nhập họ tên'
+                              : null,
                         ),
-                      ),
-                      const SizedBox(height: 20),
-                      const AuthDivider(),
-                      const SizedBox(height: 20),
-                      AuthGoogleButton(
-                        label: 'Đăng ký với Google',
-                        onPressed: busy ? null : _submitGoogle,
-                        busy: google.submittingMethod == LoginMethod.google,
-                      ),
-                      const SizedBox(height: 24),
-                      Wrap(
-                        alignment: WrapAlignment.center,
-                        crossAxisAlignment: WrapCrossAlignment.center,
-                        children: [
-                          Text(
-                            'Đã có tài khoản? ',
-                            style: OmniType.body.copyWith(
-                              color: scheme.onSurfaceVariant,
+                        const SizedBox(height: 14),
+                        AuthField(
+                          controller: _email,
+                          hint: 'Email làm việc',
+                          icon: Icons.mail_outline_rounded,
+                          shake: _shake,
+                          serverError: state.errorFor('email'),
+                          keyboardType: TextInputType.emailAddress,
+                          textInputAction: TextInputAction.next,
+                          autofillHints: const [AutofillHints.email],
+                          style: inputText,
+                          validator: (v) {
+                            final text = v?.trim() ?? '';
+                            if (text.isEmpty) return 'Vui lòng nhập email';
+                            if (!looksLikeEmail(text)) {
+                              return 'Email chưa hợp lệ';
+                            }
+                            return null;
+                          },
+                        ),
+                        const SizedBox(height: 14),
+                        AuthField(
+                          controller: _company,
+                          hint: 'Tên công ty',
+                          icon: Icons.business_outlined,
+                          shake: _shake,
+                          serverError: state.errorFor('company_name'),
+                          textInputAction: TextInputAction.next,
+                          autofillHints: const [AutofillHints.organizationName],
+                          style: inputText,
+                          validator: (v) => (v ?? '').trim().isEmpty
+                              ? 'Vui lòng nhập tên công ty'
+                              : null,
+                        ),
+                        const SizedBox(height: 14),
+                        AuthField(
+                          controller: _password,
+                          hint: 'Mật khẩu (8+ ký tự)',
+                          icon: Icons.lock_outline_rounded,
+                          shake: _shake,
+                          serverError: state.errorFor('password'),
+                          obscure: _obscure,
+                          textInputAction: TextInputAction.done,
+                          autofillHints: const [AutofillHints.newPassword],
+                          onSubmitted: (_) => _submit(),
+                          style: inputText,
+                          validator: (v) => (v ?? '').length < 8
+                              ? 'Mật khẩu cần ít nhất 8 ký tự'
+                              : null,
+                          suffix: IconButton(
+                            tooltip: _obscure ? 'Hiện mật khẩu' : 'Ẩn mật khẩu',
+                            icon: Icon(
+                              _obscure
+                                  ? Icons.visibility_outlined
+                                  : Icons.visibility_off_outlined,
+                              size: OmniIconSize.lg,
                             ),
+                            onPressed: () =>
+                                setState(() => _obscure = !_obscure),
                           ),
-                          InkWell(
-                            onTap: _back,
-                            borderRadius: BorderRadius.circular(4),
-                            child: Padding(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 4,
-                                vertical: 12,
+                        ),
+                        const SizedBox(height: 10),
+                        _StrengthMeter(score: passwordScore(_password.text)),
+                        const SizedBox(height: 12),
+                        _TermsRow(
+                          agreed: _agreed,
+                          onChanged: (v) => setState(() => _agreed = v),
+                        ),
+                        if (generalError != null)
+                          Padding(
+                            padding: const EdgeInsets.only(top: 8),
+                            child: AuthErrorBox(message: generalError),
+                          ),
+                        const SizedBox(height: 16),
+                        AnimatedOpacity(
+                          key: const ValueKey('register-opacity'),
+                          duration: OmniMotion.enabled(context)
+                              ? OmniDuration.fast
+                              : Duration.zero,
+                          opacity: _ready ? 1 : 0.45,
+                          child: AuthPrimaryButton(
+                            key: const ValueKey('register-submit'),
+                            label: 'Tạo tài khoản',
+                            busy: state.submitting,
+                            onPressed: (_ready && !busy) ? _submit : null,
+                          ),
+                        ),
+                        const SizedBox(height: 20),
+                        const AuthDivider(),
+                        const SizedBox(height: 20),
+                        AuthGoogleButton(
+                          label: 'Đăng ký với Google',
+                          onPressed: busy ? null : _submitGoogle,
+                          busy: google.submittingMethod == LoginMethod.google,
+                        ),
+                        const SizedBox(height: 24),
+                        Wrap(
+                          alignment: WrapAlignment.center,
+                          crossAxisAlignment: WrapCrossAlignment.center,
+                          children: [
+                            Text(
+                              'Đã có tài khoản? ',
+                              style: OmniType.body.copyWith(
+                                color: scheme.onSurfaceVariant,
                               ),
-                              child: Text(
-                                'Đăng nhập',
-                                style: OmniType.body.copyWith(
-                                  fontWeight: FontWeight.w600,
-                                  color: scheme.primary,
+                            ),
+                            InkWell(
+                              onTap: _back,
+                              borderRadius: BorderRadius.circular(4),
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 4,
+                                  vertical: 12,
+                                ),
+                                child: Text(
+                                  'Đăng nhập',
+                                  style: OmniType.body.copyWith(
+                                    fontWeight: FontWeight.w600,
+                                    color: scheme.primary,
+                                  ),
                                 ),
                               ),
                             ),
-                          ),
-                        ],
-                      ),
-                      const AuthPrivacyLink(),
-                    ],
+                          ],
+                        ),
+                        const AuthPrivacyLink(),
+                      ],
+                    ),
                   ),
                 ),
               ),
@@ -393,7 +396,7 @@ class _TermsRow extends StatelessWidget {
       child: InkWell(
         key: const ValueKey('terms-checkbox'),
         onTap: _toggle,
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(12),
         child: Padding(
           padding: const EdgeInsets.symmetric(vertical: 4),
           child: Row(

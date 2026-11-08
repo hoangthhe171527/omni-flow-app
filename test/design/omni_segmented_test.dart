@@ -81,11 +81,11 @@ void main() {
       ),
     );
     for (final l in ['A', 'B']) {
-      final ink = find.ancestor(
-        of: find.text(l),
-        matching: find.byType(InkWell),
-      );
-      expect(t.getSize(ink).height, greaterThanOrEqualTo(44));
+      // Kính không gợn sóng: vùng chạm là GestureDetector gần chữ nhất.
+      final hit = find
+          .ancestor(of: find.text(l), matching: find.byType(GestureDetector))
+          .first;
+      expect(t.getSize(hit).height, greaterThanOrEqualTo(44));
     }
   });
 

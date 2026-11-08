@@ -961,7 +961,7 @@ class _DaySeparator extends StatelessWidget {
     // sau đã tự cách 16.
     final color = OmniColors.byBrightness(
       context,
-      const Color(0xFF8A95A8),
+      OmniLabelColors.fallback,
       scheme.onSurfaceVariant,
     );
     return Padding(

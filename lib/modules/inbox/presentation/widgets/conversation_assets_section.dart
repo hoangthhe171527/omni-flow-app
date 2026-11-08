@@ -42,16 +42,16 @@ class _ConversationAssetsSectionState extends State<ConversationAssetsSection> {
       data: (assets) {
         final links = assets.links.toSet().toList();
         return Padding(
-          padding: const EdgeInsets.fromLTRB(4, 4, 4, 8),
+          padding: const EdgeInsets.fromLTRB(8, 8, 8, 8),
           child: Column(
             children: [
-              _AssetSegments(
+              OmniSegmented(
                 labels: [
                   'Ảnh · ${assets.media.length}',
                   'Tệp · ${assets.files.length}',
                   'Link · ${links.length}',
                 ],
-                selected: _tab,
+                index: _tab,
                 onChanged: (value) {
                   HapticFeedback.selectionClick();
                   setState(() => _tab = value);
@@ -83,111 +83,6 @@ class _ConversationAssetsSectionState extends State<ConversationAssetsSection> {
   }
 }
 
-/// Ba đoạn nền xám, vệt trắng trượt theo đoạn đang chọn (như `_Segments` của
-/// bộ lọc hộp thư). Cao 44 để đạt vùng chạm; giảm chuyển động thì nhảy ngay.
-class _AssetSegments extends StatelessWidget {
-  const _AssetSegments({
-    required this.labels,
-    required this.selected,
-    required this.onChanged,
-  });
-
-  final List<String> labels;
-  final int selected;
-  final ValueChanged<int> onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    final motion = OmniMotion.of(context);
-    final track = OmniColors.byBrightness(
-      context,
-      OmniColors.muted,
-      OmniColors.darkMuted,
-    );
-    final thumb = OmniColors.byBrightness(
-      context,
-      Colors.white,
-      OmniColors.darkCard,
-    );
-    final muted = OmniColors.byBrightness(
-      context,
-      OmniColors.mutedForeground,
-      OmniColors.darkMutedForeground,
-    );
-    final ink = Theme.of(context).colorScheme.onSurface;
-    final x = labels.length == 1
-        ? 0.0
-        : -1 + 2 * selected / (labels.length - 1);
-
-    return Container(
-      height: 44,
-      padding: const EdgeInsets.all(3),
-      decoration: BoxDecoration(
-        color: track,
-        borderRadius: BorderRadius.circular(6),
-      ),
-      child: Stack(
-        children: [
-          AnimatedAlign(
-            alignment: Alignment(x, 0),
-            duration: motion.enabled
-                ? const Duration(milliseconds: 350)
-                : Duration.zero,
-            curve: OmniCurves.standard,
-            child: FractionallySizedBox(
-              widthFactor: 1 / labels.length,
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  color: thumb,
-                  borderRadius: BorderRadius.circular(4),
-                  boxShadow: [
-                    BoxShadow(
-                      color: OmniColors.byBrightness(
-                        context,
-                        OmniColors.ink.withAlpha(0x1F),
-                        Colors.black.withAlpha(0x52),
-                      ),
-                      blurRadius: 3,
-                      offset: Offset(0, 1),
-                    ),
-                  ],
-                ),
-                child: const SizedBox.expand(),
-              ),
-            ),
-          ),
-          Row(
-            children: [
-              for (var i = 0; i < labels.length; i++)
-                Expanded(
-                  child: Semantics(
-                    button: true,
-                    selected: i == selected,
-                    child: InkWell(
-                      borderRadius: BorderRadius.circular(4),
-                      onTap: () => onChanged(i),
-                      child: Center(
-                        child: Text(
-                          labels[i],
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: OmniType.caption.copyWith(
-                            fontWeight: FontWeight.w600,
-                            color: i == selected ? ink : muted,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-}
-
 class _MediaGrid extends StatelessWidget {
   const _MediaGrid({required this.items});
 
@@ -210,7 +105,7 @@ class _MediaGrid extends StatelessWidget {
           mainAxisSpacing: 4,
         ),
         itemBuilder: (_, index) => ClipRRect(
-          borderRadius: BorderRadius.circular(4),
+          borderRadius: BorderRadius.circular(12),
           child: GestureDetector(
             onTap: () => Navigator.of(context).push(
               MaterialPageRoute<void>(
@@ -234,15 +129,38 @@ class _LinkList extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (links.isEmpty) return const _AssetEmpty(label: 'Chưa có liên kết');
-    return Column(
-      children: [
+    return _AssetRows(
+      rows: [
         for (final link in links)
-          ListTile(
-            minTileHeight: 44,
-            leading: const Icon(Icons.link_rounded),
-            title: Text(link, maxLines: 1, overflow: TextOverflow.ellipsis),
+          OmniGroupRow(
+            icon: Icons.link_rounded,
+            title: link,
+            maxTitleLines: 1,
+            chevron: false,
             onTap: () => _openUrl(link),
           ),
+      ],
+    );
+  }
+}
+
+/// Danh sách dòng trong thẻ của nhóm: vạch thụt sau ô icon, không viền.
+class _AssetRows extends StatelessWidget {
+  const _AssetRows({required this.rows});
+
+  final List<Widget> rows;
+
+  @override
+  Widget build(BuildContext context) {
+    final line = Theme.of(
+      context,
+    ).colorScheme.outlineVariant.withValues(alpha: .7);
+    return Column(
+      children: [
+        for (var i = 0; i < rows.length; i++) ...[
+          if (i > 0) Divider(height: 1, thickness: 1, indent: 54, color: line),
+          rows[i],
+        ],
       ],
     );
   }
@@ -421,17 +339,13 @@ class _FileList extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (files.isEmpty) return const _AssetEmpty(label: 'Chưa có file');
-    return Column(
-      children: [
+    return _AssetRows(
+      rows: [
         for (final file in files)
-          ListTile(
-            minTileHeight: 44,
-            leading: const Icon(Icons.insert_drive_file_outlined),
-            title: Text(
-              file.name ?? 'Tệp đính kèm',
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
+          OmniGroupRow(
+            icon: Icons.insert_drive_file_outlined,
+            title: file.name ?? 'Tệp đính kèm',
+            maxTitleLines: 1,
             trailing: const Icon(Icons.download_rounded, size: 20),
             onTap: () => _openUrl(file.url),
           ),

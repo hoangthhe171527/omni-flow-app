@@ -5,6 +5,7 @@ import '../../../core/module/module_registry.dart';
 import '../../../design/components/components.dart';
 import '../../../design/tokens/tokens.dart';
 import '../../../security/session/session_controller.dart';
+import '../domain/permission_labels.dart';
 
 /// "Quyền của tôi" — every permission slug the app gates on, grouped by module,
 /// with what this session actually holds.
@@ -22,110 +23,45 @@ class MyPermissionsPage extends ConsumerWidget {
     final held = session.policy.slugs;
     final scheme = Theme.of(context).colorScheme;
 
-    final dark = Theme.of(context).brightness == Brightness.dark;
-
-    // `MPermissions.dc.html`: thẻ mực tóm tắt (tên, vai trò, số quyền màu quỹ
-    // đạo sáng), rồi mỗi module một thẻ trắng có tên ở đầu.
+    // Nền xám; thẻ đầu là nhóm tóm tắt (tên, vai trò, số quyền), rồi mỗi
+    // module một nhóm lồng. Tick một tông, quyền không có: vòng gạch xám.
     return Scaffold(
-      backgroundColor: scheme.surface,
       appBar: const OmniAppBar(title: 'Quyền của tôi'),
       body: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 16, 16, OmniSpacing.xxl),
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, OmniSpacing.xxl),
         children: [
-          Container(
-            padding: const EdgeInsets.all(OmniSpacing.lg),
-            decoration: BoxDecoration(
-              color: dark ? OmniColors.darkMuted : OmniColors.ink,
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  session.displayName,
-                  style: OmniType.money.copyWith(color: Colors.white),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  'Vai trò: ${session.roleLabel}',
-                  style: OmniType.caption.copyWith(
-                    fontWeight: FontWeight.w400,
-                    color: OmniColors.inkMutedForeground,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  'Đang giữ ${held.length} quyền',
-                  style: OmniType.caption.copyWith(
-                    fontWeight: FontWeight.w600,
-                    color: OmniColors.orbit,
-                    fontFeatures: OmniType.tabular,
-                  ),
-                ),
-              ],
-            ),
+          OmniGroupSection(
+            dividerIndent: 14,
+            children: [
+              OmniGroupRow(title: session.displayName),
+              OmniGroupRow(title: 'Vai trò', value: session.roleLabel),
+              OmniGroupRow(title: 'Đang giữ', value: '${held.length} quyền'),
+            ],
           ),
           for (final entry in declared.entries)
-            if (entry.value.isNotEmpty)
-              Padding(
-                padding: const EdgeInsets.only(top: 14),
-                child: OmniCard(
-                  flat: true,
-                  padding: const EdgeInsets.fromLTRB(16, 6, 16, 6),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 10),
-                        child: Text(
-                          entry.key,
-                          style: OmniType.bodyStrong.copyWith(
-                            fontWeight: FontWeight.w600,
-                            color: scheme.onSurface,
-                          ),
-                        ),
+            if (entry.value.isNotEmpty) ...[
+              const SizedBox(height: OmniSpacing.lg),
+              OmniGroupSection(
+                title: entry.key,
+                dividerIndent: 42,
+                children: [
+                  for (final slug in entry.value)
+                    OmniGroupRow(
+                      title: permissionLabel(entry.key, slug),
+                      maxTitleLines: 2,
+                      leading: Icon(
+                        held.contains(slug)
+                            ? Icons.check_circle_rounded
+                            : Icons.remove_circle_outline_rounded,
+                        size: OmniIconSize.md,
+                        color: held.contains(slug)
+                            ? scheme.primary
+                            : scheme.onSurfaceVariant,
                       ),
-                      const Divider(height: 1),
-                      for (final slug in entry.value)
-                        Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 10),
-                          child: Row(
-                            children: [
-                              // Hình dạng nói có/không (tick đặc / vòng gạch),
-                              // màu chỉ nhắc lại.
-                              Icon(
-                                held.contains(slug)
-                                    ? Icons.check_circle_rounded
-                                    : Icons.remove_circle_outline_rounded,
-                                size: OmniIconSize.md,
-                                color: held.contains(slug)
-                                    ? scheme.primary
-                                    : scheme.onSurfaceVariant,
-                              ),
-                              const SizedBox(width: 10),
-                              Expanded(
-                                child: Text(
-                                  slug,
-                                  style: OmniType.caption.copyWith(
-                                    // Thiết kế dùng chữ đơn cách, nhưng app
-                                    // không đóng gói font đơn cách và bí danh
-                                    // 'monospace' không có trên mọi máy (ảnh
-                                    // chụp ra ô trống). Giữ Be Vietnam Pro với
-                                    // chữ số đều cột.
-                                    fontFeatures: OmniType.tabular,
-                                    fontWeight: FontWeight.w400,
-                                    color: held.contains(slug)
-                                        ? scheme.onSurface
-                                        : scheme.onSurfaceVariant,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                    ],
-                  ),
-                ),
+                    ),
+                ],
               ),
+            ],
         ],
       ),
     );

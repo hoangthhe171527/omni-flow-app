@@ -55,11 +55,9 @@ void main() {
     ) async {
       await tester.pumpWidget(
         host(
-          SingleChildScrollView(
-            child: StagePickerSheet(
-              pipeline: PipelineCatalog.legacy.defaultPipeline,
-              currentCode: 'quoted',
-            ),
+          StagePickerSheet(
+            pipeline: PipelineCatalog.legacy.defaultPipeline,
+            currentCode: 'quoted',
           ),
         ),
       );

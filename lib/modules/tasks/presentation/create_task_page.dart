@@ -99,18 +99,13 @@ class _CreateTaskPageState extends ConsumerState<CreateTaskPage> {
     final text = Theme.of(context).textTheme;
     final names = ref.watch(teamMemberByIdProvider);
 
-    // Bố cục `MCreateTask.dc.html`: nền trắng, ô tên lớn, một thẻ ba dòng
-    // "nhãn — giá trị", lời nhắc, và nút "Tạo việc" ghim ở đáy.
+    // Nền xám, ô tên lớn, một nhóm ba dòng "nhãn — giá trị" và nút "Tạo việc"
+    // ghim ở đáy (liquid, đợt 2 duyệt 08/11/2026).
     return Scaffold(
-      backgroundColor: scheme.surface,
-      appBar: AppBar(
-        backgroundColor: scheme.surface,
-        leading: const CloseButton(),
-        title: const Text('Việc mới'),
-      ),
+      appBar: OmniAppBar(title: 'Việc mới', close: true),
       body: ListView(
         keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-        padding: const EdgeInsets.fromLTRB(20, OmniSpacing.sm, 20, 24),
+        padding: const EdgeInsets.fromLTRB(16, OmniSpacing.md, 16, 24),
         children: [
           OmniField(
             label: 'Tên việc',
@@ -128,55 +123,46 @@ class _CreateTaskPageState extends ConsumerState<CreateTaskPage> {
               onChanged: (_) => setState(() {}),
             ),
           ),
-          const SizedBox(height: 18),
-          Container(
-            decoration: BoxDecoration(
-              borderRadius: OmniRadius.xlAll,
-              border: Border.all(color: scheme.outlineVariant),
-            ),
-            child: Material(
-              type: MaterialType.transparency,
-              child: Column(
-                children: [
-                  if (widget.sections.isNotEmpty) ...[
-                    _Field(
-                      label: 'Nhóm việc',
-                      value: _sectionName,
-                      muted: _sectionId == null,
-                      onTap: _pickSection,
-                    ),
-                    const Divider(height: 1),
-                  ],
-                  _Field(
-                    label: 'Người làm',
-                    value: _assigneeIds.isEmpty
-                        ? 'Chưa gán ai'
-                        : _assigneeIds
-                              .map((id) => names[id]?.name ?? 'Người đã rời')
-                              .join(', '),
-                    muted: _assigneeIds.isEmpty,
-                    onTap: _pickAssignees,
-                  ),
-                  const Divider(height: 1),
-                  _Field(
-                    label: 'Hạn',
-                    value: _dueDate == null
-                        ? 'Chưa đặt hạn'
-                        : Formatters.date(_dueDate!),
-                    muted: _dueDate == null,
-                    onTap: _pickDueDate,
-                    // Đặt nhầm hạn rồi không gỡ được là một cái bẫy: hạn trống
-                    // có nghĩa ("chưa hẹn"), khác hẳn một ngày đại khái nào đó.
-                    onClear: _dueDate == null
-                        ? null
-                        : () => setState(() => _dueDate = null),
-                  ),
-                ],
+          const SizedBox(height: OmniGroupSection.gap),
+          OmniGroupSection(
+            dividerIndent: 14,
+            children: [
+              if (widget.sections.isNotEmpty)
+                OmniGroupRow(
+                  title: 'Nhóm việc',
+                  value: _sectionName,
+                  onTap: _pickSection,
+                ),
+              OmniGroupRow(
+                title: 'Người làm',
+                value: _assigneeIds.isEmpty
+                    ? 'Chưa gán ai'
+                    : _assigneeIds
+                          .map((id) => names[id]?.name ?? 'Người đã rời')
+                          .join(', '),
+                onTap: _pickAssignees,
               ),
-            ),
+              OmniGroupRow(
+                title: 'Hạn',
+                value: _dueDate == null
+                    ? 'Chưa đặt hạn'
+                    : Formatters.date(_dueDate!),
+                onTap: _pickDueDate,
+                // Đặt nhầm hạn rồi không gỡ được là một cái bẫy: hạn trống
+                // có nghĩa ("chưa hẹn"), khác hẳn một ngày đại khái nào đó.
+                trailing: _dueDate == null
+                    ? null
+                    : IconButton(
+                        onPressed: () => setState(() => _dueDate = null),
+                        icon: const Icon(Icons.close_rounded),
+                        iconSize: OmniIconSize.md,
+                        tooltip: 'Xoá Hạn',
+                      ),
+              ),
+            ],
           ),
           if (_error != null) ...[
-            const SizedBox(height: OmniSpacing.lg),
+            const SizedBox(height: OmniGroupSection.gap),
             Text(
               _error!,
               style: text.bodyMedium?.copyWith(
@@ -184,38 +170,21 @@ class _CreateTaskPageState extends ConsumerState<CreateTaskPage> {
               ),
             ),
           ],
-          const SizedBox(height: 18),
-          Text(
-            'Chỉ cần tên là tạo được. Hạn, người làm, việc con điền sau cũng '
-            'kịp.',
-            style: OmniType.caption.copyWith(
-              fontWeight: FontWeight.w400,
-              color: scheme.onSurfaceVariant,
-            ),
-          ),
         ],
       ),
-      bottomNavigationBar: DecoratedBox(
-        decoration: BoxDecoration(
-          color: scheme.surface,
-          border: Border(top: BorderSide(color: scheme.outlineVariant)),
-        ),
-        child: SafeArea(
-          top: false,
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
-            child: FilledButton(
-              onPressed: _canSave ? _save : null,
-              child: _saving
-                  ? const SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator.adaptive(strokeWidth: 2),
-                    )
-                  : const Text('Tạo việc'),
-            ),
+      bottomNavigationBar: OmniActionBar(
+        children: [
+          FilledButton(
+            onPressed: _canSave ? _save : null,
+            child: _saving
+                ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator.adaptive(strokeWidth: 2),
+                  )
+                : const Text('Tạo việc'),
           ),
-        ),
+        ],
       ),
     );
   }
@@ -230,20 +199,22 @@ class _CreateTaskPageState extends ConsumerState<CreateTaskPage> {
   Future<void> _pickSection() async {
     final chosen = await showOmniSheet<String>(
       context: context,
-      builder: (context) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            for (final section in widget.sections)
-              ListTile(
-                title: Text(section.name),
-                trailing: section.id == _sectionId
-                    ? const Icon(Icons.check_rounded)
-                    : null,
-                onTap: () => Navigator.of(context).pop(section.id),
-              ),
-          ],
-        ),
+      builder: (context) => OmniSheetBody(
+        semanticsLabel: 'Nhóm việc',
+        header: const OmniSheetHeader(title: 'Nhóm việc'),
+        children: [
+          OmniGroupSection(
+            dividerIndent: 14,
+            children: [
+              for (final section in widget.sections)
+                OmniGroupRow(
+                  title: section.name,
+                  selected: section.id == _sectionId,
+                  onTap: () => Navigator.of(context).pop(section.id),
+                ),
+            ],
+          ),
+        ],
       ),
     );
 
@@ -306,70 +277,5 @@ class _CreateTaskPageState extends ConsumerState<CreateTaskPage> {
         _error = e.message;
       });
     }
-  }
-}
-
-/// Một dòng "nhãn — giá trị" bấm được, giống bảng điều phối ở màn chi tiết.
-class _Field extends StatelessWidget {
-  const _Field({
-    required this.label,
-    required this.value,
-    required this.onTap,
-    this.muted = false,
-    this.onClear,
-  });
-
-  final String label;
-  final String value;
-  final VoidCallback onTap;
-  final bool muted;
-  final VoidCallback? onClear;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-
-    return InkWell(
-      onTap: onTap,
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(minHeight: 52),
-        child: Padding(
-          padding: EdgeInsets.fromLTRB(16, 4, onClear == null ? 16 : 4, 4),
-          child: Row(
-            children: [
-              SizedBox(
-                width: 100,
-                child: Text(
-                  label,
-                  style: OmniType.body.copyWith(color: scheme.onSurfaceVariant),
-                ),
-              ),
-              Expanded(
-                child: Text(
-                  value,
-                  style: OmniType.bodyStrong.copyWith(
-                    fontWeight: muted ? FontWeight.w400 : FontWeight.w600,
-                    color: muted ? scheme.onSurfaceVariant : scheme.onSurface,
-                  ),
-                ),
-              ),
-              if (onClear != null)
-                IconButton(
-                  onPressed: onClear,
-                  icon: const Icon(Icons.close_rounded),
-                  iconSize: OmniIconSize.md,
-                  tooltip: 'Xoá $label',
-                )
-              else
-                Icon(
-                  Icons.chevron_right_rounded,
-                  size: OmniIconSize.md,
-                  color: scheme.outline,
-                ),
-            ],
-          ),
-        ),
-      ),
-    );
   }
 }

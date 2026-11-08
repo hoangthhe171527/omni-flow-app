@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../../../../design/components/components.dart';
-import '../../../../design/platform/omni_motion_scope.dart';
 import '../../../../design/tokens/tokens.dart';
 
 /// Bốn nhãn chuẩn của web; luôn hiện dù khách chưa có nhãn nào.
@@ -56,7 +55,6 @@ class _TagPickerSheetState extends State<_TagPickerSheet> {
   }
 
   final _input = TextEditingController();
-  String? _bumped;
 
   @override
   void dispose() {
@@ -69,10 +67,8 @@ class _TagPickerSheetState extends State<_TagPickerSheet> {
     setState(() {
       if (_selected.contains(tag)) {
         _selected.remove(tag);
-        _bumped = null;
       } else {
         _selected.add(tag);
-        _bumped = tag;
       }
     });
   }
@@ -99,117 +95,69 @@ class _TagPickerSheetState extends State<_TagPickerSheet> {
 
   @override
   Widget build(BuildContext context) {
-    final motion = OmniMotion.enabled(context);
-
-    return SafeArea(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
+    return OmniSheetBody(
+      header: const SizedBox(height: 14),
+      footer: Row(
         children: [
-          Flexible(
-            child: ListView(
-              shrinkWrap: true,
-              keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-              children: [
-                for (final tag in _options)
-                  InkWell(
-                    onTap: () => _toggle(tag),
-                    child: ConstrainedBox(
-                      constraints: const BoxConstraints(minHeight: 48),
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: OmniSpacing.lg,
-                        ),
-                        child: Row(
-                          children: [
-                            Semantics(
-                              label: 'Nhãn: $tag',
-                              child: Container(
-                                width: 10,
-                                height: 10,
-                                decoration: BoxDecoration(
-                                  color: OmniLabelColors.of(tag),
-                                  shape: BoxShape.circle,
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: OmniSpacing.md),
-                            Expanded(child: Text(tag)),
-                            AnimatedScale(
-                              scale: motion && _bumped == tag ? 1.15 : 1,
-                              duration: motion
-                                  ? const Duration(milliseconds: 120)
-                                  : Duration.zero,
-                              onEnd: () {
-                                if (_bumped == tag) {
-                                  setState(() => _bumped = null);
-                                }
-                              },
-                              child: IgnorePointer(
-                                child: Checkbox.adaptive(
-                                  value: _selected.contains(tag),
-                                  onChanged: (_) {},
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-              ],
+          Expanded(
+            child: OutlinedButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Huỷ'),
             ),
           ),
-          Padding(
-            padding: const EdgeInsets.all(OmniSpacing.lg),
-            child: Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    controller: _input,
-                    decoration: const InputDecoration(hintText: 'Thêm nhãn'),
-                    textInputAction: TextInputAction.done,
-                    onSubmitted: (_) => _add(),
-                  ),
-                ),
-                const SizedBox(width: OmniSpacing.sm),
-                OutlinedButton(
-                  onPressed: _add,
-                  style: OutlinedButton.styleFrom(
-                    minimumSize: const Size(44, 44),
-                  ),
-                  child: const Text('Thêm'),
-                ),
-              ],
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(
-              OmniSpacing.lg,
-              0,
-              OmniSpacing.lg,
-              OmniSpacing.lg,
-            ),
-            child: Row(
-              children: [
-                TextButton(
-                  onPressed: () => Navigator.of(context).pop(),
-                  style: TextButton.styleFrom(minimumSize: const Size(44, 44)),
-                  child: const Text('Huỷ'),
-                ),
-                const Spacer(),
-                FilledButton(
-                  onPressed: () =>
-                      Navigator.of(context).pop(List<String>.of(_selected)),
-                  style: FilledButton.styleFrom(
-                    minimumSize: const Size(88, 44),
-                  ),
-                  child: const Text('Xong'),
-                ),
-              ],
+          const SizedBox(width: OmniSpacing.sm),
+          Expanded(
+            child: FilledButton(
+              onPressed: () =>
+                  Navigator.of(context).pop(List<String>.of(_selected)),
+              child: const Text('Xong'),
             ),
           ),
         ],
       ),
+      children: [
+        OmniGroupSection(
+          dividerIndent: 38,
+          children: [
+            for (final tag in _options)
+              OmniGroupRow(
+                leading: Semantics(
+                  label: 'Nhãn: $tag',
+                  child: Container(
+                    width: 10,
+                    height: 10,
+                    margin: const EdgeInsets.symmetric(horizontal: 9),
+                    decoration: BoxDecoration(
+                      color: OmniLabelColors.of(tag),
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                ),
+                title: tag,
+                selected: _selected.contains(tag),
+                onTap: () => _toggle(tag),
+              ),
+          ],
+        ),
+        Row(
+          children: [
+            Expanded(
+              child: TextField(
+                controller: _input,
+                decoration: const InputDecoration(hintText: 'Thêm nhãn'),
+                textInputAction: TextInputAction.done,
+                onSubmitted: (_) => _add(),
+              ),
+            ),
+            const SizedBox(width: OmniSpacing.sm),
+            OutlinedButton(
+              onPressed: _add,
+              style: OutlinedButton.styleFrom(minimumSize: const Size(0, 48)),
+              child: const Text('Thêm'),
+            ),
+          ],
+        ),
+      ],
     );
   }
 }

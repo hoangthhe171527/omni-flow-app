@@ -307,6 +307,11 @@ void main() {
       bg: OmniColors.darkCard,
       min: t,
     ),
+    // ---- Ô người phụ trách Hộp thư: nền nhạt theo người ----
+    for (final (i, (bg, fg)) in OmniColors.assigneeTones.indexed)
+      (what: 'ô phụ trách $i', fg: fg, bg: bg, min: t),
+    for (final (i, (bg, fg)) in OmniColors.darkAssigneeTones.indexed)
+      (what: 'ô phụ trách $i (tối)', fg: fg, bg: bg, min: t),
   ];
 
   test('chữ trắng trên xanh "thành công" KHÔNG đủ cho một nút', () {

@@ -27,22 +27,26 @@ void main() {
   testWidgets('mặc định là CÓ nút tài khoản', (tester) async {
     await tester.pumpWidget(wrap(const OmniAppBar(title: 'Dòng việc')));
 
-    expect(find.text('Dòng việc'), findsOneWidget);
+    // Màn gốc: logo Viomni thay chữ to (2026-11-08); tên màn chỉ đọc.
+    expect(find.byType(OmniBrandMark), findsOneWidget);
+    expect(find.text('Dòng việc'), findsNothing);
     expect(find.byKey(marker), findsOneWidget);
   });
 
-  testWidgets('vẫn là một AppBar, nên bài kiểm cũ không vỡ', (tester) async {
-    await tester.pumpWidget(wrap(const OmniAppBar(title: 'Dòng việc')));
-
-    expect(find.byType(AppBar), findsOneWidget);
-  });
-
-  testWidgets('màn gốc: nút tài khoản ở GÓC TRÁI, trước tiêu đề', (
+  testWidgets('là thanh kính kiểu B (OmniTopBar), không còn AppBar', (
     tester,
   ) async {
-    // Người dùng nhìn ảnh chụp và nói avatar bên trái "thuận mắt hơn": mắt
-    // đọc trái→phải, và Slack/Zalo/Google đều đặt danh tính ở đầu dòng. Nút
-    // riêng của màn (tìm, chuông) giữ mép phải — hai mép cân nhau.
+    await tester.pumpWidget(wrap(const OmniAppBar(title: 'Dòng việc')));
+
+    expect(find.byType(OmniTopBar), findsOneWidget);
+    expect(find.byType(AppBar), findsNothing);
+  });
+
+  testWidgets('màn gốc: logo trái, nút riêng rồi tài khoản ở mép phải', (
+    tester,
+  ) async {
+    // Kiểu B đã duyệt (viomni-apple-uiux.html): tiêu đề lớn đứng đầu dòng,
+    // các viên kính rời (nút riêng, chuông, tài khoản) ở mép phải.
     await tester.pumpWidget(
       wrap(
         const OmniAppBar(
@@ -53,11 +57,14 @@ void main() {
     );
 
     final account = tester.getTopLeft(find.byKey(marker)).dx;
-    final title = tester.getTopLeft(find.text('Việc của tôi')).dx;
+    final title = tester
+        .getTopLeft(find.byKey(const ValueKey('omni-top-bar-brand')))
+        .dx;
     final search = tester.getTopLeft(find.byIcon(Icons.search_rounded)).dx;
 
-    expect(account, lessThan(title));
     expect(title, lessThan(search));
+    expect(search, lessThan(account));
+    expect(find.byType(OmniGlassAction), findsOneWidget);
   });
 
   testWidgets('màn đẩy vào: có nút quay lại, KHÔNG có nút tài khoản', (
@@ -96,8 +103,11 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Quyền của tôi'), findsOneWidget);
-    expect(find.byType(BackButton), findsOneWidget);
+    expect(find.byTooltip('Quay lại'), findsOneWidget);
     expect(find.byKey(marker), findsNothing);
+    await tester.tap(find.byTooltip('Quay lại'));
+    await tester.pumpAndSettle();
+    expect(find.byType(OmniBrandMark), findsOneWidget);
   });
 
   testWidgets('tắt được cho màn cố ý không muốn', (tester) async {
@@ -117,8 +127,30 @@ void main() {
       wrap(const OmniAppBar(title: 'Dòng việc'), plugged: false),
     );
 
-    expect(find.text('Dòng việc'), findsOneWidget);
+    expect(find.byType(OmniBrandMark), findsOneWidget);
     expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('form: close thì nút đóng ✕', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Builder(
+          builder: (context) => TextButton(
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute<void>(
+                builder: (_) => const Scaffold(
+                  appBar: OmniAppBar(title: 'Việc mới', close: true),
+                ),
+              ),
+            ),
+            child: const Text('mở'),
+          ),
+        ),
+      ),
+    );
+    await tester.tap(find.text('mở'));
+    await tester.pumpAndSettle();
+    expect(find.byIcon(Icons.close_rounded), findsOneWidget);
   });
 
   testWidgets('có bottom thì chiều cao cộng thêm', (tester) async {

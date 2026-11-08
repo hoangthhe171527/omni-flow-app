@@ -116,7 +116,7 @@ class _TeamReactionChipsState extends State<TeamReactionChips> {
               padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
               decoration: BoxDecoration(
                 color: scheme.surface,
-                borderRadius: BorderRadius.circular(9),
+                borderRadius: BorderRadius.circular(999),
                 border: Border.all(
                   color: entry.value.any((r) => r.userId == widget.myUserId)
                       ? scheme.primary
@@ -236,76 +236,35 @@ Future<void> showTeamReactorsSheet(
 }) {
   return showOmniSheet<void>(
     context: context,
-    builder: (context) {
-      final scheme = Theme.of(context).colorScheme;
-      return SafeArea(
-        top: false,
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(
-            OmniSpacing.lg,
-            OmniSpacing.lg,
-            OmniSpacing.lg,
-            OmniSpacing.md,
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Text(
-                'Cảm xúc nội bộ',
-                style: OmniType.section.copyWith(color: scheme.onSurface),
-              ),
-              const SizedBox(height: 2),
-              Text(
-                'Chỉ đội thấy, không gửi cho khách.',
-                style: OmniType.caption.copyWith(
-                  color: scheme.onSurfaceVariant,
+    builder: (context) => OmniSheetBody(
+      header: const OmniSheetHeader(
+        title: 'Cảm xúc nội bộ',
+        subtitle: 'Chỉ đội thấy, không gửi cho khách.',
+      ),
+      children: [
+        OmniGroupSection(
+          dividerIndent: 58,
+          children: [
+            for (final r in reactions)
+              if (r.emoji.isNotEmpty)
+                OmniGroupRow(
+                  leading: SizedBox(
+                    width: 28,
+                    child: Center(
+                      child: Text(r.emoji, style: OmniChatType.reaction),
+                    ),
+                  ),
+                  title: TeamReactionChips.nameOf(
+                    r,
+                    memberNames,
+                    myUserId: myUserId,
+                    myName: myName,
+                  ),
+                  maxTitleLines: 1,
                 ),
-              ),
-              const SizedBox(height: OmniSpacing.sm),
-              Flexible(
-                child: ListView(
-                  shrinkWrap: true,
-                  children: [
-                    for (final r in reactions)
-                      if (r.emoji.isNotEmpty)
-                        SizedBox(
-                          height: 44,
-                          child: Row(
-                            children: [
-                              SizedBox(
-                                width: 32,
-                                child: Text(
-                                  r.emoji,
-                                  style: OmniChatType.reaction,
-                                ),
-                              ),
-                              const SizedBox(width: OmniSpacing.sm),
-                              Expanded(
-                                child: Text(
-                                  TeamReactionChips.nameOf(
-                                    r,
-                                    memberNames,
-                                    myUserId: myUserId,
-                                    myName: myName,
-                                  ),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: OmniType.body.copyWith(
-                                    color: scheme.onSurface,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                  ],
-                ),
-              ),
-            ],
-          ),
+          ],
         ),
-      );
-    },
+      ],
+    ),
   );
 }

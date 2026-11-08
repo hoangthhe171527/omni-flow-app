@@ -40,29 +40,13 @@ class BackgroundPage extends ConsumerWidget {
       // OmniAppBar như hai màn tài khoản kia: màn đẩy vào nên nó tự giữ nút
       // quay lại và không vẽ avatar (xem OmniAppBar).
       appBar: const OmniAppBar(title: 'Nền'),
-      // `MBackground.dc.html`: một dòng giải thích, lưới ba cột, ô đang chọn
-      // có vành đôi màu chính.
+      // Lưới ba cột; ô đang chọn = vành trắng mờ + dấu ✓ (không câu dẫn).
       body: CustomScrollView(
         slivers: [
           SliverPadding(
-            padding: const EdgeInsets.fromLTRB(20, 12, 20, 12),
-            sliver: SliverToBoxAdapter(
-              child: Text(
-                'Nền cho khung chat và bảng kế hoạch.',
-                style: OmniType.body.copyWith(
-                  color: OmniColors.byBrightness(
-                    context,
-                    OmniColors.secondaryForeground,
-                    scheme.onSurfaceVariant,
-                  ),
-                ),
-              ),
-            ),
-          ),
-          SliverPadding(
             padding: const EdgeInsets.fromLTRB(
               16,
-              0,
+              12,
               16,
               OmniSpacing.bottomSafe,
             ),
@@ -136,13 +120,12 @@ class _Tile extends StatelessWidget {
                   border: selected
                       ? null
                       : Border.all(color: scheme.outlineVariant),
-                  // Vành đôi: khe màu nền + vành màu chính.
+                  // Vành trắng mờ (kính chọn), không khối màu đặc.
                   boxShadow: selected
                       ? [
-                          BoxShadow(color: scheme.primary, spreadRadius: 4),
                           BoxShadow(
-                            color: Theme.of(context).scaffoldBackgroundColor,
-                            spreadRadius: 2,
+                            color: OmniGlass.selectionOf(context),
+                            spreadRadius: 4,
                           ),
                         ]
                       : null,
@@ -155,9 +138,18 @@ class _Tile extends StatelessWidget {
                       Positioned(
                         right: OmniSpacing.sm,
                         top: OmniSpacing.sm,
-                        child: Icon(
-                          Icons.check_circle_rounded,
-                          color: scheme.primary,
+                        child: Container(
+                          width: 24,
+                          height: 24,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: Colors.white.withValues(alpha: .85),
+                          ),
+                          child: Icon(
+                            Icons.check_rounded,
+                            size: 16,
+                            color: scheme.primary,
+                          ),
                         ),
                       ),
                   ],

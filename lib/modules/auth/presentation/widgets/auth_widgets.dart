@@ -97,8 +97,9 @@ class AuthErrorBox extends StatelessWidget {
   }
 }
 
-/// Nút chính của các màn xác thực: cao 50, bo 10, đổ bóng `primary`; hiện
-/// vòng quay thay chữ khi [busy]. [onPressed] null thì nút bị khoá.
+/// Nút chính của các màn xác thực: nút viền xanh viên thuốc cao 50 (gu
+/// người dùng: không tô đặc); hiện vòng quay thay chữ khi [busy]. [onPressed]
+/// null thì nút bị khoá.
 class AuthPrimaryButton extends StatelessWidget {
   const AuthPrimaryButton({
     super.key,
@@ -114,38 +115,65 @@ class AuthPrimaryButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(10),
-        boxShadow: onPressed != null && !busy
-            ? [
-                BoxShadow(
-                  color: scheme.primary.withValues(alpha: 0.25),
-                  blurRadius: 14,
-                  offset: const Offset(0, 6),
-                ),
-              ]
-            : null,
+    return FilledButton(
+      onPressed: onPressed,
+      style: FilledButton.styleFrom(
+        minimumSize: const Size.fromHeight(50),
+        shape: const StadiumBorder(),
+        textStyle: OmniType.input.copyWith(fontWeight: FontWeight.w600),
       ),
-      child: FilledButton(
-        onPressed: onPressed,
-        style: FilledButton.styleFrom(
-          minimumSize: const Size.fromHeight(50),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(10),
+      child: busy
+          ? SizedBox(
+              width: 20,
+              height: 20,
+              child: CircularProgressIndicator.adaptive(
+                strokeWidth: 2,
+                valueColor: AlwaysStoppedAnimation<Color>(scheme.primary),
+              ),
+            )
+          : Text(label),
+    );
+  }
+}
+
+/// Nền của các màn xác thực (viomni-apple-uiux.html `.authbg`): hai quầng
+/// màu mờ — màu chủ đạo góc trên trái, xanh trời góc dưới phải — trên nền
+/// màn, để phần kính phía trên có thứ để "khúc xạ".
+class AuthBackdrop extends StatelessWidget {
+  const AuthBackdrop({super.key, required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final primary = Theme.of(context).colorScheme.primary;
+    // Lấp đầy màn: thân Scaffold cho ràng buộc lỏng, nền phải phủ tới đáy.
+    return SizedBox.expand(
+      child: DecoratedBox(
+        key: const Key('auth-backdrop'),
+        decoration: BoxDecoration(
+          gradient: RadialGradient(
+            center: const Alignment(-0.7, -0.8),
+            radius: 0.9,
+            colors: [
+              primary.withValues(alpha: .22),
+              primary.withValues(alpha: 0),
+            ],
           ),
-          textStyle: OmniType.input.copyWith(fontWeight: FontWeight.w600),
         ),
-        child: busy
-            ? SizedBox(
-                width: 20,
-                height: 20,
-                child: CircularProgressIndicator.adaptive(
-                  strokeWidth: 2,
-                  valueColor: AlwaysStoppedAnimation<Color>(scheme.onPrimary),
-                ),
-              )
-            : Text(label),
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            gradient: RadialGradient(
+              center: const Alignment(0.8, 0.7),
+              radius: 1.0,
+              colors: [
+                const Color(0xFF2DABFF).withValues(alpha: .20),
+                const Color(0xFF2DABFF).withValues(alpha: 0),
+              ],
+            ),
+          ),
+          child: child,
+        ),
       ),
     );
   }
@@ -171,7 +199,7 @@ class AuthGoogleButton extends StatelessWidget {
       onPressed: onPressed,
       style: OutlinedButton.styleFrom(
         minimumSize: const Size.fromHeight(50),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        shape: const StadiumBorder(),
       ),
       icon: busy
           ? const SizedBox.square(

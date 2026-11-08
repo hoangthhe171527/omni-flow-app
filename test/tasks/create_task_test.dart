@@ -219,7 +219,7 @@ void main() {
 
       await tester.tap(find.text('Chưa đặt hạn'));
       await tester.pumpAndSettle();
-      await tester.tap(find.text('OK'));
+      await tester.tap(find.byKey(const Key('omni-date-done')));
       await tester.pumpAndSettle();
 
       expect(find.text('Chưa đặt hạn'), findsNothing);

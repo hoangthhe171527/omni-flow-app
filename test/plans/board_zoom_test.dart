@@ -103,31 +103,31 @@ void main() {
     skipOffstage: false,
   );
 
-  testWidgets('nút nổi 52 bo 12, phải 16, đáy 34; nhãn đổi theo chế độ', (
-    tester,
-  ) async {
-    await pumpBoard(tester);
-    final fab = find.bySemanticsLabel('Thu nhỏ xem toàn bảng');
-    expect(fab, findsOneWidget);
-    final rect = tester.getRect(find.byKey(const Key('board-zoom-fab')));
-    expect(rect.size, const Size(52, 52));
-    expect(rect.right, 390 - 16);
-    expect(rect.bottom, 844 - 34);
-    final deco =
-        tester
-                .widget<Container>(find.byKey(const Key('board-zoom-fab')))
-                .decoration!
-            as BoxDecoration;
-    expect(deco.borderRadius, BorderRadius.circular(12));
-    expect(deco.boxShadow!.single.blurRadius, 22);
-    expect(deco.boxShadow!.single.offset, const Offset(0, 8));
-    expect(find.byIcon(Icons.zoom_out_rounded), findsOneWidget);
+  testWidgets(
+    'nút nổi viên kính tròn 52, phải 16, đáy 34; nhãn đổi theo chế độ',
+    (tester) async {
+      await pumpBoard(tester);
+      final fab = find.bySemanticsLabel('Thu nhỏ xem toàn bảng');
+      expect(fab, findsOneWidget);
+      final rect = tester.getRect(find.byKey(const Key('board-zoom-fab')));
+      expect(rect.size, const Size(52, 52));
+      expect(rect.right, 390 - 16);
+      expect(rect.bottom, 844 - 34);
+      final deco =
+          tester
+                  .widget<Container>(find.byKey(const Key('board-zoom-fab')))
+                  .decoration!
+              as BoxDecoration;
+      expect(deco.shape, BoxShape.circle);
+      expect(deco.border, isNotNull);
+      expect(find.byIcon(Icons.zoom_out_rounded), findsOneWidget);
 
-    await tester.tap(fab);
-    await tester.pumpAndSettle();
-    expect(find.bySemanticsLabel('Phóng to lại'), findsOneWidget);
-    expect(find.byIcon(Icons.zoom_in_rounded), findsOneWidget);
-  });
+      await tester.tap(fab);
+      await tester.pumpAndSettle();
+      expect(find.bySemanticsLabel('Phóng to lại'), findsOneWidget);
+      expect(find.byIcon(Icons.zoom_in_rounded), findsOneWidget);
+    },
+  );
 
   testWidgets('(f) lưới: ô cột 150, chạm "Chờ linh kiện" về bảng ở cột 3', (
     tester,

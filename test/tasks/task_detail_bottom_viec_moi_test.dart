@@ -229,7 +229,7 @@ void main() {
       await t.pumpAndSettle();
       await t.tap(find.text('20'));
       await t.pumpAndSettle();
-      await t.tap(find.text('OK'));
+      await t.tap(find.byKey(const Key('omni-date-done')));
       await t.pumpAndSettle();
       expect(recorded.last, ('customField', ('f_giao', '2026-10-20')));
     });

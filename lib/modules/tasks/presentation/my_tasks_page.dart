@@ -10,8 +10,6 @@ import '../../../design/components/components.dart';
 import '../../../design/platform/omni_motion_scope.dart';
 import '../../../design/tokens/tokens.dart';
 import '../../../security/session/session_controller.dart';
-import '../../notifications/application/notifications_providers.dart';
-import '../../notifications/routes.dart';
 import '../application/tasks_providers.dart';
 import '../data/tasks_api.dart';
 import '../domain/task.dart';
@@ -55,48 +53,33 @@ class _MyTasksPageState extends ConsumerState<MyTasksPage> {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
     final bucket = ref.watch(taskBucketProvider);
     final tasks = ref.watch(myTasksProvider);
     final currentUserId = ref.watch(sessionProvider.select((s) => s.user?.id));
     final canManageAll = ref.watch(
       taskAccessProvider.select((a) => a.isAssigner),
     );
-    final topBarSlot = OmniTopBarSlot.maybeOf(context);
 
     return Scaffold(
-      appBar: OmniAppBar(
-        backgroundColor: scheme.surface,
-        title: 'Việc của tôi',
-        titleSpacing: OmniSpacing.lg,
-        toolbarHeight: 56,
+      // Thanh trên kiểu B (viomni-apple-uiux.html): tiêu đề lớn, tìm cây đàn
+      // và chuông là viên kính rời; bốn nhóm việc là bộ chọn đoạn kính.
+      // Danh sách chạy dưới thanh và nhoè dần.
+      extendBodyBehindAppBar: true,
+      appBar: OmniTopBar(
+        semanticsTitle: 'Việc của tôi',
         actions: [
           // Tìm cây đàn. Ở đây vì đây là màn hình người thợ đang mở sẵn, và
           // câu "cây SN 471302 ở đâu" hỏi giữa lúc làm chứ không hỏi lúc
           // ngồi duyệt menu.
-          IconButton(
-            onPressed: () => context.pushNamed(TaskRoutes.search),
+          OmniTopBarAction(
+            icon: Icons.search_rounded,
             tooltip: 'Tìm cây đàn',
-            icon: const Icon(Icons.search_rounded),
-          ),
-          // The bell lives here because this is the screen a worker is already
-          // on. Making them go through "Thêm" to find out they were given
-          // something is a step too many.
-          _BellButton(
-            // Giữ số cũ trong lúc đếm lại: `valueOrNull` mang giá trị trước
-            // qua trạng thái đang tải, nên chuông không nháy về 0.
-            unread: ref.watch(unreadNotificationCountProvider).valueOrNull ?? 0,
-            onTap: (anchor) {
-              if (topBarSlot case final slot?) {
-                slot.onBell(context, anchor);
-              } else {
-                context.pushNamed(NotificationRoutes.centre);
-              }
-            },
+            onPressed: () => context.pushNamed(TaskRoutes.search),
           ),
         ],
+        searchBottom: false,
         bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(_BucketBar.height),
+          preferredSize: const Size.fromHeight(OmniTabStrip.height),
           child: _BucketBar(
             selected: bucket,
             counts: {
@@ -111,57 +94,65 @@ class _MyTasksPageState extends ConsumerState<MyTasksPage> {
           ),
         ),
       ),
-      body: RefreshIndicator.adaptive(
-        onRefresh: () => ref.read(myTasksProvider.notifier).refresh(),
-        child: OmniAsyncView(
-          value: tasks,
-          onRetry: () => ref.invalidate(myTasksProvider),
-          isEmpty: (state) => state.items.isEmpty,
-          empty: OmniEmptyState(
-            icon: Icons.checklist_rounded,
-            title: _emptyTitle(bucket),
-            message: _emptyMessage(bucket),
-          ),
-          data: (state) => ListView.separated(
-            controller: _scrollController,
-            padding: const EdgeInsets.fromLTRB(
-              OmniSpacing.lg,
-              OmniSpacing.lg,
-              OmniSpacing.lg,
-              OmniSpacing.bottomSafe,
-            ),
-            itemCount: state.items.length + (state.hasMore ? 1 : 0),
-            separatorBuilder: (_, _) => const SizedBox(height: OmniSpacing.md),
-            itemBuilder: (context, index) {
-              if (index >= state.items.length) {
-                return const Padding(
-                  padding: EdgeInsets.all(OmniSpacing.lg),
-                  child: Center(
-                    child: SizedBox(
-                      width: 18,
-                      height: 18,
-                      child: CircularProgressIndicator.adaptive(strokeWidth: 2),
-                    ),
-                  ),
-                );
-              }
-
-              final task = state.items[index];
-
-              return _TickOnSwipe(
-                task: task,
-                currentUserId: currentUserId,
-                canManage: canManageAll,
-                onTick: (next) => _tick(task, next, done: true),
-                child: TaskCard(
-                  task: task,
-                  onTap: () => context.pushNamed(
-                    TasksModule.detail,
-                    pathParameters: {'id': task.id},
-                  ),
+      body: OmniTopBarOverlap.wrap(
+        child: Builder(
+          builder: (context) => RefreshIndicator.adaptive(
+            edgeOffset: OmniTopBarOverlap.of(context),
+            onRefresh: () => ref.read(myTasksProvider.notifier).refresh(),
+            child: OmniAsyncView(
+              value: tasks,
+              onRetry: () => ref.invalidate(myTasksProvider),
+              isEmpty: (state) => state.items.isEmpty,
+              empty: OmniEmptyState(
+                icon: Icons.checklist_rounded,
+                title: _emptyTitle(bucket),
+                message: _emptyMessage(bucket),
+              ),
+              data: (state) => ListView.separated(
+                controller: _scrollController,
+                padding: EdgeInsets.fromLTRB(
+                  OmniSpacing.lg,
+                  OmniSpacing.lg + OmniTopBarOverlap.of(context),
+                  OmniSpacing.lg,
+                  OmniSpacing.bottomSafe,
                 ),
-              );
-            },
+                itemCount: state.items.length + (state.hasMore ? 1 : 0),
+                separatorBuilder: (_, _) =>
+                    const SizedBox(height: OmniSpacing.md),
+                itemBuilder: (context, index) {
+                  if (index >= state.items.length) {
+                    return const Padding(
+                      padding: EdgeInsets.all(OmniSpacing.lg),
+                      child: Center(
+                        child: SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator.adaptive(
+                            strokeWidth: 2,
+                          ),
+                        ),
+                      ),
+                    );
+                  }
+
+                  final task = state.items[index];
+
+                  return _TickOnSwipe(
+                    task: task,
+                    currentUserId: currentUserId,
+                    canManage: canManageAll,
+                    onTick: (next) => _tick(task, next, done: true),
+                    child: TaskCard(
+                      task: task,
+                      onTap: () => context.pushNamed(
+                        TasksModule.detail,
+                        pathParameters: {'id': task.id},
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
           ),
         ),
       ),
@@ -330,76 +321,8 @@ class _TickOnSwipe extends StatelessWidget {
   }
 }
 
-/// The bell, with a count when there is one.
-///
-/// 48dp of target, and the count is announced rather than left as a red dot a
-/// screen reader would skip.
-class _BellButton extends StatefulWidget {
-  const _BellButton({required this.unread, required this.onTap});
-
-  final int unread;
-  final ValueChanged<Rect> onTap;
-
-  @override
-  State<_BellButton> createState() => _BellButtonState();
-}
-
-class _BellButtonState extends State<_BellButton> {
-  final _buttonKey = GlobalKey(debugLabel: 'MyTasksBell');
-
-  void _open() {
-    final box = _buttonKey.currentContext?.findRenderObject() as RenderBox?;
-    if (box == null || !box.hasSize) return;
-    widget.onTap(box.localToGlobal(Offset.zero) & box.size);
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Semantics(
-      key: _buttonKey,
-      button: true,
-      label: widget.unread > 0
-          ? 'Thông báo, ${widget.unread} chưa đọc'
-          : 'Thông báo',
-      child: IconButton(
-        onPressed: _open,
-        iconSize: 24,
-        icon: Stack(
-          clipBehavior: Clip.none,
-          children: [
-            const Icon(Icons.notifications_none_rounded),
-            if (widget.unread > 0)
-              Positioned(
-                top: -4,
-                right: -6,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: OmniSpacing.xs,
-                  ),
-                  constraints: const BoxConstraints(minWidth: 16),
-                  decoration: const BoxDecoration(
-                    color: OmniColors.dangerSurface,
-                    borderRadius: OmniRadius.pillAll,
-                  ),
-                  child: Text(
-                    widget.unread > 99 ? '99+' : '${widget.unread}',
-                    textAlign: TextAlign.center,
-                    style: OmniType.micro.copyWith(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-              ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-/// Bộ chọn bốn nhóm việc — cùng MỘT kiểu tab với cả app: gạch chân 2px màu
-/// chính (`SMProjectsTasks.dc.html`). "Quá hạn" mang số đếm trong chip đỏ để
+/// Bộ chọn bốn nhóm việc — cùng MỘT kiểu tab với cả app: bộ chọn đoạn kính
+/// ([OmniTabStrip]). "Quá hạn" mang số đếm trong chip đỏ để
 /// luôn đọc ra là chỗ cần xử lý; các nhóm khác số xám.
 ///
 /// Số đếm chỉ hiện khi đã BIẾT chắc mà không phải gọi thêm API: số quá hạn đã
@@ -416,14 +339,13 @@ class _BucketBar extends StatelessWidget {
   final ValueChanged<TaskBucket> onSelect;
   final Map<TaskBucket, int> counts;
 
-  /// Cao của dải tab (44) cộng vạch đáy 1.
-  static const double height = 45;
-
   @override
   Widget build(BuildContext context) {
     const buckets = TaskBucket.forMyWork;
 
     return OmniTabStrip(
+      // Thanh trên đã chừa lề hai bên.
+      padding: EdgeInsets.zero,
       selected: buckets.indexOf(selected),
       onSelected: (i) => onSelect(buckets[i]),
       tabs: [

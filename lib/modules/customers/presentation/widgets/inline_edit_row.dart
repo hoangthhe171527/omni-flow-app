@@ -21,6 +21,7 @@ class InlineEditRow extends StatefulWidget {
     required this.editable,
     required this.onSave,
     this.multiline = false,
+    this.viewMaxLines = 1,
     this.keyboardType,
     this.maxLength,
     this.valueColor,
@@ -35,6 +36,10 @@ class InlineEditRow extends StatefulWidget {
   final bool editable;
   final Future<void> Function(String draft) onSave;
   final bool multiline;
+
+  /// Số dòng tối đa khi XEM (không phải khi sửa) — địa chỉ dài xuống dòng
+  /// thay vì cắt "…".
+  final int viewMaxLines;
   final TextInputType? keyboardType;
   final int? maxLength;
   final Color? valueColor;
@@ -171,7 +176,7 @@ class _InlineEditRowState extends State<InlineEditRow> {
           : Duration.zero,
       decoration: BoxDecoration(
         color: _flash ? flashColor : flashColor.withValues(alpha: 0),
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(14),
       ),
       constraints: const BoxConstraints(minHeight: 44),
       child: motion.enabled
@@ -205,7 +210,7 @@ class _InlineEditRowState extends State<InlineEditRow> {
     final text = Text(
       empty ? '—' : widget.value,
       textAlign: TextAlign.end,
-      maxLines: widget.multiline ? null : 1,
+      maxLines: widget.multiline ? null : widget.viewMaxLines,
       overflow: widget.multiline ? null : TextOverflow.ellipsis,
       style: theme.textTheme.bodyMedium?.copyWith(
         fontWeight: FontWeight.w500,
@@ -220,23 +225,15 @@ class _InlineEditRowState extends State<InlineEditRow> {
         : widget.onTapValue;
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(8),
+      borderRadius: BorderRadius.circular(14),
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 10),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             _label(context),
+            // Không còn bút chì lặp ở từng dòng: chạm dòng để sửa.
             Expanded(child: text),
-            if (widget.editable) ...[
-              const SizedBox(width: 8),
-              Icon(
-                Icons.edit_outlined,
-                size: 16,
-                color: scheme.outline,
-                semanticLabel: 'Sửa ${widget.label}',
-              ),
-            ],
           ],
         ),
       ),

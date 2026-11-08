@@ -2,6 +2,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:omni_app/core/nav/shell_bar_inset.dart';
 import 'package:omni_app/bootstrap.dart';
 import 'package:omni_app/core/module/module_registry.dart';
 import 'package:omni_app/core/module/nav_destination.dart';
@@ -331,6 +332,9 @@ void main() {
         await tester.tap(cashItemFinder);
         await tester.pumpAndSettle();
 
+        // Xoá nằm ở nhóm đỏ cuối sheet: cuộn tới rồi mới chạm.
+        await tester.ensureVisible(find.byTooltip('Xoá khoản chi'));
+        await tester.pumpAndSettle();
         await tester.tap(find.byTooltip('Xoá khoản chi'));
         await tester.pumpAndSettle();
 
@@ -643,6 +647,45 @@ void main() {
     );
 
     testWidgets(
+      'ExpenseSummaryPage trong tab: cuộn hết thì dòng cuối nằm trên thanh tab kính',
+      (tester) async {
+        // Thanh tab kính phủ lên body (extendBody). Lề đáy cố định 48 nhỏ hơn
+        // thanh (78) nên dòng cuối "Phần mềm & dịch vụ" nằm mãi dưới lớp mờ.
+        final routes = DemoRoutes();
+        registerFinanceDemo(routes, clock: fixedClock, seedInitialData: true);
+        final dio = Dio(BaseOptions(baseUrl: 'http://demo.local'))
+          ..httpClientAdapter = DemoApiAdapter(routes, latency: Duration.zero);
+
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [
+              dioProvider.overrideWithValue(dio),
+              financeClockProvider.overrideWithValue(fixedClock),
+            ],
+            child: const MaterialApp(
+              home: ShellBarInset(
+                height: ShellBarInset.barHeight,
+                child: ExpenseSummaryPage(),
+              ),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        final list = tester.widget<ListView>(
+          find
+              .descendant(
+                of: find.byType(RefreshIndicator),
+                matching: find.byType(ListView),
+              )
+              .first,
+        );
+        final padding = list.padding!.resolve(TextDirection.ltr);
+        expect(padding.bottom, greaterThan(ShellBarInset.barHeight));
+      },
+    );
+
+    testWidgets(
       'ExpenseSummaryPage — màn độc lập Tổng hợp chi phí theo Tháng, Quý, Năm gọn gàng, chuyển đổi mượt',
       (tester) async {
         tester.view.physicalSize = const Size(840, 2200);
@@ -665,7 +708,13 @@ void main() {
         );
         await tester.pumpAndSettle();
 
-        expect(find.text('Tổng hợp chi phí'), findsOneWidget);
+        // Màn đứng gốc trong bài kiểm: logo thay chữ, tên chỉ để đọc.
+        expect(
+          find.byWidgetPredicate(
+            (w) => w is Semantics && w.properties.label == 'Tổng hợp chi phí',
+          ),
+          findsOneWidget,
+        );
         expect(
           find.byKey(const ValueKey('finance-summary-tab-month')),
           findsOneWidget,
@@ -679,11 +728,12 @@ void main() {
           findsOneWidget,
         );
         expect(find.text('Tổng chi Quý 4/2026 (T10 – T12)'), findsOneWidget);
-        expect(find.text('3 THÁNG TRONG QUÝ 4/2026'), findsOneWidget);
+        expect(find.text('3 THÁNG TRONG QUÝ 4/2026'), findsNothing);
         expect(find.text('Tháng 10/2026'), findsOneWidget);
         expect(find.text('Tháng 11/2026'), findsOneWidget);
         expect(find.text('Tháng 12/2026'), findsOneWidget);
-        expect(find.text('CƠ CẤU CHI PHÍ TRONG KỲ'), findsOneWidget);
+        // Tiêu đề kể lại "Cơ cấu chi phí trong kỳ" đã bỏ (liquid đợt 3).
+        expect(find.text('CƠ CẤU CHI PHÍ TRONG KỲ'), findsNothing);
 
         final dimAccountBtn = find.byKey(
           const ValueKey('finance-summary-dim-account'),
@@ -699,7 +749,7 @@ void main() {
         );
         await tester.pumpAndSettle();
         expect(find.text('Tổng chi Năm 2026 (12 tháng)'), findsOneWidget);
-        expect(find.text('DIỄN BIẾN NĂM 2026'), findsOneWidget);
+        expect(find.text('DIỄN BIẾN NĂM 2026'), findsNothing);
         expect(
           find.byKey(const ValueKey('finance-summary-year-by-quarter')),
           findsOneWidget,
@@ -714,7 +764,7 @@ void main() {
         );
         await tester.pumpAndSettle();
         expect(find.text('Tổng hợp Tháng 11/2026'), findsOneWidget);
-        expect(find.text('SO SÁNH 3 THÁNG GẦN NHẤT'), findsOneWidget);
+        expect(find.text('SO SÁNH 3 THÁNG GẦN NHẤT'), findsNothing);
       },
     );
   });

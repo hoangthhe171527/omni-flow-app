@@ -285,13 +285,14 @@ class _BoardTaskCardState extends ConsumerState<BoardTaskCard>
         type: MaterialType.transparency,
         child: InkWell(
           onTap: widget.onTap,
-          borderRadius: const BorderRadius.all(Radius.circular(8)),
+          borderRadius: const BorderRadius.all(Radius.circular(14)),
           child: Container(
             key: const ValueKey('card-shell'),
             padding: const EdgeInsets.fromLTRB(8, 10, 10, 10),
             decoration: BoxDecoration(
               color: scheme.surface,
-              borderRadius: BorderRadius.circular(8),
+              // Thẻ bo 14 trên khung kính của cột (viomni-apple-uiux.html).
+              borderRadius: BorderRadius.circular(14),
               boxShadow: [
                 BoxShadow(
                   color: OmniColors.ink.withValues(alpha: 0.08),

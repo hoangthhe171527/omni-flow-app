@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../design/components/components.dart';
-import '../../../../design/tokens/tokens.dart';
 import '../../../team/team.dart';
 
 class AssignResult {
@@ -38,158 +37,87 @@ class _AssignSheetState extends ConsumerState<AssignSheet> {
   @override
   Widget build(BuildContext context) {
     final members = ref.watch(teamMembersProvider);
-    final scheme = Theme.of(context).colorScheme;
 
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(
-        OmniSpacing.lg,
-        0,
-        OmniSpacing.lg,
-        OmniSpacing.lg,
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
+    return OmniSheetBody(
+      header: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text(
-            'Gán nhân viên',
-            style: OmniType.navTitle.copyWith(
-              fontWeight: FontWeight.w600,
-              color: scheme.onSurface,
+          const OmniSheetHeader(title: 'Gán nhân viên'),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(10, 0, 10, 10),
+            child: OmniSearchField(
+              hint: 'Tìm nhân viên...',
+              debounce: const Duration(milliseconds: 150),
+              onChanged: (value) =>
+                  setState(() => _search = value.toLowerCase()),
             ),
-          ),
-          const SizedBox(height: OmniSpacing.md),
-          OmniSearchField(
-            hint: 'Tìm nhân viên...',
-            debounce: const Duration(milliseconds: 150),
-            onChanged: (value) => setState(() => _search = value.toLowerCase()),
-          ),
-          const SizedBox(height: OmniSpacing.md),
-          Flexible(
-            child: OmniAsyncView(
-              value: members,
-              loading: const OmniSkeletonList(count: 4, height: 56),
-              onRetry: () => ref.invalidate(teamDirectoryProvider),
-              data: (list) {
-                final filtered = list
-                    .where(
-                      (member) =>
-                          // `teamMembersProvider` chỉ có người chọn được
-                          // (đang làm, đã nhận lời mời — APP-I10).
-                          _search.isEmpty ||
-                          member.name.toLowerCase().contains(_search),
-                    )
-                    .toList();
-
-                return ListView.separated(
-                  shrinkWrap: true,
-                  keyboardDismissBehavior:
-                      ScrollViewKeyboardDismissBehavior.onDrag,
-                  itemCount: filtered.length + 1,
-                  separatorBuilder: (_, _) =>
-                      const SizedBox(height: OmniSpacing.xs),
-                  itemBuilder: (context, index) {
-                    if (index == 0) {
-                      return ListTile(
-                        contentPadding: const EdgeInsets.symmetric(
-                          horizontal: OmniSpacing.sm,
-                        ),
-                        leading: Container(
-                          width: 44,
-                          height: 44,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            border: Border.all(
-                              color: scheme.outline,
-                              width: 1.5,
-                            ),
-                          ),
-                          child: Icon(
-                            Icons.person_off_outlined,
-                            size: OmniIconSize.md,
-                            color: scheme.onSurfaceVariant,
-                          ),
-                        ),
-                        title: Text(
-                          'Bỏ gán',
-                          style: OmniType.bodyStrong.copyWith(
-                            color: scheme.onSurface,
-                          ),
-                        ),
-                        subtitle: Text(
-                          'Trả hội thoại về hàng chờ',
-                          style: OmniType.micro.copyWith(
-                            color: scheme.onSurfaceVariant,
-                          ),
-                        ),
-                        onTap: () => Navigator.pop(
-                          context,
-                          AssignResult(assigneeId: null, note: _noteText),
-                        ),
-                      );
-                    }
-
-                    final member = filtered[index - 1];
-                    final current = member.userId == widget.currentAssigneeId;
-
-                    return ListTile(
-                      contentPadding: const EdgeInsets.symmetric(
-                        horizontal: OmniSpacing.sm,
-                      ),
-                      // Người đang giữ hội thoại: nền mòng két rất nhạt.
-                      tileColor: current
-                          ? scheme.primary.withValues(alpha: 0.05)
-                          : null,
-                      shape: const RoundedRectangleBorder(
-                        borderRadius: OmniRadius.mdAll,
-                      ),
-                      leading: OmniAvatar(
-                        name: member.name,
-                        imageUrl: member.avatarUrl,
-                        size: OmniIconSize.hero,
-                      ),
-                      title: Text(
-                        member.name,
-                        style: OmniType.bodyStrong.copyWith(
-                          color: scheme.onSurface,
-                        ),
-                      ),
-                      subtitle: Text(
-                        member.roleLabel,
-                        style: OmniType.micro.copyWith(
-                          color: scheme.onSurfaceVariant,
-                        ),
-                      ),
-                      trailing: current
-                          ? Icon(
-                              Icons.check_circle_rounded,
-                              color: scheme.primary,
-                            )
-                          : null,
-                      onTap: () => Navigator.pop(
-                        context,
-                        AssignResult(
-                          assigneeId: member.userId,
-                          note: _noteText,
-                        ),
-                      ),
-                    );
-                  },
-                );
-              },
-            ),
-          ),
-          const SizedBox(height: OmniSpacing.md),
-          TextField(
-            controller: _note,
-            decoration: const InputDecoration(
-              hintText: 'Ghi chú bàn giao (tuỳ chọn)',
-              isDense: true,
-            ),
-            maxLines: 2,
           ),
         ],
       ),
+      footer: TextField(
+        controller: _note,
+        decoration: const InputDecoration(
+          hintText: 'Ghi chú bàn giao (tuỳ chọn)',
+          isDense: true,
+        ),
+        maxLines: 2,
+      ),
+      children: [
+        OmniAsyncView(
+          value: members,
+          loading: const Column(
+            children: [
+              OmniSkeletonBox(height: 48),
+              SizedBox(height: 8),
+              OmniSkeletonBox(height: 48),
+              SizedBox(height: 8),
+              OmniSkeletonBox(height: 48),
+            ],
+          ),
+          onRetry: () => ref.invalidate(teamDirectoryProvider),
+          data: (list) {
+            final filtered = list
+                .where(
+                  (member) =>
+                      // `teamMembersProvider` chỉ có người chọn được
+                      // (đang làm, đã nhận lời mời — APP-I10).
+                      _search.isEmpty ||
+                      member.name.toLowerCase().contains(_search),
+                )
+                .toList();
+
+            return OmniGroupSection(
+              dividerIndent: 62,
+              children: [
+                OmniGroupRow(
+                  icon: Icons.person_off_outlined,
+                  title: 'Bỏ gán',
+                  subtitle: 'Trả hội thoại về hàng chờ',
+                  onTap: () => Navigator.pop(
+                    context,
+                    AssignResult(assigneeId: null, note: _noteText),
+                  ),
+                ),
+                for (final member in filtered)
+                  OmniGroupRow(
+                    leading: OmniAvatar(
+                      name: member.name,
+                      imageUrl: member.avatarUrl,
+                      size: 36,
+                    ),
+                    title: member.name,
+                    subtitle: member.roleLabel,
+                    selected: member.userId == widget.currentAssigneeId,
+                    onTap: () => Navigator.pop(
+                      context,
+                      AssignResult(assigneeId: member.userId, note: _noteText),
+                    ),
+                  ),
+              ],
+            );
+          },
+        ),
+      ],
     );
   }
 

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:omni_app/design/components/omni_glass.dart';
 import 'package:go_router/go_router.dart';
 import 'package:omni_app/app/shell/app_shell.dart';
 import 'package:omni_app/bootstrap.dart';
@@ -64,18 +65,35 @@ Future<void> pumpShell(WidgetTester tester, {Widget? firstPage}) async {
 }
 
 void main() {
-  testWidgets('thanh tab có lớp kính mờ và body vẽ dưới nó', (tester) async {
+  testWidgets('thanh tab là viên kính nổi, mép dưới mờ dần, body vẽ dưới nó', (
+    tester,
+  ) async {
     tester.view.physicalSize = const Size(390, 844);
     tester.view.devicePixelRatio = 1.0;
     addTearDown(tester.view.reset);
     await pumpShell(tester);
 
+    // Viên kính (OmniGlass) + dải mờ dần ở mép dưới (OmniScrollEdge, 3 dải).
+    expect(
+      find.descendant(
+        of: find.byType(AppShell),
+        matching: find.byType(OmniGlass),
+      ),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(
+        of: find.byType(AppShell),
+        matching: find.byType(OmniScrollEdge),
+      ),
+      findsOneWidget,
+    );
     expect(
       find.descendant(
         of: find.byType(AppShell),
         matching: find.byType(BackdropFilter),
       ),
-      findsOneWidget,
+      findsNWidgets(4),
     );
     final scaffold = tester.widget<Scaffold>(
       find

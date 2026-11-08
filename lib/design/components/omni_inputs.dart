@@ -1,10 +1,12 @@
 import 'dart:async';
+import 'dart:ui' show ImageFilter;
 
 import 'package:flutter/material.dart';
 
 import '../platform/omni_motion_scope.dart';
 import '../platform/omni_platform.dart';
 import '../tokens/tokens.dart';
+import 'omni_glass.dart';
 
 /// Debounced search field. Debouncing lives here rather than in each screen so
 /// no list ever fires a request per keystroke.
@@ -130,7 +132,10 @@ class _OmniSearchFieldState extends State<OmniSearchField> {
         focusedBorder: !widget.flat && widget.outlined
             ? OutlineInputBorder(
                 borderRadius: OmniRadius.lgAll,
-                borderSide: BorderSide(color: scheme.primary, width: 1.5),
+                borderSide: BorderSide(
+                  color: scheme.primary.withValues(alpha: .55),
+                  width: 1.5,
+                ),
               )
             : widget.flat
             ? InputBorder.none
@@ -167,12 +172,15 @@ class OmniField extends StatelessWidget {
       children: [
         Row(
           children: [
-            Text(
-              label,
-              // 14/600 màu chữ chính — nhãn của mọi biểu mẫu trong bộ Orbit.
-              style: OmniType.body.copyWith(
-                color: scheme.onSurface,
-                fontWeight: FontWeight.w600,
+            // Nhãn dài (sheet trong viên kính hẹp hơn 16) xuống dòng, không tràn.
+            Flexible(
+              child: Text(
+                label,
+                // 14/600 màu chữ chính — nhãn của mọi biểu mẫu trong bộ Orbit.
+                style: OmniType.body.copyWith(
+                  color: scheme.onSurface,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
             ),
             if (required)
@@ -211,7 +219,13 @@ class OmniField extends StatelessWidget {
   }
 }
 
-/// Sticky bottom action bar for forms and detail screens.
+/// Thanh hành động đáy của form và màn chi tiết — viên kính nổi
+/// (viomni-apple-uiux.html `.actbar.glass`): cách mép 12, bo 30, đệm 7.
+///
+/// Nút trong thanh là nút VIỀN (gu người dùng: không nút tô đặc): nút chính
+/// (FilledButton) viền + chữ màu chủ đạo, nút phụ (OutlinedButton) viền nhạt
+/// chữ phụ; cao 46, dạng viên thuốc. Nút phụ ôm chữ của nó, nút chính cuối
+/// hàng chiếm phần còn lại — chia đều làm chữ nút phụ gãy dòng ở màn 390dp.
 class OmniActionBar extends StatelessWidget {
   const OmniActionBar({super.key, required this.children});
 
@@ -220,41 +234,76 @@ class OmniActionBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    const height = 46.0;
+    final label = OmniType.body.copyWith(fontWeight: FontWeight.w600);
 
-    return Container(
+    Color tone(Set<WidgetState> s, Color on) => s.contains(WidgetState.disabled)
+        ? scheme.onSurface.withValues(alpha: .38)
+        : on;
+
+    final primary = ButtonStyle(
+      minimumSize: const WidgetStatePropertyAll(Size(0, height)),
+      padding: const WidgetStatePropertyAll(
+        EdgeInsets.symmetric(horizontal: 18),
+      ),
+      shape: const WidgetStatePropertyAll(StadiumBorder()),
+      elevation: const WidgetStatePropertyAll(0),
+      textStyle: WidgetStatePropertyAll(label),
+      backgroundColor: const WidgetStatePropertyAll(Colors.transparent),
+      foregroundColor: WidgetStateProperty.resolveWith(
+        (s) => tone(s, scheme.primary),
+      ),
+      overlayColor: WidgetStatePropertyAll(
+        scheme.primary.withValues(alpha: .08),
+      ),
+      side: WidgetStateProperty.resolveWith(
+        (s) => BorderSide(
+          width: 1.5,
+          color: s.contains(WidgetState.disabled)
+              ? scheme.onSurface.withValues(alpha: .14)
+              : scheme.primary,
+        ),
+      ),
+    );
+    final secondary = primary.copyWith(
+      foregroundColor: WidgetStateProperty.resolveWith(
+        (s) => tone(s, scheme.onSurfaceVariant),
+      ),
+      overlayColor: WidgetStatePropertyAll(
+        scheme.onSurface.withValues(alpha: .06),
+      ),
+      side: WidgetStatePropertyAll(
+        BorderSide(width: 1.5, color: scheme.outlineVariant),
+      ),
+    );
+
+    return Padding(
       padding: EdgeInsets.fromLTRB(
-        OmniSpacing.lg,
-        OmniSpacing.md,
-        OmniSpacing.lg,
-        OmniSpacing.md + MediaQuery.paddingOf(context).bottom,
+        12,
+        8,
+        12,
+        14 + MediaQuery.paddingOf(context).bottom,
       ),
-      decoration: BoxDecoration(
-        color: scheme.surface,
-        border: Border(top: BorderSide(color: scheme.outlineVariant)),
-      ),
-      // Bộ Orbit: nút phụ ôm lấy chữ của nó ("Huỷ", "Đánh dấu thắng"), nút
-      // chính cuối hàng chiếm phần còn lại. Chia đều bề ngang làm chữ nút phụ
-      // gãy thành ba dòng trên màn 390dp.
-      child: Row(
-        children: [
-          for (var i = 0; i < children.length; i++) ...[
-            if (i > 0) const SizedBox(width: 10),
-            if (i == children.length - 1)
-              Expanded(child: children[i])
-            else
-              OutlinedButtonTheme(
-                data: OutlinedButtonThemeData(
-                  style: Theme.of(context).outlinedButtonTheme.style?.copyWith(
-                    minimumSize: const WidgetStatePropertyAll(Size(0, 48)),
-                    padding: const WidgetStatePropertyAll(
-                      EdgeInsets.symmetric(horizontal: 18),
-                    ),
-                  ),
-                ),
-                child: children[i],
-              ),
-          ],
-        ],
+      child: OmniGlass(
+        radius: 30,
+        padding: const EdgeInsets.all(7),
+        child: FilledButtonTheme(
+          data: FilledButtonThemeData(style: primary),
+          child: OutlinedButtonTheme(
+            data: OutlinedButtonThemeData(style: secondary),
+            child: Row(
+              children: [
+                for (var i = 0; i < children.length; i++) ...[
+                  if (i > 0) const SizedBox(width: 8),
+                  if (i == children.length - 1)
+                    Expanded(child: children[i])
+                  else
+                    children[i],
+                ],
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }
@@ -274,17 +323,24 @@ Future<T?> showOmniSheet<T>({
   double? radius,
   bool? showDragHandle,
   AnimationStyle? animationStyle,
-  // Phủ cả thanh tab dưới (navigator gốc) thay vì nằm trong tab hiện tại.
-  bool useRootNavigator = false,
+  // Mặc định mở ở navigator gốc: màn trong tab nằm ở navigator lồng, còn
+  // thanh tab kính vẽ bên ngoài nó — sheet mở trong tab bị thanh tab đè lên
+  // đáy. Chỉ truyền `false` khi sheet thật sự phải nằm dưới thanh tab.
+  bool useRootNavigator = true,
 }) {
   final apple = isApple(context);
+  final fill = backgroundColor ?? Theme.of(context).colorScheme.surface;
 
+  // Viên kính nổi (viomni-apple-uiux.html `.sheet.glass`): cách mép 8, bo 30,
+  // nền thẻ ~86% + nhoè. Tấm Material của sheet để trong suốt; viên kính
+  // [OmniGlassSheet] vẽ nền, bo và thanh kéo.
   return showModalBottomSheet<T>(
     context: context,
     useRootNavigator: useRootNavigator,
     isScrollControlled: true,
     useSafeArea: true,
-    backgroundColor: backgroundColor,
+    backgroundColor: Colors.transparent,
+    elevation: 0,
     barrierColor: barrierColor,
     constraints: maxHeight == null
         ? null
@@ -293,22 +349,106 @@ Future<T?> showOmniSheet<T>({
     sheetAnimationStyle: OmniMotion.enabled(context)
         ? animationStyle
         : AnimationStyle.noAnimation,
-    // iOS bo góc rõ hơn Material và luôn có thanh kéo — đó là dấu hiệu người
-    // dùng iPhone đọc để biết sheet này kéo xuống đóng được. Trên Android thì
-    // nút back của hệ thống đã nói điều đó rồi.
-    showDragHandle: showDragHandle ?? apple,
-    shape: RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(
-        top: Radius.circular(radius ?? (apple ? 14 : OmniRadius.xxl)),
-      ),
-    ),
+    showDragHandle: false,
     builder: (context) => Padding(
       padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
-      child: expand
-          ? FractionallySizedBox(heightFactor: 0.9, child: builder(context))
-          : builder(context),
+      child: OmniGlassSheet(
+        fill: fill,
+        radius: radius ?? 30,
+        // iOS luôn có thanh kéo — dấu hiệu người dùng iPhone đọc để biết sheet
+        // kéo xuống đóng được. Trên Android nút back đã nói điều đó.
+        handle: showDragHandle ?? apple,
+        expand: expand,
+        child: builder(context),
+      ),
     ),
   );
+}
+
+/// Viên kính chứa nội dung của [showOmniSheet].
+class OmniGlassSheet extends StatelessWidget {
+  const OmniGlassSheet({
+    super.key,
+    required this.fill,
+    required this.child,
+    this.radius = 30,
+    this.handle = false,
+    this.expand = false,
+  });
+
+  final Color fill;
+  final double radius;
+  final bool handle;
+  final bool expand;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    final solid = MediaQuery.highContrastOf(context);
+    final shape = BorderRadius.circular(radius);
+    final body = Material(
+      key: const Key('omni-glass-sheet'),
+      color: solid ? fill : fill.withValues(alpha: dark ? .80 : .86),
+      shape: RoundedRectangleBorder(
+        borderRadius: shape,
+        side: BorderSide(
+          color: Colors.white.withValues(alpha: dark ? .10 : .70),
+        ),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Column(
+        mainAxisSize: expand ? MainAxisSize.max : MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          if (handle)
+            const Padding(
+              padding: EdgeInsets.only(top: 8),
+              child: OmniSheetHandle(gap: 2),
+            )
+          else
+            // Không thanh kéo (Android/web): chừa mép trên để tiêu đề không
+            // nằm trong đường cong bo 30 của viên kính.
+            const SizedBox(height: 12),
+          Flexible(fit: expand ? FlexFit.tight : FlexFit.loose, child: child),
+        ],
+      ),
+    );
+
+    final sheet = Padding(
+      padding: EdgeInsets.fromLTRB(
+        8,
+        0,
+        8,
+        8 + MediaQuery.paddingOf(context).bottom,
+      ),
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          borderRadius: shape,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: dark ? .40 : .14),
+              blurRadius: 36,
+              offset: const Offset(0, 12),
+            ),
+          ],
+        ),
+        child: solid
+            ? body
+            : ClipRRect(
+                borderRadius: shape,
+                child: BackdropFilter(
+                  filter: ImageFilter.blur(sigmaX: 24, sigmaY: 24),
+                  child: body,
+                ),
+              ),
+      ),
+    );
+
+    return expand
+        ? FractionallySizedBox(heightFactor: 0.9, child: sheet)
+        : sheet;
+  }
 }
 
 /// Sheet chia nhóm của màn Việc (`Board.dc.html` menu kế hoạch,
@@ -323,9 +463,8 @@ Future<T?> showOmniViecSheet<T>({
   context: context,
   builder: builder,
   backgroundColor: backgroundColor,
-  barrierColor: OmniColors.ink.withValues(alpha: 0.4),
+  barrierColor: OmniColors.ink.withValues(alpha: 0.28),
   maxHeight: 740,
-  radius: OmniRadius.fab,
   showDragHandle: false,
   animationStyle: const AnimationStyle(
     duration: OmniDuration.sheet,

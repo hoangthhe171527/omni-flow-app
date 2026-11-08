@@ -5,7 +5,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:omni_app/design/components/components.dart';
-import 'package:omni_app/design/tokens/omni_typography.dart';
 
 import '../../../tasks/domain/task.dart';
 import '../../../tasks/routes.dart';
@@ -29,40 +28,37 @@ class MyTasksCard extends ConsumerWidget {
     final page = async.valueOrNull;
     final items = page?.items.take(limit).toList() ?? const <Task>[];
 
-    final Widget body;
+    Widget? placeholder;
+    var rows = const <Widget>[];
     if (async.hasError && !async.isLoading) {
-      body = DashboardCardError(
+      placeholder = DashboardCardError(
         error: async.error!,
         onRetry: () => ref.invalidate(dashboardMyTasksProvider),
       );
     } else if (page == null) {
-      body = const DashboardCardSkeleton();
+      placeholder = const DashboardCardSkeleton();
     } else if (items.isEmpty) {
-      body = const DashboardEmptyLine('Không có việc hôm nay');
+      placeholder = const DashboardEmptyLine('Không có việc hôm nay');
     } else {
-      body = Column(
-        children: [
-          for (final t in items)
-            _TaskRow(
-              task: t,
-              onTap: () => context.pushNamed(
-                TaskRoutes.detail,
-                pathParameters: {'id': t.id},
-              ),
+      rows = [
+        for (final t in items)
+          _TaskRow(
+            task: t,
+            onTap: () => context.pushNamed(
+              TaskRoutes.detail,
+              pathParameters: {'id': t.id},
             ),
-        ],
-      );
+          ),
+      ];
     }
 
-    return OmniCollapsibleCard(
+    return DashboardGroup(
       title: 'Việc của tôi',
       storageKey: 'dashboard.my-tasks',
-      flat: true,
       count: page?.pagination.total,
-      footer: items.isEmpty
-          ? null
-          : DashboardSeeAll(onPressed: () => context.goNamed(TaskRoutes.list)),
-      child: body,
+      rows: rows,
+      placeholder: placeholder,
+      onSeeAll: items.isEmpty ? null : () => context.goNamed(TaskRoutes.list),
     );
   }
 }
@@ -74,30 +70,11 @@ class _TaskRow extends StatelessWidget {
   final VoidCallback onTap;
 
   @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return InkWell(
-      onTap: onTap,
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(minHeight: 44),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-          child: Row(
-            children: [
-              Expanded(
-                child: Text(
-                  task.title,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: OmniType.body.copyWith(color: scheme.onSurface),
-                ),
-              ),
-              const SizedBox(width: 8),
-              DueChip(task: task),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
+  Widget build(BuildContext context) => OmniGroupRow(
+    title: task.title,
+    maxTitleLines: 2,
+    trailing: DueChip(task: task),
+    chevron: false,
+    onTap: onTap,
+  );
 }

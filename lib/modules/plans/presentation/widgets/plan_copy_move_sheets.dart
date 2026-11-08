@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../../../../design/components/components.dart';
-import '../../../../design/tokens/tokens.dart';
 import '../../domain/plan.dart';
 import '../../domain/team.dart';
 
@@ -12,7 +11,7 @@ typedef PlanCopyChoice = ({String name, bool copyTasks, bool asTemplate});
 /// Sheet sao chép: tên (mặc định "Bản sao của …"), "Chép cả công việc",
 /// "Lưu làm mẫu". Trả null khi huỷ.
 Future<PlanCopyChoice?> showCopyPlanSheet(BuildContext context, Plan plan) =>
-    showOmniViecSheet<PlanCopyChoice>(
+    showOmniSheet<PlanCopyChoice>(
       context: context,
       builder: (_) => _CopyPlanSheet(plan: plan),
     );
@@ -49,58 +48,62 @@ class _CopyPlanSheetState extends State<_CopyPlanSheet> {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-
-    return SingleChildScrollView(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 30),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          const OmniSheetHandle(gap: 6),
-          Text(
-            'Sao chép kế hoạch',
-            style: OmniType.section.copyWith(color: scheme.onSurface),
-          ),
-          const SizedBox(height: 12),
-          OmniField(
-            label: 'Tên kế hoạch mới',
-            child: TextField(
-              controller: _name,
-              maxLength: 255,
-              textCapitalization: TextCapitalization.sentences,
-              onChanged: (_) => setState(() {}),
-              onSubmitted: (_) => _submit(),
-            ),
-          ),
-          SwitchListTile.adaptive(
-            contentPadding: EdgeInsets.zero,
-            value: _copyTasks,
-            title: const Text('Chép cả công việc'),
-            onChanged: (on) {
-              HapticFeedback.selectionClick();
-              setState(() => _copyTasks = on);
-            },
-          ),
-          SwitchListTile.adaptive(
-            contentPadding: EdgeInsets.zero,
-            value: _asTemplate,
-            title: const Text('Lưu làm mẫu'),
-            // App chưa có chỗ dùng mẫu: nói trước, để bật công tắc không dẫn
-            // vào ngõ cụt.
-            subtitle: const Text('Mẫu chỉ dùng được trên web.'),
-            onChanged: (on) {
-              HapticFeedback.selectionClick();
-              setState(() => _asTemplate = on);
-            },
-          ),
-          const SizedBox(height: 12),
-          FilledButton(
-            onPressed: _name.text.trim().isEmpty ? null : _submit,
-            child: const Text('Sao chép'),
-          ),
-        ],
+    return OmniSheetBody(
+      header: const OmniSheetHeader(title: 'Sao chép kế hoạch'),
+      footer: FilledButton(
+        onPressed: _name.text.trim().isEmpty ? null : _submit,
+        child: const Text('Sao chép'),
       ),
+      children: [
+        OmniField(
+          label: 'Tên kế hoạch mới',
+          child: TextField(
+            controller: _name,
+            maxLength: 255,
+            textCapitalization: TextCapitalization.sentences,
+            onChanged: (_) => setState(() {}),
+            onSubmitted: (_) => _submit(),
+          ),
+        ),
+        OmniGroupSection(
+          dividerIndent: 14,
+          children: [
+            OmniGroupRow(
+              title: 'Chép cả công việc',
+              chevron: false,
+              onTap: () {
+                HapticFeedback.selectionClick();
+                setState(() => _copyTasks = !_copyTasks);
+              },
+              trailing: Switch.adaptive(
+                value: _copyTasks,
+                onChanged: (on) {
+                  HapticFeedback.selectionClick();
+                  setState(() => _copyTasks = on);
+                },
+              ),
+            ),
+            OmniGroupRow(
+              title: 'Lưu làm mẫu',
+              chevron: false,
+              onTap: () {
+                HapticFeedback.selectionClick();
+                setState(() => _asTemplate = !_asTemplate);
+              },
+              // App chưa có chỗ dùng mẫu: nói trước, để bật công tắc không dẫn
+              // vào ngõ cụt.
+              subtitle: 'Mẫu chỉ dùng được trên web.',
+              trailing: Switch.adaptive(
+                value: _asTemplate,
+                onChanged: (on) {
+                  HapticFeedback.selectionClick();
+                  setState(() => _asTemplate = on);
+                },
+              ),
+            ),
+          ],
+        ),
+      ],
     );
   }
 }
@@ -125,64 +128,31 @@ Future<PlanTeamTarget?> showMoveTeamSheet(
   BuildContext context, {
   required Plan plan,
   required List<Team> teams,
-}) => showOmniViecSheet<PlanTeamTarget>(
+}) => showOmniSheet<PlanTeamTarget>(
   context: context,
   builder: (ctx) {
-    final scheme = Theme.of(ctx).colorScheme;
     final current = plan.teamId ?? '';
 
-    Widget row(String label, bool selected, PlanTeamTarget target) => Semantics(
-      button: true,
-      selected: selected,
-      label: selected ? '$label, đang chọn' : label,
-      excludeSemantics: true,
-      child: InkWell(
-        onTap: () {
-          HapticFeedback.selectionClick();
-          Navigator.of(ctx).pop(selected ? null : target);
-        },
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(minHeight: 48),
-          child: Row(
-            children: [
-              Expanded(
-                child: Text(
-                  label,
-                  style: OmniType.body.copyWith(
-                    fontWeight: FontWeight.w500,
-                    color: scheme.onSurface,
-                  ),
-                ),
-              ),
-              if (selected)
-                Icon(
-                  Icons.check_rounded,
-                  size: OmniIconSize.lg,
-                  color: scheme.primary,
-                ),
-            ],
-          ),
-        ),
-      ),
-    );
+    Widget row(String label, bool selected, PlanTeamTarget target) =>
+        OmniGroupRow(
+          title: label,
+          selected: selected,
+          semanticsLabel: selected ? '$label, đang chọn' : label,
+          onTap: () => Navigator.of(ctx).pop(selected ? null : target),
+        );
 
-    return SingleChildScrollView(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 30),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          const OmniSheetHandle(gap: 6),
-          Text(
-            'Chuyển sang team khác',
-            style: OmniType.section.copyWith(color: scheme.onSurface),
-          ),
-          const SizedBox(height: 8),
-          for (final team in teams)
-            row(team.name, team.id == current, PlanTeamTo(team)),
-          row('Không team', current.isEmpty, const PlanTeamNone()),
-        ],
-      ),
+    return OmniSheetBody(
+      header: const OmniSheetHeader(title: 'Chuyển sang team khác'),
+      children: [
+        OmniGroupSection(
+          dividerIndent: 14,
+          children: [
+            for (final team in teams)
+              row(team.name, team.id == current, PlanTeamTo(team)),
+            row('Không team', current.isEmpty, const PlanTeamNone()),
+          ],
+        ),
+      ],
     );
   },
 );

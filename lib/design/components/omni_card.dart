@@ -33,7 +33,8 @@ class OmniCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final radius = flat ? BorderRadius.zero : OmniRadius.xlAll;
+    // `flat`: thẻ nhóm lồng bo 18 không viền (viomni-apple-uiux.html `.group`).
+    final radius = flat ? BorderRadius.circular(18) : OmniRadius.xlAll;
 
     Widget content = Padding(padding: padding, child: child);
 
@@ -50,7 +51,7 @@ class OmniCard extends StatelessWidget {
     return Material(
       color: background ?? scheme.surface,
       borderRadius: radius,
-      clipBehavior: flat ? Clip.none : Clip.antiAlias,
+      clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: onTap,
         child: Ink(

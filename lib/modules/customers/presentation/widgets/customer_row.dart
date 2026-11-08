@@ -24,11 +24,15 @@ class CustomerRow extends ConsumerWidget {
     required this.customer,
     required this.expanded,
     required this.onTap,
+    this.divider = true,
   });
 
   final Customer customer;
   final bool expanded;
   final VoidCallback onTap;
+
+  /// Vạch mảnh phía trên; dòng đầu của thẻ nhóm lồng thì không.
+  final bool divider;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -39,14 +43,19 @@ class CustomerRow extends ConsumerWidget {
     final last = Formatters.relative(customer.lastInteractionAt);
     final canCreateTask = ref.watch(accessProvider).can(TaskPermissions.write);
 
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: scheme.surface,
-        border: Border(top: BorderSide(color: scheme.outlineVariant)),
-      ),
+    return ColoredBox(
+      color: scheme.surface,
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
+          // Vạch chia thụt sau avatar (18 + 36 + 10), không chạy full ngang.
+          if (divider)
+            Divider(
+              height: 1,
+              thickness: 1,
+              indent: 64,
+              color: scheme.outlineVariant.withValues(alpha: .7),
+            ),
           InkWell(
             onTap: () {
               HapticFeedback.selectionClick();
@@ -291,7 +300,7 @@ Future<void> launchWithToast(
   messenger.showSnackBar(SnackBar(content: Text(failure)));
 }
 
-/// Vòng 34 viền + nhãn 12 w600; `onTap` null = tắt (không số điện thoại).
+/// Nút kính tròn + nhãn nhỏ w600; `onTap` null = tắt (không số điện thoại).
 class _Action extends StatelessWidget {
   const _Action({required this.icon, required this.label, required this.onTap});
 
@@ -308,20 +317,13 @@ class _Action extends StatelessWidget {
 
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(8),
+      borderRadius: BorderRadius.circular(12),
       child: ConstrainedBox(
         constraints: const BoxConstraints(minHeight: 56),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Container(
-              width: 34,
-              height: 34,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: scheme.surface,
-                border: Border.all(color: scheme.outlineVariant),
-              ),
+            OmniGlassCircle(
               child: Icon(icon, size: OmniIconSize.md, color: color),
             ),
             const SizedBox(height: 3),

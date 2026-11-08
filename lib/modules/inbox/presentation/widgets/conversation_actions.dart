@@ -10,22 +10,18 @@ import '../../domain/inbox_permissions.dart';
 import 'assign_sheet.dart';
 
 /// Hộp thoại nhập một nhãn — dùng chung cho thanh chọn nhiều và menu xem
-/// trước. Trả về nhãn đã cắt khoảng trắng, hoặc `null` khi huỷ.
+/// trước. Trả về nhãn đã cắt khoảng trắng, hoặc `null` khi huỷ. Là hộp kính
+/// ([OmniGlassAlert]) như `showOmniConfirm`.
 Future<String?> showLabelDialog(BuildContext context) {
-  // Không dùng showOmniConfirm: đây không phải câu hỏi có/không mà là một ô
-  // nhập liệu. CupertinoAlertDialog có nhận TextField, nhưng một hộp thoại
-  // nhập liệu là màn hình chứ không phải lời nhắc — nó xứng đáng có thiết kế
-  // riêng chứ không phải nhét vào cái API dành cho câu hỏi.
-  return showDialog<String>(
+  return showOmniGlassDialog<String>(
     context: context,
     builder: (_) => const LabelDialog(),
   );
 }
 
-/// Hộp thoại của [showLabelDialog]. Là State để controller sống đúng bằng hộp
+/// Nội dung của [showLabelDialog]. Là State để controller sống đúng bằng hộp
 /// thoại và được dispose khi hộp thoại đóng hẳn (hết hiệu ứng thoát) — dispose
-/// ngay sau `await showDialog` thì TextField còn đang vẽ sẽ dùng controller đã
-/// huỷ.
+/// ngay khi `await` trả về thì TextField còn đang vẽ sẽ dùng controller đã huỷ.
 class LabelDialog extends StatefulWidget {
   const LabelDialog({super.key});
 
@@ -43,21 +39,19 @@ class _LabelDialogState extends State<LabelDialog> {
   }
 
   @override
-  Widget build(BuildContext context) => AlertDialog(
-    title: const Text('Gắn nhãn'),
-    content: TextField(
+  Widget build(BuildContext context) => OmniGlassAlert(
+    title: 'Gắn nhãn',
+    body: TextField(
       controller: _controller,
       autofocus: true,
       decoration: const InputDecoration(hintText: 'VD: gia đình, VIP'),
     ),
     actions: [
-      TextButton(
-        onPressed: () => Navigator.pop(context),
-        child: const Text('Huỷ'),
-      ),
-      FilledButton(
+      OmniAlertAction(label: 'Huỷ', onPressed: () => Navigator.pop(context)),
+      OmniAlertAction(
+        label: 'Áp dụng',
+        strong: true,
         onPressed: () => Navigator.pop(context, _controller.text.trim()),
-        child: const Text('Áp dụng'),
       ),
     ],
   );

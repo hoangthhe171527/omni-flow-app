@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:omni_app/design/components/components.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:omni_app/core/module/customer_opportunities_section.dart';
 import 'package:omni_app/design/theme/omni_theme.dart';
@@ -62,8 +63,8 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('Đã mua'), findsOneWidget);
-      expect(find.text('3,2 tr'), findsOneWidget);
-      expect(find.text('9 tr'), findsNothing);
+      expect(find.text('3.200.000đ'), findsOneWidget);
+      expect(find.text('9.000.000đ'), findsNothing);
       expect(find.text('Đơn hàng'), findsOneWidget);
       expect(find.text('7'), findsOneWidget);
       // Không đọc được cơ hội → không có ô "Đang mở".
@@ -79,7 +80,7 @@ void main() {
 
     expect(find.text('Chú Đức'), findsOneWidget);
     expect(find.text('Đã mua'), findsNothing);
-    expect(find.text('9 tr'), findsNothing);
+    expect(find.text('9.000.000đ'), findsNothing);
   });
 
   testWidgets('summary chưa có đơn: tổng null hiện —', (tester) async {
@@ -89,7 +90,7 @@ void main() {
     expect(find.text('Đã mua'), findsOneWidget);
     final stat = find.ancestor(
       of: find.text('Đã mua'),
-      matching: find.byType(Column),
+      matching: find.byType(OmniGroupRow),
     );
     expect(
       find.descendant(of: stat.first, matching: find.text('—')),

@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:omni_app/core/utils/formatters.dart';
 import 'package:omni_app/core/network/api_client.dart';
 import 'package:omni_app/demo/demo_app.dart';
 import 'package:omni_app/demo/demo_backend.dart';
@@ -182,7 +183,13 @@ void main() {
         projectId: plan.id,
         sectionId: plan.sections.first.id,
         assigneeIds: [demoMeId],
-        dueDate: DateTime.now(),
+        // Ngày lịch VN như nhóm "Hôm nay" tính — CI chạy giờ UTC, sau 17:00
+        // UTC thì `DateTime.now()` còn là hôm qua theo giờ VN.
+        dueDate: DateTime(
+          VnTime.today().year,
+          VnTime.today().month,
+          VnTime.today().day,
+        ),
       );
       expect(created.id, isNotEmpty);
 

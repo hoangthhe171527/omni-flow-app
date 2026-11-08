@@ -7,6 +7,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:omni_app/core/error/app_exception.dart';
 import 'package:omni_app/core/storage/preferences_store.dart';
+import 'package:omni_app/design/components/components.dart';
 import 'package:omni_app/design/theme/omni_theme.dart';
 import 'package:omni_app/modules/tasks/application/task_controller.dart';
 import 'package:omni_app/modules/tasks/application/tasks_providers.dart';
@@ -190,14 +191,14 @@ void main() {
     await pump(t);
     await t.tap(find.bySemanticsLabel('Đặt hạn việc con').first);
     await t.pumpAndSettle();
-    await t.tap(find.text('OK'));
+    await t.tap(find.byKey(const Key('omni-date-done')));
     await t.pumpAndSettle();
     expect(api.calls.last.$1, 'due');
     expect(api.calls.last.$2, ('c2', DateUtils.dateOnly(DateTime.now())));
   });
 
-  testWidgets('sheet tạo đủ trường: mô tả, chip "Tuần sau" (+7, nền '
-      '#E6F3F2) → MỘT POST mang mọi trường', (t) async {
+  testWidgets('sheet tạo đủ trường: mô tả, chip "Tuần sau" (+7, chip kính '
+      'chọn) → MỘT POST mang mọi trường', (t) async {
     await pump(t);
     await t.tap(find.byTooltip('Thêm việc con'));
     await t.pumpAndSettle();
@@ -206,16 +207,14 @@ void main() {
       find.byKey(const ValueKey('subtask-create-description')),
       'Nỉ đỏ',
     );
+    await t.ensureVisible(find.text('Tuần sau'));
+    await t.pumpAndSettle();
     await t.tap(find.text('Tuần sau'));
     await t.pumpAndSettle();
-    final chip = t.widget<Container>(
+    final chip = t.widget<OmniChoicePill>(
       find.byKey(const ValueKey('quick-chip-Tuần sau')),
     );
-    expect((chip.decoration! as BoxDecoration).color, const Color(0xFFE6F3F2));
-    expect(
-      t.getSize(find.byKey(const ValueKey('quick-chip-Tuần sau'))).height,
-      36,
-    );
+    expect(chip.selected, isTrue);
     final due = DateUtils.dateOnly(DateTime.now()).add(const Duration(days: 7));
     expect(find.textContaining('Hạn '), findsWidgets);
     await t.tap(find.text('Tạo'));
@@ -354,6 +353,43 @@ void main() {
     expect(find.text('Chuyển lên'), findsOneWidget);
   });
 
+  testWidgets('ấn giữ dòng rồi thả: nhấc lên, mở menu ngay dòng đó có '
+      '"Đánh dấu xong" và "Đặt hạn"', (t) async {
+    await pump(t);
+    final g = await t.startGesture(t.getCenter(find.text('Bộ máy')));
+    await t.pump(const Duration(milliseconds: 600));
+    expect(find.byKey(const ValueKey('subtask-lifted')), findsOneWidget);
+    await g.up();
+    await t.pumpAndSettle();
+    expect(find.byKey(const Key('subtask-options-menu')), findsOneWidget);
+    expect(find.text('Đánh dấu xong'), findsOneWidget);
+    expect(find.text('Đặt hạn'), findsOneWidget);
+    expect(find.text('Chuyển lên'), findsOneWidget);
+    expect(api.calls.where((c) => c.$1 == 'move'), isEmpty);
+  });
+
+  testWidgets('ấn giữ rồi kéo: đổi thứ tự, không mở menu', (t) async {
+    await pump(t);
+    final g = await t.startGesture(t.getCenter(find.text('Bộ máy')));
+    await t.pump(const Duration(milliseconds: 600));
+    for (var i = 0; i < 20; i++) {
+      await g.moveBy(const Offset(0, -20));
+      await t.pump(const Duration(milliseconds: 16));
+    }
+    await g.up();
+    await t.pumpAndSettle();
+    expect(api.calls.last, ('move', ('c3', null)));
+    expect(find.byKey(const Key('subtask-options-menu')), findsNothing);
+  });
+
+  testWidgets('tắt chuyển động: ấn giữ dòng vẫn mở menu', (t) async {
+    await pump(t, motion: false);
+    await t.longPress(find.text('Bộ máy'));
+    await t.pumpAndSettle();
+    expect(find.byKey(const Key('subtask-options-menu')), findsOneWidget);
+    expect(find.text('Chuyển lên'), findsOneWidget);
+  });
+
   testWidgets('bật chuyển động: ⋮ vẫn có "Chuyển lên" — đường trợ năng', (
     t,
   ) async {
@@ -434,6 +470,8 @@ void main() {
     await t.tap(find.byTooltip('Thêm việc con'));
     await t.pumpAndSettle();
     await t.enterText(find.widgetWithText(TextField, 'Tên việc con'), 'Nỉ');
+    await t.ensureVisible(find.text('Tuần sau'));
+    await t.pumpAndSettle();
     await t.tap(find.text('Tuần sau'));
     await t.pumpAndSettle();
     final clear = find.ancestor(

@@ -354,7 +354,7 @@ class FinanceLedgerState {
       final hist = historyForTitle(tpl.title);
       final latestAmt = hist.isNotEmpty ? hist.last.amount : 0;
       final label = latestAmt > 0
-          ? '${tpl.title} · ${Formatters.vndCompact(latestAmt)}'
+          ? '${tpl.title} · ${Formatters.vnd(latestAmt)}'
           : tpl.title;
       out.add((
         label: label,

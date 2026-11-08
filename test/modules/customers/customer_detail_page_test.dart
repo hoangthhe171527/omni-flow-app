@@ -271,12 +271,12 @@ void main() {
     ) async {
       await open(tester);
       expect(find.text('Đã mua'), findsOneWidget);
-      expect(find.text('186 tr'), findsOneWidget);
+      expect(find.text('186.000.000đ'), findsOneWidget);
       expect(find.text('Đơn hàng'), findsOneWidget);
       expect(find.text('4'), findsOneWidget);
       expect(find.text('Đang mở'), findsOneWidget);
-      // Chỉ cơ hội còn mở: 5 tr, không cộng cơ hội đã thắng 9 tr.
-      expect(find.text('5 tr'), findsOneWidget);
+      // Chỉ cơ hội còn mở: 5.000.000đ, không cộng cơ hội đã thắng 9.000.000đ.
+      expect(find.text('5.000.000đ'), findsOneWidget);
       expect(find.text('Cơ hội · 2'), findsOneWidget);
     });
 
@@ -712,9 +712,14 @@ void main() {
       expect(server.puts, isEmpty);
     });
 
-    testWidgets('canUpdate → có bút chì ở mỗi dòng', (tester) async {
+    testWidgets('canUpdate → không bút chì lặp; chạm dòng để sửa', (
+      tester,
+    ) async {
       await open(tester);
-      expect(find.byIcon(Icons.edit_outlined), findsNWidgets(6));
+      expect(find.byIcon(Icons.edit_outlined), findsNothing);
+      await tester.tap(find.text('12 Lê Thánh Tôn'));
+      await tester.pumpAndSettle();
+      expect(find.byType(TextField), findsOneWidget);
     });
   });
 

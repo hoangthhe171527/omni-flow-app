@@ -212,175 +212,160 @@ class _CustomerDetailPageState extends ConsumerState<CustomerDetailPage> {
     final oppCount = summary?.opportunitiesCount ?? oppStats?.count;
 
     return Scaffold(
-      backgroundColor: Theme.of(context).colorScheme.surface,
+      extendBodyBehindAppBar: true,
+      // Nền xám để các thẻ nhóm lồng nổi lên.
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: OmniTopBar(
         semanticsTitle: 'Khách hàng',
-        bottom: _BackBar(
-          onFullEdit: access.canUpdate
-              ? () async {
-                  await context.pushNamed(
-                    CustomerRoutes.edit,
-                    pathParameters: {'id': _id},
-                  );
-                  if (!mounted) return;
-                  _invalidateDetail(activity: activityOn, opps: oppsOn);
-                }
-              : null,
-        ),
-      ),
-      body: OmniAsyncView(
-        value: customer,
-        onRetry: () => ref.invalidate(customerProvider(_id)),
-        data: (loaded) {
-          _lastLoaded = loaded;
-          final data = _saved != null && identical(_savedBase, loaded)
-              ? _saved!
-              : loaded;
-          final canUpdate = access.canUpdate;
-          Future<void> save(CustomerField f, String draft) =>
-              _save(data, f, draft, activity: activityOn, opps: oppsOn);
-
-          return RefreshIndicator.adaptive(
-            onRefresh: () => _refresh(activity: activityOn, opps: oppsOn),
-            child: ListView(
-              physics: const AlwaysScrollableScrollPhysics(),
-              padding: const EdgeInsets.only(bottom: OmniSpacing.bottomSafe),
-              children: [
-                _Header(customer: data),
-                _Actions(
-                  customer: data,
-                  canCreateTask: taskWrite,
-                  canCreateOpportunity: canCreateOpp,
-                ),
-                if (summary != null)
-                  _Stats(
-                    bought: Formatters.vndCompact(summary.ordersTotal),
-                    orders: '${summary.ordersCount}',
-                    open: oppsOn
-                        ? (oppStats == null
-                              ? '—'
-                              : Formatters.vndCompact(oppStats.openValue))
-                        : null,
-                  ),
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-                  child: OmniSegmented(
-                    labels: [
-                      'Tổng quan',
-                      if (activityOn) 'Hoạt động',
-                      if (oppsOn)
-                        oppCount == null ? 'Cơ hội' : 'Cơ hội · $oppCount',
-                    ],
-                    index: tabs.indexOf(tab),
-                    onChanged: (i) => setState(() {
-                      _tab = tabs[i];
-                      _editing = null;
-                    }),
-                  ),
-                ),
-                if (OmniMotion.enabled(context))
-                  AnimatedSize(
-                    duration: OmniMotion.of(context).fast,
-                    curve: Curves.easeOutCubic,
-                    alignment: Alignment.topCenter,
-                    child: switch (tab) {
-                      _Tab.overview => _Overview(
-                        customer: data,
-                        canUpdate: canUpdate,
-                        editing: _editing,
-                        onBeginEdit: _beginEdit,
-                        onEndEdit: _endEdit,
-                        onSave: save,
-                        onPickOwner: () => _pickOwner(
-                          data,
-                          activity: activityOn,
-                          opps: oppsOn,
-                        ),
-                        onPickTags: () =>
-                            _pickTags(data, activity: activityOn, opps: oppsOn),
-                      ),
-                      _Tab.activity => _ActivityTab(customerId: _id),
-                      _Tab.opportunities => section!.body(_id),
-                    },
-                  )
-                else
-                  switch (tab) {
-                    _Tab.overview => _Overview(
-                      customer: data,
-                      canUpdate: canUpdate,
-                      editing: _editing,
-                      onBeginEdit: _beginEdit,
-                      onEndEdit: _endEdit,
-                      onSave: save,
-                      onPickOwner: () =>
-                          _pickOwner(data, activity: activityOn, opps: oppsOn),
-                      onPickTags: () =>
-                          _pickTags(data, activity: activityOn, opps: oppsOn),
-                    ),
-                    _Tab.activity => _ActivityTab(customerId: _id),
-                    _Tab.opportunities => section!.body(_id),
-                  },
-              ],
-            ),
-          );
+        onBack: () {
+          if (context.canPop()) {
+            context.pop();
+          } else {
+            context.goNamed(CustomerRoutes.list);
+          }
         },
+        actions: [
+          // Chỉ có đúng một hành động thì dùng nút trực tiếp; dấu ⋯ rồi mở
+          // menu một dòng chỉ tạo thêm một lần chạm không có giá trị.
+          if (access.canUpdate)
+            OmniTopBarAction(
+              icon: Icons.edit_note_rounded,
+              tooltip: 'Sửa đầy đủ thông tin',
+              onPressed: () async {
+                await context.pushNamed(
+                  CustomerRoutes.edit,
+                  pathParameters: {'id': _id},
+                );
+                if (!mounted) return;
+                _invalidateDetail(activity: activityOn, opps: oppsOn);
+              },
+            ),
+        ],
+      ),
+      body: OmniTopBarOverlap.wrap(
+        child: Builder(
+          builder: (context) {
+            final topInset = OmniTopBarOverlap.of(context);
+            return OmniAsyncView(
+              value: customer,
+              onRetry: () => ref.invalidate(customerProvider(_id)),
+              data: (loaded) {
+                _lastLoaded = loaded;
+                final data = _saved != null && identical(_savedBase, loaded)
+                    ? _saved!
+                    : loaded;
+                final canUpdate = access.canUpdate;
+                Future<void> save(CustomerField f, String draft) =>
+                    _save(data, f, draft, activity: activityOn, opps: oppsOn);
+
+                return RefreshIndicator.adaptive(
+                  edgeOffset: topInset,
+                  onRefresh: () => _refresh(activity: activityOn, opps: oppsOn),
+                  child: ListView(
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    padding: EdgeInsets.only(
+                      top: topInset,
+                      bottom: OmniSpacing.bottomSafe,
+                    ),
+                    children: [
+                      _Header(customer: data),
+                      _Actions(
+                        customer: data,
+                        canCreateTask: taskWrite,
+                        canCreateOpportunity: canCreateOpp,
+                      ),
+                      if (summary != null)
+                        _Stats(
+                          bought: Formatters.vnd(summary.ordersTotal),
+                          orders: '${summary.ordersCount}',
+                          open: oppsOn
+                              ? (oppStats == null
+                                    ? '—'
+                                    : Formatters.vnd(oppStats.openValue))
+                              : null,
+                        ),
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+                        child: OmniSegmented(
+                          labels: [
+                            'Tổng quan',
+                            if (activityOn) 'Hoạt động',
+                            if (oppsOn)
+                              oppCount == null
+                                  ? 'Cơ hội'
+                                  : 'Cơ hội · $oppCount',
+                          ],
+                          index: tabs.indexOf(tab),
+                          onChanged: (i) => setState(() {
+                            _tab = tabs[i];
+                            _editing = null;
+                          }),
+                        ),
+                      ),
+                      if (OmniMotion.enabled(context))
+                        AnimatedSize(
+                          duration: OmniMotion.of(context).fast,
+                          curve: Curves.easeOutCubic,
+                          alignment: Alignment.topCenter,
+                          child: switch (tab) {
+                            _Tab.overview => _Overview(
+                              customer: data,
+                              canUpdate: canUpdate,
+                              editing: _editing,
+                              onBeginEdit: _beginEdit,
+                              onEndEdit: _endEdit,
+                              onSave: save,
+                              onPickOwner: () => _pickOwner(
+                                data,
+                                activity: activityOn,
+                                opps: oppsOn,
+                              ),
+                              onPickTags: () => _pickTags(
+                                data,
+                                activity: activityOn,
+                                opps: oppsOn,
+                              ),
+                            ),
+                            _Tab.activity => _ActivityTab(customerId: _id),
+                            _Tab.opportunities => section!.body(_id),
+                          },
+                        )
+                      else
+                        switch (tab) {
+                          _Tab.overview => _Overview(
+                            customer: data,
+                            canUpdate: canUpdate,
+                            editing: _editing,
+                            onBeginEdit: _beginEdit,
+                            onEndEdit: _endEdit,
+                            onSave: save,
+                            onPickOwner: () => _pickOwner(
+                              data,
+                              activity: activityOn,
+                              opps: oppsOn,
+                            ),
+                            onPickTags: () => _pickTags(
+                              data,
+                              activity: activityOn,
+                              opps: oppsOn,
+                            ),
+                          ),
+                          _Tab.activity => _ActivityTab(customerId: _id),
+                          _Tab.opportunities => section!.body(_id),
+                        },
+                    ],
+                  ),
+                );
+              },
+            );
+          },
+        ),
       ),
     );
   }
 }
 
 /// Nút ‹ "Khách hàng" dưới thanh kính (bản mẫu: không nút Sửa).
-class _BackBar extends StatelessWidget implements PreferredSizeWidget {
-  const _BackBar({this.onFullEdit});
-
-  /// Có khi được sửa: mục "Sửa đầy đủ thông tin" trong nút ⋯.
-  final VoidCallback? onFullEdit;
-
-  @override
-  Size get preferredSize => const Size.fromHeight(44);
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return SizedBox(
-      height: 44,
-      child: Row(
-        children: [
-          Padding(
-            padding: const EdgeInsets.only(left: 8),
-            child: TextButton.icon(
-              onPressed: () {
-                if (context.canPop()) {
-                  context.pop();
-                } else {
-                  context.goNamed(CustomerRoutes.list);
-                }
-              },
-              icon: const Icon(Icons.chevron_left_rounded, size: 24),
-              label: const Text('Khách hàng'),
-              style: TextButton.styleFrom(
-                minimumSize: const Size(44, 44),
-                foregroundColor: scheme.primary,
-              ),
-            ),
-          ),
-          const Spacer(),
-          // Chỉ có đúng một hành động thì dùng nút trực tiếp; dấu ⋯ rồi mở
-          // menu một dòng chỉ tạo thêm một lần chạm không có giá trị.
-          if (onFullEdit != null)
-            IconButton(
-              tooltip: 'Sửa đầy đủ thông tin',
-              onPressed: onFullEdit,
-              style: IconButton.styleFrom(minimumSize: const Size(44, 44)),
-              icon: const Icon(Icons.edit_note_rounded),
-            ),
-          const SizedBox(width: 8),
-        ],
-      ),
-    );
-  }
-}
-
 class _Header extends StatelessWidget {
   const _Header({required this.customer});
 
@@ -550,8 +535,9 @@ class _ActButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final enabled = onTap != null;
-    final background = primary ? scheme.primary : scheme.surface;
-    final foreground = primary ? scheme.onPrimary : scheme.onSurface;
+    // Nút kính (liquid-buttons-uiux.html B): nút chính chữ màu chủ đạo, nút
+    // phụ chữ mực; không viền màu, dạng viên thuốc.
+    final foreground = primary ? scheme.primary : scheme.onSurface;
 
     return Semantics(
       button: true,
@@ -561,7 +547,7 @@ class _ActButton extends StatelessWidget {
       onTap: onTap,
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(6),
+        borderRadius: BorderRadius.circular(18),
         child: SizedBox(
           height: 44,
           child: Center(
@@ -570,13 +556,7 @@ class _ActButton extends StatelessWidget {
               child: Container(
                 height: 36,
                 alignment: Alignment.center,
-                decoration: BoxDecoration(
-                  color: background,
-                  borderRadius: BorderRadius.circular(6),
-                  border: primary
-                      ? null
-                      : Border.all(color: scheme.outlineVariant),
-                ),
+                decoration: OmniGlass.buttonDecoration(context, radius: 18),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
@@ -601,71 +581,29 @@ class _ActButton extends StatelessWidget {
   }
 }
 
+/// Ba số của hồ sơ thành ba dòng "nhãn — số" trong một nhóm lồng (hết dải KPI
+/// ba ô). Tiền luôn đủ số.
 class _Stats extends StatelessWidget {
   const _Stats({required this.bought, required this.orders, this.open});
 
   final String bought;
   final String orders;
 
-  /// null = người dùng không đọc được cơ hội: không có ô này.
+  /// null = người dùng không đọc được cơ hội: không có dòng này.
   final String? open;
 
   @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final cells = [
-      ('Đã mua', bought),
-      ('Đơn hàng', orders),
-      if (open != null) ('Đang mở', open!),
-    ];
-
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-      child: Row(
-        children: [
-          for (var i = 0; i < cells.length; i++) ...[
-            if (i > 0) const SizedBox(width: 8),
-            Expanded(
-              child: Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 8,
-                ),
-                decoration: BoxDecoration(
-                  color: scheme.surfaceContainerLowest,
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: scheme.outlineVariant),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      cells[i].$1,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: OmniType.micro.copyWith(
-                        color: scheme.onSurfaceVariant,
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      cells[i].$2,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: OmniType.bodyStrong.copyWith(
-                        color: scheme.onSurface,
-                        fontFeatures: OmniType.tabular,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ],
-        ],
-      ),
-    );
-  }
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+    child: OmniGroupSection(
+      dividerIndent: 14,
+      children: [
+        OmniGroupRow(title: 'Đã mua', value: bought),
+        OmniGroupRow(title: 'Đơn hàng', value: orders),
+        if (open != null) OmniGroupRow(title: 'Đang mở', value: open),
+      ],
+    ),
+  );
 }
 
 class _Overview extends StatelessWidget {
@@ -695,6 +633,7 @@ class _Overview extends StatelessWidget {
     TextInputType? keyboardType,
     int? maxLength,
     bool multiline = false,
+    int viewMaxLines = 1,
     Color? valueColor,
     VoidCallback? onTapValue,
   }) => InlineEditRow(
@@ -703,6 +642,7 @@ class _Overview extends StatelessWidget {
     value: value,
     editable: canUpdate,
     multiline: multiline,
+    viewMaxLines: viewMaxLines,
     keyboardType: keyboardType,
     maxLength: maxLength,
     valueColor: valueColor,
@@ -754,7 +694,12 @@ class _Overview extends StatelessWidget {
                           'Không mở được ứng dụng email.',
                         ),
                 ),
-                _row(CustomerField.address, c.address, maxLength: 500),
+                _row(
+                  CustomerField.address,
+                  c.address,
+                  maxLength: 500,
+                  viewMaxLines: 3,
+                ),
                 _row(CustomerField.note, c.note ?? '', multiline: true),
               ],
             ),
@@ -806,7 +751,7 @@ class _PickerRow extends StatelessWidget {
     final scheme = theme.colorScheme;
     return InkWell(
       onTap: editable ? onTap : null,
-      borderRadius: BorderRadius.circular(8),
+      borderRadius: BorderRadius.circular(12),
       child: ConstrainedBox(
         constraints: const BoxConstraints(minHeight: 44),
         child: Padding(
@@ -825,15 +770,6 @@ class _PickerRow extends StatelessWidget {
               Expanded(
                 child: Align(alignment: Alignment.centerRight, child: child),
               ),
-              if (editable) ...[
-                const SizedBox(width: 8),
-                Icon(
-                  Icons.edit_outlined,
-                  size: 16,
-                  color: scheme.outline,
-                  semanticLabel: 'Sửa $label',
-                ),
-              ],
             ],
           ),
         ),

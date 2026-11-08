@@ -166,7 +166,7 @@ class _CopyTaskSheetState extends ConsumerState<CopyTaskSheet> {
   }
 
   /// Ngày lịch VN của một giá trị từ API, ở dạng nửa đêm cục bộ — cùng dạng
-  /// với ngày `showDatePicker` trả, để so và để `ymd` in đúng.
+  /// với ngày `pickOmniDate` trả, để so và để `ymd` in đúng.
   static DateTime? _calendarDay(DateTime? d) {
     if (d == null) return null;
     final v = VnTime.of(d);
@@ -389,164 +389,90 @@ class _CopyTaskSheetState extends ConsumerState<CopyTaskSheet> {
         _title.text.trim().isNotEmpty &&
         (_personal || plan != null) &&
         !(extended && _datesInvalid);
-    final bottom = MediaQuery.viewPaddingOf(context).bottom;
 
     return Semantics(
       scopesRoute: true,
       explicitChildNodes: true,
       label: 'Sao chép công việc',
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
+      child: OmniSheetBody(
+        header: OmniSheetHeader(
+          title: 'Sao chép công việc',
+          trailing: IconButton(
+            tooltip: 'Đóng',
+            onPressed: () => Navigator.of(context).pop(),
+            style: IconButton.styleFrom(minimumSize: const Size(44, 44)),
+            icon: const Icon(Icons.close_rounded, size: 20),
+          ),
+        ),
+        footer: FilledButton(
+          onPressed: canSubmit
+              ? () => _submit(extended: extended, people: people)
+              : null,
+          child: const Text('Sao chép'),
+        ),
         children: [
-          const Padding(
-            padding: EdgeInsets.only(top: 8),
-            child: OmniSheetHandle(gap: 0),
-          ),
-          DecoratedBox(
-            decoration: BoxDecoration(
-              border: Border(
-                bottom: BorderSide(color: OmniColors.trackOf(context)),
-              ),
-            ),
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 4, 4, 4),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      'Sao chép công việc',
-                      style: OmniType.section.copyWith(color: scheme.onSurface),
-                    ),
-                  ),
-                  IconButton(
-                    tooltip: 'Đóng',
-                    onPressed: () => Navigator.of(context).pop(),
-                    style: IconButton.styleFrom(
-                      minimumSize: const Size(44, 44),
-                    ),
-                    icon: const Icon(Icons.close_rounded, size: 20),
-                  ),
-                ],
-              ),
+          OmniField(
+            label: 'Tên công việc',
+            child: TextField(
+              controller: _title,
+              maxLength: kTaskTitleMax,
+              style: OmniType.body.copyWith(color: scheme.onSurface),
+              decoration: const InputDecoration(counterText: ''),
             ),
           ),
-          Flexible(
-            child: SingleChildScrollView(
-              keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-              padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                spacing: 16,
-                children: [
-                  _Field(
-                    label: 'Tên công việc',
-                    child: TextField(
-                      controller: _title,
-                      maxLength: kTaskTitleMax,
-                      style: OmniType.body.copyWith(color: scheme.onSurface),
-                      decoration: _inputDecoration(
-                        context,
-                      ).copyWith(counterText: ''),
-                    ),
-                  ),
-                  ..._placeFields(context),
-                  if (extended) ...[
-                    _dates(context),
-                    _assignees(context, byId, people, allowed),
-                    if (task.customFields.isNotEmpty)
-                      _customFields(context, target),
-                  ] else if (task.assigneeIds.isNotEmpty)
-                    _SwitchRow(
-                      label: 'Giữ người thực hiện',
-                      note: _keepNote(byId),
-                      value: _keepAssignees,
-                      onChanged: (v) => setState(() => _keepAssignees = v),
-                    ),
-                  if (task.subtasks.isNotEmpty)
-                    DecoratedBox(
-                      decoration: BoxDecoration(
-                        border: Border(
-                          top: BorderSide(color: OmniColors.trackOf(context)),
-                        ),
-                      ),
-                      child: Padding(
-                        padding: const EdgeInsets.only(top: 12),
-                        child: _SwitchRow(
-                          label: 'Chép cả việc con',
-                          note:
-                              '${task.subtasks.length} việc con, bỏ đánh dấu '
-                              'đã xong',
-                          value: _keepChecklist,
-                          onChanged: (v) => setState(() => _keepChecklist = v),
-                        ),
-                      ),
-                    ),
-                ],
-              ),
+          ..._placeFields(context),
+          if (extended) ...[
+            ..._dates(context),
+            _assignees(context, byId, people, allowed),
+            if (task.customFields.isNotEmpty) _customFields(context, target),
+          ] else if (task.assigneeIds.isNotEmpty)
+            _SwitchRow(
+              label: 'Giữ người thực hiện',
+              note: _keepNote(byId),
+              value: _keepAssignees,
+              onChanged: (v) => setState(() => _keepAssignees = v),
             ),
-          ),
-          DecoratedBox(
-            decoration: BoxDecoration(
-              border: Border(
-                top: BorderSide(color: OmniColors.trackOf(context)),
-              ),
+          if (task.subtasks.isNotEmpty)
+            _SwitchRow(
+              label: 'Chép cả việc con',
+              note: '${task.subtasks.length} việc con, bỏ đánh dấu đã xong',
+              value: _keepChecklist,
+              onChanged: (v) => setState(() => _keepChecklist = v),
             ),
-            child: Padding(
-              padding: EdgeInsets.fromLTRB(16, 10, 16, 28 + bottom),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton(
-                      onPressed: () => Navigator.of(context).pop(),
-                      style: OutlinedButton.styleFrom(
-                        minimumSize: const Size.fromHeight(48),
-                      ),
-                      child: const Text('Huỷ'),
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    flex: 2,
-                    child: FilledButton(
-                      onPressed: canSubmit
-                          ? () => _submit(extended: extended, people: people)
-                          : null,
-                      style: FilledButton.styleFrom(
-                        minimumSize: const Size.fromHeight(48),
-                      ),
-                      child: const Text('Sao chép'),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
         ],
       ),
     );
   }
 
-  InputDecoration _inputDecoration(BuildContext context) {
-    OutlineInputBorder border(Color color) => OutlineInputBorder(
-      borderRadius: BorderRadius.circular(8),
-      borderSide: BorderSide(color: color),
-    );
-    final scheme = Theme.of(context).colorScheme;
+  /// Chọn một giá trị trong sheet con (dòng chọn ✓), như "Chuyển sang kế
+  /// hoạch". Trả khoá đã chọn; null khi đóng.
+  Future<String?> _choose({
+    required String title,
+    required List<(String, String)> options,
+    required String? current,
+  }) => showOmniViecSheet<String>(
+    context: context,
+    builder: (sheet) => OmniSheetBody(
+      semanticsLabel: title,
+      header: OmniSheetHeader(title: title),
+      children: [
+        OmniGroupSection(
+          dividerIndent: 14,
+          children: [
+            for (final (key, label) in options)
+              OmniGroupRow(
+                title: label,
+                selected: key == current,
+                onTap: () => Navigator.of(sheet).pop(key),
+              ),
+          ],
+        ),
+      ],
+    ),
+  );
 
-    return InputDecoration(
-      isDense: true,
-      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-      constraints: const BoxConstraints(minHeight: 44),
-      enabledBorder: border(OmniColors.controlBorderOf(context)),
-      disabledBorder: border(OmniColors.trackOf(context)),
-      focusedBorder: border(scheme.primary),
-      border: border(OmniColors.controlBorderOf(context)),
-    );
-  }
-
-  /// Ba ô Team / Kế hoạch / Nhóm việc; đang tải thì vòng xoay, lỗi thì
-  /// "Thử lại" (như `move_task_sheet.dart`).
+  /// Ba dòng Team / Kế hoạch / Nhóm việc mở sheet con; đang tải thì vòng
+  /// xoay, lỗi thì "Thử lại" (như `move_task_sheet.dart`).
   List<Widget> _placeFields(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final plans = _all;
@@ -582,133 +508,131 @@ class _CopyTaskSheetState extends ConsumerState<CopyTaskSheet> {
       for (final p in plans)
         if (_personal || _teamOf(p) == _team) p,
     ];
-    final style = OmniType.body.copyWith(color: scheme.onSurface);
+    final teams = _teams(plans);
     final sections = plan?.sections ?? const <TaskSection>[];
-    final noneHint = Text(
-      'Chưa xếp nhóm',
-      style: style.copyWith(color: scheme.onSurfaceVariant),
-    );
+    final section = sections.where((s) => s.id == _sectionId).firstOrNull;
 
     return [
-      if (!_personal)
-        _Field(
-          label: 'Team',
-          child: DropdownButtonFormField<String>(
-            key: const ValueKey('copy-team'),
-            initialValue: _team,
-            isExpanded: true,
-            style: style,
-            decoration: _inputDecoration(context),
-            items: [
-              for (final (id, name) in _teams(plans))
-                DropdownMenuItem(
-                  value: id,
-                  child: Text(name, overflow: TextOverflow.ellipsis),
-                ),
-            ],
-            onChanged: _pickTeam,
+      OmniGroupSection(
+        dividerIndent: 14,
+        children: [
+          if (!_personal)
+            OmniGroupRow(
+              key: const ValueKey('copy-team'),
+              title: 'Team',
+              value: [
+                for (final (id, name) in teams)
+                  if (id == _team) name,
+              ].firstOrNull,
+              onTap: () async {
+                final id = await _choose(
+                  title: 'Team',
+                  options: teams,
+                  current: _team,
+                );
+                _pickTeam(id);
+              },
+            ),
+          OmniGroupRow(
+            key: const ValueKey('copy-plan'),
+            title: 'Kế hoạch',
+            value: _personal ? 'Không thuộc kế hoạch' : plan?.name,
+            onTap: () async {
+              final id = await _choose(
+                title: 'Kế hoạch',
+                options: [
+                  if (_personalSource) (_noPlan, 'Không thuộc kế hoạch'),
+                  for (final p in teamPlans) (p.id, p.name),
+                ],
+                current: _personal ? _noPlan : plan?.id,
+              );
+              _pickPlan(id);
+            },
           ),
-        ),
-      _Field(
-        label: 'Kế hoạch',
-        child: DropdownButtonFormField<String>(
-          key: const ValueKey('copy-plan'),
-          initialValue: _personal ? _noPlan : plan?.id,
-          isExpanded: true,
-          style: style,
-          decoration: _inputDecoration(context),
-          items: [
-            if (_personalSource)
-              const DropdownMenuItem(
-                value: _noPlan,
-                child: Text(
-                  'Không thuộc kế hoạch',
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-            for (final p in teamPlans)
-              DropdownMenuItem(
-                value: p.id,
-                child: Text(p.name, overflow: TextOverflow.ellipsis),
-              ),
-          ],
-          onChanged: _pickPlan,
-        ),
+          if (!_personal)
+            OmniGroupRow(
+              key: const ValueKey('copy-section'),
+              title: 'Nhóm việc',
+              value: section?.name ?? 'Chưa xếp nhóm',
+              onTap: sections.isEmpty
+                  ? null
+                  : () async {
+                      final id = await _choose(
+                        title: 'Nhóm việc',
+                        options: [for (final s in sections) (s.id, s.name)],
+                        current: _sectionId,
+                      );
+                      if (id != null && mounted) {
+                        setState(() => _sectionId = id);
+                      }
+                    },
+            ),
+        ],
       ),
-      if (!_personal)
-        _Field(
-          label: 'Nhóm việc',
-          child: DropdownButtonFormField<String>(
-            key: const ValueKey('copy-section'),
-            initialValue: sections.isEmpty ? null : _sectionId,
-            isExpanded: true,
-            style: style,
-            decoration: _inputDecoration(context),
-            hint: noneHint,
-            disabledHint: noneHint,
-            items: [
-              for (final s in sections)
-                DropdownMenuItem(
-                  value: s.id,
-                  child: Text(s.name, overflow: TextOverflow.ellipsis),
-                ),
-            ],
-            onChanged: sections.isEmpty
-                ? null
-                : (id) => setState(() => _sectionId = id),
-          ),
-        ),
     ];
   }
 
-  Widget _dates(BuildContext context) {
+  List<Widget> _dates(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Expanded(
-              child: _Field(
-                label: 'Từ ngày',
-                child: _DateBox(
-                  key: const ValueKey('copy-start'),
-                  value: _start,
-                  clearTooltip: 'Xoá ngày bắt đầu',
-                  onTap: () => _pickDate(start: true),
-                  onClear: () => setState(() => _start = null),
-                ),
+    Widget dateRow({
+      required Key key,
+      required String title,
+      required DateTime? value,
+      required String clearTooltip,
+      required bool start,
+    }) => OmniGroupRow(
+      key: key,
+      title: title,
+      value: value == null ? 'Chưa đặt' : Formatters.date(value),
+      trailing: value == null
+          ? null
+          : IconButton(
+              tooltip: clearTooltip,
+              onPressed: () =>
+                  setState(() => start ? _start = null : _due = null),
+              style: IconButton.styleFrom(
+                minimumSize: const Size(44, 44),
+                padding: EdgeInsets.zero,
+              ),
+              icon: Icon(
+                Icons.close_rounded,
+                size: 18,
+                color: scheme.onSurfaceVariant,
               ),
             ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: _Field(
-                label: 'Đến ngày',
-                child: _DateBox(
-                  key: const ValueKey('copy-due'),
-                  value: _due,
-                  invalid: _datesInvalid,
-                  clearTooltip: 'Xoá ngày kết thúc',
-                  onTap: () => _pickDate(start: false),
-                  onClear: () => setState(() => _due = null),
-                ),
-              ),
-            ),
-          ],
-        ),
-        if (_datesInvalid)
-          Padding(
-            padding: const EdgeInsets.only(top: 6),
-            child: Text(
-              'Ngày kết thúc phải từ ngày bắt đầu trở đi.',
-              style: OmniType.caption.copyWith(color: scheme.error),
-            ),
-          ),
-      ],
+      onTap: () => _pickDate(start: start),
     );
+
+    return [
+      OmniGroupSection(
+        dividerIndent: 14,
+        children: [
+          dateRow(
+            key: const ValueKey('copy-start'),
+            title: 'Từ ngày',
+            value: _start,
+            clearTooltip: 'Xoá ngày bắt đầu',
+            start: true,
+          ),
+          dateRow(
+            key: const ValueKey('copy-due'),
+            title: 'Đến ngày',
+            value: _due,
+            clearTooltip: 'Xoá ngày kết thúc',
+            start: false,
+          ),
+        ],
+      ),
+      if (_datesInvalid)
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 8),
+          child: Text(
+            'Ngày kết thúc phải từ ngày bắt đầu trở đi.',
+            style: OmniType.caption.copyWith(color: scheme.error),
+          ),
+        ),
+    ];
   }
 
   String _keepNote(Map<String, TeamMember> byId) {
@@ -791,7 +715,7 @@ class _CopyTaskSheetState extends ConsumerState<CopyTaskSheet> {
   }
 }
 
-/// Nhãn 12/w500 phụ + ô, cách 6.
+/// Nhãn phụ ngoài thẻ (như nhãn nhóm) + nội dung, cách 6.
 class _Field extends StatelessWidget {
   const _Field({required this.label, required this.child});
 
@@ -804,10 +728,14 @@ class _Field extends StatelessWidget {
     mainAxisSize: MainAxisSize.min,
     spacing: 6,
     children: [
-      Text(
-        label,
-        style: OmniType.micro.copyWith(
-          color: Theme.of(context).colorScheme.onSurfaceVariant,
+      Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 8),
+        child: Text(
+          label,
+          style: OmniType.caption.copyWith(
+            fontWeight: FontWeight.w600,
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
+          ),
         ),
       ),
       child,
@@ -821,89 +749,16 @@ class _Note extends StatelessWidget {
   final String text;
 
   @override
-  Widget build(BuildContext context) => Text(
-    text,
-    style: OmniType.caption.copyWith(
-      color: Theme.of(context).colorScheme.onSurfaceVariant,
-      height: 1.45,
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.symmetric(horizontal: 8),
+    child: Text(
+      text,
+      style: OmniType.caption.copyWith(
+        color: Theme.of(context).colorScheme.onSurfaceVariant,
+        height: 1.45,
+      ),
     ),
   );
-}
-
-/// Ô ngày cao 44: chạm mở lịch; có giá trị thì có nút × 44 để xoá.
-class _DateBox extends StatelessWidget {
-  const _DateBox({
-    super.key,
-    required this.value,
-    required this.clearTooltip,
-    required this.onTap,
-    required this.onClear,
-    this.invalid = false,
-  });
-
-  final DateTime? value;
-  final String clearTooltip;
-  final VoidCallback onTap;
-  final VoidCallback onClear;
-  final bool invalid;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final value = this.value;
-    final radius = BorderRadius.circular(8);
-
-    return SizedBox(
-      height: 44,
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          color: scheme.surface,
-          borderRadius: radius,
-          border: Border.all(
-            color: invalid ? scheme.error : OmniColors.controlBorderOf(context),
-          ),
-        ),
-        child: Material(
-          type: MaterialType.transparency,
-          child: InkWell(
-            borderRadius: radius,
-            onTap: onTap,
-            child: Row(
-              children: [
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    value == null ? 'Chưa đặt' : Formatters.date(value),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: OmniType.body.copyWith(
-                      color: value == null
-                          ? scheme.onSurfaceVariant
-                          : scheme.onSurface,
-                    ),
-                  ),
-                ),
-                if (value != null)
-                  IconButton(
-                    tooltip: clearTooltip,
-                    onPressed: onClear,
-                    style: IconButton.styleFrom(
-                      minimumSize: const Size(44, 44),
-                      padding: EdgeInsets.zero,
-                    ),
-                    icon: Icon(
-                      Icons.close_rounded,
-                      size: 18,
-                      color: scheme.onSurfaceVariant,
-                    ),
-                  ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
 }
 
 /// Chip người: avatar 24, tên, nút × vẽ 32 trong vùng chạm 44. Nền chip cao
@@ -922,6 +777,7 @@ class _PersonChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final dark = Theme.of(context).brightness == Brightness.dark;
 
     return SizedBox(
       height: 44,
@@ -932,8 +788,8 @@ class _PersonChip extends StatelessWidget {
             bottom: 4,
             child: DecoratedBox(
               decoration: BoxDecoration(
-                color: scheme.surfaceContainerHighest,
-                borderRadius: BorderRadius.circular(18),
+                color: scheme.onSurface.withValues(alpha: dark ? .08 : .05),
+                borderRadius: BorderRadius.circular(999),
               ),
             ),
           ),
@@ -978,50 +834,28 @@ class _PersonChip extends StatelessWidget {
   }
 }
 
-/// Chip viền đứt "+ Thêm người" (vẽ 36, vùng chạm 44).
+/// Chip kính "+ Thêm người" (vẽ 36, vùng chạm 44).
 class _AddPersonChip extends StatelessWidget {
   const _AddPersonChip({required this.onTap});
 
   final VoidCallback onTap;
 
   @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-
-    return InkWell(
-      key: const ValueKey('copy-add-person'),
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(18),
-      child: SizedBox(
-        height: 44,
-        child: Center(
-          child: OmniDashedBox(
-            height: 36,
-            radius: 18,
-            strokeWidth: 1,
-            color: OmniTaskTones.of(context).faint,
-            fill: scheme.surface,
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 14),
-              child: Center(
-                widthFactor: 1,
-                child: Text(
-                  '+ Thêm người',
-                  style: OmniType.bodySm.copyWith(
-                    fontWeight: FontWeight.w500,
-                    color: scheme.onSurface,
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ),
+  Widget build(BuildContext context) => SizedBox(
+    key: const ValueKey('copy-add-person'),
+    height: 44,
+    child: Center(
+      widthFactor: 1,
+      child: OmniChoicePill(
+        label: '+ Thêm người',
+        selected: false,
+        onTap: onTap,
       ),
-    );
-  }
+    ),
+  );
 }
 
-/// Dòng có công tắc: tiêu đề, ghi chú, `Switch` (vùng chạm 48 của Material).
+/// Dòng có công tắc trong nhóm riêng: tiêu đề, ghi chú, `Switch.adaptive`.
 class _SwitchRow extends StatelessWidget {
   const _SwitchRow({
     required this.label,
@@ -1036,50 +870,25 @@ class _SwitchRow extends StatelessWidget {
   final ValueChanged<bool> onChanged;
 
   @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-
-    // Cả dòng chạm được (bật/tắt), không chỉ con công tắc.
-    return InkWell(
-      onTap: () {
-        HapticFeedback.selectionClick();
-        onChanged(!value);
-      },
-      borderRadius: BorderRadius.circular(8),
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(minHeight: 44),
-        child: Row(
-          spacing: 12,
-          children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    label,
-                    style: OmniType.body.copyWith(
-                      fontWeight: FontWeight.w500,
-                      color: scheme.onSurface,
-                    ),
-                  ),
-                  _Note(note),
-                ],
-              ),
-            ),
-            Semantics(
-              label: label,
-              child: Switch.adaptive(
-                value: value,
-                onChanged: (v) {
-                  HapticFeedback.selectionClick();
-                  onChanged(v);
-                },
-              ),
-            ),
-          ],
+  Widget build(BuildContext context) => OmniGroupSection(
+    dividerIndent: 14,
+    children: [
+      // Cả dòng chạm được (bật/tắt), không chỉ con công tắc.
+      OmniGroupRow(
+        title: label,
+        subtitle: note,
+        onTap: () => onChanged(!value),
+        trailing: Semantics(
+          label: label,
+          child: Switch.adaptive(
+            value: value,
+            onChanged: (v) {
+              HapticFeedback.selectionClick();
+              onChanged(v);
+            },
+          ),
         ),
       ),
-    );
-  }
+    ],
+  );
 }

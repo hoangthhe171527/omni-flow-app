@@ -38,6 +38,9 @@ class TaskCard extends StatelessWidget {
   /// (nền vàng nhạt như thiết kế). Rỗng thì không tô.
   final String highlight;
 
+  /// Thẻ = một nhóm lồng trắng bo 18, không viền (liquid, đợt 3).
+  static const _radius = BorderRadius.all(Radius.circular(18));
+
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
@@ -73,16 +76,12 @@ class TaskCard extends StatelessWidget {
       label: _semanticLabel,
       child: Material(
         color: scheme.surface,
-        borderRadius: OmniRadius.xlAll,
+        borderRadius: _radius,
         child: InkWell(
           onTap: onTap,
-          borderRadius: OmniRadius.xlAll,
-          child: Container(
+          borderRadius: _radius,
+          child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-            decoration: BoxDecoration(
-              border: Border.all(color: scheme.outlineVariant),
-              borderRadius: OmniRadius.xlAll,
-            ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [

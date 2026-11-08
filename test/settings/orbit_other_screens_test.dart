@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:omni_app/core/module/module_registry.dart';
 import 'package:omni_app/design/theme/omni_theme.dart';
-import 'package:omni_app/design/tokens/tokens.dart';
 import 'package:omni_app/modules/settings/presentation/my_permissions_page.dart';
 import 'package:omni_app/security/permissions/access_policy.dart';
 import 'package:omni_app/security/session/session.dart';
@@ -34,9 +33,12 @@ void main() {
       ),
     );
 
-    final summary = tester.widget<Text>(find.text('Đang giữ 1 quyền'));
-    expect(summary.style!.color, OmniColors.orbit);
+    expect(find.text('Đang giữ'), findsOneWidget);
+    expect(find.text('1 quyền'), findsOneWidget);
     expect(find.text('Hộp thư'), findsOneWidget);
+    // Tên tiếng Việt thay mã thô.
+    expect(find.text('Xem hộp thư'), findsOneWidget);
+    expect(find.text('inbox.read'), findsNothing);
     expect(find.byIcon(Icons.check_circle_rounded), findsOneWidget);
     expect(find.byIcon(Icons.remove_circle_outline_rounded), findsOneWidget);
   });

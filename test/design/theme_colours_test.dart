@@ -89,7 +89,11 @@ void main() {
       test('$name: chữ trên nút chính đọc được', () {
         final style = theme.filledButtonTheme.style!;
         final fg = style.foregroundColor!.resolve({})!;
-        final bg = style.backgroundColor!.resolve({})!;
+        // Nút kính nền trắng mờ: đo trên nền đã trộn với nền màn.
+        final bg = Color.alphaBlend(
+          style.backgroundColor!.resolve({})!,
+          theme.scaffoldBackgroundColor,
+        );
         final r = contrastRatio(fg, bg);
 
         expect(
@@ -119,11 +123,17 @@ void main() {
         );
       });
 
-      test('$name: viền nút viền đạt 3:1', () {
-        final side = theme.outlinedButtonTheme.style!.side!.resolve({})!;
-        final r = contrastRatio(side.color, theme.scaffoldBackgroundColor);
+      // Nút phụ là nút kính có CHỮ (liquid-buttons-uiux.html B): chữ tự nhận
+      // diện nút nên WCAG 1.4.11 không đòi viền; đo chữ trên nền đã trộn.
+      test('$name: chữ nút phụ (kính) đạt 4.5:1', () {
+        final style = theme.outlinedButtonTheme.style!;
+        final bg = Color.alphaBlend(
+          style.backgroundColor!.resolve({})!,
+          theme.scaffoldBackgroundColor,
+        );
+        final r = contrastRatio(style.foregroundColor!.resolve({})!, bg);
 
-        expect(r, greaterThanOrEqualTo(3));
+        expect(r, greaterThanOrEqualTo(4.5));
       });
     }
   });

@@ -51,7 +51,7 @@ void main() {
       'Bảo hành 2026',
     );
     await tester.pump();
-    await tester.tap(find.widgetWithText(FilledButton, 'Lưu'));
+    await tester.tap(find.widgetWithText(TextButton, 'Lưu'));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 300));
 
@@ -66,7 +66,7 @@ void main() {
         .widget<CoverPicker>(find.byType(CoverPicker))
         .onPicked('/tmp/anh-nen.jpg');
     await tester.pump();
-    await tester.tap(find.widgetWithText(FilledButton, 'Lưu'));
+    await tester.tap(find.widgetWithText(TextButton, 'Lưu'));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 300));
 
@@ -82,7 +82,7 @@ void main() {
 
     tester.widget<CoverPicker>(find.byType(CoverPicker)).onRemove!();
     await tester.pump();
-    await tester.tap(find.widgetWithText(FilledButton, 'Lưu'));
+    await tester.tap(find.widgetWithText(TextButton, 'Lưu'));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 300));
 
@@ -93,8 +93,8 @@ void main() {
     tester,
   ) async {
     await pump(tester, base);
-    final save = find.widgetWithText(FilledButton, 'Lưu');
-    expect(tester.widget<FilledButton>(save).onPressed, isNull);
+    final save = find.widgetWithText(TextButton, 'Lưu');
+    expect(tester.widget<TextButton>(save).onPressed, isNull);
 
     await tester.enterText(
       find.widgetWithText(TextField, 'Việc bảo hành đàn'),
@@ -115,7 +115,7 @@ void main() {
 
     expect(
       tester
-          .widget<FilledButton>(find.widgetWithText(FilledButton, 'Lưu'))
+          .widget<TextButton>(find.widgetWithText(TextButton, 'Lưu'))
           .onPressed,
       isNull,
     );
@@ -131,7 +131,7 @@ void main() {
     expect(find.text('Nền hệ thống'), findsOneWidget);
     expect(
       tester
-          .widget<FilledButton>(find.widgetWithText(FilledButton, 'Lưu'))
+          .widget<TextButton>(find.widgetWithText(TextButton, 'Lưu'))
           .onPressed,
       isNull,
     );
@@ -147,7 +147,7 @@ void main() {
         .widget<CoverPicker>(find.byType(CoverPicker))
         .onPicked('/tmp/anh-loi.jpg');
     await tester.pump();
-    await tester.tap(find.widgetWithText(FilledButton, 'Lưu'));
+    await tester.tap(find.widgetWithText(TextButton, 'Lưu'));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 300));
 

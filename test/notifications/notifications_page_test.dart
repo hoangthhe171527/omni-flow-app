@@ -156,16 +156,18 @@ void main() {
     expect(find.text('Tin nhan bi an khoi chuong'), findsNothing);
   });
 
-  testWidgets('nhóm ngày phẳng, không còn khung bo ngoài danh sách', (t) async {
+  testWidgets('mỗi nhóm ngày là một thẻ lồng bo 18 (viomni-apple-uiux.html)', (
+    t,
+  ) async {
     await pump(t);
 
     for (final label in ['Hôm nay', 'Trước đó']) {
       final material = t.widget<Material>(
         find.byKey(ValueKey('notification-group-$label')),
       );
-      expect(material.shape, isNull, reason: label);
-      expect(material.borderRadius, isNull, reason: label);
-      expect(material.clipBehavior, Clip.none, reason: label);
+      final radius = material.borderRadius! as BorderRadius;
+      expect(radius.topLeft, const Radius.circular(18), reason: label);
+      expect(material.clipBehavior, Clip.antiAlias, reason: label);
     }
   });
 

@@ -1,17 +1,15 @@
-import 'dart:ui' show ImageFilter;
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/module/module_registry.dart';
+import '../../core/nav/search_mode.dart';
 import '../../core/nav/shell_bar_inset.dart';
 import '../../core/nav/tab_order.dart';
 import '../../core/module/nav_destination.dart';
 import '../../design/components/components.dart';
 import '../../design/platform/omni_motion_scope.dart';
-import '../../design/platform/omni_platform.dart';
 import '../../design/tokens/tokens.dart';
 import 'tab_bar_editor_sheet.dart';
 
@@ -38,6 +36,7 @@ class AppShell extends ConsumerWidget {
     final branchEntries = ref.watch(branchNavEntriesProvider);
     final tabs = ref.watch(tabEntriesProvider).take(maxTabs).toList();
     final moreBranchIndex = branchEntries.length;
+    final searching = ref.watch(searchModeProvider);
 
     // Branch index the shell is currently showing, expressed in tab terms.
     final currentBranch = navigationShell.currentIndex;
@@ -91,11 +90,25 @@ class AppShell extends ConsumerWidget {
             // Body vẽ dưới thanh kính mờ; màn danh sách tự chừa chỗ ở đáy.
             extendBody: true,
             body: navigationShell,
-            bottomNavigationBar: _EditOnLongPress(
-              child: _ShellNavBar(
-                tabs: tabs,
-                selectedIndex: selectedIndex,
-                onSelected: select,
+            // Đang tìm (ô tìm của thanh trên có focus): thanh tab trượt xuống
+            // ẩn, chỉ còn ô tìm và kết quả — như Thư viện ứng dụng iOS.
+            bottomNavigationBar: IgnorePointer(
+              ignoring: searching,
+              child: AnimatedSlide(
+                offset: searching ? const Offset(0, 1.4) : Offset.zero,
+                duration: OmniMotion.of(context).base,
+                curve: OmniCurves.standard,
+                child: AnimatedOpacity(
+                  opacity: searching ? 0 : 1,
+                  duration: OmniMotion.of(context).base,
+                  child: _EditOnLongPress(
+                    child: _ShellNavBar(
+                      tabs: tabs,
+                      selectedIndex: selectedIndex,
+                      onSelected: select,
+                    ),
+                  ),
+                ),
               ),
             ),
           ),
@@ -269,49 +282,76 @@ class _ShellNavBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
+    // Viên kính nổi cách mép 12 (`liquid-glass-uiux.html`): nội dung cuộn
+    // chạy bên dưới (Scaffold.extendBody). Đáy: vùng an toàn, tối thiểu 12.
+    final bottom = MediaQuery.viewPaddingOf(context).bottom;
 
-    return ClipRect(
-      child: BackdropFilter(
-        filter: ImageFilter.blur(
-          sigmaX: isApple(context) ? 20 : 10,
-          sigmaY: isApple(context) ? 20 : 10,
+    // Dải mờ dần sau viên kính, lan 12 lên trên: nội dung chạy tới đáy nhoè
+    // và nhạt dần (kể cả ở khe hai bên viên kính) như iOS.
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        const Positioned(
+          left: 0,
+          right: 0,
+          top: -12,
+          bottom: 0,
+          child: OmniScrollEdge(atTop: false),
         ),
-        child: DecoratedBox(
-          decoration: BoxDecoration(
-            color: scheme.surface.withValues(
-              alpha: isApple(context) ? 0.8 : 0.9,
-            ),
-            border: Border(
-              top: BorderSide(color: scheme.onSurface.withValues(alpha: 0.07)),
-            ),
-          ),
-          child: SafeArea(
-            top: false,
+        Padding(
+          padding: EdgeInsets.fromLTRB(12, 0, 12, bottom > 12 ? bottom : 12),
+          child: OmniGlass(
+            radius: ShellBarInset.pillHeight / 2,
+            padding: const EdgeInsets.symmetric(horizontal: 6),
             child: SizedBox(
-              height: ShellBarInset.barHeight,
-              child: Row(
-                children: [
-                  for (var i = 0; i < tabs.length; i++)
-                    Expanded(
-                      child: _ShellNavItem(
-                        destination: tabs[i],
-                        selected: selectedIndex == i,
-                        onTap: () => onSelected(i),
+              height: ShellBarInset.pillHeight,
+              child: LayoutBuilder(
+                builder: (context, box) {
+                  final count = tabs.length + 1;
+                  final slot = box.maxWidth / count;
+                  final motion = OmniMotion.enabled(context);
+
+                  return Stack(
+                    children: [
+                      // MỘT viên chọn trượt từ tab cũ sang tab mới, nảy nhẹ
+                      // như lò xo iOS — không phải mỗi mục tự bật/tắt nền.
+                      AnimatedPositioned(
+                        duration: motion
+                            ? const Duration(milliseconds: 420)
+                            : Duration.zero,
+                        curve: const Cubic(0.34, 1.36, 0.64, 1),
+                        left: slot * selectedIndex.clamp(0, count - 1),
+                        top: 6,
+                        bottom: 6,
+                        width: slot,
+                        child: const OmniGlassLens(),
                       ),
-                    ),
-                  Expanded(
-                    child: _ShellNavItem.more(
-                      selected: selectedIndex == tabs.length,
-                      onTap: () => onSelected(tabs.length),
-                    ),
-                  ),
-                ],
+                      Row(
+                        children: [
+                          for (var i = 0; i < tabs.length; i++)
+                            Expanded(
+                              child: _ShellNavItem(
+                                destination: tabs[i],
+                                selected: selectedIndex == i,
+                                onTap: () => onSelected(i),
+                              ),
+                            ),
+                          Expanded(
+                            child: _ShellNavItem.more(
+                              selected: selectedIndex == tabs.length,
+                              onTap: () => onSelected(tabs.length),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  );
+                },
               ),
             ),
           ),
         ),
-      ),
+      ],
     );
   }
 }
@@ -341,10 +381,8 @@ class _ShellNavItem extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final scheme = Theme.of(context).colorScheme;
-    // Mục đang chọn: icon màu chính + vạch 2px ở mép trên + chữ mực 600. Không
-    // còn viên nền teal nhạt — nền màu cho một mục điều hướng là trang trí.
+    // Mục đang chọn: viên trắng mờ trong kính + icon và chữ màu chính.
     final iconColor = selected ? scheme.primary : scheme.onSurfaceVariant;
-    final labelColor = selected ? scheme.primary : scheme.onSurfaceVariant;
     final badgeProvider = destination?.badge;
     final count = badgeProvider == null ? 0 : ref.watch(badgeProvider);
     final text = destination?.label ?? label!;
@@ -360,77 +398,73 @@ class _ShellNavItem extends ConsumerWidget {
       button: true,
       label: semanticsLabel,
       excludeSemantics: true,
-      child: InkWell(
+      // Không gợn, không tô khi rê chuột: iOS không có, và lớp tô hover của
+      // Material trên web làm một mục trông "đậm" hơn các mục khác.
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
         onTap: onTap,
-        child: Stack(
-          children: [
-            if (!isApple(context))
-              Positioned(
-                top: 0,
-                left: 0,
-                right: 0,
-                child: Center(
-                  child: SizedBox(
-                    width: 22,
-                    child: AnimatedContainer(
-                      duration: OmniMotion.of(context).base,
-                      curve: OmniCurves.standard,
-                      height: 2,
-                      decoration: BoxDecoration(
-                        color: selected ? scheme.primary : Colors.transparent,
-                        borderRadius: BorderRadius.circular(2),
+        child: TweenAnimationBuilder<Color?>(
+          duration: OmniMotion.of(context).base,
+          curve: OmniCurves.standard,
+          tween: ColorTween(end: iconColor),
+          builder: (context, color, _) => Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                SizedBox(
+                  width: 44,
+                  height: 26,
+                  child: Stack(
+                    clipBehavior: Clip.none,
+                    alignment: Alignment.center,
+                    children: [
+                      Icon(
+                        selected
+                            ? (destination?.selectedIcon ?? selectedIcon!)
+                            : (destination?.icon ?? icon!),
+                        size: 21,
+                        color: color,
+                      ),
+                      if (count > 0)
+                        Positioned(
+                          right: -4,
+                          top: -4,
+                          child: _NavBadge(
+                            count: count,
+                            tone: destination!.badgeTone,
+                            display: destination!.badgeDisplay,
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 1),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 2),
+                  // Màn hẹp (360): "Tổng quan" từng thành "Tổng qu…". Thu nhỏ
+                  // vừa ô thay vì cắt chữ.
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Text(
+                      text,
+                      maxLines: 1,
+                      style: OmniType.micro.copyWith(
+                        color: color,
+                        fontWeight: selected
+                            ? FontWeight.w600
+                            : FontWeight.w500,
                       ),
                     ),
                   ),
                 ),
-              ),
-            Center(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  SizedBox(
-                    width: 44,
-                    height: 28,
-                    child: Stack(
-                      clipBehavior: Clip.none,
-                      alignment: Alignment.center,
-                      children: [
-                        Icon(
-                          selected
-                              ? (destination?.selectedIcon ?? selectedIcon!)
-                              : (destination?.icon ?? icon!),
-                          size: 21,
-                          color: iconColor,
-                        ),
-                        if (count > 0)
-                          Positioned(
-                            right: -4,
-                            top: -4,
-                            child: _NavBadge(
-                              count: count,
-                              tone: destination!.badgeTone,
-                              display: destination!.badgeDisplay,
-                            ),
-                          ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    text,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: OmniType.micro.copyWith(
-                      color: labelColor,
-                      fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
-                    ),
-                  ),
-                ],
-              ),
+              ],
             ),
-          ],
+          ),
         ),
       ),
     );
   }
 }
+
+/// Viên chọn của thanh tab: "kính trong kính" — sáng hơn nền kính, viền
+/// sáng, vệt sáng trên, bóng nhỏ; không phải khối trắng đặc.

@@ -288,4 +288,26 @@ abstract final class OmniColors {
   /// Bản tối: nền nâng một bậc, chữ phụ sáng.
   static const darkAvatarSurface = darkMuted;
   static const darkAvatarForeground = darkMutedForeground;
+
+  /// Ô người phụ trách 22 tròn trên dòng Hộp thư (inbox-assignee-uiux.html,
+  /// phương án B người dùng duyệt 2026-11-08): nền NHẠT theo từng người để
+  /// nhận ra nhau trong danh sách, thay khối mực vuông nặng hơn tên khách.
+  /// Ngoại lệ có chủ đích của luật "không tô màu theo tên" ở trên — chỉ dùng
+  /// cho ô này. Cặp (nền, chữ); đo trong contrast_test.
+  static const assigneeTones = <(Color, Color)>[
+    (Color(0xFFE3ECFB), Color(0xFF0B4BB3)),
+    (Color(0xFFFDEBDD), Color(0xFF9A4A12)),
+    (Color(0xFFE2F5EC), Color(0xFF17744A)),
+    (Color(0xFFF1E6FB), Color(0xFF6B2FA3)),
+    (Color(0xFFFCE4EC), Color(0xFFA3224F)),
+  ];
+
+  /// Bản tối của [assigneeTones], cùng thứ tự.
+  static const darkAssigneeTones = <(Color, Color)>[
+    (Color(0xFF1E3358), Color(0xFFBFD6FF)),
+    (Color(0xFF4A2E1B), Color(0xFFFFD2AE)),
+    (Color(0xFF173D2C), Color(0xFFB5EBD0)),
+    (Color(0xFF38234F), Color(0xFFE2C8FA)),
+    (Color(0xFF4A1C2C), Color(0xFFFFC2D4)),
+  ];
 }

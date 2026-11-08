@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/nav/shell_bar_inset.dart';
 import '../../../design/components/components.dart';
 import '../../../design/tokens/tokens.dart';
 import '../application/finance_providers.dart';
@@ -139,102 +140,59 @@ class _ExpensesPageState extends ConsumerState<ExpensesPage> {
       appBar: OmniAppBar(
         title: '',
         backgroundColor: p.bg,
+        // Viên kính rời của thanh trên (OmniAppBar tự bọc): chỉ còn biểu
+        // tượng một tông; đang bật thì màu chủ đạo. "+" là biểu tượng xanh,
+        // không tô đặc (gu người dùng).
         actions: [
-          // Search toggle button
-          Padding(
-            padding: const EdgeInsets.only(right: 6),
-            child: Tooltip(
-              message: 'Tìm kiếm',
-              child: InkWell(
-                key: const ValueKey('finance-search-toggle'),
-                onTap: () {
-                  notifier.toggleSearch();
-                  if (!state.searchOpen) {
-                    Future.delayed(const Duration(milliseconds: 60), () {
-                      if (mounted) _searchFocus.requestFocus();
-                    });
-                  }
-                },
-                borderRadius: BorderRadius.circular(99),
-                child: Container(
-                  width: 34,
-                  height: 34,
-                  decoration: BoxDecoration(
-                    color: state.searchOpen ? p.primarySoft : p.card,
-                    shape: BoxShape.circle,
-                    border: Border.all(
-                      color: state.searchOpen ? p.selLine : p.line,
-                      width: 0.5,
-                    ),
-                  ),
-                  child: Icon(
-                    Icons.search_rounded,
-                    size: 17,
-                    color: state.searchOpen ? p.primaryInk : p.ink,
-                  ),
+          Tooltip(
+            message: 'Tìm kiếm',
+            child: InkWell(
+              key: const ValueKey('finance-search-toggle'),
+              customBorder: const CircleBorder(),
+              onTap: () {
+                notifier.toggleSearch();
+                if (!state.searchOpen) {
+                  Future.delayed(const Duration(milliseconds: 60), () {
+                    if (mounted) _searchFocus.requestFocus();
+                  });
+                }
+              },
+              child: SizedBox.square(
+                dimension: 44,
+                child: Icon(
+                  Icons.search_rounded,
+                  size: 20,
+                  color: state.searchOpen ? p.primaryInk : p.ink,
                 ),
               ),
             ),
           ),
-          // Sort popover button
-          Padding(
-            padding: const EdgeInsets.only(right: 6),
-            child: Tooltip(
-              message: 'Sắp xếp danh sách',
-              child: InkWell(
-                key: const ValueKey('finance-sort-btn'),
-                onTap: _openSortMenu,
-                borderRadius: BorderRadius.circular(99),
-                child: Container(
-                  key: _sortBtnKey,
-                  width: 34,
-                  height: 34,
-                  decoration: BoxDecoration(
-                    color: sortActive ? p.primarySoft : p.card,
-                    shape: BoxShape.circle,
-                    border: Border.all(
-                      color: sortActive ? p.selLine : p.line,
-                      width: 0.5,
-                    ),
-                  ),
-                  child: Icon(
-                    Icons.swap_vert_rounded,
-                    size: 17,
-                    color: sortActive ? p.primaryInk : p.ink,
-                  ),
+          Tooltip(
+            message: 'Sắp xếp danh sách',
+            child: InkWell(
+              key: const ValueKey('finance-sort-btn'),
+              customBorder: const CircleBorder(),
+              onTap: _openSortMenu,
+              child: SizedBox.square(
+                key: _sortBtnKey,
+                dimension: 44,
+                child: Icon(
+                  Icons.swap_vert_rounded,
+                  size: 20,
+                  color: sortActive ? p.primaryInk : p.ink,
                 ),
               ),
             ),
           ),
-          // Primary Add button (+)
-          Padding(
-            padding: const EdgeInsets.only(right: 8),
-            child: Tooltip(
-              message: 'Thêm khoản chi',
-              child: InkWell(
-                key: const ValueKey('finance-add-btn'),
-                onTap: () => showExpenseAddSheet(context: context),
-                borderRadius: BorderRadius.circular(99),
-                child: Container(
-                  width: 34,
-                  height: 34,
-                  decoration: BoxDecoration(
-                    color: p.primary,
-                    shape: BoxShape.circle,
-                    boxShadow: [
-                      BoxShadow(
-                        color: p.primary.withValues(alpha: 0.28),
-                        blurRadius: 10,
-                        offset: const Offset(0, 3),
-                      ),
-                    ],
-                  ),
-                  child: const Icon(
-                    Icons.add_rounded,
-                    size: 20,
-                    color: Colors.white,
-                  ),
-                ),
+          Tooltip(
+            message: 'Thêm khoản chi',
+            child: InkWell(
+              key: const ValueKey('finance-add-btn'),
+              customBorder: const CircleBorder(),
+              onTap: () => showExpenseAddSheet(context: context),
+              child: SizedBox.square(
+                dimension: 44,
+                child: Icon(Icons.add_rounded, size: 24, color: p.primary),
               ),
             ),
           ),
@@ -356,7 +314,16 @@ class _ExpensesPageState extends ConsumerState<ExpensesPage> {
                       // đang hiện trên màn, không dựng cả tháng một lượt.
                       child: _lazyList(
                         physics: const AlwaysScrollableScrollPhysics(),
-                        padding: const EdgeInsets.fromLTRB(16, 2, 16, 100),
+                        // Chừa thanh tab kính + vùng an toàn (iPhone có thanh
+                        // home 34: hằng 100 vẫn bị che dòng cuối).
+                        padding: EdgeInsets.fromLTRB(
+                          16,
+                          2,
+                          16,
+                          ShellBarInset.of(context) +
+                              MediaQuery.viewPaddingOf(context).bottom +
+                              24,
+                        ),
                         children: [
                           if (state.isLoading && !activeLoaded)
                             _buildLoadingCard(p, state)
@@ -438,8 +405,7 @@ class _ExpensesPageState extends ConsumerState<ExpensesPage> {
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 36),
       decoration: BoxDecoration(
         color: p.card,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: p.line, width: 0.5),
+        borderRadius: BorderRadius.circular(18),
       ),
       child: Column(
         children: [
@@ -472,8 +438,7 @@ class _ExpensesPageState extends ConsumerState<ExpensesPage> {
       padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 28),
       decoration: BoxDecoration(
         color: p.card,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: p.line, width: 0.5),
+        borderRadius: BorderRadius.circular(18),
       ),
       child: Column(
         children: [
@@ -491,14 +456,6 @@ class _ExpensesPageState extends ConsumerState<ExpensesPage> {
               onPressed: notifier.refresh,
               icon: const Icon(Icons.refresh_rounded, size: 16),
               label: const Text('Thử lại'),
-              style: FilledButton.styleFrom(
-                backgroundColor: p.primary,
-                foregroundColor: Colors.white,
-                elevation: 0,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10),
-                ),
-              ),
             ),
           ),
         ],
@@ -718,8 +675,7 @@ class _ExpensesPageState extends ConsumerState<ExpensesPage> {
       padding: const EdgeInsets.fromLTRB(15, 13, 15, 12),
       decoration: BoxDecoration(
         color: p.card,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: p.line, width: 0.5),
+        borderRadius: BorderRadius.circular(18),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -1115,7 +1071,6 @@ class _ExpensesPageState extends ConsumerState<ExpensesPage> {
       decoration: BoxDecoration(
         color: p.card,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: p.line, width: 0.5),
       ),
       child: Column(
         children: [
@@ -1203,11 +1158,7 @@ class _ExpensesPageState extends ConsumerState<ExpensesPage> {
                       height: 28,
                       padding: const EdgeInsets.symmetric(horizontal: 10),
                       alignment: Alignment.center,
-                      decoration: BoxDecoration(
-                        color: p.card,
-                        borderRadius: BorderRadius.circular(99),
-                        border: Border.all(color: p.primary, width: 1.2),
-                      ),
+                      decoration: OmniGlass.buttonDecoration(context),
                       child: Text(
                         allSum > 0 ? 'Ghi tất cả' : 'Mở nhập',
                         style: OmniType.caption.copyWith(
@@ -1301,16 +1252,12 @@ class _ExpensesPageState extends ConsumerState<ExpensesPage> {
                                   ),
                                   const SizedBox(width: 6),
                                   Expanded(
-                                    child: FittedBox(
-                                      fit: BoxFit.scaleDown,
-                                      alignment: Alignment.centerLeft,
-                                      child: Text(
-                                        suggestions[i].titleForMonth,
-                                        maxLines: 1,
-                                        style: OmniType.bodySm.copyWith(
-                                          color: p.ink,
-                                          fontWeight: FontWeight.w500,
-                                        ),
+                                    child: Text(
+                                      suggestions[i].titleForMonth,
+                                      maxLines: 2,
+                                      style: OmniType.bodySm.copyWith(
+                                        color: p.ink,
+                                        fontWeight: FontWeight.w500,
                                       ),
                                     ),
                                   ),
@@ -1325,7 +1272,7 @@ class _ExpensesPageState extends ConsumerState<ExpensesPage> {
                               suggestions[i],
                               state.recurAmt[i],
                             ),
-                            borderRadius: BorderRadius.circular(8),
+                            borderRadius: BorderRadius.circular(12),
                             child: Container(
                               height: 29,
                               padding: const EdgeInsets.symmetric(
@@ -1333,8 +1280,7 @@ class _ExpensesPageState extends ConsumerState<ExpensesPage> {
                               ),
                               decoration: BoxDecoration(
                                 color: p.control,
-                                borderRadius: BorderRadius.circular(8),
-                                border: Border.all(color: p.line, width: 0.5),
+                                borderRadius: BorderRadius.circular(12),
                               ),
                               child: Row(
                                 mainAxisSize: MainAxisSize.min,
@@ -1377,14 +1323,6 @@ class _ExpensesPageState extends ConsumerState<ExpensesPage> {
                         onPressed: selectedCount > 0 && selectedSum > 0
                             ? () => notifier.commitRecurring()
                             : null,
-                        style: FilledButton.styleFrom(
-                          backgroundColor: p.primary,
-                          foregroundColor: Colors.white,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          elevation: 0,
-                        ),
                         child: FittedBox(
                           fit: BoxFit.scaleDown,
                           child: Text(
@@ -1394,7 +1332,6 @@ class _ExpensesPageState extends ConsumerState<ExpensesPage> {
                                       ? 'Nhập số tiền cho khoản đã chọn'
                                       : 'Chọn ít nhất 1 khoản'),
                             style: OmniType.bodySm.copyWith(
-                              color: Colors.white,
                               fontWeight: FontWeight.w600,
                               fontFeatures: const [
                                 FontFeature.tabularFigures(),
@@ -1475,7 +1412,6 @@ class _ExpensesPageState extends ConsumerState<ExpensesPage> {
           decoration: BoxDecoration(
             color: p.card,
             borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: p.line, width: 0.5),
           ),
           alignment: Alignment.center,
           child: Text(
@@ -1544,7 +1480,6 @@ class _ExpensesPageState extends ConsumerState<ExpensesPage> {
           decoration: BoxDecoration(
             color: p.card,
             borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: p.line, width: 0.5),
           ),
           clipBehavior: Clip.antiAlias,
           child: Column(

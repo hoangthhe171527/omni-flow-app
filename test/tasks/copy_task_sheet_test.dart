@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:omni_app/core/error/app_exception.dart';
+import 'package:omni_app/design/components/components.dart';
 import 'package:omni_app/design/theme/omni_theme.dart';
 import 'package:omni_app/modules/tasks/data/tasks_api.dart';
 import 'package:omni_app/modules/tasks/domain/custom_field.dart';
@@ -187,7 +188,7 @@ void main() {
     await tapIt(t, find.byKey(ValueKey(key)));
     await t.tap(find.text(day));
     await t.pump();
-    await t.tap(find.text('OK'));
+    await t.tap(find.byKey(const Key('omni-date-done')));
     await t.pumpAndSettle();
   }
 
@@ -423,10 +424,10 @@ void main() {
     await open(t);
     await pick(t, 'copy-team', 'Chưa thuộc team');
     expect(inField('copy-section', 'Chưa xếp nhóm'), findsOneWidget);
-    final field = t.widget<DropdownButtonFormField<String>>(
+    final field = t.widget<OmniGroupRow>(
       find.byKey(const ValueKey('copy-section')),
     );
-    expect(field.onChanged, isNull);
+    expect(field.onTap, isNull);
     final body = await submit(t);
     expect(body['project_id'], 'pC');
     expect(body.containsKey('section_id'), isFalse);
@@ -452,10 +453,10 @@ void main() {
     await tapIt(t, find.text('Chọn người khác'));
     await tapIt(t, find.text('+ Thêm người'));
     expect(find.text('Người thực hiện bản sao'), findsOneWidget);
-    expect(find.widgetWithText(CheckboxListTile, 'Bảo Khánh'), findsOneWidget);
-    expect(find.widgetWithText(CheckboxListTile, 'Hằng Ni'), findsOneWidget);
-    expect(find.widgetWithText(CheckboxListTile, 'Linh'), findsNothing);
-    await t.tap(find.widgetWithText(CheckboxListTile, 'Bảo Khánh'));
+    expect(find.widgetWithText(OmniGroupRow, 'Bảo Khánh'), findsOneWidget);
+    expect(find.widgetWithText(OmniGroupRow, 'Hằng Ni'), findsOneWidget);
+    expect(find.widgetWithText(OmniGroupRow, 'Linh'), findsNothing);
+    await t.tap(find.widgetWithText(OmniGroupRow, 'Bảo Khánh'));
     await t.pump();
     await t.tap(find.text('Chọn 2 người'));
     await t.pumpAndSettle();
@@ -581,15 +582,15 @@ void main() {
     expect(copyButton(t).onPressed, isNull);
   });
 
-  testWidgets('Huỷ → trả null', (t) async {
+  testWidgets('Đóng → trả null', (t) async {
     await open(t);
-    await tapIt(t, find.widgetWithText(OutlinedButton, 'Huỷ'));
+    await tapIt(t, find.byTooltip('Đóng'));
     expect(result, isNull);
     expect(find.text('Sao chép công việc'), findsNothing);
   });
 
   testWidgets('mọi nút chạm ≥ 44×44 (×, xoá ngày, bỏ người, công tắc, '
-      'Huỷ/Sao chép cao 48)', (t) async {
+      'Sao chép cao 48)', (t) async {
     await open(t);
     void atLeast44(Finder f) {
       final s = t.getSize(f);
@@ -602,14 +603,13 @@ void main() {
     atLeast44(find.byTooltip('Xoá ngày kết thúc'));
     atLeast44(find.byType(Switch));
     expect(
-      t.getSize(find.widgetWithText(OutlinedButton, 'Huỷ')).height,
-      greaterThanOrEqualTo(48),
-    );
-    expect(
       t.getSize(find.widgetWithText(FilledButton, 'Sao chép')).height,
       greaterThanOrEqualTo(48),
     );
-    expect(t.getSize(find.byKey(const ValueKey('copy-due'))).height, 44);
+    expect(
+      t.getSize(find.byKey(const ValueKey('copy-due'))).height,
+      greaterThanOrEqualTo(48),
+    );
     await tapIt(t, find.text('Chọn người khác'));
     atLeast44(find.byTooltip('Bỏ Hằng Ni'));
     expect(

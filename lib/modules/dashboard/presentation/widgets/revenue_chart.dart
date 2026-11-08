@@ -208,7 +208,7 @@ class _RevenueChartState extends State<RevenueChart>
                   ),
                 ),
                 Text(
-                  'Kỳ trước ${prev == null ? '—' : formatCompactVnd(prev)}',
+                  'Kỳ trước ${prev == null ? '—' : formatFullVnd(prev)}',
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: OmniType.micro.copyWith(
@@ -233,7 +233,7 @@ String revenueSlotLabel(RevenueRange r, int i) => switch (r) {
 
 String _tipLine(RevenueSeries s, int i) {
   final v = s.valueAt(i);
-  return '${v == null ? 'Chưa tới' : formatCompactVnd(v)} · '
+  return '${v == null ? 'Chưa tới' : formatFullVnd(v)} · '
       '${revenueSlotLabel(s.range, i)}';
 }
 

@@ -4,7 +4,7 @@ import 'package:omni_app/design/components/components.dart';
 import 'package:omni_app/design/theme/omni_theme.dart';
 import 'package:omni_app/design/tokens/tokens.dart';
 
-/// Một kiểu tab cho cả app: gạch chân 2px màu chính (`SPrinciples.dc.html` §8).
+/// Một kiểu tab cho cả app: bộ chọn đoạn kính (viomni-apple-uiux.html).
 void main() {
   Widget host(Widget child, {double width = 360}) => MaterialApp(
     theme: OmniTheme.light(TargetPlatform.android),
@@ -22,27 +22,26 @@ void main() {
     OmniTab(label: 'Tất cả'),
   ];
 
-  BorderSide underline(WidgetTester tester, String label) {
-    final box = tester.widget<AnimatedContainer>(
-      find.descendant(
-        of: find.widgetWithText(OmniTabItem, label),
-        matching: find.byType(AnimatedContainer),
-      ),
-    );
-    return ((box.decoration! as BoxDecoration).border! as Border).bottom;
-  }
+  Color labelColor(WidgetTester tester, String label) =>
+      tester.widget<Text>(find.text(label)).style!.color!;
 
-  testWidgets('tab đang chọn gạch chân 2px màu chính, tab khác không', (
-    tester,
-  ) async {
-    await tester.pumpWidget(
-      host(OmniTabStrip(tabs: tabs, selected: 0, onSelected: (_) {})),
-    );
+  testWidgets(
+    'kính: thấu kính nằm dưới tab đang chọn, chữ tab chọn màu chính',
+    (tester) async {
+      await tester.pumpWidget(
+        host(OmniTabStrip(tabs: tabs, selected: 1, onSelected: (_) {})),
+      );
 
-    expect(underline(tester, 'Hôm nay').color, OmniColors.primary);
-    expect(underline(tester, 'Hôm nay').width, 2);
-    expect(underline(tester, 'Sắp tới').color, Colors.transparent);
-  });
+      expect(find.byType(OmniGlass), findsOneWidget);
+      final lens = tester.getRect(find.byType(OmniGlassLens));
+      final picked = tester.getRect(
+        find.widgetWithText(OmniTabItem, 'Quá hạn'),
+      );
+      expect(lens.center.dx, closeTo(picked.center.dx, 1));
+      expect(labelColor(tester, 'Quá hạn'), OmniColors.primary);
+      expect(labelColor(tester, 'Sắp tới'), isNot(OmniColors.primary));
+    },
+  );
 
   testWidgets('tên tab không bị cắt ở màn 360dp', (tester) async {
     await tester.pumpWidget(

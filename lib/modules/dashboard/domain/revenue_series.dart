@@ -79,13 +79,13 @@ class RevenueSeries {
       RevenueRange.month => 'Tháng này',
       RevenueRange.year => 'Năm nay',
     };
-    final b = StringBuffer('$period ${formatCompactVnd(headline)}');
+    final b = StringBuffer('$period ${formatFullVnd(headline)}');
     final d = deltaRatio;
     if (d != null) {
       final pct = (d.abs() * 100).round();
       b.write(', ${d >= 0 ? 'tăng' : 'giảm'} $pct% so với cùng kỳ');
     }
-    b.write('; dự kiến ${formatCompactVnd(projectedEnd)}');
+    b.write('; dự kiến ${formatFullVnd(projectedEnd)}');
     final t = targetRatio;
     if (t != null) b.write('; đạt ${(t * 100).round()}% chỉ tiêu');
     return b.toString();
@@ -150,7 +150,16 @@ String _group(int n) {
   return b.toString();
 }
 
+/// Tiền đầy đủ cho số hiển thị (gu người dùng: không rút gọn tiền):
+/// 327.4e6 → '327.400.000 đ', 0 → '0 đ'.
+String formatFullVnd(double v) {
+  final r = v.round();
+  final sign = r < 0 ? '-' : '';
+  return '$sign${_group(r.abs())} đ';
+}
+
 /// 1.25e9 → '1,25 tỷ', 8.3e8 → '830 tr', 25000 → '25.000 đ', 0 → '0 đ'.
+/// Chỉ còn cho chỗ chật như nhãn trục; số người đọc dùng [formatFullVnd].
 String formatCompactVnd(double v) {
   final sign = v < 0 ? '-' : '';
   final a = v.abs();

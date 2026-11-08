@@ -68,23 +68,18 @@ class CommentSection extends ConsumerWidget {
             children: [
               // Phần cũ đọc được NGAY ĐÂY: ở xưởng không ai mở web.
               if (ready && thread.hasMore)
-                Align(
-                  alignment: Alignment.centerLeft,
-                  child: TextButton.icon(
-                    onPressed: thread.loadingOlder
-                        ? null
-                        : () => _loadOlder(context, ref),
-                    icon: thread.loadingOlder
-                        ? const SizedBox(
-                            width: 16,
-                            height: 16,
-                            child: CircularProgressIndicator.adaptive(
-                              strokeWidth: 2,
-                            ),
-                          )
-                        : const Icon(Icons.history_rounded),
-                    label: Text(
-                      'Xem thêm ${thread.hiddenCount} bình luận cũ hơn',
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 10),
+                  child: Center(
+                    child: OmniChoicePill(
+                      icon: Icons.history_rounded,
+                      label: thread.loadingOlder
+                          ? 'Đang tải…'
+                          : 'Xem thêm ${thread.hiddenCount} bình luận cũ hơn',
+                      selected: false,
+                      onTap: thread.loadingOlder
+                          ? null
+                          : () => _loadOlder(context, ref),
                     ),
                   ),
                 ),
@@ -273,7 +268,7 @@ class _Comment extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
       decoration: BoxDecoration(
         color: Theme.of(context).scaffoldBackgroundColor,
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(14),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -373,7 +368,7 @@ class _Comment extends StatelessWidget {
                   type: MaterialType.transparency,
                   child: InkWell(
                     onLongPress: onLongPress,
-                    borderRadius: BorderRadius.circular(8),
+                    borderRadius: BorderRadius.circular(14),
                     child: bubble,
                   ),
                 ),

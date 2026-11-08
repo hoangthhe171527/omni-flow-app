@@ -1,17 +1,17 @@
-import 'dart:ui';
-
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
+import '../../../../../design/components/components.dart';
 import '../../../../../design/platform/omni_motion_scope.dart';
 import '../../../../../design/tokens/tokens.dart';
 
-/// Header kính sáng của chi tiết việc (`TaskDetail.dc.html` `.bar`).
+/// Thanh trên của chi tiết việc, kiểu nút kính rời (viomni-apple-uiux.html,
+/// màn "Chi tiết việc", duyệt 07/11).
 ///
-/// ✕ 44 bên trái; giữa là tên việc 15 w600, mờ 0 cho tới khi dòng tiêu đề
-/// trong thân cuộn khuất dưới header ([titleShown]); phải là [menu] (⋯).
-/// Nút "Người theo dõi" ([followers], Nhóm 2) đứng trước ⋯, chỉ khi API có
-/// khả năng theo dõi.
+/// Không còn dải nền: ✕, "Người theo dõi" ([followers]) và ⋯ ([menu]) là các
+/// viên kính tròn 44 trôi trên nội dung; nội dung cuộn dưới thanh thì nhoè dần
+/// ([OmniScrollEdge]). Giữa là tên việc 15 w600, chỉ hiện khi dòng tiêu đề
+/// trong thân đã khuất dưới thanh ([titleShown]).
 class DetailHeader extends StatelessWidget implements PreferredSizeWidget {
   const DetailHeader({
     super.key,
@@ -21,12 +21,13 @@ class DetailHeader extends StatelessWidget implements PreferredSizeWidget {
     this.followers,
   });
 
-  static const double height = 48;
+  /// Đệm trên 4 + nút 44 + đệm dưới 8.
+  static const double height = 56;
 
   final String title;
   final ValueListenable<bool> titleShown;
 
-  /// Nút ⋯ (đã có vùng chạm 44). null = không có mục nào cho người này.
+  /// Nút ⋯ (vùng chạm 44). null = không có mục nào cho người này.
   final Widget? menu;
 
   /// Nút "Người theo dõi" (vùng chạm 44). null = API chưa có khả năng.
@@ -38,79 +39,62 @@ class DetailHeader extends StatelessWidget implements PreferredSizeWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final glass = OmniColors.byBrightness(
-      context,
-      OmniColors.background.withValues(alpha: 0.82),
-      OmniColors.darkBackground.withValues(alpha: 0.82),
-    );
     final duration = OmniMotion.enabled(context)
         ? OmniDuration.base
         : Duration.zero;
 
-    return ClipRect(
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-        child: DecoratedBox(
-          decoration: BoxDecoration(
-            color: glass,
-            border: Border(
-              bottom: BorderSide(
-                color: scheme.onSurface.withValues(alpha: 0.06),
-              ),
-            ),
-          ),
-          child: SafeArea(
-            bottom: false,
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        const Positioned.fill(child: OmniScrollEdge(atTop: true)),
+        SafeArea(
+          bottom: false,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(12, 4, 12, 8),
             child: SizedBox(
-              height: height,
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(4, 0, 4, 4),
-                child: Row(
-                  children: [
-                    IconButton(
-                      tooltip: 'Đóng',
-                      onPressed: () => Navigator.of(context).maybePop(),
-                      style: IconButton.styleFrom(
-                        minimumSize: const Size(44, 44),
-                        maximumSize: const Size(44, 44),
-                        padding: EdgeInsets.zero,
-                        foregroundColor: scheme.onSurface,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                      ),
-                      icon: const Icon(
-                        Icons.close_rounded,
-                        size: OmniIconSize.xl - 2,
-                      ),
-                    ),
-                    Expanded(
-                      child: ValueListenableBuilder<bool>(
-                        valueListenable: titleShown,
-                        builder: (context, shown, _) => AnimatedOpacity(
-                          opacity: shown ? 1 : 0,
-                          duration: duration,
-                          child: Text(
-                            title,
-                            key: const ValueKey('header-title'),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: OmniType.bodyStrong.copyWith(
-                              color: scheme.onSurface,
-                            ),
+              height: 44,
+              child: Row(
+                children: [
+                  OmniTopBarAction(
+                    icon: Icons.close_rounded,
+                    tooltip: 'Đóng',
+                    onPressed: () => Navigator.of(context).maybePop(),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: ValueListenableBuilder<bool>(
+                      valueListenable: titleShown,
+                      builder: (context, shown, _) => AnimatedOpacity(
+                        opacity: shown ? 1 : 0,
+                        duration: duration,
+                        child: Text(
+                          title,
+                          key: const ValueKey('header-title'),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          textAlign: TextAlign.center,
+                          style: OmniType.bodyStrong.copyWith(
+                            color: scheme.onSurface,
                           ),
                         ),
                       ),
                     ),
-                    ?followers,
-                    menu ?? const SizedBox(width: 44),
+                  ),
+                  const SizedBox(width: 10),
+                  if (followers case final button?) ...[
+                    OmniGlassCircle(child: button),
+                    const SizedBox(width: 8),
                   ],
-                ),
+                  if (menu case final button?)
+                    OmniGlassCircle(child: button)
+                  else
+                    const SizedBox(width: 44),
+                ],
               ),
             ),
           ),
         ),
-      ),
+      ],
     );
   }
 }

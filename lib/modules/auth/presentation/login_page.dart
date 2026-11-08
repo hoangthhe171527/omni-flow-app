@@ -85,158 +85,163 @@ class _LoginPageState extends ConsumerState<LoginPage>
 
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      body: SafeArea(
-        child: SingleChildScrollView(
-          keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-          padding: const EdgeInsets.fromLTRB(24, 96, 24, 24),
-          child: Center(
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 420),
-              child: AutofillGroup(
-                child: Form(
-                  key: _formKey,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      Center(
-                        child: Container(
-                          width: 108,
-                          height: 108,
-                          alignment: Alignment.center,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: OmniColors.byBrightness(
-                              context,
-                              OmniColors.accent,
-                              OmniColors.darkAccent,
-                            ).withValues(alpha: 0.7),
-                          ),
-                          child: const BrandAnchor(
-                            child: OmniBrandMark(size: 64),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 20),
-                      Text(
-                        'Chào mừng trở lại',
-                        textAlign: TextAlign.center,
-                        style: OmniType.largeTitle.copyWith(
-                          color: scheme.onSurface,
-                        ),
-                      ),
-                      const SizedBox(height: 32),
-                      AuthField(
-                        controller: _email,
-                        hint: 'Email làm việc',
-                        icon: Icons.mail_outline_rounded,
-                        shake: _shake,
-                        serverError: state.errorFor('email'),
-                        keyboardType: TextInputType.emailAddress,
-                        textInputAction: TextInputAction.next,
-                        autofillHints: const [
-                          AutofillHints.username,
-                          AutofillHints.email,
-                        ],
-                        style: inputText,
-                        validator: (value) {
-                          final text = value?.trim() ?? '';
-                          if (text.isEmpty) return 'Vui lòng nhập email';
-                          if (!text.contains('@')) return 'Email chưa hợp lệ';
-                          return null;
-                        },
-                      ),
-                      const SizedBox(height: 14),
-                      AuthField(
-                        controller: _password,
-                        hint: 'Mật khẩu',
-                        icon: Icons.lock_outline_rounded,
-                        shake: _shake,
-                        serverError: state.errorFor('password'),
-                        obscure: _obscure,
-                        textInputAction: TextInputAction.done,
-                        autofillHints: const [AutofillHints.password],
-                        onSubmitted: (_) => _submit(),
-                        style: inputText,
-                        validator: (value) => (value ?? '').isEmpty
-                            ? 'Vui lòng nhập mật khẩu'
-                            : null,
-                        suffix: IconButton(
-                          // Nhãn nói cả TRẠNG THÁI: nếu không, người dùng
-                          // screen reader không có cách nào biết mật khẩu
-                          // của mình đang hiện trên màn hình hay không.
-                          tooltip: _obscure ? 'Hiện mật khẩu' : 'Ẩn mật khẩu',
-                          icon: Icon(
-                            _obscure
-                                ? Icons.visibility_outlined
-                                : Icons.visibility_off_outlined,
-                            size: OmniIconSize.lg,
-                          ),
-                          onPressed: () => setState(() => _obscure = !_obscure),
-                        ),
-                      ),
-                      Align(
-                        alignment: Alignment.centerRight,
-                        child: TextButton(
-                          onPressed: () => context.pushNamed(AuthModule.forgot),
-                          style: TextButton.styleFrom(
-                            textStyle: OmniType.caption.copyWith(
-                              fontWeight: FontWeight.w600,
+      body: AuthBackdrop(
+        child: SafeArea(
+          child: SingleChildScrollView(
+            keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+            padding: const EdgeInsets.fromLTRB(24, 96, 24, 24),
+            child: Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 420),
+                child: AutofillGroup(
+                  child: Form(
+                    key: _formKey,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Center(
+                          child: Container(
+                            width: 108,
+                            height: 108,
+                            alignment: Alignment.center,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: OmniColors.byBrightness(
+                                context,
+                                OmniColors.accent,
+                                OmniColors.darkAccent,
+                              ).withValues(alpha: 0.7),
+                            ),
+                            child: const BrandAnchor(
+                              child: OmniBrandMark(size: 64),
                             ),
                           ),
-                          child: const Text('Quên mật khẩu?'),
                         ),
-                      ),
-                      if (state.error != null)
-                        Padding(
-                          padding: const EdgeInsets.only(top: 4, bottom: 12),
-                          child: AuthErrorBox(message: state.error!),
-                        ),
-                      const SizedBox(height: 8),
-                      AuthPrimaryButton(
-                        label: 'Đăng nhập',
-                        onPressed: state.submitting ? null : _submit,
-                        busy: state.submittingMethod == LoginMethod.password,
-                      ),
-                      const SizedBox(height: 20),
-                      const AuthDivider(),
-                      const SizedBox(height: 20),
-                      AuthGoogleButton(
-                        label: 'Tiếp tục với Google',
-                        onPressed: state.submitting ? null : _submitGoogle,
-                        busy: state.submittingMethod == LoginMethod.google,
-                      ),
-                      const SizedBox(height: 32),
-                      Wrap(
-                        alignment: WrapAlignment.center,
-                        crossAxisAlignment: WrapCrossAlignment.center,
-                        children: [
-                          Text(
-                            'Chưa có tài khoản? ',
-                            style: OmniType.body.copyWith(
-                              color: scheme.onSurfaceVariant,
-                            ),
+                        const SizedBox(height: 20),
+                        Text(
+                          'Chào mừng trở lại',
+                          textAlign: TextAlign.center,
+                          style: OmniType.largeTitle.copyWith(
+                            color: scheme.onSurface,
                           ),
-                          InkWell(
-                            onTap: () => context.pushNamed(AuthModule.register),
-                            borderRadius: BorderRadius.circular(4),
-                            child: Padding(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 4,
-                                vertical: 12,
+                        ),
+                        const SizedBox(height: 32),
+                        AuthField(
+                          controller: _email,
+                          hint: 'Email làm việc',
+                          icon: Icons.mail_outline_rounded,
+                          shake: _shake,
+                          serverError: state.errorFor('email'),
+                          keyboardType: TextInputType.emailAddress,
+                          textInputAction: TextInputAction.next,
+                          autofillHints: const [
+                            AutofillHints.username,
+                            AutofillHints.email,
+                          ],
+                          style: inputText,
+                          validator: (value) {
+                            final text = value?.trim() ?? '';
+                            if (text.isEmpty) return 'Vui lòng nhập email';
+                            if (!text.contains('@')) return 'Email chưa hợp lệ';
+                            return null;
+                          },
+                        ),
+                        const SizedBox(height: 14),
+                        AuthField(
+                          controller: _password,
+                          hint: 'Mật khẩu',
+                          icon: Icons.lock_outline_rounded,
+                          shake: _shake,
+                          serverError: state.errorFor('password'),
+                          obscure: _obscure,
+                          textInputAction: TextInputAction.done,
+                          autofillHints: const [AutofillHints.password],
+                          onSubmitted: (_) => _submit(),
+                          style: inputText,
+                          validator: (value) => (value ?? '').isEmpty
+                              ? 'Vui lòng nhập mật khẩu'
+                              : null,
+                          suffix: IconButton(
+                            // Nhãn nói cả TRẠNG THÁI: nếu không, người dùng
+                            // screen reader không có cách nào biết mật khẩu
+                            // của mình đang hiện trên màn hình hay không.
+                            tooltip: _obscure ? 'Hiện mật khẩu' : 'Ẩn mật khẩu',
+                            icon: Icon(
+                              _obscure
+                                  ? Icons.visibility_outlined
+                                  : Icons.visibility_off_outlined,
+                              size: OmniIconSize.lg,
+                            ),
+                            onPressed: () =>
+                                setState(() => _obscure = !_obscure),
+                          ),
+                        ),
+                        Align(
+                          alignment: Alignment.centerRight,
+                          child: TextButton(
+                            onPressed: () =>
+                                context.pushNamed(AuthModule.forgot),
+                            style: TextButton.styleFrom(
+                              textStyle: OmniType.caption.copyWith(
+                                fontWeight: FontWeight.w600,
                               ),
-                              child: Text(
-                                'Đăng ký',
-                                style: OmniType.body.copyWith(
-                                  fontWeight: FontWeight.w600,
-                                  color: scheme.primary,
+                            ),
+                            child: const Text('Quên mật khẩu?'),
+                          ),
+                        ),
+                        if (state.error != null)
+                          Padding(
+                            padding: const EdgeInsets.only(top: 4, bottom: 12),
+                            child: AuthErrorBox(message: state.error!),
+                          ),
+                        const SizedBox(height: 8),
+                        AuthPrimaryButton(
+                          label: 'Đăng nhập',
+                          onPressed: state.submitting ? null : _submit,
+                          busy: state.submittingMethod == LoginMethod.password,
+                        ),
+                        const SizedBox(height: 20),
+                        const AuthDivider(),
+                        const SizedBox(height: 20),
+                        AuthGoogleButton(
+                          label: 'Tiếp tục với Google',
+                          onPressed: state.submitting ? null : _submitGoogle,
+                          busy: state.submittingMethod == LoginMethod.google,
+                        ),
+                        const SizedBox(height: 32),
+                        Wrap(
+                          alignment: WrapAlignment.center,
+                          crossAxisAlignment: WrapCrossAlignment.center,
+                          children: [
+                            Text(
+                              'Chưa có tài khoản? ',
+                              style: OmniType.body.copyWith(
+                                color: scheme.onSurfaceVariant,
+                              ),
+                            ),
+                            InkWell(
+                              onTap: () =>
+                                  context.pushNamed(AuthModule.register),
+                              borderRadius: BorderRadius.circular(4),
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 4,
+                                  vertical: 12,
+                                ),
+                                child: Text(
+                                  'Đăng ký',
+                                  style: OmniType.body.copyWith(
+                                    fontWeight: FontWeight.w600,
+                                    color: scheme.primary,
+                                  ),
                                 ),
                               ),
                             ),
-                          ),
-                        ],
-                      ),
-                      const AuthPrivacyLink(),
-                    ],
+                          ],
+                        ),
+                        const AuthPrivacyLink(),
+                      ],
+                    ),
                   ),
                 ),
               ),

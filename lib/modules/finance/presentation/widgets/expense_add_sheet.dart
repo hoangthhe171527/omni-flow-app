@@ -1,8 +1,7 @@
-import 'dart:math' as math;
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../design/components/components.dart';
 import '../../../../design/tokens/tokens.dart';
 import '../../application/finance_providers.dart';
 import '../../data/finance_api.dart';
@@ -20,11 +19,9 @@ import 'finance_palette.dart';
 /// - Hiển thị trực tiếp Thumbnail ảnh chứng từ ngay trong dòng `Chứng từ` (không để dạng link chữ)
 /// - Cụm 2 nút hành động dưới đáy: `Lưu & thêm tiếp` + `Lưu khoản chi`
 Future<void> showExpenseAddSheet({required BuildContext context}) {
-  return showModalBottomSheet<void>(
+  // Viên kính nổi chung của app (navigator gốc, thanh kéo, nền, bo 30).
+  return showOmniSheet<void>(
     context: context,
-    isScrollControlled: true,
-    backgroundColor: Colors.transparent,
-    barrierColor: Colors.black.withValues(alpha: 0.36),
     builder: (sheetContext) => const _ExpenseAddSheet(),
   );
 }
@@ -380,75 +377,31 @@ class _ExpenseAddSheetState extends ConsumerState<_ExpenseAddSheet> {
             historyItems: state.allLoadedExpenses,
           )
         : const <ExpenseTitleSuggestion>[];
-    final bottomInset = MediaQuery.paddingOf(context).bottom;
     final displayAccount = _accountName.isNotEmpty
         ? _accountName
         : (_isPaid ? 'Chọn nguồn tiền' : 'Chưa chọn nguồn');
 
-    return Container(
-      decoration: BoxDecoration(
-        color: p.bg,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(22)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.25),
-            blurRadius: 40,
-            offset: const Offset(0, -10),
+    return OmniSheetBody(
+      semanticsLabel: 'Thêm khoản chi',
+      header: OmniSheetHeader(
+        title:
+            'Thêm chi phí · ${FinanceMonthUtils.formatMonthSlash(state.activeMonth)}',
+        trailing: InkWell(
+          onTap: () => Navigator.of(context).pop(),
+          borderRadius: BorderRadius.circular(99),
+          child: Container(
+            width: 30,
+            height: 30,
+            decoration: BoxDecoration(color: p.control, shape: BoxShape.circle),
+            child: Icon(Icons.close_rounded, size: 16, color: p.ink2),
           ),
-        ],
+        ),
       ),
-      padding: EdgeInsets.fromLTRB(
-        16,
-        6,
-        16,
-        math.max(20, bottomInset + 14) +
-            MediaQuery.viewInsetsOf(context).bottom,
-      ),
-      child: SingleChildScrollView(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
+      footer: _buildActions(p),
+      children: [
+        Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Center(
-              child: Container(
-                width: 36,
-                height: 4,
-                margin: const EdgeInsets.only(bottom: 8),
-                decoration: BoxDecoration(
-                  color: p.muted.withValues(alpha: 0.35),
-                  borderRadius: BorderRadius.circular(99),
-                ),
-              ),
-            ),
-            // Header
-            Padding(
-              padding: const EdgeInsets.fromLTRB(2, 2, 2, 10),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    'Thêm chi phí · ${FinanceMonthUtils.formatMonthSlash(state.activeMonth)}',
-                    style: OmniType.section.copyWith(
-                      color: p.ink,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  InkWell(
-                    onTap: () => Navigator.of(context).pop(),
-                    borderRadius: BorderRadius.circular(99),
-                    child: Container(
-                      width: 30,
-                      height: 30,
-                      decoration: BoxDecoration(
-                        color: p.control,
-                        shape: BoxShape.circle,
-                      ),
-                      child: Icon(Icons.close_rounded, size: 16, color: p.ink2),
-                    ),
-                  ),
-                ],
-              ),
-            ),
             // Smart 1-line input
             TextField(
               key: const ValueKey('finance-smart-input'),
@@ -463,20 +416,6 @@ class _ExpenseAddSheetState extends ConsumerState<_ExpenseAddSheet> {
                 hintText:
                     'Tên khoản chi hoặc gõ kèm số tiền (vd: Quảng cáo FB 2.5tr)',
                 hintStyle: OmniType.body.copyWith(color: p.muted),
-                filled: true,
-                fillColor: p.card,
-                contentPadding: const EdgeInsets.symmetric(
-                  horizontal: 14,
-                  vertical: 11,
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide(color: p.line, width: 0.5),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide(color: p.primary, width: 1.2),
-                ),
               ),
             ),
             // 1 Dải Chip thông minh duy nhất (Wrap gọn gàng, tuyệt đối không dùng scroll ngang):
@@ -542,27 +481,10 @@ class _ExpenseAddSheetState extends ConsumerState<_ExpenseAddSheet> {
                   runSpacing: 6,
                   children: [
                     for (final preset in presets)
-                      InkWell(
+                      OmniChoicePill(
+                        label: preset.label,
+                        selected: false,
                         onTap: () => _applyQuickPreset(preset),
-                        borderRadius: BorderRadius.circular(99),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 10,
-                            vertical: 5,
-                          ),
-                          decoration: BoxDecoration(
-                            color: p.card,
-                            borderRadius: BorderRadius.circular(99),
-                            border: Border.all(color: p.line, width: 0.5),
-                          ),
-                          child: Text(
-                            preset.label,
-                            style: OmniType.caption.copyWith(
-                              color: p.ink2,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ),
                       ),
                   ],
                 ),
@@ -571,20 +493,16 @@ class _ExpenseAddSheetState extends ConsumerState<_ExpenseAddSheet> {
               const SizedBox(height: 10),
             // Grouped iOS form card
             Container(
-              margin: const EdgeInsets.only(bottom: 12),
+              clipBehavior: Clip.antiAlias,
               decoration: BoxDecoration(
                 color: p.card,
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: p.line, width: 0.5),
+                borderRadius: BorderRadius.circular(18),
               ),
               child: Column(
                 children: [
                   // 1. Số tiền
                   InkWell(
                     onTap: _openAmountKeypad,
-                    borderRadius: const BorderRadius.vertical(
-                      top: Radius.circular(14),
-                    ),
                     child: Container(
                       padding: const EdgeInsets.symmetric(
                         horizontal: 14,
@@ -753,37 +671,24 @@ class _ExpenseAddSheetState extends ConsumerState<_ExpenseAddSheet> {
                           'Trạng thái',
                           style: OmniType.body.copyWith(color: p.muted),
                         ),
-                        Container(
-                          padding: const EdgeInsets.all(2),
-                          decoration: BoxDecoration(
-                            color: p.track,
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              _buildStatusSegOption(
-                                p,
-                                label: 'Chưa trả',
-                                active: !_isPaid,
-                                onTap: () => setState(() => _isPaid = false),
-                              ),
-                              _buildStatusSegOption(
-                                p,
-                                label: 'Trả đủ',
-                                active: _isPaid,
-                                onTap: () => setState(() {
-                                  _isPaid = true;
-                                  if (_accountId == null &&
-                                      state.defaultPaymentAccount != null) {
-                                    _accountId =
-                                        state.defaultPaymentAccount!.id;
-                                    _accountName =
-                                        state.defaultPaymentAccount!.name;
-                                  }
-                                }),
-                              ),
-                            ],
+                        SizedBox(
+                          width: 190,
+                          child: OmniSegmented(
+                            labels: const ['Chưa trả', 'Trả đủ'],
+                            index: _isPaid ? 1 : 0,
+                            onChanged: (i) => setState(() {
+                              if (i == 0) {
+                                _isPaid = false;
+                                return;
+                              }
+                              _isPaid = true;
+                              if (_accountId == null &&
+                                  state.defaultPaymentAccount != null) {
+                                _accountId = state.defaultPaymentAccount!.id;
+                                _accountName =
+                                    state.defaultPaymentAccount!.name;
+                              }
+                            }),
                           ),
                         ),
                       ],
@@ -935,15 +840,15 @@ class _ExpenseAddSheetState extends ConsumerState<_ExpenseAddSheet> {
                               InkWell(
                                 key: const ValueKey('finance-add-attach-btn'),
                                 onTap: _openAttachmentPicker,
-                                borderRadius: BorderRadius.circular(8),
+                                borderRadius: BorderRadius.circular(12),
                                 child: Container(
                                   height: _attachments.isNotEmpty ? 46 : 32,
                                   padding: const EdgeInsets.symmetric(
                                     horizontal: 10,
                                   ),
                                   decoration: BoxDecoration(
-                                    color: p.bg,
-                                    borderRadius: BorderRadius.circular(8),
+                                    color: p.control,
+                                    borderRadius: BorderRadius.circular(12),
                                     border: Border.all(
                                       color: p.line,
                                       width: 0.7,
@@ -995,110 +900,48 @@ class _ExpenseAddSheetState extends ConsumerState<_ExpenseAddSheet> {
                 ],
               ),
             ),
-            // Cụm 2 nút hành động dưới đáy (tương tự bản PC/Web): Lưu & thêm tiếp + Lưu khoản chi
-            Row(
-              children: [
-                Expanded(
-                  child: SizedBox(
-                    height: 46,
-                    child: OutlinedButton(
-                      key: const ValueKey('finance-save-and-continue-btn'),
-                      onPressed: _uploadingAttachment
-                          ? null
-                          : () => _saveExpense(keepOpen: true),
-                      style: OutlinedButton.styleFrom(
-                        backgroundColor: p.primarySoft,
-                        foregroundColor: p.primaryInk,
-                        side: BorderSide(color: p.selLine, width: 0.8),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(13),
-                        ),
-                        padding: const EdgeInsets.symmetric(horizontal: 10),
-                      ),
-                      child: FittedBox(
-                        fit: BoxFit.scaleDown,
-                        child: Text(
-                          'Lưu & thêm tiếp',
-                          style: OmniType.bodyStrong.copyWith(
-                            color: p.primaryInk,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: SizedBox(
-                    height: 46,
-                    child: FilledButton(
-                      key: const ValueKey('finance-save-btn'),
-                      onPressed: _uploadingAttachment
-                          ? null
-                          : () => _saveExpense(keepOpen: false),
-                      style: FilledButton.styleFrom(
-                        backgroundColor: p.primary,
-                        foregroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(13),
-                        ),
-                        elevation: 0,
-                        padding: const EdgeInsets.symmetric(horizontal: 12),
-                      ),
-                      child: FittedBox(
-                        fit: BoxFit.scaleDown,
-                        child: Text(
-                          'Lưu khoản chi',
-                          style: OmniType.bodyStrong.copyWith(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
           ],
         ),
-      ),
+      ],
     );
   }
 
-  Widget _buildStatusSegOption(
-    FinancePalette p, {
-    required String label,
-    required bool active,
-    required VoidCallback onTap,
-  }) {
-    return GestureDetector(
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 140),
-        padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 4),
-        decoration: BoxDecoration(
-          color: active ? p.card : Colors.transparent,
-          borderRadius: BorderRadius.circular(6),
-          boxShadow: active
-              ? [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.08),
-                    blurRadius: 3,
-                    offset: const Offset(0, 1),
-                  ),
-                ]
-              : null,
-        ),
-        child: Text(
-          label,
-          style: OmniType.caption.copyWith(
-            color: active ? p.ink : p.muted,
-            fontWeight: FontWeight.w600,
+  Widget _buildActions(FinancePalette p) {
+    // Hai nút lưu là nút kính của theme (không tô màu riêng).
+    return Row(
+      children: [
+        Expanded(
+          child: SizedBox(
+            height: 46,
+            child: OutlinedButton(
+              key: const ValueKey('finance-save-and-continue-btn'),
+              onPressed: _uploadingAttachment
+                  ? null
+                  : () => _saveExpense(keepOpen: true),
+              child: const FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text('Lưu & thêm tiếp'),
+              ),
+            ),
           ),
         ),
-      ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: SizedBox(
+            height: 46,
+            child: FilledButton(
+              key: const ValueKey('finance-save-btn'),
+              onPressed: _uploadingAttachment
+                  ? null
+                  : () => _saveExpense(keepOpen: false),
+              child: const FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text('Lưu khoản chi'),
+              ),
+            ),
+          ),
+        ),
+      ],
     );
   }
 }

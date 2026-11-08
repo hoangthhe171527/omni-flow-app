@@ -54,7 +54,6 @@ Future<void> showReminderSheet(
 
   return showOmniViecSheet<void>(
     context: context,
-    backgroundColor: Theme.of(context).scaffoldBackgroundColor,
     builder: (_) => ReminderSheet(
       taskId: taskId,
       myUserId: myUserId,
@@ -147,97 +146,74 @@ class _ReminderSheetState extends ConsumerState<ReminderSheet> {
       scopesRoute: true,
       explicitChildNodes: true,
       label: 'Nhắc việc',
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.fromLTRB(16, 8, 16, 30),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const OmniSheetHandle(gap: 12),
-            Padding(
-              padding: const EdgeInsets.only(bottom: 10, left: 4),
-              child: Text(
-                'Nhắc việc',
-                style: OmniType.section.copyWith(color: scheme.onSurface),
-              ),
-            ),
-            if (widget.canEveryone)
-              Padding(
-                padding: const EdgeInsets.only(bottom: 10),
-                child: Wrap(
-                  spacing: 8,
-                  children: [
-                    ChoiceChip(
-                      label: const Text('Chỉ mình tôi'),
-                      selected: !_everyone,
-                      onSelected: _busy
-                          ? null
-                          : (_) => setState(() => _everyone = false),
-                    ),
-                    ChoiceChip(
-                      label: const Text('Mọi người trong việc'),
-                      selected: _everyone,
-                      onSelected: _busy
-                          ? null
-                          : (_) => setState(() => _everyone = true),
-                    ),
-                  ],
+      child: OmniSheetBody(
+        header: const OmniSheetHeader(title: 'Nhắc việc'),
+        children: [
+          if (widget.canEveryone)
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                OmniChoicePill(
+                  label: 'Chỉ mình tôi',
+                  selected: !_everyone,
+                  onTap: _busy ? null : () => setState(() => _everyone = false),
                 ),
-              ),
-            FilledButton.icon(
-              onPressed: _busy ? null : _add,
-              style: FilledButton.styleFrom(minimumSize: const Size(44, 48)),
-              icon: const Icon(Icons.add_alarm_rounded),
-              label: const Text('Thêm lời nhắc'),
-            ),
-            const SizedBox(height: 12),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12),
-              decoration: BoxDecoration(
-                color: scheme.surface,
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: list.when(
-                loading: () => const Padding(
-                  padding: EdgeInsets.all(16),
-                  child: Center(child: CircularProgressIndicator.adaptive()),
+                OmniChoicePill(
+                  label: 'Mọi người trong việc',
+                  selected: _everyone,
+                  onTap: _busy ? null : () => setState(() => _everyone = true),
                 ),
-                error: (e, _) => Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  child: Text(
-                    e is AppException
-                        ? e.message
-                        : 'Chưa tải được lời nhắc. Thử lại khi có mạng.',
-                    textAlign: TextAlign.center,
-                    style: OmniType.bodySm.copyWith(color: secondary),
+              ],
+            ),
+          OmniGroupSection(
+            children: [
+              OmniGroupRow.add(
+                title: 'Thêm lời nhắc',
+                icon: Icons.add_alarm_rounded,
+                onTap: _busy ? null : _add,
+              ),
+              ...list.when(
+                loading: () => [
+                  const Padding(
+                    padding: EdgeInsets.all(16),
+                    child: Center(child: CircularProgressIndicator.adaptive()),
                   ),
-                ),
+                ],
+                error: (e, _) => [
+                  Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 16,
+                    ),
+                    child: Text(
+                      e is AppException
+                          ? e.message
+                          : 'Chưa tải được lời nhắc. Thử lại khi có mạng.',
+                      textAlign: TextAlign.center,
+                      style: OmniType.bodySm.copyWith(color: secondary),
+                    ),
+                  ),
+                ],
                 data: (items) => items.isEmpty
-                    ? Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        child: Text(
-                          'Chưa có lời nhắc nào.',
-                          textAlign: TextAlign.center,
-                          style: OmniType.bodySm.copyWith(color: secondary),
+                    ? [
+                        Padding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 14,
+                            vertical: 16,
+                          ),
+                          child: Text(
+                            'Chưa có lời nhắc nào.',
+                            textAlign: TextAlign.center,
+                            style: OmniType.bodySm.copyWith(color: secondary),
+                          ),
                         ),
-                      )
-                    : Column(
-                        children: [
-                          for (var i = 0; i < items.length; i++) ...[
-                            if (i > 0)
-                              Divider(
-                                height: 1,
-                                thickness: 1,
-                                color: OmniColors.trackOf(context),
-                              ),
-                            _row(items[i], scheme, secondary),
-                          ],
-                        ],
-                      ),
+                      ]
+                    : [for (final r in items) _row(r, scheme, secondary)],
               ),
-            ),
-          ],
-        ),
+            ],
+          ),
+        ],
       ),
     );
   }
@@ -257,38 +233,13 @@ class _ReminderSheetState extends ConsumerState<ReminderSheet> {
         ? ' · ${r.createdByName}'
         : '';
 
-    return ConstrainedBox(
+    return OmniGroupRow(
       key: ValueKey('reminder-${r.id}'),
-      constraints: const BoxConstraints(minHeight: 52),
-      child: Row(
-        children: [
-          Icon(
-            r.isPending ? Icons.alarm_rounded : Icons.alarm_off_rounded,
-            size: OmniIconSize.lg,
-            color: r.isPending ? scheme.primary : secondary,
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  at == null ? 'Không rõ giờ' : _stamp(at),
-                  style: OmniType.body.copyWith(
-                    fontWeight: FontWeight.w500,
-                    color: scheme.onSurface,
-                  ),
-                ),
-                Text(
-                  '$who$by$state',
-                  style: OmniType.caption.copyWith(color: secondary),
-                ),
-              ],
-            ),
-          ),
-          if (_canDelete(r))
-            IconButton(
+      icon: r.isPending ? Icons.alarm_rounded : Icons.alarm_off_rounded,
+      title: at == null ? 'Không rõ giờ' : _stamp(at),
+      subtitle: '$who$by$state',
+      trailing: _canDelete(r)
+          ? IconButton(
               tooltip: 'Xoá lời nhắc',
               onPressed: _busy
                   ? null
@@ -300,9 +251,8 @@ class _ReminderSheetState extends ConsumerState<ReminderSheet> {
                 size: OmniIconSize.md,
                 color: secondary,
               ),
-            ),
-        ],
-      ),
+            )
+          : null,
     );
   }
 }

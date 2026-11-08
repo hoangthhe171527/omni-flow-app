@@ -71,104 +71,120 @@ class _NotificationsPageState extends ConsumerState<NotificationsPage> {
     final unread = unreadCount ?? 0;
 
     return Scaffold(
-      backgroundColor: scheme.surface,
-      appBar: OmniAppBar(
-        backgroundColor: scheme.surface,
-        title: 'Thông báo',
-        centerTitle: true,
-        showAccount: false,
+      // Nền xám để các thẻ nhóm lồng nổi lên.
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      // Thanh trên kiểu B (viomni-apple-uiux.html "Thông báo"): tiêu đề lớn,
+      // "Đọc hết" là viên kính chữ; không chuông — đang ở chính trang này.
+      extendBodyBehindAppBar: true,
+      appBar: OmniTopBar(
+        semanticsTitle: 'Thông báo',
+        allowBack: true,
+        showBell: false,
         actions: [
-          TextButton(
-            onPressed: unread > 0
-                ? () {
-                    HapticFeedback.selectionClick();
-                    ref.read(notificationsProvider.notifier).markAllRead();
-                  }
-                : null,
-            child: Text(
-              'Đọc hết',
-              style: TextStyle(
-                fontWeight: FontWeight.w600,
-                color: unread > 0 ? scheme.primary : null,
+          OmniGlass(
+            radius: 22,
+            child: SizedBox(
+              height: 44,
+              child: TextButton(
+                onPressed: unread > 0
+                    ? () {
+                        HapticFeedback.selectionClick();
+                        ref.read(notificationsProvider.notifier).markAllRead();
+                      }
+                    : null,
+                style: TextButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  shape: const StadiumBorder(),
+                ),
+                child: Text(
+                  'Đọc hết',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w600,
+                    color: unread > 0 ? scheme.primary : null,
+                  ),
+                ),
               ),
             ),
           ),
         ],
+        searchBottom: false,
         bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(54),
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
-            child: OmniSegmented(
-              labels: [
-                'Tất cả',
-                unreadCount == null ? 'Chưa đọc' : 'Chưa đọc · $unreadCount',
-              ],
-              index: unreadOnly ? 1 : 0,
-              onChanged: (i) =>
-                  ref.read(notificationUnreadOnlyProvider.notifier).state =
-                      i == 1,
-            ),
+          preferredSize: const Size.fromHeight(44),
+          child: OmniSegmented(
+            labels: [
+              'Tất cả',
+              unreadCount == null ? 'Chưa đọc' : 'Chưa đọc · $unreadCount',
+            ],
+            index: unreadOnly ? 1 : 0,
+            onChanged: (i) =>
+                ref.read(notificationUnreadOnlyProvider.notifier).state =
+                    i == 1,
           ),
         ),
       ),
-      body: RefreshIndicator.adaptive(
-        onRefresh: () => ref.read(notificationsProvider.notifier).refresh(),
-        child: OmniAsyncView(
-          value: notifications,
-          onRetry: () => ref.invalidate(notificationsProvider),
-          isEmpty: (state) => state.items.isEmpty,
-          empty: unreadOnly
-              ? const _AllReadEmpty()
-              : const OmniEmptyState(
-                  icon: Icons.notifications_none_rounded,
-                  title: 'Chưa có thông báo',
-                  message:
-                      'Khi có việc được giao hoặc hoàn thành, bạn sẽ thấy ở đây.',
-                ),
-          data: (state) {
-            final groups = groupNotificationsByDay(state.items);
-            // Phẳng: tiêu đề nhóm + từng dòng là một mục của builder, nên mỗi
-            // lần "tải thêm" chỉ dựng các dòng đang hiện, không dựng lại cả
-            // khối nhóm. Trông y hệt khối cũ (nhóm không có khung bo).
-            final entries = <_Entry>[
-              for (final group in groups) ...[
-                _Entry.header(group.label),
-                for (var i = 0; i < group.items.length; i++)
-                  _Entry.row(
-                    group.label,
-                    group.items[i],
-                    divider: i > 0,
-                    lastInGroup: i == group.items.length - 1,
-                  ),
-              ],
-            ];
+      body: OmniTopBarOverlap.wrap(
+        child: Builder(
+          builder: (context) => RefreshIndicator.adaptive(
+            edgeOffset: OmniTopBarOverlap.of(context),
+            onRefresh: () => ref.read(notificationsProvider.notifier).refresh(),
+            child: OmniAsyncView(
+              value: notifications,
+              onRetry: () => ref.invalidate(notificationsProvider),
+              isEmpty: (state) => state.items.isEmpty,
+              empty: unreadOnly
+                  ? const _AllReadEmpty()
+                  : const OmniEmptyState(
+                      icon: Icons.notifications_none_rounded,
+                      title: 'Chưa có thông báo',
+                      message:
+                          'Khi có việc được giao hoặc hoàn thành, bạn sẽ thấy ở đây.',
+                    ),
+              data: (state) {
+                final groups = groupNotificationsByDay(state.items);
+                // Phẳng: tiêu đề nhóm + từng dòng là một mục của builder, nên mỗi
+                // lần "tải thêm" chỉ dựng các dòng đang hiện, không dựng lại cả
+                // khối nhóm. Trông y hệt khối cũ (nhóm không có khung bo).
+                final entries = <_Entry>[
+                  for (final group in groups) ...[
+                    _Entry.header(group.label),
+                    for (var i = 0; i < group.items.length; i++)
+                      _Entry.row(
+                        group.label,
+                        group.items[i],
+                        divider: i > 0,
+                        lastInGroup: i == group.items.length - 1,
+                      ),
+                  ],
+                ];
 
-            return ListView.builder(
-              physics: const AlwaysScrollableScrollPhysics(),
-              controller: _scrollController,
-              padding: const EdgeInsets.fromLTRB(
-                16,
-                14,
-                16,
-                OmniSpacing.bottomSafe,
-              ),
-              itemCount: entries.length,
-              itemBuilder: (context, index) {
-                final entry = entries[index];
-                final child = entry.notification == null
-                    ? _GroupHeader(label: entry.label)
-                    : _GroupRow(
-                        label: entry.label,
-                        notification: entry.notification!,
-                        divider: entry.divider,
-                        lastInGroup: entry.lastInGroup,
-                        onOpen: _open,
-                      );
-                // Hiện dần chỉ ở lượt mở đầu; dòng cuộn tới sau thì hiện ngay.
-                return _entered ? child : _Rise(child: child);
+                return ListView.builder(
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  controller: _scrollController,
+                  padding: EdgeInsets.fromLTRB(
+                    16,
+                    14 + OmniTopBarOverlap.of(context),
+                    16,
+                    OmniSpacing.bottomSafe,
+                  ),
+                  itemCount: entries.length,
+                  itemBuilder: (context, index) {
+                    final entry = entries[index];
+                    final child = entry.notification == null
+                        ? _GroupHeader(label: entry.label)
+                        : _GroupRow(
+                            label: entry.label,
+                            notification: entry.notification!,
+                            divider: entry.divider,
+                            lastInGroup: entry.lastInGroup,
+                            onOpen: _open,
+                          );
+                    // Hiện dần chỉ ở lượt mở đầu; dòng cuộn tới sau thì hiện ngay.
+                    return _entered ? child : _Rise(child: child);
+                  },
+                );
               },
-            );
-          },
+            ),
+          ),
         ),
       ),
     );
@@ -198,7 +214,7 @@ class _AllReadEmpty extends StatelessWidget {
   Widget build(BuildContext context) {
     return ListView(
       physics: const AlwaysScrollableScrollPhysics(),
-      padding: const EdgeInsets.only(top: 60),
+      padding: EdgeInsets.only(top: 60 + OmniTopBarOverlap.of(context)),
       children: [
         Center(
           child: Text(
@@ -302,18 +318,28 @@ class _GroupRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
 
+    // Nhóm lồng (viomni-apple-uiux.html `.group`): mỗi ngày là một thẻ bo 18
+    // trên nền xám — dòng đầu bo trên, dòng cuối bo dưới.
+    const r = Radius.circular(18);
     return Padding(
       padding: EdgeInsets.only(bottom: lastInGroup ? 16 : 0),
       child: Material(
         key: divider ? null : ValueKey('notification-group-$label'),
-        color: Colors.transparent,
+        color: scheme.surface,
+        clipBehavior: Clip.antiAlias,
+        borderRadius: BorderRadius.vertical(
+          top: divider ? Radius.zero : r,
+          bottom: lastInGroup ? r : Radius.zero,
+        ),
         child: Column(
           children: [
             if (divider)
+              // Vạch chia thụt sau icon (18 + 32 + 10), không chạy full ngang.
               Divider(
                 height: 1,
                 thickness: 1,
-                color: scheme.surfaceContainerHighest,
+                indent: 60,
+                color: scheme.outlineVariant.withValues(alpha: .7),
               ),
             NotificationRow(
               notification: notification,
@@ -352,13 +378,9 @@ class NotificationRow extends StatelessWidget {
       onTap: onTap,
       excludeSemantics: true,
       child: Material(
-        color: unread
-            ? OmniColors.byBrightness(
-                context,
-                OmniColors.unreadRow,
-                scheme.primary.withValues(alpha: 0.08),
-              )
-            : scheme.surface,
+        // Chưa đọc = chấm màu chính ở lề trái + tiêu đề đậm; không tô nền
+        // xanh phẳng (đợt 3 liquid).
+        color: scheme.surface,
         child: InkWell(
           onTap: onTap,
           child: ConstrainedBox(

@@ -110,16 +110,18 @@ class SubtasksCard extends ConsumerWidget {
           padding: const EdgeInsets.symmetric(horizontal: 4),
           // Tắt chuyển động: ReorderableListView luôn trượt các dòng khi kéo,
           // nên vẽ Column tĩnh — sắp xếp vẫn được qua ⋮ "Chuyển lên/xuống".
+          //
+          // Ấn giữ cả dòng (viomni-apple-uiux.html): nhấc dòng lên; thả tại chỗ
+          // là mở menu ngay dòng đó, giữ rồi kéo là đổi thứ tự. Tay kéo bên
+          // trái vẫn kéo ngay không cần giữ.
           child: canReorder && motion && subtasks.length > 1
-              ? ReorderableListView.builder(
-                  key: const ValueKey('subtask-reorder'),
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  buildDefaultDragHandles: false,
-                  onReorderStart: (_) => HapticFeedback.mediumImpact(),
-                  itemCount: subtasks.length,
-                  onReorderItem: (from, to) =>
+              ? _HoldReorderList(
+                  count: subtasks.length,
+                  itemKey: (i) => ValueKey(subtasks[i].id),
+                  onReorder: (from, to) =>
                       _reorder(context, subtasks, from, to),
+                  onHold: (i, rect) =>
+                      _hold(context, subtasks[i], rect, byId, currentUserId),
                   itemBuilder: (context, i) => _row(
                     context,
                     subtasks[i],
@@ -135,12 +137,33 @@ class SubtasksCard extends ConsumerWidget {
               : Column(
                   children: [
                     for (var i = 0; i < subtasks.length; i++)
-                      _row(
-                        context,
-                        subtasks[i],
-                        byId,
-                        currentUserId: currentUserId,
-                        first: i == 0,
+                      Builder(
+                        key: ValueKey(subtasks[i].id),
+                        builder: (rowContext) => GestureDetector(
+                          behavior: HitTestBehavior.translucent,
+                          // Trình đọc màn hình dùng nút ⋮; lớp này không được
+                          // nuốt nhãn của ô tích bên trong.
+                          excludeFromSemantics: true,
+                          onLongPress: () {
+                            final box =
+                                rowContext.findRenderObject() as RenderBox?;
+                            if (box == null || !box.hasSize) return;
+                            _hold(
+                              context,
+                              subtasks[i],
+                              box.localToGlobal(Offset.zero) & box.size,
+                              byId,
+                              currentUserId,
+                            );
+                          },
+                          child: _row(
+                            context,
+                            subtasks[i],
+                            byId,
+                            currentUserId: currentUserId,
+                            first: i == 0,
+                          ),
+                        ),
                       ),
                   ],
                 ),
@@ -148,6 +171,34 @@ class SubtasksCard extends ConsumerWidget {
         if (subtasks.isNotEmpty) const SizedBox(height: 4),
       ],
     );
+  }
+
+  bool _canTickThis(Subtask s, String? currentUserId) =>
+      canTick &&
+      task.canTickSubtask(s, currentUserId: currentUserId, canManage: canEdit);
+
+  bool _canAssignThis(Subtask s, String? currentUserId) =>
+      canEdit ||
+      (canTick &&
+          (s.assigneeId == null ||
+              s.assigneeId!.isEmpty ||
+              currentUserId == null ||
+              s.assigneeId == currentUserId));
+
+  /// Ấn giữ một dòng: rung nhẹ rồi mở menu ngay dưới dòng. Không có mục nào
+  /// (người chỉ xem) thì không làm gì — ấn giữ không được là nút chết.
+  void _hold(
+    BuildContext context,
+    Subtask s,
+    Rect rect,
+    Map<String, TeamMember> byId,
+    String? currentUserId,
+  ) {
+    final canTickThis = _canTickThis(s, currentUserId);
+    final canAssignThis = _canAssignThis(s, currentUserId);
+    if (!canEdit && !canAssignThis && !canTickThis) return;
+    HapticFeedback.mediumImpact();
+    _menu(context, s, rect, canAssign: canAssignThis, canToggle: canTickThis);
   }
 
   Widget _row(
@@ -159,20 +210,8 @@ class SubtasksCard extends ConsumerWidget {
     Widget? handle,
   }) {
     final known = s.assigneeId == null ? null : byId[s.assigneeId!];
-    final canTickThis =
-        canTick &&
-        task.canTickSubtask(
-          s,
-          currentUserId: currentUserId,
-          canManage: canEdit,
-        );
-    final canAssignThis =
-        canEdit ||
-        (canTick &&
-            (s.assigneeId == null ||
-                s.assigneeId!.isEmpty ||
-                currentUserId == null ||
-                s.assigneeId == currentUserId));
+    final canTickThis = _canTickThis(s, currentUserId);
+    final canAssignThis = _canAssignThis(s, currentUserId);
 
     return SubtaskRow(
       key: ValueKey(s.id),
@@ -191,7 +230,13 @@ class SubtasksCard extends ConsumerWidget {
       ),
       onDiscard: () => controller.discard(s.id),
       onMenu: canEdit || canAssignThis
-          ? (anchor) => _menu(context, s, anchor, canAssign: canAssignThis)
+          ? (anchor) => _menu(
+              context,
+              s,
+              anchor,
+              canAssign: canAssignThis,
+              canToggle: canTickThis,
+            )
           : null,
       onAssign: canAssignThis ? (anchor) => _assign(context, s, anchor) : null,
     );
@@ -355,6 +400,7 @@ class SubtasksCard extends ConsumerWidget {
     Subtask s,
     Rect anchor, {
     required bool canAssign,
+    bool canToggle = false,
   }) async {
     final messenger = ScaffoldMessenger.of(context);
     final shown = task.subtasks;
@@ -380,6 +426,20 @@ class SubtasksCard extends ConsumerWidget {
               value: _SubAction.assign,
               icon: Icons.person_add_alt_outlined,
               label: 'Giao người làm',
+            ),
+        ],
+        [
+          if (canToggle)
+            DetailMenuItem(
+              value: _SubAction.toggle,
+              icon: s.done ? Icons.undo_rounded : Icons.check_circle_outline,
+              label: s.done ? 'Bỏ đánh dấu xong' : 'Đánh dấu xong',
+            ),
+          if (details && canEdit)
+            DetailMenuItem(
+              value: _SubAction.due,
+              icon: Icons.event_rounded,
+              label: s.dueDate == null ? 'Đặt hạn' : 'Đổi hạn',
             ),
         ],
         [
@@ -439,6 +499,10 @@ class SubtasksCard extends ConsumerWidget {
           // đứng ngay trên nó.
           final up = action == _SubAction.up;
           await _reorder(context, shown, at, up ? at - 1 : at + 1);
+        case _SubAction.toggle:
+          await controller.toggleSubtask(s.id, done: !s.done);
+        case _SubAction.due:
+          await _setDue(context, s);
         case _SubAction.remove:
           final confirmed = await showOmniConfirm(
             context: context,
@@ -485,6 +549,8 @@ class SubtasksCard extends ConsumerWidget {
 enum _SubAction {
   rename,
   assign,
+  toggle,
+  due,
   up,
   down,
   describe,
@@ -513,4 +579,109 @@ class _DragHandle extends StatelessWidget {
       ),
     ),
   );
+}
+
+/// Danh sách kéo được bằng ẤN GIỮ cả dòng.
+///
+/// Giữ ~0,5 giây là dòng nhấc lên (viên nổi, phóng 1.03). Thả ra mà ngón tay
+/// chưa đi quá 8px = người ta muốn menu: [onHold] với khung của dòng. Đi quá
+/// 8px = đang kéo: thả là đổi thứ tự qua [onReorder], không mở menu.
+class _HoldReorderList extends StatefulWidget {
+  const _HoldReorderList({
+    required this.count,
+    required this.itemKey,
+    required this.itemBuilder,
+    required this.onReorder,
+    required this.onHold,
+  });
+
+  final int count;
+  final Key Function(int index) itemKey;
+  final Widget Function(BuildContext context, int index) itemBuilder;
+  final void Function(int from, int to) onReorder;
+  final void Function(int index, Rect rect) onHold;
+
+  @override
+  State<_HoldReorderList> createState() => _HoldReorderListState();
+}
+
+class _HoldReorderListState extends State<_HoldReorderList> {
+  static const double _slop = 8;
+
+  Offset? _down;
+  Rect? _downRect;
+  int? _lifted;
+  bool _moved = false;
+
+  void _onDown(BuildContext rowContext, PointerDownEvent e) {
+    _down = e.position;
+    _moved = false;
+    final box = rowContext.findRenderObject() as RenderBox?;
+    _downRect = box != null && box.hasSize
+        ? box.localToGlobal(Offset.zero) & box.size
+        : null;
+  }
+
+  void _onMove(PointerMoveEvent e) {
+    final down = _down;
+    if (down != null && (e.position - down).distance > _slop) _moved = true;
+  }
+
+  void _onEnd(int _) {
+    final index = _lifted;
+    final rect = _downRect;
+    _lifted = null;
+    if (index == null || rect == null || _moved) return;
+    // Sau khung hình: để dòng hạ xuống xong rồi menu mới neo vào nó.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) widget.onHold(index, rect);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return ReorderableListView.builder(
+      key: const ValueKey('subtask-reorder'),
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      buildDefaultDragHandles: false,
+      itemCount: widget.count,
+      onReorderStart: (i) {
+        _lifted = i;
+        HapticFeedback.mediumImpact();
+      },
+      onReorderEnd: _onEnd,
+      onReorderItem: widget.onReorder,
+      proxyDecorator: (child, index, animation) => AnimatedBuilder(
+        animation: animation,
+        builder: (context, child) {
+          final t = Curves.easeOut.transform(animation.value);
+          return Transform.scale(
+            scale: 1 + 0.03 * t,
+            child: Material(
+              key: const ValueKey('subtask-lifted'),
+              elevation: 6 * t,
+              shadowColor: Colors.black.withValues(alpha: 0.25),
+              color: Theme.of(context).colorScheme.surface,
+              borderRadius: BorderRadius.circular(14),
+              clipBehavior: Clip.antiAlias,
+              child: child,
+            ),
+          );
+        },
+        child: child,
+      ),
+      itemBuilder: (context, i) => ReorderableDelayedDragStartListener(
+        key: widget.itemKey(i),
+        index: i,
+        child: Builder(
+          builder: (rowContext) => Listener(
+            onPointerDown: (e) => _onDown(rowContext, e),
+            onPointerMove: _onMove,
+            child: widget.itemBuilder(context, i),
+          ),
+        ),
+      ),
+    );
+  }
 }

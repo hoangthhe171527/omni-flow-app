@@ -10,8 +10,6 @@ import 'package:omni_app/modules/plans/application/plans_providers.dart';
 import 'package:omni_app/modules/plans/data/plans_api.dart';
 import 'package:omni_app/modules/plans/domain/plan.dart';
 import 'package:omni_app/modules/plans/domain/team.dart';
-import 'package:omni_app/modules/plans/presentation/create_plan_page.dart';
-import 'package:omni_app/modules/plans/presentation/create_team_page.dart';
 import 'package:omni_app/modules/plans/presentation/teams_page.dart';
 import 'package:omni_app/modules/plans/presentation/widgets/plan_tile.dart';
 import 'package:omni_app/modules/plans/presentation/widgets/project_cover.dart';
@@ -183,55 +181,62 @@ void main() {
     expect(find.text('Tìm team, kế hoạch'), findsOneWidget);
   });
 
-  testWidgets('bố cục phân cấp: team phẳng, dự án thụt cấp và dùng dấu cover', (
-    t,
-  ) async {
-    phone(t);
-    await t.pumpWidget(host(groups: twoTeams, assigner: true));
-    await t.pumpAndSettle();
-    await t.tap(header('Tổ kỹ thuật'));
-    await t.pumpAndSettle();
-    expect(t.getSize(find.byType(PlanTile).first).height, 48);
-    expect(find.byKey(const Key('plan-tile-swatch')), findsWidgets);
-    expect(find.byKey(const Key('team-group-icon')), findsNWidgets(2));
-    expect(find.byKey(const Key('plan-tile-marker')), findsNothing);
-    expect(find.byKey(const Key('team-group-marker')), findsNothing);
-    expect(t.getSize(header('Tổ kỹ thuật')).height, 48);
-    expect(find.byKey(const Key('plan-tree-rail')), findsNothing);
-    expect(
-      t.getTopLeft(find.byKey(const Key('plan-tile-swatch')).first).dx,
-      greaterThan(
-        t.getTopLeft(find.byKey(const Key('team-group-icon')).first).dx + 16,
-      ),
-    );
-    expect(t.getSize(find.byKey(const Key('teams-search-box'))).height, 40);
-    expect(
-      t.getSize(find.byKey(const Key('teams-add-face'))),
-      const Size(44, 40),
-    );
-    expect(
-      t.widget<Icon>(find.byKey(const Key('team-group-icon')).first).icon,
-      Icons.groups_2_outlined,
-    );
-    expect(
-      t.widget<ProjectCoverMarker>(find.byType(ProjectCoverMarker).first).cover,
-      'teal-1',
-    );
-    // Section phẳng sát mép; đường chia tạo nhịp 17 giữa các nhóm.
-    final first = t.getRect(find.byType(TeamGroup).at(0));
-    final second = t.getRect(find.byType(TeamGroup).at(1));
-    expect(second.top - first.bottom, 17);
-    expect(first.left, 0);
-    final groupMaterial = t.widget<Material>(
-      find
-          .descendant(
-            of: find.byType(TeamGroup).first,
-            matching: find.byType(Material),
-          )
-          .first,
-    );
-    expect(groupMaterial.shape, isNull);
-  });
+  testWidgets(
+    'bố cục phân cấp: team là thẻ lồng, dự án thụt cấp và dùng dấu cover',
+    (t) async {
+      phone(t);
+      await t.pumpWidget(host(groups: twoTeams, assigner: true));
+      await t.pumpAndSettle();
+      await t.tap(header('Tổ kỹ thuật'));
+      await t.pumpAndSettle();
+      expect(t.getSize(find.byType(PlanTile).first).height, 48);
+      expect(find.byKey(const Key('plan-tile-swatch')), findsWidgets);
+      expect(find.byKey(const Key('team-group-icon')), findsNWidgets(2));
+      expect(find.byKey(const Key('plan-tile-marker')), findsNothing);
+      expect(find.byKey(const Key('team-group-marker')), findsNothing);
+      expect(t.getSize(header('Tổ kỹ thuật')).height, 48);
+      expect(find.byKey(const Key('plan-tree-rail')), findsNothing);
+      expect(
+        t.getTopLeft(find.byKey(const Key('plan-tile-swatch')).first).dx,
+        greaterThan(
+          t.getTopLeft(find.byKey(const Key('team-group-icon')).first).dx + 16,
+        ),
+      );
+      // Dải tìm trong viên kính của thanh trên cao 44 (viomni-apple-uiux.html).
+      expect(t.getSize(find.byKey(const Key('teams-search-box'))).height, 44);
+      // Dấu + rời ô tìm, thành nút kính lỏng tròn 58 góc dưới phải.
+      expect(find.byKey(const Key('teams-add-face')), findsNothing);
+      final fab = t.getRect(find.byKey(const Key('work-create-fab')));
+      expect(fab.size, const Size(58, 58));
+      expect(fab.right, 390 - 20);
+      expect(fab.center.dy, greaterThan(844 / 2));
+      expect(
+        t.widget<Icon>(find.byKey(const Key('team-group-icon')).first).icon,
+        Icons.groups_2_outlined,
+      );
+      expect(
+        t
+            .widget<ProjectCoverMarker>(find.byType(ProjectCoverMarker).first)
+            .cover,
+        'teal-1',
+      );
+      // Nhóm lồng (viomni-apple-uiux.html): mỗi team là thẻ cách mép 16,
+      // hai thẻ cách nhau 12.
+      final first = t.getRect(find.byType(TeamGroup).at(0));
+      final second = t.getRect(find.byType(TeamGroup).at(1));
+      expect(second.top - first.bottom, 12);
+      expect(first.left, 16);
+      final groupMaterial = t.widget<Material>(
+        find
+            .descendant(
+              of: find.byType(TeamGroup).first,
+              matching: find.byType(Material),
+            )
+            .first,
+      );
+      expect(groupMaterial.shape, isNull);
+    },
+  );
 
   testWidgets('quản lý giữ dự án rồi thả sang team khác → cập nhật team_id', (
     t,
@@ -384,7 +389,7 @@ void main() {
   });
 
   // (d)
-  testWidgets('nút + mở menu Tạo team / Tạo kế hoạch; mỗi mục mở đúng trang', (
+  testWidgets('nút + mở menu Tạo team / Tạo kế hoạch; mỗi mục mở sheet', (
     t,
   ) async {
     phone(t);
@@ -397,74 +402,63 @@ void main() {
     expect(find.text('Tạo kế hoạch'), findsOneWidget);
     await t.tap(find.text('Tạo team'));
     await t.pumpAndSettle();
-    expect(find.byType(CreateTeamPage), findsOneWidget);
+    // Tạo nhanh ngay trên màn: sheet, không đẩy trang mới.
+    expect(find.byKey(const Key('quick-create-team')), findsOneWidget);
+    expect(find.byType(TeamsPage), findsOneWidget);
 
-    Navigator.of(t.element(find.byType(CreateTeamPage))).pop();
+    await t.tap(find.byTooltip('Đóng'));
     await t.pumpAndSettle();
     await t.tap(plus());
     await t.pumpAndSettle();
     await t.tap(find.text('Tạo kế hoạch'));
     await t.pumpAndSettle();
-    expect(find.byType(CreatePlanPage), findsOneWidget);
+    expect(find.byKey(const Key('quick-create-plan')), findsOneWidget);
   });
 
-  testWidgets('menu +: hộp 220 bo 8 neo phải 16 ngay dưới nút, dòng 52', (
-    t,
-  ) async {
+  testWidgets('menu + bật LÊN ngay trên nút, mép phải thẳng nút', (t) async {
     phone(t);
     await t.pumpWidget(host(assigner: true, canCreateTeam: true));
     await t.pumpAndSettle();
-    final face = t.getRect(find.byKey(const Key('teams-add-face')));
+    final fab = t.getRect(find.byKey(const Key('work-create-fab')));
     await t.tap(plus());
     await t.pumpAndSettle();
     final menu = t.getRect(find.byKey(const Key('create-menu')));
-    expect(menu.width, 220);
-    expect(menu.right, 390 - 16);
-    expect(menu.right, face.right);
-    expect(menu.top, face.bottom + 6);
+    expect(menu.bottom, lessThanOrEqualTo(fab.top));
+    expect(menu.right, closeTo(fab.right, 1));
     final row = find.ancestor(
       of: find.text('Tạo team'),
       matching: find.byType(InkWell),
     );
-    expect(t.getSize(row.first).height, greaterThanOrEqualTo(52));
+    expect(t.getSize(row.first).height, greaterThanOrEqualTo(48));
   });
 
-  testWidgets('nút + phẳng màu chữ và xoay 45° khi menu mở', (t) async {
+  testWidgets('nút + màu chính, xoay thành ✕ khi menu mở', (t) async {
     phone(t);
     await t.pumpWidget(host(assigner: true, canCreateTeam: true));
     await t.pumpAndSettle();
     double turns() => t
-        .widget<AnimatedRotation>(
-          find.descendant(
-            of: find.byType(TeamsSearchRow),
-            matching: find.byType(AnimatedRotation),
-          ),
-        )
+        .widget<AnimatedRotation>(find.byKey(const Key('liquid-fab-icon')))
         .turns;
     final scheme = Theme.of(t.element(find.byType(TeamsPage))).colorScheme;
     expect(turns(), 0);
     expect(
-      t.widget<Icon>(find.byKey(const Key('teams-add-icon'))).color,
-      scheme.onSurface,
-    );
-    expect(
-      find.descendant(
-        of: find.byKey(const Key('teams-add-face')),
-        matching: find.byType(DecoratedBox),
-      ),
-      findsNothing,
+      t
+          .widget<Icon>(
+            find.descendant(
+              of: find.byKey(const Key('liquid-fab-icon')),
+              matching: find.byType(Icon),
+            ),
+          )
+          .color,
+      scheme.primary,
     );
 
     await t.tap(plus());
     await t.pumpAndSettle();
-    expect(turns(), 0.125);
-    expect(
-      t.widget<Icon>(find.byKey(const Key('teams-add-icon'))).color,
-      scheme.onSurface,
-    );
+    expect(turns(), 0.375);
 
     // Chạm lớp phủ để đóng.
-    await t.tapAt(const Offset(60, 600));
+    await t.tapAt(const Offset(60, 300));
     await t.pumpAndSettle();
     expect(find.text('Tạo kế hoạch'), findsNothing);
     expect(turns(), 0);
@@ -510,11 +504,11 @@ void main() {
     expect(find.byKey(const Key('teams-add-face')), findsNothing);
   });
 
-  testWidgets('vùng chạm nút + ≥ 44×44 dù hình vẽ 44×40', (t) async {
+  testWidgets('vùng chạm nút + ≥ 44×44', (t) async {
     phone(t);
     await t.pumpWidget(host(assigner: true));
     await t.pumpAndSettle();
-    final hit = t.getSize(find.byKey(const Key('teams-add-hit')));
+    final hit = t.getSize(find.byKey(const Key('work-create-fab')));
     expect(hit.width, greaterThanOrEqualTo(44));
     expect(hit.height, greaterThanOrEqualTo(44));
   });

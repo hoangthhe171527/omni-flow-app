@@ -6,7 +6,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:omni_app/design/components/omni_card.dart';
+import 'package:omni_app/design/components/omni_group.dart';
 import 'package:omni_app/design/components/omni_segmented.dart';
 import 'package:omni_app/design/components/omni_states.dart';
 import 'package:omni_app/design/platform/omni_motion_scope.dart';
@@ -37,16 +37,17 @@ class _RevenueCardState extends ConsumerState<RevenueCard> {
     if (async.hasValue && async.value == null && !async.isLoading) {
       return const SizedBox.shrink();
     }
-    final scheme = Theme.of(context).colorScheme;
     // Một thể hiện chuỗi duy nhất: lấy thẳng từ provider, không dựng lại.
     final s = async.valueOrNull;
     final Widget body;
     // Lỗi xét trước: AsyncError giữ giá trị cũ, nếu không thì đổi kỳ thất bại
     // sẽ hiện số của kỳ trước mà không có nút thử lại.
     if (async.hasError && !async.isLoading) {
-      body = OmniErrorView(
-        error: async.error!,
-        onRetry: () => ref.invalidate(revenueSeriesProvider),
+      body = _Shell(
+        child: OmniErrorView(
+          error: async.error!,
+          onRetry: () => ref.invalidate(revenueSeriesProvider),
+        ),
       );
     } else if (s != null) {
       // Đang tải kỳ mới → số cũ mờ đi cho tới khi có số đúng kỳ.
@@ -60,17 +61,17 @@ class _RevenueCardState extends ConsumerState<RevenueCard> {
         child: IgnorePointer(ignoring: stale, child: _content(context, s)),
       );
     } else if (async.hasError) {
-      body = OmniErrorView(
-        error: async.error!,
-        onRetry: () => ref.invalidate(revenueSeriesProvider),
+      body = _Shell(
+        child: OmniErrorView(
+          error: async.error!,
+          onRetry: () => ref.invalidate(revenueSeriesProvider),
+        ),
       );
     } else {
-      body = const _Skeleton();
+      body = const _Shell(child: _Skeleton());
     }
-    return OmniCard(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 10),
-      background: scheme.surface,
-      flat: true,
+    return Padding(
+      padding: const EdgeInsets.only(bottom: OmniGroupSection.gap),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -83,7 +84,7 @@ class _RevenueCardState extends ConsumerState<RevenueCard> {
                   RevenueRange.values[i];
             },
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: OmniGroupSection.gap),
           body,
         ],
       ),
@@ -96,96 +97,83 @@ class _RevenueCardState extends ConsumerState<RevenueCard> {
     final n = math.max(1, s.slots);
     final i = _scrub?.clamp(0, n - 1);
 
-    final String caption, big, sub;
+    final String caption, big;
+    // Số phụ là dòng "nhãn — số" trong nhóm, đủ chữ số.
+    final rows = <(String, String)>[];
     if (i == null) {
-      caption = switch (s.range) {
-        RevenueRange.week => 'Doanh thu tuần này',
-        RevenueRange.month => 'Doanh thu tháng này',
-        RevenueRange.year => 'Doanh thu năm nay',
+      final (caption0, endLabel) = switch (s.range) {
+        RevenueRange.week => ('Doanh thu tuần này', 'Dự kiến cuối tuần'),
+        RevenueRange.month => ('Doanh thu tháng này', 'Dự kiến cuối tháng'),
+        RevenueRange.year => ('Doanh thu năm nay', 'Dự kiến cuối năm'),
       };
-      big = formatCompactVnd(s.headline);
+      caption = caption0;
+      big = formatFullVnd(s.headline);
       final k = s.cumCurrent.length - 1;
       final pv = s.cumPrevious.isEmpty
           ? null
           : s.cumPrevious[math.min(math.max(k, 0), s.cumPrevious.length - 1)];
-      sub =
-          '${pv == null ? 'Chưa có số cùng kỳ' : 'So với cùng kỳ ${formatCompactVnd(pv)}'}'
-          ' · dự kiến ${formatCompactVnd(s.projectedEnd)}';
+      rows.add((
+        'Cùng kỳ trước',
+        pv == null ? 'Chưa có số' : formatFullVnd(pv),
+      ));
+      rows.add((endLabel, formatFullVnd(s.projectedEnd)));
+      final target = s.targetRatio;
+      if (target != null) {
+        rows.add(('Đạt mục tiêu', '${(target * 100).round()}%'));
+      }
     } else {
       caption = revenueSlotLabel(s.range, i);
       final v = s.valueAt(i);
-      big = v == null ? 'Chưa tới' : formatCompactVnd(v);
+      big = v == null ? 'Chưa tới' : formatFullVnd(v);
       final p = s.previousAt(i);
-      sub = 'Kỳ trước: ${p == null ? '—' : formatCompactVnd(p)}';
+      rows.add(('Kỳ trước', p == null ? '—' : formatFullVnd(p)));
     }
 
-    final target = s.targetRatio;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
+    return OmniGroupSection(
+      dividerIndent: 14,
       children: [
-        Text(caption, style: OmniType.micro.copyWith(color: muted)),
-        const SizedBox(height: 2),
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            Flexible(
-              child: Text(
-                big,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: OmniType.moneyHero.copyWith(color: scheme.onSurface),
-              ),
-            ),
-            if (i == null) ...[
-              const SizedBox(width: 8),
-              _Delta(ratio: s.deltaRatio),
-            ],
-          ],
-        ),
-        Text(sub, maxLines: 2, style: OmniType.micro.copyWith(color: muted)),
-        const SizedBox(height: 8),
-        RevenueChart(
-          series: s,
-          scrubIndex: i,
-          onScrub: (v) {
-            if (v != _scrub) setState(() => _scrub = v);
-          },
-          ringColor: scheme.surface,
-        ),
-        const SizedBox(height: 4),
-        _Ticks(range: s.range, slots: n, color: muted),
-        const SizedBox(height: 8),
-        Divider(height: 1, thickness: 1, color: scheme.outlineVariant),
-        const SizedBox(height: 8),
-        ExcludeSemantics(
-          child: Row(
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 14, 16, 10),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              _LegendSample(color: scheme.primary, dashed: false),
-              const SizedBox(width: 5),
-              Text('Kỳ này', style: OmniType.micro.copyWith(color: muted)),
-              const SizedBox(width: 14),
-              _LegendSample(
-                color: OmniColors.mutedBarOf(context),
-                dashed: true,
-              ),
-              const SizedBox(width: 5),
-              Text('Kỳ trước', style: OmniType.micro.copyWith(color: muted)),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  target == null ? '' : '${(target * 100).round()}% mục tiêu',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  textAlign: TextAlign.end,
-                  style: OmniType.micro.copyWith(
-                    color: scheme.onSurface,
-                    fontWeight: FontWeight.w600,
+              Text(caption, style: OmniType.micro.copyWith(color: muted)),
+              const SizedBox(height: 2),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Flexible(
+                    child: Text(
+                      big,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: OmniType.moneyHero.copyWith(
+                        color: scheme.onSurface,
+                      ),
+                    ),
                   ),
-                ),
+                  if (i == null) ...[
+                    const SizedBox(width: 8),
+                    _Delta(ratio: s.deltaRatio),
+                  ],
+                ],
               ),
+              const SizedBox(height: 8),
+              RevenueChart(
+                series: s,
+                scrubIndex: i,
+                onScrub: (v) {
+                  if (v != _scrub) setState(() => _scrub = v);
+                },
+                ringColor: scheme.surface,
+              ),
+              const SizedBox(height: 4),
+              _Ticks(range: s.range, slots: n, color: muted),
             ],
           ),
         ),
+        for (final (label, value) in rows)
+          OmniGroupRow(title: label, value: value),
       ],
     );
   }
@@ -224,7 +212,7 @@ class _Delta extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
       decoration: BoxDecoration(
         color: color.withValues(alpha: .12),
-        borderRadius: BorderRadius.circular(4),
+        borderRadius: BorderRadius.circular(999),
       ),
       // Font app không có ▲/▼ (font_glyph_coverage_test) → dùng icon.
       child: Semantics(
@@ -296,47 +284,6 @@ class _Ticks extends StatelessWidget {
   }
 }
 
-class _LegendSample extends StatelessWidget {
-  const _LegendSample({required this.color, required this.dashed});
-
-  final Color color;
-  final bool dashed;
-
-  @override
-  Widget build(BuildContext context) => SizedBox(
-    width: 12,
-    height: 3,
-    child: CustomPaint(painter: _SamplePainter(color, dashed)),
-  );
-}
-
-class _SamplePainter extends CustomPainter {
-  _SamplePainter(this.color, this.dashed);
-
-  final Color color;
-  final bool dashed;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final y = size.height / 2;
-    final p = Paint()
-      ..color = color
-      ..strokeWidth = dashed ? 1.5 : 2.5
-      ..strokeCap = dashed ? StrokeCap.butt : StrokeCap.round;
-    if (!dashed) {
-      canvas.drawLine(Offset(0, y), Offset(size.width, y), p);
-      return;
-    }
-    for (var x = 0.0; x < size.width; x += 6) {
-      canvas.drawLine(Offset(x, y), Offset(math.min(x + 3, size.width), y), p);
-    }
-  }
-
-  @override
-  bool shouldRepaint(_SamplePainter o) =>
-      o.color != color || o.dashed != dashed;
-}
-
 class _Skeleton extends StatelessWidget {
   const _Skeleton();
 
@@ -350,5 +297,19 @@ class _Skeleton extends StatelessWidget {
       SizedBox(height: 12),
       OmniSkeletonBox(height: RevenueChart.height),
     ],
+  );
+}
+
+/// Thẻ trắng bo 18 cho trạng thái tải / lỗi (cùng dáng nhóm lồng).
+class _Shell extends StatelessWidget {
+  const _Shell({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) => Material(
+    color: Theme.of(context).colorScheme.surface,
+    borderRadius: BorderRadius.circular(18),
+    child: Padding(padding: const EdgeInsets.all(16), child: child),
   );
 }

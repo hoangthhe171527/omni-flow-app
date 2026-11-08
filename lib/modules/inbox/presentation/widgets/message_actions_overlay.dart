@@ -27,7 +27,7 @@ const _rowHeight = 44.0;
 
 Color _ink(BuildContext context) => OmniColors.byBrightness(
   context,
-  const Color(0xFF0B1A33),
+  OmniColors.ink,
   Theme.of(context).colorScheme.onSurface,
 );
 
@@ -55,7 +55,7 @@ Future<void> showMessageActions({
     context: context,
     barrierDismissible: true,
     barrierLabel: 'Đóng menu tin nhắn',
-    barrierColor: const Color(0x590B1A33),
+    barrierColor: OmniColors.ink.withValues(alpha: .35),
     transitionDuration: motion
         ? const Duration(milliseconds: 400)
         : Duration.zero,
@@ -126,7 +126,7 @@ class _MessageActionsOverlay extends StatelessWidget {
           // Không có con: không nuốt chạm, để rào chắn của route đóng hộp.
           Positioned.fill(
             child: BackdropFilter(
-              filter: ImageFilter.blur(sigmaX: 14, sigmaY: 14),
+              filter: ImageFilter.blur(sigmaX: 6, sigmaY: 6),
             ),
           ),
           Positioned.fill(
@@ -284,9 +284,9 @@ class _ReactionBarState extends State<_ReactionBar>
           Colors.white,
           scheme.surfaceContainerHigh,
         ).withValues(alpha: .92),
-        boxShadow: const [
+        boxShadow: [
           BoxShadow(
-            color: Color(0x400B1A33),
+            color: OmniColors.ink.withValues(alpha: .25),
             offset: Offset(0, 10),
             blurRadius: 30,
           ),
@@ -408,6 +408,7 @@ class _GlassMenu extends StatelessWidget {
                       Divider(
                         height: 1,
                         thickness: 1,
+                        indent: 16,
                         color: scheme.outlineVariant,
                       ),
                     InkWell(

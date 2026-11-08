@@ -36,18 +36,32 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  testWidgets('iOS dựng hộp thoại Cupertino', (tester) async {
-    await open(tester, TargetPlatform.iOS);
+  // Một thẻ kính kiểu iOS cho cả hai nền tảng (viomni-apple-uiux.html).
+  for (final platform in [TargetPlatform.iOS, TargetPlatform.android]) {
+    testWidgets('$platform: thẻ kính bo 24, hai nút chữ chia đôi', (
+      tester,
+    ) async {
+      await open(tester, platform);
 
-    expect(find.byType(CupertinoAlertDialog), findsOneWidget);
-    expect(find.byType(AlertDialog), findsNothing);
-  });
+      expect(find.byType(AlertDialog), findsOneWidget);
+      expect(find.byType(CupertinoAlertDialog), findsNothing);
+      final dialog = tester.widget<AlertDialog>(find.byType(AlertDialog));
+      final shape = dialog.shape! as RoundedRectangleBorder;
+      expect((shape.borderRadius as BorderRadius).topLeft.x, 24);
+      final cancel = tester.getRect(find.text('Huỷ'));
+      final ok = tester.getRect(find.text('Hoàn thành'));
+      expect(cancel.center.dy, closeTo(ok.center.dy, 1));
+      expect(cancel.center.dx, lessThan(ok.center.dx));
+    });
+  }
 
-  testWidgets('Android dựng hộp thoại Material', (tester) async {
-    await open(tester, TargetPlatform.android);
-
-    expect(find.byType(AlertDialog), findsOneWidget);
-    expect(find.byType(CupertinoAlertDialog), findsNothing);
+  testWidgets('phá huỷ: nút xác nhận màu lỗi', (tester) async {
+    await open(tester, TargetPlatform.android, destructive: true);
+    final button = tester.widget<TextButton>(
+      find.widgetWithText(TextButton, 'Hoàn thành'),
+    );
+    final theme = Theme.of(tester.element(find.text('Hoàn thành')));
+    expect(button.style!.foregroundColor!.resolve({}), theme.colorScheme.error);
   });
 
   testWidgets('gạt bỏ hộp thoại là KHÔNG đồng ý', (tester) async {
@@ -89,16 +103,18 @@ void main() {
     expect(find.text('Huỷ'), findsOneWidget);
   });
 
-  testWidgets('hành động phá huỷ không phải mặc định trên iOS', (tester) async {
+  testWidgets('hành động phá huỷ không phải mặc định (không đậm)', (
+    tester,
+  ) async {
     // Mặc định là cái người dùng bấm khi không đọc kỹ. Xoá tài khoản không
-    // được nằm ở đó.
+    // được nằm ở đó: nút phá huỷ đỏ nhưng KHÔNG đậm như nút mặc định.
     await open(tester, TargetPlatform.iOS, destructive: true);
-
-    final action = tester.widget<CupertinoDialogAction>(
-      find.widgetWithText(CupertinoDialogAction, 'Hoàn thành'),
+    final button = tester.widget<TextButton>(
+      find.widgetWithText(TextButton, 'Hoàn thành'),
     );
-
-    expect(action.isDestructiveAction, isTrue);
-    expect(action.isDefaultAction, isFalse);
+    expect(
+      button.style!.textStyle!.resolve({})!.fontWeight,
+      isNot(FontWeight.w600),
+    );
   });
 }

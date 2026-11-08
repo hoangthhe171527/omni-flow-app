@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:omni_app/design/components/components.dart';
+import 'package:omni_app/core/nav/search_mode.dart';
 
 Widget _host(
   ProviderContainer c, {
@@ -34,7 +35,7 @@ Widget _host(
 
 void main() {
   testWidgets(
-    'logo trái, chuông có chấm khi có thông báo, đăng ký BrandAnchor',
+    'kiểu B: chuông và avatar là viên kính tròn rời, chuông có chấm',
     (tester) async {
       final handle = tester.ensureSemantics();
       final c = ProviderContainer();
@@ -43,18 +44,15 @@ void main() {
       await tester.pumpWidget(_host(c, unread: 3));
       await tester.pump();
 
+      // Màn gốc: logo Viomni thay tiêu đề lớn (người dùng chọn 2026-11-08).
       expect(find.byType(OmniBrandMark), findsOneWidget);
-      expect(
-        tester.widget<OmniBrandMark>(find.byType(OmniBrandMark)).framed,
-        isFalse,
-      );
+      expect(find.byType(OmniGlass), findsNWidgets(2));
       expect(find.bySemanticsLabel(RegExp('Thông báo')), findsOneWidget);
       expect(
         find.byKey(const ValueKey('omni-top-bar-bell-dot')),
         findsOneWidget,
       );
       expect(find.byKey(const ValueKey('tile')), findsOneWidget);
-      expect(c.read(brandAnchorProvider), isNotNull);
       handle.dispose();
     },
   );
@@ -84,25 +82,23 @@ void main() {
     expect(anchor?.size, const Size(44, 44));
   });
 
-  testWidgets('chuông phẳng, vùng chạm 44; tiêu đề trang là header', (t) async {
+  testWidgets('chuông vùng chạm 44; tiêu đề trang là header', (t) async {
     final handle = t.ensureSemantics();
     final c = ProviderContainer();
     addTearDown(c.dispose);
     await t.pumpWidget(_host(c, semanticsTitle: 'Hộp thư'));
     await t.pump();
 
-    final bell = find.bySemanticsLabel(RegExp('^Thông báo'));
-    expect(t.getSize(bell).width, greaterThanOrEqualTo(44));
-    expect(t.getSize(bell).height, greaterThanOrEqualTo(44));
-    final face = t.widget<Material>(
-      find.byKey(const ValueKey('omni-top-bar-bell-face')),
-    );
-    expect(face.color, Colors.transparent);
     expect(
       t.getSize(find.byKey(const ValueKey('omni-top-bar-bell-face'))),
       const Size(44, 44),
     );
-    final node = t.getSemantics(find.bySemanticsLabel('Hộp thư'));
+    // Chữ không hiện (logo đứng chỗ đó) nhưng vẫn đọc tên màn như header.
+    expect(find.text('Hộp thư'), findsNothing);
+    final node = t.getSemantics(
+      find.byKey(const ValueKey('omni-top-bar-brand')),
+    );
+    expect(node.label, 'Hộp thư');
     expect(node.flagsCollection.isHeader, isTrue);
     expect(node.rect.isEmpty, isFalse);
     expect(t.getSize(find.byKey(const ValueKey('tile'))).width, 36);
@@ -122,7 +118,7 @@ void main() {
     );
   });
 
-  testWidgets('chiều cao gồm hàng 44 và phần bottom; bottom được vẽ', (
+  testWidgets('chiều cao gồm hàng tiêu đề 48 và dải tìm; bottom được vẽ', (
     tester,
   ) async {
     final c = ProviderContainer();
@@ -134,7 +130,9 @@ void main() {
         child: SizedBox(key: ValueKey('bottom'), height: 40),
       ),
     );
-    expect(bar.preferredSize.height, 4 + 44 + 6 + 40);
+    // Đệm trên 4, hàng tiêu đề 48, đệm 8, dải tìm 40, đệm dưới 8.
+    expect(bar.preferredSize.height, 4 + 48 + 8 + 40 + 8);
+    expect(const OmniTopBar().preferredSize.height, 4 + 48 + 8);
 
     await tester.pumpWidget(
       _host(
@@ -149,27 +147,74 @@ void main() {
     expect(find.byKey(const ValueKey('bottom')), findsOneWidget);
   });
 
-  testWidgets('BrandAnchor chỉ xoá khoá của chính nó khi gỡ', (tester) async {
+  testWidgets('màn con: nút quay lại gọi onBack, tiêu đề nhỏ, không chuông', (
+    tester,
+  ) async {
     final c = ProviderContainer();
     addTearDown(c.dispose);
+    var back = 0;
+    await tester.pumpWidget(
+      UncontrolledProviderScope(
+        container: c,
+        child: MaterialApp(
+          home: OmniTopBarSlot(
+            unreadOf: (_) => 0,
+            onBell: (_, _) {},
+            child: Scaffold(
+              appBar: OmniTopBar(
+                semanticsTitle: 'Khách hàng',
+                onBack: () => back++,
+                actions: [
+                  OmniTopBarAction(
+                    icon: Icons.edit_note_rounded,
+                    tooltip: 'Sửa',
+                    onPressed: () {},
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+    expect(find.byIcon(Icons.notifications_none_rounded), findsNothing);
+    expect(find.byTooltip('Sửa'), findsOneWidget);
+    expect(tester.widget<Text>(find.text('Khách hàng')).style!.fontSize, 17);
+    await tester.tap(find.byTooltip('Quay lại'));
+    expect(back, 1);
+  });
 
-    await tester.pumpWidget(_host(c));
+  testWidgets('chạm ô tìm: bật chế độ tìm, Huỷ xoá chữ rồi thoát', (
+    tester,
+  ) async {
+    final c = ProviderContainer();
+    addTearDown(c.dispose);
+    final ctrl = TextEditingController();
+    addTearDown(ctrl.dispose);
+    await tester.pumpWidget(
+      _host(
+        c,
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(44),
+          child: TextField(controller: ctrl),
+        ),
+      ),
+    );
     await tester.pump();
-    expect(c.read(brandAnchorProvider), isNotNull);
+    expect(find.text('Huỷ'), findsNothing);
 
-    // Một neo mới hơn chiếm chỗ trước khi neo cũ bị gỡ: không bị xoá nhầm.
-    final newer = GlobalKey();
-    c.read(brandAnchorProvider.notifier).state = newer;
-    await tester.pumpWidget(const SizedBox());
-    await tester.pump();
-    expect(c.read(brandAnchorProvider), same(newer));
+    await tester.tap(find.byType(TextField));
+    await tester.pumpAndSettle();
+    expect(c.read(searchModeProvider), isTrue);
+    expect(find.text('Huỷ'), findsOneWidget);
 
-    // Và khi khoá còn là của nó thì được xoá.
-    await tester.pumpWidget(_host(c));
-    await tester.pump();
-    expect(c.read(brandAnchorProvider), isNot(same(newer)));
-    await tester.pumpWidget(const SizedBox());
-    await tester.pump();
-    expect(c.read(brandAnchorProvider), isNull);
+    await tester.enterText(find.byType(TextField), 'lan');
+    await tester.tap(find.text('Huỷ'));
+    await tester.pumpAndSettle();
+    expect(ctrl.text, '');
+    expect(c.read(searchModeProvider), isFalse);
+    expect(find.text('Huỷ'), findsNothing);
+    expect(tester.takeException(), isNull);
   });
 }

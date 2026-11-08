@@ -20,6 +20,7 @@ import 'package:omni_app/modules/inbox/domain/conversation.dart';
 import 'package:omni_app/modules/inbox/domain/inbox_filter.dart';
 import 'package:omni_app/modules/inbox/inbox_routes.dart';
 import 'package:omni_app/modules/inbox/presentation/thread_info_page.dart';
+import 'package:omni_app/design/components/components.dart';
 import 'package:omni_app/design/theme/omni_theme.dart';
 import 'package:omni_app/design/tokens/tokens.dart';
 import 'package:omni_app/security/permissions/access_policy.dart';
@@ -159,7 +160,13 @@ void main() {
     tester,
   ) async {
     await pump(tester, const {'opportunities': true});
-    expect(find.text('Thông tin'), findsOneWidget);
+    // Màn đứng gốc trong bài kiểm: thanh trên hiện logo, tên chỉ để đọc.
+    expect(
+      find.byWidgetPredicate(
+        (w) => w is Semantics && w.properties.label == 'Thông tin',
+      ),
+      findsOneWidget,
+    );
     expect(find.text('Tìm tin'), findsOneWidget);
     expect(find.text('Phụ trách'), findsOneWidget);
     expect(find.text('Nhãn'), findsOneWidget);
@@ -180,10 +187,10 @@ void main() {
   ) async {
     await pump(tester, const {'opportunities': true}, permissions: withOpp);
     expect(find.text('Tạo cơ hội'), findsOneWidget);
-    expect(find.text('BÁN HÀNG'), findsOneWidget);
+    expect(find.text('Bán hàng'), findsOneWidget);
     await pump(tester, const {'opportunities': false});
     expect(find.text('Tạo cơ hội'), findsNothing);
-    expect(find.text('BÁN HÀNG'), findsNothing);
+    expect(find.text('Bán hàng'), findsNothing);
   });
 
   testWidgets('chưa gắn khách: không Gọi, có Chuyển KH', (tester) async {
@@ -244,22 +251,25 @@ void main() {
     expect(find.text('Link · 0'), findsOneWidget);
   });
 
-  testWidgets('các nhóm thông tin là section phẳng, không còn card bo', (
+  testWidgets('các nhóm thông tin là nhóm lồng liquid, nền xám', (
     tester,
   ) async {
     await pump(tester, const {'opportunities': true}, permissions: withOpp);
 
-    for (final key in [
-      'thread-info-section-KHÁCH HÀNG',
-      'thread-info-section-BÁN HÀNG',
-      'thread-info-section-ẢNH, TỆP, LIÊN KẾT',
-      'thread-info-section-actions',
+    for (final title in [
+      'Khách hàng',
+      'Bán hàng',
+      'Ảnh, tệp, liên kết',
+      'Thao tác',
     ]) {
-      final material = tester.widget<Material>(find.byKey(ValueKey(key)));
-      expect(material.shape, isNull, reason: key);
-      expect(material.borderRadius, isNull, reason: key);
-      expect(material.clipBehavior, Clip.none, reason: key);
+      final group = find.byKey(ValueKey('thread-info-section-$title'));
+      expect(group, findsOneWidget, reason: title);
+      expect(tester.widget<OmniGroupSection>(group).title, title);
     }
+    expect(
+      tester.widget<Scaffold>(find.byType(Scaffold).first).backgroundColor,
+      isNull,
+    );
   });
 
   testWidgets('máy hẹp 320: không tràn', (tester) async {
@@ -327,7 +337,7 @@ void main() {
   ) async {
     await pump(tester, const {'opportunities': true});
     expect(find.text('Tạo cơ hội'), findsNothing);
-    expect(find.text('BÁN HÀNG'), findsNothing);
+    expect(find.text('Bán hàng'), findsNothing);
     await pump(tester, const {'opportunities': true}, permissions: withOpp);
     expect(find.text('Tạo cơ hội'), findsOneWidget);
   });
@@ -349,9 +359,12 @@ void main() {
     tester,
   ) async {
     VoidCallback? onTapOf(String label) => tester
-        .widget<InkWell>(
+        .widget<OmniGroupRow>(
           find
-              .ancestor(of: find.text(label), matching: find.byType(InkWell))
+              .ancestor(
+                of: find.text(label),
+                matching: find.byType(OmniGroupRow),
+              )
               .first,
         )
         .onTap;

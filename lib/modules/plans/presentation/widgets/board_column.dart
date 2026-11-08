@@ -608,13 +608,24 @@ class _ColumnDropBuilder extends ValueListenableBuilder<BoardColumnDrop> {
         ? const Duration(milliseconds: 200)
         : Duration.zero;
 
-    // Rãnh phẳng, không bo góc (bản 0.1.6 đã duyệt).
+    // Khung kính trên ảnh bìa (viomni-apple-uiux.html `.col.glass`, duyệt
+    // 07/11 — thay rãnh phẳng bản 0.1.6): bo 20, nền trắng mờ. Không nhoè
+    // phía sau: cột cuộn ngang cả bảng, nhoè từng khung là tốn khung hình.
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    final glass = MediaQuery.highContrastOf(context)
+        ? scheme.surfaceContainerHighest
+        : dark
+        ? const Color(0xFF1C283C).withValues(alpha: .62)
+        : Colors.white.withValues(alpha: .62);
     return AnimatedContainer(
       duration: duration,
+      clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
-        color: hot
-            ? OmniTaskTones.of(context).today.background
-            : scheme.surfaceContainerHighest,
+        color: hot ? OmniTaskTones.of(context).today.background : glass,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: Colors.white.withValues(alpha: dark ? .12 : .55),
+        ),
       ),
       child: Stack(
         fit: StackFit.passthrough,
@@ -626,6 +637,7 @@ class _ColumnDropBuilder extends ValueListenableBuilder<BoardColumnDrop> {
                 key: const Key('column-drop-border'),
                 duration: duration,
                 decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(20),
                   border: Border.all(
                     color: hot ? scheme.primary : Colors.transparent,
                     width: 2,
@@ -1008,10 +1020,10 @@ class BoardAddSectionTile extends StatelessWidget {
       height: 52,
       child: Material(
         color: Colors.white.withValues(alpha: .18),
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(14),
         child: InkWell(
           onTap: onTap,
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(14),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [

@@ -45,45 +45,36 @@ class DashboardPage extends ConsumerWidget {
     }
     final none = !revenueVisible && !cards.tasks && !cards.inbox;
     return Scaffold(
-      backgroundColor: Theme.of(context).colorScheme.surface,
+      extendBodyBehindAppBar: true,
       appBar: const OmniTopBar(semanticsTitle: 'Tổng quan'),
-      body: RefreshIndicator.adaptive(
-        onRefresh: () => _refresh(ref),
-        child: ListView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          padding: const EdgeInsets.only(
-            top: 4,
-            bottom: OmniSpacing.bottomSafe,
-          ),
-          children: none
-              ? const [
-                  OmniEmptyState(
-                    icon: Icons.dashboard_outlined,
-                    title: emptyMessage,
-                  ),
-                ]
-              : const [
-                  RevenueCard(),
-                  _SectionDivider(),
-                  MyTasksCard(),
-                  _SectionDivider(),
-                  AwaitingReplyCard(),
-                ],
+      body: OmniTopBarOverlap.wrap(
+        child: Builder(
+          builder: (context) {
+            final topInset = OmniTopBarOverlap.of(context);
+            return RefreshIndicator.adaptive(
+              edgeOffset: topInset,
+              onRefresh: () => _refresh(ref),
+              child: ListView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: EdgeInsets.only(
+                  top: topInset + 12,
+                  left: 16,
+                  right: 16,
+                  bottom: OmniSpacing.bottomSafe,
+                ),
+                children: none
+                    ? const [
+                        OmniEmptyState(
+                          icon: Icons.dashboard_outlined,
+                          title: emptyMessage,
+                        ),
+                      ]
+                    : const [RevenueCard(), MyTasksCard(), AwaitingReplyCard()],
+              ),
+            );
+          },
         ),
       ),
     );
   }
-}
-
-class _SectionDivider extends StatelessWidget {
-  const _SectionDivider();
-
-  @override
-  Widget build(BuildContext context) => Divider(
-    height: 17,
-    thickness: 1,
-    indent: OmniSpacing.lg,
-    endIndent: OmniSpacing.lg,
-    color: Theme.of(context).colorScheme.outlineVariant,
-  );
 }
