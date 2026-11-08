@@ -28,6 +28,48 @@ class OmniGlass extends StatelessWidget {
       ? Colors.white.withValues(alpha: 0.16)
       : Colors.white.withValues(alpha: 0.92);
 
+  /// Mặt "nút kính" (liquid-buttons-uiux.html phương án B) cho nút tự vẽ:
+  /// trắng mờ + vệt sáng nửa trên, mép sáng mảnh, bóng mềm — không viền
+  /// màu. Cùng công thức với theme FilledButton/OutlinedButton.
+  static BoxDecoration buttonDecoration(
+    BuildContext context, {
+    double radius = 999,
+  }) {
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    if (MediaQuery.highContrastOf(context)) {
+      final scheme = Theme.of(context).colorScheme;
+      return BoxDecoration(
+        color: scheme.surface,
+        borderRadius: BorderRadius.circular(radius),
+        border: Border.all(color: scheme.outline),
+      );
+    }
+    return BoxDecoration(
+      color: Colors.white.withValues(alpha: dark ? .12 : .82),
+      borderRadius: BorderRadius.circular(radius),
+      border: Border.all(
+        color: Colors.white.withValues(alpha: dark ? .16 : .9),
+      ),
+      gradient: LinearGradient(
+        begin: Alignment.topCenter,
+        end: Alignment.bottomCenter,
+        stops: const [0, .5, 1],
+        colors: [
+          Colors.white.withValues(alpha: dark ? .14 : .7),
+          Colors.white.withValues(alpha: dark ? .06 : .55),
+          Colors.white.withValues(alpha: dark ? .08 : .78),
+        ],
+      ),
+      boxShadow: [
+        BoxShadow(
+          color: Colors.black.withValues(alpha: dark ? .35 : .10),
+          blurRadius: 10,
+          offset: const Offset(0, 3),
+        ),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;

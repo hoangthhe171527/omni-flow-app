@@ -131,41 +131,15 @@ abstract final class OmniTheme {
         ),
       ),
       dividerTheme: DividerThemeData(color: border, thickness: 1, space: 1),
-      // Nút cao 48, bo 8, chữ 15/600 (bảng token: "Nút — 48 (giữ)").
-      // Nút chính là nút VIỀN xanh, không tô đặc (gu người dùng; liquid
-      // glass, viomni-apple-uiux.html `.btn-o`): nền trong, viền 1.5 màu chủ
-      // đạo, chữ màu chủ đạo, dạng viên thuốc.
+      // Nút kính lỏng (liquid-buttons-uiux.html phương án B, duyệt
+      // 2026-11-08): viên kính sáng, vệt sáng nửa trên, mép sáng mảnh, bóng
+      // mềm — KHÔNG viền màu, không tô đặc. Nút chính chữ màu chủ đạo, nút
+      // phụ (Outlined) chữ mực. Cao 48, dạng viên thuốc, chữ 15/600.
       filledButtonTheme: FilledButtonThemeData(
-        style: ButtonStyle(
-          minimumSize: const WidgetStatePropertyAll(Size.fromHeight(48)),
-          elevation: const WidgetStatePropertyAll(0),
-          textStyle: const WidgetStatePropertyAll(OmniType.bodyStrong),
-          shape: const WidgetStatePropertyAll(StadiumBorder()),
-          backgroundColor: const WidgetStatePropertyAll(Colors.transparent),
-          foregroundColor: WidgetStateProperty.resolveWith(
-            (s) => s.contains(WidgetState.disabled)
-                ? onSurface.withValues(alpha: .38)
-                : primary,
-          ),
-          overlayColor: WidgetStatePropertyAll(primary.withValues(alpha: .08)),
-          side: WidgetStateProperty.resolveWith(
-            (s) => BorderSide(
-              width: 1.5,
-              color: s.contains(WidgetState.disabled)
-                  ? onSurface.withValues(alpha: .14)
-                  : primary,
-            ),
-          ),
-        ),
+        style: _glassButtonStyle(brightness, foreground: primary),
       ),
       outlinedButtonTheme: OutlinedButtonThemeData(
-        style: OutlinedButton.styleFrom(
-          foregroundColor: onSurface,
-          minimumSize: const Size.fromHeight(48),
-          side: BorderSide(color: borderInteractive),
-          textStyle: OmniType.bodyStrong,
-          shape: const StadiumBorder(),
-        ),
+        style: _glassButtonStyle(brightness, foreground: onSurface),
       ),
       textButtonTheme: TextButtonThemeData(
         style: TextButton.styleFrom(
@@ -190,9 +164,9 @@ abstract final class OmniTheme {
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: brightness == Brightness.light
-            ? OmniColors.card
-            : surfaceMuted,
+        fillColor: onSurface.withValues(
+          alpha: brightness == Brightness.light ? .05 : .08,
+        ),
         // 13 + dòng 22 (thân 15/22) + 13 = ô cao 48 — cỡ nút và ô nhập của
         // app trong bảng token, và thẳng tâm với nút icon 48 đứng cạnh.
         contentPadding: const EdgeInsets.symmetric(
@@ -201,24 +175,31 @@ abstract final class OmniTheme {
         ),
         hintStyle: OmniType.body.copyWith(color: onSurfaceMuted),
         labelStyle: OmniType.caption.copyWith(color: onSurfaceMuted),
+        // Ô nhập (phương án B): nền mờ lõm nhẹ; đang gõ chỉ có viền màu chủ
+        // đạo nhạt, không khung xanh đậm.
+        // Mép xám mảnh vẫn đạt 3:1 (WCAG 1.4.11): ô nhập không có chữ tự
+        // nhận diện như nút, phải thấy được ranh giới.
         border: OutlineInputBorder(
-          borderRadius: OmniRadius.mdAll,
+          borderRadius: _fieldRadius,
           borderSide: BorderSide(color: borderInteractive),
         ),
         enabledBorder: OutlineInputBorder(
-          borderRadius: OmniRadius.mdAll,
+          borderRadius: _fieldRadius,
           borderSide: BorderSide(color: borderInteractive),
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: OmniRadius.mdAll,
-          borderSide: BorderSide(color: primary, width: 1.5),
+          borderRadius: _fieldRadius,
+          borderSide: BorderSide(
+            color: primary.withValues(alpha: .55),
+            width: 1.5,
+          ),
         ),
         errorBorder: const OutlineInputBorder(
-          borderRadius: OmniRadius.mdAll,
+          borderRadius: _fieldRadius,
           borderSide: BorderSide(color: OmniColors.destructive),
         ),
         focusedErrorBorder: const OutlineInputBorder(
-          borderRadius: OmniRadius.mdAll,
+          borderRadius: _fieldRadius,
           borderSide: BorderSide(color: OmniColors.destructive, width: 1.5),
         ),
       ),
@@ -327,4 +308,73 @@ abstract final class OmniTheme {
       ),
     );
   }
+}
+
+const _fieldRadius = BorderRadius.all(Radius.circular(14));
+
+/// Nút kính lỏng dùng chung cho nút chính và nút phụ (phương án B).
+///
+/// Nền trắng mờ + vệt sáng nửa trên (vẽ bằng [ButtonStyle.backgroundBuilder]),
+/// mép sáng 1px, bóng mềm trung tính. Tương phản cao: nền đặc, viền màu chữ.
+ButtonStyle _glassButtonStyle(
+  Brightness brightness, {
+  required Color foreground,
+}) {
+  final dark = brightness == Brightness.dark;
+  final ink = dark ? OmniColors.darkForeground : OmniColors.foreground;
+  return ButtonStyle(
+    minimumSize: const WidgetStatePropertyAll(Size.fromHeight(48)),
+    textStyle: const WidgetStatePropertyAll(OmniType.bodyStrong),
+    shape: const WidgetStatePropertyAll(StadiumBorder()),
+    elevation: WidgetStateProperty.resolveWith(
+      (s) => s.contains(WidgetState.disabled) ? 0 : 2,
+    ),
+    shadowColor: WidgetStatePropertyAll(
+      Colors.black.withValues(alpha: dark ? .5 : .16),
+    ),
+    surfaceTintColor: const WidgetStatePropertyAll(Colors.transparent),
+    backgroundColor: WidgetStateProperty.resolveWith(
+      (s) => s.contains(WidgetState.disabled)
+          ? Colors.white.withValues(alpha: dark ? .04 : .45)
+          : Colors.white.withValues(alpha: dark ? .12 : .82),
+    ),
+    foregroundColor: WidgetStateProperty.resolveWith(
+      (s) => s.contains(WidgetState.disabled)
+          ? ink.withValues(alpha: .38)
+          : foreground,
+    ),
+    overlayColor: WidgetStatePropertyAll(foreground.withValues(alpha: .08)),
+    side: WidgetStatePropertyAll(
+      BorderSide(color: Colors.white.withValues(alpha: dark ? .16 : .9)),
+    ),
+    backgroundBuilder: (context, states, child) {
+      if (MediaQuery.highContrastOf(context)) {
+        return DecoratedBox(
+          decoration: ShapeDecoration(
+            color: Theme.of(context).colorScheme.surface,
+            shape: StadiumBorder(side: BorderSide(color: foreground)),
+          ),
+          child: child,
+        );
+      }
+      if (states.contains(WidgetState.disabled)) return child!;
+      // Vệt sáng nửa trên — "mép kính bắt sáng".
+      return DecoratedBox(
+        decoration: ShapeDecoration(
+          shape: const StadiumBorder(),
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            stops: const [0, .5, 1],
+            colors: [
+              Colors.white.withValues(alpha: dark ? .14 : .7),
+              Colors.white.withValues(alpha: 0),
+              Colors.black.withValues(alpha: dark ? .10 : .03),
+            ],
+          ),
+        ),
+        child: child,
+      );
+    },
+  );
 }

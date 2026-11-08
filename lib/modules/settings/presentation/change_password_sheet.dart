@@ -167,10 +167,6 @@ class _ChangePasswordSheetState extends ConsumerState<ChangePasswordSheet> {
               style: OutlinedButton.styleFrom(
                 foregroundColor: scheme.primary,
                 minimumSize: const Size.fromHeight(48),
-                side: BorderSide(
-                  color: _ready ? scheme.primary : scheme.outlineVariant,
-                  width: 1.5,
-                ),
                 shape: const StadiumBorder(),
                 textStyle: OmniType.bodyStrong,
               ),

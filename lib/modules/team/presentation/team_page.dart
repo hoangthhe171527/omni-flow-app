@@ -52,7 +52,6 @@ class TeamPage extends ConsumerWidget {
                   foregroundColor: scheme.primary,
                   minimumSize: const Size(0, 36),
                   padding: const EdgeInsets.symmetric(horizontal: 14),
-                  side: BorderSide(color: scheme.primary, width: 1.5),
                   shape: const StadiumBorder(),
                   tapTargetSize: MaterialTapTargetSize.padded,
                   textStyle: OmniType.bodyStrong,

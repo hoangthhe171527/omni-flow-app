@@ -217,7 +217,6 @@ class _OutlineButton extends StatelessWidget {
         foregroundColor: primary,
         minimumSize: const Size(0, 36),
         padding: const EdgeInsets.symmetric(horizontal: OmniSpacing.lg),
-        side: BorderSide(color: primary, width: 1.5),
         shape: const StadiumBorder(),
         tapTargetSize: MaterialTapTargetSize.padded,
         textStyle: OmniType.bodyStrong,

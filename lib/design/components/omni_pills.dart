@@ -64,7 +64,8 @@ class OmniFilterPill extends StatelessWidget {
       background = scheme.surface;
       foreground = scheme.onSurface;
       countColor = scheme.onSurfaceVariant;
-      border = Border.all(color: scheme.primary, width: 2);
+      // Cùng kiểu chip đang chọn của theme: trắng mờ, viền màu chính nhạt.
+      border = Border.all(color: scheme.primary.withValues(alpha: .45));
     } else if (selected) {
       background = tint ?? (dark ? scheme.onSurface : OmniColors.ink);
       foreground = dark && tint == null ? scheme.surface : Colors.white;

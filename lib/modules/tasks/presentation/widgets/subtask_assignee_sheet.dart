@@ -277,10 +277,6 @@ class _SheetState extends ConsumerState<_Sheet> {
                     Navigator.of(context).pop(const SubtaskUnassign()),
                 style: OutlinedButton.styleFrom(
                   foregroundColor: OmniColors.dangerTextOf(context),
-                  side: BorderSide(color: OmniColors.controlBorderOf(context)),
-                  shape: const RoundedRectangleBorder(
-                    borderRadius: OmniRadius.xsAll,
-                  ),
                 ),
                 child: const Text('Bỏ gán'),
               ),

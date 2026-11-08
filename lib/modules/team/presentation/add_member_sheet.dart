@@ -420,7 +420,6 @@ class _OutlineButton extends StatelessWidget {
     final style = OutlinedButton.styleFrom(
       foregroundColor: primary,
       minimumSize: const Size.fromHeight(48),
-      side: BorderSide(color: primary, width: 1.5),
       shape: const StadiumBorder(),
       textStyle: OmniType.bodyStrong,
     );

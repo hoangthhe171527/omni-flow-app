@@ -535,9 +535,8 @@ class _ActButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final enabled = onTap != null;
-    // Nút viền (gu người dùng: không tô đặc): nút chính viền + chữ màu chủ
-    // đạo, nút phụ viền nhạt chữ mực; dạng viên thuốc.
-    final background = scheme.surface;
+    // Nút kính (liquid-buttons-uiux.html B): nút chính chữ màu chủ đạo, nút
+    // phụ chữ mực; không viền màu, dạng viên thuốc.
     final foreground = primary ? scheme.primary : scheme.onSurface;
 
     return Semantics(
@@ -557,14 +556,7 @@ class _ActButton extends StatelessWidget {
               child: Container(
                 height: 36,
                 alignment: Alignment.center,
-                decoration: BoxDecoration(
-                  color: background,
-                  borderRadius: BorderRadius.circular(18),
-                  border: Border.all(
-                    color: primary ? scheme.primary : scheme.outlineVariant,
-                    width: primary ? 1.5 : 1,
-                  ),
-                ),
+                decoration: OmniGlass.buttonDecoration(context, radius: 18),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [

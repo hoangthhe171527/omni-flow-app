@@ -567,15 +567,11 @@ class _LogoutButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-
     return OutlinedButton(
       onPressed: onPressed,
       style: OutlinedButton.styleFrom(
         foregroundColor: OmniColors.dangerTextOf(context),
-        backgroundColor: scheme.surface,
         minimumSize: const Size.fromHeight(44),
-        side: BorderSide(color: scheme.outlineVariant),
         shape: const StadiumBorder(),
         textStyle: OmniType.chip.copyWith(fontWeight: FontWeight.w600),
       ),

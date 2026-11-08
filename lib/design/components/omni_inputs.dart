@@ -132,7 +132,10 @@ class _OmniSearchFieldState extends State<OmniSearchField> {
         focusedBorder: !widget.flat && widget.outlined
             ? OutlineInputBorder(
                 borderRadius: OmniRadius.lgAll,
-                borderSide: BorderSide(color: scheme.primary, width: 1.5),
+                borderSide: BorderSide(
+                  color: scheme.primary.withValues(alpha: .55),
+                  width: 1.5,
+                ),
               )
             : widget.flat
             ? InputBorder.none
