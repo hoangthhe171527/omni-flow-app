@@ -164,7 +164,8 @@ class _OmniAnchoredMenuRoute<T> extends PopupRoute<T> {
       child: MediaQuery.highContrastOf(context)
           ? ColoredBox(color: scrim)
           : BackdropFilter(
-              filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
+              // Mờ vừa (người dùng 2026-11-08: 18 quá mờ, mất ngữ cảnh).
+              filter: ImageFilter.blur(sigmaX: 6, sigmaY: 6),
               child: ColoredBox(color: scrim),
             ),
     );

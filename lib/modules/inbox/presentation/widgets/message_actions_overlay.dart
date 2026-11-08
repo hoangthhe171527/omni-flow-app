@@ -126,7 +126,7 @@ class _MessageActionsOverlay extends StatelessWidget {
           // Không có con: không nuốt chạm, để rào chắn của route đóng hộp.
           Positioned.fill(
             child: BackdropFilter(
-              filter: ImageFilter.blur(sigmaX: 14, sigmaY: 14),
+              filter: ImageFilter.blur(sigmaX: 6, sigmaY: 6),
             ),
           ),
           Positioned.fill(

@@ -183,8 +183,8 @@ class _InboxPageState extends ConsumerState<InboxPage>
     final pinned =
         ref.watch(pinnedConversationsProvider).valueOrNull ??
         const <Conversation>[];
-    // Dòng đầu: hàng chip lọc nhanh; rồi mục "Đã ghim" nếu có.
-    final lead = pinned.isEmpty ? 1 : 2;
+    // Lọc nằm ở ô tìm của thanh trên (người dùng bỏ hàng chip 2026-11-08).
+    final lead = pinned.isEmpty ? 0 : 1;
     final scheme = Theme.of(context).colorScheme;
 
     return Scaffold(
@@ -277,9 +277,6 @@ class _InboxPageState extends ConsumerState<InboxPage>
                                 ),
                               ),
                         itemBuilder: (context, rawIndex) {
-                          if (rawIndex == 0) {
-                            return const InboxQuickChips();
-                          }
                           if (rawIndex < lead) {
                             return InboxPinnedSection(
                               items: pinned,
@@ -307,7 +304,12 @@ class _InboxPageState extends ConsumerState<InboxPage>
                           final last =
                               index == state.items.length - 1 && !state.hasMore;
                           return Padding(
-                            padding: EdgeInsets.fromLTRB(16, 0, 16, 0),
+                            padding: EdgeInsets.fromLTRB(
+                              16,
+                              index == 0 && lead == 0 ? 8 : 0,
+                              16,
+                              0,
+                            ),
                             child: Material(
                               color: scheme.surface,
                               clipBehavior: Clip.antiAlias,

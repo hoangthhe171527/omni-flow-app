@@ -402,45 +402,6 @@ class InboxFilterPanel extends ConsumerWidget {
   }
 }
 
-/// Hàng chip lọc nhanh kính ở đầu danh sách Hộp thư (viomni-apple-uiux.html
-/// "Hộp thư": "Bộ lọc nhanh thành hàng chip kính; nút lọc chi tiết nằm trong
-/// ô tìm"). Cùng tập lựa chọn với mục "Hiển thị" của bảng lọc — một nguồn
-/// ([inboxQuickSegments]) để hai chỗ không lệch nhau.
-class InboxQuickChips extends ConsumerWidget {
-  const InboxQuickChips({super.key});
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final filter = ref.watch(inboxFilterProvider);
-    final controller = ref.read(inboxFilterProvider.notifier);
-    final access = ref.watch(inboxAccessProvider);
-    final segments = inboxQuickSegments(access.showsAssigneeFilter);
-
-    return SizedBox(
-      key: const Key('inbox-quick-chips'),
-      height: 52,
-      child: ListView.separated(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
-        itemCount: segments.length,
-        separatorBuilder: (_, _) => const SizedBox(width: 8),
-        itemBuilder: (context, i) {
-          final (value, label) = segments[i];
-          return ChoiceChip(
-            label: Text(label),
-            selected: filter.quick == value,
-            showCheckmark: false,
-            onSelected: (_) {
-              HapticFeedback.selectionClick();
-              controller.setQuick(value);
-            },
-          );
-        },
-      ),
-    );
-  }
-}
-
 /// Các lựa chọn "Hiển thị" của Hộp thư theo quyền xem người phụ trách.
 List<(InboxQuickFilter, String)> inboxQuickSegments(bool showsAssignee) => [
   (InboxQuickFilter.all, 'Tất cả'),

@@ -375,7 +375,6 @@ class _AssigneeBox extends StatelessWidget {
           maxLines: 1,
           textScaler: TextScaler.noScaling,
           style: OmniType.micro.copyWith(
-            fontSize: 9.5,
             fontWeight: FontWeight.w600,
             color: fg,
             height: 1,
