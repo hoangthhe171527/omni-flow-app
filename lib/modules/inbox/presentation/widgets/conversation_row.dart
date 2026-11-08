@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
@@ -314,47 +315,100 @@ class _SourceLine extends StatelessWidget {
   }
 }
 
-/// Ô 20×20 bo 4 của người phụ trách: chữ tắt, hoặc `–` khi chưa gán.
+/// Ô tròn 22 của người phụ trách (inbox-assignee-uiux.html, phương án B):
+/// chữ tắt trên nền nhạt theo từng người; chưa gán là vòng nét đứt có dấu +.
 class _AssigneeBox extends StatelessWidget {
   const _AssigneeBox({required this.conversation});
 
   final Conversation conversation;
+
+  static const double _size = 22;
 
   @override
   Widget build(BuildContext context) {
     final name = conversation.assigneeName;
     final hasName =
         !conversation.isUnassigned && name != null && name.trim().isNotEmpty;
-    final text = hasName ? Formatters.initials(name) : '–';
     final scheme = Theme.of(context).colorScheme;
 
+    if (!hasName) {
+      return Semantics(
+        label: 'Chưa gán',
+        excludeSemantics: true,
+        child: CustomPaint(
+          key: const Key('assignee-unassigned'),
+          painter: _DashedRingPainter(
+            color: OmniColors.controlBorderOf(context),
+          ),
+          child: SizedBox.square(
+            dimension: _size,
+            child: Icon(
+              Icons.add_rounded,
+              size: 13,
+              color: scheme.onSurfaceVariant,
+            ),
+          ),
+        ),
+      );
+    }
+
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    final tones = dark
+        ? OmniColors.darkAssigneeTones
+        : OmniColors.assigneeTones;
+    // Màu cố định theo người: cùng người luôn cùng màu ở mọi dòng, mọi lần mở.
+    final seed = conversation.assigneeId ?? name;
+    final (bg, fg) =
+        tones[seed.codeUnits.fold<int>(0, (a, c) => a + c) % tones.length];
+
     return Semantics(
-      label: hasName ? 'Phụ trách: $name' : 'Chưa gán',
+      label: 'Phụ trách: $name',
       excludeSemantics: true,
       child: Container(
-        width: 20,
-        height: 20,
+        key: const Key('assignee-chip'),
+        width: _size,
+        height: _size,
         alignment: Alignment.center,
-        decoration: BoxDecoration(
-          color: hasName
-              ? scheme.onSurface
-              : OmniColors.byBrightness(
-                  context,
-                  const Color(0xFFEEF1F5),
-                  scheme.surfaceContainerHighest,
-                ),
-          borderRadius: BorderRadius.circular(4),
-        ),
+        decoration: BoxDecoration(color: bg, shape: BoxShape.circle),
         child: Text(
-          text,
+          Formatters.initials(name),
+          maxLines: 1,
+          textScaler: TextScaler.noScaling,
           style: OmniType.micro.copyWith(
+            fontSize: 9.5,
             fontWeight: FontWeight.w600,
-            color: hasName ? scheme.surface : scheme.onSurfaceVariant,
+            color: fg,
+            height: 1,
           ),
         ),
       ),
     );
   }
+}
+
+/// Vòng tròn nét đứt 1.5 của ô "chưa gán".
+class _DashedRingPainter extends CustomPainter {
+  const _DashedRingPainter({required this.color});
+
+  final Color color;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    const dashes = 12;
+    const sweep = 2 * math.pi / dashes;
+    final paint = Paint()
+      ..color = color
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.5
+      ..strokeCap = StrokeCap.round;
+    final rect = (Offset.zero & size).deflate(0.75);
+    for (var i = 0; i < dashes; i++) {
+      canvas.drawArc(rect, i * sweep, sweep * 0.55, false, paint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(_DashedRingPainter old) => old.color != color;
 }
 
 /// Avatar 38 bo 6, không huy hiệu kênh (kênh đã nằm ở dòng nguồn).

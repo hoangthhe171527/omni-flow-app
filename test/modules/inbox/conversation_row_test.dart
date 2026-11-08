@@ -55,6 +55,21 @@ void main() {
     expect(find.text('2'), findsNothing);
   });
 
+  testWidgets('ô phụ trách: tròn 22, nền nhạt theo người, không khối mực', (
+    tester,
+  ) async {
+    await pump(tester);
+    final chip = find.byKey(const Key('assignee-chip'));
+    expect(tester.getSize(chip), const Size(22, 22));
+    final box = tester.widget<Container>(chip).decoration! as BoxDecoration;
+    expect(box.shape, BoxShape.circle);
+    expect(
+      OmniColors.assigneeTones.map((t) => t.$1),
+      contains(box.color),
+      reason: 'nền lấy từ bảng màu nhạt, không phải mực',
+    );
+  });
+
   test(
     'màu chữ nguồn mọi kênh đạt 4.5:1 (sáng trên trắng, tối trên nền tối)',
     () {
@@ -106,7 +121,9 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('không nhãn → không chấm; chưa gán → –', (tester) async {
+  testWidgets('không nhãn → không chấm; chưa gán → vòng nét đứt +', (
+    tester,
+  ) async {
     await pump(
       tester,
       c: const Conversation(
@@ -119,7 +136,8 @@ void main() {
       ),
     );
     expect(find.bySemanticsLabel(RegExp('^Nhãn:')), findsNothing);
-    expect(find.text('–'), findsOneWidget);
+    expect(find.byKey(const Key('assignee-unassigned')), findsOneWidget);
+    expect(find.byKey(const Key('assignee-chip')), findsNothing);
   });
 
   testWidgets(
