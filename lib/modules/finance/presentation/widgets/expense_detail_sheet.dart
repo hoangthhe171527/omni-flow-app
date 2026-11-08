@@ -164,7 +164,6 @@ class _FinanceTwoStepDeleteSheetState
                     },
                     style: OutlinedButton.styleFrom(
                       foregroundColor: p.ink,
-                      side: BorderSide(color: p.line),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),
@@ -191,9 +190,7 @@ class _FinanceTwoStepDeleteSheetState
                       }
                     },
                     style: FilledButton.styleFrom(
-                      backgroundColor: p.danger,
-                      foregroundColor: Colors.white,
-                      elevation: 0,
+                      foregroundColor: p.danger,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),
@@ -1357,8 +1354,7 @@ class _ExpenseDetailSheetState extends ConsumerState<_ExpenseDetailSheet> {
                         child: FilledButton(
                           onPressed: () => _openPayKeypad(item),
                           style: FilledButton.styleFrom(
-                            backgroundColor: p.primary,
-                            foregroundColor: Colors.white,
+                            foregroundColor: p.primary,
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(13),
                             ),
@@ -1369,7 +1365,6 @@ class _ExpenseDetailSheetState extends ConsumerState<_ExpenseDetailSheet> {
                             child: Text(
                               'Trả · ${FinanceMonthUtils.formatVndSpace(left)}',
                               style: OmniType.bodyStrong.copyWith(
-                                color: Colors.white,
                                 fontWeight: FontWeight.w600,
                                 fontFeatures: const [
                                   FontFeature.tabularFigures(),

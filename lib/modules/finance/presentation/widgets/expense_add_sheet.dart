@@ -1007,9 +1007,7 @@ class _ExpenseAddSheetState extends ConsumerState<_ExpenseAddSheet> {
                           ? null
                           : () => _saveExpense(keepOpen: true),
                       style: OutlinedButton.styleFrom(
-                        backgroundColor: p.primarySoft,
                         foregroundColor: p.primaryInk,
-                        side: BorderSide(color: p.selLine, width: 0.8),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(13),
                         ),
@@ -1038,8 +1036,7 @@ class _ExpenseAddSheetState extends ConsumerState<_ExpenseAddSheet> {
                           ? null
                           : () => _saveExpense(keepOpen: false),
                       style: FilledButton.styleFrom(
-                        backgroundColor: p.primary,
-                        foregroundColor: Colors.white,
+                        foregroundColor: p.primary,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(13),
                         ),
@@ -1051,7 +1048,6 @@ class _ExpenseAddSheetState extends ConsumerState<_ExpenseAddSheet> {
                         child: Text(
                           'Lưu khoản chi',
                           style: OmniType.bodyStrong.copyWith(
-                            color: Colors.white,
                             fontWeight: FontWeight.w600,
                           ),
                         ),

@@ -449,9 +449,7 @@ class _ExpensesPageState extends ConsumerState<ExpensesPage> {
               icon: const Icon(Icons.refresh_rounded, size: 16),
               label: const Text('Thử lại'),
               style: FilledButton.styleFrom(
-                backgroundColor: p.primary,
-                foregroundColor: Colors.white,
-                elevation: 0,
+                foregroundColor: p.primary,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(10),
                 ),
@@ -1335,8 +1333,7 @@ class _ExpensesPageState extends ConsumerState<ExpensesPage> {
                             ? () => notifier.commitRecurring()
                             : null,
                         style: FilledButton.styleFrom(
-                          backgroundColor: p.primary,
-                          foregroundColor: Colors.white,
+                          foregroundColor: p.primary,
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(10),
                           ),
@@ -1351,7 +1348,6 @@ class _ExpensesPageState extends ConsumerState<ExpensesPage> {
                                       ? 'Nhập số tiền cho khoản đã chọn'
                                       : 'Chọn ít nhất 1 khoản'),
                             style: OmniType.bodySm.copyWith(
-                              color: Colors.white,
                               fontWeight: FontWeight.w600,
                               fontFeatures: const [
                                 FontFeature.tabularFigures(),

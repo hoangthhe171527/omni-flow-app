@@ -348,11 +348,24 @@ ButtonStyle _glassButtonStyle(
       BorderSide(color: Colors.white.withValues(alpha: dark ? .16 : .9)),
     ),
     backgroundBuilder: (context, states, child) {
+      // Dáng THẬT của nút (nút tự đặt bo góc riêng thì vệt sáng theo đúng
+      // dáng đó, không lòi hai góc): `context` là của chính nút, đọc dáng
+      // từ style riêng của nó; không đặt thì dáng viên thuốc của theme.
+      final own = context.widget;
+      final ShapeBorder shape = switch (own is ButtonStyleButton
+          ? own.style?.shape?.resolve(states)
+          : null) {
+        final OutlinedBorder s => s.copyWith(side: BorderSide.none),
+        final ShapeBorder s => s,
+        null => const StadiumBorder(),
+      };
       if (MediaQuery.highContrastOf(context)) {
         return DecoratedBox(
           decoration: ShapeDecoration(
             color: Theme.of(context).colorScheme.surface,
-            shape: StadiumBorder(side: BorderSide(color: foreground)),
+            shape: shape is OutlinedBorder
+                ? shape.copyWith(side: BorderSide(color: foreground))
+                : shape,
           ),
           child: child,
         );
@@ -361,7 +374,7 @@ ButtonStyle _glassButtonStyle(
       // Vệt sáng nửa trên — "mép kính bắt sáng".
       return DecoratedBox(
         decoration: ShapeDecoration(
-          shape: const StadiumBorder(),
+          shape: shape,
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,

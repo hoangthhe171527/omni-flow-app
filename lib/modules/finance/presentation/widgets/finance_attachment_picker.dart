@@ -581,7 +581,6 @@ Future<void> showFinanceAttachmentPreviewDialog({
                     label: const Text('Mở tệp'),
                     style: OutlinedButton.styleFrom(
                       foregroundColor: p.primary,
-                      side: BorderSide(color: p.line),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(10),
                       ),

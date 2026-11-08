@@ -113,7 +113,7 @@ class _DeleteAccountDialogState extends State<DeleteAccountDialog> {
               ? () => Navigator.pop(context, _password.text)
               : null,
           style: FilledButton.styleFrom(
-            backgroundColor: Theme.of(context).colorScheme.error,
+            foregroundColor: Theme.of(context).colorScheme.error,
           ),
           child: const Text('Xác nhận xoá'),
         ),
