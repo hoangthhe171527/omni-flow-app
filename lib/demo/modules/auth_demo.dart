@@ -68,6 +68,9 @@ const _permissions = <String>[
   'authorization.roles.revoke',
   'authorization.permissions.read',
   'organization.org_units.read',
+  'organization.org_units.create',
+  'organization.org_units.update',
+  'organization.org_units.delete',
   'finance.expenses',
 ];
 
