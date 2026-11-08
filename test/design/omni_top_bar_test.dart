@@ -44,8 +44,8 @@ void main() {
       await tester.pumpWidget(_host(c, unread: 3));
       await tester.pump();
 
-      // Logo rời thanh: tiêu đề lớn đứng chỗ đó (viomni-apple-uiux.html).
-      expect(find.byType(OmniBrandMark), findsNothing);
+      // Màn gốc: logo Viomni thay tiêu đề lớn (người dùng chọn 2026-11-08).
+      expect(find.byType(OmniBrandMark), findsOneWidget);
       expect(find.byType(OmniGlass), findsNWidgets(2));
       expect(find.bySemanticsLabel(RegExp('Thông báo')), findsOneWidget);
       expect(
@@ -93,7 +93,12 @@ void main() {
       t.getSize(find.byKey(const ValueKey('omni-top-bar-bell-face'))),
       const Size(44, 44),
     );
-    final node = t.getSemantics(find.text('Hộp thư'));
+    // Chữ không hiện (logo đứng chỗ đó) nhưng vẫn đọc tên màn như header.
+    expect(find.text('Hộp thư'), findsNothing);
+    final node = t.getSemantics(
+      find.byKey(const ValueKey('omni-top-bar-brand')),
+    );
+    expect(node.label, 'Hộp thư');
     expect(node.flagsCollection.isHeader, isTrue);
     expect(node.rect.isEmpty, isFalse);
     expect(t.getSize(find.byKey(const ValueKey('tile'))).width, 36);

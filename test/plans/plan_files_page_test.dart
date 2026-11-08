@@ -73,7 +73,13 @@ void main() {
   ) async {
     await pump(tester);
 
-    expect(find.text('Tệp đính kèm'), findsOneWidget);
+    // Màn đứng gốc trong bài kiểm: logo thay chữ, tên màn chỉ để đọc.
+    expect(
+      find.byWidgetPredicate(
+        (w) => w is Semantics && w.properties.label == 'Tệp đính kèm',
+      ),
+      findsOneWidget,
+    );
     expect(find.byType(AttachmentThumb), findsNWidgets(4));
     expect(find.text('Đàn A'), findsNWidgets(2));
     expect(find.text('Đàn B'), findsOneWidget);

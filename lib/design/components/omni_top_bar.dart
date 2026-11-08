@@ -8,7 +8,9 @@ import '../../core/nav/search_mode.dart';
 import '../platform/omni_motion_scope.dart';
 import '../platform/omni_platform.dart';
 import '../tokens/tokens.dart';
+import 'brand_anchor.dart';
 import 'omni_app_bar.dart';
+import 'omni_brand.dart';
 import 'omni_glass.dart';
 
 /// Chỗ cắm cho phần của [OmniTopBar] thuộc về `modules/`: số thông báo chưa đọc
@@ -218,7 +220,46 @@ class _OmniTopBarState extends State<OmniTopBar> {
             const SizedBox(width: 10),
           ],
           Expanded(
-            child: title == null
+            child: !subPage
+                // Màn gốc: logo + chữ Viomni thay cho tiêu đề lớn (người dùng
+                // chọn 2026-11-08). Tên màn vẫn đọc cho trình đọc màn hình.
+                // BrandAnchor là đích bay của logo ở màn mở app.
+                ? Align(
+                    alignment: Alignment.centerLeft,
+                    child: Semantics(
+                      key: const ValueKey('omni-top-bar-brand'),
+                      // Nút đọc riêng: không gộp với chuông thành một nhãn.
+                      container: true,
+                      header: title != null,
+                      label: title ?? 'Viomni',
+                      excludeSemantics: true,
+                      // Màn hẹp nhiều nút (Chi phí ở 360 + chữ 1.15×): chỉ
+                      // còn logo, bỏ chữ Viomni để không tràn dòng.
+                      child: LayoutBuilder(
+                        builder: (context, box) => box.maxWidth >= 120
+                            ? const BrandAnchor(
+                                withWordmark: true,
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    OmniBrandMark(size: 30, framed: false),
+                                    SizedBox(width: 8),
+                                    Flexible(
+                                      child: FittedBox(
+                                        fit: BoxFit.scaleDown,
+                                        child: OmniWordmark(fontSize: 19),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              )
+                            : const BrandAnchor(
+                                child: OmniBrandMark(size: 30, framed: false),
+                              ),
+                      ),
+                    ),
+                  )
+                : title == null
                 ? const SizedBox.shrink()
                 : Semantics(
                     header: true,
@@ -226,20 +267,12 @@ class _OmniTopBarState extends State<OmniTopBar> {
                       title,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      textAlign: subPage ? TextAlign.center : TextAlign.start,
-                      style: subPage
-                          ? OmniType.body.copyWith(
-                              color: scheme.onSurface,
-                              fontSize: 17,
-                              fontWeight: FontWeight.w600,
-                            )
-                          : OmniType.largeTitle.copyWith(
-                              color: scheme.onSurface,
-                              fontSize: 28,
-                              fontWeight: FontWeight.w600,
-                              letterSpacing: -0.3,
-                              height: 1.15,
-                            ),
+                      textAlign: TextAlign.center,
+                      style: OmniType.body.copyWith(
+                        color: scheme.onSurface,
+                        fontSize: 17,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                   ),
           ),

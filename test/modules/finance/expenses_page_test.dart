@@ -665,7 +665,13 @@ void main() {
         );
         await tester.pumpAndSettle();
 
-        expect(find.text('Tổng hợp chi phí'), findsOneWidget);
+        // Màn đứng gốc trong bài kiểm: logo thay chữ, tên chỉ để đọc.
+        expect(
+          find.byWidgetPredicate(
+            (w) => w is Semantics && w.properties.label == 'Tổng hợp chi phí',
+          ),
+          findsOneWidget,
+        );
         expect(
           find.byKey(const ValueKey('finance-summary-tab-month')),
           findsOneWidget,

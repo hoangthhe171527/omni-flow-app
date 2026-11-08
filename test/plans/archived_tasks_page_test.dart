@@ -69,7 +69,13 @@ void main() {
   ) async {
     await pump(tester);
 
-    expect(find.text('Việc đã lưu trữ'), findsOneWidget);
+    // Màn đứng gốc trong bài kiểm: logo thay chữ, tên màn chỉ để đọc.
+    expect(
+      find.byWidgetPredicate(
+        (w) => w is Semantics && w.properties.label == 'Việc đã lưu trữ',
+      ),
+      findsOneWidget,
+    );
     expect(find.byType(TaskCard), findsNWidgets(2));
     expect(find.text('Đàn A'), findsOneWidget);
     expect(api.lists.first, (planId, TaskArchiveScope.archived, 1));

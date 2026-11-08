@@ -49,17 +49,18 @@ void main() {
   });
 
   group('tiêu đề lớn', () {
-    testWidgets('màn gốc: tiêu đề lớn 28/600 canh trái', (tester) async {
+    testWidgets('màn gốc: logo Viomni canh trái thay chữ to', (tester) async {
+      // Người dùng chọn 2026-11-08: bỏ tiêu đề lớn, đặt logo app.
       await tester.pumpWidget(
         const MaterialApp(
           home: Scaffold(appBar: OmniAppBar(title: 'Việc của tôi')),
         ),
       );
 
-      final title = tester.widget<Text>(find.text('Việc của tôi'));
-      expect(title.style!.fontSize, 28);
-      expect(title.style!.fontWeight, FontWeight.w600);
-      expect(title.textAlign, TextAlign.start);
+      expect(find.text('Việc của tôi'), findsNothing);
+      expect(find.byType(OmniBrandMark), findsOneWidget);
+      expect(find.byType(OmniWordmark), findsOneWidget);
+      expect(tester.getTopLeft(find.byType(OmniBrandMark)).dx, lessThan(40));
     });
 
     testWidgets('màn đẩy vào: tiêu đề màn con 17/600 ở giữa', (tester) async {

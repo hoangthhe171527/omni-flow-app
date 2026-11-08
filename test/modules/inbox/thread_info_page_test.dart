@@ -159,7 +159,13 @@ void main() {
     tester,
   ) async {
     await pump(tester, const {'opportunities': true});
-    expect(find.text('Thông tin'), findsOneWidget);
+    // Màn đứng gốc trong bài kiểm: thanh trên hiện logo, tên chỉ để đọc.
+    expect(
+      find.byWidgetPredicate(
+        (w) => w is Semantics && w.properties.label == 'Thông tin',
+      ),
+      findsOneWidget,
+    );
     expect(find.text('Tìm tin'), findsOneWidget);
     expect(find.text('Phụ trách'), findsOneWidget);
     expect(find.text('Nhãn'), findsOneWidget);

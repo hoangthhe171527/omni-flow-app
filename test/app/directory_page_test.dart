@@ -243,8 +243,8 @@ void main() {
           ),
         )
         .map((e) => e.data)
-        // Tiêu đề lớn của thanh trên cũng là header.
-        .where((l) => l != 'Tất cả')
+        // Logo của thanh trên cũng là header (chữ Viomni là Text.rich).
+        .where((l) => l != null && l != 'Tất cả')
         .toList();
     expect(labels, [
       'Bán hàng',

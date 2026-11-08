@@ -50,7 +50,13 @@ void main() {
     await pump(tester);
 
     final now = DateTime.now();
-    expect(find.text('Báo cáo kế hoạch'), findsOneWidget);
+    // Màn đứng gốc trong bài kiểm: logo thay chữ, tên màn chỉ để đọc.
+    expect(
+      find.byWidgetPredicate(
+        (w) => w is Semantics && w.properties.label == 'Báo cáo kế hoạch',
+      ),
+      findsOneWidget,
+    );
     expect(find.byType(KpiCard), findsOneWidget);
     expect(api.calls, contains((planId, DateTime(now.year, now.month))));
     for (final (planIdSent, _) in api.calls) {
