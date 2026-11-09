@@ -16,7 +16,6 @@ import 'package:omni_app/core/realtime/realtime_client.dart';
 import 'package:omni_app/core/utils/formatters.dart';
 import 'package:omni_app/design/theme/omni_theme.dart';
 import 'package:omni_app/modules/inbox/application/thread_controller.dart';
-import 'package:omni_app/modules/inbox/application/voice_recorder.dart';
 import 'package:omni_app/modules/inbox/data/inbox_api.dart';
 import 'package:omni_app/modules/inbox/domain/conversation.dart';
 import 'package:omni_app/modules/inbox/domain/inbox_filter.dart';
@@ -33,7 +32,6 @@ import 'package:omni_app/security/permissions/access_policy.dart';
 import 'package:omni_app/security/session/session.dart';
 import 'package:omni_app/security/session/session_controller.dart';
 
-import '../../support/fake_voice_recorder.dart';
 import '../../support/fixed_background.dart';
 
 /// Màn chat, dựng thật với API giả.
@@ -50,15 +48,11 @@ void main() {
 
   setUp(() => api = _FakeInboxApi());
 
-  late FakeVoiceRecorder recorder;
-  setUp(() => recorder = FakeVoiceRecorder());
-
   Widget host({
     Set<String> permissions = const {'inbox.read', 'inbox.write'},
   }) => ProviderScope(
     overrides: [
       inboxApiProvider.overrideWithValue(api),
-      voiceRecorderProvider.overrideWith((ref) => recorder),
       // Không realtime: tín hiệu của hội thoại vẫn dựng được mà không mở socket.
       realtimeClientProvider.overrideWithValue(
         RealtimeClient(
@@ -578,111 +572,27 @@ void main() {
     );
   });
 
-  group('Task 6: ghi âm', () {
-    Map<String, dynamic> caps(String audio) => {
+  testWidgets('composer hội thoại luôn ẩn ghi âm và giữ hàng công cụ gọn', (
+    tester,
+  ) async {
+    api.capabilities = const {
       'can_send': true,
       'text': 'native',
       'image': 'native',
       'file': 'native',
-      'audio': audio,
-      'video': audio,
+      'audio': 'native',
+      'video': 'native',
     };
 
-    // Khả năng gửi về sau lượt dựng đầu: cụm công cụ nở thêm nút mic (350ms).
-    Future<void> open(WidgetTester tester) async {
-      await openThread(tester);
-      await tester.pump(const Duration(milliseconds: 400));
-    }
+    await openThread(tester);
+    await tester.pump(const Duration(milliseconds: 400));
 
-    Future<void> record(WidgetTester tester, Duration length) async {
-      await tester.tap(find.byTooltip('Ghi âm'));
-      await tester.pump();
-      await tester.pump();
-      recorder.tick(length);
-      await tester.pump();
-    }
-
-    testWidgets('ghi → Gửi: upload tệp .wav, gửi tin không chữ với type '
-        'audio do server trả', (tester) async {
-      api.capabilities = caps('native');
-      await open(tester);
-      await record(tester, const Duration(seconds: 4));
-
-      await tester.tap(find.byTooltip('Gửi ghi âm'));
-      await tester.pump();
-      await tester.pump();
-      await tester.pump();
-
-      expect(api.uploads, [
-        (
-          path: '/tmp/ghi-am-20261010-090507.wav',
-          filename: 'ghi-am-20261010-090507.wav',
-        ),
-      ]);
-      expect(api.sendCalls.single.text, '');
-      final sent = api.sentAttachments.single.single;
-      expect(sent.type, 'audio');
-      expect(sent.name, 'ghi-am-20261010-090507.wav');
-      expect(find.byType(TextField), findsOneWidget);
-      await closeThread(tester);
-    });
-
-    testWidgets('Zalo OA (audio: link) → hỏi trước khi ghi', (tester) async {
-      api.capabilities = caps('link');
-      await open(tester);
-      await tester.tap(find.byTooltip('Ghi âm'));
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 400));
-      expect(find.textContaining('gửi dưới dạng đường link'), findsOneWidget);
-      await tester.tap(find.text('Huỷ'));
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 400));
-      expect(recorder.starts, isEmpty);
-      await closeThread(tester);
-    });
-
-    testWidgets('API cũ thiếu khoá / audio none → không có mic', (
-      tester,
-    ) async {
-      await openThread(tester);
-      expect(find.byTooltip('Ghi âm'), findsNothing);
-      await closeThread(tester);
-
-      api.capabilities = caps('none');
-      await openThread(tester);
-      expect(find.byTooltip('Ghi âm'), findsNothing);
-      await closeThread(tester);
-    });
-
-    testWidgets('rời trang khi đang ghi → huỷ bản ghi', (tester) async {
-      api.capabilities = caps('native');
-      await open(tester);
-      await record(tester, const Duration(seconds: 2));
-      await closeThread(tester);
-      expect(recorder.cancels, 1);
-    });
-
-    testWidgets('snackbar của trang nổi phía trên composer', (tester) async {
-      api.capabilities = caps('native');
-      recorder.permission = false;
-      await open(tester);
-      await tester.tap(find.byTooltip('Ghi âm'));
-      await tester.pump();
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 500));
-
-      final snack = tester.getRect(
-        find
-            .descendant(
-              of: find.byType(SnackBar),
-              matching: find.byType(Material),
-            )
-            .first,
-      );
-      final bar = tester.getRect(find.byType(MessageComposer));
-      expect(snack.bottom, lessThanOrEqualTo(bar.top));
-      await closeThread(tester);
-    });
+    expect(find.byTooltip('Ghi âm'), findsNothing);
+    expect(find.byTooltip('Thêm'), findsOneWidget);
+    expect(find.byTooltip('Chụp ảnh'), findsOneWidget);
+    expect(find.byTooltip('Ảnh'), findsOneWidget);
+    expect(find.byType(TextField), findsOneWidget);
+    await closeThread(tester);
   });
 
   group('Task 5: khả năng gửi của kênh, tin lỗi, gửi lại qua /resend', () {
