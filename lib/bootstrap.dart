@@ -23,6 +23,7 @@ import 'modules/customers/customers_module.dart';
 import 'modules/dashboard/dashboard_module.dart';
 import 'modules/finance/finance_module.dart';
 import 'modules/inbox/inbox_module.dart';
+import 'modules/inventory/inventory_module.dart';
 import 'modules/notifications/notifications_module.dart';
 import 'modules/opportunities/opportunities.dart'
     show opportunitiesCustomerSection, opportunitiesKhachSegment;
@@ -47,6 +48,7 @@ const List<OmniModule> appModules = [
   CustomersModule(),
   OpportunitiesModule(),
   FinanceModule(),
+  InventoryModule(),
   TeamModule(),
   ChannelsModule(),
   NotificationsModule(),
