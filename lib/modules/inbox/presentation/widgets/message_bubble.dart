@@ -162,8 +162,18 @@ class MessageBubble extends StatelessWidget {
         : message.attachments
               .where((attachment) => attachment.isVideo)
               .toList();
+    final stickers = message.recalled
+        ? const <MessageAttachment>[]
+        : message.attachments
+              .where((attachment) => attachment.isSticker)
+              .toList();
     final files = message.attachments
-        .where((attachment) => !attachment.isImage && !attachment.isVideo)
+        .where(
+          (attachment) =>
+              !attachment.isImage &&
+              !attachment.isVideo &&
+              !attachment.isSticker,
+        )
         .toList();
     final hasBubbleContent =
         message.recalled ||
@@ -268,11 +278,14 @@ class MessageBubble extends StatelessWidget {
           ? CrossAxisAlignment.end
           : CrossAxisAlignment.start,
       children: [
+        // Nhãn dán (LIKE, sticker) vẽ trần: không bong bóng, không khung.
+        if (stickers.isNotEmpty) MessageStickers(stickers: stickers),
         if (images.isNotEmpty)
           MessageImageGallery(images: images, heroPrefix: mediaHeroPrefix),
         if (videos.isNotEmpty) MessageVideoAttachments(attachments: videos),
         if (hasBubbleContent) ...[
-          if (images.isNotEmpty) const SizedBox(height: 4),
+          if (images.isNotEmpty || stickers.isNotEmpty)
+            const SizedBox(height: 4),
           bubble,
         ],
       ],

@@ -4,4 +4,7 @@ abstract final class FinanceRoutes {
 
   static const expenseSummary = 'finance.summary';
   static const expenseSummaryPath = '/finance/summary';
+
+  static const catalog = 'finance.catalog';
+  static const catalogPath = '/finance/catalog';
 }

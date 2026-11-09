@@ -267,6 +267,29 @@ class FinanceDemoStore {
     return null;
   }
 
+  /// Số khoản chi của nhóm (mọi năm) — `expense_count` của API.
+  int groupExpenseCount(String id) =>
+      expenses.where((e) => e['group_id'] == id).length;
+
+  /// Số khoản chi dùng nguồn tiền: khoản mang `account_id` hoặc có một lần
+  /// trả từ nguồn đó.
+  int accountExpenseCount(String id) => expenses.where((e) {
+    if (e['account_id'] == id) return true;
+    final pays = e['payments'];
+    return pays is List &&
+        pays.whereType<Map>().any((p) => p['account_id'] == id);
+  }).length;
+
+  Map<String, dynamic> groupJson(Map<String, dynamic> g) => {
+    ...g,
+    'expense_count': groupExpenseCount('${g['id']}'),
+  };
+
+  Map<String, dynamic> accountJson(Map<String, dynamic> a) => {
+    ...a,
+    'expense_count': accountExpenseCount('${a['id']}'),
+  };
+
   Map<String, dynamic>? _findAccount(String? id) {
     if (id == null || id.isEmpty) return null;
     for (final a in accounts) {
@@ -531,7 +554,7 @@ FinanceDemoStore registerFinanceDemo(
     return DemoResponse(200, {
       'success': true,
       'meta': {'year': year, 'recurring_templates': store.recurringTemplates},
-      'data': store.groups,
+      'data': [for (final g in store.groups) store.groupJson(g)],
     });
   });
 
@@ -559,15 +582,46 @@ FinanceDemoStore registerFinanceDemo(
       grp['counts_as_expense'] = b['counts_as_expense'] == true;
     }
     if (b.containsKey('archived')) grp['archived'] = b['archived'] == true;
-    return ok(grp);
+    return ok(store.groupJson(grp));
   });
 
+  // Khớp ExpenseCatalogController::destroyGroup: còn khoản → 422.
   r.delete('/finance/expense-groups/{id}', (req) {
-    store.groups.removeWhere((g) => g['id'] == req.params['id']);
+    final id = req.params['id'] ?? '';
+    if (store._findGroup(id) == null) return notFound();
+    final left = store.groupExpenseCount(id);
+    if (left > 0) {
+      return unprocessable('Nhóm còn $left khoản chi, không xoá được.');
+    }
+    store.groups.removeWhere((g) => g['id'] == id);
     return noContent;
   });
 
-  r.get('/finance/money-accounts', (_) => ok(store.accounts));
+  r.get(
+    '/finance/money-accounts',
+    (_) => ok([for (final a in store.accounts) store.accountJson(a)]),
+  );
+
+  r.put('/finance/money-accounts/{id}', (req) {
+    final acc = store._findAccount(req.params['id']);
+    if (acc == null) return notFound();
+    final b = req.json;
+    if (b.containsKey('name')) acc['name'] = '${b['name']}'.trim();
+    if (b.containsKey('kind')) acc['kind'] = '${b['kind']}';
+    if (b.containsKey('archived')) acc['archived'] = b['archived'] == true;
+    return ok(store.accountJson(acc));
+  });
+
+  r.delete('/finance/money-accounts/{id}', (req) {
+    final id = req.params['id'] ?? '';
+    if (store._findAccount(id) == null) return notFound();
+    final left = store.accountExpenseCount(id);
+    if (left > 0) {
+      return unprocessable('Nguồn tiền còn $left khoản chi, không xoá được.');
+    }
+    store.accounts.removeWhere((a) => a['id'] == id);
+    return noContent;
+  });
 
   r.post('/finance/money-accounts', (req) {
     final b = req.json;

@@ -112,6 +112,41 @@ class MessageImageGallery extends StatelessWidget {
   }
 }
 
+/// Nhãn dán (LIKE của Messenger, sticker Zalo): vẽ trần ~112, không bong
+/// bóng, không bo, không viền — giống chính ứng dụng nhắn tin của khách.
+class MessageStickers extends StatelessWidget {
+  const MessageStickers({super.key, required this.stickers});
+
+  static const double size = 112;
+
+  final List<MessageAttachment> stickers;
+
+  @override
+  Widget build(BuildContext context) {
+    return Wrap(
+      spacing: 4,
+      runSpacing: 4,
+      children: [
+        for (final sticker in stickers)
+          Semantics(
+            image: true,
+            label: 'Nhãn dán',
+            excludeSemantics: true,
+            child: SizedBox.square(
+              key: const ValueKey('message-sticker'),
+              dimension: size,
+              child: _NetworkMediaImage(
+                url: sticker.url,
+                fit: BoxFit.contain,
+                bare: true,
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+}
+
 class _StackedImageCarousel extends StatefulWidget {
   const _StackedImageCarousel({
     required this.images,
@@ -333,10 +368,17 @@ class _GalleryTile extends StatelessWidget {
 }
 
 class _NetworkMediaImage extends StatefulWidget {
-  const _NetworkMediaImage({required this.url, required this.fit});
+  const _NetworkMediaImage({
+    required this.url,
+    required this.fit,
+    this.bare = false,
+  });
 
   final String url;
   final BoxFit fit;
+
+  /// Nhãn dán: nền trong suốt khi đang tải / lỗi, không ô xám.
+  final bool bare;
 
   @override
   State<_NetworkMediaImage> createState() => _NetworkMediaImageState();
@@ -401,6 +443,9 @@ class _NetworkMediaImageState extends State<_NetworkMediaImage> {
     final logicalWidth = MediaQuery.sizeOf(context).width;
     final pixelRatio = MediaQuery.devicePixelRatioOf(context);
     final decodeWidth = math.min((logicalWidth * pixelRatio).round(), 1440);
+    final placeholder = widget.bare
+        ? Colors.transparent
+        : scheme.surfaceContainerHighest;
 
     return CachedNetworkImage(
       key: ValueKey('$_cacheKey#$_attempt'),
@@ -416,7 +461,7 @@ class _NetworkMediaImageState extends State<_NetworkMediaImage> {
       memCacheWidth: decodeWidth,
       maxWidthDiskCache: 1440,
       progressIndicatorBuilder: (_, _, progress) => ColoredBox(
-        color: scheme.surfaceContainerHighest,
+        color: placeholder,
         child: Center(
           child: SizedBox.square(
             dimension: 20,
@@ -432,7 +477,7 @@ class _NetworkMediaImageState extends State<_NetworkMediaImage> {
         ),
       ),
       errorWidget: (_, _, _) => ColoredBox(
-        color: scheme.surfaceContainerHighest,
+        color: placeholder,
         child: Center(
           child: IconButton(
             tooltip: 'Tải lại ảnh',

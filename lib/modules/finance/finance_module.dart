@@ -6,6 +6,7 @@ import '../../core/module/omni_module.dart';
 import '../../security/guard/access_requirement.dart';
 import 'domain/finance_permissions.dart';
 import 'presentation/expense_summary_page.dart';
+import 'presentation/finance_catalog_page.dart';
 import 'presentation/expenses_page.dart';
 import 'routes.dart';
 
@@ -40,6 +41,13 @@ class FinanceModule extends OmniModule {
       access: const AccessRequirement.all(FinancePermissions.adminOnly),
       builder: (_, _) => const ExpenseSummaryPage(),
     ),
+    ModuleRoute(
+      path: FinanceRoutes.catalogPath,
+      name: FinanceRoutes.catalog,
+      rootNavigator: true,
+      access: const AccessRequirement.all(FinancePermissions.adminOnly),
+      builder: (_, _) => const FinanceCatalogPage(),
+    ),
   ];
 
   @override
@@ -66,6 +74,18 @@ class FinanceModule extends OmniModule {
       area: NavArea.finance,
       weight: NavWeight.secondary,
       order: 26,
+      access: AccessRequirement.all(FinancePermissions.adminOnly),
+    ),
+    ModuleNavEntry(
+      moduleId: 'finance',
+      label: 'Danh mục chi',
+      subtitle: 'Nhóm chi và nguồn tiền',
+      icon: Icons.sell_outlined,
+      selectedIcon: Icons.sell_rounded,
+      routeName: FinanceRoutes.catalog,
+      area: NavArea.finance,
+      weight: NavWeight.secondary,
+      order: 27,
       access: AccessRequirement.all(FinancePermissions.adminOnly),
     ),
   ];
