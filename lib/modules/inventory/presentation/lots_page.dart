@@ -10,6 +10,7 @@ import '../domain/inventory_format.dart';
 import '../domain/inventory_models.dart';
 import '../domain/inventory_permissions.dart';
 import '../routes.dart';
+import 'widgets/create_lot_sheet.dart';
 import 'widgets/inventory_ui.dart';
 
 /// Hàng sắp về: lô gom theo Đang về / Đã đặt hàng, vạch đặt trước, tỷ lệ tạm /
@@ -29,10 +30,10 @@ class _LotsPageState extends ConsumerState<LotsPage> {
   Widget build(BuildContext context) {
     final perms = ref.watch(inventoryPermsProvider);
     final lots = ref.watch(lotsProvider);
-    final bottom =
-        ShellBarInset.of(context) +
-        MediaQuery.viewPaddingOf(context).bottom +
-        24;
+    final shellBottom =
+        ShellBarInset.of(context) + MediaQuery.viewPaddingOf(context).bottom;
+    // Nút "Tạo lô" ở vùng ngón cái: chừa thêm chỗ cho nút dưới danh sách.
+    final bottom = shellBottom + (perms.write ? 88 : 24);
 
     return Scaffold(
       appBar: const OmniAppBar(title: 'Hàng sắp về'),
@@ -71,7 +72,7 @@ class _LotsPageState extends ConsumerState<LotsPage> {
                 final resv = open.fold<int>(0, (s, l) => s + l.withCustomer);
                 final units = inTransitAll.fold<int>(0, (s, l) => s + l.units);
 
-                return RefreshIndicator(
+                final list = RefreshIndicator(
                   onRefresh: () => ref.refresh(lotsProvider.future),
                   child: ListView(
                     physics: const AlwaysScrollableScrollPhysics(),
@@ -159,9 +160,32 @@ class _LotsPageState extends ConsumerState<LotsPage> {
                     ],
                   ),
                 );
+                if (!perms.write) return list;
+                return Stack(
+                  children: [
+                    Positioned.fill(child: list),
+                    Positioned(
+                      left: 20,
+                      right: 20,
+                      bottom: shellBottom + 16,
+                      child: FilledButton(
+                        key: const ValueKey('inv-lot-create'),
+                        onPressed: () => _create(all),
+                        child: const Text('Tạo lô'),
+                      ),
+                    ),
+                  ],
+                );
               },
             ),
     );
+  }
+
+  Future<void> _create(List<Lot> all) async {
+    final lot = await openCreateLotSheet(context, lots: all);
+    if (lot == null || !mounted) return;
+    InvUi.toast(context, 'Đã tạo lô ${lot.code}');
+    context.pushNamed(InventoryRoutes.lot, pathParameters: {'lotId': lot.id});
   }
 }
 

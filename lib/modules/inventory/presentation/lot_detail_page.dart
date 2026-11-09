@@ -13,6 +13,8 @@ import 'lots_page.dart' show lotDebtLine;
 import 'widgets/add_unit_sheet.dart';
 import 'widgets/cost_sheet.dart';
 import 'widgets/inventory_ui.dart';
+import 'widgets/paste_sheet.dart';
+import 'widgets/pay_costs_sheet.dart';
 import 'widgets/sell_sheet.dart';
 import 'widgets/serial_field.dart';
 import 'widgets/unit_sheet.dart';
@@ -36,6 +38,25 @@ class _LotDetailPageState extends ConsumerState<LotDetailPage> {
   final _open = <String>{};
   bool _payOpen = false;
   bool _busy = false;
+
+  /// "Trả nhiều khoản": đang chọn khoản dự kiến để ghi đã trả một lần.
+  bool _pmsOn = false;
+  final _pms = <String>{};
+
+  Future<void> _payMany(Lot lot) async {
+    final costs = [
+      for (final c in lot.costs ?? const <LotCost>[])
+        if (_pms.contains(c.id) && c.status == CostStatus.planned) c,
+    ];
+    if (costs.isEmpty) return;
+    final msg = await openPayCostsSheet(context, lot: lot, costs: costs);
+    if (msg == null || !mounted) return;
+    setState(() {
+      _pmsOn = false;
+      _pms.clear();
+    });
+    InvUi.toast(context, msg);
+  }
 
   Future<void> _useEstimate(Lot lot) async {
     setState(() => _busy = true);
@@ -133,6 +154,16 @@ class _LotDetailPageState extends ConsumerState<LotDetailPage> {
         perms.write &&
         lot.status != LotStatus.received &&
         lot.units > 0;
+    final payMany = lot != null && perms.pay && _pmsOn;
+    final selected = [
+      if (payMany)
+        for (final c in lot.costs ?? const <LotCost>[])
+          if (_pms.contains(c.id) && c.status == CostStatus.planned) c,
+    ];
+    final payTotal = lot == null
+        ? 0
+        : selected.fold<int>(0, (s, c) => s + plannedAmount(lot, c));
+    final thumb = payMany ? selected.isNotEmpty : canReceive;
 
     return Scaffold(
       appBar: OmniAppBar(title: lot?.code ?? 'Lô'),
@@ -154,7 +185,7 @@ class _LotDetailPageState extends ConsumerState<LotDetailPage> {
                         16,
                         12,
                         16,
-                        bottomSafe + (canReceive ? 96 : 24),
+                        bottomSafe + (thumb ? 96 : 24),
                       ),
                       children: [
                         ..._summary(lot, perms),
@@ -163,6 +194,16 @@ class _LotDetailPageState extends ConsumerState<LotDetailPage> {
                           const SizedBox(height: OmniGroupSection.gap),
                           OmniGroupSection(
                             children: [
+                              OmniGroupRow(
+                                key: const ValueKey('inv-lot-paste'),
+                                icon: Icons.content_paste_rounded,
+                                accent: true,
+                                title: 'Dán packing list',
+                                subtitle: lot.units == 0
+                                    ? 'Copy các dòng từ Excel'
+                                    : null,
+                                onTap: () => openPasteSheet(context, lot: lot),
+                              ),
                               OmniGroupRow.add(
                                 key: const ValueKey('inv-lot-add-unit'),
                                 title: 'Thêm cây',
@@ -189,7 +230,20 @@ class _LotDetailPageState extends ConsumerState<LotDetailPage> {
                     ),
                   ),
                 ),
-                if (canReceive)
+                if (payMany && selected.isNotEmpty)
+                  Positioned(
+                    left: 20,
+                    right: 20,
+                    bottom: bottomSafe + 16,
+                    child: FilledButton(
+                      key: const ValueKey('inv-lot-pay-many'),
+                      onPressed: () => _payMany(lot),
+                      child: Text(
+                        'Ghi đã trả · ${selected.length} khoản · ${InvUi.vnd(payTotal)}',
+                      ),
+                    ),
+                  )
+                else if (!payMany && canReceive)
                   Positioned(
                     left: 20,
                     right: 20,
@@ -303,6 +357,7 @@ class _LotDetailPageState extends ConsumerState<LotDetailPage> {
 
     final costs = lot.costs ?? const <LotCost>[];
     final paid = costs.where((c) => c.status == CostStatus.paid).length;
+    final selecting = _pmsOn && _payOpen;
     return [
       head,
       if (money.isNotEmpty) ...[
@@ -323,15 +378,37 @@ class _LotDetailPageState extends ConsumerState<LotDetailPage> {
                     : Icons.expand_more_rounded,
                 size: 20,
               ),
-              onTap: () => setState(() => _payOpen = !_payOpen),
+              onTap: () => setState(() {
+                _payOpen = !_payOpen;
+                if (!_payOpen) {
+                  _pmsOn = false;
+                  _pms.clear();
+                }
+              }),
             ),
             if (_payOpen) ...[
-              for (final c in costs) _costRow(lot, c),
-              OmniGroupRow.add(
-                key: const ValueKey('inv-lot-add-cost'),
-                title: 'Thêm khoản',
-                onTap: () => openCostSheet(context, lot: lot),
-              ),
+              if (costs.length > paid)
+                OmniGroupRow(
+                  key: const ValueKey('inv-lot-pay-select'),
+                  icon: Icons.checklist_rounded,
+                  title: selecting
+                      ? 'Đã chọn ${_pms.length} khoản'
+                      : 'Trả nhiều khoản',
+                  value: selecting ? 'Xong' : null,
+                  chevron: !selecting,
+                  onTap: () => setState(() {
+                    _pmsOn = !_pmsOn;
+                    _pms.clear();
+                  }),
+                ),
+              for (final c in costs)
+                selecting ? _pickCostRow(lot, c) : _costRow(lot, c),
+              if (!selecting)
+                OmniGroupRow.add(
+                  key: const ValueKey('inv-lot-add-cost'),
+                  title: 'Thêm khoản',
+                  onTap: () => openCostSheet(context, lot: lot),
+                ),
             ],
           ],
         ),
@@ -360,6 +437,33 @@ class _LotDetailPageState extends ConsumerState<LotDetailPage> {
       chevron: true,
       onTap: () => openCostSheet(context, lot: lot, cost: c),
     );
+  }
+
+  /// Dòng khoản trong chế độ "Trả nhiều khoản": dự kiến bấm để chọn, đã trả
+  /// mờ đi, không bấm được.
+  Widget _pickCostRow(Lot lot, LotCost c) {
+    final planned = c.status == CostStatus.planned;
+    final row = OmniGroupRow(
+      key: ValueKey('inv-cost-pick-${c.id}'),
+      title: c.title,
+      subtitle: c.isGoods
+          ? '${InventoryFormat.yen(c.amountJpy)}'
+                '${c.kind == CostKind.goodsInvoice ? ' · invoice' : ''}'
+          : 'Thuế & phí',
+      trailing: InvValue(
+        InvUi.vnd(planned ? plannedAmount(lot, c) : c.amountVnd),
+        sub: planned ? 'dự kiến' : 'đã trả',
+        subColor: planned ? OmniColors.warningTextOf(context) : null,
+      ),
+      selected: planned && _pms.contains(c.id),
+      chevron: false,
+      onTap: planned
+          ? () => setState(
+              () => _pms.contains(c.id) ? _pms.remove(c.id) : _pms.add(c.id),
+            )
+          : null,
+    );
+    return planned ? row : Opacity(opacity: .5, child: row);
   }
 
   List<Widget> _unitList(

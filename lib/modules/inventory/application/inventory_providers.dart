@@ -240,6 +240,15 @@ final lotUnitsProvider = FutureProvider.autoDispose
       return ref.watch(inventoryApiProvider).lotUnits(id);
     });
 
+/// Nhà cung cấp (cho "Tạo lô").
+final suppliersProvider = FutureProvider.autoDispose<List<Supplier>>((
+  ref,
+) async {
+  ref.watch(inventoryRevisionProvider);
+  if (!ref.watch(inventoryPermsProvider).read) return const [];
+  return ref.watch(inventoryApiProvider).listSuppliers();
+});
+
 final moneyAccountsProvider = FutureProvider.autoDispose<List<MoneyAccount>>((
   ref,
 ) async {
