@@ -17,7 +17,6 @@ import '../application/inbox_providers.dart';
 import '../application/inbox_realtime.dart';
 import '../application/media_url_resolver.dart';
 import '../application/thread_controller.dart';
-import '../application/voice_recorder.dart';
 import '../data/inbox_api.dart';
 import '../domain/conversation.dart';
 import '../domain/message.dart';
@@ -309,9 +308,6 @@ class _ThreadPageState extends ConsumerState<ThreadPage>
     final myUserId = session.user?.id;
     // Null = API cũ thiếu khoá: giữ chữ + ảnh, ẩn Tệp.
     final capabilities = conversation.valueOrNull?.outboundCapabilities;
-    // Ghi âm chỉ khi kênh gửi được audio; API cũ (null) thì ẩn. Máy ghi chỉ
-    // được tạo (và giữ) khi nút mic có mặt.
-    final canVoice = access.canSend && (capabilities?.canSendVoice ?? false);
     // Tên người thả cảm xúc: danh bạ đội nếu ĐÃ nạp ở nơi khác (không kéo cả
     // danh bạ chỉ để mở một hội thoại), không thì tên server chụp lúc thả.
     // Theo dõi cờ "đã nạp": danh bạ nạp SAU khi mở (sheet Gán…) thì tên đổi
@@ -439,17 +435,6 @@ class _ThreadPageState extends ConsumerState<ThreadPage>
                             : null,
                         loadTemplates: _loadTemplates,
                         onSend: _sendWithAttachments,
-                        voiceRecorder: canVoice
-                            ? ref.watch(voiceRecorderProvider)
-                            : null,
-                        onSendVoice: canVoice
-                            ? (voice) =>
-                                  _sendWithAttachments('', [voice], _replyingTo)
-                            : null,
-                        warnVoiceAsLink:
-                            capabilities?.audio == OutboundMode.link,
-                        channelName:
-                            conversation.valueOrNull?.channel.meta.name,
                       )
                     : _ReadOnlyBar(),
               ),

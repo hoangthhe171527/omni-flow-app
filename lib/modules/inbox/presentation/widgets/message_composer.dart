@@ -16,7 +16,7 @@ import 'composer_snack_bar.dart';
 import 'voice_record_bar.dart';
 
 /// Thanh nhập kiểu Messenger (`Thread.dc.html`): một hàng gồm cụm công cụ
-/// (`+`, chụp ảnh, ảnh, ghi âm), ô nhập bo tròn có mặt cười, và nút cuối.
+/// (`+`, chụp ảnh, ảnh), ô nhập bo tròn có mặt cười, và nút cuối.
 ///
 /// Nút cuối là 👍 khi ô trống (gửi đúng một tin 👍) và đổi thành nút Gửi ngay
 /// khi có chữ hoặc ảnh. Khi gõ, cụm công cụ thu về 0 và để lại `›` để bung lại.
@@ -589,7 +589,6 @@ class _MessageComposerState extends State<MessageComposer> {
     final toolsWidth = _toolWidth * _toolCount;
     // Liền khối với viên kính: ô chữ không nền riêng.
     const fieldFill = Colors.transparent;
-    final dark = Theme.of(context).brightness == Brightness.dark;
     const border = OutlineInputBorder(
       borderRadius: BorderRadius.all(Radius.circular(18)),
       borderSide: BorderSide.none,
@@ -598,30 +597,18 @@ class _MessageComposerState extends State<MessageComposer> {
     // Lớp vẽ riêng: gõ phím, nháy con trỏ, đổi nút gửi — chỉ composer raster
     // lại, danh sách tin nhắn và nền phía trên nó thì không.
     //
-    // Viên kính nổi (viomni-apple-uiux.html `.composer.glass`): cách mép 12,
-    // bo 27, nền .94, viền sáng, bóng nhẹ. Không BackdropFilter — thanh đáy
-    // cố định nhoè lại mỗi khung cuộn danh sách tin.
+    // Dùng đúng mặt OmniGlass của toàn app: nền bán trong suốt, vệt sáng sát
+    // mép trên và bóng mềm. `blur: false` giữ phong cách liquid nhưng tránh
+    // BackdropFilter cố định đáy phải dựng lại theo mỗi khung cuộn tin.
     return RepaintBoundary(
       child: SafeArea(
         top: false,
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(12, 6, 12, 8),
-          child: DecoratedBox(
+          padding: const EdgeInsets.fromLTRB(12, 4, 12, 4),
+          child: OmniGlass(
             key: const ValueKey('composer-glass'),
-            decoration: BoxDecoration(
-              color: scheme.surface.withValues(alpha: .94),
-              borderRadius: BorderRadius.circular(27),
-              border: Border.all(
-                color: Colors.white.withValues(alpha: dark ? .10 : .70),
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: dark ? .35 : .10),
-                  blurRadius: 24,
-                  offset: const Offset(0, 6),
-                ),
-              ],
-            ),
+            radius: 27,
+            blur: false,
             child: ClipRRect(
               borderRadius: BorderRadius.circular(27),
               child: Column(
@@ -641,7 +628,7 @@ class _MessageComposerState extends State<MessageComposer> {
                   if (widget.errorText != null)
                     _ComposerError(text: widget.errorText!),
                   Padding(
-                    padding: const EdgeInsets.fromLTRB(6, 6, 6, 6),
+                    padding: const EdgeInsets.symmetric(horizontal: 4),
                     // Đang ghi âm: thanh ghi thay cả hàng — các nút khác khoá.
                     child: _voiceActive
                         ? VoiceRecordBar(
@@ -655,7 +642,7 @@ class _MessageComposerState extends State<MessageComposer> {
                             ),
                           )
                         : Row(
-                            crossAxisAlignment: CrossAxisAlignment.end,
+                            crossAxisAlignment: CrossAxisAlignment.center,
                             children: [
                               // Chỉ cụm công cụ và cụm nút cuối nghe controller. Trước đây
                               // cả composer `setState` theo từng ký tự — dựng lại ô nhập
