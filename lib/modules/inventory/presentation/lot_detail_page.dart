@@ -279,7 +279,7 @@ class _LotDetailPageState extends ConsumerState<LotDetailPage> {
         OmniGroupRow(
           title: 'Đã chốt',
           value: fin != null && fin.from != null && perms.cost
-              ? 'Tạm ${InventoryFormat.rate(fin.from)} → thật ${InventoryFormat.rate(fin.to)}'
+              ? 'Tạm ${InventoryFormat.rate(fin.from)}, thật ${InventoryFormat.rate(fin.to)}'
               : 'Giá vốn đã chốt',
         ),
       );
