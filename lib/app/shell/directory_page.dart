@@ -12,7 +12,9 @@ import '../../core/utils/text_search.dart';
 import '../../design/components/components.dart';
 import '../../design/platform/omni_motion_scope.dart';
 import '../../design/tokens/tokens.dart';
+import '../../modules/inventory/inventory.dart';
 import '../../modules/settings/settings_module.dart';
+import '../../security/session/api_capabilities.dart';
 import '../perf/performance_controller.dart';
 import 'tab_bar_editor_sheet.dart';
 
@@ -61,12 +63,14 @@ OmniHue hueOfArea(NavArea area) => switch (area) {
 /// duyệt 07/11) và lọc theo từ khoá; nhóm rỗng bị bỏ.
 ///
 /// Bán hàng · Vận hành (công việc, dòng việc, thông báo) · Tài chính · Đội &
-/// quản trị. Mục khu Tài khoản (nền, cài đặt thông báo, quyền của tôi) KHÔNG
+/// quản trị, cộng nhóm "Kho hàng" (mục của module `inventory`, chỉ khi API
+/// có capability `inventory` — [inventory] false thì ẩn hẳn). Mục khu Tài khoản (nền, cài đặt thông báo, quyền của tôi) KHÔNG
 /// lên lưới: cài đặt nằm ở danh sách "Cài đặt ứng dụng", quyền ở màn Tài khoản.
 List<DirectorySection> buildDirectorySections(
   Map<NavArea, List<ModuleNavEntry>> groups, {
   required void Function(String routeName) open,
   required String query,
+  bool inventory = true,
 }) {
   DirectoryTile fromEntry(ModuleNavEntry e) => DirectoryTile(
     label: e.label,
@@ -79,8 +83,19 @@ List<DirectorySection> buildDirectorySections(
     badgeDisplay: e.badgeDisplay,
     id: e.routeName,
   );
+  // Mục Kho khai báo ở khu "Bán hàng" (để ghim được lên tab) nhưng có nhóm
+  // riêng trên lưới.
+  bool isInventory(ModuleNavEntry e) => e.moduleId == _inventoryModule;
   List<DirectoryTile> of(List<NavArea> areas) => [
-    for (final a in areas) ...?groups[a]?.map(fromEntry),
+    for (final a in areas)
+      for (final e in groups[a] ?? const <ModuleNavEntry>[])
+        if (!isInventory(e)) fromEntry(e),
+  ];
+  final stock = [
+    if (inventory)
+      for (final list in groups.values)
+        for (final e in list)
+          if (isInventory(e)) fromEntry(e),
   ];
   bool keep(DirectoryTile t) =>
       matchesQuery(label: t.label, subtitle: t.subtitle, query: query);
@@ -96,6 +111,7 @@ List<DirectorySection> buildDirectorySections(
           if (!isNotifications(t)) t,
       ],
     ),
+    ('Kho hàng', stock),
     (
       'Vận hành',
       [
@@ -118,6 +134,10 @@ List<DirectorySection> buildDirectorySections(
 /// Tên route trung tâm thông báo (`NotificationRoutes.centre`) — chép chuỗi
 /// để shell không import route của module thông báo.
 const _notificationsRoute = 'notifications.centre';
+
+/// Mã module Kho (`InventoryModule.moduleId`) — chép chuỗi để shell không
+/// import lớp module.
+const _inventoryModule = 'inventory';
 
 /// Danh bạ "Tất cả": MỌI tính năng người dùng có quyền dùng, gom theo nhóm,
 /// tìm được bằng từ khoá (không cần gõ dấu).
@@ -163,6 +183,9 @@ class _DirectoryPageState extends ConsumerState<DirectoryPage> {
       groups,
       open: (name) => context.pushNamed(name),
       query: _query,
+      inventory: ref.watch(
+        apiSupportsProvider(InventoryPermissions.capability),
+      ),
     );
     bool shows(String label) =>
         matchesQuery(label: label, subtitle: null, query: _query);
