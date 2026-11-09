@@ -45,13 +45,19 @@ enum MessageAuthor { customer, agent, note }
 enum DeliveryStatus { queued, sent, delivered, read, received, failed, none }
 
 class MessageAttachment {
-  const MessageAttachment({required this.url, required this.type, this.name});
+  const MessageAttachment({
+    required this.url,
+    required this.type,
+    this.name,
+    this.stickerId,
+  });
 
   factory MessageAttachment.fromJson(Map<String, dynamic> json) =>
       MessageAttachment(
         url: resolveMediaUrl(json.strOr('url', '')),
         type: json.strOr('type', 'file'),
         name: json.str('name'),
+        stickerId: json.str('sticker_id'),
       );
 
   /// Kết quả `POST /inbox/media`: giữ `url` NGUYÊN VĂN server trả về.
@@ -70,7 +76,13 @@ class MessageAttachment {
   final String type;
   final String? name;
 
-  bool get isImage => type.toLowerCase().startsWith('image');
+  /// Mã nhãn dán của nền tảng (LIKE của Messenger, sticker Zalo) — chỉ có khi
+  /// [type] là `sticker`.
+  final String? stickerId;
+
+  /// Nhãn dán vẽ trần, không bong bóng — không phải ảnh, không phải tệp.
+  bool get isSticker => type.toLowerCase() == 'sticker';
+  bool get isImage => !isSticker && type.toLowerCase().startsWith('image');
   bool get isVideo => type.toLowerCase().startsWith('video');
   bool get isAudio => type.startsWith('audio');
 
@@ -78,6 +90,7 @@ class MessageAttachment {
     'url': url,
     'type': type,
     if (name != null) 'name': name,
+    if (stickerId != null) 'sticker_id': stickerId,
   };
 }
 

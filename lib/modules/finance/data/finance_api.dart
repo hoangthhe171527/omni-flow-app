@@ -79,6 +79,53 @@ class FinanceApi {
     return ExpenseGroup.fromJson(item);
   }
 
+  /// `PUT /finance/expense-groups/{id}` — chỉ gửi khoá đã đổi (giống web
+  /// `buildGroupUpdate`): `name`, `counts_as_expense`, `archived`.
+  Future<ExpenseGroup> updateGroup(
+    String id, {
+    String? name,
+    bool? countsAsExpense,
+    bool? archived,
+  }) async {
+    final resp = await _api.put(
+      '/finance/expense-groups/${Uri.encodeComponent(id)}',
+      body: {
+        if (name != null) 'name': name.trim(),
+        'counts_as_expense': ?countsAsExpense,
+        'archived': ?archived,
+      },
+    );
+    return ExpenseGroup.fromJson(_item(resp.object));
+  }
+
+  /// `DELETE /finance/expense-groups/{id}` — còn khoản thì API trả 422.
+  Future<void> deleteGroup(String id) async {
+    await _api.delete('/finance/expense-groups/${Uri.encodeComponent(id)}');
+  }
+
+  /// `PUT /finance/money-accounts/{id}` — `name`, `archived`.
+  Future<MoneyAccount> updateAccount(
+    String id, {
+    String? name,
+    bool? archived,
+  }) async {
+    final resp = await _api.put(
+      '/finance/money-accounts/${Uri.encodeComponent(id)}',
+      body: {if (name != null) 'name': name.trim(), 'archived': ?archived},
+    );
+    return MoneyAccount.fromJson(_item(resp.object));
+  }
+
+  /// `DELETE /finance/money-accounts/{id}` — còn khoản thì API trả 422.
+  Future<void> deleteAccount(String id) async {
+    await _api.delete('/finance/money-accounts/${Uri.encodeComponent(id)}');
+  }
+
+  static Map<String, dynamic> _item(Map<String, dynamic> body) =>
+      body['item'] is Map
+      ? (body['item'] as Map).cast<String, dynamic>()
+      : body;
+
   Future<List<MoneyAccount>> fetchAccounts() async {
     final resp = await _api.get('/finance/money-accounts');
     final items = resp.list.isNotEmpty
