@@ -123,7 +123,49 @@ class InventoryApi {
     return res.list.map(InventoryUnit.fromJson).toList();
   }
 
+  // ---------------- nhà cung cấp ----------------
+
+  Future<List<Supplier>> listSuppliers() async {
+    final res = await _api.get('/inventory/suppliers');
+    return res.list.map(Supplier.fromJson).toList();
+  }
+
+  /// `POST /inventory/suppliers` — mã (tối đa 30 ký tự) + tên đầy đủ.
+  Future<Supplier> createSupplier(String name) async {
+    final n = name.trim();
+    final res = await _api.post(
+      '/inventory/suppliers',
+      body: {'code': n.length > 30 ? n.substring(0, 30).trim() : n, 'name': n},
+    );
+    return Supplier.fromJson(res.object);
+  }
+
   // ---------------- lô ----------------
+
+  /// `POST /inventory/lots` — lô mới ở trạng thái Đã đặt hàng. [rate] chỉ có
+  /// tác dụng với quyền thanh toán lô; `fees_from_previous` chép thuế phí dự
+  /// kiến của lô trước cùng nhà cung cấp.
+  Future<Lot> createLot({
+    required String code,
+    String? supplierId,
+    String? orderedAt,
+    String? eta,
+    double? rate,
+    bool feesFromPrevious = true,
+  }) async {
+    final res = await _api.post(
+      '/inventory/lots',
+      body: {
+        'code': code.trim(),
+        'supplier_id': supplierId,
+        'ordered_at': orderedAt,
+        'eta': eta,
+        'rate': ?rate,
+        'fees_from_previous': feesFromPrevious,
+      },
+    );
+    return Lot.fromJson(res.object);
+  }
 
   Future<List<Lot>> listLots() async {
     final res = await _api.get('/inventory/lots');
@@ -212,6 +254,27 @@ class InventoryApi {
 
   Future<Lot> deleteCost(String costId) async {
     final res = await _api.delete('/inventory/lot-costs/${_e(costId)}');
+    return Lot.fromJson(res.object);
+  }
+
+  /// `POST /inventory/lots/{id}/costs/pay` — ghi đã trả nhiều khoản dự kiến
+  /// cùng ngày, cùng nguồn tiền. [amounts]: số ₫ từng khoản (id → ₫).
+  Future<Lot> payCosts(
+    String lotId, {
+    required List<String> costIds,
+    required String paidAt,
+    String? moneyAccountId,
+    Map<String, num>? amounts,
+  }) async {
+    final res = await _api.post(
+      '/inventory/lots/${_e(lotId)}/costs/pay',
+      body: {
+        'cost_ids': costIds,
+        'paid_at': paidAt,
+        'money_account_id': moneyAccountId,
+        if (amounts != null && amounts.isNotEmpty) 'amounts': amounts,
+      },
+    );
     return Lot.fromJson(res.object);
   }
 

@@ -269,6 +269,7 @@ class InvInputRow extends StatelessWidget {
     this.hint,
     this.phone = false,
     this.caps = false,
+    this.keyboardType,
     this.onChanged,
   });
 
@@ -280,6 +281,9 @@ class InvInputRow extends StatelessWidget {
 
   /// Viết hoa toàn bộ (hãng, serial).
   final bool caps;
+
+  /// Bàn phím riêng (vd. số thập phân cho tỷ lệ) — mặc định theo [phone].
+  final TextInputType? keyboardType;
   final ValueChanged<String>? onChanged;
 
   @override
@@ -294,7 +298,9 @@ class InvInputRow extends StatelessWidget {
           TextField(
             key: fieldKey,
             controller: controller,
-            keyboardType: phone ? TextInputType.phone : TextInputType.name,
+            keyboardType:
+                keyboardType ??
+                (phone ? TextInputType.phone : TextInputType.name),
             autocorrect: !caps,
             textCapitalization: phone
                 ? TextCapitalization.none

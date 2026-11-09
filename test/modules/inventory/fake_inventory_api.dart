@@ -9,9 +9,16 @@ class FakeInventoryApi extends InventoryApi {
     List<InventoryUnit> units = const [],
     List<InventoryCustomer> customers = const [],
     List<OpenOrder> openOrders = const [],
+    List<Lot> lots = const [],
+    List<Supplier> suppliers = const [],
+    List<MoneyAccount> accounts = const [],
+    this.payResult,
   }) : units = [...units],
        customers = [...customers],
        _openOrders = openOrders,
+       lots = [...lots],
+       suppliers = [...suppliers],
+       _accounts = accounts,
        super(ApiClient(Dio()));
 
   final List<InventoryUnit> units;
@@ -23,6 +30,18 @@ class FakeInventoryApi extends InventoryApi {
   final reserves = <Map<String, Object?>>[];
   final sells = <Map<String, Object?>>[];
   final created = <(String, String?)>[];
+
+  final List<Lot> lots;
+  final List<Supplier> suppliers;
+  final List<MoneyAccount> _accounts;
+
+  /// Lô trả về sau `payCosts` (null = lô cũ, chưa chốt).
+  final Lot? payResult;
+
+  final createdSuppliers = <String>[];
+  final createdLots = <Map<String, Object?>>[];
+  final pays = <Map<String, Object?>>[];
+  final addedUnits = <(String, List<NewUnitInput>)>[];
 
   @override
   Future<UnitPage> listUnits({
@@ -52,7 +71,83 @@ class FakeInventoryApi extends InventoryApi {
   }
 
   @override
-  Future<List<Lot>> listLots() async => const [];
+  Future<List<Lot>> listLots() async => lots;
+
+  @override
+  Future<Lot> getLot(String id) async => lots.firstWhere((l) => l.id == id);
+
+  @override
+  Future<List<InventoryUnit>> lotUnits(String id) async => [
+    for (final u in units)
+      if (u.lotId == id) u,
+  ];
+
+  @override
+  Future<List<Supplier>> listSuppliers() async => suppliers;
+
+  @override
+  Future<Supplier> createSupplier(String name) async {
+    createdSuppliers.add(name);
+    final s = Supplier(id: 'sup-new', name: name);
+    suppliers.add(s);
+    return s;
+  }
+
+  @override
+  Future<Lot> createLot({
+    required String code,
+    String? supplierId,
+    String? orderedAt,
+    String? eta,
+    double? rate,
+    bool feesFromPrevious = true,
+  }) async {
+    createdLots.add({
+      'code': code,
+      'supplier_id': supplierId,
+      'ordered_at': orderedAt,
+      'eta': eta,
+      'rate': rate,
+      'fees_from_previous': feesFromPrevious,
+    });
+    final l = Lot(id: 'lot-new', code: code, supplierId: supplierId);
+    lots.insert(0, l);
+    return l;
+  }
+
+  @override
+  Future<AddUnitsResult> addUnits(
+    String lotId,
+    List<NewUnitInput> units,
+  ) async {
+    addedUnits.add((lotId, units));
+    return (
+      lot: lots.firstWhere((l) => l.id == lotId),
+      created: units.length,
+      warnings: const <SerialWarning>[],
+    );
+  }
+
+  @override
+  Future<Lot> payCosts(
+    String lotId, {
+    required List<String> costIds,
+    required String paidAt,
+    String? moneyAccountId,
+    Map<String, num>? amounts,
+  }) async {
+    pays.add({
+      'lot_id': lotId,
+      'cost_ids': costIds,
+      'paid_at': paidAt,
+      'money_account_id': moneyAccountId,
+      'amounts': amounts,
+    });
+    return payResult ?? lots.firstWhere((l) => l.id == lotId);
+  }
+
+  @override
+  Future<List<MoneyAccount>> moneyAccounts() async => _accounts;
 
   @override
   Future<UnitUpdateResult> updateUnit(
