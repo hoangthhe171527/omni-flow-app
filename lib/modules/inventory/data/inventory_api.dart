@@ -355,6 +355,115 @@ class InventoryApi {
     return res.list.map(Reservation.fromJson).toList();
   }
 
+  // ---------------- Đợt C: trả hàng, kiểm kê, phiếu xuất ----------------
+
+  /// `POST /inventory/units/{id}/return` — cây đã giao về kho, bán lại được.
+  /// Không gửi [locationId] = vị trí mặc định; [condition] null = Chưa kiểm
+  /// (API không nhận `missing`).
+  Future<InventoryUnit> returnUnit(
+    String id, {
+    String? locationId,
+    UnitCondition? condition,
+    String? note,
+  }) async {
+    final n = note?.trim() ?? '';
+    final res = await _api.post(
+      '/inventory/units/${_e(id)}/return',
+      body: {
+        'location_id': ?locationId,
+        'condition': ?condition?.wire,
+        if (n.isNotEmpty) 'note': n,
+      },
+    );
+    return InventoryUnit.fromJson(res.object);
+  }
+
+  /// `GET /inventory/counts?location_id=&status=` — mới nhất trước.
+  Future<List<StockCount>> listCounts({
+    String? locationId,
+    CountStatus? status,
+  }) async {
+    final res = await _api.get(
+      '/inventory/counts',
+      query: {'location_id': locationId, 'status': status?.wire},
+    );
+    return res.list.map(StockCount.fromJson).toList();
+  }
+
+  /// `POST /inventory/counts {location_id}` — vị trí đang có phiên chưa duyệt
+  /// thì API trả lại phiên đó.
+  Future<StockCount> openCount(String locationId) async {
+    final res = await _api.post(
+      '/inventory/counts',
+      body: {'location_id': locationId},
+    );
+    return StockCount.fromJson(res.object);
+  }
+
+  Future<StockCount> getCount(String id) async {
+    final res = await _api.get('/inventory/counts/${_e(id)}');
+    return StockCount.fromJson(res.object);
+  }
+
+  /// `PUT /inventory/counts/{id}` — gửi khoá nào thay khoá đó (cây thấy, số
+  /// đếm hàng số lượng). Phiên không còn mở → 409.
+  Future<StockCount> saveCount(
+    String id, {
+    List<String>? seenUnitIds,
+    Map<String, int>? qty,
+  }) async {
+    final res = await _api.put(
+      '/inventory/counts/${_e(id)}',
+      body: {
+        'seen_unit_ids': ?seenUnitIds,
+        if (qty != null)
+          'qty': [
+            for (final e in qty.entries) {'product_id': e.key, 'qty': e.value},
+          ],
+      },
+    );
+    return StockCount.fromJson(res.object);
+  }
+
+  /// `POST …/submit` — chốt: cây không tick thành "Không thấy", chưa đổi sổ.
+  Future<StockCount> submitCount(String id) async {
+    final res = await _api.post('/inventory/counts/${_e(id)}/submit');
+    return StockCount.fromJson(res.object);
+  }
+
+  /// `POST …/approve` (`inventory.settings`) — ghi sổ theo kết quả đã chốt.
+  Future<StockCount> approveCount(String id) async {
+    final res = await _api.post('/inventory/counts/${_e(id)}/approve');
+    return StockCount.fromJson(res.object);
+  }
+
+  /// Cây theo sổ ở một vị trí: trong kho, trừ cây đã "Không thấy" (đọc hết
+  /// các trang).
+  Future<List<InventoryUnit>> countUnits(String locationId) async {
+    const page = 200;
+    final all = <InventoryUnit>[];
+    for (var offset = 0; offset < 5000; offset += page) {
+      final p = await listUnits(
+        place: UnitPlace.inStock.wire,
+        locationId: locationId,
+        limit: page,
+        offset: offset,
+      );
+      all.addAll(p.items);
+      if (p.items.length < page || all.length >= p.total) break;
+    }
+    return [
+      for (final u in all)
+        if (u.condition != UnitCondition.missing) u,
+    ];
+  }
+
+  /// `GET /inventory/slips/{no}` — phiếu xuất (dòng hàng, serial, ĐVT, tiền).
+  Future<Slip> getSlip(String no) async {
+    final res = await _api.get('/inventory/slips/${_e(no)}');
+    return Slip.fromJson(res.object);
+  }
+
   // ---------------- nhà cung cấp ----------------
 
   Future<List<Supplier>> listSuppliers() async {

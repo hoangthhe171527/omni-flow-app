@@ -11,8 +11,10 @@ import '../../domain/inventory_format.dart';
 import '../../domain/inventory_models.dart';
 import 'inventory_ui.dart';
 import 'money_keypad_sheet.dart';
+import 'return_sheet.dart';
 import 'sell_sheet.dart';
 import 'serial_field.dart';
+import 'slip_sheet.dart';
 import 'unit_extras.dart';
 
 /// Sheet "Chi tiết cây" của Tồn kho: serial chạm để sửa / thêm, tình trạng,
@@ -26,6 +28,9 @@ import 'unit_extras.dart';
 /// Kho chuẩn hóa Đợt A (mỗi phần theo capability riêng): Ảnh, Lỗi, Ghi chú
 /// (`inventory.photos`); Vị trí — chạm để chuyển khi có từ hai vị trí — và
 /// Thẻ kho (`inventory.locations`); nút Đã giao cho cây đã vào đơn.
+///
+/// Đợt C: cây đã giao có nhóm phiếu xuất (chạm xem phiếu), giá bán, hóa đơn
+/// (chỉ xem); nút "Mở việc bảo hành" và "Nhập lại kho".
 Future<void> openUnitSheet(
   BuildContext context, {
   required InventoryUnit unit,
@@ -237,6 +242,59 @@ class _UnitSheetState extends ConsumerState<UnitSheet> {
     if (mounted && _u.place == UnitPlace.delivered) nav.pop();
   }
 
+  /// Nhập lại kho cây đã giao (Đợt C §2.3).
+  Future<void> _return() async {
+    final nav = Navigator.of(context);
+    final back = await openReturnSheet(context, _u);
+    if (back == null || !mounted) return;
+    widget.onChanged(back);
+    InvUi.toast(context, 'Đã nhập lại kho.');
+    nav.pop();
+  }
+
+  /// Bảo hành = việc xưởng gắn cây, cây vẫn của khách (Đợt C §2.3): chọn kế
+  /// hoạch rồi `POST /tasks/from-units`.
+  Future<void> _warranty() async {
+    setState(() => _busy = true);
+    try {
+      final sub = ref.listenManual(workshopPlansProvider, (_, _) {});
+      final List<WorkshopPlan> plans;
+      try {
+        plans = await ref.read(workshopPlansProvider.future);
+      } finally {
+        sub.close();
+      }
+      if (!mounted) return;
+      if (plans.isEmpty) {
+        InvUi.toast(
+          context,
+          'Chưa có kế hoạch đang chạy nào bạn quản lý được.',
+        );
+        return;
+      }
+      final r = await showInvOptions<String>(
+        context: context,
+        title: 'Chọn kế hoạch',
+        options: [for (final p in plans) (p.id, p.name)],
+      );
+      final planId = r?.value;
+      if (planId == null || !mounted) return;
+      final res = await ref
+          .read(inventoryApiProvider)
+          .sendToWorkshop(projectId: planId, unitIds: [_u.id]);
+      bumpInventory(ref);
+      if (!mounted) return;
+      InvUi.toast(
+        context,
+        res.created > 0 ? 'Đã mở việc bảo hành.' : sendToWorkshopMessage(res),
+      );
+    } catch (e) {
+      if (mounted) InvUi.toast(context, InvUi.error(e));
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
   Future<void> _sell({String title = 'Bán / Đặt trước'}) async {
     final nav = Navigator.of(context);
     final done = await openSellSheet(context, units: [_u], title: title);
@@ -257,6 +315,8 @@ class _UnitSheetState extends ConsumerState<UnitSheet> {
         : null;
     final multi = ref.watch(multiLocationProvider).valueOrNull ?? false;
     final canMove = multi && perms.write && u.place == UnitPlace.inStock;
+    final delivered = u.place == UnitPlace.delivered;
+    final invoice = perms.invoices ? u.invoice : null;
 
     final buttons = <Widget>[
       if (u.sale == UnitSale.available && perms.canSellOrReserve)
@@ -295,6 +355,20 @@ class _UnitSheetState extends ConsumerState<UnitSheet> {
           key: const ValueKey('inv-unit-order'),
           onPressed: _busy ? null : _orderNow,
           child: const Text('Tạo đơn'),
+        ),
+      // Đợt C: cây đã giao — bảo hành (cây vẫn của khách) hoặc nhập lại kho.
+      if (delivered && perms.delivered && perms.workshop)
+        OutlinedButton(
+          key: const ValueKey('inv-unit-warranty'),
+          onPressed: _busy ? null : _warranty,
+          // "Mở việc bảo hành" xuống hai dòng ở nửa bề ngang 390.
+          child: const Text('Bảo hành'),
+        ),
+      if (delivered && perms.returns)
+        FilledButton(
+          key: const ValueKey('inv-unit-return'),
+          onPressed: _busy ? null : _return,
+          child: const Text('Nhập lại kho'),
         ),
     ];
 
@@ -376,7 +450,10 @@ class _UnitSheetState extends ConsumerState<UnitSheet> {
               onTap: perms.write && !_busy ? _editCondition : null,
             ),
             // Vị trí chỉ khi có từ hai vị trí (spec §5) — một vị trí thì thừa.
-            if (perms.locations && multi && u.locationName != null)
+            if (perms.locations &&
+                multi &&
+                u.locationName != null &&
+                u.place != UnitPlace.delivered)
               OmniGroupRow(
                 key: const ValueKey('inv-unit-location'),
                 title: 'Vị trí',
@@ -386,15 +463,58 @@ class _UnitSheetState extends ConsumerState<UnitSheet> {
               ),
             OmniGroupRow(
               title: 'Bán',
-              subtitle: hold,
-              value: switch (u.sale) {
-                UnitSale.available => 'Còn bán',
-                UnitSale.reserved => 'Đang giữ',
-                UnitSale.sold => 'Trong đơn',
-              },
+              subtitle: delivered ? u.customerName : hold,
+              value: delivered
+                  ? 'Đã giao'
+                  : switch (u.sale) {
+                      UnitSale.available => 'Còn bán',
+                      UnitSale.reserved => 'Đang giữ',
+                      UnitSale.sold => 'Trong đơn',
+                    },
             ),
           ],
         ),
+        // Đợt C: lần giao gần nhất — phiếu xuất, giá bán, hóa đơn (chỉ xem).
+        if (u.slipNo != null || u.soldPrice != null || invoice != null)
+          OmniGroupSection(
+            key: const ValueKey('inv-unit-sale'),
+            children: [
+              if (delivered && u.deliveredAt != null)
+                OmniGroupRow(
+                  title: 'Giao',
+                  value: InventoryFormat.dmy(u.deliveredAt),
+                ),
+              if (u.slipNo != null)
+                OmniGroupRow(
+                  key: const ValueKey('inv-unit-slip'),
+                  title: 'Phiếu xuất',
+                  value: u.slipNo,
+                  chevron: perms.slips,
+                  onTap: perms.slips
+                      ? () => openSlipSheet(context, u.slipNo!)
+                      : null,
+                ),
+              if (u.soldPrice != null)
+                OmniGroupRow(
+                  key: const ValueKey('inv-unit-sold-price'),
+                  title: 'Giá bán',
+                  trailing: InvValue(InvUi.vnd(u.soldPrice)),
+                ),
+              if (invoice != null)
+                OmniGroupRow(
+                  key: const ValueKey('inv-unit-invoice'),
+                  title: 'Hóa đơn',
+                  subtitle: invoice.no == null && invoice.date == null
+                      ? null
+                      : [
+                          if (invoice.no != null) invoice.no!,
+                          if (invoice.date != null)
+                            InventoryFormat.dmy(invoice.date),
+                        ].join(' · '),
+                  value: invoice.status.label,
+                ),
+            ],
+          ),
         if (perms.photos)
           UnitDefectSection(
             unit: u,

@@ -8,6 +8,7 @@ import '../../../design/tokens/tokens.dart';
 import '../application/inventory_providers.dart';
 import '../domain/inventory_format.dart';
 import '../domain/inventory_models.dart';
+import '../domain/inventory_permissions.dart';
 import '../routes.dart';
 import 'widgets/inventory_ui.dart';
 import 'widgets/sell_sheet.dart';
@@ -284,6 +285,41 @@ class _StockPageState extends ConsumerState<StockPage> {
     }
   }
 
+  /// Menu ⋯ trên thanh: Kiểm kê, Hàng đã giao (Đợt C, theo capability).
+  Future<void> _openMore(BuildContext btn, InventoryPerms perms) async {
+    final box = btn.findRenderObject() as RenderBox?;
+    if (box == null) return;
+    final anchor = box.localToGlobal(Offset.zero) & box.size;
+    final route = await showOmniAnchoredMenu<String>(
+      context: context,
+      anchor: anchor,
+      menuKey: const ValueKey('inv-more-menu'),
+      semanticsLabel: 'Thêm',
+      builder: (menu) => Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          if (perms.counts)
+            OmniAnchoredMenuItem(
+              key: const ValueKey('inv-open-counts'),
+              icon: Icons.fact_check_outlined,
+              label: 'Kiểm kê',
+              onTap: () => Navigator.of(menu).pop(InventoryRoutes.counts),
+            ),
+          if (perms.delivered)
+            OmniAnchoredMenuItem(
+              key: const ValueKey('inv-open-delivered'),
+              icon: Icons.assignment_turned_in_outlined,
+              label: 'Hàng đã giao',
+              divider: perms.counts,
+              onTap: () => Navigator.of(menu).pop(InventoryRoutes.delivered),
+            ),
+        ],
+      ),
+    );
+    if (route != null && mounted) context.pushNamed(route);
+  }
+
   @override
   Widget build(BuildContext context) {
     final perms = ref.watch(inventoryPermsProvider);
@@ -532,6 +568,17 @@ class _StockPageState extends ConsumerState<StockPage> {
               tooltip: 'Danh mục hàng',
               icon: Icons.category_outlined,
               onPressed: () => context.pushNamed(InventoryRoutes.catalog),
+            ),
+          // Kho chuẩn hóa Đợt C — Kiểm kê, Hàng đã giao trong menu ⋯ (thanh
+          // tiêu đề không đủ chỗ cho thêm hai nút).
+          if (perms.counts || perms.delivered)
+            Builder(
+              builder: (btn) => _BarIcon(
+                key: const ValueKey('inv-open-more'),
+                tooltip: 'Thêm',
+                icon: Icons.more_horiz_rounded,
+                onPressed: () => _openMore(btn, perms),
+              ),
             ),
           IconButton(
             key: const ValueKey('inv-open-lots'),
