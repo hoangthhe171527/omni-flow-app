@@ -56,10 +56,23 @@ abstract final class InventoryFormat {
     return s.isEmpty ? null : s;
   }
 
-  /// Bỏ mọi ký tự không phải số → số (rỗng → null).
+  static final _decimalTail = RegExp(r'^(.*\d)[.,](\d{1,2})$');
+
+  /// Đọc số tiền gõ tay hoặc dán từ Excel → số nguyên (rỗng, số âm → null).
+  /// Dấu chấm/phẩy là dấu hàng nghìn (`17.500.000`, `120,000`); riêng đuôi 1–2
+  /// chữ số sau dấu cuối là phần lẻ của Excel (`5500000.0`) — làm tròn, không
+  /// dính vào phần nguyên. Giống `parseMoney` ở web.
   static int? parseMoney(String raw) {
-    final d = raw.replaceAll(_nonDigit, '');
-    return d.isEmpty ? null : int.tryParse(d);
+    final s = raw.trim();
+    if (s.startsWith('-') || s.startsWith('−')) return null;
+    final m = _decimalTail.firstMatch(s);
+    final whole = (m?.group(1) ?? s).replaceAll(_nonDigit, '');
+    if (whole.isEmpty) return null;
+    final n = int.tryParse(whole);
+    if (n == null || m == null) return n;
+    final frac = m.group(2)!;
+    final up = int.parse(frac.padRight(2, '0')) >= 50;
+    return up ? n + 1 : n;
   }
 
   static String digits(String raw) => raw.replaceAll(_nonDigit, '');

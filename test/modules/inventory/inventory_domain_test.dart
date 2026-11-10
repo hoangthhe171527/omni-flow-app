@@ -77,6 +77,12 @@ void main() {
     test('tiền gõ tay và số điện thoại', () {
       expect(InventoryFormat.parseMoney('12.500.000 đ'), 12500000);
       expect(InventoryFormat.parseMoney('abc'), isNull);
+      // Số dán từ Excel có phần lẻ không bị nhân 10.
+      expect(InventoryFormat.parseMoney('5500000.0'), 5500000);
+      expect(InventoryFormat.parseMoney('1,234.50'), 1235);
+      expect(InventoryFormat.parseMoney('120,000'), 120000);
+      expect(InventoryFormat.parseMoney('120.000'), 120000);
+      expect(InventoryFormat.parseMoney('-5'), isNull);
       expect(InventoryFormat.looksLikePhone('0909 778'), isTrue);
       expect(InventoryFormat.looksLikePhone('Anh Bình'), isFalse);
     });

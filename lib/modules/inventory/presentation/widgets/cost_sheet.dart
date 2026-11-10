@@ -62,17 +62,31 @@ class _CostSheetState extends ConsumerState<CostSheet> {
       ? _jpy > 0 && (_status == CostStatus.planned || _vnd > 0)
       : _vnd > 0;
 
+  /// Sửa khoản mà không đổi loại thì giữ tên khoản đã có (tên ghi ở web không
+  /// bị thay bằng tên mặc định).
+  String get _label {
+    final c = widget.cost;
+    final same =
+        c != null &&
+        c.label.isNotEmpty &&
+        c.isGoods == _goods &&
+        (_goods || c.kind == _fee);
+    return same ? c.label : (_goods ? 'Trả tiền hàng' : _fee.label);
+  }
+
   Future<void> _save() async {
     final input = CostInput(
       kind: _goods
           ? (_invoice ? CostKind.goodsInvoice : CostKind.goodsOutside)
           : _fee,
       status: _status,
-      label: _goods ? 'Trả tiền hàng' : _fee.label,
+      label: _label,
       amountJpy: _goods ? _jpy.toDouble() : null,
       amountVnd: _vnd > 0 ? _vnd.toDouble() : null,
       paidAt: InventoryFormat.isoDay(_date),
       moneyAccountId: _account,
+      // Sheet không có ô ghi chú: gửi lại ghi chú cũ, không gửi null làm mất.
+      note: widget.cost?.note,
     );
     setState(() => _saving = true);
     try {

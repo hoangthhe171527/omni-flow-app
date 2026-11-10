@@ -67,7 +67,8 @@ class _LotsPageState extends ConsumerState<LotsPage> {
                 ];
                 final dueJpy = open.fold<double>(
                   0,
-                  (s, l) => s + (l.dueJpy ?? 0),
+                  // Lô trả dư không làm giảm tổng còn nợ.
+                  (s, l) => s + ((l.dueJpy ?? 0) > 0 ? l.dueJpy! : 0),
                 );
                 final resv = open.fold<int>(0, (s, l) => s + l.withCustomer);
                 final units = inTransitAll.fold<int>(0, (s, l) => s + l.units);
