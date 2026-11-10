@@ -18,6 +18,8 @@ import 'widgets/finance_palette.dart';
 /// - Sắp xếp đa chiều chuẩn iOS (`Ngày ghi nhận`, `Thời gian nhập`, `Ngày thanh toán`, `Loại chi phí`, `Số tiền`)
 /// - Đính kèm chứng từ / phiếu chi thật lên máy chủ
 /// - Hiển thị toàn bộ số tiền rõ ràng, tự co giãn thông minh (`FittedBox`), tuyệt đối không cắt `...`
+/// - Header cùng khuôn các màn khác: `OmniTopBar` + viên kính tìm (sắp xếp, "+" nằm trong);
+///   tháng chọn ngay trên thẻ tổng chi (‹ Tháng 11/2026 ›, chạm tên tháng mở menu, vuốt ngang thẻ)
 class ExpensesPage extends ConsumerStatefulWidget {
   const ExpensesPage({super.key});
 
@@ -28,24 +30,11 @@ class ExpensesPage extends ConsumerStatefulWidget {
 class _ExpensesPageState extends ConsumerState<ExpensesPage> {
   final TextEditingController _searchCtrl = TextEditingController();
   final FocusNode _searchFocus = FocusNode();
-  final GlobalKey _segMoreKey = GlobalKey();
+  final GlobalKey _monthBtnKey = GlobalKey();
   final GlobalKey _sortBtnKey = GlobalKey();
-  bool _searchFocused = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _searchFocus.addListener(_handleSearchFocus);
-  }
-
-  void _handleSearchFocus() {
-    if (!mounted) return;
-    setState(() => _searchFocused = _searchFocus.hasFocus);
-  }
 
   @override
   void dispose() {
-    _searchFocus.removeListener(_handleSearchFocus);
     _searchFocus.dispose();
     _searchCtrl.dispose();
     super.dispose();
@@ -59,7 +48,7 @@ class _ExpensesPageState extends ConsumerState<ExpensesPage> {
     );
     final picked = await showFinancePopoverMenu<String>(
       context: context,
-      anchorContext: _segMoreKey.currentContext,
+      anchorContext: _monthBtnKey.currentContext,
       header: 'Chọn kỳ sổ chi phí',
       width: 248,
       items: [
@@ -136,178 +125,30 @@ class _ExpensesPageState extends ConsumerState<ExpensesPage> {
     }
 
     return Scaffold(
+      // Cùng khuôn với Khách / Cơ hội: hàng logo + chuông + tài khoản, bên
+      // dưới là một viên kính 44 chứa ô tìm, sắp xếp và "+". Danh sách chạy
+      // dưới thanh và nhoè dần.
+      extendBodyBehindAppBar: true,
       backgroundColor: p.bg,
-      appBar: OmniAppBar(
-        title: '',
-        backgroundColor: p.bg,
-        // Viên kính rời của thanh trên (OmniAppBar tự bọc): chỉ còn biểu
-        // tượng một tông; đang bật thì màu chủ đạo. "+" là biểu tượng xanh,
-        // không tô đặc (gu người dùng).
-        actions: [
-          Tooltip(
-            message: 'Tìm kiếm',
-            child: InkWell(
-              key: const ValueKey('finance-search-toggle'),
-              customBorder: const CircleBorder(),
-              onTap: () {
-                notifier.toggleSearch();
-                if (!state.searchOpen) {
-                  Future.delayed(const Duration(milliseconds: 60), () {
-                    if (mounted) _searchFocus.requestFocus();
-                  });
-                }
-              },
-              child: SizedBox.square(
-                dimension: 44,
-                child: Icon(
-                  Icons.search_rounded,
-                  size: 20,
-                  color: state.searchOpen ? p.primaryInk : p.ink,
-                ),
-              ),
-            ),
-          ),
-          Tooltip(
-            message: 'Sắp xếp danh sách',
-            child: InkWell(
-              key: const ValueKey('finance-sort-btn'),
-              customBorder: const CircleBorder(),
-              onTap: _openSortMenu,
-              child: SizedBox.square(
-                key: _sortBtnKey,
-                dimension: 44,
-                child: Icon(
-                  Icons.swap_vert_rounded,
-                  size: 20,
-                  color: sortActive ? p.primaryInk : p.ink,
-                ),
-              ),
-            ),
-          ),
-          Tooltip(
-            message: 'Thêm khoản chi',
-            child: InkWell(
-              key: const ValueKey('finance-add-btn'),
-              customBorder: const CircleBorder(),
-              onTap: () => showExpenseAddSheet(context: context),
-              child: SizedBox.square(
-                dimension: 44,
-                child: Icon(Icons.add_rounded, size: 24, color: p.primary),
-              ),
-            ),
-          ),
-        ],
+      appBar: OmniTopBar(
+        allowBack: true,
+        semanticsTitle: 'Sổ chi phí',
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(44),
+          child: _buildSearchRow(p, state, notifier, sortActive),
+        ),
       ),
       body: Stack(
         children: [
           Center(
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 680),
-              child: Column(
-                children: [
-                  // Collapsible search bar + 3-month segmented control
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 2, 16, 10),
-                    child: Column(
-                      children: [
-                        if (state.searchOpen)
-                          Padding(
-                            padding: const EdgeInsets.only(bottom: 10),
-                            child: AnimatedContainer(
-                              duration: const Duration(milliseconds: 160),
-                              curve: Curves.easeOutCubic,
-                              height: 46,
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 14,
-                              ),
-                              decoration: BoxDecoration(
-                                color: p.card,
-                                borderRadius: BorderRadius.circular(14),
-                                border: Border.all(
-                                  color: _searchFocused
-                                      ? p.selLine
-                                      : Colors.transparent,
-                                  width: _searchFocused ? 1.2 : 1,
-                                ),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: (_searchFocused ? p.primary : p.ink)
-                                        .withValues(
-                                          alpha: _searchFocused ? 0.09 : 0.04,
-                                        ),
-                                    blurRadius: _searchFocused ? 14 : 8,
-                                    offset: const Offset(0, 3),
-                                  ),
-                                ],
-                              ),
-                              child: Row(
-                                children: [
-                                  Icon(
-                                    Icons.search_rounded,
-                                    size: 19,
-                                    color: _searchFocused ? p.primary : p.muted,
-                                  ),
-                                  const SizedBox(width: 10),
-                                  Expanded(
-                                    child: TextField(
-                                      key: const ValueKey(
-                                        'finance-search-input',
-                                      ),
-                                      controller: _searchCtrl,
-                                      focusNode: _searchFocus,
-                                      onChanged: notifier.setSearchQuery,
-                                      textInputAction: TextInputAction.search,
-                                      textAlignVertical:
-                                          TextAlignVertical.center,
-                                      style: OmniType.search.copyWith(
-                                        color: p.ink,
-                                        fontStyle: FontStyle.normal,
-                                      ),
-                                      decoration: InputDecoration(
-                                        isDense: true,
-                                        filled: false,
-                                        hintText:
-                                            'Tìm khoản chi, số tiền hoặc ngày…',
-                                        hintStyle: OmniType.searchHint.copyWith(
-                                          color: p.muted,
-                                        ),
-                                        border: InputBorder.none,
-                                        enabledBorder: InputBorder.none,
-                                        focusedBorder: InputBorder.none,
-                                        contentPadding: EdgeInsets.zero,
-                                      ),
-                                    ),
-                                  ),
-                                  if (state.searchQuery.isNotEmpty)
-                                    IconButton(
-                                      tooltip: 'Xoá tìm kiếm',
-                                      onPressed: () {
-                                        notifier.clearSearch();
-                                        _searchFocus.requestFocus();
-                                      },
-                                      padding: EdgeInsets.zero,
-                                      constraints:
-                                          const BoxConstraints.tightFor(
-                                            width: 40,
-                                            height: 44,
-                                          ),
-                                      icon: Icon(
-                                        Icons.close_rounded,
-                                        size: 18,
-                                        color: p.muted,
-                                      ),
-                                    ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        _buildMonthSegmentedRow(p, state, notifier),
-                      ],
-                    ),
-                  ),
-                  // Scrollable ledger content
-                  Expanded(
-                    child: RefreshIndicator(
+              child: OmniTopBarOverlap.wrap(
+                child: Builder(
+                  builder: (context) {
+                    final top = OmniTopBarOverlap.of(context);
+                    return RefreshIndicator(
+                      edgeOffset: top,
                       onRefresh: notifier.refresh,
                       color: p.primary,
                       // builder: tháng đông khoản chi chỉ dựng các nhóm ngày
@@ -318,7 +159,7 @@ class _ExpensesPageState extends ConsumerState<ExpensesPage> {
                         // home 34: hằng 100 vẫn bị che dòng cuối).
                         padding: EdgeInsets.fromLTRB(
                           16,
-                          2,
+                          top + 8,
                           16,
                           ShellBarInset.of(context) +
                               MediaQuery.viewPaddingOf(context).bottom +
@@ -340,7 +181,21 @@ class _ExpensesPageState extends ConsumerState<ExpensesPage> {
                                 ),
                               ),
                             // TIER 1: Summary Card
-                            _buildSummaryCard(p, state, notifier),
+                            // Vuốt ngang thẻ để sang tháng liền kề.
+                            GestureDetector(
+                              key: const ValueKey('finance-month-carousel'),
+                              onHorizontalDragEnd: (details) {
+                                final vx = details.primaryVelocity ?? 0;
+                                if (vx.abs() < 120) return;
+                                notifier.selectMonth(
+                                  FinanceMonthUtils.shiftMonth(
+                                    state.activeMonth,
+                                    vx < 0 ? 1 : -1,
+                                  ),
+                                );
+                              },
+                              child: _buildSummaryCard(p, state, notifier),
+                            ),
                             // TIER 2: Monthly Recurring Card (5 khoản cố định)
                             if (state.showRecurringCard)
                               Padding(
@@ -362,9 +217,9 @@ class _ExpensesPageState extends ConsumerState<ExpensesPage> {
                           ],
                         ],
                       ),
-                    ),
-                  ),
-                ],
+                    );
+                  },
+                ),
               ),
             ),
           ),
@@ -506,157 +361,126 @@ class _ExpensesPageState extends ConsumerState<ExpensesPage> {
     );
   }
 
-  Widget _buildMonthSegmentedRow(
+  /// Nội dung viên kính dưới thanh trên: ô tìm, sắp xếp, thêm khoản chi.
+  /// [OmniTopBar] lo viên kính, lớp mờ khi đang tìm và nút "Huỷ".
+  Widget _buildSearchRow(
     FinancePalette p,
     FinanceLedgerState state,
     FinanceLedgerNotifier notifier,
+    bool sortActive,
   ) {
-    final defaultSeg = FinanceMonthUtils.recentThreeMonths(state.clock);
-    final inDefaultSeg = defaultSeg.contains(state.activeMonth);
-    final ribbonMonths = <String>{
-      for (var d = -4; d <= 1; d++)
-        FinanceMonthUtils.shiftMonth(state.activeMonth, d),
-      ...defaultSeg,
-      state.activeMonth,
-    }.toList()..sort();
+    return Material(
+      type: MaterialType.transparency,
+      child: SizedBox(
+        height: 44,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(10, 0, 2, 0),
+          child: Row(
+            children: [
+              Icon(Icons.search_rounded, size: OmniIconSize.md, color: p.muted),
+              const SizedBox(width: 8),
+              Expanded(
+                child: TextField(
+                  key: const ValueKey('finance-search-input'),
+                  controller: _searchCtrl,
+                  focusNode: _searchFocus,
+                  onChanged: notifier.setSearchQuery,
+                  textInputAction: TextInputAction.search,
+                  style: OmniType.search.copyWith(
+                    color: p.ink,
+                    fontStyle: FontStyle.normal,
+                  ),
+                  decoration: InputDecoration(
+                    isDense: true,
+                    filled: false,
+                    hintText: 'Tìm khoản chi, số tiền',
+                    hintStyle: OmniType.searchHint.copyWith(color: p.muted),
+                    border: InputBorder.none,
+                    enabledBorder: InputBorder.none,
+                    focusedBorder: InputBorder.none,
+                    contentPadding: EdgeInsets.zero,
+                  ),
+                ),
+              ),
+              if (state.searchQuery.isNotEmpty)
+                IconButton(
+                  tooltip: 'Xoá tìm kiếm',
+                  onPressed: () {
+                    notifier.clearSearch();
+                    _searchFocus.requestFocus();
+                  },
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints.tightFor(
+                    width: 40,
+                    height: 44,
+                  ),
+                  icon: Icon(Icons.close_rounded, size: 18, color: p.muted),
+                ),
+              _buildBarIcon(
+                key: const ValueKey('finance-sort-btn'),
+                anchorKey: _sortBtnKey,
+                tooltip: 'Sắp xếp danh sách',
+                icon: Icons.swap_vert_rounded,
+                color: sortActive ? p.primaryInk : p.ink,
+                onTap: _openSortMenu,
+              ),
+              _buildBarIcon(
+                key: const ValueKey('finance-add-btn'),
+                tooltip: 'Thêm khoản chi',
+                icon: Icons.add_rounded,
+                color: p.ink,
+                onTap: () => showExpenseAddSheet(context: context),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 
-    final prevYm = FinanceMonthUtils.shiftMonth(state.activeMonth, -1);
-    final nextYm = FinanceMonthUtils.shiftMonth(state.activeMonth, 1);
+  /// Biểu tượng phẳng trong viên kính tìm, vùng chạm 40×44.
+  Widget _buildBarIcon({
+    required Key key,
+    Key? anchorKey,
+    required String tooltip,
+    required IconData icon,
+    required Color color,
+    required VoidCallback onTap,
+  }) {
+    return Tooltip(
+      message: tooltip,
+      child: InkResponse(
+        key: key,
+        onTap: onTap,
+        radius: 22,
+        child: SizedBox(
+          key: anchorKey,
+          width: 40,
+          height: 44,
+          child: Icon(icon, size: OmniIconSize.md, color: color),
+        ),
+      ),
+    );
+  }
 
-    return GestureDetector(
-      key: const ValueKey('finance-month-carousel'),
-      behavior: HitTestBehavior.translucent,
-      onHorizontalDragEnd: (details) {
-        final vx = details.primaryVelocity ?? 0;
-        if (vx.abs() < 120) return;
-        if (vx < 0) {
-          notifier.selectMonth(nextYm);
-        } else {
-          notifier.selectMonth(prevYm);
-        }
-      },
-      child: Row(
-        children: [
-          InkWell(
-            key: const ValueKey('finance-prev-month-btn'),
-            onTap: () => notifier.selectMonth(prevYm),
-            borderRadius: BorderRadius.circular(9),
-            child: Container(
-              width: 30,
-              height: 34,
-              decoration: BoxDecoration(
-                color: p.track,
-                borderRadius: BorderRadius.circular(9),
-              ),
-              alignment: Alignment.center,
-              child: Icon(Icons.chevron_left_rounded, size: 18, color: p.ink2),
-            ),
-          ),
-          const SizedBox(width: 5),
-          Expanded(
-            child: Container(
-              height: 34,
-              padding: const EdgeInsets.all(2),
-              decoration: BoxDecoration(
-                color: p.track,
-                borderRadius: BorderRadius.circular(9),
-              ),
-              child: SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                physics: const BouncingScrollPhysics(),
-                child: Row(
-                  children: [
-                    for (final ym in ribbonMonths)
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 1.5),
-                        child: GestureDetector(
-                          behavior: HitTestBehavior.opaque,
-                          onTap: () => notifier.selectMonth(ym),
-                          child: AnimatedContainer(
-                            duration: const Duration(milliseconds: 180),
-                            curve: Curves.easeOutCubic,
-                            padding: const EdgeInsets.symmetric(horizontal: 10),
-                            alignment: Alignment.center,
-                            decoration: BoxDecoration(
-                              color: ym == state.activeMonth
-                                  ? p.card
-                                  : Colors.transparent,
-                              borderRadius: BorderRadius.circular(7),
-                              boxShadow: ym == state.activeMonth
-                                  ? [
-                                      BoxShadow(
-                                        color: Colors.black.withValues(
-                                          alpha: 0.08,
-                                        ),
-                                        blurRadius: 4,
-                                        offset: const Offset(0, 1),
-                                      ),
-                                    ]
-                                  : null,
-                            ),
-                            child: Text(
-                              FinanceMonthUtils.formatMonthShort(ym),
-                              maxLines: 1,
-                              style: OmniType.caption.copyWith(
-                                color: ym == state.activeMonth
-                                    ? p.ink
-                                    : p.muted,
-                                fontWeight: ym == state.activeMonth
-                                    ? FontWeight.w600
-                                    : FontWeight.w500,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(width: 5),
-          InkWell(
-            key: const ValueKey('finance-next-month-btn'),
-            onTap: () => notifier.selectMonth(nextYm),
-            borderRadius: BorderRadius.circular(9),
-            child: Container(
-              width: 30,
-              height: 34,
-              decoration: BoxDecoration(
-                color: p.track,
-                borderRadius: BorderRadius.circular(9),
-              ),
-              alignment: Alignment.center,
-              child: Icon(Icons.chevron_right_rounded, size: 18, color: p.ink2),
-            ),
-          ),
-          const SizedBox(width: 6),
-          Tooltip(
-            message: 'Chọn tháng khác',
-            child: InkWell(
-              key: _segMoreKey,
-              onTap: _openMonthPickerMenu,
-              borderRadius: BorderRadius.circular(9),
-              child: Container(
-                width: 34,
-                height: 34,
-                decoration: BoxDecoration(
-                  color: !inDefaultSeg ? p.primarySoft : p.track,
-                  borderRadius: BorderRadius.circular(9),
-                  border: !inDefaultSeg
-                      ? Border.all(color: p.selLine, width: 0.5)
-                      : null,
-                ),
-                alignment: Alignment.center,
-                child: Icon(
-                  Icons.calendar_month_outlined,
-                  size: 16,
-                  color: !inDefaultSeg ? p.primaryInk : p.ink2,
-                ),
-              ),
-            ),
-          ),
-        ],
+  /// Nút ‹ › đổi tháng liền kề trên thẻ tổng chi, vùng chạm 40×40.
+  Widget _buildMonthStepButton(
+    FinancePalette p, {
+    required Key key,
+    required String tooltip,
+    required IconData icon,
+    required VoidCallback onTap,
+  }) {
+    return Tooltip(
+      message: tooltip,
+      child: InkResponse(
+        key: key,
+        onTap: onTap,
+        radius: 20,
+        child: SizedBox.square(
+          dimension: 40,
+          child: Icon(icon, size: 22, color: p.muted),
+        ),
       ),
     );
   }
@@ -667,12 +491,13 @@ class _ExpensesPageState extends ConsumerState<ExpensesPage> {
     FinanceLedgerNotifier notifier,
   ) {
     final summary = state.activeSummary;
-    final monthNum = FinanceMonthUtils.monthNumberOf(state.activeMonth);
+    final prevYm = FinanceMonthUtils.shiftMonth(state.activeMonth, -1);
+    final nextYm = FinanceMonthUtils.shiftMonth(state.activeMonth, 1);
     final delta = summary.deltaPill;
     final grpBtnActive = state.grpOpen || state.fltGroup != null;
 
     return Container(
-      padding: const EdgeInsets.fromLTRB(15, 13, 15, 12),
+      padding: const EdgeInsets.fromLTRB(15, 7, 15, 12),
       decoration: BoxDecoration(
         color: p.card,
         borderRadius: BorderRadius.circular(18),
@@ -680,39 +505,82 @@ class _ExpensesPageState extends ConsumerState<ExpensesPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // Hàng 1: Nhãn "Tổng chi tháng X" bên trái + Pill biến động & nút biểu đồ tròn bên phải
+          // Hàng 1: bộ chọn tháng (‹ Tháng 11/2026 ›) bên trái, nút tỷ trọng
+          // theo nhóm bên phải. Tháng đứng ngay trên con số nó chi phối nên
+          // không cần nhãn "Tổng chi tháng X".
           Row(
             children: [
               Expanded(
-                child: Text(
-                  'Tổng chi tháng $monthNum',
-                  maxLines: 1,
-                  style: OmniType.caption.copyWith(
-                    color: p.muted,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              ),
-              if (delta != null) ...[
-                Container(
-                  height: 24,
-                  padding: const EdgeInsets.symmetric(horizontal: 8),
-                  alignment: Alignment.center,
-                  decoration: BoxDecoration(
-                    color: delta.isIncrease ? p.amberSoft : p.okSoft,
-                    borderRadius: BorderRadius.circular(99),
-                  ),
-                  child: Text(
-                    delta.text,
-                    style: OmniType.micro.copyWith(
-                      color: delta.isIncrease ? p.amber : p.ok,
-                      fontWeight: FontWeight.w600,
-                      fontFeatures: const [FontFeature.tabularFigures()],
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  // Lùi 14 để nét mũi tên gần lề chữ của thẻ; vùng chạm vẫn 40.
+                  child: Transform.translate(
+                    offset: const Offset(-14, 0),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        _buildMonthStepButton(
+                          p,
+                          key: const ValueKey('finance-prev-month-btn'),
+                          tooltip: 'Tháng trước',
+                          icon: Icons.chevron_left_rounded,
+                          onTap: () => notifier.selectMonth(prevYm),
+                        ),
+                        Flexible(
+                          child: Tooltip(
+                            message: 'Chọn tháng khác',
+                            child: InkWell(
+                              key: _monthBtnKey,
+                              onTap: _openMonthPickerMenu,
+                              borderRadius: BorderRadius.circular(8),
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 4,
+                                  vertical: 8,
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Flexible(
+                                      child: Text(
+                                        FinanceMonthUtils.formatMonthFull(
+                                          state.activeMonth,
+                                        ),
+                                        maxLines: 1,
+                                        softWrap: false,
+                                        style: OmniType.body.copyWith(
+                                          color: p.ink,
+                                          fontWeight: FontWeight.w600,
+                                          fontFeatures: const [
+                                            FontFeature.tabularFigures(),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 2),
+                                    Icon(
+                                      Icons.expand_more_rounded,
+                                      size: 18,
+                                      color: p.muted,
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                        _buildMonthStepButton(
+                          p,
+                          key: const ValueKey('finance-next-month-btn'),
+                          tooltip: 'Tháng sau',
+                          icon: Icons.chevron_right_rounded,
+                          onTap: () => notifier.selectMonth(nextYm),
+                        ),
+                      ],
                     ),
                   ),
                 ),
-                const SizedBox(width: 6),
-              ],
+              ),
               Tooltip(
                 message: 'Tỷ trọng theo nhóm',
                 child: InkWell(
@@ -737,38 +605,64 @@ class _ExpensesPageState extends ConsumerState<ExpensesPage> {
               ),
             ],
           ),
-          const SizedBox(height: 2),
-          // Hàng 2: Số tiền tổng chi chiếm trọn chiều ngang card, tự co giãn vừa khít, không bao giờ cắt "..."
-          Align(
-            alignment: Alignment.centerLeft,
-            child: FittedBox(
-              fit: BoxFit.scaleDown,
-              alignment: Alignment.centerLeft,
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.baseline,
-                textBaseline: TextBaseline.alphabetic,
-                children: [
-                  Text(
-                    FinanceMonthUtils.formatNumber(summary.total),
-                    maxLines: 1,
-                    style: OmniType.displayLg.copyWith(
-                      color: p.ink,
-                      fontWeight: FontWeight.w600,
-                      fontFeatures: const [FontFeature.tabularFigures()],
+          // Hàng 2: số tổng chi + nhãn biến động. Số dài thì nhãn tự xuống
+          // dòng; số chỉ co lại khi một mình nó rộng hơn cả thẻ.
+          Wrap(
+            crossAxisAlignment: WrapCrossAlignment.center,
+            spacing: 10,
+            runSpacing: 6,
+            children: [
+              FittedBox(
+                fit: BoxFit.scaleDown,
+                alignment: Alignment.centerLeft,
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.baseline,
+                  textBaseline: TextBaseline.alphabetic,
+                  children: [
+                    Text(
+                      FinanceMonthUtils.formatNumber(summary.total),
+                      maxLines: 1,
+                      style: OmniType.displayLg.copyWith(
+                        color: p.ink,
+                        fontWeight: FontWeight.w600,
+                        fontFeatures: const [FontFeature.tabularFigures()],
+                      ),
                     ),
-                  ),
-                  const SizedBox(width: 4),
-                  Text(
-                    'đ',
-                    style: OmniType.section.copyWith(
-                      color: p.muted,
-                      fontWeight: FontWeight.w600,
+                    const SizedBox(width: 4),
+                    Text(
+                      'đ',
+                      style: OmniType.section.copyWith(
+                        color: p.muted,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-            ),
+              if (delta != null)
+                Container(
+                  height: 24,
+                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                  // Không giãn hết chiều ngang trong Wrap.
+                  constraints: const BoxConstraints(),
+                  decoration: BoxDecoration(
+                    color: delta.isIncrease ? p.amberSoft : p.okSoft,
+                    borderRadius: BorderRadius.circular(99),
+                  ),
+                  child: Center(
+                    widthFactor: 1,
+                    child: Text(
+                      delta.text,
+                      style: OmniType.micro.copyWith(
+                        color: delta.isIncrease ? p.amber : p.ok,
+                        fontWeight: FontWeight.w600,
+                        fontFeatures: const [FontFeature.tabularFigures()],
+                      ),
+                    ),
+                  ),
+                ),
+            ],
           ),
           // Thanh tiến độ 6px
           Padding(
@@ -1062,7 +956,6 @@ class _ExpensesPageState extends ConsumerState<ExpensesPage> {
     FinanceLedgerNotifier notifier,
   ) {
     final suggestions = state.activeRecurringSuggestions;
-    final monthNum = FinanceMonthUtils.monthNumberOf(state.activeMonth);
     final selectedCount = state.selectedRecurringCount;
     final selectedSum = state.selectedRecurringSum;
     final allSum = state.allRecurringSum;
@@ -1118,7 +1011,8 @@ class _ExpensesPageState extends ConsumerState<ExpensesPage> {
                           fit: BoxFit.scaleDown,
                           alignment: Alignment.centerLeft,
                           child: Text(
-                            'Khoản cố định tháng $monthNum',
+                            // Tháng đã ghi ngay trên thẻ tổng chi.
+                            'Khoản cố định',
                             maxLines: 1,
                             style: OmniType.bodySm.copyWith(
                               color: p.ink,
