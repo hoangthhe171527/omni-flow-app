@@ -278,6 +278,7 @@ class TaskController
             clientRequestId: tick.clientRequestId,
           );
       _settle(subtaskId, updated);
+      _unitWorkChanged(updated);
     } on AppException catch (error) {
       _fail(subtaskId, error.message);
     } on Object catch (error, stackTrace) {
@@ -313,6 +314,16 @@ class TaskController
     final updated = await ref.read(tasksApiProvider).setStatus(arg, status);
     if (_disposed) return;
     _adopt(updated);
+    _unitWorkChanged(updated);
+  }
+
+  /// Việc gắn với cây trong Kho vừa đổi trạng thái (tick, xong, mở lại):
+  /// server đổi tình trạng cây theo việc. Đọc lại việc để `unit.condition` là
+  /// số mới, và báo các màn Kho tải lại.
+  void _unitWorkChanged(Task updated) {
+    if (_disposed || updated.subject == null) return;
+    ref.read(unitWorkRevisionProvider.notifier).state++;
+    unawaited(refresh().catchError((Object _) {}));
   }
 
   /// Chuyển công việc sang công đoạn khác.

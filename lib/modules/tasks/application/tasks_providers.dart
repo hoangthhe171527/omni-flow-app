@@ -33,6 +33,14 @@ final _entityChannelProvider = Provider<String?>((ref) {
       : 'tenant.$tenantId.entities';
 });
 
+/// Tăng sau mỗi lượt ghi làm đổi "việc đang ở đâu" của một việc gắn với cây
+/// trong Kho (tick công đoạn, xong, mở lại, đưa cây vào xưởng). Server đổi tình
+/// trạng cây theo việc, nên các màn Kho theo dõi số này để tải lại.
+///
+/// Nằm ở tasks chứ không gọi thẳng `bumpInventory`: Kho import tasks, chiều
+/// ngược lại là một chu trình (`module_cycle_test`).
+final unitWorkRevisionProvider = StateProvider<int>((ref) => 0);
+
 /// Bumped when realtime says something about this user's work changed.
 ///
 /// A signal, never data: acting on it means refetching through the API, which

@@ -9,6 +9,7 @@ import '../../../../core/error/app_exception.dart';
 import '../../../../design/components/omni_avatar.dart';
 import '../../../../design/components/omni_dashed_circle.dart';
 import '../../../../design/components/omni_motion_widgets.dart';
+import '../../../../design/components/omni_tabs.dart';
 import '../../../../design/components/omni_task_chip.dart';
 import '../../../../design/platform/omni_motion_scope.dart';
 import '../../../../design/tokens/tokens.dart';
@@ -25,6 +26,10 @@ import '../../application/plans_providers.dart';
 ///
 /// Việc con kế tiếp, thanh tiến độ và điểm kiểm tra đã rời thẻ: xem ở chi
 /// tiết. `TaskCard` vẫn là thẻ của "Việc của tôi", Workload và tìm kiếm.
+///
+/// Việc gắn với cây trong Kho (`task.unit`, Kho nối Xưởng) vẽ khác: tên cây
+/// (hãng + model) với serial mờ thay cho tiêu đề gõ tay, dòng "khách · lô"
+/// (đậm khi cây đã bán mà việc chưa xong), vạch tiến độ công đoạn + `8/10`.
 class BoardTaskCard extends ConsumerStatefulWidget {
   const BoardTaskCard({
     super.key,
@@ -121,6 +126,10 @@ class _BoardTaskCardState extends ConsumerState<BoardTaskCard>
       // tiết (vòng tick ở dòng tên — TitleRow).
       await api.setStatus(widget.task.id, next ? 'done' : 'doing');
       if (planId != null) container.invalidate(planTasksProvider(planId));
+      // Việc xưởng xong / mở lại: server đổi tình trạng cây, Kho tải lại.
+      if (widget.task.subject != null) {
+        container.read(unitWorkRevisionProvider.notifier).state++;
+      }
       if (mounted) setState(() => _saving = false);
     } on AppException catch (error) {
       // Lời của server (422 còn việc con chưa xong, 403 chỉ xem…): người
@@ -157,6 +166,9 @@ class _BoardTaskCardState extends ConsumerState<BoardTaskCard>
     final catalog = ref.watch(taskLabelsProvider).valueOrNull ?? const [];
     final byCode = {for (final l in catalog) l.code: l};
     final labels = [for (final code in task.labels) ?byCode[code]];
+    final unit = task.unit;
+    // Theo trạng thái lạc quan: vừa tích xong thì thôi tô ưu tiên ngay.
+    final soldPriority = isSoldPriority(unit, done: done);
 
     final meta = <Widget>[
       // Theo trạng thái lạc quan: vừa tích xong thì thôi báo quá hạn ngay,
@@ -169,7 +181,8 @@ class _BoardTaskCardState extends ConsumerState<BoardTaskCard>
           icon: Icons.calendar_today_outlined,
         ),
       if (task.priority == 'high') const OmniTaskChip.high('Ưu tiên cao'),
-      if (task.hasSubtasks)
+      // Việc có cây: tiến độ là vạch + `8/10` ngay dưới tên, không lặp ở đây.
+      if (task.hasSubtasks && unit == null)
         _Meta(
           icon: Icons.checklist_rounded,
           text: '${task.doneCount}/${task.totalCount}',
@@ -226,8 +239,23 @@ class _BoardTaskCardState extends ConsumerState<BoardTaskCard>
             // `.ck` 44 lề âm −10/−8: chiếm 26 × 22 trong dòng, cách 6.
             if (canCompleteThis) const SizedBox(width: 32, height: 22),
             Expanded(
-              child: Text(
-                task.title,
+              child: Text.rich(
+                TextSpan(
+                  // Cây thiếu cả hãng lẫn model thì vẫn phải có tên để đọc.
+                  text: unit == null || unit.name.isEmpty
+                      ? task.title
+                      : unit.name,
+                  children: [
+                    if (unit?.serial case final serial?)
+                      TextSpan(
+                        text: ' $serial',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w400,
+                          color: scheme.onSurfaceVariant,
+                        ),
+                      ),
+                  ],
+                ),
                 style: OmniType.bodySm.copyWith(
                   fontWeight: FontWeight.w500,
                   height: 1.35,
@@ -255,6 +283,56 @@ class _BoardTaskCardState extends ConsumerState<BoardTaskCard>
             ],
           ],
         ),
+        if (unit != null)
+          Padding(
+            padding: EdgeInsets.only(top: 2, left: canCompleteThis ? 32 : 0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text(
+                  unit.customerLine,
+                  key: const ValueKey('card-unit-line'),
+                  style: OmniType.micro.copyWith(
+                    fontWeight: soldPriority
+                        ? FontWeight.w600
+                        : FontWeight.w400,
+                    color: soldPriority
+                        ? scheme.onSurface
+                        : scheme.onSurfaceVariant,
+                  ),
+                ),
+                if (task.hasSubtasks)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 7),
+                    child: Semantics(
+                      container: true,
+                      label:
+                          '${task.doneCount} trên ${task.totalCount} công đoạn xong',
+                      excludeSemantics: true,
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: OmniProgressBar(
+                              key: const ValueKey('card-unit-progress'),
+                              value: task.progress,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            '${task.doneCount}/${task.totalCount}',
+                            style: OmniType.micro.copyWith(
+                              fontWeight: FontWeight.w500,
+                              color: scheme.onSurface,
+                              fontFeatures: OmniType.tabular,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
         Padding(
           padding: EdgeInsets.only(top: 8, left: canCompleteThis ? 28 : 0),
           child: Row(
@@ -346,7 +424,15 @@ class _BoardTaskCardState extends ConsumerState<BoardTaskCard>
 
   String _semanticLabel(bool done) {
     final task = widget.task;
-    final parts = <String>[task.title];
+    final unit = task.unit;
+    final parts = <String>[
+      if (unit == null)
+        task.title
+      else ...[
+        [unit.name, ?unit.serial].join(' '),
+        unit.customerLine,
+      ],
+    ];
     if (done) {
       parts.add('đã xong');
     } else {

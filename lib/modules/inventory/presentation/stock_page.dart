@@ -16,7 +16,8 @@ import 'widgets/unit_sheet.dart';
 
 /// Tồn kho theo serial (artifact app bản 7): tìm serial / model, Còn bán / Đã
 /// có khách, hàng lọc một dòng thả xuống (Loại · Lô · Tuổi tồn), dòng tổng
-/// ngắn, serial chạm để sửa, chọn nhiều cây để Bán / Đặt trước.
+/// ngắn, serial chạm để sửa, chọn nhiều cây để Bán / Đặt trước hoặc Đưa vào
+/// xưởng (Kho nối Xưởng: mỗi cây một việc của kế hoạch được chọn).
 class StockPage extends ConsumerStatefulWidget {
   const StockPage({super.key});
 
@@ -27,6 +28,9 @@ class StockPage extends ConsumerStatefulWidget {
 class _StockPageState extends ConsumerState<StockPage> {
   bool _multi = false;
   final _picked = <String>{};
+
+  /// Đang đưa cây vào xưởng (chờ danh sách kế hoạch / API) — chặn bấm lặp.
+  bool _sending = false;
 
   /// Lần tự tải thêm (khi lọc tuổi tồn) vừa lỗi — không thử lại liên tục.
   bool _autoLoadFailed = false;
@@ -145,6 +149,56 @@ class _StockPageState extends ConsumerState<StockPage> {
     }
   }
 
+  /// Đưa các cây đã chọn vào xưởng: chọn kế hoạch rồi `POST /tasks/from-units`.
+  /// Cây đang có việc tân trang chưa xong không gửi (server cũng bỏ qua).
+  Future<void> _sendPicked(List<InventoryUnit> items) async {
+    final ids = [
+      for (final u in items)
+        if (_picked.contains(u.id) && !u.hasOpenRefurbish) u.id,
+    ];
+    if (ids.isEmpty || _sending) return;
+    setState(() => _sending = true);
+    try {
+      // Giữ provider tự huỷ sống trong lúc chờ (như `_pickLot`).
+      final sub = ref.listenManual(workshopPlansProvider, (_, _) {});
+      final List<WorkshopPlan> plans;
+      try {
+        plans = await ref.read(workshopPlansProvider.future);
+      } finally {
+        sub.close();
+      }
+      if (!mounted) return;
+      if (plans.isEmpty) {
+        InvUi.toast(
+          context,
+          'Chưa có kế hoạch đang chạy nào bạn quản lý được.',
+        );
+        return;
+      }
+      final r = await showInvOptions<String>(
+        context: context,
+        title: 'Chọn kế hoạch',
+        options: [for (final p in plans) (p.id, p.name)],
+      );
+      final planId = r?.value;
+      if (planId == null || !mounted) return;
+      final res = await ref
+          .read(inventoryApiProvider)
+          .sendToWorkshop(projectId: planId, unitIds: ids);
+      if (!mounted) return;
+      bumpInventory(ref);
+      setState(() {
+        _multi = false;
+        _picked.clear();
+      });
+      InvUi.toast(context, sendToWorkshopMessage(res));
+    } catch (e) {
+      if (mounted) InvUi.toast(context, InvUi.error(e));
+    } finally {
+      if (mounted) setState(() => _sending = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final perms = ref.watch(inventoryPermsProvider);
@@ -197,11 +251,19 @@ class _StockPageState extends ConsumerState<StockPage> {
       });
     }
     final pickedLoaded = loaded.where((u) => _picked.contains(u.id)).length;
+    // Cây đã chọn chưa có việc tân trang đang mở — số cây sẽ vào xưởng.
+    final pickedForWorkshop = loaded
+        .where((u) => _picked.contains(u.id) && !u.hasOpenRefurbish)
+        .length;
     final categories = {
       ...loaded.map((u) => u.category).whereType<String>(),
       ?f.category,
     }.toList()..sort();
-    final canMulti = !reserved && perms.canSellOrReserve;
+    final canSell = !reserved && perms.canSellOrReserve;
+    final canSend = perms.workshop;
+    final canMulti = canSell || canSend;
+    final showSell = _multi && canSell && pickedLoaded > 0;
+    final showSend = _multi && canSend && pickedForWorkshop > 0;
     final bottomPad =
         ShellBarInset.of(context) + MediaQuery.viewPaddingOf(context).bottom;
 
@@ -311,6 +373,7 @@ class _StockPageState extends ConsumerState<StockPage> {
                   showCustomer: reserved,
                   canEditSerial: perms.write && !_multi,
                   picking: _multi,
+                  showWorkshop: _multi && canSend,
                   picked: _picked.contains(u.id),
                   onTap: () => _tapUnit(u),
                   onSerial: (s) => _saveSerial(u, s),
@@ -365,21 +428,46 @@ class _StockPageState extends ConsumerState<StockPage> {
                   physics: const AlwaysScrollableScrollPhysics(),
                   keyboardDismissBehavior:
                       ScrollViewKeyboardDismissBehavior.onDrag,
-                  padding: EdgeInsets.fromLTRB(16, 12, 16, bottomPad + 88),
+                  padding: EdgeInsets.fromLTRB(
+                    16,
+                    12,
+                    16,
+                    bottomPad + 88 + (showSell && showSend ? 56 : 0),
+                  ),
                   children: list,
                 ),
               ),
             ),
           ),
-          if (_multi && pickedLoaded > 0)
+          if (showSell || showSend)
             Positioned(
               left: 20,
               right: 20,
               bottom: bottomPad + 16,
-              child: FilledButton(
-                key: const ValueKey('inv-stock-sell-picked'),
-                onPressed: () => _sellPicked(loaded),
-                child: Text('Bán / Đặt trước · $pickedLoaded cây'),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  if (showSend && showSell)
+                    OutlinedButton(
+                      key: const ValueKey('inv-stock-send-picked'),
+                      onPressed: _sending ? null : () => _sendPicked(loaded),
+                      child: Text('Đưa vào xưởng · $pickedForWorkshop cây'),
+                    )
+                  else if (showSend)
+                    FilledButton(
+                      key: const ValueKey('inv-stock-send-picked'),
+                      onPressed: _sending ? null : () => _sendPicked(loaded),
+                      child: Text('Đưa vào xưởng · $pickedForWorkshop cây'),
+                    ),
+                  if (showSend && showSell) const SizedBox(height: 8),
+                  if (showSell)
+                    FilledButton(
+                      key: const ValueKey('inv-stock-sell-picked'),
+                      onPressed: () => _sellPicked(loaded),
+                      child: Text('Bán / Đặt trước · $pickedLoaded cây'),
+                    ),
+                ],
               ),
             ),
         ],
@@ -401,6 +489,7 @@ class StockUnitRow extends StatelessWidget {
     this.canEditSerial = false,
     this.picking = false,
     this.picked = false,
+    this.showWorkshop = false,
   });
 
   final InventoryUnit unit;
@@ -412,12 +501,17 @@ class StockUnitRow extends StatelessWidget {
   final bool picking;
   final bool picked;
 
+  /// Đang chọn cây để đưa vào xưởng: dòng nhỏ bên phải là tình hình xưởng
+  /// (`8/10`, "Xong", "Chưa vào xưởng"), tình trạng dời sang dòng phụ.
+  final bool showWorkshop;
+
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final u = unit;
     final age = InventoryFormat.ageDays(u.receivedAt, today);
     final hold = showCustomer ? InvUi.holdLine(u) : null;
+    final work = showWorkshop ? u.workshopLabel : null;
     return Semantics(
       button: true,
       selected: picking && picked,
@@ -468,6 +562,8 @@ class StockUnitRow extends StatelessWidget {
                           children: [
                             TextSpan(
                               text: [
+                                if (work != null)
+                                  UnitCondition.labelOf(u.condition),
                                 if (u.lotCode != null) u.lotCode!,
                                 if (InvUi.shortCategory(u.category).isNotEmpty)
                                   InvUi.shortCategory(u.category),
@@ -500,8 +596,10 @@ class StockUnitRow extends StatelessWidget {
                 const SizedBox(width: 10),
                 InvValue(
                   InvUi.vnd(u.listPrice),
-                  sub: UnitCondition.labelOf(u.condition),
-                  subColor: InvUi.conditionColor(context, u.condition),
+                  sub: work ?? UnitCondition.labelOf(u.condition),
+                  subColor: work != null
+                      ? null
+                      : InvUi.conditionColor(context, u.condition),
                 ),
               ],
             ),

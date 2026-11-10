@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../../design/components/components.dart';
+import '../../../../security/session/session_controller.dart';
+import '../../../tasks/domain/task_permissions.dart';
+import '../../../tasks/routes.dart';
 import '../../application/inventory_providers.dart';
 import '../../domain/inventory_format.dart';
 import '../../domain/inventory_models.dart';
@@ -14,22 +18,46 @@ import 'serial_field.dart';
 /// giá, Bán / Đặt trước, Bỏ giữ, Đổi khách, Tạo đơn — theo quyền.
 ///
 /// [onChanged] nhận cây sau mỗi lần sửa (để màn danh sách thay tại chỗ).
+///
+/// Nhóm "Xưởng" (Kho nối Xưởng): mỗi việc xưởng của cây một dòng, chạm để mở
+/// việc. Sheet nằm ở navigator gốc nên đóng sheet trước rồi mới mở việc.
 Future<void> openUnitSheet(
   BuildContext context, {
   required InventoryUnit unit,
   required ValueChanged<InventoryUnit> onChanged,
 }) {
+  final router = GoRouter.maybeOf(context);
   return showOmniSheet<void>(
     context: context,
-    builder: (_) => UnitSheet(unit: unit, onChanged: onChanged),
+    builder: (sheet) => UnitSheet(
+      unit: unit,
+      onChanged: onChanged,
+      onOpenTask: router == null
+          ? null
+          : (taskId) {
+              Navigator.of(sheet).pop();
+              router.pushNamed(
+                TaskRoutes.detail,
+                pathParameters: {'id': taskId},
+              );
+            },
+    ),
   );
 }
 
 class UnitSheet extends ConsumerStatefulWidget {
-  const UnitSheet({super.key, required this.unit, required this.onChanged});
+  const UnitSheet({
+    super.key,
+    required this.unit,
+    required this.onChanged,
+    this.onOpenTask,
+  });
 
   final InventoryUnit unit;
   final ValueChanged<InventoryUnit> onChanged;
+
+  /// Mở chi tiết việc xưởng theo id. null = không có lối mở (không mũi tên).
+  final ValueChanged<String>? onOpenTask;
 
   @override
   ConsumerState<UnitSheet> createState() => _UnitSheetState();
@@ -149,6 +177,11 @@ class _UnitSheetState extends ConsumerState<UnitSheet> {
     final u = _u;
     final age = InventoryFormat.ageDays(u.receivedAt, today);
     final hold = InvUi.holdLine(u);
+    final workshop = u.workshop;
+    // Màn chi tiết việc đòi `tasks.read` — thiếu thì dòng chỉ để đọc.
+    final openTask = ref.watch(accessProvider).can(TaskPermissions.read)
+        ? widget.onOpenTask
+        : null;
 
     final buttons = <Widget>[
       if (u.sale == UnitSale.available && perms.canSellOrReserve)
@@ -268,6 +301,23 @@ class _UnitSheetState extends ConsumerState<UnitSheet> {
             ),
           ],
         ),
+        // API cũ không gửi `workshop`: không có nhóm, không đoán "chưa vào".
+        if (workshop != null)
+          OmniGroupSection(
+            key: const ValueKey('inv-unit-workshop'),
+            title: 'Xưởng',
+            children: [
+              if (workshop.isEmpty) const InvMutedRow('Chưa vào xưởng'),
+              for (final w in workshop)
+                InvWorkRow(
+                  key: ValueKey('inv-unit-work-${w.taskId}'),
+                  work: w,
+                  onTap: openTask == null || w.taskId.isEmpty
+                      ? null
+                      : () => openTask(w.taskId),
+                ),
+            ],
+          ),
       ],
     );
   }

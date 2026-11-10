@@ -376,6 +376,91 @@ class Lot {
       : '$code · $supplierName';
 }
 
+/// Một việc xưởng của cây (`workshop[]`, `UnitWork::forUnits` bên API) — Kho
+/// đọc từ Công việc lúc trả lời, mới nhất trước.
+@immutable
+class UnitWork {
+  const UnitWork({
+    required this.taskId,
+    this.title = '',
+    this.projectId,
+    this.projectName,
+    this.role = refurbish,
+    this.state = todo,
+    this.done = 0,
+    this.total = 0,
+    this.step,
+    this.assigneeNames = const [],
+    this.completedAt,
+  });
+
+  factory UnitWork.fromJson(Map<String, dynamic> j) => UnitWork(
+    taskId: j.strOr('task_id', ''),
+    title: j.strOr('title', ''),
+    projectId: j.str('project_id'),
+    projectName: j.str('project_name'),
+    role: j.strOr('role', refurbish),
+    state: j.strOr('state', todo),
+    done: j.intOr('done'),
+    total: j.intOr('total'),
+    step: j.str('step'),
+    assigneeNames: j.strList('assignee_names'),
+    completedAt: j.str('completed_at'),
+  );
+
+  static const refurbish = 'refurbish';
+  static const warranty = 'warranty';
+  static const todo = 'todo';
+  static const doing = 'doing';
+  static const doneState = 'done';
+
+  final String taskId;
+  final String title;
+  final String? projectId;
+  final String? projectName;
+
+  /// `refurbish` (tân trang) | `warranty` (bảo hành).
+  final String role;
+
+  /// `todo` | `doing` | `done` (`WorkState::of`).
+  final String state;
+
+  /// Số công đoạn đã xong / tổng.
+  final int done;
+  final int total;
+
+  /// Công đoạn chưa xong đầu tiên; null khi đã xong hết hoặc không có.
+  final String? step;
+  final List<String> assigneeNames;
+  final String? completedAt;
+
+  bool get isDone => state == doneState;
+
+  /// Việc tân trang chưa xong — cây chỉ có MỘT việc như vậy tại một thời điểm.
+  bool get isOpenRefurbish => role == refurbish && !isDone;
+
+  String get roleLabel => role == warranty ? 'Bảo hành' : 'Tân trang';
+
+  /// 0–1 cho vạch tiến độ; việc xong luôn đầy.
+  double get progress =>
+      isDone ? 1 : (total <= 0 ? 0 : (done / total).clamp(0, 1).toDouble());
+
+  /// "Xong" / "8/10" / "" (việc không có công đoạn).
+  String get progressLabel => isDone
+      ? 'Xong'
+      : total > 0
+      ? '$done/$total'
+      : '';
+
+  /// "Nắp cong · Thanh Hòa, Ngọc Trâm" / "Đã hoàn thiện".
+  String get subtitle => isDone
+      ? 'Đã hoàn thiện'
+      : [
+          ?step,
+          if (assigneeNames.isNotEmpty) assigneeNames.join(', '),
+        ].join(' · ');
+}
+
 @immutable
 class InventoryUnit {
   const InventoryUnit({
@@ -404,6 +489,7 @@ class InventoryUnit {
     this.note,
     this.yenPrice,
     this.costVnd,
+    this.workshop,
   });
 
   factory InventoryUnit.fromJson(Map<String, dynamic> j) => InventoryUnit(
@@ -432,6 +518,10 @@ class InventoryUnit {
     note: j.str('note'),
     yenPrice: j.dbl('yen_price'),
     costVnd: j.dbl('cost_vnd'),
+    // API cũ không có khoá: null (ẩn nhóm Xưởng), khác với `[]` = chưa vào xưởng.
+    workshop: j['workshop'] is List
+        ? [for (final w in j.mapList('workshop')) UnitWork.fromJson(w)]
+        : null,
   );
 
   final String id;
@@ -461,6 +551,28 @@ class InventoryUnit {
   // ---- chỉ có với `inventory.cost` ----
   final double? yenPrice;
   final double? costVnd;
+
+  /// Việc xưởng của cây, mới nhất trước. null = API chưa có Kho nối Xưởng.
+  final List<UnitWork>? workshop;
+
+  /// Cây đang có việc tân trang chưa xong — không đưa vào xưởng lần nữa
+  /// (server cũng bỏ qua: `CreateWorkshopTasks`).
+  bool get hasOpenRefurbish => workshop?.any((w) => w.isOpenRefurbish) ?? false;
+
+  /// Chữ ngắn về xưởng cho dòng cây lúc chọn nhiều: `8/10` (việc tân trang
+  /// đang mở), "Xong" (đã tân trang xong), "Chưa vào xưởng". null = API cũ.
+  String? get workshopLabel {
+    final list = workshop;
+    if (list == null) return null;
+    for (final w in list) {
+      if (w.isOpenRefurbish) {
+        return w.total > 0 ? w.progressLabel : 'Ở xưởng';
+      }
+    }
+    return list.any((w) => w.role == UnitWork.refurbish)
+        ? 'Xong'
+        : 'Chưa vào xưởng';
+  }
 
   String get name => '$maker $model'.trim();
 
@@ -593,4 +705,16 @@ class SerialWarning {
   final String code;
   final String? serial;
   final int? index;
+}
+
+/// Câu báo sau "Đưa vào xưởng" (`POST /tasks/from-units` → `meta`): số việc đã
+/// tạo và số cây bị bỏ qua vì đang có việc tân trang chưa xong.
+String sendToWorkshopMessage(({int created, List<String> skipped}) r) {
+  final s = r.skipped.length;
+  if (r.created == 0) {
+    return 'Không tạo việc nào: $s cây đang có việc tân trang.';
+  }
+  return s > 0
+      ? 'Đã tạo ${r.created} việc xưởng, bỏ qua $s cây đang có việc tân trang.'
+      : 'Đã tạo ${r.created} việc xưởng.';
 }
