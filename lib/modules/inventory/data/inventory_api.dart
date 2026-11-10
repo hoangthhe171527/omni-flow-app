@@ -14,6 +14,10 @@ final inventoryApiProvider = Provider<InventoryApi>((ref) {
 /// Kết quả `PUT /units/{id}` — cây sau khi sửa + cảnh báo serial trùng.
 typedef UnitUpdateResult = ({InventoryUnit unit, List<SerialWarning> warnings});
 
+/// Kết quả `POST /tasks/from-units`: số việc đã tạo và id các cây bị bỏ qua
+/// (đang có việc tân trang chưa xong).
+typedef SendToWorkshopResult = ({int created, List<String> skipped});
+
 /// Kết quả `POST /lots/{id}/units`.
 typedef AddUnitsResult = ({Lot lot, int created, List<SerialWarning> warnings});
 
@@ -281,6 +285,34 @@ class InventoryApi {
   Future<List<MoneyAccount>> moneyAccounts() async {
     final res = await _api.get('/inventory/money-accounts');
     return res.list.map(MoneyAccount.fromJson).toList();
+  }
+
+  // ---------------- xưởng ----------------
+
+  /// `POST /tasks/from-units` `{project_id, unit_ids[]}` — đưa cây vào xưởng:
+  /// mỗi cây một việc của kế hoạch (`TaskUnitController::fromUnits`). 201
+  /// `{data: việc[], meta: {created, skipped}}`; 403 không quản lý được kế
+  /// hoạch; 404 cây không còn.
+  ///
+  /// Gọi từ tầng data của Kho (như web) thay vì qua `TasksApi`: Kho chỉ cần
+  /// hai con số trong `meta`, không cần kiểu `Task`.
+  Future<SendToWorkshopResult> sendToWorkshop({
+    required String projectId,
+    required List<String> unitIds,
+  }) async {
+    final res = await _api.post(
+      '/tasks/from-units',
+      body: {'project_id': projectId, 'unit_ids': unitIds},
+    );
+    final meta = res.raw['meta'];
+    final m = meta is Map
+        ? meta.cast<String, dynamic>()
+        : const <String, dynamic>{};
+    return (
+      // Thiếu `meta.created` (không nên xảy ra) thì đếm mảng việc trả về.
+      created: m['created'] == null ? res.list.length : m.intOr('created'),
+      skipped: m.strList('skipped'),
+    );
   }
 
   // ---------------- bán ----------------

@@ -577,8 +577,9 @@ class _PlanBoardPageState extends ConsumerState<PlanBoardPage>
                     }
                     final section = columns[index];
                     // Cột "Tất cả công việc" của kế hoạch chưa khai nhóm việc là cột
-                    // dựng tạm, không có gì để đổi tên hay xoá.
-                    final real = section.id.isNotEmpty;
+                    // dựng tạm, không có gì để đổi tên hay xoá. Cột ảo "Đã
+                    // giao" cũng vậy: không thả vào, không tạo việc, không ⋯.
+                    final real = section.id.isNotEmpty && !section.isDelivered;
 
                     return Align(
                       alignment: Alignment.topCenter,
@@ -595,8 +596,13 @@ class _PlanBoardPageState extends ConsumerState<PlanBoardPage>
                           drag: canDragTasks && real && !board.truncated
                               ? _drag
                               : null,
+                          // Việc ở cột ảo "Đã giao" không nhấc được: nhóm đã
+                          // lưu của nó không đổi theo chỗ đang vẽ.
                           canDrag: (t) =>
-                              canDragTasks && !board.truncated && !t.isLocked,
+                              canDragTasks &&
+                              !board.truncated &&
+                              !t.isLocked &&
+                              !t.isDeliveredRefurbish,
                           liftable: _liftable,
                           onDragUpdate: _onDragUpdate,
                           onDragEnd: _endDrag,
@@ -807,7 +813,12 @@ class _PlanBoardPageState extends ConsumerState<PlanBoardPage>
     // trước khi lượt thả tới đây.
     final from = board.buckets.indexWhere((b) => b.any((t) => t.id == task.id));
     _endDrag();
-    if (sectionId.isEmpty || from < 0 || _pending != null) return;
+    if (sectionId.isEmpty ||
+        sectionId == PlanSection.deliveredId ||
+        from < 0 ||
+        _pending != null) {
+      return;
+    }
     final fromIndex = board.buckets[from].indexWhere((t) => t.id == task.id);
     final targetOthers = [
       for (final t in board.buckets[toColumn])

@@ -2,6 +2,10 @@ import '../../../core/utils/avatar_url.dart';
 import '../../../core/utils/formatters.dart';
 import '../../../core/utils/json.dart';
 import 'task_activity.dart';
+import 'task_unit.dart';
+import 'task_unit.dart' as task_unit;
+
+export 'task_unit.dart';
 
 // URL ảnh người được chuẩn hoá NGAY LÚC PARSE (`resolveAvatarUrl`), ở cả bốn
 // chỗ API gửi nó: người làm, việc con, bình luận, đã xem. Ảnh được vẽ ở hàng
@@ -265,6 +269,8 @@ class Task {
     this.createdByAvatar,
     this.customerId,
     this.customerName,
+    this.subject,
+    this.unit,
     this.order = 0,
     this.hasOrder = true,
   });
@@ -345,6 +351,10 @@ class Task {
     customerId: json.str('customer_id'),
     // Chỉ có khi tài liệu mang sẵn tên khách; presenter không trang trí.
     customerName: json.str('customer_name'),
+    // Kho nối Xưởng: việc thường vắng cả hai khoá; cây đã xoá khỏi Kho thì
+    // `unit: null` dù còn `subject`.
+    subject: TaskSubject.parse(json['subject']),
+    unit: TaskUnit.parse(json['unit']),
     order: json.dbl('order') ?? 0,
     hasOrder: json.dbl('order') != null,
   );
@@ -498,6 +508,19 @@ class Task {
 
   /// Tên khách nếu tài liệu có `customer_name`. null = chỉ có id.
   final String? customerName;
+
+  /// Việc gắn với một cây trong Kho (`subject.type == unit`). null = việc thường.
+  final TaskSubject? subject;
+
+  /// Cây của việc, số hiện tại của Kho. null = việc thường hoặc cây đã xoá.
+  final TaskUnit? unit;
+
+  /// Việc tân trang mà cây đã giao — thuộc cột ảo "Đã giao" của bảng.
+  bool get isDeliveredRefurbish =>
+      task_unit.isDeliveredRefurbish(subject, unit);
+
+  /// Cây đã bán, việc chưa xong, cây chưa giao — tô ưu tiên trên thẻ.
+  bool get isSoldPriority => task_unit.isSoldPriority(unit, done: isDone);
 
   /// Vị trí trong nhóm việc (`tasks.order`, số thực để chèn giữa hai thẻ).
   /// Thiếu hoặc sai kiểu = 0.
@@ -679,6 +702,8 @@ class Task {
     createdByAvatar: createdByAvatar,
     customerId: customerId,
     customerName: customerName,
+    subject: subject,
+    unit: unit,
     order: order ?? this.order,
     hasOrder: hasOrder ?? (order != null || this.hasOrder),
   );

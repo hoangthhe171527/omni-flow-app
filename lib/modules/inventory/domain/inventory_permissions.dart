@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 
 import '../../../security/permissions/access_policy.dart';
+import '../../tasks/domain/task_permissions.dart';
 
 /// Quyền Kho hàng (spec TNP_KHO_VA_HANG_SAP_VE §6, `routes.php` của Inventory).
 abstract final class InventoryPermissions {
@@ -34,6 +35,7 @@ class InventoryPerms {
     this.cost = false,
     this.pay = false,
     this.sell = false,
+    this.workshop = false,
   });
 
   factory InventoryPerms.from({
@@ -52,6 +54,7 @@ class InventoryPerms {
           read &&
           has(InventoryPermissions.reserve) &&
           has(InventoryPermissions.ordersWrite),
+      workshop: read && policy.can(TaskPermissions.write),
     );
   }
 
@@ -74,6 +77,10 @@ class InventoryPerms {
 
   /// Tạo đơn từ cây (cần thêm `orders.write`).
   final bool sell;
+
+  /// Đưa cây vào xưởng (`POST /tasks/from-units`): quyền tạo việc
+  /// (`tasks.write`) cộng xem Kho. Server kiểm thêm quyền quản lý kế hoạch.
+  final bool workshop;
 
   /// Mở được sheet "Bán / Đặt trước".
   bool get canSellOrReserve => reserve || sell;

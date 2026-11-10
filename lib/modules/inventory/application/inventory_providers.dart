@@ -2,13 +2,20 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../security/session/session_controller.dart';
+import '../../plans/application/plans_providers.dart';
+import '../../tasks/application/tasks_providers.dart';
 import '../data/inventory_api.dart';
 import '../domain/inventory_format.dart';
 import '../domain/inventory_models.dart';
 import '../domain/inventory_permissions.dart';
 
 export '../data/inventory_api.dart'
-    show AddUnitsResult, InventoryApi, UnitUpdateResult, inventoryApiProvider;
+    show
+        AddUnitsResult,
+        InventoryApi,
+        SendToWorkshopResult,
+        UnitUpdateResult,
+        inventoryApiProvider;
 
 /// Quyền Kho của phiên hiện tại. Thiếu capability `inventory` → mọi quyền false.
 final inventoryPermsProvider = Provider<InventoryPerms>((ref) {
@@ -29,6 +36,34 @@ final inventoryRevisionProvider = StateProvider<int>((ref) => 0);
 
 void bumpInventory(WidgetRef ref) =>
     ref.read(inventoryRevisionProvider.notifier).state++;
+
+/// Dữ liệu cây đổi vì Kho ghi ([inventoryRevisionProvider]) HOẶC vì một việc
+/// xưởng đổi trạng thái ([unitWorkRevisionProvider] — server đổi tình trạng cây
+/// theo việc). Mọi provider đọc cây theo dõi qua đây.
+void _watchUnits(Ref ref) {
+  ref.watch(inventoryRevisionProvider);
+  ref.watch(unitWorkRevisionProvider);
+}
+
+/// Kế hoạch đưa cây vào được: đang chạy và người này quản lý được (như web —
+/// server trả 403 cho kế hoạch không quản lý được).
+typedef WorkshopPlan = ({String id, String name});
+
+final workshopPlansProvider = FutureProvider.autoDispose<List<WorkshopPlan>>((
+  ref,
+) async {
+  if (!ref.watch(inventoryPermsProvider).workshop) return const [];
+  final manageAll = ref.watch(taskAccessProvider).isAssigner;
+  final me = ref.watch(sessionProvider.select((s) => s.user?.id));
+  final teams = await ref.watch(teamsWithPlansProvider.future);
+  return [
+    for (final t in teams)
+      // `plans` chỉ gồm kế hoạch đang chạy (đã đóng / lưu trữ nằm riêng).
+      for (final p in t.plans)
+        if (manageAll || (me != null && p.roleOf(me).canManagePlan))
+          (id: p.id, name: p.name),
+  ];
+});
 
 // ---------------------------------------------------------------- tồn kho
 
@@ -129,7 +164,7 @@ class StockController extends AutoDisposeAsyncNotifier<StockState> {
 
   @override
   Future<StockState> build() async {
-    ref.watch(inventoryRevisionProvider);
+    _watchUnits(ref);
     final f = ref.watch(stockFilterProvider);
     if (!ref.watch(inventoryPermsProvider).read) {
       return const StockState(items: [], total: 0);
@@ -249,7 +284,7 @@ final lotProvider = FutureProvider.autoDispose.family<Lot, String>((
 
 final lotUnitsProvider = FutureProvider.autoDispose
     .family<List<InventoryUnit>, String>((ref, id) async {
-      ref.watch(inventoryRevisionProvider);
+      _watchUnits(ref);
       return ref.watch(inventoryApiProvider).lotUnits(id);
     });
 

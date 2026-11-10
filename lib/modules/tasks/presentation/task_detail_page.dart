@@ -655,6 +655,9 @@ class _Loaded extends ConsumerWidget {
         ref.watch(accessProvider).canAny(TaskPermissions.openCustomer) &&
         GoRouter.maybeOf(context) != null;
     final customerId = task.customerId;
+    // Việc gắn với cây trong Kho: khách là khách HIỆN TẠI của cây.
+    final unit = task.unit;
+    final unitCustomerId = unit?.customerId;
 
     // Khai báo trường là sửa KẾ HOẠCH (`UpdateProjectRequest`): cùng luật
     // `canManage` với xoá bình luận người khác.
@@ -662,8 +665,33 @@ class _Loaded extends ConsumerWidget {
         canModerate && projectId != null && GoRouter.maybeOf(context) != null;
 
     final bottom = [
+      if (unit != null)
+        Padding(
+          padding: const EdgeInsets.only(top: 10),
+          child: OmniGroupSection(
+            key: const Key('task-unit-group'),
+            children: [
+              OmniGroupRow(title: 'Tình trạng', value: unit.conditionLabel),
+              OmniGroupRow(
+                key: const Key('task-unit-customer'),
+                title: 'Khách',
+                value:
+                    unit.customerName ??
+                    (unitCustomerId != null ? 'Xem hồ sơ khách' : 'Chưa có'),
+                onTap: canOpenCustomer && unitCustomerId != null
+                    ? () => context.pushNamed(
+                        CustomerRoutes.detail,
+                        pathParameters: {'id': unitCustomerId},
+                      )
+                    : null,
+              ),
+              OmniGroupRow(title: 'Lô', value: unit.lotCode ?? '—'),
+            ],
+          ),
+        ),
       CustomFieldsCard(
         task: task,
+        showCustomer: unit == null,
         onEdit: canWrite ? (def) => _editField(context, controller, def) : null,
         onManageFields: canManageFields
             ? () async {

@@ -13,6 +13,7 @@ class FakeInventoryApi extends InventoryApi {
     List<Supplier> suppliers = const [],
     List<MoneyAccount> accounts = const [],
     this.payResult,
+    this.workshopSkipped = const [],
   }) : units = [...units],
        customers = [...customers],
        _openOrders = openOrders,
@@ -37,6 +38,10 @@ class FakeInventoryApi extends InventoryApi {
 
   /// Lô trả về sau `payCosts` (null = lô cũ, chưa chốt).
   final Lot? payResult;
+
+  /// Id cây server bỏ qua khi đưa vào xưởng (đang có việc tân trang mở).
+  final List<String> workshopSkipped;
+  final workshopSends = <Map<String, Object?>>[];
 
   final createdSuppliers = <String>[];
   final createdLots = <Map<String, Object?>>[];
@@ -68,6 +73,19 @@ class FakeInventoryApi extends InventoryApi {
       items: all.skip(offset).take(limit).toList(),
       total: all.length,
     );
+  }
+
+  @override
+  Future<SendToWorkshopResult> sendToWorkshop({
+    required String projectId,
+    required List<String> unitIds,
+  }) async {
+    workshopSends.add({'project_id': projectId, 'unit_ids': unitIds});
+    final skipped = [
+      for (final id in unitIds)
+        if (workshopSkipped.contains(id)) id,
+    ];
+    return (created: unitIds.length - skipped.length, skipped: skipped);
   }
 
   @override

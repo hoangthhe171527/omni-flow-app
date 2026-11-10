@@ -101,6 +101,123 @@ class InvValue extends StatelessWidget {
   }
 }
 
+/// Một việc xưởng của cây trong nhóm "Xưởng": "Tân trang" / "Bảo hành", dòng
+/// phụ công đoạn đang làm + người làm, vạch tiến độ, bên phải `8/10` / "Xong".
+class InvWorkRow extends StatelessWidget {
+  const InvWorkRow({super.key, required this.work, this.onTap});
+
+  final UnitWork work;
+
+  /// null = không mở được việc (thiếu quyền xem việc): không có mũi tên.
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final w = work;
+    final sub = w.subtitle;
+    final value = w.progressLabel;
+    final row = ConstrainedBox(
+      constraints: const BoxConstraints(minHeight: 48),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+        child: Row(
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    w.roleLabel,
+                    style: OmniType.body.copyWith(
+                      fontWeight: FontWeight.w500,
+                      color: scheme.onSurface,
+                    ),
+                  ),
+                  if (sub.isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 1),
+                      child: Text(sub, style: invMuted(context)),
+                    ),
+                  if (w.total > 0 || w.isDone)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 7),
+                      child: OmniProgressBar(value: w.progress),
+                    ),
+                ],
+              ),
+            ),
+            if (value.isNotEmpty) ...[
+              const SizedBox(width: 12),
+              Text(
+                value,
+                style: OmniType.body.copyWith(
+                  fontWeight: FontWeight.w500,
+                  color: scheme.onSurface,
+                  fontFeatures: OmniType.tabular,
+                ),
+              ),
+            ],
+            if (onTap != null) ...[
+              const SizedBox(width: 6),
+              Icon(
+                Icons.chevron_right_rounded,
+                size: 18,
+                color: OmniTaskTones.of(context).chevron,
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+    final label = [
+      w.roleLabel,
+      if (sub.isNotEmpty) sub,
+      if (value.isNotEmpty) value,
+    ].join(', ');
+    if (onTap == null) {
+      return Semantics(label: label, excludeSemantics: true, child: row);
+    }
+    return Semantics(
+      button: true,
+      label: label,
+      excludeSemantics: true,
+      child: InkWell(
+        onTap: () {
+          HapticFeedback.selectionClick();
+          onTap!();
+        },
+        child: row,
+      ),
+    );
+  }
+}
+
+/// Dòng chữ mờ trong nhóm ("Chưa vào xưởng") — không bấm được.
+class InvMutedRow extends StatelessWidget {
+  const InvMutedRow(this.text, {super.key});
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) => ConstrainedBox(
+    constraints: const BoxConstraints(minHeight: 48),
+    child: Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+      child: Align(
+        alignment: Alignment.centerLeft,
+        child: Text(
+          text,
+          style: OmniType.body.copyWith(
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
+          ),
+        ),
+      ),
+    ),
+  );
+}
+
 /// Nút thả xuống của hàng lọc: kính trắng mờ khi đang lọc, mũi tên ▾.
 class InvDropPill extends StatelessWidget {
   const InvDropPill({

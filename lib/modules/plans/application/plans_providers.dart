@@ -329,25 +329,42 @@ class BoardBuckets {
   /// Việc không thuộc nhóm nào — hoặc thuộc một nhóm đã bị xoá — rơi vào cột
   /// ĐẦU chứ không bị bỏ đi. Một cây đàn không ai thấy là một cây đàn không ai
   /// làm. Dự án chưa khai nhóm việc nào vẫn xem được: một cột duy nhất.
+  ///
+  /// Kho nối Xưởng: việc tân trang mà cây đã giao khách
+  /// ([Task.isDeliveredRefurbish]) nằm ở cột ảo [PlanSection.delivered] đứng
+  /// CUỐI, thay cho nhóm việc đã lưu. Cột ảo chỉ có khi có việc như vậy, và luôn
+  /// đứng cuối nên chỉ số các cột thật không đổi. [sections] có lẫn cột ảo
+  /// (gọi lại với `board.columns`) thì nó bị bỏ ra trước khi chia.
   factory BoardBuckets.build(
     PlanTasks loaded,
     List<PlanSection> sections,
     BoardPerson person,
   ) {
-    final columns = sections.isEmpty
+    final real = [
+      for (final s in sections)
+        if (!s.isDelivered) s,
+    ];
+    final columns = real.isEmpty
         ? const [PlanSection(id: '', name: 'Tất cả công việc')]
-        : sections;
+        : real;
     final byId = {for (var i = 0; i < columns.length; i++) columns[i].id: i};
     final buckets = List.generate(columns.length, (_) => <Task>[]);
+    final delivered = <Task>[];
 
     for (final task in loaded.tasks) {
       if (!person.matches(task.assigneeIds)) continue;
+      if (task.isDeliveredRefurbish) {
+        delivered.add(task);
+        continue;
+      }
       buckets[byId[task.sectionId ?? ''] ?? 0].add(task);
     }
 
     return BoardBuckets(
-      columns: columns,
-      buckets: buckets,
+      columns: delivered.isEmpty
+          ? columns
+          : [...columns, PlanSection.delivered],
+      buckets: delivered.isEmpty ? buckets : [...buckets, delivered],
       truncated: loaded.truncated,
     );
   }

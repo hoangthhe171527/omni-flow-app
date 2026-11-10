@@ -76,6 +76,16 @@ class PlanSection {
     countsForKpi: json.flag('counts_for_kpi'),
   );
 
+  /// Id của cột ảo "Đã giao" — chỉ có ở client (như web `DELIVERED_STAGE`),
+  /// không phải nhóm việc của kế hoạch và không bao giờ gửi lên server.
+  static const deliveredId = '__delivered';
+
+  /// Cột ảo cuối bảng: việc tân trang mà cây đã giao khách (Kho nối Xưởng).
+  static const delivered = PlanSection(id: deliveredId, name: 'Đã giao');
+
+  /// Cột ảo: không đổi tên, không xoá, không thả thẻ vào, không tạo việc.
+  bool get isDelivered => id == deliveredId;
+
   final String id;
   final String name;
   final int? order;

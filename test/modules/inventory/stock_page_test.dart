@@ -67,17 +67,24 @@ void main() {
   Future<FakeInventoryApi> pump(
     WidgetTester t, {
     InventoryPerms perms = all,
+    List<InventoryUnit>? units,
+    List<WorkshopPlan> plans = const [],
+    List<String> workshopSkipped = const [],
   }) async {
     t.view.physicalSize = const Size(390, 1400);
     t.view.devicePixelRatio = 1;
     addTearDown(t.view.reset);
-    final api = FakeInventoryApi(units: seed());
+    final api = FakeInventoryApi(
+      units: units ?? seed(),
+      workshopSkipped: workshopSkipped,
+    );
     await t.pumpWidget(
       ProviderScope(
         overrides: [
           inventoryApiProvider.overrideWithValue(api),
           inventoryPermsProvider.overrideWithValue(perms),
           inventoryTodayProvider.overrideWithValue(today),
+          workshopPlansProvider.overrideWith((ref) async => plans),
         ],
         child: const MaterialApp(home: StockPage()),
       ),
@@ -165,5 +172,202 @@ void main() {
     expect(find.text('2 cây'), findsWidgets);
     expect(find.text('Giá chốt'), findsOneWidget);
     expect(find.text('Tổng 2 cây'), findsOneWidget);
+  });
+
+  testWidgets('không có quyền tạo việc: không có nút Đưa vào xưởng', (t) async {
+    await pump(t);
+
+    await t.tap(find.text('Chọn nhiều cây'));
+    await t.pumpAndSettle();
+    await t.tap(find.text('YAMAHA U3H'));
+    await t.pumpAndSettle();
+
+    expect(find.byKey(const ValueKey('inv-stock-sell-picked')), findsOneWidget);
+    expect(find.byKey(const ValueKey('inv-stock-send-picked')), findsNothing);
+  });
+
+  group('Đưa vào xưởng', () {
+    const workshop = InventoryPerms(read: true, workshop: true);
+    const plans = <WorkshopPlan>[
+      (id: 'p1', name: 'Tân trang đàn piano cơ'),
+      (id: 'p2', name: 'Đàn điện'),
+    ];
+
+    // s1 chưa vào xưởng, s2 đang có việc tân trang mở, s3 đã tân trang xong.
+    List<InventoryUnit> units() => const [
+      InventoryUnit(
+        id: 's1',
+        lotId: 'l61',
+        lotCode: 'Ep 61',
+        maker: 'YAMAHA',
+        model: 'U3H',
+        place: UnitPlace.inStock,
+        workshop: [],
+      ),
+      InventoryUnit(
+        id: 's2',
+        lotId: 'l61',
+        lotCode: 'Ep 61',
+        maker: 'KAWAI',
+        model: 'K5',
+        place: UnitPlace.inStock,
+        condition: UnitCondition.refurbishing,
+        workshop: [
+          UnitWork(taskId: 't2', state: UnitWork.doing, done: 5, total: 10),
+        ],
+      ),
+      InventoryUnit(
+        id: 's3',
+        lotId: 'l57',
+        lotCode: 'Ep 57',
+        maker: 'KAWAI',
+        model: 'BL71',
+        place: UnitPlace.inStock,
+        condition: UnitCondition.ready,
+        workshop: [
+          UnitWork(
+            taskId: 't3',
+            state: UnitWork.doneState,
+            done: 10,
+            total: 10,
+          ),
+        ],
+      ),
+    ];
+
+    testWidgets(
+      'chọn cây, chọn kế hoạch: gửi cây chưa có việc mở, báo kết quả',
+      (t) async {
+        final api = await pump(
+          t,
+          perms: workshop,
+          units: units(),
+          plans: plans,
+        );
+
+        await t.tap(find.text('Chọn nhiều cây'));
+        await t.pumpAndSettle();
+        // Dòng cây lúc chọn: tình hình xưởng bên phải, tình trạng ở dòng phụ.
+        expect(find.text('Chưa vào xưởng'), findsOneWidget);
+        expect(find.text('5/10'), findsOneWidget);
+        expect(find.text('Xong'), findsWidgets);
+
+        await t.tap(find.text('YAMAHA U3H'));
+        await t.tap(find.text('KAWAI K5'));
+        await t.tap(find.text('KAWAI BL71'));
+        await t.pumpAndSettle();
+        // Cây đang có việc tân trang mở không tính.
+        expect(find.text('Đưa vào xưởng · 2 cây'), findsOneWidget);
+        // Không có quyền bán: không có nút bán.
+        expect(
+          find.byKey(const ValueKey('inv-stock-sell-picked')),
+          findsNothing,
+        );
+
+        await t.tap(find.byKey(const ValueKey('inv-stock-send-picked')));
+        await t.pumpAndSettle();
+        expect(find.text('Chọn kế hoạch'), findsOneWidget);
+        await t.tap(find.text('Tân trang đàn piano cơ'));
+        await t.pumpAndSettle();
+
+        expect(api.workshopSends.single, {
+          'project_id': 'p1',
+          'unit_ids': ['s1', 's3'],
+        });
+        expect(find.text('Đã tạo 2 việc xưởng.'), findsOneWidget);
+        // Bỏ chọn, thoát chế độ chọn, danh sách tải lại.
+        expect(find.text('Chọn nhiều cây'), findsOneWidget);
+        expect(
+          find.byKey(const ValueKey('inv-stock-send-picked')),
+          findsNothing,
+        );
+        expect(
+          api.listCalls.where((c) => c['limit'] == 50).length,
+          greaterThan(1),
+        );
+      },
+    );
+
+    testWidgets('server bỏ qua cây: câu báo có số cây bỏ qua', (t) async {
+      await pump(
+        t,
+        perms: workshop,
+        units: units(),
+        plans: plans,
+        workshopSkipped: const ['s3'],
+      );
+
+      await t.tap(find.text('Chọn nhiều cây'));
+      await t.pumpAndSettle();
+      await t.tap(find.text('YAMAHA U3H'));
+      await t.tap(find.text('KAWAI BL71'));
+      await t.pumpAndSettle();
+      await t.tap(find.byKey(const ValueKey('inv-stock-send-picked')));
+      await t.pumpAndSettle();
+      await t.tap(find.text('Đàn điện'));
+      await t.pumpAndSettle();
+
+      expect(
+        find.text('Đã tạo 1 việc xưởng, bỏ qua 1 cây đang có việc tân trang.'),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('không có kế hoạch quản lý được: báo, không gọi API', (
+      t,
+    ) async {
+      final api = await pump(t, perms: workshop, units: units());
+
+      await t.tap(find.text('Chọn nhiều cây'));
+      await t.pumpAndSettle();
+      await t.tap(find.text('YAMAHA U3H'));
+      await t.pumpAndSettle();
+      await t.tap(find.byKey(const ValueKey('inv-stock-send-picked')));
+      await t.pumpAndSettle();
+
+      expect(
+        find.text('Chưa có kế hoạch đang chạy nào bạn quản lý được.'),
+        findsOneWidget,
+      );
+      expect(api.workshopSends, isEmpty);
+    });
+
+    testWidgets('chỉ chọn cây đang ở xưởng: không có nút', (t) async {
+      await pump(t, perms: workshop, units: units(), plans: plans);
+
+      await t.tap(find.text('Chọn nhiều cây'));
+      await t.pumpAndSettle();
+      await t.tap(find.text('KAWAI K5'));
+      await t.pumpAndSettle();
+
+      expect(find.byKey(const ValueKey('inv-stock-send-picked')), findsNothing);
+    });
+
+    testWidgets('có cả quyền bán: hai nút, không che nhau', (t) async {
+      await pump(
+        t,
+        perms: const InventoryPerms(
+          read: true,
+          reserve: true,
+          sell: true,
+          workshop: true,
+        ),
+        units: units(),
+        plans: plans,
+      );
+
+      await t.tap(find.text('Chọn nhiều cây'));
+      await t.pumpAndSettle();
+      await t.tap(find.text('YAMAHA U3H'));
+      await t.pumpAndSettle();
+
+      final send = t.getRect(
+        find.byKey(const ValueKey('inv-stock-send-picked')),
+      );
+      final sell = t.getRect(
+        find.byKey(const ValueKey('inv-stock-sell-picked')),
+      );
+      expect(send.bottom, lessThanOrEqualTo(sell.top));
+    });
   });
 }

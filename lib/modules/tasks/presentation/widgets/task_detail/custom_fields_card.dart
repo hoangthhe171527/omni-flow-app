@@ -31,6 +31,7 @@ class CustomFieldsCard extends ConsumerWidget {
     this.onEdit,
     this.onOpenCustomer,
     this.onManageFields,
+    this.showCustomer = true,
   });
 
   final Task task;
@@ -45,6 +46,10 @@ class CustomFieldsCard extends ConsumerWidget {
   /// nút + ở đầu thẻ lẫn nút "Thêm trường".
   final VoidCallback? onManageFields;
 
+  /// false = không vẽ dòng "Khách": việc gắn với cây trong Kho đã có dòng
+  /// Khách riêng (khách hiện tại của cây), hai dòng là lặp.
+  final bool showCustomer;
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final projectId = task.projectId;
@@ -54,7 +59,8 @@ class CustomFieldsCard extends ConsumerWidget {
     final defs = loaded ?? const <CustomFieldDef>[];
     final empty = loaded != null && loaded.isEmpty;
     final customerId = task.customerId;
-    final hasCustomer = customerId != null && customerId.isNotEmpty;
+    final hasCustomer =
+        showCustomer && customerId != null && customerId.isNotEmpty;
     if (defs.isEmpty && !empty && !hasCustomer) return const SizedBox.shrink();
 
     final manage = projectId == null ? null : onManageFields;
