@@ -129,7 +129,10 @@ class _PayCostsSheetState extends ConsumerState<PayCostsSheet> {
       ),
       footer: FilledButton(
         key: const ValueKey('inv-pay-many-save'),
-        onPressed: total > 0 && !_saving ? _save : null,
+        // Khoản nào cũng phải có số tiền: khoản 0 ₫ không được ghi "đã trả".
+        onPressed: _amounts.values.every((v) => v > 0) && !_saving
+            ? _save
+            : null,
         child: const Text('Ghi đã trả'),
       ),
       children: [

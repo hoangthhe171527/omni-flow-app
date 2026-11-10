@@ -106,6 +106,10 @@ class StockState {
   );
 }
 
+/// "Đã có khách" = đang giữ HOẶC đã vào đơn mà chưa giao (như web). Chỉ gửi
+/// `reserved` thì cây vừa tạo đơn biến mất khỏi cả hai tab.
+final heldSaleWire = '${UnitSale.reserved.wire},${UnitSale.sold.wire}';
+
 class StockController extends AutoDisposeAsyncNotifier<StockState> {
   static const pageSize = 50;
 
@@ -115,7 +119,7 @@ class StockController extends AutoDisposeAsyncNotifier<StockState> {
         place: UnitPlace.inStock.wire,
         sale: f.segment == StockSegment.available
             ? UnitSale.available.wire
-            : UnitSale.reserved.wire,
+            : heldSaleWire,
         category: f.category,
         lotId: f.lotId,
         q: f.query.trim().isEmpty ? null : f.query.trim(),
@@ -143,6 +147,15 @@ class StockController extends AutoDisposeAsyncNotifier<StockState> {
         ref.read(stockFilterProvider),
         cur.items.length,
       );
+      // Trong lúc chờ, bộ lọc đổi (danh sách đã tải lại): bỏ trang này, không
+      // dán cây của bộ lọc cũ vào danh sách mới.
+      final now = state.valueOrNull;
+      if (now == null || !identical(now.items, cur.items)) {
+        if (now != null && now.loadingMore) {
+          state = AsyncData(now.copyWith(loadingMore: false));
+        }
+        return;
+      }
       final seen = {for (final u in cur.items) u.id};
       state = AsyncData(
         cur.copyWith(
@@ -211,7 +224,7 @@ final stockCountProvider = FutureProvider.autoDispose.family<int, StockSegment>(
           place: UnitPlace.inStock.wire,
           sale: seg == StockSegment.available
               ? UnitSale.available.wire
-              : UnitSale.reserved.wire,
+              : heldSaleWire,
           limit: 1,
         );
     return page.total;

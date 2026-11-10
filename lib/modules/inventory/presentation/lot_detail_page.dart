@@ -392,7 +392,7 @@ class _LotDetailPageState extends ConsumerState<LotDetailPage> {
                   key: const ValueKey('inv-lot-pay-select'),
                   icon: Icons.checklist_rounded,
                   title: selecting
-                      ? 'Đã chọn ${_pms.length} khoản'
+                      ? 'Đã chọn ${costs.where((c) => _pms.contains(c.id) && c.status == CostStatus.planned).length} khoản'
                       : 'Trả nhiều khoản',
                   value: selecting ? 'Xong' : null,
                   chevron: !selecting,

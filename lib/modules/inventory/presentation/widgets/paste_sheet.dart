@@ -55,13 +55,20 @@ class _PasteSheetState extends ConsumerState<PasteSheet> {
     final rows = pl.valid;
     setState(() => _saving = true);
     try {
-      final res = await ref.read(inventoryApiProvider).addUnits(widget.lot.id, [
-        for (final r in rows) r.toInput(withYen: perms.cost),
-      ]);
+      final api = ref.read(inventoryApiProvider);
+      final inputs = [for (final r in rows) r.toInput(withYen: perms.cost)];
+      // Máy chủ nhận tối đa 500 cây một lượt: packing list dài hơn gửi từng đợt.
+      var created = 0;
+      var dup = 0;
+      for (var i = 0; i < inputs.length; i += 500) {
+        final end = i + 500 < inputs.length ? i + 500 : inputs.length;
+        final res = await api.addUnits(widget.lot.id, inputs.sublist(i, end));
+        created += res.created;
+        dup += res.warnings.length;
+      }
       bumpInventory(ref);
       if (!mounted) return;
-      final n = res.created == 0 ? rows.length : res.created;
-      final dup = res.warnings.length;
+      final n = created == 0 ? rows.length : created;
       InvUi.toast(
         context,
         'Đã thêm $n cây vào ${widget.lot.code}'

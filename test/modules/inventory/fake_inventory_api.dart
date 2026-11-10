@@ -57,7 +57,7 @@ class FakeInventoryApi extends InventoryApi {
     listCalls.add({'place': place, 'sale': sale, 'q': q, 'limit': limit});
     final all = [
       for (final u in units)
-        if ((sale == null || u.sale.wire == sale) &&
+        if ((sale == null || sale.split(',').contains(u.sale.wire)) &&
             (q == null ||
                 '${u.maker} ${u.model} ${u.serial ?? ''}'
                     .toLowerCase()

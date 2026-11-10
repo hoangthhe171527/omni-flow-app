@@ -28,6 +28,9 @@ class _StockPageState extends ConsumerState<StockPage> {
   bool _multi = false;
   final _picked = <String>{};
 
+  /// Lần tự tải thêm (khi lọc tuổi tồn) vừa lỗi — không thử lại liên tục.
+  bool _autoLoadFailed = false;
+
   StateController<StockFilter> get _filter =>
       ref.read(stockFilterProvider.notifier);
 
@@ -154,6 +157,11 @@ class _StockPageState extends ConsumerState<StockPage> {
         ),
       );
     }
+    // Bộ lọc đổi thì danh sách đổi: bỏ các cây đã chọn ở danh sách cũ.
+    ref.listen(stockFilterProvider, (_, _) {
+      _autoLoadFailed = false;
+      if (_picked.isNotEmpty) setState(_picked.clear);
+    });
     final f = ref.watch(stockFilterProvider);
     final stock = ref.watch(stockProvider);
     final today = ref.watch(inventoryTodayProvider);
@@ -174,6 +182,21 @@ class _StockPageState extends ConsumerState<StockPage> {
               if (f.age!.matches(InventoryFormat.ageDays(u.receivedAt, today)))
                 u,
           ];
+    // Tuổi tồn lọc trên máy: phải tải hết các trang, không thì cây khớp ở
+    // trang chưa tải bị coi như không có.
+    if (f.age != null &&
+        state != null &&
+        state.hasMore &&
+        !state.loadingMore &&
+        !_autoLoadFailed) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        ref.read(stockProvider.notifier).loadMore().catchError((Object _) {
+          _autoLoadFailed = true;
+        });
+      });
+    }
+    final pickedLoaded = loaded.where((u) => _picked.contains(u.id)).length;
     final categories = {
       ...loaded.map((u) => u.category).whereType<String>(),
       ?f.category,
@@ -348,7 +371,7 @@ class _StockPageState extends ConsumerState<StockPage> {
               ),
             ),
           ),
-          if (_multi && _picked.isNotEmpty)
+          if (_multi && pickedLoaded > 0)
             Positioned(
               left: 20,
               right: 20,
@@ -356,7 +379,7 @@ class _StockPageState extends ConsumerState<StockPage> {
               child: FilledButton(
                 key: const ValueKey('inv-stock-sell-picked'),
                 onPressed: () => _sellPicked(loaded),
-                child: Text('Bán / Đặt trước · ${_picked.length} cây'),
+                child: Text('Bán / Đặt trước · $pickedLoaded cây'),
               ),
             ),
         ],

@@ -136,13 +136,13 @@ void main() {
     expect(find.text('Y026280'), findsOneWidget);
   });
 
-  testWidgets('Đã có khách: tải sale=reserved, hiện tên khách', (t) async {
+  testWidgets('Đã có khách: tải sale=reserved,sold, hiện tên khách', (t) async {
     final api = await pump(t);
 
     await t.tap(find.text('Đã có khách 1'));
     await t.pumpAndSettle();
 
-    expect(api.listCalls.last['sale'], 'reserved');
+    expect(api.listCalls.last['sale'], 'reserved,sold');
     expect(find.text('YAMAHA U1H'), findsOneWidget);
     expect(find.text('Anh Phúc · 24.000.000đ'), findsOneWidget);
     expect(find.text('Chọn nhiều cây'), findsNothing);

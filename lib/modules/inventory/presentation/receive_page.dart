@@ -335,14 +335,14 @@ class _ReceiveOrdersSheetState extends ConsumerState<ReceiveOrdersSheet> {
     setState(() => _saving = true);
     var made = 0;
     final errors = <String>[];
+    // Lấy API trước vòng lặp: sheet có thể bị đóng giữa các lượt chờ.
+    final api = ref.read(inventoryApiProvider);
     for (final g in widget.groups.where((g) => _sel.contains(g.customerId))) {
       try {
-        await ref
-            .read(inventoryApiProvider)
-            .sell(
-              customerId: g.customerId,
-              unitIds: [for (final u in g.units) u.id],
-            );
+        await api.sell(
+          customerId: g.customerId,
+          unitIds: [for (final u in g.units) u.id],
+        );
         made++;
       } catch (e) {
         errors.add('${g.customerName}: ${InvUi.error(e)}');
