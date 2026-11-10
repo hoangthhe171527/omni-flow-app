@@ -22,7 +22,10 @@
             android:value="inbox_messages_v4" />
         <meta-data
             android:name="com.google.firebase.messaging.default_notification_icon"
-            android:resource="@drawable/ic_stat_omnicrm" />
+            android:resource="@drawable/ic_stat_viomni" />
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_color"
+            android:resource="@color/notification_accent" />
         <!-- Let Google Play Services render high-priority notification payloads
              without starting Flutter. This is the reliable screen-off path. -->
         <meta-data

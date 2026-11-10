@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Màu nhuộm icon nhỏ của thông báo: xanh chủ đạo của logo Viomni. -->
+    <color name="notification_accent">#0159DB</color>
+</resources>
