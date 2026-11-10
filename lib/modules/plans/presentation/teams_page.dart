@@ -231,11 +231,12 @@ class _TeamsPageState extends ConsumerState<TeamsPage> {
           if (isAssigner)
             Positioned(
               right: 20,
-              // Ngay trên thanh tab kính, vừa tầm ngón cái.
+              // Trên thanh tab kính, vừa tầm ngón cái. Khe 24: với 16 thì bóng
+              // của nút chạm bóng thanh tab, nhìn như dính vào menu.
               bottom:
                   ShellBarInset.of(context) +
                   MediaQuery.viewPaddingOf(context).bottom +
-                  16,
+                  24,
               child: _HideWhileSearching(
                 child: OmniLiquidFab(
                   key: const Key('work-create-fab'),

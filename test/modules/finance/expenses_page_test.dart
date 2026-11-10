@@ -9,6 +9,7 @@ import 'package:omni_app/core/module/nav_destination.dart';
 import 'package:omni_app/core/network/active_tenant.dart';
 import 'package:omni_app/core/network/dio_provider.dart';
 import 'package:omni_app/demo/demo_backend.dart';
+import 'package:omni_app/design/components/components.dart';
 import 'package:omni_app/demo/modules/finance_demo.dart';
 import 'package:omni_app/modules/finance/application/finance_providers.dart';
 import 'package:omni_app/modules/finance/domain/finance_permissions.dart';
@@ -131,7 +132,7 @@ void main() {
         await tester.pumpAndSettle();
 
         expect(find.text('Sổ chi phí'), findsNothing);
-        expect(find.text('Tổng chi tháng 11'), findsOneWidget);
+        expect(find.text('Tháng 11/2026'), findsOneWidget);
         // 2.450.000 + 6.000.000 + 1.650.000 = 10.100.000
         expect(find.text('10.100.000'), findsOneWidget);
         expect(find.text('Đã trả'), findsOneWidget);
@@ -141,7 +142,7 @@ void main() {
         expect(find.textContaining('vs T10'), findsOneWidget);
 
         // Thẻ 4 khoản cố định tự nội suy từ tháng trước trên API (12tr + 1.85tr + 4.5tr + 3tr = 21.35tr, không có Lương nhân sự)
-        expect(find.text('Khoản cố định tháng 11'), findsOneWidget);
+        expect(find.text('Khoản cố định'), findsOneWidget);
         expect(find.text('4 khoản · 21.350.000 đ'), findsOneWidget);
         expect(find.text('Ghi tất cả'), findsOneWidget);
 
@@ -163,7 +164,7 @@ void main() {
         await tester.pumpWidget(h.app);
         await tester.pumpAndSettle();
 
-        expect(find.text('Tổng chi tháng 11'), findsOneWidget);
+        expect(find.text('Tháng 11/2026'), findsOneWidget);
         expect(find.text('0'), findsOneWidget);
         expect(
           find.text('Chưa có khoản chi nào trong Tháng 11/2026.'),
@@ -207,7 +208,7 @@ void main() {
         await tester.tap(find.byKey(const ValueKey('finance-prev-month-btn')));
         await tester.pumpAndSettle();
 
-        expect(find.text('Tổng chi tháng 10'), findsOneWidget);
+        expect(find.text('Tháng 10/2026'), findsOneWidget);
         expect(find.text('21.350.000'), findsOneWidget);
         expect(find.text('Dịch vụ kế toán T10'), findsOneWidget);
         expect(find.text('Lương nhân sự T10'), findsNothing);
@@ -225,9 +226,37 @@ void main() {
         await tester.tap(find.text('Tháng 6/2026'));
         await tester.pumpAndSettle();
 
-        expect(find.text('Tổng chi tháng 6'), findsOneWidget);
+        expect(find.text('Tháng 6/2026'), findsOneWidget);
         expect(find.text('8.200.000'), findsOneWidget);
         expect(find.text('Gia hạn bản quyền đám mây T6'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'header gọn: hàng trên không còn nút riêng, đổi tháng bằng › và vuốt ngang thẻ tổng chi',
+      (tester) async {
+        final h = buildTestHarness();
+        await tester.pumpWidget(h.app);
+        await tester.pumpAndSettle();
+
+        // Sắp xếp và "+" nằm trong viên kính tìm, không phải viên kính rời.
+        expect(find.byType(OmniTopBarAction), findsNothing);
+        expect(find.byTooltip('Sắp xếp danh sách'), findsOneWidget);
+        expect(find.byTooltip('Thêm khoản chi'), findsOneWidget);
+
+        await tester.tap(find.byKey(const ValueKey('finance-next-month-btn')));
+        await tester.pumpAndSettle();
+        expect(find.text('Tháng 12/2026'), findsOneWidget);
+
+        // Vuốt sang phải = về tháng trước.
+        await tester.fling(
+          find.byKey(const ValueKey('finance-month-carousel')),
+          const Offset(200, 0),
+          800,
+        );
+        await tester.pumpAndSettle();
+        expect(find.text('Tháng 11/2026'), findsOneWidget);
+        expect(find.text('10.100.000'), findsOneWidget);
       },
     );
 
@@ -250,7 +279,7 @@ void main() {
           '10.100.000',
           '5.450.000 đ',
           '4.650.000 đ',
-          'Khoản cố định tháng 11',
+          'Khoản cố định',
           '4 khoản · 21.350.000 đ',
           '2.450.000 đ',
           '6.000.000 đ',
@@ -301,7 +330,7 @@ void main() {
           h.store.expenses.where((e) => e['month'] == '2026-11').length,
           7,
         );
-        expect(find.text('Khoản cố định tháng 11'), findsNothing);
+        expect(find.text('Khoản cố định'), findsNothing);
         // 10.100.000 + 21.350.000 = 31.450.000
         expect(find.text('31.450.000'), findsOneWidget);
         expect(find.text('Hoàn tác'), findsOneWidget);
@@ -314,7 +343,7 @@ void main() {
           h.store.expenses.where((e) => e['month'] == '2026-11').length,
           3,
         );
-        expect(find.text('Khoản cố định tháng 11'), findsOneWidget);
+        expect(find.text('Khoản cố định'), findsOneWidget);
         expect(find.text('10.100.000'), findsOneWidget);
       },
     );
@@ -415,11 +444,13 @@ void main() {
         await tester.pumpWidget(h.app);
         await tester.pumpAndSettle();
 
-        await tester.tap(find.byKey(const ValueKey('finance-search-toggle')));
-        await tester.pumpAndSettle();
-
+        // Ô tìm luôn nằm trong viên kính dưới thanh trên, không còn nút bật.
+        expect(
+          find.byKey(const ValueKey('finance-search-toggle')),
+          findsNothing,
+        );
         final searchInput = find.byKey(const ValueKey('finance-search-input'));
-        expect(find.text('Tìm khoản chi, số tiền hoặc ngày…'), findsOneWidget);
+        expect(find.text('Tìm khoản chi, số tiền'), findsOneWidget);
         expect(find.byTooltip('Xoá tìm kiếm'), findsNothing);
 
         await tester.enterText(searchInput, '2.45tr');
@@ -436,6 +467,10 @@ void main() {
         await tester.tap(find.byTooltip('Xoá tìm kiếm'));
         await tester.pumpAndSettle();
         expect(find.byTooltip('Xoá tìm kiếm'), findsNothing);
+
+        // Ô tìm còn focus mà trống thì thân màn bị phủ mờ: "Huỷ" để thoát tìm.
+        await tester.tap(find.text('Huỷ'));
+        await tester.pumpAndSettle();
 
         await tester.tap(find.byKey(const ValueKey('finance-sort-btn')));
         await tester.pumpAndSettle();
