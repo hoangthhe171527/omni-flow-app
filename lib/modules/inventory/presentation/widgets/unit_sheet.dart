@@ -13,6 +13,7 @@ import 'inventory_ui.dart';
 import 'money_keypad_sheet.dart';
 import 'sell_sheet.dart';
 import 'serial_field.dart';
+import 'unit_extras.dart';
 
 /// Sheet "Chi tiết cây" của Tồn kho: serial chạm để sửa / thêm, tình trạng,
 /// giá, Bán / Đặt trước, Bỏ giữ, Đổi khách, Tạo đơn — theo quyền.
@@ -21,6 +22,10 @@ import 'serial_field.dart';
 ///
 /// Nhóm "Xưởng" (Kho nối Xưởng): mỗi việc xưởng của cây một dòng, chạm để mở
 /// việc. Sheet nằm ở navigator gốc nên đóng sheet trước rồi mới mở việc.
+///
+/// Kho chuẩn hóa Đợt A (mỗi phần theo capability riêng): Ảnh, Lỗi, Ghi chú
+/// (`inventory.photos`); Vị trí — chạm để chuyển khi có từ hai vị trí — và
+/// Thẻ kho (`inventory.locations`); nút Đã giao cho cây đã vào đơn.
 Future<void> openUnitSheet(
   BuildContext context, {
   required InventoryUnit unit,
@@ -164,6 +169,74 @@ class _UnitSheetState extends ConsumerState<UnitSheet> {
     }
   }
 
+  /// Chuyển cây sang vị trí khác (một cây — `POST /units/move`).
+  Future<void> _move() async {
+    final sub = ref.listenManual(locationsProvider, (_, _) {});
+    final List<StockLocation> locations;
+    try {
+      locations = await ref.read(locationsProvider.future);
+    } catch (e) {
+      if (mounted) InvUi.toast(context, InvUi.error(e));
+      return;
+    } finally {
+      sub.close();
+    }
+    if (!mounted) return;
+    final r = await showInvOptions<String>(
+      context: context,
+      title: 'Chuyển đến',
+      options: [for (final l in locations) (l.id, l.name)],
+      selected: _u.locationId,
+    );
+    final to = r?.value;
+    if (to == null || to == _u.locationId || !mounted) return;
+    setState(() => _busy = true);
+    try {
+      final res = await ref
+          .read(inventoryApiProvider)
+          .moveUnits(unitIds: [_u.id], toLocationId: to);
+      bumpInventory(ref);
+      if (!mounted) return;
+      final moved = res.units.where((x) => x.id == _u.id).firstOrNull;
+      if (moved != null) {
+        setState(() => _u = moved);
+        widget.onChanged(moved);
+      }
+      final name = locations.where((l) => l.id == to).firstOrNull?.name;
+      InvUi.toast(
+        context,
+        res.moved > 0
+            ? 'Đã chuyển đến ${name ?? 'vị trí mới'}.'
+            : 'Cây không chuyển được.',
+      );
+    } catch (e) {
+      if (mounted) InvUi.toast(context, InvUi.error(e));
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  Future<void> _editNote() async {
+    final v = await showOmniPrompt(
+      context: context,
+      title: 'Ghi chú',
+      confirmLabel: 'Lưu',
+      initialValue: _u.note ?? '',
+      maxLength: 500,
+      fieldKey: const ValueKey('inv-unit-note-field'),
+    );
+    if (v == null || v.trim() == (_u.note ?? '').trim()) return;
+    await _update({
+      'note': v.trim().isEmpty ? null : v.trim(),
+    }, done: 'Đã lưu ghi chú.');
+  }
+
+  Future<void> _deliver() async {
+    final nav = Navigator.of(context);
+    await _update({'place': UnitPlace.delivered.wire}, done: 'Đã giao.');
+    if (mounted && _u.place == UnitPlace.delivered) nav.pop();
+  }
+
   Future<void> _sell({String title = 'Bán / Đặt trước'}) async {
     final nav = Navigator.of(context);
     final done = await openSellSheet(context, units: [_u], title: title);
@@ -182,6 +255,8 @@ class _UnitSheetState extends ConsumerState<UnitSheet> {
     final openTask = ref.watch(accessProvider).can(TaskPermissions.read)
         ? widget.onOpenTask
         : null;
+    final multi = ref.watch(multiLocationProvider).valueOrNull ?? false;
+    final canMove = multi && perms.write && u.place == UnitPlace.inStock;
 
     final buttons = <Widget>[
       if (u.sale == UnitSale.available && perms.canSellOrReserve)
@@ -202,6 +277,15 @@ class _UnitSheetState extends ConsumerState<UnitSheet> {
           child: const Text('Đổi khách'),
         ),
       ],
+      // Cây đã vào đơn mà còn trong kho: giao xong thì rời Tồn kho.
+      if (perms.write &&
+          u.sale == UnitSale.sold &&
+          u.place == UnitPlace.inStock)
+        OutlinedButton(
+          key: const ValueKey('inv-unit-deliver'),
+          onPressed: _busy ? null : _deliver,
+          child: const Text('Đã giao'),
+        ),
       if (u.sale == UnitSale.reserved &&
           perms.sell &&
           !u.retailHold &&
@@ -233,6 +317,7 @@ class _UnitSheetState extends ConsumerState<UnitSheet> {
               ],
             ),
       children: [
+        if (perms.photos) UnitPhotosSection(unit: u),
         OmniGroupSection(
           children: [
             OmniGroupRow(
@@ -290,6 +375,15 @@ class _UnitSheetState extends ConsumerState<UnitSheet> {
               chevron: perms.write,
               onTap: perms.write && !_busy ? _editCondition : null,
             ),
+            // Vị trí chỉ khi có từ hai vị trí (spec §5) — một vị trí thì thừa.
+            if (perms.locations && multi && u.locationName != null)
+              OmniGroupRow(
+                key: const ValueKey('inv-unit-location'),
+                title: 'Vị trí',
+                value: u.locationName,
+                chevron: canMove,
+                onTap: canMove && !_busy ? _move : null,
+              ),
             OmniGroupRow(
               title: 'Bán',
               subtitle: hold,
@@ -301,6 +395,26 @@ class _UnitSheetState extends ConsumerState<UnitSheet> {
             ),
           ],
         ),
+        if (perms.photos)
+          UnitDefectSection(
+            unit: u,
+            enabled: perms.write && !_busy,
+            onChanged: (tags) =>
+                _update({'defect_tags': tags}, done: 'Đã lưu nhãn lỗi.'),
+          ),
+        if (perms.photos && (perms.write || (u.note ?? '').isNotEmpty))
+          OmniGroupSection(
+            children: [
+              OmniGroupRow(
+                key: const ValueKey('inv-unit-note'),
+                title: 'Ghi chú',
+                subtitle: (u.note ?? '').isEmpty ? null : u.note,
+                value: (u.note ?? '').isEmpty && perms.write ? 'Thêm' : null,
+                chevron: perms.write,
+                onTap: perms.write && !_busy ? _editNote : null,
+              ),
+            ],
+          ),
         // API cũ không gửi `workshop`: không có nhóm, không đoán "chưa vào".
         if (workshop != null)
           OmniGroupSection(
@@ -318,6 +432,7 @@ class _UnitSheetState extends ConsumerState<UnitSheet> {
                 ),
             ],
           ),
+        if (perms.locations) UnitLedgerSection(unitId: u.id),
       ],
     );
   }

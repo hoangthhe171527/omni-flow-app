@@ -6,12 +6,18 @@ import '../../../design/tokens/tokens.dart';
 import '../application/inventory_providers.dart';
 import '../domain/inventory_format.dart';
 import '../domain/inventory_models.dart';
+import '../domain/receive.dart';
 import 'widgets/inventory_ui.dart';
+import 'widgets/money_keypad_sheet.dart';
 import 'widgets/serial_field.dart';
 
 /// Nhận hàng một lô: mặc định mọi cây Đã nhận — chỉ bấm Thiếu / Lỗi; gõ serial
 /// hoặc model để dòng khớp lên đầu; cây chưa có serial nhập tại dòng. Xong thì
 /// sheet tạo đơn cho cây đặt trước, gom theo khách.
+///
+/// Đợt A: cây thiếu / lỗi chọn cách xử lý với nhà cung cấp (trừ tiền / bù lô
+/// sau / mình chịu; lỗi + trừ tiền cần số ¥) khi API có `inventory.claims`;
+/// chọn vị trí nhận khi tenant có từ hai vị trí.
 class ReceivePage extends ConsumerStatefulWidget {
   const ReceivePage({super.key, required this.lotId});
 
@@ -24,6 +30,10 @@ class ReceivePage extends ConsumerStatefulWidget {
 class _ReceivePageState extends ConsumerState<ReceivePage> {
   final _results = <String, ReceiveResult>{};
   final _serials = <String, String?>{};
+  final _claims = <String, ReceiveClaim>{};
+
+  /// Vị trí nhận đã chọn; null = vị trí mặc định.
+  String? _locationId;
   String _q = '';
   UnitCondition? _condition;
   late DateTime _date = ref.read(inventoryTodayProvider);
@@ -37,7 +47,50 @@ class _ReceivePageState extends ConsumerState<ReceivePage> {
     } else {
       _results[id] = r;
     }
+    // Đổi Thiếu ↔ Lỗi thì cách xử lý về mặc định của loại mới.
+    _claims.remove(id);
   });
+
+  ReceiveClaim _claimOf(String id) =>
+      _claims[id] ?? ReceiveClaim.defaultFor(_res(id));
+
+  Future<void> _pickClaim(InventoryUnit u) async {
+    final defect = _res(u.id) == ReceiveResult.defect;
+    final cur = _claimOf(u.id);
+    final r = await showInvOptions<ClaimResolution>(
+      context: context,
+      title: 'Xử lý ${u.name}',
+      options: [for (final c in ClaimResolution.values) (c, c.label)],
+      selected: cur.resolution,
+      // Cây thiếu luôn có khoản đòi: không có "Chưa quyết".
+      allLabel: defect ? ClaimResolution.undecidedLabel : null,
+    );
+    if (r == null || !mounted) return;
+    setState(() => _claims[u.id] = cur.copyWith(resolution: () => r.value));
+  }
+
+  Future<void> _pickClaimAmount(InventoryUnit u) async {
+    final cur = _claimOf(u.id);
+    final v = await showMoneyKeypad(
+      context: context,
+      title: 'Số ¥ được trừ',
+      subtitle: u.name,
+      initial: cur.amountJpy,
+      unit: '¥',
+    );
+    if (v == null || !mounted) return;
+    setState(() => _claims[u.id] = cur.copyWith(amountJpy: () => v));
+  }
+
+  Future<void> _pickLocation(List<StockLocation> locations) async {
+    final r = await showInvOptions<String>(
+      context: context,
+      title: 'Nhận vào',
+      options: [for (final l in locations) (l.id, l.name)],
+      selected: _locationId ?? locations.firstOrNull?.id,
+    );
+    if (r?.value != null && mounted) setState(() => _locationId = r!.value);
+  }
 
   Future<void> _pickCondition() async {
     final r = await showInvOptions<UnitCondition>(
@@ -61,7 +114,22 @@ class _ReceivePageState extends ConsumerState<ReceivePage> {
     if (d != null) setState(() => _date = d);
   }
 
-  Future<void> _finish(Lot lot, List<InventoryUnit> units) async {
+  Future<void> _finish(
+    Lot lot,
+    List<InventoryUnit> units, {
+    StockLocation? location,
+  }) async {
+    final lines = buildReceiveLines(
+      units,
+      result: _res,
+      serials: _serials,
+      claims: _claims,
+      withClaims: ref.read(inventoryPermsProvider).claims,
+    );
+    if (missingDeductAmount(lines)) {
+      InvUi.toast(context, 'Nhập số ¥ được trừ cho cây lỗi.');
+      return;
+    }
     setState(() => _saving = true);
     final count = {for (final r in ReceiveResult.values) r: 0};
     for (final u in units) {
@@ -74,22 +142,15 @@ class _ReceivePageState extends ConsumerState<ReceivePage> {
             lot.id,
             receivedAt: InventoryFormat.isoDay(_date),
             condition: _condition,
-            results: [
-              for (final u in units)
-                if (_res(u.id) != ReceiveResult.ok ||
-                    InventoryFormat.normalizeSerial(_serials[u.id]) != null)
-                  (
-                    unitId: u.id,
-                    result: _res(u.id),
-                    serial: InventoryFormat.normalizeSerial(_serials[u.id]),
-                  ),
-            ],
+            results: lines,
+            locationId: location?.id,
           );
       bumpInventory(ref);
       if (!mounted) return;
       InvUi.toast(
         context,
-        '${lot.code} đã về kho · ${count[ReceiveResult.ok]} nhận, '
+        '${lot.code} đã về ${location?.name ?? 'kho'} · '
+        '${count[ReceiveResult.ok]} nhận, '
         '${count[ReceiveResult.missing]} thiếu, ${count[ReceiveResult.defect]} lỗi.',
       );
       final groups = groupReservedByCustomer(units, _results);
@@ -132,6 +193,17 @@ class _ReceivePageState extends ConsumerState<ReceivePage> {
         ? units
         : [...units.where(hit), ...units.where((u) => !hit(u))];
     int n(ReceiveResult r) => units.where((u) => _res(u.id) == r).length;
+    // Chọn nơi nhận chỉ khi tenant có từ hai vị trí (spec §5).
+    final multi = ref.watch(multiLocationProvider).valueOrNull ?? false;
+    final locations = multi
+        ? ref.watch(locationsProvider).valueOrNull ?? const <StockLocation>[]
+        : const <StockLocation>[];
+    final location = locations.isEmpty
+        ? null
+        : locations.firstWhere(
+            (l) => l.id == _locationId,
+            orElse: () => locations.first,
+          );
 
     if (!perms.write) {
       return const Scaffold(
@@ -184,6 +256,13 @@ class _ReceivePageState extends ConsumerState<ReceivePage> {
                       value: UnitCondition.labelOf(_condition),
                       onTap: _pickCondition,
                     ),
+                    if (location != null)
+                      OmniGroupRow(
+                        key: const ValueKey('inv-receive-location'),
+                        title: 'Nhận vào',
+                        value: location.name,
+                        onTap: () => _pickLocation(locations),
+                      ),
                   ],
                 ),
                 const SizedBox(height: OmniGroupSection.gap),
@@ -196,7 +275,7 @@ class _ReceivePageState extends ConsumerState<ReceivePage> {
                 else
                   OmniGroupSection(
                     children: [
-                      for (final u in ordered)
+                      for (final u in ordered) ...[
                         _ReceiveRow(
                           key: ValueKey('inv-recv-${u.id}'),
                           unit: u,
@@ -207,6 +286,9 @@ class _ReceivePageState extends ConsumerState<ReceivePage> {
                           onSerial: (s) async =>
                               setState(() => _serials[u.id] = s),
                         ),
+                        if (perms.claims && _res(u.id) != ReceiveResult.ok)
+                          ..._claimRows(u),
+                      ],
                     ],
                   ),
               ],
@@ -220,13 +302,49 @@ class _ReceivePageState extends ConsumerState<ReceivePage> {
               key: const ValueKey('inv-receive-finish'),
               onPressed: lot == null || units.isEmpty || _saving
                   ? null
-                  : () => _finish(lot, units),
+                  : () => _finish(lot, units, location: location),
               child: const Text('Hoàn tất nhận hàng'),
             ),
           ),
         ],
       ),
     );
+  }
+}
+
+extension on _ReceivePageState {
+  /// Dòng lồng dưới cây thiếu / lỗi: cách xử lý, và số ¥ khi lỗi + trừ tiền.
+  List<Widget> _claimRows(InventoryUnit u) {
+    final c = _claimOf(u.id);
+    final needAmount = LotClaim.needsAmount(
+      missing: _res(u.id) == ReceiveResult.missing,
+      resolution: c.resolution,
+    );
+    return [
+      OmniGroupRow(
+        key: ValueKey('inv-recv-claim-${u.id}'),
+        leading: const SizedBox(width: 16),
+        // Cách xử lý là chữ chính của dòng lồng: đủ chỗ, không xuống dòng.
+        title: ClaimResolution.labelOf(c.resolution),
+        onTap: () => _pickClaim(u),
+      ),
+      if (needAmount)
+        OmniGroupRow(
+          key: ValueKey('inv-recv-amount-${u.id}'),
+          leading: const SizedBox(width: 16),
+          title: 'Số ¥ được trừ',
+          trailing: c.amountJpy == null
+              ? Text(
+                  'Nhập',
+                  style: invMuted(
+                    context,
+                  ).copyWith(color: OmniColors.warningTextOf(context)),
+                )
+              : InvValue(InventoryFormat.yen(c.amountJpy)),
+          chevron: true,
+          onTap: () => _pickClaimAmount(u),
+        ),
+    ];
   }
 }
 

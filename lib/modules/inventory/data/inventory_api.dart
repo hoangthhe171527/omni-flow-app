@@ -6,6 +6,7 @@ import '../../../core/utils/json.dart';
 import '../../customers/customers.dart';
 import '../domain/inventory_format.dart';
 import '../domain/inventory_models.dart';
+import '../domain/receive.dart';
 
 final inventoryApiProvider = Provider<InventoryApi>((ref) {
   return InventoryApi(ref.watch(apiClientProvider));
@@ -17,6 +18,10 @@ typedef UnitUpdateResult = ({InventoryUnit unit, List<SerialWarning> warnings});
 /// Kết quả `POST /tasks/from-units`: số việc đã tạo và id các cây bị bỏ qua
 /// (đang có việc tân trang chưa xong).
 typedef SendToWorkshopResult = ({int created, List<String> skipped});
+
+/// Kết quả `POST /inventory/units/move`: cây sau khi chuyển, số đã chuyển, số
+/// bị bỏ qua.
+typedef MoveResult = ({List<InventoryUnit> units, int moved, int skipped});
 
 /// Kết quả `POST /lots/{id}/units`.
 typedef AddUnitsResult = ({Lot lot, int created, List<SerialWarning> warnings});
@@ -52,6 +57,7 @@ class InventoryApi {
     String? category,
     String? lotId,
     String? customerId,
+    String? locationId,
     String? q,
     int limit = 50,
     int offset = 0,
@@ -64,6 +70,7 @@ class InventoryApi {
         'category': category,
         'lot_id': lotId,
         'customer_id': customerId,
+        'location_id': locationId,
         'q': q,
         'limit': limit,
         'offset': offset,
@@ -85,7 +92,8 @@ class InventoryApi {
 
   /// `PUT /inventory/units/{id}` — chỉ gửi khoá có trong [fields] (`serial`,
   /// `condition`, `list_price`, `yen_price`, `color`, `category`, `note`,
-  /// `place`). Giá trị null = xoá.
+  /// `place`, `defect_tags`). Giá trị null = xoá. `defect_tags` chỉ nhận nhãn
+  /// có trong [defectTags] (API trả 422 nếu lạ).
   Future<UnitUpdateResult> updateUnit(
     String id,
     Map<String, Object?> fields,
@@ -127,11 +135,129 @@ class InventoryApi {
     return res.list.map(InventoryUnit.fromJson).toList();
   }
 
+  /// `GET /inventory/units/summary` — app chỉ đọc `multi_location`.
+  Future<StockSummary> stockSummary() async {
+    final res = await _api.get('/inventory/units/summary');
+    return StockSummary.fromJson(res.object);
+  }
+
+  // ---------------- vị trí, thẻ kho (Đợt A) ----------------
+
+  /// `GET /inventory/locations` — cả vị trí đã lưu trữ (lọc ở chỗ dùng).
+  Future<List<StockLocation>> listLocations() async {
+    final res = await _api.get('/inventory/locations');
+    return res.list.map(StockLocation.fromJson).toList();
+  }
+
+  /// `POST /inventory/units/move` — chuyển nhiều cây sang [toLocationId]. Cây
+  /// đã ở nơi đến / đang về / đã giao bị bỏ qua (`meta.skipped`).
+  Future<MoveResult> moveUnits({
+    required List<String> unitIds,
+    required String toLocationId,
+  }) async {
+    final res = await _api.post(
+      '/inventory/units/move',
+      body: {'unit_ids': unitIds, 'to_location_id': toLocationId},
+    );
+    final meta = res.raw['meta'];
+    final m = meta is Map
+        ? meta.cast<String, dynamic>()
+        : const <String, dynamic>{};
+    return (
+      units: res.list.map(InventoryUnit.fromJson).toList(),
+      moved: m.strList('moved').length,
+      skipped: m.strList('skipped').length,
+    );
+  }
+
+  /// `GET /inventory/units/{id}/ledger` — thẻ kho, mới nhất trước.
+  Future<List<LedgerRow>> unitLedger(String id) async {
+    final res = await _api.get('/inventory/units/${_e(id)}/ledger');
+    return res.list.map(LedgerRow.fromJson).toList();
+  }
+
+  // ---------------- ảnh, nhãn lỗi (Đợt A) ----------------
+
+  Future<List<UnitPhoto>> unitPhotos(String id) async {
+    final res = await _api.get('/inventory/units/${_e(id)}/photos');
+    return res.list.map(UnitPhoto.fromJson).toList();
+  }
+
+  /// `POST /inventory/units/{id}/photos` multipart `files[]` (ảnh đã nén ở
+  /// máy). Trả lại toàn bộ ảnh của cây.
+  Future<List<UnitPhoto>> uploadPhotos(
+    String id,
+    List<({String path, String name})> files,
+  ) async {
+    final res = await _api.uploadMany(
+      '/inventory/units/${_e(id)}/photos',
+      files: [
+        for (final f in files)
+          (field: 'files[]', path: f.path, filename: f.name),
+      ],
+    );
+    return res.list.map(UnitPhoto.fromJson).toList();
+  }
+
+  /// `DELETE …/photos/{photoId}` — chỉ ảnh kho; xoá ảnh đại diện thì ảnh kế
+  /// tiếp lên thay.
+  Future<List<UnitPhoto>> deletePhoto(String id, String photoId) async {
+    final res = await _api.delete(
+      '/inventory/units/${_e(id)}/photos/${_e(photoId)}',
+    );
+    return res.list.map(UnitPhoto.fromJson).toList();
+  }
+
+  Future<List<UnitPhoto>> setCover(String id, String photoId) async {
+    final res = await _api.put(
+      '/inventory/units/${_e(id)}/cover',
+      body: {'photo_id': photoId},
+    );
+    return res.list.map(UnitPhoto.fromJson).toList();
+  }
+
+  /// Nhãn lỗi của tenant (`GET /inventory/settings` → `defect_tags`).
+  Future<List<String>> defectTags() async {
+    final res = await _api.get('/inventory/settings');
+    return res.object.strList('defect_tags');
+  }
+
   // ---------------- nhà cung cấp ----------------
 
   Future<List<Supplier>> listSuppliers() async {
     final res = await _api.get('/inventory/suppliers');
     return res.list.map(Supplier.fromJson).toList();
+  }
+
+  /// Danh sách đủ hồ sơ (+ số nợ khi có `inventory.lot_payments`).
+  Future<List<SupplierDetail>> listSupplierDetails() async {
+    final res = await _api.get('/inventory/suppliers');
+    return res.list.map(SupplierDetail.fromJson).toList();
+  }
+
+  /// Chi tiết: thêm `lots` còn nợ / trả dư khi có quyền thanh toán lô.
+  Future<SupplierDetail> getSupplier(String id) async {
+    final res = await _api.get('/inventory/suppliers/${_e(id)}');
+    return SupplierDetail.fromJson(res.object);
+  }
+
+  /// `PUT /inventory/suppliers/{id}` (cần `inventory.suppliers`).
+  Future<SupplierDetail> updateSupplier(String id, SupplierInput input) async {
+    final res = await _api.put(
+      '/inventory/suppliers/${_e(id)}',
+      body: input.toPayload(),
+    );
+    return SupplierDetail.fromJson(res.object);
+  }
+
+  /// `PUT /inventory/claims/{id}` (cần `inventory.lot_payments`) — đổi cách
+  /// xử lý / đánh dấu đã giải quyết. Lô tự tính lại nợ và giá vốn.
+  Future<LotClaim> updateClaim(String id, ClaimInput input) async {
+    final res = await _api.put(
+      '/inventory/claims/${_e(id)}',
+      body: input.toPayload(),
+    );
+    return LotClaim.fromJson(res.object);
   }
 
   /// `POST /inventory/suppliers` — mã (tối đa 30 ký tự) + tên đầy đủ.
@@ -181,6 +307,16 @@ class InventoryApi {
     return Lot.fromJson(res.object);
   }
 
+  /// `PUT /inventory/lots/{id}` `{expected_jpy}` — tổng ¥ dự kiến (API bỏ
+  /// khoá với người thiếu quyền thanh toán lô). null = xoá.
+  Future<Lot> setExpectedJpy(String id, num? yen) async {
+    final res = await _api.put(
+      '/inventory/lots/${_e(id)}',
+      body: {'expected_jpy': yen},
+    );
+    return Lot.fromJson(res.object);
+  }
+
   Future<List<InventoryUnit>> lotUnits(String id) async {
     final res = await _api.get('/inventory/lots/${_e(id)}/units');
     return res.list.map(InventoryUnit.fromJson).toList();
@@ -203,23 +339,23 @@ class InventoryApi {
   }
 
   /// `POST /inventory/lots/{id}/receive` — mặc định mọi cây "Đã nhận"; chỉ gửi
-  /// cây thiếu / lỗi hoặc có serial bổ sung.
+  /// cây thiếu / lỗi hoặc có serial bổ sung ([ReceiveLine.toPayload]).
+  /// [locationId] chỉ gửi khi tenant có từ hai vị trí (không có thì API nhận
+  /// vào vị trí mặc định).
   Future<({Lot lot, Map<String, int> counts})> receive(
     String lotId, {
     required String receivedAt,
     UnitCondition? condition,
-    required List<({String unitId, ReceiveResult result, String? serial})>
-    results,
+    required List<ReceiveLine> results,
+    String? locationId,
   }) async {
     final res = await _api.post(
       '/inventory/lots/${_e(lotId)}/receive',
       body: {
         'received_at': receivedAt,
         'condition': condition?.wire,
-        'results': [
-          for (final r in results)
-            {'unit_id': r.unitId, 'result': r.result.wire, 'serial': ?r.serial},
-        ],
+        'results': [for (final r in results) r.toPayload()],
+        'location_id': ?locationId,
       },
     );
     final meta = res.raw['meta'];
