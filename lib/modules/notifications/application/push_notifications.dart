@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:ui' show Color;
 
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
@@ -16,6 +17,10 @@ import '../data/push_api.dart';
 // creates a fresh channel so installs that received a silent v3 channel get
 // the bundled alert sound.
 const _androidChannelId = 'inbox_messages_v4';
+
+/// Màu nhuộm icon nhỏ của thông báo; khớp `@color/notification_accent` mà
+/// thông báo FCM dùng khi app đóng.
+const _androidAccent = Color(0xFF0159DB);
 const _tokenRefreshGenerationKey = 'fcm_token_refresh_generation';
 // Bump when a release must rebind the installation. This repairs devices that
 // kept an FCM token locally while its server-side row was removed/invalidated.
@@ -331,7 +336,9 @@ class PushNotifications {
   }
 
   Future<void> _initializeLocalNotifications() async {
-    const android = AndroidInitializationSettings('@mipmap/ic_launcher');
+    // Icon nhỏ một màu (drawable/ic_stat_viomni), cùng icon với thông báo FCM
+    // khai trong AndroidManifest. Icon app nhiều màu ở đây sẽ thành ô vuông trắng.
+    const android = AndroidInitializationSettings('ic_stat_viomni');
     const ios = DarwinInitializationSettings(
       requestAlertPermission: false,
       requestBadgePermission: false,
@@ -525,6 +532,7 @@ class PushNotifications {
                       importance: Importance.high,
                       priority: Priority.high,
                       enableVibration: true,
+                      color: _androidAccent,
                       category: AndroidNotificationCategory.reminder,
                     )
                   : AndroidNotificationDetails(
@@ -537,6 +545,7 @@ class PushNotifications {
                       playSound: true,
                       sound: _androidSound,
                       enableVibration: true,
+                      color: _androidAccent,
                       audioAttributesUsage:
                           AudioAttributesUsage.notificationEvent,
                       category: AndroidNotificationCategory.message,

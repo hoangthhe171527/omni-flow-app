@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Icon nhỏ của thông báo: bóng một màu của logo V có quỹ đạo (cùng đường nét
+     với favicon.svg của web). Android chỉ dùng độ trong suốt của icon nhỏ, nên
+     ảnh nhiều màu / nền đặc sẽ thành ô vuông trắng. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="100"
+    android:viewportHeight="100">
+    <group
+        android:pivotX="50"
+        android:pivotY="46.5"
+        android:scaleX="1.2"
+        android:scaleY="1.2"
+        android:translateY="3.5">
+        <path
+            android:fillColor="#FFFFFFFF"
+            android:pathData="M47,50 L60,28 C62.5,23.8 66.5,22 71.5,22 H79 L52.5,68 C49.5,73 45,73 42.5,68 Z" />
+        <path
+            android:fillColor="#FFFFFFFF"
+            android:pathData="M17,22 H33 C38,22 42,24.2 44.5,28.5 L57.5,52 L51.5,62.5 L35.5,66.5 L17,22 Z" />
+        <path
+            android:fillColor="#FFFFFFFF"
+            android:pathData="M39.5,69.5 L57.5,61.5 L51,74 C48.5,78.5 43.2,78.5 40.8,74 Z" />
+        <path
+            android:fillColor="#FFFFFFFF"
+            android:pathData="M61,19 C78,14.5 89.5,19.5 87,30.5 C83.5,44.5 60.5,61 36.5,68.5 C19.5,73.8 11.5,69.5 15.5,57.5 C17.5,51.8 22,46.2 27.5,41.5 C23.2,46.8 20.8,52 21.8,56.2 C23.5,63.2 35.8,63.5 53,56.5 C69.5,49.8 81.2,38.2 79.8,29.5 C78.8,23.2 71.5,19.8 61,19 Z" />
+    </group>
+</vector>
