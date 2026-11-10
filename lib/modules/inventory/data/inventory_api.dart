@@ -111,6 +111,9 @@ class InventoryApi {
     Map<String, num>? prices,
     num? deposit,
     String? note,
+    String? depositPaidAt,
+    String? moneyAccountId,
+    String? expiresAt,
   }) async {
     final res = await _api.post(
       '/inventory/units/reserve',
@@ -121,6 +124,11 @@ class InventoryApi {
         if (prices != null && prices.isNotEmpty) 'prices': prices,
         if (!retail && deposit != null) 'deposit': deposit,
         'note': ?note,
+        // Đợt B (`inventory.reservations`): ngày nhận cọc, nguồn tiền, hạn
+        // giữ (Y-m-d) — chỉ gửi khi có, API cũ không biết các khoá này.
+        if (!retail) 'deposit_paid_at': ?depositPaidAt,
+        if (!retail) 'money_account_id': ?moneyAccountId,
+        if (!retail) 'expires_at': ?expiresAt,
       },
     );
     return res.list.map(InventoryUnit.fromJson).toList();
@@ -220,6 +228,131 @@ class InventoryApi {
   Future<List<String>> defectTags() async {
     final res = await _api.get('/inventory/settings');
     return res.object.strList('defect_tags');
+  }
+
+  // ---------------- Đợt B: danh mục, hàng số lượng, phiếu giữ ----------------
+
+  /// Tên bậc giá (`GET /inventory/settings` → `price_tiers`, đủ ba bậc).
+  Future<List<PriceTier>> priceTiers() async {
+    final res = await _api.get('/inventory/settings');
+    return PriceTier.listFrom(res.object);
+  }
+
+  /// `GET /inventory/categories` — danh sách phẳng, cả đã lưu trữ.
+  Future<List<InvCategory>> listCategories() async {
+    final res = await _api.get('/inventory/categories');
+    return res.list.map(InvCategory.fromJson).toList();
+  }
+
+  /// `GET /inventory/products` — lọc loại gồm cả loại con; kèm `on_hand`.
+  Future<List<InvProduct>> listProducts({
+    String? categoryId,
+    String? q,
+    ProductTracking? tracking,
+    int limit = 500,
+  }) async {
+    final res = await _api.get(
+      '/inventory/products',
+      query: {
+        'category_id': categoryId,
+        'q': q,
+        'tracking': tracking?.wire,
+        'limit': limit,
+      },
+    );
+    return res.list.map(InvProduct.fromJson).toList();
+  }
+
+  /// `PUT /inventory/products/{id}` — app chỉ sửa tên và giá theo bậc
+  /// ([prices]: bậc không gửi giữ giá cũ; giá trị null = xoá giá bậc đó).
+  Future<InvProduct> updateProduct(
+    String id, {
+    String? name,
+    Map<PriceTierKey, num?>? prices,
+  }) async {
+    final res = await _api.put(
+      '/inventory/products/${_e(id)}',
+      body: {
+        if (name != null) 'name': name.trim(),
+        if (prices != null && prices.isNotEmpty)
+          'prices': {for (final e in prices.entries) e.key.wire: e.value},
+      },
+    );
+    return InvProduct.fromJson(res.object);
+  }
+
+  /// `POST /inventory/stock/receive` — nhập hàng số lượng. Không gửi
+  /// [locationId] thì vào vị trí mặc định; [unitCost] ghim làm giá vốn (chỉ
+  /// người có `inventory.cost`).
+  Future<InvProduct> receiveStock({
+    required String productId,
+    required int qty,
+    String? locationId,
+    num? unitCost,
+    String? note,
+  }) async {
+    final res = await _api.post(
+      '/inventory/stock/receive',
+      body: {
+        'product_id': productId,
+        'qty': qty,
+        'location_id': ?locationId,
+        'unit_cost': ?unitCost,
+        'note': ?note,
+      },
+    );
+    return InvProduct.fromJson(res.object);
+  }
+
+  /// `POST /inventory/stock/transfer` — chuyển giữa hai vị trí.
+  Future<InvProduct> transferStock({
+    required String productId,
+    required String from,
+    required String to,
+    required int qty,
+  }) async {
+    final res = await _api.post(
+      '/inventory/stock/transfer',
+      body: {'product_id': productId, 'from': from, 'to': to, 'qty': qty},
+    );
+    return InvProduct.fromJson(res.object);
+  }
+
+  /// `POST /inventory/stock/adjust` — đặt số thật sau kiểm đếm (bắt buộc ghi
+  /// chú). Trả mã hàng sau khi ghi + chênh lệch (`meta.delta`). Tồn đổi giữa
+  /// lúc đọc và ghi → 409.
+  Future<({InvProduct product, int delta})> adjustStock({
+    required String productId,
+    required String locationId,
+    required int qty,
+    required String note,
+  }) async {
+    final res = await _api.post(
+      '/inventory/stock/adjust',
+      body: {
+        'product_id': productId,
+        'location_id': locationId,
+        'qty': qty,
+        'note': note.trim(),
+      },
+    );
+    final meta = res.raw['meta'];
+    return (
+      product: InvProduct.fromJson(res.object),
+      delta: meta is Map ? meta.cast<String, dynamic>().intOr('delta') : 0,
+    );
+  }
+
+  /// `GET /inventory/reservations?status=` — mới nhất trước.
+  Future<List<Reservation>> listReservations({
+    ReservationStatus? status,
+    int limit = 100,
+  }) async {
+    final res = await _api.get(
+      '/inventory/reservations',
+      query: {'status': status?.wire, 'limit': limit},
+    );
+    return res.list.map(Reservation.fromJson).toList();
   }
 
   // ---------------- nhà cung cấp ----------------
@@ -455,18 +588,23 @@ class InventoryApi {
 
   /// `POST /orders/from-units` — tạo đơn mới cho khách, hoặc thêm vào đơn đang
   /// mở ([orderId]). Trả mã đơn.
+  ///
+  /// Đợt B (`inventory.stock_qty`): [items] thêm dòng hàng số lượng (cùng
+  /// hoặc thay [unitIds]); không có cây thì không gửi `unit_ids`.
   Future<({String id, String code})> sell({
     required String customerId,
     required List<String> unitIds,
     Map<String, num>? prices,
     String? orderId,
     num? deposit,
+    List<SellItem> items = const [],
   }) async {
     final res = await _api.post(
       '/orders/from-units',
       body: {
         'customer_id': customerId,
-        'unit_ids': unitIds,
+        if (unitIds.isNotEmpty || items.isEmpty) 'unit_ids': unitIds,
+        if (items.isNotEmpty) 'items': [for (final i in items) i.toPayload()],
         if (prices != null && prices.isNotEmpty) 'prices': prices,
         'order_id': ?orderId,
         if (deposit != null && deposit > 0) 'deposit': deposit,

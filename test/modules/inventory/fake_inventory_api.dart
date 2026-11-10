@@ -236,6 +236,9 @@ class FakeInventoryApi extends InventoryApi {
     Map<String, num>? prices,
     num? deposit,
     String? note,
+    String? depositPaidAt,
+    String? moneyAccountId,
+    String? expiresAt,
   }) async {
     reserves.add({
       'unit_ids': unitIds,
@@ -243,6 +246,10 @@ class FakeInventoryApi extends InventoryApi {
       'retail': retail,
       'prices': prices,
       'deposit': deposit,
+      // Đợt B: chỉ ghi khi có — bài cũ so khớp cả map vẫn đúng.
+      'deposit_paid_at': ?depositPaidAt,
+      'money_account_id': ?moneyAccountId,
+      'expires_at': ?expiresAt,
     });
     return const [];
   }
@@ -254,15 +261,184 @@ class FakeInventoryApi extends InventoryApi {
     Map<String, num>? prices,
     String? orderId,
     num? deposit,
+    List<SellItem> items = const [],
   }) async {
     sells.add({
       'customer_id': customerId,
       'unit_ids': unitIds,
       'prices': prices,
       'order_id': orderId,
+      if (items.isNotEmpty) 'items': [for (final i in items) i.toPayload()],
     });
     return (id: 'o1', code: 'DH-1043');
   }
+
+  // ---------------- Kho chuẩn hóa Đợt B ----------------
+
+  List<PriceTier> tiers = const [
+    PriceTier(key: PriceTierKey.wholesale, name: 'Giá sỉ'),
+    PriceTier(key: PriceTierKey.retail, name: 'Giá lẻ'),
+    PriceTier(key: PriceTierKey.tier3),
+  ];
+  List<InvCategory> categories = const [];
+  List<InvProduct> products = [];
+  List<Reservation> reservations = const [];
+  final productUpdates = <(String, String?, Map<PriceTierKey, num?>?)>[];
+  final stockWrites = <(String, Map<String, Object?>)>[];
+  final productQueries = <Map<String, Object?>>[];
+  final reservationQueries = <ReservationStatus?>[];
+
+  @override
+  Future<List<PriceTier>> priceTiers() async => tiers;
+
+  @override
+  Future<List<InvCategory>> listCategories() async => categories;
+
+  @override
+  Future<List<InvProduct>> listProducts({
+    String? categoryId,
+    String? q,
+    ProductTracking? tracking,
+    int limit = 500,
+  }) async {
+    productQueries.add({
+      'category_id': categoryId,
+      'q': q,
+      'tracking': tracking,
+    });
+    return [
+      for (final p in products)
+        if ((tracking == null || p.tracking == tracking) &&
+            (categoryId == null || p.categoryId == categoryId) &&
+            (q == null ||
+                '${p.code} ${p.name}'.toLowerCase().contains(q.toLowerCase())))
+          p,
+    ];
+  }
+
+  InvProduct _replace(String id, InvProduct Function(InvProduct) f) {
+    final i = products.indexWhere((p) => p.id == id);
+    products[i] = f(products[i]);
+    return products[i];
+  }
+
+  @override
+  Future<InvProduct> updateProduct(
+    String id, {
+    String? name,
+    Map<PriceTierKey, num?>? prices,
+  }) async {
+    productUpdates.add((id, name, prices));
+    return _replace(
+      id,
+      (p) => copyProduct(
+        p,
+        name: name,
+        // Bậc không gửi giữ giá cũ; gửi null là xoá (như API).
+        prices: prices == null
+            ? null
+            : {
+                for (final e in p.prices.entries)
+                  if (!prices.containsKey(e.key)) e.key: e.value,
+                for (final e in prices.entries)
+                  if (e.value != null) e.key: e.value!.toDouble(),
+              },
+      ),
+    );
+  }
+
+  @override
+  Future<InvProduct> receiveStock({
+    required String productId,
+    required int qty,
+    String? locationId,
+    num? unitCost,
+    String? note,
+  }) async {
+    stockWrites.add((
+      'receive',
+      {
+        'product_id': productId,
+        'qty': qty,
+        'location_id': locationId,
+        'unit_cost': unitCost,
+      },
+    ));
+    return _replace(productId, (p) => copyProduct(p, onHand: p.onHand + qty));
+  }
+
+  @override
+  Future<InvProduct> transferStock({
+    required String productId,
+    required String from,
+    required String to,
+    required int qty,
+  }) async {
+    stockWrites.add((
+      'transfer',
+      {'product_id': productId, 'from': from, 'to': to, 'qty': qty},
+    ));
+    return _replace(
+      productId,
+      (p) => copyProduct(
+        p,
+        stock: [
+          for (final s in p.stock)
+            (
+              locationId: s.locationId,
+              qty: s.locationId == from
+                  ? s.qty - qty
+                  : s.locationId == to
+                  ? s.qty + qty
+                  : s.qty,
+            ),
+          if (!p.stock.any((s) => s.locationId == to))
+            (locationId: to, qty: qty),
+        ],
+      ),
+    );
+  }
+
+  @override
+  Future<({InvProduct product, int delta})> adjustStock({
+    required String productId,
+    required String locationId,
+    required int qty,
+    required String note,
+  }) async {
+    stockWrites.add((
+      'adjust',
+      {
+        'product_id': productId,
+        'location_id': locationId,
+        'qty': qty,
+        'note': note,
+      },
+    ));
+    final old = products.firstWhere((p) => p.id == productId);
+    final delta = qty - old.qtyAt(locationId);
+    final next = _replace(
+      productId,
+      (p) => copyProduct(p, onHand: p.onHand + delta),
+    );
+    return (product: next, delta: delta);
+  }
+
+  @override
+  Future<List<Reservation>> listReservations({
+    ReservationStatus? status,
+    int limit = 100,
+  }) async {
+    reservationQueries.add(status);
+    return [
+      for (final r in reservations)
+        if (status == null || r.status == status) r,
+    ];
+  }
+
+  @override
+  Future<InventoryUnit> getUnit(String id) async =>
+      units.firstWhere((u) => u.id == id);
 
   @override
   Future<List<OpenOrder>> openOrders(String customerId) async => _openOrders;
@@ -498,6 +674,34 @@ InventoryUnit copyUnit(
   photoCount: u.photoCount,
   coverUrl: u.coverUrl,
 );
+
+/// Bản sao mã hàng với vài trường đổi.
+InvProduct copyProduct(
+  InvProduct p, {
+  String? name,
+  Map<PriceTierKey, double>? prices,
+  int? onHand,
+  List<LocationQty>? stock,
+}) {
+  final nextStock = stock ?? p.stock;
+  return InvProduct(
+    id: p.id,
+    code: p.code,
+    name: name ?? p.name,
+    categoryId: p.categoryId,
+    categoryName: p.categoryName,
+    unit: p.unit,
+    tracking: p.tracking,
+    prices: prices ?? p.prices,
+    fixedCost: p.fixedCost,
+    archived: p.archived,
+    onHand:
+        onHand ??
+        (stock == null ? p.onHand : nextStock.fold(0, (s, x) => s + x.qty)),
+    available: onHand ?? p.available,
+    stock: nextStock,
+  );
+}
 
 /// Bản sao lô (các trường test dùng).
 Lot copyLot(Lot l, {List<LotClaim>? claims, double? expectedJpy}) => Lot(

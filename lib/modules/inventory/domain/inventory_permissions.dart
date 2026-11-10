@@ -28,6 +28,15 @@ abstract final class InventoryPermissions {
   static const capClaims = 'inventory.claims';
   static const capPhotos = 'inventory.photos';
 
+  /// Thiết lập Kho: sửa mã hàng, tên bậc giá, đặt số thật (Đợt B).
+  static const settings = 'inventory.settings';
+
+  /// Kho chuẩn hóa Đợt B (TNP_KHO_DOT_B_C §1.5): loại + mã hàng, tồn theo số
+  /// lượng (và dòng đơn số lượng), phiếu giữ hàng.
+  static const capProducts = 'inventory.products';
+  static const capStockQty = 'inventory.stock_qty';
+  static const capReservations = 'inventory.reservations';
+
   /// Menu và route cùng một yêu cầu — deep link không lách được lớp ẩn.
   static const List<String> readOnly = [read];
 
@@ -58,6 +67,11 @@ class InventoryPerms {
     this.editSuppliers = false,
     this.claims = false,
     this.photos = false,
+    this.products = false,
+    this.editProducts = false,
+    this.stockQty = false,
+    this.adjustStock = false,
+    this.reservations = false,
   });
 
   /// [supports]: API có capability tên này không (`Session.apiSupports`).
@@ -70,6 +84,9 @@ class InventoryPerms {
     bool api(String cap) => capable && (supports?.call(cap) ?? false);
     final read = has(InventoryPermissions.read);
     final capSuppliers = read && api(InventoryPermissions.capSuppliers);
+    final products = read && api(InventoryPermissions.capProducts);
+    final stockQty = products && api(InventoryPermissions.capStockQty);
+    final settings = has(InventoryPermissions.settings);
     return InventoryPerms(
       read: read,
       write: read && has(InventoryPermissions.write),
@@ -86,6 +103,11 @@ class InventoryPerms {
       editSuppliers: capSuppliers && has(InventoryPermissions.suppliers),
       claims: read && api(InventoryPermissions.capClaims),
       photos: read && api(InventoryPermissions.capPhotos),
+      products: products,
+      editProducts: products && settings,
+      stockQty: stockQty,
+      adjustStock: stockQty && settings,
+      reservations: read && api(InventoryPermissions.capReservations),
     );
   }
 
@@ -127,6 +149,23 @@ class InventoryPerms {
 
   /// Đợt A: ảnh và nhãn lỗi của cây (`inventory.photos`).
   final bool photos;
+
+  /// Đợt B: Danh mục hàng (loại, mã hàng, bậc giá) — `inventory.products`.
+  final bool products;
+
+  /// Sửa tên / giá mã hàng: thêm quyền `inventory.settings`.
+  final bool editProducts;
+
+  /// Đợt B: tồn theo số lượng + dòng đơn số lượng (`inventory.stock_qty`).
+  /// Nhập / chuyển cần thêm [write].
+  final bool stockQty;
+
+  /// Đặt số thật sau kiểm đếm: `inventory.settings`.
+  final bool adjustStock;
+
+  /// Đợt B: phiếu giữ hàng, ngày nhận cọc, nguồn tiền, hạn giữ
+  /// (`inventory.reservations`).
+  final bool reservations;
 
   /// Mở được sheet "Bán / Đặt trước".
   bool get canSellOrReserve => reserve || sell;

@@ -383,6 +383,66 @@ final moneyAccountsProvider = FutureProvider.autoDispose<List<MoneyAccount>>((
   return ref.watch(inventoryApiProvider).moneyAccounts();
 });
 
+// ------------------------------------- Đợt B: danh mục, hàng số lượng, giữ
+
+/// Bậc giá đang dùng (có tên). API thiếu `inventory.products` → rỗng (ẩn
+/// chọn bậc giá).
+final priceTiersProvider = FutureProvider.autoDispose<List<PriceTier>>((
+  ref,
+) async {
+  ref.watch(inventoryRevisionProvider);
+  if (!ref.watch(inventoryPermsProvider).products) return const [];
+  return PriceTier.active(await ref.watch(inventoryApiProvider).priceTiers());
+});
+
+/// Loại hàng (cả đã lưu trữ — lọc ở chỗ dùng qua [categoryTree]).
+final categoriesProvider = FutureProvider.autoDispose<List<InvCategory>>((
+  ref,
+) async {
+  ref.watch(inventoryRevisionProvider);
+  if (!ref.watch(inventoryPermsProvider).products) return const [];
+  return ref.watch(inventoryApiProvider).listCategories();
+});
+
+/// Bộ lọc màn Danh mục hàng.
+typedef CatalogFilter = ({String? categoryId, String query});
+
+final catalogFilterProvider = StateProvider.autoDispose<CatalogFilter>(
+  (ref) => (categoryId: null, query: ''),
+);
+
+/// Mã hàng theo bộ lọc của Danh mục hàng.
+final productsProvider = FutureProvider.autoDispose<List<InvProduct>>((
+  ref,
+) async {
+  _watchUnits(ref);
+  if (!ref.watch(inventoryPermsProvider).products) return const [];
+  final f = ref.watch(catalogFilterProvider);
+  final q = f.query.trim();
+  return ref
+      .watch(inventoryApiProvider)
+      .listProducts(categoryId: f.categoryId, q: q.isEmpty ? null : q);
+});
+
+/// Hàng số lượng bán được (cho "Thêm hàng số lượng" trong sheet bán).
+final qtyProductsProvider = FutureProvider.autoDispose<List<InvProduct>>((
+  ref,
+) async {
+  ref.watch(inventoryRevisionProvider);
+  if (!ref.watch(inventoryPermsProvider).stockQty) return const [];
+  return ref
+      .watch(inventoryApiProvider)
+      .listProducts(tracking: ProductTracking.qty);
+});
+
+/// Phiếu giữ hàng theo trạng thái (null = tất cả).
+final reservationsProvider = FutureProvider.autoDispose
+    .family<List<Reservation>, ReservationStatus?>((ref, status) async {
+      _watchUnits(ref);
+      if (!ref.watch(inventoryPermsProvider).reservations) return const [];
+      return ref.watch(inventoryApiProvider).listReservations(status: status);
+    });
+
 /// Đơn còn mở của khách (cho "Thêm vào đơn đang mở").
 final openOrdersProvider = FutureProvider.autoDispose
     .family<List<OpenOrder>, String>((ref, customerId) async {

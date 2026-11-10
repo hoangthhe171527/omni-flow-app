@@ -18,4 +18,11 @@ abstract final class InventoryRoutes {
 
   static const supplier = 'inventory.supplier';
   static const supplierPath = '/inventory/suppliers/:supplierId';
+
+  // Kho chuẩn hóa Đợt B.
+  static const catalog = 'inventory.catalog';
+  static const catalogPath = '/inventory/catalog';
+
+  static const reservations = 'inventory.reservations';
+  static const reservationsPath = '/inventory/reservations';
 }

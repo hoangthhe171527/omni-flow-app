@@ -5,9 +5,11 @@ import '../../core/module/nav_destination.dart';
 import '../../core/module/omni_module.dart';
 import '../../security/guard/access_requirement.dart';
 import 'domain/inventory_permissions.dart';
+import 'presentation/catalog_page.dart';
 import 'presentation/lot_detail_page.dart';
 import 'presentation/lots_page.dart';
 import 'presentation/receive_page.dart';
+import 'presentation/reservations_page.dart';
 import 'presentation/stock_page.dart';
 import 'presentation/suppliers_page.dart';
 import 'routes.dart';
@@ -78,6 +80,22 @@ class InventoryModule extends OmniModule {
       access: const AccessRequirement.all(InventoryPermissions.readOnly),
       builder: (_, state) =>
           SupplierDetailPage(supplierId: state.pathParameters['supplierId']!),
+    ),
+    // Kho chuẩn hóa Đợt B: màn ẩn nội dung khi API thiếu `inventory.products`
+    // / `inventory.reservations`.
+    ModuleRoute(
+      path: InventoryRoutes.catalogPath,
+      name: InventoryRoutes.catalog,
+      rootNavigator: true,
+      access: const AccessRequirement.all(InventoryPermissions.readOnly),
+      builder: (_, _) => const CatalogPage(),
+    ),
+    ModuleRoute(
+      path: InventoryRoutes.reservationsPath,
+      name: InventoryRoutes.reservations,
+      rootNavigator: true,
+      access: const AccessRequirement.all(InventoryPermissions.readOnly),
+      builder: (_, _) => const ReservationsPage(),
     ),
   ];
 
