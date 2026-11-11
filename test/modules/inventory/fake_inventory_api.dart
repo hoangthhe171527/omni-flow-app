@@ -87,6 +87,7 @@ class FakeInventoryApi extends InventoryApi {
     String? customerId,
     String? locationId,
     String? q,
+    String? condition,
     int limit = 50,
     int offset = 0,
   }) async {
@@ -96,10 +97,15 @@ class FakeInventoryApi extends InventoryApi {
       'q': q,
       'limit': limit,
       'location_id': locationId,
+      'condition': ?condition,
     });
     final all = [
       for (final u in units)
         if ((sale == null || sale.split(',').contains(u.sale.wire)) &&
+            // Như API: cây "Không thấy" chỉ trả khi lọc đúng `condition=missing`.
+            (condition == null
+                ? u.condition != UnitCondition.missing
+                : u.condition?.wire == condition) &&
             // Đợt C: `place=delivered` chỉ trả cây đã giao.
             (place != UnitPlace.delivered.wire ||
                 u.place == UnitPlace.delivered) &&
@@ -641,6 +647,43 @@ class FakeInventoryApi extends InventoryApi {
   List<StockCount> counts = [];
   Map<String, Slip> slips = {};
   final returns = <(String, Map<String, Object?>)>[];
+  final founds = <(String, Map<String, Object?>)>[];
+
+  @override
+  Future<InventoryUnit> foundUnit(
+    String id, {
+    String? locationId,
+    UnitCondition? condition,
+    String? note,
+  }) async {
+    founds.add((
+      id,
+      {'location_id': locationId, 'condition': condition?.wire, 'note': note},
+    ));
+    final i = units.indexWhere((u) => u.id == id);
+    final loc = locations
+        .where((l) => l.id == (locationId ?? 'main'))
+        .firstOrNull;
+    final back = copyUnit(
+      units[i],
+      condition: () => condition,
+      locationId: loc?.id,
+      locationName: loc?.name,
+    );
+    units[i] = back;
+    ledger[id] = [
+      LedgerRow(
+        id: 'm-found-$id',
+        isWork: false,
+        kind: 'count_found',
+        at: '2026-11-10T00:00:00+07:00',
+        toName: loc?.name,
+      ),
+      ...?ledger[id],
+    ];
+    return back;
+  }
+
   final countSaves = <(String, List<String>?, Map<String, int>?)>[];
   final countSteps = <String>[];
 
@@ -780,6 +823,7 @@ InventoryUnit copyUnit(
   UnitPlace? place,
   String? locationId,
   String? locationName,
+  ValueGetter<UnitCondition?>? condition,
 }) => InventoryUnit(
   id: u.id,
   lotId: u.lotId,
@@ -792,7 +836,7 @@ InventoryUnit copyUnit(
   color: u.color,
   listPrice: u.listPrice,
   place: place ?? u.place,
-  condition: u.condition,
+  condition: condition != null ? condition() : u.condition,
   sale: u.sale,
   retailHold: u.retailHold,
   customerId: u.customerId,
