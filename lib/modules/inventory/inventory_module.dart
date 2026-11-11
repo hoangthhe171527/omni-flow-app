@@ -9,11 +9,13 @@ import 'presentation/lot_detail_page.dart';
 import 'presentation/lots_page.dart';
 import 'presentation/receive_page.dart';
 import 'presentation/stock_page.dart';
+import 'presentation/suppliers_page.dart';
 import 'routes.dart';
 
 export 'routes.dart';
 
-/// Phân hệ **Kho hàng**: Tồn kho theo serial, Hàng sắp về (lô), Nhận hàng.
+/// Phân hệ **Kho hàng**: Tồn kho theo serial, Hàng sắp về (lô), Nhận hàng,
+/// Nhà cung cấp (Đợt A — lối vào từ Hàng sắp về và từ lô).
 ///
 /// Route và mục menu cùng đòi `inventory.read`; capability `inventory` của API
 /// lọc thêm ở danh bạ (`directory_page.dart`) và trong từng màn — API cũ chưa
@@ -60,6 +62,22 @@ class InventoryModule extends OmniModule {
       access: const AccessRequirement.all(InventoryPermissions.readOnly),
       builder: (_, state) =>
           LotDetailPage(lotId: state.pathParameters['lotId']!),
+    ),
+    // Kho chuẩn hóa Đợt A: màn ẩn nội dung khi API thiếu `inventory.suppliers`.
+    ModuleRoute(
+      path: InventoryRoutes.suppliersPath,
+      name: InventoryRoutes.suppliers,
+      rootNavigator: true,
+      access: const AccessRequirement.all(InventoryPermissions.readOnly),
+      builder: (_, _) => const SuppliersPage(),
+    ),
+    ModuleRoute(
+      path: InventoryRoutes.supplierPath,
+      name: InventoryRoutes.supplier,
+      rootNavigator: true,
+      access: const AccessRequirement.all(InventoryPermissions.readOnly),
+      builder: (_, state) =>
+          SupplierDetailPage(supplierId: state.pathParameters['supplierId']!),
     ),
   ];
 

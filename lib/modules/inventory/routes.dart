@@ -12,4 +12,10 @@ abstract final class InventoryRoutes {
 
   static const receive = 'inventory.receive';
   static const receivePath = '/inventory/lots/:lotId/receive';
+
+  static const suppliers = 'inventory.suppliers';
+  static const suppliersPath = '/inventory/suppliers';
+
+  static const supplier = 'inventory.supplier';
+  static const supplierPath = '/inventory/suppliers/:supplierId';
 }

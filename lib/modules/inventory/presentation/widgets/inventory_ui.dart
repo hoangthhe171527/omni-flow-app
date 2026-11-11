@@ -225,11 +225,15 @@ class InvDropPill extends StatelessWidget {
     required this.label,
     required this.active,
     required this.onTap,
+    this.shrink = false,
   });
 
   final String label;
   final bool active;
   final VoidCallback onTap;
+
+  /// Vừa chữ (hàng lọc cuộn ngang) thay vì giãn hết chỗ được cho.
+  final bool shrink;
 
   @override
   Widget build(BuildContext context) {
@@ -258,6 +262,7 @@ class InvDropPill extends StatelessWidget {
                     borderRadius: BorderRadius.circular(999),
                   ),
             child: Row(
+              mainAxisSize: shrink ? MainAxisSize.min : MainAxisSize.max,
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Flexible(
@@ -388,6 +393,7 @@ class InvInputRow extends StatelessWidget {
     this.caps = false,
     this.keyboardType,
     this.onChanged,
+    this.inputFormatters,
   });
 
   final String label;
@@ -402,6 +408,7 @@ class InvInputRow extends StatelessWidget {
   /// Bàn phím riêng (vd. số thập phân cho tỷ lệ) — mặc định theo [phone].
   final TextInputType? keyboardType;
   final ValueChanged<String>? onChanged;
+  final List<TextInputFormatter>? inputFormatters;
 
   @override
   Widget build(BuildContext context) {
@@ -419,6 +426,8 @@ class InvInputRow extends StatelessWidget {
                 keyboardType ??
                 (phone ? TextInputType.phone : TextInputType.name),
             autocorrect: !caps,
+            inputFormatters: inputFormatters,
+            maxLines: keyboardType == TextInputType.multiline ? null : 1,
             textCapitalization: phone
                 ? TextCapitalization.none
                 : caps

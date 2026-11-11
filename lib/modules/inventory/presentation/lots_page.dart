@@ -36,7 +36,25 @@ class _LotsPageState extends ConsumerState<LotsPage> {
     final bottom = shellBottom + (perms.write ? 88 : 24);
 
     return Scaffold(
-      appBar: const OmniAppBar(title: 'Hàng sắp về'),
+      appBar: OmniAppBar(
+        title: 'Hàng sắp về',
+        actions: [
+          // Đợt A: Nhà cung cấp — hồ sơ và công nợ theo lô.
+          if (perms.suppliers)
+            IconButton(
+              key: const ValueKey('inv-open-suppliers'),
+              tooltip: 'Nhà cung cấp',
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints.tightFor(width: 44, height: 44),
+              onPressed: () => context.pushNamed(InventoryRoutes.suppliers),
+              icon: Icon(
+                Icons.storefront_outlined,
+                size: OmniIconSize.md,
+                color: Theme.of(context).colorScheme.onSurface,
+              ),
+            ),
+        ],
+      ),
       body: !perms.read
           ? const OmniEmptyState(
               icon: Icons.lock_outline_rounded,

@@ -13,6 +13,7 @@ export '../data/inventory_api.dart'
     show
         AddUnitsResult,
         InventoryApi,
+        MoveResult,
         SendToWorkshopResult,
         UnitUpdateResult,
         inventoryApiProvider;
@@ -23,6 +24,7 @@ final inventoryPermsProvider = Provider<InventoryPerms>((ref) {
   return InventoryPerms.from(
     capable: session.apiSupports(InventoryPermissions.capability),
     policy: session.policy,
+    supports: session.apiSupports,
   );
 });
 
@@ -78,6 +80,8 @@ class StockFilter {
     this.lotId,
     this.lotCode,
     this.age,
+    this.locationId,
+    this.locationName,
   });
 
   final StockSegment segment;
@@ -87,11 +91,16 @@ class StockFilter {
   final String? lotCode;
   final AgeBucket? age;
 
+  /// Lọc vị trí — chỉ khi tenant có từ hai vị trí (Đợt A).
+  final String? locationId;
+  final String? locationName;
+
   bool get narrowed =>
       query.trim().isNotEmpty ||
       category != null ||
       lotId != null ||
-      age != null;
+      age != null ||
+      locationId != null;
 
   StockFilter copyWith({
     StockSegment? segment,
@@ -100,6 +109,8 @@ class StockFilter {
     ValueGetter<String?>? lotId,
     ValueGetter<String?>? lotCode,
     ValueGetter<AgeBucket?>? age,
+    ValueGetter<String?>? locationId,
+    ValueGetter<String?>? locationName,
   }) => StockFilter(
     segment: segment ?? this.segment,
     query: query ?? this.query,
@@ -107,6 +118,8 @@ class StockFilter {
     lotId: lotId != null ? lotId() : this.lotId,
     lotCode: lotCode != null ? lotCode() : this.lotCode,
     age: age != null ? age() : this.age,
+    locationId: locationId != null ? locationId() : this.locationId,
+    locationName: locationName != null ? locationName() : this.locationName,
   );
 }
 
@@ -157,6 +170,7 @@ class StockController extends AutoDisposeAsyncNotifier<StockState> {
             : heldSaleWire,
         category: f.category,
         lotId: f.lotId,
+        locationId: f.locationId,
         q: f.query.trim().isEmpty ? null : f.query.trim(),
         limit: pageSize,
         offset: offset,
@@ -266,6 +280,57 @@ final stockCountProvider = FutureProvider.autoDispose.family<int, StockSegment>(
   },
 );
 
+// ------------------------------------------------- vị trí, ảnh, thẻ kho (Đợt A)
+
+/// Tenant có từ hai vị trí (`GET /units/summary` → `multi_location`): chỉ khi
+/// đó mới có lọc vị trí, chọn nơi nhận, chuyển cây (spec §5). API thiếu
+/// capability `inventory.locations` → false, không gọi request.
+final multiLocationProvider = FutureProvider.autoDispose<bool>((ref) async {
+  ref.watch(inventoryRevisionProvider);
+  if (!ref.watch(inventoryPermsProvider).locations) return false;
+  final s = await ref.watch(inventoryApiProvider).stockSummary();
+  return s.multiLocation;
+});
+
+/// Vị trí đang dùng (chưa lưu trữ), mặc định đứng đầu.
+final locationsProvider = FutureProvider.autoDispose<List<StockLocation>>((
+  ref,
+) async {
+  ref.watch(inventoryRevisionProvider);
+  if (!ref.watch(inventoryPermsProvider).locations) return const [];
+  final all = await ref.watch(inventoryApiProvider).listLocations();
+  return [
+    for (final l in all)
+      if (!l.archived && l.isDefault) l,
+    for (final l in all)
+      if (!l.archived && !l.isDefault) l,
+  ];
+});
+
+/// Thẻ kho của một cây.
+final unitLedgerProvider = FutureProvider.autoDispose
+    .family<List<LedgerRow>, String>((ref, id) async {
+      _watchUnits(ref);
+      if (!ref.watch(inventoryPermsProvider).locations) return const [];
+      return ref.watch(inventoryApiProvider).unitLedger(id);
+    });
+
+/// Ảnh của một cây (ảnh kho + ảnh thợ chụp trong việc xưởng).
+final unitPhotosProvider = FutureProvider.autoDispose
+    .family<List<UnitPhoto>, String>((ref, id) async {
+      _watchUnits(ref);
+      if (!ref.watch(inventoryPermsProvider).photos) return const [];
+      return ref.watch(inventoryApiProvider).unitPhotos(id);
+    });
+
+/// Nhãn lỗi của tenant (chưa thiết lập thì API trả sáu nhãn mặc định).
+final defectTagsProvider = FutureProvider.autoDispose<List<String>>((
+  ref,
+) async {
+  if (!ref.watch(inventoryPermsProvider).photos) return const [];
+  return ref.watch(inventoryApiProvider).defectTags();
+});
+
 // ---------------------------------------------------------------- lô
 
 final lotsProvider = FutureProvider.autoDispose<List<Lot>>((ref) async {
@@ -296,6 +361,20 @@ final suppliersProvider = FutureProvider.autoDispose<List<Supplier>>((
   if (!ref.watch(inventoryPermsProvider).read) return const [];
   return ref.watch(inventoryApiProvider).listSuppliers();
 });
+
+/// Hồ sơ nhà cung cấp (màn Nhà cung cấp, Đợt A).
+final supplierDetailsProvider =
+    FutureProvider.autoDispose<List<SupplierDetail>>((ref) async {
+      ref.watch(inventoryRevisionProvider);
+      if (!ref.watch(inventoryPermsProvider).suppliers) return const [];
+      return ref.watch(inventoryApiProvider).listSupplierDetails();
+    });
+
+final supplierProvider = FutureProvider.autoDispose
+    .family<SupplierDetail, String>((ref, id) async {
+      ref.watch(inventoryRevisionProvider);
+      return ref.watch(inventoryApiProvider).getSupplier(id);
+    });
 
 final moneyAccountsProvider = FutureProvider.autoDispose<List<MoneyAccount>>((
   ref,

@@ -11,8 +11,10 @@ import '../domain/inventory_permissions.dart';
 import '../routes.dart';
 import 'lots_page.dart' show lotDebtLine;
 import 'widgets/add_unit_sheet.dart';
+import 'widgets/claim_sheet.dart';
 import 'widgets/cost_sheet.dart';
 import 'widgets/inventory_ui.dart';
+import 'widgets/money_keypad_sheet.dart';
 import 'widgets/paste_sheet.dart';
 import 'widgets/pay_costs_sheet.dart';
 import 'widgets/sell_sheet.dart';
@@ -22,6 +24,10 @@ import 'widgets/unit_sheet.dart';
 /// Chi tiết lô: tóm tắt, tiền & giá vốn (tỷ lệ · giá vốn lô · còn thiếu, "Dùng
 /// ước tính", khoản trả hai loại), Thêm cây, danh sách cây gom theo model,
 /// nút Nhận hàng.
+///
+/// Kho chuẩn hóa Đợt A (`inventory.claims`): tổng ¥ dự kiến (sửa khi có quyền
+/// thanh toán lô), phải trả nhà cung cấp sau khoản được trừ, trả dư; khoản đòi
+/// cây thiếu / lỗi — đổi cách xử lý, đánh dấu đã giải quyết.
 class LotDetailPage extends ConsumerStatefulWidget {
   const LotDetailPage({super.key, required this.lotId});
 
@@ -106,6 +112,106 @@ class _LotDetailPageState extends ConsumerState<LotDetailPage> {
     }
   }
 
+  Future<void> _editExpected(Lot lot) async {
+    final v = await showMoneyKeypad(
+      context: context,
+      title: 'Tổng ¥ dự kiến',
+      subtitle: lot.code,
+      initial: lot.expectedJpy,
+      unit: '¥',
+    );
+    if (v == null || !mounted || v == lot.expectedJpy?.round()) return;
+    setState(() => _busy = true);
+    try {
+      await ref.read(inventoryApiProvider).setExpectedJpy(lot.id, v);
+      bumpInventory(ref);
+      if (mounted) InvUi.toast(context, 'Đã lưu tổng ¥ dự kiến.');
+    } catch (e) {
+      if (mounted) InvUi.toast(context, InvUi.error(e));
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  Future<void> _openClaim(LotClaim c, String unitName) async {
+    final msg = await openClaimSheet(context, claim: c, unitName: unitName);
+    if (msg != null && mounted) InvUi.toast(context, msg);
+  }
+
+  /// Tổng ¥ dự kiến, phải trả nhà cung cấp, trả dư. API cũ không có khoá
+  /// `debt_base_jpy` (hoặc thiếu quyền thanh toán) → không có nhóm.
+  List<Widget> _yen(Lot lot, InventoryPerms perms) {
+    final base = lot.debtBaseJpy;
+    if (!perms.claims || base == null) return const [];
+    return [
+      const SizedBox(height: OmniGroupSection.gap),
+      OmniGroupSection(
+        key: const ValueKey('inv-lot-yen'),
+        children: [
+          OmniGroupRow(
+            key: const ValueKey('inv-lot-expected'),
+            title: 'Tổng ¥ dự kiến',
+            trailing: InvValue(
+              lot.expectedJpy == null
+                  ? '—'
+                  : InventoryFormat.yen(lot.expectedJpy),
+            ),
+            chevron: perms.pay,
+            onTap: perms.pay && !_busy ? () => _editExpected(lot) : null,
+          ),
+          OmniGroupRow(
+            title: 'Phải trả nhà cung cấp',
+            trailing: InvValue(InventoryFormat.yen(base)),
+          ),
+          if ((lot.prepaidJpy ?? 0) > 0)
+            OmniGroupRow(
+              title: 'Trả dư',
+              trailing: InvValue(InventoryFormat.yen(lot.prepaidJpy)),
+            ),
+        ],
+      ),
+    ];
+  }
+
+  List<Widget> _claims(
+    Lot lot,
+    List<InventoryUnit> units,
+    InventoryPerms perms,
+  ) {
+    final claims = lot.claims ?? const <LotClaim>[];
+    if (!perms.claims || claims.isEmpty) return const [];
+    final byId = {for (final u in units) u.id: u};
+    return [
+      const SizedBox(height: OmniGroupSection.gap),
+      OmniGroupSection(
+        key: const ValueKey('inv-lot-claims'),
+        title: 'Khoản đòi nhà cung cấp',
+        dividerIndent: 14,
+        children: [
+          for (final c in claims)
+            () {
+              final u = byId[c.unitId];
+              final name = u == null ? 'Cây' : '#${u.lineNo} ${u.name}';
+              final detail = [
+                c.kindLabel,
+                if (u?.serial != null) u!.serial!,
+                if (perms.cost && (c.debtCutJpy ?? 0) > 0)
+                  'trừ ${InventoryFormat.yen(c.debtCutJpy)}',
+              ].join(' · ');
+              return OmniGroupRow(
+                key: ValueKey('inv-claim-row-${c.id}'),
+                title: name,
+                // Dòng phụ 1: cách xử lý; dòng 2: loại · serial · số ¥ trừ.
+                subtitle: '${ClaimResolution.labelOf(c.resolution)}\n$detail',
+                value: c.settled ? 'Xong' : null,
+                onTap: perms.pay ? () => _openClaim(c, name) : null,
+              );
+            }(),
+        ],
+      ),
+    ];
+  }
+
   void _tapUnit(InventoryUnit u, InventoryPerms perms) {
     if (u.place == UnitPlace.inStock) {
       openUnitSheet(context, unit: u, onChanged: (_) => bumpInventory(ref));
@@ -188,7 +294,7 @@ class _LotDetailPageState extends ConsumerState<LotDetailPage> {
                         bottomSafe + (thumb ? 96 : 24),
                       ),
                       children: [
-                        ..._summary(lot, perms),
+                        ..._summary(lot, perms, units),
                         if (perms.write &&
                             lot.status != LotStatus.received) ...[
                           const SizedBox(height: OmniGroupSection.gap),
@@ -262,14 +368,27 @@ class _LotDetailPageState extends ConsumerState<LotDetailPage> {
     );
   }
 
-  List<Widget> _summary(Lot lot, InventoryPerms perms) {
+  List<Widget> _summary(
+    Lot lot,
+    InventoryPerms perms,
+    List<InventoryUnit> units,
+  ) {
+    final supplierId = lot.supplierId;
     final head = OmniGroupSection(
       children: [
         OmniGroupRow(
+          key: const ValueKey('inv-lot-supplier'),
           title: lot.supplierName ?? 'Nhà cung cấp',
           value: lot.status == LotStatus.received
               ? 'Về kho ${InventoryFormat.dmy(lot.receivedAt)}'
               : lot.status.label,
+          // Đợt A: mở hồ sơ nhà cung cấp.
+          onTap: perms.suppliers && supplierId != null
+              ? () => context.pushNamed(
+                  InventoryRoutes.supplier,
+                  pathParameters: {'supplierId': supplierId},
+                )
+              : null,
         ),
         OmniGroupRow(
           title: 'Cây',
@@ -364,6 +483,8 @@ class _LotDetailPageState extends ConsumerState<LotDetailPage> {
         const SizedBox(height: OmniGroupSection.gap),
         OmniGroupSection(key: const ValueKey('inv-lot-money'), children: money),
       ],
+      ..._yen(lot, perms),
+      ..._claims(lot, units, perms),
       if (perms.pay) ...[
         const SizedBox(height: OmniGroupSection.gap),
         OmniGroupSection(

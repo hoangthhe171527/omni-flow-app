@@ -12,12 +12,16 @@ import '../routes.dart';
 import 'widgets/inventory_ui.dart';
 import 'widgets/sell_sheet.dart';
 import 'widgets/serial_field.dart';
+import 'widgets/unit_extras.dart';
 import 'widgets/unit_sheet.dart';
 
 /// Tồn kho theo serial (artifact app bản 7): tìm serial / model, Còn bán / Đã
 /// có khách, hàng lọc một dòng thả xuống (Loại · Lô · Tuổi tồn), dòng tổng
 /// ngắn, serial chạm để sửa, chọn nhiều cây để Bán / Đặt trước hoặc Đưa vào
 /// xưởng (Kho nối Xưởng: mỗi cây một việc của kế hoạch được chọn).
+///
+/// Kho chuẩn hóa Đợt A: lọc theo vị trí và chuyển nhiều cây CHỈ khi tenant có
+/// từ hai vị trí (`multi_location`); ảnh đại diện nhỏ đầu dòng khi API có ảnh.
 class StockPage extends ConsumerStatefulWidget {
   const StockPage({super.key});
 
@@ -85,6 +89,87 @@ class _StockPageState extends ConsumerState<StockPage> {
     _filter.update(
       (f) => f.copyWith(lotId: () => r.value, lotCode: () => code),
     );
+  }
+
+  Future<void> _pickLocation() async {
+    final sub = ref.listenManual(locationsProvider, (_, _) {});
+    final locations = await ref
+        .read(locationsProvider.future)
+        .catchError((_) => <StockLocation>[]);
+    sub.close();
+    if (!mounted) return;
+    final f = ref.read(stockFilterProvider);
+    final r = await showInvOptions<String>(
+      context: context,
+      title: 'Vị trí',
+      options: [for (final l in locations) (l.id, l.name)],
+      selected: f.locationId,
+      allLabel: 'Mọi vị trí',
+    );
+    if (r == null) return;
+    final name = locations.where((l) => l.id == r.value).firstOrNull?.name;
+    _filter.update(
+      (f) => f.copyWith(locationId: () => r.value, locationName: () => name),
+    );
+  }
+
+  /// Chuyển các cây đã chọn sang một vị trí (`POST /units/move`).
+  Future<void> _movePicked(List<InventoryUnit> items) async {
+    final ids = [
+      for (final u in items)
+        if (_picked.contains(u.id)) u.id,
+    ];
+    if (ids.isEmpty || _sending) return;
+    final sub = ref.listenManual(locationsProvider, (_, _) {});
+    final locations = await ref
+        .read(locationsProvider.future)
+        .catchError((_) => <StockLocation>[]);
+    sub.close();
+    if (!mounted || locations.isEmpty) return;
+    final to = await showOmniSheet<StockLocation>(
+      context: context,
+      builder: (sheet) => OmniSheetBody(
+        header: OmniSheetHeader(title: 'Chuyển ${ids.length} cây đến'),
+        children: [
+          OmniGroupSection(
+            dividerIndent: 14,
+            children: [
+              for (final l in locations)
+                OmniGroupRow(
+                  key: ValueKey('inv-move-to-${l.id}'),
+                  title: l.name,
+                  value: '${InventoryFormat.number(l.unitCount)} cây',
+                  chevron: false,
+                  onTap: () => Navigator.of(sheet).pop(l),
+                ),
+            ],
+          ),
+        ],
+      ),
+    );
+    if (to == null || !mounted) return;
+    setState(() => _sending = true);
+    try {
+      final res = await ref
+          .read(inventoryApiProvider)
+          .moveUnits(unitIds: ids, toLocationId: to.id);
+      if (!mounted) return;
+      bumpInventory(ref);
+      setState(() {
+        _multi = false;
+        _picked.clear();
+      });
+      InvUi.toast(
+        context,
+        res.skipped > 0
+            ? 'Đã chuyển ${res.moved} cây đến ${to.name}, bỏ qua ${res.skipped} cây.'
+            : 'Đã chuyển ${res.moved} cây đến ${to.name}.',
+      );
+    } catch (e) {
+      if (mounted) InvUi.toast(context, InvUi.error(e));
+    } finally {
+      if (mounted) setState(() => _sending = false);
+    }
   }
 
   Future<void> _pickAge() async {
@@ -226,6 +311,16 @@ class _StockPageState extends ConsumerState<StockPage> {
         .watch(stockCountProvider(StockSegment.reserved))
         .valueOrNull;
     final reserved = f.segment == StockSegment.reserved;
+    // Đợt A: lọc / chuyển vị trí chỉ khi có từ hai vị trí (spec §5).
+    final multi = ref.watch(multiLocationProvider).valueOrNull ?? false;
+    final defaultLocation = multi
+        ? ref
+              .watch(locationsProvider)
+              .valueOrNull
+              ?.where((l) => l.isDefault)
+              .firstOrNull
+              ?.id
+        : null;
 
     final state = stock.valueOrNull;
     final loaded = state?.items ?? const <InventoryUnit>[];
@@ -261,9 +356,16 @@ class _StockPageState extends ConsumerState<StockPage> {
     }.toList()..sort();
     final canSell = !reserved && perms.canSellOrReserve;
     final canSend = perms.workshop;
-    final canMulti = canSell || canSend;
+    final canMove = multi && perms.write;
+    final canMulti = canSell || canSend || canMove;
     final showSell = _multi && canSell && pickedLoaded > 0;
     final showSend = _multi && canSend && pickedForWorkshop > 0;
+    final showMove = _multi && canMove && pickedLoaded > 0;
+    // Chỉ có chuyển vị trí: nút ở vùng ngón cái (bản xem trước). Có thêm
+    // Bán / Xưởng thì chuyển vị trí là một dòng ngay dưới "Đã chọn" — không
+    // xếp ba nút chồng nhau che danh sách.
+    final moveInBar = showMove && !showSend && !showSell;
+    final actions = [moveInBar, showSend, showSell].where((x) => x).length;
     final bottomPad =
         ShellBarInset.of(context) + MediaQuery.viewPaddingOf(context).bottom;
 
@@ -288,34 +390,40 @@ class _StockPageState extends ConsumerState<StockPage> {
         onChanged: _setSegment,
       ),
       const SizedBox(height: 10),
-      Row(
-        children: [
-          Expanded(
-            child: InvDropPill(
-              key: const ValueKey('inv-filter-category'),
-              label: f.category ?? 'Loại',
-              active: f.category != null,
-              onTap: () => _pickCategory(categories),
-            ),
+      _FilterRow(
+        // Bốn ô (có Vị trí) không đủ chỗ chia đều 390px: cuộn ngang, mỗi ô
+        // vừa chữ — không xuống dòng.
+        scroll: multi,
+        pills: [
+          InvDropPill(
+            key: const ValueKey('inv-filter-category'),
+            label: f.category ?? 'Loại',
+            active: f.category != null,
+            shrink: multi,
+            onTap: () => _pickCategory(categories),
           ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: InvDropPill(
-              key: const ValueKey('inv-filter-lot'),
-              label: f.lotCode ?? 'Lô',
-              active: f.lotId != null,
-              onTap: _pickLot,
-            ),
+          InvDropPill(
+            key: const ValueKey('inv-filter-lot'),
+            label: f.lotCode ?? 'Lô',
+            active: f.lotId != null,
+            shrink: multi,
+            onTap: _pickLot,
           ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: InvDropPill(
-              key: const ValueKey('inv-filter-age'),
-              label: f.age?.label ?? 'Tuổi tồn',
-              active: f.age != null,
-              onTap: _pickAge,
-            ),
+          InvDropPill(
+            key: const ValueKey('inv-filter-age'),
+            label: f.age?.label ?? 'Tuổi tồn',
+            active: f.age != null,
+            shrink: multi,
+            onTap: _pickAge,
           ),
+          if (multi)
+            InvDropPill(
+              key: const ValueKey('inv-filter-location'),
+              label: f.locationName ?? 'Vị trí',
+              active: f.locationId != null,
+              shrink: true,
+              onTap: _pickLocation,
+            ),
         ],
       ),
       const SizedBox(height: OmniGroupSection.gap),
@@ -344,6 +452,14 @@ class _StockPageState extends ConsumerState<StockPage> {
                 _multi = !_multi;
                 _picked.clear();
               }),
+            ),
+          if (showMove && !moveInBar)
+            OmniGroupRow(
+              key: const ValueKey('inv-stock-move-picked'),
+              icon: Icons.swap_horiz_rounded,
+              accent: true,
+              title: 'Chuyển vị trí · $pickedLoaded cây',
+              onTap: _sending ? null : () => _movePicked(loaded),
             ),
         ],
       ),
@@ -374,6 +490,15 @@ class _StockPageState extends ConsumerState<StockPage> {
                   canEditSerial: perms.write && !_multi,
                   picking: _multi,
                   showWorkshop: _multi && canSend,
+                  // Lúc chọn nhiều thì bỏ ảnh: chừa chỗ cho ô chọn và chữ.
+                  thumb: perms.photos && !_multi,
+                  // Cây ở nơi khác vị trí mặc định thì ghi nơi đó; lúc chọn
+                  // để chuyển thì ghi cho mọi cây.
+                  location:
+                      multi &&
+                          (_multi && canMove || u.locationId != defaultLocation)
+                      ? u.locationName
+                      : null,
                   picked: _picked.contains(u.id),
                   onTap: () => _tapUnit(u),
                   onSerial: (s) => _saveSerial(u, s),
@@ -432,14 +557,14 @@ class _StockPageState extends ConsumerState<StockPage> {
                     16,
                     12,
                     16,
-                    bottomPad + 88 + (showSell && showSend ? 56 : 0),
+                    bottomPad + 88 + (actions > 1 ? 56 * (actions - 1) : 0),
                   ),
                   children: list,
                 ),
               ),
             ),
           ),
-          if (showSell || showSend)
+          if (actions > 0)
             Positioned(
               left: 20,
               right: 20,
@@ -448,6 +573,12 @@ class _StockPageState extends ConsumerState<StockPage> {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
+                  if (moveInBar)
+                    FilledButton(
+                      key: const ValueKey('inv-stock-move-picked'),
+                      onPressed: _sending ? null : () => _movePicked(loaded),
+                      child: Text('Chuyển vị trí · $pickedLoaded cây'),
+                    ),
                   if (showSend && showSell)
                     OutlinedButton(
                       key: const ValueKey('inv-stock-send-picked'),
@@ -490,6 +621,8 @@ class StockUnitRow extends StatelessWidget {
     this.picking = false,
     this.picked = false,
     this.showWorkshop = false,
+    this.thumb = false,
+    this.location,
   });
 
   final InventoryUnit unit;
@@ -504,6 +637,12 @@ class StockUnitRow extends StatelessWidget {
   /// Đang chọn cây để đưa vào xưởng: dòng nhỏ bên phải là tình hình xưởng
   /// (`8/10`, "Xong", "Chưa vào xưởng"), tình trạng dời sang dòng phụ.
   final bool showWorkshop;
+
+  /// Ảnh đại diện nhỏ đầu dòng (API có ảnh — Đợt A).
+  final bool thumb;
+
+  /// Tên vị trí ghi ở dòng phụ (chỉ khi có từ hai vị trí).
+  final String? location;
 
   @override
   Widget build(BuildContext context) {
@@ -531,6 +670,10 @@ class StockUnitRow extends StatelessWidget {
                     size: 22,
                     color: picked ? scheme.primary : scheme.onSurfaceVariant,
                   ),
+                  const SizedBox(width: 12),
+                ],
+                if (thumb) ...[
+                  InvUnitThumb(unit: u),
                   const SizedBox(width: 12),
                 ],
                 Expanded(
@@ -564,6 +707,7 @@ class StockUnitRow extends StatelessWidget {
                               text: [
                                 if (work != null)
                                   UnitCondition.labelOf(u.condition),
+                                ?location,
                                 if (u.lotCode != null) u.lotCode!,
                                 if (InvUi.shortCategory(u.category).isNotEmpty)
                                   InvUi.shortCategory(u.category),
@@ -605,6 +749,43 @@ class StockUnitRow extends StatelessWidget {
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+/// Hàng lọc: chia đều khi ít ô, cuộn ngang khi có thêm ô Vị trí.
+class _FilterRow extends StatelessWidget {
+  const _FilterRow({required this.pills, required this.scroll});
+
+  final List<Widget> pills;
+  final bool scroll;
+
+  @override
+  Widget build(BuildContext context) {
+    if (!scroll) {
+      return Row(
+        children: [
+          for (var i = 0; i < pills.length; i++) ...[
+            if (i > 0) const SizedBox(width: 8),
+            Expanded(child: pills[i]),
+          ],
+        ],
+      );
+    }
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      clipBehavior: Clip.none,
+      child: Row(
+        children: [
+          for (var i = 0; i < pills.length; i++) ...[
+            if (i > 0) const SizedBox(width: 8),
+            ConstrainedBox(
+              constraints: const BoxConstraints(minWidth: 72, maxWidth: 200),
+              child: pills[i],
+            ),
+          ],
+        ],
       ),
     );
   }

@@ -11,6 +11,9 @@ abstract final class InventoryPermissions {
   static const cost = 'inventory.cost';
   static const lotPayments = 'inventory.lot_payments';
 
+  /// Sửa hồ sơ nhà cung cấp (Kho chuẩn hóa Đợt A).
+  static const suppliers = 'inventory.suppliers';
+
   /// Tạo đơn từ cây (`POST /orders/from-units`) cần thêm quyền ghi đơn.
   static const ordersWrite = 'orders.write';
 
@@ -18,10 +21,24 @@ abstract final class InventoryPermissions {
   /// có Kho: ẩn mọi lối vào, không gọi request nào.
   static const capability = 'inventory';
 
+  /// Kho chuẩn hóa Đợt A — mỗi phần một capability riêng: API trước đợt A
+  /// không có endpoint (gọi là 404), thiếu tên thì ẩn phần đó.
+  static const capLocations = 'inventory.locations';
+  static const capSuppliers = 'inventory.suppliers';
+  static const capClaims = 'inventory.claims';
+  static const capPhotos = 'inventory.photos';
+
   /// Menu và route cùng một yêu cầu — deep link không lách được lớp ẩn.
   static const List<String> readOnly = [read];
 
-  static const List<String> all = [read, write, reserve, cost, lotPayments];
+  static const List<String> all = [
+    read,
+    write,
+    reserve,
+    cost,
+    lotPayments,
+    suppliers,
+  ];
 }
 
 /// Quyền Kho của người đang đăng nhập — cùng cách tính với web
@@ -36,14 +53,23 @@ class InventoryPerms {
     this.pay = false,
     this.sell = false,
     this.workshop = false,
+    this.locations = false,
+    this.suppliers = false,
+    this.editSuppliers = false,
+    this.claims = false,
+    this.photos = false,
   });
 
+  /// [supports]: API có capability tên này không (`Session.apiSupports`).
   factory InventoryPerms.from({
     required bool capable,
     required AccessPolicy policy,
+    bool Function(String capability)? supports,
   }) {
     bool has(String slug) => capable && policy.can(slug);
+    bool api(String cap) => capable && (supports?.call(cap) ?? false);
     final read = has(InventoryPermissions.read);
+    final capSuppliers = read && api(InventoryPermissions.capSuppliers);
     return InventoryPerms(
       read: read,
       write: read && has(InventoryPermissions.write),
@@ -55,6 +81,11 @@ class InventoryPerms {
           has(InventoryPermissions.reserve) &&
           has(InventoryPermissions.ordersWrite),
       workshop: read && policy.can(TaskPermissions.write),
+      locations: read && api(InventoryPermissions.capLocations),
+      suppliers: capSuppliers,
+      editSuppliers: capSuppliers && has(InventoryPermissions.suppliers),
+      claims: read && api(InventoryPermissions.capClaims),
+      photos: read && api(InventoryPermissions.capPhotos),
     );
   }
 
@@ -81,6 +112,21 @@ class InventoryPerms {
   /// Đưa cây vào xưởng (`POST /tasks/from-units`): quyền tạo việc
   /// (`tasks.write`) cộng xem Kho. Server kiểm thêm quyền quản lý kế hoạch.
   final bool workshop;
+
+  /// Đợt A: API có vị trí / chuyển cây / thẻ kho (`inventory.locations`).
+  final bool locations;
+
+  /// Đợt A: API có màn Nhà cung cấp (`inventory.suppliers`) — đọc.
+  final bool suppliers;
+
+  /// Sửa hồ sơ nhà cung cấp: capability + quyền `inventory.suppliers`.
+  final bool editSuppliers;
+
+  /// Đợt A: khoản đòi cây thiếu / lỗi và tổng ¥ dự kiến (`inventory.claims`).
+  final bool claims;
+
+  /// Đợt A: ảnh và nhãn lỗi của cây (`inventory.photos`).
+  final bool photos;
 
   /// Mở được sheet "Bán / Đặt trước".
   bool get canSellOrReserve => reserve || sell;

@@ -1,6 +1,9 @@
 import 'package:flutter/foundation.dart';
 
 import '../../../core/utils/json.dart';
+import 'kho_models.dart';
+
+export 'kho_models.dart';
 
 /// Kiểu Kho hàng — đúng hình dạng API (`InventoryPresenter`, omni-flow-api PR #90,
 /// spec TNP_KHO_VA_HANG_SAP_VE §7b). Trường tiền là `null` khi người xem thiếu
@@ -290,6 +293,10 @@ class Lot {
     this.lastFx,
     this.costs,
     this.rateLogs,
+    this.expectedJpy,
+    this.debtBaseJpy,
+    this.prepaidJpy,
+    this.claims,
   });
 
   factory Lot.fromJson(Map<String, dynamic> j) => Lot(
@@ -327,6 +334,13 @@ class Lot {
         : null,
     rateLogs: j['rate_logs'] is List
         ? [for (final r in j.mapList('rate_logs')) RateLog.fromJson(r)]
+        : null,
+    expectedJpy: j.dbl('expected_jpy'),
+    debtBaseJpy: j.dbl('debt_base_jpy'),
+    prepaidJpy: j.dbl('prepaid_jpy'),
+    // API trước Đợt A không có khoá: null (ẩn nhóm), khác `[]` = chưa có khoản.
+    claims: j['claims'] is List
+        ? [for (final c in j.mapList('claims')) LotClaim.fromJson(c)]
         : null,
   );
 
@@ -367,6 +381,19 @@ class Lot {
   final double? lastFx;
   final List<LotCost>? costs;
   final List<RateLog>? rateLogs;
+
+  // ---- Kho chuẩn hóa Đợt A (API cũ không có khoá → null) ----
+  /// Tổng ¥ dự kiến của lô (sửa được khi có quyền thanh toán lô).
+  final double? expectedJpy;
+
+  /// Phải trả nhà cung cấp sau khoản được trừ.
+  final double? debtBaseJpy;
+
+  /// Trả dư (nợ không âm, phần dư tách ra đây).
+  final double? prepaidJpy;
+
+  /// Khoản đòi nhà cung cấp cho cây thiếu / lỗi.
+  final List<LotClaim>? claims;
 
   /// Cây có khách (đặt trước hoặc đã vào đơn) — dùng cho vạch đặt trước.
   int get withCustomer => reserved + sold;
@@ -490,6 +517,13 @@ class InventoryUnit {
     this.yenPrice,
     this.costVnd,
     this.workshop,
+    this.locationId,
+    this.locationName,
+    this.locationKind,
+    this.deliveredAt,
+    this.defectTags,
+    this.photoCount,
+    this.coverUrl,
   });
 
   factory InventoryUnit.fromJson(Map<String, dynamic> j) => InventoryUnit(
@@ -522,6 +556,14 @@ class InventoryUnit {
     workshop: j['workshop'] is List
         ? [for (final w in j.mapList('workshop')) UnitWork.fromJson(w)]
         : null,
+    locationId: j.str('location_id'),
+    locationName: j.str('location_name'),
+    locationKind: j.str('location_kind'),
+    deliveredAt: j.str('delivered_at'),
+    // API trước Đợt A không có khoá: null, khác `[]` = chưa gắn nhãn.
+    defectTags: j['defect_tags'] is List ? j.strList('defect_tags') : null,
+    photoCount: j['photo_count'] == null ? null : j.intOr('photo_count'),
+    coverUrl: j.str('cover_url'),
   );
 
   final String id;
@@ -554,6 +596,21 @@ class InventoryUnit {
 
   /// Việc xưởng của cây, mới nhất trước. null = API chưa có Kho nối Xưởng.
   final List<UnitWork>? workshop;
+
+  // ---- Kho chuẩn hóa Đợt A (API cũ không có khoá → null) ----
+  final String? locationId;
+  final String? locationName;
+
+  /// `warehouse` | `showroom` | `partner`.
+  final String? locationKind;
+  final String? deliveredAt;
+
+  /// Nhãn lỗi (trong danh sách `GET /inventory/settings`).
+  final List<String>? defectTags;
+  final int? photoCount;
+
+  /// Ảnh đại diện (URL công khai `GET /inventory/media/...`).
+  final String? coverUrl;
 
   /// Cây đang có việc tân trang chưa xong — không đưa vào xưởng lần nữa
   /// (server cũng bỏ qua: `CreateWorkshopTasks`).
