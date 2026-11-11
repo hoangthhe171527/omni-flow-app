@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/config/app_config.dart';
 import '../../../core/network/api_client.dart';
+import '../../../core/network/api_path.dart';
 import '../../../core/network/api_envelope.dart';
 import '../../../design/tokens/omni_covers.dart';
 import '../../tasks/domain/custom_field.dart';
@@ -122,7 +123,10 @@ class PlansApi {
       throw ArgumentError.value(name, 'name', 'Tên team không được để trống');
     }
 
-    final response = await _client.put('/teams/$teamId', body: {'name': clean});
+    final response = await _client.put(
+      '/teams/${pathSegment(teamId)}',
+      body: {'name': clean},
+    );
 
     return Team.fromJson(response.object);
   }
@@ -132,7 +136,7 @@ class PlansApi {
   /// Server trả 409 nếu team còn dự án, kể cả dự án đang ở thùng rác. Không
   /// xoá dây chuyền ở client: một lần dọn team không được làm biến mất cả xưởng.
   Future<void> deleteTeam(String teamId) async {
-    await _client.delete('/teams/$teamId');
+    await _client.delete('/teams/${pathSegment(teamId)}');
   }
 
   /// Tạo một dự án, kèm các nhóm việc của nó.
@@ -179,7 +183,7 @@ class PlansApi {
 
   /// Xoá mềm dự án; server xoá mềm các công việc thuộc dự án cùng lượt.
   Future<void> deletePlan(String planId) async {
-    await _client.delete('/projects/$planId');
+    await _client.delete('/projects/${pathSegment(planId)}');
   }
 
   /// Đặt lại danh sách nhóm việc của một dự án đã có.
@@ -196,7 +200,7 @@ class PlansApi {
   /// của nhóm vừa xoá, vì công việc cũ vẫn đang trỏ vào đó.
   Future<Plan> updateSections(String planId, List<PlanSection> sections) async {
     final response = await _client.put(
-      '/projects/$planId',
+      '/projects/${pathSegment(planId)}',
       body: {
         'sections': [
           for (var i = 0; i < sections.length; i++)
@@ -220,7 +224,7 @@ class PlansApi {
   /// nên gửi cả bản ghi là mời xoá nhầm — xem [PlanPatch.toJson].
   Future<Plan> updatePlan(String planId, PlanPatch patch) async {
     final response = await _client.put(
-      '/projects/$planId',
+      '/projects/${pathSegment(planId)}',
       body: patch.toJson(),
     );
 
@@ -239,7 +243,7 @@ class PlansApi {
     DateTime? startDate,
   }) async {
     final response = await _client.post(
-      '/projects/$planId/copy',
+      '/projects/${pathSegment(planId)}/copy',
       body: {
         'name': name,
         'copy_tasks': copyTasks,
@@ -258,7 +262,7 @@ class PlansApi {
   /// Đánh dấu / bỏ yêu thích (`POST|DELETE /projects/{id}/favorite`, sở thích
   /// riêng, chỉ cần `tasks.read`). Trả `data.is_favorite` của server.
   Future<bool> setFavorite(String planId, bool favorite) async {
-    final path = '/projects/$planId/favorite';
+    final path = '/projects/${pathSegment(planId)}/favorite';
     final response = favorite
         ? await _client.post(path)
         : await _client.delete(path);
@@ -284,7 +288,7 @@ class PlansApi {
 
     return _client
         .post(
-          '/projects/$planId/transfer-owner',
+          '/projects/${pathSegment(planId)}/transfer-owner',
           body: {
             'owner_id': ownerId,
             'previous_owner_role': ?previousOwnerRole?.name,
@@ -356,7 +360,7 @@ class PlansApi {
   }
 
   Future<Plan> plan(String id) async {
-    final response = await _client.get('/projects/$id');
+    final response = await _client.get('/projects/${pathSegment(id)}');
 
     return Plan.fromJson(response.object);
   }

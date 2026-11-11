@@ -9,6 +9,7 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../../../security/session/session.dart';
 import '../../inbox/application/inbox_providers.dart';
 import 'notifications_providers.dart';
 import '../data/push_api.dart';
@@ -219,6 +220,8 @@ class PushNotifications {
     _startupRetry?.cancel();
     _startupRetry = null;
     try {
+      final forgetting = _forgetting;
+      if (forgetting != null) await forgetting;
       await initializePushRuntime();
       if (!_isActive(generation)) return;
       _firebaseReady = true;
@@ -299,6 +302,59 @@ class PushNotifications {
     await _cancelListeners();
     if (token != null && !_started && generation == _lifecycleGeneration) {
       await _unregisterSafely(token, reason: 'stop');
+    }
+  }
+
+  /// Phiên đổi trạng thái (gốc app gọi). Đã đăng nhập → bật push; đổi không
+  /// gian làm việc → chỉ dừng (vẫn là người đó); phiên KẾT THÚC → dừng, rồi
+  /// huỷ FCM token và gỡ thông báo đang hiện.
+  Future<void> onSessionChanged(Session? previous, Session next) async {
+    if (next.isAuthenticated) {
+      await start();
+      return;
+    }
+    await stop();
+    if (sessionEnded(previous, next)) {
+      final forgetting = _forgetDevice();
+      _forgetting = forgetting;
+      await forgetting;
+    }
+  }
+
+  /// Lượt huỷ token đang chạy: đăng nhập lại ngay sau đăng xuất thì [start]
+  /// chờ nó xong, kẻo token mới vừa đăng ký lại bị lượt huỷ cũ xoá mất.
+  Future<void>? _forgetting;
+
+  /// Phiên kết thúc: hết hạn (kể cả ngay lúc mở app), hoặc đăng xuất/xoá tài
+  /// khoản từ một phiên đang có. Mở app khi chưa đăng nhập hay đăng nhập hỏng
+  /// thì không — chưa có gì để gỡ.
+  @visibleForTesting
+  static bool sessionEnded(Session? previous, Session next) =>
+      next.status == SessionStatus.expired ||
+      (next.status == SessionStatus.unauthenticated &&
+          (previous?.hasCredentials ?? false));
+
+  /// `DELETE /devices/push-tokens` (trong [stop] hay bước trước đăng xuất) cần
+  /// phiên còn sống; hết hạn/mất mạng thì nó hỏng lặng và máy chủ vẫn đẩy tin
+  /// của người cũ tới máy này. Huỷ token ở Firebase là đường không cần phiên:
+  /// lần gửi sau máy chủ nhận "unregistered" và tự dọn hàng. Lần đăng nhập sau
+  /// [start] lấy token mới và đăng ký cho người mới.
+  Future<void> _forgetDevice() async {
+    _ref.read(pushIntentProvider.notifier).state = null;
+    final reset = _ref.read(pushDeviceResetProvider);
+    try {
+      await reset.deleteFcmToken();
+    } catch (error, stackTrace) {
+      if (kDebugMode) {
+        debugPrint('Push token delete failed: $error\n$stackTrace');
+      }
+    }
+    try {
+      await reset.clearShownNotifications();
+    } catch (error, stackTrace) {
+      if (kDebugMode) {
+        debugPrint('Clearing notifications failed: $error\n$stackTrace');
+      }
     }
   }
 
@@ -634,9 +690,9 @@ class PushNotifications {
     try {
       await _ref.read(pushApiProvider).unregister(token);
     } catch (error, stackTrace) {
-      // Local logout wins. A stale token is harmless because the next login
-      // moves it to the current tenant/user, and invalid tokens are pruned by
-      // the server's delivery path.
+      // Local logout wins. A still-valid token is NOT harmless (the server
+      // keeps pushing the previous user's messages to this device), so when
+      // the session ends `_forgetDevice` revokes it at Firebase instead.
       if (kDebugMode) {
         debugPrint(
           'Push token unregister failed [$reason]: $error\n$stackTrace',
@@ -645,6 +701,31 @@ class PushNotifications {
     }
   }
 }
+
+/// Những việc chạm thẳng vào máy khi một phiên KẾT THÚC: thu hồi FCM token của
+/// bản cài này và gỡ thông báo đang nằm trên khay. Tách ra provider để test
+/// thay được (Firebase không chạy trong `flutter test`).
+class PushDeviceReset {
+  const PushDeviceReset();
+
+  /// FCM token bị huỷ ở phía Firebase: máy chủ gửi tới token cũ sẽ nhận lỗi
+  /// "unregistered" và tự dọn hàng — cách DUY NHẤT gỡ máy khỏi người cũ khi
+  /// không còn phiên để gọi `DELETE /devices/push-tokens` (401, mất mạng).
+  Future<void> deleteFcmToken() async {
+    if (!_pushRuntimeInitialized) return;
+    await FirebaseMessaging.instance.deleteToken();
+  }
+
+  /// Gỡ thông báo đang hiện (tên khách, trích tin) của người vừa rời phiên.
+  Future<void> clearShownNotifications() async {
+    if (_runtimePushPlatform == null) return;
+    await FlutterLocalNotificationsPlugin().cancelAll();
+  }
+}
+
+final pushDeviceResetProvider = Provider<PushDeviceReset>(
+  (ref) => const PushDeviceReset(),
+);
 
 final pushNotificationsProvider = Provider<PushNotifications>((ref) {
   final notifications = PushNotifications(ref);

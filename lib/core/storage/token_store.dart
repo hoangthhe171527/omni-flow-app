@@ -40,17 +40,44 @@ class TokenStore {
   Future<String?> readRefreshToken() =>
       _storage.read(key: StorageKeys.refreshToken);
 
+  /// Thế hệ phiên: tăng mỗi lần [clear] (đăng xuất, phiên hết hạn).
+  ///
+  /// Việc chạy nền mở ra TRƯỚC khi phiên kết thúc — lượt refresh đang chờ
+  /// 429 chẳng hạn — ghi nhớ thế hệ lúc bắt đầu và chỉ được lưu kết quả qua
+  /// [saveIfCurrent]. Không có nó, token mới của người vừa đăng xuất bị ghi
+  /// lại vào máy và lần mở app sau vào thẳng tài khoản của họ.
+  int _generation = 0;
+
+  int get generation => _generation;
+
   Future<void> save({required String accessToken, String? refreshToken}) async {
+    final generation = _generation;
     // Cache trước, đĩa sau: request kế tiếp dùng token mới ngay, kể cả khi
     // lượt ghi Keychain còn đang bay.
     _access = Future.value(accessToken);
     await _storage.write(key: StorageKeys.accessToken, value: accessToken);
+    // Đăng xuất chen vào giữa hai lượt ghi: lượt xoá của nó đã xếp sau lượt
+    // ghi access token, nhưng ghi refresh token lúc này sẽ hồi sinh phiên.
+    if (generation != _generation) return;
     if (refreshToken != null && refreshToken.isNotEmpty) {
       await _storage.write(key: StorageKeys.refreshToken, value: refreshToken);
     }
   }
 
+  /// [save] nếu phiên chưa đổi kể từ thế hệ [generation]; trả `false` (và
+  /// không ghi gì) nếu đã có một lần [clear] chen vào.
+  Future<bool> saveIfCurrent(
+    int generation, {
+    required String accessToken,
+    String? refreshToken,
+  }) async {
+    if (generation != _generation) return false;
+    await save(accessToken: accessToken, refreshToken: refreshToken);
+    return generation == _generation;
+  }
+
   Future<void> clear() async {
+    _generation++;
     _access = null;
     await _storage.delete(key: StorageKeys.accessToken);
     await _storage.delete(key: StorageKeys.refreshToken);

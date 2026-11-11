@@ -10,6 +10,7 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:video_player/video_player.dart';
 
 import '../../../../core/utils/media_url.dart';
+import '../../../../core/utils/web_url.dart';
 import '../../../../design/tokens/tokens.dart';
 import '../../domain/message.dart';
 import 'message_images.dart';
@@ -23,15 +24,22 @@ VideoPlayerController Function(Uri url) videoControllerFactory =
 void resetVideoControllerFactory() =>
     videoControllerFactory = VideoPlayerController.networkUrl;
 
+/// Cách mở tệp đính kèm bằng app ngoài — bài kiểm thay để ghi lại URL.
+@visibleForTesting
+Future<bool> Function(Uri url, {LaunchMode mode}) attachmentLauncher =
+    launchUrl;
+
 class MessageFileAttachments extends StatelessWidget {
   const MessageFileAttachments({super.key, required this.attachments});
 
   final List<MessageAttachment> attachments;
 
   Future<void> _open(String url) async {
-    final uri = Uri.tryParse(url);
+    // URL đính kèm đến từ tin của khách: chỉ trao cho hệ điều hành trang
+    // http/https, không bao giờ `file:`/`intent:`/scheme app khác.
+    final uri = webUriOrNull(resolveMediaUrl(url));
     if (uri == null) return;
-    await launchUrl(uri, mode: LaunchMode.externalApplication);
+    await attachmentLauncher(uri, mode: LaunchMode.externalApplication);
   }
 
   @override

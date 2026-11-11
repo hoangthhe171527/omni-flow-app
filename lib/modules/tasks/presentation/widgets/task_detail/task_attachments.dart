@@ -2,6 +2,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../../../../../core/utils/web_url.dart';
 import '../../../../../design/platform/omni_motion_scope.dart';
 import '../../../../../design/tokens/tokens.dart';
 import '../../../domain/task.dart';
@@ -30,7 +31,8 @@ class AttachmentThumb extends StatelessWidget {
   /// Mở bản đầy đủ ra ngoài app, như module hộp thư vẫn làm với tệp đính kèm.
   /// Ô nhỏ đủ để nhận ra là tấm nào, không đủ để soi một vết xước.
   Future<void> _open() async {
-    final uri = Uri.tryParse(attachment.url);
+    // Chỉ http/https: URL từ API không bao giờ được thành `file:`/`intent:`.
+    final uri = webUriOrNull(attachment.url);
     if (uri == null) return;
     await launchUrl(uri, mode: LaunchMode.externalApplication);
   }

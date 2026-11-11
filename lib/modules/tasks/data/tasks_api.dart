@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/config/app_config.dart';
 import '../../../core/error/app_exception.dart';
 import '../../../core/network/api_client.dart';
+import '../../../core/network/api_path.dart';
 import '../../../core/network/api_envelope.dart';
 import '../../../core/utils/json.dart';
 import '../domain/custom_field.dart';
@@ -181,7 +182,7 @@ class TasksApi {
   }
 
   Future<Task> get(String id) async {
-    final response = await _client.get('$_base/$id');
+    final response = await _client.get('$_base/${pathSegment(id)}');
 
     return Task.fromJson(response.object);
   }
@@ -189,7 +190,7 @@ class TasksApi {
   /// Xoá mềm một công việc cha. Việc đã xoá biến mất ở cả web và app sau khi
   /// hai client nhận tín hiệu realtime hoặc lần tải lại kế tiếp.
   Future<void> deleteTask(String taskId) async {
-    await _client.delete('$_base/$taskId');
+    await _client.delete('$_base/${pathSegment(taskId)}');
   }
 
   /// Ticks or un-ticks one stage.
@@ -205,7 +206,7 @@ class TasksApi {
     String? clientRequestId,
   }) async {
     final response = await _client.patch(
-      '$_base/$taskId/checklist/$subtaskId',
+      '$_base/${pathSegment(taskId)}/checklist/${pathSegment(subtaskId)}',
       body: {
         'done': done,
         if (clientRequestId != null && clientRequestId.isNotEmpty)
@@ -222,7 +223,7 @@ class TasksApi {
   /// trùng, và một checklist có hai mục cùng id thì mọi lệnh sau đó trỏ nhầm.
   Future<Task> addSubtask(String taskId, String title) async {
     final response = await _client.post(
-      '$_base/$taskId/checklist',
+      '$_base/${pathSegment(taskId)}/checklist',
       body: {'title': title},
     );
 
@@ -240,7 +241,7 @@ class TasksApi {
     String title,
   ) async {
     final response = await _client.patch(
-      '$_base/$taskId/checklist/$subtaskId',
+      '$_base/${pathSegment(taskId)}/checklist/${pathSegment(subtaskId)}',
       body: {'title': title},
     );
 
@@ -262,7 +263,7 @@ class TasksApi {
     String? userId,
   ) async {
     final response = await _client.patch(
-      '$_base/$taskId/checklist/$subtaskId',
+      '$_base/${pathSegment(taskId)}/checklist/${pathSegment(subtaskId)}',
       body: <String, dynamic>{'assignee_id': userId},
     );
 
@@ -274,7 +275,7 @@ class TasksApi {
   /// Đọc thẳng ở đây chứ không qua `PlansApi`: plans đã import tasks, và
   /// tasks import ngược lại là một chu trình (`module_cycle_test.dart`).
   Future<List<String>> projectMemberIds(String projectId) async {
-    final response = await _client.get('/projects/$projectId');
+    final response = await _client.get('/projects/${pathSegment(projectId)}');
     final json = response.object;
     final ids = <String>[...json.strList('member_ids')];
     final owner = json.str('owner_id');
@@ -286,7 +287,7 @@ class TasksApi {
 
   Future<Task> removeSubtask(String taskId, String subtaskId) async {
     final response = await _client.delete(
-      '$_base/$taskId/checklist/$subtaskId',
+      '$_base/${pathSegment(taskId)}/checklist/${pathSegment(subtaskId)}',
     );
 
     return Task.fromJson(response.object);
@@ -294,7 +295,7 @@ class TasksApi {
 
   Future<Task> setStatus(String taskId, String status) async {
     final response = await _client.patch(
-      '$_base/$taskId/status',
+      '$_base/${pathSegment(taskId)}/status',
       body: {'status': status},
     );
 
@@ -311,7 +312,7 @@ class TasksApi {
   /// nghĩa là có hai đường ghi cùng một trường.
   Future<Task> moveToSection(String taskId, String? sectionId) async {
     final response = await _client.put(
-      '$_base/$taskId',
+      '$_base/${pathSegment(taskId)}',
       // Luôn GỬI khoá `section_id`, kể cả khi gỡ. Server phân biệt "có gửi
       // khoá" với "không gửi khoá" chứ không nhìn giá trị — chuỗi rỗng bị
       // middleware của Laravel biến thành null trước khi tới controller.
@@ -404,7 +405,7 @@ class TasksApi {
   /// Không gửi danh sách nào: một bản chụp gửi lên là đè người vừa được thêm
   /// giữa lúc mở màn và lúc bấm. API trước Đợt 5 chưa có route này (404).
   Future<Task> claim(String taskId) async {
-    final response = await _client.post('$_base/$taskId/claim');
+    final response = await _client.post('$_base/${pathSegment(taskId)}/claim');
 
     return Task.fromJson(response.object);
   }
@@ -415,7 +416,10 @@ class TasksApi {
   /// một trường là sửa một trường — không cần đọc rồi ghi lại cả bản ghi, và
   /// hai người sửa hai trường khác nhau không đè lên nhau.
   Future<Task> _patch(String taskId, Map<String, dynamic> body) async {
-    final response = await _client.put('$_base/$taskId', body: body);
+    final response = await _client.put(
+      '$_base/${pathSegment(taskId)}',
+      body: body,
+    );
 
     return Task.fromJson(response.object);
   }
@@ -431,7 +435,7 @@ class TasksApi {
     List<String> mentionedUserIds = const [],
   }) async {
     final response = await _client.post(
-      '$_base/$taskId/comments',
+      '$_base/${pathSegment(taskId)}/comments',
       // §B3: QC trượt thì bình luận phải nhắc tên người phụ trách công đoạn
       // lỗi. Khoá server nhận là `mentioned_user_ids` (xem
       // `CreateTaskCommentRequest`). Không gửi thì tên chỉ là chữ trong câu:
@@ -454,7 +458,7 @@ class TasksApi {
     int perPage = AppConfig.defaultPerPage,
   }) async {
     final response = await _client.get(
-      '$_base/$taskId/comments',
+      '$_base/${pathSegment(taskId)}/comments',
       query: {'page': page, 'per_page': perPage.clamp(1, 50)},
     );
 
@@ -474,7 +478,7 @@ class TasksApi {
   /// Bật/tắt thích của người đang đăng nhập. Server trả việc đầy đủ đã trang
   /// trí; chỗ gọi thay state bằng nó, không tải lại.
   Future<Task> toggleLike(String taskId) async {
-    final response = await _client.post('$_base/$taskId/like');
+    final response = await _client.post('$_base/${pathSegment(taskId)}/like');
 
     return Task.fromJson(response.object);
   }
@@ -514,7 +518,7 @@ class TasksApi {
   /// Xoá một tệp đã đính. Server trả việc sau khi xoá.
   Future<Task> deleteAttachment(String taskId, String attachmentId) async {
     final response = await _client.delete(
-      '$_base/$taskId/attachments/$attachmentId',
+      '$_base/${pathSegment(taskId)}/attachments/${pathSegment(attachmentId)}',
     );
 
     return Task.fromJson(response.object);
@@ -522,7 +526,9 @@ class TasksApi {
 
   /// Xoá một bình luận (tác giả hoặc quản lý kế hoạch; người khác → 403).
   Future<Task> deleteComment(String taskId, String commentId) async {
-    final response = await _client.delete('$_base/$taskId/comments/$commentId');
+    final response = await _client.delete(
+      '$_base/${pathSegment(taskId)}/comments/${pathSegment(commentId)}',
+    );
 
     return Task.fromJson(response.object);
   }
@@ -544,7 +550,7 @@ class TasksApi {
   }) async {
     final note = description?.trim() ?? '';
     final response = await _client.post(
-      '$_base/$taskId/checklist',
+      '$_base/${pathSegment(taskId)}/checklist',
       body: {
         'title': title,
         if (note.isNotEmpty) 'description': note,
@@ -595,7 +601,7 @@ class TasksApi {
     Map<String, dynamic> body,
   ) async {
     final response = await _client.patch(
-      '$_base/$taskId/checklist/$subtaskId',
+      '$_base/${pathSegment(taskId)}/checklist/${pathSegment(subtaskId)}',
       body: body,
     );
 
@@ -611,7 +617,7 @@ class TasksApi {
     required String? afterId,
   }) async {
     final response = await _client.post(
-      '$_base/$taskId/checklist/$subtaskId/move',
+      '$_base/${pathSegment(taskId)}/checklist/${pathSegment(subtaskId)}/move',
       body: <String, dynamic>{'after_id': afterId},
     );
 
@@ -624,7 +630,7 @@ class TasksApi {
   /// `keep_custom_fields`) chỉ được đặt khi có `ApiCapability.taskCopyOptions`.
   Future<Task> copyTask(String taskId, TaskCopyRequest request) async {
     final response = await _client.post(
-      '$_base/$taskId/copy',
+      '$_base/${pathSegment(taskId)}/copy',
       body: request.toJson(),
     );
 
@@ -642,7 +648,9 @@ class TasksApi {
 
   /// Lời nhắc người này thấy được trên việc: của mình, và `everyone`.
   Future<List<TaskReminder>> reminders(String taskId) async {
-    final response = await _client.get('$_base/$taskId/reminders');
+    final response = await _client.get(
+      '$_base/${pathSegment(taskId)}/reminders',
+    );
 
     return response.list.map(TaskReminder.fromJson).toList();
   }
@@ -657,7 +665,7 @@ class TasksApi {
     bool everyone = false,
   }) async {
     final response = await _client.post(
-      '$_base/$taskId/reminders',
+      '$_base/${pathSegment(taskId)}/reminders',
       body: {
         'remind_at': at.toUtc().toIso8601String(),
         'audience': everyone ? 'everyone' : 'me',
@@ -669,7 +677,9 @@ class TasksApi {
 
   /// Xoá lời nhắc (người đặt; `everyone` của người khác cần quản lý việc).
   Future<void> deleteReminder(String taskId, String reminderId) async {
-    await _client.delete('$_base/$taskId/reminders/$reminderId');
+    await _client.delete(
+      '$_base/${pathSegment(taskId)}/reminders/${pathSegment(reminderId)}',
+    );
   }
 
   /// Bình luận KÈM tệp: multipart `files[]` (≤10 tệp, mỗi tệp ≤25MB, cả
@@ -683,7 +693,7 @@ class TasksApi {
   }) async {
     final text = body.trim();
     final response = await _client.uploadMany(
-      '$_base/$taskId/comments',
+      '$_base/${pathSegment(taskId)}/comments',
       files: [
         for (final f in files)
           (field: 'files[]', path: f.path, filename: f.name),
@@ -704,7 +714,7 @@ class TasksApi {
     String attachmentId,
   ) async {
     final response = await _client.delete(
-      '$_base/$taskId/comments/$commentId/attachments/$attachmentId',
+      '$_base/${pathSegment(taskId)}/comments/${pathSegment(commentId)}/attachments/${pathSegment(attachmentId)}',
     );
 
     return Task.fromJson(response.object);
@@ -743,7 +753,7 @@ class TasksApi {
   /// Kế hoạch chứa việc: chủ, thành viên, vai, trường tuỳ chỉnh — một lượt
   /// `GET /projects/{id}`. Đọc thẳng ở đây: tasks không import plans.
   Future<TaskProject> project(String projectId) async {
-    final response = await _client.get('/projects/$projectId');
+    final response = await _client.get('/projects/${pathSegment(projectId)}');
 
     return TaskProject.fromJson(response.object);
   }
@@ -753,7 +763,7 @@ class TasksApi {
   /// Đọc thẳng `/projects/{id}` như [projectMemberIds]: tasks không import
   /// plans.
   Future<List<CustomFieldDef>> projectCustomFields(String projectId) async {
-    final response = await _client.get('/projects/$projectId');
+    final response = await _client.get('/projects/${pathSegment(projectId)}');
 
     return response.object
         .mapList('custom_fields')
@@ -843,17 +853,17 @@ class TasksApi {
   /// Ghim / bỏ ghim việc lên đầu cột (`POST|DELETE /tasks/{id}/pin`). Không
   /// body; server trả việc đầy đủ. Việc đã khoá → 423.
   Future<Task> setPinned(String taskId, bool pinned) =>
-      _toggle('$_base/$taskId/pin', pinned);
+      _toggle('$_base/${pathSegment(taskId)}/pin', pinned);
 
   /// Khoá / mở khoá việc (`POST|DELETE /tasks/{id}/lock`, chủ / quản lý kế
   /// hoạch; người khác 403 kèm câu của server).
   Future<Task> setLocked(String taskId, bool locked) =>
-      _toggle('$_base/$taskId/lock', locked);
+      _toggle('$_base/${pathSegment(taskId)}/lock', locked);
 
   /// Tự theo dõi / bỏ theo dõi (`POST|DELETE /tasks/{id}/follow`, chỉ cần
   /// `tasks.read`; việc đã khoá vẫn được).
   Future<Task> setFollowing(String taskId, bool following) =>
-      _toggle('$_base/$taskId/follow', following);
+      _toggle('$_base/${pathSegment(taskId)}/follow', following);
 
   /// Đặt lại TOÀN BỘ người theo dõi (`PUT /tasks/{id}` `follower_ids[]`).
   /// Rỗng vẫn gửi khoá: đó là "bỏ hết". Mọi id phải là thành viên đang làm
@@ -912,7 +922,7 @@ class TasksApi {
     String? color,
   }) async {
     final response = await _client.put(
-      '/system-options/$id',
+      '/system-options/${pathSegment(id)}',
       body: {'label': label, 'color': color},
     );
 
@@ -921,7 +931,7 @@ class TasksApi {
 
   Future<void> attach(String taskId, String filePath, {String? filename}) =>
       _client.upload(
-        '$_base/$taskId/attachments',
+        '$_base/${pathSegment(taskId)}/attachments',
         field: 'file',
         filePath: filePath,
         filename: filename,

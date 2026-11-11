@@ -6,6 +6,7 @@ import '../error/app_exception.dart';
 import 'api_envelope.dart';
 import 'active_tenant.dart';
 import 'api_exception_mapper.dart';
+import 'api_path.dart';
 import 'dio_provider.dart';
 
 /// The single seam between the app and the HTTP API.
@@ -121,9 +122,18 @@ class ApiClient {
     }
   }
 
-  String _url(String path) => path.startsWith('/')
-      ? '${AppConfig.apiPrefix}$path'
-      : '${AppConfig.apiPrefix}/$path';
+  /// Đường có đoạn `..`/`.` (kể cả `%2e%2e`, hay `..%2F` trong một id đã mã
+  /// hoá) không bao giờ là đường hợp lệ của API: Dio gộp dot-segment và máy
+  /// chủ giải mã đường trước khi khớp route, nên một id độc từ link có thể dẫn
+  /// request sang endpoint khác bằng phiên người dùng. Chặn trước khi gửi.
+  String _url(String path) {
+    if (hasDotSegment(path)) {
+      throw const NotFoundException('Không tìm thấy.');
+    }
+    return path.startsWith('/')
+        ? '${AppConfig.apiPrefix}$path'
+        : '${AppConfig.apiPrefix}/$path';
+  }
 
   /// Dio serialises nulls as the literal string "null"; drop them instead so an
   /// unset filter simply isn't sent.

@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/network/api_client.dart';
+import '../../../core/network/api_path.dart';
 import '../domain/finance_models.dart';
 
 final financeApiProvider = Provider<FinanceApi>((ref) {
@@ -217,7 +218,10 @@ class FinanceApi {
     required String id,
     required Map<String, dynamic> patch,
   }) async {
-    final resp = await _api.put('/finance/expenses/$id', body: patch);
+    final resp = await _api.put(
+      '/finance/expenses/${pathSegment(id)}',
+      body: patch,
+    );
     final body = resp.object;
     final item = body['item'] is Map
         ? (body['item'] as Map).cast<String, dynamic>()
@@ -226,7 +230,7 @@ class FinanceApi {
   }
 
   Future<void> deleteExpense(String id) async {
-    await _api.delete('/finance/expenses/$id');
+    await _api.delete('/finance/expenses/${pathSegment(id)}');
   }
 
   Future<ExpenseItem> replacePayments({
@@ -234,7 +238,7 @@ class FinanceApi {
     required List<Map<String, dynamic>> payments,
   }) async {
     final resp = await _api.put(
-      '/finance/expenses/$expenseId/payments',
+      '/finance/expenses/${pathSegment(expenseId)}/payments',
       body: {'payments': payments},
     );
     final body = resp.object;

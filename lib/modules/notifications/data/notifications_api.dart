@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/config/app_config.dart';
 import '../../../core/network/api_client.dart';
+import '../../../core/network/api_path.dart';
 import '../../../core/network/api_envelope.dart';
 import '../domain/app_notification.dart';
 
@@ -52,7 +53,8 @@ class NotificationsApi {
     return (response.object['count'] as num?)?.toInt() ?? 0;
   }
 
-  Future<void> markRead(String id) => _client.post('$_base/$id/mark-read');
+  Future<void> markRead(String id) =>
+      _client.post('$_base/${pathSegment(id)}/mark-read');
 
   Future<void> markAllRead() => _client.post('$_base/mark-all-read');
 }

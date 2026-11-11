@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/config/app_config.dart';
 import '../../../core/error/app_exception.dart';
 import '../../../core/network/api_client.dart';
+import '../../../core/network/api_path.dart';
 import '../../../design/tokens/omni_covers.dart';
 
 /// API riêng cho ảnh nền dự án.
@@ -17,7 +18,7 @@ class PlanCoverApi {
 
   Future<String> upload(String planId, String filePath) async {
     final response = await _client.upload(
-      '/projects/$planId/cover',
+      '/projects/${pathSegment(planId)}/cover',
       field: 'cover',
       filePath: filePath,
     );
@@ -32,7 +33,7 @@ class PlanCoverApi {
   }
 
   Future<void> remove(String planId) async {
-    await _client.delete('/projects/$planId/cover');
+    await _client.delete('/projects/${pathSegment(planId)}/cover');
   }
 }
 

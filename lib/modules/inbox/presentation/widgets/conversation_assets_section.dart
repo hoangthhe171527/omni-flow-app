@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:video_player/video_player.dart';
 
+import '../../../../core/utils/web_url.dart';
 import '../../../../design/components/components.dart';
 import '../../../../design/platform/omni_motion_scope.dart';
 import '../../../../design/tokens/tokens.dart';
@@ -417,6 +418,7 @@ class _AssetEmpty extends StatelessWidget {
 
 Future<void> _openUrl(String raw) async {
   final value = raw.toLowerCase().startsWith('http') ? raw : 'https://$raw';
-  final uri = Uri.tryParse(value);
+  // Tệp/link trong hội thoại là dữ liệu của khách: chỉ mở http/https.
+  final uri = webUriOrNull(value);
   if (uri != null) await launchUrl(uri, mode: LaunchMode.externalApplication);
 }

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/config/app_config.dart';
 import '../../../core/domain/channel.dart';
 import '../../../core/network/api_client.dart';
+import '../../../core/network/api_path.dart';
 import '../../../core/utils/json.dart';
 import '../domain/channel_connection.dart';
 import '../domain/pairing.dart';
@@ -24,7 +25,8 @@ class ChannelsApi {
     return response.list.map(ChannelConnection.fromJson).toList();
   }
 
-  Future<void> disconnect(String id) => _client.delete('/channels/$id');
+  Future<void> disconnect(String id) =>
+      _client.delete('/channels/${pathSegment(id)}');
 
   /// URL trang đồng ý của nền tảng. Mở bằng trình duyệt ngoài — Facebook và
   /// Google chặn webview nhúng cho đăng nhập.
@@ -55,7 +57,9 @@ class ChannelsApi {
   }
 
   Future<PairingStatus> pairStatus(String connectionId) async {
-    final response = await _client.get('/channels/pair/$connectionId/status');
+    final response = await _client.get(
+      '/channels/pair/${pathSegment(connectionId)}/status',
+    );
     return PairingStatus.fromJson(response.object);
   }
 }
