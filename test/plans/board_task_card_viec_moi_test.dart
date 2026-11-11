@@ -8,6 +8,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:omni_app/core/error/app_exception.dart';
 import 'package:omni_app/design/components/omni_dashed_circle.dart';
 import 'package:omni_app/design/theme/omni_theme.dart';
+import 'package:omni_app/design/tokens/tokens.dart';
 import 'package:omni_app/modules/plans/presentation/widgets/board_task_card.dart';
 import 'package:omni_app/modules/tasks/application/tasks_providers.dart';
 import 'package:omni_app/modules/tasks/data/tasks_api.dart';
@@ -111,6 +112,48 @@ void main() {
     // Vạch hai cách vạch một 4.
     expect(t.getTopLeft(bars.last).dx - t.getTopRight(bars.first).dx, 4);
     expect(find.bySemanticsLabel('Nhãn: Gấp, Bảo hành'), findsOneWidget);
+  });
+
+  testWidgets('ô x/y việc con: bốn mức màu, xong thì tick đặc màu chính', (
+    t,
+  ) async {
+    Color countColor() => t
+        .widget<Text>(
+          find.descendant(
+            of: find.byKey(const ValueKey('card-checklist')),
+            matching: find.byType(Text),
+          ),
+        )
+        .style!
+        .color!;
+
+    final expected = <int, Color>{
+      5: OmniColors.dangerText,
+      6: OmniColors.warningText,
+      9: OmniColors.infoText,
+    };
+    for (final MapEntry(key: done, value: color) in expected.entries) {
+      await t.pumpWidget(
+        wrap(
+          BoardTaskCard(
+            key: ValueKey(done),
+            task: task(subtasks: 10, done: done),
+            onTap: () {},
+          ),
+        ),
+      );
+      await t.pumpAndSettle();
+      expect(countColor(), color, reason: '$done/10');
+      expect(find.byIcon(Icons.checklist_rounded), findsOneWidget);
+    }
+
+    await t.pumpWidget(
+      wrap(BoardTaskCard(task: task(subtasks: 10, done: 10), onTap: () {})),
+    );
+    await t.pumpAndSettle();
+    final primary = Theme.of(t.element(title())).colorScheme.primary;
+    expect(countColor(), primary);
+    expect(find.byIcon(Icons.check_circle_rounded), findsOneWidget);
   });
 
   testWidgets('không nhãn thì không có dải', (t) async {

@@ -15,6 +15,7 @@ import '../../../../design/platform/omni_motion_scope.dart';
 import '../../../../design/tokens/tokens.dart';
 import '../../../tasks/application/tasks_providers.dart';
 import '../../../tasks/data/tasks_api.dart';
+import '../../../tasks/domain/progress_level.dart';
 import '../../../tasks/domain/task.dart';
 import '../../../tasks/tasks.dart';
 import '../../application/plans_providers.dart';
@@ -184,9 +185,13 @@ class _BoardTaskCardState extends ConsumerState<BoardTaskCard>
       // Việc có cây: tiến độ là vạch + `8/10` ngay dưới tên, không lặp ở đây.
       if (task.hasSubtasks && unit == null)
         _Meta(
-          icon: Icons.checklist_rounded,
+          key: const ValueKey('card-checklist'),
+          icon: _isAllDone(task)
+              ? Icons.check_circle_rounded
+              : Icons.checklist_rounded,
           text: '${task.doneCount}/${task.totalCount}',
           semantics: '${task.doneCount} trên ${task.totalCount} việc con xong',
+          color: progressColor(context, task),
         ),
       if (task.attachmentCount > 0)
         _Meta(
@@ -320,9 +325,10 @@ class _BoardTaskCardState extends ConsumerState<BoardTaskCard>
                           const SizedBox(width: 8),
                           Text(
                             '${task.doneCount}/${task.totalCount}',
+                            key: const ValueKey('card-unit-count'),
                             style: OmniType.micro.copyWith(
-                              fontWeight: FontWeight.w500,
-                              color: scheme.onSurface,
+                              fontWeight: FontWeight.w600,
+                              color: progressColor(context, task),
                               fontFeatures: OmniType.tabular,
                             ),
                           ),
@@ -509,21 +515,47 @@ class _TickBox extends StatelessWidget {
   }
 }
 
-/// `.mt`: biểu tượng 14, cách 3, chữ 12 màu phụ.
+bool _isAllDone(Task task) =>
+    progressLevelOf(task.doneCount, task.totalCount) == ProgressLevel.done;
+
+/// Màu ô `x/y` việc con theo bốn mức ([progressLevelOf]): đỏ, cam, xanh dương,
+/// xong. "Xong" dùng màu chính + tick đặc chứ không dùng chữ xanh lá — app cố
+/// ý không có chữ xanh lá (xem `OmniColors.success`).
+@visibleForTesting
+Color progressColor(BuildContext context, Task task) {
+  final scheme = Theme.of(context).colorScheme;
+  return switch (progressLevelOf(task.doneCount, task.totalCount)) {
+    ProgressLevel.low => OmniColors.dangerTextOf(context),
+    ProgressLevel.mid => OmniColors.warningTextOf(context),
+    ProgressLevel.near => OmniColors.byBrightness(
+      context,
+      OmniColors.infoText,
+      OmniColors.darkInfoText,
+    ),
+    ProgressLevel.done => scheme.primary,
+    null => scheme.onSurfaceVariant,
+  };
+}
+
+/// `.mt`: biểu tượng 14, cách 3, chữ 12 màu phụ ([color] đổi màu riêng ô này).
 class _Meta extends StatelessWidget {
   const _Meta({
+    super.key,
     required this.icon,
     required this.text,
     required this.semantics,
+    this.color,
   });
 
   final IconData icon;
   final String text;
   final String semantics;
+  final Color? color;
 
   @override
   Widget build(BuildContext context) {
-    final color = Theme.of(context).colorScheme.onSurfaceVariant;
+    final color = this.color ?? Theme.of(context).colorScheme.onSurfaceVariant;
+    final tinted = this.color != null;
 
     return Semantics(
       container: true,
@@ -537,7 +569,7 @@ class _Meta extends StatelessWidget {
           Text(
             text,
             style: OmniType.micro.copyWith(
-              fontWeight: FontWeight.w400,
+              fontWeight: tinted ? FontWeight.w600 : FontWeight.w400,
               color: color,
               fontFeatures: OmniType.tabular,
             ),
