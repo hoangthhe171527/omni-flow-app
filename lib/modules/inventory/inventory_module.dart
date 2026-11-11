@@ -6,6 +6,8 @@ import '../../core/module/omni_module.dart';
 import '../../security/guard/access_requirement.dart';
 import 'domain/inventory_permissions.dart';
 import 'presentation/catalog_page.dart';
+import 'presentation/counts_page.dart';
+import 'presentation/delivered_page.dart';
 import 'presentation/lot_detail_page.dart';
 import 'presentation/lots_page.dart';
 import 'presentation/receive_page.dart';
@@ -96,6 +98,22 @@ class InventoryModule extends OmniModule {
       rootNavigator: true,
       access: const AccessRequirement.all(InventoryPermissions.readOnly),
       builder: (_, _) => const ReservationsPage(),
+    ),
+    // Kho chuẩn hóa Đợt C: màn ẩn nội dung khi API thiếu `inventory.counts`
+    // / `inventory.returns`.
+    ModuleRoute(
+      path: InventoryRoutes.countsPath,
+      name: InventoryRoutes.counts,
+      rootNavigator: true,
+      access: const AccessRequirement.all(InventoryPermissions.readOnly),
+      builder: (_, _) => const CountsPage(),
+    ),
+    ModuleRoute(
+      path: InventoryRoutes.deliveredPath,
+      name: InventoryRoutes.delivered,
+      rootNavigator: true,
+      access: const AccessRequirement.all(InventoryPermissions.readOnly),
+      builder: (_, _) => const DeliveredPage(),
     ),
   ];
 

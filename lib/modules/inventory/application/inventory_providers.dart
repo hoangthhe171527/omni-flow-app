@@ -454,3 +454,49 @@ final customerSearchProvider = FutureProvider.autoDispose
     .family<List<InventoryCustomer>, String>((ref, q) async {
       return ref.watch(inventoryApiProvider).searchCustomers(q);
     });
+
+// ------------------------------- Đợt C: hàng đã giao, kiểm kê, phiếu xuất
+
+/// Bộ lọc Hàng đã giao: chữ tìm (serial, model, khách) + số cây đã tải.
+typedef DeliveredQuery = ({String q, int limit});
+
+/// Cây đã giao cho khách, mới giao trước (`GET /units?place=delivered`).
+final deliveredProvider = FutureProvider.autoDispose
+    .family<UnitPage, DeliveredQuery>((ref, f) async {
+      _watchUnits(ref);
+      if (!ref.watch(inventoryPermsProvider).delivered) {
+        return const UnitPage(items: [], total: 0);
+      }
+      final q = f.q.trim();
+      return ref
+          .watch(inventoryApiProvider)
+          .listUnits(
+            place: UnitPlace.delivered.wire,
+            q: q.isEmpty ? null : q,
+            limit: f.limit,
+          );
+    });
+
+/// Phiên kiểm kê của một vị trí, mới nhất trước.
+final countsProvider = FutureProvider.autoDispose
+    .family<List<StockCount>, String>((ref, locationId) async {
+      ref.watch(inventoryRevisionProvider);
+      if (!ref.watch(inventoryPermsProvider).counts) return const [];
+      return ref.watch(inventoryApiProvider).listCounts(locationId: locationId);
+    });
+
+/// Cây theo sổ ở một vị trí (để tick khi kiểm kê).
+final countUnitsProvider = FutureProvider.autoDispose
+    .family<List<InventoryUnit>, String>((ref, locationId) async {
+      _watchUnits(ref);
+      if (!ref.watch(inventoryPermsProvider).counts) return const [];
+      return ref.watch(inventoryApiProvider).countUnits(locationId);
+    });
+
+/// Phiếu xuất theo số phiếu.
+final slipProvider = FutureProvider.autoDispose.family<Slip, String>((
+  ref,
+  no,
+) async {
+  return ref.watch(inventoryApiProvider).getSlip(no);
+});

@@ -25,4 +25,11 @@ abstract final class InventoryRoutes {
 
   static const reservations = 'inventory.reservations';
   static const reservationsPath = '/inventory/reservations';
+
+  // Kho chuẩn hóa Đợt C.
+  static const counts = 'inventory.counts';
+  static const countsPath = '/inventory/counts';
+
+  static const delivered = 'inventory.delivered';
+  static const deliveredPath = '/inventory/delivered';
 }

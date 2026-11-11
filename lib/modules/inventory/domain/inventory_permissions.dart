@@ -37,6 +37,13 @@ abstract final class InventoryPermissions {
   static const capStockQty = 'inventory.stock_qty';
   static const capReservations = 'inventory.reservations';
 
+  /// Kho chuẩn hóa Đợt C (TNP_KHO_DOT_B_C §2.8): hóa đơn trên cây đã bán, trả
+  /// hàng (màn Hàng đã giao), kiểm kê, phiếu xuất. App không làm NXT.
+  static const capInvoices = 'inventory.invoices';
+  static const capReturns = 'inventory.returns';
+  static const capCounts = 'inventory.counts';
+  static const capSlips = 'inventory.slips';
+
   /// Menu và route cùng một yêu cầu — deep link không lách được lớp ẩn.
   static const List<String> readOnly = [read];
 
@@ -72,6 +79,13 @@ class InventoryPerms {
     this.stockQty = false,
     this.adjustStock = false,
     this.reservations = false,
+    this.invoices = false,
+    this.delivered = false,
+    this.returns = false,
+    this.counts = false,
+    this.doCounts = false,
+    this.approveCounts = false,
+    this.slips = false,
   });
 
   /// [supports]: API có capability tên này không (`Session.apiSupports`).
@@ -87,9 +101,12 @@ class InventoryPerms {
     final products = read && api(InventoryPermissions.capProducts);
     final stockQty = products && api(InventoryPermissions.capStockQty);
     final settings = has(InventoryPermissions.settings);
+    final write = read && has(InventoryPermissions.write);
+    final capReturns = read && api(InventoryPermissions.capReturns);
+    final capCounts = read && api(InventoryPermissions.capCounts);
     return InventoryPerms(
       read: read,
-      write: read && has(InventoryPermissions.write),
+      write: write,
       reserve: read && has(InventoryPermissions.reserve),
       cost: read && has(InventoryPermissions.cost),
       pay: read && has(InventoryPermissions.lotPayments),
@@ -108,6 +125,13 @@ class InventoryPerms {
       stockQty: stockQty,
       adjustStock: stockQty && settings,
       reservations: read && api(InventoryPermissions.capReservations),
+      invoices: read && api(InventoryPermissions.capInvoices),
+      delivered: capReturns,
+      returns: capReturns && write,
+      counts: capCounts,
+      doCounts: capCounts && write,
+      approveCounts: capCounts && settings,
+      slips: read && api(InventoryPermissions.capSlips),
     );
   }
 
@@ -166,6 +190,28 @@ class InventoryPerms {
   /// Đợt B: phiếu giữ hàng, ngày nhận cọc, nguồn tiền, hạn giữ
   /// (`inventory.reservations`).
   final bool reservations;
+
+  /// Đợt C: trạng thái hóa đơn trên cây đã bán — app chỉ xem
+  /// (`inventory.invoices`).
+  final bool invoices;
+
+  /// Đợt C: màn Hàng đã giao (`inventory.returns`).
+  final bool delivered;
+
+  /// "Nhập lại kho" cây đã giao: thêm quyền [write].
+  final bool returns;
+
+  /// Đợt C: xem kiểm kê (`inventory.counts`).
+  final bool counts;
+
+  /// Mở phiên, tick, chốt: thêm quyền [write].
+  final bool doCounts;
+
+  /// Duyệt kiểm kê (ghi sổ): `inventory.settings`.
+  final bool approveCounts;
+
+  /// Đợt C: phiếu xuất kho (`inventory.slips`).
+  final bool slips;
 
   /// Mở được sheet "Bán / Đặt trước".
   bool get canSellOrReserve => reserve || sell;

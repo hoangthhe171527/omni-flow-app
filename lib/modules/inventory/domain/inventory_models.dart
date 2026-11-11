@@ -2,9 +2,11 @@ import 'package:flutter/foundation.dart';
 
 import '../../../core/utils/json.dart';
 import 'kho_b_models.dart';
+import 'kho_c_models.dart';
 import 'kho_models.dart';
 
 export 'kho_b_models.dart';
+export 'kho_c_models.dart';
 export 'kho_models.dart';
 
 /// Kiểu Kho hàng — đúng hình dạng API (`InventoryPresenter`, omni-flow-api PR #90,
@@ -529,6 +531,9 @@ class InventoryUnit {
     this.categoryId,
     this.productId,
     this.wholesalePrice,
+    this.slipNo,
+    this.soldPrice,
+    this.invoice,
   });
 
   factory InventoryUnit.fromJson(Map<String, dynamic> j) => InventoryUnit(
@@ -572,6 +577,9 @@ class InventoryUnit {
     categoryId: j.str('category_id'),
     productId: j.str('product_id'),
     wholesalePrice: j.dbl('wholesale_price'),
+    slipNo: j.str('slip_no'),
+    soldPrice: j.dbl('sold_price'),
+    invoice: UnitInvoice.fromJson(j['invoice']),
   );
 
   final String id;
@@ -626,6 +634,16 @@ class InventoryUnit {
 
   /// Giá sỉ lấy từ mã hàng của cây (giá lẻ vẫn là [listPrice]).
   final double? wholesalePrice;
+
+  // ---- Kho chuẩn hóa Đợt C (API cũ không có khoá → null) ----
+  /// Số phiếu xuất của lần giao gần nhất (`PX-YYMM-NNN`).
+  final String? slipNo;
+
+  /// Giá bán của lần giao gần nhất.
+  final double? soldPrice;
+
+  /// Hóa đơn bán; null = cây bán trước khi có tính năng (chưa theo dõi).
+  final UnitInvoice? invoice;
 
   /// Giá của cây theo bậc (như web `unitTierPrice`): sỉ từ mã hàng, lẻ là
   /// giá niêm yết; bậc 3 không có giá riêng cho cây → null.

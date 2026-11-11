@@ -100,6 +100,9 @@ class FakeInventoryApi extends InventoryApi {
     final all = [
       for (final u in units)
         if ((sale == null || sale.split(',').contains(u.sale.wire)) &&
+            // Đợt C: `place=delivered` chỉ trả cây đã giao.
+            (place != UnitPlace.delivered.wire ||
+                u.place == UnitPlace.delivered) &&
             (locationId == null || u.locationId == locationId) &&
             (q == null ||
                 '${u.maker} ${u.model} ${u.serial ?? ''}'
@@ -633,6 +636,139 @@ class FakeInventoryApi extends InventoryApi {
     customers.add(c);
     return c;
   }
+
+  // ---- Kho chuẩn hóa Đợt C ----
+  List<StockCount> counts = [];
+  Map<String, Slip> slips = {};
+  final returns = <(String, Map<String, Object?>)>[];
+  final countSaves = <(String, List<String>?, Map<String, int>?)>[];
+  final countSteps = <String>[];
+
+  void _putCount(StockCount c) {
+    counts = [for (final x in counts) x.id == c.id ? c : x];
+  }
+
+  StockCount _count(String id) => counts.firstWhere((c) => c.id == id);
+
+  @override
+  Future<InventoryUnit> returnUnit(
+    String id, {
+    String? locationId,
+    UnitCondition? condition,
+    String? note,
+  }) async {
+    returns.add((
+      id,
+      {'location_id': locationId, 'condition': condition?.wire, 'note': note},
+    ));
+    final i = units.indexWhere((u) => u.id == id);
+    final loc = locations
+        .where((l) => l.id == (locationId ?? 'main'))
+        .firstOrNull;
+    final back = copyUnit(
+      units[i],
+      place: UnitPlace.inStock,
+      locationId: loc?.id,
+      locationName: loc?.name,
+    );
+    units[i] = back;
+    return back;
+  }
+
+  @override
+  Future<List<StockCount>> listCounts({
+    String? locationId,
+    CountStatus? status,
+  }) async => [
+    for (final c in counts.reversed)
+      if ((locationId == null || c.locationId == locationId) &&
+          (status == null || c.status == status))
+        c,
+  ];
+
+  @override
+  Future<StockCount> openCount(String locationId) async {
+    countSteps.add('open $locationId');
+    final open = counts
+        .where(
+          (c) => c.locationId == locationId && c.status != CountStatus.approved,
+        )
+        .firstOrNull;
+    if (open != null) return open;
+    final c = StockCount(id: 'cnt${counts.length + 1}', locationId: locationId);
+    counts = [...counts, c];
+    return c;
+  }
+
+  @override
+  Future<StockCount> saveCount(
+    String id, {
+    List<String>? seenUnitIds,
+    Map<String, int>? qty,
+  }) async {
+    countSaves.add((id, seenUnitIds, qty));
+    final c = _count(id);
+    final next = StockCount(
+      id: c.id,
+      locationId: c.locationId,
+      status: c.status,
+      seenUnitIds: seenUnitIds ?? c.seenUnitIds,
+      qty: qty ?? c.qty,
+    );
+    _putCount(next);
+    return next;
+  }
+
+  @override
+  Future<StockCount> submitCount(String id) async {
+    countSteps.add('submit $id');
+    final c = _count(id);
+    final missing = [
+      for (final u in units)
+        if (u.place == UnitPlace.inStock &&
+            u.locationId == c.locationId &&
+            !c.seenUnitIds.contains(u.id))
+          u,
+    ];
+    final next = StockCount(
+      id: c.id,
+      locationId: c.locationId,
+      status: CountStatus.submitted,
+      seenUnitIds: c.seenUnitIds,
+      qty: c.qty,
+      missingUnitIds: [for (final u in missing) u.id],
+      missingUnits: [
+        for (final u in missing)
+          (unitId: u.id, label: u.name, serial: u.serial),
+      ],
+      submittedAt: '2026-11-11T09:00:00+07:00',
+    );
+    _putCount(next);
+    return next;
+  }
+
+  @override
+  Future<StockCount> approveCount(String id) async {
+    countSteps.add('approve $id');
+    final c = _count(id);
+    final next = StockCount(
+      id: c.id,
+      locationId: c.locationId,
+      status: CountStatus.approved,
+      seenUnitIds: c.seenUnitIds,
+      qty: c.qty,
+      missingUnitIds: c.missingUnitIds,
+      missingUnits: c.missingUnits,
+      missingCount: c.missingUnits.length,
+      submittedAt: c.submittedAt,
+      approvedAt: '2026-11-11T10:00:00+07:00',
+    );
+    _putCount(next);
+    return next;
+  }
+
+  @override
+  Future<Slip> getSlip(String no) async => slips[no]!;
 }
 
 /// Bản sao cây với vài trường đổi — giữ mọi trường khác (API trả cả cây).
@@ -673,6 +809,10 @@ InventoryUnit copyUnit(
   defectTags: defectTags ?? u.defectTags,
   photoCount: u.photoCount,
   coverUrl: u.coverUrl,
+  deliveredAt: u.deliveredAt,
+  slipNo: u.slipNo,
+  soldPrice: u.soldPrice,
+  invoice: u.invoice,
 );
 
 /// Bản sao mã hàng với vài trường đổi.
