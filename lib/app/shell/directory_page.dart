@@ -15,10 +15,91 @@ import '../../design/tokens/tokens.dart';
 import '../../modules/inventory/inventory.dart';
 import '../../modules/settings/settings_module.dart';
 import '../../security/session/api_capabilities.dart';
+import '../apps/app_shell_layout.dart';
 import '../perf/performance_controller.dart';
 import 'tab_bar_editor_sheet.dart';
 
 export '../../core/utils/text_search.dart' show foldDiacritics, matchesQuery;
+
+/// Mở liên kết ngoài (hỗ trợ, quyền riêng tư); không mở được thì báo.
+Future<void> _openExternal(BuildContext context, Uri url) async {
+  // Chụp trước khi await: màn có thể đã bị đóng khi trình duyệt trả về.
+  final messenger = ScaffoldMessenger.of(context);
+  var opened = false;
+  try {
+    opened = await launchUrl(url, mode: LaunchMode.externalApplication);
+  } on Object {
+    opened = false;
+  }
+  if (opened) return;
+  messenger.showSnackBar(
+    const SnackBar(content: Text('Không mở được liên kết. Vui lòng thử lại.')),
+  );
+}
+
+/// "Cài đặt ứng dụng" và "Trợ giúp" ở cuối màn Tài khoản khi công ty bật khung
+/// ứng dụng (không còn màn "Tất cả"). Cắm qua `AccountExtrasSlot`; khung tắt
+/// thì không vẽ gì — hai nhóm này vẫn ở "Tất cả" như cũ.
+class AppSettingsSections extends ConsumerWidget {
+  const AppSettingsSections({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    if (ref.watch(appShellLayoutProvider) == null) {
+      return const SizedBox.shrink();
+    }
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const SizedBox(height: 14),
+        const _SectionLabel('Cài đặt ứng dụng'),
+        _GroupCard(
+          child: Column(
+            children: [
+              _ListRow(
+                icon: Icons.notifications_none_rounded,
+                label: 'Thông báo',
+                onTap: () => context.pushNamed(SettingsModule.notifications),
+              ),
+              const _ThemeRow(),
+              const _PerfRow(),
+              _ListRow(
+                icon: Icons.wallpaper_outlined,
+                label: 'Nền',
+                onTap: () => context.pushNamed(SettingsModule.background),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 14),
+        const _SectionLabel('Trợ giúp'),
+        _GroupCard(
+          child: Column(
+            children: [
+              _ListRow(
+                icon: Icons.help_outline_rounded,
+                label: 'Trung tâm hỗ trợ',
+                external: true,
+                onTap: () => _openExternal(context, AppConfig.supportUrl),
+              ),
+              _ListRow(
+                icon: Icons.policy_outlined,
+                label: 'Chính sách quyền riêng tư',
+                external: true,
+                onTap: () => _openExternal(context, AppConfig.privacyPolicyUrl),
+              ),
+              _ListRow(
+                icon: Icons.info_outline_rounded,
+                label: 'Phiên bản',
+                value: AppConfig.appVersion,
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
 
 /// Một ô trong lưới "Tất cả".
 class DirectoryTile {
@@ -159,22 +240,7 @@ class _DirectoryPageState extends ConsumerState<DirectoryPage> {
   /// Ô đã từng hiện: chỉ lần dựng đầu tiên mới chạy hoạt ảnh, gõ tìm không phát lại.
   final _seen = <String>{};
 
-  Future<void> _openLink(Uri url) async {
-    // Chụp trước khi await: màn có thể đã bị đóng khi trình duyệt trả về.
-    final messenger = ScaffoldMessenger.of(context);
-    var opened = false;
-    try {
-      opened = await launchUrl(url, mode: LaunchMode.externalApplication);
-    } on Object {
-      opened = false;
-    }
-    if (opened) return;
-    messenger.showSnackBar(
-      const SnackBar(
-        content: Text('Không mở được liên kết. Vui lòng thử lại.'),
-      ),
-    );
-  }
+  Future<void> _openLink(Uri url) => _openExternal(context, url);
 
   @override
   Widget build(BuildContext context) {

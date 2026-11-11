@@ -6,6 +6,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:go_router/go_router.dart';
 
 import '../core/config/app_config.dart';
+import '../core/nav/account_extras_slot.dart';
 import '../core/lifecycle/background_policy.dart';
 import '../core/realtime/realtime_client.dart';
 import '../core/theme/theme_mode_controller.dart';
@@ -26,7 +27,10 @@ import '../security/session/session_controller.dart';
 import '../security/session/session.dart';
 import 'perf/performance_scope_host.dart';
 import 'router/app_router.dart';
+import 'shell/directory_page.dart' show AppSettingsSections;
 import 'shell/launch_splash.dart';
+
+Widget _accountExtras(BuildContext context) => const AppSettingsSections();
 
 class OmniApp extends ConsumerStatefulWidget {
   const OmniApp({super.key});
@@ -154,24 +158,28 @@ class _OmniAppState extends ConsumerState<OmniApp> with WidgetsBindingObserver {
           // `OmniAppBar` cũng có nút ở góc phải mà không phải nhớ gì — xem
           // docblock của `OmniAccountSlot` về lý do là chỗ cắm chứ không phải
           // một import thẳng từ design lên module.
-          child: OmniAccountSlot(
-            builder: (_) => const AccountMenuButton(),
-            tileBuilder: (_) => const AccountMenuButton(tile: true),
-            // Chuông của OmniTopBar: số chưa đọc và đích đến đều thuộc về
-            // module thông báo, nên cắm ở đây thay vì import ngược từ design.
-            child: OmniTopBarSlot(
-              unreadOf: (ref) =>
-                  ref.watch(unreadNotificationCountProvider).valueOrNull ?? 0,
-              // Chuông mở thẳng trang Thông báo (người dùng 2026-11-08): "Đọc
-              // hết" đã ở trang đó, Cài đặt thông báo nằm trong "Tất cả".
-              onBell: (context, _) =>
-                  GoRouter.of(context).pushNamed(NotificationRoutes.centre),
-              // Bậc hiệu năng (làm mờ đầy đủ / giảm / tối giản) cho cả app,
-              // tự hạ khi đo thấy giật — rà soát hiệu năng 08/11/2026.
-              child: PerformanceScopeHost(
-                // Hiệu ứng mở app phủ lên router, không nằm trong nó — xem
-                // docblock của LaunchSplash về lý do không làm chậm điều hướng.
-                child: LaunchSplash(child: child ?? const SizedBox.shrink()),
+          child: AccountExtrasSlot(
+            // Khung ứng dụng: Cài đặt ứng dụng + Trợ giúp ở cuối Tài khoản.
+            builder: _accountExtras,
+            child: OmniAccountSlot(
+              builder: (_) => const AccountMenuButton(),
+              tileBuilder: (_) => const AccountMenuButton(tile: true),
+              // Chuông của OmniTopBar: số chưa đọc và đích đến đều thuộc về
+              // module thông báo, nên cắm ở đây thay vì import ngược từ design.
+              child: OmniTopBarSlot(
+                unreadOf: (ref) =>
+                    ref.watch(unreadNotificationCountProvider).valueOrNull ?? 0,
+                // Chuông mở thẳng trang Thông báo (người dùng 2026-11-08): "Đọc
+                // hết" đã ở trang đó, Cài đặt thông báo nằm trong "Tất cả".
+                onBell: (context, _) =>
+                    GoRouter.of(context).pushNamed(NotificationRoutes.centre),
+                // Bậc hiệu năng (làm mờ đầy đủ / giảm / tối giản) cho cả app,
+                // tự hạ khi đo thấy giật — rà soát hiệu năng 08/11/2026.
+                child: PerformanceScopeHost(
+                  // Hiệu ứng mở app phủ lên router, không nằm trong nó — xem
+                  // docblock của LaunchSplash về lý do không làm chậm điều hướng.
+                  child: LaunchSplash(child: child ?? const SizedBox.shrink()),
+                ),
               ),
             ),
           ),

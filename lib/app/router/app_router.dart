@@ -8,6 +8,9 @@ import '../../core/nav/tab_order.dart';
 import '../../modules/auth/auth_module.dart';
 import '../../security/session/session.dart';
 import '../../security/session/session_controller.dart';
+import '../apps/app_manifest.dart';
+import '../apps/app_shell_layout.dart';
+import '../apps/apps_page.dart';
 import '../shell/app_shell.dart';
 import '../shell/directory_page.dart';
 import '../shell/splash_page.dart';
@@ -33,6 +36,15 @@ final routerProvider = Provider<GoRouter>((ref) {
   final overlayRoutes = moduleRoutes.where(
     (route) => !tabRouteNames.contains(route.name),
   );
+  // Khung ứng dụng: màn con (Nhà cung cấp, Đang giữ…) cần làm gốc thanh dưới
+  // thì có branch riêng bằng bản sao route — đứng SAU branch "Tất cả" để chỉ
+  // số các branch cũ không đổi.
+  final cloneNames = ref.watch(appTabCloneRoutesProvider);
+  final clones = [
+    for (final name in cloneNames)
+      for (final route in moduleRoutes)
+        if (route.name == name) route,
+  ];
 
   return GoRouter(
     navigatorKey: rootKey,
@@ -67,7 +79,25 @@ final routerProvider = Provider<GoRouter>((ref) {
               ),
             ],
           ),
+          for (final route in clones)
+            StatefulShellBranch(
+              routes: [
+                GoRoute(
+                  path: '$appTabPathPrefix${route.path}',
+                  name: appTabCloneName(route.name),
+                  builder: (context, state) => AccessBoundary(
+                    requirement: route.access,
+                    child: route.builder(context, state),
+                  ),
+                ),
+              ],
+            ),
         ],
+      ),
+      GoRoute(
+        path: ShellRoutes.appsPath,
+        name: ShellRoutes.apps,
+        builder: (_, _) => const AppsPage(),
       ),
       for (final route in overlayRoutes) _toGoRoute(route, rootKey),
     ],
@@ -159,19 +189,32 @@ String _afterSignIn(Ref ref, _PendingDestination pending) {
   return destination;
 }
 
-/// Landing screen after sign-in: the first TAB (user's pick, see tab_order.dart)
-/// this user can actually see. A rep with only inbox rights lands in the inbox.
-/// With no tab at all, the first permitted primary entry (e.g. opportunities)
-/// is used; only a user with nothing to show lands on "More".
+/// Landing screen after sign-in (mở app, chọn công ty, đổi công ty).
+///
+/// Công ty bật khung ứng dụng: LUÔN là màn Chọn ứng dụng — màn đó tự vào thẳng
+/// khi người dùng chỉ có một ô, và tự trả về [legacyLandingPath] nếu bản khai
+/// báo nói tắt. Liên kết sâu không qua đây (`_afterSignIn` dùng đích đã nhớ).
 @visibleForTesting
 String landingPath(Ref ref) {
-  final tabs = ref.read(tabEntriesProvider);
+  if (sessionWantsAppShell(ref.read(sessionProvider))) {
+    return ShellRoutes.appsPath;
+  }
+  return legacyLandingPath(ref.read);
+}
+
+/// Landing khi không có khung ứng dụng: the first TAB (user's pick, see
+/// tab_order.dart) this user can actually see. A rep with only inbox rights
+/// lands in the inbox. With no tab at all, the first permitted primary entry
+/// (e.g. opportunities) is used; only a user with nothing to show lands on
+/// "More".
+String legacyLandingPath(T Function<T>(ProviderListenable<T>) read) {
+  final tabs = read(tabEntriesProvider);
   final candidates = tabs.isNotEmpty
       ? tabs
-      : ref.read(primaryNavEntriesProvider).take(1).toList();
+      : read(primaryNavEntriesProvider).take(1).toList();
   if (candidates.isEmpty) return ShellRoutes.morePath;
 
-  final routes = ref.read(moduleRoutesProvider);
+  final routes = read(moduleRoutesProvider);
   for (final entry in candidates) {
     for (final route in routes) {
       if (route.name == entry.routeName) return route.path;

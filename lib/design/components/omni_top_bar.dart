@@ -39,6 +39,28 @@ class OmniTopBarSlot extends InheritedWidget {
       unreadOf != oldWidget.unreadOf || onBell != oldWidget.onBell;
 }
 
+/// Chỗ cắm phần ĐẦU thanh của màn gốc, thay cho logo Viomni. Khung ứng dụng
+/// cắm nút ô lưới + tên ứng dụng + tên màn quanh các tab; màn Chọn ứng dụng
+/// cắm tên công ty. Không cắm thì logo như cũ. Màn con (có nút quay lại) không
+/// đọc chỗ cắm này.
+class OmniTopBarLeading extends InheritedWidget {
+  const OmniTopBarLeading({
+    super.key,
+    required this.builder,
+    required super.child,
+  });
+
+  /// [title]: tên màn ([OmniTopBar.semanticsTitle]).
+  final Widget Function(BuildContext context, String? title) builder;
+
+  static OmniTopBarLeading? maybeOf(BuildContext context) =>
+      context.dependOnInheritedWidgetOfExactType<OmniTopBarLeading>();
+
+  @override
+  bool updateShouldNotify(OmniTopBarLeading oldWidget) =>
+      builder != oldWidget.builder;
+}
+
 /// Thanh trên kiểu "nút kính rời" (`viomni-apple-uiux.html`, duyệt 07/11):
 /// tiêu đề lớn của màn bên trái, các nút là viên kính tròn 44 rời nhau (thêm
 /// của màn → chuông → tài khoản), ô tìm của màn ([bottom]) đặt trên một viên
@@ -203,6 +225,9 @@ class _OmniTopBarState extends State<OmniTopBar> {
     final motion = OmniMotion.of(context).base;
     final title = widget.semanticsTitle;
     final bottom = widget.bottom;
+    final leading = subPage || showBack
+        ? null
+        : OmniTopBarLeading.maybeOf(context);
 
     final row = SizedBox(
       height: OmniTopBar._rowHeight,
@@ -221,7 +246,9 @@ class _OmniTopBarState extends State<OmniTopBar> {
             const SizedBox(width: 10),
           ],
           Expanded(
-            child: !subPage
+            child: leading != null
+                ? leading.builder(context, title)
+                : !subPage
                 // Màn gốc: logo + chữ Viomni thay cho tiêu đề lớn (người dùng
                 // chọn 2026-11-08). Tên màn vẫn đọc cho trình đọc màn hình.
                 // BrandAnchor là đích bay của logo ở màn mở app.
