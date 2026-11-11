@@ -44,6 +44,11 @@ abstract final class InventoryPermissions {
   static const capCounts = 'inventory.counts';
   static const capSlips = 'inventory.slips';
 
+  /// TNP_KHO_DOT_B_C §2.9: tìm thấy lại cây "Không thấy" sau kiểm kê
+  /// (`POST /units/{id}/found`); cùng bản API bỏ cây `missing` khỏi danh sách
+  /// trong kho trừ khi lọc `condition=missing`.
+  static const capFound = 'inventory.found';
+
   /// Menu và route cùng một yêu cầu — deep link không lách được lớp ẩn.
   static const List<String> readOnly = [read];
 
@@ -86,6 +91,8 @@ class InventoryPerms {
     this.doCounts = false,
     this.approveCounts = false,
     this.slips = false,
+    this.missing = false,
+    this.found = false,
   });
 
   /// [supports]: API có capability tên này không (`Session.apiSupports`).
@@ -104,6 +111,7 @@ class InventoryPerms {
     final write = read && has(InventoryPermissions.write);
     final capReturns = read && api(InventoryPermissions.capReturns);
     final capCounts = read && api(InventoryPermissions.capCounts);
+    final capFound = read && api(InventoryPermissions.capFound);
     return InventoryPerms(
       read: read,
       write: write,
@@ -132,6 +140,8 @@ class InventoryPerms {
       doCounts: capCounts && write,
       approveCounts: capCounts && settings,
       slips: read && api(InventoryPermissions.capSlips),
+      missing: capFound,
+      found: capFound && write,
     );
   }
 
@@ -212,6 +222,12 @@ class InventoryPerms {
 
   /// Đợt C: phiếu xuất kho (`inventory.slips`).
   final bool slips;
+
+  /// Xem cây "Không thấy" sau kiểm kê (`inventory.found`).
+  final bool missing;
+
+  /// "Tìm thấy" — đưa cây Không thấy về kho: thêm quyền [write].
+  final bool found;
 
   /// Mở được sheet "Bán / Đặt trước".
   bool get canSellOrReserve => reserve || sell;

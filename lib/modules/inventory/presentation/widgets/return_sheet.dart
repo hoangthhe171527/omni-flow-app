@@ -17,6 +17,17 @@ Future<InventoryUnit?> openReturnSheet(
   builder: (_) => ReturnSheet(unit: unit),
 );
 
+/// "Tìm thấy" cây đã đánh Không thấy khi kiểm kê (TNP_KHO_DOT_B_C §2.9,
+/// `POST /units/{id}/found`): cùng sheet với Nhập lại kho. Trả cây sau khi về
+/// kho; null khi đóng.
+Future<InventoryUnit?> openFoundSheet(
+  BuildContext context,
+  InventoryUnit unit,
+) => showOmniSheet<InventoryUnit>(
+  context: context,
+  builder: (_) => ReturnSheet(unit: unit, found: true),
+);
+
 /// Tình trạng chọn được khi nhập lại (API không nhận `missing`).
 const returnConditions = [
   UnitCondition.sealed,
@@ -26,9 +37,12 @@ const returnConditions = [
 ];
 
 class ReturnSheet extends ConsumerStatefulWidget {
-  const ReturnSheet({super.key, required this.unit});
+  const ReturnSheet({super.key, required this.unit, this.found = false});
 
   final InventoryUnit unit;
+
+  /// Tìm thấy cây Không thấy (`/found`) thay vì nhập lại cây đã giao.
+  final bool found;
 
   @override
   ConsumerState<ReturnSheet> createState() => _ReturnSheetState();
@@ -70,14 +84,20 @@ class _ReturnSheetState extends ConsumerState<ReturnSheet> {
   Future<void> _save() async {
     setState(() => _saving = true);
     try {
-      final u = await ref
-          .read(inventoryApiProvider)
-          .returnUnit(
-            widget.unit.id,
-            locationId: _location,
-            condition: _condition,
-            note: _note.text,
-          );
+      final api = ref.read(inventoryApiProvider);
+      final u = widget.found
+          ? await api.foundUnit(
+              widget.unit.id,
+              locationId: _location,
+              condition: _condition,
+              note: _note.text,
+            )
+          : await api.returnUnit(
+              widget.unit.id,
+              locationId: _location,
+              condition: _condition,
+              note: _note.text,
+            );
       bumpInventory(ref);
       if (mounted) Navigator.of(context).pop(u);
     } catch (e) {
@@ -99,9 +119,10 @@ class _ReturnSheetState extends ConsumerState<ReturnSheet> {
         locations.firstOrNull?.id;
     final atName = locations.where((l) => l.id == at).firstOrNull?.name;
 
+    final action = widget.found ? 'Tìm thấy' : 'Nhập lại kho';
     return OmniSheetBody(
       header: OmniSheetHeader(
-        title: 'Nhập lại kho',
+        title: action,
         subtitle: [
           widget.unit.name,
           if (widget.unit.serial != null) widget.unit.serial!,
@@ -110,7 +131,7 @@ class _ReturnSheetState extends ConsumerState<ReturnSheet> {
       footer: FilledButton(
         key: const ValueKey('inv-return-save'),
         onPressed: _saving ? null : _save,
-        child: const Text('Nhập lại kho'),
+        child: Text(action),
       ),
       children: [
         OmniGroupSection(

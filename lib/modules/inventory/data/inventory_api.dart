@@ -59,6 +59,7 @@ class InventoryApi {
     String? customerId,
     String? locationId,
     String? q,
+    String? condition,
     int limit = 50,
     int offset = 0,
   }) async {
@@ -67,6 +68,8 @@ class InventoryApi {
       query: {
         'place': place,
         'sale': sale,
+        // `missing`: cây "Không thấy" — API chỉ trả chúng khi lọc đúng khoá này.
+        'condition': condition,
         'category': category,
         'lot_id': lotId,
         'customer_id': customerId,
@@ -369,6 +372,28 @@ class InventoryApi {
     final n = note?.trim() ?? '';
     final res = await _api.post(
       '/inventory/units/${_e(id)}/return',
+      body: {
+        'location_id': ?locationId,
+        'condition': ?condition?.wire,
+        if (n.isNotEmpty) 'note': n,
+      },
+    );
+    return InventoryUnit.fromJson(res.object);
+  }
+
+  /// `POST /inventory/units/{id}/found` — cây "Không thấy" (đã nhận) về kho,
+  /// thẻ kho thêm dòng thấy lại (TNP_KHO_DOT_B_C §2.9). Không gửi [locationId]
+  /// = vị trí mặc định; [condition] null = Chưa kiểm. Cây không `missing` hoặc
+  /// chưa từng nhận → 422.
+  Future<InventoryUnit> foundUnit(
+    String id, {
+    String? locationId,
+    UnitCondition? condition,
+    String? note,
+  }) async {
+    final n = note?.trim() ?? '';
+    final res = await _api.post(
+      '/inventory/units/${_e(id)}/found',
       body: {
         'location_id': ?locationId,
         'condition': ?condition?.wire,

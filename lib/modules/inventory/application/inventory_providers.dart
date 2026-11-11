@@ -69,7 +69,18 @@ final workshopPlansProvider = FutureProvider.autoDispose<List<WorkshopPlan>>((
 
 // ---------------------------------------------------------------- tồn kho
 
-enum StockSegment { available, reserved }
+/// `missing` = cây "Không thấy" sau kiểm kê (mọi trạng thái bán) — API chỉ trả
+/// chúng khi lọc `condition=missing` (capability `inventory.found`).
+enum StockSegment { available, reserved, missing }
+
+/// Tham số `sale` / `condition` của `GET /units` cho từng phân đoạn.
+({String? sale, String? condition}) _segmentQuery(
+  StockSegment seg,
+) => switch (seg) {
+  StockSegment.available => (sale: UnitSale.available.wire, condition: null),
+  StockSegment.reserved => (sale: heldSaleWire, condition: null),
+  StockSegment.missing => (sale: null, condition: UnitCondition.missing.wire),
+};
 
 @immutable
 class StockFilter {
@@ -165,9 +176,8 @@ class StockController extends AutoDisposeAsyncNotifier<StockState> {
       .read(inventoryApiProvider)
       .listUnits(
         place: UnitPlace.inStock.wire,
-        sale: f.segment == StockSegment.available
-            ? UnitSale.available.wire
-            : heldSaleWire,
+        sale: _segmentQuery(f.segment).sale,
+        condition: _segmentQuery(f.segment).condition,
         category: f.category,
         lotId: f.lotId,
         locationId: f.locationId,
@@ -242,11 +252,14 @@ class StockController extends AutoDisposeAsyncNotifier<StockState> {
         next.add(u);
         continue;
       }
+      final lost = c.condition == UnitCondition.missing;
       final keep =
           c.place == UnitPlace.inStock &&
-          (seg == StockSegment.available
-              ? c.sale == UnitSale.available
-              : c.sale == UnitSale.reserved);
+          switch (seg) {
+            StockSegment.available => !lost && c.sale == UnitSale.available,
+            StockSegment.reserved => !lost && c.sale == UnitSale.reserved,
+            StockSegment.missing => lost,
+          };
       if (keep) {
         next.add(c);
       } else {
@@ -266,14 +279,17 @@ final stockProvider =
 final stockCountProvider = FutureProvider.autoDispose.family<int, StockSegment>(
   (ref, seg) async {
     ref.watch(inventoryRevisionProvider);
-    if (!ref.watch(inventoryPermsProvider).read) return 0;
+    final perms = ref.watch(inventoryPermsProvider);
+    if (!perms.read || (seg == StockSegment.missing && !perms.missing)) {
+      return 0;
+    }
+    final q = _segmentQuery(seg);
     final page = await ref
         .watch(inventoryApiProvider)
         .listUnits(
           place: UnitPlace.inStock.wire,
-          sale: seg == StockSegment.available
-              ? UnitSale.available.wire
-              : heldSaleWire,
+          sale: q.sale,
+          condition: q.condition,
           limit: 1,
         );
     return page.total;

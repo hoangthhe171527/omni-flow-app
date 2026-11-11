@@ -43,12 +43,8 @@ class _StockPageState extends ConsumerState<StockPage> {
   StateController<StockFilter> get _filter =>
       ref.read(stockFilterProvider.notifier);
 
-  void _setSegment(int i) {
-    _filter.update(
-      (f) => f.copyWith(
-        segment: i == 0 ? StockSegment.available : StockSegment.reserved,
-      ),
-    );
+  void _setSegment(StockSegment s) {
+    _filter.update((f) => f.copyWith(segment: s));
     setState(() {
       _multi = false;
       _picked.clear();
@@ -346,7 +342,17 @@ class _StockPageState extends ConsumerState<StockPage> {
     final nHeld = ref
         .watch(stockCountProvider(StockSegment.reserved))
         .valueOrNull;
+    // Tab "Không thấy" (`inventory.found`): cây kiểm kê không thấy.
+    final nMissing = perms.missing
+        ? ref.watch(stockCountProvider(StockSegment.missing)).valueOrNull
+        : null;
+    final segments = [
+      StockSegment.available,
+      StockSegment.reserved,
+      if (perms.missing) StockSegment.missing,
+    ];
     final reserved = f.segment == StockSegment.reserved;
+    final lost = f.segment == StockSegment.missing;
     // Đợt A: lọc / chuyển vị trí chỉ khi có từ hai vị trí (spec §5).
     final multi = ref.watch(multiLocationProvider).valueOrNull ?? false;
     final defaultLocation = multi
@@ -390,9 +396,10 @@ class _StockPageState extends ConsumerState<StockPage> {
       ...loaded.map((u) => u.category).whereType<String>(),
       ?f.category,
     }.toList()..sort();
-    final canSell = !reserved && perms.canSellOrReserve;
-    final canSend = perms.workshop;
-    final canMove = multi && perms.write;
+    // Cây "Không thấy" chỉ để xem và tìm thấy từng cây — không chọn nhiều.
+    final canSell = !reserved && !lost && perms.canSellOrReserve;
+    final canSend = !lost && perms.workshop;
+    final canMove = !lost && multi && perms.write;
     final canMulti = canSell || canSend || canMove;
     final showSell = _multi && canSell && pickedLoaded > 0;
     final showSend = _multi && canSend && pickedForWorkshop > 0;
@@ -415,15 +422,16 @@ class _StockPageState extends ConsumerState<StockPage> {
     final list = <Widget>[
       OmniSegmented(
         labels: [
-          nFree == null
-              ? 'Còn bán'
-              : 'Còn bán ${InventoryFormat.number(nFree)}',
-          nHeld == null
-              ? 'Đã có khách'
-              : 'Đã có khách ${InventoryFormat.number(nHeld)}',
+          for (final (label, n) in [
+            ('Còn bán', nFree),
+            // Ba đoạn ở bề ngang 390: "Đã có khách 251" bị cắt — rút gọn.
+            (perms.missing ? 'Có khách' : 'Đã có khách', nHeld),
+            if (perms.missing) ('Không thấy', nMissing),
+          ])
+            n == null ? label : '$label ${InventoryFormat.number(n)}',
         ],
-        index: reserved ? 1 : 0,
-        onChanged: _setSegment,
+        index: segments.indexOf(f.segment).clamp(0, segments.length - 1),
+        onChanged: (i) => _setSegment(segments[i]),
       ),
       const SizedBox(height: 10),
       _FilterRow(

@@ -252,6 +252,16 @@ class _UnitSheetState extends ConsumerState<UnitSheet> {
     nav.pop();
   }
 
+  /// Tìm thấy cây "Không thấy" (TNP_KHO_DOT_B_C §2.9): sheet ở lại, thẻ kho
+  /// tải lại có dòng thấy lại.
+  Future<void> _found() async {
+    final back = await openFoundSheet(context, _u);
+    if (back == null || !mounted) return;
+    setState(() => _u = back);
+    widget.onChanged(back);
+    InvUi.toast(context, 'Đã đưa cây về kho.');
+  }
+
   /// Bảo hành = việc xưởng gắn cây, cây vẫn của khách (Đợt C §2.3): chọn kế
   /// hoạch rồi `POST /tasks/from-units`.
   Future<void> _warranty() async {
@@ -316,10 +326,17 @@ class _UnitSheetState extends ConsumerState<UnitSheet> {
     final multi = ref.watch(multiLocationProvider).valueOrNull ?? false;
     final canMove = multi && perms.write && u.place == UnitPlace.inStock;
     final delivered = u.place == UnitPlace.delivered;
+    // Cây kiểm kê không thấy, đã từng nhận (API có `inventory.found`): không
+    // bán, chỉ "Tìm thấy".
+    final lost =
+        perms.missing &&
+        u.condition == UnitCondition.missing &&
+        u.place == UnitPlace.inStock &&
+        u.receivedAt != null;
     final invoice = perms.invoices ? u.invoice : null;
 
     final buttons = <Widget>[
-      if (u.sale == UnitSale.available && perms.canSellOrReserve)
+      if (u.sale == UnitSale.available && perms.canSellOrReserve && !lost)
         FilledButton(
           key: const ValueKey('inv-unit-sell'),
           onPressed: _busy ? null : _sell,
@@ -369,6 +386,13 @@ class _UnitSheetState extends ConsumerState<UnitSheet> {
           key: const ValueKey('inv-unit-return'),
           onPressed: _busy ? null : _return,
           child: const Text('Nhập lại kho'),
+        ),
+      // Cây kiểm kê không thấy (đã từng nhận) — tìm thấy thì về kho.
+      if (lost && perms.found)
+        FilledButton(
+          key: const ValueKey('inv-unit-found'),
+          onPressed: _busy ? null : _found,
+          child: const Text('Tìm thấy'),
         ),
     ];
 

@@ -188,7 +188,8 @@ class LedgerRow {
   final String id;
   final bool isWork;
 
-  /// move: `receive` | `transfer` | `issue` | `return`; work: `refurbish` |
+  /// move: `receive` | `transfer` | `issue` | `return` | `count_missing` |
+  /// `count_found`; work: `refurbish` |
   /// `warranty`.
   final String kind;
   final String? at;
@@ -214,6 +215,8 @@ class LedgerRow {
       'transfer' => 'Chuyển từ $from đến $to',
       'issue' => 'Xuất kho',
       'return' => 'Nhận lại vào $to',
+      'count_missing' => 'Kiểm kê: không thấy',
+      'count_found' => 'Kiểm kê: thấy lại',
       _ => kind,
     };
   }
