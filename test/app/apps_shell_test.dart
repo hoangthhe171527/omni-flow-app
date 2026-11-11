@@ -138,6 +138,24 @@ void main() {
       ]);
     });
 
+    test(
+      'vai không cho dùng Bàn làm việc (home_enabled: false) thì không có ô đó',
+      () async {
+        final c = containerFor(
+          session(),
+          manifest: AppManifest.fromJson({
+            ..._manifestJson,
+            'home_enabled': false,
+          }),
+        );
+        addTearDown(c.dispose);
+        await c.read(appManifestProvider.future);
+        expect(c.read(appShellLayoutProvider)!.entries.map((a) => a.key), [
+          'stock',
+        ]);
+      },
+    );
+
     test('vào thẳng: cờ bật thì landing là /apps, tắt hoặc API cũ như cũ', () {
       String landing(Session s) {
         final c = containerFor(s);

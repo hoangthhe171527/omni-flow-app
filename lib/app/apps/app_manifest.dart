@@ -47,9 +47,14 @@ class ManifestApp {
 class AppManifest {
   const AppManifest({
     required this.shell,
+    this.homeEnabled = true,
     this.home = const [],
     this.apps = const [],
   });
+
+  /// Vai trò của người dùng có cho dùng Bàn làm việc không (`home_enabled`). Không cho thì ô
+  /// Bàn làm việc không hiện, kể cả mục chưa được xếp chỗ.
+  final bool homeEnabled;
 
   factory AppManifest.fromJson(Map<String, dynamic> json) {
     List<Map<String, dynamic>> maps(Object? v) => v is List
@@ -61,6 +66,8 @@ class AppManifest {
 
     return AppManifest(
       shell: json['shell'] == true,
+      // API cũ không có khoá này: coi như được dùng Bàn làm việc.
+      homeEnabled: json['home_enabled'] != false,
       home: [
         for (final k
             in (json['home'] is List ? json['home'] as List : const []))

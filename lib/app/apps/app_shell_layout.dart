@@ -306,12 +306,14 @@ AppShellLayout buildAppShellLayout({
     key: homeAppKey,
     name: 'Bàn làm việc',
     icon: appIconOf(homeAppKey),
-    items: [
-      ...pick(manifest.home),
-      for (final e in visible)
-        if (isTabEligible(e) && !placed.contains(e.routeName))
-          ShellItem(key: e.routeName, entry: e),
-    ],
+    items: manifest.homeEnabled
+        ? [
+            ...pick(manifest.home),
+            for (final e in visible)
+              if (isTabEligible(e) && !placed.contains(e.routeName))
+                ShellItem(key: e.routeName, entry: e),
+          ]
+        : const [],
   );
 
   return AppShellLayout(home: home, apps: apps);
