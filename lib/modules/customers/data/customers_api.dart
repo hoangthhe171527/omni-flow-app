@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/config/app_config.dart';
 import '../../../core/network/api_client.dart';
+import '../../../core/network/api_path.dart';
 import '../../../core/network/api_envelope.dart';
 import '../../../core/utils/json.dart';
 import '../domain/customer.dart';
@@ -48,13 +49,13 @@ class CustomersApi {
   }
 
   Future<Customer> get(String id) async {
-    final response = await _client.get('$_base/$id');
+    final response = await _client.get('$_base/${pathSegment(id)}');
     return Customer.fromJson(response.object);
   }
 
   /// `GET /customers/{id}/summary`.
   Future<CustomerSummary> summary(String id) async {
-    final response = await _client.get('$_base/$id/summary');
+    final response = await _client.get('$_base/${pathSegment(id)}/summary');
     return CustomerSummary.fromJson(response.object);
   }
 
@@ -87,11 +88,14 @@ class CustomersApi {
   }
 
   Future<Customer> update(String id, Customer draft) async {
-    final response = await _client.put('$_base/$id', body: draft.toPayload());
+    final response = await _client.put(
+      '$_base/${pathSegment(id)}',
+      body: draft.toPayload(),
+    );
     return Customer.fromJson(response.object);
   }
 
-  Future<void> delete(String id) => _client.delete('$_base/$id');
+  Future<void> delete(String id) => _client.delete('$_base/${pathSegment(id)}');
 
   /// Warns before a rep creates a second record for someone who already messaged
   /// on another channel — the most common way a CRM turns into two CRMs.

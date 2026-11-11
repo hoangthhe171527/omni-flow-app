@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/config/app_config.dart';
 import '../../../core/error/app_exception.dart';
 import '../../../core/network/api_client.dart';
+import '../../../core/network/api_path.dart';
 import '../../../core/network/api_envelope.dart';
 import '../../../core/utils/json.dart';
 import '../domain/new_member.dart';
@@ -29,8 +30,11 @@ class TeamApi {
   /// Cần quyền `membership.members.update`, tức là quản đốc trở lên. Đó là cả
   /// điểm của cơ chế: bot không được tự nhận ra ai vừa nhắn, mà phải dựa vào
   /// một liên kết người có thẩm quyền đã tự tay tạo (§G4).
-  Future<void> setZaloUserId(String membershipId, String zaloUserId) => _client
-      .put('/memberships/$membershipId', body: {'zalo_user_id': zaloUserId});
+  Future<void> setZaloUserId(String membershipId, String zaloUserId) =>
+      _client.put(
+        '/memberships/${pathSegment(membershipId)}',
+        body: {'zalo_user_id': zaloUserId},
+      );
 
   /// Tạo tài khoản và gắn vào workspace ngay (`POST /memberships/add-user`).
   ///

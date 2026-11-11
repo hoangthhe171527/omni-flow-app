@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/config/app_config.dart';
 import '../../../core/error/app_exception.dart';
 import '../../../core/network/api_client.dart';
+import '../../../core/network/api_path.dart';
 import '../../../core/network/api_envelope.dart';
 import '../domain/opportunity.dart';
 import '../domain/pipeline_catalog.dart';
@@ -120,7 +121,7 @@ class OpportunitiesApi {
   }
 
   Future<Opportunity> get(String id) async {
-    final response = await _client.get('$_base/$id');
+    final response = await _client.get('$_base/${pathSegment(id)}');
     return Opportunity.fromJson(response.object);
   }
 
@@ -130,7 +131,10 @@ class OpportunitiesApi {
   }
 
   Future<Opportunity> update(String id, Opportunity draft) async {
-    final response = await _client.put('$_base/$id', body: draft.toPayload());
+    final response = await _client.put(
+      '$_base/${pathSegment(id)}',
+      body: draft.toPayload(),
+    );
     return Opportunity.fromJson(response.object);
   }
 
@@ -142,14 +146,14 @@ class OpportunitiesApi {
   /// pipeline (422 when it is not one of its stages).
   Future<Opportunity> moveStage(String id, {required String stageCode}) async {
     final response = await _client.patch(
-      '$_base/$id/stage',
+      '$_base/${pathSegment(id)}/stage',
       body: {'opportunity_stage': stageCode},
     );
     return Opportunity.fromJson(response.object);
   }
 
   Future<WinResult> markWon(String id) async {
-    final response = await _client.post('$_base/$id/win');
+    final response = await _client.post('$_base/${pathSegment(id)}/win');
     return parseWin(response.object);
   }
 
@@ -167,7 +171,7 @@ class OpportunitiesApi {
     );
   }
 
-  Future<void> delete(String id) => _client.delete('$_base/$id');
+  Future<void> delete(String id) => _client.delete('$_base/${pathSegment(id)}');
 }
 
 final opportunitiesApiProvider = Provider<OpportunitiesApi>((ref) {

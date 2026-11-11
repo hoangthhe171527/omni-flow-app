@@ -9,6 +9,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../../../core/error/app_exception.dart';
+import '../../../../core/utils/web_url.dart';
 import '../../../../design/components/components.dart';
 import '../../../../design/tokens/tokens.dart';
 import '../../data/finance_api.dart';
@@ -517,7 +518,8 @@ Future<void> showFinanceAttachmentPreviewDialog({
               const SizedBox(height: 12),
               OutlinedButton.icon(
                 onPressed: () async {
-                  final uri = Uri.tryParse(resolvedUrl);
+                  // Chỉ http/https — không trao `file:`/`intent:` cho máy.
+                  final uri = webUriOrNull(resolvedUrl);
                   if (uri != null) {
                     await launchUrl(uri, mode: LaunchMode.externalApplication);
                   }

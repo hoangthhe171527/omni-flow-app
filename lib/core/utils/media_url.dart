@@ -1,4 +1,5 @@
 import '../config/app_config.dart';
+import '../net/public_address.dart';
 
 /// Dựng lại host cho đường proxy media của Hộp thư về API origin mà điện thoại
 /// tới được; giữ NGUYÊN khoá sau `/api/v1/inbox/media/` và query.
@@ -47,7 +48,23 @@ String resolveMediaUrl(String value) {
   if (!parsed.hasScheme && !source.contains('/') && source != marker) {
     return api.replace(path: '$mediaPath$source').toString();
   }
+  // URL tuyệt đối còn lại (S3/CDN, hay URL nguyên văn từ tin của khách qua
+  // agent bridge) được ảnh/video/sticker TỰ TẢI khi bong bóng hiện — không ai
+  // bấm. Chỉ tải host công khai, hoặc chính host API (máy dev trỏ API vào IP
+  // LAN): một URL `http://192.168.1.1/…` hay `http://2130706433/` của khách
+  // không được biến máy nhân viên thành công cụ quét mạng nội bộ. Rỗng = các
+  // widget media hiện "không tải được".
+  if (parsed.hasScheme && !_isAutoLoadable(parsed, api)) return '';
   return source;
+}
+
+bool _isAutoLoadable(Uri url, Uri api) {
+  if (url.scheme != 'http' && url.scheme != 'https') return false;
+  if (url.userInfo.isNotEmpty) return false;
+  if (url.host.isNotEmpty && url.host.toLowerCase() == api.host.toLowerCase()) {
+    return true;
+  }
+  return isPublicHttpUrl(url);
 }
 
 /// Khoá cache cho URL media: bỏ `expires`/`signature` của link ký (MS-I24).

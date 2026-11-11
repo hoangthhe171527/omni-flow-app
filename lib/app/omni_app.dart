@@ -56,12 +56,14 @@ class _OmniAppState extends ConsumerState<OmniApp> with WidgetsBindingObserver {
     _unregisterPreLogout = ref
         .read(sessionPreLogoutProvider)
         .register(push.stop);
-    _sessionListener = ref.listenManual<Session>(sessionProvider, (_, session) {
+    _sessionListener = ref.listenManual<Session>(sessionProvider, (
+      previous,
+      session,
+    ) {
+      unawaited(push.onSessionChanged(previous, session));
       if (session.isAuthenticated) {
-        unawaited(push.start());
         _openPushIntent(ref.read(pushIntentProvider));
       } else {
-        unawaited(push.stop());
         // The realtime socket was authorized with the ending session's token,
         // and its channels belong to that tenant. Leaving it open would carry
         // one workspace's message stream into the next sign-in — including a

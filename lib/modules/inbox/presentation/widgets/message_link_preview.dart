@@ -8,9 +8,12 @@ library;
 
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../../../../core/net/host_lookup.dart';
+import '../../../../core/net/public_address.dart';
 import '../../../../design/tokens/tokens.dart';
 
 class MessageLinkPreview extends StatefulWidget {
@@ -23,7 +26,7 @@ class MessageLinkPreview extends StatefulWidget {
 }
 
 class _LinkPreviewCardState extends State<MessageLinkPreview> {
-  static final Map<String, Future<_LinkMetadata>> _metadataCache = {};
+  static final Map<String, Future<LinkPreviewData>> _metadataCache = {};
   static final Dio _previewClient = Dio(
     BaseOptions(
       connectTimeout: Duration(seconds: 4),
@@ -31,11 +34,12 @@ class _LinkPreviewCardState extends State<MessageLinkPreview> {
       sendTimeout: Duration(seconds: 4),
       responseType: ResponseType.plain,
       headers: {'User-Agent': 'Viomni Link Preview'},
+      followRedirects: false,
     ),
   );
-  late final Future<_LinkMetadata> _metadata = _cachedMetadata(widget.url);
+  late final Future<LinkPreviewData> _metadata = _cachedMetadata(widget.url);
 
-  Future<_LinkMetadata> _cachedMetadata(String url) {
+  Future<LinkPreviewData> _cachedMetadata(String url) {
     final existing = _metadataCache[url];
     if (existing != null) return existing;
     final future = _fetchMetadata(url);
@@ -48,64 +52,8 @@ class _LinkPreviewCardState extends State<MessageLinkPreview> {
     return future;
   }
 
-  Future<_LinkMetadata> _fetchMetadata(String rawUrl) async {
-    final normalized = rawUrl.toLowerCase().startsWith('http')
-        ? rawUrl
-        : 'https://$rawUrl';
-    final uri = Uri.tryParse(normalized);
-    if (uri == null || !_isPreviewSafe(uri)) {
-      final host = uri?.host;
-      return _LinkMetadata(
-        domain: host != null && host.isNotEmpty ? host : rawUrl,
-      );
-    }
-
-    try {
-      final response = await _previewClient.get<String>(normalized);
-      // Metadata is near the head of normal pages. Avoid retaining/parsing a
-      // multi-megabyte response when a server returns a large document.
-      final rawHtml = response.data ?? '';
-      final html = rawHtml.substring(
-        0,
-        rawHtml.length > 512 * 1024 ? 512 * 1024 : rawHtml.length,
-      );
-      String readMeta(String property) {
-        final pattern = RegExp(
-          "<meta[^>]+(?:property|name)=[\\\"']$property[\\\"'][^>]+content=[\\\"']([^\\\"']+)",
-          caseSensitive: false,
-        );
-        return pattern.firstMatch(html)?.group(1) ?? '';
-      }
-
-      final title = readMeta('og:title');
-      final description = readMeta('og:description');
-      final image = readMeta('og:image');
-      return _LinkMetadata(
-        domain: uri.host,
-        title: title.isNotEmpty ? title : uri.host,
-        description: description,
-        imageUrl: image,
-      );
-    } catch (_) {
-      return _LinkMetadata(domain: uri.host, title: uri.host);
-    }
-  }
-
-  static bool _isPreviewSafe(Uri uri) {
-    if (uri.scheme != 'http' && uri.scheme != 'https') return false;
-    final host = uri.host.toLowerCase();
-    if (host.isEmpty || host == 'localhost' || host.endsWith('.local')) {
-      return false;
-    }
-    final ipv4 = RegExp(r'^\d{1,3}(?:\.\d{1,3}){3}$');
-    if (!ipv4.hasMatch(host)) return true;
-    final parts = host.split('.').map(int.parse).toList();
-    return parts[0] != 10 &&
-        !(parts[0] == 172 && parts[1] >= 16 && parts[1] <= 31) &&
-        !(parts[0] == 192 && parts[1] == 168) &&
-        parts[0] != 127 &&
-        !(parts[0] == 169 && parts[1] == 254);
-  }
+  Future<LinkPreviewData> _fetchMetadata(String rawUrl) =>
+      fetchLinkMetadata(rawUrl, client: _previewClient);
 
   Future<void> _open() async {
     final raw = widget.url.toLowerCase().startsWith('http')
@@ -117,10 +65,10 @@ class _LinkPreviewCardState extends State<MessageLinkPreview> {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    return FutureBuilder<_LinkMetadata>(
+    return FutureBuilder<LinkPreviewData>(
       future: _metadata,
       builder: (context, snapshot) {
-        final meta = snapshot.data ?? _LinkMetadata(domain: widget.url);
+        final meta = snapshot.data ?? LinkPreviewData(domain: widget.url);
         return Padding(
           padding: const EdgeInsets.only(top: 8),
           child: Material(
@@ -188,8 +136,8 @@ class _LinkPreviewCardState extends State<MessageLinkPreview> {
   }
 }
 
-class _LinkMetadata {
-  const _LinkMetadata({
+class LinkPreviewData {
+  const LinkPreviewData({
     required this.domain,
     this.title,
     this.description,
@@ -200,4 +148,108 @@ class _LinkMetadata {
   final String? title;
   final String? description;
   final String? imageUrl;
+}
+
+/// Tải metadata (og:title/og:description/og:image) cho một link trong tin.
+///
+/// Link do KHÁCH gửi, và thẻ tự tải khi bong bóng hiện — không ai bấm. Nên
+/// máy nhân viên chỉ tự gửi request tới host công khai:
+/// - host chuẩn hoá mọi cách viết IP (`2130706433`, `127.1`, `0x7f…`, IPv6),
+///   chặn loopback/private/link-local/metadata/tên nội bộ;
+/// - tên miền phải phân giải ra TOÀN địa chỉ công khai ([lookup]);
+/// - không để Dio tự theo redirect: theo tay tối đa 3 bước, kiểm lại từng bước;
+/// - `og:image` qua cùng bộ lọc trước khi `CachedNetworkImage` tải nó.
+///
+/// Trên web ([allowNetwork] = false) KHÔNG tự tải: trình duyệt không cho kiểm
+/// DNS, nên không phân biệt được tên công khai với tên trỏ vào mạng nội bộ;
+/// thẻ chỉ hiện tên miền, bấm vẫn mở link.
+@visibleForTesting
+Future<LinkPreviewData> fetchLinkMetadata(
+  String rawUrl, {
+  required Dio client,
+  HostLookup lookup = lookupHostAddresses,
+  bool allowNetwork = !kIsWeb,
+}) async {
+  final normalized = rawUrl.toLowerCase().startsWith('http')
+      ? rawUrl
+      : 'https://$rawUrl';
+  final uri = Uri.tryParse(normalized);
+  final host = uri?.host;
+  final fallback = LinkPreviewData(
+    domain: host != null && host.isNotEmpty ? host : rawUrl,
+  );
+  if (uri == null || !allowNetwork || !await _isSafeTarget(uri, lookup)) {
+    return fallback;
+  }
+
+  try {
+    var current = uri;
+    Response<String>? response;
+    for (var hop = 0; hop <= _maxRedirects; hop++) {
+      response = await client.get<String>(
+        current.toString(),
+        options: Options(
+          followRedirects: false,
+          responseType: ResponseType.plain,
+          validateStatus: (status) => status != null && status < 400,
+        ),
+      );
+      final status = response.statusCode ?? 0;
+      if (status < 300 || status >= 400) break;
+      final location = response.headers.value('location');
+      final next = location == null ? null : Uri.tryParse(location);
+      if (next == null || hop == _maxRedirects) return fallback;
+      current = current.resolveUri(next);
+      if (!await _isSafeTarget(current, lookup)) return fallback;
+    }
+    final status = response?.statusCode ?? 0;
+    if (status < 200 || status >= 300) return fallback;
+
+    // Metadata is near the head of normal pages. Avoid retaining/parsing a
+    // multi-megabyte response when a server returns a large document.
+    final rawHtml = response?.data ?? '';
+    final html = rawHtml.substring(
+      0,
+      rawHtml.length > 512 * 1024 ? 512 * 1024 : rawHtml.length,
+    );
+    String readMeta(String property) {
+      final pattern = RegExp(
+        "<meta[^>]+(?:property|name)=[\\\"']$property[\\\"'][^>]+content=[\\\"']([^\\\"']+)",
+        caseSensitive: false,
+      );
+      return pattern.firstMatch(html)?.group(1) ?? '';
+    }
+
+    final title = readMeta('og:title');
+    final description = readMeta('og:description');
+    final image = readMeta('og:image');
+    String? imageUrl;
+    final imageUri = image.isEmpty ? null : Uri.tryParse(image);
+    if (imageUri != null) {
+      final resolved = current.resolveUri(imageUri);
+      if (await _isSafeTarget(resolved, lookup)) {
+        imageUrl = resolved.toString();
+      }
+    }
+    return LinkPreviewData(
+      domain: uri.host,
+      title: title.isNotEmpty ? title : uri.host,
+      description: description,
+      imageUrl: imageUrl,
+    );
+  } catch (_) {
+    return LinkPreviewData(domain: uri.host, title: uri.host);
+  }
+}
+
+const _maxRedirects = 3;
+
+/// Host công khai theo chữ, VÀ (nếu là tên miền) mọi địa chỉ nó phân giải ra
+/// đều công khai. Không phân giải được = không an toàn.
+Future<bool> _isSafeTarget(Uri uri, HostLookup lookup) async {
+  if (!isPublicHttpUrl(uri)) return false;
+  if (parseIpLiteral(uri.host) != null) return true;
+  final addresses = await lookup(uri.host);
+  if (addresses == null || addresses.isEmpty) return false;
+  return addresses.every(isPublicAddress);
 }

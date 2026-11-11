@@ -41,13 +41,20 @@ final dioProvider = Provider<Dio>((ref) {
   // Concurrent 401s share one refresh. Otherwise an inbox screen can rotate
   // the same refresh token multiple times and invalidate its own session.
   Future<void>? refreshInFlight;
+  int? refreshInFlightGeneration;
 
   Future<void> refreshAccessToken() {
+    final tokenStore = ref.read(tokenStoreProvider);
+    // Thế hệ phiên lúc mở lượt refresh: đăng xuất chen vào lúc chờ 429 thì
+    // kết quả của lượt này thuộc về phiên đã kết thúc, không được lưu — và
+    // người đăng nhập sau không được nhập chung vào lượt ấy.
+    final generation = tokenStore.generation;
     final active = refreshInFlight;
-    if (active != null) return active;
+    if (active != null && refreshInFlightGeneration == generation) {
+      return active;
+    }
 
     final refresh = () async {
-      final tokenStore = ref.read(tokenStoreProvider);
       final refreshToken = await tokenStore.readRefreshToken();
       if (refreshToken == null || refreshToken.isEmpty) {
         throw DioException(
@@ -95,14 +102,27 @@ final dioProvider = Provider<Dio>((ref) {
           error: 'Refresh response is missing an access token.',
         );
       }
-      await tokenStore.save(
+      final saved = await tokenStore.saveIfCurrent(
+        generation,
         accessToken: payload['access_token'] as String,
         refreshToken: payload['refresh_token'] as String?,
       );
+      if (!saved) {
+        // Không phải 401: phiên đã kết thúc ở máy rồi, và một 401 ở đây sẽ
+        // làm hết hạn phiên của người đăng nhập SAU (nếu đã có).
+        throw DioException(
+          requestOptions: response.requestOptions,
+          type: DioExceptionType.cancel,
+          error: 'Phiên đã kết thúc trong lúc làm mới.',
+        );
+      }
     }();
 
     refreshInFlight = refresh;
-    return refresh.whenComplete(() => refreshInFlight = null);
+    refreshInFlightGeneration = generation;
+    return refresh.whenComplete(() {
+      if (identical(refreshInFlight, refresh)) refreshInFlight = null;
+    });
   }
 
   dio.interceptors.add(
@@ -150,6 +170,8 @@ final dioProvider = Provider<Dio>((ref) {
         final skipRefresh =
             error.requestOptions.extra['skipSessionRefresh'] == true;
         if (status == 401 && !isAuthEndpoint && !hasRetried && !skipRefresh) {
+          final tokenStore = ref.read(tokenStoreProvider);
+          final generation = tokenStore.generation;
           try {
             await refreshAccessToken();
             error.requestOptions.extra['sessionRetried'] = true;
@@ -159,7 +181,10 @@ final dioProvider = Provider<Dio>((ref) {
             handler.resolve(response);
             return;
           } on DioException catch (refreshError) {
-            if (refreshError.response?.statusCode == 401) {
+            // Refresh của phiên CŨ bị từ chối sau khi đã đăng xuất (và có thể
+            // người khác đã đăng nhập): không được làm hết hạn phiên mới.
+            if (refreshError.response?.statusCode == 401 &&
+                tokenStore.generation == generation) {
               final signal = ref.read(unauthorizedSignalProvider.notifier);
               signal.state = signal.state + 1;
             } else {

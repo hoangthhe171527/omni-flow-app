@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/config/app_config.dart';
 import '../../../core/error/app_exception.dart';
 import '../../../core/network/api_client.dart';
+import '../../../core/network/api_path.dart';
 import '../../../core/network/api_envelope.dart';
 import '../../../core/utils/formatters.dart';
 import '../../../core/utils/json.dart';
@@ -205,7 +206,7 @@ class InboxApi {
   }
 
   Future<Conversation> get(String id) async {
-    final response = await _client.get('$_base/$id');
+    final response = await _client.get('$_base/${pathSegment(id)}');
     return Conversation.fromJson(response.object);
   }
 
@@ -217,7 +218,7 @@ class InboxApi {
     int perPage = AppConfig.messagePageSize,
   }) async {
     final response = await _client.get(
-      '$_base/$id/messages',
+      '$_base/${pathSegment(id)}/messages',
       query: {'per_page': perPage, 'before': before},
     );
     return MessagePage(
@@ -232,7 +233,7 @@ class InboxApi {
     int perPage = 80,
   }) async {
     final response = await _client.get(
-      '$_base/$id/assets',
+      '$_base/${pathSegment(id)}/assets',
       query: {'before': before, 'per_page': perPage},
     );
     return ConversationAssets.fromJson(response.object);
@@ -240,7 +241,7 @@ class InboxApi {
 
   Future<List<Message>> searchMessages(String id, String query) async {
     final response = await _client.get(
-      '$_base/$id/messages/search',
+      '$_base/${pathSegment(id)}/messages/search',
       query: {'q': query.trim(), 'limit': 50},
     );
     return response.list.map(Message.fromJson).toList();
@@ -248,7 +249,7 @@ class InboxApi {
 
   Future<bool> togglePin(String conversationId, String messageId) async {
     final response = await _client.post(
-      '$_base/$conversationId/messages/$messageId/pin',
+      '$_base/${pathSegment(conversationId)}/messages/${pathSegment(messageId)}/pin',
     );
     // API trả `{success, pinned}` ở gốc (INB-I21).
     return (response.raw['pinned'] ?? response.object['pinned']) == true;
@@ -265,7 +266,7 @@ class InboxApi {
     String? clientMessageId,
   }) async {
     final response = await _client.post(
-      '$_base/$id/messages',
+      '$_base/${pathSegment(id)}/messages',
       body: {
         if (text != null && text.isNotEmpty) 'text': text,
         if (clientMessageId != null && clientMessageId.isNotEmpty)
@@ -294,7 +295,7 @@ class InboxApi {
   Future<Message> resend(String id, String messageId) async {
     try {
       final response = await _client.post(
-        '$_base/$id/messages/$messageId/resend',
+        '$_base/${pathSegment(id)}/messages/${pathSegment(messageId)}/resend',
       );
       return Message.fromJson(response.object);
     } on RequestRejectedException catch (error) {
@@ -309,7 +310,8 @@ class InboxApi {
     }
   }
 
-  Future<void> markRead(String id) => _client.post('$_base/$id/read');
+  Future<void> markRead(String id) =>
+      _client.post('$_base/${pathSegment(id)}/read');
 
   // ── Hộp thư mobile (API `feat/hop-thu-mobile`) ─────────────────────────
 
@@ -322,21 +324,21 @@ class InboxApi {
 
   /// Đánh dấu chưa đọc (dùng chung cả đội). Trả `unread_count` mới (≥ 1).
   Future<int> markUnread(String id) async {
-    final response = await _client.post('$_base/$id/unread');
+    final response = await _client.post('$_base/${pathSegment(id)}/unread');
     return response.object.intOr('unread_count', 1);
   }
 
   /// Ghim/bỏ ghim cho RIÊNG người gọi. Trả trạng thái thật server ghi.
   /// Vượt trần → 422 `ValidationException.reason == 'pin_limit_reached'`.
   Future<bool> setPinned(String id, bool on) async {
-    final path = '$_base/$id/pin';
+    final path = '$_base/${pathSegment(id)}/pin';
     final response = on ? await _client.post(path) : await _client.delete(path);
     return response.object.flag('is_pinned');
   }
 
   /// Tắt (`on`) / bật thông báo cho riêng người gọi.
   Future<bool> setMuted(String id, bool on) async {
-    final path = '$_base/$id/mute';
+    final path = '$_base/${pathSegment(id)}/mute';
     final response = on ? await _client.post(path) : await _client.delete(path);
     return response.object.flag('is_muted');
   }
@@ -345,7 +347,7 @@ class InboxApi {
   /// báo), KHÔNG chặn trên nền tảng. Idempotent; trả hội thoại đầy đủ như
   /// `GET {id}`.
   Future<Conversation> setBlocked(String id, bool on) async {
-    final path = '$_base/$id/block';
+    final path = '$_base/${pathSegment(id)}/block';
     final response = on ? await _client.post(path) : await _client.delete(path);
     return Conversation.fromJson(response.object);
   }
@@ -358,7 +360,7 @@ class InboxApi {
     String emoji,
   ) async {
     final response = await _client.post(
-      '$_base/$conversationId/messages/$messageId/team-reactions',
+      '$_base/${pathSegment(conversationId)}/messages/${pathSegment(messageId)}/team-reactions',
       body: {'emoji': emoji},
     );
     return response.object
@@ -373,14 +375,14 @@ class InboxApi {
     String? note,
   }) async {
     final response = await _client.post(
-      '$_base/$id/assign',
+      '$_base/${pathSegment(id)}/assign',
       body: {'assignee_id': assigneeId, 'note': ?note},
     );
     return Conversation.fromJson(response.object);
   }
 
   Future<Conversation> update(String id, Map<String, dynamic> body) async {
-    final response = await _client.put('$_base/$id', body: body);
+    final response = await _client.put('$_base/${pathSegment(id)}', body: body);
     return Conversation.fromJson(response.object);
   }
 
@@ -406,7 +408,7 @@ class InboxApi {
   Future<({String customerId, bool created, bool linkedExisting})> convert(
     String id,
   ) async {
-    final response = await _client.post('$_base/$id/convert');
+    final response = await _client.post('$_base/${pathSegment(id)}/convert');
     final json = response.object;
     return (
       customerId: json.strOr('customer_id', ''),
@@ -432,7 +434,7 @@ class InboxApi {
   }
 
   Future<ConversationContext> context(String id) async {
-    final response = await _client.get('$_base/$id/context');
+    final response = await _client.get('$_base/${pathSegment(id)}/context');
     final json = response.object;
     return ConversationContext(
       opportunities: json
