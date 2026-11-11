@@ -1,8 +1,10 @@
 import 'package:flutter/foundation.dart';
 
 import '../../../core/utils/json.dart';
+import 'kho_b_models.dart';
 import 'kho_models.dart';
 
+export 'kho_b_models.dart';
 export 'kho_models.dart';
 
 /// Kiểu Kho hàng — đúng hình dạng API (`InventoryPresenter`, omni-flow-api PR #90,
@@ -524,6 +526,9 @@ class InventoryUnit {
     this.defectTags,
     this.photoCount,
     this.coverUrl,
+    this.categoryId,
+    this.productId,
+    this.wholesalePrice,
   });
 
   factory InventoryUnit.fromJson(Map<String, dynamic> j) => InventoryUnit(
@@ -564,6 +569,9 @@ class InventoryUnit {
     defectTags: j['defect_tags'] is List ? j.strList('defect_tags') : null,
     photoCount: j['photo_count'] == null ? null : j.intOr('photo_count'),
     coverUrl: j.str('cover_url'),
+    categoryId: j.str('category_id'),
+    productId: j.str('product_id'),
+    wholesalePrice: j.dbl('wholesale_price'),
   );
 
   final String id;
@@ -611,6 +619,21 @@ class InventoryUnit {
 
   /// Ảnh đại diện (URL công khai `GET /inventory/media/...`).
   final String? coverUrl;
+
+  // ---- Kho chuẩn hóa Đợt B (API cũ không có khoá → null) ----
+  final String? categoryId;
+  final String? productId;
+
+  /// Giá sỉ lấy từ mã hàng của cây (giá lẻ vẫn là [listPrice]).
+  final double? wholesalePrice;
+
+  /// Giá của cây theo bậc (như web `unitTierPrice`): sỉ từ mã hàng, lẻ là
+  /// giá niêm yết; bậc 3 không có giá riêng cho cây → null.
+  double? tierPrice(PriceTierKey k) => switch (k) {
+    PriceTierKey.wholesale => wholesalePrice,
+    PriceTierKey.retail => listPrice,
+    PriceTierKey.tier3 => null,
+  };
 
   /// Cây đang có việc tân trang chưa xong — không đưa vào xưởng lần nữa
   /// (server cũng bỏ qua: `CreateWorkshopTasks`).

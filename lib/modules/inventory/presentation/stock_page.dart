@@ -518,6 +518,21 @@ class _StockPageState extends ConsumerState<StockPage> {
       appBar: OmniAppBar(
         title: 'Tồn kho',
         actions: [
+          // Kho chuẩn hóa Đợt B — chỉ khi API có capability.
+          if (perms.reservations)
+            _BarIcon(
+              key: const ValueKey('inv-open-reservations'),
+              tooltip: 'Đang giữ',
+              icon: Icons.bookmark_border_rounded,
+              onPressed: () => context.pushNamed(InventoryRoutes.reservations),
+            ),
+          if (perms.products)
+            _BarIcon(
+              key: const ValueKey('inv-open-catalog'),
+              tooltip: 'Danh mục hàng',
+              icon: Icons.category_outlined,
+              onPressed: () => context.pushNamed(InventoryRoutes.catalog),
+            ),
           IconButton(
             key: const ValueKey('inv-open-lots'),
             tooltip: 'Hàng sắp về',
@@ -752,6 +767,33 @@ class StockUnitRow extends StatelessWidget {
       ),
     );
   }
+}
+
+/// Nút biểu tượng 44×44 trên thanh tiêu đề (cùng kiểu nút Hàng sắp về).
+class _BarIcon extends StatelessWidget {
+  const _BarIcon({
+    super.key,
+    required this.tooltip,
+    required this.icon,
+    required this.onPressed,
+  });
+
+  final String tooltip;
+  final IconData icon;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) => IconButton(
+    tooltip: tooltip,
+    padding: EdgeInsets.zero,
+    constraints: const BoxConstraints.tightFor(width: 44, height: 44),
+    onPressed: onPressed,
+    icon: Icon(
+      icon,
+      size: OmniIconSize.md,
+      color: Theme.of(context).colorScheme.onSurface,
+    ),
+  );
 }
 
 /// Hàng lọc: chia đều khi ít ô, cuộn ngang khi có thêm ô Vị trí.
