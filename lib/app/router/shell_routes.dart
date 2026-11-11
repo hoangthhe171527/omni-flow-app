@@ -4,7 +4,11 @@ abstract final class ShellRoutes {
   static const more = 'shell.more';
   static const forbidden = 'shell.forbidden';
 
+  /// Màn Chọn ứng dụng (khung ứng dụng, cờ `app_shell`).
+  static const apps = 'shell.apps';
+
   static const splashPath = '/';
   static const morePath = '/more';
   static const forbiddenPath = '/forbidden';
+  static const appsPath = '/apps';
 }

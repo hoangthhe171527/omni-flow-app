@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../../../core/error/app_exception.dart';
+import '../../../core/nav/account_extras_slot.dart';
 import '../../../design/components/components.dart';
 import '../../../design/platform/omni_motion_scope.dart';
 import '../../../design/tokens/tokens.dart';
@@ -95,6 +96,9 @@ class _AccountPageState extends ConsumerState<AccountPage> {
                   ],
                 ),
               ),
+              // Khung ứng dụng: Cài đặt ứng dụng, Trợ giúp (không còn "Tất cả").
+              if (AccountExtrasSlot.maybeOf(context) case final extras?)
+                _Rise(delay: 125, child: extras(context)),
               const SizedBox(height: 18),
               _Rise(
                 delay: 150,
