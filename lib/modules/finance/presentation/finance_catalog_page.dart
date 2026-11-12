@@ -19,7 +19,6 @@ class FinanceCatalogPage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(financeLedgerProvider);
-    final scheme = Theme.of(context).colorScheme;
 
     final active = [
       for (final g in state.groups)
@@ -58,12 +57,12 @@ class FinanceCatalogPage extends ConsumerWidget {
         child: ListView(
           key: const ValueKey('finance-catalog-list'),
           physics: const AlwaysScrollableScrollPhysics(),
-          // Màn đẩy, không có thanh tab: chỉ chừa vùng an toàn dưới.
+          // Chừa phần đáy bị che + nút + kính.
           padding: EdgeInsets.fromLTRB(
             16,
-            8,
+            12,
             16,
-            MediaQuery.viewPaddingOf(context).bottom + 24,
+            OmniFabLayer.listBottom(context),
           ),
           children: [
             OmniGroupSection(
@@ -107,39 +106,23 @@ class FinanceCatalogPage extends ConsumerWidget {
                 ],
               ),
             ],
-            Padding(
-              padding: const EdgeInsets.fromLTRB(8, 14, 8, 0),
-              child: Text(
-                'Gộp nhiều nhóm làm một: dùng bản web.',
-                style: OmniType.caption.copyWith(
-                  color: scheme.onSurfaceVariant,
-                ),
-              ),
-            ),
           ],
         ),
       );
     }
 
     return Scaffold(
-      appBar: OmniAppBar(
-        title: 'Danh mục chi',
-        actions: [
-          IconButton(
-            key: const ValueKey('finance-catalog-add'),
-            tooltip: 'Thêm',
-            padding: EdgeInsets.zero,
-            constraints: const BoxConstraints.tightFor(width: 44, height: 44),
-            onPressed: () => _add(context, ref),
-            icon: Icon(
-              Icons.add_rounded,
-              size: OmniIconSize.md,
-              color: scheme.onSurface,
-            ),
-          ),
-        ],
+      appBar: const OmniAppBar(title: 'Danh mục chi'),
+      // Thêm nhóm chi / nguồn tiền: nút + kính góc phải dưới (rà soát 12/11),
+      // mở sheet hai dòng như dấu + ở header trước đây.
+      body: OmniFabLayer(
+        fab: OmniLiquidFab(
+          key: const ValueKey('finance-catalog-add'),
+          tooltip: 'Thêm',
+          onPressed: (_) => _add(context, ref),
+        ),
+        body: body,
       ),
-      body: body,
     );
   }
 
@@ -512,6 +495,15 @@ class _CatalogEditSheetState extends State<_CatalogEditSheet> {
             child: Text(
               _error!,
               style: OmniType.caption.copyWith(color: scheme.error),
+            ),
+          ),
+        // Nơi người ta thật sự cần tới: đang sửa một nhóm.
+        if (isGroup)
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8),
+            child: Text(
+              'Gộp nhiều nhóm làm một: dùng bản web.',
+              style: OmniType.caption.copyWith(color: scheme.onSurfaceVariant),
             ),
           ),
       ],

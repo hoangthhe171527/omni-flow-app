@@ -110,6 +110,30 @@ const appItemSpecs = <String, AppItemSpec>{
   'staff': AppItemSpec('team.list'),
 };
 
+/// Nhãn ngắn trên thanh tab (rà soát 12/11/2026): ô tab rộng ~70px chỉ vừa
+/// ~9 ký tự ở cỡ chữ của thanh. Nhãn dài từng bị FittedBox thu nhỏ → một thanh
+/// ba cỡ chữ. Tên đầy đủ vẫn dùng cho tiêu đề màn, sheet "Thêm" và nhãn đọc
+/// màn hình. Test `tab_labels_test.dart` ghim mọi nhãn tab ≤ [maxTabLabelLength].
+const tabLabels = <String, String>{
+  'inventory.lots': 'Sắp về',
+  'inventory.suppliers': 'NCC',
+  'inventory.catalog': 'Danh mục',
+  'inventory.delivered': 'Đã giao',
+  'finance.expenses': 'Sổ chi',
+  'finance.summary': 'Tổng hợp',
+  'finance.catalog': 'Danh mục',
+  'channels.list': 'Kênh',
+  'tasks.list': 'Việc',
+  'settings.notifications': 'Thông báo',
+  'settings.permissions': 'Quyền',
+};
+
+const maxTabLabelLength = 9;
+
+/// Nhãn của một mục trên thanh tab / thanh bên.
+String tabLabelOf(ModuleNavEntry entry) =>
+    tabLabels[entry.routeName] ?? entry.label;
+
 /// Khoá của Bàn làm việc — trang mở đầu, không phải ứng dụng trong bản khai báo.
 const homeAppKey = 'home';
 

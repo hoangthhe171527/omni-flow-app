@@ -200,10 +200,11 @@ void main() {
     await t.tapAt(icon + const Offset(20, 0));
     await t.pumpAndSettle();
     expect(find.text('VIP'), findsOneWidget);
+    // "Thêm khách" giờ là nút + kính góc phải dưới (rà soát 12/11).
     final add = t.getSize(
       find.ancestor(
-        of: find.byIcon(Icons.person_add_alt_rounded),
-        matching: find.byType(IconButton),
+        of: find.byIcon(Icons.person_add_alt_1_rounded),
+        matching: find.byType(OmniLiquidFab),
       ),
     );
     expect(add.shortestSide, greaterThanOrEqualTo(44));

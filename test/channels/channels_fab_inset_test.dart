@@ -8,35 +8,43 @@ import 'package:omni_app/security/permissions/access_policy.dart';
 import 'package:omni_app/security/session/session_controller.dart';
 
 void main() {
-  testWidgets('nút "Kết nối kênh" nằm trên thanh tab kính, không bị che', (
-    t,
-  ) async {
-    // Thanh tab kính phủ lên body (extendBody). Scaffold lồng đặt nút nổi theo
-    // viewPadding, không theo thanh — nút nằm hẳn dưới lớp kính mờ, không bấm
-    // được (lỗi thấy trên bản demo 08/11/2026).
-    t.view.physicalSize = const Size(390, 844);
-    t.view.devicePixelRatio = 1;
-    addTearDown(t.view.reset);
+  // Thanh tab kính phủ lên body (extendBody): viên kính 66 + đáy = vùng an
+  // toàn (tối thiểu 12). Lỗi 08/11: nút nằm dưới kính vì Scaffold lồng không
+  // biết thanh. Lỗi 12/11: nút chỉ được nâng 78 (thanh + khe 12), nên trên
+  // iPhone (vùng an toàn 34, thanh cao 100) kính vẫn đè lên nút.
+  for (final safe in const [0.0, 34.0]) {
+    testWidgets(
+      'nút "Kết nối kênh" nằm trên thanh tab kính (đáy an toàn $safe)',
+      (t) async {
+        t.view.physicalSize = const Size(390, 844);
+        t.view.devicePixelRatio = 1;
+        t.view.viewPadding = FakeViewPadding(bottom: safe);
+        t.view.padding = FakeViewPadding(bottom: safe);
+        addTearDown(t.view.reset);
 
-    await t.pumpWidget(
-      ProviderScope(
-        overrides: [
-          channelsProvider.overrideWith((ref) async => const []),
-          accessProvider.overrideWithValue(
-            const AccessPolicy({'channels.read', 'channels.write'}),
+        await t.pumpWidget(
+          ProviderScope(
+            overrides: [
+              channelsProvider.overrideWith((ref) async => const []),
+              accessProvider.overrideWithValue(
+                const AccessPolicy({'channels.read', 'channels.write'}),
+              ),
+            ],
+            child: const MaterialApp(
+              home: ShellBarInset(
+                height: ShellBarInset.barHeight,
+                child: ChannelsPage(),
+              ),
+            ),
           ),
-        ],
-        child: const MaterialApp(
-          home: ShellBarInset(
-            height: ShellBarInset.barHeight,
-            child: ChannelsPage(),
-          ),
-        ),
-      ),
+        );
+        await t.pumpAndSettle();
+
+        final barTop =
+            844 - (ShellBarInset.pillHeight + (safe > 12 ? safe : 12));
+        final fab = t.getRect(find.byKey(const Key('channels-connect')));
+        expect(fab.bottom, lessThanOrEqualTo(barTop - 16));
+      },
     );
-    await t.pumpAndSettle();
-
-    final fab = t.getRect(find.byType(FloatingActionButton));
-    expect(fab.bottom, lessThanOrEqualTo(844 - ShellBarInset.barHeight));
-  });
+  }
 }

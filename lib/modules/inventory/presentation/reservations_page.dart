@@ -46,8 +46,7 @@ class _ReservationsPageState extends ConsumerState<ReservationsPage> {
     final status = _filters[_filter].$1;
     final res = ref.watch(reservationsProvider(status));
     final today = ref.watch(inventoryTodayProvider);
-    final bottom =
-        ShellBarInset.of(context) + MediaQuery.viewPaddingOf(context).bottom;
+    final bottom = ShellBarInset.coveredBottom(context);
 
     final list = <Widget>[
       OmniSegmented(

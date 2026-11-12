@@ -162,11 +162,17 @@ void main() {
   );
 
   group('Lối vào trên Tồn kho', () {
-    testWidgets('API thiếu capability Đợt C: không có nút ⋯', (t) async {
+    testWidgets('API thiếu capability Đợt C: menu ⋯ không Kiểm kê, Đã giao', (
+      t,
+    ) async {
       phone(t);
       await t.pumpWidget(app(fake(), old, const StockPage()));
       await t.pumpAndSettle();
-      expect(find.byKey(const ValueKey('inv-open-more')), findsNothing);
+      await t.tap(find.byKey(const ValueKey('inv-open-more')));
+      await t.pumpAndSettle();
+      expect(find.byKey(const ValueKey('inv-open-lots')), findsOneWidget);
+      expect(find.byKey(const ValueKey('inv-open-counts')), findsNothing);
+      expect(find.byKey(const ValueKey('inv-open-delivered')), findsNothing);
     });
 
     testWidgets('có capability: ⋯ mở menu Kiểm kê, Hàng đã giao', (t) async {

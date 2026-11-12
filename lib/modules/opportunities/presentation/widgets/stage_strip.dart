@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../../../../design/components/components.dart';
 import '../../../../design/platform/omni_motion_scope.dart';
 import '../../../../design/tokens/contrast.dart';
 import '../../../../design/tokens/tokens.dart';
@@ -31,9 +32,9 @@ Color readableStageColor(Color color, Color surface, {double minRatio = 4.5}) {
   return toward;
 }
 
-/// Dải ô giai đoạn (`Customers.dc.html`): mỗi ô một số đếm, nhãn và vạch đáy
-/// màu giai đoạn. Chạm ô để lọc, chạm lại để bỏ lọc. Quá 4 giai đoạn thì dải
-/// cuộn ngang, ô rộng bằng một phần tư.
+/// Dải chip kính lọc theo giai đoạn (rà soát 12/11): "Tất cả n" rồi mỗi giai
+/// đoạn một chip "tên n". Chạm chip để lọc, chạm lại chip đang chọn (hoặc
+/// "Tất cả") để bỏ lọc. Nhiều giai đoạn thì dải cuộn ngang.
 class StageStrip extends StatelessWidget {
   const StageStrip({
     super.key,
@@ -41,39 +42,55 @@ class StageStrip extends StatelessWidget {
     required this.summary,
     required this.selected,
     required this.onSelected,
+    this.showAll = true,
+    this.allCount,
   });
 
-  /// Chỉ các giai đoạn mở.
+  /// Các giai đoạn hiện trên dải (mở, hoặc đóng khi xem "Đã đóng").
   final List<PipelineStageDef> stages;
   final PipelineSummary? summary;
 
   /// Mã giai đoạn đang lọc; null = không lọc.
   final String? selected;
 
-  /// Gọi với mã vừa chạm, hoặc null khi chạm lại ô đang chọn.
+  /// Gọi với mã vừa chạm, hoặc null khi chạm lại chip đang chọn / "Tất cả".
   final ValueChanged<String?> onSelected;
+
+  /// Có chip "Tất cả" ở đầu dải.
+  final bool showAll;
+
+  /// Số trên chip "Tất cả"; null thì chỉ hiện chữ.
+  final int? allCount;
 
   @override
   Widget build(BuildContext context) {
-    final width = (MediaQuery.sizeOf(context).width - 32) / 4;
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
-      padding: const EdgeInsets.symmetric(horizontal: 16),
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
       child: Row(
         children: [
+          if (showAll)
+            _StageChip(
+              label: 'Tất cả',
+              count: allCount,
+              semanticsLabel: 'Tất cả, ${allCount ?? 0} cơ hội',
+              selected: selected == null,
+              onTap: () {
+                HapticFeedback.selectionClick();
+                onSelected(null);
+              },
+            ),
           for (final stage in stages)
-            SizedBox(
-              width: width,
-              child: _StageTile(
-                stage: stage,
-                count: summary?.totalFor(stage.code).count,
-                filtering: selected != null,
-                isSelected: stage.code == selected,
-                onTap: () {
-                  HapticFeedback.selectionClick();
-                  onSelected(stage.code == selected ? null : stage.code);
-                },
-              ),
+            _StageChip(
+              label: stage.label,
+              count: summary?.totalFor(stage.code).count ?? 0,
+              semanticsLabel:
+                  '${stage.label}, ${summary?.totalFor(stage.code).count ?? 0} cơ hội',
+              selected: stage.code == selected,
+              onTap: () {
+                HapticFeedback.selectionClick();
+                onSelected(stage.code == selected ? null : stage.code);
+              },
             ),
         ],
       ),
@@ -81,79 +98,83 @@ class StageStrip extends StatelessWidget {
   }
 }
 
-class _StageTile extends StatelessWidget {
-  const _StageTile({
-    required this.stage,
+/// Chip kính cùng dáng `OmniChoicePill`, nhưng tên và số là hai mẩu chữ riêng
+/// (số mờ hơn, chữ số đều) để tên giai đoạn đứng một mình.
+class _StageChip extends StatelessWidget {
+  const _StageChip({
+    required this.label,
     required this.count,
-    required this.filtering,
-    required this.isSelected,
+    required this.semanticsLabel,
+    required this.selected,
     required this.onTap,
   });
 
-  final PipelineStageDef stage;
+  final String label;
   final int? count;
-  final bool filtering;
-  final bool isSelected;
+  final String semanticsLabel;
+  final bool selected;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final dark = Theme.of(context).brightness == Brightness.dark;
     final motion = OmniMotion.enabled(context);
-    final duration = motion ? const Duration(milliseconds: 250) : Duration.zero;
-    final dimmed = filtering && !isSelected;
+    final base = scheme.onSurface.withValues(alpha: dark ? .08 : .05);
+    final count = this.count;
 
-    return Semantics(
-      button: true,
-      selected: isSelected,
-      label: '${stage.label}, ${count ?? 0} cơ hội',
-      onTap: onTap,
-      excludeSemantics: true,
-      child: InkWell(
+    return Padding(
+      padding: const EdgeInsets.only(right: 8),
+      child: Semantics(
+        button: true,
+        selected: selected,
+        label: semanticsLabel,
         onTap: onTap,
-        child: AnimatedOpacity(
-          opacity: dimmed ? 0.45 : 1,
-          duration: duration,
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(8, 8, 8, 10),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  '${count ?? 0}',
-                  style: OmniType.money.copyWith(color: scheme.onSurface),
-                ),
-                Text(
-                  stage.label,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: OmniType.micro.copyWith(
-                    color: scheme.onSurfaceVariant,
-                  ),
-                ),
-                const SizedBox(height: 6),
-                TweenAnimationBuilder<double>(
-                  tween: Tween(end: dimmed ? 0.35 : 1),
-                  duration: duration,
-                  builder: (context, scaleX, child) => Transform(
-                    alignment: Alignment.centerLeft,
-                    transform: Matrix4.diagonal3Values(scaleX, 1, 1),
-                    child: child,
-                  ),
-                  child: Container(
-                    height: 3,
-                    decoration: BoxDecoration(
-                      color: readableStageColor(
-                        stageColorOf(stage, scheme),
-                        scheme.surface,
-                        minRatio: 3,
-                      ),
-                      borderRadius: BorderRadius.circular(2),
+        excludeSemantics: true,
+        child: Material(
+          type: MaterialType.transparency,
+          child: InkWell(
+            customBorder: const StadiumBorder(),
+            onTap: onTap,
+            child: AnimatedContainer(
+              duration: motion
+                  ? const Duration(milliseconds: 160)
+                  : Duration.zero,
+              constraints: const BoxConstraints(minHeight: 36),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+              decoration: selected
+                  ? OmniGlass.buttonDecoration(
+                      context,
+                    ).copyWith(color: OmniGlass.selectionOf(context))
+                  : BoxDecoration(
+                      color: base,
+                      borderRadius: BorderRadius.circular(999),
+                    ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    label,
+                    style: OmniType.chip.copyWith(
+                      fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
+                      color: selected
+                          ? scheme.onSurface
+                          : scheme.onSurfaceVariant,
                     ),
                   ),
-                ),
-              ],
+                  if (count != null) ...[
+                    const SizedBox(width: 6),
+                    Text(
+                      '$count',
+                      style: OmniType.chip.copyWith(
+                        fontWeight: FontWeight.w500,
+                        color: scheme.onSurfaceVariant,
+                        fontFeatures: OmniType.tabular,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
             ),
           ),
         ),

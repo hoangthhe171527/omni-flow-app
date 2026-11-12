@@ -131,9 +131,11 @@ void main() {
 
       expect(find.byType(InvUnitThumb), findsNWidgets(3));
       // Cây ở nơi khác vị trí mặc định ghi tên nơi đó ở dòng phụ.
-      expect(find.textContaining('Đại lý Sao Mai · Ep 57'), findsOneWidget);
+      expect(find.text('Đại lý Sao Mai'), findsOneWidget);
 
-      await t.ensureVisible(find.byKey(const ValueKey('inv-filter-location')));
+      // Vị trí nằm trong sheet lọc (nút lọc cạnh ô tìm).
+      await t.tap(find.byKey(const ValueKey('inv-filter')));
+      await t.pumpAndSettle();
       await t.tap(find.byKey(const ValueKey('inv-filter-location')));
       await t.pumpAndSettle();
       await t.tap(find.text('Đại lý Sao Mai').last);
@@ -143,7 +145,9 @@ void main() {
       expect(find.text('YAMAHA U3H'), findsNothing);
 
       // Bỏ lọc, chọn hai cây ở Kho chính, chuyển sang Sao Mai.
-      await t.ensureVisible(find.byKey(const ValueKey('inv-filter-location')));
+      // Vị trí nằm trong sheet lọc (nút lọc cạnh ô tìm).
+      await t.tap(find.byKey(const ValueKey('inv-filter')));
+      await t.pumpAndSettle();
       await t.tap(find.byKey(const ValueKey('inv-filter-location')));
       await t.pumpAndSettle();
       await t.tap(find.text('Mọi vị trí'));
@@ -154,10 +158,10 @@ void main() {
       await t.tap(find.byKey(const ValueKey('inv-unit-u3')));
       await t.pumpAndSettle();
       expect(find.text('Chuyển vị trí · 2 cây'), findsOneWidget);
-      // Có cả Bán: chuyển vị trí là dòng trong nhóm, không thêm nút nổi.
+      // Có cả Bán: chuyển vị trí là nút phụ trong khay kính đáy.
       expect(
         find.descendant(
-          of: find.byKey(const ValueKey('inv-stock-summary')),
+          of: find.byKey(const ValueKey('inv-stock-dock')),
           matching: find.text('Chuyển vị trí · 2 cây'),
         ),
         findsOneWidget,
@@ -174,7 +178,7 @@ void main() {
       });
       expect(find.text('Đã chuyển 2 cây đến Đại lý Sao Mai.'), findsOneWidget);
       // Đọc lại: danh sách tải lại, cả ba cây giờ ở Sao Mai.
-      expect(find.textContaining('Đại lý Sao Mai · '), findsNWidgets(3));
+      expect(find.text('Đại lý Sao Mai'), findsNWidgets(3));
     });
 
     testWidgets(
@@ -184,7 +188,12 @@ void main() {
         final api = FakeInventoryApi(units: seed(), locations: locations);
         await t.pumpWidget(app(api, allNew, const StockPage()));
         await t.pumpAndSettle();
+        await t.tap(find.byKey(const ValueKey('inv-filter')));
+        await t.pumpAndSettle();
         expect(find.byKey(const ValueKey('inv-filter-location')), findsNothing);
+        // Đóng sheet lọc bằng cách chạm ra ngoài.
+        await t.tapAt(const Offset(20, 20));
+        await t.pumpAndSettle();
         expect(find.textContaining('Đại lý Sao Mai'), findsNothing);
 
         await t.pumpWidget(

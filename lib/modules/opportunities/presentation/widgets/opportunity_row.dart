@@ -83,8 +83,9 @@ class OpportunityRow extends ConsumerWidget {
                     children: [
                       Text(
                         opportunity.title,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
+                        // Tên không cắt "…": tối đa 2 dòng (rà soát 12/11).
+                        maxLines: 2,
+                        overflow: TextOverflow.clip,
                         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                           fontWeight: FontWeight.w600,
                           color: scheme.onSurface,
@@ -96,8 +97,8 @@ class OpportunityRow extends ConsumerWidget {
                           opportunity.customerName ?? 'Chưa gắn khách hàng',
                           if (due != null) 'Hạn ${Formatters.dayMonth(due)}',
                         ].join(' · '),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
+                        // Tên khách không cắt "…" (soát 12/11): tối đa 2 dòng.
+                        maxLines: 2,
                         style: OmniType.micro.copyWith(
                           color: overdue
                               ? scheme.error

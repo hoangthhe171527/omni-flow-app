@@ -10,6 +10,7 @@ import '../apps/app_title_leading.dart';
 import '../router/shell_routes.dart';
 import '../../core/nav/search_mode.dart';
 import '../../core/nav/shell_bar_inset.dart';
+import '../../core/nav/shell_tab_routes.dart';
 import '../../core/nav/tab_order.dart';
 import '../../core/module/nav_destination.dart';
 import '../../design/components/components.dart';
@@ -120,17 +121,21 @@ class AppShell extends ConsumerWidget {
     // dụng. Chỉ một ô thì không có nút (không có gì để chọn).
     final Widget body = !appMode
         ? navigationShell
-        : OmniTopBarLeading(
-            builder: (context, title) => AppTitleLeading(
-              appName: layout.entries.length > 1
-                  ? app.name
-                  : (ref.read(sessionProvider).tenant?.name ?? app.name),
-              title: title,
-              onSwitch: layout.entries.length > 1
-                  ? () => context.go(ShellRoutes.appsPath)
-                  : null,
+        : ShellTabRoutes(
+            // Màn của module hỏi qua đây để không lặp lối vào trên header.
+            routes: {for (final item in app.all) item.entry.routeName},
+            child: OmniTopBarLeading(
+              builder: (context, title) => AppTitleLeading(
+                appName: layout.entries.length > 1
+                    ? app.name
+                    : (ref.read(sessionProvider).tenant?.name ?? app.name),
+                title: title,
+                onSwitch: layout.entries.length > 1
+                    ? () => context.go(ShellRoutes.appsPath)
+                    : null,
+              ),
+              child: navigationShell,
             ),
-            child: navigationShell,
           );
 
     return LayoutBuilder(
@@ -481,15 +486,18 @@ class _ShellNavItem extends ConsumerWidget {
     final scheme = Theme.of(context).colorScheme;
     // Mục đang chọn: viên trắng mờ trong kính + icon và chữ màu chính.
     final iconColor = selected ? scheme.primary : scheme.onSurfaceVariant;
+    final destination = this.destination;
     final badgeProvider = destination?.badge;
     final count = badgeProvider == null ? 0 : ref.watch(badgeProvider);
-    final text = destination?.label ?? label!;
+    final text = destination == null ? label! : tabLabelOf(destination);
+    // Đọc màn hình đọc tên đầy đủ ("Nhà cung cấp"), không phải nhãn ngắn.
+    final fullName = destination?.label ?? text;
 
     final semanticsLabel = count <= 0
-        ? text
+        ? fullName
         : destination?.badgeDisplay == NavBadgeDisplay.dot
-        ? '$text, có tin chưa đọc'
-        : '$text, $count';
+        ? '$fullName, có tin chưa đọc'
+        : '$fullName, $count';
 
     return Semantics(
       selected: selected,
@@ -530,7 +538,7 @@ class _ShellNavItem extends ConsumerWidget {
                           child: _NavBadge(
                             count: count,
                             tone: destination!.badgeTone,
-                            display: destination!.badgeDisplay,
+                            display: destination.badgeDisplay,
                           ),
                         ),
                     ],
@@ -539,19 +547,18 @@ class _ShellNavItem extends ConsumerWidget {
                 const SizedBox(height: 1),
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 2),
-                  // Màn hẹp (360): "Tổng quan" từng thành "Tổng qu…". Thu nhỏ
-                  // vừa ô thay vì cắt chữ.
-                  child: FittedBox(
-                    fit: BoxFit.scaleDown,
-                    child: Text(
-                      text,
-                      maxLines: 1,
-                      style: OmniType.micro.copyWith(
-                        color: color,
-                        fontWeight: selected
-                            ? FontWeight.w600
-                            : FontWeight.w500,
-                      ),
+                  // MỘT cỡ chữ cho cả thanh (rà soát 12/11): không FittedBox —
+                  // nó từng thu "Nhà cung cấp" còn 8,6px cạnh nhãn 11px. Nhãn
+                  // dài dùng nhãn ngắn `tabLabels` (≤ 9 ký tự, vừa ô ở 360).
+                  child: Text(
+                    text,
+                    maxLines: 1,
+                    softWrap: false,
+                    overflow: TextOverflow.fade,
+                    textAlign: TextAlign.center,
+                    style: OmniType.micro.copyWith(
+                      color: color,
+                      fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
                     ),
                   ),
                 ),

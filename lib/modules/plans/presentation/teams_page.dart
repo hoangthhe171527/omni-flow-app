@@ -233,10 +233,10 @@ class _TeamsPageState extends ConsumerState<TeamsPage> {
               right: 20,
               // Trên thanh tab kính, vừa tầm ngón cái. Khe 24: với 16 thì bóng
               // của nút chạm bóng thanh tab, nhìn như dính vào menu.
-              bottom:
-                  ShellBarInset.of(context) +
-                  MediaQuery.viewPaddingOf(context).bottom +
-                  24,
+              bottom: ShellBarInset.floatingBottom(
+                context,
+                gap: OmniFabLayer.gap,
+              ),
               child: _HideWhileSearching(
                 child: OmniLiquidFab(
                   key: const Key('work-create-fab'),

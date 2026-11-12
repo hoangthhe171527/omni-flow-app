@@ -112,7 +112,15 @@ void main() {
     expect(find.text('Đã chọn 2 khoản'), findsOneWidget);
     expect(find.text('Nhận hàng'), findsNothing);
     // 100.000 ¥ × 170 = 17.000.000 + 25.000.000.
-    expect(find.text('Ghi đã trả · 2 khoản · 42.000.000đ'), findsOneWidget);
+    // Khay kính đáy: tóm tắt bên trái, nút Ghi đã trả bên phải.
+    expect(find.text('2 khoản · 42.000.000đ'), findsOneWidget);
+    expect(
+      find.descendant(
+        of: find.byKey(const ValueKey('inv-lot-pay-many')),
+        matching: find.text('Ghi đã trả'),
+      ),
+      findsOneWidget,
+    );
 
     await t.tap(find.byKey(const ValueKey('inv-lot-pay-many')));
     await t.pumpAndSettle();

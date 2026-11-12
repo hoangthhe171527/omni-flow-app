@@ -7,6 +7,7 @@ import 'package:omni_app/core/config/app_config.dart';
 import 'package:omni_app/core/network/api_client.dart';
 import 'package:omni_app/core/network/api_envelope.dart';
 import 'package:omni_app/core/realtime/realtime_client.dart';
+import 'package:omni_app/design/components/components.dart';
 import 'package:omni_app/design/theme/omni_theme.dart';
 import 'package:omni_app/modules/customers/application/customers_providers.dart';
 import 'package:omni_app/modules/customers/data/customers_api.dart';
@@ -67,12 +68,6 @@ class _CustomersApi implements CustomersApi {
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
-
-/// Vùng chạm thật của IconButton là chính nó (lớp InputPadding nằm trong): Tooltip
-/// bọc phần vẽ bên trong nên đo Tooltip sẽ ra phần vẽ, không phải vùng chạm.
-Size hitSize(WidgetTester t, String tooltip) => t.getSize(
-  find.ancestor(of: find.byTooltip(tooltip), matching: find.byType(IconButton)),
-);
 
 /// Hình vẽ 36 nhưng vùng chạm phải ≥ 44 (ruling của dự án).
 void main() {
@@ -166,7 +161,13 @@ void main() {
     );
     await t.pumpAndSettle();
 
-    final add = hitSize(t, 'Thêm khách');
+    // "Thêm khách" là nút + kính góc phải dưới (rà soát 12/11).
+    final add = t.getSize(
+      find.ancestor(
+        of: find.byTooltip('Thêm khách'),
+        matching: find.byType(OmniLiquidFab),
+      ),
+    );
     expect(add.width, greaterThanOrEqualTo(44));
     expect(add.height, greaterThanOrEqualTo(44));
     expect(t.getSize(find.bySemanticsLabel('Bộ lọc')), const Size(44, 44));

@@ -352,12 +352,20 @@ void main() {
       t,
     ) async {
       phone(t);
+      // Các lối vào nằm trong menu ⋯ (một nút trên thanh).
       await t.pumpWidget(app(fake(), old, const StockPage()));
       await t.pumpAndSettle();
+      await t.tap(find.byKey(const ValueKey('inv-open-more')));
+      await t.pumpAndSettle();
+      expect(find.byKey(const ValueKey('inv-open-lots')), findsOneWidget);
       expect(find.byKey(const ValueKey('inv-open-catalog')), findsNothing);
       expect(find.byKey(const ValueKey('inv-open-reservations')), findsNothing);
+      await t.tapAt(const Offset(8, 800));
+      await t.pumpAndSettle();
 
       await t.pumpWidget(app(fake(), all, const StockPage()));
+      await t.pumpAndSettle();
+      await t.tap(find.byKey(const ValueKey('inv-open-more')));
       await t.pumpAndSettle();
       expect(find.byKey(const ValueKey('inv-open-catalog')), findsOneWidget);
       expect(

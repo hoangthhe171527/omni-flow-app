@@ -23,7 +23,7 @@ import 'widgets/unit_sheet.dart';
 
 /// Chi tiết lô: tóm tắt, tiền & giá vốn (tỷ lệ · giá vốn lô · còn thiếu, "Dùng
 /// ước tính", khoản trả hai loại), Thêm cây, danh sách cây gom theo model,
-/// nút Nhận hàng.
+/// khay kính đáy Nhận hàng / Ghi đã trả (rà soát 12/11, `#s-nhan-hang`).
 ///
 /// Kho chuẩn hóa Đợt A (`inventory.claims`): tổng ¥ dự kiến (sửa khi có quyền
 /// thanh toán lô), phải trả nhà cung cấp sau khoản được trừ, trả dư; khoản đòi
@@ -254,7 +254,6 @@ class _LotDetailPageState extends ConsumerState<LotDetailPage> {
     final lot = lotAsync.valueOrNull;
     final unitsAsync = ref.watch(lotUnitsProvider(widget.lotId));
     final units = unitsAsync.valueOrNull ?? const <InventoryUnit>[];
-    final bottomSafe = MediaQuery.viewPaddingOf(context).bottom;
     final canReceive =
         lot != null &&
         perms.write &&
@@ -269,7 +268,39 @@ class _LotDetailPageState extends ConsumerState<LotDetailPage> {
     final payTotal = lot == null
         ? 0
         : selected.fold<int>(0, (s, c) => s + plannedAmount(lot, c));
-    final thumb = payMany ? selected.isNotEmpty : canReceive;
+    // Khay kính đáy: Ghi đã trả (đang chọn khoản) hoặc Nhận hàng, bên trái là
+    // dòng tóm tắt để biết nút sẽ làm gì.
+    final OmniBottomDock? dock;
+    if (lot != null && payMany && selected.isNotEmpty) {
+      dock = OmniBottomDock(
+        title: '${selected.length} khoản · ${InvUi.vnd(payTotal)}',
+        action: FilledButton(
+          key: const ValueKey('inv-lot-pay-many'),
+          onPressed: () => _payMany(lot),
+          child: const Text('Ghi đã trả'),
+        ),
+      );
+    } else if (lot != null && !payMany && canReceive) {
+      // Cây chưa nhận: đếm trên danh sách cây khi đã tải, không thì cả lô.
+      final waiting = unitsAsync.hasValue
+          ? units.where((u) => u.place == UnitPlace.incoming).length
+          : lot.units;
+      dock = OmniBottomDock(
+        title: waiting > 0
+            ? '${InventoryFormat.number(waiting)} cây chưa nhận'
+            : null,
+        action: FilledButton(
+          key: const ValueKey('inv-lot-receive'),
+          onPressed: () => context.pushNamed(
+            InventoryRoutes.receive,
+            pathParameters: {'lotId': lot.id},
+          ),
+          child: const Text('Nhận hàng'),
+        ),
+      );
+    } else {
+      dock = null;
+    }
 
     return Scaffold(
       appBar: OmniAppBar(title: lot?.code ?? 'Lô'),
@@ -280,90 +311,61 @@ class _LotDetailPageState extends ConsumerState<LotDetailPage> {
               loading: const OmniSkeletonList(count: 5, height: 56),
               data: (_) => const SizedBox.shrink(),
             )
-          : Stack(
-              children: [
-                Positioned.fill(
-                  child: RefreshIndicator(
-                    onRefresh: () async => bumpInventory(ref),
-                    child: ListView(
-                      physics: const AlwaysScrollableScrollPhysics(),
-                      padding: EdgeInsets.fromLTRB(
-                        16,
-                        12,
-                        16,
-                        bottomSafe + (thumb ? 96 : 24),
-                      ),
-                      children: [
-                        ..._summary(lot, perms, units),
-                        if (perms.write &&
-                            lot.status != LotStatus.received) ...[
-                          const SizedBox(height: OmniGroupSection.gap),
-                          OmniGroupSection(
-                            children: [
-                              OmniGroupRow(
-                                key: const ValueKey('inv-lot-paste'),
-                                icon: Icons.content_paste_rounded,
-                                accent: true,
-                                title: 'Dán packing list',
-                                subtitle: lot.units == 0
-                                    ? 'Copy các dòng từ Excel'
-                                    : null,
-                                onTap: () => openPasteSheet(context, lot: lot),
-                              ),
-                              OmniGroupRow.add(
-                                key: const ValueKey('inv-lot-add-unit'),
-                                title: 'Thêm cây',
-                                onTap: () => openAddUnitSheet(
-                                  context,
-                                  lot: lot,
-                                  known: [
-                                    ...units,
-                                    // Tồn kho đang mở (nếu có) cho thêm gợi ý.
-                                    if (ref.exists(stockProvider))
-                                      ...?ref
-                                          .read(stockProvider)
-                                          .valueOrNull
-                                          ?.items,
-                                  ],
-                                ),
-                              ),
-                            ],
+          : OmniDockLayer(
+              dock: dock,
+              body: RefreshIndicator(
+                onRefresh: () async => bumpInventory(ref),
+                child: ListView(
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  padding: EdgeInsets.fromLTRB(
+                    16,
+                    12,
+                    16,
+                    dock == null
+                        ? OmniFabLayer.listBottom(context, hasFab: false)
+                        : OmniDockLayer.listBottom(context),
+                  ),
+                  children: [
+                    ..._summary(lot, perms, units),
+                    if (perms.write && lot.status != LotStatus.received) ...[
+                      const SizedBox(height: OmniGroupSection.gap),
+                      OmniGroupSection(
+                        children: [
+                          OmniGroupRow(
+                            key: const ValueKey('inv-lot-paste'),
+                            icon: Icons.content_paste_rounded,
+                            accent: true,
+                            title: 'Dán packing list',
+                            subtitle: lot.units == 0
+                                ? 'Copy các dòng từ Excel'
+                                : null,
+                            onTap: () => openPasteSheet(context, lot: lot),
+                          ),
+                          OmniGroupRow.add(
+                            key: const ValueKey('inv-lot-add-unit'),
+                            title: 'Thêm cây',
+                            onTap: () => openAddUnitSheet(
+                              context,
+                              lot: lot,
+                              known: [
+                                ...units,
+                                // Tồn kho đang mở (nếu có) cho thêm gợi ý.
+                                if (ref.exists(stockProvider))
+                                  ...?ref
+                                      .read(stockProvider)
+                                      .valueOrNull
+                                      ?.items,
+                              ],
+                            ),
                           ),
                         ],
-                        const SizedBox(height: OmniGroupSection.gap),
-                        ..._unitList(lot, units, unitsAsync, perms),
-                      ],
-                    ),
-                  ),
+                      ),
+                    ],
+                    const SizedBox(height: OmniGroupSection.gap),
+                    ..._unitList(lot, units, unitsAsync, perms),
+                  ],
                 ),
-                if (payMany && selected.isNotEmpty)
-                  Positioned(
-                    left: 20,
-                    right: 20,
-                    bottom: bottomSafe + 16,
-                    child: FilledButton(
-                      key: const ValueKey('inv-lot-pay-many'),
-                      onPressed: () => _payMany(lot),
-                      child: Text(
-                        'Ghi đã trả · ${selected.length} khoản · ${InvUi.vnd(payTotal)}',
-                      ),
-                    ),
-                  )
-                else if (!payMany && canReceive)
-                  Positioned(
-                    left: 20,
-                    right: 20,
-                    bottom: bottomSafe + 16,
-                    child: FilledButton(
-                      key: const ValueKey('inv-lot-receive'),
-                      onPressed: () => context.pushNamed(
-                        InventoryRoutes.receive,
-                        pathParameters: {'lotId': lot.id},
-                      ),
-                      child: const Text('Nhận hàng'),
-                    ),
-                  ),
-              ],
+              ),
             ),
     );
   }
@@ -376,12 +378,24 @@ class _LotDetailPageState extends ConsumerState<LotDetailPage> {
     final supplierId = lot.supplierId;
     final head = OmniGroupSection(
       children: [
+        // Tóm tắt gọn: ngày về là dòng phụ dưới nhà cung cấp, trạng thái là
+        // chip bên phải.
         OmniGroupRow(
           key: const ValueKey('inv-lot-supplier'),
           title: lot.supplierName ?? 'Nhà cung cấp',
-          value: lot.status == LotStatus.received
+          subtitle: lot.status == LotStatus.received
               ? 'Về kho ${InventoryFormat.dmy(lot.receivedAt)}'
-              : lot.status.label,
+              : lot.eta != null
+              ? 'Dự kiến về ${InventoryFormat.dmy(lot.eta)}'
+              : null,
+          trailing: OmniBadge(
+            label: lot.status.label,
+            tone: switch (lot.status) {
+              LotStatus.received => OmniTone.success,
+              LotStatus.inTransit => OmniTone.info,
+              LotStatus.ordered => OmniTone.neutral,
+            },
+          ),
           // Đợt A: mở hồ sơ nhà cung cấp.
           onTap: perms.suppliers && supplierId != null
               ? () => context.pushNamed(
@@ -396,11 +410,6 @@ class _LotDetailPageState extends ConsumerState<LotDetailPage> {
               ? 'Chưa có'
               : '${lot.units} · đặt trước ${lot.withCustomer}',
         ),
-        if (lot.eta != null && lot.status != LotStatus.received)
-          OmniGroupRow(
-            title: 'Dự kiến về',
-            value: InventoryFormat.dmy(lot.eta),
-          ),
       ],
     );
     final money = <Widget>[];

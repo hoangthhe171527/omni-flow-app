@@ -20,6 +20,21 @@ class ShellBarInset extends InheritedWidget {
   static double of(BuildContext context) =>
       context.dependOnInheritedWidgetOfExactType<ShellBarInset>()?.height ?? 0;
 
+  /// Phần đáy màn bị che THẬT: trong shell là viên kính + đáy của nó (vùng an
+  /// toàn, tối thiểu 12 — đúng như `_ShellNavBar` vẽ); ngoài shell chỉ là vùng
+  /// an toàn. Đừng cộng [of] với `viewPadding` bằng tay: [barHeight] đã gồm khe
+  /// 12, cộng thêm vùng an toàn là tính hai lần ở máy có tai thỏ và thiếu ở
+  /// máy không có (lỗi nút "Kết nối kênh" bị kính đè, 12/11).
+  static double coveredBottom(BuildContext context) {
+    final safe = MediaQuery.viewPaddingOf(context).bottom;
+    if (of(context) <= 0) return safe;
+    return pillHeight + (safe > 12 ? safe : 12);
+  }
+
+  /// Mép dưới của nút nổi / khay đáy: trên phần bị che một khe [gap].
+  static double floatingBottom(BuildContext context, {double gap = 16}) =>
+      coveredBottom(context) + gap;
+
   @override
   bool updateShouldNotify(ShellBarInset oldWidget) =>
       height != oldWidget.height;

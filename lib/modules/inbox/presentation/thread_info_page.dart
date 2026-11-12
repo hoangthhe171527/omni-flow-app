@@ -418,7 +418,7 @@ class _Hero extends StatelessWidget {
         const SizedBox(height: 14),
         Wrap(
           alignment: WrapAlignment.center,
-          spacing: 6,
+          spacing: 2,
           runSpacing: 8,
           children: actions,
         ),
@@ -453,7 +453,7 @@ class _QuickAction extends StatelessWidget {
         onTap: onTap,
         borderRadius: BorderRadius.circular(12),
         child: SizedBox(
-          width: 64,
+          width: 70,
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -465,10 +465,12 @@ class _QuickAction extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 5),
+              // Không cắt "…" ("Chuyển KH" từng thành "Chuyển …"): rộng 70,
+              // nhãn dài thì xuống dòng thứ hai.
               Text(
                 label,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
+                maxLines: 2,
+                textAlign: TextAlign.center,
                 style: OmniType.micro.copyWith(
                   fontWeight: FontWeight.w600,
                   color: scheme.onSurface,

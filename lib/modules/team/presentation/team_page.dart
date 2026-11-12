@@ -36,69 +36,71 @@ class TeamPage extends ConsumerWidget {
     final canAdd = ref.watch(accessProvider).can(TeamPermissions.membersCreate);
 
     return Scaffold(
-      appBar: OmniAppBar(
-        title: 'Nhân viên',
-        actions: [
-          if (canAdd)
-            TextButton.icon(
-              onPressed: () => showAddMemberSheet(context),
-              icon: const Icon(Icons.person_add_alt_rounded, size: 20),
-              label: const Text('Thêm'),
+      appBar: const OmniAppBar(title: 'Nhân viên'),
+      // Thêm người: nút + kính góc phải dưới (rà soát 12/11) — không đẩy một
+      // viên "Thêm" lên header.
+      body: OmniFabLayer(
+        fab: canAdd
+            ? OmniLiquidFab(
+                key: const Key('team-add-member'),
+                tooltip: 'Thêm nhân viên',
+                icon: Icons.person_add_alt_1_rounded,
+                onPressed: (_) => showAddMemberSheet(context),
+              )
+            : null,
+        body: RefreshIndicator.adaptive(
+          onRefresh: () {
+            ref.invalidate(teamMembersProvider);
+            return ref.refresh(teamDirectoryProvider.future);
+          },
+          child: OmniAsyncView(
+            // Danh bạ nạp cả người đã nghỉ (để tra tên trong lịch sử); màn này giữ
+            // như trước: người đang làm, kể cả lời mời chưa nhận ("Đang chờ").
+            value: members.whenData(
+              (all) => all.where((m) => m.isActive).toList(),
             ),
-        ],
-      ),
-      body: RefreshIndicator.adaptive(
-        onRefresh: () {
-          ref.invalidate(teamMembersProvider);
-          return ref.refresh(teamDirectoryProvider.future);
-        },
-        child: OmniAsyncView(
-          // Danh bạ nạp cả người đã nghỉ (để tra tên trong lịch sử); màn này giữ
-          // như trước: người đang làm, kể cả lời mời chưa nhận ("Đang chờ").
-          value: members.whenData(
-            (all) => all.where((m) => m.isActive).toList(),
-          ),
-          onRetry: () => ref.invalidate(teamDirectoryProvider),
-          isEmpty: (list) => list.isEmpty,
-          empty: const OmniEmptyState(
-            icon: Icons.group_outlined,
-            title: 'Chưa có nhân viên',
-            message: 'Mời đồng nghiệp vào workspace để bắt đầu phân công.',
-          ),
-          // Nền xám; cả danh sách là MỘT nhóm lồng, vạch chia thụt sau avatar.
-          data: (list) => ListView(
-            physics: const AlwaysScrollableScrollPhysics(),
-            padding: const EdgeInsets.fromLTRB(
-              16,
-              OmniGroupSection.gap,
-              16,
-              OmniSpacing.bottomSafe,
+            onRetry: () => ref.invalidate(teamDirectoryProvider),
+            isEmpty: (list) => list.isEmpty,
+            empty: const OmniEmptyState(
+              icon: Icons.group_outlined,
+              title: 'Chưa có nhân viên',
+              message: 'Mời đồng nghiệp vào workspace để bắt đầu phân công.',
             ),
-            children: [
-              OmniGroupSection(
-                dividerIndent: 70,
-                children: [
-                  for (final member in list)
-                    _MemberTile(
-                      member: member,
-                      canLink: canLink,
-                      // Chạm vào một người là mở TẢI VIỆC của họ — câu hỏi
-                      // quản đốc hỏi nhiều nhất khi đứng giữa xưởng. Liên kết
-                      // Zalo lùi về một nút riêng bên phải.
-                      onTap: canSeeLoad
-                          ? () {
-                              HapticFeedback.selectionClick();
-                              context.pushNamed(
-                                TaskRoutes.workload,
-                                pathParameters: {'userId': member.userId},
-                              );
-                            }
-                          : null,
-                      onLinkZalo: () => _linkZalo(context, ref, member),
-                    ),
-                ],
+            // Nền xám; cả danh sách là MỘT nhóm lồng, vạch chia thụt sau avatar.
+            data: (list) => ListView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              padding: EdgeInsets.fromLTRB(
+                16,
+                OmniGroupSection.gap,
+                16,
+                OmniFabLayer.listBottom(context, hasFab: canAdd),
               ),
-            ],
+              children: [
+                OmniGroupSection(
+                  dividerIndent: 70,
+                  children: [
+                    for (final member in list)
+                      _MemberTile(
+                        member: member,
+                        canLink: canLink,
+                        // Chạm vào một người là mở TẢI VIỆC của họ — câu hỏi
+                        // quản đốc hỏi nhiều nhất khi đứng giữa xưởng. Liên kết
+                        // Zalo lùi về một nút riêng bên phải.
+                        onTap: canSeeLoad
+                            ? () {
+                                HapticFeedback.selectionClick();
+                                context.pushNamed(
+                                  TaskRoutes.workload,
+                                  pathParameters: {'userId': member.userId},
+                                );
+                              }
+                            : null,
+                        onLinkZalo: () => _linkZalo(context, ref, member),
+                      ),
+                  ],
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -123,6 +125,10 @@ class _MemberTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final muted = OmniType.caption.copyWith(
+      fontWeight: FontWeight.w400,
+      color: scheme.onSurfaceVariant,
+    );
 
     return InkWell(
       onTap: onTap,
@@ -143,6 +149,8 @@ class _MemberTile extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    // Gọn (soát 12/11, như danh sách thành viên của
+                    // Superlist): tên; vai + trạng thái Zalo; email đủ chữ.
                     Text(
                       member.name,
                       style: OmniType.bodyStrong.copyWith(
@@ -150,44 +158,45 @@ class _MemberTile extends StatelessWidget {
                         color: scheme.onSurface,
                       ),
                     ),
-                    if (member.email != null)
-                      Text(
-                        member.email!,
-                        style: OmniType.caption.copyWith(
-                          fontWeight: FontWeight.w400,
-                          color: scheme.onSurfaceVariant,
+                    const SizedBox(height: 3),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 2,
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      children: [
+                        // Pill vai giữ viên thuốc nhạt, không tô đặc.
+                        OmniBadge(
+                          label: member.isPending
+                              ? 'Đang chờ'
+                              : member.isActive
+                              ? member.roleLabel
+                              : 'Ngừng hoạt động',
+                          tone: member.isPending
+                              ? OmniTone.warning
+                              : member.isActive
+                              ? OmniTone.info
+                              : OmniTone.neutral,
                         ),
-                      ),
-                    // Nói ra ai đã liên kết Zalo: không có dòng này thì quản
-                    // đốc phải mở từng người ra mới biết còn thiếu ai, và bot
-                    // thì im lặng từ chối những người chưa liên kết.
-                    if (canLink)
-                      Text(
-                        member.zaloUserId == null
-                            ? 'Chưa liên kết Zalo'
-                            : 'Zalo: ${member.zaloUserId}',
-                        style: OmniType.caption.copyWith(
-                          fontWeight: FontWeight.w400,
-                          color: scheme.onSurfaceVariant,
-                          fontStyle: member.zaloUserId == null
-                              ? FontStyle.italic
-                              : FontStyle.normal,
-                        ),
-                      ),
-                    const SizedBox(height: 4),
-                    // Pill vai giữ viên thuốc nhạt, không tô đặc.
-                    OmniBadge(
-                      label: member.isPending
-                          ? 'Đang chờ'
-                          : member.isActive
-                          ? member.roleLabel
-                          : 'Ngừng hoạt động',
-                      tone: member.isPending
-                          ? OmniTone.warning
-                          : member.isActive
-                          ? OmniTone.info
-                          : OmniTone.neutral,
+                        // Nói ra ai đã liên kết Zalo: không có chữ này thì
+                        // quản đốc phải mở từng người ra mới biết còn thiếu ai,
+                        // và bot thì im lặng từ chối những người chưa liên kết.
+                        if (canLink)
+                          Text(
+                            member.zaloUserId == null
+                                ? 'Chưa liên kết Zalo'
+                                : 'Zalo: ${member.zaloUserId}',
+                            style: muted.copyWith(
+                              fontStyle: member.zaloUserId == null
+                                  ? FontStyle.italic
+                                  : FontStyle.normal,
+                            ),
+                          ),
+                      ],
                     ),
+                    if (member.email != null) ...[
+                      const SizedBox(height: 2),
+                      Text(member.email!, style: muted),
+                    ],
                   ],
                 ),
               ),

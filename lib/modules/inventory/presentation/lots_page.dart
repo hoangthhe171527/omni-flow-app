@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../core/nav/shell_bar_inset.dart';
+import '../../../core/nav/shell_tab_routes.dart';
 import '../../../design/components/components.dart';
 import '../../../design/tokens/tokens.dart';
 import '../application/inventory_providers.dart';
@@ -11,10 +11,16 @@ import '../domain/inventory_models.dart';
 import '../domain/inventory_permissions.dart';
 import '../routes.dart';
 import 'widgets/create_lot_sheet.dart';
+import 'widgets/inventory_intro.dart';
 import 'widgets/inventory_ui.dart';
 
-/// Hàng sắp về: lô gom theo Đang về / Đã đặt hàng, vạch đặt trước, tỷ lệ tạm /
-/// ước (quyền giá), còn nợ nhà cung cấp (quyền thanh toán lô).
+/// Hàng sắp về (rà soát app mobile 12/11, `#s-sap-ve`): tìm mã lô / nhà cung
+/// cấp, lô chia hai nhóm Đang về (gồm lô đã đặt hàng) / Đã về kho, vạch đặt
+/// trước, tỷ lệ tạm / ước (quyền giá), còn nợ nhà cung cấp (quyền thanh toán
+/// lô); tạo lô bằng nút + kính góc phải dưới.
+///
+/// Nút Nhà cung cấp trên thanh vẫn giữ: module không được import tầng `app/`
+/// nên không biết đang ở khung ứng dụng (có tab NCC) hay giao diện cũ.
 class LotsPage extends ConsumerStatefulWidget {
   const LotsPage({super.key});
 
@@ -24,23 +30,29 @@ class LotsPage extends ConsumerStatefulWidget {
 
 class _LotsPageState extends ConsumerState<LotsPage> {
   String _q = '';
-  bool _showReceived = false;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) maybeShowInventoryIntro(context, ref);
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
     final perms = ref.watch(inventoryPermsProvider);
     final lots = ref.watch(lotsProvider);
-    final shellBottom =
-        ShellBarInset.of(context) + MediaQuery.viewPaddingOf(context).bottom;
-    // Nút "Tạo lô" ở vùng ngón cái: chừa thêm chỗ cho nút dưới danh sách.
-    final bottom = shellBottom + (perms.write ? 88 : 24);
+    final bottom = OmniFabLayer.listBottom(context, hasFab: perms.write);
 
     return Scaffold(
       appBar: OmniAppBar(
         title: 'Hàng sắp về',
         actions: [
           // Đợt A: Nhà cung cấp — hồ sơ và công nợ theo lô.
-          if (perms.suppliers)
+          // Khung ứng dụng có tab NCC → không lặp lối vào trên header.
+          if (perms.suppliers &&
+              !ShellTabRoutes.reachable(context, InventoryRoutes.suppliers))
             IconButton(
               key: const ValueKey('inv-open-suppliers'),
               tooltip: 'Nhà cung cấp',
@@ -67,13 +79,18 @@ class _LotsPageState extends ConsumerState<LotsPage> {
               data: (all) {
                 final q = _q.trim().toLowerCase();
                 bool hit(Lot l) =>
-                    q.isEmpty || l.code.toLowerCase().contains(q);
+                    q.isEmpty ||
+                    l.code.toLowerCase().contains(q) ||
+                    (l.supplierName?.toLowerCase().contains(q) ?? false);
                 List<Lot> of(LotStatus s) => [
                   for (final l in all)
                     if (l.status == s && hit(l)) l,
                 ];
-                final transit = of(LotStatus.inTransit);
-                final ordered = of(LotStatus.ordered);
+                // Đang về gồm cả lô mới đặt hàng (đang đi trước, đặt sau).
+                final coming = [
+                  ...of(LotStatus.inTransit),
+                  ...of(LotStatus.ordered),
+                ];
                 final received = of(LotStatus.received);
                 final open = [
                   for (final l in all)
@@ -103,7 +120,7 @@ class _LotsPageState extends ConsumerState<LotsPage> {
                         height: 44,
                         child: OmniSearchField(
                           key: const ValueKey('inv-lot-search'),
-                          hint: 'Mã lô',
+                          hint: 'Tìm mã lô, nhà cung cấp',
                           flat: true,
                           dense: true,
                           onChanged: (v) => setState(() => _q = v),
@@ -129,9 +146,8 @@ class _LotsPageState extends ConsumerState<LotsPage> {
                         ],
                       ),
                       for (final (title, group) in [
-                        ('Đang về', transit),
-                        ('Đã đặt hàng', ordered),
-                        if (_showReceived) ('Đã về kho', received),
+                        ('Đang về', coming),
+                        ('Đã về kho', received),
                       ])
                         if (group.isNotEmpty) ...[
                           const SizedBox(height: OmniGroupSection.gap),
@@ -155,21 +171,7 @@ class _LotsPageState extends ConsumerState<LotsPage> {
                             ],
                           ),
                         ],
-                      if (!_showReceived && received.isNotEmpty) ...[
-                        const SizedBox(height: OmniGroupSection.gap),
-                        OmniGroupSection(
-                          children: [
-                            OmniGroupRow(
-                              icon: Icons.inventory_2_outlined,
-                              title: 'Xem ${received.length} lô đã về kho',
-                              onTap: () => setState(() => _showReceived = true),
-                            ),
-                          ],
-                        ),
-                      ],
-                      if (transit.isEmpty &&
-                          ordered.isEmpty &&
-                          received.isEmpty)
+                      if (coming.isEmpty && received.isEmpty)
                         const Padding(
                           padding: EdgeInsets.only(top: 12),
                           child: OmniGroupSection(
@@ -179,21 +181,15 @@ class _LotsPageState extends ConsumerState<LotsPage> {
                     ],
                   ),
                 );
-                if (!perms.write) return list;
-                return Stack(
-                  children: [
-                    Positioned.fill(child: list),
-                    Positioned(
-                      left: 20,
-                      right: 20,
-                      bottom: shellBottom + 16,
-                      child: FilledButton(
-                        key: const ValueKey('inv-lot-create'),
-                        onPressed: () => _create(all),
-                        child: const Text('Tạo lô'),
-                      ),
-                    ),
-                  ],
+                return OmniFabLayer(
+                  body: list,
+                  fab: perms.write
+                      ? OmniLiquidFab(
+                          key: const ValueKey('inv-lot-create'),
+                          tooltip: 'Tạo lô',
+                          onPressed: (_) => _create(all),
+                        )
+                      : null,
                 );
               },
             ),

@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../core/nav/shell_bar_inset.dart';
 import '../../../core/utils/formatters.dart';
 import '../../../design/components/components.dart';
 import '../../../design/tokens/tokens.dart';
@@ -41,8 +40,6 @@ class _OrdersPageState extends ConsumerState<OrdersPage> {
     final res = ref.watch(ordersListProvider(query));
     final due = ref.watch(ordersDueProvider).valueOrNull;
     final perms = ref.watch(inventoryPermsProvider);
-    final bottom =
-        ShellBarInset.of(context) + MediaQuery.viewPaddingOf(context).bottom;
     final now = ref.watch(inventoryTodayProvider);
     final weekStart = DateTime(
       now.year,
@@ -125,43 +122,43 @@ class _OrdersPageState extends ConsumerState<OrdersPage> {
           onChanged: (v) => setState(() => _q = v),
         ),
       ),
-      body: Stack(
-        children: [
-          Positioned.fill(
-            child: RefreshIndicator(
-              onRefresh: () async {
-                bumpOrders(ref);
-                await ref
-                    .read(ordersListProvider(query).future)
-                    .catchError((_) => const <OrderRow>[]);
-              },
-              child: ListView(
-                key: const ValueKey('orders-scroll'),
-                physics: const AlwaysScrollableScrollPhysics(),
-                keyboardDismissBehavior:
-                    ScrollViewKeyboardDismissBehavior.onDrag,
-                padding: EdgeInsets.fromLTRB(16, 12, 16, bottom + 96),
-                children: [
-                  for (var i = 0; i < list.length; i++) ...[
-                    if (i > 0) const SizedBox(height: OmniGroupSection.gap),
-                    list[i],
-                  ],
-                ],
-              ),
-            ),
-          ),
-          // Tạo đơn = bán cây trong kho: cần quyền bán (`orders.write` +
-          // `inventory.reserve`), như nút Bán ở Tồn kho.
-          if (perms.sell)
-            Positioned(
-              right: 20,
-              bottom: bottom + 16,
-              child: OmniLiquidFab(
+      // Nút + kính qua OmniFabLayer (rà soát 12/11): một chỗ tính phần đáy bị
+      // thanh kính + vùng an toàn che, không cộng tay.
+      body: OmniFabLayer(
+        // Tạo đơn = bán cây trong kho: cần quyền bán (`orders.write` +
+        // `inventory.reserve`), như nút Bán ở Tồn kho.
+        fab: perms.sell
+            ? OmniLiquidFab(
+                key: const ValueKey('orders-create'),
                 tooltip: 'Tạo đơn',
                 onPressed: (_) => _create(),
-              ),
+              )
+            : null,
+        body: RefreshIndicator(
+          onRefresh: () async {
+            bumpOrders(ref);
+            await ref
+                .read(ordersListProvider(query).future)
+                .catchError((_) => const <OrderRow>[]);
+          },
+          child: ListView(
+            key: const ValueKey('orders-scroll'),
+            physics: const AlwaysScrollableScrollPhysics(),
+            keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+            padding: EdgeInsets.fromLTRB(
+              16,
+              12,
+              16,
+              OmniFabLayer.listBottom(context, hasFab: perms.sell),
             ),
-        ],
+            children: [
+              for (var i = 0; i < list.length; i++) ...[
+                if (i > 0) const SizedBox(height: OmniGroupSection.gap),
+                list[i],
+              ],
+            ],
+          ),
+        ),
       ),
     );
   }

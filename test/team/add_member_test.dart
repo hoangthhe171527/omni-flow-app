@@ -62,7 +62,7 @@ void main() {
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.reset);
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Thêm'));
+    await tester.tap(find.byKey(const Key('team-add-member')));
     await tester.pumpAndSettle();
   }
 
@@ -79,7 +79,7 @@ void main() {
     await tester.pumpWidget(host(permissions: {'membership.members.read'}));
     await tester.pumpAndSettle();
 
-    expect(find.text('Thêm'), findsNothing);
+    expect(find.byKey(const Key('team-add-member')), findsNothing);
   });
 
   testWidgets('tạo tài khoản: gửi đủ trường và hiện mật khẩu để gửi Zalo', (

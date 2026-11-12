@@ -79,6 +79,12 @@ class _NotificationsPageState extends ConsumerState<NotificationsPage> {
       appBar: OmniTopBar(
         semanticsTitle: 'Thông báo',
         allowBack: true,
+        // Mở từ "Xem tất cả" của bảng chuông: kiểu màn con — ‹ · Thông báo ·
+        // Đọc hết, không logo, không avatar (rà soát 12/11). Là tab gốc (Bàn
+        // làm việc) thì vẫn kiểu màn gốc.
+        onBack: ModalRoute.of(context)?.canPop ?? false
+            ? () => Navigator.of(context).maybePop()
+            : null,
         showBell: false,
         actions: [
           OmniGlass(

@@ -217,6 +217,10 @@ void main() {
         await tester.pumpAndSettle();
         expect(find.text('Chi phí kho T10'), findsOneWidget);
 
+        // Cuộn lại lên đầu: nút chọn kỳ nằm trong danh sách.
+        await tester.drag(find.byType(ListView).first, const Offset(0, 800));
+        await tester.pumpAndSettle();
+
         // Chọn tháng 6 (chưa prefetch) từ menu kỳ -> tải trực tiếp từ API
         await tester.tap(find.byTooltip('Chọn tháng khác'));
         await tester.pumpAndSettle();
@@ -239,7 +243,7 @@ void main() {
         await tester.pumpWidget(h.app);
         await tester.pumpAndSettle();
 
-        // Sắp xếp và "+" nằm trong viên kính tìm, không phải viên kính rời.
+        // Sắp xếp nằm trong viên kính tìm; "+" là nút kính góc phải dưới.
         expect(find.byType(OmniTopBarAction), findsNothing);
         expect(find.byTooltip('Sắp xếp danh sách'), findsOneWidget);
         expect(find.byTooltip('Thêm khoản chi'), findsOneWidget);
@@ -750,19 +754,21 @@ void main() {
           ),
           findsOneWidget,
         );
-        expect(
-          find.byKey(const ValueKey('finance-summary-tab-month')),
-          findsOneWidget,
+        // Tháng / Quý / Năm là OmniSegmented; kỳ nằm ở nút ‹ kỳ ›, tiêu đề
+        // thẻ chỉ còn "Tổng chi" (rà soát 12/11).
+        Finder scopeTab(String label) => find.descendant(
+          of: find.byKey(const ValueKey('finance-summary-scope')),
+          matching: find.text(label),
         );
+        expect(scopeTab('Tháng'), findsOneWidget);
+        expect(scopeTab('Quý'), findsOneWidget);
+        expect(scopeTab('Năm'), findsOneWidget);
         expect(
-          find.byKey(const ValueKey('finance-summary-tab-quarter')),
-          findsOneWidget,
+          find.byKey(const ValueKey('finance-summary-refresh-btn')),
+          findsNothing,
         );
-        expect(
-          find.byKey(const ValueKey('finance-summary-tab-year')),
-          findsOneWidget,
-        );
-        expect(find.text('Tổng chi Quý 4/2026 (T10 – T12)'), findsOneWidget);
+        expect(find.text('Quý 4 · 2026'), findsOneWidget);
+        expect(find.text('Tổng chi'), findsOneWidget);
         expect(find.text('3 THÁNG TRONG QUÝ 4/2026'), findsNothing);
         expect(find.text('Tháng 10/2026'), findsOneWidget);
         expect(find.text('Tháng 11/2026'), findsOneWidget);
@@ -779,11 +785,9 @@ void main() {
         await tester.pumpAndSettle();
         expect(find.textContaining('Tiền mặt'), findsWidgets);
 
-        await tester.tap(
-          find.byKey(const ValueKey('finance-summary-tab-year')),
-        );
+        await tester.tap(scopeTab('Năm'));
         await tester.pumpAndSettle();
-        expect(find.text('Tổng chi Năm 2026 (12 tháng)'), findsOneWidget);
+        expect(find.text('Năm 2026'), findsOneWidget);
         expect(find.text('DIỄN BIẾN NĂM 2026'), findsNothing);
         expect(
           find.byKey(const ValueKey('finance-summary-year-by-quarter')),
@@ -794,11 +798,9 @@ void main() {
           findsOneWidget,
         );
 
-        await tester.tap(
-          find.byKey(const ValueKey('finance-summary-tab-month')),
-        );
+        await tester.tap(scopeTab('Tháng'));
         await tester.pumpAndSettle();
-        expect(find.text('Tổng hợp Tháng 11/2026'), findsOneWidget);
+        expect(find.text('Tháng 11 · 2026'), findsOneWidget);
         expect(find.text('SO SÁNH 3 THÁNG GẦN NHẤT'), findsNothing);
       },
     );
