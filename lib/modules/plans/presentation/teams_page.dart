@@ -231,8 +231,8 @@ class _TeamsPageState extends ConsumerState<TeamsPage> {
           if (isAssigner)
             Positioned(
               right: 20,
-              // Trên thanh tab kính, vừa tầm ngón cái. Khe 24: với 16 thì bóng
-              // của nút chạm bóng thanh tab, nhìn như dính vào menu.
+              // Trên thanh tab kính, vừa tầm ngón cái. Khe chung OmniFabLayer.gap
+              // (32: dải mờ của thanh + bóng nút không chạm nhau).
               bottom: ShellBarInset.floatingBottom(
                 context,
                 gap: OmniFabLayer.gap,
