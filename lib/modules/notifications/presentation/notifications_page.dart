@@ -481,9 +481,14 @@ class _KindIcon extends StatelessWidget {
         Icons.assignment_ind_outlined,
         OmniHue.blue,
       ),
+      NotificationKind.taskCreated => (Icons.add_task_rounded, OmniHue.blue),
       NotificationKind.taskStageOpen => (
         Icons.pan_tool_alt_outlined,
         OmniHue.blue,
+      ),
+      NotificationKind.taskIssue => (
+        Icons.report_problem_outlined,
+        OmniHue.red,
       ),
       NotificationKind.taskProgress => (Icons.timeline_rounded, OmniHue.blue),
       NotificationKind.taskCompleted => (

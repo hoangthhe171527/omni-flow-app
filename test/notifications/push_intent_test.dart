@@ -46,6 +46,17 @@ void main() {
       expect(intent.id, 't-1');
     });
 
+    test('a new task and a reported issue open that task', () {
+      // Bug sheet 12/11/2026: loại mới bên API phải có ở đây, không thì push
+      // hiện trên màn khoá mà chạm vào không đi đâu.
+      for (final type in ['task_created', 'task_issue']) {
+        final intent = PushIntent.fromData({'type': type, 'task_id': 't-9'});
+
+        expect(intent?.target, PushTarget.task, reason: type);
+        expect(intent?.id, 't-9', reason: type);
+      }
+    });
+
     test('an open stage opens the task it belongs to', () {
       // Not the subtask: a stage is not a screen of its own, and the worker
       // needs the surrounding work to decide whether to take it.
