@@ -1406,6 +1406,39 @@ class _InboxDemo {
     return ok(found);
   });
 
+  /// Tìm nội dung tin trên mọi hội thoại (`GET /inbox/messages/search`).
+  DemoResponse _searchAll(DemoRequest req) {
+    // Như server (SearchTokens): mỗi từ gõ là ĐẦU một từ của tin, chữ thường,
+    // giữ dấu.
+    final term = (req.q('q') ?? '').trim().toLowerCase();
+    if (term.length < 2) return ok(const <Object>[]);
+    final split = RegExp(r'[^\p{L}\p{N}]+', unicode: true);
+    final words = term.split(split).where((w) => w.isNotEmpty).toList();
+    bool matches(String text) {
+      final tokens = text.toLowerCase().split(split);
+      return words.every((w) => tokens.any((t) => t.startsWith(w)));
+    }
+
+    final limit = req.qInt('limit', 20);
+    final hits = <Map<String, dynamic>>[];
+    for (final entry in _threads.entries) {
+      final c = _convs[entry.key];
+      if (c == null) continue;
+      for (final m in entry.value) {
+        if (m['from'] == 'note') continue;
+        if (matches('${m['text']}')) {
+          hits.add({'message': m, 'conversation': _convJson(c)});
+        }
+      }
+    }
+    hits.sort(
+      (a, b) => '${(b['message'] as Map)['sent_at']}'.compareTo(
+        '${(a['message'] as Map)['sent_at']}',
+      ),
+    );
+    return ok(hits.take(limit).toList());
+  }
+
   Map<String, dynamic>? _findMessage(String convId, String? messageId) {
     for (final m in _threads[convId] ?? const <Map<String, dynamic>>[]) {
       if (m['id'] == messageId) return m;
@@ -1640,6 +1673,7 @@ class _InboxDemo {
     r.get('$base/{id}/messages', _messages);
     r.post('$base/{id}/messages', _send);
     r.get('$base/{id}/messages/search', _search);
+    r.get('/inbox/messages/search', _searchAll);
     r.post('$base/{id}/messages/{mid}/pin', _toggleMessagePin);
     r.post('$base/{id}/messages/{mid}/resend', _resend);
     r.post('$base/{id}/messages/{mid}/team-reactions', _teamReaction);

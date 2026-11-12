@@ -185,6 +185,9 @@ void main() {
       )).items.single;
       final hits = await inbox.searchMessages(nhung.id, 'mien phi');
       expect(hits, isNotEmpty);
+      // Tìm nội dung tin trên mọi hội thoại (bug sheet 12/11/2026).
+      final all = await inbox.searchAllMessages('miễn phí');
+      expect(all.map((h) => h.conversation.id), contains(nhung.id));
 
       final assets = await inbox.assets(id);
       expect(assets.media, isEmpty);

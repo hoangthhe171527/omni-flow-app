@@ -91,6 +91,7 @@ const _capabilities = <String>[
   'inbox.block',
   'inbox.mute',
   'inbox.outbound_capabilities',
+  'inbox.message_search',
   'projects.member_names',
   'tasks.copy_options',
   'tasks.points',
