@@ -37,6 +37,17 @@ Future<void> _openExternal(BuildContext context, Uri url) async {
   );
 }
 
+/// Ô icon một tông màu chính chuẩn [OmniIconTile] cho các dòng nhóm dưới lưới.
+Widget _directoryIconTile(BuildContext context, IconData icon) {
+  final scheme = Theme.of(context).colorScheme;
+  final dark = Theme.of(context).brightness == Brightness.dark;
+  return OmniIconTile(
+    icon,
+    color: scheme.primary,
+    background: scheme.primary.withValues(alpha: dark ? 0.16 : 0.09),
+  );
+}
+
 /// "Cài đặt ứng dụng" và "Trợ giúp" ở cuối màn Tài khoản khi công ty bật khung
 /// ứng dụng (không còn màn "Tất cả"). Cắm qua `AccountExtrasSlot`; khung tắt
 /// thì không vẽ gì — hai nhóm này vẫn ở "Tất cả" như cũ.
@@ -48,53 +59,63 @@ class AppSettingsSections extends ConsumerWidget {
     if (ref.watch(appShellLayoutProvider) == null) {
       return const SizedBox.shrink();
     }
+    final chevronColor = OmniTaskTones.of(context).chevron;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const SizedBox(height: 14),
-        const _SectionLabel('Cài đặt ứng dụng'),
-        _GroupCard(
-          child: Column(
-            children: [
-              _ListRow(
-                icon: Icons.notifications_none_rounded,
-                label: 'Thông báo',
-                onTap: () => context.pushNamed(SettingsModule.notifications),
+        const SizedBox(height: OmniGroupSection.gap),
+        OmniGroupSection(
+          title: 'Cài đặt ứng dụng',
+          children: [
+            OmniGroupRow(
+              leading: _directoryIconTile(
+                context,
+                Icons.notifications_none_rounded,
               ),
-              const _ThemeRow(),
-              const _PerfRow(),
-              _ListRow(
-                icon: Icons.wallpaper_outlined,
-                label: 'Nền',
-                onTap: () => context.pushNamed(SettingsModule.background),
-              ),
-            ],
-          ),
+              title: 'Thông báo',
+              onTap: () => context.pushNamed(SettingsModule.notifications),
+            ),
+            const _ThemeRow(),
+            const _PerfRow(),
+            OmniGroupRow(
+              leading: _directoryIconTile(context, Icons.wallpaper_outlined),
+              title: 'Nền',
+              onTap: () => context.pushNamed(SettingsModule.background),
+            ),
+          ],
         ),
-        const SizedBox(height: 14),
-        const _SectionLabel('Trợ giúp'),
-        _GroupCard(
-          child: Column(
-            children: [
-              _ListRow(
-                icon: Icons.help_outline_rounded,
-                label: 'Trung tâm hỗ trợ',
-                external: true,
-                onTap: () => _openExternal(context, AppConfig.supportUrl),
+        const SizedBox(height: OmniGroupSection.gap),
+        OmniGroupSection(
+          title: 'Trợ giúp',
+          children: [
+            OmniGroupRow(
+              leading: _directoryIconTile(context, Icons.help_outline_rounded),
+              title: 'Trung tâm hỗ trợ',
+              trailing: Icon(
+                Icons.open_in_new_rounded,
+                size: 18,
+                color: chevronColor,
               ),
-              _ListRow(
-                icon: Icons.policy_outlined,
-                label: 'Chính sách quyền riêng tư',
-                external: true,
-                onTap: () => _openExternal(context, AppConfig.privacyPolicyUrl),
+              chevron: false,
+              onTap: () => _openExternal(context, AppConfig.supportUrl),
+            ),
+            OmniGroupRow(
+              leading: _directoryIconTile(context, Icons.policy_outlined),
+              title: 'Chính sách quyền riêng tư',
+              trailing: Icon(
+                Icons.open_in_new_rounded,
+                size: 18,
+                color: chevronColor,
               ),
-              _ListRow(
-                icon: Icons.info_outline_rounded,
-                label: 'Phiên bản',
-                value: AppConfig.appVersion,
-              ),
-            ],
-          ),
+              chevron: false,
+              onTap: () => _openExternal(context, AppConfig.privacyPolicyUrl),
+            ),
+            OmniGroupRow(
+              leading: _directoryIconTile(context, Icons.info_outline_rounded),
+              title: 'Phiên bản',
+              value: AppConfig.appVersion,
+            ),
+          ],
         ),
       ],
     );
@@ -255,41 +276,55 @@ class _DirectoryPageState extends ConsumerState<DirectoryPage> {
     );
     bool shows(String label) =>
         matchesQuery(label: label, subtitle: null, query: _query);
+    final chevronColor = OmniTaskTones.of(context).chevron;
     final settingsRows = <Widget>[
       if (shows('Thông báo'))
-        _ListRow(
-          icon: Icons.notifications_none_rounded,
-          label: 'Thông báo',
+        OmniGroupRow(
+          leading: _directoryIconTile(
+            context,
+            Icons.notifications_none_rounded,
+          ),
+          title: 'Thông báo',
           onTap: () => context.pushNamed(SettingsModule.notifications),
         ),
       if (shows('Giao diện sáng tối')) const _ThemeRow(),
       if (shows('Hiệu ứng mượt pin')) const _PerfRow(),
       if (shows('Nền'))
-        _ListRow(
-          icon: Icons.wallpaper_outlined,
-          label: 'Nền',
+        OmniGroupRow(
+          leading: _directoryIconTile(context, Icons.wallpaper_outlined),
+          title: 'Nền',
           onTap: () => context.pushNamed(SettingsModule.background),
         ),
     ];
     final helpRows = <Widget>[
       if (shows('Trung tâm hỗ trợ'))
-        _ListRow(
-          icon: Icons.help_outline_rounded,
-          label: 'Trung tâm hỗ trợ',
-          external: true,
+        OmniGroupRow(
+          leading: _directoryIconTile(context, Icons.help_outline_rounded),
+          title: 'Trung tâm hỗ trợ',
+          trailing: Icon(
+            Icons.open_in_new_rounded,
+            size: 18,
+            color: chevronColor,
+          ),
+          chevron: false,
           onTap: () => _openLink(AppConfig.supportUrl),
         ),
       if (shows('Chính sách quyền riêng tư'))
-        _ListRow(
-          icon: Icons.policy_outlined,
-          label: 'Chính sách quyền riêng tư',
-          external: true,
+        OmniGroupRow(
+          leading: _directoryIconTile(context, Icons.policy_outlined),
+          title: 'Chính sách quyền riêng tư',
+          trailing: Icon(
+            Icons.open_in_new_rounded,
+            size: 18,
+            color: chevronColor,
+          ),
+          chevron: false,
           onTap: () => _openLink(AppConfig.privacyPolicyUrl),
         ),
       if (shows('Phiên bản'))
-        _ListRow(
-          icon: Icons.info_outline_rounded,
-          label: 'Phiên bản',
+        OmniGroupRow(
+          leading: _directoryIconTile(context, Icons.info_outline_rounded),
+          title: 'Phiên bản',
           value: AppConfig.appVersion,
         ),
     ];
@@ -355,26 +390,34 @@ class _DirectoryPageState extends ConsumerState<DirectoryPage> {
                           ),
                         ),
                       ),
-                    for (final section in sections) ...[
-                      if (section != sections.first) const SizedBox(height: 16),
-                      _SectionLabel(section.label),
-                      _GroupCard(
-                        child: _TileGrid(
-                          tiles: section.tiles,
-                          firstIndex: starts[sections.indexOf(section)],
-                          seen: _seen,
-                        ),
+                    for (var i = 0; i < sections.length; i++) ...[
+                      if (i > 0) const SizedBox(height: OmniGroupSection.gap),
+                      OmniGroupSection(
+                        title: sections[i].label,
+                        children: [
+                          _TileGrid(
+                            tiles: sections[i].tiles,
+                            firstIndex: starts[i],
+                            seen: _seen,
+                          ),
+                        ],
                       ),
                     ],
                     if (settingsRows.isNotEmpty) ...[
-                      const SizedBox(height: 16),
-                      const _SectionLabel('Cài đặt ứng dụng'),
-                      _GroupCard(child: Column(children: settingsRows)),
+                      if (sections.isNotEmpty)
+                        const SizedBox(height: OmniGroupSection.gap),
+                      OmniGroupSection(
+                        title: 'Cài đặt ứng dụng',
+                        children: settingsRows,
+                      ),
                     ],
                     if (helpRows.isNotEmpty) ...[
-                      const SizedBox(height: 16),
-                      const _SectionLabel('Trợ giúp'),
-                      _GroupCard(child: Column(children: helpRows)),
+                      if (sections.isNotEmpty || settingsRows.isNotEmpty)
+                        const SizedBox(height: OmniGroupSection.gap),
+                      OmniGroupSection(
+                        title: 'Trợ giúp',
+                        children: helpRows,
+                      ),
                     ],
                   ],
                 ),
@@ -681,47 +724,6 @@ class _PopInState extends State<_PopIn> with SingleTickerProviderStateMixin {
   }
 }
 
-class _SectionLabel extends StatelessWidget {
-  const _SectionLabel(this.label);
-
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(4, 0, 4, 8),
-      child: Semantics(
-        header: true,
-        child: Text(
-          label,
-          style: OmniType.overline.copyWith(
-            color: Theme.of(context).colorScheme.onSurfaceVariant,
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-/// Khung nhóm: thẻ nền surface, bo 18, KHÔNG viền (cùng nhóm lồng của Tài
-/// khoản) — tách khỏi nền xám bằng màu nền, không bằng nét.
-class _GroupCard extends StatelessWidget {
-  const _GroupCard({required this.child});
-
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return Material(
-      color: scheme.surface,
-      borderRadius: BorderRadius.circular(18),
-      clipBehavior: Clip.antiAlias,
-      child: child,
-    );
-  }
-}
-
 /// Nhãn ô tối đa hai dòng, CÂN nhau: khi phải xuống dòng thì bề ngang thu về
 /// cỡ dòng dài nhất, nên "Kênh kết nối" thành "Kênh / kết nối" chứ không rớt
 /// một chữ lẻ xuống dòng hai. Nội dung `Text` giữ nguyên (không chèn ký tự xuống
@@ -794,91 +796,6 @@ class _BalancedLabel extends StatelessWidget {
   }
 }
 
-/// Icon một tông màu cho dòng danh sách (cùng tông với ô lưới).
-class _MonoIcon extends StatelessWidget {
-  const _MonoIcon(this.icon);
-
-  final IconData icon;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final dark = Theme.of(context).brightness == Brightness.dark;
-    return Container(
-      width: 34,
-      height: 34,
-      decoration: BoxDecoration(
-        color: scheme.primary.withValues(alpha: dark ? 0.16 : 0.09),
-        borderRadius: BorderRadius.circular(10),
-      ),
-      child: Icon(icon, size: 19, color: scheme.primary),
-    );
-  }
-}
-
-class _ListRow extends StatelessWidget {
-  const _ListRow({
-    required this.icon,
-    required this.label,
-    this.onTap,
-    this.value,
-    this.external = false,
-  });
-
-  final IconData icon;
-  final String label;
-  final VoidCallback? onTap;
-  final String? value;
-  final bool external;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final row = ConstrainedBox(
-      constraints: const BoxConstraints(minHeight: 54),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-        child: Row(
-          children: [
-            _MonoIcon(icon),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Text(
-                label,
-                style: OmniType.body.copyWith(color: scheme.onSurface),
-              ),
-            ),
-            if (value != null)
-              Text(
-                value!,
-                style: OmniType.caption.copyWith(
-                  color: scheme.onSurfaceVariant,
-                  fontFeatures: const [FontFeature.tabularFigures()],
-                ),
-              ),
-            if (onTap != null)
-              Icon(
-                external
-                    ? Icons.open_in_new_rounded
-                    : Icons.chevron_right_rounded,
-                size: 18,
-                color: scheme.onSurfaceVariant,
-              ),
-          ],
-        ),
-      ),
-    );
-    if (onTap == null) return row;
-    return InkWell(
-      onTap: () {
-        HapticFeedback.selectionClick();
-        onTap!();
-      },
-      child: row,
-    );
-  }
-}
-
 String _perfLabel(PerfPreference p) => switch (p) {
   PerfPreference.auto => 'Tự động',
   PerfPreference.full => 'Đầy đủ',
@@ -899,56 +816,19 @@ class _PerfRow extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final scheme = Theme.of(context).colorScheme;
     final pref = ref.watch(performanceControllerProvider).preference;
     final tier = ref.watch(effectivePerfTierProvider);
     final value = pref == PerfPreference.auto
         ? 'Tự động · ${_tierLabel(tier)}'
         : _perfLabel(pref);
 
-    return Semantics(
-      button: true,
-      label: 'Hiệu ứng: $value',
-      excludeSemantics: true,
-      child: InkWell(
-        key: const Key('directory-perf-row'),
-        onTap: () => _pick(context, ref, pref),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-          child: Row(
-            children: [
-              const _MonoIcon(Icons.auto_awesome_outlined),
-              const SizedBox(width: 12),
-              // Giá trị là dòng phụ dưới nhãn, không chung hàng: "Tự động ·
-              // Đầy đủ" cạnh nhãn tràn ở màn 360 / chữ phóng to.
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      'Hiệu ứng',
-                      style: OmniType.body.copyWith(color: scheme.onSurface),
-                    ),
-                    Text(
-                      value,
-                      style: OmniType.caption.copyWith(
-                        color: scheme.onSurfaceVariant,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 4),
-              Icon(
-                Icons.chevron_right_rounded,
-                size: 18,
-                color: OmniTaskTones.of(context).chevron,
-              ),
-            ],
-          ),
-        ),
-      ),
+    return OmniGroupRow(
+      key: const Key('directory-perf-row'),
+      leading: _directoryIconTile(context, Icons.auto_awesome_outlined),
+      title: 'Hiệu ứng',
+      subtitle: value,
+      semanticsLabel: 'Hiệu ứng: $value',
+      onTap: () => _pick(context, ref, pref),
     );
   }
 
@@ -1001,32 +881,20 @@ class _ThemeRow extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final scheme = Theme.of(context).colorScheme;
     final mode = ref.watch(themeModeProvider);
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-      child: Row(
-        children: [
-          const _MonoIcon(Icons.contrast_rounded),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Text(
-              'Giao diện',
-              style: OmniType.body.copyWith(color: scheme.onSurface),
-            ),
-          ),
-          SizedBox(
-            width: 168,
-            child: OmniSegmented(
-              labels: const ['Máy', 'Sáng', 'Tối'],
-              index: _modes.indexOf(mode).clamp(0, 2),
-              onChanged: (i) {
-                HapticFeedback.selectionClick();
-                ref.read(themeModeProvider.notifier).set(_modes[i]);
-              },
-            ),
-          ),
-        ],
+    return OmniGroupRow(
+      leading: _directoryIconTile(context, Icons.contrast_rounded),
+      title: 'Giao diện',
+      trailing: SizedBox(
+        width: 168,
+        child: OmniSegmented(
+          labels: const ['Máy', 'Sáng', 'Tối'],
+          index: _modes.indexOf(mode).clamp(0, 2),
+          onChanged: (i) {
+            HapticFeedback.selectionClick();
+            ref.read(themeModeProvider.notifier).set(_modes[i]);
+          },
+        ),
       ),
     );
   }

@@ -108,7 +108,7 @@ class _MediaGrid extends StatelessWidget {
           mainAxisSpacing: 4,
         ),
         itemBuilder: (_, index) => ClipRRect(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(14),
           child: GestureDetector(
             onTap: () => Navigator.of(context).push(
               MaterialPageRoute<void>(

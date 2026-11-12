@@ -10,6 +10,9 @@ import 'session_controller.dart';
 /// còn khoá. Thiếu tên trong danh sách = chưa có = ẩn nút.
 abstract final class ApiCapability {
   static const taskPin = 'tasks.pin';
+
+  /// Ô tìm Hộp thư tìm cả nội dung tin (`GET /inbox/messages/search`).
+  static const inboxMessageSearch = 'inbox.message_search';
   static const taskLock = 'tasks.lock';
   static const taskFollow = 'tasks.follow';
   static const taskAssignedBy = 'tasks.assigned_by';

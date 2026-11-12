@@ -50,6 +50,7 @@ void main() {
 
   Widget host({
     Set<String> permissions = const {'inbox.read', 'inbox.write'},
+    Widget page = const ThreadPage(conversationId: 'c1'),
   }) => ProviderScope(
     overrides: [
       inboxApiProvider.overrideWithValue(api),
@@ -73,7 +74,7 @@ void main() {
     ],
     child: MaterialApp(
       theme: OmniTheme.light(TargetPlatform.android),
-      home: const ThreadPage(conversationId: 'c1'),
+      home: page,
     ),
   );
 
@@ -293,6 +294,46 @@ void main() {
 
     await closeThread(tester);
   });
+
+  testWidgets(
+    'mở từ kết quả tìm Hộp thư: ô tìm điền sẵn, nhảy đúng tin (bug sheet 12/11)',
+    (tester) async {
+      api.searchResult = [
+        Message(
+          id: 'm9',
+          author: MessageAuthor.customer,
+          text: 'đàn piano mới',
+          sentAt: DateTime.utc(2026, 1, 2, 9),
+        ),
+        Message(
+          id: 'm8',
+          author: MessageAuthor.customer,
+          text: 'đàn cũ',
+          sentAt: DateTime.utc(2026, 1, 1, 9),
+        ),
+      ];
+      await tester.pumpWidget(
+        host(
+          page: const ThreadPage(
+            conversationId: 'c1',
+            initialQuery: 'đàn',
+            focusMessageId: 'm8',
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400));
+      await tester.pump();
+
+      final header = tester.widget<ThreadHeader>(find.byType(ThreadHeader));
+      expect(header.searchMode, isTrue);
+      expect(header.searchResultCount, 2);
+      // Tin được chạm ở Hộp thư là m8 (thứ hai), không phải kết quả đầu.
+      expect(header.searchResultIndex, 1);
+      expect(state(tester).messages.map((m) => m.id), contains('m8'));
+      await closeThread(tester);
+    },
+  );
 
   testWidgets('tìm tin từ trang Thông tin: kết quả không gồm ghi chú nội bộ', (
     tester,

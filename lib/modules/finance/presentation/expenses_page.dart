@@ -504,367 +504,276 @@ class _ExpensesPageState extends ConsumerState<ExpensesPage> {
     final delta = summary.deltaPill;
     final grpBtnActive = state.grpOpen || state.fltGroup != null;
 
-    return Container(
-      padding: const EdgeInsets.fromLTRB(15, 7, 15, 12),
-      decoration: BoxDecoration(
-        color: p.card,
-        borderRadius: BorderRadius.circular(18),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          // Hàng 1: bộ chọn tháng (‹ Tháng 11/2026 ›) bên trái, nút tỷ trọng
-          // theo nhóm bên phải. Tháng đứng ngay trên con số nó chi phối nên
-          // không cần nhãn "Tổng chi tháng X".
-          Row(
+    return OmniGroupSection(
+      dividerIndent: 14,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(14, 7, 14, 11),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Expanded(
-                child: Align(
-                  alignment: Alignment.centerLeft,
-                  // Lùi 14 để nét mũi tên gần lề chữ của thẻ; vùng chạm vẫn 40.
-                  child: Transform.translate(
-                    offset: const Offset(-14, 0),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        _buildMonthStepButton(
-                          p,
-                          key: const ValueKey('finance-prev-month-btn'),
-                          tooltip: 'Tháng trước',
-                          icon: Icons.chevron_left_rounded,
-                          onTap: () => notifier.selectMonth(prevYm),
-                        ),
-                        Flexible(
-                          child: Tooltip(
-                            message: 'Chọn tháng khác',
-                            child: InkWell(
-                              key: _monthBtnKey,
-                              onTap: _openMonthPickerMenu,
-                              borderRadius: BorderRadius.circular(8),
-                              child: Padding(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 4,
-                                  vertical: 8,
-                                ),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Flexible(
-                                      child: Text(
-                                        FinanceMonthUtils.formatMonthFull(
-                                          state.activeMonth,
-                                        ),
-                                        maxLines: 1,
-                                        softWrap: false,
-                                        style: OmniType.body.copyWith(
-                                          color: p.ink,
-                                          fontWeight: FontWeight.w600,
-                                          fontFeatures: const [
-                                            FontFeature.tabularFigures(),
-                                          ],
-                                        ),
-                                      ),
+              // Hàng 1: bộ chọn tháng (‹ Tháng 11/2026 ›) bên trái, nút tỷ trọng
+              // theo nhóm bên phải. Tháng đứng ngay trên con số nó chi phối nên
+              // không cần nhãn "Tổng chi tháng X".
+              Row(
+                children: [
+                  Expanded(
+                    child: Align(
+                      alignment: Alignment.centerLeft,
+                      // Lùi 14 để nét mũi tên gần lề chữ của thẻ; vùng chạm vẫn 40.
+                      child: Transform.translate(
+                        offset: const Offset(-14, 0),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            _buildMonthStepButton(
+                              p,
+                              key: const ValueKey('finance-prev-month-btn'),
+                              tooltip: 'Tháng trước',
+                              icon: Icons.chevron_left_rounded,
+                              onTap: () => notifier.selectMonth(prevYm),
+                            ),
+                            Flexible(
+                              child: Tooltip(
+                                message: 'Chọn tháng khác',
+                                child: InkWell(
+                                  key: _monthBtnKey,
+                                  onTap: _openMonthPickerMenu,
+                                  borderRadius: BorderRadius.circular(8),
+                                  child: Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 4,
+                                      vertical: 8,
                                     ),
-                                    const SizedBox(width: 2),
-                                    Icon(
-                                      Icons.expand_more_rounded,
-                                      size: 18,
-                                      color: p.muted,
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Flexible(
+                                          child: Text(
+                                            FinanceMonthUtils.formatMonthFull(
+                                              state.activeMonth,
+                                            ),
+                                            maxLines: 1,
+                                            softWrap: false,
+                                            style: OmniType.body.copyWith(
+                                              color: p.ink,
+                                              fontWeight: FontWeight.w600,
+                                              fontFeatures: const [
+                                                FontFeature.tabularFigures(),
+                                              ],
+                                            ),
+                                          ),
+                                        ),
+                                        const SizedBox(width: 2),
+                                        Icon(
+                                          Icons.expand_more_rounded,
+                                          size: 18,
+                                          color: p.muted,
+                                        ),
+                                      ],
                                     ),
-                                  ],
+                                  ),
                                 ),
                               ),
                             ),
-                          ),
+                            _buildMonthStepButton(
+                              p,
+                              key: const ValueKey('finance-next-month-btn'),
+                              tooltip: 'Tháng sau',
+                              icon: Icons.chevron_right_rounded,
+                              onTap: () => notifier.selectMonth(nextYm),
+                            ),
+                          ],
                         ),
-                        _buildMonthStepButton(
-                          p,
-                          key: const ValueKey('finance-next-month-btn'),
-                          tooltip: 'Tháng sau',
-                          icon: Icons.chevron_right_rounded,
-                          onTap: () => notifier.selectMonth(nextYm),
+                      ),
+                    ),
+                  ),
+                  Tooltip(
+                    message: 'Tỷ trọng theo nhóm',
+                    child: InkWell(
+                      key: const ValueKey('finance-grp-toggle'),
+                      onTap: notifier.toggleGroupBreakdown,
+                      borderRadius: BorderRadius.circular(99),
+                      child: Container(
+                        width: 28,
+                        height: 28,
+                        decoration: BoxDecoration(
+                          color: grpBtnActive ? p.primarySoft : p.control,
+                          shape: BoxShape.circle,
                         ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-              Tooltip(
-                message: 'Tỷ trọng theo nhóm',
-                child: InkWell(
-                  key: const ValueKey('finance-grp-toggle'),
-                  onTap: notifier.toggleGroupBreakdown,
-                  borderRadius: BorderRadius.circular(99),
-                  child: Container(
-                    width: 28,
-                    height: 28,
-                    decoration: BoxDecoration(
-                      color: grpBtnActive ? p.primarySoft : p.control,
-                      shape: BoxShape.circle,
-                    ),
-                    alignment: Alignment.center,
-                    child: Icon(
-                      Icons.pie_chart_outline_rounded,
-                      size: 15,
-                      color: grpBtnActive ? p.primaryInk : p.ink2,
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-          // Hàng 2: số tổng chi + nhãn biến động. Số dài thì nhãn tự xuống
-          // dòng; số chỉ co lại khi một mình nó rộng hơn cả thẻ.
-          Wrap(
-            crossAxisAlignment: WrapCrossAlignment.center,
-            spacing: 10,
-            runSpacing: 6,
-            children: [
-              FittedBox(
-                fit: BoxFit.scaleDown,
-                alignment: Alignment.centerLeft,
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.baseline,
-                  textBaseline: TextBaseline.alphabetic,
-                  children: [
-                    Text(
-                      FinanceMonthUtils.formatNumber(summary.total),
-                      maxLines: 1,
-                      style: OmniType.displayLg.copyWith(
-                        color: p.ink,
-                        fontWeight: FontWeight.w600,
-                        fontFeatures: const [FontFeature.tabularFigures()],
-                      ),
-                    ),
-                    const SizedBox(width: 4),
-                    Text(
-                      'đ',
-                      style: OmniType.section.copyWith(
-                        color: p.muted,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              if (delta != null)
-                Container(
-                  height: 24,
-                  padding: const EdgeInsets.symmetric(horizontal: 8),
-                  // Không giãn hết chiều ngang trong Wrap.
-                  constraints: const BoxConstraints(),
-                  decoration: BoxDecoration(
-                    color: delta.isIncrease ? p.amberSoft : p.okSoft,
-                    borderRadius: BorderRadius.circular(99),
-                  ),
-                  child: Center(
-                    widthFactor: 1,
-                    child: Text(
-                      delta.text,
-                      style: OmniType.micro.copyWith(
-                        color: delta.isIncrease ? p.amber : p.ok,
-                        fontWeight: FontWeight.w600,
-                        fontFeatures: const [FontFeature.tabularFigures()],
+                        alignment: Alignment.center,
+                        child: Icon(
+                          Icons.pie_chart_outline_rounded,
+                          size: 15,
+                          color: grpBtnActive ? p.primaryInk : p.ink2,
+                        ),
                       ),
                     ),
                   ),
-                ),
-            ],
-          ),
-          // Thanh tiến độ 6px
-          Padding(
-            padding: const EdgeInsets.only(top: 10, bottom: 9),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(99),
-              child: SizedBox(
-                height: 6,
-                child: LinearProgressIndicator(
-                  value: summary.paidRatio,
-                  backgroundColor: p.amberSoft,
-                  valueColor: AlwaysStoppedAnimation<Color>(p.primary),
-                ),
+                ],
               ),
-            ),
-          ),
-          // Hai ô lọc Đã trả / Phải trả: bố cục 2 dòng gọn gàng để số tiền luôn hiển thị trọn vẹn 100%
-          Row(
-            children: [
-              Expanded(
-                child: _buildSummaryStatusPill(
-                  p,
-                  key: const ValueKey('finance-flt-paid'),
-                  active: state.fltStatus == 'paid',
-                  dotColor: p.ok,
-                  label: 'Đã trả',
-                  amountText: FinanceMonthUtils.formatVndSpace(summary.paid),
-                  amountColor: p.ink,
-                  onTap: () => notifier.toggleStatusFilter('paid'),
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: _buildSummaryStatusPill(
-                  p,
-                  key: const ValueKey('finance-flt-owe'),
-                  active: state.fltStatus == 'owe',
-                  dotColor: summary.outstanding > 0 ? p.amber : p.ok,
-                  label: 'Phải trả',
-                  amountText: FinanceMonthUtils.formatVndSpace(
-                    summary.outstanding,
-                  ),
-                  amountColor: summary.outstanding > 0 ? p.amber : p.ink2,
-                  onTap: () => notifier.toggleStatusFilter('owe'),
-                ),
-              ),
-            ],
-          ),
-          if (summary.excluded.count > 0 && summary.excluded.total != 0)
-            Padding(
-              padding: const EdgeInsets.only(top: 8),
-              child: FittedBox(
-                fit: BoxFit.scaleDown,
-                alignment: Alignment.centerLeft,
-                child: Text(
-                  'Ngoài chi phí: ${FinanceMonthUtils.formatVndSpace(summary.excluded.total)} (${summary.excluded.count} khoản không tính CP)',
-                  maxLines: 1,
-                  style: OmniType.micro.copyWith(
-                    color: p.muted,
-                    fontFeatures: const [FontFeature.tabularFigures()],
-                  ),
-                ),
-              ),
-            ),
-          // Expandable group breakdown (grp-panel)
-          if (state.grpOpen) ...[
-            const SizedBox(height: 11),
-            Container(
-              padding: const EdgeInsets.only(top: 11),
-              decoration: BoxDecoration(
-                border: Border(top: BorderSide(color: p.divider, width: 0.5)),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
+              // Hàng 2: số tổng chi + nhãn biến động.
+              Wrap(
+                crossAxisAlignment: WrapCrossAlignment.center,
+                spacing: 10,
+                runSpacing: 6,
                 children: [
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 7),
+                  FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: Alignment.centerLeft,
                     child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.baseline,
+                      textBaseline: TextBaseline.alphabetic,
                       children: [
                         Text(
-                          'TỶ TRỌNG THEO NHÓM',
-                          style: OmniType.overline.copyWith(
-                            color: p.muted,
+                          FinanceMonthUtils.formatNumber(summary.total),
+                          maxLines: 1,
+                          style: OmniType.displayLg.copyWith(
+                            color: p.ink,
                             fontWeight: FontWeight.w600,
-                            letterSpacing: 0.4,
+                            fontFeatures: const [FontFeature.tabularFigures()],
                           ),
                         ),
+                        const SizedBox(width: 4),
                         Text(
-                          'Chạm nhóm để lọc',
-                          style: OmniType.micro.copyWith(color: p.muted),
+                          'đ',
+                          style: OmniType.section.copyWith(
+                            color: p.muted,
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
                       ],
                     ),
                   ),
-                  if (summary.byGroup.isEmpty)
-                    Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 8),
-                      child: Text(
-                        'Chưa có phát sinh theo nhóm trong kỳ này.',
-                        style: OmniType.caption.copyWith(color: p.muted),
+                  if (delta != null)
+                    Container(
+                      height: 24,
+                      padding: const EdgeInsets.symmetric(horizontal: 8),
+                      constraints: const BoxConstraints(),
+                      decoration: BoxDecoration(
+                        color: delta.isIncrease ? p.amberSoft : p.okSoft,
+                        borderRadius: BorderRadius.circular(99),
                       ),
-                    ),
-                  for (final g in summary.byGroup)
-                    _buildGroupBreakdownRow(
-                      p,
-                      g,
-                      total: summary.total,
-                      selected: state.fltGroup == g.groupId,
-                      onTap: () => notifier.toggleGroupFilter(g.groupId),
+                      child: Center(
+                        widthFactor: 1,
+                        child: Text(
+                          delta.text,
+                          style: OmniType.micro.copyWith(
+                            color: delta.isIncrease ? p.amber : p.ok,
+                            fontWeight: FontWeight.w600,
+                            fontFeatures: const [FontFeature.tabularFigures()],
+                          ),
+                        ),
+                      ),
                     ),
                 ],
               ),
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSummaryStatusPill(
-    FinancePalette p, {
-    required Key key,
-    required bool active,
-    required Color dotColor,
-    required String label,
-    required String amountText,
-    required Color amountColor,
-    required VoidCallback onTap,
-  }) {
-    return InkWell(
-      key: key,
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(10),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 140),
-        padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 7),
-        decoration: BoxDecoration(
-          color: active ? p.primarySoft : p.control,
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(
-            color: active ? p.selLine : Colors.transparent,
-            width: 0.5,
-          ),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  width: 7,
-                  height: 7,
-                  decoration: BoxDecoration(
-                    color: dotColor,
-                    shape: BoxShape.circle,
-                  ),
-                ),
-                const SizedBox(width: 5),
-                Flexible(
-                  child: FittedBox(
-                    fit: BoxFit.scaleDown,
-                    alignment: Alignment.centerLeft,
-                    child: Text(
-                      label,
-                      maxLines: 1,
-                      style: OmniType.micro.copyWith(
-                        color: p.muted,
-                        fontWeight: FontWeight.w500,
-                      ),
+              // Thanh tiến độ 6px
+              Padding(
+                padding: const EdgeInsets.only(top: 10),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(99),
+                  child: SizedBox(
+                    height: 6,
+                    child: LinearProgressIndicator(
+                      value: summary.paidRatio,
+                      backgroundColor: p.amberSoft,
+                      valueColor: AlwaysStoppedAnimation<Color>(p.primary),
                     ),
                   ),
                 ),
+              ),
+              if (summary.excluded.count > 0 && summary.excluded.total != 0)
+                Padding(
+                  padding: const EdgeInsets.only(top: 8),
+                  child: Text(
+                    'Ngoài chi phí: ${FinanceMonthUtils.formatVndSpace(summary.excluded.total)} (${summary.excluded.count} khoản không tính CP)',
+                    maxLines: 1,
+                    style: OmniType.micro.copyWith(
+                      color: p.muted,
+                      fontFeatures: const [FontFeature.tabularFigures()],
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ),
+        OmniGroupRow(
+          key: const ValueKey('finance-flt-paid'),
+          title: 'Đã trả',
+          selected: state.fltStatus == 'paid',
+          onTap: () => notifier.toggleStatusFilter('paid'),
+          trailing: Text(
+            FinanceMonthUtils.formatVndSpace(summary.paid),
+            maxLines: 1,
+            style: OmniType.bodyStrong.copyWith(
+              color: p.ink,
+              fontFeatures: const [FontFeature.tabularFigures()],
+            ),
+          ),
+        ),
+        OmniGroupRow(
+          key: const ValueKey('finance-flt-owe'),
+          title: 'Phải trả',
+          selected: state.fltStatus == 'owe',
+          onTap: () => notifier.toggleStatusFilter('owe'),
+          trailing: Text(
+            FinanceMonthUtils.formatVndSpace(summary.outstanding),
+            maxLines: 1,
+            style: OmniType.bodyStrong.copyWith(
+              color: summary.outstanding > 0 ? p.amber : p.ink2,
+              fontFeatures: const [FontFeature.tabularFigures()],
+            ),
+          ),
+        ),
+        // Expandable group breakdown (grp-panel)
+        if (state.grpOpen)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(14, 10, 14, 11),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 7),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'TỶ TRỌNG THEO NHÓM',
+                        style: OmniType.overline.copyWith(
+                          color: p.muted,
+                          fontWeight: FontWeight.w600,
+                          letterSpacing: 0.4,
+                        ),
+                      ),
+                      Text(
+                        'Chạm nhóm để lọc',
+                        style: OmniType.micro.copyWith(color: p.muted),
+                      ),
+                    ],
+                  ),
+                ),
+                if (summary.byGroup.isEmpty)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    child: Text(
+                      'Chưa có phát sinh theo nhóm trong kỳ này.',
+                      style: OmniType.caption.copyWith(color: p.muted),
+                    ),
+                  ),
+                for (final g in summary.byGroup)
+                  _buildGroupBreakdownRow(
+                    p,
+                    g,
+                    total: summary.total,
+                    selected: state.fltGroup == g.groupId,
+                    onTap: () => notifier.toggleGroupFilter(g.groupId),
+                  ),
               ],
             ),
-            const SizedBox(height: 2),
-            FittedBox(
-              fit: BoxFit.scaleDown,
-              alignment: Alignment.centerLeft,
-              child: Text(
-                amountText,
-                maxLines: 1,
-                style: OmniType.bodySm.copyWith(
-                  color: amountColor,
-                  fontWeight: FontWeight.w600,
-                  fontFeatures: const [FontFeature.tabularFigures()],
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
+          ),
+      ],
     );
   }
 
@@ -897,15 +806,13 @@ class _ExpensesPageState extends ConsumerState<ExpensesPage> {
           children: [
             Row(
               children: [
-                Container(
-                  width: 8,
-                  height: 8,
-                  decoration: BoxDecoration(
-                    color: g.resolvedColor,
-                    shape: BoxShape.circle,
-                  ),
+                OmniIconTile(
+                  Icons.category_outlined,
+                  size: 24,
+                  color: p.primary,
+                  background: p.primarySoft,
                 ),
-                const SizedBox(width: 7),
+                const SizedBox(width: 8),
                 Expanded(
                   child: Text(
                     g.resolvedName,
@@ -926,16 +833,13 @@ class _ExpensesPageState extends ConsumerState<ExpensesPage> {
                   ),
                 ),
                 const SizedBox(width: 8),
-                FittedBox(
-                  fit: BoxFit.scaleDown,
-                  child: Text(
-                    FinanceMonthUtils.formatVndSpace(g.amount),
-                    maxLines: 1,
-                    style: OmniType.caption.copyWith(
-                      color: p.ink,
-                      fontWeight: FontWeight.w600,
-                      fontFeatures: const [FontFeature.tabularFigures()],
-                    ),
+                Text(
+                  FinanceMonthUtils.formatVndSpace(g.amount),
+                  maxLines: 1,
+                  style: OmniType.caption.copyWith(
+                    color: p.ink,
+                    fontWeight: FontWeight.w600,
+                    fontFeatures: const [FontFeature.tabularFigures()],
                   ),
                 ),
               ],
@@ -948,7 +852,7 @@ class _ExpensesPageState extends ConsumerState<ExpensesPage> {
                 child: LinearProgressIndicator(
                   value: ratio,
                   backgroundColor: p.track,
-                  valueColor: AlwaysStoppedAnimation<Color>(g.resolvedColor),
+                  valueColor: AlwaysStoppedAnimation<Color>(p.primary),
                 ),
               ),
             ),
@@ -968,287 +872,240 @@ class _ExpensesPageState extends ConsumerState<ExpensesPage> {
     final selectedSum = state.selectedRecurringSum;
     final allSum = state.allRecurringSum;
 
-    return Container(
-      decoration: BoxDecoration(
-        color: p.card,
-        borderRadius: BorderRadius.circular(14),
-      ),
-      child: Column(
-        children: [
-          // Header: rc-head
-          InkWell(
-            key: const ValueKey('finance-recur-head'),
-            onTap: notifier.toggleRecurringExpanded,
-            borderRadius: BorderRadius.vertical(
-              top: const Radius.circular(14),
-              bottom: Radius.circular(state.recurOpen ? 0 : 14),
-            ),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-              child: Row(
-                children: [
-                  // Overlapping category color dots
-                  SizedBox(
-                    width: 30,
-                    height: 11,
-                    child: Stack(
-                      children: [
-                        for (var i = 0; i < suggestions.length && i < 4; i++)
-                          Positioned(
-                            left: i * 6.0,
-                            top: 0.5,
-                            child: Container(
-                              width: 10,
-                              height: 10,
-                              decoration: BoxDecoration(
-                                color: suggestions[i].resolvedColor,
-                                shape: BoxShape.circle,
-                                border: Border.all(color: p.card, width: 1.4),
-                              ),
-                            ),
+    return OmniGroupSection(
+      dividerIndent: 54,
+      children: [
+        // Header: rc-head với OmniIconTile một tông màu chính
+        InkWell(
+          key: const ValueKey('finance-recur-head'),
+          onTap: notifier.toggleRecurringExpanded,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            child: Row(
+              children: [
+                OmniIconTile(
+                  Icons.autorenew_rounded,
+                  color: p.primary,
+                  background: p.primarySoft,
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      FittedBox(
+                        fit: BoxFit.scaleDown,
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          'Khoản cố định',
+                          maxLines: 1,
+                          style: OmniType.bodySm.copyWith(
+                            color: p.ink,
+                            fontWeight: FontWeight.w600,
                           ),
-                      ],
-                    ),
+                        ),
+                      ),
+                      const SizedBox(height: 1),
+                      FittedBox(
+                        fit: BoxFit.scaleDown,
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          allSum > 0
+                              ? '${suggestions.length} khoản · ${FinanceMonthUtils.formatVndSpace(allSum)}'
+                              : '${suggestions.length} khoản gợi ý · Chạm để nhập số tiền',
+                          maxLines: 1,
+                          style: OmniType.caption.copyWith(
+                            color: p.muted,
+                            fontFeatures: const [
+                              FontFeature.tabularFigures(),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
-                  const SizedBox(width: 7),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        FittedBox(
-                          fit: BoxFit.scaleDown,
-                          alignment: Alignment.centerLeft,
-                          child: Text(
-                            // Tháng đã ghi ngay trên thẻ tổng chi.
-                            'Khoản cố định',
-                            maxLines: 1,
-                            style: OmniType.bodySm.copyWith(
-                              color: p.ink,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 1),
-                        FittedBox(
-                          fit: BoxFit.scaleDown,
-                          alignment: Alignment.centerLeft,
-                          child: Text(
-                            allSum > 0
-                                ? '${suggestions.length} khoản · ${FinanceMonthUtils.formatVndSpace(allSum)}'
-                                : '${suggestions.length} khoản gợi ý · Chạm để nhập số tiền',
-                            maxLines: 1,
-                            style: OmniType.caption.copyWith(
-                              color: p.muted,
-                              fontFeatures: const [
-                                FontFeature.tabularFigures(),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(width: 6),
-                  // "Ghi tất cả" pill button (hoặc mở danh sách nếu chưa có số tiền lịch sử)
-                  InkWell(
-                    key: const ValueKey('finance-recur-commit-all'),
-                    onTap: allSum > 0
-                        ? () => notifier.commitRecurring(all: true)
-                        : notifier.toggleRecurringExpanded,
-                    borderRadius: BorderRadius.circular(99),
-                    child: Container(
-                      height: 28,
-                      padding: const EdgeInsets.symmetric(horizontal: 10),
-                      alignment: Alignment.center,
-                      decoration: OmniGlass.buttonDecoration(context),
-                      child: Text(
-                        allSum > 0 ? 'Ghi tất cả' : 'Mở nhập',
-                        style: OmniType.caption.copyWith(
-                          color: p.primary,
-                          fontWeight: FontWeight.w600,
-                        ),
+                ),
+                const SizedBox(width: 6),
+                // "Ghi tất cả" pill button (hoặc mở danh sách nếu chưa có số tiền lịch sử)
+                InkWell(
+                  key: const ValueKey('finance-recur-commit-all'),
+                  onTap: allSum > 0
+                      ? () => notifier.commitRecurring(all: true)
+                      : notifier.toggleRecurringExpanded,
+                  borderRadius: BorderRadius.circular(99),
+                  child: Container(
+                    height: 32,
+                    padding: const EdgeInsets.symmetric(horizontal: 11),
+                    alignment: Alignment.center,
+                    decoration: OmniGlass.buttonDecoration(context),
+                    child: Text(
+                      allSum > 0 ? 'Ghi tất cả' : 'Mở nhập',
+                      style: OmniType.caption.copyWith(
+                        color: p.primary,
+                        fontWeight: FontWeight.w600,
                       ),
                     ),
                   ),
-                  const SizedBox(width: 2),
-                  AnimatedRotation(
-                    turns: state.recurOpen ? 0.25 : 0.0,
-                    duration: const Duration(milliseconds: 180),
-                    child: Icon(
-                      Icons.chevron_right_rounded,
-                      size: 17,
-                      color: p.muted,
-                    ),
+                ),
+                const SizedBox(width: 2),
+                AnimatedRotation(
+                  turns: state.recurOpen ? 0.25 : 0.0,
+                  duration: const Duration(milliseconds: 180),
+                  child: Icon(
+                    Icons.chevron_right_rounded,
+                    size: 17,
+                    color: p.muted,
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
           ),
-          // Expanded checklist: rc-body
-          if (state.recurOpen)
-            Container(
-              decoration: BoxDecoration(
-                border: Border(top: BorderSide(color: p.divider, width: 0.5)),
-              ),
-              child: Column(
-                children: [
-                  for (var i = 0; i < suggestions.length; i++)
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 9,
-                      ),
-                      decoration: BoxDecoration(
-                        border: i == suggestions.length - 1
-                            ? null
-                            : Border(
-                                bottom: BorderSide(
-                                  color: p.divider,
-                                  width: 0.5,
-                                ),
-                              ),
-                      ),
-                      child: Row(
-                        children: [
-                          InkWell(
-                            onTap: () => notifier.toggleRecurringItem(i),
-                            borderRadius: BorderRadius.circular(99),
-                            child: Container(
-                              width: 20,
-                              height: 20,
-                              decoration: BoxDecoration(
-                                color: state.recurSel[i]
-                                    ? p.primary
-                                    : Colors.transparent,
-                                shape: BoxShape.circle,
-                                border: Border.all(
-                                  color: state.recurSel[i]
-                                      ? p.primary
-                                      : p.muted.withValues(alpha: 0.5),
-                                  width: 1.5,
-                                ),
-                              ),
-                              alignment: Alignment.center,
-                              child: state.recurSel[i]
-                                  ? const Icon(
-                                      Icons.check_rounded,
-                                      size: 13,
-                                      color: Colors.white,
-                                    )
-                                  : null,
+        ),
+        // Expanded checklist: rc-body
+        if (state.recurOpen)
+          Column(
+            children: [
+              for (var i = 0; i < suggestions.length; i++)
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 9,
+                  ),
+                  decoration: BoxDecoration(
+                    border: i == suggestions.length - 1
+                        ? null
+                        : Border(
+                            bottom: BorderSide(
+                              color: p.divider,
+                              width: 0.5,
                             ),
                           ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: InkWell(
-                              onTap: () => notifier.toggleRecurringItem(i),
-                              child: Row(
-                                children: [
-                                  Container(
-                                    width: 7,
-                                    height: 7,
-                                    decoration: BoxDecoration(
-                                      color: suggestions[i].resolvedColor,
-                                      shape: BoxShape.circle,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 6),
-                                  Expanded(
-                                    child: Text(
-                                      suggestions[i].titleForMonth,
-                                      maxLines: 2,
-                                      style: OmniType.bodySm.copyWith(
-                                        color: p.ink,
-                                        fontWeight: FontWeight.w500,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
+                  ),
+                  child: Row(
+                    children: [
+                      InkWell(
+                        onTap: () => notifier.toggleRecurringItem(i),
+                        borderRadius: BorderRadius.circular(99),
+                        child: Container(
+                          width: 20,
+                          height: 20,
+                          decoration: BoxDecoration(
+                            color: state.recurSel[i]
+                                ? p.primary
+                                : Colors.transparent,
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: state.recurSel[i]
+                                  ? p.primary
+                                  : p.muted.withValues(alpha: 0.5),
+                              width: 1.5,
                             ),
                           ),
-                          const SizedBox(width: 6),
-                          InkWell(
-                            onTap: () => _openRecurringAmountKeypad(
-                              i,
-                              suggestions[i],
-                              state.recurAmt[i],
-                            ),
-                            borderRadius: BorderRadius.circular(12),
-                            child: Container(
-                              height: 29,
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 9,
-                              ),
-                              decoration: BoxDecoration(
-                                color: p.control,
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Text(
-                                    state.recurAmt[i] > 0
-                                        ? FinanceMonthUtils.formatVndSpace(
-                                            state.recurAmt[i],
-                                          )
-                                        : 'Nhập số tiền',
-                                    style: OmniType.caption.copyWith(
-                                      color: state.recurAmt[i] > 0
-                                          ? p.ink
-                                          : p.primary,
-                                      fontWeight: FontWeight.w600,
-                                      fontFeatures: const [
-                                        FontFeature.tabularFigures(),
-                                      ],
-                                    ),
-                                  ),
-                                  const SizedBox(width: 4),
-                                  Icon(
-                                    Icons.edit_outlined,
-                                    size: 12,
-                                    color: p.muted,
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ],
+                          alignment: Alignment.center,
+                          child: state.recurSel[i]
+                              ? const Icon(
+                                  Icons.check_rounded,
+                                  size: 13,
+                                  color: Colors.white,
+                                )
+                              : null,
+                        ),
                       ),
-                    ),
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(12, 9, 12, 11),
-                    child: SizedBox(
-                      width: double.infinity,
-                      height: 40,
-                      child: FilledButton(
-                        onPressed: selectedCount > 0 && selectedSum > 0
-                            ? () => notifier.commitRecurring()
-                            : null,
-                        child: FittedBox(
-                          fit: BoxFit.scaleDown,
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: InkWell(
+                          onTap: () => notifier.toggleRecurringItem(i),
                           child: Text(
-                            selectedCount > 0 && selectedSum > 0
-                                ? 'Ghi $selectedCount khoản · ${FinanceMonthUtils.formatVndSpace(selectedSum)}'
-                                : (selectedCount > 0
-                                      ? 'Nhập số tiền cho khoản đã chọn'
-                                      : 'Chọn ít nhất 1 khoản'),
+                            suggestions[i].titleForMonth,
+                            maxLines: 2,
                             style: OmniType.bodySm.copyWith(
-                              fontWeight: FontWeight.w600,
-                              fontFeatures: const [
-                                FontFeature.tabularFigures(),
-                              ],
+                              color: p.ink,
+                              fontWeight: FontWeight.w500,
                             ),
                           ),
                         ),
                       ),
+                      const SizedBox(width: 6),
+                      InkWell(
+                        onTap: () => _openRecurringAmountKeypad(
+                          i,
+                          suggestions[i],
+                          state.recurAmt[i],
+                        ),
+                        borderRadius: BorderRadius.circular(12),
+                        child: Container(
+                          height: 29,
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 9,
+                          ),
+                          decoration: BoxDecoration(
+                            color: p.control,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                state.recurAmt[i] > 0
+                                    ? FinanceMonthUtils.formatVndSpace(
+                                        state.recurAmt[i],
+                                      )
+                                    : 'Nhập số tiền',
+                                maxLines: 1,
+                                style: OmniType.caption.copyWith(
+                                  color: state.recurAmt[i] > 0
+                                      ? p.ink
+                                      : p.primary,
+                                  fontWeight: FontWeight.w600,
+                                  fontFeatures: const [
+                                    FontFeature.tabularFigures(),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(width: 4),
+                              Icon(
+                                Icons.edit_outlined,
+                                size: 12,
+                                color: p.muted,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(14, 9, 14, 11),
+                child: SizedBox(
+                  width: double.infinity,
+                  height: 40,
+                  child: FilledButton(
+                    onPressed: selectedCount > 0 && selectedSum > 0
+                        ? () => notifier.commitRecurring()
+                        : null,
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: Text(
+                        selectedCount > 0 && selectedSum > 0
+                            ? 'Ghi $selectedCount khoản · ${FinanceMonthUtils.formatVndSpace(selectedSum)}'
+                            : (selectedCount > 0
+                                  ? 'Nhập số tiền cho khoản đã chọn'
+                                  : 'Chọn ít nhất 1 khoản'),
+                        style: OmniType.bodySm.copyWith(
+                          fontWeight: FontWeight.w600,
+                          fontFeatures: const [
+                            FontFeature.tabularFigures(),
+                          ],
+                        ),
+                      ),
                     ),
                   ),
-                ],
+                ),
               ),
-            ),
-        ],
-      ),
+            ],
+          ),
+      ],
     );
   }
 
@@ -1313,7 +1170,7 @@ class _ExpensesPageState extends ConsumerState<ExpensesPage> {
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 28),
           decoration: BoxDecoration(
             color: p.card,
-            borderRadius: BorderRadius.circular(14),
+            borderRadius: BorderRadius.circular(18),
           ),
           alignment: Alignment.center,
           child: Text(
@@ -1335,44 +1192,24 @@ class _ExpensesPageState extends ConsumerState<ExpensesPage> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Expanded(
-                child: Row(
-                  children: [
-                    if (section.dotColor != null) ...[
-                      Container(
-                        width: 8,
-                        height: 8,
-                        decoration: BoxDecoration(
-                          color: section.dotColor,
-                          shape: BoxShape.circle,
-                        ),
-                      ),
-                      const SizedBox(width: 6),
-                    ],
-                    Flexible(
-                      child: Text(
-                        section.headerLabel,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: OmniType.caption.copyWith(
-                          color: p.muted,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
-                  ],
+                child: Text(
+                  section.headerLabel,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: OmniType.caption.copyWith(
+                    color: p.muted,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
               ),
               const SizedBox(width: 8),
-              FittedBox(
-                fit: BoxFit.scaleDown,
-                child: Text(
-                  FinanceMonthUtils.formatVndSpace(section.totalAmount),
-                  maxLines: 1,
-                  style: OmniType.caption.copyWith(
-                    color: p.muted,
-                    fontWeight: FontWeight.w500,
-                    fontFeatures: const [FontFeature.tabularFigures()],
-                  ),
+              Text(
+                FinanceMonthUtils.formatVndSpace(section.totalAmount),
+                maxLines: 1,
+                style: OmniType.caption.copyWith(
+                  color: p.muted,
+                  fontWeight: FontWeight.w500,
+                  fontFeatures: const [FontFeature.tabularFigures()],
                 ),
               ),
             ],
@@ -1381,7 +1218,7 @@ class _ExpensesPageState extends ConsumerState<ExpensesPage> {
         Container(
           decoration: BoxDecoration(
             color: p.card,
-            borderRadius: BorderRadius.circular(14),
+            borderRadius: BorderRadius.circular(18),
           ),
           clipBehavior: Clip.antiAlias,
           child: Column(

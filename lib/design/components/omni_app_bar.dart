@@ -59,6 +59,7 @@ class OmniAppBar extends StatelessWidget implements PreferredSizeWidget {
     this.showAccount = true,
     this.bottom,
     this.close = false,
+    this.fallbackBack,
     // Ba tham số dưới đây thuộc AppBar cũ; giữ để màn cũ dựng được, không còn
     // tác dụng với thanh kính.
     this.backgroundColor,
@@ -79,6 +80,10 @@ class OmniAppBar extends StatelessWidget implements PreferredSizeWidget {
 
   /// Form tạo/sửa toàn màn: nút đóng ✕ thay cho mũi tên quay lại.
   final bool close;
+
+  /// Hành động quay lại dự phòng khi màn con được mở thẳng (vd. qua deep-link)
+  /// không có lịch sử stack để pop.
+  final VoidCallback? fallbackBack;
 
   final Color? backgroundColor;
   final double? titleSpacing;
@@ -101,7 +106,10 @@ class OmniAppBar extends StatelessWidget implements PreferredSizeWidget {
   @override
   Widget build(BuildContext context) {
     final canPop = ModalRoute.of(context)?.canPop ?? false;
-    return _bar(canPop, () => Navigator.of(context).maybePop());
+    final effectiveBack = canPop
+        ? () => Navigator.of(context).maybePop()
+        : fallbackBack;
+    return _bar(effectiveBack != null, effectiveBack);
   }
 }
 

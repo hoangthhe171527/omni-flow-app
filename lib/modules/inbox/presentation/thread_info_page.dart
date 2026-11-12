@@ -37,7 +37,10 @@ class ThreadInfoPage extends ConsumerWidget {
     final conversation = ref.watch(conversationProvider(conversationId));
 
     return Scaffold(
-      appBar: const OmniAppBar(title: 'Thông tin'),
+      appBar: OmniAppBar(
+        title: 'Thông tin',
+        fallbackBack: () => context.go('/inbox/$conversationId'),
+      ),
       body: OmniAsyncView(
         value: conversation,
         onRetry: () => ref.invalidate(conversationProvider(conversationId)),

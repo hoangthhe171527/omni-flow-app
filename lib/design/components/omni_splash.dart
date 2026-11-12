@@ -147,7 +147,7 @@ class OmniSplash extends StatelessWidget {
     );
   }
 
-  /// Ô logo 148 với quầng vàng sau chấm; hiện ra khỏi lớp mờ.
+  /// Ô logo 148 với quầng hào quang xanh V-Orbit phía sau; hiện ra khỏi lớp mờ.
   Widget _logo(_SplashFrame s) {
     final tile = SizedBox.square(
       dimension: _tileSize,
@@ -156,18 +156,25 @@ class OmniSplash extends StatelessWidget {
         children: [
           if (s.glowOpacity > 0)
             Positioned(
-              left: 34,
-              top: 4,
-              width: 80,
-              height: 80,
+              left: -16,
+              top: -16,
+              width: _tileSize + 32,
+              height: _tileSize + 32,
               child: Opacity(
                 opacity: s.glowOpacity,
                 child: Transform.scale(
                   scale: s.glowScale,
-                  child: const DecoratedBox(
+                  child: DecoratedBox(
                     decoration: BoxDecoration(
-                      color: OmniColors.sun,
                       shape: BoxShape.circle,
+                      gradient: RadialGradient(
+                        colors: [
+                          OmniColors.orbit.withValues(alpha: 0.55),
+                          OmniColors.primary.withValues(alpha: 0.18),
+                          Colors.transparent,
+                        ],
+                        stops: const [0.0, 0.58, 1.0],
+                      ),
                     ),
                   ),
                 ),

@@ -101,8 +101,8 @@ class _AppsPageState extends ConsumerState<AppsPage> {
   }
 }
 
-/// Thanh trên: tên công ty (chạm để đổi khi có nhiều công ty), chuông, tài
-/// khoản — không logo, không tiêu đề màn (ít chữ).
+/// Thanh trên: biểu tượng V-Orbit 30dp cạnh tên công ty (chạm để đổi khi có
+/// nhiều công ty), chuông và tài khoản.
 class _AppsTopBar extends ConsumerWidget implements PreferredSizeWidget {
   const _AppsTopBar();
 
@@ -164,18 +164,32 @@ class _CompanyButton extends StatelessWidget {
     );
     return Align(
       alignment: Alignment.centerLeft,
-      child: Semantics(
-        button: onTap != null,
-        label: onTap != null ? 'Đổi công ty, $name' : name,
-        excludeSemantics: true,
-        child: GestureDetector(
-          behavior: HitTestBehavior.opaque,
-          onTap: onTap,
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(minHeight: 44),
-            child: Padding(padding: const EdgeInsets.only(left: 4), child: row),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const SizedBox(width: 4),
+          const BrandAnchor(child: OmniBrandMark(size: 30, framed: false)),
+          const SizedBox(width: 10),
+          Flexible(
+            child: Semantics(
+              button: onTap != null,
+              label: onTap != null ? 'Đổi công ty, $name' : name,
+              excludeSemantics: true,
+              child: GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: onTap,
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(minHeight: 44),
+                  child: Align(
+                    alignment: Alignment.centerLeft,
+                    widthFactor: 1,
+                    child: row,
+                  ),
+                ),
+              ),
+            ),
           ),
-        ),
+        ],
       ),
     );
   }
@@ -264,6 +278,15 @@ class _AppTileState extends ConsumerState<_AppTile> {
         ? '${app.name}, có mục mới'
         : app.name;
 
+    final borderColor = Color.alphaBlend(
+      Colors.white.withValues(alpha: dark ? 0.08 : 0.72),
+      OmniColors.byBrightness(
+        context,
+        OmniColors.border,
+        OmniColors.darkBorder,
+      ),
+    );
+
     final icon = AnimatedScale(
       scale: _down ? 0.94 : 1,
       duration: const Duration(milliseconds: 120),
@@ -275,28 +298,38 @@ class _AppTileState extends ConsumerState<_AppTile> {
             height: 76,
             decoration: BoxDecoration(
               color: scheme.surface,
-              borderRadius: BorderRadius.circular(24),
+              borderRadius: BorderRadius.circular(22),
+              border: Border.all(color: borderColor),
               gradient: LinearGradient(
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
-                stops: const [0, 0.7],
+                stops: const [0, 0.72],
                 colors: [
                   Color.alphaBlend(
-                    scheme.primary.withValues(alpha: dark ? 0.22 : 0.12),
+                    Colors.white.withValues(alpha: dark ? 0.05 : 0.65),
                     scheme.surface,
                   ),
-                  scheme.surface,
+                  Color.alphaBlend(
+                    scheme.primary.withValues(alpha: dark ? 0.18 : 0.09),
+                    scheme.surface,
+                  ),
                 ],
               ),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withValues(alpha: dark ? 0.35 : 0.08),
-                  blurRadius: 16,
+                  color: OmniColors.ink.withValues(alpha: dark ? 0.35 : 0.08),
+                  blurRadius: 18,
                   offset: const Offset(0, 6),
                 ),
+                if (!dark)
+                  BoxShadow(
+                    color: OmniColors.ink.withValues(alpha: 0.04),
+                    blurRadius: 2,
+                    offset: const Offset(0, 1),
+                  ),
               ],
             ),
-            child: Icon(app.icon, size: 34, color: scheme.primary),
+            child: Icon(app.icon, size: 32, color: scheme.primary),
           ),
           if (alert > 0)
             Positioned(

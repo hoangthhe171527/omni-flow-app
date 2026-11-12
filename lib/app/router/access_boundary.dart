@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../design/components/components.dart';
 import '../../design/tokens/tokens.dart';
 import '../../security/guard/access_requirement.dart';
 import '../../security/session/session_controller.dart';
@@ -32,25 +33,33 @@ class AccessBoundary extends ConsumerWidget {
   }
 }
 
-/// Màn "không có quyền" theo `MNoAccess.dc.html`: ổ khoá trong vòng tròn,
-/// tên quyền còn thiếu in đậm, và một nút quay lại khi còn chỗ để quay lại.
+/// Màn "không có quyền" theo chuẩn Liquid Glass (`#s-no-access`): nền xám
+/// chuẩn, thanh đầu `OmniAppBar`, thẻ nhóm trắng bo 18, ô khoá 64 bo 18 một
+/// tông màu chính, tên quyền còn thiếu in đậm, và nút quay lại khi có đường lùi.
 class NoAccessView extends StatelessWidget {
-  const NoAccessView({super.key, required this.requirement});
+  const NoAccessView({
+    super.key,
+    required this.requirement,
+    this.fallbackBack,
+  });
 
   final AccessRequirement requirement;
+  final VoidCallback? fallbackBack;
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final canPop = Navigator.of(context).canPop();
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    final canPop = ModalRoute.of(context)?.canPop ?? Navigator.of(context).canPop();
+    final effectiveBack = canPop
+        ? () => Navigator.of(context).maybePop()
+        : fallbackBack;
     // `any` đủ MỘT quyền là vào được, `all` phải đủ cả — câu phải nói đúng
     // điều đó, không thì quản trị viên cấp thừa quyền.
     final permissions = requirement.permissions.join(
       requirement.requireAll ? ' và ' : ' hoặc ',
     );
-    // Chữ cấp 2 (#3A4760) ở chế độ sáng; chế độ tối không có bậc đó nên dùng
-    // chữ phụ.
-    final secondary = Theme.of(context).brightness == Brightness.dark
+    final secondary = dark
         ? scheme.onSurfaceVariant
         : OmniColors.secondaryForeground;
     final body = OmniType.bodyStrong.copyWith(
@@ -60,72 +69,97 @@ class NoAccessView extends StatelessWidget {
     );
 
     return Scaffold(
-      backgroundColor: scheme.surface,
-      body: SafeArea(
-        child: Center(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(
-              horizontal: OmniSpacing.section,
-            ),
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 420),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Container(
-                    width: 96,
-                    height: 96,
-                    decoration: BoxDecoration(
-                      color: scheme.surfaceContainerHighest,
-                      shape: BoxShape.circle,
+      extendBodyBehindAppBar: true,
+      appBar: OmniAppBar(
+        title: 'Quyền truy cập',
+        showAccount: false,
+        fallbackBack: fallbackBack,
+      ),
+      body: OmniTopBarOverlap.wrap(
+        child: Builder(
+          builder: (context) {
+            final topInset = OmniTopBarOverlap.of(context);
+            return Center(
+              child: SingleChildScrollView(
+                padding: EdgeInsets.fromLTRB(
+                  OmniSpacing.xl,
+                  topInset + OmniSpacing.lg,
+                  OmniSpacing.xl,
+                  MediaQuery.viewPaddingOf(context).bottom + OmniSpacing.xxl,
+                ),
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 420),
+                  child: OmniCard(
+                    flat: true,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: OmniSpacing.xl,
+                      vertical: OmniSpacing.xxl,
                     ),
-                    child: Icon(
-                      Icons.lock_outline_rounded,
-                      size: 40,
-                      color: secondary,
-                    ),
-                  ),
-                  const SizedBox(height: OmniSpacing.lg),
-                  Text(
-                    'Bạn không có quyền xem mục này',
-                    textAlign: TextAlign.center,
-                    style: OmniType.title.copyWith(
-                      fontWeight: FontWeight.w600,
-                      color: scheme.onSurface,
-                    ),
-                  ),
-                  const SizedBox(height: OmniSpacing.lg),
-                  Text.rich(
-                    TextSpan(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
                       children: [
-                        const TextSpan(text: 'Cần quyền '),
-                        TextSpan(
-                          text: permissions,
-                          style: const TextStyle(fontWeight: FontWeight.w600),
+                        Container(
+                          width: 64,
+                          height: 64,
+                          decoration: BoxDecoration(
+                            color: scheme.primary.withValues(
+                              alpha: dark ? 0.16 : 0.10,
+                            ),
+                            borderRadius: BorderRadius.circular(18),
+                          ),
+                          child: Icon(
+                            Icons.lock_outline_rounded,
+                            size: 28,
+                            color: scheme.primary,
+                          ),
                         ),
-                        const TextSpan(
-                          text: '. Liên hệ quản trị viên để được cấp quyền.',
+                        const SizedBox(height: OmniSpacing.lg),
+                        Text(
+                          'Bạn không có quyền xem mục này',
+                          textAlign: TextAlign.center,
+                          style: OmniType.title.copyWith(
+                            fontWeight: FontWeight.w600,
+                            color: scheme.onSurface,
+                          ),
                         ),
+                        const SizedBox(height: OmniSpacing.md),
+                        Text.rich(
+                          TextSpan(
+                            children: [
+                              const TextSpan(text: 'Cần quyền '),
+                              TextSpan(
+                                text: permissions,
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w600,
+                                  color: scheme.primary,
+                                ),
+                              ),
+                              const TextSpan(
+                                text:
+                                    '. Liên hệ quản trị viên để được cấp quyền.',
+                              ),
+                            ],
+                          ),
+                          textAlign: TextAlign.center,
+                          style: body,
+                        ),
+                        if (effectiveBack != null) ...[
+                          const SizedBox(height: OmniSpacing.xl),
+                          SizedBox(
+                            width: double.infinity,
+                            child: OutlinedButton(
+                              onPressed: effectiveBack,
+                              child: const Text('Quay lại'),
+                            ),
+                          ),
+                        ],
                       ],
                     ),
-                    textAlign: TextAlign.center,
-                    style: body,
                   ),
-                  if (canPop) ...[
-                    const SizedBox(height: OmniSpacing.xxl),
-                    OutlinedButton(
-                      onPressed: () => Navigator.of(context).maybePop(),
-                      style: OutlinedButton.styleFrom(
-                        minimumSize: const Size(0, 52),
-                        padding: const EdgeInsets.symmetric(horizontal: 28),
-                      ),
-                      child: const Text('Quay lại'),
-                    ),
-                  ],
-                ],
+                ),
               ),
-            ),
-          ),
+            );
+          },
         ),
       ),
     );

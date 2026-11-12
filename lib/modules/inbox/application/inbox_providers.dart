@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/error/app_exception.dart';
 import '../../../core/network/api_envelope.dart';
+import '../../../security/session/api_capabilities.dart';
 import '../../../security/session/session_controller.dart';
 import '../data/inbox_api.dart';
 import '../domain/conversation.dart';
@@ -672,4 +673,20 @@ final conversationProvider = FutureProvider.autoDispose
 final conversationContextProvider = FutureProvider.autoDispose
     .family<ConversationContext, String>((ref, id) {
       return ref.watch(inboxApiProvider).context(id);
+    });
+
+/// Tin khớp NỘI DUNG ô tìm (bug sheet 12/11/2026): từ 2 ký tự, khi API khai
+/// `inbox.message_search`, theo cùng bộ lọc với danh sách. Rỗng khi không tìm.
+final inboxMessageSearchProvider =
+    FutureProvider.autoDispose<List<MessageSearchHit>>((ref) async {
+      final search = ref.watch(
+        inboxFilterProvider.select((f) => f.search.trim()),
+      );
+      final supported = ref.watch(
+        apiSupportsProvider(ApiCapability.inboxMessageSearch),
+      );
+      if (!supported || search.length < 2) return const [];
+      return ref
+          .watch(inboxApiProvider)
+          .searchAllMessages(search, filter: ref.watch(_inboxQueryProvider));
     });

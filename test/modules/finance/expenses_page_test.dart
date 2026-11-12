@@ -776,8 +776,9 @@ void main() {
         // Tiêu đề kể lại "Cơ cấu chi phí trong kỳ" đã bỏ (liquid đợt 3).
         expect(find.text('CƠ CẤU CHI PHÍ TRONG KỲ'), findsNothing);
 
-        final dimAccountBtn = find.byKey(
-          const ValueKey('finance-summary-dim-account'),
+        final dimAccountBtn = find.descendant(
+          of: find.byKey(const ValueKey('finance-summary-dim')),
+          matching: find.text('Nguồn tiền'),
         );
         await tester.ensureVisible(dimAccountBtn);
         await tester.pumpAndSettle();

@@ -1,4 +1,4 @@
-import 'dart:math' as math;
+import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 
@@ -163,49 +163,92 @@ class OmniBrandMarkPainter extends CustomPainter {
   final double dotRadius;
   final OmniBrandFrame frame;
 
-  /// Chiều dài nét của `stroke-dasharray` trong thiết kế.
-  static const double _dash = 170;
+  /// Cánh phải dải ruy-băng chữ V 3D (`viewBox 0 0 100 100`).
+  static final Path _wingRight = Path()
+    ..moveTo(47, 50)
+    ..lineTo(60, 28)
+    ..cubicTo(62.5, 23.8, 66.5, 22, 71.5, 22)
+    ..lineTo(79, 22)
+    ..lineTo(52.5, 68)
+    ..cubicTo(49.5, 73, 45, 73, 42.5, 68)
+    ..close();
 
-  static final Path _backArc = Path()
-    ..moveTo(12.5, 58.2)
-    ..arcToPoint(
-      const Offset(87.5, 29.8),
-      radius: const Radius.elliptical(40, 11),
-      rotation: -20,
-    );
+  /// Nếp gấp phản sáng giữa hai cánh chữ V.
+  static final Path _innerFold = Path()
+    ..moveTo(47, 50)
+    ..lineTo(54.5, 60.5)
+    ..cubicTo(57.5, 58.5, 61, 55.5, 64, 51.5)
+    ..lineTo(55, 36.5)
+    ..close();
 
-  static final Path _frontArc = Path()
-    ..moveTo(12.5, 58.2)
-    ..arcToPoint(
-      const Offset(87.5, 29.8),
-      radius: const Radius.elliptical(40, 11),
-      rotation: -20,
-      clockwise: false,
-    );
+  /// Cánh trái dải ruy-băng chữ V 3D.
+  static final Path _wingLeft = Path()
+    ..moveTo(17, 22)
+    ..lineTo(33, 22)
+    ..cubicTo(38, 22, 42, 24.2, 44.5, 28.5)
+    ..lineTo(57.5, 52)
+    ..lineTo(51.5, 62.5)
+    ..lineTo(35.5, 66.5)
+    ..lineTo(17, 22)
+    ..close();
 
-  // Cánh phải và cánh trái của chữ V (V-Orbit).
-  static final Path _ring = Path()
-    ..moveTo(47, 70)
-    ..lineTo(72, 26);
+  /// Đáy nhọn chữ V tạo chiều sâu khối dưới rãnh cắt quỹ đạo.
+  static final Path _apexTip = Path()
+    ..moveTo(39.5, 69.5)
+    ..lineTo(57.5, 61.5)
+    ..lineTo(51, 74)
+    ..cubicTo(48.5, 78.5, 43.2, 78.5, 40.8, 74)
+    ..close();
 
-  static final Path _tail = Path()
-    ..moveTo(26, 26)
-    ..lineTo(47, 70);
+  /// Cánh cung quỹ đạo lưỡi liềm vát nhọn hai đầu (Orbit Swoosh).
+  static final Path _orbitSwoosh = Path()
+    ..moveTo(61, 19)
+    ..cubicTo(78, 14.5, 89.5, 19.5, 87, 30.5)
+    ..cubicTo(83.5, 44.5, 60.5, 61, 36.5, 68.5)
+    ..cubicTo(19.5, 73.8, 11.5, 69.5, 15.5, 57.5)
+    ..cubicTo(17.5, 51.8, 22, 46.2, 27.5, 41.5)
+    ..cubicTo(23.2, 46.8, 20.8, 52, 21.8, 56.2)
+    ..cubicTo(23.5, 63.2, 35.8, 63.5, 53, 56.5)
+    ..cubicTo(69.5, 49.8, 81.2, 38.2, 79.8, 29.5)
+    ..cubicTo(78.8, 23.2, 71.5, 19.8, 61, 19)
+    ..close();
 
   @override
   void paint(Canvas canvas, Size size) {
     canvas.save();
     canvas.scale(size.width / 100, size.height / 100);
 
+    final dark = stroke == OmniColors.orbit;
+
     if (drawTile) {
-      canvas.drawRRect(
-        RRect.fromRectAndRadius(
-          const Rect.fromLTWH(0, 0, 100, 100),
-          const Radius.circular(24),
-        ),
-        Paint()..color = tile,
+      const tileRect = Rect.fromLTWH(0, 0, 100, 100);
+      final tileRRect = RRect.fromRectAndRadius(
+        tileRect,
+        const Radius.circular(24),
       );
+      canvas.drawRRect(tileRRect, Paint()..color = tile);
+      // Lớp phủ kính mờ nhẹ từ đỉnh xuống tạo chiều sâu bề mặt.
+      canvas.drawRRect(
+        tileRRect,
+        Paint()
+          ..shader = ui.Gradient.linear(
+            const Offset(0, 0),
+            const Offset(0, 100),
+            [
+              Colors.white.withValues(alpha: dark ? 0.10 : 0.45),
+              Colors.white.withValues(alpha: 0.0),
+            ],
+            const [0.0, 0.55],
+          ),
+      );
+    } else {
+      // Trên thanh đầu (30dp không khung), phóng nhẹ quanh tâm để biểu tượng
+      // đầy đặn và sắc nét.
+      canvas.translate(50, 50);
+      canvas.scale(1.12);
+      canvas.translate(-50, -50);
     }
+
     if (tileBorder != null) {
       canvas.drawRRect(
         RRect.fromRectAndRadius(
@@ -219,78 +262,135 @@ class OmniBrandMarkPainter extends CustomPainter {
       );
     }
 
-    final orbitPaint = Paint()
-      ..color = stroke
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = strokeWidth
-      ..strokeCap = StrokeCap.round
-      ..strokeJoin = StrokeJoin.round;
+    final ringP = frame.ring.clamp(0.0, 1.0);
+    final tailP = frame.tail.clamp(0.0, 1.0);
+    final cutP = frame.frontArc.clamp(0.0, 1.0);
+    final swooshP = (frame.backArc * 0.5 + frame.frontArc * 0.5).clamp(
+      0.0,
+      1.0,
+    );
 
-    _drawPartial(canvas, _backArc, frame.backArc, orbitPaint);
+    // Nhóm chữ V 3D bọc trong saveLayer riêng để cắt âm bản rãnh quỹ đạo xuyên
+    // thấu chuẩn xác cả khi đặt trên nền trong suốt lẫn nền ô.
+    if (ringP > 0 || tailP > 0) {
+      canvas.saveLayer(const Rect.fromLTWH(-12, -12, 124, 124), Paint());
 
-    // Hai cánh chữ V dày tạo khối V-Orbit trung tâm, che nửa sau quỹ đạo.
-    final vWingPaint = Paint()
-      ..color = stroke
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = strokeWidth * 2.15
-      ..strokeCap = StrokeCap.round
-      ..strokeJoin = StrokeJoin.round;
+      if (ringP > 0) {
+        canvas.save();
+        if (ringP < 1) {
+          canvas.clipRect(Rect.fromLTWH(38, 20, 44, 58 * ringP));
+        }
+        canvas.drawPath(
+          _wingRight,
+          Paint()
+            ..shader = ui.Gradient.linear(
+              const Offset(78, 22),
+              const Offset(46, 78),
+              dark
+                  ? [
+                      const Color(0xFF5EC2FF).withValues(alpha: ringP),
+                      const Color(0xFF1E7BFF).withValues(alpha: ringP),
+                      const Color(0xFF0159DB).withValues(alpha: ringP),
+                    ]
+                  : [
+                      const Color(0xFF2DABFF).withValues(alpha: ringP),
+                      const Color(0xFF0159DB).withValues(alpha: ringP),
+                      const Color(0xFF003594).withValues(alpha: ringP),
+                    ],
+              const [0.0, 0.58, 1.0],
+            ),
+        );
+        canvas.drawPath(
+          _innerFold,
+          Paint()..color = const Color(0xFF2DABFF).withValues(alpha: 0.45 * ringP),
+        );
+        canvas.restore();
+      }
 
-    _drawPartial(canvas, _ring, frame.ring, vWingPaint);
-    _drawPartial(canvas, _tail, frame.tail, vWingPaint);
+      if (tailP > 0) {
+        canvas.save();
+        if (tailP < 1) {
+          canvas.clipRect(Rect.fromLTWH(15, 20, 46, 62 * tailP));
+        }
+        canvas.drawPath(
+          _wingLeft,
+          Paint()
+            ..shader = ui.Gradient.linear(
+              const Offset(18, 22),
+              const Offset(54, 82),
+              dark
+                  ? [
+                      const Color(0xFF5EC2FF).withValues(alpha: tailP),
+                      const Color(0xFF1E7BFF).withValues(alpha: tailP),
+                      const Color(0xFF0A47B8).withValues(alpha: tailP),
+                    ]
+                  : [
+                      const Color(0xFF2DABFF).withValues(alpha: tailP),
+                      const Color(0xFF0159DB).withValues(alpha: tailP),
+                      const Color(0xFF002B80).withValues(alpha: tailP),
+                    ],
+              const [0.0, 0.55, 1.0],
+            ),
+        );
+        canvas.drawPath(
+          _apexTip,
+          Paint()
+            ..color = (dark ? const Color(0xFF0A47B8) : const Color(0xFF002673))
+                .withValues(alpha: tailP),
+        );
+        canvas.restore();
+      }
 
-    // Đường cắt âm bản dọc theo cung quỹ đạo trước để tạo chiều sâu V-Orbit.
-    if (frame.frontArc > 0) {
-      final cutoutPaint = Paint()
-        ..color = tile
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = strokeWidth + 4.5
-        ..strokeCap = StrokeCap.round
-        ..strokeJoin = StrokeJoin.round;
-      _drawPartial(canvas, _frontArc, frame.frontArc, cutoutPaint);
+      if (cutP > 0) {
+        canvas.save();
+        if (cutP < 1) {
+          canvas.clipRect(Rect.fromLTWH(8, 10, 84 * cutP, 72));
+        }
+        canvas.drawPath(_orbitSwoosh, Paint()..blendMode = BlendMode.clear);
+        canvas.drawPath(
+          _orbitSwoosh,
+          Paint()
+            ..blendMode = BlendMode.clear
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = 4.2
+            ..strokeJoin = StrokeJoin.round
+            ..strokeCap = StrokeCap.round,
+        );
+        canvas.restore();
+      }
+
+      canvas.restore();
     }
-    _drawPartial(canvas, _frontArc, frame.frontArc, orbitPaint);
 
-    if (frame.dotOpacity > 0 && frame.dotScale > 0) {
+    if (swooshP > 0) {
       canvas.save();
-      canvas.translate(50, 44);
-      canvas.rotate(frame.dotTurn * math.pi / 180);
-      canvas.translate(-50, -44);
-      canvas.translate(82, 24);
-      canvas.scale(frame.dotScale);
-      final alpha = frame.dotOpacity.clamp(0.0, 1.0);
-      canvas.drawCircle(
-        Offset.zero,
-        dotRadius,
-        Paint()..color = OmniColors.orbit.withValues(alpha: alpha),
-      );
-      canvas.drawCircle(
-        Offset.zero,
-        dotRadius,
+      if (swooshP < 1) {
+        canvas.clipRect(Rect.fromLTWH(8, 10, 84 * swooshP, 72));
+      }
+      canvas.drawPath(
+        _orbitSwoosh,
         Paint()
-          ..color = tile.withValues(alpha: alpha)
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = 3,
+          ..shader = ui.Gradient.linear(
+            const Offset(14, 68),
+            const Offset(90, 24),
+            dark
+                ? [
+                    const Color(0xFF5EC2FF).withValues(alpha: swooshP),
+                    const Color(0xFF2DABFF).withValues(alpha: swooshP),
+                    const Color(0xFF1E7BFF).withValues(alpha: swooshP),
+                  ]
+                : [
+                    const Color(0xFF2DABFF).withValues(alpha: swooshP),
+                    const Color(0xFF0A6CFF).withValues(alpha: swooshP),
+                    const Color(0xFF0159DB).withValues(alpha: swooshP),
+                  ],
+            const [0.0, 0.50, 1.0],
+          ),
       );
       canvas.restore();
     }
 
     canvas.restore();
-  }
-
-  void _drawPartial(Canvas canvas, Path path, double progress, Paint paint) {
-    if (progress <= 0) return;
-    if (progress >= 1) {
-      canvas.drawPath(path, paint);
-      return;
-    }
-    final visible = _dash * progress;
-    for (final metric in path.computeMetrics()) {
-      canvas.drawPath(
-        metric.extractPath(0, math.min(visible, metric.length)),
-        paint,
-      );
-    }
   }
 
   @override
