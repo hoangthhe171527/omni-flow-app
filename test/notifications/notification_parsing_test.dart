@@ -22,6 +22,11 @@ void main() {
         parse({'notification_type': 'TASK_STAGE_OPEN'}).kind,
         NotificationKind.taskStageOpen,
       );
+      final created = parse({'notification_type': 'TASK_CREATED'}).kind;
+      final issue = parse({'notification_type': 'TASK_ISSUE'}).kind;
+      expect(created, NotificationKind.taskCreated);
+      expect(issue, NotificationKind.taskIssue);
+      expect(created.isTask && issue.isTask, isTrue, reason: 'chạm mở việc');
     });
 
     test('a type this build has never heard of is still a readable row', () {
