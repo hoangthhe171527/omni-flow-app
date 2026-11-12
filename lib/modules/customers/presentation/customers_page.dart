@@ -96,7 +96,6 @@ class _CustomersPageState extends ConsumerState<CustomersPage> {
     final list = ref.watch(customerListProvider);
     final filter = ref.watch(customerFilterProvider);
     final access = ref.watch(customerAccessProvider);
-    final scheme = Theme.of(context).colorScheme;
 
     // Đổi lọc/tìm kiếm là danh sách khác: dòng đang mở không còn nghĩa.
     ref.listen(customerFilterProvider, (_, _) {
@@ -138,23 +137,6 @@ class _CustomersPageState extends ConsumerState<CustomersPage> {
                   labels: labels,
                   filterContent: const CustomerFilterMenuContent(),
                 ),
-                trailing: [
-                  if (access.canCreate) ...[
-                    IconButton(
-                      key: _addCustomerKey,
-                      tooltip: 'Thêm khách',
-                      onPressed: _openQuickCreate,
-                      style: IconButton.styleFrom(
-                        fixedSize: const Size(36, 36),
-                        tapTargetSize: MaterialTapTargetSize.padded,
-                        visualDensity: VisualDensity.standard,
-                        foregroundColor: scheme.onSurface,
-                        backgroundColor: Colors.transparent,
-                      ),
-                      icon: const Icon(Icons.person_add_alt_rounded),
-                    ),
-                  ],
-                ],
               ),
       ),
       body: OmniTopBarOverlap.wrap(
@@ -190,90 +172,105 @@ class _CustomersPageState extends ConsumerState<CustomersPage> {
     ResourceAccess access,
     double topInset,
   ) {
-    return Column(
+    // Thêm khách: nút + kính góc phải dưới (rà soát 12/11), không nằm trong ô
+    // tìm nữa — ô tìm chỉ còn tìm + lọc.
+    return OmniFabLayer(
       key: const ValueKey('khach-seg-khach-hang'),
-      children: [
-        Expanded(
-          child: RefreshIndicator.adaptive(
-            edgeOffset: topInset,
-            onRefresh: () {
-              setState(() => _openId = null);
-              return ref.read(customerListProvider.notifier).refresh();
-            },
-            child: OmniAsyncView(
-              value: list,
-              onRetry: () => ref.invalidate(customerListProvider),
-              isEmpty: (state) => state.items.isEmpty,
-              empty: OmniEmptyState(
-                icon: Icons.people_outline_rounded,
-                title: filter.search.isEmpty
-                    ? 'Chưa có khách hàng'
-                    : 'Không tìm thấy khách hàng',
-                message: filter.search.isEmpty
-                    ? 'Khách từ hộp thư sẽ tự động xuất hiện ở đây khi được chuyển đổi.'
-                    : 'Thử từ khoá khác hoặc bỏ bớt bộ lọc.',
-                actionLabel: access.canCreate ? 'Thêm khách hàng' : null,
-                onAction: _openQuickCreate,
-              ),
-              data: (state) => ListView.builder(
-                controller: _scrollController,
-                keyboardDismissBehavior:
-                    ScrollViewKeyboardDismissBehavior.onDrag,
-                padding: EdgeInsets.only(
-                  top: topInset,
-                  bottom: OmniSpacing.bottomSafe,
+      fab: access.canCreate
+          ? OmniLiquidFab(
+              key: _addCustomerKey,
+              tooltip: 'Thêm khách',
+              icon: Icons.person_add_alt_1_rounded,
+              onPressed: (_) => _openQuickCreate(),
+            )
+          : null,
+      body: Column(
+        children: [
+          Expanded(
+            child: RefreshIndicator.adaptive(
+              edgeOffset: topInset,
+              onRefresh: () {
+                setState(() => _openId = null);
+                return ref.read(customerListProvider.notifier).refresh();
+              },
+              child: OmniAsyncView(
+                value: list,
+                onRetry: () => ref.invalidate(customerListProvider),
+                isEmpty: (state) => state.items.isEmpty,
+                empty: OmniEmptyState(
+                  icon: Icons.people_outline_rounded,
+                  title: filter.search.isEmpty
+                      ? 'Chưa có khách hàng'
+                      : 'Không tìm thấy khách hàng',
+                  message: filter.search.isEmpty
+                      ? 'Khách từ hộp thư sẽ tự động xuất hiện ở đây khi được chuyển đổi.'
+                      : 'Thử từ khoá khác hoặc bỏ bớt bộ lọc.',
+                  actionLabel: access.canCreate ? 'Thêm khách hàng' : null,
+                  onAction: _openQuickCreate,
                 ),
-                itemCount: state.items.length + (state.hasMore ? 1 : 0),
-                itemBuilder: (context, index) {
-                  if (index >= state.items.length) {
-                    return const Padding(
-                      padding: EdgeInsets.all(OmniSpacing.lg),
-                      child: Center(
-                        child: SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator.adaptive(
-                            strokeWidth: 2,
+                data: (state) => ListView.builder(
+                  controller: _scrollController,
+                  keyboardDismissBehavior:
+                      ScrollViewKeyboardDismissBehavior.onDrag,
+                  padding: EdgeInsets.only(
+                    top: topInset,
+                    bottom: OmniFabLayer.listBottom(
+                      context,
+                      hasFab: access.canCreate,
+                    ),
+                  ),
+                  itemCount: state.items.length + (state.hasMore ? 1 : 0),
+                  itemBuilder: (context, index) {
+                    if (index >= state.items.length) {
+                      return const Padding(
+                        padding: EdgeInsets.all(OmniSpacing.lg),
+                        child: Center(
+                          child: SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator.adaptive(
+                              strokeWidth: 2,
+                            ),
                           ),
+                        ),
+                      );
+                    }
+                    final customer = state.items[index];
+                    // Nhóm lồng (viomni-apple-uiux.html `.group`): cả danh sách
+                    // là một thẻ bo 18 cách mép 16 trên nền xám.
+                    const r = Radius.circular(18);
+                    final first = index == 0;
+                    final last =
+                        index == state.items.length - 1 && !state.hasMore;
+                    return Padding(
+                      padding: EdgeInsets.fromLTRB(16, first ? 8 : 0, 16, 0),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.vertical(
+                          top: first ? r : Radius.zero,
+                          bottom: last ? r : Radius.zero,
+                        ),
+                        child: CustomerRow(
+                          customer: customer,
+                          divider: !first,
+                          expanded: _openId == customer.id,
+                          onTap: () {
+                            HapticFeedback.selectionClick();
+                            setState(
+                              () => _openId = _openId == customer.id
+                                  ? null
+                                  : customer.id,
+                            );
+                          },
                         ),
                       ),
                     );
-                  }
-                  final customer = state.items[index];
-                  // Nhóm lồng (viomni-apple-uiux.html `.group`): cả danh sách
-                  // là một thẻ bo 18 cách mép 16 trên nền xám.
-                  const r = Radius.circular(18);
-                  final first = index == 0;
-                  final last =
-                      index == state.items.length - 1 && !state.hasMore;
-                  return Padding(
-                    padding: EdgeInsets.fromLTRB(16, first ? 8 : 0, 16, 0),
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.vertical(
-                        top: first ? r : Radius.zero,
-                        bottom: last ? r : Radius.zero,
-                      ),
-                      child: CustomerRow(
-                        customer: customer,
-                        divider: !first,
-                        expanded: _openId == customer.id,
-                        onTap: () {
-                          HapticFeedback.selectionClick();
-                          setState(
-                            () => _openId = _openId == customer.id
-                                ? null
-                                : customer.id,
-                          );
-                        },
-                      ),
-                    ),
-                  );
-                },
+                  },
+                ),
               ),
             ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }

@@ -47,8 +47,7 @@ class _DeliveredPageState extends ConsumerState<DeliveredPage> {
     // Đang tải trang lớn hơn: giữ danh sách cũ, không nháy khung chờ.
     if (res.hasValue) _last = res.value;
     final page = res.valueOrNull ?? (res.hasError ? null : _last);
-    final bottom =
-        ShellBarInset.of(context) + MediaQuery.viewPaddingOf(context).bottom;
+    final bottom = ShellBarInset.coveredBottom(context);
 
     final list = <Widget>[
       ...switch (res) {

@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../core/nav/shell_bar_inset.dart';
+import '../../../core/nav/shell_tab_routes.dart';
 import '../../../design/components/components.dart';
 import '../../../design/tokens/tokens.dart';
 import '../application/inventory_providers.dart';
@@ -10,6 +10,7 @@ import '../domain/inventory_format.dart';
 import '../domain/inventory_models.dart';
 import '../domain/inventory_permissions.dart';
 import '../routes.dart';
+import 'widgets/inventory_intro.dart';
 import 'widgets/inventory_ui.dart';
 import 'widgets/sell_sheet.dart';
 import 'widgets/serial_field.dart';
@@ -17,10 +18,11 @@ import 'widgets/unit_extras.dart';
 import 'widgets/unit_sheet.dart';
 import 'widgets/workshop_target.dart';
 
-/// Tồn kho theo serial (artifact app bản 7): tìm serial / model, Còn bán / Đã
-/// có khách, hàng lọc một dòng thả xuống (Loại · Lô · Tuổi tồn), dòng tổng
-/// ngắn, serial chạm để sửa, chọn nhiều cây để Bán / Đặt trước hoặc Đưa vào
-/// xưởng (Kho nối Xưởng: mỗi cây một việc của kế hoạch được chọn).
+/// Tồn kho theo serial (rà soát app mobile 12/11, `#s-ton-kho`): một nút ⋯
+/// trên thanh, ô tìm + nút lọc (sheet Loại · Lô · Tuổi tồn · Vị trí), dải 3 số
+/// (số cây · niêm yết · tồn > 90 ngày), Còn bán / Đã có khách, danh sách nhóm
+/// theo loại, serial chạm để sửa, "Chọn" ở đầu danh sách để Bán / Đặt trước,
+/// Đưa vào xưởng hoặc Chuyển vị trí từ khay kính đáy.
 ///
 /// Kho chuẩn hóa Đợt A: lọc theo vị trí và chuyển nhiều cây CHỈ khi tenant có
 /// từ hai vị trí (`multi_location`); ảnh đại diện nhỏ đầu dòng khi API có ảnh.
@@ -265,7 +267,11 @@ class _StockPageState extends ConsumerState<StockPage> {
     }
   }
 
-  /// Menu ⋯ trên thanh: Kiểm kê, Hàng đã giao (Đợt C, theo capability).
+  /// Menu ⋯ duy nhất trên thanh (rà soát 12/11): Hàng sắp về, Đang giữ, Danh
+  /// mục hàng, Kiểm kê, Hàng đã giao (theo capability), Giới thiệu Kho.
+  ///
+  /// Module không được import tầng `app/` nên không biết đang ở khung ứng dụng
+  /// hay giao diện cũ — gộp còn một nút cho cả hai chế độ.
   Future<void> _openMore(BuildContext btn, InventoryPerms perms) async {
     final box = btn.findRenderObject() as RenderBox?;
     if (box == null) return;
@@ -279,11 +285,36 @@ class _StockPageState extends ConsumerState<StockPage> {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          OmniAnchoredMenuItem(
+            key: const ValueKey('inv-open-lots'),
+            icon: Icons.local_shipping_outlined,
+            label: 'Hàng sắp về',
+            onTap: () => Navigator.of(menu).pop(InventoryRoutes.lots),
+          ),
+          // Kho chuẩn hóa Đợt B — chỉ khi API có capability.
+          if (perms.reservations)
+            OmniAnchoredMenuItem(
+              key: const ValueKey('inv-open-reservations'),
+              icon: Icons.bookmark_border_rounded,
+              label: 'Đang giữ',
+              divider: true,
+              onTap: () => Navigator.of(menu).pop(InventoryRoutes.reservations),
+            ),
+          if (perms.products)
+            OmniAnchoredMenuItem(
+              key: const ValueKey('inv-open-catalog'),
+              icon: Icons.category_outlined,
+              label: 'Danh mục hàng',
+              divider: true,
+              onTap: () => Navigator.of(menu).pop(InventoryRoutes.catalog),
+            ),
+          // Kho chuẩn hóa Đợt C.
           if (perms.counts)
             OmniAnchoredMenuItem(
               key: const ValueKey('inv-open-counts'),
               icon: Icons.fact_check_outlined,
               label: 'Kiểm kê',
+              divider: true,
               onTap: () => Navigator.of(menu).pop(InventoryRoutes.counts),
             ),
           if (perms.delivered)
@@ -291,13 +322,113 @@ class _StockPageState extends ConsumerState<StockPage> {
               key: const ValueKey('inv-open-delivered'),
               icon: Icons.assignment_turned_in_outlined,
               label: 'Hàng đã giao',
-              divider: perms.counts,
+              divider: true,
               onTap: () => Navigator.of(menu).pop(InventoryRoutes.delivered),
             ),
+          OmniAnchoredMenuItem(
+            key: const ValueKey('inv-open-intro'),
+            icon: Icons.lightbulb_outline_rounded,
+            label: 'Giới thiệu Kho',
+            divider: true,
+            onTap: () => Navigator.of(menu).pop(_introRoute),
+          ),
         ],
       ),
     );
-    if (route != null && mounted) context.pushNamed(route);
+    if (route == null || !mounted) return;
+    if (route == _introRoute) {
+      await showInventoryIntro(context);
+      return;
+    }
+    context.pushNamed(route);
+  }
+
+  static const _introRoute = '_intro';
+
+  /// Sheet lọc: Loại, Lô, Tuổi tồn, Vị trí (khi có từ hai vị trí). Chạm một
+  /// dòng thì đóng sheet rồi mở danh sách chọn của dòng đó.
+  Future<void> _openFilters(List<String> categories, bool multi) async {
+    final f = ref.read(stockFilterProvider);
+    final pick = await showOmniSheet<String>(
+      context: context,
+      builder: (sheet) => OmniSheetBody(
+        header: OmniSheetHeader(
+          title: 'Lọc',
+          trailing: _activeFilters(f) > 0
+              ? TextButton(
+                  key: const ValueKey('inv-filter-clear'),
+                  onPressed: () => Navigator.of(sheet).pop('clear'),
+                  child: const Text('Bỏ lọc'),
+                )
+              : null,
+        ),
+        children: [
+          OmniGroupSection(
+            dividerIndent: 14,
+            children: [
+              OmniGroupRow(
+                key: const ValueKey('inv-filter-category'),
+                title: 'Loại',
+                value: f.category ?? 'Tất cả',
+                onTap: () => Navigator.of(sheet).pop('category'),
+              ),
+              OmniGroupRow(
+                key: const ValueKey('inv-filter-lot'),
+                title: 'Lô',
+                value: f.lotCode ?? 'Tất cả',
+                onTap: () => Navigator.of(sheet).pop('lot'),
+              ),
+              OmniGroupRow(
+                key: const ValueKey('inv-filter-age'),
+                title: 'Tuổi tồn',
+                value: f.age?.label ?? 'Tất cả',
+                onTap: () => Navigator.of(sheet).pop('age'),
+              ),
+              if (multi)
+                OmniGroupRow(
+                  key: const ValueKey('inv-filter-location'),
+                  title: 'Vị trí',
+                  value: f.locationName ?? 'Mọi vị trí',
+                  onTap: () => Navigator.of(sheet).pop('location'),
+                ),
+            ],
+          ),
+        ],
+      ),
+    );
+    if (!mounted) return;
+    switch (pick) {
+      case 'category':
+        await _pickCategory(categories);
+      case 'lot':
+        await _pickLot();
+      case 'age':
+        await _pickAge();
+      case 'location':
+        await _pickLocation();
+      case 'clear':
+        _filter.update(
+          (f) => f.copyWith(
+            category: () => null,
+            lotId: () => null,
+            lotCode: () => null,
+            age: () => null,
+            locationId: () => null,
+            locationName: () => null,
+          ),
+        );
+    }
+  }
+
+  static int _activeFilters(StockFilter f) =>
+      [f.category, f.lotId, f.age, f.locationId].where((x) => x != null).length;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) maybeShowInventoryIntro(context, ref);
+    });
   }
 
   @override
@@ -330,11 +461,16 @@ class _StockPageState extends ConsumerState<StockPage> {
     final nMissing = perms.missing
         ? ref.watch(stockCountProvider(StockSegment.missing)).valueOrNull
         : null;
+    // Ba đoạn ở bề ngang 390: "Đã có khách 251" bị cắt — rút gọn.
+    final heldLabel = perms.missing ? 'Có khách' : 'Đã có khách';
     final segments = [
-      StockSegment.available,
-      StockSegment.reserved,
-      if (perms.missing) StockSegment.missing,
+      ('Còn bán', StockSegment.available, nFree),
+      (heldLabel, StockSegment.reserved, nHeld),
+      if (perms.missing) ('Không thấy', StockSegment.missing, nMissing),
     ];
+    final segIndex = segments
+        .indexWhere((s) => s.$2 == f.segment)
+        .clamp(0, segments.length - 1);
     final reserved = f.segment == StockSegment.reserved;
     final lost = f.segment == StockSegment.missing;
     // Đợt A: lọc / chuyển vị trí chỉ khi có từ hai vị trí (spec §5).
@@ -388,13 +524,6 @@ class _StockPageState extends ConsumerState<StockPage> {
     final showSell = _multi && canSell && pickedLoaded > 0;
     final showSend = _multi && canSend && pickedForWorkshop > 0;
     final showMove = _multi && canMove && pickedLoaded > 0;
-    // Chỉ có chuyển vị trí: nút ở vùng ngón cái (bản xem trước). Có thêm
-    // Bán / Xưởng thì chuyển vị trí là một dòng ngay dưới "Đã chọn" — không
-    // xếp ba nút chồng nhau che danh sách.
-    final moveInBar = showMove && !showSend && !showSell;
-    final actions = [moveInBar, showSend, showSell].where((x) => x).length;
-    final bottomPad =
-        ShellBarInset.of(context) + MediaQuery.viewPaddingOf(context).bottom;
 
     final allLoaded = state != null && !state.hasMore;
     final count = f.age != null && allLoaded
@@ -402,94 +531,117 @@ class _StockPageState extends ConsumerState<StockPage> {
         : (state?.total ?? 0);
     final sumPrice = items.fold<double>(0, (s, u) => s + (u.listPrice ?? 0));
     final sumCost = items.fold<double>(0, (s, u) => s + (u.costVnd ?? 0));
+    final old = items.where((u) {
+      final d = InventoryFormat.ageDays(u.receivedAt, today);
+      return d != null && d > StockUnitRow.oldDays;
+    }).length;
+
+    // Khay đáy: nút chính là Bán (rồi Xưởng, rồi Chuyển vị trí); nút còn lại
+    // xếp trên hàng chính.
+    final moveBtn = showMove
+        ? _DockButton(
+            key: const ValueKey('inv-stock-move-picked'),
+            label: 'Chuyển vị trí · $pickedLoaded cây',
+            onPressed: _sending ? null : () => _movePicked(loaded),
+          )
+        : null;
+    final sendBtn = showSend
+        ? _DockButton(
+            key: const ValueKey('inv-stock-send-picked'),
+            label: 'Đưa vào xưởng · $pickedForWorkshop cây',
+            onPressed: _sending ? null : () => _sendPicked(loaded),
+          )
+        : null;
+    final sellBtn = showSell
+        ? _DockButton(
+            key: const ValueKey('inv-stock-sell-picked'),
+            label: 'Bán / Đặt trước · $pickedLoaded cây',
+            onPressed: () => _sellPicked(loaded),
+          )
+        : null;
+    final dockButtons = [?moveBtn, ?sendBtn, ?sellBtn];
+    final dock = dockButtons.isEmpty
+        ? null
+        : OmniBottomDock(
+            key: const ValueKey('inv-stock-dock'),
+            // Không dòng tóm tắt: nhãn nút đã mang số cây ("Bán / Đặt trước ·
+            // 2 cây") — nút trải hết khay, chữ không gãy dòng (soát 12/11).
+            action: dockButtons.last.filled(),
+            extra: [
+              for (final b in dockButtons.take(dockButtons.length - 1))
+                b.outlined(),
+            ],
+          );
+
+    // Nhóm theo loại khi dữ liệu có loại; cây không có loại vào "Khác".
+    final grouped = items.any((u) => u.category != null);
+    final groups = <String?, List<InventoryUnit>>{};
+    for (final u in items) {
+      (groups[grouped ? (u.category ?? 'Khác') : null] ??= []).add(u);
+    }
+
+    final pickToggle = canMulti
+        ? TextButton(
+            key: const ValueKey('inv-stock-multi'),
+            style: TextButton.styleFrom(
+              minimumSize: const Size(44, 32),
+              padding: const EdgeInsets.symmetric(horizontal: 8),
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            ),
+            onPressed: () => setState(() {
+              _multi = !_multi;
+              _picked.clear();
+            }),
+            child: Text(_multi ? 'Xong' : 'Chọn'),
+          )
+        : null;
+
+    Widget row(InventoryUnit u) => StockUnitRow(
+      key: ValueKey('inv-unit-${u.id}'),
+      unit: u,
+      today: today,
+      showCustomer: reserved,
+      showCategory: !grouped,
+      canEditSerial: perms.write && !_multi,
+      picking: _multi,
+      showWorkshop: _multi && canSend,
+      // Lúc chọn nhiều thì bỏ ảnh: chừa chỗ cho ô chọn và chữ.
+      thumb: perms.photos && !_multi,
+      // Cây ở nơi khác vị trí mặc định thì ghi nơi đó; lúc chọn để chuyển thì
+      // ghi cho mọi cây.
+      location: multi && (_multi && canMove || u.locationId != defaultLocation)
+          ? u.locationName
+          : null,
+      picked: _picked.contains(u.id),
+      onTap: () => _tapUnit(u),
+      onSerial: (s) => _saveSerial(u, s),
+    );
 
     final list = <Widget>[
-      OmniSegmented(
-        labels: [
-          for (final (label, n) in [
-            ('Còn bán', nFree),
-            // Ba đoạn ở bề ngang 390: "Đã có khách 251" bị cắt — rút gọn.
-            (perms.missing ? 'Có khách' : 'Đã có khách', nHeld),
-            if (perms.missing) ('Không thấy', nMissing),
-          ])
-            n == null ? label : '$label ${InventoryFormat.number(n)}',
+      _StatStrip(
+        key: const ValueKey('inv-stock-summary'),
+        cells: [
+          (segments[segIndex].$1, '${InventoryFormat.number(count)} cây', null),
+          // Tổng tiền chỉ khi đã tải hết — cộng một trang là số sai.
+          ('Niêm yết', allLoaded ? InvUi.vnd(sumPrice) : '—', null),
+          (
+            // Nhãn một dòng ở 1/3 bề ngang 390: "Tồn > 90 ngày" gãy dòng.
+            'Tồn lâu',
+            allLoaded ? '${InventoryFormat.number(old)} cây' : '—',
+            _pickAge,
+          ),
         ],
-        index: segments.indexOf(f.segment).clamp(0, segments.length - 1),
-        onChanged: (i) => _setSegment(segments[i]),
-      ),
-      const SizedBox(height: 10),
-      _FilterRow(
-        // Bốn ô (có Vị trí) không đủ chỗ chia đều 390px: cuộn ngang, mỗi ô
-        // vừa chữ — không xuống dòng.
-        scroll: multi,
-        pills: [
-          InvDropPill(
-            key: const ValueKey('inv-filter-category'),
-            label: f.category ?? 'Loại',
-            active: f.category != null,
-            shrink: multi,
-            onTap: () => _pickCategory(categories),
-          ),
-          InvDropPill(
-            key: const ValueKey('inv-filter-lot'),
-            label: f.lotCode ?? 'Lô',
-            active: f.lotId != null,
-            shrink: multi,
-            onTap: _pickLot,
-          ),
-          InvDropPill(
-            key: const ValueKey('inv-filter-age'),
-            label: f.age?.label ?? 'Tuổi tồn',
-            active: f.age != null,
-            shrink: multi,
-            onTap: _pickAge,
-          ),
-          if (multi)
-            InvDropPill(
-              key: const ValueKey('inv-filter-location'),
-              label: f.locationName ?? 'Vị trí',
-              active: f.locationId != null,
-              shrink: true,
-              onTap: _pickLocation,
-            ),
-        ],
+        activeLast: f.age != null,
+        cost: perms.cost && allLoaded ? InvUi.vnd(sumCost) : null,
       ),
       const SizedBox(height: OmniGroupSection.gap),
-      OmniGroupSection(
-        key: const ValueKey('inv-stock-summary'),
-        children: [
-          OmniGroupRow(
-            title: '${InventoryFormat.number(count)} cây',
-            // Tổng tiền chỉ khi đã tải hết — cộng một trang là số sai.
-            trailing: allLoaded
-                ? InvValue(InvUi.vnd(sumPrice), sub: 'niêm yết')
-                : null,
-          ),
-          if (perms.cost && allLoaded)
-            OmniGroupRow(title: 'Vốn', trailing: InvValue(InvUi.vnd(sumCost))),
-          if (canMulti)
-            OmniGroupRow(
-              key: const ValueKey('inv-stock-multi'),
-              icon: Icons.checklist_rounded,
-              title: _multi
-                  ? 'Đã chọn ${_picked.length} cây'
-                  : 'Chọn nhiều cây',
-              value: _multi ? 'Xong' : null,
-              chevron: false,
-              onTap: () => setState(() {
-                _multi = !_multi;
-                _picked.clear();
-              }),
-            ),
-          if (showMove && !moveInBar)
-            OmniGroupRow(
-              key: const ValueKey('inv-stock-move-picked'),
-              icon: Icons.swap_horiz_rounded,
-              accent: true,
-              title: 'Chuyển vị trí · $pickedLoaded cây',
-              onTap: _sending ? null : () => _movePicked(loaded),
-            ),
+      OmniSegmented(
+        labels: [
+          for (final (label, _, n) in segments)
+            n == null ? label : '$label ${InventoryFormat.number(n)}',
         ],
+        index: segIndex,
+        onChanged: (i) => _setSegment(segments[i].$2),
       ),
       const SizedBox(height: OmniGroupSection.gap),
       ...switch (stock) {
@@ -501,38 +653,24 @@ class _StockPageState extends ConsumerState<StockPage> {
         ],
         _ when state == null => [const InvSkeleton(count: 6, height: 64)],
         _ when items.isEmpty => [
-          const OmniGroupSection(
-            children: [OmniGroupRow(title: 'Không có cây khớp')],
+          OmniGroupSection(
+            trailingTitle: _multi ? pickToggle : null,
+            children: const [OmniGroupRow(title: 'Không có cây khớp')],
           ),
         ],
         _ => [
-          OmniGroupSection(
-            key: const ValueKey('inv-stock-list'),
-            children: [
-              for (final u in items)
-                StockUnitRow(
-                  key: ValueKey('inv-unit-${u.id}'),
-                  unit: u,
-                  today: today,
-                  showCustomer: reserved,
-                  canEditSerial: perms.write && !_multi,
-                  picking: _multi,
-                  showWorkshop: _multi && canSend,
-                  // Lúc chọn nhiều thì bỏ ảnh: chừa chỗ cho ô chọn và chữ.
-                  thumb: perms.photos && !_multi,
-                  // Cây ở nơi khác vị trí mặc định thì ghi nơi đó; lúc chọn
-                  // để chuyển thì ghi cho mọi cây.
-                  location:
-                      multi &&
-                          (_multi && canMove || u.locationId != defaultLocation)
-                      ? u.locationName
-                      : null,
-                  picked: _picked.contains(u.id),
-                  onTap: () => _tapUnit(u),
-                  onSerial: (s) => _saveSerial(u, s),
-                ),
-            ],
-          ),
+          for (final (i, e) in groups.entries.indexed) ...[
+            if (i > 0) const SizedBox(height: OmniGroupSection.gap),
+            OmniGroupSection(
+              key: i == 0 ? const ValueKey('inv-stock-list') : null,
+              title: e.key == null
+                  ? null
+                  : '${e.key} · ${InventoryFormat.number(e.value.length)} cây',
+              // "Chọn" ở đầu danh sách, như ứng dụng Ảnh.
+              trailingTitle: i == 0 ? pickToggle : null,
+              children: [for (final u in e.value) row(u)],
+            ),
+          ],
           if (state.loadingMore)
             const Padding(
               padding: EdgeInsets.all(16),
@@ -546,123 +684,170 @@ class _StockPageState extends ConsumerState<StockPage> {
       appBar: OmniAppBar(
         title: 'Tồn kho',
         actions: [
-          // Kho chuẩn hóa Đợt B — chỉ khi API có capability.
-          if (perms.reservations)
-            _BarIcon(
-              key: const ValueKey('inv-open-reservations'),
-              tooltip: 'Đang giữ',
-              icon: Icons.bookmark_border_rounded,
-              onPressed: () => context.pushNamed(InventoryRoutes.reservations),
-            ),
-          if (perms.products)
-            _BarIcon(
-              key: const ValueKey('inv-open-catalog'),
-              tooltip: 'Danh mục hàng',
-              icon: Icons.category_outlined,
-              onPressed: () => context.pushNamed(InventoryRoutes.catalog),
-            ),
-          // Kho chuẩn hóa Đợt C — Kiểm kê, Hàng đã giao trong menu ⋯ (thanh
-          // tiêu đề không đủ chỗ cho thêm hai nút).
-          if (perms.counts || perms.delivered)
+          // Khung ứng dụng: mọi màn của Kho đã ở thanh dưới / "Thêm" — header
+          // chỉ còn tên + chuông + avatar (rà soát 12/11). Giao diện cũ: một ⋯.
+          if (ShellTabRoutes.of(context).isEmpty)
             Builder(
-              builder: (btn) => _BarIcon(
+              builder: (btn) => IconButton(
                 key: const ValueKey('inv-open-more'),
                 tooltip: 'Thêm',
-                icon: Icons.more_horiz_rounded,
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints.tightFor(
+                  width: 44,
+                  height: 44,
+                ),
                 onPressed: () => _openMore(btn, perms),
-              ),
-            ),
-          IconButton(
-            key: const ValueKey('inv-open-lots'),
-            tooltip: 'Hàng sắp về',
-            padding: EdgeInsets.zero,
-            constraints: const BoxConstraints.tightFor(width: 44, height: 44),
-            onPressed: () => context.pushNamed(InventoryRoutes.lots),
-            icon: Icon(
-              Icons.local_shipping_outlined,
-              size: OmniIconSize.md,
-              color: Theme.of(context).colorScheme.onSurface,
-            ),
-          ),
-        ],
-        bottom: _SearchBottom(
-          hint: 'Serial, model',
-          onChanged: (v) => _filter.update((f) => f.copyWith(query: v)),
-        ),
-      ),
-      body: Stack(
-        children: [
-          Positioned.fill(
-            child: NotificationListener<ScrollNotification>(
-              onNotification: (n) {
-                if (n.metrics.extentAfter < 400) {
-                  ref.read(stockProvider.notifier).loadMore().ignore();
-                }
-                return false;
-              },
-              child: RefreshIndicator(
-                onRefresh: () => ref.read(stockProvider.notifier).refresh(),
-                child: ListView(
-                  key: const ValueKey('inv-stock-scroll'),
-                  physics: const AlwaysScrollableScrollPhysics(),
-                  keyboardDismissBehavior:
-                      ScrollViewKeyboardDismissBehavior.onDrag,
-                  padding: EdgeInsets.fromLTRB(
-                    16,
-                    12,
-                    16,
-                    bottomPad + 88 + (actions > 1 ? 56 * (actions - 1) : 0),
-                  ),
-                  children: list,
+                icon: Icon(
+                  Icons.more_horiz_rounded,
+                  size: OmniIconSize.md,
+                  color: Theme.of(context).colorScheme.onSurface,
                 ),
               ),
             ),
-          ),
-          if (actions > 0)
-            Positioned(
-              left: 20,
-              right: 20,
-              bottom: bottomPad + 16,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  if (moveInBar)
-                    FilledButton(
-                      key: const ValueKey('inv-stock-move-picked'),
-                      onPressed: _sending ? null : () => _movePicked(loaded),
-                      child: Text('Chuyển vị trí · $pickedLoaded cây'),
-                    ),
-                  if (showSend && showSell)
-                    OutlinedButton(
-                      key: const ValueKey('inv-stock-send-picked'),
-                      onPressed: _sending ? null : () => _sendPicked(loaded),
-                      child: Text('Đưa vào xưởng · $pickedForWorkshop cây'),
-                    )
-                  else if (showSend)
-                    FilledButton(
-                      key: const ValueKey('inv-stock-send-picked'),
-                      onPressed: _sending ? null : () => _sendPicked(loaded),
-                      child: Text('Đưa vào xưởng · $pickedForWorkshop cây'),
-                    ),
-                  if (showSend && showSell) const SizedBox(height: 8),
-                  if (showSell)
-                    FilledButton(
-                      key: const ValueKey('inv-stock-sell-picked'),
-                      onPressed: () => _sellPicked(loaded),
-                      child: Text('Bán / Đặt trước · $pickedLoaded cây'),
-                    ),
-                ],
-              ),
-            ),
         ],
+        bottom: _SearchBottom(
+          hint: 'Tìm serial, model',
+          onChanged: (v) => _filter.update((f) => f.copyWith(query: v)),
+          activeFilters: _activeFilters(f),
+          onFilter: () => _openFilters(categories, multi),
+        ),
+      ),
+      body: OmniDockLayer(
+        dock: dock,
+        body: NotificationListener<ScrollNotification>(
+          onNotification: (n) {
+            if (n.metrics.extentAfter < 400) {
+              ref.read(stockProvider.notifier).loadMore().ignore();
+            }
+            return false;
+          },
+          child: RefreshIndicator(
+            onRefresh: () => ref.read(stockProvider.notifier).refresh(),
+            child: ListView(
+              key: const ValueKey('inv-stock-scroll'),
+              physics: const AlwaysScrollableScrollPhysics(),
+              keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+              padding: EdgeInsets.fromLTRB(
+                16,
+                12,
+                16,
+                dock == null
+                    ? OmniFabLayer.listBottom(context, hasFab: false)
+                    : OmniDockLayer.listBottom(
+                        context,
+                        rows: dockButtons.length,
+                      ),
+              ),
+              children: list,
+            ),
+          ),
+        ),
       ),
     );
   }
 }
 
-/// Một cây trong danh sách tồn: "Hãng Model [serial]", dòng phụ lô · loại ·
-/// tuổi tồn, khách (phân đoạn Đã có khách), bên phải giá niêm yết + tình trạng.
+/// Một nút của khay đáy: nút chính tô (FilledButton), nút phụ viền.
+class _DockButton {
+  const _DockButton({
+    required this.key,
+    required this.label,
+    required this.onPressed,
+  });
+
+  final Key key;
+  final String label;
+  final VoidCallback? onPressed;
+
+  Widget filled() =>
+      FilledButton(key: key, onPressed: onPressed, child: Text(label));
+
+  Widget outlined() =>
+      OutlinedButton(key: key, onPressed: onPressed, child: Text(label));
+}
+
+/// Dải 3 số đầu trang (kiểu Sortly): số cây · giá trị niêm yết · tồn lâu.
+/// Số luôn đủ chữ số; ô dài thì chữ thu nhỏ, không cắt. Giá vốn (quyền cost)
+/// là dòng phụ dưới dải.
+class _StatStrip extends StatelessWidget {
+  const _StatStrip({
+    super.key,
+    required this.cells,
+    required this.activeLast,
+    this.cost,
+  });
+
+  final List<(String, String, VoidCallback?)> cells;
+  final bool activeLast;
+  final String? cost;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return OmniGroupSection(
+      dividerIndent: 14,
+      children: [
+        IntrinsicHeight(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              for (final (i, (label, value, onTap)) in cells.indexed) ...[
+                if (i > 0)
+                  VerticalDivider(
+                    width: 1,
+                    thickness: 1,
+                    indent: 10,
+                    endIndent: 10,
+                    color: scheme.outlineVariant.withValues(alpha: .7),
+                  ),
+                Expanded(
+                  // Ô giữa (tiền) rộng hơn: số tỷ đủ chữ số vẫn vừa.
+                  flex: i == 1 ? 5 : 4,
+                  child: InkWell(
+                    onTap: onTap,
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 10,
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          FittedBox(
+                            fit: BoxFit.scaleDown,
+                            alignment: Alignment.centerLeft,
+                            child: Text(
+                              value,
+                              maxLines: 1,
+                              style: OmniType.bodyStrong.copyWith(
+                                color: i == cells.length - 1 && activeLast
+                                    ? scheme.primary
+                                    : scheme.onSurface,
+                                fontFeatures: OmniType.tabular,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(label, maxLines: 2, style: invMuted(context)),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+        if (cost != null) OmniGroupRow(title: 'Vốn', trailing: InvValue(cost!)),
+      ],
+    );
+  }
+}
+
+/// Một cây trong danh sách tồn: tên model, dòng phụ serial · lô · tuổi tồn
+/// (cam khi quá [oldDays] ngày), khách (phân đoạn Đã có khách); bên phải giá
+/// niêm yết đủ số, tình trạng và vị trí.
 class StockUnitRow extends StatelessWidget {
   const StockUnitRow({
     super.key,
@@ -671,6 +856,7 @@ class StockUnitRow extends StatelessWidget {
     required this.onTap,
     required this.onSerial,
     this.showCustomer = false,
+    this.showCategory = true,
     this.canEditSerial = false,
     this.picking = false,
     this.picked = false,
@@ -679,11 +865,17 @@ class StockUnitRow extends StatelessWidget {
     this.location,
   });
 
+  /// Quá số ngày này thì tuổi tồn đổi màu cam ("Tồn > 90 ngày").
+  static const oldDays = 90;
+
   final InventoryUnit unit;
   final DateTime today;
   final VoidCallback onTap;
   final Future<void> Function(String? serial) onSerial;
   final bool showCustomer;
+
+  /// Loại ở dòng phụ — tắt khi danh sách đã nhóm theo loại.
+  final bool showCategory;
   final bool canEditSerial;
   final bool picking;
   final bool picked;
@@ -695,7 +887,7 @@ class StockUnitRow extends StatelessWidget {
   /// Ảnh đại diện nhỏ đầu dòng (API có ảnh — Đợt A).
   final bool thumb;
 
-  /// Tên vị trí ghi ở dòng phụ (chỉ khi có từ hai vị trí).
+  /// Tên vị trí ghi bên phải dưới giá (chỉ khi có từ hai vị trí).
   final String? location;
 
   @override
@@ -705,6 +897,8 @@ class StockUnitRow extends StatelessWidget {
     final age = InventoryFormat.ageDays(u.receivedAt, today);
     final hold = showCustomer ? InvUi.holdLine(u) : null;
     final work = showWorkshop ? u.workshopLabel : null;
+    final category = showCategory ? InvUi.shortCategory(u.category) : '';
+    final muted = invMuted(context);
     return Semantics(
       button: true,
       selected: picking && picked,
@@ -735,50 +929,59 @@ class StockUnitRow extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisSize: MainAxisSize.min,
                     children: [
+                      Text(
+                        u.name,
+                        maxLines: 2,
+                        style: OmniType.body.copyWith(
+                          fontWeight: FontWeight.w600,
+                          color: scheme.onSurface,
+                        ),
+                      ),
+                      // Wrap, không Row: serial dài + lô + loại + tuổi tồn
+                      // không vừa một dòng ở 390 thì xuống dòng, không tràn.
                       Wrap(
                         crossAxisAlignment: WrapCrossAlignment.center,
-                        spacing: 6,
                         children: [
-                          Text(
-                            u.name,
-                            style: OmniType.body.copyWith(
-                              fontWeight: FontWeight.w600,
-                              color: scheme.onSurface,
-                            ),
-                          ),
                           SerialField(
                             serial: u.serial,
                             editable: canEditSerial,
                             semanticsName: u.name,
                             onSave: onSerial,
                           ),
+                          Text(' · ', style: muted),
+                          ConstrainedBox(
+                            constraints: const BoxConstraints(minWidth: 0),
+                            child: Text.rich(
+                              TextSpan(
+                                children: [
+                                  TextSpan(
+                                    text: [
+                                      if (work != null)
+                                        UnitCondition.labelOf(u.condition),
+                                      if (u.lotCode != null) u.lotCode!,
+                                      if (category.isNotEmpty) category,
+                                      '',
+                                    ].join(' · '),
+                                  ),
+                                  TextSpan(
+                                    text: age == null
+                                        ? 'chưa có ngày'
+                                        : '$age ngày',
+                                    style: age != null && age > oldDays
+                                        ? TextStyle(
+                                            color: OmniColors.warningTextOf(
+                                              context,
+                                            ),
+                                          )
+                                        : null,
+                                  ),
+                                ],
+                              ),
+                              maxLines: 2,
+                              style: muted,
+                            ),
+                          ),
                         ],
-                      ),
-                      Text.rich(
-                        TextSpan(
-                          children: [
-                            TextSpan(
-                              text: [
-                                if (work != null)
-                                  UnitCondition.labelOf(u.condition),
-                                ?location,
-                                if (u.lotCode != null) u.lotCode!,
-                                if (InvUi.shortCategory(u.category).isNotEmpty)
-                                  InvUi.shortCategory(u.category),
-                              ].join(' · '),
-                            ),
-                            const TextSpan(text: ' · '),
-                            TextSpan(
-                              text: age == null ? 'chưa có ngày' : '$age ngày',
-                              style: age != null && age > 180
-                                  ? TextStyle(
-                                      color: OmniColors.warningTextOf(context),
-                                    )
-                                  : null,
-                            ),
-                          ],
-                        ),
-                        style: invMuted(context),
                       ),
                       if (hold != null)
                         Text(
@@ -792,12 +995,20 @@ class StockUnitRow extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(width: 10),
-                InvValue(
-                  InvUi.vnd(u.listPrice),
-                  sub: work ?? UnitCondition.labelOf(u.condition),
-                  subColor: work != null
-                      ? null
-                      : InvUi.conditionColor(context, u.condition),
+                Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    InvValue(
+                      InvUi.vnd(u.listPrice),
+                      sub: work ?? UnitCondition.labelOf(u.condition),
+                      subColor: work != null
+                          ? null
+                          : InvUi.conditionColor(context, u.condition),
+                    ),
+                    if (location != null)
+                      Text(location!, maxLines: 1, style: muted),
+                  ],
                 ),
               ],
             ),
@@ -808,91 +1019,63 @@ class StockUnitRow extends StatelessWidget {
   }
 }
 
-/// Nút biểu tượng 44×44 trên thanh tiêu đề (cùng kiểu nút Hàng sắp về).
-class _BarIcon extends StatelessWidget {
-  const _BarIcon({
-    super.key,
-    required this.tooltip,
-    required this.icon,
-    required this.onPressed,
-  });
-
-  final String tooltip;
-  final IconData icon;
-  final VoidCallback onPressed;
-
-  @override
-  Widget build(BuildContext context) => IconButton(
-    tooltip: tooltip,
-    padding: EdgeInsets.zero,
-    constraints: const BoxConstraints.tightFor(width: 44, height: 44),
-    onPressed: onPressed,
-    icon: Icon(
-      icon,
-      size: OmniIconSize.md,
-      color: Theme.of(context).colorScheme.onSurface,
-    ),
-  );
-}
-
-/// Hàng lọc: chia đều khi ít ô, cuộn ngang khi có thêm ô Vị trí.
-class _FilterRow extends StatelessWidget {
-  const _FilterRow({required this.pills, required this.scroll});
-
-  final List<Widget> pills;
-  final bool scroll;
-
-  @override
-  Widget build(BuildContext context) {
-    if (!scroll) {
-      return Row(
-        children: [
-          for (var i = 0; i < pills.length; i++) ...[
-            if (i > 0) const SizedBox(width: 8),
-            Expanded(child: pills[i]),
-          ],
-        ],
-      );
-    }
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      clipBehavior: Clip.none,
-      child: Row(
-        children: [
-          for (var i = 0; i < pills.length; i++) ...[
-            if (i > 0) const SizedBox(width: 8),
-            ConstrainedBox(
-              constraints: const BoxConstraints(minWidth: 72, maxWidth: 200),
-              child: pills[i],
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-}
-
+/// Ô tìm trên thanh + nút lọc (chấm số bộ lọc đang bật).
 class _SearchBottom extends StatelessWidget implements PreferredSizeWidget {
-  const _SearchBottom({required this.hint, required this.onChanged});
+  const _SearchBottom({
+    required this.hint,
+    required this.onChanged,
+    required this.activeFilters,
+    required this.onFilter,
+  });
 
   final String hint;
   final ValueChanged<String> onChanged;
+  final int activeFilters;
+  final VoidCallback onFilter;
 
   @override
   Size get preferredSize => const Size.fromHeight(44);
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 6),
       child: SizedBox(
         height: 44,
-        child: OmniSearchField(
-          key: const ValueKey('inv-search'),
-          hint: hint,
-          flat: true,
-          dense: true,
-          onChanged: onChanged,
+        child: Row(
+          children: [
+            Expanded(
+              child: OmniSearchField(
+                key: const ValueKey('inv-search'),
+                hint: hint,
+                flat: true,
+                dense: true,
+                onChanged: onChanged,
+              ),
+            ),
+            const SizedBox(width: 4),
+            IconButton(
+              key: const ValueKey('inv-filter'),
+              tooltip: activeFilters > 0
+                  ? 'Lọc · đang bật $activeFilters'
+                  : 'Lọc',
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints.tightFor(width: 44, height: 44),
+              onPressed: onFilter,
+              icon: Badge(
+                isLabelVisible: activeFilters > 0,
+                label: Text('$activeFilters'),
+                backgroundColor: scheme.primary,
+                textColor: scheme.onPrimary,
+                child: Icon(
+                  Icons.tune_rounded,
+                  size: OmniIconSize.md,
+                  color: activeFilters > 0 ? scheme.primary : scheme.onSurface,
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );

@@ -4,7 +4,6 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../core/nav/shell_bar_inset.dart';
 import '../../../design/components/components.dart';
 import '../../../design/tokens/tokens.dart';
 import '../application/finance_providers.dart';
@@ -115,7 +114,6 @@ class _ExpenseSummaryPageState extends ConsumerState<ExpenseSummaryPage> {
   late int _selectedMonth;
   YearTrendBreakdown _yearTrend = YearTrendBreakdown.quarter;
   SummaryDimension _dimension = SummaryDimension.group;
-  final GlobalKey _yearBtnKey = GlobalKey();
   bool _initialized = false;
 
   @override
@@ -247,7 +245,15 @@ class _ExpenseSummaryPageState extends ConsumerState<ExpenseSummaryPage> {
     unawaited(_ensureActiveScopeLoaded());
   }
 
-  Future<void> _openYearPicker(FinanceLedgerState state) async {
+  /// Nhãn của nút kỳ: "Tháng 11 · 2026", "Quý 4 · 2026", "Năm 2026".
+  String get _periodLabel => switch (_scope) {
+    ExpenseSummaryScope.month => 'Tháng $_selectedMonth · $_selectedYear',
+    ExpenseSummaryScope.quarter => 'Quý $_selectedQuarter · $_selectedYear',
+    ExpenseSummaryScope.year => 'Năm $_selectedYear',
+  };
+
+  /// Sheet chọn kỳ: năm (chip) rồi quý / tháng; chế độ Năm chỉ chọn năm.
+  Future<void> _openPeriodPicker(FinanceLedgerState state) async {
     final currentYear = FinanceMonthUtils.yearOf(
       FinanceMonthUtils.currentVnMonth(state.clock),
     );
@@ -256,22 +262,28 @@ class _ExpenseSummaryPageState extends ConsumerState<ExpenseSummaryPage> {
       _selectedYear,
     }.toList()..sort((a, b) => b.compareTo(a));
 
-    final picked = await showFinancePopoverMenu<int>(
+    final picked = await showOmniSheet<({int year, int part})>(
       context: context,
-      anchorContext: _yearBtnKey.currentContext,
-      header: 'Chọn năm tổng hợp',
-      width: 210,
-      items: [
-        for (final y in years)
-          FinancePopoverItem<int>(
-            value: y,
-            label: 'Năm $y',
-            selected: y == _selectedYear,
-          ),
-      ],
+      builder: (_) => _PeriodPickerSheet(
+        scope: _scope,
+        years: years,
+        year: _selectedYear,
+        part: switch (_scope) {
+          ExpenseSummaryScope.month => _selectedMonth,
+          ExpenseSummaryScope.quarter => _selectedQuarter,
+          ExpenseSummaryScope.year => 0,
+        },
+      ),
     );
-    if (picked != null && mounted) {
-      _selectYear(picked);
+    if (picked == null || !mounted) return;
+    switch (_scope) {
+      case ExpenseSummaryScope.month:
+        _selectMonth(picked.part, year: picked.year);
+      case ExpenseSummaryScope.quarter:
+        setState(() => _selectedYear = picked.year);
+        _selectQuarter(picked.part);
+      case ExpenseSummaryScope.year:
+        _selectYear(picked.year);
     }
   }
 
@@ -291,40 +303,7 @@ class _ExpenseSummaryPageState extends ConsumerState<ExpenseSummaryPage> {
       appBar: OmniAppBar(
         title: 'Tổng hợp chi phí',
         backgroundColor: p.bg,
-        actions: [
-          Padding(
-            padding: const EdgeInsets.only(right: 10),
-            child: Tooltip(
-              message: 'Làm mới dữ liệu',
-              child: InkWell(
-                key: const ValueKey('finance-summary-refresh-btn'),
-                onTap: () => _ensureActiveScopeLoaded(forceRefresh: true),
-                borderRadius: BorderRadius.circular(99),
-                child: Container(
-                  width: 34,
-                  height: 34,
-                  decoration: BoxDecoration(
-                    color: p.card,
-                    shape: BoxShape.circle,
-                  ),
-                  alignment: Alignment.center,
-                  child: state.syncing
-                      ? SizedBox(
-                          width: 15,
-                          height: 15,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            valueColor: AlwaysStoppedAnimation<Color>(
-                              p.primary,
-                            ),
-                          ),
-                        )
-                      : Icon(Icons.refresh_rounded, size: 17, color: p.ink),
-                ),
-              ),
-            ),
-          ),
-        ],
+        // Không nút làm mới: kéo xuống để làm mới như mọi màn khác.
       ),
       body: Center(
         child: ConstrainedBox(
@@ -332,13 +311,20 @@ class _ExpenseSummaryPageState extends ConsumerState<ExpenseSummaryPage> {
           child: Column(
             children: [
               // KHỐI 1: Bộ chuyển Tháng / Quý / Năm + Thanh chọn kỳ
+              // Hai hàng: Tháng / Quý / Năm, rồi ‹ kỳ › (chạm giữa mở sheet).
               Padding(
-                padding: const EdgeInsets.fromLTRB(16, 2, 16, 10),
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
                 child: Column(
                   children: [
-                    _buildScopeSwitchRow(p, state),
-                    const SizedBox(height: 7),
-                    _buildPeriodRibbon(p, state),
+                    OmniSegmented(
+                      key: const ValueKey('finance-summary-scope'),
+                      labels: const ['Tháng', 'Quý', 'Năm'],
+                      index: ExpenseSummaryScope.values.indexOf(_scope),
+                      onChanged: (i) =>
+                          _setScope(ExpenseSummaryScope.values[i]),
+                    ),
+                    const SizedBox(height: 8),
+                    _buildPeriodRow(state),
                   ],
                 ),
               ),
@@ -349,15 +335,12 @@ class _ExpenseSummaryPageState extends ConsumerState<ExpenseSummaryPage> {
                   color: p.primary,
                   child: ListView(
                     physics: const AlwaysScrollableScrollPhysics(),
-                    // Thanh tab kính phủ lên body: chừa đúng chiều cao thanh
-                    // + vùng an toàn, nếu không dòng cuối nằm mãi dưới lớp mờ.
+                    // Thanh tab kính phủ lên body: chừa phần đáy bị che thật.
                     padding: EdgeInsets.fromLTRB(
                       16,
-                      2,
+                      0,
                       16,
-                      ShellBarInset.of(context) +
-                          MediaQuery.viewPaddingOf(context).bottom +
-                          24,
+                      OmniFabLayer.listBottom(context, hasFab: false),
                     ),
                     children: [
                       if ((state.isLoading || state.syncing) && !anyLoaded)
@@ -383,251 +366,79 @@ class _ExpenseSummaryPageState extends ConsumerState<ExpenseSummaryPage> {
     );
   }
 
-  Widget _buildScopeSwitchRow(FinancePalette p, FinanceLedgerState state) {
+  /// ‹ Quý 4 · 2026 ›: nút kính trước / sau, viên giữa mở sheet chọn kỳ.
+  Widget _buildPeriodRow(FinanceLedgerState state) {
+    final scheme = Theme.of(context).colorScheme;
+    final unit = switch (_scope) {
+      ExpenseSummaryScope.month => 'Tháng',
+      ExpenseSummaryScope.quarter => 'Quý',
+      ExpenseSummaryScope.year => 'Năm',
+    };
+    final label = _periodLabel;
     return Row(
       children: [
-        Expanded(
-          child: Container(
-            height: 34,
-            padding: const EdgeInsets.all(2),
-            decoration: BoxDecoration(
-              color: p.track,
-              borderRadius: BorderRadius.circular(9),
-            ),
-            child: Row(
-              children: [
-                for (final s in ExpenseSummaryScope.values)
-                  Expanded(
-                    child: GestureDetector(
-                      key: ValueKey('finance-summary-tab-${s.name}'),
-                      behavior: HitTestBehavior.opaque,
-                      onTap: () => _setScope(s),
-                      child: AnimatedContainer(
-                        duration: const Duration(milliseconds: 160),
-                        curve: Curves.easeOutCubic,
-                        alignment: Alignment.center,
-                        decoration: BoxDecoration(
-                          color: _scope == s ? p.card : Colors.transparent,
-                          borderRadius: BorderRadius.circular(7),
-                          boxShadow: _scope == s
-                              ? [
-                                  BoxShadow(
-                                    color: Colors.black.withValues(alpha: 0.08),
-                                    blurRadius: 4,
-                                    offset: const Offset(0, 1),
-                                  ),
-                                ]
-                              : null,
-                        ),
-                        child: Text(
-                          s.label,
-                          maxLines: 1,
-                          style: OmniType.caption.copyWith(
-                            color: _scope == s ? p.primaryInk : p.muted,
-                            fontWeight: _scope == s
-                                ? FontWeight.w600
-                                : FontWeight.w600,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-              ],
-            ),
+        OmniGlassCircle(
+          child: IconButton(
+            key: const ValueKey('finance-summary-prev-btn'),
+            tooltip: '$unit trước',
+            onPressed: () => _shiftPeriod(-1),
+            icon: const Icon(Icons.chevron_left_rounded),
           ),
         ),
-        if (_scope != ExpenseSummaryScope.year) ...[
-          const SizedBox(width: 8),
-          InkWell(
-            key: const ValueKey('finance-summary-year-btn'),
-            onTap: () => _openYearPicker(state),
-            borderRadius: BorderRadius.circular(9),
-            child: Container(
-              key: _yearBtnKey,
-              height: 34,
-              padding: const EdgeInsets.symmetric(horizontal: 11),
-              decoration: BoxDecoration(
-                color: p.primarySoft,
-                borderRadius: BorderRadius.circular(9),
-                border: Border.all(color: p.selLine, width: 0.5),
-              ),
-              alignment: Alignment.center,
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    '$_selectedYear',
-                    style: OmniType.caption.copyWith(
-                      color: p.primaryInk,
-                      fontWeight: FontWeight.w600,
-                      fontFeatures: const [FontFeature.tabularFigures()],
-                    ),
-                  ),
-                  const SizedBox(width: 3),
-                  Icon(
-                    Icons.keyboard_arrow_down_rounded,
-                    size: 15,
-                    color: p.primaryInk,
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ],
-    );
-  }
-
-  Widget _buildPeriodRibbon(FinancePalette p, FinanceLedgerState state) {
-    final currentYear = FinanceMonthUtils.yearOf(
-      FinanceMonthUtils.currentVnMonth(state.clock),
-    );
-    final years = <int>{
-      currentYear - 2,
-      currentYear - 1,
-      currentYear,
-      _selectedYear,
-    }.toList()..sort();
-
-    return Row(
-      children: [
-        InkWell(
-          key: const ValueKey('finance-summary-prev-btn'),
-          onTap: () => _shiftPeriod(-1),
-          borderRadius: BorderRadius.circular(9),
-          child: Container(
-            width: 30,
-            height: 34,
-            decoration: BoxDecoration(
-              color: p.track,
-              borderRadius: BorderRadius.circular(9),
-            ),
-            alignment: Alignment.center,
-            child: Icon(Icons.chevron_left_rounded, size: 18, color: p.ink2),
-          ),
-        ),
-        const SizedBox(width: 5),
+        const SizedBox(width: 8),
         Expanded(
-          child: Container(
-            height: 34,
-            padding: const EdgeInsets.all(2),
-            decoration: BoxDecoration(
-              color: p.track,
-              borderRadius: BorderRadius.circular(9),
-            ),
-            child: switch (_scope) {
-              ExpenseSummaryScope.quarter => Row(
-                children: [
-                  for (var q = 1; q <= 4; q++)
-                    Expanded(
-                      child: GestureDetector(
-                        key: ValueKey('finance-summary-quarter-$q'),
-                        behavior: HitTestBehavior.opaque,
-                        onTap: () => _selectQuarter(q),
-                        child: _buildRibbonChip(
-                          p,
-                          label: 'Quý $q',
-                          active: _selectedQuarter == q,
-                        ),
-                      ),
-                    ),
-                ],
-              ),
-              ExpenseSummaryScope.year => Row(
-                children: [
-                  for (final y in years)
-                    Expanded(
-                      child: GestureDetector(
-                        key: ValueKey('finance-summary-year-chip-$y'),
-                        behavior: HitTestBehavior.opaque,
-                        onTap: () => _selectYear(y),
-                        child: _buildRibbonChip(
-                          p,
-                          label: 'Năm $y',
-                          active: _selectedYear == y,
-                        ),
-                      ),
-                    ),
-                ],
-              ),
-              ExpenseSummaryScope.month => SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                physics: const BouncingScrollPhysics(),
-                child: Row(
-                  children: [
-                    for (var m = 1; m <= 12; m++)
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 1.5),
-                        child: GestureDetector(
-                          key: ValueKey('finance-summary-month-chip-$m'),
-                          behavior: HitTestBehavior.opaque,
-                          onTap: () => _selectMonth(m),
-                          child: _buildRibbonChip(
-                            p,
-                            label: 'Tháng $m',
-                            active: _selectedMonth == m,
-                            horizontalPadding: 11,
+          child: OmniGlass(
+            blur: false,
+            radius: 22,
+            child: Semantics(
+              button: true,
+              label: 'Chọn kỳ, $label',
+              excludeSemantics: true,
+              child: Material(
+                type: MaterialType.transparency,
+                child: InkWell(
+                  key: const ValueKey('finance-summary-period-btn'),
+                  customBorder: const StadiumBorder(),
+                  onTap: () => _openPeriodPicker(state),
+                  child: SizedBox(
+                    height: 44,
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Flexible(
+                          child: Text(
+                            label,
+                            maxLines: 1,
+                            style: OmniType.bodyStrong.copyWith(
+                              color: scheme.onSurface,
+                              fontFeatures: OmniType.tabular,
+                            ),
                           ),
                         ),
-                      ),
-                  ],
+                        const SizedBox(width: 4),
+                        Icon(
+                          Icons.keyboard_arrow_down_rounded,
+                          size: 18,
+                          color: scheme.onSurfaceVariant,
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
               ),
-            },
+            ),
           ),
         ),
-        const SizedBox(width: 5),
-        InkWell(
-          key: const ValueKey('finance-summary-next-btn'),
-          onTap: () => _shiftPeriod(1),
-          borderRadius: BorderRadius.circular(9),
-          child: Container(
-            width: 30,
-            height: 34,
-            decoration: BoxDecoration(
-              color: p.track,
-              borderRadius: BorderRadius.circular(9),
-            ),
-            alignment: Alignment.center,
-            child: Icon(Icons.chevron_right_rounded, size: 18, color: p.ink2),
+        const SizedBox(width: 8),
+        OmniGlassCircle(
+          child: IconButton(
+            key: const ValueKey('finance-summary-next-btn'),
+            tooltip: '$unit sau',
+            onPressed: () => _shiftPeriod(1),
+            icon: const Icon(Icons.chevron_right_rounded),
           ),
         ),
       ],
-    );
-  }
-
-  Widget _buildRibbonChip(
-    FinancePalette p, {
-    required String label,
-    required bool active,
-    double horizontalPadding = 6,
-  }) {
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 160),
-      curve: Curves.easeOutCubic,
-      padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
-      alignment: Alignment.center,
-      decoration: BoxDecoration(
-        color: active ? p.card : Colors.transparent,
-        borderRadius: BorderRadius.circular(7),
-        boxShadow: active
-            ? [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.08),
-                  blurRadius: 4,
-                  offset: const Offset(0, 1),
-                ),
-              ]
-            : null,
-      ),
-      child: Text(
-        label,
-        maxLines: 1,
-        style: OmniType.caption.copyWith(
-          color: active ? p.ink : p.muted,
-          fontWeight: active ? FontWeight.w600 : FontWeight.w600,
-        ),
-      ),
     );
   }
 
@@ -693,7 +504,7 @@ class _ExpenseSummaryPageState extends ConsumerState<ExpenseSummaryPage> {
     switch (_scope) {
       case ExpenseSummaryScope.month:
         final ym = periodMonths.first;
-        titleText = 'Tổng hợp Tháng $_selectedMonth/$_selectedYear';
+        titleText = 'Tổng chi';
         final days = DateTime.utc(
           FinanceMonthUtils.yearOf(ym),
           FinanceMonthUtils.monthNumberOf(ym) + 1,
@@ -704,10 +515,8 @@ class _ExpenseSummaryPageState extends ConsumerState<ExpenseSummaryPage> {
         final summary = state.summaryForMonth(ym);
         deltaBadge = summary.deltaPill;
       case ExpenseSummaryScope.quarter:
-        final startM = (_selectedQuarter - 1) * 3 + 1;
-        final endM = startM + 2;
-        titleText =
-            'Tổng chi Quý $_selectedQuarter/$_selectedYear (T$startM – T$endM)';
+        // Kỳ đã hiện ở nút ‹ kỳ › ngay trên: tiêu đề không lặp lại.
+        titleText = 'Tổng chi';
         avgPrefix = 'TB tháng: ';
         final divisor = activeMonthsWithSpend > 0 ? activeMonthsWithSpend : 3;
         avgAmount = (total / divisor).round();
@@ -730,7 +539,7 @@ class _ExpenseSummaryPageState extends ConsumerState<ExpenseSummaryPage> {
           }
         }
       case ExpenseSummaryScope.year:
-        titleText = 'Tổng chi Năm $_selectedYear (12 tháng)';
+        titleText = 'Tổng chi';
         avgPrefix = 'TB tháng: ';
         final divisor = activeMonthsWithSpend > 0 ? activeMonthsWithSpend : 12;
         avgAmount = (total / divisor).round();
@@ -1414,25 +1223,31 @@ class _ExpenseSummaryPageState extends ConsumerState<ExpenseSummaryPage> {
                   ),
                 ),
                 const SizedBox(width: 8),
+                // Tên trên dòng chính; số khoản + % xuống dòng phụ để tên
+                // không bị bẻ giữa chừng "(3 / khoản)".
                 Expanded(
-                  child: Text.rich(
-                    TextSpan(
-                      style: OmniType.caption.copyWith(
-                        color: p.ink,
-                        fontWeight: FontWeight.w600,
-                      ),
-                      children: [
-                        TextSpan(text: row.name),
-                        TextSpan(
-                          text: ' (${row.countLabel})',
-                          style: OmniType.micro.copyWith(
-                            color: p.muted,
-                            fontWeight: FontWeight.w400,
-                          ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        row.name,
+                        maxLines: 2,
+                        style: OmniType.caption.copyWith(
+                          color: p.ink,
+                          fontWeight: FontWeight.w600,
                         ),
-                      ],
-                    ),
-                    maxLines: 2,
+                      ),
+                      Text(
+                        '${row.countLabel} · '
+                        '${row.sharePct.toStringAsFixed(1).replaceAll('.', ',')}%',
+                        maxLines: 1,
+                        style: OmniType.micro.copyWith(
+                          color: p.muted,
+                          fontFeatures: const [FontFeature.tabularFigures()],
+                        ),
+                      ),
+                    ],
                   ),
                 ),
                 const SizedBox(width: 8),
@@ -1442,29 +1257,6 @@ class _ExpenseSummaryPageState extends ConsumerState<ExpenseSummaryPage> {
                     color: p.ink,
                     fontWeight: FontWeight.w600,
                     fontFeatures: const [FontFeature.tabularFigures()],
-                  ),
-                ),
-                const SizedBox(width: 6),
-                Container(
-                  constraints: const BoxConstraints(minWidth: 52),
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 6,
-                    vertical: 2,
-                  ),
-                  decoration: BoxDecoration(
-                    color: p.control,
-                    borderRadius: BorderRadius.circular(6),
-                  ),
-                  child: Text(
-                    '${row.sharePct.toStringAsFixed(1).replaceAll('.', ',')}%',
-                    maxLines: 1,
-                    softWrap: false,
-                    textAlign: TextAlign.right,
-                    style: OmniType.micro.copyWith(
-                      color: p.muted,
-                      fontWeight: FontWeight.w600,
-                      fontFeatures: const [FontFeature.tabularFigures()],
-                    ),
                   ),
                 ),
               ],
@@ -1599,6 +1391,97 @@ class _ExpenseSummaryPageState extends ConsumerState<ExpenseSummaryPage> {
           ],
         );
       },
+    );
+  }
+}
+
+/// Sheet chọn kỳ tổng hợp: chip năm (đổi tại chỗ) rồi chip quý / tháng (chạm
+/// là chọn và đóng). Chế độ Năm: chạm năm là chọn.
+class _PeriodPickerSheet extends StatefulWidget {
+  const _PeriodPickerSheet({
+    required this.scope,
+    required this.years,
+    required this.year,
+    required this.part,
+  });
+
+  final ExpenseSummaryScope scope;
+  final List<int> years;
+  final int year;
+
+  /// Tháng (1–12) hoặc quý (1–4) đang chọn; 0 ở chế độ Năm.
+  final int part;
+
+  @override
+  State<_PeriodPickerSheet> createState() => _PeriodPickerSheetState();
+}
+
+class _PeriodPickerSheetState extends State<_PeriodPickerSheet> {
+  late int _year = widget.year;
+
+  void _pick(int part) => Navigator.of(context).pop((year: _year, part: part));
+
+  @override
+  Widget build(BuildContext context) {
+    final years = Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: [
+        for (final y in widget.years)
+          OmniChoicePill(
+            key: ValueKey('finance-summary-year-chip-$y'),
+            label: 'Năm $y',
+            selected: y == _year,
+            onTap: widget.scope == ExpenseSummaryScope.year
+                ? () => Navigator.of(context).pop((year: y, part: 0))
+                : () => setState(() => _year = y),
+          ),
+      ],
+    );
+    final sameYear = _year == widget.year;
+    final parts = switch (widget.scope) {
+      ExpenseSummaryScope.year => null,
+      ExpenseSummaryScope.quarter => Wrap(
+        spacing: 8,
+        runSpacing: 8,
+        children: [
+          for (var q = 1; q <= 4; q++)
+            OmniChoicePill(
+              key: ValueKey('finance-summary-quarter-$q'),
+              label: 'Quý $q',
+              selected: sameYear && q == widget.part,
+              onTap: () => _pick(q),
+            ),
+        ],
+      ),
+      ExpenseSummaryScope.month => Wrap(
+        spacing: 8,
+        runSpacing: 8,
+        children: [
+          for (var m = 1; m <= 12; m++)
+            OmniChoicePill(
+              key: ValueKey('finance-summary-month-chip-$m'),
+              label: 'Tháng $m',
+              selected: sameYear && m == widget.part,
+              onTap: () => _pick(m),
+            ),
+        ],
+      ),
+    };
+
+    return OmniSheetBody(
+      header: const OmniSheetHeader(title: 'Chọn kỳ'),
+      children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 8),
+          child: years,
+        ),
+        if (parts != null)
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8),
+            child: parts,
+          ),
+      ],
     );
   }
 }

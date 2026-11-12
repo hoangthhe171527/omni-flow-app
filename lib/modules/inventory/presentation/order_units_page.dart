@@ -27,8 +27,7 @@ class OrderUnitsPage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final res = ref.watch(orderUnitsProvider(orderId));
     final data = res.valueOrNull;
-    final bottom =
-        ShellBarInset.of(context) + MediaQuery.viewPaddingOf(context).bottom;
+    final bottom = ShellBarInset.coveredBottom(context);
 
     final title = data == null
         ? 'Đơn hàng'
@@ -196,7 +195,7 @@ class _ProgressBlock extends StatelessWidget {
                         child: InkWell(
                           key: const ValueKey('order-due'),
                           onTap: onPay,
-                          borderRadius: BorderRadius.circular(8),
+                          borderRadius: BorderRadius.circular(12),
                           child: Padding(
                             padding: const EdgeInsets.symmetric(
                               vertical: 2,

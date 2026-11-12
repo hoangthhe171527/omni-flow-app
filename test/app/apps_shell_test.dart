@@ -186,9 +186,10 @@ void main() {
 
       expect(find.text('page Hàng sắp về'), findsOneWidget);
       for (final label in [
-        'Hàng sắp về',
+        // Nhãn ngắn trên thanh tab (rà soát 12/11) — tên đầy đủ ở tiêu đề.
+        'Sắp về',
         'Tồn kho',
-        'Nhà cung cấp',
+        'NCC',
         'Đang giữ',
         'Thêm',
       ]) {
@@ -199,7 +200,7 @@ void main() {
       expect(find.byKey(const ValueKey('app-switch-button')), findsOneWidget);
 
       // Mục thứ 3 là màn con (branch bản sao) — vẫn nằm trong khung.
-      await tester.tap(find.text('Nhà cung cấp'));
+      await tester.tap(find.text('NCC'));
       await settle(tester);
       expect(find.text('page Nhà cung cấp'), findsOneWidget);
       expect(find.text('Thêm'), findsOneWidget);

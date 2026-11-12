@@ -16,6 +16,7 @@ import '../modules/customers/application/customers_providers.dart';
 import '../modules/inbox/inbox_routes.dart';
 import '../modules/notifications/application/notifications_providers.dart';
 import '../modules/notifications/application/push_notifications.dart';
+import '../modules/notifications/presentation/notification_drop.dart';
 import '../modules/notifications/routes.dart';
 import '../modules/opportunities/application/opportunities_providers.dart';
 import '../modules/plans/application/plans_providers.dart';
@@ -171,10 +172,25 @@ class _OmniAppState extends ConsumerState<OmniApp> with WidgetsBindingObserver {
               child: OmniTopBarSlot(
                 unreadOf: (ref) =>
                     ref.watch(unreadNotificationCountProvider).valueOrNull ?? 0,
-                // Chuông mở thẳng trang Thông báo (người dùng 2026-11-08): "Đọc
-                // hết" đã ở trang đó, Cài đặt thông báo nằm trong "Tất cả".
-                onBell: (context, _) =>
-                    GoRouter.of(context).pushNamed(NotificationRoutes.centre),
+                // Chuông KHÔNG chuyển trang (người dùng 12/11, thay quyết định
+                // 08/11): bảng kính "giọt nước" nở từ chính nút chuông; trang
+                // đầy đủ qua "Xem tất cả".
+                onBell: (context, anchor) {
+                  final router = GoRouter.of(context);
+                  showNotificationDrop(
+                    context,
+                    anchor: anchor,
+                    onOpenTask: (id) => router.pushNamed(
+                      TasksModule.detail,
+                      pathParameters: {'id': id},
+                    ),
+                    onOpenConversation: (id) => router.pushNamed(
+                      InboxRoutes.thread,
+                      pathParameters: {'id': id},
+                    ),
+                    onSeeAll: () => router.pushNamed(NotificationRoutes.centre),
+                  );
+                },
                 // Bậc hiệu năng (làm mờ đầy đủ / giảm / tối giản) cho cả app,
                 // tự hạ khi đo thấy giật — rà soát hiệu năng 08/11/2026.
                 child: PerformanceScopeHost(

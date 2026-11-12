@@ -60,8 +60,7 @@ class CatalogPage extends ConsumerWidget {
         .where((c) => c.id == f.categoryId)
         .firstOrNull
         ?.name;
-    final bottom =
-        ShellBarInset.of(context) + MediaQuery.viewPaddingOf(context).bottom;
+    final bottom = ShellBarInset.coveredBottom(context);
 
     final list = <Widget>[
       Align(

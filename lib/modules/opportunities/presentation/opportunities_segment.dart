@@ -68,24 +68,36 @@ class _OpportunitiesSegmentState extends ConsumerState<OpportunitiesSegment> {
   Widget build(BuildContext context) {
     final catalog = ref.watch(pipelineCatalogProvider);
     final pipeline = ref.watch(boardPipelineProvider);
+    final canCreate = ref.watch(opportunityAccessProvider).canCreate;
 
-    return Column(
-      children: [
-        OpportunityFilterPanel(open: widget.filtersOpen),
-        Expanded(
-          child: pipeline == null || pipeline.openStages.isEmpty
-              ? OmniAsyncView(
-                  value: catalog,
-                  onRetry: () => ref.invalidate(pipelineCatalogProvider),
-                  data: (_) => const OmniEmptyState(
-                    icon: Icons.trending_up_rounded,
-                    title: 'Quy trình chưa có giai đoạn',
-                    message: 'Thêm giai đoạn cho quy trình bán hàng trên web.',
-                  ),
-                )
-              : _Body(pipeline: pipeline, controller: _scrollController),
-        ),
-      ],
+    // Cơ hội mới: nút + kính góc phải dưới (rà soát 12/11), không nằm trong ô
+    // tìm nữa.
+    return OmniFabLayer(
+      fab: canCreate
+          ? OmniLiquidFab(
+              tooltip: 'Cơ hội mới',
+              onPressed: (_) => context.pushNamed(OpportunitiesModule.create),
+            )
+          : null,
+      body: Column(
+        children: [
+          OpportunityFilterPanel(open: widget.filtersOpen),
+          Expanded(
+            child: pipeline == null || pipeline.openStages.isEmpty
+                ? OmniAsyncView(
+                    value: catalog,
+                    onRetry: () => ref.invalidate(pipelineCatalogProvider),
+                    data: (_) => const OmniEmptyState(
+                      icon: Icons.trending_up_rounded,
+                      title: 'Quy trình chưa có giai đoạn',
+                      message:
+                          'Thêm giai đoạn cho quy trình bán hàng trên web.',
+                    ),
+                  )
+                : _Body(pipeline: pipeline, controller: _scrollController),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -164,13 +176,19 @@ class _Body extends ConsumerWidget {
         controller: controller,
         keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
         physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.only(bottom: OmniSpacing.bottomSafe),
+        padding: EdgeInsets.only(
+          bottom: OmniFabLayer.listBottom(context, hasFab: access.canCreate),
+        ),
         itemCount: 2 + tail,
         itemBuilder: (context, index) {
           if (index == 0) {
             return StageStrip(
               stages: closed ? closedStages : pipeline.openStages,
               summary: summary,
+              // Chip "Tất cả" chỉ khi xem giai đoạn mở; đã đóng luôn nhắm
+              // một giai đoạn.
+              allCount: closed ? null : summary?.openCount(pipeline),
+              showAll: !closed,
               selected: stageCode,
               onSelected: (code) {
                 // Đã đóng: luôn có một giai đoạn được chọn, chạm lại không bỏ.
@@ -283,8 +301,8 @@ class _SectionLine extends StatelessWidget {
   }
 }
 
-/// Hàng tìm của đoạn "Cơ hội": ô tìm, nút lọc (huy hiệu đếm) và nút vuông
-/// "Cơ hội mới" khi có quyền tạo. Cùng dáng với hàng tìm của danh sách khách.
+/// Hàng tìm của đoạn "Cơ hội": ô tìm và nút lọc (huy hiệu đếm). "Cơ hội mới"
+/// là nút + kính của [OpportunitiesSegment]. Cùng dáng với hàng tìm khách.
 class OpportunitySearchRow extends ConsumerWidget
     implements PreferredSizeWidget {
   const OpportunitySearchRow({
@@ -304,7 +322,6 @@ class OpportunitySearchRow extends ConsumerWidget
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final scheme = Theme.of(context).colorScheme;
     final access = ref.watch(opportunityAccessProvider);
     final mine = ref.watch(pipelineMineProvider);
     final pipelineChosen = ref.watch(selectedPipelineProvider) != null;
@@ -342,20 +359,6 @@ class OpportunitySearchRow extends ConsumerWidget
                 },
               ),
             ),
-            if (access.canCreate) ...[
-              IconButton(
-                tooltip: 'Cơ hội mới',
-                onPressed: () => context.pushNamed(OpportunitiesModule.create),
-                style: IconButton.styleFrom(
-                  fixedSize: const Size(36, 36),
-                  tapTargetSize: MaterialTapTargetSize.padded,
-                  visualDensity: VisualDensity.standard,
-                  foregroundColor: scheme.onSurface,
-                  backgroundColor: Colors.transparent,
-                ),
-                icon: const Icon(Icons.add_rounded),
-              ),
-            ],
           ],
         ),
       ),

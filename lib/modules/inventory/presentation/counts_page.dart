@@ -3,7 +3,6 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../core/nav/shell_bar_inset.dart';
 import '../../../design/components/components.dart';
 import '../../../design/tokens/tokens.dart';
 import '../application/inventory_providers.dart';
@@ -231,9 +230,6 @@ class _CountsPageState extends ConsumerState<CountsPage> {
             ? _pickedLoc
             : null) ??
         locations.firstOrNull?.id;
-    final bottom =
-        ShellBarInset.of(context) + MediaQuery.viewPaddingOf(context).bottom;
-
     if (locationId == null) {
       return Scaffold(
         appBar: const OmniAppBar(title: 'Kiểm kê'),
@@ -453,35 +449,32 @@ class _CountsPageState extends ConsumerState<CountsPage> {
               )
             : null,
       ),
-      body: Stack(
-        children: [
-          Positioned.fill(
-            child: RefreshIndicator(
-              onRefresh: () async {
-                ref.invalidate(countsProvider(locationId));
-                ref.invalidate(countUnitsProvider(locationId));
-                await ref
-                    .read(countsProvider(locationId).future)
-                    .catchError((_) => const <StockCount>[]);
-              },
-              child: ListView(
-                key: const ValueKey('inv-count-scroll'),
-                physics: const AlwaysScrollableScrollPhysics(),
-                keyboardDismissBehavior:
-                    ScrollViewKeyboardDismissBehavior.onDrag,
-                padding: EdgeInsets.fromLTRB(
-                  16,
-                  12,
-                  16,
-                  bottom + (action == null ? 24 : 88),
-                ),
-                children: children,
-              ),
+      // Nút chính (Bắt đầu / Chốt / Duyệt) trong khay kính đáy.
+      body: OmniDockLayer(
+        dock: action == null ? null : OmniBottomDock(action: action),
+        body: RefreshIndicator(
+          onRefresh: () async {
+            ref.invalidate(countsProvider(locationId));
+            ref.invalidate(countUnitsProvider(locationId));
+            await ref
+                .read(countsProvider(locationId).future)
+                .catchError((_) => const <StockCount>[]);
+          },
+          child: ListView(
+            key: const ValueKey('inv-count-scroll'),
+            physics: const AlwaysScrollableScrollPhysics(),
+            keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+            padding: EdgeInsets.fromLTRB(
+              16,
+              12,
+              16,
+              action == null
+                  ? OmniFabLayer.listBottom(context, hasFab: false)
+                  : OmniDockLayer.listBottom(context),
             ),
+            children: children,
           ),
-          if (action != null)
-            Positioned(left: 20, right: 20, bottom: bottom + 16, child: action),
-        ],
+        ),
       ),
     );
   }

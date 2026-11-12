@@ -97,7 +97,8 @@ void main() {
     // Phụ đề chỉ ở nhóm không tính vào chi phí.
     expect(find.text('Không tính vào chi phí'), findsOneWidget);
     expect(find.text('TK ngân hàng'), findsOneWidget);
-    expect(find.text('Gộp nhiều nhóm làm một: dùng bản web.'), findsOneWidget);
+    // Câu gộp nhóm nằm trong sheet sửa nhóm, không ở cuối trang (rà soát 12/11).
+    expect(find.text('Gộp nhiều nhóm làm một: dùng bản web.'), findsNothing);
   });
 
   testWidgets('nhóm còn khoản: Xoá nhóm bị khoá, gợi ý lưu trữ', (
@@ -115,6 +116,7 @@ void main() {
     );
     expect(delete.onTap, isNull);
     expect(find.text('Còn $count khoản, hãy lưu trữ'), findsOneWidget);
+    expect(find.text('Gộp nhiều nhóm làm một: dùng bản web.'), findsOneWidget);
     expect(
       find.byKey(const ValueKey('finance-catalog-counts-switch')),
       findsOneWidget,

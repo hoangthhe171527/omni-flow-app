@@ -18,7 +18,7 @@ import 'widgets/finance_palette.dart';
 /// - Sắp xếp đa chiều chuẩn iOS (`Ngày ghi nhận`, `Thời gian nhập`, `Ngày thanh toán`, `Loại chi phí`, `Số tiền`)
 /// - Đính kèm chứng từ / phiếu chi thật lên máy chủ
 /// - Hiển thị toàn bộ số tiền rõ ràng, tự co giãn thông minh (`FittedBox`), tuyệt đối không cắt `...`
-/// - Header cùng khuôn các màn khác: `OmniTopBar` + viên kính tìm (sắp xếp, "+" nằm trong);
+/// - Header cùng khuôn các màn khác: `OmniTopBar` + viên kính tìm (sắp xếp); "+" là nút kính góc phải dưới;
 ///   tháng chọn ngay trên thẻ tổng chi (‹ Tháng 11/2026 ›, chạm tên tháng mở menu, vuốt ngang thẻ)
 class ExpensesPage extends ConsumerStatefulWidget {
   const ExpensesPage({super.key});
@@ -126,7 +126,7 @@ class _ExpensesPageState extends ConsumerState<ExpensesPage> {
 
     return Scaffold(
       // Cùng khuôn với Khách / Cơ hội: hàng logo + chuông + tài khoản, bên
-      // dưới là một viên kính 44 chứa ô tìm, sắp xếp và "+". Danh sách chạy
+      // dưới là một viên kính 44 chứa ô tìm và sắp xếp. Danh sách chạy
       // dưới thanh và nhoè dần.
       extendBodyBehindAppBar: true,
       backgroundColor: p.bg,
@@ -138,105 +138,120 @@ class _ExpensesPageState extends ConsumerState<ExpensesPage> {
           child: _buildSearchRow(p, state, notifier, sortActive),
         ),
       ),
-      body: Stack(
-        children: [
-          Center(
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 680),
-              child: OmniTopBarOverlap.wrap(
-                child: Builder(
-                  builder: (context) {
-                    final top = OmniTopBarOverlap.of(context);
-                    return RefreshIndicator(
-                      edgeOffset: top,
-                      onRefresh: notifier.refresh,
-                      color: p.primary,
-                      // builder: tháng đông khoản chi chỉ dựng các nhóm ngày
-                      // đang hiện trên màn, không dựng cả tháng một lượt.
-                      child: _lazyList(
-                        physics: const AlwaysScrollableScrollPhysics(),
-                        // Chừa thanh tab kính + vùng an toàn (iPhone có thanh
-                        // home 34: hằng 100 vẫn bị che dòng cuối).
-                        padding: EdgeInsets.fromLTRB(
-                          16,
-                          top + 8,
-                          16,
-                          ShellBarInset.of(context) +
-                              MediaQuery.viewPaddingOf(context).bottom +
-                              24,
-                        ),
-                        children: [
-                          if (state.isLoading && !activeLoaded)
-                            _buildLoadingCard(p, state)
-                          else if (state.errorMessage != null && !activeLoaded)
-                            _buildErrorCard(p, state.errorMessage!, notifier)
-                          else ...[
-                            if (state.errorMessage != null)
-                              Padding(
-                                padding: const EdgeInsets.only(bottom: 10),
-                                child: _buildInlineErrorBanner(
-                                  p,
-                                  state.errorMessage!,
-                                  notifier,
-                                ),
-                              ),
-                            // TIER 1: Summary Card
-                            // Vuốt ngang thẻ để sang tháng liền kề.
-                            GestureDetector(
-                              key: const ValueKey('finance-month-carousel'),
-                              onHorizontalDragEnd: (details) {
-                                final vx = details.primaryVelocity ?? 0;
-                                if (vx.abs() < 120) return;
-                                notifier.selectMonth(
-                                  FinanceMonthUtils.shiftMonth(
-                                    state.activeMonth,
-                                    vx < 0 ? 1 : -1,
+      // Thêm khoản chi: nút + kính góc phải dưới (rà soát 12/11); ô tìm chỉ
+      // còn tìm + sắp xếp.
+      body: OmniFabLayer(
+        fab: OmniLiquidFab(
+          key: const ValueKey('finance-add-btn'),
+          tooltip: 'Thêm khoản chi',
+          onPressed: (_) => showExpenseAddSheet(context: context),
+        ),
+        body: Stack(
+          children: [
+            Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 680),
+                child: OmniTopBarOverlap.wrap(
+                  child: Builder(
+                    builder: (context) {
+                      final top = OmniTopBarOverlap.of(context);
+                      return RefreshIndicator(
+                        edgeOffset: top,
+                        onRefresh: notifier.refresh,
+                        color: p.primary,
+                        // builder: tháng đông khoản chi chỉ dựng các nhóm ngày
+                        // đang hiện trên màn, không dựng cả tháng một lượt.
+                        child: _lazyList(
+                          physics: const AlwaysScrollableScrollPhysics(),
+                          // Chừa thanh tab kính + vùng an toàn + nút + kính.
+                          padding: EdgeInsets.fromLTRB(
+                            16,
+                            top + 8,
+                            16,
+                            OmniFabLayer.listBottom(context),
+                          ),
+                          children: [
+                            if (state.isLoading && !activeLoaded)
+                              _buildLoadingCard(p, state)
+                            else if (state.errorMessage != null &&
+                                !activeLoaded)
+                              _buildErrorCard(p, state.errorMessage!, notifier)
+                            else ...[
+                              if (state.errorMessage != null)
+                                Padding(
+                                  padding: const EdgeInsets.only(bottom: 10),
+                                  child: _buildInlineErrorBanner(
+                                    p,
+                                    state.errorMessage!,
+                                    notifier,
                                   ),
-                                );
-                              },
-                              child: _buildSummaryCard(p, state, notifier),
-                            ),
-                            // TIER 2: Monthly Recurring Card (5 khoản cố định)
-                            if (state.showRecurringCard)
-                              Padding(
-                                padding: const EdgeInsets.only(top: 10),
-                                child: _buildRecurringCard(p, state, notifier),
-                              ),
-                            // Active Filter / Sort Banner
-                            if (state.hasActiveFilter)
-                              Padding(
-                                padding: const EdgeInsets.only(top: 10),
-                                child: _buildActiveFilterBanner(
-                                  p,
-                                  state,
-                                  notifier,
                                 ),
+                              // TIER 1: Summary Card
+                              // Vuốt ngang thẻ để sang tháng liền kề.
+                              GestureDetector(
+                                key: const ValueKey('finance-month-carousel'),
+                                onHorizontalDragEnd: (details) {
+                                  final vx = details.primaryVelocity ?? 0;
+                                  if (vx.abs() < 120) return;
+                                  notifier.selectMonth(
+                                    FinanceMonthUtils.shiftMonth(
+                                      state.activeMonth,
+                                      vx < 0 ? 1 : -1,
+                                    ),
+                                  );
+                                },
+                                child: _buildSummaryCard(p, state, notifier),
                               ),
-                            // TIER 3: Grouped Expense List
-                            ..._buildGroupedSections(p, state),
+                              // TIER 2: Monthly Recurring Card (5 khoản cố định)
+                              if (state.showRecurringCard)
+                                Padding(
+                                  padding: const EdgeInsets.only(top: 10),
+                                  child: _buildRecurringCard(
+                                    p,
+                                    state,
+                                    notifier,
+                                  ),
+                                ),
+                              // Active Filter / Sort Banner
+                              if (state.hasActiveFilter)
+                                Padding(
+                                  padding: const EdgeInsets.only(top: 10),
+                                  child: _buildActiveFilterBanner(
+                                    p,
+                                    state,
+                                    notifier,
+                                  ),
+                                ),
+                              // TIER 3: Grouped Expense List
+                              ..._buildGroupedSections(p, state),
+                            ],
                           ],
-                        ],
-                      ),
-                    );
-                  },
+                        ),
+                      );
+                    },
+                  ),
                 ),
               ),
             ),
-          ),
-          // Floating Undo Toast
-          if (state.toast != null)
-            Positioned(
-              left: 16,
-              right: 16,
-              bottom: 20,
-              child: Center(
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 440),
-                  child: _buildToastBanner(state.toast!, notifier),
+            // Floating Undo Toast
+            if (state.toast != null)
+              Positioned(
+                left: 16,
+                right: 16,
+                // Trên thanh tab kính + nút + (soát 12/11): ở 20 nó nằm dưới kính.
+                bottom: ShellBarInset.floatingBottom(
+                  context,
+                  gap: OmniFabLayer.gap + OmniLiquidFab.size + 12,
+                ),
+                child: Center(
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 440),
+                    child: _buildToastBanner(state.toast!, notifier),
+                  ),
                 ),
               ),
-            ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -361,7 +376,7 @@ class _ExpensesPageState extends ConsumerState<ExpensesPage> {
     );
   }
 
-  /// Nội dung viên kính dưới thanh trên: ô tìm, sắp xếp, thêm khoản chi.
+  /// Nội dung viên kính dưới thanh trên: ô tìm và sắp xếp.
   /// [OmniTopBar] lo viên kính, lớp mờ khi đang tìm và nút "Huỷ".
   Widget _buildSearchRow(
     FinancePalette p,
@@ -423,13 +438,6 @@ class _ExpensesPageState extends ConsumerState<ExpensesPage> {
                 icon: Icons.swap_vert_rounded,
                 color: sortActive ? p.primaryInk : p.ink,
                 onTap: _openSortMenu,
-              ),
-              _buildBarIcon(
-                key: const ValueKey('finance-add-btn'),
-                tooltip: 'Thêm khoản chi',
-                icon: Icons.add_rounded,
-                color: p.ink,
-                onTap: () => showExpenseAddSheet(context: context),
               ),
             ],
           ),
