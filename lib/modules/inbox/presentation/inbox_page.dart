@@ -20,6 +20,7 @@ import 'widgets/conversation_peek.dart';
 import 'widgets/conversation_row.dart';
 import 'widgets/inbox_filter_bar.dart';
 import 'widgets/inbox_pinned_section.dart';
+import 'widgets/message_hits_section.dart';
 
 class InboxPage extends ConsumerStatefulWidget {
   const InboxPage({super.key});
@@ -200,6 +201,12 @@ class _InboxPageState extends ConsumerState<InboxPage>
         const <Conversation>[];
     // Lọc nằm ở ô tìm của thanh trên (người dùng bỏ hàng chip 2026-11-08).
     final lead = pinned.isEmpty ? 0 : 1;
+    // Tin khớp nội dung ô tìm (bug sheet 12/11/2026): nhóm "Tin nhắn" cuối danh
+    // sách. Lỗi hay đang tải thì ẩn — danh sách hội thoại vẫn hiện.
+    final hits =
+        ref.watch(inboxMessageSearchProvider).valueOrNull ??
+        const <MessageSearchHit>[];
+    final term = ref.watch(inboxFilterProvider.select((f) => f.search.trim()));
     final scheme = Theme.of(context).colorScheme;
 
     return Scaffold(
@@ -249,7 +256,8 @@ class _InboxPageState extends ConsumerState<InboxPage>
                       value: list,
                       onRetry: () => ref.invalidate(inboxListProvider),
                       // Rỗng chỉ khi CẢ HAI mục rỗng.
-                      isEmpty: (state) => state.items.isEmpty && pinned.isEmpty,
+                      isEmpty: (state) =>
+                          state.items.isEmpty && pinned.isEmpty && hits.isEmpty,
                       empty: _empty(),
                       data: (state) => ListView.separated(
                         controller: _scrollController,
@@ -263,14 +271,24 @@ class _InboxPageState extends ConsumerState<InboxPage>
                         // sách: một ScrollController, `loadMore` vẫn theo
                         // `extentAfter`.
                         itemCount:
-                            lead + state.items.length + (state.hasMore ? 1 : 0),
+                            lead +
+                            state.items.length +
+                            (state.hasMore ? 1 : 0) +
+                            (hits.isEmpty ? 0 : 1),
                         // Zalo separates rows with a hairline indented past the
                         // avatar (18 + 38 + 10 = 66), not a gap. Gaps between
                         // bordered cards were what made the list read as a table of
                         // records.
                         // Không kẻ vạch ngay dưới mục ghim: mục đó kết thúc
                         // bằng tiêu đề "Hội thoại", dòng đầu nằm sát dưới.
-                        separatorBuilder: (_, rawIndex) => rawIndex < lead
+                        separatorBuilder: (_, rawIndex) =>
+                            rawIndex < lead ||
+                                (hits.isNotEmpty &&
+                                    rawIndex ==
+                                        lead +
+                                            state.items.length +
+                                            (state.hasMore ? 1 : 0) -
+                                            1)
                             ? const SizedBox.shrink()
                             : Padding(
                                 padding: const EdgeInsets.symmetric(
@@ -299,6 +317,23 @@ class _InboxPageState extends ConsumerState<InboxPage>
                             );
                           }
                           final index = rawIndex - lead;
+                          if (hits.isNotEmpty &&
+                              index ==
+                                  state.items.length +
+                                      (state.hasMore ? 1 : 0)) {
+                            return MessageHitsSection(
+                              hits: hits,
+                              term: term,
+                              onOpen: (hit) => context.pushNamed(
+                                InboxRoutes.thread,
+                                pathParameters: {'id': hit.conversation.id},
+                                queryParameters: {
+                                  'q': term,
+                                  'm': hit.message.id,
+                                },
+                              ),
+                            );
+                          }
                           if (index >= state.items.length) {
                             return const Padding(
                               padding: EdgeInsets.all(OmniSpacing.lg),

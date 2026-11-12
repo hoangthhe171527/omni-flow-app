@@ -144,6 +144,14 @@ class QuickReply {
   final String body;
 }
 
+/// Một tin khớp ô tìm và hội thoại của nó (`GET /inbox/messages/search`).
+class MessageSearchHit {
+  const MessageSearchHit({required this.message, required this.conversation});
+
+  final Message message;
+  final Conversation conversation;
+}
+
 class InboxApi {
   InboxApi(this._client);
 
@@ -245,6 +253,30 @@ class InboxApi {
       query: {'q': query.trim(), 'limit': 50},
     );
     return response.list.map(Message.fromJson).toList();
+  }
+
+  /// Tìm NỘI DUNG tin trên mọi hội thoại người xem thấy (bug sheet 12/11/2026,
+  /// `GET /inbox/messages/search`). [filter] là cùng query của danh sách (trừ
+  /// `search`), để kết quả theo đúng bộ lọc đang chọn. Chỉ gọi khi API khai
+  /// `ApiCapability.inboxMessageSearch`.
+  Future<List<MessageSearchHit>> searchAllMessages(
+    String query, {
+    Map<String, dynamic> filter = const {},
+  }) async {
+    final response = await _client.get(
+      '/inbox/messages/search',
+      query: {...filter, 'search': null, 'q': query.trim(), 'limit': 20},
+    );
+    return [
+      for (final row in response.list)
+        if (row['conversation'] is Map<String, dynamic>)
+          MessageSearchHit(
+            message: Message.fromJson(row['message'] as Map<String, dynamic>),
+            conversation: Conversation.fromJson(
+              row['conversation'] as Map<String, dynamic>,
+            ),
+          ),
+    ];
   }
 
   Future<bool> togglePin(String conversationId, String messageId) async {
