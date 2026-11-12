@@ -181,8 +181,10 @@ class _OmniLiquidFabState extends State<OmniLiquidFab>
           boxShadow: [
             BoxShadow(
               color: Colors.black.withValues(alpha: dark ? 0.42 : 0.14),
-              blurRadius: 24,
-              offset: const Offset(0, 10),
+              // Bóng gọn (18/6, trước 24/10): bóng dài loang xuống thanh tab
+              // làm nút trông như dính vào menu.
+              blurRadius: 18,
+              offset: const Offset(0, 6),
             ),
           ],
         ),

@@ -43,7 +43,7 @@ void main() {
         final barTop =
             844 - (ShellBarInset.pillHeight + (safe > 12 ? safe : 12));
         final fab = t.getRect(find.byKey(const Key('channels-connect')));
-        expect(fab.bottom, lessThanOrEqualTo(barTop - 16));
+        expect(fab.bottom, lessThanOrEqualTo(barTop - 32));
       },
     );
   }

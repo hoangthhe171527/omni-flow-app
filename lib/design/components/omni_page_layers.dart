@@ -19,9 +19,12 @@ class OmniFabLayer extends StatelessWidget {
   /// Thường là [OmniLiquidFab]. null = không có nút (thiếu quyền).
   final Widget? fab;
 
-  /// Khe giữa nút và thanh tab: 16 thì bóng nút chạm bóng thanh (đã thử ở
-  /// /teams), nên 20.
-  static const double gap = 20;
+  /// Khe giữa mép dưới nút và mép trên viên kính của thanh tab.
+  ///
+  /// 20 vẫn bị chê "sát, bị menu đè" (12/11): thanh có dải mờ lan lên 12 trên
+  /// viên kính, nút có bóng đổ ~15 phía dưới — hai thứ chồng nhau. 32 = 12 dải
+  /// mờ + ~20 khoảng trống thật. Test `fab_clearance_test.dart` ghim con số.
+  static const double gap = 32;
 
   /// Đệm đáy cho danh sách dưới nút: dòng cuối cuộn lên khỏi nút.
   static double listBottom(BuildContext context, {bool hasFab = true}) =>
