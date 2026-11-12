@@ -15,6 +15,7 @@ import 'widgets/sell_sheet.dart';
 import 'widgets/serial_field.dart';
 import 'widgets/unit_extras.dart';
 import 'widgets/unit_sheet.dart';
+import 'widgets/workshop_target.dart';
 
 /// Tồn kho theo serial (artifact app bản 7): tìm serial / model, Còn bán / Đã
 /// có khách, hàng lọc một dòng thả xuống (Loại · Lô · Tuổi tồn), dòng tổng
@@ -241,32 +242,15 @@ class _StockPageState extends ConsumerState<StockPage> {
     if (ids.isEmpty || _sending) return;
     setState(() => _sending = true);
     try {
-      // Giữ provider tự huỷ sống trong lúc chờ (như `_pickLot`).
-      final sub = ref.listenManual(workshopPlansProvider, (_, _) {});
-      final List<WorkshopPlan> plans;
-      try {
-        plans = await ref.read(workshopPlansProvider.future);
-      } finally {
-        sub.close();
-      }
-      if (!mounted) return;
-      if (plans.isEmpty) {
-        InvUi.toast(
-          context,
-          'Chưa có kế hoạch đang chạy nào bạn quản lý được.',
-        );
-        return;
-      }
-      final r = await showInvOptions<String>(
-        context: context,
-        title: 'Chọn kế hoạch',
-        options: [for (final p in plans) (p.id, p.name)],
-      );
-      final planId = r?.value;
-      if (planId == null || !mounted) return;
+      final target = await pickWorkshopTarget(context, ref);
+      if (target == null || !mounted) return;
       final res = await ref
           .read(inventoryApiProvider)
-          .sendToWorkshop(projectId: planId, unitIds: ids);
+          .sendToWorkshop(
+            projectId: target.planId,
+            sectionId: target.sectionId,
+            unitIds: ids,
+          );
       if (!mounted) return;
       bumpInventory(ref);
       setState(() {

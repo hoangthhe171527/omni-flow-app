@@ -11,6 +11,7 @@ import 'menu_sheet.dart';
 /// và Sao chép công việc theo `taskReminders` / `taskCopy`. "Sao chép liên
 /// kết" luôn có: chỉ chép đường dẫn web (`WebLinks.task`), không gọi API.
 enum TaskMenuAction {
+  resolveIssue,
   labels,
   followers,
   reminders,
@@ -50,10 +51,13 @@ List<List<TaskMenuAction>> taskMenuGroups({
   bool locked = false,
   bool canRemind = false,
   bool canCopy = false,
+  bool canResolveIssue = false,
 }) {
   final edit = !locked;
 
   return [
+    // Tắt cờ vấn đề: chỉ quản lý kế hoạch; việc khoá vẫn được (như bình luận).
+    if (canResolveIssue) [TaskMenuAction.resolveIssue],
     [
       if (canLabels && edit) TaskMenuAction.labels,
       if (canFollow) TaskMenuAction.followers,
@@ -145,6 +149,11 @@ Future<TaskMenuAction?> showTaskMenu(
 
 DetailMenuItem<TaskMenuAction> _item(TaskMenuAction a, int followers) =>
     switch (a) {
+      TaskMenuAction.resolveIssue => DetailMenuItem(
+        value: a,
+        icon: Icons.check_circle_outline_rounded,
+        label: 'Đã xử lý',
+      ),
       TaskMenuAction.labels => DetailMenuItem(
         value: a,
         icon: Icons.sell_outlined,

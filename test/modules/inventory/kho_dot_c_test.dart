@@ -147,7 +147,9 @@ void main() {
           inventoryPermsProvider.overrideWithValue(perms),
           inventoryTodayProvider.overrideWithValue(today),
           workshopPlansProvider.overrideWith(
-            (ref) async => const [(id: 'plan-bh', name: 'Bảo hành 2026')],
+            (ref) async => const [
+              (id: 'plan-bh', name: 'Bảo hành 2026', sections: []),
+            ],
           ),
           accessProvider.overrideWithValue(AccessPolicy(const {})),
         ],

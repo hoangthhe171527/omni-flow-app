@@ -46,6 +46,7 @@ import 'widgets/task_detail/subtasks_card.dart';
 import 'widgets/task_detail/task_info_card.dart';
 import 'widgets/task_detail/task_menu_sheet.dart';
 import 'widgets/task_detail/title_row.dart';
+import 'widgets/task_detail/issue_widgets.dart';
 
 /// Chi tiết một việc (`TaskDetail.dc.html`).
 ///
@@ -148,6 +149,10 @@ class _TaskDetailPageState extends ConsumerState<TaskDetailPage> {
             // Nhắc "mình" chỉ cần đọc được việc; "mọi người" xét trong sheet.
             canRemind: canRemind,
             canCopy: api(ApiCapability.taskCopy) && access.canUpdate,
+            canResolveIssue:
+                loadedTask.issue != null &&
+                access.canUpdate &&
+                _canManageTask(loadedTask, me, access.isAssigner),
           );
     final showFollowers =
         loadedTask != null && api(ApiCapability.taskFollow) && access.canRead;
@@ -253,6 +258,13 @@ class _TaskDetailPageState extends ConsumerState<TaskDetailPage> {
     if (action == null || !context.mounted) return;
 
     switch (action) {
+      case TaskMenuAction.resolveIssue:
+        await _flag(
+          context,
+          controller.resolveIssue,
+          'Đã tắt cờ vấn đề.',
+          bumpBoard: true,
+        );
       case TaskMenuAction.followers:
         await showFollowersSheet(
           context,
@@ -664,7 +676,35 @@ class _Loaded extends ConsumerWidget {
     final canManageFields =
         canModerate && projectId != null && GoRouter.maybeOf(context) != null;
 
+    // Báo vấn đề (TNP_DON_HANG_THEO_CAY §4.3): ai sửa được việc báo được, kể
+    // cả việc khoá (như bình luận); chỉ việc xưởng (gắn cây) có nút.
+    final canReportIssue =
+        task.subject != null &&
+        (access.canUpdate || access.canComplete) &&
+        !viewer;
+
     final bottom = [
+      if (task.issue case final issue?)
+        Padding(
+          padding: const EdgeInsets.only(top: 10),
+          child: IssueCard(issue: issue),
+        ),
+      if (canReportIssue)
+        Padding(
+          padding: const EdgeInsets.only(top: 10),
+          child: OutlinedButton.icon(
+            key: const Key('task-report-issue'),
+            onPressed: () => _reportIssue(context, controller),
+            icon: Icon(
+              Icons.report_outlined,
+              color: OmniColors.dangerTextOf(context),
+            ),
+            label: Text(
+              task.issue == null ? 'Báo vấn đề' : 'Báo lại vấn đề',
+              style: TextStyle(color: OmniColors.dangerTextOf(context)),
+            ),
+          ),
+        ),
       if (unit != null)
         Padding(
           padding: const EdgeInsets.only(top: 10),
@@ -1211,4 +1251,23 @@ bool canManageTask(
   if (task.projectId == null) return me != null && task.createdBy == me;
 
   return _projectOf(ref, task)?.canManage(me, manageAll: false) ?? false;
+}
+
+/// Báo vấn đề: tấm ghi chú + ảnh → `POST /tasks/{id}/issue`. Bảng và đơn đọc
+/// lại để nổi cờ đỏ.
+Future<void> _reportIssue(
+  BuildContext context,
+  TaskController controller,
+) async {
+  final draft = await showReportIssueSheet(context);
+  if (draft == null || !context.mounted) return;
+  final messenger = ScaffoldMessenger.of(context);
+  final container = ProviderScope.containerOf(context);
+  try {
+    await controller.reportIssue(draft.note, photos: draft.photos);
+    container.read(taskRealtimeSignalProvider.notifier).bump();
+    messenger.showSnackBar(const SnackBar(content: Text('Đã báo vấn đề.')));
+  } on AppException catch (e) {
+    messenger.showSnackBar(SnackBar(content: Text(e.message)));
+  }
 }

@@ -8,6 +8,7 @@ import '../data/inventory_api.dart';
 import '../domain/inventory_format.dart';
 import '../domain/inventory_models.dart';
 import '../domain/inventory_permissions.dart';
+import '../domain/order_units.dart';
 
 export '../data/inventory_api.dart'
     show
@@ -48,8 +49,13 @@ void _watchUnits(Ref ref) {
 }
 
 /// Kế hoạch đưa cây vào được: đang chạy và người này quản lý được (như web —
-/// server trả 403 cho kế hoạch không quản lý được).
-typedef WorkshopPlan = ({String id, String name});
+/// server trả 403 cho kế hoạch không quản lý được). `sections` theo thứ tự cột
+/// của bảng, để chọn nhóm việc (TNP_DON_HANG_THEO_CAY §6).
+typedef WorkshopPlan = ({
+  String id,
+  String name,
+  List<({String id, String name})> sections,
+});
 
 final workshopPlansProvider = FutureProvider.autoDispose<List<WorkshopPlan>>((
   ref,
@@ -63,7 +69,11 @@ final workshopPlansProvider = FutureProvider.autoDispose<List<WorkshopPlan>>((
       // `plans` chỉ gồm kế hoạch đang chạy (đã đóng / lưu trữ nằm riêng).
       for (final p in t.plans)
         if (manageAll || (me != null && p.roleOf(me).canManagePlan))
-          (id: p.id, name: p.name),
+          (
+            id: p.id,
+            name: p.name,
+            sections: [for (final s in p.sections) (id: s.id, name: s.name)],
+          ),
   ];
 });
 
@@ -516,3 +526,13 @@ final slipProvider = FutureProvider.autoDispose.family<Slip, String>((
 ) async {
   return ref.watch(inventoryApiProvider).getSlip(no);
 });
+
+// ---------------------------------------------------------------- đơn theo cây
+
+/// Chi tiết đơn theo cây (TNP_DON_HANG_THEO_CAY §6). Đọc lại khi Kho ghi hoặc
+/// việc xưởng đổi (thợ tick, báo vấn đề).
+final orderUnitsProvider = FutureProvider.autoDispose
+    .family<OrderUnits, String>((ref, orderId) async {
+      _watchUnits(ref);
+      return ref.watch(inventoryApiProvider).orderUnits(orderId);
+    });

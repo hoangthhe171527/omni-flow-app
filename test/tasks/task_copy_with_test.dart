@@ -44,6 +44,16 @@ void main() {
     'viewers': [
       {'user_id': 'u9', 'name': 'Quản đốc'},
     ],
+    'issue': {
+      'comment_id': 'c9',
+      'note': 'Nứt bảng cộng hưởng',
+      'photos': [
+        {'id': 'a1', 'url': 'https://x/a.jpg'},
+      ],
+      'by': 'u2',
+      'by_name': 'Bảo Khánh',
+      'at': '2026-11-11T14:20:00+07:00',
+    },
   });
 
   test('không sửa gì thì mọi trường giữ nguyên', () {
@@ -66,6 +76,7 @@ void main() {
     expect(copy.commentCount, full.commentCount);
     expect(copy.viewers.length, full.viewers.length);
     expect(copy.pinned, isTrue);
+    expect(copy.issue?.note, 'Nứt bảng cộng hưởng');
   });
 
   group('ba trường từng bị rơi', () {

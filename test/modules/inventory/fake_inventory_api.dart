@@ -126,8 +126,13 @@ class FakeInventoryApi extends InventoryApi {
   Future<SendToWorkshopResult> sendToWorkshop({
     required String projectId,
     required List<String> unitIds,
+    String? sectionId,
   }) async {
-    workshopSends.add({'project_id': projectId, 'unit_ids': unitIds});
+    workshopSends.add({
+      'project_id': projectId,
+      'unit_ids': unitIds,
+      'section_id': ?sectionId,
+    });
     final skipped = [
       for (final id in unitIds)
         if (workshopSkipped.contains(id)) id,

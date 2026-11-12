@@ -172,6 +172,13 @@ class _BoardTaskCardState extends ConsumerState<BoardTaskCard>
     final soldPriority = isSoldPriority(unit, done: done);
 
     final meta = <Widget>[
+      // Cờ vấn đề (TNP_DON_HANG_THEO_CAY §4.3): đỏ, đứng đầu hàng.
+      if (task.issue != null)
+        const OmniTaskChip.late(
+          'Vấn đề',
+          key: ValueKey('card-issue'),
+          icon: Icons.report_outlined,
+        ),
       // Theo trạng thái lạc quan: vừa tích xong thì thôi báo quá hạn ngay,
       // không đợi server.
       if (task.dueDate != null)

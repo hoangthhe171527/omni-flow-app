@@ -4,9 +4,11 @@ import '../../../core/config/app_config.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/network/api_path.dart';
 import '../../../core/network/api_envelope.dart';
+import '../../../core/utils/json.dart';
 import '../../../design/tokens/omni_covers.dart';
 import '../../tasks/domain/custom_field.dart';
 import '../../tasks/domain/task.dart';
+import '../domain/board_unit.dart';
 import '../domain/plan.dart';
 import '../domain/feed_entry.dart';
 import '../domain/workshop_kpi.dart';
@@ -363,6 +365,41 @@ class PlansApi {
     final response = await _client.get('/projects/${pathSegment(id)}');
 
     return Plan.fromJson(response.object);
+  }
+
+  /// Tìm cây trong kho cho "Thêm việc · Chọn đàn": `GET /inventory/units?q=`
+  /// (cần `inventory.read`). Không gửi `place` → server chỉ trả cây trong kho.
+  Future<List<BoardUnit>> searchUnits(String q, {int limit = 20}) async {
+    final response = await _client.get(
+      '/inventory/units',
+      query: {'q': q, 'limit': limit},
+    );
+    return response.list.map(BoardUnit.fromJson).toList();
+  }
+
+  /// `POST /tasks/from-units` — mỗi cây một việc trong nhóm [sectionId] của
+  /// kế hoạch. Cây đang có việc tân trang mở bị bỏ qua (`meta.skipped`).
+  Future<UnitTasksResult> tasksFromUnits({
+    required String planId,
+    required List<String> unitIds,
+    String? sectionId,
+  }) async {
+    final response = await _client.post(
+      '/tasks/from-units',
+      body: {
+        'project_id': planId,
+        'unit_ids': unitIds,
+        if (sectionId != null && sectionId.isNotEmpty) 'section_id': sectionId,
+      },
+    );
+    final meta = response.raw['meta'];
+    final m = meta is Map
+        ? meta.cast<String, dynamic>()
+        : const <String, dynamic>{};
+    return (
+      created: m['created'] == null ? response.list.length : m.intOr('created'),
+      skipped: m.strList('skipped'),
+    );
   }
 
   /// Công việc trong một dự án, theo thứ tự bảng.

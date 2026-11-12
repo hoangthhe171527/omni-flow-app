@@ -7,7 +7,9 @@ import 'package:omni_app/design/theme/omni_theme.dart';
 import 'package:omni_app/design/tokens/tokens.dart';
 import 'package:omni_app/modules/plans/application/plans_providers.dart';
 import 'package:omni_app/modules/plans/data/plans_api.dart';
+import 'package:omni_app/modules/plans/domain/board_unit.dart';
 import 'package:omni_app/modules/plans/domain/plan.dart';
+import 'package:omni_app/modules/plans/presentation/widgets/add_task_sheet.dart';
 import 'package:omni_app/modules/plans/presentation/edit_sections_page.dart';
 import 'package:omni_app/modules/plans/presentation/plan_board_page.dart';
 import 'package:omni_app/modules/plans/presentation/section_order_page.dart';
@@ -64,7 +66,11 @@ void main() {
   late _FakeTasksApi tasksApi;
   CreateTaskArgs? createdWith;
 
-  Widget host({Set<String> perms = assigner, bool reduceMotion = false}) {
+  Widget host({
+    Set<String> perms = assigner,
+    bool reduceMotion = false,
+    bool canPick = false,
+  }) {
     plansApi = _FakePlansApi(plan);
     tasksApi = _FakeTasksApi(tasks);
     createdWith = null;
@@ -95,6 +101,7 @@ void main() {
         teamDirectoryProvider.overrideWith((ref) async => const <TeamMember>[]),
         plansApiProvider.overrideWithValue(plansApi),
         tasksApiProvider.overrideWithValue(tasksApi),
+        canPickUnitsProvider.overrideWithValue(canPick),
         sessionProvider.overrideWithValue(
           const Session(
             status: SessionStatus.authenticated,
@@ -246,11 +253,79 @@ void main() {
     );
     await tester.tap(add);
     await tester.pumpAndSettle();
+    // + ở cột mở tấm "Thêm việc"; "Thêm chi tiết" vẫn tới trang tạo đầy đủ.
+    expect(find.text('vào Tiếp nhận'), findsOneWidget);
+    await tester.tap(find.byKey(const Key('add-task-full')));
+    await tester.pumpAndSettle();
 
     expect(find.text('trang tao viec'), findsOneWidget);
     expect(createdWith?.planId, planId);
     expect(createdWith?.sectionId, 's1');
     expect(createdWith?.sections.map((s) => s.id), ['s1', 's2', 's3', 's4']);
+  });
+
+  testWidgets('tấm Thêm việc · Gõ tên: tạo việc ở nhóm của cột', (
+    tester,
+  ) async {
+    await pumpBoard(tester);
+    await tester.tap(
+      find.descendant(
+        of: column('Tiếp nhận'),
+        matching: find.text('Thêm công việc'),
+      ),
+    );
+    await tester.pumpAndSettle();
+    // Không xem được Kho: không có "Chọn đàn".
+    expect(find.text('Chọn đàn'), findsNothing);
+    await tester.enterText(find.byKey(const Key('add-task-title')), 'Lau phím');
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('add-task-submit')));
+    await tester.pumpAndSettle();
+
+    expect(tasksApi.created.single, ('Lau phím', planId, 's1'));
+  });
+
+  testWidgets('tấm Thêm việc · Chọn đàn: tick cây, from-units với nhóm cột', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(host(canPick: true));
+    await tester.pumpAndSettle();
+    await tester.tap(
+      find.descendant(
+        of: column('Tiếp nhận'),
+        matching: find.text('Thêm công việc'),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Chọn đàn'));
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.descendant(
+        of: find.byKey(const Key('add-task-unit-search')),
+        matching: find.byType(TextField),
+      ),
+      'yamaha',
+    );
+    await tester.pump(const Duration(milliseconds: 400));
+    await tester.pumpAndSettle();
+    // Cây đang ở xưởng: không chọn được, ghi nhóm đang ở.
+    expect(find.text('Đang ở Lên dây'), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('add-task-unit-u2')));
+    await tester.pumpAndSettle();
+    expect(find.text('Thêm việc'), findsWidgets);
+    await tester.tap(find.byKey(const ValueKey('add-task-unit-u1')));
+    await tester.pumpAndSettle();
+    expect(find.text('Thêm 1 việc'), findsOneWidget);
+    await tester.tap(find.byKey(const Key('add-task-submit')));
+    await tester.pumpAndSettle();
+
+    final (pid, sid, ids) = plansApi.fromUnits.single;
+    expect((pid, sid), (planId, 's1'));
+    expect(ids, ['u1']);
+    expect(find.text('Đã thêm 1 việc.'), findsOneWidget);
   });
 
   testWidgets('nhân viên (worker) không có "Thêm công việc" trên cột', (
@@ -275,6 +350,9 @@ void main() {
         matching: find.text('Thêm công việc'),
       ),
     );
+    await tester.pumpAndSettle();
+    expect(find.text('vào Đang xử lý'), findsOneWidget);
+    await tester.tap(find.byKey(const Key('add-task-full')));
     await tester.pumpAndSettle();
     expect(createdWith?.sectionId, 's2');
   });
@@ -704,6 +782,38 @@ class _FakePlansApi implements PlansApi {
   @override
   Future<Plan> plan(String id) async => _plan;
 
+  final fromUnits = <(String, String?, List<String>)>[];
+
+  @override
+  Future<List<BoardUnit>> searchUnits(String q, {int limit = 20}) async => [
+    BoardUnit.fromJson(const {
+      'id': 'u1',
+      'maker': 'YAMAHA',
+      'model': 'U3H',
+      'serial': '2531940',
+      'lot_code': 'Ep 63',
+      'workshop': [],
+    }),
+    BoardUnit.fromJson(const {
+      'id': 'u2',
+      'maker': 'YAMAHA',
+      'model': 'W106',
+      'workshop': [
+        {'role': 'refurbish', 'state': 'doing', 'section_name': 'Lên dây'},
+      ],
+    }),
+  ];
+
+  @override
+  Future<UnitTasksResult> tasksFromUnits({
+    required String planId,
+    required List<String> unitIds,
+    String? sectionId,
+  }) async {
+    fromUnits.add((planId, sectionId, unitIds));
+    return (created: unitIds.length, skipped: const <String>[]);
+  }
+
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
@@ -713,6 +823,20 @@ class _FakeTasksApi implements TasksApi {
 
   final List<Task> _tasks;
   final searches = <(String, String?)>[];
+  final created = <(String, String?, String?)>[];
+
+  @override
+  Future<Task> create({
+    required String title,
+    String? projectId,
+    String? sectionId,
+    double? order,
+    List<String> assigneeIds = const [],
+    DateTime? dueDate,
+  }) async {
+    created.add((title, projectId, sectionId));
+    return Task.fromJson({'id': 'new', 'title': title});
+  }
 
   @override
   Future<Paged<Task>> list({

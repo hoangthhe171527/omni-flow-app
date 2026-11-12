@@ -7,6 +7,7 @@ import '../../../../security/session/session_controller.dart';
 import '../../../tasks/domain/task_permissions.dart';
 import '../../../tasks/routes.dart';
 import '../../application/inventory_providers.dart';
+import '../../routes.dart';
 import '../../domain/inventory_format.dart';
 import '../../domain/inventory_models.dart';
 import 'inventory_ui.dart';
@@ -16,6 +17,7 @@ import 'sell_sheet.dart';
 import 'serial_field.dart';
 import 'slip_sheet.dart';
 import 'unit_extras.dart';
+import 'workshop_target.dart';
 
 /// Sheet "Chi tiết cây" của Tồn kho: serial chạm để sửa / thêm, tình trạng,
 /// giá, Bán / Đặt trước, Bỏ giữ, Đổi khách, Tạo đơn — theo quyền.
@@ -267,31 +269,15 @@ class _UnitSheetState extends ConsumerState<UnitSheet> {
   Future<void> _warranty() async {
     setState(() => _busy = true);
     try {
-      final sub = ref.listenManual(workshopPlansProvider, (_, _) {});
-      final List<WorkshopPlan> plans;
-      try {
-        plans = await ref.read(workshopPlansProvider.future);
-      } finally {
-        sub.close();
-      }
-      if (!mounted) return;
-      if (plans.isEmpty) {
-        InvUi.toast(
-          context,
-          'Chưa có kế hoạch đang chạy nào bạn quản lý được.',
-        );
-        return;
-      }
-      final r = await showInvOptions<String>(
-        context: context,
-        title: 'Chọn kế hoạch',
-        options: [for (final p in plans) (p.id, p.name)],
-      );
-      final planId = r?.value;
-      if (planId == null || !mounted) return;
+      final target = await pickWorkshopTarget(context, ref);
+      if (target == null || !mounted) return;
       final res = await ref
           .read(inventoryApiProvider)
-          .sendToWorkshop(projectId: planId, unitIds: [_u.id]);
+          .sendToWorkshop(
+            projectId: target.planId,
+            sectionId: target.sectionId,
+            unitIds: [_u.id],
+          );
       bumpInventory(ref);
       if (!mounted) return;
       InvUi.toast(
@@ -486,8 +472,20 @@ class _UnitSheetState extends ConsumerState<UnitSheet> {
                 onTap: canMove && !_busy ? _move : null,
               ),
             OmniGroupRow(
+              key: const ValueKey('inv-unit-sale-row'),
               title: 'Bán',
               subtitle: delivered ? u.customerName : hold,
+              // Cây thuộc đơn: mở chi tiết đơn theo cây (TNP_DON_HANG_THEO_CAY §6).
+              onTap: u.orderId != null && GoRouter.maybeOf(context) != null
+                  ? () {
+                      final router = GoRouter.of(context);
+                      Navigator.of(context).pop();
+                      router.pushNamed(
+                        InventoryRoutes.order,
+                        pathParameters: {'orderId': u.orderId!},
+                      );
+                    }
+                  : null,
               value: delivered
                   ? 'Đã giao'
                   : switch (u.sale) {

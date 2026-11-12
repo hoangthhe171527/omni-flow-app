@@ -46,6 +46,7 @@ import 'widgets/project_cover.dart';
 import 'widgets/plan_copy_move_sheets.dart';
 import 'widgets/plan_menu_sheet.dart';
 import 'widgets/transfer_owner_sheet.dart';
+import 'widgets/add_task_sheet.dart';
 
 /// Bảng kế hoạch (`Board.dc.html`): ảnh nền theo `cover`, header kính tối, dải
 /// cột 300 kéo ngang có snap căn giữa, hé cột kế bên.
@@ -611,8 +612,7 @@ class _PlanBoardPageState extends ConsumerState<PlanBoardPage>
                             pathParameters: {'id': task.id},
                           ),
                           onAddTask: canCreate
-                              ? () =>
-                                    _createTask(plan, real ? section.id : null)
+                              ? () => _addTask(plan, real ? section.id : null)
                               : null,
                           onOptions: canEditSections && real
                               ? (anchor) => _sectionOptions(
@@ -973,6 +973,65 @@ class _PlanBoardPageState extends ConsumerState<PlanBoardPage>
       current: _person,
     );
     if (picked != null && mounted) setState(() => _person = picked);
+  }
+
+  /// + ở cột: tấm "Thêm việc" (Gõ tên / Chọn đàn — TNP_DON_HANG_THEO_CAY §6).
+  /// "Thêm chi tiết" mở trang tạo đầy đủ như trước.
+  Future<void> _addTask(Plan plan, String? sectionId) async {
+    final sectionName =
+        plan.sections.where((s) => s.id == sectionId).firstOrNull?.name ??
+        'Chưa phân nhóm';
+    final choice = await showAddTaskSheet(context, sectionName: sectionName);
+    if (choice == null || !mounted) return;
+    final messenger = ScaffoldMessenger.of(context);
+    void say(String text) => messenger
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(content: Text(text)));
+    try {
+      switch (choice) {
+        case OpenFullCreate():
+          await _createTask(plan, sectionId);
+          return;
+        case AddTypedTask(:final title):
+          await ref
+              .read(tasksApiProvider)
+              .create(
+                title: title,
+                projectId: plan.id,
+                sectionId: sectionId,
+                order: _nextOrder(sectionId),
+              );
+        case AddUnitTasks(:final unitIds):
+          final res = await ref
+              .read(plansApiProvider)
+              .tasksFromUnits(
+                planId: plan.id,
+                sectionId: sectionId,
+                unitIds: unitIds,
+              );
+          final s = res.skipped.length;
+          say(
+            res.created == 0
+                ? 'Không thêm việc nào: $s cây đang có việc tân trang.'
+                : s > 0
+                ? 'Đã thêm ${res.created} việc, bỏ qua $s cây đang có việc tân trang.'
+                : 'Đã thêm ${res.created} việc.',
+          );
+      }
+      if (mounted) ref.invalidate(planTasksProvider(widget.planId));
+    } on AppException catch (error) {
+      say(error.message);
+    }
+  }
+
+  /// Thứ tự cho việc mới ở cuối nhóm [sectionId].
+  double _nextOrder(String? sectionId) {
+    final loaded = ref.read(planTasksProvider(widget.planId)).valueOrNull;
+    final same = loaded?.tasks.where((t) => t.sectionId == sectionId).toList();
+    final ordered = same?.where((t) => t.hasOrder).toList();
+    return ordered == null || ordered.isEmpty
+        ? (same?.length ?? 0).toDouble()
+        : ordered.map((t) => t.order).reduce(math.max) + 1;
   }
 
   /// Mở màn tạo việc với kế hoạch + nhóm của cột đã chạm điền sẵn.

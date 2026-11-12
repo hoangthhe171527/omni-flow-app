@@ -8,6 +8,7 @@ import 'domain/inventory_permissions.dart';
 import 'presentation/catalog_page.dart';
 import 'presentation/counts_page.dart';
 import 'presentation/delivered_page.dart';
+import 'presentation/order_units_page.dart';
 import 'presentation/lot_detail_page.dart';
 import 'presentation/lots_page.dart';
 import 'presentation/receive_page.dart';
@@ -114,6 +115,14 @@ class InventoryModule extends OmniModule {
       rootNavigator: true,
       access: const AccessRequirement.all(InventoryPermissions.readOnly),
       builder: (_, _) => const DeliveredPage(),
+    ),
+    ModuleRoute(
+      path: InventoryRoutes.orderPath,
+      name: InventoryRoutes.order,
+      rootNavigator: true,
+      access: const AccessRequirement.all(InventoryPermissions.readOnly),
+      builder: (_, state) =>
+          OrderUnitsPage(orderId: state.pathParameters['orderId']!),
     ),
   ];
 

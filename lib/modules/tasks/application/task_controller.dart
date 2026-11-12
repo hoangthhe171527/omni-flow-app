@@ -539,6 +539,15 @@ class TaskController
   Future<void> setPinned(bool pinned) =>
       _apply((api) => api.setPinned(arg, pinned));
 
+  /// Báo vấn đề (ghi chú + ảnh) — ai sửa được việc, kể cả việc khoá.
+  Future<void> reportIssue(
+    String note, {
+    List<CommentUpload> photos = const [],
+  }) => _apply((api) => api.reportIssue(arg, note, photos: photos));
+
+  /// Tắt cờ vấn đề — chỉ quản lý kế hoạch.
+  Future<void> resolveIssue() => _apply((api) => api.resolveIssue(arg));
+
   /// Khoá / mở khoá (chủ / quản lý kế hoạch).
   Future<void> setLocked(bool locked) =>
       _apply((api) => api.setLocked(arg, locked));

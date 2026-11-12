@@ -32,4 +32,8 @@ abstract final class InventoryRoutes {
 
   static const delivered = 'inventory.delivered';
   static const deliveredPath = '/inventory/delivered';
+
+  // Đơn hàng theo cây (TNP_DON_HANG_THEO_CAY §6).
+  static const order = 'inventory.order';
+  static const orderPath = '/inventory/orders/:orderId';
 }
