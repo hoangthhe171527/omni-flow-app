@@ -6,12 +6,14 @@ import '../../../core/nav/shell_bar_inset.dart';
 import '../../../core/utils/formatters.dart';
 import '../../../design/components/components.dart';
 import '../../../design/tokens/tokens.dart';
+import '../../../security/session/session_controller.dart';
 import '../../tasks/domain/progress_level.dart';
 import '../../tasks/routes.dart';
 import '../application/inventory_providers.dart';
 import '../domain/inventory_models.dart';
 import '../domain/order_units.dart';
 import 'widgets/inventory_ui.dart';
+import 'widgets/record_payment_sheet.dart';
 
 /// Chi tiết đơn theo cây (TNP_DON_HANG_THEO_CAY §6, bản mẫu 7LZPEX "App · Đơn
 /// hàng"): dòng "N/M cây xong" + vạch màu, cây gom theo trạng thái (nhóm lồng),
@@ -42,7 +44,7 @@ class OrderUnitsPage extends ConsumerWidget {
         ),
       ],
       _ when data == null => [const InvSkeleton(count: 4, height: 64)],
-      _ => _content(context, data),
+      _ => _content(context, ref, data),
     };
 
     return Scaffold(
@@ -63,12 +65,30 @@ class OrderUnitsPage extends ConsumerWidget {
     );
   }
 
-  List<Widget> _content(BuildContext context, OrderUnits d) {
+  List<Widget> _content(BuildContext context, WidgetRef ref, OrderUnits d) {
     final router = GoRouter.maybeOf(context);
+    // Ghi thu: quyền ghi đơn (`orders.write`, như web); đơn đã huỷ thì không.
+    final canPay =
+        ref.watch(accessProvider).can('orders.write') && !d.cancelled;
+    Future<void> pay() async {
+      final ok = await openRecordPaymentSheet(
+        context,
+        orderId: orderId,
+        orderCode: d.code,
+        remaining: d.remaining,
+      );
+      if (ok && context.mounted) InvUi.toast(context, 'Đã ghi thu.');
+    }
+
     return [
       OmniGroupSection(
         key: const ValueKey('order-progress'),
-        children: [_ProgressBlock(data: d)],
+        children: [
+          _ProgressBlock(
+            data: d,
+            onPay: canPay && d.remaining > 0 ? pay : null,
+          ),
+        ],
       ),
       for (final (bucket, units) in d.groups)
         OmniGroupSection(
@@ -87,6 +107,37 @@ class OrderUnitsPage extends ConsumerWidget {
               ),
           ],
         ),
+      // Sổ thu (bản mẫu NWUQNP "Chi tiết đơn · đã thu"): mỗi đợt một dòng.
+      if (d.payments.isNotEmpty || canPay)
+        OmniGroupSection(
+          key: const ValueKey('order-payments'),
+          title: 'Đã thu',
+          children: [
+            for (final p in d.payments)
+              OmniGroupRow(
+                title: Formatters.vnd(p.amount),
+                subtitle: [
+                  if (p.paidAt case final at?) Formatters.date(at),
+                  p.method.label,
+                  ?p.note,
+                ].join(' · '),
+              ),
+            if (canPay && d.remaining > 0)
+              OmniGroupRow.add(
+                key: const ValueKey('order-pay-add'),
+                title: 'Ghi thu',
+                onTap: pay,
+              ),
+          ],
+        ),
+      if (d.value > 0)
+        OmniGroupSection(
+          key: const ValueKey('order-money'),
+          children: [
+            OmniGroupRow(title: 'Tổng đơn', value: Formatters.vnd(d.value)),
+            OmniGroupRow(title: 'Đã thu', value: Formatters.vnd(d.paid)),
+          ],
+        ),
     ];
   }
 }
@@ -94,8 +145,11 @@ class OrderUnitsPage extends ConsumerWidget {
 /// Khối tiến độ (bản mẫu): "N/M cây xong" · "còn X" một dòng, mã đơn, vạch gộp
 /// (đã giao, sẵn sàng, có vấn đề, ở xưởng, chưa vào — theo số cây).
 class _ProgressBlock extends StatelessWidget {
-  const _ProgressBlock({required this.data});
+  const _ProgressBlock({required this.data, this.onPay});
   final OrderUnits data;
+
+  /// Chạm "còn …" mở Ghi thu (tiền chạm để sửa). null = không ghi được.
+  final VoidCallback? onPay;
 
   @override
   Widget build(BuildContext context) {
@@ -108,42 +162,69 @@ class _ProgressBlock extends StatelessWidget {
       (data.count(OrderUnitBucket.inShop), scheme.primary),
       (data.count(OrderUnitBucket.notInShop), scheme.outlineVariant),
     ];
-    return Semantics(
-      label: [
-        for (final b in OrderUnitBucket.values)
-          if (data.count(b) > 0) '${data.count(b)} ${b.label}',
-      ].join(', '),
-      excludeSemantics: true,
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(
-                  child: Text(
-                    data.total == 0
-                        ? 'Chưa có cây nào'
-                        : '${data.done}/${data.total} cây xong',
-                    style: OmniType.bodyStrong.copyWith(
-                      color: scheme.onSurface,
-                    ),
-                  ),
+    final barLabel = [
+      for (final b in OrderUnitBucket.values)
+        if (data.count(b) > 0) '${data.count(b)} ${b.label}',
+    ].join(', ');
+    final due = 'còn ${Formatters.vnd(data.remaining)}';
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Text(
+                  data.total == 0
+                      ? 'Chưa có cây nào'
+                      : '${data.done}/${data.total} cây xong',
+                  style: OmniType.bodyStrong.copyWith(color: scheme.onSurface),
                 ),
-                if (data.remaining > 0)
-                  Text(
-                    'còn ${Formatters.vnd(data.remaining)}',
-                    style: muted.copyWith(fontFeatures: OmniType.tabular),
-                  ),
-              ],
+              ),
+              if (data.remaining > 0)
+                onPay == null
+                    ? Text(
+                        due,
+                        style: muted.copyWith(fontFeatures: OmniType.tabular),
+                      )
+                    : Semantics(
+                        button: true,
+                        label: '$due, ghi thu',
+                        excludeSemantics: true,
+                        child: InkWell(
+                          key: const ValueKey('order-due'),
+                          onTap: onPay,
+                          borderRadius: BorderRadius.circular(8),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(
+                              vertical: 2,
+                              horizontal: 2,
+                            ),
+                            child: Text(
+                              due,
+                              style: OmniType.bodyStrong.copyWith(
+                                color: scheme.primary,
+                                fontFeatures: OmniType.tabular,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+            ],
+          ),
+          const SizedBox(height: 2),
+          Text(data.code, style: muted),
+          if (data.total > 0) ...[
+            const SizedBox(height: 10),
+            Semantics(
+              label: barLabel,
+              excludeSemantics: true,
+              child: _bar(parts),
             ),
-            const SizedBox(height: 2),
-            Text(data.code, style: muted),
-            if (data.total > 0) ...[const SizedBox(height: 10), _bar(parts)],
           ],
-        ),
+        ],
       ),
     );
   }

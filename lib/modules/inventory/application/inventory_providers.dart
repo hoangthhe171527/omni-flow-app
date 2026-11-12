@@ -8,6 +8,7 @@ import '../data/inventory_api.dart';
 import '../domain/inventory_format.dart';
 import '../domain/inventory_models.dart';
 import '../domain/inventory_permissions.dart';
+import '../domain/order_list.dart';
 import '../domain/order_units.dart';
 
 export '../data/inventory_api.dart'
@@ -534,5 +535,44 @@ final slipProvider = FutureProvider.autoDispose.family<Slip, String>((
 final orderUnitsProvider = FutureProvider.autoDispose
     .family<OrderUnits, String>((ref, orderId) async {
       _watchUnits(ref);
+      ref.watch(orderRevisionProvider);
       return ref.watch(inventoryApiProvider).orderUnits(orderId);
     });
+
+/// Tăng sau mỗi lượt ghi đơn (ghi thu, tạo đơn) — danh sách và chi tiết đơn
+/// đọc lại cùng lúc.
+final orderRevisionProvider = StateProvider<int>((ref) => 0);
+
+void bumpOrders(WidgetRef ref) =>
+    ref.read(orderRevisionProvider.notifier).state++;
+
+typedef OrderListQuery = ({OrderListFilter filter, String q});
+
+/// Danh sách đơn (bản mẫu NWUQNP). "Cần thu" = còn phải thu > 0, chưa huỷ —
+/// lọc trên 100 đơn mới nhất vì API chỉ lọc một trạng thái thu mỗi lần.
+final ordersListProvider = FutureProvider.autoDispose
+    .family<List<OrderRow>, OrderListQuery>((ref, f) async {
+      ref.watch(orderRevisionProvider);
+      ref.watch(inventoryRevisionProvider);
+      final q = f.q.trim();
+      final rows = await ref
+          .watch(inventoryApiProvider)
+          .listOrders(
+            search: q.isEmpty ? null : q,
+            status: f.filter == OrderListFilter.processing
+                ? 'processing'
+                : null,
+          );
+      return f.filter == OrderListFilter.due
+          ? [
+              for (final o in rows)
+                if (o.remaining > 0) o,
+            ]
+          : rows;
+    });
+
+final ordersDueProvider = FutureProvider.autoDispose<OrdersDue>((ref) async {
+  ref.watch(orderRevisionProvider);
+  ref.watch(inventoryRevisionProvider);
+  return ref.watch(inventoryApiProvider).ordersDue();
+});

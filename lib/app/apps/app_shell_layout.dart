@@ -53,6 +53,8 @@ const appItemSpecs = <String, AppItemSpec>{
   'inbox': AppItemSpec('inbox.list'),
   'customers': AppItemSpec('customers.list'),
   'opportunities': AppItemSpec('opportunities.pipeline'),
+  // Đơn hàng theo cây (TNP_DON_HANG_THEO_CAY §6): danh sách, tạo đơn, ghi thu.
+  'orders': AppItemSpec('inventory.orders'),
   'sales_stock': AppItemSpec(
     'inventory.stock',
     capabilities: [_inventory],

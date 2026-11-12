@@ -17,7 +17,11 @@ import 'package:intl/date_symbol_data_local.dart';
 import 'package:omni_app/design/theme/omni_theme.dart';
 import 'package:omni_app/modules/inventory/application/inventory_providers.dart';
 import 'package:omni_app/modules/inventory/domain/order_units.dart';
+import 'package:omni_app/modules/inventory/domain/inventory_permissions.dart';
+import 'package:omni_app/modules/inventory/domain/order_list.dart';
 import 'package:omni_app/modules/inventory/presentation/order_units_page.dart';
+import 'package:omni_app/modules/inventory/presentation/orders_page.dart';
+import 'package:omni_app/modules/inventory/presentation/widgets/record_payment_sheet.dart';
 import 'package:omni_app/modules/plans/data/plans_api.dart';
 import 'package:omni_app/modules/plans/domain/board_unit.dart';
 import 'package:omni_app/modules/plans/presentation/widgets/add_task_sheet.dart';
@@ -365,4 +369,92 @@ void main() {
       },
     ),
   );
+
+  testWidgets(
+    'danh sach don',
+    (t) => shoot(
+      t,
+      app(
+        const OrdersPage(),
+        extra: [
+          inventoryPermsProvider.overrideWithValue(
+            const InventoryPerms(read: true, sell: true, reserve: true),
+          ),
+          inventoryTodayProvider.overrideWithValue(DateTime(2026, 11, 12)),
+          ordersDueProvider.overrideWith(
+            (ref) async => (outstanding: 512000000.0, awaiting: 4),
+          ),
+          ordersListProvider.overrideWith(
+            (ref, q) async => [for (final j in _orders) OrderRow.fromJson(j)],
+          ),
+        ],
+      ),
+      'danh-sach-don',
+    ),
+  );
+
+  testWidgets(
+    'ghi thu',
+    (t) => shoot(
+      t,
+      app(
+        opener(
+          (c) => openRecordPaymentSheet(
+            c,
+            orderId: 'o1',
+            orderCode: 'DH-2611-014',
+            remaining: 203500000,
+          ),
+        ),
+        extra: [
+          inventoryTodayProvider.overrideWithValue(DateTime(2026, 11, 12)),
+        ],
+      ),
+      'ghi-thu',
+      act: () => t.tap(find.text('mở')),
+    ),
+  );
 }
+
+const _orders = [
+  {
+    'id': 'a',
+    'code': 'DH-2611-014',
+    'customer_name': 'Phạm Minh Đức',
+    'product': '5 cây: KAWAI BL-71, YAMAHA W106…',
+    'value': 303500000,
+    'paid': 100000000,
+    'pay_status': 'partial',
+    'created_at': '2026-11-11T03:00:00Z',
+  },
+  {
+    'id': 'b',
+    'code': 'DH-2611-012',
+    'customer_name': 'Lê Thu Hà',
+    'product': '1 cây: YAMAHA U2H · 2455019',
+    'value': 58000000,
+    'paid': 0,
+    'pay_status': 'unpaid',
+    'created_at': '2026-11-10T03:00:00Z',
+  },
+  {
+    'id': 'c',
+    'code': 'DH-2611-010',
+    'customer_name': 'Trường Mầm non Hoa Sen',
+    'product': '3 cây',
+    'value': 286000000,
+    'paid': 100000000,
+    'pay_status': 'partial',
+    'created_at': '2026-11-10T03:00:00Z',
+  },
+  {
+    'id': 'd',
+    'code': 'DH-2610-087',
+    'customer_name': 'Nguyễn Hoàng Long',
+    'product': '2 cây',
+    'value': 64500000,
+    'paid': 0,
+    'pay_status': 'unpaid',
+    'created_at': '2026-10-28T03:00:00Z',
+  },
+];
