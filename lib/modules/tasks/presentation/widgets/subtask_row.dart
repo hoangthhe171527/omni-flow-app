@@ -40,7 +40,12 @@ class SubtaskRow extends StatelessWidget {
     this.first = false,
     this.onSetDue,
     this.dragHandle,
+    this.onRename,
   });
+
+  /// Có thì chạm vào tên việc con là sửa tại chỗ (bug sheet 12/11/2026).
+  /// Ấn giữ vẫn là kéo — chạm và ấn giữ không tranh nhau.
+  final Future<void> Function(String next)? onRename;
 
   /// Vùng chạm tối thiểu của mỗi nút trong dòng.
   static const double tapSize = 44;
@@ -175,15 +180,27 @@ class SubtaskRow extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      subtask.title,
+                    OmniInlineRename(
+                      value: subtask.title,
+                      canEdit: onRename != null,
+                      onSubmit: (next) => onRename!(next),
+                      semanticsLabel: 'Chạm để sửa tên việc con',
+                      fieldKey: ValueKey('subtask-title-field-${subtask.id}'),
                       style: OmniType.body.copyWith(
                         fontWeight: FontWeight.w500,
                         height: 1.35,
-                        decoration: subtask.done
-                            ? TextDecoration.lineThrough
-                            : null,
-                        color: subtask.done ? secondary : scheme.onSurface,
+                        color: scheme.onSurface,
+                      ),
+                      builder: (_) => Text(
+                        subtask.title,
+                        style: OmniType.body.copyWith(
+                          fontWeight: FontWeight.w500,
+                          height: 1.35,
+                          decoration: subtask.done
+                              ? TextDecoration.lineThrough
+                              : null,
+                          color: subtask.done ? secondary : scheme.onSurface,
+                        ),
                       ),
                     ),
                     if (subtask.description case final note?)

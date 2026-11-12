@@ -16,6 +16,7 @@ export 'omni_dashed_circle.dart';
 export 'omni_glass.dart';
 export 'omni_group.dart';
 export 'omni_liquid_fab.dart';
+export 'omni_inline_rename.dart';
 export 'omni_inputs.dart';
 export 'omni_motion_widgets.dart';
 export 'omni_page_layers.dart';

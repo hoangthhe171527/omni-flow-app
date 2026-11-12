@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../../core/error/app_exception.dart';
+import '../../../../../design/components/components.dart';
 import '../../../../../design/platform/omni_motion_scope.dart';
 import '../../../../../design/tokens/tokens.dart';
 import '../../../application/task_controller.dart';
@@ -23,11 +24,15 @@ class TaskTitleRow extends ConsumerStatefulWidget {
     required this.task,
     required this.taskId,
     required this.canComplete,
+    this.onRename,
   });
 
   final Task task;
   final String taskId;
   final bool canComplete;
+
+  /// Có thì chạm vào tên là sửa tại chỗ (bug sheet 12/11/2026).
+  final Future<void> Function(String next)? onRename;
 
   @override
   ConsumerState<TaskTitleRow> createState() => _TaskTitleRowState();
@@ -193,12 +198,23 @@ class _TaskTitleRowState extends ConsumerState<TaskTitleRow>
           constraints: const BoxConstraints(minHeight: 44),
           child: Padding(
             padding: const EdgeInsets.only(left: 38, top: 7),
-            child: Text(
-              widget.task.title,
-              key: const ValueKey('detail-title'),
+            child: OmniInlineRename(
+              value: widget.task.title,
+              canEdit: widget.onRename != null,
+              onSubmit: (next) => widget.onRename!(next),
+              semanticsLabel: 'Chạm để sửa tên việc',
+              fieldKey: const ValueKey('detail-title-field'),
               style: OmniType.title.copyWith(
                 letterSpacing: 0,
                 color: scheme.onSurface,
+              ),
+              builder: (_) => Text(
+                widget.task.title,
+                key: const ValueKey('detail-title'),
+                style: OmniType.title.copyWith(
+                  letterSpacing: 0,
+                  color: scheme.onSurface,
+                ),
               ),
             ),
           ),

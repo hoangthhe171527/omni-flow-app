@@ -613,6 +613,14 @@ class _Loaded extends ConsumerWidget {
             task: task,
             taskId: taskId,
             canComplete: canCompleteParent,
+            // Cùng cổng với mục "Đổi tên" trong ⋯ (người giao việc, việc chưa
+            // khoá, không phải người xem kế hoạch).
+            onRename: isAssigner
+                ? (next) => _guard(
+                    ScaffoldMessenger.of(context),
+                    () => actions.editTitle(task, next),
+                  )
+                : null,
           ),
         ),
         if (task.projectName != null || sectionName != null) ...[
