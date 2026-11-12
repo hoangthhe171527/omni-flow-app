@@ -6,6 +6,7 @@ import '../../../core/utils/json.dart';
 import '../../customers/customers.dart';
 import '../domain/inventory_format.dart';
 import '../domain/inventory_models.dart';
+import '../domain/order_list.dart';
 import '../domain/order_units.dart';
 import '../domain/receive.dart';
 
@@ -770,7 +771,53 @@ class InventoryApi {
       customerName: o.str('customer_name') ?? '',
       value: o.dbl('value') ?? 0,
       paid: o.dbl('paid') ?? 0,
+      cancelled: o.str('status') == 'cancelled',
+      payments: o.mapList('payments').map(OrderPayment.fromJson).toList(),
       units: data.mapList('units').map(OrderUnit.fromJson).toList(),
+    );
+  }
+
+  /// Danh sách đơn (`GET /orders`), mới nhất trước. API lọc mỗi khoá một giá
+  /// trị nên "Cần thu" (chưa thu + thu một phần) lọc ở app trên trang này.
+  Future<List<OrderRow>> listOrders({
+    String? search,
+    String? status,
+    int perPage = 100,
+  }) async {
+    final res = await _api.get(
+      '/orders',
+      query: {'search': search, 'status': status, 'per_page': perPage},
+    );
+    return res.list.map(OrderRow.fromJson).toList();
+  }
+
+  /// Tổng còn phải thu và số đơn chờ thu (`GET /orders/summary`).
+  Future<OrdersDue> ordersDue() async {
+    final s = (await _api.get('/orders/summary')).object;
+    return (
+      outstanding:
+          s.dbl('outstanding') ??
+          ((s.dbl('total_value') ?? 0) - (s.dbl('total_paid') ?? 0)),
+      awaiting: s.intOr('awaiting_payment'),
+    );
+  }
+
+  /// Ghi một đợt thu: `POST /orders/{id}/payments` (như web).
+  Future<void> recordPayment(
+    String orderId, {
+    required int amount,
+    required DateTime paidAt,
+    required PaymentMethod method,
+    String? note,
+  }) async {
+    await _api.post(
+      '/orders/${_e(orderId)}/payments',
+      body: {
+        'amount': amount,
+        'paid_at': InventoryFormat.isoDay(paidAt),
+        'method': method.wire,
+        if (note != null && note.trim().isNotEmpty) 'note': note.trim(),
+      },
     );
   }
 

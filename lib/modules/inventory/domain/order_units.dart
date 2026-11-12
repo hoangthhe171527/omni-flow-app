@@ -1,5 +1,6 @@
 import '../../../core/utils/formatters.dart';
 import '../../../core/utils/json.dart';
+import 'order_list.dart';
 
 /// Trạng thái một cây trong đơn — server tính (`GET /orders/{id}/units`,
 /// TNP_DON_HANG_THEO_CAY §3), app chỉ gom và hiện. Thứ tự = thứ tự nhóm.
@@ -141,6 +142,8 @@ class OrderUnits {
     required this.units,
     this.value = 0,
     this.paid = 0,
+    this.payments = const [],
+    this.cancelled = false,
   });
 
   final String code;
@@ -148,6 +151,10 @@ class OrderUnits {
   final double value;
   final double paid;
   final List<OrderUnit> units;
+
+  /// Sổ thu, mới nhất cuối (như API). Người không có quyền tiền đơn: rỗng.
+  final List<OrderPayment> payments;
+  final bool cancelled;
 
   int get total => units.length;
 

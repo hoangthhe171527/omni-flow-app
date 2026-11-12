@@ -9,6 +9,7 @@ import 'presentation/catalog_page.dart';
 import 'presentation/counts_page.dart';
 import 'presentation/delivered_page.dart';
 import 'presentation/order_units_page.dart';
+import 'presentation/orders_page.dart';
 import 'presentation/lot_detail_page.dart';
 import 'presentation/lots_page.dart';
 import 'presentation/receive_page.dart';
@@ -117,6 +118,12 @@ class InventoryModule extends OmniModule {
       builder: (_, _) => const DeliveredPage(),
     ),
     ModuleRoute(
+      path: InventoryRoutes.ordersPath,
+      name: InventoryRoutes.orders,
+      access: const AccessRequirement.all(['orders.read']),
+      builder: (_, _) => const OrdersPage(),
+    ),
+    ModuleRoute(
       path: InventoryRoutes.orderPath,
       name: InventoryRoutes.order,
       rootNavigator: true,
@@ -128,6 +135,19 @@ class InventoryModule extends OmniModule {
 
   @override
   List<ModuleNavEntry> navEntries() => const [
+    // Đơn hàng theo cây (TNP_DON_HANG_THEO_CAY §6): danh sách, tạo đơn, ghi thu.
+    ModuleNavEntry(
+      moduleId: moduleId,
+      label: 'Đơn hàng',
+      subtitle: 'Cần thu, tạo đơn, ghi thu',
+      icon: Icons.receipt_long_outlined,
+      selectedIcon: Icons.receipt_long_rounded,
+      routeName: InventoryRoutes.orders,
+      area: NavArea.sales,
+      weight: NavWeight.secondary,
+      order: 39,
+      access: AccessRequirement.all(['orders.read']),
+    ),
     ModuleNavEntry(
       moduleId: moduleId,
       label: 'Tồn kho',
