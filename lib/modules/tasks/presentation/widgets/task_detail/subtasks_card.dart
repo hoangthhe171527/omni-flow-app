@@ -239,6 +239,8 @@ class SubtasksCard extends ConsumerWidget {
             )
           : null,
       onAssign: canAssignThis ? (anchor) => _assign(context, s, anchor) : null,
+      // Cùng cổng với "Đổi tên" trong ⋮.
+      onRename: canEdit ? (next) => controller.renameSubtask(s.id, next) : null,
     );
   }
 
