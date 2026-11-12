@@ -2,9 +2,11 @@ import '../../../core/utils/avatar_url.dart';
 import '../../../core/utils/formatters.dart';
 import '../../../core/utils/json.dart';
 import 'task_activity.dart';
+import 'task_issue.dart';
 import 'task_unit.dart';
 import 'task_unit.dart' as task_unit;
 
+export 'task_issue.dart';
 export 'task_unit.dart';
 
 // URL ảnh người được chuẩn hoá NGAY LÚC PARSE (`resolveAvatarUrl`), ở cả bốn
@@ -125,6 +127,7 @@ class TaskComment {
     this.mentionedUserNames = const [],
     this.createdAt,
     this.attachments = const [],
+    this.kind,
   });
 
   factory TaskComment.fromJson(Map<String, dynamic> json) => TaskComment(
@@ -144,9 +147,18 @@ class TaskComment {
         .mapList('attachments')
         .map(TaskAttachment.fromJson)
         .toList(),
+    kind: switch (json['kind']) {
+      'issue' => 'issue',
+      'issue_resolved' => 'issue_resolved',
+      _ => null,
+    },
   );
 
   final String id;
+
+  /// `issue` (lời báo vấn đề) | `issue_resolved` (Đã xử lý); bình luận thường
+  /// → null.
+  final String? kind;
 
   /// Rỗng được khi bình luận chỉ có tệp.
   final String body;
@@ -271,6 +283,7 @@ class Task {
     this.customerName,
     this.subject,
     this.unit,
+    this.issue,
     this.order = 0,
     this.hasOrder = true,
   });
@@ -355,6 +368,8 @@ class Task {
     // `unit: null` dù còn `subject`.
     subject: TaskSubject.parse(json['subject']),
     unit: TaskUnit.parse(json['unit']),
+    // Cờ vấn đề (API #111): luôn có khoá, `null` khi không có; API cũ thiếu.
+    issue: TaskIssue.parse(json['issue']),
     order: json.dbl('order') ?? 0,
     hasOrder: json.dbl('order') != null,
   );
@@ -514,6 +529,9 @@ class Task {
 
   /// Cây của việc, số hiện tại của Kho. null = việc thường hoặc cây đã xoá.
   final TaskUnit? unit;
+
+  /// Cờ vấn đề đang mở. null = không có (hoặc API cũ).
+  final TaskIssue? issue;
 
   /// Việc tân trang mà cây đã giao — thuộc cột ảo "Đã giao" của bảng.
   bool get isDeliveredRefurbish =>
@@ -704,6 +722,7 @@ class Task {
     customerName: customerName,
     subject: subject,
     unit: unit,
+    issue: issue,
     order: order ?? this.order,
     hasOrder: hasOrder ?? (order != null || this.hasOrder),
   );

@@ -189,8 +189,8 @@ void main() {
   group('Đưa vào xưởng', () {
     const workshop = InventoryPerms(read: true, workshop: true);
     const plans = <WorkshopPlan>[
-      (id: 'p1', name: 'Tân trang đàn piano cơ'),
-      (id: 'p2', name: 'Đàn điện'),
+      (id: 'p1', name: 'Tân trang đàn piano cơ', sections: []),
+      (id: 'p2', name: 'Đàn điện', sections: []),
     ];
 
     // s1 chưa vào xưởng, s2 đang có việc tân trang mở, s3 đã tân trang xong.
@@ -311,6 +311,44 @@ void main() {
         find.text('Đã tạo 1 việc xưởng, bỏ qua 1 cây đang có việc tân trang.'),
         findsOneWidget,
       );
+    });
+
+    testWidgets('kế hoạch nhiều nhóm: chọn nhóm việc, gửi section_id', (
+      t,
+    ) async {
+      final api = await pump(
+        t,
+        perms: workshop,
+        units: units(),
+        plans: const [
+          (
+            id: 'p1',
+            name: 'Tân trang đàn piano cơ',
+            sections: [
+              (id: 'sA', name: 'Nhập xưởng'),
+              (id: 'sB', name: 'Lên dây'),
+            ],
+          ),
+        ],
+      );
+
+      await t.tap(find.text('Chọn nhiều cây'));
+      await t.pumpAndSettle();
+      await t.tap(find.text('YAMAHA U3H'));
+      await t.pumpAndSettle();
+      await t.tap(find.byKey(const ValueKey('inv-stock-send-picked')));
+      await t.pumpAndSettle();
+      await t.tap(find.text('Tân trang đàn piano cơ'));
+      await t.pumpAndSettle();
+      expect(find.text('Nhóm việc'), findsOneWidget);
+      await t.tap(find.text('Lên dây'));
+      await t.pumpAndSettle();
+
+      expect(api.workshopSends.single, {
+        'project_id': 'p1',
+        'unit_ids': ['s1'],
+        'section_id': 'sB',
+      });
     });
 
     testWidgets('không có kế hoạch quản lý được: báo, không gọi API', (

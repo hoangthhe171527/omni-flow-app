@@ -707,6 +707,35 @@ class TasksApi {
     return Task.fromJson(response.object);
   }
 
+  /// Báo vấn đề (TNP_DON_HANG_THEO_CAY §4.3): multipart `note` (≤ 2000) +
+  /// `files[]` ảnh (≤ 10) trên `POST /tasks/{id}/issue`. Server ghi bình luận
+  /// `kind: issue` và đặt cờ; báo lại thì thay cờ cũ. Việc khoá vẫn báo được.
+  Future<Task> reportIssue(
+    String taskId,
+    String note, {
+    List<CommentUpload> photos = const [],
+  }) async {
+    final response = await _client.uploadMany(
+      '$_base/${pathSegment(taskId)}/issue',
+      files: [
+        for (final f in photos)
+          (field: 'files[]', path: f.path, filename: f.name),
+      ],
+      fields: [MapEntry('note', note.trim())],
+    );
+
+    return Task.fromJson(response.object);
+  }
+
+  /// Tắt cờ vấn đề ("Đã xử lý") — chỉ quản lý kế hoạch, người khác 403.
+  Future<Task> resolveIssue(String taskId) async {
+    final response = await _client.post(
+      '$_base/${pathSegment(taskId)}/issue/resolve',
+    );
+
+    return Task.fromJson(response.object);
+  }
+
   /// Gỡ một tệp kèm bình luận (người tải hoặc quản lý; việc khoá vẫn được).
   Future<Task> deleteCommentAttachment(
     String taskId,

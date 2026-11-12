@@ -313,7 +313,15 @@ class _Comment extends StatelessWidget {
                               color: scheme.primary,
                               fontWeight: FontWeight.w500,
                             )
-                          : body.copyWith(color: scheme.onSurface),
+                          : body.copyWith(
+                              // Lời báo vấn đề đỏ, "Đã xử lý" màu chính: lịch
+                              // sử nhìn ra ngay dù cờ trên việc đã tắt.
+                              color: switch (comment.kind) {
+                                'issue' => OmniColors.dangerTextOf(context),
+                                'issue_resolved' => scheme.primary,
+                                _ => scheme.onSurface,
+                              },
+                            ),
                     ),
                 ],
               ),

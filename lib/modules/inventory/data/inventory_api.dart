@@ -6,6 +6,7 @@ import '../../../core/utils/json.dart';
 import '../../customers/customers.dart';
 import '../domain/inventory_format.dart';
 import '../domain/inventory_models.dart';
+import '../domain/order_units.dart';
 import '../domain/receive.dart';
 
 final inventoryApiProvider = Provider<InventoryApi>((ref) {
@@ -692,7 +693,8 @@ class InventoryApi {
 
   // ---------------- xưởng ----------------
 
-  /// `POST /tasks/from-units` `{project_id, unit_ids[]}` — đưa cây vào xưởng:
+  /// `POST /tasks/from-units` `{project_id, unit_ids[], section_id?}` — đưa cây
+  /// vào xưởng, vào nhóm việc `sectionId` (bỏ trống: server chọn nhóm đầu):
   /// mỗi cây một việc của kế hoạch (`TaskUnitController::fromUnits`). 201
   /// `{data: việc[], meta: {created, skipped}}`; 403 không quản lý được kế
   /// hoạch; 404 cây không còn.
@@ -702,10 +704,15 @@ class InventoryApi {
   Future<SendToWorkshopResult> sendToWorkshop({
     required String projectId,
     required List<String> unitIds,
+    String? sectionId,
   }) async {
     final res = await _api.post(
       '/tasks/from-units',
-      body: {'project_id': projectId, 'unit_ids': unitIds},
+      body: {
+        'project_id': projectId,
+        'unit_ids': unitIds,
+        if (sectionId != null && sectionId.isNotEmpty) 'section_id': sectionId,
+      },
     );
     final meta = res.raw['meta'];
     final m = meta is Map
@@ -746,6 +753,25 @@ class InventoryApi {
     );
     final o = res.object;
     return (id: o.strOr('id', ''), code: o.str('code') ?? o.strOr('id', ''));
+  }
+
+  /// Chi tiết đơn theo cây (TNP_DON_HANG_THEO_CAY §4.1): `GET /orders/{id}`
+  /// (mã, khách, giá trị, đã thu) + `GET /orders/{id}/units` (cây theo nhóm).
+  Future<OrderUnits> orderUnits(String orderId) async {
+    final id = _e(orderId);
+    final (order, units) = await (
+      _api.get('/orders/$id'),
+      _api.get('/orders/$id/units'),
+    ).wait;
+    final o = order.object;
+    final data = units.object;
+    return OrderUnits(
+      code: o.str('code') ?? orderId,
+      customerName: o.str('customer_name') ?? '',
+      value: o.dbl('value') ?? 0,
+      paid: o.dbl('paid') ?? 0,
+      units: data.mapList('units').map(OrderUnit.fromJson).toList(),
+    );
   }
 
   /// Đơn còn mở (chưa huỷ / hoàn tất) của một khách.
