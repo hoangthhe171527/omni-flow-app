@@ -622,6 +622,15 @@ class _PlanBoardPageState extends ConsumerState<PlanBoardPage>
                                   canRemove: realSections.length > 1,
                                 )
                               : null,
+                          // Cùng cổng với "Đổi tên nhóm" trong ⋯.
+                          onRename: canEditSections && real
+                              ? (name) => _saveSections([
+                                  for (final s in plan.sections)
+                                    s.id == section.id
+                                        ? _copy(s, name: name)
+                                        : s,
+                                ])
+                              : null,
                         ),
                       ),
                     );

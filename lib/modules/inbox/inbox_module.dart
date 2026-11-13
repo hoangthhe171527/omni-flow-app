@@ -40,8 +40,11 @@ class InboxModule extends OmniModule {
       // notification tap should land here without a tab bar underneath.
       rootNavigator: true,
       access: const AccessRequirement.any(InboxPermissions.anyRead),
-      builder: (_, state) =>
-          ThreadPage(conversationId: state.pathParameters['id']!),
+      builder: (_, state) => ThreadPage(
+        conversationId: state.pathParameters['id']!,
+        initialQuery: state.uri.queryParameters['q'],
+        focusMessageId: state.uri.queryParameters['m'],
+      ),
     ),
     ModuleRoute(
       path: InboxRoutes.threadInfoPath,

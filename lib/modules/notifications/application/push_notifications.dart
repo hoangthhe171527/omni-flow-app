@@ -148,6 +148,10 @@ class PushIntent {
       // Every task push opens the task itself. A stage is not a screen of its
       // own, and the worker needs the surrounding work to act on it anyway.
       'task_assigned' ||
+      // Việc mới trong kế hoạch, và thợ báo vấn đề (bug sheet 12/11/2026):
+      // thiếu ở đây thì push vẫn hiện, chạm vào không đi đâu.
+      'task_created' ||
+      'task_issue' ||
       'task_stage_open' ||
       'task_completed' ||
       'task_overdue' ||

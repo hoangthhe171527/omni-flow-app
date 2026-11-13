@@ -58,9 +58,19 @@ const _defaultTemplates = <String>[
 ];
 
 class ThreadPage extends ConsumerStatefulWidget {
-  const ThreadPage({super.key, required this.conversationId});
+  const ThreadPage({
+    super.key,
+    required this.conversationId,
+    this.initialQuery,
+    this.focusMessageId,
+  });
 
   final String conversationId;
+
+  /// Mở từ kết quả tìm của Hộp thư (bug sheet 12/11/2026): bật ô tìm với từ
+  /// này và nhảy tới [focusMessageId] (kể cả tin cũ — tìm tự nạp tin về).
+  final String? initialQuery;
+  final String? focusMessageId;
 
   @override
   ConsumerState<ThreadPage> createState() => _ThreadPageState();
@@ -78,6 +88,9 @@ class _ThreadPageState extends ConsumerState<ThreadPage>
   String? _syncCursor;
   bool _syncing = false;
   Timer? _searchDebounce;
+
+  /// Tin cần nhảy tới ở lượt tìm đầu (mở từ kết quả tìm Hộp thư).
+  String? _pendingFocusId;
   Message? _replyingTo;
 
   /// Câu 422 của server khi gửi (`channel_send_unsupported`), hiện trong
@@ -104,6 +117,15 @@ class _ThreadPageState extends ConsumerState<ThreadPage>
     _scrollController.addListener(_onScroll);
     WidgetsBinding.instance.addObserver(this);
     _startRealtimeFallback();
+    final query = widget.initialQuery?.trim() ?? '';
+    if (query.length >= 2) {
+      _pendingFocusId = widget.focusMessageId;
+      _searchController.text = query;
+      _searchMode = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _search(query);
+      });
+    }
     // Opening a thread is the act of reading it.
     Future.microtask(() async {
       // `/read` cần `inbox.write` (routes.php:49). Người chỉ đọc không gọi:
@@ -543,9 +565,14 @@ class _ThreadPageState extends ConsumerState<ThreadPage>
         ref
             .read(threadProvider(widget.conversationId).notifier)
             .mergeMessages(found);
+        final focus = _pendingFocusId;
+        _pendingFocusId = null;
+        final focusIndex = focus == null
+            ? -1
+            : found.indexWhere((m) => m.id == focus);
         setState(() {
           _searchResults = found;
-          _searchIndex = 0;
+          _searchIndex = focusIndex < 0 ? 0 : focusIndex;
         });
         _ensureSearchVisible();
       } on AppException catch (error) {

@@ -9,6 +9,9 @@ import '../../../core/utils/json.dart';
 /// explicit fallback is the only shape that guarantees it.
 enum NotificationKind {
   taskAssigned('TASK_ASSIGNED'),
+
+  /// Quản lý thêm việc mới vào kế hoạch (`NotifyTaskCreated` bên API).
+  taskCreated('TASK_CREATED'),
   taskStageOpen('TASK_STAGE_OPEN'),
   taskProgress('TASK_PROGRESS'),
   taskCompleted('TASK_COMPLETED'),
@@ -19,6 +22,10 @@ enum NotificationKind {
 
   /// Lời nhắc theo giờ tự chọn (Việc mới, `NotificationType::TaskReminder`).
   taskReminder('TASK_REMINDER'),
+
+  /// Thợ báo vấn đề ở việc xưởng (`NotifyTaskIssue`). Thiếu dòng này thì
+  /// dòng chuông rơi vào [other] và chạm vào không mở được việc.
+  taskIssue('TASK_ISSUE'),
   inboxMessage('INBOX_MESSAGE'),
 
   /// Anything the server knows about and this build does not.

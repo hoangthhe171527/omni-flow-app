@@ -363,7 +363,9 @@ class NotificationRow extends StatelessWidget {
 IconData _iconForKind(NotificationKind kind) => switch (kind) {
   NotificationKind.inboxMessage => Icons.chat_bubble_outline_rounded,
   NotificationKind.taskAssigned => Icons.assignment_ind_outlined,
+  NotificationKind.taskCreated => Icons.add_task_rounded,
   NotificationKind.taskStageOpen => Icons.pan_tool_alt_outlined,
+  NotificationKind.taskIssue => Icons.report_problem_outlined,
   NotificationKind.taskProgress => Icons.timeline_rounded,
   NotificationKind.taskCompleted => Icons.check_circle_outline_rounded,
   NotificationKind.taskCommented ||

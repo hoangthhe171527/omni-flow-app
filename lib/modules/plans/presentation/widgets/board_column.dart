@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../../../../design/components/omni_dashed_box.dart';
+import '../../../../design/components/omni_inline_rename.dart';
 import '../../../../design/platform/omni_motion_scope.dart';
 import '../../../../design/tokens/tokens.dart';
 import '../../../tasks/domain/task.dart';
@@ -149,6 +150,7 @@ class BoardColumn extends StatefulWidget {
     this.canComplete = false,
     this.onAddTask,
     this.onOptions,
+    this.onRename,
     this.columnIndex = 0,
     this.drag,
     this.canDrag = _never,
@@ -175,6 +177,9 @@ class BoardColumn extends StatefulWidget {
   /// null = không sửa được nhóm việc: ẩn ⋯. Khi chạm, trả vùng của nút để
   /// menu nổi neo đúng tại nơi người dùng vừa thao tác.
   final ValueChanged<Rect>? onOptions;
+
+  /// Có thì chạm vào tên cột là đổi tên nhóm việc tại chỗ (bug sheet 12/11/2026).
+  final Future<void> Function(String next)? onRename;
 
   /// Vị trí của cột trên bảng, để [drag] biết đích là cột nào.
   final int columnIndex;
@@ -523,6 +528,7 @@ class _BoardColumnState extends State<BoardColumn> {
             name: widget.section.name,
             count: tasks.length,
             onOptions: widget.onOptions,
+            onRename: widget.onRename,
           ),
           Flexible(
             child: LayoutBuilder(
@@ -879,11 +885,17 @@ class _SlotGapState extends State<_SlotGap> {
 }
 
 class _Header extends StatelessWidget {
-  const _Header({required this.name, required this.count, this.onOptions});
+  const _Header({
+    required this.name,
+    required this.count,
+    this.onOptions,
+    this.onRename,
+  });
 
   final String name;
   final int count;
   final ValueChanged<Rect>? onOptions;
+  final Future<void> Function(String next)? onRename;
 
   @override
   Widget build(BuildContext context) {
@@ -893,70 +905,85 @@ class _Header extends StatelessWidget {
       constraints: const BoxConstraints(minHeight: 44),
       child: Padding(
         padding: EdgeInsets.fromLTRB(12, 4, onOptions == null ? 12 : 0, 4),
-        child: Row(
-          children: [
-            Expanded(
-              child: Text(
-                name,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: OmniType.bodySm.copyWith(
-                  fontWeight: FontWeight.w600,
-                  color: scheme.onSurface,
-                ),
-              ),
-            ),
-            const SizedBox(width: 8),
-            Semantics(
-              label: '$count việc',
-              excludeSemantics: true,
-              child: Container(
-                key: const Key('column-count'),
-                constraints: const BoxConstraints(minWidth: 20),
-                height: 20,
-                padding: const EdgeInsets.symmetric(horizontal: 6),
-                alignment: Alignment.center,
-                decoration: BoxDecoration(
-                  color: scheme.surface,
-                  borderRadius: BorderRadius.circular(10),
-                ),
+        // Chạm vào hàng tên là sửa tên nhóm tại chỗ; ⋯ vẫn là nút riêng (nút
+        // con thắng chạm). Lúc sửa, số việc và ⋯ nhường chỗ cho ô nhập.
+        child: OmniInlineRename(
+          value: name,
+          canEdit: onRename != null,
+          onSubmit: (next) => onRename!(next),
+          semanticsLabel: 'Chạm để đổi tên nhóm việc',
+          fieldKey: const ValueKey('column-name-field'),
+          editEndPadding: onOptions == null ? 0 : 8,
+          style: OmniType.bodySm.copyWith(
+            fontWeight: FontWeight.w600,
+            color: scheme.onSurface,
+          ),
+          builder: (_) => Row(
+            children: [
+              Expanded(
                 child: Text(
-                  '$count',
-                  style: OmniType.micro.copyWith(
+                  name,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: OmniType.bodySm.copyWith(
                     fontWeight: FontWeight.w600,
-                    height: 1,
-                    color: scheme.onSurfaceVariant,
-                    fontFeatures: OmniType.tabular,
+                    color: scheme.onSurface,
                   ),
                 ),
               ),
-            ),
-            if (onOptions != null) ...[
               const SizedBox(width: 8),
-              Builder(
-                builder: (buttonContext) => IconButton(
-                  tooltip: 'Tuỳ chọn nhóm việc',
-                  onPressed: () {
-                    final box = buttonContext.findRenderObject() as RenderBox?;
-                    if (box == null || !box.hasSize) return;
-                    HapticFeedback.selectionClick();
-                    onOptions!(box.localToGlobal(Offset.zero) & box.size);
-                  },
-                  padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints.tightFor(
-                    width: 44,
-                    height: 44,
+              Semantics(
+                label: '$count việc',
+                excludeSemantics: true,
+                child: Container(
+                  key: const Key('column-count'),
+                  constraints: const BoxConstraints(minWidth: 20),
+                  height: 20,
+                  padding: const EdgeInsets.symmetric(horizontal: 6),
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    color: scheme.surface,
+                    borderRadius: BorderRadius.circular(10),
                   ),
-                  style: IconButton.styleFrom(shape: const CircleBorder()),
-                  icon: Icon(
-                    Icons.more_horiz_rounded,
-                    size: OmniIconSize.md,
-                    color: scheme.onSurfaceVariant,
+                  child: Text(
+                    '$count',
+                    style: OmniType.micro.copyWith(
+                      fontWeight: FontWeight.w600,
+                      height: 1,
+                      color: scheme.onSurfaceVariant,
+                      fontFeatures: OmniType.tabular,
+                    ),
                   ),
                 ),
               ),
+              if (onOptions != null) ...[
+                const SizedBox(width: 8),
+                Builder(
+                  builder: (buttonContext) => IconButton(
+                    tooltip: 'Tuỳ chọn nhóm việc',
+                    onPressed: () {
+                      final box =
+                          buttonContext.findRenderObject() as RenderBox?;
+                      if (box == null || !box.hasSize) return;
+                      HapticFeedback.selectionClick();
+                      onOptions!(box.localToGlobal(Offset.zero) & box.size);
+                    },
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints.tightFor(
+                      width: 44,
+                      height: 44,
+                    ),
+                    style: IconButton.styleFrom(shape: const CircleBorder()),
+                    icon: Icon(
+                      Icons.more_horiz_rounded,
+                      size: OmniIconSize.md,
+                      color: scheme.onSurfaceVariant,
+                    ),
+                  ),
+                ),
+              ],
             ],
-          ],
+          ),
         ),
       ),
     );
