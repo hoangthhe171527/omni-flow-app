@@ -24,14 +24,11 @@ class DeliveredPage extends ConsumerStatefulWidget {
   ConsumerState<DeliveredPage> createState() => _DeliveredPageState();
 }
 
-const _page = 50;
-
 class _DeliveredPageState extends ConsumerState<DeliveredPage> {
   String _q = '';
-  int _limit = _page;
 
   /// Trang đã hiện gần nhất — giữ trong lúc tải thêm / tìm (không nháy).
-  UnitPage? _last;
+  StockState? _last;
 
   @override
   Widget build(BuildContext context) {
@@ -54,8 +51,7 @@ class _DeliveredPageState extends ConsumerState<DeliveredPage> {
         ),
       );
     }
-    final query = (q: _q, limit: _limit);
-    final res = ref.watch(deliveredProvider(query));
+    final res = ref.watch(deliveredProvider(_q));
     // Đang tải trang lớn hơn: giữ danh sách cũ, không nháy khung chờ.
     if (res.hasValue) _last = res.value;
     final page = res.valueOrNull ?? (res.hasError ? null : _last);
@@ -66,7 +62,7 @@ class _DeliveredPageState extends ConsumerState<DeliveredPage> {
         AsyncValue(:final error?) when page == null => [
           OmniErrorView(
             error: InvUi.error(error),
-            onRetry: () => ref.invalidate(deliveredProvider(query)),
+            onRetry: () => ref.invalidate(deliveredProvider(_q)),
           ),
         ],
         _ when page == null => [const InvSkeleton(count: 5, height: 64)],
@@ -96,13 +92,16 @@ class _DeliveredPageState extends ConsumerState<DeliveredPage> {
                   onTap: () =>
                       openUnitSheet(context, unit: u, onChanged: (_) {}),
                 ),
-              if (page.items.length < page.total)
+              if (page.hasMore)
                 OmniGroupRow(
                   key: const ValueKey('inv-delivered-more'),
-                  title: 'Xem thêm',
+                  title: page.loadingMore ? 'Đang tải...' : 'Xem thêm',
                   accent: true,
                   chevron: false,
-                  onTap: () => setState(() => _limit += _page),
+                  onTap: page.loadingMore
+                      ? null
+                      : () =>
+                            ref.read(deliveredProvider(_q).notifier).loadMore(),
                 ),
             ],
           ),
@@ -120,16 +119,15 @@ class _DeliveredPageState extends ConsumerState<DeliveredPage> {
           hint: 'Serial, model',
           onChanged: (v) => setState(() {
             _q = v;
-            _limit = _page;
           }),
         ),
       ),
       body: RefreshIndicator(
         onRefresh: () async {
-          ref.invalidate(deliveredProvider(query));
+          ref.invalidate(deliveredProvider(_q));
           await ref
-              .read(deliveredProvider(query).future)
-              .catchError((_) => const UnitPage(items: [], total: 0));
+              .read(deliveredProvider(_q).future)
+              .catchError((_) => const StockState(items: [], total: 0));
         },
         child: ListView(
           key: const ValueKey('inv-delivered-scroll'),

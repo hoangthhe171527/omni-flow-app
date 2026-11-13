@@ -81,7 +81,10 @@ final selectedPipelineProvider = StateProvider<String?>((ref) {
   return null;
 });
 
-final pipelineSearchProvider = StateProvider<String>((ref) => '');
+final pipelineSearchProvider = StateProvider<String>((ref) {
+  ref.watch(activeTenantIdProvider);
+  return '';
+});
 
 /// "Của tôi": only deals the current user owns (`owner=me`). On by default
 /// for a rep who can only read their own — "all" would return the same list

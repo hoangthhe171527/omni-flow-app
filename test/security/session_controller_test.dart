@@ -234,6 +234,43 @@ void main() {
           'when the next outage arrives',
     );
   });
+
+  test('logout clears thread and subtask outbox keys', () async {
+    SharedPreferences.setMockInitialValues({
+      StorageKeys.tenantId: 'tenant-1',
+      '${StorageKeys.threadOutbox}.conv-1': '[{"text":"hi"}]',
+      StorageKeys.threadOutbox: '[{"text":"legacy"}]',
+      '${StorageKeys.subtaskOutbox}.task-1': '{"s1":true}',
+      'unrelated.key': 'keep',
+    });
+    final sharedPreferences = await SharedPreferences.getInstance();
+    final events = <String>[];
+    final tokens = _RecordingTokenStore(events);
+    final preferences = _RecordingPreferencesStore(sharedPreferences, events);
+    final container = ProviderContainer(
+      overrides: [
+        tokenStoreProvider.overrideWithValue(tokens),
+        preferencesStoreProvider.overrideWithValue(preferences),
+        authGatewayProvider.overrideWithValue(
+          _RecordingAuthGateway(events, logoutFails: false),
+        ),
+        sessionPreLogoutProvider.overrideWithValue(SessionPreLogout()),
+      ],
+    );
+    addTearDown(container.dispose);
+
+    container.read(sessionControllerProvider);
+    await Future<void>.delayed(Duration.zero);
+    await container.read(sessionControllerProvider.notifier).logout();
+
+    expect(preferences.getString('${StorageKeys.threadOutbox}.conv-1'), isNull);
+    expect(preferences.getString(StorageKeys.threadOutbox), isNull);
+    expect(
+      preferences.getString('${StorageKeys.subtaskOutbox}.task-1'),
+      isNull,
+    );
+    expect(preferences.getString('unrelated.key'), 'keep');
+  });
 }
 
 class _SessionHarness {

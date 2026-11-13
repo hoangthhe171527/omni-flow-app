@@ -1,3 +1,4 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -305,10 +306,18 @@ class _PhotoTile extends StatelessWidget {
 
 /// Ảnh mạng có nền chờ và ô lỗi (không ném lỗi ra ngoài).
 class InvPhoto extends StatelessWidget {
-  const InvPhoto({super.key, required this.url, this.fit = BoxFit.cover});
+  const InvPhoto({
+    super.key,
+    required this.url,
+    this.fit = BoxFit.cover,
+    this.cacheWidth,
+    this.cacheHeight,
+  });
 
   final String url;
   final BoxFit fit;
+  final int? cacheWidth;
+  final int? cacheHeight;
 
   @override
   Widget build(BuildContext context) {
@@ -323,13 +332,32 @@ class InvPhoto extends StatelessWidget {
         ),
       ),
     );
-    if (url.isEmpty) return empty;
-    return Image.network(
-      url,
-      fit: fit,
-      gaplessPlayback: true,
-      errorBuilder: (_, _, _) => empty,
-      loadingBuilder: (_, child, progress) => progress == null ? child : empty,
+    if (url.trim().isEmpty) return empty;
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final dpr = MediaQuery.devicePixelRatioOf(context);
+        final screen = MediaQuery.sizeOf(context);
+        final rawW = constraints.hasBoundedWidth && constraints.maxWidth.isFinite
+            ? constraints.maxWidth
+            : screen.width;
+        final rawH =
+            constraints.hasBoundedHeight && constraints.maxHeight.isFinite
+                ? constraints.maxHeight
+                : screen.height;
+        final memW = cacheWidth ?? (rawW * dpr).round().clamp(48, 1440);
+        final memH = cacheHeight ?? (rawH * dpr).round().clamp(48, 1440);
+        return CachedNetworkImage(
+          imageUrl: url,
+          fit: fit,
+          memCacheWidth: memW,
+          memCacheHeight: memH,
+          fadeInDuration: OmniDuration.fast,
+          fadeOutDuration: Duration.zero,
+          placeholderFadeInDuration: Duration.zero,
+          placeholder: (_, _) => empty,
+          errorWidget: (_, _, _) => empty,
+        );
+      },
     );
   }
 }
@@ -342,13 +370,22 @@ class InvUnitThumb extends StatelessWidget {
   final double size;
 
   @override
-  Widget build(BuildContext context) => SizedBox.square(
-    dimension: size,
-    child: ClipRRect(
-      borderRadius: BorderRadius.circular(14),
-      child: InvPhoto(url: unit.coverUrl ?? ''),
-    ),
-  );
+  Widget build(BuildContext context) {
+    final px = (size * MediaQuery.devicePixelRatioOf(context))
+        .round()
+        .clamp(40, 256);
+    return SizedBox.square(
+      dimension: size,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(14),
+        child: InvPhoto(
+          url: unit.coverUrl ?? '',
+          cacheWidth: px,
+          cacheHeight: px,
+        ),
+      ),
+    );
+  }
 }
 
 /// Xem ảnh toàn màn: vuốt ngang, chụm để phóng; ảnh kho đặt đại diện / xoá

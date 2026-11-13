@@ -118,7 +118,9 @@ class InboxRealtime {
   static int _timerMode(RealtimeStatus status) => switch (status) {
     RealtimeStatus.connected => 0,
     RealtimeStatus.disabled => 1,
-    RealtimeStatus.connecting || RealtimeStatus.disconnected => 2,
+    RealtimeStatus.connecting ||
+    RealtimeStatus.disconnected ||
+    RealtimeStatus.degraded => 2,
   };
 
   /// Ghi nhận trạng thái kênh mới; trả `true` khi người gọi cần dựng lại hẹn
@@ -282,6 +284,8 @@ class InboxConversationUpdates extends Notifier<ConversationUpdateBatch?> {
 
   @override
   ConversationUpdateBatch? build() {
+    _pending.clear();
+    _pendingUnscoped = false;
     final coalescer = _Coalescer(_flush);
     ref.onDispose(coalescer.cancel);
 

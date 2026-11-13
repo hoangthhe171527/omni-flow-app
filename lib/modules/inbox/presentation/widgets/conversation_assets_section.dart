@@ -215,6 +215,7 @@ class _MediaViewerPageState extends State<_MediaViewerPage> {
                         fit: BoxFit.contain,
                         width: double.infinity,
                         memCacheWidth: 1440,
+                        memCacheHeight: 1440,
                         errorWidget: (_, _, _) => const Icon(
                           Icons.broken_image_outlined,
                           color: Colors.white54,
@@ -296,6 +297,7 @@ class _AssetTile extends StatelessWidget {
         imageUrl: item.url,
         fit: BoxFit.cover,
         memCacheWidth: 420,
+        memCacheHeight: 420,
         errorWidget: (_, _, _) => const ColoredBox(
           color: Colors.black12,
           child: Icon(Icons.broken_image_outlined),

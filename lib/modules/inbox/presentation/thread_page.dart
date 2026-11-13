@@ -116,6 +116,9 @@ class _ThreadPageState extends ConsumerState<ThreadPage>
     super.initState();
     _scrollController.addListener(_onScroll);
     WidgetsBinding.instance.addObserver(this);
+    _realtime.setState(
+      ref.read(realtimeStatusProvider).valueOrNull ?? RealtimeStatus.disabled,
+    );
     _startRealtimeFallback();
     final query = widget.initialQuery?.trim() ?? '';
     if (query.length >= 2) {
@@ -309,14 +312,12 @@ class _ThreadPageState extends ConsumerState<ThreadPage>
       if (state != null) _pruneMessageKeys(state);
     });
 
-    final status =
-        ref.watch(realtimeStatusProvider).valueOrNull ??
-        RealtimeStatus.disabled;
-    if (_realtime.setState(status)) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) _startRealtimeFallback();
-      });
-    }
+    ref.listen<AsyncValue<RealtimeStatus>>(realtimeStatusProvider, (_, next) {
+      final status = next.valueOrNull ?? RealtimeStatus.disabled;
+      if (_realtime.setState(status) && mounted) {
+        _startRealtimeFallback();
+      }
+    });
 
     final conversation = ref.watch(conversationProvider(widget.conversationId));
     final thread = ref.watch(threadProvider(widget.conversationId));

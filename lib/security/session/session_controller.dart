@@ -273,6 +273,10 @@ class SessionController extends Notifier<Session> {
   Future<void> _clearCredentials() async {
     await _tokens.clear();
     await _prefs.remove(StorageKeys.tenantId);
+    await _prefs.removeByPrefixes(const [
+      StorageKeys.threadOutbox,
+      '${StorageKeys.subtaskOutbox}.',
+    ]);
     ref.read(activeTenantIdProvider.notifier).state = null;
     // Detach the identity too. A shared demo phone would otherwise keep
     // attributing the next person's crashes to whoever logged out.

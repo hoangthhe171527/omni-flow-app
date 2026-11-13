@@ -460,6 +460,9 @@ class _NetworkMediaImageState extends State<_NetworkMediaImage> {
       // ký mới. Nút "tải lại ảnh" bên dưới vẫn còn cho lỗi mạng thường.
       errorListener: _onLoadError,
       memCacheWidth: decodeWidth,
+      memCacheHeight: (MediaQuery.sizeOf(context).height * pixelRatio)
+          .round()
+          .clamp(480, 1440),
       maxWidthDiskCache: 1440,
       progressIndicatorBuilder: (_, _, progress) => ColoredBox(
         color: placeholder,

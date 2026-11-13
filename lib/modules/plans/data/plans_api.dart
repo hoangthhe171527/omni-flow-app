@@ -40,13 +40,15 @@ class PlansApi {
 
   final ApiClient _client;
 
+  static const _maxPages = 50;
+
   /// Mọi team, tuỳ chọn lọc theo tên ([search], LIKE ở server —
   /// `TeamController@index`). Rỗng thì không gửi khoá.
   Future<List<Team>> teams({String? search}) async {
     final query = search?.trim() ?? '';
     final all = <Team>[];
     var page = 1;
-    while (true) {
+    while (page <= _maxPages) {
       final response = await _client.get(
         '/teams',
         query: {
@@ -57,7 +59,11 @@ class PlansApi {
       );
       all.addAll(response.list.map(Team.fromJson));
       final pagination = response.pagination;
-      if (pagination == null || !pagination.hasMore) break;
+      if (pagination == null ||
+          !pagination.hasMore ||
+          pagination.nextPage <= page) {
+        break;
+      }
       page = pagination.nextPage;
     }
 
@@ -76,7 +82,7 @@ class PlansApi {
     final query = search?.trim() ?? '';
     final all = <Plan>[];
     var page = 1;
-    while (true) {
+    while (page <= _maxPages) {
       final response = await _client.get(
         '/projects',
         query: {
@@ -88,7 +94,11 @@ class PlansApi {
       );
       all.addAll(response.list.map(Plan.fromJson));
       final pagination = response.pagination;
-      if (pagination == null || !pagination.hasMore) break;
+      if (pagination == null ||
+          !pagination.hasMore ||
+          pagination.nextPage <= page) {
+        break;
+      }
       page = pagination.nextPage;
     }
 

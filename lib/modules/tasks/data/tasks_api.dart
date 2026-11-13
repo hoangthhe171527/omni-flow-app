@@ -800,12 +800,14 @@ class TasksApi {
         .toList();
   }
 
+  static const _maxMovePages = 50;
+
   /// Mọi kế hoạch người dùng đọc được, kèm nhóm việc — cho sheet "Chuyển
   /// việc". Gom hết các trang; dừng theo dữ liệu nhận được.
   Future<List<MovablePlan>> projectsForMove() async {
     final all = <MovablePlan>[];
     var page = 1;
-    while (true) {
+    while (page <= _maxMovePages) {
       final response = await _client.get(
         '/projects',
         query: {'page': page, 'per_page': AppConfig.maxPerPage},
@@ -826,7 +828,8 @@ class TasksApi {
       final pagination = response.pagination;
       if (rows.length < AppConfig.maxPerPage ||
           pagination == null ||
-          !pagination.hasMore) {
+          !pagination.hasMore ||
+          pagination.nextPage <= page) {
         break;
       }
       page = pagination.nextPage;

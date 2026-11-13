@@ -74,16 +74,16 @@ jobs:
       - name: Dựng .env
         env:
           ENV_FILE: ${{ secrets.ENV_FILE }}
+          DEMO_MODE: ${{ inputs.demo }}
         run: |
           if [ -n "$ENV_FILE" ]; then
             printf '%s' "$ENV_FILE" > .env
-          else
-            # `.env.example` đã trỏ vào API thật, nên bản dựng vẫn chạy đúng —
-            # chỉ thiếu REALTIME_KEY, và app tự lùi về hỏi lại theo chu kỳ.
-            # Chậm hơn, nhưng không bao giờ sai. Nói ra để không ai tưởng
-            # realtime đang chạy.
-            echo "::warning::Không có secret ENV_FILE — dùng .env.example, realtime TẮT."
+          elif [ "$DEMO_MODE" = "true" ]; then
+            echo "::warning::Không có secret ENV_FILE — dùng .env.example cho bản DEMO."
             cp .env.example .env
+          else
+            echo "::error::Thiếu secret ENV_FILE cho bản release production (thiếu REALTIME_KEY/REALTIME_HOST sẽ làm tắt realtime âm thầm)."
+            exit 1
           fi
 
       - name: Dựng google-services.json
@@ -172,12 +172,16 @@ jobs:
       - name: Dựng .env
         env:
           ENV_FILE: ${{ secrets.ENV_FILE }}
+          DEMO_MODE: ${{ inputs.demo }}
         run: |
           if [ -n "$ENV_FILE" ]; then
             printf '%s' "$ENV_FILE" > .env
-          else
-            echo "::warning::Không có secret ENV_FILE — dùng .env.example, realtime TẮT."
+          elif [ "$DEMO_MODE" = "true" ]; then
+            echo "::warning::Không có secret ENV_FILE — dùng .env.example cho bản DEMO."
             cp .env.example .env
+          else
+            echo "::error::Thiếu secret ENV_FILE cho bản release production (thiếu REALTIME_KEY/REALTIME_HOST sẽ làm tắt realtime âm thầm)."
+            exit 1
           fi
 
       - name: Nạp chứng thư ký vào keychain tạm

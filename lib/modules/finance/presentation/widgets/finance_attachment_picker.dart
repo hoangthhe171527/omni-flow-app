@@ -242,6 +242,7 @@ Widget buildFinanceAttachmentImageContent({
       imageUrl: resolvedUrl,
       fit: fit,
       memCacheWidth: decodeWidth,
+      memCacheHeight: decodeWidth,
       placeholder: (_, _) => _buildReceiptVisualFallback(
         palette,
         att: att,

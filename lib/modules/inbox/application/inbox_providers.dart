@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/error/app_exception.dart';
+import '../../../core/network/active_tenant.dart';
 import '../../../core/network/api_envelope.dart';
 import '../../../security/session/api_capabilities.dart';
 import '../../../security/session/session_controller.dart';
@@ -28,7 +29,10 @@ final inboxFilterProvider =
 
 class InboxFilterController extends Notifier<InboxFilter> {
   @override
-  InboxFilter build() => const InboxFilter();
+  InboxFilter build() {
+    ref.watch(activeTenantIdProvider);
+    return const InboxFilter();
+  }
 
   void setQuick(InboxQuickFilter quick) => state = state.copyWith(quick: quick);
 

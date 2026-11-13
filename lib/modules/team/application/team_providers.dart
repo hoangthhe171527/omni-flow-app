@@ -62,6 +62,7 @@ class TeamRealtimeSignal extends Notifier<int> {
 }
 
 final teamDirectoryProvider = FutureProvider<List<TeamMember>>((ref) async {
+  ref.watch(activeTenantIdProvider);
   ref.watch(teamRealtimeSignalProvider);
   // Lượt nạp bị bỏ (đổi tenant giữa chừng → provider dựng lại) thì không được
   // bật cờ cho tenant MỚI bằng danh bạ của tenant cũ.

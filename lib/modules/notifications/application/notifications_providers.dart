@@ -65,10 +65,12 @@ class NotificationListState {
   const NotificationListState({
     this.items = const [],
     this.pagination = const ApiPagination.empty(),
+    this.loadingMore = false,
   });
 
   final List<AppNotification> items;
   final ApiPagination pagination;
+  final bool loadingMore;
 
   bool get hasMore => pagination.hasMore;
 
@@ -77,13 +79,21 @@ class NotificationListState {
 
 class NotificationsController
     extends AutoDisposeAsyncNotifier<NotificationListState> {
+  int _generation = 0;
+  bool _loadingMore = false;
+
   @override
   Future<NotificationListState> build() async {
+    final gen = ++_generation;
+    _loadingMore = false;
     ref.watch(notificationSignalProvider);
     final unreadOnly = ref.watch(notificationUnreadOnlyProvider);
     final page = await ref
         .watch(notificationsApiProvider)
         .list(unreadOnly: unreadOnly);
+    if (gen != _generation) {
+      return state.valueOrNull ?? const NotificationListState();
+    }
 
     return NotificationListState(
       items: page.items.where((item) => item.isBellNotification).toList(),
@@ -96,8 +106,19 @@ class NotificationsController
   }
 
   Future<void> loadMore() async {
+    if (_loadingMore) return;
     final current = state.valueOrNull;
-    if (current == null || !current.hasMore) return;
+    if (current == null || !current.hasMore || current.loadingMore) return;
+
+    _loadingMore = true;
+    final gen = _generation;
+    state = AsyncData(
+      NotificationListState(
+        items: current.items,
+        pagination: current.pagination,
+        loadingMore: true,
+      ),
+    );
 
     try {
       final next = await ref
@@ -106,18 +127,30 @@ class NotificationsController
             page: current.pagination.nextPage,
             unreadOnly: ref.read(notificationUnreadOnlyProvider),
           );
+      if (gen != _generation) return;
+      final seen = {for (final item in current.items) item.id};
+      final merged = [
+        ...current.items,
+        for (final item in next.items)
+          if (item.isBellNotification && seen.add(item.id)) item,
+      ];
       state = AsyncData(
         NotificationListState(
-          items: [
-            ...current.items,
-            ...next.items.where((item) => item.isBellNotification),
-          ],
+          items: merged,
           pagination: next.pagination,
         ),
       );
     } catch (_) {
-      // Keep what is on screen. Blanking the list because page three failed is
-      // worse than showing pages one and two.
+      if (gen == _generation) {
+        state = AsyncData(
+          NotificationListState(
+            items: current.items,
+            pagination: current.pagination,
+          ),
+        );
+      }
+    } finally {
+      _loadingMore = false;
     }
   }
 

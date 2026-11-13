@@ -120,7 +120,9 @@ class _TaskDetailPageState extends ConsumerState<TaskDetailPage> {
     final loadedTask = detail.valueOrNull?.visible;
     final canWrite = access.canUpdate || access.canComplete;
     final me = ref.watch(sessionProvider.select((s) => s.user?.id));
-    final catalog = ref.watch(taskLabelsProvider).valueOrNull ?? const [];
+    final hasLabels = ref.watch(
+      taskLabelsProvider.select((v) => v.valueOrNull?.isNotEmpty ?? false),
+    );
     final viewer = loadedTask != null && _isPlanViewer(ref, loadedTask, me);
     bool api(String name) => ref.watch(apiSupportsProvider(name));
     final canRemind = api(ApiCapability.taskReminders) && access.canRead;
@@ -136,7 +138,7 @@ class _TaskDetailPageState extends ConsumerState<TaskDetailPage> {
         : taskMenuGroups(
             // Thợ có danh mục qua `/system-options/task-labels` (Nhóm 2)
             // cũng bật/tắt nhãn được; sửa danh mục vẫn cần system_options.
-            canLabels: canWrite && (access.canReadLabels || catalog.isNotEmpty),
+            canLabels: canWrite && (access.canReadLabels || hasLabels),
             isAssigner: access.isAssigner,
             archived: loadedTask.archived,
             canFollow: api(ApiCapability.taskFollow) && access.canRead,

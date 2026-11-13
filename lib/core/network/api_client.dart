@@ -60,12 +60,14 @@ class ApiClient {
     String? filename,
     Map<String, dynamic> fields = const {},
   }) async {
+    Future<FormData> buildForm() async => FormData.fromMap({
+      ...fields,
+      field: await MultipartFile.fromFile(filePath, filename: filename),
+    });
+
     final FormData form;
     try {
-      form = FormData.fromMap({
-        ...fields,
-        field: await MultipartFile.fromFile(filePath, filename: filename),
-      });
+      form = await buildForm();
     } on Object catch (_) {
       // Reading the file is I/O outside Dio, so it throws a raw
       // FileSystemException rather than a DioException — and callers only catch
@@ -79,7 +81,13 @@ class ApiClient {
       );
     }
 
-    return _send(() => _dio.post<Map<String, dynamic>>(_url(path), data: form));
+    return _send(
+      () => _dio.post<Map<String, dynamic>>(
+        _url(path),
+        data: form,
+        options: Options(extra: {'formDataFactory': buildForm}),
+      ),
+    );
   }
 
   /// POST multipart nhiều tệp cùng các trường chữ, giữ ĐÚNG tên khoá đã cho
@@ -90,16 +98,22 @@ class ApiClient {
     required List<({String field, String path, String? filename})> files,
     List<MapEntry<String, String>> fields = const [],
   }) async {
-    final form = FormData()..fields.addAll(fields);
-    try {
-      for (final f in files) {
-        form.files.add(
+    Future<FormData> buildForm() async {
+      final f = FormData()..fields.addAll(fields);
+      for (final file in files) {
+        f.files.add(
           MapEntry(
-            f.field,
-            await MultipartFile.fromFile(f.path, filename: f.filename),
+            file.field,
+            await MultipartFile.fromFile(file.path, filename: file.filename),
           ),
         );
       }
+      return f;
+    }
+
+    final FormData form;
+    try {
+      form = await buildForm();
     } on Object catch (_) {
       // Như [upload]: lỗi đọc tệp là I/O ngoài Dio, phải thành AppException.
       throw const NetworkException(
@@ -108,7 +122,13 @@ class ApiClient {
       );
     }
 
-    return _send(() => _dio.post<Map<String, dynamic>>(_url(path), data: form));
+    return _send(
+      () => _dio.post<Map<String, dynamic>>(
+        _url(path),
+        data: form,
+        options: Options(extra: {'formDataFactory': buildForm}),
+      ),
+    );
   }
 
   Future<ApiEnvelope> _send(

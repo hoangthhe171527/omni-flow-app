@@ -40,9 +40,6 @@ class _StockPageState extends ConsumerState<StockPage> {
   /// Đang đưa cây vào xưởng (chờ danh sách kế hoạch / API) — chặn bấm lặp.
   bool _sending = false;
 
-  /// Lần tự tải thêm (khi lọc tuổi tồn) vừa lỗi — không thử lại liên tục.
-  bool _autoLoadFailed = false;
-
   StateController<StockFilter> get _filter =>
       ref.read(stockFilterProvider.notifier);
 
@@ -445,7 +442,6 @@ class _StockPageState extends ConsumerState<StockPage> {
     }
     // Bộ lọc đổi thì danh sách đổi: bỏ các cây đã chọn ở danh sách cũ.
     ref.listen(stockFilterProvider, (_, _) {
-      _autoLoadFailed = false;
       if (_picked.isNotEmpty) setState(_picked.clear);
     });
     final f = ref.watch(stockFilterProvider);
@@ -493,20 +489,6 @@ class _StockPageState extends ConsumerState<StockPage> {
               if (f.age!.matches(InventoryFormat.ageDays(u.receivedAt, today)))
                 u,
           ];
-    // Tuổi tồn lọc trên máy: phải tải hết các trang, không thì cây khớp ở
-    // trang chưa tải bị coi như không có.
-    if (f.age != null &&
-        state != null &&
-        state.hasMore &&
-        !state.loadingMore &&
-        !_autoLoadFailed) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (!mounted) return;
-        ref.read(stockProvider.notifier).loadMore().catchError((Object _) {
-          _autoLoadFailed = true;
-        });
-      });
-    }
     final pickedLoaded = loaded.where((u) => _picked.contains(u.id)).length;
     // Cây đã chọn chưa có việc tân trang đang mở — số cây sẽ vào xưởng.
     final pickedForWorkshop = loaded
@@ -617,8 +599,9 @@ class _StockPageState extends ConsumerState<StockPage> {
       onSerial: (s) => _saveSerial(u, s),
     );
 
-    final list = <Widget>[
-      _StatStrip(
+    final scheme = Theme.of(context).colorScheme;
+    final builders = <Widget Function()>[
+      () => _StatStrip(
         key: const ValueKey('inv-stock-summary'),
         countLabel: segments[segIndex].$1,
         countValue: '${InventoryFormat.number(count)} cây',
@@ -630,8 +613,8 @@ class _StockPageState extends ConsumerState<StockPage> {
         onPickAge: _pickAge,
         cost: perms.cost && allLoaded ? InvUi.vnd(sumCost) : null,
       ),
-      const SizedBox(height: OmniGroupSection.gap),
-      OmniSegmented(
+      () => const SizedBox(height: OmniGroupSection.gap),
+      () => OmniSegmented(
         labels: [
           for (final (label, _, n) in segments)
             n == null ? label : '$label ${InventoryFormat.number(n)}',
@@ -639,36 +622,84 @@ class _StockPageState extends ConsumerState<StockPage> {
         index: segIndex,
         onChanged: (i) => _setSegment(segments[i].$2),
       ),
-      const SizedBox(height: OmniGroupSection.gap),
+      () => const SizedBox(height: OmniGroupSection.gap),
       ...switch (stock) {
         AsyncValue(:final error?) when state == null => [
-          OmniErrorView(
+          () => OmniErrorView(
             error: InvUi.error(error),
             onRetry: () => ref.invalidate(stockProvider),
           ),
         ],
-        _ when state == null => [const InvSkeleton(count: 6, height: 64)],
+        _ when state == null => [() => const InvSkeleton(count: 6, height: 64)],
         _ when items.isEmpty => [
-          OmniGroupSection(
+          () => OmniGroupSection(
             trailingTitle: _multi ? pickToggle : null,
             children: const [OmniGroupRow(title: 'Không có cây khớp')],
           ),
         ],
         _ => [
-          for (final (i, e) in groups.entries.indexed) ...[
-            if (i > 0) const SizedBox(height: OmniGroupSection.gap),
-            OmniGroupSection(
-              key: i == 0 ? const ValueKey('inv-stock-list') : null,
-              title: e.key == null
-                  ? null
-                  : '${e.key} · ${InventoryFormat.number(e.value.length)} cây',
-              // "Chọn" ở đầu danh sách, như ứng dụng Ảnh.
-              trailingTitle: i == 0 ? pickToggle : null,
-              children: [for (final u in e.value) row(u)],
-            ),
+          for (final (groupIdx, e) in groups.entries.indexed) ...[
+            if (groupIdx > 0) () => const SizedBox(height: OmniGroupSection.gap),
+            if (e.key != null || (groupIdx == 0 && pickToggle != null))
+              () => Padding(
+                padding: const EdgeInsets.fromLTRB(8, 0, 8, 6),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Semantics(
+                        header: true,
+                        child: Text(
+                          e.key == null
+                              ? ''
+                              : '${e.key} · ${InventoryFormat.number(e.value.length)} cây',
+                          style: OmniType.caption.copyWith(
+                            fontWeight: FontWeight.w600,
+                            color: scheme.onSurfaceVariant,
+                          ),
+                        ),
+                      ),
+                    ),
+                    if (groupIdx == 0) ?pickToggle,
+                  ],
+                ),
+              ),
+            for (var idx = 0; idx < e.value.length; idx++)
+              () {
+                final u = e.value[idx];
+                final len = e.value.length;
+                return Material(
+                  key: groupIdx == 0 && idx == 0
+                      ? const ValueKey('inv-stock-list')
+                      : null,
+                  color: scheme.surface,
+                  borderRadius: BorderRadius.vertical(
+                    top: idx == 0 ? const Radius.circular(18) : Radius.zero,
+                    bottom: idx == len - 1
+                        ? const Radius.circular(18)
+                        : Radius.zero,
+                  ),
+                  clipBehavior: Clip.antiAlias,
+                  child: OmniTintedButtons(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        if (idx > 0)
+                          Divider(
+                            height: 1,
+                            thickness: 1,
+                            indent: 54,
+                            color: scheme.outlineVariant.withValues(alpha: .7),
+                          ),
+                        row(u),
+                      ],
+                    ),
+                  ),
+                );
+              },
           ],
           if (state.loadingMore)
-            const Padding(
+            () => const Padding(
               padding: EdgeInsets.all(16),
               child: Center(child: CircularProgressIndicator.adaptive()),
             ),
@@ -719,7 +750,7 @@ class _StockPageState extends ConsumerState<StockPage> {
           },
           child: RefreshIndicator(
             onRefresh: () => ref.read(stockProvider.notifier).refresh(),
-            child: ListView(
+            child: ListView.builder(
               key: const ValueKey('inv-stock-scroll'),
               physics: const AlwaysScrollableScrollPhysics(),
               keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
@@ -734,7 +765,8 @@ class _StockPageState extends ConsumerState<StockPage> {
                         rows: dockButtons.length,
                       ),
               ),
-              children: list,
+              itemCount: builders.length,
+              itemBuilder: (_, index) => builders[index](),
             ),
           ),
         ),

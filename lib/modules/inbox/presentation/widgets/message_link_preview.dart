@@ -118,6 +118,11 @@ class _LinkPreviewCardState extends State<MessageLinkPreview> {
                             (320 * MediaQuery.devicePixelRatioOf(context))
                                 .round()
                                 .clamp(320, 960),
+                        memCacheHeight:
+                            ((320 / 1.9) *
+                                    MediaQuery.devicePixelRatioOf(context))
+                                .round()
+                                .clamp(168, 505),
                         errorWidget: (_, _, _) => const SizedBox.shrink(),
                       ),
                     ),

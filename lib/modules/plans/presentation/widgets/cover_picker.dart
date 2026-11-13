@@ -228,6 +228,7 @@ class _CoverPickerState extends State<CoverPicker> {
         imageUrl: remote,
         fit: BoxFit.cover,
         memCacheWidth: decodeWidth,
+        memCacheHeight: (decodeWidth * 0.75).round().clamp(240, 1080),
         placeholder: (_, _) => Center(
           child: CircularProgressIndicator(
             strokeWidth: 2,

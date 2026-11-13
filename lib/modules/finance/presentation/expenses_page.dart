@@ -111,18 +111,22 @@ class _ExpensesPageState extends ConsumerState<ExpensesPage> {
 
   @override
   Widget build(BuildContext context) {
+    ref.listen<String>(
+      financeLedgerProvider.select((s) => s.searchQuery),
+      (_, next) {
+        if (_searchCtrl.text != next) {
+          _searchCtrl.value = TextEditingValue(
+            text: next,
+            selection: TextSelection.collapsed(offset: next.length),
+          );
+        }
+      },
+    );
     final state = ref.watch(financeLedgerProvider);
     final notifier = ref.read(financeLedgerProvider.notifier);
     final p = FinancePalette.of(context);
     final sortActive = state.sortMode != ExpenseSortMode.spentDateDesc;
     final activeLoaded = state.isMonthLoaded(state.activeMonth);
-
-    if (_searchCtrl.text != state.searchQuery) {
-      _searchCtrl.value = TextEditingValue(
-        text: state.searchQuery,
-        selection: TextSelection.collapsed(offset: state.searchQuery.length),
-      );
-    }
 
     return Scaffold(
       // Cùng khuôn với Khách / Cơ hội: hàng logo + chuông + tài khoản, bên
@@ -170,15 +174,19 @@ class _ExpensesPageState extends ConsumerState<ExpensesPage> {
                             16,
                             OmniFabLayer.listBottom(context),
                           ),
-                          children: [
+                          builders: [
                             if (state.isLoading && !activeLoaded)
-                              _buildLoadingCard(p, state)
+                              () => _buildLoadingCard(p, state)
                             else if (state.errorMessage != null &&
                                 !activeLoaded)
-                              _buildErrorCard(p, state.errorMessage!, notifier)
+                              () => _buildErrorCard(
+                                p,
+                                state.errorMessage!,
+                                notifier,
+                              )
                             else ...[
                               if (state.errorMessage != null)
-                                Padding(
+                                () => Padding(
                                   padding: const EdgeInsets.only(bottom: 10),
                                   child: _buildInlineErrorBanner(
                                     p,
@@ -188,7 +196,7 @@ class _ExpensesPageState extends ConsumerState<ExpensesPage> {
                                 ),
                               // TIER 1: Summary Card
                               // Vuốt ngang thẻ để sang tháng liền kề.
-                              GestureDetector(
+                              () => GestureDetector(
                                 key: const ValueKey('finance-month-carousel'),
                                 onHorizontalDragEnd: (details) {
                                   final vx = details.primaryVelocity ?? 0;
@@ -204,7 +212,7 @@ class _ExpensesPageState extends ConsumerState<ExpensesPage> {
                               ),
                               // TIER 2: Monthly Recurring Card (5 khoản cố định)
                               if (state.showRecurringCard)
-                                Padding(
+                                () => Padding(
                                   padding: const EdgeInsets.only(top: 10),
                                   child: _buildRecurringCard(
                                     p,
@@ -214,7 +222,7 @@ class _ExpensesPageState extends ConsumerState<ExpensesPage> {
                                 ),
                               // Active Filter / Sort Banner
                               if (state.hasActiveFilter)
-                                Padding(
+                                () => Padding(
                                   padding: const EdgeInsets.only(top: 10),
                                   child: _buildActiveFilterBanner(
                                     p,
@@ -222,8 +230,8 @@ class _ExpensesPageState extends ConsumerState<ExpensesPage> {
                                     notifier,
                                   ),
                                 ),
-                              // TIER 3: Grouped Expense List
-                              ..._buildGroupedSections(p, state),
+                              // TIER 3: Grouped Expense List (lazy per row)
+                              ..._buildGroupedSectionBuilders(p, state),
                             ],
                           ],
                         ),
@@ -259,13 +267,13 @@ class _ExpensesPageState extends ConsumerState<ExpensesPage> {
   static Widget _lazyList({
     required ScrollPhysics physics,
     required EdgeInsetsGeometry padding,
-    required List<Widget> children,
+    required List<Widget Function()> builders,
   }) {
     return ListView.builder(
       physics: physics,
       padding: padding,
-      itemCount: children.length,
-      itemBuilder: (_, i) => children[i],
+      itemCount: builders.length,
+      itemBuilder: (_, i) => builders[i](),
     );
   }
 
@@ -1135,7 +1143,7 @@ class _ExpensesPageState extends ConsumerState<ExpensesPage> {
     );
   }
 
-  List<Widget> _buildGroupedSections(
+  List<Widget Function()> _buildGroupedSectionBuilders(
     FinancePalette p,
     FinanceLedgerState state,
   ) {
@@ -1144,7 +1152,7 @@ class _ExpensesPageState extends ConsumerState<ExpensesPage> {
       final isMonthEmpty =
           state.activeMonthItems.isEmpty && !state.hasActiveFilter;
       return [
-        Container(
+        () => Container(
           margin: const EdgeInsets.only(top: 12),
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 28),
           decoration: BoxDecoration(
@@ -1165,7 +1173,7 @@ class _ExpensesPageState extends ConsumerState<ExpensesPage> {
 
     return [
       for (final section in sections) ...[
-        Padding(
+        () => Padding(
           padding: const EdgeInsets.fromLTRB(4, 12, 4, 6),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -1194,24 +1202,29 @@ class _ExpensesPageState extends ConsumerState<ExpensesPage> {
             ],
           ),
         ),
-        Container(
-          decoration: BoxDecoration(
-            color: p.card,
-            borderRadius: BorderRadius.circular(18),
-          ),
-          clipBehavior: Clip.antiAlias,
-          child: Column(
-            children: [
-              for (var i = 0; i < section.items.length; i++)
-                ExpenseRowTile(
-                  key: ValueKey('expense-row-${section.items[i].id}'),
-                  item: section.items[i],
-                  showBottomDivider: i < section.items.length - 1,
-                  isFlashed: state.flashedIds.contains(section.items[i].id),
+        for (var i = 0; i < section.items.length; i++)
+          () {
+            final item = section.items[i];
+            final len = section.items.length;
+            return Container(
+              decoration: BoxDecoration(
+                color: p.card,
+                borderRadius: BorderRadius.vertical(
+                  top: i == 0 ? const Radius.circular(18) : Radius.zero,
+                  bottom: i == len - 1
+                      ? const Radius.circular(18)
+                      : Radius.zero,
                 ),
-            ],
-          ),
-        ),
+              ),
+              clipBehavior: Clip.antiAlias,
+              child: ExpenseRowTile(
+                key: ValueKey('expense-row-${item.id}'),
+                item: item,
+                showBottomDivider: i < len - 1,
+                isFlashed: state.flashedIds.contains(item.id),
+              ),
+            );
+          },
       ],
     ];
   }

@@ -289,7 +289,19 @@ class _ExpenseSummaryPageState extends ConsumerState<ExpenseSummaryPage> {
 
   @override
   Widget build(BuildContext context) {
-    final state = ref.watch(financeLedgerProvider);
+    ref.watch(
+      financeLedgerProvider.select(
+        (s) => (
+          s.loadedMonths,
+          s.isLoading,
+          s.syncing,
+          s.itemsByMonth,
+          s.summariesByMonth,
+          s.clock,
+        ),
+      ),
+    );
+    final state = ref.read(financeLedgerProvider);
     final p = FinancePalette.of(context);
     if (!_initialized && state.loadedMonths.isNotEmpty) {
       _initialized = true;

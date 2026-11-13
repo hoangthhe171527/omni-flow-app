@@ -77,6 +77,8 @@ class AttachmentThumb extends StatelessWidget {
                     fit: BoxFit.cover,
                     memCacheWidth:
                         (size * MediaQuery.devicePixelRatioOf(context)).round(),
+                    memCacheHeight:
+                        (size * MediaQuery.devicePixelRatioOf(context)).round(),
                     fadeInDuration: OmniMotion.of(context).fast,
                     // Mất mạng hay ảnh hỏng thì rơi về cái tên, chứ không để
                     // lại một ô xám không nói gì.
