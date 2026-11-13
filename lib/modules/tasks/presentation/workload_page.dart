@@ -35,6 +35,7 @@ class WorkloadPage extends ConsumerWidget {
     return Scaffold(
       appBar: OmniAppBar(
         title: member?.name ?? 'Tải việc',
+        fallbackBack: () => context.go('/team'),
         // Vai trò dưới tên: "Hằng Ni · Thợ máy" nói đủ để biết vì sao hàng đợi
         // của người này trông như thế. Căn giữa theo tiêu đề màn con.
         bottom: member == null
@@ -74,7 +75,7 @@ class _Load extends StatelessWidget {
     // hay để yên — và cái quyết định đó bắt đầu từ những cây đang trễ.
     final sorted = [...data.tasks]..sort(_lateFirst);
 
-    return ListView.separated(
+    return ListView(
       // Luôn cuộn được, kể cả khi rỗng: RefreshIndicator ở trên cần một cử
       // chỉ kéo, và một danh sách rỗng không cuộn thì không kéo được.
       physics: const AlwaysScrollableScrollPhysics(),
@@ -84,21 +85,25 @@ class _Load extends StatelessWidget {
         OmniSpacing.lg,
         OmniSpacing.bottomSafe,
       ),
-      itemCount: sorted.length + 1,
-      separatorBuilder: (_, _) => const SizedBox(height: OmniGroupSection.gap),
-      itemBuilder: (context, index) {
-        if (index == 0) return _Summary(data: data);
-
-        final task = sorted[index - 1];
-
-        return TaskCard(
-          task: task,
-          onTap: () => context.pushNamed(
-            TaskRoutes.detail,
-            pathParameters: {'id': task.id},
+      children: [
+        _Summary(data: data),
+        if (sorted.isNotEmpty) ...[
+          const SizedBox(height: OmniGroupSection.gap),
+          OmniGroupSection(
+            dividerIndent: 14,
+            children: [
+              for (final task in sorted)
+                TaskCard(
+                  task: task,
+                  onTap: () => context.pushNamed(
+                    TaskRoutes.detail,
+                    pathParameters: {'id': task.id},
+                  ),
+                ),
+            ],
           ),
-        );
-      },
+        ],
+      ],
     );
   }
 

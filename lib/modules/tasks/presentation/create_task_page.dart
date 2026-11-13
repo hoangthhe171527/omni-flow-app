@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../core/error/app_exception.dart';
 import '../../../core/utils/formatters.dart';
@@ -102,26 +103,67 @@ class _CreateTaskPageState extends ConsumerState<CreateTaskPage> {
     // Nền xám, ô tên lớn, một nhóm ba dòng "nhãn — giá trị" và nút "Tạo việc"
     // ghim ở đáy (liquid, đợt 2 duyệt 08/11/2026).
     return Scaffold(
-      appBar: OmniAppBar(title: 'Việc mới', close: true),
+      appBar: OmniAppBar(
+        title: 'Việc mới',
+        close: true,
+        fallbackBack: () => context.go('/tasks'),
+      ),
       body: ListView(
         keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
         padding: const EdgeInsets.fromLTRB(16, OmniSpacing.md, 16, 24),
         children: [
-          OmniField(
-            label: 'Tên việc',
-            child: TextField(
-              controller: _title,
-              autofocus: true,
-              textCapitalization: TextCapitalization.sentences,
-              style: OmniType.listTitle.copyWith(
-                fontWeight: FontWeight.w600,
-                color: scheme.onSurface,
+          OmniGroupSection(
+            dividerIndent: 14,
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(14, 10, 14, 12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Flexible(
+                          child: Text(
+                            'Tên việc',
+                            style: OmniType.caption.copyWith(
+                              color: scheme.onSurfaceVariant,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                        Text(
+                          ' *',
+                          style: OmniType.caption.copyWith(color: scheme.error),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    TextField(
+                      controller: _title,
+                      autofocus: true,
+                      textCapitalization: TextCapitalization.sentences,
+                      style: OmniType.listTitle.copyWith(
+                        fontWeight: FontWeight.w600,
+                        color: scheme.onSurface,
+                      ),
+                      decoration: InputDecoration(
+                        hintText: 'Việc cần làm là gì?',
+                        hintStyle: OmniType.listTitle.copyWith(
+                          color: scheme.onSurfaceVariant,
+                        ),
+                        isDense: true,
+                        contentPadding: EdgeInsets.zero,
+                        filled: false,
+                        border: InputBorder.none,
+                        enabledBorder: InputBorder.none,
+                        focusedBorder: InputBorder.none,
+                      ),
+                      onChanged: (_) => setState(() {}),
+                    ),
+                  ],
+                ),
               ),
-              decoration: const InputDecoration(
-                hintText: 'Việc cần làm là gì?',
-              ),
-              onChanged: (_) => setState(() {}),
-            ),
+            ],
           ),
           const SizedBox(height: OmniGroupSection.gap),
           OmniGroupSection(
@@ -174,6 +216,19 @@ class _CreateTaskPageState extends ConsumerState<CreateTaskPage> {
       ),
       bottomNavigationBar: OmniActionBar(
         children: [
+          OutlinedButton(
+            onPressed: _saving
+                ? null
+                : () {
+                    final nav = Navigator.of(context);
+                    if (nav.canPop()) {
+                      nav.maybePop();
+                    } else {
+                      context.go('/tasks');
+                    }
+                  },
+            child: const Text('Huỷ'),
+          ),
           FilledButton(
             onPressed: _canSave ? _save : null,
             child: _saving
@@ -210,6 +265,7 @@ class _CreateTaskPageState extends ConsumerState<CreateTaskPage> {
                 OmniGroupRow(
                   title: section.name,
                   selected: section.id == _sectionId,
+                  chevron: false,
                   onTap: () => Navigator.of(context).pop(section.id),
                 ),
             ],

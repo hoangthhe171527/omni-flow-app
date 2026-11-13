@@ -13,7 +13,7 @@ Color stageColorOf(PipelineStageDef? stage, ColorScheme scheme) {
   final hex = stage?.color?.trim().replaceFirst('#', '');
   if (hex == null || hex.length != 6) return scheme.primary;
   final value = int.tryParse(hex, radix: 16);
-  return value == null ? scheme.primary : Color(0xFF000000 | value);
+  return value == null ? scheme.primary : Color(value).withAlpha(255);
 }
 
 /// [color] pha dần về đen (nền sáng) hoặc trắng (nền tối) cho tới khi đạt
@@ -22,9 +22,7 @@ Color stageColorOf(PipelineStageDef? stage, ColorScheme scheme) {
 /// hình như vàng #FACC15 sẽ không đọc được trên nền trắng nếu dùng thô.
 Color readableStageColor(Color color, Color surface, {double minRatio = 4.5}) {
   if (contrastRatio(color, surface) >= minRatio) return color;
-  final toward = surface.computeLuminance() > 0.5
-      ? const Color(0xFF000000)
-      : const Color(0xFFFFFFFF);
+  final toward = surface.computeLuminance() > 0.5 ? Colors.black : Colors.white;
   for (var t = 0.05; t <= 1.0001; t += 0.05) {
     final mixed = Color.lerp(color, toward, t)!;
     if (contrastRatio(mixed, surface) >= minRatio) return mixed;

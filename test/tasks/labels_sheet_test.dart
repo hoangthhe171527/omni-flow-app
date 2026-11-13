@@ -56,7 +56,7 @@ void main() {
     await pump(tester);
 
     expect(find.text('Nhãn màu'), findsOneWidget);
-    expect(find.text('Xong'), findsOneWidget);
+    expect(find.byTooltip('Đóng'), findsOneWidget);
     final row = find.byKey(const Key('label-row-khan_cap'));
     expect(tester.getSize(row).height, greaterThanOrEqualTo(48));
     final dot = tester.widget<Container>(

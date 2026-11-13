@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../design/components/components.dart';
 import '../../../design/tokens/tokens.dart';
@@ -7,6 +8,7 @@ import '../application/inventory_providers.dart';
 import '../domain/inventory_format.dart';
 import '../domain/inventory_models.dart';
 import '../domain/receive.dart';
+import 'delivered_page.dart' show InvSearchBottom;
 import 'widgets/inventory_ui.dart';
 import 'widgets/money_keypad_sheet.dart';
 import 'widgets/serial_field.dart';
@@ -204,10 +206,17 @@ class _ReceivePageState extends ConsumerState<ReceivePage> {
             orElse: () => locations.first,
           );
 
+    void backToLot() =>
+        GoRouter.maybeOf(context)?.go('/inventory/lots/${widget.lotId}');
+
     if (!perms.write) {
-      return const Scaffold(
-        appBar: OmniAppBar(title: 'Nhận hàng'),
-        body: OmniEmptyState(
+      return Scaffold(
+        appBar: OmniAppBar(
+          title: 'Nhận hàng',
+          showAccount: false,
+          fallbackBack: backToLot,
+        ),
+        body: const OmniEmptyState(
           icon: Icons.lock_outline_rounded,
           title: 'Cần quyền tạo lô, nhận hàng',
         ),
@@ -218,6 +227,14 @@ class _ReceivePageState extends ConsumerState<ReceivePage> {
       appBar: OmniAppBar(
         title: lot == null ? 'Nhận hàng' : 'Nhận hàng · ${lot.code}',
         close: true,
+        showAccount: false,
+        fallbackBack: backToLot,
+        bottom: InvSearchBottom(
+          fieldKey: const ValueKey('inv-receive-search'),
+          hint: 'Gõ serial hoặc model',
+          debounce: const Duration(milliseconds: 150),
+          onChanged: (v) => setState(() => _q = v),
+        ),
       ),
       // Nút chính trong khay kính đáy (rà soát 12/11) kèm tóm tắt kết quả,
       // không treo lơ lửng trên danh sách.
@@ -260,18 +277,6 @@ class _ReceivePageState extends ConsumerState<ReceivePage> {
                   OmniDockLayer.listBottom(context),
                 ),
                 children: [
-                  SizedBox(
-                    height: 44,
-                    child: OmniSearchField(
-                      key: const ValueKey('inv-receive-search'),
-                      hint: 'Gõ serial hoặc model',
-                      flat: true,
-                      dense: true,
-                      debounce: const Duration(milliseconds: 150),
-                      onChanged: (v) => setState(() => _q = v),
-                    ),
-                  ),
-                  const SizedBox(height: 10),
                   OmniGroupSection(
                     children: [
                       OmniGroupRow(

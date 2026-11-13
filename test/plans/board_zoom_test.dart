@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:omni_app/design/components/omni_motion_widgets.dart';
+import 'package:omni_app/design/components/components.dart';
 import 'package:omni_app/design/theme/omni_theme.dart';
 import 'package:omni_app/modules/plans/application/plans_providers.dart';
 import 'package:omni_app/modules/plans/domain/plan.dart';
@@ -104,22 +104,19 @@ void main() {
   );
 
   testWidgets(
-    'nút nổi viên kính tròn 52, phải 16, đáy 34; nhãn đổi theo chế độ',
+    'nút nổi viên kính chuẩn OmniGlassCircle, phải 16, đáy 34; nhãn đổi theo chế độ',
     (tester) async {
       await pumpBoard(tester);
       final fab = find.bySemanticsLabel('Thu nhỏ xem toàn bảng');
       expect(fab, findsOneWidget);
       final rect = tester.getRect(find.byKey(const Key('board-zoom-fab')));
-      expect(rect.size, const Size(52, 52));
+      expect(rect.size, const Size(44, 44));
       expect(rect.right, 390 - 16);
       expect(rect.bottom, 844 - 34);
-      final deco =
-          tester
-                  .widget<Container>(find.byKey(const Key('board-zoom-fab')))
-                  .decoration!
-              as BoxDecoration;
-      expect(deco.shape, BoxShape.circle);
-      expect(deco.border, isNotNull);
+      expect(
+        tester.widget(find.byKey(const Key('board-zoom-fab'))),
+        isA<OmniGlassCircle>(),
+      );
       expect(find.byIcon(Icons.zoom_out_rounded), findsOneWidget);
 
       await tester.tap(fab);

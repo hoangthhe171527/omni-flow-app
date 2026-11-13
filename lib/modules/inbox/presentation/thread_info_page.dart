@@ -37,7 +37,10 @@ class ThreadInfoPage extends ConsumerWidget {
     final conversation = ref.watch(conversationProvider(conversationId));
 
     return Scaffold(
-      appBar: const OmniAppBar(title: 'Thông tin'),
+      appBar: OmniAppBar(
+        title: 'Thông tin',
+        fallbackBack: () => context.go('/inbox/$conversationId'),
+      ),
       body: OmniAsyncView(
         value: conversation,
         onRetry: () => ref.invalidate(conversationProvider(conversationId)),
@@ -451,7 +454,7 @@ class _QuickAction extends StatelessWidget {
       toggled: active ? true : null,
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(14),
         child: SizedBox(
           width: 70,
           child: Column(

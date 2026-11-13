@@ -133,36 +133,49 @@ class _Photos extends StatelessWidget {
         .round();
     final fade = OmniMotion.of(context).fast;
 
+    final scheme = Theme.of(context).colorScheme;
+    final thumbRadius = BorderRadius.circular(12);
+
     return SizedBox(
       height: _size,
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
         itemCount: urls.length,
         separatorBuilder: (_, _) => const SizedBox(width: OmniSpacing.sm),
-        itemBuilder: (context, index) => ClipRRect(
+        itemBuilder: (context, index) => DecoratedBox(
           // Khoá theo URL: một ảnh hỏng bị errorWidget thay bằng ô giữ chỗ,
           // nên đếm theo widget ảnh cho ra số khác nhau tuỳ ảnh nào tải xong
           // trước. Khoá là thứ ổn định để nói "ô ảnh này CÓ trên màn hình".
           key: ValueKey('photo:${urls[index]}'),
-          borderRadius: OmniRadius.smAll,
-          // Bộ nhớ đệm ĐĨA: quản đốc mở dòng việc mỗi sáng, và cùng những tấm
-          // ảnh đó không việc gì phải tải lại mỗi lần cuộn.
-          child: CachedNetworkImage(
-            imageUrl: resolveMediaUrl(urls[index]),
-            width: _size,
-            height: _size,
-            fit: BoxFit.cover,
-            memCacheWidth: decodeWidth,
-            fadeInDuration: fade,
-            fadeOutDuration: fade,
-            placeholderFadeInDuration: Duration.zero,
-            // Ô GIỮ CHỖ cùng cỡ trong lúc tải và khi hỏng, không phải ô 0dp.
-            // Bản đầu trả `SizedBox.shrink()` cho ảnh hỏng: dải ảnh co lại rồi
-            // giãn ra khi ảnh tới, và ngoài xưởng sóng yếu thì người đọc
-            // không biết là CÓ ảnh đang chờ. Kích thước cố định là thứ giữ cho
-            // bố cục không nhảy (CLS) — ảnh tới hay không, ô vẫn ở đó.
-            placeholder: (_, _) => const _PhotoPlaceholder(),
-            errorWidget: (_, _, _) => const _PhotoPlaceholder(broken: true),
+          position: DecorationPosition.foreground,
+          decoration: BoxDecoration(
+            borderRadius: thumbRadius,
+            border: Border.all(
+              color: scheme.outlineVariant.withValues(alpha: .5),
+              width: 0.5,
+            ),
+          ),
+          child: ClipRRect(
+            borderRadius: thumbRadius,
+            // Bộ nhớ đệm ĐĨA: quản đốc mở dòng việc mỗi sáng, và cùng những tấm
+            // ảnh đó không việc gì phải tải lại mỗi lần cuộn.
+            child: CachedNetworkImage(
+              imageUrl: resolveMediaUrl(urls[index]),
+              width: _size,
+              height: _size,
+              fit: BoxFit.cover,
+              memCacheWidth: decodeWidth,
+              fadeInDuration: fade,
+              fadeOutDuration: fade,
+              placeholderFadeInDuration: Duration.zero,
+              // Ô GIỮ CHỖ cùng cỡ trong lúc tải và khi hỏng, không phải ô 0dp.
+              // Bản đầu trả `SizedBox.shrink()` cho ảnh hỏng: dải ảnh co lại rồi
+              // giãn ra khi ảnh tới, và ngoài xưởng sóng yếu thì người đọc
+              // không biết là CÓ ảnh đang chờ. Kích thước cố định là thứ giữ cho
+              // bố cục không nhảy (CLS) — ảnh tới hay không, ô vẫn ở đó.
+              placeholder: (_, _) => const _PhotoPlaceholder(),
+              errorWidget: (_, _, _) => const _PhotoPlaceholder(broken: true),
+            ),
           ),
         ),
       ),

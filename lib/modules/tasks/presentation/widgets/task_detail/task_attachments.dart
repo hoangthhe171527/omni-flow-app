@@ -14,7 +14,7 @@ class AttachmentThumb extends StatelessWidget {
     required this.attachment,
     required this.size,
     this.onLongPress,
-    this.radius = 4,
+    this.radius = 12,
   });
 
   final TaskAttachment attachment;

@@ -293,7 +293,7 @@ class InvDropPill extends StatelessWidget {
   }
 }
 
-/// Bộ đếm −  n  + (số lượng cây).
+/// Bộ đếm −  n  + (số lượng cây) trong khay viên thuốc mặt kính gọn.
 class InvStepper extends StatelessWidget {
   const InvStepper({
     super.key,
@@ -313,30 +313,49 @@ class InvStepper extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final dark = Theme.of(context).brightness == Brightness.dark;
     Widget btn(IconData icon, String tip, int next, bool enabled) => IconButton(
       tooltip: tip,
       onPressed: enabled ? () => onChanged(next) : null,
-      icon: Icon(icon, size: 18),
       constraints: const BoxConstraints.tightFor(width: 40, height: 40),
       padding: EdgeInsets.zero,
+      icon: Container(
+        width: 32,
+        height: 32,
+        decoration: OmniGlass.buttonDecoration(context, radius: 16),
+        child: Icon(
+          icon,
+          size: 17,
+          color: enabled
+              ? scheme.onSurface
+              : scheme.onSurface.withValues(alpha: .35),
+        ),
+      ),
     );
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        btn(Icons.remove_rounded, 'Bớt', value - 1, value > min),
-        ConstrainedBox(
-          constraints: const BoxConstraints(minWidth: 32),
-          child: Text(
-            suffix == null ? '$value' : '$value$suffix',
-            textAlign: TextAlign.center,
-            style: OmniType.bodyStrong.copyWith(
-              color: scheme.onSurface,
-              fontFeatures: OmniType.tabular,
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 2),
+      decoration: BoxDecoration(
+        color: scheme.onSurface.withValues(alpha: dark ? .08 : .05),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          btn(Icons.remove_rounded, 'Bớt', value - 1, value > min),
+          ConstrainedBox(
+            constraints: const BoxConstraints(minWidth: 32),
+            child: Text(
+              suffix == null ? '$value' : '$value$suffix',
+              textAlign: TextAlign.center,
+              style: OmniType.bodyStrong.copyWith(
+                color: scheme.onSurface,
+                fontFeatures: OmniType.tabular,
+              ),
             ),
           ),
-        ),
-        btn(Icons.add_rounded, 'Thêm', value + 1, value < max),
-      ],
+          btn(Icons.add_rounded, 'Thêm', value + 1, value < max),
+        ],
+      ),
     );
   }
 }

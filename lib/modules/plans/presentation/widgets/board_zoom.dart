@@ -1,13 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../../../../design/components/components.dart';
 import '../../../../design/platform/omni_motion_scope.dart';
 import '../../../../design/tokens/tokens.dart';
 import '../../../tasks/domain/task.dart';
 import '../../domain/plan.dart';
 
-/// Nút kính lúp nổi của bảng: viên kính tròn 52, nền surface .86, biểu
-/// tượng primary. − để thu nhỏ, + để phóng to lại.
+/// Nút kính lúp nổi của bảng: viên kính chuẩn [OmniGlassCircle] đồng bộ hệ
+/// nút nổi, biểu tượng primary. − để thu nhỏ, + để phóng to lại.
 class BoardZoomButton extends StatelessWidget {
   const BoardZoomButton({super.key, required this.zoomed, required this.onTap});
 
@@ -17,39 +18,29 @@ class BoardZoomButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final label = zoomed ? 'Phóng to lại' : 'Thu nhỏ xem toàn bảng';
 
     return Semantics(
       button: true,
-      label: zoomed ? 'Phóng to lại' : 'Thu nhỏ xem toàn bảng',
+      label: label,
       excludeSemantics: true,
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTap: () {
-          HapticFeedback.selectionClick();
-          onTap();
-        },
-        child: Container(
-          key: const Key('board-zoom-fab'),
-          width: 52,
-          height: 52,
-          // Viên kính tròn trên ảnh bìa (viomni-apple-uiux.html): trắng mờ,
-          // viền sáng, bóng nhẹ. Không nhoè — bảng cuộn ngang bên dưới.
-          decoration: BoxDecoration(
-            color: scheme.surface.withValues(alpha: .86),
-            shape: BoxShape.circle,
-            border: Border.all(color: Colors.white.withValues(alpha: .7)),
-            boxShadow: [
-              BoxShadow(
-                color: OmniColors.ink.withValues(alpha: 0.22),
-                offset: const Offset(0, 6),
-                blurRadius: 18,
+      child: Tooltip(
+        message: label,
+        child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: () {
+            HapticFeedback.selectionClick();
+            onTap();
+          },
+          child: OmniGlassCircle(
+            key: const Key('board-zoom-fab'),
+            child: Center(
+              child: Icon(
+                zoomed ? Icons.zoom_in_rounded : Icons.zoom_out_rounded,
+                size: 20,
+                color: scheme.primary,
               ),
-            ],
-          ),
-          child: Icon(
-            zoomed ? Icons.zoom_in_rounded : Icons.zoom_out_rounded,
-            size: 22,
-            color: scheme.primary,
+            ),
           ),
         ),
       ),
@@ -204,10 +195,10 @@ class _ZoomTile extends StatelessWidget {
   }
 
   Widget _taskChip(ColorScheme scheme, String title) => Container(
-    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 5),
+    padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 5),
     decoration: BoxDecoration(
       color: scheme.surface,
-      borderRadius: BorderRadius.circular(4),
+      borderRadius: BorderRadius.circular(8),
     ),
     child: Text(
       title,

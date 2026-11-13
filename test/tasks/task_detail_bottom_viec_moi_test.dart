@@ -534,13 +534,13 @@ void main() {
       final fill = t.getSize(
         find.byKey(const ValueKey('subtask-progress-fill')),
       );
-      expect(track.height, 4);
+      expect(track.height, 5);
       expect(fill.width / track.width, closeTo(0.5, 0.01));
 
       final box = find.byKey(const ValueKey('subtask-tick-box')).last;
       expect(t.getSize(box), const Size(22, 22));
       final deco = t.widget<Container>(box).decoration! as BoxDecoration;
-      expect(deco.borderRadius, BorderRadius.circular(6));
+      expect(deco.borderRadius, BorderRadius.circular(7.5));
 
       await t.tap(find.bySemanticsLabel('Đánh dấu xong việc con').first);
       await t.pump();

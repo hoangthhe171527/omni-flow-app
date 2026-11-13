@@ -311,6 +311,7 @@ void main() {
     expect(thumb, findsOneWidget);
     expect(t.getSize(thumb), const Size(72, 72));
     await t.ensureVisible(thumb);
+    await t.pumpAndSettle();
     await t.longPress(thumb);
     await t.pumpAndSettle();
     await t.tap(find.text('Gỡ tệp').last);

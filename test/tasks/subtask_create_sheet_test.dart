@@ -82,19 +82,19 @@ void main() {
     (w) => w is TextField && w.autofocus,
   );
 
-  Finder createButton() => find.widgetWithText(TextButton, 'Tạo');
+  Finder createButton() => find.widgetWithText(FilledButton, 'Tạo');
 
   testWidgets('đầu sheet: Huỷ / "Việc con mới" / Tạo (mờ khi tên rỗng)', (
     t,
   ) async {
     await openSheet(t, host());
-    expect(find.text('Huỷ'), findsOneWidget);
+    expect(find.byTooltip('Huỷ'), findsOneWidget);
     expect(find.text('Việc con mới'), findsOneWidget);
-    expect(t.widget<TextButton>(createButton()).onPressed, isNull);
+    expect(t.widget<FilledButton>(createButton()).onPressed, isNull);
     expect(t.getSize(createButton()).height, greaterThanOrEqualTo(44));
     await t.enterText(nameField, 'Thay nỉ búa');
     await t.pump();
-    expect(t.widget<TextButton>(createButton()).onPressed, isNotNull);
+    expect(t.widget<FilledButton>(createButton()).onPressed, isNotNull);
   });
 
   testWidgets('(d) "Thay nỉ búa" + chọn Khánh: POST rồi PATCH assignee_id', (
@@ -163,7 +163,7 @@ void main() {
   testWidgets('Huỷ đóng sheet, không gửi gì', (t) async {
     await openSheet(t, host());
     await t.enterText(nameField, 'Bỏ');
-    await t.tap(find.text('Huỷ'));
+    await t.tap(find.byTooltip('Huỷ'));
     await t.pumpAndSettle();
     expect(find.text('Việc con mới'), findsNothing);
     expect(adapter.requests.where((r) => r.method != 'GET'), isEmpty);

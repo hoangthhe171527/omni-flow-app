@@ -2,12 +2,15 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
+import '../../../core/nav/shell_tab_routes.dart';
 import '../../../design/components/components.dart';
 import '../../../design/tokens/tokens.dart';
 import '../application/inventory_providers.dart';
 import '../domain/inventory_format.dart';
 import '../domain/inventory_models.dart';
+import '../routes.dart';
 import 'delivered_page.dart' show InvSearchBottom;
 import 'widgets/inventory_ui.dart';
 import 'widgets/money_keypad_sheet.dart';
@@ -214,10 +217,16 @@ class _CountsPageState extends ConsumerState<CountsPage> {
   Widget build(BuildContext context) {
     final perms = ref.watch(inventoryPermsProvider);
     _api = ref.watch(inventoryApiProvider);
+    final subPage = !ShellTabRoutes.reachable(context, InventoryRoutes.counts);
+    void back() => GoRouter.maybeOf(context)?.go(InventoryRoutes.stockPath);
     if (!perms.counts) {
-      return const Scaffold(
-        appBar: OmniAppBar(title: 'Kiểm kê'),
-        body: OmniEmptyState(
+      return Scaffold(
+        appBar: OmniAppBar(
+          title: 'Kiểm kê',
+          showAccount: !subPage,
+          fallbackBack: subPage ? back : null,
+        ),
+        body: const OmniEmptyState(
           icon: Icons.lock_outline_rounded,
           title: 'Chưa có kiểm kê',
         ),
@@ -232,7 +241,11 @@ class _CountsPageState extends ConsumerState<CountsPage> {
         locations.firstOrNull?.id;
     if (locationId == null) {
       return Scaffold(
-        appBar: const OmniAppBar(title: 'Kiểm kê'),
+        appBar: OmniAppBar(
+          title: 'Kiểm kê',
+          showAccount: !subPage,
+          fallbackBack: subPage ? back : null,
+        ),
         body: switch (locs) {
           AsyncValue(:final error?) => OmniErrorView(
             error: InvUi.error(error),
@@ -440,6 +453,8 @@ class _CountsPageState extends ConsumerState<CountsPage> {
     return Scaffold(
       appBar: OmniAppBar(
         title: 'Kiểm kê',
+        showAccount: !subPage,
+        fallbackBack: subPage ? back : null,
         bottom: open != null && perms.doCounts
             ? InvSearchBottom(
                 key: ValueKey('inv-count-serial-$_fieldGen'),
@@ -480,7 +495,8 @@ class _CountsPageState extends ConsumerState<CountsPage> {
   }
 }
 
-/// Một cây khi kiểm: ô tick, "Hãng Model", serial + lô, tình trạng.
+/// Một cây khi kiểm: nền chọn mềm + dấu ✓ bên phải, "Hãng Model", serial + lô,
+/// tình trạng.
 class CountUnitRow extends StatelessWidget {
   const CountUnitRow({
     super.key,
@@ -502,52 +518,51 @@ class CountUnitRow extends StatelessWidget {
       checked: seen,
       label: 'Thấy ${u.name} ${u.serial ?? ''}',
       excludeSemantics: true,
-      child: InkWell(
-        onTap: onTap,
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(minHeight: 56),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-            child: Row(
-              children: [
-                Icon(
-                  seen
-                      ? Icons.check_circle_rounded
-                      : Icons.radio_button_unchecked_rounded,
-                  size: 22,
-                  color: seen ? scheme.primary : scheme.onSurfaceVariant,
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        u.name,
-                        style: OmniType.body.copyWith(
-                          fontWeight: FontWeight.w600,
-                          color: scheme.onSurface,
+      child: ColoredBox(
+        color: seen ? OmniGlass.selectionOf(context) : Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(minHeight: 56),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          u.name,
+                          style: OmniType.body.copyWith(
+                            fontWeight: FontWeight.w600,
+                            color: scheme.onSurface,
+                          ),
                         ),
-                      ),
-                      Text(
-                        [
-                          u.serial ?? 'chưa có serial',
-                          if (u.lotCode != null) u.lotCode!,
-                        ].join(' · '),
-                        style: invMuted(context),
-                      ),
-                    ],
+                        Text(
+                          [
+                            u.serial ?? 'chưa có serial',
+                            if (u.lotCode != null) u.lotCode!,
+                          ].join(' · '),
+                          style: invMuted(context),
+                        ),
+                      ],
+                    ),
                   ),
-                ),
-                const SizedBox(width: 10),
-                Text(
-                  UnitCondition.labelOf(u.condition),
-                  style: invMuted(
-                    context,
-                  ).copyWith(color: InvUi.conditionColor(context, u.condition)),
-                ),
-              ],
+                  const SizedBox(width: 10),
+                  Text(
+                    UnitCondition.labelOf(u.condition),
+                    style: invMuted(context).copyWith(
+                      color: InvUi.conditionColor(context, u.condition),
+                    ),
+                  ),
+                  if (seen) ...[
+                    const SizedBox(width: 8),
+                    Icon(Icons.check_rounded, size: 20, color: scheme.primary),
+                  ],
+                ],
+              ),
             ),
           ),
         ),

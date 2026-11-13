@@ -224,7 +224,7 @@ void main() {
 
       expect(find.text('Chưa đặt hạn'), findsNothing);
 
-      await tester.tap(find.byIcon(Icons.close_rounded));
+      await tester.tap(find.byTooltip('Xoá Hạn'));
       await tester.pumpAndSettle();
 
       expect(find.text('Chưa đặt hạn'), findsOneWidget);

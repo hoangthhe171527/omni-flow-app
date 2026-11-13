@@ -12,6 +12,7 @@ import '../../tasks/routes.dart';
 import '../application/inventory_providers.dart';
 import '../domain/inventory_models.dart';
 import '../domain/order_units.dart';
+import '../routes.dart';
 import 'widgets/inventory_ui.dart';
 import 'widgets/record_payment_sheet.dart';
 
@@ -48,7 +49,12 @@ class OrderUnitsPage extends ConsumerWidget {
 
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      appBar: OmniAppBar(title: title, showAccount: false),
+      appBar: OmniAppBar(
+        title: title,
+        showAccount: false,
+        fallbackBack: () =>
+            GoRouter.maybeOf(context)?.go(InventoryRoutes.ordersPath),
+      ),
       body: RefreshIndicator(
         onRefresh: () => ref.refresh(orderUnitsProvider(orderId).future),
         child: ListView(
@@ -171,16 +177,17 @@ class _ProgressBlock extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
+          Wrap(
+            alignment: WrapAlignment.spaceBetween,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            spacing: 8,
+            runSpacing: 6,
             children: [
-              Expanded(
-                child: Text(
-                  data.total == 0
-                      ? 'Chưa có cây nào'
-                      : '${data.done}/${data.total} cây xong',
-                  style: OmniType.bodyStrong.copyWith(color: scheme.onSurface),
-                ),
+              Text(
+                data.total == 0
+                    ? 'Chưa có cây nào'
+                    : '${data.done}/${data.total} cây xong',
+                style: OmniType.bodyStrong.copyWith(color: scheme.onSurface),
               ),
               if (data.remaining > 0)
                 onPay == null
@@ -192,20 +199,25 @@ class _ProgressBlock extends StatelessWidget {
                         button: true,
                         label: '$due, ghi thu',
                         excludeSemantics: true,
-                        child: InkWell(
-                          key: const ValueKey('order-due'),
-                          onTap: onPay,
-                          borderRadius: BorderRadius.circular(12),
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(
-                              vertical: 2,
-                              horizontal: 2,
-                            ),
-                            child: Text(
-                              due,
-                              style: OmniType.bodyStrong.copyWith(
-                                color: scheme.primary,
-                                fontFeatures: OmniType.tabular,
+                        child: Material(
+                          color: scheme.primary.withValues(alpha: .10),
+                          borderRadius: BorderRadius.circular(18),
+                          child: InkWell(
+                            key: const ValueKey('order-due'),
+                            onTap: onPay,
+                            borderRadius: BorderRadius.circular(18),
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(
+                                vertical: 5,
+                                horizontal: 10,
+                              ),
+                              child: Text(
+                                'Còn ${Formatters.vnd(data.remaining)} · Ghi thu',
+                                style: OmniType.caption.copyWith(
+                                  color: scheme.primary,
+                                  fontWeight: FontWeight.w600,
+                                  fontFeatures: OmniType.tabular,
+                                ),
                               ),
                             ),
                           ),
@@ -282,13 +294,22 @@ class _UnitRow extends StatelessWidget {
         ? _ProgressChip(done: w.done, total: w.total)
         : null;
 
+    final danger = OmniColors.dangerTextOf(context);
     return OmniGroupRow(
       key: ValueKey('order-unit-${u.id}'),
       title: [u.label.isEmpty ? '—' : u.label, ?u.serial].join(' '),
       subtitle: line2 == null || line2.isEmpty ? null : line2,
-      // Cây có vấn đề: icon đỏ đầu dòng, lời báo ở dòng phụ.
+      // Cây có vấn đề: ô icon 28 bo 12 nền đỏ mềm đầu dòng, lời báo ở dòng phụ.
       leading: u.bucket == OrderUnitBucket.issue
-          ? Icon(Icons.report_outlined, color: OmniColors.dangerTextOf(context))
+          ? Container(
+              width: 28,
+              height: 28,
+              decoration: BoxDecoration(
+                color: danger.withValues(alpha: .12),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(Icons.error_outline_rounded, size: 16, color: danger),
+            )
           : null,
       trailing: progress,
       chevron: onTap != null,

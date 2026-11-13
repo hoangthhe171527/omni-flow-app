@@ -26,6 +26,11 @@ enum PlanMenuAction {
   delete;
 
   bool get danger => this == close || this == delete;
+
+  bool get opensSubPage => switch (this) {
+    edit || members || labels || fields || archived || files || report => true,
+    _ => false,
+  };
 }
 
 /// Các nhóm của menu kế hoạch theo quyền, đúng thứ tự `Board.dc.html`
@@ -218,6 +223,7 @@ class PlanAnchoredMenu extends ConsumerWidget {
                               trailing,
                               style: OmniType.caption.copyWith(
                                 color: scheme.onSurfaceVariant,
+                                fontFeatures: OmniType.tabular,
                               ),
                             ),
                       onTap: () => Navigator.of(context).pop(action),
@@ -270,6 +276,13 @@ class PlanMenuSheet extends ConsumerWidget {
           color: plan.color,
           size: 36,
         ),
+        trailing: OmniGlassCircle(
+          child: IconButton(
+            tooltip: 'Đóng',
+            onPressed: () => Navigator.of(context).maybePop(),
+            icon: const Icon(Icons.close_rounded),
+          ),
+        ),
       ),
       children: [
         for (var g = 0; g < groups.length; g++)
@@ -281,7 +294,7 @@ class PlanMenuSheet extends ConsumerWidget {
                   icon: _planMenuMeta(action).icon,
                   title: _planMenuMeta(action).label,
                   destructive: action.danger,
-                  chevron: false,
+                  chevron: action.opensSubPage,
                   value: switch (action) {
                     PlanMenuAction.members => '${planMemberCount(plan)}',
                     PlanMenuAction.archived => archivedCount,

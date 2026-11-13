@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/error/app_exception.dart';
+import '../../../../core/nav/shell_bar_inset.dart';
 import '../../../../design/components/components.dart';
 import '../../../../design/tokens/tokens.dart';
 import '../../application/bulk_assign.dart';
@@ -31,75 +32,90 @@ class InboxBulkBar extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final scheme = Theme.of(context).colorScheme;
     final allSelected = selectedIds.length == allIds.length;
-    // Nút kính viên thuốc nhỏ (theme OutlinedButton là kính).
     final pill = OutlinedButton.styleFrom(
-      minimumSize: const Size(0, 40),
+      minimumSize: const Size(0, 44),
+      shape: const StadiumBorder(),
       padding: const EdgeInsets.symmetric(horizontal: 14),
     );
 
-    // Thanh thành viên kính nổi cách mép, bo 28 — không nền đặc / vạch viền.
+    // Khay kính bo 24 nổi phía trên thanh tab kính (ShellBarInset) — nút thao
+    // tác là viên thuốc 999px một tông.
     return Padding(
       padding: EdgeInsets.fromLTRB(
         12,
         8,
         12,
-        10 + MediaQuery.paddingOf(context).bottom,
+        ShellBarInset.floatingBottom(context, gap: 10),
       ),
       child: OmniGlass(
-        radius: 28,
-        padding: const EdgeInsets.fromLTRB(
-          OmniSpacing.md,
-          OmniSpacing.sm,
-          OmniSpacing.md,
-          OmniSpacing.sm,
-        ),
+        radius: 24,
+        padding: const EdgeInsets.fromLTRB(14, 10, 10, 10),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // Được phép xuống dòng: Row cố định làm tràn trên Android hẹp.
-            Wrap(
-              crossAxisAlignment: WrapCrossAlignment.center,
-              spacing: 8,
-              runSpacing: 6,
+            Row(
               children: [
-                Text(
-                  'Đã chọn ${selectedIds.length}',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: OmniType.body.copyWith(
-                    color: scheme.onSurface,
-                    fontWeight: FontWeight.w600,
+                Expanded(
+                  child: Text(
+                    'Đã chọn ${selectedIds.length}',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: OmniType.body.copyWith(
+                      color: scheme.onSurface,
+                      fontWeight: FontWeight.w600,
+                      fontFeatures: OmniType.tabular,
+                    ),
                   ),
                 ),
                 OutlinedButton(
                   onPressed: allIds.isEmpty
                       ? null
                       : () => onSelectAll(allSelected ? const [] : allIds),
-                  style: pill,
+                  style: OutlinedButton.styleFrom(
+                    minimumSize: const Size(0, 40),
+                    shape: const StadiumBorder(),
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                  ),
                   child: Text(allSelected ? 'Bỏ tất cả' : 'Chọn tất cả'),
                 ),
-                OutlinedButton(
-                  onPressed: onDone,
-                  style: pill,
-                  child: const Text('Bỏ chọn'),
+                const SizedBox(width: 6),
+                OmniGlassCircle(
+                  child: IconButton(
+                    tooltip: 'Bỏ chọn',
+                    onPressed: onDone,
+                    icon: const Icon(Icons.close_rounded),
+                  ),
                 ),
               ],
             ),
-            const SizedBox(height: 6),
+            const SizedBox(height: 8),
             Row(
-              mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                _BulkAction(
-                  icon: Icons.person_add_alt_rounded,
-                  label: 'Gán',
-                  onTap: () => _assign(context, ref),
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: () => _assign(context, ref),
+                    style: pill,
+                    icon: Icon(
+                      Icons.person_add_alt_rounded,
+                      size: OmniIconSize.md,
+                      color: scheme.onSurface,
+                    ),
+                    label: const Text('Gán'),
+                  ),
                 ),
-                const SizedBox(width: 24),
-                _BulkAction(
-                  icon: Icons.sell_outlined,
-                  label: 'Gắn nhãn',
-                  onTap: () => _label(context, ref),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: () => _label(context, ref),
+                    style: pill,
+                    icon: Icon(
+                      Icons.sell_outlined,
+                      size: OmniIconSize.md,
+                      color: scheme.onSurface,
+                    ),
+                    label: const Text('Gắn nhãn'),
+                  ),
                 ),
               ],
             ),
@@ -156,54 +172,5 @@ class InboxBulkBar extends ConsumerWidget {
     } on AppException catch (error) {
       messenger.showSnackBar(SnackBar(content: Text(error.message)));
     }
-  }
-}
-
-/// Một thao tác hàng loạt: nút kính tròn có nhãn nhỏ phía dưới.
-class _BulkAction extends StatelessWidget {
-  const _BulkAction({
-    required this.icon,
-    required this.label,
-    required this.onTap,
-  });
-
-  final IconData icon;
-  final String label;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return Semantics(
-      button: true,
-      label: label,
-      excludeSemantics: true,
-      onTap: onTap,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(minWidth: 64),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              OmniGlassCircle(
-                child: Icon(icon, size: 20, color: scheme.onSurface),
-              ),
-              const SizedBox(height: 3),
-              Text(
-                label,
-                maxLines: 1,
-                style: OmniType.micro.copyWith(
-                  fontWeight: FontWeight.w600,
-                  color: scheme.onSurface,
-                ),
-              ),
-              const SizedBox(height: 2),
-            ],
-          ),
-        ),
-      ),
-    );
   }
 }

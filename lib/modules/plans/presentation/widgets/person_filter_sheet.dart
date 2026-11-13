@@ -36,16 +36,24 @@ Future<BoardPerson?> showPersonFilterMenu(
   ),
 );
 
-class _PersonFilterSheet extends ConsumerWidget {
+class _PersonFilterSheet extends ConsumerStatefulWidget {
   const _PersonFilterSheet({required this.current, this.inMenu = false});
 
   final BoardPerson current;
   final bool inMenu;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_PersonFilterSheet> createState() => _PersonFilterSheetState();
+}
+
+class _PersonFilterSheetState extends ConsumerState<_PersonFilterSheet> {
+  String _query = '';
+
+  @override
+  Widget build(BuildContext context) {
     final members = ref.watch(teamMembersProvider);
     final text = Theme.of(context).textTheme;
+    final current = widget.current;
 
     // Danh sách người có thể chưa tải xong, hoặc tải hỏng. Cả hai đều KHÔNG
     // được che mất hai lựa chọn đầu: "Tất cả" và "Chưa giao ai" không cần biết
@@ -54,7 +62,18 @@ class _PersonFilterSheet extends ConsumerWidget {
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const OmniSheetHeader(title: 'Lọc theo người'),
+        OmniSheetHeader(
+          title: 'Lọc theo người',
+          trailing: widget.inMenu
+              ? null
+              : OmniGlassCircle(
+                  child: IconButton(
+                    tooltip: 'Đóng',
+                    onPressed: () => Navigator.of(context).maybePop(),
+                    icon: const Icon(Icons.close_rounded),
+                  ),
+                ),
+        ),
         Flexible(
           child: ListView(
             shrinkWrap: true,
@@ -80,24 +99,50 @@ class _PersonFilterSheet extends ConsumerWidget {
               ),
               const SizedBox(height: OmniGroupSection.sheetGap),
               members.when(
-                data: (list) => OmniGroupSection(
-                  dividerIndent: 54,
-                  children: [
-                    // `list` chỉ có người chọn được (APP-I10); người đang lọc
-                    // mà nay không chọn được vẫn hiện để thấy mình lọc ai.
-                    for (final member in withPickedMembers(list, [
-                      ?current.userId,
-                    ], ref.watch(teamMemberByIdProvider)))
-                      _row(
-                        avatarName: member.name,
-                        label: member.name,
-                        selected: current.userId == member.userId,
-                        onTap: () => Navigator.of(
-                          context,
-                        ).pop(BoardPerson.person(member.userId, member.name)),
-                      ),
-                  ],
-                ),
+                data: (list) {
+                  // `list` chỉ có người chọn được (APP-I10); người đang lọc
+                  // mà nay không chọn được vẫn hiện để thấy mình lọc ai.
+                  final allMembers = withPickedMembers(list, [
+                    ?current.userId,
+                  ], ref.watch(teamMemberByIdProvider));
+                  final shown = _query.isEmpty
+                      ? allMembers
+                      : allMembers
+                            .where((m) => m.name.toLowerCase().contains(_query))
+                            .toList();
+                  return Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      if (allMembers.length > 6) ...[
+                        OmniSearchField(
+                          hint: 'Tìm người…',
+                          onChanged: (v) =>
+                              setState(() => _query = v.trim().toLowerCase()),
+                        ),
+                        const SizedBox(height: OmniGroupSection.sheetGap),
+                      ],
+                      if (shown.isNotEmpty)
+                        OmniGroupSection(
+                          dividerIndent: 54,
+                          children: [
+                            for (final member in shown)
+                              _row(
+                                avatarName: member.name,
+                                label: member.name,
+                                selected: current.userId == member.userId,
+                                onTap: () => Navigator.of(context).pop(
+                                  BoardPerson.person(
+                                    member.userId,
+                                    member.name,
+                                  ),
+                                ),
+                              ),
+                          ],
+                        ),
+                    ],
+                  );
+                },
                 loading: () => const Padding(
                   padding: EdgeInsets.all(OmniSpacing.lg),
                   child: Center(
@@ -123,7 +168,7 @@ class _PersonFilterSheet extends ConsumerWidget {
         ),
       ],
     );
-    return inMenu ? content : SafeArea(child: content);
+    return widget.inMenu ? content : SafeArea(child: content);
   }
 
   /// Dấu ✓ chứ không chỉ đổi màu chữ: trong ánh sáng xưởng và với người mù
@@ -142,6 +187,7 @@ class _PersonFilterSheet extends ConsumerWidget {
     title: label,
     maxTitleLines: 1,
     selected: selected,
+    chevron: false,
     onTap: onTap,
   );
 }

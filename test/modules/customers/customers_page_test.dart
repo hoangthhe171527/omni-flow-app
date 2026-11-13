@@ -313,10 +313,7 @@ void main() {
     await t.tap(find.byTooltip('Thêm khách'));
     await t.pumpAndSettle();
     expect(find.byKey(const Key('customer-create-dialog')), findsOneWidget);
-    expect(
-      find.text('Điền thông tin hồ sơ ngay tại danh sách'),
-      findsOneWidget,
-    );
+    expect(find.text('Thêm khách hàng'), findsOneWidget);
     expect(find.byType(CustomerFormPage), findsNothing);
 
     await t.enterText(find.byKey(const Key('customer-form-name')), 'Mai Anh');

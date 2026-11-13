@@ -291,6 +291,11 @@ void main() {
           '1.650.000 đ',
         ]) {
           final finder = find.text(textValue);
+          if (finder.evaluate().isEmpty) {
+            await tester.drag(find.byType(ListView), const Offset(0, -260));
+            await tester.pumpAndSettle();
+            expect(tester.takeException(), isNull);
+          }
           expect(
             finder,
             findsWidgets,
@@ -776,8 +781,9 @@ void main() {
         // Tiêu đề kể lại "Cơ cấu chi phí trong kỳ" đã bỏ (liquid đợt 3).
         expect(find.text('CƠ CẤU CHI PHÍ TRONG KỲ'), findsNothing);
 
-        final dimAccountBtn = find.byKey(
-          const ValueKey('finance-summary-dim-account'),
+        final dimAccountBtn = find.descendant(
+          of: find.byKey(const ValueKey('finance-summary-dim')),
+          matching: find.text('Nguồn tiền'),
         );
         await tester.ensureVisible(dimAccountBtn);
         await tester.pumpAndSettle();

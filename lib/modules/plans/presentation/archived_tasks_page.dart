@@ -9,7 +9,6 @@ import '../../../design/tokens/tokens.dart';
 import '../../tasks/application/tasks_providers.dart';
 import '../../tasks/data/tasks_api.dart';
 import '../../tasks/domain/task.dart';
-import '../../tasks/tasks.dart';
 import '../../tasks/tasks_module.dart';
 import '../application/plans_providers.dart';
 
@@ -67,7 +66,10 @@ class _ArchivedTasksPageState extends ConsumerState<ArchivedTasksPage> {
     final scheme = Theme.of(context).colorScheme;
 
     return Scaffold(
-      appBar: OmniAppBar(title: 'Việc đã lưu trữ'),
+      appBar: OmniAppBar(
+        title: 'Việc đã lưu trữ',
+        fallbackBack: () => context.go('/plans/${widget.planId}'),
+      ),
       body: RefreshIndicator.adaptive(
         onRefresh: () async =>
             ref.invalidate(archivedTasksProvider(widget.planId)),
@@ -87,7 +89,7 @@ class _ArchivedTasksPageState extends ConsumerState<ArchivedTasksPage> {
               );
             }
 
-            return ListView.separated(
+            return ListView(
               physics: const AlwaysScrollableScrollPhysics(),
               padding: const EdgeInsets.fromLTRB(
                 OmniSpacing.lg,
@@ -95,60 +97,119 @@ class _ArchivedTasksPageState extends ConsumerState<ArchivedTasksPage> {
                 OmniSpacing.lg,
                 OmniSpacing.bottomSafe,
               ),
-              // Dừng ở trần mà server còn nữa: nói ra ở ĐẦU danh sách, không
-              // lặng lẽ dừng ở việc thứ 500.
-              itemCount: tasks.length + (result.truncated ? 1 : 0),
-              separatorBuilder: (_, _) =>
-                  const SizedBox(height: OmniSpacing.sm),
-              itemBuilder: (context, index) {
-                if (result.truncated && index == 0) {
-                  return Text(
-                    'Chỉ hiện $kMaxArchivedTasks việc lưu trữ đầu tiên. '
-                    'Tìm việc cũ hơn trên web.',
-                    style: OmniType.caption.copyWith(
-                      color: scheme.onSurfaceVariant,
-                    ),
-                  );
-                }
-                final task = tasks[index - (result.truncated ? 1 : 0)];
-
-                return Column(
-                  key: ValueKey('archived-${task.id}'),
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    TaskCard(
-                      task: task,
-                      showPlanName: false,
-                      onTap: () => context.pushNamed(
-                        TasksModule.detail,
-                        pathParameters: {'id': task.id},
+              children: [
+                // Dừng ở trần mà server còn nữa: nói ra ở ĐẦU danh sách, không
+                // lặng lẽ dừng ở việc thứ 500.
+                if (result.truncated) ...[
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(4, 0, 4, 8),
+                    child: Text(
+                      'Chỉ hiện $kMaxArchivedTasks việc lưu trữ đầu tiên. '
+                      'Tìm việc cũ hơn trên web.',
+                      style: OmniType.caption.copyWith(
+                        color: scheme.onSurfaceVariant,
                       ),
                     ),
-                    if (widget.canRestore)
-                      Align(
-                        alignment: Alignment.centerRight,
-                        child: Semantics(
-                          button: true,
-                          label: 'Khôi phục ${task.title}',
-                          excludeSemantics: true,
-                          child: TextButton.icon(
-                            style: TextButton.styleFrom(
-                              minimumSize: const Size(44, 44),
-                              foregroundColor: scheme.primary,
+                  ),
+                ],
+                OmniGroupSection(
+                  dividerIndent: 14,
+                  children: [
+                    for (final task in tasks)
+                      if (widget.canRestore)
+                        Stack(
+                          key: ValueKey('archived-${task.id}'),
+                          alignment: Alignment.centerRight,
+                          children: [
+                            OmniGroupRow(
+                              title: task.title,
+                              subtitle: (task.sectionName ?? '').trim().isEmpty
+                                  ? null
+                                  : task.sectionName,
+                              chevron: false,
+                              onTap: () => context.pushNamed(
+                                TasksModule.detail,
+                                pathParameters: {'id': task.id},
+                              ),
+                              trailing: const SizedBox(width: 92, height: 32),
                             ),
-                            onPressed: _busy.contains(task.id)
-                                ? null
-                                : () => _restore(task),
-                            icon: const Icon(Icons.unarchive_outlined),
-                            label: const Text('Khôi phục'),
+                            Positioned(
+                              right: 14,
+                              child: _RestoreGlassPill(
+                                taskTitle: task.title,
+                                busy: _busy.contains(task.id),
+                                onPressed: () => _restore(task),
+                              ),
+                            ),
+                          ],
+                        )
+                      else
+                        OmniGroupRow(
+                          key: ValueKey('archived-${task.id}'),
+                          title: task.title,
+                          subtitle: (task.sectionName ?? '').trim().isEmpty
+                              ? null
+                              : task.sectionName,
+                          chevron: true,
+                          onTap: () => context.pushNamed(
+                            TasksModule.detail,
+                            pathParameters: {'id': task.id},
                           ),
                         ),
-                      ),
                   ],
-                );
-              },
+                ),
+              ],
             );
           },
+        ),
+      ),
+    );
+  }
+}
+
+class _RestoreGlassPill extends StatelessWidget {
+  const _RestoreGlassPill({
+    required this.taskTitle,
+    required this.busy,
+    required this.onPressed,
+  });
+
+  final String taskTitle;
+  final bool busy;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+
+    return Semantics(
+      container: true,
+      button: true,
+      label: 'Khôi phục $taskTitle',
+      excludeSemantics: true,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
+        child: Center(
+          child: Material(
+            type: MaterialType.transparency,
+            child: InkWell(
+              borderRadius: BorderRadius.circular(999),
+              onTap: busy ? null : onPressed,
+              child: Container(
+                height: 32,
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                alignment: Alignment.center,
+                decoration: OmniGlass.buttonDecoration(context),
+                child: Text(
+                  'Khôi phục',
+                  style: OmniType.caption.copyWith(
+                    color: busy ? scheme.onSurfaceVariant : scheme.primary,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ),
+          ),
         ),
       ),
     );

@@ -109,7 +109,7 @@ class _CustomerDetailPageState extends ConsumerState<CustomerDetailPage> {
       if (router.canPop()) {
         router.pop();
       } else {
-        router.goNamed(CustomerRoutes.list);
+        router.go('/customers');
       }
       messenger.showSnackBar(
         SnackBar(
@@ -215,22 +215,17 @@ class _CustomerDetailPageState extends ConsumerState<CustomerDetailPage> {
       extendBodyBehindAppBar: true,
       // Nền xám để các thẻ nhóm lồng nổi lên.
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      appBar: OmniTopBar(
-        semanticsTitle: 'Khách hàng',
-        onBack: () {
-          if (context.canPop()) {
-            context.pop();
-          } else {
-            context.goNamed(CustomerRoutes.list);
-          }
-        },
+      appBar: OmniAppBar(
+        title: 'Khách hàng',
+        fallbackBack: () => context.go('/customers'),
         actions: [
           // Chỉ có đúng một hành động thì dùng nút trực tiếp; dấu ⋯ rồi mở
           // menu một dòng chỉ tạo thêm một lần chạm không có giá trị.
           if (access.canUpdate)
-            OmniTopBarAction(
-              icon: Icons.edit_note_rounded,
+            IconButton(
               tooltip: 'Sửa đầy đủ thông tin',
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints.tightFor(width: 44, height: 44),
               onPressed: () async {
                 await context.pushNamed(
                   CustomerRoutes.edit,
@@ -239,6 +234,11 @@ class _CustomerDetailPageState extends ConsumerState<CustomerDetailPage> {
                 if (!mounted) return;
                 _invalidateDetail(activity: activityOn, opps: oppsOn);
               },
+              icon: Icon(
+                Icons.edit_note_rounded,
+                size: OmniIconSize.md,
+                color: Theme.of(context).colorScheme.onSurface,
+              ),
             ),
         ],
       ),
@@ -630,6 +630,7 @@ class _Overview extends StatelessWidget {
   InlineEditRow _row(
     CustomerField field,
     String value, {
+    required IconData icon,
     TextInputType? keyboardType,
     int? maxLength,
     bool multiline = false,
@@ -640,6 +641,7 @@ class _Overview extends StatelessWidget {
     key: ValueKey('edit-${field.name}'),
     label: field.label,
     value: value,
+    icon: icon,
     editable: canUpdate,
     multiline: multiline,
     viewMaxLines: viewMaxLines,
@@ -664,66 +666,72 @@ class _Overview extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 16),
       child: Column(
         children: [
-          OmniCard(
-            flat: true,
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-            child: Column(
-              children: [
-                _row(
-                  CustomerField.phone,
-                  c.phone,
-                  keyboardType: TextInputType.phone,
-                  valueColor: scheme.primary,
-                  onTapValue: phone.isEmpty
-                      ? null
-                      : () => launchWithToast(
-                          context,
-                          Uri(scheme: 'tel', path: dialNumber(phone)),
-                          'Không mở được ứng dụng gọi điện.',
-                        ),
-                ),
-                _row(
-                  CustomerField.email,
-                  c.email,
-                  keyboardType: TextInputType.emailAddress,
-                  onTapValue: email.isEmpty
-                      ? null
-                      : () => launchWithToast(
-                          context,
-                          Uri(scheme: 'mailto', path: email),
-                          'Không mở được ứng dụng email.',
-                        ),
-                ),
-                _row(
-                  CustomerField.address,
-                  c.address,
-                  maxLength: 500,
-                  viewMaxLines: 3,
-                ),
-                _row(CustomerField.note, c.note ?? '', multiline: true),
-              ],
-            ),
+          OmniGroupSection(
+            title: 'Liên hệ',
+            dividerIndent: 54,
+            children: [
+              _row(
+                CustomerField.phone,
+                c.phone,
+                icon: Icons.call_outlined,
+                keyboardType: TextInputType.phone,
+                valueColor: scheme.primary,
+                onTapValue: phone.isEmpty
+                    ? null
+                    : () => launchWithToast(
+                        context,
+                        Uri(scheme: 'tel', path: dialNumber(phone)),
+                        'Không mở được ứng dụng gọi điện.',
+                      ),
+              ),
+              _row(
+                CustomerField.email,
+                c.email,
+                icon: Icons.mail_outline_rounded,
+                keyboardType: TextInputType.emailAddress,
+                onTapValue: email.isEmpty
+                    ? null
+                    : () => launchWithToast(
+                        context,
+                        Uri(scheme: 'mailto', path: email),
+                        'Không mở được ứng dụng email.',
+                      ),
+              ),
+              _row(
+                CustomerField.address,
+                c.address,
+                icon: Icons.location_on_outlined,
+                maxLength: 500,
+                viewMaxLines: 3,
+              ),
+              _row(
+                CustomerField.note,
+                c.note ?? '',
+                icon: Icons.notes_rounded,
+                multiline: true,
+              ),
+            ],
           ),
-          const SizedBox(height: 12),
-          OmniCard(
-            flat: true,
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-            child: Column(
-              children: [
-                _PickerRow(
-                  label: CustomerField.owner.label,
-                  editable: canUpdate,
-                  onTap: onPickOwner,
-                  child: _OwnerValue(name: c.ownerName),
-                ),
-                _PickerRow(
-                  label: CustomerField.tags.label,
-                  editable: canUpdate,
-                  onTap: onPickTags,
-                  child: _TagsValue(tags: c.tags),
-                ),
-              ],
-            ),
+          const SizedBox(height: OmniGroupSection.gap),
+          OmniGroupSection(
+            title: 'Phân công',
+            dividerIndent: 54,
+            children: [
+              _PickerRow(
+                icon: Icons.person_outline_rounded,
+                label: CustomerField.owner.label,
+                editable: canUpdate,
+                onTap: onPickOwner,
+                child: _OwnerValue(name: c.ownerName),
+              ),
+              _PickerRow(
+                icon: Icons.sell_outlined,
+                label: CustomerField.tags.label,
+                editable: canUpdate,
+                onTap: onPickTags,
+                child: _TagsValue(tags: c.tags),
+              ),
+            ],
           ),
         ],
       ),
@@ -734,12 +742,14 @@ class _Overview extends StatelessWidget {
 /// Dòng chạm-để-chọn (Phụ trách, Nhãn): cùng khung với [InlineEditRow].
 class _PickerRow extends StatelessWidget {
   const _PickerRow({
+    required this.icon,
     required this.label,
     required this.editable,
     required this.onTap,
     required this.child,
   });
 
+  final IconData icon;
   final String label;
   final bool editable;
   final VoidCallback onTap;
@@ -751,13 +761,14 @@ class _PickerRow extends StatelessWidget {
     final scheme = theme.colorScheme;
     return InkWell(
       onTap: editable ? onTap : null,
-      borderRadius: BorderRadius.circular(12),
       child: ConstrainedBox(
-        constraints: const BoxConstraints(minHeight: 44),
+        constraints: const BoxConstraints(minHeight: 48),
         child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 10),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
           child: Row(
             children: [
+              OmniIconTile(icon),
+              const SizedBox(width: 12),
               SizedBox(
                 width: 92,
                 child: Text(
@@ -770,6 +781,14 @@ class _PickerRow extends StatelessWidget {
               Expanded(
                 child: Align(alignment: Alignment.centerRight, child: child),
               ),
+              if (editable) ...[
+                const SizedBox(width: 6),
+                Icon(
+                  Icons.chevron_right_rounded,
+                  size: 18,
+                  color: OmniTaskTones.of(context).chevron,
+                ),
+              ],
             ],
           ),
         ),
@@ -838,12 +857,10 @@ class _TagsValue extends StatelessWidget {
       runSpacing: 6,
       children: [
         for (final tag in tags)
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-            decoration: BoxDecoration(
-              color: scheme.surfaceContainerHighest,
-              borderRadius: BorderRadius.circular(999),
-            ),
+          OmniGlass(
+            blur: false,
+            radius: 999,
+            padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [

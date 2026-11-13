@@ -52,7 +52,7 @@ class FinanceCatalogPage extends ConsumerWidget {
         onAction: () => _add(context, ref),
       );
     } else {
-      body = RefreshIndicator(
+      body = RefreshIndicator.adaptive(
         onRefresh: () => ref.read(financeLedgerProvider.notifier).refresh(),
         child: ListView(
           key: const ValueKey('finance-catalog-list'),
@@ -68,6 +68,7 @@ class FinanceCatalogPage extends ConsumerWidget {
             OmniGroupSection(
               key: const ValueKey('finance-catalog-groups'),
               title: 'Nhóm chi',
+              dividerIndent: 54,
               trailingTitle: _Count(active.length),
               children: [
                 for (final g in active)
@@ -79,6 +80,7 @@ class FinanceCatalogPage extends ConsumerWidget {
               OmniGroupSection(
                 key: const ValueKey('finance-catalog-archived'),
                 title: 'Đã lưu trữ',
+                dividerIndent: 54,
                 trailingTitle: _Count(archived.length),
                 children: [
                   for (final g in archived)
@@ -94,6 +96,7 @@ class FinanceCatalogPage extends ConsumerWidget {
               OmniGroupSection(
                 key: const ValueKey('finance-catalog-accounts'),
                 title: 'Nguồn tiền',
+                dividerIndent: 54,
                 trailingTitle: _Count(
                   accounts.where((a) => !a.archived).length,
                 ),
@@ -148,9 +151,21 @@ class FinanceCatalogPage extends ConsumerWidget {
     final kind = await showOmniSheet<_CatalogKind>(
       context: context,
       builder: (sheet) => OmniSheetBody(
-        header: const OmniSheetHeader(title: 'Thêm'),
+        header: OmniSheetHeader(
+          title: 'Thêm danh mục',
+          trailing: OmniGlassCircle(
+            child: IconButton(
+              tooltip: 'Đóng',
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints.tightFor(width: 44, height: 44),
+              icon: const Icon(Icons.close_rounded, size: OmniIconSize.md),
+              onPressed: () => Navigator.of(sheet).maybePop(),
+            ),
+          ),
+        ),
         children: [
           OmniGroupSection(
+            dividerIndent: 54,
             children: [
               OmniGroupRow(
                 key: const ValueKey('finance-catalog-add-group'),
@@ -274,17 +289,8 @@ class _GroupRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final row = OmniGroupRow(
       key: ValueKey('finance-catalog-group-${group.id}'),
-      leading: SizedBox.square(
-        dimension: 28,
-        child: Center(
-          child: DecoratedBox(
-            decoration: BoxDecoration(
-              color: group.parsedColor,
-              shape: BoxShape.circle,
-            ),
-            child: const SizedBox.square(dimension: 10),
-          ),
-        ),
+      leading: OmniIconTile(
+        group.archived ? Icons.archive_outlined : Icons.sell_outlined,
       ),
       title: group.name,
       subtitle: group.countsAsExpense ? null : 'Không tính vào chi phí',
@@ -301,11 +307,18 @@ class _AccountRow extends StatelessWidget {
   final MoneyAccount account;
   final VoidCallback onTap;
 
+  static IconData _iconFor(MoneyAccountKind kind) => switch (kind) {
+    MoneyAccountKind.bank ||
+    MoneyAccountKind.company => Icons.account_balance_outlined,
+    MoneyAccountKind.cash => Icons.payments_outlined,
+    MoneyAccountKind.advance => Icons.account_balance_wallet_outlined,
+  };
+
   @override
   Widget build(BuildContext context) {
     final row = OmniGroupRow(
       key: ValueKey('finance-catalog-account-${account.id}'),
-      leading: OmniAvatar(name: account.name, size: 28),
+      leading: OmniIconTile(_iconFor(account.kind)),
       title: account.name,
       subtitle: account.archived ? 'Đã lưu trữ' : null,
       value: '${account.expenseCount} khoản',
@@ -424,6 +437,19 @@ class _CatalogEditSheetState extends State<_CatalogEditSheet> {
       header: OmniSheetHeader(
         title: widget.title,
         subtitle: '${widget.expenseCount} khoản',
+        trailing: OmniGlassCircle(
+          child: IconButton(
+            tooltip: 'Đóng',
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints.tightFor(width: 44, height: 44),
+            icon: Icon(
+              Icons.close_rounded,
+              size: OmniIconSize.md,
+              color: scheme.onSurface,
+            ),
+            onPressed: () => Navigator.of(context).maybePop(),
+          ),
+        ),
       ),
       footer: FilledButton(
         key: const ValueKey('finance-catalog-save'),
@@ -435,16 +461,36 @@ class _CatalogEditSheetState extends State<_CatalogEditSheet> {
           dividerIndent: 14,
           children: [
             Padding(
-              padding: const EdgeInsets.fromLTRB(14, 6, 14, 6),
-              child: OmniField(
-                label: 'Tên',
-                child: TextField(
-                  key: const ValueKey('finance-catalog-edit-name'),
-                  controller: _name,
-                  maxLength: 80,
-                  textCapitalization: TextCapitalization.sentences,
-                  decoration: const InputDecoration(counterText: ''),
-                ),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    'Tên',
+                    style: OmniType.caption.copyWith(
+                      fontWeight: FontWeight.w600,
+                      color: scheme.onSurfaceVariant,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  TextField(
+                    key: const ValueKey('finance-catalog-edit-name'),
+                    controller: _name,
+                    maxLength: 80,
+                    textCapitalization: TextCapitalization.sentences,
+                    style: OmniType.body.copyWith(color: scheme.onSurface),
+                    decoration: const InputDecoration(
+                      counterText: '',
+                      isDense: true,
+                      filled: false,
+                      contentPadding: EdgeInsets.symmetric(vertical: 4),
+                      border: InputBorder.none,
+                      enabledBorder: InputBorder.none,
+                      focusedBorder: InputBorder.none,
+                    ),
+                  ),
+                ],
               ),
             ),
             if (isGroup)

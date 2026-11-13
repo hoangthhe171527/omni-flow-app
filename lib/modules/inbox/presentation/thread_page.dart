@@ -1014,29 +1014,29 @@ class _NoComposerBar extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
 
-    return Container(
-      width: double.infinity,
-      padding: EdgeInsets.fromLTRB(
-        OmniSpacing.lg,
-        OmniSpacing.md,
-        OmniSpacing.lg,
-        OmniSpacing.md + MediaQuery.paddingOf(context).bottom,
-      ),
-      decoration: BoxDecoration(
-        color: scheme.surfaceContainerHighest,
-        border: Border(top: BorderSide(color: scheme.outline)),
-      ),
-      child: Row(
-        children: [
-          Icon(icon, size: OmniIconSize.sm, color: scheme.onSurfaceVariant),
-          const SizedBox(width: OmniSpacing.sm),
-          Expanded(
-            child: Text(
-              text,
-              style: OmniType.caption.copyWith(color: scheme.onSurfaceVariant),
-            ),
+    return SafeArea(
+      top: false,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(12, 4, 12, 8),
+        child: OmniGlass(
+          radius: 24,
+          blur: false,
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          child: Row(
+            children: [
+              Icon(icon, size: OmniIconSize.sm, color: scheme.onSurfaceVariant),
+              const SizedBox(width: OmniSpacing.sm),
+              Expanded(
+                child: Text(
+                  text,
+                  style: OmniType.caption.copyWith(
+                    color: scheme.onSurfaceVariant,
+                  ),
+                ),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }

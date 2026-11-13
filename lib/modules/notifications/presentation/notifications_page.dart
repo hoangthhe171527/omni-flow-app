@@ -147,23 +147,8 @@ class _NotificationsPageState extends ConsumerState<NotificationsPage> {
                     ),
               data: (state) {
                 final groups = groupNotificationsByDay(state.items);
-                // Phẳng: tiêu đề nhóm + từng dòng là một mục của builder, nên mỗi
-                // lần "tải thêm" chỉ dựng các dòng đang hiện, không dựng lại cả
-                // khối nhóm. Trông y hệt khối cũ (nhóm không có khung bo).
-                final entries = <_Entry>[
-                  for (final group in groups) ...[
-                    _Entry.header(group.label),
-                    for (var i = 0; i < group.items.length; i++)
-                      _Entry.row(
-                        group.label,
-                        group.items[i],
-                        divider: i > 0,
-                        lastInGroup: i == group.items.length - 1,
-                      ),
-                  ],
-                ];
 
-                return ListView.builder(
+                return ListView.separated(
                   physics: const AlwaysScrollableScrollPhysics(),
                   controller: _scrollController,
                   padding: EdgeInsets.fromLTRB(
@@ -172,20 +157,25 @@ class _NotificationsPageState extends ConsumerState<NotificationsPage> {
                     16,
                     OmniSpacing.bottomSafe,
                   ),
-                  itemCount: entries.length,
+                  itemCount: groups.length,
+                  separatorBuilder: (_, _) =>
+                      const SizedBox(height: OmniGroupSection.gap),
                   itemBuilder: (context, index) {
-                    final entry = entries[index];
-                    final child = entry.notification == null
-                        ? _GroupHeader(label: entry.label)
-                        : _GroupRow(
-                            label: entry.label,
-                            notification: entry.notification!,
-                            divider: entry.divider,
-                            lastInGroup: entry.lastInGroup,
-                            onOpen: _open,
-                          );
-                    // Hiện dần chỉ ở lượt mở đầu; dòng cuộn tới sau thì hiện ngay.
-                    return _entered ? child : _Rise(child: child);
+                    final group = groups[index];
+                    final section = OmniGroupSection(
+                      key: ValueKey('notification-group-${group.label}'),
+                      title: group.label,
+                      dividerIndent: 54,
+                      children: [
+                        for (final item in group.items)
+                          NotificationRow(
+                            notification: item,
+                            onTap: () => _open(item),
+                          ),
+                      ],
+                    );
+                    // Hiện dần chỉ ở lượt mở đầu; nhóm cuộn tới sau thì hiện ngay.
+                    return _entered ? section : _Rise(child: section);
                   },
                 );
               },
@@ -265,104 +255,8 @@ class _Rise extends StatelessWidget {
   }
 }
 
-/// Một mục của danh sách phẳng: tiêu đề nhóm ([notification] null) hoặc một dòng.
-class _Entry {
-  const _Entry.header(this.label)
-    : notification = null,
-      divider = false,
-      lastInGroup = false;
-
-  const _Entry.row(
-    this.label,
-    AppNotification this.notification, {
-    required this.divider,
-    required this.lastInGroup,
-  });
-
-  final String label;
-  final AppNotification? notification;
-  final bool divider;
-  final bool lastInGroup;
-}
-
-class _GroupHeader extends StatelessWidget {
-  const _GroupHeader({required this.label});
-
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(2, 0, 2, 8),
-      child: Semantics(
-        header: true,
-        child: Text(
-          label,
-          style: OmniType.overline.copyWith(
-            color: Theme.of(context).colorScheme.onSurfaceVariant,
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-/// Một dòng của nhóm: vạch trên (trừ dòng đầu) + dòng thông báo; dòng cuối nhóm
-/// chừa 16px như khối nhóm cũ. Dòng đầu mang khoá `notification-group-<nhãn>`.
-class _GroupRow extends StatelessWidget {
-  const _GroupRow({
-    required this.label,
-    required this.notification,
-    required this.divider,
-    required this.lastInGroup,
-    required this.onOpen,
-  });
-
-  final String label;
-  final AppNotification notification;
-  final bool divider;
-  final bool lastInGroup;
-  final void Function(AppNotification) onOpen;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-
-    // Nhóm lồng (viomni-apple-uiux.html `.group`): mỗi ngày là một thẻ bo 18
-    // trên nền xám — dòng đầu bo trên, dòng cuối bo dưới.
-    const r = Radius.circular(18);
-    return Padding(
-      padding: EdgeInsets.only(bottom: lastInGroup ? 16 : 0),
-      child: Material(
-        key: divider ? null : ValueKey('notification-group-$label'),
-        color: scheme.surface,
-        clipBehavior: Clip.antiAlias,
-        borderRadius: BorderRadius.vertical(
-          top: divider ? Radius.zero : r,
-          bottom: lastInGroup ? r : Radius.zero,
-        ),
-        child: Column(
-          children: [
-            if (divider)
-              // Vạch chia thụt sau icon (18 + 32 + 10), không chạy full ngang.
-              Divider(
-                height: 1,
-                thickness: 1,
-                indent: 60,
-                color: scheme.outlineVariant.withValues(alpha: .7),
-              ),
-            NotificationRow(
-              notification: notification,
-              onTap: () => onOpen(notification),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-/// Một thông báo. Cả dòng là đích chạm; chấm chưa đọc chỉ là chỉ báo.
+/// Một thông báo trong [OmniGroupSection]. Cả dòng là đích chạm; chấm chưa đọc
+/// tròn 8×8 màu chính ở lề trái, ô icon [OmniIconTile] 28×28 bo 8 một tông.
 class NotificationRow extends StatelessWidget {
   const NotificationRow({
     super.key,
@@ -388,9 +282,7 @@ class NotificationRow extends StatelessWidget {
       onTap: onTap,
       excludeSemantics: true,
       child: Material(
-        // Chưa đọc = chấm màu chính ở lề trái + tiêu đề đậm; không tô nền
-        // xanh phẳng (đợt 3 liquid).
-        color: scheme.surface,
+        type: MaterialType.transparency,
         child: InkWell(
           onTap: onTap,
           child: ConstrainedBox(
@@ -399,11 +291,11 @@ class NotificationRow extends StatelessWidget {
               children: [
                 if (unread)
                   Positioned(
-                    left: 7,
-                    top: 22,
+                    left: 3,
+                    top: 20,
                     child: Container(
-                      width: 6,
-                      height: 6,
+                      width: 8,
+                      height: 8,
                       decoration: BoxDecoration(
                         color: scheme.primary,
                         shape: BoxShape.circle,
@@ -411,12 +303,17 @@ class NotificationRow extends StatelessWidget {
                     ),
                   ),
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(18, 10, 12, 10),
+                  // 14 + 28 (OmniIconTile) + 12 = 54, khớp `dividerIndent: 54`.
+                  padding: const EdgeInsets.fromLTRB(14, 10, 14, 10),
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      _KindIcon(kind: notification.kind),
-                      const SizedBox(width: 10),
+                      OmniIconTile(
+                        _iconForKind(notification.kind),
+                        color: scheme.primary,
+                        background: scheme.primary.withValues(alpha: .10),
+                      ),
+                      const SizedBox(width: 12),
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -463,58 +360,16 @@ class NotificationRow extends StatelessWidget {
   }
 }
 
-/// Hình theo loại, màu theo sắc: tin nhắn teal, việc xanh, sắp hạn cam, trễ
-/// hạn đỏ, còn lại trung tính.
-class _KindIcon extends StatelessWidget {
-  const _KindIcon({required this.kind});
-
-  final NotificationKind kind;
-
-  @override
-  Widget build(BuildContext context) {
-    final (icon, hue) = switch (kind) {
-      NotificationKind.inboxMessage => (
-        Icons.chat_bubble_outline_rounded,
-        OmniHue.teal,
-      ),
-      NotificationKind.taskAssigned => (
-        Icons.assignment_ind_outlined,
-        OmniHue.blue,
-      ),
-      NotificationKind.taskStageOpen => (
-        Icons.pan_tool_alt_outlined,
-        OmniHue.blue,
-      ),
-      NotificationKind.taskProgress => (Icons.timeline_rounded, OmniHue.blue),
-      NotificationKind.taskCompleted => (
-        Icons.check_circle_outline_rounded,
-        OmniHue.blue,
-      ),
-      NotificationKind.taskCommented || NotificationKind.taskMentioned => (
-        Icons.chat_bubble_outline_rounded,
-        OmniHue.blue,
-      ),
-      NotificationKind.taskDueSoon => (Icons.schedule_rounded, OmniHue.orange),
-      NotificationKind.taskReminder => (Icons.alarm_rounded, OmniHue.orange),
-      NotificationKind.taskOverdue => (
-        Icons.warning_amber_rounded,
-        OmniHue.red,
-      ),
-      NotificationKind.other => (
-        Icons.notifications_none_rounded,
-        OmniHue.neutral,
-      ),
-    };
-    final tone = OmniFeatureTones.of(context, hue);
-
-    return Container(
-      width: 32,
-      height: 32,
-      decoration: BoxDecoration(
-        color: tone.background,
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Icon(icon, size: OmniIconSize.lg, color: tone.foreground),
-    );
-  }
-}
+IconData _iconForKind(NotificationKind kind) => switch (kind) {
+  NotificationKind.inboxMessage => Icons.chat_bubble_outline_rounded,
+  NotificationKind.taskAssigned => Icons.assignment_ind_outlined,
+  NotificationKind.taskStageOpen => Icons.pan_tool_alt_outlined,
+  NotificationKind.taskProgress => Icons.timeline_rounded,
+  NotificationKind.taskCompleted => Icons.check_circle_outline_rounded,
+  NotificationKind.taskCommented ||
+  NotificationKind.taskMentioned => Icons.chat_bubble_outline_rounded,
+  NotificationKind.taskDueSoon => Icons.schedule_rounded,
+  NotificationKind.taskReminder => Icons.alarm_rounded,
+  NotificationKind.taskOverdue => Icons.warning_amber_rounded,
+  NotificationKind.other => Icons.notifications_none_rounded,
+};

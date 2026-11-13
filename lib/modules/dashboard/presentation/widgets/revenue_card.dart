@@ -139,23 +139,19 @@ class _RevenueCardState extends ConsumerState<RevenueCard> {
             children: [
               Text(caption, style: OmniType.micro.copyWith(color: muted)),
               const SizedBox(height: 2),
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.center,
+              Wrap(
+                spacing: 8,
+                runSpacing: 4,
+                crossAxisAlignment: WrapCrossAlignment.center,
                 children: [
-                  Flexible(
-                    child: Text(
-                      big,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: OmniType.moneyHero.copyWith(
-                        color: scheme.onSurface,
-                      ),
+                  Text(
+                    big,
+                    style: OmniType.moneyHero.copyWith(
+                      color: scheme.onSurface,
+                      fontFeatures: OmniType.tabular,
                     ),
                   ),
-                  if (i == null) ...[
-                    const SizedBox(width: 8),
-                    _Delta(ratio: s.deltaRatio),
-                  ],
+                  if (i == null) _Delta(ratio: s.deltaRatio),
                 ],
               ),
               const SizedBox(height: 8),
@@ -173,7 +169,17 @@ class _RevenueCardState extends ConsumerState<RevenueCard> {
           ),
         ),
         for (final (label, value) in rows)
-          OmniGroupRow(title: label, value: value),
+          OmniGroupRow(
+            title: label,
+            chevron: false,
+            trailing: Text(
+              value,
+              style: OmniType.body.copyWith(
+                color: muted,
+                fontFeatures: OmniType.tabular,
+              ),
+            ),
+          ),
       ],
     );
   }
@@ -227,6 +233,7 @@ class _Delta extends StatelessWidget {
               style: OmniType.micro.copyWith(
                 color: color,
                 fontWeight: FontWeight.w600,
+                fontFeatures: OmniType.tabular,
               ),
             ),
           ],
@@ -263,7 +270,10 @@ class _Ticks extends StatelessWidget {
         ],
       },
     ].where((t) => t.$1 < slots).toList();
-    final style = OmniType.micro.copyWith(color: color);
+    final style = OmniType.micro.copyWith(
+      color: color,
+      fontFeatures: OmniType.tabular,
+    );
     return ExcludeSemantics(
       child: SizedBox(
         height: 18,
@@ -291,11 +301,11 @@ class _Skeleton extends StatelessWidget {
   Widget build(BuildContext context) => const Column(
     crossAxisAlignment: CrossAxisAlignment.start,
     children: [
-      OmniSkeletonBox(height: 14, width: 120),
+      OmniSkeletonBox(height: 14, width: 120, radius: 7),
       SizedBox(height: 6),
-      OmniSkeletonBox(height: 30, width: 160),
+      OmniSkeletonBox(height: 30, width: 160, radius: 10),
       SizedBox(height: 12),
-      OmniSkeletonBox(height: RevenueChart.height),
+      OmniSkeletonBox(height: RevenueChart.height, radius: 12),
     ],
   );
 }

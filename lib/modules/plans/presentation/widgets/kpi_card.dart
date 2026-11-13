@@ -125,7 +125,14 @@ class KpiCard extends StatelessWidget {
       if (kpi.reachedBonus > 0)
         OmniGroupRow(
           icon: Icons.emoji_events_outlined,
-          title: 'Đã đạt ${_bonusMoney(kpi.reachedBonus)}',
+          title: 'Đã đạt thưởng',
+          trailing: Text(
+            _bonusMoney(kpi.reachedBonus),
+            style: OmniType.bodyStrong.copyWith(
+              color: scheme.onSurface,
+              fontFeatures: OmniType.tabular,
+            ),
+          ),
         ),
       if (hasTiers && next == null)
         // Vượt mốc cao nhất là tin tốt. Một ô trống ở đây đọc như lỗi tải.
@@ -140,10 +147,15 @@ class KpiCard extends StatelessWidget {
         OmniGroupRow(
           icon: Icons.card_giftcard_rounded,
           title: _isCurrentMonth
-              ? 'Còn ${next.remaining} việc tới mốc ${next.count} · '
-                    'thưởng ${_bonusMoney(next.bonus)}'
-              : 'Thiếu ${next.remaining} việc so với mốc ${next.count} · '
-                    'thưởng ${_bonusMoney(next.bonus)}',
+              ? 'Còn ${next.remaining} việc tới mốc ${next.count}'
+              : 'Thiếu ${next.remaining} việc so với mốc ${next.count}',
+          trailing: Text(
+            _bonusMoney(next.bonus),
+            style: OmniType.bodyStrong.copyWith(
+              color: scheme.onSurface,
+              fontFeatures: OmniType.tabular,
+            ),
+          ),
         ),
       // Số lần làm lại (§B3): cam khi > 1, phụ khi ≤ 1. Không kèm tên ai — nó
       // là thông tin để cải thiện chứ không phải một lời buộc tội.
@@ -219,18 +231,15 @@ class KpiCard extends StatelessWidget {
       _ => (Icons.trending_flat_rounded, 'Bằng $label'),
     };
 
-    // Dòng riêng (không dùng OmniGroupRow) vì chữ mang màu của tông.
+    // Dòng riêng (không dùng OmniGroupRow) vì chữ mang màu của tông; ô biểu
+    // tượng vẫn giữ 1 tông trung tính thẳng trục 54px với các dòng khác.
     return ConstrainedBox(
       constraints: const BoxConstraints(minHeight: 48),
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
         child: Row(
           children: [
-            OmniIconTile(
-              icon,
-              color: tone.foreground,
-              background: tone.background,
-            ),
+            OmniIconTile(icon),
             const SizedBox(width: 12),
             Expanded(
               child: Text(

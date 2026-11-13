@@ -57,12 +57,23 @@ class _MoveTaskSheetState extends ConsumerState<MoveTaskSheet> {
           title: plan == null ? 'Chuyển sang kế hoạch' : plan.name,
           leading: plan == null
               ? null
-              : IconButton(
-                  tooltip: 'Chọn kế hoạch khác',
-                  onPressed: () => setState(() => _plan = null),
-                  style: IconButton.styleFrom(minimumSize: const Size(44, 44)),
-                  icon: const Icon(Icons.arrow_back_rounded),
+              : OmniGlassCircle(
+                  child: IconButton(
+                    tooltip: 'Chọn kế hoạch khác',
+                    onPressed: () => setState(() => _plan = null),
+                    icon: const Icon(
+                      Icons.arrow_back_rounded,
+                      size: OmniIconSize.lg,
+                    ),
+                  ),
                 ),
+          trailing: OmniGlassCircle(
+            child: IconButton(
+              tooltip: 'Đóng',
+              onPressed: () => Navigator.of(context).maybePop(),
+              icon: const Icon(Icons.close_rounded, size: OmniIconSize.lg),
+            ),
+          ),
         ),
         children: [
           if (plan == null) _planList(context) else _sectionList(plan),
@@ -137,6 +148,7 @@ class _MoveTaskSheetState extends ConsumerState<MoveTaskSheet> {
             title: plan.sections[i].name,
             selected:
                 samePlan && plan.sections[i].id == widget.currentSectionId,
+            chevron: false,
             onTap: () => Navigator.of(
               context,
             ).pop((projectId: plan.id, sectionId: plan.sections[i].id)),
@@ -145,6 +157,7 @@ class _MoveTaskSheetState extends ConsumerState<MoveTaskSheet> {
           OmniGroupRow(
             title: 'Chưa xếp nhóm việc',
             selected: samePlan && widget.currentSectionId == null,
+            chevron: false,
             onTap: () => Navigator.of(
               context,
             ).pop((projectId: plan.id, sectionId: null)),

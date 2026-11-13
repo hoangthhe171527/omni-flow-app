@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../design/components/components.dart';
+import '../../../../design/tokens/tokens.dart';
 import '../../../../security/session/session_controller.dart';
 import '../../data/plans_api.dart';
 import '../../domain/board_unit.dart';
@@ -96,6 +97,7 @@ class _AddTaskSheetState extends ConsumerState<_AddTaskSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
     final canPick = ref.watch(canPickUnitsProvider);
     final mode = canPick ? ref.watch(addTaskModeProvider) : 0;
     final title = _title.text.trim();
@@ -104,26 +106,56 @@ class _AddTaskSheetState extends ConsumerState<_AddTaskSheet> {
     final List<Widget> children;
     if (mode == 0) {
       children = [
-        TextField(
-          key: const Key('add-task-title'),
-          controller: _title,
-          autofocus: true,
-          textCapitalization: TextCapitalization.sentences,
-          textInputAction: TextInputAction.done,
-          decoration: const InputDecoration(hintText: 'Tên việc'),
-          onChanged: (_) => setState(() {}),
-          onSubmitted: (v) {
-            if (v.trim().isNotEmpty) {
-              Navigator.of(context).pop(AddTypedTask(v.trim()));
-            }
-          },
+        OmniGroupSection(
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(14, 10, 14, 10),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Text(
+                    'Tên công việc *',
+                    style: OmniType.micro.copyWith(
+                      color: scheme.onSurfaceVariant,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  TextField(
+                    key: const Key('add-task-title'),
+                    controller: _title,
+                    autofocus: true,
+                    textCapitalization: TextCapitalization.sentences,
+                    textInputAction: TextInputAction.done,
+                    decoration: const InputDecoration(
+                      hintText: 'Tên việc',
+                      filled: false,
+                      isDense: true,
+                      contentPadding: EdgeInsets.symmetric(vertical: 4),
+                      border: InputBorder.none,
+                      enabledBorder: InputBorder.none,
+                      focusedBorder: InputBorder.none,
+                    ),
+                    onChanged: (_) => setState(() {}),
+                    onSubmitted: (v) {
+                      if (v.trim().isNotEmpty) {
+                        Navigator.of(context).pop(AddTypedTask(v.trim()));
+                      }
+                    },
+                  ),
+                ],
+              ),
+            ),
+          ],
         ),
         OmniGroupSection(
           children: [
             OmniGroupRow(
               key: const Key('add-task-full'),
               title: 'Thêm chi tiết',
+              subtitle: 'Người làm, hạn chót, nhãn màu, tệp đính kèm',
               icon: Icons.tune_rounded,
+              chevron: true,
               onTap: () => Navigator.of(context).pop(const OpenFullCreate()),
             ),
           ],
@@ -194,6 +226,7 @@ class _AddTaskSheetState extends ConsumerState<_AddTaskSheet> {
               ).pop(AddUnitTasks(_picked.keys.toList())),
         child: Text(
           _picked.isEmpty ? 'Thêm việc' : 'Thêm ${_picked.length} việc',
+          style: const TextStyle(fontFeatures: OmniType.tabular),
         ),
       );
     }
@@ -202,6 +235,13 @@ class _AddTaskSheetState extends ConsumerState<_AddTaskSheet> {
       header: OmniSheetHeader(
         title: 'Thêm việc',
         subtitle: 'vào ${widget.sectionName}',
+        trailing: OmniGlassCircle(
+          child: IconButton(
+            tooltip: 'Đóng',
+            onPressed: () => Navigator.of(context).maybePop(),
+            icon: const Icon(Icons.close_rounded),
+          ),
+        ),
       ),
       footer: footer,
       children: [

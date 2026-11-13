@@ -17,9 +17,17 @@ import '../../../../core/net/public_address.dart';
 import '../../../../design/tokens/tokens.dart';
 
 class MessageLinkPreview extends StatefulWidget {
-  const MessageLinkPreview({super.key, required this.url});
+  const MessageLinkPreview({
+    super.key,
+    required this.url,
+    this.onPrimary = false,
+  });
 
   final String url;
+
+  /// Nằm trong bong bóng gửi đi nền primary: đảo nền và chữ sang trắng bán trong
+  /// suốt để không bị chìm bởi hộp xám đặc.
+  final bool onPrimary;
 
   @override
   State<MessageLinkPreview> createState() => _LinkPreviewCardState();
@@ -65,6 +73,22 @@ class _LinkPreviewCardState extends State<MessageLinkPreview> {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final onPrimary = widget.onPrimary;
+    final cardColor = onPrimary
+        ? Colors.white.withValues(alpha: 0.16)
+        : scheme.onSurface.withValues(alpha: 0.06);
+    final borderColor = onPrimary
+        ? Colors.white.withValues(alpha: 0.24)
+        : OmniColors.byBrightness(
+            context,
+            OmniColors.border,
+            OmniColors.darkBorder,
+          );
+    final titleColor = onPrimary ? Colors.white : scheme.onSurface;
+    final subColor = onPrimary
+        ? Colors.white.withValues(alpha: 0.82)
+        : scheme.onSurfaceVariant;
+
     return FutureBuilder<LinkPreviewData>(
       future: _metadata,
       builder: (context, snapshot) {
@@ -72,11 +96,15 @@ class _LinkPreviewCardState extends State<MessageLinkPreview> {
         return Padding(
           padding: const EdgeInsets.only(top: 8),
           child: Material(
-            color: scheme.surfaceContainerHighest.withValues(alpha: 0.72),
-            borderRadius: BorderRadius.circular(12),
+            color: cardColor,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(14),
+              side: BorderSide(color: borderColor, width: 0.5),
+            ),
             clipBehavior: Clip.antiAlias,
             child: InkWell(
               onTap: _open,
+              borderRadius: BorderRadius.circular(14),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -102,7 +130,9 @@ class _LinkPreviewCardState extends State<MessageLinkPreview> {
                           meta.title ?? meta.domain,
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
-                          style: OmniType.bodyStrong,
+                          style: OmniType.bodyStrong.copyWith(
+                            color: titleColor,
+                          ),
                         ),
                         if (meta.description != null &&
                             meta.description!.isNotEmpty) ...[
@@ -111,17 +141,13 @@ class _LinkPreviewCardState extends State<MessageLinkPreview> {
                             meta.description!,
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
-                            style: OmniType.caption.copyWith(
-                              color: scheme.onSurfaceVariant,
-                            ),
+                            style: OmniType.caption.copyWith(color: subColor),
                           ),
                         ],
                         const SizedBox(height: 3),
                         Text(
                           meta.domain,
-                          style: OmniType.caption.copyWith(
-                            color: scheme.onSurfaceVariant,
-                          ),
+                          style: OmniType.caption.copyWith(color: subColor),
                         ),
                       ],
                     ),

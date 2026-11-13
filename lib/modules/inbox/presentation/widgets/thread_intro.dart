@@ -39,7 +39,6 @@ class ThreadIntro extends ConsumerWidget {
             name: conversation.title,
             imageUrl: conversation.customerAvatar,
             size: 64,
-            borderRadius: 12,
           ),
           const SizedBox(height: 8),
           Text(

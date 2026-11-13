@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 
 import '../../../../core/utils/formatters.dart';
+import '../../../../design/components/components.dart';
 import '../../../../design/platform/omni_motion_scope.dart';
-import '../../../../design/platform/omni_performance.dart';
 import '../../../../design/tokens/tokens.dart';
 import '../../domain/customer_activity.dart';
 
-/// Dòng thời gian hoạt động của khách (`CustomerDetail.dc.html` tab Hoạt động):
-/// chấm tròn 26 theo loại, vạch nối 2px, nội dung và thời gian tương đối.
+/// Dòng thời gian hoạt động của khách trong một nhóm lồng [OmniGroupSection]
+/// bo 18, [OmniIconTile] 28×28 một tông trung tính và vạch chia lùi 54px.
 /// Mỗi dòng "nổi lên" lệch nhau 50ms; giảm chuyển động thì hiện thẳng.
 class CustomerActivityList extends StatelessWidget {
   const CustomerActivityList({super.key, required this.items});
@@ -30,16 +30,14 @@ class CustomerActivityList extends StatelessWidget {
       );
     }
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      child: Column(
+      padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
+      child: OmniGroupSection(
+        dividerIndent: 54,
         children: [
           for (var i = 0; i < items.length; i++)
             _Rise(
               index: i,
-              child: _ActivityTile(
-                activity: items[i],
-                isLast: i == items.length - 1,
-              ),
+              child: _ActivityTile(activity: items[i]),
             ),
         ],
       ),
@@ -79,47 +77,28 @@ class _Rise extends StatelessWidget {
 }
 
 class _ActivityTile extends StatelessWidget {
-  const _ActivityTile({required this.activity, required this.isLast});
+  const _ActivityTile({required this.activity});
 
   final CustomerActivity activity;
-  final bool isLast;
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final (icon, background, foreground) = _look(activity.kind, scheme);
     final when = Formatters.relative(activity.at);
 
-    return IntrinsicHeight(
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          SizedBox(
-            width: 26,
-            child: Column(
-              children: [
-                Container(
-                  width: 26,
-                  height: 26,
-                  decoration: BoxDecoration(
-                    color: background,
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(icon, size: 14, color: foreground),
-                ),
-                if (!isLast)
-                  Expanded(
-                    child: Container(width: 2, color: scheme.outlineVariant),
-                  ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Padding(
-              padding: const EdgeInsets.only(bottom: 16),
+    return ConstrainedBox(
+      constraints: const BoxConstraints(minHeight: 48),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            OmniIconTile(_icon(activity.kind)),
+            const SizedBox(width: 12),
+            Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
                     activity.text.isEmpty ? '—' : activity.text,
@@ -139,43 +118,18 @@ class _ActivityTile extends StatelessWidget {
                 ],
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
 
-  static (IconData, Color, Color) _look(ActivityKind kind, ColorScheme s) =>
-      switch (kind) {
-        ActivityKind.message => (
-          Icons.chat_bubble_outline_rounded,
-          s.primaryContainer,
-          s.onPrimaryContainer,
-        ),
-        ActivityKind.call => (
-          Icons.call_outlined,
-          s.tertiaryContainer,
-          s.onTertiaryContainer,
-        ),
-        ActivityKind.order => (
-          Icons.receipt_long_outlined,
-          s.errorContainer,
-          s.onErrorContainer,
-        ),
-        ActivityKind.task => (
-          Icons.task_alt_rounded,
-          s.surfaceContainerHighest,
-          s.onSurfaceVariant,
-        ),
-        ActivityKind.note => (
-          Icons.sticky_note_2_outlined,
-          s.surfaceContainerHighest,
-          s.onSurfaceVariant,
-        ),
-        ActivityKind.other => (
-          Icons.more_horiz_rounded,
-          s.surfaceContainerHighest,
-          s.onSurfaceVariant,
-        ),
-      };
+  static IconData _icon(ActivityKind kind) => switch (kind) {
+    ActivityKind.message => Icons.chat_bubble_outline_rounded,
+    ActivityKind.call => Icons.call_outlined,
+    ActivityKind.order => Icons.receipt_long_outlined,
+    ActivityKind.task => Icons.task_alt_rounded,
+    ActivityKind.note => Icons.sticky_note_2_outlined,
+    ActivityKind.other => Icons.more_horiz_rounded,
+  };
 }

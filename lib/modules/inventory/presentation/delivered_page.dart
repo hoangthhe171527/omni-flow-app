@@ -1,12 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../core/nav/shell_bar_inset.dart';
+import '../../../core/nav/shell_tab_routes.dart';
 import '../../../design/components/components.dart';
 import '../../../design/tokens/tokens.dart';
 import '../application/inventory_providers.dart';
 import '../domain/inventory_format.dart';
 import '../domain/inventory_models.dart';
+import '../routes.dart';
 import 'widgets/inventory_ui.dart';
 import 'widgets/unit_sheet.dart';
 
@@ -33,10 +36,19 @@ class _DeliveredPageState extends ConsumerState<DeliveredPage> {
   @override
   Widget build(BuildContext context) {
     final perms = ref.watch(inventoryPermsProvider);
+    final subPage = !ShellTabRoutes.reachable(
+      context,
+      InventoryRoutes.delivered,
+    );
+    void back() => GoRouter.maybeOf(context)?.go(InventoryRoutes.stockPath);
     if (!perms.delivered) {
-      return const Scaffold(
-        appBar: OmniAppBar(title: 'Hàng đã giao'),
-        body: OmniEmptyState(
+      return Scaffold(
+        appBar: OmniAppBar(
+          title: 'Hàng đã giao',
+          showAccount: !subPage,
+          fallbackBack: subPage ? back : null,
+        ),
+        body: const OmniEmptyState(
           icon: Icons.lock_outline_rounded,
           title: 'Chưa có hàng đã giao',
         ),
@@ -101,6 +113,8 @@ class _DeliveredPageState extends ConsumerState<DeliveredPage> {
     return Scaffold(
       appBar: OmniAppBar(
         title: 'Hàng đã giao',
+        showAccount: !subPage,
+        fallbackBack: subPage ? back : null,
         bottom: InvSearchBottom(
           fieldKey: const ValueKey('inv-delivered-search'),
           hint: 'Serial, model',
@@ -195,6 +209,12 @@ class DeliveredUnitRow extends StatelessWidget {
                       ? OmniColors.warningTextOf(context)
                       : null,
                 ),
+                const SizedBox(width: 6),
+                Icon(
+                  Icons.chevron_right_rounded,
+                  size: 18,
+                  color: OmniTaskTones.of(context).chevron,
+                ),
               ],
             ),
           ),
@@ -204,33 +224,42 @@ class DeliveredUnitRow extends StatelessWidget {
   }
 }
 
-/// Ô tìm 44 dưới thanh tiêu đề (như Tồn kho).
+/// Ô tìm viên kính 44 dưới thanh tiêu đề (như Tồn kho).
 class InvSearchBottom extends StatelessWidget implements PreferredSizeWidget {
   const InvSearchBottom({
     super.key,
     required this.hint,
     required this.onChanged,
     this.fieldKey,
+    this.debounce = const Duration(milliseconds: 350),
   });
 
   final String hint;
   final ValueChanged<String> onChanged;
   final Key? fieldKey;
+  final Duration debounce;
 
   @override
   Size get preferredSize => const Size.fromHeight(44);
 
   @override
   Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.symmetric(horizontal: 6),
-    child: SizedBox(
-      height: 44,
-      child: OmniSearchField(
-        key: fieldKey,
-        hint: hint,
-        flat: true,
-        dense: true,
-        onChanged: onChanged,
+    padding: const EdgeInsets.only(right: 4),
+    child: OmniGlass(
+      radius: 22,
+      child: SizedBox(
+        height: 44,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 6),
+          child: OmniSearchField(
+            key: fieldKey,
+            hint: hint,
+            debounce: debounce,
+            flat: true,
+            dense: true,
+            onChanged: onChanged,
+          ),
+        ),
       ),
     ),
   );

@@ -50,13 +50,9 @@ void main() {
     await pump(tester);
 
     final now = DateTime.now();
-    // Màn đứng gốc trong bài kiểm: logo thay chữ, tên màn chỉ để đọc.
-    expect(
-      find.byWidgetPredicate(
-        (w) => w is Semantics && w.properties.label == 'Báo cáo kế hoạch',
-      ),
-      findsOneWidget,
-    );
+    // Màn con của kế hoạch: tiêu đề hiển thị giữa thanh trên kèm nút quay lại.
+    expect(find.text('Báo cáo kế hoạch'), findsOneWidget);
+    expect(find.byTooltip('Quay lại'), findsOneWidget);
     expect(find.byType(KpiCard), findsOneWidget);
     expect(api.calls, contains((planId, DateTime(now.year, now.month))));
     for (final (planIdSent, _) in api.calls) {

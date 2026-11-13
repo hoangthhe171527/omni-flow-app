@@ -105,7 +105,13 @@ class ProjectCoverMarker extends StatelessWidget {
     final image = isProjectCoverImage(cover);
     return ClipRRect(
       key: markerKey,
-      borderRadius: BorderRadius.circular(size >= 24 ? 8 : 3),
+      borderRadius: BorderRadius.circular(
+        size >= 32
+            ? 12
+            : size >= 24
+            ? 10
+            : 4,
+      ),
       child: SizedBox.square(
         dimension: size,
         child: image

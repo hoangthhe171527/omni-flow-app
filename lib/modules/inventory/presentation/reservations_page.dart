@@ -1,12 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../core/nav/shell_bar_inset.dart';
+import '../../../core/nav/shell_tab_routes.dart';
 import '../../../design/components/components.dart';
 import '../../../design/tokens/tokens.dart';
 import '../application/inventory_providers.dart';
 import '../domain/inventory_format.dart';
 import '../domain/inventory_models.dart';
+import '../routes.dart';
 import 'widgets/inventory_ui.dart';
 import 'widgets/unit_sheet.dart';
 
@@ -34,10 +37,19 @@ class _ReservationsPageState extends ConsumerState<ReservationsPage> {
   @override
   Widget build(BuildContext context) {
     final perms = ref.watch(inventoryPermsProvider);
+    final subPage = !ShellTabRoutes.reachable(
+      context,
+      InventoryRoutes.reservations,
+    );
+    void back() => GoRouter.maybeOf(context)?.go(InventoryRoutes.stockPath);
     if (!perms.reservations) {
-      return const Scaffold(
-        appBar: OmniAppBar(title: 'Đang giữ'),
-        body: OmniEmptyState(
+      return Scaffold(
+        appBar: OmniAppBar(
+          title: 'Đang giữ',
+          showAccount: !subPage,
+          fallbackBack: subPage ? back : null,
+        ),
+        body: const OmniEmptyState(
           icon: Icons.lock_outline_rounded,
           title: 'Chưa có phiếu giữ hàng',
         ),
@@ -87,7 +99,11 @@ class _ReservationsPageState extends ConsumerState<ReservationsPage> {
     ];
 
     return Scaffold(
-      appBar: const OmniAppBar(title: 'Đang giữ'),
+      appBar: OmniAppBar(
+        title: 'Đang giữ',
+        showAccount: !subPage,
+        fallbackBack: subPage ? back : null,
+      ),
       body: RefreshIndicator(
         onRefresh: () async {
           ref.invalidate(reservationsProvider(status));
@@ -179,6 +195,12 @@ class ReservationRow extends StatelessWidget {
                   sub: dep == null || dep.amount <= 0
                       ? null
                       : 'cọc ${InvUi.vnd(dep.amount)}',
+                ),
+                const SizedBox(width: 6),
+                Icon(
+                  Icons.chevron_right_rounded,
+                  size: 18,
+                  color: OmniTaskTones.of(context).chevron,
                 ),
               ],
             ),

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/utils/text_search.dart';
 import '../../../../design/components/components.dart';
+import '../../../../design/tokens/tokens.dart';
 import '../../../team/team.dart';
 
 /// Chọn chủ mới cho kế hoạch (Nhóm 2). Trả người đã chọn, hoặc null khi đóng.
@@ -35,62 +36,58 @@ class _TransferOwnerSheetState extends ConsumerState<_TransferOwnerSheet> {
   Widget build(BuildContext context) {
     final members = ref.watch(teamMembersProvider);
 
-    return Semantics(
-      scopesRoute: true,
-      explicitChildNodes: true,
-      label: 'Chuyển chủ kế hoạch',
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const OmniSheetHeader(title: 'Chuyển chủ kế hoạch'),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(10, 0, 10, 10),
-            child: OmniSearchField(
-              hint: 'Tìm người...',
-              onChanged: (value) => setState(() => _query = value),
-            ),
+    return OmniSheetBody(
+      semanticsLabel: 'Chuyển chủ kế hoạch',
+      header: OmniSheetHeader(
+        title: 'Chuyển chủ kế hoạch',
+        subtitle: 'Chọn thành viên đang làm việc để nhận quyền chủ',
+        trailing: OmniGlassCircle(
+          child: IconButton(
+            tooltip: 'Đóng',
+            onPressed: () => Navigator.of(context).maybePop(),
+            icon: const Icon(Icons.close_rounded),
           ),
-          Flexible(
-            child: OmniAsyncView(
-              value: members,
-              onRetry: () => ref.invalidate(teamDirectoryProvider),
-              isEmpty: (rows) => _visible(rows).isEmpty,
-              empty: const OmniEmptyState(
-                icon: Icons.person_search_outlined,
-                title: 'Không có ai để chọn',
-                message: 'Chủ mới phải là thành viên đang làm của workspace.',
-              ),
-              data: (rows) => ListView(
-                shrinkWrap: true,
-                padding: const EdgeInsets.fromLTRB(10, 0, 10, 14),
-                keyboardDismissBehavior:
-                    ScrollViewKeyboardDismissBehavior.onDrag,
-                children: [
-                  OmniGroupSection(
-                    dividerIndent: 56,
-                    children: [
-                      for (final m in _visible(rows))
-                        OmniGroupRow(
-                          key: ValueKey('owner-${m.userId}'),
-                          leading: OmniAvatar(
-                            name: m.name,
-                            imageUrl: m.avatarUrl,
-                            size: 30,
-                          ),
-                          title: m.name,
-                          maxTitleLines: 1,
-                          chevron: false,
-                          onTap: () => Navigator.of(context).pop(m),
-                        ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ],
+        ),
       ),
+      children: [
+        OmniSearchField(
+          hint: 'Tìm người...',
+          onChanged: (value) => setState(() => _query = value),
+        ),
+        OmniAsyncView(
+          value: members,
+          loading: const Padding(
+            padding: EdgeInsets.all(OmniSpacing.xxl),
+            child: Center(child: CircularProgressIndicator.adaptive()),
+          ),
+          onRetry: () => ref.invalidate(teamDirectoryProvider),
+          isEmpty: (rows) => _visible(rows).isEmpty,
+          empty: const OmniEmptyState(
+            icon: Icons.person_search_outlined,
+            title: 'Không có ai để chọn',
+            message: 'Chủ mới phải là thành viên đang làm của workspace.',
+          ),
+          data: (rows) => OmniGroupSection(
+            dividerIndent: 62,
+            children: [
+              for (final m in _visible(rows))
+                OmniGroupRow(
+                  key: ValueKey('owner-${m.userId}'),
+                  leading: OmniAvatar(
+                    name: m.name,
+                    imageUrl: m.avatarUrl,
+                    size: 36,
+                  ),
+                  title: m.name,
+                  subtitle: m.jobTitle,
+                  maxTitleLines: 2,
+                  chevron: false,
+                  onTap: () => Navigator.of(context).pop(m),
+                ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 

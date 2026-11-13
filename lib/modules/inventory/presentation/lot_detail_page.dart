@@ -303,7 +303,12 @@ class _LotDetailPageState extends ConsumerState<LotDetailPage> {
     }
 
     return Scaffold(
-      appBar: OmniAppBar(title: lot?.code ?? 'Lô'),
+      appBar: OmniAppBar(
+        title: lot?.code ?? 'Lô',
+        showAccount: false,
+        fallbackBack: () =>
+            GoRouter.maybeOf(context)?.go(InventoryRoutes.lotsPath),
+      ),
       body: lot == null
           ? OmniAsyncView<Lot>(
               value: lotAsync,
@@ -645,7 +650,18 @@ class _LotDetailPageState extends ConsumerState<LotDetailPage> {
               InvUi.shortCategory(u0.category),
             '${g.withCustomer}/${g.items.length} đặt trước',
           ].join(' · '),
-          trailing: InvValue(InvUi.vnd(u0.listPrice)),
+          trailing: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              InvValue(InvUi.vnd(u0.listPrice)),
+              const SizedBox(width: 6),
+              Icon(
+                open ? Icons.expand_less_rounded : Icons.expand_more_rounded,
+                size: 20,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
+            ],
+          ),
           chevron: false,
           onTap: () =>
               setState(() => open ? _open.remove(g.key) : _open.add(g.key)),

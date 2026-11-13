@@ -1,12 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../core/nav/shell_bar_inset.dart';
+import '../../../core/nav/shell_tab_routes.dart';
 import '../../../design/components/components.dart';
 import '../../../design/tokens/tokens.dart';
 import '../application/inventory_providers.dart';
 import '../domain/inventory_format.dart';
 import '../domain/inventory_models.dart';
+import '../routes.dart';
 import 'widgets/inventory_ui.dart';
 import 'widgets/product_sheet.dart';
 
@@ -42,10 +45,16 @@ class CatalogPage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final perms = ref.watch(inventoryPermsProvider);
+    final subPage = !ShellTabRoutes.reachable(context, InventoryRoutes.catalog);
+    void back() => GoRouter.maybeOf(context)?.go(InventoryRoutes.stockPath);
     if (!perms.products) {
-      return const Scaffold(
-        appBar: OmniAppBar(title: 'Danh mục hàng'),
-        body: OmniEmptyState(
+      return Scaffold(
+        appBar: OmniAppBar(
+          title: 'Danh mục hàng',
+          showAccount: !subPage,
+          fallbackBack: subPage ? back : null,
+        ),
+        body: const OmniEmptyState(
           icon: Icons.lock_outline_rounded,
           title: 'Chưa có danh mục hàng',
         ),
@@ -108,6 +117,8 @@ class CatalogPage extends ConsumerWidget {
     return Scaffold(
       appBar: OmniAppBar(
         title: 'Danh mục hàng',
+        showAccount: !subPage,
+        fallbackBack: subPage ? back : null,
         bottom: _SearchBottom(
           onChanged: (v) => ref.read(catalogFilterProvider.notifier).state = (
             categoryId: ref.read(catalogFilterProvider).categoryId,
@@ -197,6 +208,12 @@ class ProductRow extends StatelessWidget {
                 ),
                 const SizedBox(width: 10),
                 InvValue(InventoryFormat.number(p.onHand), sub: p.unitLabel),
+                const SizedBox(width: 6),
+                Icon(
+                  Icons.chevron_right_rounded,
+                  size: 18,
+                  color: OmniTaskTones.of(context).chevron,
+                ),
               ],
             ),
           ),
@@ -217,15 +234,21 @@ class _SearchBottom extends StatelessWidget implements PreferredSizeWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 6),
-      child: SizedBox(
-        height: 44,
-        child: OmniSearchField(
-          key: const ValueKey('inv-catalog-search'),
-          hint: 'Mã, tên hàng',
-          flat: true,
-          dense: true,
-          onChanged: onChanged,
+      padding: const EdgeInsets.only(right: 4),
+      child: OmniGlass(
+        radius: 22,
+        child: SizedBox(
+          height: 44,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 6),
+            child: OmniSearchField(
+              key: const ValueKey('inv-catalog-search'),
+              hint: 'Mã, tên hàng',
+              flat: true,
+              dense: true,
+              onChanged: onChanged,
+            ),
+          ),
         ),
       ),
     );

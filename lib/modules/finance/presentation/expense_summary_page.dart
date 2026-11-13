@@ -545,219 +545,165 @@ class _ExpenseSummaryPageState extends ConsumerState<ExpenseSummaryPage> {
         avgAmount = (total / divisor).round();
     }
 
-    return Container(
+    return OmniGroupSection(
       key: const ValueKey('finance-summary-hero-card'),
-      padding: const EdgeInsets.fromLTRB(15, 13, 15, 13),
-      decoration: BoxDecoration(
-        color: p.card,
-        borderRadius: BorderRadius.circular(18),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Row(
+      dividerIndent: 14,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(14, 12, 14, 10),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Expanded(
-                child: Text(
-                  titleText,
-                  maxLines: 2,
-                  style: OmniType.caption.copyWith(
-                    color: p.muted,
-                    fontWeight: FontWeight.w600,
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      titleText,
+                      maxLines: 2,
+                      style: OmniType.caption.copyWith(
+                        color: p.muted,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                  if (deltaBadge != null) ...[
+                    const SizedBox(width: 8),
+                    Container(
+                      height: 23,
+                      padding: const EdgeInsets.symmetric(horizontal: 8),
+                      alignment: Alignment.center,
+                      decoration: BoxDecoration(
+                        color: deltaBadge.isIncrease ? p.amberSoft : p.okSoft,
+                        borderRadius: BorderRadius.circular(99),
+                      ),
+                      child: Text(
+                        deltaBadge.text,
+                        style: OmniType.micro.copyWith(
+                          color: deltaBadge.isIncrease ? p.amber : p.ok,
+                          fontWeight: FontWeight.w600,
+                          fontFeatures: const [FontFeature.tabularFigures()],
+                        ),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+              const SizedBox(height: 3),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.baseline,
+                    textBaseline: TextBaseline.alphabetic,
+                    children: [
+                      Text(
+                        FinanceMonthUtils.formatNumber(total),
+                        maxLines: 1,
+                        softWrap: false,
+                        style: OmniType.displayLg.copyWith(
+                          color: p.ink,
+                          fontWeight: FontWeight.w600,
+                          fontFeatures: const [FontFeature.tabularFigures()],
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        'đ',
+                        style: OmniType.section.copyWith(
+                          color: p.muted,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ),
-              if (deltaBadge != null) ...[
-                const SizedBox(width: 8),
-                Container(
-                  height: 23,
-                  padding: const EdgeInsets.symmetric(horizontal: 8),
-                  alignment: Alignment.center,
-                  decoration: BoxDecoration(
-                    color: deltaBadge.isIncrease ? p.amberSoft : p.okSoft,
-                    borderRadius: BorderRadius.circular(99),
-                  ),
-                  child: Text(
-                    deltaBadge.text,
-                    style: OmniType.micro.copyWith(
-                      color: deltaBadge.isIncrease ? p.amber : p.ok,
-                      fontWeight: FontWeight.w600,
-                      fontFeatures: const [FontFeature.tabularFigures()],
-                    ),
-                  ),
-                ),
-              ],
-            ],
-          ),
-          const SizedBox(height: 3),
-          Align(
-            alignment: Alignment.centerLeft,
-            child: FittedBox(
-              fit: BoxFit.scaleDown,
-              alignment: Alignment.centerLeft,
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.baseline,
-                textBaseline: TextBaseline.alphabetic,
+              const SizedBox(height: 4),
+              Wrap(
+                spacing: 6,
+                runSpacing: 2,
+                crossAxisAlignment: WrapCrossAlignment.center,
                 children: [
-                  Text(
-                    FinanceMonthUtils.formatNumber(total),
-                    maxLines: 1,
-                    style: OmniType.displayLg.copyWith(
-                      color: p.ink,
-                      fontWeight: FontWeight.w600,
-                      fontFeatures: const [FontFeature.tabularFigures()],
+                  RichText(
+                    text: TextSpan(
+                      style: OmniType.micro.copyWith(
+                        color: p.muted,
+                        fontFeatures: const [FontFeature.tabularFigures()],
+                      ),
+                      children: [
+                        TextSpan(text: avgPrefix),
+                        TextSpan(
+                          text: FinanceMonthUtils.formatVndSpace(avgAmount),
+                          style: TextStyle(
+                            color: p.ink2,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                  const SizedBox(width: 4),
-                  Text(
-                    'đ',
-                    style: OmniType.section.copyWith(
-                      color: p.muted,
-                      fontWeight: FontWeight.w600,
+                  Text('•', style: OmniType.micro.copyWith(color: p.muted)),
+                  RichText(
+                    text: TextSpan(
+                      style: OmniType.micro.copyWith(color: p.muted),
+                      children: [
+                        TextSpan(
+                          text: '$count',
+                          style: TextStyle(
+                            color: p.ink2,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        const TextSpan(text: ' khoản chi'),
+                      ],
                     ),
                   ),
                 ],
               ),
-            ),
-          ),
-          const SizedBox(height: 4),
-          Wrap(
-            spacing: 6,
-            runSpacing: 2,
-            crossAxisAlignment: WrapCrossAlignment.center,
-            children: [
-              RichText(
-                text: TextSpan(
-                  style: OmniType.micro.copyWith(
-                    color: p.muted,
-                    fontFeatures: const [FontFeature.tabularFigures()],
+              Padding(
+                padding: const EdgeInsets.only(top: 10),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(99),
+                  child: SizedBox(
+                    height: 6,
+                    child: LinearProgressIndicator(
+                      value: paidRatio,
+                      backgroundColor: p.amberSoft,
+                      valueColor: AlwaysStoppedAnimation<Color>(p.primary),
+                    ),
                   ),
-                  children: [
-                    TextSpan(text: avgPrefix),
-                    TextSpan(
-                      text: FinanceMonthUtils.formatVndSpace(avgAmount),
-                      style: TextStyle(
-                        color: p.ink2,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              Text('•', style: OmniType.micro.copyWith(color: p.muted)),
-              RichText(
-                text: TextSpan(
-                  style: OmniType.micro.copyWith(color: p.muted),
-                  children: [
-                    TextSpan(
-                      text: '$count',
-                      style: TextStyle(
-                        color: p.ink2,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    const TextSpan(text: ' khoản chi'),
-                  ],
                 ),
               ),
             ],
           ),
-          Padding(
-            padding: const EdgeInsets.only(top: 10, bottom: 9),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(99),
-              child: SizedBox(
-                height: 6,
-                child: LinearProgressIndicator(
-                  value: paidRatio,
-                  backgroundColor: p.amberSoft,
-                  valueColor: AlwaysStoppedAnimation<Color>(p.primary),
-                ),
-              ),
+        ),
+        OmniGroupRow(
+          title: 'Đã trả',
+          chevron: false,
+          trailing: Text(
+            FinanceMonthUtils.formatVndSpace(paid),
+            maxLines: 1,
+            style: OmniType.bodyStrong.copyWith(
+              color: p.ink,
+              fontFeatures: const [FontFeature.tabularFigures()],
             ),
           ),
-          Row(
-            children: [
-              Expanded(
-                child: _buildKpiBox(
-                  p,
-                  dotColor: p.ok,
-                  label: 'Đã trả',
-                  amountText: FinanceMonthUtils.formatVndSpace(paid),
-                  amountColor: p.ink,
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: _buildKpiBox(
-                  p,
-                  dotColor: outstanding > 0 ? p.amber : p.ok,
-                  label: 'Phải trả',
-                  amountText: FinanceMonthUtils.formatVndSpace(outstanding),
-                  amountColor: outstanding > 0 ? p.amber : p.ink2,
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildKpiBox(
-    FinancePalette p, {
-    required Color dotColor,
-    required String label,
-    required String amountText,
-    required Color amountColor,
-  }) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 7),
-      decoration: BoxDecoration(
-        color: p.control,
-        borderRadius: BorderRadius.circular(10),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: 7,
-                height: 7,
-                decoration: BoxDecoration(
-                  color: dotColor,
-                  shape: BoxShape.circle,
-                ),
-              ),
-              const SizedBox(width: 5),
-              Text(
-                label,
-                style: OmniType.micro.copyWith(
-                  color: p.muted,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 2),
-          FittedBox(
-            fit: BoxFit.scaleDown,
-            alignment: Alignment.centerLeft,
-            child: Text(
-              amountText,
-              maxLines: 1,
-              style: OmniType.bodySm.copyWith(
-                color: amountColor,
-                fontWeight: FontWeight.w600,
-                fontFeatures: const [FontFeature.tabularFigures()],
-              ),
+        ),
+        OmniGroupRow(
+          title: 'Phải trả',
+          chevron: false,
+          trailing: Text(
+            FinanceMonthUtils.formatVndSpace(outstanding),
+            maxLines: 1,
+            style: OmniType.bodyStrong.copyWith(
+              color: outstanding > 0 ? p.amber : p.ink2,
+              fontFeatures: const [FontFeature.tabularFigures()],
             ),
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 
@@ -925,21 +871,27 @@ class _ExpenseSummaryPageState extends ConsumerState<ExpenseSummaryPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Row(
-            children: [
-              const Expanded(child: SizedBox.shrink()),
-              if (_scope == ExpenseSummaryScope.year)
-                _buildMiniSegmentedToggle<YearTrendBreakdown>(
-                  p,
-                  values: YearTrendBreakdown.values,
-                  selected: _yearTrend,
-                  labelOf: (v) => v.label,
-                  keyPrefix: 'finance-summary-year-by',
-                  onSelected: (v) => setState(() => _yearTrend = v),
-                ),
-            ],
-          ),
-          const SizedBox(height: 4),
+          if (_scope == ExpenseSummaryScope.year) ...[
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                for (var i = 0; i < YearTrendBreakdown.values.length; i++) ...[
+                  if (i > 0) const SizedBox(width: 8),
+                  OmniChoicePill(
+                    key: ValueKey(
+                      'finance-summary-year-by-${YearTrendBreakdown.values[i].name}',
+                    ),
+                    label: YearTrendBreakdown.values[i].label,
+                    selected: _yearTrend == YearTrendBreakdown.values[i],
+                    onTap: () => setState(
+                      () => _yearTrend = YearTrendBreakdown.values[i],
+                    ),
+                  ),
+                ],
+              ],
+            ),
+            const SizedBox(height: 6),
+          ],
           for (var i = 0; i < rows.length; i++) ...[
             if (i > 0) const SizedBox(height: 7),
             _buildTrendRowItem(p, rows[i]),
@@ -1036,66 +988,39 @@ class _ExpenseSummaryPageState extends ConsumerState<ExpenseSummaryPage> {
   ) {
     final rows = _computeDimensionRows(p, state, periodMonths);
 
-    return Container(
+    return Column(
       key: const ValueKey('finance-summary-breakdown-card'),
-      padding: const EdgeInsets.fromLTRB(15, 13, 15, 13),
-      decoration: BoxDecoration(
-        color: p.card,
-        borderRadius: BorderRadius.circular(18),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Row(
-            children: [
-              Expanded(child: SizedBox.shrink()),
-              _buildMiniSegmentedToggle<SummaryDimension>(
-                p,
-                values: SummaryDimension.values,
-                selected: _dimension,
-                labelOf: (v) => v.label,
-                keyPrefix: 'finance-summary-dim',
-                onSelected: (v) => setState(() => _dimension = v),
-              ),
-            ],
-          ),
-          const SizedBox(height: 11),
-          if (rows.isEmpty)
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 16),
-              child: Text(
-                'Chưa có khoản chi phát sinh trong kỳ này.',
-                textAlign: TextAlign.center,
-                style: OmniType.caption.copyWith(color: p.muted),
-              ),
-            )
-          else ...[
-            // Stacked multi-color progress bar
-            ClipRRect(
-              borderRadius: BorderRadius.circular(99),
-              child: SizedBox(
-                height: 8,
-                child: Row(
-                  children: [
-                    for (var i = 0; i < rows.length; i++) ...[
-                      if (i > 0) const SizedBox(width: 2),
-                      Expanded(
-                        flex: math.max(1, (rows[i].sharePct * 10).round()),
-                        child: Container(color: rows[i].color),
-                      ),
-                    ],
-                  ],
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        OmniSegmented(
+          key: const ValueKey('finance-summary-dim'),
+          labels: [for (final v in SummaryDimension.values) v.label],
+          index: SummaryDimension.values.indexOf(_dimension),
+          onChanged: (i) =>
+              setState(() => _dimension = SummaryDimension.values[i]),
+        ),
+        const SizedBox(height: 10),
+        OmniGroupSection(
+          dividerIndent: 54,
+          children: [
+            if (rows.isEmpty)
+              Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 20,
                 ),
-              ),
-            ),
-            const SizedBox(height: 12),
-            for (var i = 0; i < rows.length; i++) ...[
-              if (i > 0) const SizedBox(height: 8),
-              _buildDimensionRowItem(p, rows[i]),
-            ],
+                child: Text(
+                  'Chưa có khoản chi phát sinh trong kỳ này.',
+                  textAlign: TextAlign.center,
+                  style: OmniType.caption.copyWith(color: p.muted),
+                ),
+              )
+            else
+              for (var i = 0; i < rows.length; i++)
+                _buildDimensionRowItem(p, rows[i], rank: i),
           ],
-        ],
-      ),
+        ),
+      ],
     );
   }
 
@@ -1139,10 +1064,7 @@ class _ExpenseSummaryPageState extends ConsumerState<ExpenseSummaryPage> {
           _SummaryDimensionRow(
             id: grp.id,
             name: grp.name,
-            color: FinanceMonthUtils.parseHexColor(
-              grp.color,
-              fallback: p.primary,
-            ),
+            color: p.primary,
             amount: amt,
             count: items.length,
             countLabel: '${items.length} khoản',
@@ -1154,14 +1076,6 @@ class _ExpenseSummaryPageState extends ConsumerState<ExpenseSummaryPage> {
       list.sort((a, b) => b.amount.compareTo(a.amount));
       return list;
     } else {
-      final paletteColors = <Color>[
-        p.primary,
-        const Color(0xFF0284C7),
-        const Color(0xFF12B76A),
-        const Color(0xFF7C3AED),
-        const Color(0xFFD97706),
-        const Color(0xFFE11D48),
-      ];
       final byAccount = <String, List<ExpenseItem>>{};
       final accountNames = <String, String>{};
       for (final item in allItems) {
@@ -1176,18 +1090,15 @@ class _ExpenseSummaryPageState extends ConsumerState<ExpenseSummaryPage> {
         byAccount.putIfAbsent(key, () => []).add(item);
       }
       final list = <_SummaryDimensionRow>[];
-      var colorIdx = 0;
       for (final entry in byAccount.entries) {
         final items = entry.value;
         final amt = items.fold<int>(0, (s, e) => s + e.amount);
         final share = (amt / totalSpend) * 100;
-        final color = paletteColors[colorIdx % paletteColors.length];
-        colorIdx++;
         list.add(
           _SummaryDimensionRow(
             id: entry.key,
             name: accountNames[entry.key] ?? 'Nguồn khác',
-            color: color,
+            color: p.primary,
             amount: amt,
             count: items.length,
             countLabel: '${items.length} khoản',
@@ -1201,79 +1112,78 @@ class _ExpenseSummaryPageState extends ConsumerState<ExpenseSummaryPage> {
     }
   }
 
-  Widget _buildDimensionRowItem(FinancePalette p, _SummaryDimensionRow row) {
+  Widget _buildDimensionRowItem(
+    FinancePalette p,
+    _SummaryDimensionRow row, {
+    required int rank,
+  }) {
     final ratio = (row.sharePct / 100).clamp(0.0, 1.0);
+    final barAlpha = rank == 0 ? 1.0 : (rank == 1 ? 0.72 : 0.48);
+    final icon = _dimension == SummaryDimension.group
+        ? Icons.category_outlined
+        : Icons.account_balance_wallet_outlined;
     return InkWell(
       key: ValueKey('finance-summary-row-${row.id}'),
       onTap: () => _openDimensionDrilldownSheet(row),
-      borderRadius: BorderRadius.circular(10),
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
-              children: [
-                Container(
-                  width: 9,
-                  height: 9,
-                  decoration: BoxDecoration(
-                    color: row.color,
-                    borderRadius: BorderRadius.circular(3),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                // Tên trên dòng chính; số khoản + % xuống dòng phụ để tên
-                // không bị bẻ giữa chừng "(3 / khoản)".
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
+            OmniIconTile(icon, color: p.primary, background: p.primarySoft),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.baseline,
+                    textBaseline: TextBaseline.alphabetic,
                     children: [
-                      Text(
-                        row.name,
-                        maxLines: 2,
-                        style: OmniType.caption.copyWith(
-                          color: p.ink,
-                          fontWeight: FontWeight.w600,
+                      Expanded(
+                        child: Text(
+                          row.name,
+                          maxLines: 2,
+                          style: OmniType.bodyStrong.copyWith(color: p.ink),
                         ),
                       ),
+                      const SizedBox(width: 8),
                       Text(
-                        '${row.countLabel} · '
-                        '${row.sharePct.toStringAsFixed(1).replaceAll('.', ',')}%',
+                        FinanceMonthUtils.formatVndSpace(row.amount),
                         maxLines: 1,
-                        style: OmniType.micro.copyWith(
-                          color: p.muted,
+                        style: OmniType.bodyStrong.copyWith(
+                          color: p.ink,
                           fontFeatures: const [FontFeature.tabularFigures()],
                         ),
                       ),
                     ],
                   ),
-                ),
-                const SizedBox(width: 8),
-                Text(
-                  FinanceMonthUtils.formatVndSpace(row.amount),
-                  style: OmniType.caption.copyWith(
-                    color: p.ink,
-                    fontWeight: FontWeight.w600,
-                    fontFeatures: const [FontFeature.tabularFigures()],
+                  const SizedBox(height: 2),
+                  Text(
+                    '${row.countLabel} · '
+                    '${row.sharePct.toStringAsFixed(1).replaceAll('.', ',')}%',
+                    maxLines: 1,
+                    style: OmniType.caption.copyWith(
+                      color: p.muted,
+                      fontFeatures: const [FontFeature.tabularFigures()],
+                    ),
                   ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 5),
-            Padding(
-              padding: const EdgeInsets.only(left: 17),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(99),
-                child: SizedBox(
-                  height: 4,
-                  child: LinearProgressIndicator(
-                    value: ratio,
-                    backgroundColor: p.control,
-                    valueColor: AlwaysStoppedAnimation<Color>(row.color),
+                  const SizedBox(height: 6),
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(99),
+                    child: SizedBox(
+                      height: 4,
+                      child: LinearProgressIndicator(
+                        value: ratio,
+                        backgroundColor: p.control,
+                        valueColor: AlwaysStoppedAnimation<Color>(
+                          p.primary.withValues(alpha: barAlpha),
+                        ),
+                      ),
+                    ),
                   ),
-                ),
+                ],
               ),
             ),
           ],
@@ -1282,62 +1192,13 @@ class _ExpenseSummaryPageState extends ConsumerState<ExpenseSummaryPage> {
     );
   }
 
-  Widget _buildMiniSegmentedToggle<T>(
-    FinancePalette p, {
-    required List<T> values,
-    required T selected,
-    required String Function(T) labelOf,
-    required String keyPrefix,
-    required ValueChanged<T> onSelected,
-  }) {
-    return Container(
-      padding: const EdgeInsets.all(2),
-      decoration: BoxDecoration(
-        color: p.control,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          for (final v in values)
-            GestureDetector(
-              key: ValueKey('$keyPrefix-${(v as Enum).name}'),
-              behavior: HitTestBehavior.opaque,
-              onTap: () => onSelected(v),
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 140),
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                decoration: BoxDecoration(
-                  color: v == selected ? p.card : Colors.transparent,
-                  borderRadius: BorderRadius.circular(5),
-                  boxShadow: v == selected
-                      ? [
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.06),
-                            blurRadius: 2,
-                            offset: const Offset(0, 1),
-                          ),
-                        ]
-                      : null,
-                ),
-                child: Text(
-                  labelOf(v),
-                  style: OmniType.micro.copyWith(
-                    color: v == selected ? p.ink : p.muted,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-            ),
-        ],
-      ),
-    );
-  }
-
   Future<void> _openDimensionDrilldownSheet(_SummaryDimensionRow row) async {
     final p = FinancePalette.of(context);
     final sorted = List<ExpenseItem>.from(row.items)
       ..sort((a, b) => b.spentOn.compareTo(a.spentOn));
+    final icon = _dimension == SummaryDimension.group
+        ? Icons.category_outlined
+        : Icons.account_balance_wallet_outlined;
 
     await showOmniSheet<void>(
       context: context,
@@ -1349,25 +1210,16 @@ class _ExpenseSummaryPageState extends ConsumerState<ExpenseSummaryPage> {
             title: row.name,
             subtitle:
                 '${row.countLabel} · ${FinanceMonthUtils.formatVndSpace(row.amount)}',
-            leading: Container(
-              width: 10,
-              height: 10,
-              decoration: BoxDecoration(
-                color: row.color,
-                borderRadius: BorderRadius.circular(3),
-              ),
+            leading: OmniIconTile(
+              icon,
+              color: p.primary,
+              background: p.primarySoft,
             ),
-            trailing: InkWell(
-              onTap: () => Navigator.of(ctx).pop(),
-              borderRadius: BorderRadius.circular(99),
-              child: Container(
-                width: 32,
-                height: 32,
-                decoration: BoxDecoration(
-                  color: p.control,
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(Icons.close_rounded, size: 16, color: p.ink2),
+            trailing: OmniGlassCircle(
+              child: IconButton(
+                tooltip: 'Đóng',
+                onPressed: () => Navigator.of(ctx).pop(),
+                icon: const Icon(Icons.close_rounded),
               ),
             ),
           ),
@@ -1470,16 +1322,31 @@ class _PeriodPickerSheetState extends State<_PeriodPickerSheet> {
     };
 
     return OmniSheetBody(
-      header: const OmniSheetHeader(title: 'Chọn kỳ'),
+      header: OmniSheetHeader(
+        title: 'Chọn kỳ',
+        trailing: OmniGlassCircle(
+          child: IconButton(
+            tooltip: 'Đóng',
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints.tightFor(width: 44, height: 44),
+            icon: const Icon(Icons.close_rounded, size: OmniIconSize.md),
+            onPressed: () => Navigator.of(context).maybePop(),
+          ),
+        ),
+      ),
       children: [
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 8),
-          child: years,
+        OmniGroupSection(
+          title: 'Năm',
+          children: [Padding(padding: const EdgeInsets.all(14), child: years)],
         ),
         if (parts != null)
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8),
-            child: parts,
+          OmniGroupSection(
+            title: widget.scope == ExpenseSummaryScope.quarter
+                ? 'Quý'
+                : 'Tháng',
+            children: [
+              Padding(padding: const EdgeInsets.all(14), child: parts),
+            ],
           ),
       ],
     );

@@ -3,8 +3,8 @@ import 'dart:ui' show ImageFilter;
 
 import 'package:flutter/material.dart';
 
+import '../../../../design/components/components.dart';
 import '../../../../design/platform/omni_motion_scope.dart';
-import '../../../../design/platform/omni_performance.dart';
 import '../../../../design/tokens/tokens.dart';
 
 /// Một mục trong menu bấm giữ tin.
@@ -159,9 +159,9 @@ class _MessageActionsOverlay extends StatelessWidget {
                               borderRadius: BorderRadius.circular(18),
                               boxShadow: [
                                 BoxShadow(
-                                  color: const Color(
-                                    0xFF0B1A33,
-                                  ).withValues(alpha: dark ? .5 : .3),
+                                  color: OmniColors.ink.withValues(
+                                    alpha: dark ? .45 : .24,
+                                  ),
                                   offset: const Offset(0, 14),
                                   blurRadius: 34,
                                 ),
@@ -273,52 +273,31 @@ class _ReactionBarState extends State<_ReactionBar>
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final selectedBg = OmniColors.byBrightness(
-      context,
-      OmniColors.accent,
-      OmniColors.darkAccent,
-    );
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(24),
-        color: OmniColors.byBrightness(
-          context,
-          Colors.white,
-          scheme.surfaceContainerHigh,
-        ).withValues(alpha: .92),
-        boxShadow: [
-          BoxShadow(
-            color: OmniColors.ink.withValues(alpha: .25),
-            offset: Offset(0, 10),
-            blurRadius: 30,
-          ),
-        ],
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(4),
-        child: Material(
-          type: MaterialType.transparency,
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              for (var i = 0; i < kTeamReactionChoices.length; i++) ...[
-                if (i > 0) const SizedBox(width: 2),
-                FadeTransition(
-                  opacity: _opacities[i],
-                  child: ScaleTransition(
-                    scale: _scales[i],
-                    child: _ReactionButton(
-                      emoji: kTeamReactionChoices[i],
-                      selected: kTeamReactionChoices[i] == widget.selected,
-                      selectedColor: selectedBg,
-                      onTap: () => widget.onPick(kTeamReactionChoices[i]),
-                    ),
+    final selectedBg = OmniGlass.selectionOf(context);
+    return OmniGlass(
+      radius: 999,
+      padding: const EdgeInsets.all(4),
+      child: Material(
+        type: MaterialType.transparency,
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            for (var i = 0; i < kTeamReactionChoices.length; i++) ...[
+              if (i > 0) const SizedBox(width: 2),
+              FadeTransition(
+                opacity: _opacities[i],
+                child: ScaleTransition(
+                  scale: _scales[i],
+                  child: _ReactionButton(
+                    emoji: kTeamReactionChoices[i],
+                    selected: kTeamReactionChoices[i] == widget.selected,
+                    selectedColor: selectedBg,
+                    onTap: () => widget.onPick(kTeamReactionChoices[i]),
                   ),
                 ),
-              ],
+              ),
             ],
-          ),
+          ],
         ),
       ),
     );
@@ -374,79 +353,59 @@ class _GlassMenu extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(14),
-        boxShadow: [
-          BoxShadow(
-            color: OmniColors.byBrightness(
-              context,
-              OmniColors.ink.withAlpha(0x40),
-              Colors.black.withAlpha(0x80),
-            ),
-            offset: Offset(0, 16),
-            blurRadius: 40,
-          ),
-        ],
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(14),
-        child: OmniBackdropBlur(
-          sigma: 24,
-          child: Container(
-            width: _menuWidth,
-            color: OmniColors.byBrightness(
-              context,
-              Colors.white,
-              scheme.surfaceContainerHigh,
-            ).withValues(alpha: .9),
-            child: Material(
-              type: MaterialType.transparency,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  for (var i = 0; i < items.length; i++) ...[
-                    if (i > 0)
-                      Divider(
-                        height: 1,
-                        thickness: 1,
-                        indent: 16,
-                        color: scheme.outlineVariant,
+    return SizedBox(
+      width: _menuWidth,
+      child: OmniGlass(
+        radius: 18,
+        padding: const EdgeInsets.symmetric(vertical: 4),
+        child: Material(
+          type: MaterialType.transparency,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              for (var i = 0; i < items.length; i++) ...[
+                if (i > 0)
+                  Padding(
+                    padding: const EdgeInsets.only(left: 16),
+                    child: ColoredBox(
+                      color: OmniColors.byBrightness(
+                        context,
+                        OmniColors.border,
+                        OmniColors.darkBorder,
                       ),
-                    InkWell(
-                      onTap: () => onSelected(items[i]),
-                      child: SizedBox(
-                        height: _rowHeight,
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 16),
-                          child: Row(
-                            children: [
-                              Expanded(
-                                child: Text(
-                                  items[i].label,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: OmniType.body.copyWith(
-                                    color: _ink(context),
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                ),
-                              ),
-                              Icon(
-                                items[i].icon,
-                                size: 18,
-                                color: _ink(context),
-                              ),
-                            ],
-                          ),
-                        ),
+                      child: const SizedBox(
+                        height: 0.5,
+                        width: double.infinity,
                       ),
                     ),
-                  ],
-                ],
-              ),
-            ),
+                  ),
+                InkWell(
+                  onTap: () => onSelected(items[i]),
+                  child: SizedBox(
+                    height: _rowHeight,
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              items[i].label,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: OmniType.body.copyWith(
+                                color: _ink(context),
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ),
+                          Icon(items[i].icon, size: 18, color: _ink(context)),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ],
           ),
         ),
       ),

@@ -98,13 +98,16 @@ class _CoverPickerState extends State<CoverPicker> {
                     child: _preview(scheme),
                   ),
                   if (_hasImage)
-                    const DecoratedBox(
+                    DecoratedBox(
                       decoration: BoxDecoration(
                         gradient: LinearGradient(
                           begin: Alignment.topCenter,
                           end: Alignment.bottomCenter,
-                          colors: [Colors.transparent, Color(0x99000000)],
-                          stops: [0.38, 1],
+                          colors: [
+                            Colors.transparent,
+                            Colors.black.withValues(alpha: .56),
+                          ],
+                          stops: const [0.38, 1],
                         ),
                       ),
                     ),
@@ -180,6 +183,7 @@ class _CoverPickerState extends State<CoverPicker> {
                     ? Icons.wallpaper_outlined
                     : Icons.add_photo_alternate_outlined,
                 title: _hasImage ? 'Thay ảnh' : 'Chọn ảnh',
+                chevron: false,
                 onTap: busy ? null : _pick,
               ),
               if (_hasImage && widget.onRemove != null)
@@ -188,6 +192,7 @@ class _CoverPickerState extends State<CoverPicker> {
                   icon: Icons.delete_outline_rounded,
                   title: 'Bỏ ảnh nền',
                   destructive: true,
+                  chevron: false,
                   onTap: busy ? null : widget.onRemove,
                 ),
             ],

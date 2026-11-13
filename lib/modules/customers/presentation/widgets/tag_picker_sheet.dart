@@ -95,25 +95,28 @@ class _TagPickerSheetState extends State<_TagPickerSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+
     return OmniSheetBody(
-      header: const SizedBox(height: 14),
-      footer: Row(
-        children: [
-          Expanded(
-            child: OutlinedButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Huỷ'),
+      header: OmniSheetHeader(
+        title: 'Chọn nhãn',
+        trailing: OmniGlassCircle(
+          child: IconButton(
+            tooltip: 'Đóng',
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints.tightFor(width: 44, height: 44),
+            onPressed: () => Navigator.of(context).pop(),
+            icon: Icon(
+              Icons.close_rounded,
+              size: OmniIconSize.md,
+              color: scheme.onSurface,
             ),
           ),
-          const SizedBox(width: OmniSpacing.sm),
-          Expanded(
-            child: FilledButton(
-              onPressed: () =>
-                  Navigator.of(context).pop(List<String>.of(_selected)),
-              child: const Text('Xong'),
-            ),
-          ),
-        ],
+        ),
+      ),
+      footer: FilledButton(
+        onPressed: () => Navigator.of(context).pop(List<String>.of(_selected)),
+        child: const Text('Xong'),
       ),
       children: [
         OmniGroupSection(
@@ -134,26 +137,47 @@ class _TagPickerSheetState extends State<_TagPickerSheet> {
                   ),
                 ),
                 title: tag,
+                chevron: false,
                 selected: _selected.contains(tag),
                 onTap: () => _toggle(tag),
               ),
           ],
         ),
-        Row(
+        OmniGroupSection(
+          title: 'Nhãn mới',
           children: [
-            Expanded(
-              child: TextField(
-                controller: _input,
-                decoration: const InputDecoration(hintText: 'Thêm nhãn'),
-                textInputAction: TextInputAction.done,
-                onSubmitted: (_) => _add(),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(14, 6, 10, 6),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: _input,
+                      decoration: const InputDecoration(
+                        hintText: 'Nhập tên nhãn mới…',
+                        border: InputBorder.none,
+                        enabledBorder: InputBorder.none,
+                        focusedBorder: InputBorder.none,
+                        filled: false,
+                        isDense: true,
+                      ),
+                      textInputAction: TextInputAction.done,
+                      onSubmitted: (_) => _add(),
+                    ),
+                  ),
+                  const SizedBox(width: OmniSpacing.sm),
+                  TextButton(
+                    onPressed: _add,
+                    style: TextButton.styleFrom(
+                      minimumSize: const Size(44, 36),
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      backgroundColor: OmniGlass.selectionOf(context),
+                      shape: const StadiumBorder(),
+                    ),
+                    child: const Text('Thêm'),
+                  ),
+                ],
               ),
-            ),
-            const SizedBox(width: OmniSpacing.sm),
-            OutlinedButton(
-              onPressed: _add,
-              style: OutlinedButton.styleFrom(minimumSize: const Size(0, 48)),
-              child: const Text('Thêm'),
             ),
           ],
         ),

@@ -20,44 +20,58 @@ class FeedSkeleton extends StatelessWidget {
       padding: const EdgeInsets.all(OmniSpacing.lg),
       children: [
         // Tiêu đề ngày: một thanh ngắn, cùng chỗ với "Hôm nay · 3 việc".
-        const OmniSkeletonBox(height: 14, width: 140, radius: OmniRadius.xs),
-        const SizedBox(height: OmniSpacing.md),
-        for (var i = 0; i < rows; i++) ...[
-          const _RowSkeleton(),
-          if (i < rows - 1) const SizedBox(height: OmniSpacing.md),
-        ],
+        const Padding(
+          padding: EdgeInsets.symmetric(horizontal: 4),
+          child: Align(
+            alignment: Alignment.centerLeft,
+            child: OmniSkeletonBox(
+              height: 12,
+              width: 132,
+              radius: OmniRadius.xs,
+            ),
+          ),
+        ),
+        const SizedBox(height: OmniSpacing.sm),
+        OmniGroupSection(
+          dividerIndent: 52,
+          children: [for (var i = 0; i < rows; i++) const _RowSkeleton()],
+        ),
       ],
     );
   }
 }
 
-/// Một dòng: avatar 32dp, câu chính, dòng phụ ngắn hơn, giờ bên phải.
+/// Một dòng: avatar 28dp, câu chính, dòng phụ ngắn hơn, giờ bên phải — khớp
+/// hình học với [CompletionRow] trong thẻ bo 18 của ngày.
 class _RowSkeleton extends StatelessWidget {
   const _RowSkeleton();
 
   @override
   Widget build(BuildContext context) {
-    return const Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        OmniSkeletonBox(height: 32, width: 32, radius: 16),
-        SizedBox(width: OmniSpacing.md),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              OmniSkeletonBox(height: 14, radius: OmniRadius.xs),
-              SizedBox(height: OmniSpacing.sm),
-              FractionallySizedBox(
-                widthFactor: 0.55,
-                child: OmniSkeletonBox(height: 11, radius: OmniRadius.xs),
-              ),
-            ],
+    return const Padding(
+      padding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          OmniSkeletonBox(height: 28, width: 28, radius: 14),
+          SizedBox(width: OmniSpacing.md),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                OmniSkeletonBox(height: 14, radius: OmniRadius.xs),
+                SizedBox(height: OmniSpacing.sm),
+                FractionallySizedBox(
+                  widthFactor: 0.55,
+                  child: OmniSkeletonBox(height: 11, radius: OmniRadius.xs),
+                ),
+              ],
+            ),
           ),
-        ),
-        SizedBox(width: OmniSpacing.sm),
-        OmniSkeletonBox(height: 11, width: 36, radius: OmniRadius.xs),
-      ],
+          SizedBox(width: OmniSpacing.sm),
+          OmniSkeletonBox(height: 11, width: 36, radius: OmniRadius.xs),
+        ],
+      ),
     );
   }
 }

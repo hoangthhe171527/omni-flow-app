@@ -288,33 +288,35 @@ class _ChannelsPageState extends ConsumerState<ChannelsPage>
                   OmniFabLayer.listBottom(context, hasFab: canPick),
                 ),
                 children: [
-                  OmniGroupSection(
-                    title: 'Kênh chính thức',
-                    children: [
-                      for (final connection in official)
-                        ChannelTile(
-                          connection: connection,
-                          canWrite: canWrite,
-                          canReconnect: canConnectCompany,
-                          onReconnect: () => _startOauth(connection.channel),
-                          onDisconnect: () => _disconnect(connection),
-                        ),
-                    ],
-                  ),
+                  if (official.isNotEmpty)
+                    OmniGroupSection(
+                      title: 'Kênh chính thức',
+                      children: [
+                        for (final connection in official)
+                          ChannelTile(
+                            connection: connection,
+                            canWrite: canWrite,
+                            canReconnect: canConnectCompany,
+                            onReconnect: () => _startOauth(connection.channel),
+                            onDisconnect: () => _disconnect(connection),
+                          ),
+                      ],
+                    ),
                   if (official.isNotEmpty && personal.isNotEmpty)
                     const SizedBox(height: OmniGroupSection.gap),
-                  OmniGroupSection(
-                    title: 'Tài khoản cá nhân',
-                    children: [
-                      for (final connection in personal)
-                        ChannelTile(
-                          connection: connection,
-                          canWrite: canWrite,
-                          onReconnect: () => _openPair(connection.channel),
-                          onDisconnect: () => _disconnect(connection),
-                        ),
-                    ],
-                  ),
+                  if (personal.isNotEmpty)
+                    OmniGroupSection(
+                      title: 'Tài khoản cá nhân',
+                      children: [
+                        for (final connection in personal)
+                          ChannelTile(
+                            connection: connection,
+                            canWrite: canWrite,
+                            onReconnect: () => _openPair(connection.channel),
+                            onDisconnect: () => _disconnect(connection),
+                          ),
+                      ],
+                    ),
                 ],
               );
             },

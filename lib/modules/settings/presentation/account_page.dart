@@ -50,10 +50,11 @@ class _AccountPageState extends ConsumerState<AccountPage> {
     return Scaffold(
       // Nền xám để các thẻ nhóm lồng nổi lên.
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      appBar: const OmniAppBar(
+      appBar: OmniAppBar(
         title: 'Tài khoản',
         centerTitle: true,
         showAccount: false,
+        fallbackBack: () => context.go('/more'),
       ),
       body: Center(
         child: ConstrainedBox(
@@ -67,55 +68,43 @@ class _AccountPageState extends ConsumerState<AccountPage> {
             ),
             children: [
               _Rise(delay: 0, child: _buildProfile(scheme)),
-              const SizedBox(height: 14),
+              const SizedBox(height: OmniGroupSection.gap),
+              _Rise(delay: 50, child: _buildOrganizationGroup()),
+              const SizedBox(height: OmniGroupSection.gap),
               _Rise(
-                delay: 50,
-                child: _Section(
+                delay: 100,
+                child: OmniGroupSection(
                   title: 'Bảo mật',
                   children: [
-                    _AccountRow(
+                    OmniGroupRow(
                       icon: Icons.key_outlined,
-                      label: 'Đổi mật khẩu',
+                      title: 'Đổi mật khẩu',
                       onTap: _changePassword,
                     ),
                   ],
                 ),
               ),
-              const SizedBox(height: 14),
-              _Rise(
-                delay: 100,
-                child: _Section(
-                  title: 'Không gian làm việc',
-                  children: [
-                    _AccountRow(
-                      icon: Icons.shield_outlined,
-                      label: 'Quyền của tôi',
-                      onTap: () =>
-                          context.pushNamed(SettingsModule.myPermissions),
-                    ),
-                  ],
-                ),
-              ),
               // Khung ứng dụng: Cài đặt ứng dụng, Trợ giúp (không còn "Tất cả").
-              if (AccountExtrasSlot.maybeOf(context) case final extras?)
+              if (AccountExtrasSlot.maybeOf(context) case final extras?) ...[
+                const SizedBox(height: OmniGroupSection.gap),
                 _Rise(delay: 125, child: extras(context)),
+              ],
               const SizedBox(height: 18),
               _Rise(
                 delay: 150,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                child: OmniGroupSection(
                   children: [
-                    _LogoutButton(onPressed: _confirmLogout),
-                    const SizedBox(height: 4),
-                    Center(
-                      child: TextButton(
-                        style: TextButton.styleFrom(
-                          foregroundColor: scheme.error,
-                          minimumSize: const Size(44, 44),
-                        ),
-                        onPressed: () => requestAccountDeletion(context),
-                        child: const Text('Xoá tài khoản'),
-                      ),
+                    OmniGroupRow(
+                      icon: Icons.logout_rounded,
+                      title: 'Đăng xuất',
+                      destructive: true,
+                      onTap: _confirmLogout,
+                    ),
+                    OmniGroupRow(
+                      icon: Icons.delete_outline_rounded,
+                      title: 'Xoá tài khoản',
+                      destructive: true,
+                      onTap: () => requestAccountDeletion(context),
                     ),
                   ],
                 ),
@@ -129,20 +118,18 @@ class _AccountPageState extends ConsumerState<AccountPage> {
 
   Widget _buildProfile(ColorScheme scheme) {
     final displayName = ref.watch(sessionProvider.select((s) => s.displayName));
+    final email = ref.watch(sessionProvider.select((s) => s.user?.email));
     final avatarUrl = ref.watch(
       sessionProvider.select((s) => s.user?.avatarUrl),
     );
     final roleLabel = ref.watch(sessionProvider.select((s) => s.roleLabel));
-    final tenantName = ref.watch(sessionProvider.select((s) => s.tenant?.name));
-    final canSwitch =
-        (ref.watch(tenantOptionsProvider).valueOrNull?.length ?? 0) > 1;
-    final subtitle = [
-      roleLabel,
-      ?tenantName,
-    ].where((p) => p.isNotEmpty).join(' · ');
+    final secondary = (email != null && email.trim().isNotEmpty)
+        ? email.trim()
+        : roleLabel;
 
-    return _Card(
-      padding: const EdgeInsets.all(OmniSpacing.md),
+    return OmniCard(
+      flat: true,
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       child: Row(
         children: [
           Semantics(
@@ -164,6 +151,7 @@ class _AccountPageState extends ConsumerState<AccountPage> {
                       name: displayName.isEmpty ? 'Tài khoản' : displayName,
                       imageUrl: avatarUrl,
                       size: 48,
+                      badge: const _CameraBadge(),
                     ),
                     // Vành tiến độ trong lúc tải lên; ảnh cũ VẪN hiện bên dưới.
                     if (_busy)
@@ -192,32 +180,73 @@ class _AccountPageState extends ConsumerState<AccountPage> {
                     color: scheme.onSurface,
                   ),
                 ),
-                if (subtitle.isNotEmpty)
+                if (secondary.isNotEmpty) ...[
+                  const SizedBox(height: 2),
                   Text(
-                    subtitle,
-                    maxLines: 2,
+                    secondary,
+                    maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: OmniType.micro.copyWith(
-                      fontWeight: FontWeight.w400,
+                    style: OmniType.caption.copyWith(
                       color: scheme.onSurfaceVariant,
                     ),
                   ),
+                ],
               ],
             ),
           ),
-          if (canSwitch) ...[
-            const SizedBox(width: OmniSpacing.sm),
-            _SwitchWorkspaceButton(
-              onTap: () {
-                HapticFeedback.selectionClick();
-                // Danh sách có thể đã cũ (vừa được thêm vào một công ty mới).
-                ref.invalidate(tenantOptionsProvider);
-                ref.read(sessionControllerProvider.notifier).chooseWorkspace();
-              },
+          const SizedBox(width: OmniSpacing.sm),
+          ExcludeSemantics(
+            child: _GlassActionPill(
+              icon: Icons.photo_camera_outlined,
+              label: 'Ảnh',
+              onTap: _busy ? null : () => _openAvatarMenu(avatarUrl),
             ),
-          ],
+          ),
         ],
       ),
+    );
+  }
+
+  Widget _buildOrganizationGroup() {
+    final roleLabel = ref.watch(sessionProvider.select((s) => s.roleLabel));
+    final tenantName = ref.watch(sessionProvider.select((s) => s.tenant?.name));
+    final canSwitch =
+        (ref.watch(tenantOptionsProvider).valueOrNull?.length ?? 0) > 1;
+
+    void switchWorkspace() {
+      HapticFeedback.selectionClick();
+      // Danh sách có thể đã cũ (vừa được thêm vào một công ty mới).
+      ref.invalidate(tenantOptionsProvider);
+      ref.read(sessionControllerProvider.notifier).chooseWorkspace();
+    }
+
+    return OmniGroupSection(
+      title: 'Tổ chức hiện tại',
+      children: [
+        OmniGroupRow(
+          icon: Icons.apartment_rounded,
+          title: (tenantName != null && tenantName.isNotEmpty)
+              ? tenantName
+              : 'Tổ chức',
+          subtitle: roleLabel.isNotEmpty ? roleLabel : null,
+          chevron: false,
+          trailing: canSwitch
+              ? Semantics(
+                  button: true,
+                  container: true,
+                  label: 'Đổi không gian làm việc',
+                  excludeSemantics: true,
+                  onTap: switchWorkspace,
+                  child: _GlassActionPill(label: 'Đổi', onTap: switchWorkspace),
+                )
+              : null,
+        ),
+        OmniGroupRow(
+          icon: Icons.shield_outlined,
+          title: 'Quyền của tôi',
+          onTap: () => context.pushNamed(SettingsModule.myPermissions),
+        ),
+      ],
     );
   }
 
@@ -389,78 +418,30 @@ class _Rise extends StatelessWidget {
   }
 }
 
-/// Mặt phẳng nội dung. Các nhóm cấp trang dùng khoảng cách + divider thay vì
-/// khung bo quanh toàn bộ nội dung.
-class _Card extends StatelessWidget {
-  const _Card({required this.child, this.padding = EdgeInsets.zero});
-
-  final Widget child;
-  final EdgeInsets padding;
+class _CameraBadge extends StatelessWidget {
+  const _CameraBadge();
 
   @override
   Widget build(BuildContext context) {
-    // Thẻ nhóm lồng bo 18 trên nền xám (viomni-apple-uiux.html `.group`).
-    return Material(
-      color: Theme.of(context).colorScheme.surface,
-      borderRadius: BorderRadius.circular(18),
-      clipBehavior: Clip.antiAlias,
-      child: Padding(padding: padding, child: child),
-    );
-  }
-}
-
-/// Nhãn nhóm + thẻ chứa các dòng, vạch ngăn giữa chúng. Nhóm rỗng không vẽ.
-class _Section extends StatelessWidget {
-  const _Section({required this.title, required this.children});
-
-  final String title;
-  final List<Widget> children;
-
-  @override
-  Widget build(BuildContext context) {
-    if (children.isEmpty) return const SizedBox.shrink();
     final scheme = Theme.of(context).colorScheme;
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(
-            OmniSpacing.xs,
-            0,
-            OmniSpacing.xs,
-            6,
-          ),
-          child: Semantics(
-            header: true,
-            child: Text(
-              title,
-              style: OmniType.overline.copyWith(color: scheme.onSurfaceVariant),
-            ),
-          ),
-        ),
-        _Card(
-          child: Column(
-            children: [
-              for (var i = 0; i < children.length; i++) ...[
-                if (i > 0) const Divider(height: 1),
-                children[i],
-              ],
-            ],
-          ),
-        ),
-      ],
+    return Container(
+      width: 20,
+      height: 20,
+      decoration: BoxDecoration(
+        color: scheme.surface,
+        shape: BoxShape.circle,
+        border: Border.all(color: scheme.outlineVariant),
+      ),
+      child: Icon(Icons.photo_camera_rounded, size: 11, color: scheme.primary),
     );
   }
 }
 
-/// Một dòng: ô icon 28, nhãn, giá trị phụ, mũi tên. Dòng nguy hiểm tô đỏ và
-/// không có mũi tên.
-class _AccountRow extends StatelessWidget {
-  const _AccountRow({required this.label, required this.onTap, this.icon});
+class _GlassActionPill extends StatelessWidget {
+  const _GlassActionPill({required this.label, required this.onTap, this.icon});
 
   final String label;
-  final VoidCallback onTap;
+  final VoidCallback? onTap;
   final IconData? icon;
 
   @override
@@ -468,122 +449,35 @@ class _AccountRow extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
 
     return InkWell(
-      onTap: () {
-        HapticFeedback.selectionClick();
-        onTap();
-      },
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(minHeight: 44),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: OmniSpacing.md),
-          child: Row(
-            children: [
-              if (icon != null) ...[_IconTile(icon), const SizedBox(width: 10)],
-              Expanded(
-                child: Text(
-                  label,
-                  style: OmniType.chip.copyWith(
-                    fontWeight: FontWeight.w400,
-                    color: scheme.onSurface,
-                  ),
-                ),
-              ),
-              const SizedBox(width: 6),
-              Icon(
-                Icons.chevron_right_rounded,
-                size: 16,
-                color: OmniTaskTones.of(context).chevron,
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _IconTile extends StatelessWidget {
-  const _IconTile(this.icon);
-
-  final IconData? icon;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-
-    return Container(
-      width: 28,
-      height: 28,
-      decoration: BoxDecoration(
-        color: scheme.surfaceContainerHighest,
-        borderRadius: BorderRadius.circular(6),
-      ),
-      child: Icon(icon, size: 16, color: scheme.onSurface),
-    );
-  }
-}
-
-class _SwitchWorkspaceButton extends StatelessWidget {
-  const _SwitchWorkspaceButton({required this.onTap});
-
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-
-    return Semantics(
-      button: true,
-      container: true,
-      label: 'Đổi không gian làm việc',
-      excludeSemantics: true,
       onTap: onTap,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(6),
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
-          child: Center(
-            child: Container(
-              height: 30,
-              padding: const EdgeInsets.symmetric(horizontal: 10),
-              alignment: Alignment.center,
-              decoration: BoxDecoration(
-                color: scheme.surface,
-                borderRadius: BorderRadius.circular(6),
-                border: Border.all(color: scheme.outlineVariant),
-              ),
-              child: Text(
-                'Đổi',
-                style: OmniType.micro.copyWith(
-                  fontWeight: FontWeight.w600,
-                  color: scheme.onSurface,
-                ),
+      borderRadius: BorderRadius.circular(999),
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
+        child: Center(
+          child: DecoratedBox(
+            decoration: OmniGlass.buttonDecoration(context),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (icon != null) ...[
+                    Icon(icon, size: 14, color: scheme.primary),
+                    const SizedBox(width: 5),
+                  ],
+                  Text(
+                    label,
+                    style: OmniType.micro.copyWith(
+                      fontWeight: FontWeight.w600,
+                      color: scheme.primary,
+                    ),
+                  ),
+                ],
               ),
             ),
           ),
         ),
       ),
-    );
-  }
-}
-
-class _LogoutButton extends StatelessWidget {
-  const _LogoutButton({required this.onPressed});
-
-  final VoidCallback onPressed;
-
-  @override
-  Widget build(BuildContext context) {
-    return OutlinedButton(
-      onPressed: onPressed,
-      style: OutlinedButton.styleFrom(
-        foregroundColor: OmniColors.dangerTextOf(context),
-        minimumSize: const Size.fromHeight(44),
-        shape: const StadiumBorder(),
-        textStyle: OmniType.chip.copyWith(fontWeight: FontWeight.w600),
-      ),
-      child: const Text('Đăng xuất'),
     );
   }
 }

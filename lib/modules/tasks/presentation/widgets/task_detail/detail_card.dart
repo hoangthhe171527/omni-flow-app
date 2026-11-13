@@ -14,12 +14,11 @@ class DetailCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
 
-    // `flat` (chi tiết việc): thẻ nhóm lồng bo 18 trên nền xám, không viền
-    // (viomni-apple-uiux.html `.group`). Không phẳng: khung viền bo 8 cũ.
+    // Thẻ nhóm lồng bo 18 trên nền xám (viomni-apple-uiux.html `.group`).
     return Container(
       decoration: BoxDecoration(
         color: scheme.surface,
-        borderRadius: BorderRadius.circular(flat ? 18 : 8),
+        borderRadius: BorderRadius.circular(18),
         border: flat ? null : Border.all(color: scheme.outlineVariant),
       ),
       clipBehavior: Clip.antiAlias,
@@ -114,14 +113,14 @@ class DetailHeaderButton extends StatelessWidget {
       maximumSize: const Size(44, 44),
       padding: EdgeInsets.zero,
       foregroundColor: Theme.of(context).colorScheme.primary,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+      shape: const CircleBorder(),
     ),
     icon: Icon(icon, size: OmniIconSize.lg),
   );
 }
 
 /// Dòng `.row` của thẻ: cao ≥48, đệm 0 6 0 12, nhãn trái rộng 104 chữ 14
-/// màu phụ, vạch `#EEF1F5` phía trên khi [divider].
+/// màu phụ, vạch chia thụt lề 14px phía trên khi [divider].
 class DetailRow extends StatelessWidget {
   const DetailRow({
     super.key,
@@ -148,36 +147,50 @@ class DetailRow extends StatelessWidget {
     final secondary = detailSecondary(context);
     final text = Text(label, style: OmniType.bodySm.copyWith(color: secondary));
 
-    return Container(
+    final content = ConstrainedBox(
       constraints: const BoxConstraints(minHeight: 48),
-      padding: const EdgeInsets.fromLTRB(12, 0, 6, 0),
-      decoration: BoxDecoration(
-        border: divider
-            ? Border(top: BorderSide(color: OmniColors.trackOf(context)))
-            : null,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(12, 0, 6, 0),
+        child: Row(
+          children: [
+            SizedBox(
+              width: icon == null ? 104 : 116,
+              child: icon == null
+                  ? text
+                  : Row(
+                      children: [
+                        Icon(
+                          icon,
+                          size: OmniIconSize.sm,
+                          color: iconColor ?? secondary,
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(child: text),
+                      ],
+                    ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(child: child),
+          ],
+        ),
       ),
-      child: Row(
-        children: [
-          SizedBox(
-            width: icon == null ? 104 : 116,
-            child: icon == null
-                ? text
-                : Row(
-                    children: [
-                      Icon(
-                        icon,
-                        size: OmniIconSize.sm,
-                        color: iconColor ?? secondary,
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(child: text),
-                    ],
-                  ),
+    );
+
+    if (!divider) return content;
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 14),
+          child: SizedBox(
+            height: 0.5,
+            child: ColoredBox(color: OmniColors.trackOf(context)),
           ),
-          const SizedBox(width: 10),
-          Expanded(child: child),
-        ],
-      ),
+        ),
+        content,
+      ],
     );
   }
 }

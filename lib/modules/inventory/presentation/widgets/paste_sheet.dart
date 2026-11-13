@@ -96,10 +96,12 @@ class _PasteSheetState extends ConsumerState<PasteSheet> {
         title: 'Dán packing list',
         subtitle: widget.lot.title,
       ),
-      footer: FilledButton(
-        key: const ValueKey('inv-paste-next'),
-        onPressed: _next,
-        child: const Text('Xem trước'),
+      footer: OmniTintedButtons(
+        child: FilledButton(
+          key: const ValueKey('inv-paste-next'),
+          onPressed: _next,
+          child: const Text('Xem trước'),
+        ),
       ),
       children: [
         OmniGroupSection(
@@ -177,24 +179,28 @@ class _PasteSheetState extends ConsumerState<PasteSheet> {
         title: 'Xem trước · ${pl.rows.length} dòng',
         subtitle: widget.lot.title,
       ),
-      footer: Row(
-        children: [
-          Expanded(
-            child: OutlinedButton(
-              key: const ValueKey('inv-paste-back'),
-              onPressed: _saving ? null : () => setState(() => _preview = null),
-              child: const Text('Sửa lại'),
+      footer: OmniTintedButtons(
+        child: Row(
+          children: [
+            Expanded(
+              child: OutlinedButton(
+                key: const ValueKey('inv-paste-back'),
+                onPressed: _saving
+                    ? null
+                    : () => setState(() => _preview = null),
+                child: const Text('Sửa lại'),
+              ),
             ),
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: FilledButton(
-              key: const ValueKey('inv-paste-save'),
-              onPressed: valid.isEmpty || _saving ? null : () => _save(pl),
-              child: Text('Thêm ${valid.length} cây'),
+            const SizedBox(width: 10),
+            Expanded(
+              child: FilledButton(
+                key: const ValueKey('inv-paste-save'),
+                onPressed: valid.isEmpty || _saving ? null : () => _save(pl),
+                child: Text('Thêm ${valid.length} cây'),
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
       children: [
         OmniGroupSection(

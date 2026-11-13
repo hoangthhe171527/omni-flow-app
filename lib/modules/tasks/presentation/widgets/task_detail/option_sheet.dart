@@ -35,7 +35,16 @@ Future<int?> showOptionSheet(
   // Sheet liquid chuẩn: đầu sheet có lề, các mục trong một nhóm lồng.
   builder: (ctx) => OmniSheetBody(
     semanticsLabel: title,
-    header: OmniSheetHeader(title: title),
+    header: OmniSheetHeader(
+      title: title,
+      trailing: OmniGlassCircle(
+        child: IconButton(
+          tooltip: 'Đóng',
+          onPressed: () => Navigator.of(ctx).maybePop(),
+          icon: const Icon(Icons.close_rounded, size: OmniIconSize.lg),
+        ),
+      ),
+    ),
     children: [
       if (items.isEmpty && emptyMessage != null)
         Padding(

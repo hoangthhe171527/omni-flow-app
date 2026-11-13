@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../core/domain/channel.dart';
 import '../../../design/components/components.dart';
@@ -17,11 +18,16 @@ class UnsupportedPairPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: OmniAppBar(title: 'Ghép nối ${channel.meta.name}'),
-      body: const OmniEmptyState(
+      appBar: OmniAppBar(
+        title: 'Ghép nối ${channel.meta.name}',
+        fallbackBack: () => context.go('/channels'),
+      ),
+      body: OmniEmptyState(
         icon: Icons.phonelink_off_rounded,
         title: 'Kênh này chưa hỗ trợ trên điện thoại',
         message: 'Kết nối kênh này từ Viomni trên máy tính.',
+        actionLabel: 'Quay lại Kết nối kênh',
+        onAction: () => context.go('/channels'),
       ),
     );
   }

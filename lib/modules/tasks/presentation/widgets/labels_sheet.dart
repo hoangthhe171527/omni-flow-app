@@ -78,7 +78,6 @@ class _LabelsSheetState extends ConsumerState<LabelsSheet> {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
     final canEdit = ref.watch(taskAccessProvider).canEditLabels;
     final labels = ref.watch(taskLabelsProvider);
 
@@ -98,15 +97,14 @@ class _LabelsSheetState extends ConsumerState<LabelsSheet> {
       child: OmniSheetBody(
         header: OmniSheetHeader(
           title: 'Nhãn màu',
-          trailing: TextButton(
-            style: TextButton.styleFrom(
-              minimumSize: const Size(44, 44),
-              padding: const EdgeInsets.symmetric(horizontal: 8),
-              foregroundColor: scheme.primary,
-              textStyle: OmniType.bodyStrong,
+          trailing: OmniGlassCircle(
+            child: IconButton(
+              tooltip: 'Đóng',
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints.tightFor(width: 44, height: 44),
+              onPressed: () => Navigator.of(context).maybePop(),
+              icon: const Icon(Icons.close_rounded, size: OmniIconSize.lg),
             ),
-            onPressed: () => Navigator.of(context).maybePop(),
-            child: const Text('Xong'),
           ),
         ),
         children: [
@@ -327,29 +325,79 @@ class _EditLabelPaneState extends State<_EditLabelPane> {
       child: OmniSheetBody(
         header: OmniSheetHeader(
           title: widget.label == null ? 'Nhãn mới' : 'Sửa nhãn',
-          leading: IconButton(
-            tooltip: 'Quay lại',
-            onPressed: widget.onBack,
-            icon: Icon(
-              Icons.chevron_left_rounded,
-              color: scheme.onSurface,
-              size: 28,
+          leading: OmniGlassCircle(
+            child: IconButton(
+              tooltip: 'Quay lại',
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints.tightFor(width: 44, height: 44),
+              onPressed: widget.onBack,
+              icon: Icon(
+                Icons.chevron_left_rounded,
+                color: scheme.onSurface,
+                size: 24,
+              ),
+            ),
+          ),
+          trailing: OmniGlassCircle(
+            child: IconButton(
+              tooltip: 'Đóng',
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints.tightFor(width: 44, height: 44),
+              onPressed: () => Navigator.of(context).maybePop(),
+              icon: const Icon(Icons.close_rounded, size: OmniIconSize.lg),
             ),
           ),
         ),
         footer: FilledButton(
           onPressed: name.isEmpty || _busy ? null : () => _submit(name),
+          style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(48)),
           child: const Text('Lưu'),
         ),
         children: [
-          OmniField(
-            label: 'Tên nhãn',
-            child: TextField(
-              key: const Key('label-name'),
-              controller: _name,
-              maxLength: 255,
-              onChanged: (_) => setState(() {}),
-            ),
+          OmniGroupSection(
+            children: [
+              Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 12,
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      'Tên nhãn',
+                      style: OmniType.micro.copyWith(
+                        fontWeight: FontWeight.w600,
+                        color: scheme.onSurfaceVariant,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    TextField(
+                      key: const Key('label-name'),
+                      controller: _name,
+                      maxLength: 255,
+                      style: OmniType.body.copyWith(color: scheme.onSurface),
+                      decoration: InputDecoration(
+                        hintText: 'Nhập tên nhãn',
+                        hintStyle: OmniType.body.copyWith(
+                          color: scheme.onSurfaceVariant,
+                        ),
+                        counterText: '',
+                        isDense: true,
+                        filled: false,
+                        border: InputBorder.none,
+                        enabledBorder: InputBorder.none,
+                        focusedBorder: InputBorder.none,
+                        disabledBorder: InputBorder.none,
+                        contentPadding: EdgeInsets.zero,
+                      ),
+                      onChanged: (_) => setState(() {}),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
           OmniGroupSection(
             dividerIndent: 14,

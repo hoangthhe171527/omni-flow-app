@@ -151,7 +151,7 @@ class _TaskTitleRowState extends ConsumerState<TaskTitleRow>
         height: 26,
         decoration: BoxDecoration(
           color: done ? scheme.primary : scheme.surface,
-          borderRadius: BorderRadius.circular(6),
+          borderRadius: BorderRadius.circular(8.5),
           border: Border.all(
             color: done ? scheme.primary : faint,
             width: done ? 0 : 2,

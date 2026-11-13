@@ -79,12 +79,17 @@ class _NotificationSettingsPageState
         ),
         (null, _) => const Center(child: CircularProgressIndicator.adaptive()),
         (final bool value, _) => ListView(
-          padding: const EdgeInsets.fromLTRB(16, 12, 16, OmniSpacing.xxl),
+          padding: const EdgeInsets.fromLTRB(
+            16,
+            12,
+            16,
+            OmniSpacing.bottomSafe,
+          ),
           children: [
             OmniGroupSection(
-              dividerIndent: 14,
               children: [
                 OmniGroupRow(
+                  icon: Icons.notifications_none_rounded,
                   title: 'Báo khi có công đoạn xong',
                   trailing: Switch.adaptive(
                     value: value,

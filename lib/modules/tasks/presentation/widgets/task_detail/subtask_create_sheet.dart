@@ -195,79 +195,93 @@ class _SubtaskCreateSheetState extends ConsumerState<SubtaskCreateSheet> {
       explicitChildNodes: true,
       label: 'Tạo việc con',
       child: OmniSheetBody(
-        header: Padding(
-          padding: const EdgeInsets.fromLTRB(4, 8, 4, 8),
-          child: Row(
-            children: [
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(),
-                style: TextButton.styleFrom(
-                  minimumSize: const Size(64, 44),
-                  foregroundColor: secondary,
-                  textStyle: OmniType.body.copyWith(
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-                child: const Text('Huỷ'),
-              ),
-              Expanded(
-                child: Text(
-                  'Việc con mới',
-                  textAlign: TextAlign.center,
-                  style: OmniType.section.copyWith(color: scheme.onSurface),
-                ),
-              ),
-              ValueListenableBuilder<TextEditingValue>(
-                valueListenable: _name,
-                builder: (context, _, _) => TextButton(
-                  onPressed: _canCreate ? _create : null,
-                  style: TextButton.styleFrom(
-                    minimumSize: const Size(64, 44),
-                    foregroundColor: scheme.primary,
-                    disabledForegroundColor: scheme.primary.withValues(
-                      alpha: 0.4,
-                    ),
-                    textStyle: OmniType.bodyStrong,
-                  ),
-                  child: _busy
-                      ? const SizedBox.square(
-                          dimension: 18,
-                          child: CircularProgressIndicator.adaptive(
-                            strokeWidth: 2,
-                          ),
-                        )
-                      : const Text('Tạo'),
-                ),
-              ),
-            ],
+        header: OmniSheetHeader(
+          title: 'Việc con mới',
+          trailing: OmniGlassCircle(
+            child: IconButton(
+              tooltip: 'Huỷ',
+              onPressed: () => Navigator.of(context).pop(),
+              icon: const Icon(Icons.close_rounded, size: OmniIconSize.lg),
+            ),
+          ),
+        ),
+        footer: ValueListenableBuilder<TextEditingValue>(
+          valueListenable: _name,
+          builder: (context, _, _) => FilledButton(
+            onPressed: _canCreate ? _create : null,
+            style: FilledButton.styleFrom(
+              minimumSize: const Size.fromHeight(48),
+            ),
+            child: _busy
+                ? const SizedBox.square(
+                    dimension: 18,
+                    child: CircularProgressIndicator.adaptive(strokeWidth: 2),
+                  )
+                : const Text('Tạo'),
           ),
         ),
         children: [
-          TextField(
-            controller: _name,
-            autofocus: true,
-            enabled: !_busy,
-            textCapitalization: TextCapitalization.sentences,
-            textInputAction: TextInputAction.done,
-            onSubmitted: (_) => _create(),
-            style: OmniType.body.copyWith(color: scheme.onSurface),
-            decoration: const InputDecoration(hintText: 'Tên việc con'),
-          ),
-          if (widget.details)
-            TextField(
-              key: const ValueKey('subtask-create-description'),
-              controller: _description,
-              enabled: !_busy,
-              minLines: 3,
-              maxLines: 6,
-              // `CreateChecklistItemRequest` `description` `max:2000`.
-              maxLength: 2000,
-              textCapitalization: TextCapitalization.sentences,
-              style: OmniType.body.copyWith(color: scheme.onSurface),
-              decoration: const InputDecoration(
-                hintText: 'Mô tả (không bắt buộc)',
+          OmniGroupSection(
+            dividerIndent: 14,
+            children: [
+              Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 12,
+                ),
+                child: TextField(
+                  controller: _name,
+                  autofocus: true,
+                  enabled: !_busy,
+                  textCapitalization: TextCapitalization.sentences,
+                  textInputAction: TextInputAction.done,
+                  onSubmitted: (_) => _create(),
+                  style: OmniType.body.copyWith(color: scheme.onSurface),
+                  decoration: InputDecoration(
+                    hintText: 'Tên việc con',
+                    hintStyle: OmniType.body.copyWith(color: secondary),
+                    isDense: true,
+                    filled: false,
+                    border: InputBorder.none,
+                    enabledBorder: InputBorder.none,
+                    focusedBorder: InputBorder.none,
+                    disabledBorder: InputBorder.none,
+                    contentPadding: EdgeInsets.zero,
+                  ),
+                ),
               ),
-            ),
+              if (widget.details)
+                Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 12,
+                  ),
+                  child: TextField(
+                    key: const ValueKey('subtask-create-description'),
+                    controller: _description,
+                    enabled: !_busy,
+                    minLines: 3,
+                    maxLines: 6,
+                    // `CreateChecklistItemRequest` `description` `max:2000`.
+                    maxLength: 2000,
+                    textCapitalization: TextCapitalization.sentences,
+                    style: OmniType.body.copyWith(color: scheme.onSurface),
+                    decoration: InputDecoration(
+                      hintText: 'Mô tả (không bắt buộc)',
+                      hintStyle: OmniType.body.copyWith(color: secondary),
+                      counterText: '',
+                      isDense: true,
+                      filled: false,
+                      border: InputBorder.none,
+                      enabledBorder: InputBorder.none,
+                      focusedBorder: InputBorder.none,
+                      disabledBorder: InputBorder.none,
+                      contentPadding: EdgeInsets.zero,
+                    ),
+                  ),
+                ),
+            ],
+          ),
           if (widget.canAssign)
             OmniGroupSection(
               dividerIndent: 14,

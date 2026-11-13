@@ -100,7 +100,7 @@ class _DashboardGroupState extends State<DashboardGroup> {
             expanded: _expanded,
             child: InkWell(
               onTap: _toggle,
-              borderRadius: BorderRadius.circular(8),
+              borderRadius: BorderRadius.circular(14),
               child: ConstrainedBox(
                 constraints: const BoxConstraints(minHeight: 44),
                 child: Padding(
@@ -125,6 +125,7 @@ class _DashboardGroupState extends State<DashboardGroup> {
                           style: OmniType.micro.copyWith(
                             color: scheme.onSurfaceVariant,
                             fontWeight: FontWeight.w600,
+                            fontFeatures: OmniType.tabular,
                           ),
                         ),
                       ],
@@ -189,11 +190,11 @@ class DashboardCardSkeleton extends StatelessWidget {
     padding: EdgeInsets.all(12),
     child: Column(
       children: [
-        OmniSkeletonBox(height: 36),
+        OmniSkeletonBox(height: 40, radius: 12),
         SizedBox(height: 8),
-        OmniSkeletonBox(height: 36),
+        OmniSkeletonBox(height: 40, radius: 12),
         SizedBox(height: 8),
-        OmniSkeletonBox(height: 36),
+        OmniSkeletonBox(height: 40, radius: 12),
       ],
     ),
   );

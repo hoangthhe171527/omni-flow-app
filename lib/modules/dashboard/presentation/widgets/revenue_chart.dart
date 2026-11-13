@@ -10,6 +10,7 @@ import 'package:flutter/services.dart';
 import 'package:omni_app/design/platform/omni_motion_scope.dart';
 import 'package:omni_app/design/tokens/omni_colors.dart';
 import 'package:omni_app/design/tokens/omni_motion.dart';
+import 'package:omni_app/design/tokens/omni_spacing.dart';
 import 'package:omni_app/design/tokens/omni_typography.dart';
 
 import '../../domain/revenue_period.dart';
@@ -176,11 +177,11 @@ class _RevenueChartState extends State<RevenueChart>
   }
 
   Widget _tooltip(BuildContext context, RevenueSeries s, int i, double w) {
+    final scheme = Theme.of(context).colorScheme;
+    final dark = scheme.brightness == Brightness.dark;
     final x = _n == 1 ? 0.0 : i / (_n - 1) * w;
-    const tipW = 132.0;
+    final tipW = math.min(204.0, math.max(148.0, w));
     final left = (x - tipW / 2).clamp(0.0, math.max(0.0, w - tipW)).toDouble();
-    final ink = Theme.of(context).colorScheme.inverseSurface;
-    final onInk = Theme.of(context).colorScheme.onInverseSurface;
     final prev = s.previousAt(i);
     return Positioned(
       left: left,
@@ -189,10 +190,16 @@ class _RevenueChartState extends State<RevenueChart>
       child: IgnorePointer(
         child: ExcludeSemantics(
           child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
             decoration: BoxDecoration(
-              color: ink,
-              borderRadius: BorderRadius.circular(6),
+              color: scheme.surface.withValues(alpha: dark ? .92 : .94),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: dark
+                    ? Colors.white.withValues(alpha: .14)
+                    : scheme.outlineVariant.withValues(alpha: .55),
+              ),
+              boxShadow: OmniShadows.raised,
             ),
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -200,19 +207,18 @@ class _RevenueChartState extends State<RevenueChart>
               children: [
                 Text(
                   _tipLine(s, i),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
                   style: OmniType.micro.copyWith(
-                    color: onInk,
+                    color: scheme.onSurface,
                     fontWeight: FontWeight.w600,
+                    fontFeatures: OmniType.tabular,
                   ),
                 ),
+                const SizedBox(height: 1),
                 Text(
                   'Kỳ trước ${prev == null ? '—' : formatFullVnd(prev)}',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
                   style: OmniType.micro.copyWith(
-                    color: onInk.withValues(alpha: .75),
+                    color: scheme.onSurfaceVariant,
+                    fontFeatures: OmniType.tabular,
                   ),
                 ),
               ],

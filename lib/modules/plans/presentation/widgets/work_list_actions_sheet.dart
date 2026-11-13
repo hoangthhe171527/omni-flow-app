@@ -66,14 +66,20 @@ class WorkListActionsSheet extends StatelessWidget {
                 height: 36,
                 decoration: BoxDecoration(
                   color: coverColor,
-                  borderRadius: BorderRadius.circular(10),
+                  borderRadius: BorderRadius.circular(12),
                 ),
               ),
+        trailing: OmniGlassCircle(
+          child: IconButton(
+            tooltip: 'Đóng',
+            onPressed: () => Navigator.of(context).maybePop(),
+            icon: const Icon(Icons.close_rounded),
+          ),
+        ),
       ),
       children: [
         if (canEdit)
           OmniGroupSection(
-            dividerIndent: 14,
             children: [
               OmniGroupRow(
                 key: const Key('work-list-action-edit'),
@@ -86,13 +92,13 @@ class WorkListActionsSheet extends StatelessWidget {
           ),
         if (canDelete)
           OmniGroupSection(
-            dividerIndent: 14,
             children: [
               OmniGroupRow(
                 key: const Key('work-list-action-delete'),
                 icon: Icons.delete_outline_rounded,
                 title: deleteLabel,
                 destructive: true,
+                chevron: false,
                 onTap: () => Navigator.of(context).pop(WorkListAction.delete),
               ),
             ],

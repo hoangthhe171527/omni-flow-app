@@ -155,19 +155,11 @@ class _MoreButton extends StatelessWidget {
             menuKey: const Key('channel-row-menu'),
             semanticsLabel: 'Tuỳ chọn kênh',
             scrollable: false,
-            builder: (menuContext) => Padding(
-              padding: const EdgeInsets.all(6),
-              child: OmniGroupSection(
-                dividerIndent: 14,
-                children: [
-                  OmniGroupRow(
-                    icon: Icons.link_off_rounded,
-                    title: 'Ngắt kết nối',
-                    destructive: true,
-                    onTap: () => Navigator.of(menuContext).pop(true),
-                  ),
-                ],
-              ),
+            builder: (menuContext) => OmniAnchoredMenuItem(
+              icon: Icons.link_off_rounded,
+              label: 'Ngắt kết nối',
+              destructive: true,
+              onTap: () => Navigator.of(menuContext).pop(true),
             ),
           );
           if (disconnect == true) onDisconnect();

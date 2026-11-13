@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../core/error/app_exception.dart';
 import '../../../design/components/components.dart';
@@ -74,6 +75,7 @@ class _CreatePlanPageState extends ConsumerState<CreatePlanPage> {
   @override
   Widget build(BuildContext context) {
     final teams = ref.watch(teamsWithPlansProvider);
+    final scheme = Theme.of(context).colorScheme;
     final text = Theme.of(context).textTheme;
 
     final realTeams = <Team>[
@@ -83,7 +85,11 @@ class _CreatePlanPageState extends ConsumerState<CreatePlanPage> {
     final teamName = realTeams.where((t) => t.id == _teamId).firstOrNull?.name;
 
     return Scaffold(
-      appBar: OmniAppBar(title: 'Kế hoạch mới', close: true),
+      appBar: OmniAppBar(
+        title: 'Kế hoạch mới',
+        close: true,
+        fallbackBack: () => context.go('/teams'),
+      ),
       bottomNavigationBar: OmniActionBar(
         children: [
           FilledButton(
@@ -126,16 +132,46 @@ class _CreatePlanPageState extends ConsumerState<CreatePlanPage> {
             dividerIndent: 14,
             children: [
               Padding(
-                padding: const EdgeInsets.fromLTRB(14, 6, 14, 6),
-                child: OmniField(
-                  label: 'Tên kế hoạch',
-                  child: TextField(
-                    controller: _name,
-                    autofocus: true,
-                    textCapitalization: TextCapitalization.sentences,
-                    decoration: const InputDecoration(hintText: 'Đàn cơ'),
-                    onChanged: (_) => setState(() {}),
-                  ),
+                padding: const EdgeInsets.fromLTRB(14, 10, 14, 10),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Row(
+                      children: [
+                        Text(
+                          'Tên kế hoạch',
+                          style: OmniType.caption.copyWith(
+                            fontWeight: FontWeight.w600,
+                            color: scheme.onSurfaceVariant,
+                          ),
+                        ),
+                        Text(
+                          ' *',
+                          style: OmniType.caption.copyWith(
+                            fontWeight: FontWeight.w600,
+                            color: OmniColors.dangerTextOf(context),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    TextField(
+                      controller: _name,
+                      autofocus: true,
+                      textCapitalization: TextCapitalization.sentences,
+                      decoration: const InputDecoration(
+                        hintText: 'Đàn cơ',
+                        isDense: true,
+                        filled: false,
+                        contentPadding: EdgeInsets.symmetric(vertical: 4),
+                        border: InputBorder.none,
+                        enabledBorder: InputBorder.none,
+                        focusedBorder: InputBorder.none,
+                      ),
+                      onChanged: (_) => setState(() {}),
+                    ),
+                  ],
                 ),
               ),
               // Dòng chọn team ẩn khi tới từ luồng "vừa tạo team xong": người
@@ -197,7 +233,16 @@ class _CreatePlanPageState extends ConsumerState<CreatePlanPage> {
     final picked = await showOmniSheet<({String? id})>(
       context: context,
       builder: (sheet) => OmniSheetBody(
-        header: const OmniSheetHeader(title: 'Thuộc team'),
+        header: OmniSheetHeader(
+          title: 'Thuộc team',
+          trailing: OmniGlassCircle(
+            child: IconButton(
+              tooltip: 'Đóng',
+              onPressed: () => Navigator.of(sheet).maybePop(),
+              icon: const Icon(Icons.close_rounded),
+            ),
+          ),
+        ),
         children: [
           OmniGroupSection(
             dividerIndent: 14,
@@ -205,12 +250,14 @@ class _CreatePlanPageState extends ConsumerState<CreatePlanPage> {
               OmniGroupRow(
                 title: 'Chưa thuộc team nào',
                 selected: _teamId == null,
+                chevron: false,
                 onTap: () => Navigator.of(sheet).pop((id: null)),
               ),
               for (final team in teams)
                 OmniGroupRow(
                   title: team.name,
                   selected: _teamId == team.id,
+                  chevron: false,
                   onTap: () => Navigator.of(sheet).pop((id: team.id)),
                 ),
             ],

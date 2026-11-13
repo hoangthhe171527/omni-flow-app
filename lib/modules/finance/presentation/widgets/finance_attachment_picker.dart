@@ -280,59 +280,70 @@ Widget _buildReceiptVisualFallback(
   required bool compact,
 }) {
   if (compact) {
-    return Container(
-      color: p.card,
-      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 3),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
+    return LayoutBuilder(
+      builder: (context, box) {
+        final scale = MediaQuery.textScalerOf(context).scale(1);
+        final showAmount =
+            expenseAmount != null &&
+            expenseAmount > 0 &&
+            box.maxHeight >= 50 * scale;
+        return Container(
+          color: p.card,
+          padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 3),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Icon(
-                att.isPdf
-                    ? Icons.picture_as_pdf_rounded
-                    : Icons.receipt_long_rounded,
-                size: 11,
-                color: p.primary,
-              ),
-              const SizedBox(width: 3),
-              Expanded(
-                child: Text(
-                  att.isPdf ? 'PDF' : 'UNC',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: OmniType.micro.copyWith(
-                    color: p.primaryInk,
-                    fontWeight: FontWeight.w600,
+              Row(
+                children: [
+                  Icon(
+                    att.isPdf
+                        ? Icons.picture_as_pdf_rounded
+                        : Icons.receipt_long_rounded,
+                    size: 11,
+                    color: p.primary,
                   ),
+                  const SizedBox(width: 3),
+                  Expanded(
+                    child: Text(
+                      att.isPdf ? 'PDF' : 'UNC',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: OmniType.micro.copyWith(
+                        height: 1.15,
+                        color: p.primaryInk,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              if (showAmount)
+                Text(
+                  FinanceMonthUtils.formatNumber(expenseAmount),
+                  maxLines: 1,
+                  softWrap: false,
+                  style: OmniType.micro.copyWith(
+                    height: 1.15,
+                    color: p.ink,
+                    fontWeight: FontWeight.w600,
+                    fontFeatures: OmniType.tabular,
+                  ),
+                ),
+              Text(
+                att.name,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: OmniType.micro.copyWith(
+                  height: 1.15,
+                  color: p.ink2,
+                  fontWeight: FontWeight.w600,
                 ),
               ),
             ],
           ),
-          if (expenseAmount != null && expenseAmount > 0)
-            FittedBox(
-              fit: BoxFit.scaleDown,
-              alignment: Alignment.centerLeft,
-              child: Text(
-                FinanceMonthUtils.formatNumber(expenseAmount),
-                style: OmniType.micro.copyWith(
-                  color: p.ink,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ),
-          Text(
-            att.name,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: OmniType.micro.copyWith(
-              color: p.ink2,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ],
-      ),
+        );
+      },
     );
   }
 
@@ -413,18 +424,18 @@ class FinanceAttachmentInlineThumb extends StatelessWidget {
         height: height,
         decoration: BoxDecoration(
           color: p.card,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: p.selLine, width: 1),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: p.line, width: 1),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.06),
-              blurRadius: 4,
-              offset: const Offset(0, 1),
+              color: OmniColors.ink.withValues(alpha: 0.06),
+              blurRadius: 6,
+              offset: const Offset(0, 2),
             ),
           ],
         ),
         child: ClipRRect(
-          borderRadius: BorderRadius.circular(11),
+          borderRadius: BorderRadius.circular(13),
           child: Stack(
             fit: StackFit.expand,
             children: [
@@ -440,22 +451,26 @@ class FinanceAttachmentInlineThumb extends StatelessWidget {
               ),
               if (onRemove != null)
                 Positioned(
-                  top: 2,
-                  right: 2,
+                  top: 3,
+                  right: 3,
                   child: GestureDetector(
                     key: ValueKey('finance-att-remove-${attachment.id}'),
                     onTap: onRemove,
                     child: Container(
-                      width: 17,
-                      height: 17,
+                      width: 20,
+                      height: 20,
                       decoration: BoxDecoration(
-                        color: Colors.black.withValues(alpha: 0.68),
+                        color: OmniColors.ink.withValues(alpha: 0.72),
                         shape: BoxShape.circle,
+                        border: Border.all(
+                          color: Colors.white.withValues(alpha: 0.35),
+                          width: 0.8,
+                        ),
                       ),
                       alignment: Alignment.center,
                       child: const Icon(
                         Icons.close_rounded,
-                        size: 11,
+                        size: 12,
                         color: Colors.white,
                       ),
                     ),

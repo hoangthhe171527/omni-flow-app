@@ -392,13 +392,15 @@ class _UnitSheetState extends ConsumerState<UnitSheet> {
       ),
       footer: buttons.isEmpty
           ? null
-          : Row(
-              children: [
-                for (var i = 0; i < buttons.length; i++) ...[
-                  if (i > 0) const SizedBox(width: 8),
-                  Expanded(child: buttons[i]),
+          : OmniTintedButtons(
+              child: Row(
+                children: [
+                  for (var i = 0; i < buttons.length; i++) ...[
+                    if (i > 0) const SizedBox(width: 8),
+                    Expanded(child: buttons[i]),
+                  ],
                 ],
-              ],
+              ),
             ),
       children: [
         if (perms.photos) UnitPhotosSection(unit: u),

@@ -110,41 +110,66 @@ Future<TaskMenuAction?> showTaskMenu(
   width: 344,
   menuKey: const Key('task-actions-menu'),
   semanticsLabel: 'Tuỳ chọn công việc',
-  builder: (menuContext) => Column(
-    mainAxisSize: MainAxisSize.min,
-    children: [
-      for (var g = 0; g < groups.length; g++)
-        Column(
-          key: Key('detail-menu-group-$g'),
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            for (var i = 0; i < groups[g].length; i++)
-              Builder(
-                builder: (_) {
-                  final item = _item(groups[g][i], followerCount);
-                  return OmniAnchoredMenuItem(
-                    icon: item.icon,
-                    label: item.label,
-                    divider: g > 0 || i > 0,
-                    destructive: item.danger,
-                    trailing: item.trailing == null
-                        ? null
-                        : Text(
-                            item.trailing!,
-                            style: OmniType.caption.copyWith(
-                              color: Theme.of(
-                                menuContext,
-                              ).colorScheme.onSurfaceVariant,
-                            ),
-                          ),
-                    onTap: () => Navigator.of(menuContext).pop(item.value),
-                  );
-                },
+  builder: (menuContext) {
+    final scheme = Theme.of(menuContext).colorScheme;
+    final dark = Theme.of(menuContext).brightness == Brightness.dark;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          for (var g = 0; g < groups.length; g++) ...[
+            if (g > 0) const SizedBox(height: 8),
+            Container(
+              key: Key('detail-menu-group-$g'),
+              decoration: BoxDecoration(
+                color: scheme.surface.withValues(alpha: dark ? .58 : .76),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: scheme.outlineVariant.withValues(
+                    alpha: dark ? .32 : .45,
+                  ),
+                  width: 0.5,
+                ),
               ),
+              clipBehavior: Clip.antiAlias,
+              child: Material(
+                type: MaterialType.transparency,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    for (var i = 0; i < groups[g].length; i++)
+                      Builder(
+                        builder: (_) {
+                          final item = _item(groups[g][i], followerCount);
+                          return OmniAnchoredMenuItem(
+                            icon: item.icon,
+                            label: item.label,
+                            divider: i > 0,
+                            destructive: item.danger,
+                            trailing: item.trailing == null
+                                ? null
+                                : Text(
+                                    item.trailing!,
+                                    style: OmniType.caption.copyWith(
+                                      color: scheme.onSurfaceVariant,
+                                    ),
+                                  ),
+                            onTap: () =>
+                                Navigator.of(menuContext).pop(item.value),
+                          );
+                        },
+                      ),
+                  ],
+                ),
+              ),
+            ),
           ],
-        ),
-    ],
-  ),
+        ],
+      ),
+    );
+  },
 );
 
 DetailMenuItem<TaskMenuAction> _item(TaskMenuAction a, int followers) =>

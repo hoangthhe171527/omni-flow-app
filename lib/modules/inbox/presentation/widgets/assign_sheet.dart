@@ -39,30 +39,50 @@ class _AssignSheetState extends ConsumerState<AssignSheet> {
     final members = ref.watch(teamMembersProvider);
 
     return OmniSheetBody(
-      header: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          const OmniSheetHeader(title: 'Gán nhân viên'),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(10, 0, 10, 10),
-            child: OmniSearchField(
-              hint: 'Tìm nhân viên...',
-              debounce: const Duration(milliseconds: 150),
-              onChanged: (value) =>
-                  setState(() => _search = value.toLowerCase()),
-            ),
+      header: OmniSheetHeader(
+        title: 'Gán nhân viên',
+        trailing: OmniGlassCircle(
+          child: IconButton(
+            tooltip: 'Đóng',
+            onPressed: () => Navigator.of(context).pop(),
+            icon: const Icon(Icons.close_rounded),
           ),
-        ],
-      ),
-      footer: TextField(
-        controller: _note,
-        decoration: const InputDecoration(
-          hintText: 'Ghi chú bàn giao (tuỳ chọn)',
-          isDense: true,
         ),
-        maxLines: 2,
       ),
       children: [
+        OmniGlass(
+          blur: false,
+          radius: 22,
+          padding: const EdgeInsets.symmetric(horizontal: 4),
+          child: OmniSearchField(
+            hint: 'Tìm nhân viên...',
+            flat: true,
+            dense: true,
+            debounce: const Duration(milliseconds: 150),
+            onChanged: (value) => setState(() => _search = value.toLowerCase()),
+          ),
+        ),
+        OmniGroupSection(
+          title: 'Ghi chú bàn giao',
+          dividerIndent: 14,
+          children: [
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+              child: TextField(
+                controller: _note,
+                decoration: const InputDecoration(
+                  hintText: 'Ghi chú bàn giao (tuỳ chọn)',
+                  border: InputBorder.none,
+                  enabledBorder: InputBorder.none,
+                  focusedBorder: InputBorder.none,
+                  filled: false,
+                  isDense: true,
+                ),
+                maxLines: 2,
+              ),
+            ),
+          ],
+        ),
         OmniAsyncView(
           value: members,
           loading: const Column(
@@ -93,6 +113,7 @@ class _AssignSheetState extends ConsumerState<AssignSheet> {
                   icon: Icons.person_off_outlined,
                   title: 'Bỏ gán',
                   subtitle: 'Trả hội thoại về hàng chờ',
+                  chevron: false,
                   onTap: () => Navigator.pop(
                     context,
                     AssignResult(assigneeId: null, note: _noteText),
@@ -108,6 +129,7 @@ class _AssignSheetState extends ConsumerState<AssignSheet> {
                     title: member.name,
                     subtitle: member.roleLabel,
                     selected: member.userId == widget.currentAssigneeId,
+                    chevron: false,
                     onTap: () => Navigator.pop(
                       context,
                       AssignResult(assigneeId: member.userId, note: _noteText),

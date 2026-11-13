@@ -397,47 +397,105 @@ class _CopyTaskSheetState extends ConsumerState<CopyTaskSheet> {
       child: OmniSheetBody(
         header: OmniSheetHeader(
           title: 'Sao chép công việc',
-          trailing: IconButton(
-            tooltip: 'Đóng',
-            onPressed: () => Navigator.of(context).pop(),
-            style: IconButton.styleFrom(minimumSize: const Size(44, 44)),
-            icon: const Icon(Icons.close_rounded, size: 20),
+          trailing: OmniGlassCircle(
+            child: IconButton(
+              tooltip: 'Đóng',
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints.tightFor(width: 44, height: 44),
+              onPressed: () => Navigator.of(context).pop(),
+              icon: const Icon(Icons.close_rounded, size: OmniIconSize.lg),
+            ),
           ),
         ),
         footer: FilledButton(
           onPressed: canSubmit
               ? () => _submit(extended: extended, people: people)
               : null,
+          style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(48)),
           child: const Text('Sao chép'),
         ),
         children: [
-          OmniField(
-            label: 'Tên công việc',
-            child: TextField(
-              controller: _title,
-              maxLength: kTaskTitleMax,
-              style: OmniType.body.copyWith(color: scheme.onSurface),
-              decoration: const InputDecoration(counterText: ''),
-            ),
+          OmniGroupSection(
+            children: [
+              Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 12,
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      'Tên công việc',
+                      style: OmniType.micro.copyWith(
+                        fontWeight: FontWeight.w600,
+                        color: scheme.onSurfaceVariant,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    TextField(
+                      controller: _title,
+                      maxLength: kTaskTitleMax,
+                      style: OmniType.body.copyWith(color: scheme.onSurface),
+                      decoration: InputDecoration(
+                        hintText: 'Nhập tên công việc',
+                        hintStyle: OmniType.body.copyWith(
+                          color: scheme.onSurfaceVariant,
+                        ),
+                        counterText: '',
+                        isDense: true,
+                        filled: false,
+                        border: InputBorder.none,
+                        enabledBorder: InputBorder.none,
+                        focusedBorder: InputBorder.none,
+                        disabledBorder: InputBorder.none,
+                        contentPadding: EdgeInsets.zero,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
           ..._placeFields(context),
           if (extended) ...[
             ..._dates(context),
             _assignees(context, byId, people, allowed),
             if (task.customFields.isNotEmpty) _customFields(context, target),
-          ] else if (task.assigneeIds.isNotEmpty)
-            _SwitchRow(
-              label: 'Giữ người thực hiện',
-              note: _keepNote(byId),
-              value: _keepAssignees,
-              onChanged: (v) => setState(() => _keepAssignees = v),
-            ),
-          if (task.subtasks.isNotEmpty)
-            _SwitchRow(
-              label: 'Chép cả việc con',
-              note: '${task.subtasks.length} việc con, bỏ đánh dấu đã xong',
-              value: _keepChecklist,
-              onChanged: (v) => setState(() => _keepChecklist = v),
+            if (task.subtasks.isNotEmpty)
+              OmniGroupSection(
+                dividerIndent: 14,
+                children: [
+                  _SwitchRow(
+                    label: 'Chép cả việc con',
+                    note:
+                        '${task.subtasks.length} việc con, bỏ đánh dấu đã xong',
+                    value: _keepChecklist,
+                    onChanged: (v) => setState(() => _keepChecklist = v),
+                  ),
+                ],
+              ),
+          ] else if (task.assigneeIds.isNotEmpty || task.subtasks.isNotEmpty)
+            OmniGroupSection(
+              dividerIndent: 14,
+              children: [
+                if (task.assigneeIds.isNotEmpty)
+                  _SwitchRow(
+                    label: 'Giữ người thực hiện',
+                    note: _keepNote(byId),
+                    value: _keepAssignees,
+                    onChanged: (v) => setState(() => _keepAssignees = v),
+                  ),
+                if (task.subtasks.isNotEmpty)
+                  _SwitchRow(
+                    label: 'Chép cả việc con',
+                    note:
+                        '${task.subtasks.length} việc con, bỏ đánh dấu đã xong',
+                    value: _keepChecklist,
+                    onChanged: (v) => setState(() => _keepChecklist = v),
+                  ),
+              ],
             ),
         ],
       ),
@@ -454,7 +512,18 @@ class _CopyTaskSheetState extends ConsumerState<CopyTaskSheet> {
     context: context,
     builder: (sheet) => OmniSheetBody(
       semanticsLabel: title,
-      header: OmniSheetHeader(title: title),
+      header: OmniSheetHeader(
+        title: title,
+        trailing: OmniGlassCircle(
+          child: IconButton(
+            tooltip: 'Đóng',
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints.tightFor(width: 44, height: 44),
+            onPressed: () => Navigator.of(sheet).maybePop(),
+            icon: const Icon(Icons.close_rounded, size: OmniIconSize.lg),
+          ),
+        ),
+      ),
       children: [
         OmniGroupSection(
           dividerIndent: 14,
@@ -463,6 +532,7 @@ class _CopyTaskSheetState extends ConsumerState<CopyTaskSheet> {
               OmniGroupRow(
                 title: label,
                 selected: key == current,
+                chevron: false,
                 onTap: () => Navigator.of(sheet).pop(key),
               ),
           ],
@@ -855,7 +925,7 @@ class _AddPersonChip extends StatelessWidget {
   );
 }
 
-/// Dòng có công tắc trong nhóm riêng: tiêu đề, ghi chú, `Switch.adaptive`.
+/// Dòng có công tắc trong nhóm: tiêu đề, ghi chú, `Switch.adaptive`.
 class _SwitchRow extends StatelessWidget {
   const _SwitchRow({
     required this.label,
@@ -870,25 +940,21 @@ class _SwitchRow extends StatelessWidget {
   final ValueChanged<bool> onChanged;
 
   @override
-  Widget build(BuildContext context) => OmniGroupSection(
-    dividerIndent: 14,
-    children: [
-      // Cả dòng chạm được (bật/tắt), không chỉ con công tắc.
-      OmniGroupRow(
-        title: label,
-        subtitle: note,
-        onTap: () => onChanged(!value),
-        trailing: Semantics(
-          label: label,
-          child: Switch.adaptive(
-            value: value,
-            onChanged: (v) {
-              HapticFeedback.selectionClick();
-              onChanged(v);
-            },
-          ),
-        ),
+  Widget build(BuildContext context) => OmniGroupRow(
+    // Cả dòng chạm được (bật/tắt), không chỉ con công tắc.
+    title: label,
+    subtitle: note,
+    chevron: false,
+    onTap: () => onChanged(!value),
+    trailing: Semantics(
+      label: label,
+      child: Switch.adaptive(
+        value: value,
+        onChanged: (v) {
+          HapticFeedback.selectionClick();
+          onChanged(v);
+        },
       ),
-    ],
+    ),
   );
 }

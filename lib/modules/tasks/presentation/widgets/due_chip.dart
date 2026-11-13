@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../../core/utils/formatters.dart';
-import '../../../../design/components/omni_task_chip.dart';
+import '../../../../design/tokens/tokens.dart';
 import '../../domain/task.dart';
 
 /// Bốn tông của ô hạn (`Tasks.dc.html`): hôm nay, trễ, sắp tới, chưa đặt.
@@ -36,10 +36,67 @@ enum DueTone { today, late, upcoming, none }
   return (label: 'Hạn $dd/$mm', tone: DueTone.upcoming);
 }
 
+/// Viên thuốc trạng thái/hạn/ưu tiên chuẩn Liquid Glass (`radius: 999`).
+class TaskPillChip extends StatelessWidget {
+  const TaskPillChip(this.label, {super.key, required this.pick, this.icon});
+
+  const TaskPillChip.late(this.label, {super.key, this.icon}) : pick = _late;
+  const TaskPillChip.today(this.label, {super.key, this.icon}) : pick = _today;
+  const TaskPillChip.upcoming(this.label, {super.key, this.icon})
+    : pick = _upcoming;
+  const TaskPillChip.none(this.label, {super.key, this.icon}) : pick = _none;
+  const TaskPillChip.high(this.label, {super.key, this.icon}) : pick = _high;
+
+  final String label;
+  final IconData? icon;
+  final OmniTaskTone Function(OmniTaskTones tones) pick;
+
+  static OmniTaskTone _late(OmniTaskTones t) => t.late;
+  static OmniTaskTone _today(OmniTaskTones t) => t.today;
+  static OmniTaskTone _upcoming(OmniTaskTones t) => t.upcoming;
+  static OmniTaskTone _none(OmniTaskTones t) => t.none;
+  static OmniTaskTone _high(OmniTaskTones t) => t.highPriority;
+
+  @override
+  Widget build(BuildContext context) {
+    final tone = pick(OmniTaskTones.of(context));
+    final text = Text(
+      label,
+      maxLines: 1,
+      overflow: TextOverflow.ellipsis,
+      style: Theme.of(context).textTheme.labelSmall?.copyWith(
+        color: tone.foreground,
+        fontWeight: icon == null ? FontWeight.w600 : FontWeight.w500,
+        fontFeatures: OmniType.tabular,
+      ),
+    );
+
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: tone.background,
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
+        child: icon == null
+            ? text
+            : Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(icon, size: 13, color: tone.foreground),
+                  const SizedBox(width: 4),
+                  Flexible(child: text),
+                ],
+              ),
+      ),
+    );
+  }
+}
+
 /// Hạn của một công việc, bằng CHỮ chứ không chỉ bằng màu.
 ///
 /// Một chỗ duy nhất cho thẻ việc, bảng dự án và đầu trang chi tiết. Màu lấy
-/// từ [OmniTaskChip] (token theo chế độ sáng / tối).
+/// từ [OmniTaskTones] (token theo chế độ sáng / tối), bo viên thuốc 999px.
 class DueChip extends StatelessWidget {
   DueChip({super.key, required Task task, this.icon})
     : due = task.dueDate,
@@ -64,10 +121,10 @@ class DueChip extends StatelessWidget {
     final d = dueToneFor(due, done: done);
 
     return switch (d.tone) {
-      DueTone.today => OmniTaskChip.today(d.label, icon: icon),
-      DueTone.late => OmniTaskChip.late(d.label, icon: icon),
-      DueTone.upcoming => OmniTaskChip.upcoming(d.label, icon: icon),
-      DueTone.none => OmniTaskChip.none(d.label, icon: icon),
+      DueTone.today => TaskPillChip.today(d.label, icon: icon),
+      DueTone.late => TaskPillChip.late(d.label, icon: icon),
+      DueTone.upcoming => TaskPillChip.upcoming(d.label, icon: icon),
+      DueTone.none => TaskPillChip.none(d.label, icon: icon),
     };
   }
 }

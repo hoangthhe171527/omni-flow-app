@@ -73,13 +73,9 @@ void main() {
   ) async {
     await pump(tester);
 
-    // Màn đứng gốc trong bài kiểm: logo thay chữ, tên màn chỉ để đọc.
-    expect(
-      find.byWidgetPredicate(
-        (w) => w is Semantics && w.properties.label == 'Tệp đính kèm',
-      ),
-      findsOneWidget,
-    );
+    // Màn con của kế hoạch: tiêu đề hiển thị giữa thanh trên kèm nút quay lại.
+    expect(find.text('Tệp đính kèm'), findsOneWidget);
+    expect(find.byTooltip('Quay lại'), findsOneWidget);
     expect(find.byType(AttachmentThumb), findsNWidgets(4));
     expect(find.text('Đàn A'), findsNWidgets(2));
     expect(find.text('Đàn B'), findsOneWidget);

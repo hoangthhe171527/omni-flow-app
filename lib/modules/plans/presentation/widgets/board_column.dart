@@ -615,7 +615,7 @@ class _ColumnDropBuilder extends ValueListenableBuilder<BoardColumnDrop> {
     final glass = MediaQuery.highContrastOf(context)
         ? scheme.surfaceContainerHighest
         : dark
-        ? const Color(0xFF1C283C).withValues(alpha: .62)
+        ? OmniColors.darkMuted.withValues(alpha: .62)
         : Colors.white.withValues(alpha: .62);
     return AnimatedContainer(
       duration: duration,
@@ -947,11 +947,7 @@ class _Header extends StatelessWidget {
                     width: 44,
                     height: 44,
                   ),
-                  style: IconButton.styleFrom(
-                    shape: const RoundedRectangleBorder(
-                      borderRadius: BorderRadius.all(Radius.circular(6)),
-                    ),
-                  ),
+                  style: IconButton.styleFrom(shape: const CircleBorder()),
                   icon: Icon(
                     Icons.more_horiz_rounded,
                     size: OmniIconSize.md,
@@ -967,7 +963,7 @@ class _Header extends StatelessWidget {
   }
 }
 
-/// `.add`: cao 44, bo 6, chữ w500 14 `#3D4A60`, dấu + 18.
+/// `.add`: cao 44, bo 14, chữ w500 14, dấu + 18.
 class _AddTaskButton extends StatelessWidget {
   const _AddTaskButton({required this.onTap});
 
@@ -981,7 +977,7 @@ class _AddTaskButton extends StatelessWidget {
       type: MaterialType.transparency,
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(6),
+        borderRadius: BorderRadius.circular(14),
         child: ConstrainedBox(
           constraints: const BoxConstraints(minHeight: 44),
           child: Padding(

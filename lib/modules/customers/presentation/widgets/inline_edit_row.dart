@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../../../../core/error/app_exception.dart';
+import '../../../../design/components/components.dart';
 import '../../../../design/platform/omni_motion_scope.dart';
 import '../../../../design/tokens/tokens.dart';
 
@@ -20,6 +21,7 @@ class InlineEditRow extends StatefulWidget {
     required this.value,
     required this.editable,
     required this.onSave,
+    this.icon,
     this.multiline = false,
     this.viewMaxLines = 1,
     this.keyboardType,
@@ -35,6 +37,7 @@ class InlineEditRow extends StatefulWidget {
   final String value;
   final bool editable;
   final Future<void> Function(String draft) onSave;
+  final IconData? icon;
   final bool multiline;
 
   /// Số dòng tối đa khi XEM (không phải khi sửa) — địa chỉ dài xuống dòng
@@ -225,16 +228,22 @@ class _InlineEditRowState extends State<InlineEditRow> {
         : widget.onTapValue;
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(14),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 10),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            _label(context),
-            // Không còn bút chì lặp ở từng dòng: chạm dòng để sửa.
-            Expanded(child: text),
-          ],
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(minHeight: 48),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              if (widget.icon != null) ...[
+                OmniIconTile(widget.icon!),
+                const SizedBox(width: 12),
+              ],
+              _label(context),
+              // Không còn bút chì lặp ở từng dòng: chạm dòng để sửa.
+              Expanded(child: text),
+            ],
+          ),
         ),
       ),
     );
@@ -244,6 +253,7 @@ class _InlineEditRowState extends State<InlineEditRow> {
     required String label,
     required IconData icon,
     required VoidCallback? onTap,
+    bool accent = false,
     Widget? busy,
   }) {
     final scheme = Theme.of(context).colorScheme;
@@ -259,16 +269,23 @@ class _InlineEditRowState extends State<InlineEditRow> {
           onTap: onTap,
           radius: 22,
           child: Center(
-            child: Container(
-              width: 28,
-              height: 28,
-              decoration: BoxDecoration(
-                color: scheme.surfaceContainerHighest,
-                shape: BoxShape.circle,
+            child: OmniGlass(
+              blur: false,
+              radius: 14,
+              child: SizedBox.square(
+                dimension: 28,
+                child: Center(
+                  child:
+                      busy ??
+                      Icon(
+                        icon,
+                        size: 16,
+                        color: accent
+                            ? scheme.primary
+                            : scheme.onSurfaceVariant,
+                      ),
+                ),
               ),
-              alignment: Alignment.center,
-              child:
-                  busy ?? Icon(icon, size: 16, color: scheme.onSurfaceVariant),
             ),
           ),
         ),
@@ -281,10 +298,21 @@ class _InlineEditRowState extends State<InlineEditRow> {
     final controller = _controller;
     if (controller == null) return const SizedBox.shrink();
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
+      padding: const EdgeInsets.fromLTRB(14, 4, 6, 4),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          if (widget.icon != null) ...[
+            Padding(
+              padding: const EdgeInsets.only(top: 10),
+              child: OmniIconTile(
+                widget.icon!,
+                color: scheme.primary,
+                background: scheme.primary.withValues(alpha: .10),
+              ),
+            ),
+            const SizedBox(width: 12),
+          ],
           Padding(
             padding: const EdgeInsets.only(top: 14),
             child: _label(context),
@@ -335,6 +363,7 @@ class _InlineEditRowState extends State<InlineEditRow> {
           _miniButton(
             label: 'Lưu',
             icon: Icons.check,
+            accent: true,
             onTap: _saving ? null : _save,
             busy: _saving
                 ? SizedBox(
