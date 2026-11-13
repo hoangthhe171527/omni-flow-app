@@ -318,6 +318,43 @@ void main() {
     expect(client.isConnected, isFalse);
     expect(client.subscribedChannels, isEmpty);
   });
+
+  test(
+    'failed channel authorization marks status degraded so polling wakes',
+    () async {
+      var shouldFail = true;
+      final degradedClient = RealtimeClient(
+        config: const RealtimeConfig(
+          key: 'key',
+          host: 'ws.example.test',
+          port: 443,
+          useTls: true,
+        ),
+        socketFactory: (_) {
+          final s = _FakeSocket();
+          opened.add(s);
+          return s;
+        },
+        authorizer: (channel, socketId) async {
+          if (shouldFail) throw StateError('auth 500');
+          return 'key:sig-for-$channel';
+        },
+      );
+      addTearDown(degradedClient.disconnect);
+
+      degradedClient.subscribePrivate('inbox.t1', (_) {});
+      await settle();
+      opened.last.emit({
+        'event': 'pusher:connection_established',
+        'data': jsonEncode({'socket_id': '9.9'}),
+      });
+      await settle();
+      await settle();
+
+      expect(degradedClient.status.value, RealtimeStatus.degraded);
+      shouldFail = false;
+    },
+  );
 }
 
 /// A socket whose frames the test writes, and whose sends the test reads.

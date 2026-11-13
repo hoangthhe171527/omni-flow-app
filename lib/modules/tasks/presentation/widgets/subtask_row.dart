@@ -143,142 +143,151 @@ class SubtaskRow extends StatelessWidget {
             ),
           );
 
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        border: first
-            ? null
-            : Border(top: BorderSide(color: OmniColors.trackOf(context))),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(0, 0, 4, 2),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            if (dragHandle case final handle?)
-              Padding(padding: const EdgeInsets.only(top: 6), child: handle),
-            Padding(
-              padding: const EdgeInsets.only(top: 6),
-              child: _TickButton(
-                title: subtask.title,
-                done: subtask.done,
-                inFlight: _inFlight,
-                failed: _failed,
-                onTap: enabled
-                    ? () {
-                        // Rung trước, để người dùng cảm thấy ngay lúc chạm chứ
-                        // không phải sau khi mạng quyết định.
-                        HapticFeedback.selectionClick();
-                        onToggle(!subtask.done);
-                      }
-                    : null,
-              ),
+    final rowContent = Padding(
+      padding: const EdgeInsets.fromLTRB(0, 0, 4, 2),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (dragHandle case final handle?)
+            Padding(padding: const EdgeInsets.only(top: 6), child: handle),
+          Padding(
+            padding: const EdgeInsets.only(top: 6),
+            child: _TickButton(
+              title: subtask.title,
+              done: subtask.done,
+              inFlight: _inFlight,
+              failed: _failed,
+              onTap: enabled
+                  ? () {
+                      // Rung trước, để người dùng cảm thấy ngay lúc chạm chứ
+                      // không phải sau khi mạng quyết định.
+                      HapticFeedback.selectionClick();
+                      onToggle(!subtask.done);
+                    }
+                  : null,
             ),
-            const SizedBox(width: 2),
-            Expanded(
-              child: Padding(
-                padding: const EdgeInsets.only(top: 17),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    OmniInlineRename(
-                      value: subtask.title,
-                      canEdit: onRename != null,
-                      onSubmit: (next) => onRename!(next),
-                      semanticsLabel: 'Chạm để sửa tên việc con',
-                      fieldKey: ValueKey('subtask-title-field-${subtask.id}'),
+          ),
+          const SizedBox(width: 2),
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.only(top: 17),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  OmniInlineRename(
+                    value: subtask.title,
+                    canEdit: onRename != null,
+                    onSubmit: (next) => onRename!(next),
+                    semanticsLabel: 'Chạm để sửa tên việc con',
+                    fieldKey: ValueKey('subtask-title-field-${subtask.id}'),
+                    style: OmniType.body.copyWith(
+                      fontWeight: FontWeight.w500,
+                      height: 1.35,
+                      color: scheme.onSurface,
+                    ),
+                    builder: (_) => Text(
+                      subtask.title,
                       style: OmniType.body.copyWith(
                         fontWeight: FontWeight.w500,
                         height: 1.35,
-                        color: scheme.onSurface,
-                      ),
-                      builder: (_) => Text(
-                        subtask.title,
-                        style: OmniType.body.copyWith(
-                          fontWeight: FontWeight.w500,
-                          height: 1.35,
-                          decoration: subtask.done
-                              ? TextDecoration.lineThrough
-                              : null,
-                          color: subtask.done ? secondary : scheme.onSurface,
-                        ),
+                        decoration: subtask.done
+                            ? TextDecoration.lineThrough
+                            : null,
+                        color: subtask.done ? secondary : scheme.onSurface,
                       ),
                     ),
-                    if (subtask.description case final note?)
-                      Padding(
-                        padding: const EdgeInsets.only(top: 2),
-                        child: Text(
-                          note,
-                          key: const ValueKey('subtask-note'),
-                          style: OmniType.caption.copyWith(color: secondary),
-                        ),
+                  ),
+                  if (subtask.description case final note?)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 2),
+                      child: Text(
+                        note,
+                        key: const ValueKey('subtask-note'),
+                        style: OmniType.caption.copyWith(color: secondary),
                       ),
-                    if (who != null ||
-                        subtask.dueDate != null ||
-                        subtask.startDate != null ||
-                        onSetDue != null)
-                      Padding(
-                        padding: const EdgeInsets.only(top: 2),
-                        child: Wrap(
-                          spacing: 6,
-                          crossAxisAlignment: WrapCrossAlignment.center,
-                          children: [
-                            ?who,
-                            if (subtask.startDate case final start?)
-                              OmniTaskChip.none(
-                                'Từ ${Formatters.dayMonth(start)}',
-                              ),
-                            if (subtask.dueDate != null)
-                              _dueChip()
-                            else if (onSetDue != null)
-                              _MiniButton(
-                                semanticsLabel: 'Đặt hạn việc con',
-                                icon: Icons.calendar_today_outlined,
-                                label: 'Hạn',
-                                onTap: onSetDue!,
-                              ),
-                          ],
-                        ),
-                      )
-                    else
-                      const SizedBox(height: 12),
-                    if (_failed)
-                      Padding(
-                        padding: const EdgeInsets.only(bottom: OmniSpacing.sm),
-                        child: _FailureNotice(
-                          reason: pending!.error!,
-                          onRetry: onRetry,
-                          onDiscard: onDiscard,
-                        ),
+                    ),
+                  if (who != null ||
+                      subtask.dueDate != null ||
+                      subtask.startDate != null ||
+                      onSetDue != null)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 2),
+                      child: Wrap(
+                        spacing: 6,
+                        crossAxisAlignment: WrapCrossAlignment.center,
+                        children: [
+                          ?who,
+                          if (subtask.startDate case final start?)
+                            TaskPillChip.none(
+                              'Từ ${Formatters.dayMonth(start)}',
+                            ),
+                          if (subtask.dueDate != null)
+                            _dueChip()
+                          else if (onSetDue != null)
+                            _MiniButton(
+                              semanticsLabel: 'Đặt hạn việc con',
+                              icon: Icons.calendar_today_outlined,
+                              label: 'Hạn',
+                              onTap: onSetDue!,
+                            ),
+                        ],
                       ),
-                  ],
+                    )
+                  else
+                    const SizedBox(height: 12),
+                  if (_failed)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: OmniSpacing.sm),
+                      child: _FailureNotice(
+                        reason: pending!.error!,
+                        onRetry: onRetry,
+                        onDiscard: onDiscard,
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ),
+          if (onMenu != null)
+            Padding(
+              padding: const EdgeInsets.only(top: 6),
+              child: Builder(
+                builder: (buttonContext) => IconButton(
+                  tooltip: 'Tuỳ chọn việc con',
+                  onPressed: () {
+                    final box = buttonContext.findRenderObject() as RenderBox?;
+                    if (box == null || !box.hasSize) return;
+                    onMenu!(box.localToGlobal(Offset.zero) & box.size);
+                  },
+                  style: IconButton.styleFrom(
+                    minimumSize: const Size(tapSize, tapSize),
+                    maximumSize: const Size(tapSize, tapSize),
+                    padding: EdgeInsets.zero,
+                    foregroundColor: secondary,
+                  ),
+                  icon: const Icon(Icons.more_vert_rounded, size: 18),
                 ),
               ),
             ),
-            if (onMenu != null)
-              Padding(
-                padding: const EdgeInsets.only(top: 6),
-                child: Builder(
-                  builder: (buttonContext) => IconButton(
-                    tooltip: 'Tuỳ chọn việc con',
-                    onPressed: () {
-                      final box =
-                          buttonContext.findRenderObject() as RenderBox?;
-                      if (box == null || !box.hasSize) return;
-                      onMenu!(box.localToGlobal(Offset.zero) & box.size);
-                    },
-                    style: IconButton.styleFrom(
-                      minimumSize: const Size(tapSize, tapSize),
-                      maximumSize: const Size(tapSize, tapSize),
-                      padding: EdgeInsets.zero,
-                      foregroundColor: secondary,
-                    ),
-                    icon: const Icon(Icons.more_vert_rounded, size: 18),
-                  ),
-                ),
-              ),
-          ],
-        ),
+        ],
       ),
+    );
+
+    if (first) return rowContent;
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 10),
+          child: SizedBox(
+            height: 0.5,
+            child: ColoredBox(color: OmniColors.trackOf(context)),
+          ),
+        ),
+        rowContent,
+      ],
     );
   }
 }
@@ -347,11 +356,11 @@ class _MiniButton extends StatelessWidget {
               key: const ValueKey('subtask-mini-dashed'),
               foregroundPainter: _DashedRRect(OmniTaskTones.of(context).faint),
               child: Container(
-                height: 32,
-                padding: const EdgeInsets.symmetric(horizontal: 8),
+                height: 30,
+                padding: const EdgeInsets.symmetric(horizontal: 10),
                 decoration: BoxDecoration(
                   color: scheme.surface,
-                  borderRadius: BorderRadius.circular(6),
+                  borderRadius: BorderRadius.circular(999),
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
@@ -373,7 +382,7 @@ class _MiniButton extends StatelessWidget {
   }
 }
 
-/// Viền nét đứt 1px bo 6.
+/// Viền nét đứt 1px viên thuốc 999px.
 class _DashedRRect extends CustomPainter {
   const _DashedRRect(this.color);
 
@@ -389,7 +398,7 @@ class _DashedRRect extends CustomPainter {
       ..addRRect(
         RRect.fromRectAndRadius(
           Offset.zero & size,
-          const Radius.circular(6),
+          Radius.circular(size.height / 2),
         ).deflate(0.5),
       );
     for (final metric in path.computeMetrics()) {
@@ -491,7 +500,7 @@ class _TickButtonState extends State<_TickButton>
         height: 22,
         decoration: BoxDecoration(
           color: filled ? scheme.primary : scheme.surface,
-          borderRadius: BorderRadius.circular(6),
+          borderRadius: BorderRadius.circular(7.5),
           border: filled ? null : Border.all(color: border, width: 1.5),
         ),
         child: widget.done

@@ -4,13 +4,13 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:omni_app/core/error/app_exception.dart';
 import 'package:omni_app/core/network/api_envelope.dart';
+import 'package:omni_app/design/components/components.dart';
 import 'package:omni_app/design/theme/omni_theme.dart';
 import 'package:omni_app/modules/plans/application/plans_providers.dart';
 import 'package:omni_app/modules/plans/presentation/archived_tasks_page.dart';
 import 'package:omni_app/modules/tasks/application/tasks_providers.dart';
 import 'package:omni_app/modules/tasks/data/tasks_api.dart';
 import 'package:omni_app/modules/tasks/domain/task.dart';
-import 'package:omni_app/modules/tasks/tasks.dart';
 import 'package:omni_app/modules/tasks/tasks_module.dart';
 
 /// Việc đã lưu trữ của một kế hoạch (Task 7): danh sách `archived=archived`,
@@ -64,22 +64,18 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  testWidgets('liệt kê việc lưu trữ bằng TaskCard, gọi list(archived)', (
-    tester,
-  ) async {
-    await pump(tester);
+  testWidgets(
+    'liệt kê việc lưu trữ trong OmniGroupSection, gọi list(archived)',
+    (tester) async {
+      await pump(tester);
 
-    // Màn đứng gốc trong bài kiểm: logo thay chữ, tên màn chỉ để đọc.
-    expect(
-      find.byWidgetPredicate(
-        (w) => w is Semantics && w.properties.label == 'Việc đã lưu trữ',
-      ),
-      findsOneWidget,
-    );
-    expect(find.byType(TaskCard), findsNWidgets(2));
-    expect(find.text('Đàn A'), findsOneWidget);
-    expect(api.lists.first, (planId, TaskArchiveScope.archived, 1));
-  });
+      expect(find.text('Việc đã lưu trữ'), findsOneWidget);
+      expect(find.byType(OmniGroupSection), findsOneWidget);
+      expect(find.byType(OmniGroupRow), findsNWidgets(2));
+      expect(find.text('Đàn A'), findsOneWidget);
+      expect(api.lists.first, (planId, TaskArchiveScope.archived, 1));
+    },
+  );
 
   testWidgets('(a) "Khôi phục" gửi archived:false và dòng biến mất', (
     tester,
@@ -112,7 +108,7 @@ void main() {
   testWidgets('(d) không có quyền ghi: không có "Khôi phục"', (tester) async {
     await pump(tester, canRestore: false);
 
-    expect(find.byType(TaskCard), findsNWidgets(2));
+    expect(find.byType(OmniGroupRow), findsNWidgets(2));
     expect(find.text('Khôi phục'), findsNothing);
   });
 

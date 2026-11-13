@@ -119,180 +119,293 @@ class _AddMemberSheetState extends ConsumerState<AddMemberSheet> {
     final scheme = Theme.of(context).colorScheme;
     final roles = ref.watch(assignableRolesProvider).valueOrNull ?? const [];
     final done = _done;
+    final create = _mode == _Mode.create;
 
-    return SafeArea(
-      top: false,
+    return OmniSheetBody(
+      header: OmniSheetHeader(
+        title: done == null ? 'Thêm nhân viên' : 'Hoàn tất',
+        trailing: OmniGlassCircle(
+          child: IconButton(
+            tooltip: 'Đóng',
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints.tightFor(width: 44, height: 44),
+            icon: Icon(
+              Icons.close_rounded,
+              size: OmniIconSize.md,
+              color: scheme.onSurface,
+            ),
+            onPressed: () => Navigator.of(context).maybePop(),
+          ),
+        ),
+      ),
+      footer: done == null
+          ? _OutlineButton(
+              label: create ? 'Tạo tài khoản' : 'Gửi lời mời',
+              busy: _busy,
+              onPressed: _busy ? null : () => _submit(roles),
+            )
+          : _doneFooter(done),
+      children: done == null
+          ? _formChildren(context, roles)
+          : _successChildren(done),
+    );
+  }
+
+  Widget _inlineField({
+    required BuildContext context,
+    required String label,
+    required Widget child,
+    bool required = false,
+    String? hint,
+    String? error,
+  }) {
+    final scheme = Theme.of(context).colorScheme;
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 8, 4, 0),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Semantics(
-                    header: true,
-                    child: Text(
-                      done == null ? 'Thêm nhân viên' : '',
-                      style: OmniType.title.copyWith(color: scheme.onSurface),
-                    ),
+          Row(
+            children: [
+              Flexible(
+                child: Text(
+                  label,
+                  style: OmniType.caption.copyWith(
+                    fontWeight: FontWeight.w600,
+                    color: scheme.onSurfaceVariant,
                   ),
                 ),
-                IconButton(
-                  tooltip: 'Đóng',
-                  icon: const Icon(Icons.close_rounded),
-                  onPressed: () => Navigator.of(context).maybePop(),
+              ),
+              if (required)
+                Text(
+                  ' *',
+                  style: OmniType.caption.copyWith(color: scheme.error),
+                ),
+            ],
+          ),
+          const SizedBox(height: 2),
+          child,
+          if (error != null) ...[
+            const SizedBox(height: 4),
+            Row(
+              children: [
+                Icon(
+                  Icons.error_outline_rounded,
+                  size: OmniIconSize.xs,
+                  color: scheme.error,
+                ),
+                const SizedBox(width: 4),
+                Expanded(
+                  child: Text(
+                    error,
+                    style: OmniType.micro.copyWith(color: scheme.error),
+                  ),
                 ),
               ],
             ),
-          ),
-          Flexible(
-            child: done == null ? _form(context, roles) : _success(done),
-          ),
+          ] else if (hint != null) ...[
+            const SizedBox(height: 2),
+            Text(
+              hint,
+              style: OmniType.micro.copyWith(color: scheme.onSurfaceVariant),
+            ),
+          ],
         ],
       ),
     );
   }
 
-  Widget _form(BuildContext context, List<RoleOption> roles) {
+  static const _borderlessDecoration = InputDecoration(
+    isDense: true,
+    filled: false,
+    contentPadding: EdgeInsets.symmetric(vertical: 4),
+    border: InputBorder.none,
+    enabledBorder: InputBorder.none,
+    focusedBorder: InputBorder.none,
+    errorBorder: InputBorder.none,
+    focusedErrorBorder: InputBorder.none,
+  );
+
+  List<Widget> _formChildren(BuildContext context, List<RoleOption> roles) {
     final scheme = Theme.of(context).colorScheme;
     final create = _mode == _Mode.create;
 
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 4, 16, 0),
-          child: OmniSegmented(
-            labels: const ['Tạo tài khoản', 'Mời qua email'],
-            index: create ? 0 : 1,
-            onChanged: (i) => setState(() {
-              _mode = i == 0 ? _Mode.create : _Mode.invite;
-              _formError = null;
-            }),
-          ),
-        ),
-        Flexible(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                if (create) ...[
-                  OmniField(
-                    label: 'Họ tên',
-                    required: true,
-                    error: _nameError,
-                    child: TextField(
-                      controller: _name,
-                      textCapitalization: TextCapitalization.words,
-                      autofillHints: const [AutofillHints.name],
-                      textInputAction: TextInputAction.next,
-                    ),
-                  ),
-                  const SizedBox(height: OmniSpacing.lg),
-                  OmniField(
-                    label: 'Số điện thoại',
-                    child: TextField(
-                      controller: _phone,
-                      keyboardType: TextInputType.phone,
-                      autofillHints: const [AutofillHints.telephoneNumber],
-                      textInputAction: TextInputAction.next,
-                    ),
-                  ),
-                  const SizedBox(height: OmniSpacing.lg),
-                ],
-                OmniField(
-                  label: 'Email đăng nhập',
-                  required: true,
-                  error: _emailError,
-                  child: TextField(
-                    controller: _email,
-                    keyboardType: TextInputType.emailAddress,
-                    autocorrect: false,
-                    autofillHints: const [AutofillHints.email],
-                  ),
+    return [
+      OmniSegmented(
+        labels: const ['Tạo tài khoản', 'Mời qua email'],
+        index: create ? 0 : 1,
+        onChanged: (i) => setState(() {
+          _mode = i == 0 ? _Mode.create : _Mode.invite;
+          _formError = null;
+        }),
+      ),
+      OmniGroupSection(
+        title: create ? 'Thông tin tài khoản' : 'Lời mời qua email',
+        dividerIndent: 14,
+        children: [
+          if (create) ...[
+            _inlineField(
+              context: context,
+              label: 'Họ tên',
+              required: true,
+              error: _nameError,
+              child: TextField(
+                controller: _name,
+                textCapitalization: TextCapitalization.words,
+                autofillHints: const [AutofillHints.name],
+                textInputAction: TextInputAction.next,
+                style: OmniType.body.copyWith(color: scheme.onSurface),
+                decoration: _borderlessDecoration.copyWith(
+                  hintText: 'Nguyễn Văn A',
                 ),
-                if (create) ...[
-                  const SizedBox(height: OmniSpacing.lg),
-                  OmniField(
-                    label: 'Mật khẩu tạm',
-                    hint: 'Đưa cho nhân viên; họ đổi sau khi đăng nhập.',
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: TextField(
-                            controller: _password,
-                            autocorrect: false,
-                            style: const TextStyle(
-                              fontFeatures: [FontFeature.tabularFigures()],
-                            ),
-                          ),
-                        ),
-                        IconButton(
-                          tooltip: 'Tạo mật khẩu khác',
-                          icon: const Icon(Icons.refresh_rounded),
-                          onPressed: () => setState(
-                            () => _password.text = generateTempPassword(),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  if (roles.isNotEmpty) ...[
-                    const SizedBox(height: OmniSpacing.lg),
-                    Text(
-                      'Vai trò',
-                      style: OmniType.body.copyWith(
-                        color: scheme.onSurface,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    const SizedBox(height: OmniSpacing.sm),
-                    Wrap(
-                      spacing: OmniSpacing.sm,
-                      runSpacing: OmniSpacing.sm,
-                      children: [
-                        for (final r in roles)
-                          OmniChoicePill(
-                            label: r.label,
-                            selected: _role == r.slug,
-                            onTap: () => setState(() => _role = r.slug),
-                          ),
-                      ],
-                    ),
-                  ],
-                ],
-                if (_formError != null) ...[
-                  const SizedBox(height: OmniSpacing.md),
-                  Text(
-                    _formError!,
-                    style: OmniType.caption.copyWith(color: scheme.error),
-                  ),
-                ],
-              ],
+              ),
+            ),
+            _inlineField(
+              context: context,
+              label: 'Số điện thoại',
+              child: TextField(
+                controller: _phone,
+                keyboardType: TextInputType.phone,
+                autofillHints: const [AutofillHints.telephoneNumber],
+                textInputAction: TextInputAction.next,
+                style: OmniType.body.copyWith(
+                  color: scheme.onSurface,
+                  fontFeatures: const [FontFeature.tabularFigures()],
+                ),
+                decoration: _borderlessDecoration.copyWith(
+                  hintText: '0912 345 678',
+                ),
+              ),
+            ),
+          ],
+          _inlineField(
+            context: context,
+            label: 'Email đăng nhập',
+            required: true,
+            error: _emailError,
+            child: TextField(
+              controller: _email,
+              keyboardType: TextInputType.emailAddress,
+              autocorrect: false,
+              autofillHints: const [AutofillHints.email],
+              style: OmniType.body.copyWith(color: scheme.onSurface),
+              decoration: _borderlessDecoration.copyWith(
+                hintText: 'ten@congty.vn',
+              ),
             ),
           ),
+          if (create)
+            _inlineField(
+              context: context,
+              label: 'Mật khẩu tạm',
+              hint: 'Đưa cho nhân viên; họ đổi sau khi đăng nhập.',
+              child: Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: _password,
+                      autocorrect: false,
+                      style: OmniType.bodyStrong.copyWith(
+                        color: scheme.onSurface,
+                        fontFeatures: const [FontFeature.tabularFigures()],
+                      ),
+                      decoration: _borderlessDecoration,
+                    ),
+                  ),
+                  OmniGlassCircle(
+                    child: IconButton(
+                      tooltip: 'Tạo mật khẩu khác',
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints.tightFor(
+                        width: 44,
+                        height: 44,
+                      ),
+                      icon: Icon(
+                        Icons.refresh_rounded,
+                        size: OmniIconSize.sm,
+                        color: scheme.onSurface,
+                      ),
+                      onPressed: () => setState(
+                        () => _password.text = generateTempPassword(),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+        ],
+      ),
+      if (create && roles.isNotEmpty)
+        OmniGroupSection(
+          title: 'Vai trò',
+          children: [
+            Padding(
+              padding: const EdgeInsets.all(14),
+              child: Wrap(
+                spacing: OmniSpacing.sm,
+                runSpacing: OmniSpacing.sm,
+                children: [
+                  for (final r in roles)
+                    OmniChoicePill(
+                      label: r.label,
+                      selected: _role == r.slug,
+                      onTap: () => setState(() => _role = r.slug),
+                    ),
+                ],
+              ),
+            ),
+          ],
         ),
+      if (_formError != null)
         Padding(
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+          padding: const EdgeInsets.symmetric(horizontal: 8),
+          child: Text(
+            _formError!,
+            style: OmniType.caption.copyWith(color: scheme.error),
+          ),
+        ),
+    ];
+  }
+
+  Widget _doneFooter(
+    ({String email, String? password, String role, bool invited}) done,
+  ) {
+    final credentials = done.password == null
+        ? null
+        : 'Viomni\nEmail: ${done.email}\nMật khẩu: ${done.password}';
+    return Row(
+      children: [
+        if (credentials != null) ...[
+          Expanded(
+            child: _OutlineButton(
+              label: 'Sao chép',
+              icon: Icons.content_copy_rounded,
+              onPressed: () async {
+                await Clipboard.setData(ClipboardData(text: credentials));
+                if (!mounted) return;
+                ScaffoldMessenger.maybeOf(
+                  context,
+                )?.showSnackBar(const SnackBar(content: Text('Đã sao chép.')));
+              },
+            ),
+          ),
+          const SizedBox(width: OmniSpacing.sm),
+        ],
+        Expanded(
           child: _OutlineButton(
-            label: create ? 'Tạo tài khoản' : 'Gửi lời mời',
-            busy: _busy,
-            onPressed: _busy ? null : () => _submit(roles),
+            label: 'Xong',
+            onPressed: () => Navigator.of(context).maybePop(),
           ),
         ),
       ],
     );
   }
 
-  Widget _success(
+  List<Widget> _successChildren(
     ({String email, String? password, String role, bool invited}) done,
   ) {
     final scheme = Theme.of(context).colorScheme;
-    final credentials = done.password == null
-        ? null
-        : 'Viomni\nEmail: ${done.email}\nMật khẩu: ${done.password}';
     final message = done.invited
         ? '${done.email} sẽ nhận email để tự đặt mật khẩu.'
         : done.password == null
@@ -322,72 +435,56 @@ class _AddMemberSheetState extends ConsumerState<AddMemberSheet> {
       ),
     );
 
-    return SingleChildScrollView(
-      padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
+    return [
+      OmniGroupSection(
         children: [
-          Icon(
-            done.invited
-                ? Icons.mark_email_read_outlined
-                : Icons.check_circle_outline_rounded,
-            size: 48,
-            color: scheme.primary,
-          ),
-          const SizedBox(height: OmniSpacing.sm),
-          Text(
-            done.invited ? 'Đã gửi lời mời' : 'Đã thêm nhân viên',
-            textAlign: TextAlign.center,
-            style: OmniType.title.copyWith(color: scheme.onSurface),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            message,
-            textAlign: TextAlign.center,
-            style: OmniType.body.copyWith(color: scheme.onSurfaceVariant),
-          ),
-          if (!done.invited) ...[
-            const SizedBox(height: OmniSpacing.lg),
-            OmniGroupSection(
-              dividerIndent: 14,
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 18, 16, 16),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
               children: [
-                line('Email', done.email),
-                if (done.password case final pw?) line('Mật khẩu tạm', pw),
-                line('Vai trò', done.role),
-              ],
-            ),
-          ],
-          const SizedBox(height: OmniSpacing.lg),
-          Row(
-            children: [
-              if (credentials != null) ...[
-                Expanded(
-                  child: _OutlineButton(
-                    label: 'Sao chép',
-                    icon: Icons.content_copy_rounded,
-                    onPressed: () async {
-                      await Clipboard.setData(ClipboardData(text: credentials));
-                      if (!mounted) return;
-                      ScaffoldMessenger.maybeOf(context)?.showSnackBar(
-                        const SnackBar(content: Text('Đã sao chép.')),
-                      );
-                    },
+                Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    color: scheme.primary.withValues(alpha: .12),
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  child: Icon(
+                    done.invited
+                        ? Icons.mark_email_read_outlined
+                        : Icons.check_circle_rounded,
+                    size: OmniIconSize.lg,
+                    color: scheme.primary,
                   ),
                 ),
-                const SizedBox(width: OmniSpacing.sm),
-              ],
-              Expanded(
-                child: _OutlineButton(
-                  label: 'Xong',
-                  onPressed: () => Navigator.of(context).maybePop(),
+                const SizedBox(height: OmniSpacing.sm),
+                Text(
+                  done.invited ? 'Đã gửi lời mời' : 'Đã thêm nhân viên',
+                  textAlign: TextAlign.center,
+                  style: OmniType.title.copyWith(color: scheme.onSurface),
                 ),
-              ),
-            ],
+                const SizedBox(height: 4),
+                Text(
+                  message,
+                  textAlign: TextAlign.center,
+                  style: OmniType.body.copyWith(color: scheme.onSurfaceVariant),
+                ),
+              ],
+            ),
           ),
         ],
       ),
-    );
+      if (!done.invited)
+        OmniGroupSection(
+          dividerIndent: 14,
+          children: [
+            line('Email', done.email),
+            if (done.password case final pw?) line('Mật khẩu tạm', pw),
+            line('Vai trò', done.role),
+          ],
+        ),
+    ];
   }
 }
 

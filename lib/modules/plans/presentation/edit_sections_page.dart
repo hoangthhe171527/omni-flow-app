@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
-
-import '../../../design/components/components.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../core/error/app_exception.dart';
 import '../../../core/utils/client_id.dart';
+import '../../../design/components/components.dart';
 import '../../../design/tokens/tokens.dart';
 import '../application/plans_providers.dart';
 import '../data/plans_api.dart';
@@ -55,30 +55,24 @@ class _EditSectionsPageState extends ConsumerState<EditSectionsPage> {
       // sách dài thì nút ở cuối trang phải cuộn mới thấy.
       appBar: OmniAppBar(
         title: 'Nhóm việc',
+        fallbackBack: () => context.go('/plans/${widget.planId}'),
         actions: [
           if (sections != null)
-            Padding(
-              padding: EdgeInsets.zero,
-              child: TextButton(
-                onPressed: _canSave(sections) ? () => _save(sections) : null,
-                style: TextButton.styleFrom(
-                  minimumSize: const Size(0, 44),
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  shape: const StadiumBorder(),
-                  textStyle: OmniType.body.copyWith(
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                child: _saving
-                    ? const SizedBox(
-                        width: 18,
-                        height: 18,
-                        child: CircularProgressIndicator.adaptive(
-                          strokeWidth: 2,
-                        ),
-                      )
-                    : const Text('Lưu'),
+            TextButton(
+              onPressed: _canSave(sections) ? () => _save(sections) : null,
+              style: TextButton.styleFrom(
+                minimumSize: const Size(44, 44),
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                shape: const StadiumBorder(),
+                textStyle: OmniType.body.copyWith(fontWeight: FontWeight.w600),
               ),
+              child: _saving
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator.adaptive(strokeWidth: 2),
+                    )
+                  : const Text('Lưu'),
             ),
         ],
       ),
@@ -254,15 +248,22 @@ class _SectionRowState extends State<_SectionRow> {
           title: widget.section.name.trim().isEmpty
               ? 'Nhóm việc'
               : widget.section.name.trim(),
+          trailing: OmniGlassCircle(
+            child: IconButton(
+              tooltip: 'Đóng',
+              onPressed: () => Navigator.of(sheet).maybePop(),
+              icon: const Icon(Icons.close_rounded),
+            ),
+          ),
         ),
         children: [
           OmniGroupSection(
-            dividerIndent: 14,
             children: [
               OmniGroupRow(
                 icon: Icons.delete_outline_rounded,
                 title: 'Xoá nhóm việc',
                 destructive: true,
+                chevron: false,
                 onTap: () => Navigator.of(sheet).pop(true),
               ),
             ],
@@ -286,44 +287,66 @@ class _SectionRowState extends State<_SectionRow> {
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
     final gated =
         widget.section.requiresChecklist || widget.section.countsForKpi;
 
     // Mỗi nhóm việc là một nhóm lồng: dòng tên (chạm để đổi tên), hai dòng
-    // công tắc.
+    // công tắc — toàn bộ thẳng trục 54px với OmniIconTile 1 tông.
     return Padding(
       padding: const EdgeInsets.only(bottom: OmniGroupSection.gap),
       child: OmniGroupSection(
-        dividerIndent: 14,
         children: [
-          Padding(
-            padding: const EdgeInsets.only(left: 14, right: 4),
-            child: Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    controller: _controller,
-                    decoration: InputDecoration(
-                      hintText: 'Tên nhóm việc',
-                      isDense: true,
-                      filled: false,
-                      border: InputBorder.none,
-                      enabledBorder: InputBorder.none,
-                      focusedBorder: InputBorder.none,
-                      // Nói ra nhóm nào đang mang quy tắc, để người sửa biết
-                      // mình đang đụng vào thứ gì trước khi xoá nó.
-                      helperText: gated ? _rulesOf(widget.section) : null,
+          ConstrainedBox(
+            constraints: const BoxConstraints(minHeight: 52),
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(14, 6, 4, 6),
+              child: Row(
+                children: [
+                  const OmniIconTile(Icons.view_column_outlined),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        TextField(
+                          controller: _controller,
+                          style: OmniType.bodyStrong.copyWith(
+                            color: scheme.onSurface,
+                          ),
+                          decoration: const InputDecoration(
+                            hintText: 'Tên nhóm việc',
+                            isDense: true,
+                            filled: false,
+                            contentPadding: EdgeInsets.symmetric(vertical: 4),
+                            border: InputBorder.none,
+                            enabledBorder: InputBorder.none,
+                            focusedBorder: InputBorder.none,
+                          ),
+                          onChanged: widget.onChanged,
+                        ),
+                        if (gated)
+                          Padding(
+                            padding: const EdgeInsets.only(bottom: 2),
+                            child: Text(
+                              _rulesOf(widget.section),
+                              style: OmniType.caption.copyWith(
+                                color: scheme.onSurfaceVariant,
+                              ),
+                            ),
+                          ),
+                      ],
                     ),
-                    onChanged: widget.onChanged,
                   ),
-                ),
-                if (widget.onRemove != null)
-                  IconButton(
-                    onPressed: _options,
-                    icon: const Icon(Icons.more_horiz_rounded),
-                    tooltip: 'Tuỳ chọn nhóm việc',
-                  ),
-              ],
+                  if (widget.onRemove != null)
+                    IconButton(
+                      onPressed: _options,
+                      icon: const Icon(Icons.more_horiz_rounded),
+                      tooltip: 'Tuỳ chọn nhóm việc',
+                    ),
+                ],
+              ),
             ),
           ),
           // Đặt ngay tại đây chứ không giấu sau một màn khác: quản đốc đứng
@@ -331,6 +354,7 @@ class _SectionRowState extends State<_SectionRow> {
           // được từ web. Nhãn nói HẬU QUẢ chứ không nói tên cờ — bật nhầm thì
           // bảng trông y hệt, chỉ có con số cuối tháng khác đi.
           OmniGroupRow(
+            icon: Icons.playlist_add_check_rounded,
             title: 'Chặn vào nhóm khi việc con chưa xong',
             trailing: Switch.adaptive(
               value: widget.section.requiresChecklist,
@@ -341,6 +365,7 @@ class _SectionRowState extends State<_SectionRow> {
             ),
           ),
           OmniGroupRow(
+            icon: Icons.flag_outlined,
             title: 'Nhóm này là đích đếm KPI tháng',
             trailing: Switch.adaptive(
               value: widget.section.countsForKpi,

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/module/customer_opportunities_section.dart';
+import '../../../design/components/components.dart';
 import '../../../design/tokens/tokens.dart';
 import '../../../security/session/session_controller.dart';
 import '../application/opportunities_providers.dart';
@@ -55,7 +56,7 @@ class CustomerOpportunitiesTab extends ConsumerWidget {
     if (opps.isLoading && !opps.hasValue) {
       return const Padding(
         padding: EdgeInsets.all(OmniSpacing.section),
-        child: Center(child: CircularProgressIndicator()),
+        child: Center(child: CircularProgressIndicator.adaptive()),
       );
     }
     // Lỗi đọc cơ hội = coi như chưa có (không chặn phần còn lại của hồ sơ).
@@ -84,16 +85,21 @@ class CustomerOpportunitiesTab extends ConsumerWidget {
         ),
       );
     }
-    return Column(
-      children: [
-        for (final o in items)
-          OpportunityRow(
-            opportunity: o,
-            pipeline: catalog?.pipelineOf(o.pipelineCode),
-            // Cùng quyền với danh sách cơ hội (giữ dòng → đổi giai đoạn).
-            canMove: access.canUpdate,
-          ),
-      ],
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+      child: OmniGroupSection(
+        dividerIndent: 68,
+        children: [
+          for (final o in items)
+            OpportunityRow(
+              opportunity: o,
+              pipeline: catalog?.pipelineOf(o.pipelineCode),
+              // Cùng quyền với danh sách cơ hội (giữ dòng → đổi giai đoạn).
+              canMove: access.canUpdate,
+              divider: false,
+            ),
+        ],
+      ),
     );
   }
 }

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../core/utils/client_id.dart';
 import '../../../design/components/components.dart';
@@ -110,6 +111,7 @@ class _PlanFieldsPageState extends ConsumerState<PlanFieldsPage> {
     return Scaffold(
       appBar: OmniAppBar(
         title: 'Trường tuỳ chỉnh',
+        fallbackBack: () => context.go('/plans/${widget.planId}'),
         actions: [
           PlanSaveAction(saving: _saving, onPressed: _dirty ? _save : null),
         ],
@@ -217,11 +219,19 @@ class _FieldSheetState extends State<_FieldSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
     const types = CustomFieldType.values;
 
     return OmniSheetBody(
       header: OmniSheetHeader(
         title: widget.initial == null ? 'Thêm trường' : 'Sửa trường',
+        trailing: OmniGlassCircle(
+          child: IconButton(
+            tooltip: 'Đóng',
+            onPressed: () => Navigator.of(context).maybePop(),
+            icon: const Icon(Icons.close_rounded),
+          ),
+        ),
       ),
       footer: FilledButton(
         onPressed: _valid ? _submit : null,
@@ -233,16 +243,37 @@ class _FieldSheetState extends State<_FieldSheet> {
           children: [
             Padding(
               padding: const EdgeInsets.fromLTRB(14, 10, 14, 10),
-              child: OmniField(
-                label: 'Tên trường',
-                child: TextField(
-                  key: const Key('field-name'),
-                  controller: _name,
-                  maxLength: 128,
-                  autofocus: widget.initial == null,
-                  textCapitalization: TextCapitalization.sentences,
-                  onChanged: (_) => setState(() {}),
-                ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    'Tên trường',
+                    style: OmniType.caption.copyWith(
+                      fontWeight: FontWeight.w600,
+                      color: scheme.onSurfaceVariant,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  TextField(
+                    key: const Key('field-name'),
+                    controller: _name,
+                    maxLength: 128,
+                    autofocus: widget.initial == null,
+                    textCapitalization: TextCapitalization.sentences,
+                    decoration: InputDecoration(
+                      hintText: 'Nhập tên trường…',
+                      isDense: true,
+                      filled: false,
+                      contentPadding: const EdgeInsets.symmetric(vertical: 4),
+                      border: InputBorder.none,
+                      enabledBorder: InputBorder.none,
+                      focusedBorder: InputBorder.none,
+                      counterText: _name.text.length > 102 ? null : '',
+                    ),
+                    onChanged: (_) => setState(() {}),
+                  ),
+                ],
               ),
             ),
             // Kiểu trường: bốn lựa chọn loại trừ.
@@ -257,34 +288,52 @@ class _FieldSheetState extends State<_FieldSheet> {
             if (_type == CustomFieldType.select)
               Padding(
                 padding: const EdgeInsets.fromLTRB(14, 10, 14, 10),
-                child: OmniField(
-                  label: 'Lựa chọn (mỗi dòng một)',
-                  child: TextField(
-                    key: const Key('field-options'),
-                    controller: _options,
-                    minLines: 3,
-                    maxLines: 8,
-                    decoration: InputDecoration(
-                      errorText: switch (_tooLongOption) {
-                        final line? =>
-                          'Mỗi lựa chọn tối đa $_maxOption ký tự (dòng $line).',
-                        null => null,
-                      },
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      'Lựa chọn (mỗi dòng một)',
+                      style: OmniType.caption.copyWith(
+                        fontWeight: FontWeight.w600,
+                        color: scheme.onSurfaceVariant,
+                      ),
                     ),
-                    onChanged: (_) => setState(() {}),
-                  ),
+                    const SizedBox(height: 4),
+                    TextField(
+                      key: const Key('field-options'),
+                      controller: _options,
+                      minLines: 3,
+                      maxLines: 8,
+                      decoration: InputDecoration(
+                        hintText: 'Mỗi dòng một lựa chọn…',
+                        isDense: true,
+                        filled: false,
+                        contentPadding: const EdgeInsets.symmetric(vertical: 4),
+                        border: InputBorder.none,
+                        enabledBorder: InputBorder.none,
+                        focusedBorder: InputBorder.none,
+                        errorText: switch (_tooLongOption) {
+                          final line? =>
+                            'Mỗi lựa chọn tối đa $_maxOption ký tự (dòng $line).',
+                          null => null,
+                        },
+                      ),
+                      onChanged: (_) => setState(() {}),
+                    ),
+                  ],
                 ),
               ),
           ],
         ),
         if (widget.initial != null)
           OmniGroupSection(
-            dividerIndent: 14,
             children: [
               OmniGroupRow(
                 icon: Icons.delete_outline_rounded,
                 title: 'Xoá trường',
                 destructive: true,
+                chevron: false,
                 onTap: () =>
                     Navigator.of(context).pop((field: null, remove: true)),
               ),

@@ -29,7 +29,16 @@ Future<String?> showPrioritySheet({
   context: context,
   builder: (context) => OmniSheetBody(
     semanticsLabel: 'Mức ưu tiên',
-    header: const OmniSheetHeader(title: 'Mức ưu tiên'),
+    header: OmniSheetHeader(
+      title: 'Mức ưu tiên',
+      trailing: OmniGlassCircle(
+        child: IconButton(
+          tooltip: 'Đóng',
+          onPressed: () => Navigator.of(context).maybePop(),
+          icon: const Icon(Icons.close_rounded, size: OmniIconSize.lg),
+        ),
+      ),
+    ),
     children: [
       OmniGroupSection(
         dividerIndent: 14,
@@ -38,6 +47,7 @@ Future<String?> showPrioritySheet({
             OmniGroupRow(
               title: entry.value,
               selected: entry.key == (current == 'medium' ? 'med' : current),
+              chevron: false,
               onTap: () => Navigator.of(context).pop(entry.key),
             ),
         ],
@@ -86,19 +96,30 @@ Future<DueDateChoice?> showDueDateSheet({
     context: context,
     builder: (context) => OmniSheetBody(
       semanticsLabel: 'Hạn',
-      header: const SizedBox(height: 14),
+      header: OmniSheetHeader(
+        title: 'Hạn hoàn thành',
+        trailing: OmniGlassCircle(
+          child: IconButton(
+            tooltip: 'Đóng',
+            onPressed: () => Navigator.of(context).maybePop(),
+            icon: const Icon(Icons.close_rounded, size: OmniIconSize.lg),
+          ),
+        ),
+      ),
       children: [
         OmniGroupSection(
           children: [
             OmniGroupRow(
               icon: Icons.event_outlined,
               title: 'Chọn ngày khác',
+              chevron: false,
               onTap: () => Navigator.of(context).pop('pick'),
             ),
             OmniGroupRow(
               icon: Icons.event_busy_outlined,
               title: 'Xoá hạn',
               subtitle: 'Việc vẫn còn, chỉ là chưa hẹn ngày',
+              chevron: false,
               onTap: () => Navigator.of(context).pop('clear'),
             ),
           ],
@@ -188,53 +209,80 @@ class _TextEditSheetState extends State<_TextEditSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
     // KHÔNG tự đệm phần bàn phím: `showOmniSheet` đã đệm rồi. Đệm hai lần
     // thì nội dung bị ép, tràn xuống dưới, và nút "Lưu" vẽ ra mà bấm không ăn
     // (`text_edit_sheet_keyboard_test.dart`).
     return Padding(
-      padding: const EdgeInsets.fromLTRB(
-        OmniSpacing.lg,
-        OmniSpacing.sm,
-        OmniSpacing.lg,
-        OmniSpacing.lg,
-      ),
+      padding: const EdgeInsets.fromLTRB(0, 0, 0, OmniSpacing.md),
       child: Column(
         mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text(
-            widget.title,
-            style: Theme.of(
-              context,
-            ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
+          OmniSheetHeader(
+            title: widget.title,
+            trailing: OmniGlassCircle(
+              child: IconButton(
+                tooltip: 'Đóng',
+                onPressed: () => Navigator.of(context).maybePop(),
+                icon: const Icon(Icons.close_rounded, size: OmniIconSize.lg),
+              ),
+            ),
           ),
-          const SizedBox(height: OmniSpacing.md),
           // Màn nhỏ + bàn phím: mô tả tám dòng cao hơn chỗ còn lại. Ô nhập co
           // lại và tự cuộn, còn tiêu đề và nút "Lưu" luôn trong tầm chạm.
           Flexible(
             child: SingleChildScrollView(
-              child: TextField(
-                controller: _controller,
-                autofocus: true,
-                keyboardType: widget.keyboardType,
-                textCapitalization: TextCapitalization.sentences,
-                minLines: widget.multiline ? 3 : 1,
-                maxLines: widget.multiline ? 8 : 1,
-                maxLength: widget.maxLength,
-                decoration: InputDecoration(hintText: widget.hint),
-                onChanged: (_) => setState(() {}),
+              padding: const EdgeInsets.symmetric(horizontal: 10),
+              child: OmniGroupSection(
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 12,
+                    ),
+                    child: TextField(
+                      controller: _controller,
+                      autofocus: true,
+                      keyboardType: widget.keyboardType,
+                      textCapitalization: TextCapitalization.sentences,
+                      minLines: widget.multiline ? 3 : 1,
+                      maxLines: widget.multiline ? 8 : 1,
+                      maxLength: widget.maxLength,
+                      style: OmniType.body.copyWith(color: scheme.onSurface),
+                      decoration: InputDecoration(
+                        hintText: widget.hint,
+                        hintStyle: OmniType.body.copyWith(
+                          color: scheme.onSurfaceVariant,
+                        ),
+                        counterText: '',
+                        isDense: true,
+                        filled: false,
+                        border: InputBorder.none,
+                        enabledBorder: InputBorder.none,
+                        focusedBorder: InputBorder.none,
+                        disabledBorder: InputBorder.none,
+                        contentPadding: EdgeInsets.zero,
+                      ),
+                      onChanged: (_) => setState(() {}),
+                    ),
+                  ),
+                ],
               ),
             ),
           ),
-          const SizedBox(height: OmniSpacing.lg),
-          SizedBox(
-            width: double.infinity,
+          const SizedBox(height: OmniSpacing.md),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 14),
             child: FilledButton(
               // Tắt khi chưa đổi gì: lưu lại đúng nội dung cũ vẫn chạm
               // updated_at và đẻ ra một dòng nhật ký nói có người sửa.
               onPressed: _canSave
                   ? () => Navigator.of(context).pop(_controller.text.trim())
                   : null,
+              style: FilledButton.styleFrom(
+                minimumSize: const Size.fromHeight(48),
+              ),
               child: const Text('Lưu'),
             ),
           ),

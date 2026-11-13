@@ -41,95 +41,80 @@ Future<QuickCreated?> showQuickCreateTeam(
 // ---------------------------------------------------------------------------
 // Phần dùng chung
 
-class _SheetHeader extends StatelessWidget {
-  const _SheetHeader(this.title);
-
-  final String title;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return Row(
-      children: [
-        Expanded(
-          child: Semantics(
-            header: true,
-            child: Text(
-              title,
-              style: OmniType.body.copyWith(
-                fontWeight: FontWeight.w600,
-                color: scheme.onSurface,
-              ),
-            ),
-          ),
-        ),
-        IconButton(
+OmniSheetHeader _sheetHeader(BuildContext context, String title) =>
+    OmniSheetHeader(
+      title: title,
+      trailing: OmniGlassCircle(
+        child: IconButton(
           tooltip: 'Đóng',
           onPressed: () => Navigator.of(context).maybePop(),
           icon: const Icon(Icons.close_rounded),
-          color: scheme.onSurfaceVariant,
         ),
-      ],
-    );
-  }
-}
-
-/// Một dòng gập/mở gọn: biểu tượng · nhãn · giá trị bên phải. Phần mở ra
-/// nằm ngay dưới, trong cùng sheet — không cuộn ngang, không màn thứ hai.
-class _DisclosureRow extends StatelessWidget {
-  const _DisclosureRow({
-    super.key,
-    required this.icon,
-    required this.label,
-    required this.value,
-    required this.onTap,
-    this.expanded,
-  });
-
-  final IconData icon;
-  final String label;
-  final String value;
-  final VoidCallback onTap;
-
-  /// null = dòng hành động (không gập/mở).
-  final bool? expanded;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return Padding(
-      padding: const EdgeInsets.only(bottom: OmniGroupSection.sheetGap),
-      child: OmniGroupSection(
-        children: [
-          OmniGroupRow(
-            icon: icon,
-            title: label,
-            value: value,
-            semanticsLabel: null,
-            chevron: false,
-            onTap: onTap,
-            trailing: expanded == null
-                ? null
-                : AnimatedRotation(
-                    turns: expanded! ? 0.25 : 0,
-                    duration: OmniMotion.of(context).fast,
-                    child: Icon(
-                      Icons.chevron_right_rounded,
-                      size: 18,
-                      color: scheme.onSurfaceVariant,
-                    ),
-                  ),
-          ),
-        ],
       ),
     );
-  }
+
+Widget _chevron(BuildContext context, bool expanded) => AnimatedRotation(
+  turns: expanded ? 0.25 : 0,
+  duration: OmniMotion.of(context).fast,
+  child: Icon(
+    Icons.chevron_right_rounded,
+    size: 18,
+    color: Theme.of(context).colorScheme.onSurfaceVariant,
+  ),
+);
+
+Widget _groupField({
+  required BuildContext context,
+  required String label,
+  required Widget child,
+  bool required = true,
+}) {
+  final scheme = Theme.of(context).colorScheme;
+  return Padding(
+    padding: const EdgeInsets.fromLTRB(14, 10, 14, 12),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Flexible(
+              child: Text(
+                label,
+                style: OmniType.caption.copyWith(
+                  color: scheme.onSurfaceVariant,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+            if (required)
+              Text(' *', style: OmniType.caption.copyWith(color: scheme.error)),
+          ],
+        ),
+        const SizedBox(height: 4),
+        child,
+      ],
+    ),
+  );
+}
+
+InputDecoration _bareDecoration(BuildContext context, String hint) {
+  final scheme = Theme.of(context).colorScheme;
+  return InputDecoration(
+    hintText: hint,
+    hintStyle: OmniType.body.copyWith(color: scheme.onSurfaceVariant),
+    isDense: true,
+    contentPadding: EdgeInsets.zero,
+    filled: false,
+    border: InputBorder.none,
+    enabledBorder: InputBorder.none,
+    focusedBorder: InputBorder.none,
+  );
 }
 
 Widget _errorText(BuildContext context, String? error) => error == null
     ? const SizedBox.shrink()
     : Padding(
-        padding: const EdgeInsets.only(top: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 6),
         child: Text(
           error,
           style: OmniType.caption.copyWith(
@@ -143,19 +128,15 @@ Widget _saveButton({
   required bool saving,
   required VoidCallback? onPressed,
   Key? key,
-}) => Padding(
-  padding: const EdgeInsets.only(top: 12),
-  child: FilledButton(
-    key: key,
-    onPressed: saving ? null : onPressed,
-    style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(50)),
-    child: saving
-        ? const SizedBox.square(
-            dimension: 20,
-            child: CircularProgressIndicator.adaptive(strokeWidth: 2),
-          )
-        : Text(label),
-  ),
+}) => FilledButton(
+  key: key,
+  onPressed: saving ? null : onPressed,
+  child: saving
+      ? const SizedBox.square(
+          dimension: 20,
+          child: CircularProgressIndicator.adaptive(strokeWidth: 2),
+        )
+      : Text(label),
 );
 
 // ---------------------------------------------------------------------------
@@ -288,45 +269,75 @@ class _QuickCreatePlanFormState extends ConsumerState<QuickCreatePlanForm> {
               widget.teamName ??
               'Team';
 
-    return SingleChildScrollView(
+    final iconBg = scheme.primary.withValues(alpha: .10);
+
+    return OmniSheetBody(
       key: const Key('quick-create-plan'),
-      padding: const EdgeInsets.fromLTRB(18, 4, 10, 18),
-      child: Padding(
-        padding: const EdgeInsets.only(right: 8),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            _SheetHeader(_chained ? 'Kế hoạch đầu tiên' : 'Kế hoạch mới'),
-            if (_chained) ...[
-              Container(
-                key: const Key('quick-team-created'),
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: scheme.primary.withValues(alpha: .08),
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: Row(
-                  children: [
-                    Icon(
-                      Icons.check_circle_rounded,
-                      size: 20,
-                      color: scheme.primary,
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Text(
-                        '${widget.teamName ?? 'Team'} đã tạo. Thêm kế hoạch '
-                        'đầu tiên cho team này?',
-                        style: OmniType.caption.copyWith(color: scheme.primary),
-                      ),
-                    ),
-                  ],
-                ),
+      header: _sheetHeader(
+        context,
+        _chained ? 'Kế hoạch đầu tiên' : 'Kế hoạch mới',
+      ),
+      footer: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          _saveButton(
+            key: const Key('quick-plan-save'),
+            label: _createdId != null ? 'Thử tải ảnh lại' : 'Tạo kế hoạch',
+            saving: _saving,
+            onPressed: _name.text.trim().isEmpty ? null : _save,
+          ),
+          if (_chained) ...[
+            const SizedBox(height: 4),
+            TextButton(
+              onPressed: _saving
+                  ? null
+                  : () => Navigator.of(context).pop<QuickCreated>((
+                      id: widget.teamId!,
+                      name: widget.teamName ?? 'Team',
+                      isTeam: true,
+                    )),
+              style: TextButton.styleFrom(
+                foregroundColor: scheme.onSurfaceVariant,
+                minimumSize: const Size.fromHeight(44),
               ),
-              const SizedBox(height: 14),
-            ],
-            OmniField(
+              child: const Text('Để sau'),
+            ),
+          ],
+        ],
+      ),
+      children: [
+        if (_chained)
+          Container(
+            key: const Key('quick-team-created'),
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: scheme.primary.withValues(alpha: .08),
+              borderRadius: BorderRadius.circular(18),
+            ),
+            child: Row(
+              children: [
+                Icon(
+                  Icons.check_circle_rounded,
+                  size: 20,
+                  color: scheme.primary,
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    '${widget.teamName ?? 'Team'} đã tạo. Thêm kế hoạch '
+                    'đầu tiên cho team này?',
+                    style: OmniType.caption.copyWith(color: scheme.primary),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        OmniGroupSection(
+          dividerIndent: 14,
+          children: [
+            _groupField(
+              context: context,
               label: 'Tên kế hoạch',
               child: TextField(
                 key: const Key('quick-plan-name'),
@@ -334,133 +345,139 @@ class _QuickCreatePlanFormState extends ConsumerState<QuickCreatePlanForm> {
                 autofocus: true,
                 textCapitalization: TextCapitalization.sentences,
                 textInputAction: TextInputAction.done,
-                decoration: const InputDecoration(hintText: 'Đàn cơ'),
+                style: OmniType.bodyStrong.copyWith(color: scheme.onSurface),
+                decoration: _bareDecoration(context, 'Đàn cơ'),
                 onChanged: (_) => setState(() {}),
                 onSubmitted: (_) => _save(),
               ),
             ),
-            const SizedBox(height: 12),
+          ],
+        ),
+        OmniGroupSection(
+          dividerIndent: 54,
+          children: [
             if (!_chained) ...[
-              _DisclosureRow(
+              OmniGroupRow(
                 key: const Key('quick-plan-team'),
-                icon: Icons.groups_2_outlined,
-                label: 'Thuộc team',
+                leading: OmniIconTile(
+                  Icons.groups_2_outlined,
+                  color: scheme.primary,
+                  background: iconBg,
+                ),
+                title: 'Thuộc team',
                 value: teamLabel,
-                expanded: _teamOpen,
+                chevron: false,
+                trailing: _chevron(context, _teamOpen),
                 onTap: () => setState(() => _teamOpen = !_teamOpen),
               ),
               if (_teamOpen)
-                Padding(
-                  padding: const EdgeInsets.only(
-                    bottom: OmniGroupSection.sheetGap,
+                for (final (id, name) in <(String?, String)>[
+                  (null, 'Chưa thuộc team'),
+                  for (final t in teams) (t.id, t.name),
+                ])
+                  OmniGroupRow(
+                    title: name,
+                    selected: _teamId == id,
+                    chevron: false,
+                    onTap: () => setState(() {
+                      _teamId = id;
+                      _teamOpen = false;
+                    }),
                   ),
-                  child: OmniGroupSection(
-                    dividerIndent: 14,
-                    children: [
-                      for (final (id, name) in <(String?, String)>[
-                        (null, 'Chưa thuộc team'),
-                        for (final t in teams) (t.id, t.name),
-                      ])
-                        OmniGroupRow(
-                          title: name,
-                          selected: _teamId == id,
-                          onTap: () => setState(() {
-                            _teamId = id;
-                            _teamOpen = false;
-                          }),
-                        ),
-                    ],
-                  ),
-                ),
             ],
-            _DisclosureRow(
+            OmniGroupRow(
               key: const Key('quick-plan-sections'),
-              icon: Icons.view_week_outlined,
-              label: 'Nhóm việc',
+              leading: OmniIconTile(
+                Icons.view_week_outlined,
+                color: scheme.primary,
+                background: iconBg,
+              ),
+              title: 'Nhóm việc',
               value: _sections.join(' · '),
-              expanded: _sectionsOpen,
+              chevron: false,
+              trailing: _chevron(context, _sectionsOpen),
               onTap: () => setState(() => _sectionsOpen = !_sectionsOpen),
             ),
             if (_sectionsOpen)
               Padding(
-                padding: const EdgeInsets.only(bottom: 10),
+                padding: const EdgeInsets.fromLTRB(14, 10, 14, 12),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Wrap(
-                      spacing: 6,
-                      runSpacing: 6,
+                      spacing: 8,
+                      runSpacing: 8,
                       children: [
                         for (var i = 0; i < _sections.length; i++)
-                          InputChip(
-                            label: Text(_sections[i]),
-                            onDeleted: _sections.length > 1
-                                ? () => setState(() => _sections.removeAt(i))
-                                : null,
-                            deleteButtonTooltipMessage:
-                                'Bỏ nhóm ${_sections[i]}',
-                          ),
+                          if (_sections.length > 1)
+                            Tooltip(
+                              message: 'Bỏ nhóm ${_sections[i]}',
+                              child: OmniChoicePill(
+                                label: _sections[i],
+                                selected: true,
+                                icon: Icons.close_rounded,
+                                onTap: () =>
+                                    setState(() => _sections.removeAt(i)),
+                              ),
+                            )
+                          else
+                            OmniChoicePill(
+                              label: _sections[i],
+                              selected: true,
+                              onTap: null,
+                            ),
                       ],
                     ),
-                    const SizedBox(height: 8),
-                    TextField(
-                      key: const Key('quick-plan-new-section'),
-                      controller: _newSection,
-                      textCapitalization: TextCapitalization.sentences,
-                      textInputAction: TextInputAction.done,
-                      decoration: InputDecoration(
-                        hintText: 'Thêm nhóm việc',
-                        suffixIcon: IconButton(
+                    const SizedBox(height: 10),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: TextField(
+                            key: const Key('quick-plan-new-section'),
+                            controller: _newSection,
+                            textCapitalization: TextCapitalization.sentences,
+                            textInputAction: TextInputAction.done,
+                            style: OmniType.body.copyWith(
+                              color: scheme.onSurface,
+                            ),
+                            decoration: _bareDecoration(
+                              context,
+                              'Thêm nhóm việc',
+                            ),
+                            onSubmitted: (_) => _addSection(),
+                          ),
+                        ),
+                        IconButton(
                           tooltip: 'Thêm nhóm việc',
-                          icon: const Icon(Icons.add_rounded),
+                          icon: Icon(Icons.add_rounded, color: scheme.primary),
                           onPressed: _addSection,
                         ),
-                      ),
-                      onSubmitted: (_) => _addSection(),
+                      ],
                     ),
                   ],
                 ),
               ),
-            _DisclosureRow(
+            OmniGroupRow(
               key: const Key('quick-plan-cover'),
-              icon: Icons.image_outlined,
-              label: 'Ảnh nền',
+              leading: OmniIconTile(
+                Icons.image_outlined,
+                color: scheme.primary,
+                background: iconBg,
+              ),
+              title: 'Ảnh nền',
               value: _coverPath == null ? 'Tuỳ chọn' : 'Đã chọn ảnh',
               onTap: _pickCover,
             ),
             if (_coverPath != null)
-              Align(
-                alignment: Alignment.centerRight,
-                child: TextButton(
-                  onPressed: () => setState(() => _coverPath = null),
-                  child: const Text('Bỏ ảnh'),
-                ),
-              ),
-            _errorText(context, _error),
-            _saveButton(
-              key: const Key('quick-plan-save'),
-              label: _createdId != null ? 'Thử tải ảnh lại' : 'Tạo kế hoạch',
-              saving: _saving,
-              onPressed: _name.text.trim().isEmpty ? null : _save,
-            ),
-            if (_chained)
-              TextButton(
-                onPressed: _saving
-                    ? null
-                    : () => Navigator.of(context).pop<QuickCreated>((
-                        id: widget.teamId!,
-                        name: widget.teamName ?? 'Team',
-                        isTeam: true,
-                      )),
-                style: TextButton.styleFrom(
-                  foregroundColor: scheme.onSurfaceVariant,
-                  minimumSize: const Size.fromHeight(44),
-                ),
-                child: const Text('Để sau'),
+              OmniGroupRow(
+                title: 'Bỏ ảnh',
+                destructive: true,
+                onTap: () => setState(() => _coverPath = null),
               ),
           ],
         ),
-      ),
+        if (_error != null) _errorText(context, _error),
+      ],
     );
   }
 }
@@ -542,146 +559,162 @@ class _QuickCreateTeamSheetState extends ConsumerState<_QuickCreateTeamSheet> {
   }
 
   Widget _form(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final iconBg = scheme.primary.withValues(alpha: .10);
     final members = ref.watch(teamMembersProvider);
     final byId = ref.watch(teamMemberByIdProvider);
     final picked = [for (final id in _memberIds) ?byId[id]];
 
-    return SingleChildScrollView(
+    return OmniSheetBody(
       key: const Key('quick-create-team'),
-      padding: const EdgeInsets.fromLTRB(18, 4, 18, 18),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          const _SheetHeader('Team mới'),
-          OmniField(
-            label: 'Tên team',
-            child: TextField(
-              key: const Key('quick-team-name'),
-              controller: _name,
-              autofocus: true,
-              textCapitalization: TextCapitalization.sentences,
-              decoration: const InputDecoration(
-                hintText: 'Tổ sản xuất, Nhóm kinh doanh…',
-              ),
-              onChanged: (_) => setState(() {}),
-            ),
-          ),
-          const SizedBox(height: 12),
-          _DisclosureRow(
-            key: const Key('quick-team-desc'),
-            icon: Icons.notes_rounded,
-            label: 'Mô tả',
-            value: _description.text.trim().isEmpty
-                ? 'Tuỳ chọn'
-                : _description.text.trim(),
-            expanded: _descOpen,
-            onTap: () => setState(() => _descOpen = !_descOpen),
-          ),
-          if (_descOpen)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 10),
+      header: _sheetHeader(context, 'Team mới'),
+      footer: _saveButton(
+        key: const Key('quick-team-save'),
+        label: 'Tạo team',
+        saving: _saving,
+        onPressed: _name.text.trim().isEmpty ? null : _save,
+      ),
+      children: [
+        OmniGroupSection(
+          dividerIndent: 14,
+          children: [
+            _groupField(
+              context: context,
+              label: 'Tên team',
               child: TextField(
-                controller: _description,
+                key: const Key('quick-team-name'),
+                controller: _name,
                 autofocus: true,
-                maxLines: 3,
-                minLines: 1,
                 textCapitalization: TextCapitalization.sentences,
-                decoration: const InputDecoration(hintText: 'Team này làm gì'),
+                style: OmniType.bodyStrong.copyWith(color: scheme.onSurface),
+                decoration: _bareDecoration(
+                  context,
+                  'Tổ sản xuất, Nhóm kinh doanh…',
+                ),
                 onChanged: (_) => setState(() {}),
               ),
             ),
-          _DisclosureRow(
-            key: const Key('quick-team-members'),
-            icon: Icons.person_add_alt_outlined,
-            label: 'Thành viên',
-            value: _memberIds.isEmpty
-                ? 'Thêm sau cũng được'
-                : '${_memberIds.length} người',
-            expanded: _membersOpen,
-            onTap: () => setState(() => _membersOpen = !_membersOpen),
-          ),
-          if (picked.isNotEmpty)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 8),
-              child: Wrap(
-                spacing: 6,
-                runSpacing: 6,
-                children: [
-                  for (final m in picked)
-                    Tooltip(
-                      message: m.name,
-                      child: OmniAvatar(
-                        name: m.name,
-                        imageUrl: m.avatarUrl,
-                        size: 30,
-                      ),
-                    ),
-                ],
+          ],
+        ),
+        OmniGroupSection(
+          dividerIndent: 54,
+          children: [
+            OmniGroupRow(
+              key: const Key('quick-team-desc'),
+              leading: OmniIconTile(
+                Icons.notes_rounded,
+                color: scheme.primary,
+                background: iconBg,
               ),
+              title: 'Mô tả',
+              value: _description.text.trim().isEmpty
+                  ? 'Tuỳ chọn'
+                  : _description.text.trim(),
+              chevron: false,
+              trailing: _chevron(context, _descOpen),
+              onTap: () => setState(() => _descOpen = !_descOpen),
             ),
-          if (_membersOpen)
-            ConstrainedBox(
-              constraints: const BoxConstraints(maxHeight: 260),
-              child: members.when(
-                data: (all) {
-                  final shown = withPickedMembers(all, _memberIds, byId);
+            if (_descOpen)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(14, 10, 14, 12),
+                child: TextField(
+                  controller: _description,
+                  autofocus: true,
+                  maxLines: 3,
+                  minLines: 1,
+                  textCapitalization: TextCapitalization.sentences,
+                  style: OmniType.body.copyWith(color: scheme.onSurface),
+                  decoration: _bareDecoration(context, 'Team này làm gì'),
+                  onChanged: (_) => setState(() {}),
+                ),
+              ),
+            OmniGroupRow(
+              key: const Key('quick-team-members'),
+              leading: OmniIconTile(
+                Icons.person_add_alt_outlined,
+                color: scheme.primary,
+                background: iconBg,
+              ),
+              title: 'Thành viên',
+              value: _memberIds.isEmpty
+                  ? 'Thêm sau cũng được'
+                  : '${_memberIds.length} người',
+              chevron: false,
+              trailing: _chevron(context, _membersOpen),
+              onTap: () => setState(() => _membersOpen = !_membersOpen),
+            ),
+            if (picked.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(54, 8, 14, 10),
+                child: Wrap(
+                  spacing: 6,
+                  runSpacing: 6,
+                  children: [
+                    for (final m in picked)
+                      Tooltip(
+                        message: m.name,
+                        child: OmniAvatar(
+                          name: m.name,
+                          imageUrl: m.avatarUrl,
+                          size: 30,
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            if (_membersOpen)
+              ...switch (members) {
+                AsyncData(:final value) => () {
+                  final shown = withPickedMembers(value, _memberIds, byId);
                   if (shown.isEmpty) {
-                    return const Padding(
-                      padding: EdgeInsets.all(12),
-                      child: Text(
-                        'Chưa có ai trong workspace. Mời người vào trước.',
+                    return <Widget>[
+                      Padding(
+                        padding: const EdgeInsets.all(14),
+                        child: Text(
+                          'Chưa có ai trong workspace. Mời người vào trước.',
+                          style: OmniType.caption.copyWith(
+                            color: scheme.onSurfaceVariant,
+                          ),
+                        ),
                       ),
-                    );
+                    ];
                   }
-                  return ListView(
-                    shrinkWrap: true,
-                    padding: const EdgeInsets.only(
-                      bottom: OmniGroupSection.sheetGap,
-                    ),
-                    children: [
-                      OmniGroupSection(
-                        dividerIndent: 58,
-                        children: [
-                          for (final m in shown)
-                            OmniGroupRow(
-                              leading: OmniAvatar(
-                                name: m.name,
-                                imageUrl: m.avatarUrl,
-                                size: 32,
-                              ),
-                              title: m.name,
-                              selected: _memberIds.contains(m.userId),
-                              onTap: () => setState(() {
-                                if (!_memberIds.remove(m.userId)) {
-                                  _memberIds.add(m.userId);
-                                }
-                              }),
-                            ),
-                        ],
+                  return <Widget>[
+                    for (final m in shown)
+                      OmniGroupRow(
+                        leading: OmniAvatar(
+                          name: m.name,
+                          imageUrl: m.avatarUrl,
+                          size: 32,
+                        ),
+                        title: m.name,
+                        selected: _memberIds.contains(m.userId),
+                        chevron: false,
+                        onTap: () => setState(() {
+                          if (!_memberIds.remove(m.userId)) {
+                            _memberIds.add(m.userId);
+                          }
+                        }),
                       ),
-                    ],
-                  );
-                },
-                loading: () => const Padding(
-                  padding: EdgeInsets.all(16),
-                  child: Center(child: CircularProgressIndicator.adaptive()),
-                ),
-                error: (e, _) => OmniErrorView(
-                  error: e,
-                  onRetry: () => ref.invalidate(teamDirectoryProvider),
-                ),
-              ),
-            ),
-          _errorText(context, _error),
-          _saveButton(
-            key: const Key('quick-team-save'),
-            label: 'Tạo team',
-            saving: _saving,
-            onPressed: _name.text.trim().isEmpty ? null : _save,
-          ),
-        ],
-      ),
+                  ];
+                }(),
+                AsyncError(:final error) => <Widget>[
+                  OmniErrorView(
+                    error: error,
+                    onRetry: () => ref.invalidate(teamDirectoryProvider),
+                  ),
+                ],
+                _ => <Widget>[
+                  const Padding(
+                    padding: EdgeInsets.all(16),
+                    child: Center(child: CircularProgressIndicator.adaptive()),
+                  ),
+                ],
+              },
+          ],
+        ),
+        if (_error != null) _errorText(context, _error),
+      ],
     );
   }
 }

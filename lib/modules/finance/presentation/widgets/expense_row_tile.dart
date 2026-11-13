@@ -378,20 +378,15 @@ class _ExpenseRowTileState extends ConsumerState<ExpenseRowTile> {
                             constraints: const BoxConstraints(minHeight: 56),
                             child: Padding(
                               padding: const EdgeInsets.symmetric(
-                                horizontal: 13,
-                                vertical: 9,
+                                horizontal: 14,
+                                vertical: 10,
                               ),
                               child: Row(
                                 children: [
-                                  Container(
-                                    width: 8,
-                                    height: 8,
-                                    decoration: BoxDecoration(
-                                      color: grp.parsedColor,
-                                      shape: BoxShape.circle,
-                                    ),
+                                  const OmniIconTile(
+                                    Icons.receipt_long_outlined,
                                   ),
-                                  const SizedBox(width: 9),
+                                  const SizedBox(width: 12),
                                   Expanded(
                                     child: Column(
                                       crossAxisAlignment:
@@ -421,41 +416,32 @@ class _ExpenseRowTileState extends ConsumerState<ExpenseRowTile> {
                                       ],
                                     ),
                                   ),
-                                  const SizedBox(width: 8),
-                                  ConstrainedBox(
-                                    constraints: const BoxConstraints(
-                                      maxWidth: 146,
-                                    ),
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.end,
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        FittedBox(
-                                          fit: BoxFit.scaleDown,
-                                          alignment: Alignment.centerRight,
-                                          child: Text(
-                                            FinanceMonthUtils.formatVndSpace(
-                                              item.amount,
-                                            ),
-                                            maxLines: 1,
-                                            style: OmniType.body.copyWith(
-                                              color: p.ink,
-                                              fontWeight: FontWeight.w600,
-                                              fontFeatures: const [
-                                                FontFeature.tabularFigures(),
-                                              ],
-                                            ),
-                                          ),
+                                  const SizedBox(width: 10),
+                                  Column(
+                                    crossAxisAlignment: CrossAxisAlignment.end,
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Text(
+                                        FinanceMonthUtils.formatVndSpace(
+                                          item.amount,
                                         ),
-                                        const SizedBox(height: 2),
-                                        _buildStatusIndicator(
-                                          p,
-                                          left: left,
-                                          paid: paid,
+                                        maxLines: 1,
+                                        softWrap: false,
+                                        style: OmniType.body.copyWith(
+                                          color: p.ink,
+                                          fontWeight: FontWeight.w600,
+                                          fontFeatures: const [
+                                            FontFeature.tabularFigures(),
+                                          ],
                                         ),
-                                      ],
-                                    ),
+                                      ),
+                                      const SizedBox(height: 2),
+                                      _buildStatusIndicator(
+                                        p,
+                                        left: left,
+                                        paid: paid,
+                                      ),
+                                    ],
                                   ),
                                 ],
                               ),
@@ -463,7 +449,7 @@ class _ExpenseRowTileState extends ConsumerState<ExpenseRowTile> {
                           ),
                           if (widget.showBottomDivider)
                             Positioned(
-                              left: 30,
+                              left: 54,
                               right: 0,
                               bottom: 0,
                               child: Container(height: 0.5, color: p.divider),
@@ -500,17 +486,14 @@ class _ExpenseRowTileState extends ConsumerState<ExpenseRowTile> {
       return Icon(Icons.check_rounded, size: 12, color: p.ok);
     }
     if (paid > 0) {
-      return FittedBox(
-        fit: BoxFit.scaleDown,
-        alignment: Alignment.centerRight,
-        child: Text(
-          'còn ${FinanceMonthUtils.formatVndSpace(left)}',
-          maxLines: 1,
-          style: OmniType.micro.copyWith(
-            color: p.amber,
-            fontWeight: FontWeight.w600,
-            fontFeatures: const [FontFeature.tabularFigures()],
-          ),
+      return Text(
+        'còn ${FinanceMonthUtils.formatVndSpace(left)}',
+        maxLines: 1,
+        softWrap: false,
+        style: OmniType.micro.copyWith(
+          color: p.amber,
+          fontWeight: FontWeight.w600,
+          fontFeatures: const [FontFeature.tabularFigures()],
         ),
       );
     }

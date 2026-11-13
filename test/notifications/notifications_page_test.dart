@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:omni_app/core/network/api_envelope.dart';
+import 'package:omni_app/design/components/components.dart';
 import 'package:omni_app/design/theme/omni_theme.dart';
 import 'package:omni_app/modules/notifications/data/notifications_api.dart';
 import 'package:omni_app/modules/notifications/domain/app_notification.dart';
@@ -162,8 +163,10 @@ void main() {
     await pump(t);
 
     for (final label in ['Hôm nay', 'Trước đó']) {
+      final group = find.byKey(ValueKey('notification-group-$label'));
+      expect(t.widget<OmniGroupSection>(group).title, label);
       final material = t.widget<Material>(
-        find.byKey(ValueKey('notification-group-$label')),
+        find.descendant(of: group, matching: find.byType(Material)).first,
       );
       final radius = material.borderRadius! as BorderRadius;
       expect(radius.topLeft, const Radius.circular(18), reason: label);
@@ -246,16 +249,12 @@ void main() {
     expect(t.hasRunningAnimations, isFalse);
   });
 
-  testWidgets(
-    'có chuyển động: lượt mở đầu, mọi mục (2 tiêu đề nhóm + các dòng) cùng rise',
-    (t) async {
-      await pump(t);
-      final rows = find.byType(NotificationRow).evaluate().length;
-      expect(rows, greaterThan(0));
-      expect(
-        find.byType(TweenAnimationBuilder<double>),
-        findsNWidgets(rows + 2),
-      );
-    },
-  );
+  testWidgets('có chuyển động: lượt mở đầu, mỗi thẻ nhóm ngày cùng rise', (
+    t,
+  ) async {
+    await pump(t);
+    final rows = find.byType(NotificationRow).evaluate().length;
+    expect(rows, greaterThan(0));
+    expect(find.byType(TweenAnimationBuilder<double>), findsNWidgets(2));
+  });
 }

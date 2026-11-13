@@ -1,3 +1,5 @@
+import 'dart:ui' show ImageFilter;
+
 import 'package:flutter/material.dart';
 
 import '../../../../design/platform/omni_motion_scope.dart';
@@ -6,7 +8,7 @@ import '../../../../design/tokens/tokens.dart';
 import '../../domain/customer.dart';
 import '../customer_form_page.dart';
 
-/// Form đầy đủ tại chỗ. Dialog chừa cùng một khoảng ở bốn cạnh safe area,
+/// Form đầy đủ tại chỗ. Khung kính chừa cùng một khoảng ở bốn cạnh safe area,
 /// cuộn độc lập khi bàn phím mở và không thay đổi route phía sau.
 Future<Customer?> showCustomerCreateDialog(BuildContext context) {
   final motion = OmniMotion.enabled(context);
@@ -42,7 +44,61 @@ class _CustomerCreateDialog extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    final solid = MediaQuery.highContrastOf(context);
+    final noBlur = OmniPerformance.solidGlass(context);
     final keyboard = MediaQuery.viewInsetsOf(context).bottom;
+    final shape = BorderRadius.circular(28);
+
+    final body = Material(
+      color: solid
+          ? scheme.surface
+          : scheme.surface.withValues(alpha: noBlur ? .97 : (dark ? .82 : .88)),
+      elevation: 0,
+      clipBehavior: Clip.antiAlias,
+      shape: RoundedRectangleBorder(
+        borderRadius: shape,
+        side: BorderSide(
+          color: solid
+              ? scheme.outline
+              : Colors.white.withValues(alpha: dark ? .10 : .70),
+        ),
+      ),
+      // Sheet gần trắng: nút bên trong là kính nhuộm tông, không chìm.
+      child: OmniTintedButtons(
+        child: Column(
+          children: [
+            const SizedBox(height: 6),
+            OmniSheetHeader(
+              title: 'Thêm khách hàng',
+              trailing: OmniGlassCircle(
+                child: IconButton(
+                  tooltip: 'Đóng',
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints.tightFor(
+                    width: 44,
+                    height: 44,
+                  ),
+                  onPressed: () => Navigator.of(context).pop(),
+                  icon: Icon(
+                    Icons.close_rounded,
+                    size: OmniIconSize.md,
+                    color: scheme.onSurface,
+                  ),
+                ),
+              ),
+            ),
+            Expanded(
+              child: CustomerFormEditor(
+                embedded: true,
+                onCancel: () => Navigator.of(context).pop(),
+                onSaved: (saved) => Navigator.of(context).pop(saved),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
 
     return SafeArea(
       minimum: const EdgeInsets.all(16),
@@ -58,69 +114,35 @@ class _CustomerCreateDialog extends StatelessWidget {
                 key: const Key('customer-create-dialog'),
                 width: width,
                 height: constraints.maxHeight,
-                child: Material(
-                  color: scheme.surface,
-                  elevation: 0,
-                  clipBehavior: Clip.antiAlias,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: OmniRadius.xlAll,
-                    side: BorderSide(color: scheme.outlineVariant),
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    borderRadius: shape,
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: dark ? .40 : .14),
+                        blurRadius: 36,
+                        offset: const Offset(0, 12),
+                      ),
+                    ],
                   ),
-                  // Hộp trắng: nút "Huỷ / Lưu khách hàng" là kính nhuộm tông
-                  // — kính trắng chìm vào nền trắng (phương án B, 08/11).
-                  child: OmniTintedButtons(
-                    child: Column(
-                      children: [
-                        Container(
-                          constraints: const BoxConstraints(minHeight: 60),
-                          padding: const EdgeInsets.only(left: 18, right: 8),
-                          decoration: BoxDecoration(
-                            color: scheme.surfaceContainerLow,
-                            border: Border(
-                              bottom: BorderSide(color: scheme.outlineVariant),
+                  child: solid || noBlur
+                      ? body
+                      : ClipRRect(
+                          borderRadius: shape,
+                          child: BackdropFilter(
+                            filter: ImageFilter.blur(
+                              sigmaX: OmniPerformance.glassSigma(
+                                context,
+                                full: 24,
+                              ),
+                              sigmaY: OmniPerformance.glassSigma(
+                                context,
+                                full: 24,
+                              ),
                             ),
-                          ),
-                          child: Row(
-                            children: [
-                              Expanded(
-                                child: Column(
-                                  mainAxisSize: MainAxisSize.min,
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      'Thêm khách hàng',
-                                      style: OmniType.bodyStrong.copyWith(
-                                        color: scheme.onSurface,
-                                      ),
-                                    ),
-                                    Text(
-                                      'Điền thông tin hồ sơ ngay tại danh sách',
-                                      style: OmniType.micro.copyWith(
-                                        color: scheme.onSurfaceVariant,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              IconButton(
-                                tooltip: 'Đóng',
-                                onPressed: () => Navigator.of(context).pop(),
-                                icon: const Icon(Icons.close_rounded),
-                              ),
-                            ],
+                            child: body,
                           ),
                         ),
-                        Expanded(
-                          child: CustomerFormEditor(
-                            embedded: true,
-                            onCancel: () => Navigator.of(context).pop(),
-                            onSaved: (saved) =>
-                                Navigator.of(context).pop(saved),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
                 ),
               ),
             );

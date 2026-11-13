@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../design/components/components.dart';
 import '../../../design/tokens/tokens.dart';
@@ -132,6 +133,7 @@ class _PlanMembersPageState extends ConsumerState<PlanMembersPage> {
     return Scaffold(
       appBar: OmniAppBar(
         title: 'Thành viên',
+        fallbackBack: () => context.go('/plans/${widget.planId}'),
         actions: [
           PlanSaveAction(saving: _saving, onPressed: _dirty ? _save : null),
         ],
@@ -187,18 +189,41 @@ class _PlanMembersPageState extends ConsumerState<PlanMembersPage> {
     );
   }
 
-  /// Vai là chữ phụ kèm ›, riêng Chủ không có › (không đổi được ở đây).
+  /// Vai hiển thị dưới tên (hoặc nhãn mềm cho Chủ) để tên 3–4 chữ không bị
+  /// cắt cụt sớm; riêng Chủ không có › (không đổi được ở đây).
   Widget _memberRow({
     required String name,
     required PlanRole role,
     String? avatarUrl,
     VoidCallback? onTap,
   }) {
+    final scheme = Theme.of(context).colorScheme;
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    final isOwner = role == PlanRole.owner;
+
     final row = OmniGroupRow(
       leading: OmniAvatar(name: name, imageUrl: avatarUrl, size: 36),
       title: name,
-      maxTitleLines: 1,
-      value: planRoleLabel(role),
+      maxTitleLines: 2,
+      subtitle: isOwner ? null : planRoleLabel(role),
+      trailing: isOwner
+          ? DecoratedBox(
+              decoration: BoxDecoration(
+                color: scheme.primary.withValues(alpha: dark ? .18 : .10),
+                borderRadius: OmniRadius.pillAll,
+              ),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
+                child: Text(
+                  planRoleLabel(role),
+                  style: OmniType.micro.copyWith(
+                    fontWeight: FontWeight.w600,
+                    color: scheme.primary,
+                  ),
+                ),
+              ),
+            )
+          : null,
       onTap: onTap,
     );
     if (onTap == null) return row;
@@ -235,9 +260,19 @@ class _RoleSheet extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return OmniSheetBody(
-      header: OmniSheetHeader(title: name),
+      header: OmniSheetHeader(
+        title: name,
+        subtitle: 'Chọn quyền truy cập trong kế hoạch',
+        trailing: OmniGlassCircle(
+          child: IconButton(
+            tooltip: 'Đóng',
+            onPressed: () => Navigator.of(context).maybePop(),
+            icon: const Icon(Icons.close_rounded),
+          ),
+        ),
+      ),
       children: [
-        // Vai hiện tại trắng mờ và có ✓.
+        // Vai hiện tại có dấu ✓, tắt › để không hiện kép "✓ ›".
         OmniGroupSection(
           dividerIndent: 14,
           children: [
@@ -249,16 +284,18 @@ class _RoleSheet extends StatelessWidget {
               OmniGroupRow(
                 title: planRoleLabel(role),
                 selected: role == current,
+                chevron: false,
                 onTap: () => Navigator.of(context).pop(_SetRole(role)),
               ),
           ],
         ),
         OmniGroupSection(
-          dividerIndent: 14,
           children: [
             OmniGroupRow(
+              icon: Icons.person_remove_outlined,
               title: 'Gỡ khỏi kế hoạch',
               destructive: true,
+              chevron: false,
               onTap: () => Navigator.of(context).pop(const _Remove()),
             ),
           ],

@@ -101,6 +101,7 @@ class PlanTile extends StatelessWidget {
                               style: OmniType.micro.copyWith(
                                 fontWeight: FontWeight.w400,
                                 color: scheme.onSurfaceVariant,
+                                fontFeatures: OmniType.tabular,
                               ),
                             ),
                           ],
@@ -122,6 +123,7 @@ class PlanTile extends StatelessWidget {
                           style: OmniType.micro.copyWith(
                             fontWeight: FontWeight.w600,
                             color: tones.highPriority.foreground,
+                            fontFeatures: OmniType.tabular,
                           ),
                         ),
                       ],
@@ -139,7 +141,7 @@ class PlanTile extends StatelessWidget {
                           child: InkWell(
                             key: Key('plan-favorite-${plan.id}'),
                             onTap: onToggleFavorite,
-                            borderRadius: BorderRadius.circular(6),
+                            borderRadius: OmniRadius.pillAll,
                             child: SizedBox.square(
                               dimension: 44,
                               child: Icon(

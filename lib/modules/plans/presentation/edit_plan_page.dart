@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../core/error/app_exception.dart';
 import '../../../design/components/components.dart';
@@ -27,7 +28,7 @@ class PlanSaveAction extends StatelessWidget {
     // Chữ màu chủ đạo trong viên kính của thanh trên — không nút tô đặc.
     onPressed: saving ? null : onPressed,
     style: TextButton.styleFrom(
-      minimumSize: const Size(0, 44),
+      minimumSize: const Size(44, 44),
       padding: const EdgeInsets.symmetric(horizontal: 16),
       shape: const StadiumBorder(),
       textStyle: OmniType.body.copyWith(fontWeight: FontWeight.w600),
@@ -165,12 +166,14 @@ class _EditPlanPageState extends ConsumerState<EditPlanPage> {
       _name.text = loaded.name;
       _description.text = loaded.description ?? '';
     }
+    final scheme = Theme.of(context).colorScheme;
     final patch = _patch();
     final canSave = !_saving && (patch != null || _coverChanged);
 
     return Scaffold(
       appBar: OmniAppBar(
         title: 'Sửa kế hoạch',
+        fallbackBack: () => context.go('/plans/${widget.planId}'),
         actions: [
           PlanSaveAction(saving: _saving, onPressed: canSave ? _save : null),
         ],
@@ -187,7 +190,7 @@ class _EditPlanPageState extends ConsumerState<EditPlanPage> {
                 16,
                 OmniGroupSection.gap,
                 16,
-                24,
+                OmniSpacing.bottomSafe,
               ),
               children: [
                 // Ảnh nền là khung xem trước, tên kế hoạch đè lên bằng viên
@@ -217,32 +220,77 @@ class _EditPlanPageState extends ConsumerState<EditPlanPage> {
                   dividerIndent: 14,
                   children: [
                     Padding(
-                      padding: const EdgeInsets.fromLTRB(14, 6, 14, 6),
-                      child: OmniField(
-                        label: 'Tên kế hoạch',
-                        child: TextField(
-                          controller: _name,
-                          maxLength: 255,
-                          textCapitalization: TextCapitalization.sentences,
-                          onChanged: (_) => setState(() {}),
-                        ),
+                      padding: const EdgeInsets.fromLTRB(14, 10, 14, 10),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            'Tên kế hoạch',
+                            style: OmniType.caption.copyWith(
+                              fontWeight: FontWeight.w600,
+                              color: scheme.onSurfaceVariant,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          TextField(
+                            controller: _name,
+                            maxLength: 255,
+                            textCapitalization: TextCapitalization.sentences,
+                            decoration: InputDecoration(
+                              hintText: 'Nhập tên kế hoạch…',
+                              isDense: true,
+                              filled: false,
+                              contentPadding: const EdgeInsets.symmetric(
+                                vertical: 4,
+                              ),
+                              border: InputBorder.none,
+                              enabledBorder: InputBorder.none,
+                              focusedBorder: InputBorder.none,
+                              counterText: _name.text.length > 204 ? null : '',
+                            ),
+                            onChanged: (_) => setState(() {}),
+                          ),
+                        ],
                       ),
                     ),
                     Padding(
-                      padding: const EdgeInsets.fromLTRB(14, 6, 14, 6),
-                      child: OmniField(
-                        label: 'Mô tả',
-                        child: TextField(
-                          controller: _description,
-                          minLines: 3,
-                          maxLines: 6,
-                          maxLength: 2000,
-                          textCapitalization: TextCapitalization.sentences,
-                          decoration: const InputDecoration(
-                            hintText: 'Kế hoạch này dùng để làm gì',
+                      padding: const EdgeInsets.fromLTRB(14, 10, 14, 10),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            'Mô tả',
+                            style: OmniType.caption.copyWith(
+                              fontWeight: FontWeight.w600,
+                              color: scheme.onSurfaceVariant,
+                            ),
                           ),
-                          onChanged: (_) => setState(() {}),
-                        ),
+                          const SizedBox(height: 4),
+                          TextField(
+                            controller: _description,
+                            minLines: 3,
+                            maxLines: 6,
+                            maxLength: 2000,
+                            textCapitalization: TextCapitalization.sentences,
+                            decoration: InputDecoration(
+                              hintText: 'Kế hoạch này dùng để làm gì',
+                              isDense: true,
+                              filled: false,
+                              contentPadding: const EdgeInsets.symmetric(
+                                vertical: 4,
+                              ),
+                              border: InputBorder.none,
+                              enabledBorder: InputBorder.none,
+                              focusedBorder: InputBorder.none,
+                              counterText: _description.text.length > 1600
+                                  ? null
+                                  : '',
+                            ),
+                            onChanged: (_) => setState(() {}),
+                          ),
+                        ],
                       ),
                     ),
                   ],

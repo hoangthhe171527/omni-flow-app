@@ -9,7 +9,6 @@ import '../../core/nav/tab_order.dart';
 import '../../design/components/components.dart';
 import '../../design/platform/omni_motion_scope.dart';
 import '../../design/tokens/tokens.dart';
-import 'directory_page.dart' show hueOfArea;
 
 /// Mở màn "Sửa menu": người dùng tự chọn tối đa [maxTabs] tính năng cho thanh
 /// dưới. Mở từ nút viền ở "Tất cả" hoặc nhấn giữ thanh dưới — thanh dưới không
@@ -34,7 +33,7 @@ String _groupOf(NavArea area) => switch (area) {
   NavArea.account => 'Cá nhân',
 };
 
-/// Nội dung màn "Sửa menu" (`menu-tuy-chon-uiux.html`, đã duyệt 06/11).
+/// Nội dung màn "Sửa menu" (`01-shell-finance-settings.html` #1).
 ///
 /// Đổi là áp ngay và tự lưu; "Xong" chỉ đóng tấm. Luôn còn ít nhất một mục —
 /// một thanh chỉ có "Tất cả" là thanh hỏng.
@@ -72,125 +71,118 @@ class TabBarEditor extends ConsumerWidget {
     return SafeArea(
       top: false,
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(
-              OmniSpacing.lg,
-              OmniSpacing.md,
-              OmniSpacing.lg,
-              OmniSpacing.md,
-            ),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Semantics(
-                    header: true,
-                    child: Text(
-                      'Thanh menu',
-                      style: OmniType.title.copyWith(color: scheme.onSurface),
-                    ),
-                  ),
-                ),
-                _OutlineButton(
-                  label: 'Xong',
-                  onPressed: () => Navigator.of(context).maybePop(),
-                ),
-              ],
+          OmniSheetHeader(
+            title: 'Thanh menu',
+            trailing: _DonePill(
+              label: 'Xong',
+              onPressed: () => Navigator.of(context).maybePop(),
             ),
           ),
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: OmniSpacing.lg),
+            padding: const EdgeInsets.fromLTRB(10, 0, 10, 8),
             child: _BarPreview(tabs: tabs),
           ),
           Expanded(
             child: CustomScrollView(
               slivers: [
                 SliverPadding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: OmniSpacing.lg,
-                  ),
+                  padding: const EdgeInsets.symmetric(horizontal: 10),
                   sliver: SliverToBoxAdapter(
-                    child: _SectionLabel(
-                      'Trên thanh',
+                    child: _GroupTitle(
+                      'Trên thanh · kéo để đổi chỗ',
                       trailing: '${routes.length}/$maxTabs',
                       trailingStrong: full,
                     ),
                   ),
                 ),
                 SliverPadding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: OmniSpacing.lg,
-                  ),
-                  sliver: SliverReorderableList(
-                    itemCount: tabs.length,
-                    proxyDecorator: (child, _, _) => Material(
+                  padding: const EdgeInsets.symmetric(horizontal: 10),
+                  sliver: SliverToBoxAdapter(
+                    child: Material(
                       color: scheme.surface,
-                      elevation: 6,
-                      borderRadius: OmniRadius.lgAll,
-                      child: child,
+                      borderRadius: BorderRadius.circular(18),
+                      clipBehavior: Clip.antiAlias,
+                      child: ReorderableListView.builder(
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        buildDefaultDragHandles: false,
+                        itemCount: tabs.length,
+                        proxyDecorator: (child, _, _) => Material(
+                          color: scheme.surface,
+                          elevation: 6,
+                          borderRadius: BorderRadius.circular(14),
+                          child: child,
+                        ),
+                        onReorderItem: move,
+                        itemBuilder: (context, i) {
+                          final entry = tabs[i];
+                          return _SelectedRow(
+                            key: ValueKey(entry.routeName),
+                            index: i,
+                            entry: entry,
+                            showDivider: i > 0,
+                            onRemove: tabs.length > 1
+                                ? () => save([...routes]..removeAt(i))
+                                : null,
+                            onUp: i > 0 ? () => move(i, i - 1) : null,
+                            onDown: i < tabs.length - 1
+                                ? () => move(i, i + 1)
+                                : null,
+                          );
+                        },
+                      ),
                     ),
-                    onReorderItem: move,
-                    itemBuilder: (context, i) {
-                      final entry = tabs[i];
-                      return _SelectedRow(
-                        key: ValueKey(entry.routeName),
-                        index: i,
-                        entry: entry,
-                        onRemove: tabs.length > 1
-                            ? () => save([...routes]..removeAt(i))
-                            : null,
-                        onUp: i > 0 ? () => move(i, i - 1) : null,
-                        onDown: i < tabs.length - 1
-                            ? () => move(i, i + 1)
-                            : null,
-                      );
-                    },
                   ),
                 ),
                 for (final MapEntry(key: label, value: entries)
                     in groups.entries)
                   SliverPadding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: OmniSpacing.lg,
+                    padding: const EdgeInsets.fromLTRB(
+                      10,
+                      OmniGroupSection.sheetGap,
+                      10,
+                      0,
                     ),
-                    sliver: SliverList.list(
-                      children: [
-                        _SectionLabel(label),
-                        for (final e in entries)
-                          _AvailableRow(
-                            entry: e,
-                            onAdd: full
-                                ? null
-                                : () => save([...routes, e.routeName]),
-                          ),
-                      ],
+                    sliver: SliverToBoxAdapter(
+                      child: OmniGroupSection(
+                        title: label,
+                        dividerIndent: 54,
+                        children: [
+                          for (final e in entries)
+                            _AvailableRow(
+                              entry: e,
+                              onAdd: full
+                                  ? null
+                                  : () => save([...routes, e.routeName]),
+                            ),
+                        ],
+                      ),
                     ),
                   ),
                 const SliverToBoxAdapter(
-                  child: SizedBox(height: OmniSpacing.lg),
+                  child: SizedBox(height: OmniSpacing.md),
                 ),
               ],
             ),
           ),
-          DecoratedBox(
-            decoration: BoxDecoration(
-              border: Border(top: BorderSide(color: scheme.outlineVariant)),
-            ),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(vertical: OmniSpacing.xs),
-              child: Center(
-                child: TextButton(
-                  style: TextButton.styleFrom(
-                    foregroundColor: scheme.onSurfaceVariant,
-                  ),
-                  onPressed: customised
-                      ? () {
-                          HapticFeedback.selectionClick();
-                          ref.read(tabPinsProvider.notifier).reset();
-                        }
-                      : null,
-                  child: const Text('Về mặc định'),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(10, 6, 10, 10),
+            child: Center(
+              child: OutlinedButton.icon(
+                style: OutlinedButton.styleFrom(
+                  minimumSize: const Size(0, 40),
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
                 ),
+                onPressed: customised
+                    ? () {
+                        HapticFeedback.selectionClick();
+                        ref.read(tabPinsProvider.notifier).reset();
+                      }
+                    : null,
+                icon: const Icon(Icons.restart_alt_rounded, size: 16),
+                label: const Text('Về mặc định'),
               ),
             ),
           ),
@@ -200,9 +192,9 @@ class TabBarEditor extends ConsumerWidget {
   }
 }
 
-/// Nút viền màu chính, không tô đặc (gu đã duyệt); cao 36, vùng chạm 48.
-class _OutlineButton extends StatelessWidget {
-  const _OutlineButton({required this.label, required this.onPressed});
+/// Viên thuốc kính 'Xong' ở đầu sheet.
+class _DonePill extends StatelessWidget {
+  const _DonePill({required this.label, required this.onPressed});
 
   final String label;
   final VoidCallback onPressed;
@@ -211,22 +203,35 @@ class _OutlineButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final primary = Theme.of(context).colorScheme.primary;
 
-    return OutlinedButton(
-      onPressed: onPressed,
-      style: OutlinedButton.styleFrom(
-        foregroundColor: primary,
-        minimumSize: const Size(0, 36),
-        padding: const EdgeInsets.symmetric(horizontal: OmniSpacing.lg),
-        shape: const StadiumBorder(),
-        tapTargetSize: MaterialTapTargetSize.padded,
-        textStyle: OmniType.bodyStrong,
+    return InkWell(
+      onTap: () {
+        HapticFeedback.selectionClick();
+        onPressed();
+      },
+      borderRadius: OmniRadius.pillAll,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
+        child: Center(
+          child: DecoratedBox(
+            decoration: OmniGlass.buttonDecoration(context),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+              child: Text(
+                label,
+                style: OmniType.caption.copyWith(
+                  fontWeight: FontWeight.w600,
+                  color: primary,
+                ),
+              ),
+            ),
+          ),
+        ),
       ),
-      child: Text(label),
     );
   }
 }
 
-/// Ảnh thu nhỏ của thanh dưới: 4 ô + "Tất cả" cố định; ô trống viền đứt.
+/// Ảnh thu nhỏ của thanh kính nổi dưới đáy: 4 ô + "Tất cả" cố định; ô trống viền đứt.
 class _BarPreview extends StatelessWidget {
   const _BarPreview({required this.tabs});
 
@@ -236,73 +241,96 @@ class _BarPreview extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
 
-    Widget slot({IconData? icon, String? label, bool fixed = false}) {
-      final color = fixed ? scheme.onSurfaceVariant : scheme.primary;
+    Widget slot({
+      IconData? icon,
+      String? label,
+      bool active = false,
+      bool fixed = false,
+    }) {
+      final fg = active
+          ? scheme.primary
+          : fixed
+          ? scheme.onSurfaceVariant
+          : scheme.onSurface;
       return Expanded(
         child: AnimatedSwitcher(
           duration: OmniMotion.of(context).base,
-          child: Column(
+          child: Container(
             key: ValueKey(label),
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              if (icon != null)
-                Icon(icon, size: 20, color: color)
-              else
-                OmniDashedBox(
-                  radius: OmniRadius.lg,
-                  color: scheme.outline,
-                  child: SizedBox.square(
-                    dimension: 28,
-                    child: Icon(
-                      Icons.add_rounded,
-                      size: 16,
-                      color: scheme.onSurfaceVariant,
+            margin: const EdgeInsets.symmetric(horizontal: 2),
+            padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 2),
+            decoration: active
+                ? BoxDecoration(
+                    color: OmniGlass.selectionOf(context),
+                    borderRadius: OmniRadius.pillAll,
+                  )
+                : null,
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                if (icon != null)
+                  Icon(icon, size: 19, color: fg)
+                else
+                  OmniDashedBox(
+                    radius: OmniRadius.lg,
+                    color: scheme.outline,
+                    child: SizedBox.square(
+                      dimension: 26,
+                      child: Icon(
+                        Icons.add_rounded,
+                        size: 15,
+                        color: scheme.onSurfaceVariant,
+                      ),
                     ),
                   ),
-                ),
-              if (label != null) ...[
-                const SizedBox(height: 2),
-                Text(
-                  label,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: OmniType.micro.copyWith(
-                    color: fixed ? scheme.onSurfaceVariant : scheme.onSurface,
-                    fontWeight: FontWeight.w500,
+                if (label != null) ...[
+                  const SizedBox(height: 2),
+                  Text(
+                    label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: OmniType.micro.copyWith(
+                      color: fg,
+                      fontWeight: active ? FontWeight.w600 : FontWeight.w500,
+                    ),
                   ),
-                ),
+                ],
               ],
-            ],
+            ),
           ),
         ),
       );
     }
 
     return ExcludeSemantics(
-      child: Container(
-        height: 62,
-        decoration: BoxDecoration(
-          color: Theme.of(context).scaffoldBackgroundColor,
-          borderRadius: OmniRadius.xxlAll,
-          border: Border.all(color: scheme.outlineVariant),
-        ),
-        child: Row(
-          children: [
-            for (var i = 0; i < maxTabs; i++)
-              if (i < tabs.length)
-                slot(icon: tabs[i].icon, label: tabs[i].label)
-              else
-                slot(),
-            slot(icon: Icons.grid_view_outlined, label: 'Tất cả', fixed: true),
-          ],
+      child: OmniGlass(
+        radius: OmniRadius.pill,
+        blur: false,
+        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 5),
+        child: SizedBox(
+          height: 52,
+          child: Row(
+            children: [
+              for (var i = 0; i < maxTabs; i++)
+                if (i < tabs.length)
+                  slot(icon: tabs[i].icon, label: tabs[i].label, active: i == 0)
+                else
+                  slot(),
+              slot(
+                icon: Icons.grid_view_outlined,
+                label: 'Tất cả',
+                fixed: true,
+              ),
+            ],
+          ),
         ),
       ),
     );
   }
 }
 
-class _SectionLabel extends StatelessWidget {
-  const _SectionLabel(this.label, {this.trailing, this.trailingStrong = false});
+class _GroupTitle extends StatelessWidget {
+  const _GroupTitle(this.label, {this.trailing, this.trailingStrong = false});
 
   final String label;
   final String? trailing;
@@ -311,21 +339,23 @@ class _SectionLabel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final style = OmniType.overline.copyWith(color: scheme.onSurfaceVariant);
+    final style = OmniType.caption.copyWith(
+      fontWeight: FontWeight.w600,
+      color: scheme.onSurfaceVariant,
+    );
 
     return Padding(
-      padding: const EdgeInsets.fromLTRB(4, 20, 4, 6),
+      padding: const EdgeInsets.fromLTRB(8, 4, 8, 6),
       child: Semantics(
         header: true,
         child: Row(
           children: [
-            Expanded(child: Text(label.toUpperCase(), style: style)),
+            Expanded(child: Text(label, style: style)),
             if (trailing != null)
               Text(
                 trailing!,
                 style: style.copyWith(
-                  letterSpacing: 0,
-                  fontFeatures: const [FontFeature.tabularFigures()],
+                  fontFeatures: OmniType.tabular,
                   color: trailingStrong ? scheme.primary : null,
                 ),
               ),
@@ -336,28 +366,7 @@ class _SectionLabel extends StatelessWidget {
   }
 }
 
-class _FeatureIcon extends StatelessWidget {
-  const _FeatureIcon({required this.entry});
-
-  final ModuleNavEntry entry;
-
-  @override
-  Widget build(BuildContext context) {
-    final tone = OmniFeatureTones.of(context, hueOfArea(entry.area));
-
-    return Container(
-      width: 36,
-      height: 36,
-      decoration: BoxDecoration(
-        color: tone.background,
-        borderRadius: OmniRadius.xlAll,
-      ),
-      child: Icon(entry.icon, size: 19, color: tone.foreground),
-    );
-  }
-}
-
-/// Nút tròn viền 32 (vùng chạm 48): "+" màu chính, "−" xám.
+/// Nút tròn một tông 26px trong vùng chạm IconButton 44dp: "+" màu chính, "−" đỏ dịu.
 class _RoundButton extends StatelessWidget {
   const _RoundButton({
     required this.icon,
@@ -374,23 +383,23 @@ class _RoundButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final color = primary ? scheme.primary : scheme.onSurfaceVariant;
-    final border = primary ? scheme.primary : scheme.outline;
+    final danger = OmniColors.dangerTextOf(context);
+    final fg = primary ? scheme.primary : danger;
+    final bg = fg.withValues(alpha: 0.12);
     final enabled = onPressed != null;
 
     return IconButton(
       tooltip: tooltip,
+      constraints: const BoxConstraints.tightFor(width: 44, height: 44),
+      padding: EdgeInsets.zero,
       onPressed: onPressed,
       icon: Opacity(
         opacity: enabled ? 1 : 0.32,
         child: Container(
-          width: 32,
-          height: 32,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            border: Border.all(color: border, width: 1.5),
-          ),
-          child: Icon(icon, size: 20, color: color),
+          width: 26,
+          height: 26,
+          decoration: BoxDecoration(shape: BoxShape.circle, color: bg),
+          child: Icon(icon, size: 16, color: fg),
         ),
       ),
     );
@@ -402,6 +411,7 @@ class _SelectedRow extends StatelessWidget {
     super.key,
     required this.index,
     required this.entry,
+    required this.showDivider,
     required this.onRemove,
     required this.onUp,
     required this.onDown,
@@ -409,6 +419,7 @@ class _SelectedRow extends StatelessWidget {
 
   final int index;
   final ModuleNavEntry entry;
+  final bool showDivider;
   final VoidCallback? onRemove;
   final VoidCallback? onUp;
   final VoidCallback? onDown;
@@ -423,48 +434,63 @@ class _SelectedRow extends StatelessWidget {
         const CustomSemanticsAction(label: 'Lên'): ?onUp,
         const CustomSemanticsAction(label: 'Xuống'): ?onDown,
       },
-      child: SizedBox(
-        height: 56,
-        child: Row(
-          children: [
-            ReorderableDragStartListener(
-              index: index,
-              child: Tooltip(
-                message: 'Kéo để đổi vị trí',
-                child: SizedBox(
-                  width: 36,
-                  height: 48,
-                  child: Icon(
-                    Icons.drag_indicator_rounded,
-                    color: scheme.onSurfaceVariant,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (showDivider)
+            Divider(
+              height: 1,
+              thickness: 1,
+              indent: 54,
+              color: scheme.outlineVariant.withValues(alpha: .7),
+            ),
+          ConstrainedBox(
+            constraints: const BoxConstraints(minHeight: 50),
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(14, 4, 6, 4),
+              child: Row(
+                children: [
+                  OmniIconTile(entry.icon),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: ExcludeSemantics(
+                      child: Text(
+                        entry.label,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: OmniType.body.copyWith(
+                          fontWeight: FontWeight.w500,
+                          color: scheme.onSurface,
+                        ),
+                      ),
+                    ),
                   ),
-                ),
+                  _RoundButton(
+                    icon: Icons.remove_rounded,
+                    tooltip: 'Bỏ ${entry.label} khỏi thanh menu',
+                    primary: false,
+                    onPressed: onRemove,
+                  ),
+                  ReorderableDragStartListener(
+                    index: index,
+                    child: Tooltip(
+                      message: 'Kéo để đổi vị trí',
+                      child: SizedBox(
+                        width: 36,
+                        height: 44,
+                        child: Icon(
+                          Icons.drag_handle_rounded,
+                          size: 20,
+                          color: scheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
-            const SizedBox(width: 4),
-            _FeatureIcon(entry: entry),
-            const SizedBox(width: OmniSpacing.md),
-            Expanded(
-              child: ExcludeSemantics(
-                child: Text(
-                  entry.label,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: OmniType.body.copyWith(
-                    fontWeight: FontWeight.w500,
-                    color: scheme.onSurface,
-                  ),
-                ),
-              ),
-            ),
-            _RoundButton(
-              icon: Icons.remove_rounded,
-              tooltip: 'Bỏ ${entry.label} khỏi thanh menu',
-              primary: false,
-              onPressed: onRemove,
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -481,50 +507,54 @@ class _AvailableRow extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     final enabled = onAdd != null;
 
-    return SizedBox(
-      height: 60,
-      child: Row(
-        children: [
-          Opacity(
-            opacity: enabled ? 1 : 0.45,
-            child: _FeatureIcon(entry: entry),
-          ),
-          const SizedBox(width: OmniSpacing.md),
-          Expanded(
-            child: Opacity(
-              opacity: enabled ? 1 : 0.45,
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    entry.label,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: OmniType.body.copyWith(
-                      fontWeight: FontWeight.w500,
-                      color: scheme.onSurface,
-                    ),
-                  ),
-                  if (entry.subtitle case final sub?)
+    return ConstrainedBox(
+      constraints: const BoxConstraints(minHeight: 50),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(14, 6, 6, 6),
+        child: Row(
+          children: [
+            Opacity(
+              opacity: enabled ? 1 : 0.48,
+              child: OmniIconTile(entry.icon),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Opacity(
+                opacity: enabled ? 1 : 0.52,
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
                     Text(
-                      sub,
-                      maxLines: 1,
+                      entry.label,
+                      maxLines: 2,
                       overflow: TextOverflow.ellipsis,
-                      style: OmniType.caption.copyWith(
-                        color: scheme.onSurfaceVariant,
+                      style: OmniType.body.copyWith(
+                        fontWeight: FontWeight.w500,
+                        color: scheme.onSurface,
                       ),
                     ),
-                ],
+                    if (entry.subtitle case final sub?)
+                      Text(
+                        sub,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: OmniType.caption.copyWith(
+                          color: scheme.onSurfaceVariant,
+                        ),
+                      ),
+                  ],
+                ),
               ),
             ),
-          ),
-          _RoundButton(
-            icon: Icons.add_rounded,
-            tooltip: 'Thêm ${entry.label} vào thanh menu',
-            onPressed: onAdd,
-          ),
-        ],
+            _RoundButton(
+              icon: Icons.add_rounded,
+              tooltip: 'Thêm ${entry.label} vào thanh menu',
+              onPressed: onAdd,
+            ),
+          ],
+        ),
       ),
     );
   }

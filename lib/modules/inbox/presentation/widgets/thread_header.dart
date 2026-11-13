@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../../design/components/components.dart';
 import '../../../../design/platform/omni_platform.dart';
 import '../../../../design/tokens/tokens.dart';
 import '../../domain/conversation.dart';
+import '../../inbox_routes.dart';
 
 /// Header gọn của hội thoại: ‹, avatar 30, tên + dòng nguồn, nút Thông tin.
 ///
@@ -81,7 +83,6 @@ class ThreadHeader extends StatelessWidget implements PreferredSizeWidget {
 
   Widget _buildRow(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final canPop = Navigator.of(context).canPop();
     final muted = OmniColors.byBrightness(
       context,
       OmniColors.mutedForeground,
@@ -91,16 +92,21 @@ class ThreadHeader extends StatelessWidget implements PreferredSizeWidget {
 
     return Row(
       children: [
-        if (canPop) ...[
-          OmniTopBarAction(
-            icon: isApple(context)
-                ? Icons.arrow_back_ios_new_rounded
-                : Icons.arrow_back_rounded,
-            tooltip: 'Quay lại',
-            onPressed: () => Navigator.of(context).maybePop(),
-          ),
-          const SizedBox(width: 8),
-        ],
+        OmniTopBarAction(
+          icon: isApple(context)
+              ? Icons.arrow_back_ios_new_rounded
+              : Icons.arrow_back_rounded,
+          tooltip: 'Quay lại',
+          onPressed: () {
+            final nav = Navigator.of(context);
+            if (nav.canPop()) {
+              nav.maybePop();
+            } else {
+              GoRouter.maybeOf(context)?.go(InboxRoutes.listPath);
+            }
+          },
+        ),
+        const SizedBox(width: 8),
         if (c != null)
           Expanded(
             child: OmniGlass(

@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 
 import '../../../../design/components/omni_avatar.dart';
 import '../../../../design/components/omni_tabs.dart';
-import '../../../../design/components/omni_status_chip.dart';
 import '../../../../design/tokens/tokens.dart';
 import '../../domain/task.dart';
 import 'due_chip.dart';
@@ -96,12 +95,37 @@ class TaskCard extends StatelessWidget {
                   ),
                   const SizedBox(height: OmniSpacing.xs),
                 ],
-                Text.rich(
-                  _highlighted(task.title, highlight, context),
-                  style: OmniType.section.copyWith(color: scheme.onSurface),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                ),
+                if (task.isPinned)
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.only(top: 4, right: 6),
+                        child: Icon(
+                          Icons.push_pin_rounded,
+                          size: 13,
+                          color: scheme.onSurfaceVariant,
+                        ),
+                      ),
+                      Expanded(
+                        child: Text.rich(
+                          _highlighted(task.title, highlight, context),
+                          style: OmniType.section.copyWith(
+                            color: scheme.onSurface,
+                          ),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  )
+                else
+                  Text.rich(
+                    _highlighted(task.title, highlight, context),
+                    style: OmniType.section.copyWith(color: scheme.onSurface),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
                 // Công đoạn ĐANG MỞ đầu tiên và ai làm — câu quản đốc hỏi khi
                 // lướt bảng ("cây này tới đâu rồi, ai đang cầm"). Bản trước thẻ
                 // chỉ có tên đàn + thanh tiến độ, và người dùng nói "không
@@ -155,10 +179,8 @@ class TaskCard extends StatelessWidget {
                           // Chỉ "Cao" mới đáng một chip: mọi thẻ đều "Bình
                           // thường" thì chữ đó không phân biệt được gì.
                           if (task.priority == 'high')
-                            OmniBadge(
-                              label:
-                                  'Ưu tiên ${priorityLabel(task.priority).toLowerCase()}',
-                              tone: OmniTone.warning,
+                            TaskPillChip.high(
+                              'Ưu tiên ${priorityLabel(task.priority).toLowerCase()}',
                             ),
                           if (!task.hasSubtasks) ...counts,
                         ],

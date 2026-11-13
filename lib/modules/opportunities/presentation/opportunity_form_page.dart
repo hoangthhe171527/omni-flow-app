@@ -176,7 +176,11 @@ class _OpportunityFormPageState extends ConsumerState<OpportunityFormPage> {
       final data = existing.valueOrNull;
       if (data == null) {
         return Scaffold(
-          appBar: OmniAppBar(title: 'Sửa cơ hội', close: true),
+          appBar: OmniAppBar(
+            title: 'Sửa cơ hội',
+            close: true,
+            fallbackBack: () => context.go('/opportunities'),
+          ),
           body: OmniAsyncView(value: existing, data: (_) => const SizedBox()),
         );
       }
@@ -187,6 +191,7 @@ class _OpportunityFormPageState extends ConsumerState<OpportunityFormPage> {
       appBar: OmniAppBar(
         title: widget.isEdit ? 'Sửa cơ hội' : 'Cơ hội mới',
         close: true,
+        fallbackBack: () => context.go('/opportunities'),
       ),
       body: Form(
         key: _formKey,

@@ -116,6 +116,9 @@ class _ThreadPageState extends ConsumerState<ThreadPage>
     super.initState();
     _scrollController.addListener(_onScroll);
     WidgetsBinding.instance.addObserver(this);
+    _realtime.setState(
+      ref.read(realtimeStatusProvider).valueOrNull ?? RealtimeStatus.disabled,
+    );
     _startRealtimeFallback();
     final query = widget.initialQuery?.trim() ?? '';
     if (query.length >= 2) {
@@ -309,14 +312,12 @@ class _ThreadPageState extends ConsumerState<ThreadPage>
       if (state != null) _pruneMessageKeys(state);
     });
 
-    final status =
-        ref.watch(realtimeStatusProvider).valueOrNull ??
-        RealtimeStatus.disabled;
-    if (_realtime.setState(status)) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) _startRealtimeFallback();
-      });
-    }
+    ref.listen<AsyncValue<RealtimeStatus>>(realtimeStatusProvider, (_, next) {
+      final status = next.valueOrNull ?? RealtimeStatus.disabled;
+      if (_realtime.setState(status) && mounted) {
+        _startRealtimeFallback();
+      }
+    });
 
     final conversation = ref.watch(conversationProvider(widget.conversationId));
     final thread = ref.watch(threadProvider(widget.conversationId));
@@ -1041,29 +1042,29 @@ class _NoComposerBar extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
 
-    return Container(
-      width: double.infinity,
-      padding: EdgeInsets.fromLTRB(
-        OmniSpacing.lg,
-        OmniSpacing.md,
-        OmniSpacing.lg,
-        OmniSpacing.md + MediaQuery.paddingOf(context).bottom,
-      ),
-      decoration: BoxDecoration(
-        color: scheme.surfaceContainerHighest,
-        border: Border(top: BorderSide(color: scheme.outline)),
-      ),
-      child: Row(
-        children: [
-          Icon(icon, size: OmniIconSize.sm, color: scheme.onSurfaceVariant),
-          const SizedBox(width: OmniSpacing.sm),
-          Expanded(
-            child: Text(
-              text,
-              style: OmniType.caption.copyWith(color: scheme.onSurfaceVariant),
-            ),
+    return SafeArea(
+      top: false,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(12, 4, 12, 8),
+        child: OmniGlass(
+          radius: 24,
+          blur: false,
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          child: Row(
+            children: [
+              Icon(icon, size: OmniIconSize.sm, color: scheme.onSurfaceVariant),
+              const SizedBox(width: OmniSpacing.sm),
+              Expanded(
+                child: Text(
+                  text,
+                  style: OmniType.caption.copyWith(
+                    color: scheme.onSurfaceVariant,
+                  ),
+                ),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }

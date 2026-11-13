@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../design/components/components.dart';
 import '../../../design/tokens/tokens.dart';
@@ -61,7 +62,10 @@ class _PlanReportPageState extends ConsumerState<PlanReportPage> {
     final plan = ref.watch(planProvider(widget.planId));
 
     return Scaffold(
-      appBar: OmniAppBar(title: 'Báo cáo kế hoạch'),
+      appBar: OmniAppBar(
+        title: 'Báo cáo kế hoạch',
+        fallbackBack: () => context.go('/plans/${widget.planId}'),
+      ),
       body: OmniAsyncView(
         value: plan,
         onRetry: () => ref.invalidate(planProvider(widget.planId)),
@@ -152,30 +156,41 @@ class _StatsBlock extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final dark = Theme.of(context).brightness == Brightness.dark;
     final danger = OmniTaskTones.of(context).highPriority.foreground;
+    final pct = (plan.progress * 100).round();
+    final progressRatio = plan.progress.clamp(0.0, 1.0);
+
     final cells = [
-      ('plan-report-total', 'Tổng việc', '${plan.taskCount}', null),
-      ('plan-report-done', 'Xong', '${plan.doneCount}', null),
+      (
+        'plan-report-total',
+        Icons.assignment_outlined,
+        'Tổng việc',
+        '${plan.taskCount}',
+        null,
+      ),
+      (
+        'plan-report-done',
+        Icons.task_alt_rounded,
+        'Xong',
+        '${plan.doneCount}',
+        null,
+      ),
       (
         'plan-report-overdue',
+        Icons.schedule_rounded,
         'Trễ hạn',
         '${plan.overdueCount}',
         plan.overdueCount > 0 ? danger : null,
       ),
-      (
-        'plan-report-progress',
-        'Tiến độ',
-        '${(plan.progress * 100).round()}%',
-        null,
-      ),
     ];
 
     return OmniGroupSection(
-      dividerIndent: 14,
       children: [
-        for (final (key, label, value, color) in cells)
+        for (final (key, icon, label, value, color) in cells)
           OmniGroupRow(
             key: Key(key),
+            leading: OmniIconTile(icon, color: color),
             title: label,
             semanticsLabel: '$label: $value',
             trailing: Text(
@@ -186,6 +201,43 @@ class _StatsBlock extends StatelessWidget {
               ),
             ),
           ),
+        OmniGroupRow(
+          key: const Key('plan-report-progress'),
+          icon: Icons.donut_large_rounded,
+          title: 'Tiến độ',
+          semanticsLabel: 'Tiến độ: $pct%',
+          trailing: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              SizedBox(
+                width: 56,
+                height: 6,
+                child: ClipRRect(
+                  borderRadius: OmniRadius.pillAll,
+                  child: ColoredBox(
+                    color: scheme.onSurface.withValues(alpha: dark ? .14 : .08),
+                    child: Align(
+                      alignment: Alignment.centerLeft,
+                      child: FractionallySizedBox(
+                        widthFactor: progressRatio,
+                        heightFactor: 1,
+                        child: ColoredBox(color: scheme.primary),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Text(
+                '$pct%',
+                style: OmniType.bodyStrong.copyWith(
+                  color: scheme.onSurface,
+                  fontFeatures: OmniType.tabular,
+                ),
+              ),
+            ],
+          ),
+        ),
       ],
     );
   }

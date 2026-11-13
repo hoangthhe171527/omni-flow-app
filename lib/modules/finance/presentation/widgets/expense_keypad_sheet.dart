@@ -247,27 +247,24 @@ class _ExpenseKeypadSheetState extends State<_ExpenseKeypadSheet> {
           mainAxisSize: MainAxisSize.min,
           children: [
             if (showAccountPicker) ...[
-              const SizedBox(width: 8),
+              const SizedBox(width: 6),
               InkWell(
                 key: _srcBtnKey,
                 onTap: _openSourceMenu,
                 borderRadius: BorderRadius.circular(99),
                 child: Container(
-                  height: 28,
-                  padding: const EdgeInsets.symmetric(horizontal: 10),
-                  decoration: BoxDecoration(
-                    color: p.control,
-                    borderRadius: BorderRadius.circular(99),
-                  ),
+                  height: 36,
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  decoration: OmniGlass.buttonDecoration(context, radius: 99),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Icon(
                         Icons.account_balance_wallet_outlined,
-                        size: 13,
-                        color: p.ink2,
+                        size: 15,
+                        color: p.primary,
                       ),
-                      const SizedBox(width: 5),
+                      const SizedBox(width: 6),
                       Text(
                         _accountName ?? 'Chọn nguồn',
                         style: OmniType.caption.copyWith(
@@ -278,7 +275,7 @@ class _ExpenseKeypadSheetState extends State<_ExpenseKeypadSheet> {
                       const SizedBox(width: 3),
                       Icon(
                         Icons.keyboard_arrow_down_rounded,
-                        size: 14,
+                        size: 16,
                         color: p.muted,
                       ),
                     ],
@@ -286,18 +283,21 @@ class _ExpenseKeypadSheetState extends State<_ExpenseKeypadSheet> {
                 ),
               ),
             ],
-            const SizedBox(width: 8),
-            InkWell(
-              onTap: () => Navigator.of(context).pop(),
-              borderRadius: BorderRadius.circular(99),
-              child: Container(
-                width: 30,
-                height: 30,
-                decoration: BoxDecoration(
-                  color: p.control,
-                  shape: BoxShape.circle,
+            const SizedBox(width: 6),
+            OmniGlassCircle(
+              child: IconButton(
+                tooltip: 'Đóng',
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints.tightFor(
+                  width: 44,
+                  height: 44,
                 ),
-                child: Icon(Icons.close_rounded, size: 16, color: p.ink2),
+                icon: Icon(
+                  Icons.close_rounded,
+                  size: OmniIconSize.md,
+                  color: p.ink,
+                ),
+                onPressed: () => Navigator.of(context).pop(),
               ),
             ),
           ],
@@ -307,113 +307,107 @@ class _ExpenseKeypadSheetState extends State<_ExpenseKeypadSheet> {
         Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // Display card: pad-disp
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 11),
-              margin: const EdgeInsets.only(bottom: 8),
-              decoration: BoxDecoration(
-                color: p.card,
-                borderRadius: BorderRadius.circular(18),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  SizedBox(
-                    height: 17,
-                    child: _hasOp
-                        ? FittedBox(
-                            fit: BoxFit.scaleDown,
-                            alignment: Alignment.centerRight,
-                            child: Text(
-                              '${_prettyExpr(_expr)} =',
-                              maxLines: 1,
-                              style: OmniType.caption.copyWith(
-                                color: p.muted,
-                                fontFeatures: const [
-                                  FontFeature.tabularFigures(),
-                                ],
-                              ),
-                            ),
-                          )
-                        : null,
+            // Display card trong OmniGroupSection bo 18, không FittedBox co nhỏ số tiền
+            OmniGroupSection(
+              children: [
+                Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 12,
                   ),
-                  const SizedBox(height: 1),
-                  Align(
-                    alignment: Alignment.centerRight,
-                    child: FittedBox(
-                      fit: BoxFit.scaleDown,
-                      alignment: Alignment.centerRight,
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        crossAxisAlignment: CrossAxisAlignment.baseline,
-                        textBaseline: TextBaseline.alphabetic,
-                        children: [
-                          AnimatedContainer(
-                            duration: const Duration(milliseconds: 120),
-                            padding: _fresh
-                                ? const EdgeInsets.symmetric(
-                                    horizontal: 7,
-                                    vertical: 1,
-                                  )
-                                : EdgeInsets.zero,
-                            decoration: BoxDecoration(
-                              color: _fresh
-                                  ? p.primarySoft
-                                  : Colors.transparent,
-                              borderRadius: BorderRadius.circular(7),
-                            ),
-                            child: Text(
-                              FinanceMonthUtils.formatNumber(val),
-                              maxLines: 1,
-                              style: OmniType.moneyHero.copyWith(
-                                color: _fresh ? p.primaryInk : p.ink,
-                                fontWeight: FontWeight.w600,
-                                fontFeatures: const [
-                                  FontFeature.tabularFigures(),
-                                ],
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 4),
-                          Text(
-                            'đ',
-                            style: OmniType.section.copyWith(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (_hasOp) ...[
+                        SingleChildScrollView(
+                          scrollDirection: Axis.horizontal,
+                          reverse: true,
+                          child: Text(
+                            '${_prettyExpr(_expr)} =',
+                            maxLines: 1,
+                            softWrap: false,
+                            style: OmniType.caption.copyWith(
                               color: p.muted,
-                              fontWeight: FontWeight.w600,
+                              fontFeatures: const [
+                                FontFeature.tabularFigures(),
+                              ],
                             ),
                           ),
-                        ],
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 3),
-                  SizedBox(
-                    height: 16,
-                    child: hintText.isNotEmpty
-                        ? FittedBox(
-                            fit: BoxFit.scaleDown,
-                            alignment: Alignment.centerRight,
-                            child: Text(
-                              hintText,
-                              maxLines: 1,
-                              style: OmniType.micro.copyWith(
-                                color: hintDanger ? p.danger : p.muted,
-                                fontWeight: hintDanger
-                                    ? FontWeight.w600
-                                    : FontWeight.w500,
+                        ),
+                        const SizedBox(height: 2),
+                      ],
+                      SingleChildScrollView(
+                        scrollDirection: Axis.horizontal,
+                        reverse: true,
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.baseline,
+                          textBaseline: TextBaseline.alphabetic,
+                          children: [
+                            AnimatedContainer(
+                              duration: const Duration(milliseconds: 120),
+                              padding: _fresh
+                                  ? const EdgeInsets.symmetric(
+                                      horizontal: 8,
+                                      vertical: 2,
+                                    )
+                                  : EdgeInsets.zero,
+                              decoration: BoxDecoration(
+                                color: _fresh
+                                    ? p.primarySoft
+                                    : Colors.transparent,
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: Text(
+                                FinanceMonthUtils.formatNumber(val),
+                                maxLines: 1,
+                                softWrap: false,
+                                style: OmniType.moneyHero.copyWith(
+                                  color: _fresh ? p.primary : p.ink,
+                                  fontWeight: FontWeight.w600,
+                                  fontFeatures: const [
+                                    FontFeature.tabularFigures(),
+                                  ],
+                                ),
                               ),
                             ),
-                          )
-                        : null,
+                            const SizedBox(width: 4),
+                            Text(
+                              'đ',
+                              style: OmniType.section.copyWith(
+                                color: p.muted,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      if (hintText.isNotEmpty) ...[
+                        const SizedBox(height: 4),
+                        Text(
+                          hintText,
+                          maxLines: 2,
+                          textAlign: TextAlign.right,
+                          style: OmniType.micro.copyWith(
+                            color: hintDanger ? p.danger : p.muted,
+                            fontWeight: hintDanger
+                                ? FontWeight.w600
+                                : FontWeight.w500,
+                            fontFeatures: const [FontFeature.tabularFigures()],
+                          ),
+                        ),
+                      ],
+                    ],
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
+            const SizedBox(height: 10),
             // Suggestion chips: pad-chips
             if (widget.chips.isNotEmpty)
               Padding(
-                padding: const EdgeInsets.only(bottom: 8),
+                padding: const EdgeInsets.only(bottom: 10),
                 // Xuống hàng thay vì cuộn ngang: số tiền gợi ý không bị cắt.
                 child: Wrap(
                   spacing: 6,
@@ -424,17 +418,17 @@ class _ExpenseKeypadSheetState extends State<_ExpenseKeypadSheet> {
                   ],
                 ),
               ),
-            // 4x4 keys grid
+            // 4x4 keys grid (52dp Thumb-Zone, bo 16, khe 8)
             Column(
               children: [
                 Row(
                   children: [
                     _buildKey(p, label: '1', keyVal: '1'),
-                    const SizedBox(width: 7),
+                    const SizedBox(width: 8),
                     _buildKey(p, label: '2', keyVal: '2'),
-                    const SizedBox(width: 7),
+                    const SizedBox(width: 8),
                     _buildKey(p, label: '3', keyVal: '3'),
-                    const SizedBox(width: 7),
+                    const SizedBox(width: 8),
                     _buildKey(
                       p,
                       label: '⌫',
@@ -443,15 +437,15 @@ class _ExpenseKeypadSheetState extends State<_ExpenseKeypadSheet> {
                     ),
                   ],
                 ),
-                const SizedBox(height: 7),
+                const SizedBox(height: 8),
                 Row(
                   children: [
                     _buildKey(p, label: '4', keyVal: '4'),
-                    const SizedBox(width: 7),
+                    const SizedBox(width: 8),
                     _buildKey(p, label: '5', keyVal: '5'),
-                    const SizedBox(width: 7),
+                    const SizedBox(width: 8),
                     _buildKey(p, label: '6', keyVal: '6'),
-                    const SizedBox(width: 7),
+                    const SizedBox(width: 8),
                     _buildKey(
                       p,
                       label: '+',
@@ -460,15 +454,15 @@ class _ExpenseKeypadSheetState extends State<_ExpenseKeypadSheet> {
                     ),
                   ],
                 ),
-                const SizedBox(height: 7),
+                const SizedBox(height: 8),
                 Row(
                   children: [
                     _buildKey(p, label: '7', keyVal: '7'),
-                    const SizedBox(width: 7),
+                    const SizedBox(width: 8),
                     _buildKey(p, label: '8', keyVal: '8'),
-                    const SizedBox(width: 7),
+                    const SizedBox(width: 8),
                     _buildKey(p, label: '9', keyVal: '9'),
-                    const SizedBox(width: 7),
+                    const SizedBox(width: 8),
                     _buildKey(
                       p,
                       label: '−',
@@ -477,7 +471,7 @@ class _ExpenseKeypadSheetState extends State<_ExpenseKeypadSheet> {
                     ),
                   ],
                 ),
-                const SizedBox(height: 7),
+                const SizedBox(height: 8),
                 Row(
                   children: [
                     _buildKey(
@@ -486,16 +480,16 @@ class _ExpenseKeypadSheetState extends State<_ExpenseKeypadSheet> {
                       keyVal: '000',
                       tone: _KeyTone.subKey,
                     ),
-                    const SizedBox(width: 7),
+                    const SizedBox(width: 8),
                     _buildKey(p, label: '0', keyVal: '0'),
-                    const SizedBox(width: 7),
+                    const SizedBox(width: 8),
                     _buildKey(
                       p,
                       label: 'C',
                       keyVal: 'c',
                       tone: _KeyTone.subKey,
                     ),
-                    const SizedBox(width: 7),
+                    const SizedBox(width: 8),
                     _buildKey(
                       p,
                       label: 'Xong',
@@ -568,22 +562,21 @@ class _ExpenseKeypadSheetState extends State<_ExpenseKeypadSheet> {
       ),
     };
 
-    // "Xong" là nút kính chữ màu chính (không tô đặc); các phím còn lại là
-    // ô phẳng không viền.
+    // "Xong" là nút kính chữ màu chính Viomni (#0159DB); các phím còn lại bo 16, cao 52dp.
     final ok = tone == _KeyTone.okKey;
 
     return Expanded(
       child: Material(
         color: bgColor,
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(16),
         child: InkWell(
           onTap: () => _onKey(keyVal),
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: BorderRadius.circular(16),
           child: Container(
-            height: 48,
+            height: 52,
             alignment: Alignment.center,
             decoration: ok
-                ? OmniGlass.buttonDecoration(context, radius: 14)
+                ? OmniGlass.buttonDecoration(context, radius: 16)
                 : null,
             child: Text(label, style: textStyle),
           ),

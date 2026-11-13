@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../core/error/app_exception.dart';
 import '../../../design/components/components.dart';
@@ -28,6 +29,7 @@ class PlanFilesPage extends ConsumerWidget {
   final bool canDelete;
 
   static const _gap = 8.0;
+  static const _cardPad = 12.0;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -35,7 +37,10 @@ class PlanFilesPage extends ConsumerWidget {
     final scheme = Theme.of(context).colorScheme;
 
     return Scaffold(
-      appBar: OmniAppBar(title: 'Tệp đính kèm'),
+      appBar: OmniAppBar(
+        title: 'Tệp đính kèm',
+        fallbackBack: () => context.go('/plans/$planId'),
+      ),
       body: OmniAsyncView(
         value: tasks,
         onRetry: () => ref.invalidate(planTasksProvider(planId)),
@@ -54,7 +59,10 @@ class PlanFilesPage extends ConsumerWidget {
 
           return LayoutBuilder(
             builder: (context, box) {
-              final tile = ((box.maxWidth - 2 * OmniSpacing.lg - 2 * _gap) / 3)
+              final innerWidth =
+                  box.maxWidth - 2 * OmniSpacing.lg - 2 * _cardPad;
+              final tile = ((innerWidth - 2 * _gap - 1) / 3)
+                  .floorToDouble()
                   .clamp(44.0, 160.0);
 
               return ListView(
@@ -77,42 +85,62 @@ class PlanFilesPage extends ConsumerWidget {
                         ),
                       ),
                     ),
-                  Wrap(
-                    spacing: _gap,
-                    runSpacing: OmniSpacing.md,
-                    children: [
-                      for (final entry in files)
-                        SizedBox(
-                          key: ValueKey('plan-file-${entry.file.id}'),
-                          width: tile,
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              AttachmentThumb(
-                                attachment: entry.file,
-                                size: tile,
-                                onLongPress: canDelete
-                                    ? () => _fileOptions(
-                                        context,
-                                        entry.task,
-                                        entry.file,
-                                      )
-                                    : null,
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(4, 0, 4, 8),
+                    child: Text(
+                      '${files.length} tệp từ các việc trong kế hoạch',
+                      style: OmniType.caption.copyWith(
+                        fontWeight: FontWeight.w600,
+                        color: scheme.onSurfaceVariant,
+                        fontFeatures: OmniType.tabular,
+                      ),
+                    ),
+                  ),
+                  DecoratedBox(
+                    decoration: BoxDecoration(
+                      color: scheme.surface,
+                      borderRadius: BorderRadius.circular(18),
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.all(_cardPad),
+                      child: Wrap(
+                        spacing: _gap,
+                        runSpacing: OmniSpacing.md,
+                        children: [
+                          for (final entry in files)
+                            SizedBox(
+                              key: ValueKey('plan-file-${entry.file.id}'),
+                              width: tile,
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  AttachmentThumb(
+                                    attachment: entry.file,
+                                    size: tile,
+                                    onLongPress: canDelete
+                                        ? () => _fileOptions(
+                                            context,
+                                            entry.task,
+                                            entry.file,
+                                          )
+                                        : null,
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    entry.task.title,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: OmniType.micro.copyWith(
+                                      fontWeight: FontWeight.w400,
+                                      color: scheme.onSurfaceVariant,
+                                    ),
+                                  ),
+                                ],
                               ),
-                              const SizedBox(height: 4),
-                              Text(
-                                entry.task.title,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: OmniType.micro.copyWith(
-                                  fontWeight: FontWeight.w400,
-                                  color: scheme.onSurfaceVariant,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                    ],
+                            ),
+                        ],
+                      ),
+                    ),
                   ),
                 ],
               );
@@ -131,15 +159,25 @@ class PlanFilesPage extends ConsumerWidget {
     final remove = await showOmniSheet<bool>(
       context: context,
       builder: (sheet) => OmniSheetBody(
-        header: OmniSheetHeader(title: file.name),
+        header: OmniSheetHeader(
+          title: file.name,
+          subtitle: task.title,
+          trailing: OmniGlassCircle(
+            child: IconButton(
+              tooltip: 'Đóng',
+              onPressed: () => Navigator.of(sheet).maybePop(),
+              icon: const Icon(Icons.close_rounded),
+            ),
+          ),
+        ),
         children: [
           OmniGroupSection(
-            dividerIndent: 14,
             children: [
               OmniGroupRow(
                 icon: Icons.delete_outline,
                 title: 'Xoá tệp',
                 destructive: true,
+                chevron: false,
                 onTap: () => Navigator.of(sheet).pop(true),
               ),
             ],

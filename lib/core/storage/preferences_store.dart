@@ -28,6 +28,18 @@ class PreferencesStore {
   Future<void> setBool(String key, bool value) => _prefs.setBool(key, value);
 
   Future<void> remove(String key) => _prefs.remove(key);
+
+  Set<String> getKeys() => _prefs.getKeys();
+
+  Future<void> removeByPrefixes(Iterable<String> prefixes) async {
+    final matching = _prefs
+        .getKeys()
+        .where((key) => prefixes.any(key.startsWith))
+        .toList();
+    for (final key in matching) {
+      await _prefs.remove(key);
+    }
+  }
 }
 
 final preferencesStoreProvider = Provider<PreferencesStore>((ref) {

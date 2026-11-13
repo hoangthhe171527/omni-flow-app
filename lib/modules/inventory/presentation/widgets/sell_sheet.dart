@@ -430,21 +430,23 @@ class _SellSheetState extends ConsumerState<SellSheet> {
             : widget.title,
         subtitle: count.isEmpty ? null : count,
       ),
-      footer: _alreadyHeld && perms.reserve
-          ? Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton(
-                    key: const ValueKey('inv-sell-release'),
-                    onPressed: _saving ? null : _release,
-                    child: const Text('Bỏ giữ'),
+      footer: OmniTintedButtons(
+        child: _alreadyHeld && perms.reserve
+            ? Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      key: const ValueKey('inv-sell-release'),
+                      onPressed: _saving ? null : _release,
+                      child: const Text('Bỏ giữ'),
+                    ),
                   ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(child: main),
-              ],
-            )
-          : main,
+                  const SizedBox(width: 10),
+                  Expanded(child: main),
+                ],
+              )
+            : main,
+      ),
       children: [
         if (_qty != null && widget.units.length > 1)
           OmniGroupSection(
@@ -675,12 +677,19 @@ class _SellSheetState extends ConsumerState<SellSheet> {
     final results = ref.watch(customerSearchProvider(_query.trim()));
     final q = _query.trim();
     return [
-      OmniSearchField(
-        key: const ValueKey('inv-sell-customer-search'),
-        hint: 'Tên hoặc SĐT khách',
-        flat: true,
-        dense: true,
-        onChanged: (v) => setState(() => _query = v),
+      OmniGlass(
+        blur: false,
+        radius: 22,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 6),
+          child: OmniSearchField(
+            key: const ValueKey('inv-sell-customer-search'),
+            hint: 'Tên hoặc SĐT khách',
+            flat: true,
+            dense: true,
+            onChanged: (v) => setState(() => _query = v),
+          ),
+        ),
       ),
       OmniGroupSection(
         children: [

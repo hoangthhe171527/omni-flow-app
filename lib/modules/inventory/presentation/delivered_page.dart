@@ -1,12 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../core/nav/shell_bar_inset.dart';
+import '../../../core/nav/shell_tab_routes.dart';
 import '../../../design/components/components.dart';
 import '../../../design/tokens/tokens.dart';
 import '../application/inventory_providers.dart';
 import '../domain/inventory_format.dart';
 import '../domain/inventory_models.dart';
+import '../routes.dart';
 import 'widgets/inventory_ui.dart';
 import 'widgets/unit_sheet.dart';
 
@@ -21,29 +24,34 @@ class DeliveredPage extends ConsumerStatefulWidget {
   ConsumerState<DeliveredPage> createState() => _DeliveredPageState();
 }
 
-const _page = 50;
-
 class _DeliveredPageState extends ConsumerState<DeliveredPage> {
   String _q = '';
-  int _limit = _page;
 
   /// Trang đã hiện gần nhất — giữ trong lúc tải thêm / tìm (không nháy).
-  UnitPage? _last;
+  StockState? _last;
 
   @override
   Widget build(BuildContext context) {
     final perms = ref.watch(inventoryPermsProvider);
+    final subPage = !ShellTabRoutes.reachable(
+      context,
+      InventoryRoutes.delivered,
+    );
+    void back() => GoRouter.maybeOf(context)?.go(InventoryRoutes.stockPath);
     if (!perms.delivered) {
-      return const Scaffold(
-        appBar: OmniAppBar(title: 'Hàng đã giao'),
-        body: OmniEmptyState(
+      return Scaffold(
+        appBar: OmniAppBar(
+          title: 'Hàng đã giao',
+          showAccount: !subPage,
+          fallbackBack: subPage ? back : null,
+        ),
+        body: const OmniEmptyState(
           icon: Icons.lock_outline_rounded,
           title: 'Chưa có hàng đã giao',
         ),
       );
     }
-    final query = (q: _q, limit: _limit);
-    final res = ref.watch(deliveredProvider(query));
+    final res = ref.watch(deliveredProvider(_q));
     // Đang tải trang lớn hơn: giữ danh sách cũ, không nháy khung chờ.
     if (res.hasValue) _last = res.value;
     final page = res.valueOrNull ?? (res.hasError ? null : _last);
@@ -54,7 +62,7 @@ class _DeliveredPageState extends ConsumerState<DeliveredPage> {
         AsyncValue(:final error?) when page == null => [
           OmniErrorView(
             error: InvUi.error(error),
-            onRetry: () => ref.invalidate(deliveredProvider(query)),
+            onRetry: () => ref.invalidate(deliveredProvider(_q)),
           ),
         ],
         _ when page == null => [const InvSkeleton(count: 5, height: 64)],
@@ -84,13 +92,16 @@ class _DeliveredPageState extends ConsumerState<DeliveredPage> {
                   onTap: () =>
                       openUnitSheet(context, unit: u, onChanged: (_) {}),
                 ),
-              if (page.items.length < page.total)
+              if (page.hasMore)
                 OmniGroupRow(
                   key: const ValueKey('inv-delivered-more'),
-                  title: 'Xem thêm',
+                  title: page.loadingMore ? 'Đang tải...' : 'Xem thêm',
                   accent: true,
                   chevron: false,
-                  onTap: () => setState(() => _limit += _page),
+                  onTap: page.loadingMore
+                      ? null
+                      : () =>
+                            ref.read(deliveredProvider(_q).notifier).loadMore(),
                 ),
             ],
           ),
@@ -101,21 +112,22 @@ class _DeliveredPageState extends ConsumerState<DeliveredPage> {
     return Scaffold(
       appBar: OmniAppBar(
         title: 'Hàng đã giao',
+        showAccount: !subPage,
+        fallbackBack: subPage ? back : null,
         bottom: InvSearchBottom(
           fieldKey: const ValueKey('inv-delivered-search'),
           hint: 'Serial, model',
           onChanged: (v) => setState(() {
             _q = v;
-            _limit = _page;
           }),
         ),
       ),
       body: RefreshIndicator(
         onRefresh: () async {
-          ref.invalidate(deliveredProvider(query));
+          ref.invalidate(deliveredProvider(_q));
           await ref
-              .read(deliveredProvider(query).future)
-              .catchError((_) => const UnitPage(items: [], total: 0));
+              .read(deliveredProvider(_q).future)
+              .catchError((_) => const StockState(items: [], total: 0));
         },
         child: ListView(
           key: const ValueKey('inv-delivered-scroll'),
@@ -195,6 +207,12 @@ class DeliveredUnitRow extends StatelessWidget {
                       ? OmniColors.warningTextOf(context)
                       : null,
                 ),
+                const SizedBox(width: 6),
+                Icon(
+                  Icons.chevron_right_rounded,
+                  size: 18,
+                  color: OmniTaskTones.of(context).chevron,
+                ),
               ],
             ),
           ),
@@ -204,33 +222,42 @@ class DeliveredUnitRow extends StatelessWidget {
   }
 }
 
-/// Ô tìm 44 dưới thanh tiêu đề (như Tồn kho).
+/// Ô tìm viên kính 44 dưới thanh tiêu đề (như Tồn kho).
 class InvSearchBottom extends StatelessWidget implements PreferredSizeWidget {
   const InvSearchBottom({
     super.key,
     required this.hint,
     required this.onChanged,
     this.fieldKey,
+    this.debounce = const Duration(milliseconds: 350),
   });
 
   final String hint;
   final ValueChanged<String> onChanged;
   final Key? fieldKey;
+  final Duration debounce;
 
   @override
   Size get preferredSize => const Size.fromHeight(44);
 
   @override
   Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.symmetric(horizontal: 6),
-    child: SizedBox(
-      height: 44,
-      child: OmniSearchField(
-        key: fieldKey,
-        hint: hint,
-        flat: true,
-        dense: true,
-        onChanged: onChanged,
+    padding: const EdgeInsets.only(right: 4),
+    child: OmniGlass(
+      radius: 22,
+      child: SizedBox(
+        height: 44,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 6),
+          child: OmniSearchField(
+            key: fieldKey,
+            hint: hint,
+            debounce: debounce,
+            flat: true,
+            dense: true,
+            onChanged: onChanged,
+          ),
+        ),
       ),
     ),
   );

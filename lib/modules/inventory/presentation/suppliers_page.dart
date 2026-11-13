@@ -3,6 +3,8 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/nav/shell_bar_inset.dart';
+import '../../../core/nav/shell_tab_routes.dart';
 import '../../../design/components/components.dart';
 import '../../../design/tokens/tokens.dart';
 import '../application/inventory_providers.dart';
@@ -29,10 +31,18 @@ class _SuppliersPageState extends ConsumerState<SuppliersPage> {
   @override
   Widget build(BuildContext context) {
     final perms = ref.watch(inventoryPermsProvider);
-    final bottom = MediaQuery.viewPaddingOf(context).bottom + 24;
+    final bottom = ShellBarInset.coveredBottom(context) + 24;
+    final subPage = !ShellTabRoutes.reachable(
+      context,
+      InventoryRoutes.suppliers,
+    );
     return Scaffold(
       appBar: OmniAppBar(
         title: 'Nhà cung cấp',
+        showAccount: !subPage,
+        fallbackBack: subPage
+            ? () => GoRouter.maybeOf(context)?.go(InventoryRoutes.lotsPath)
+            : null,
         bottom: perms.suppliers
             ? _SearchBottom(onChanged: (v) => setState(() => _q = v))
             : null,
@@ -191,10 +201,13 @@ class SupplierDetailPage extends ConsumerWidget {
     final perms = ref.watch(inventoryPermsProvider);
     final async = ref.watch(supplierProvider(supplierId));
     final s = async.valueOrNull;
-    final bottom = MediaQuery.viewPaddingOf(context).bottom + 24;
+    final bottom = ShellBarInset.coveredBottom(context) + 24;
     return Scaffold(
       appBar: OmniAppBar(
         title: s?.code ?? 'Nhà cung cấp',
+        showAccount: false,
+        fallbackBack: () =>
+            GoRouter.maybeOf(context)?.go(InventoryRoutes.suppliersPath),
         actions: [
           if (s != null && perms.editSuppliers)
             IconButton(
@@ -380,15 +393,21 @@ class _SearchBottom extends StatelessWidget implements PreferredSizeWidget {
 
   @override
   Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.symmetric(horizontal: 6),
-    child: SizedBox(
-      height: 44,
-      child: OmniSearchField(
-        key: const ValueKey('inv-sup-search'),
-        hint: 'Tìm mã, tên',
-        flat: true,
-        dense: true,
-        onChanged: onChanged,
+    padding: const EdgeInsets.only(right: 4),
+    child: OmniGlass(
+      radius: 22,
+      child: SizedBox(
+        height: 44,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 6),
+          child: OmniSearchField(
+            key: const ValueKey('inv-sup-search'),
+            hint: 'Tìm mã, tên',
+            flat: true,
+            dense: true,
+            onChanged: onChanged,
+          ),
+        ),
       ),
     ),
   );

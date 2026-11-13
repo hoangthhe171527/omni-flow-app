@@ -31,7 +31,11 @@ class CustomerFormPage extends ConsumerWidget {
       initial = existing.valueOrNull;
       if (initial == null) {
         return Scaffold(
-          appBar: OmniAppBar(title: 'Sửa khách hàng', close: true),
+          appBar: OmniAppBar(
+            title: 'Sửa khách hàng',
+            close: true,
+            fallbackBack: () => context.go('/customers'),
+          ),
           body: OmniAsyncView(value: existing, data: (_) => const SizedBox()),
         );
       }
@@ -41,6 +45,7 @@ class CustomerFormPage extends ConsumerWidget {
       appBar: OmniAppBar(
         title: isEdit ? 'Sửa khách hàng' : 'Thêm khách hàng',
         close: true,
+        fallbackBack: () => context.go('/customers'),
       ),
       body: CustomerFormEditor(
         key: ValueKey(customerId ?? 'new-customer'),
@@ -607,7 +612,7 @@ class _DuplicateNotice extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(14, 4, 4, 4),
       decoration: BoxDecoration(
         color: background,
-        borderRadius: OmniRadius.mdAll,
+        borderRadius: BorderRadius.circular(14),
       ),
       child: Row(
         children: [

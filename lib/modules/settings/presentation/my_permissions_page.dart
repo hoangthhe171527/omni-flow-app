@@ -22,13 +22,14 @@ class MyPermissionsPage extends ConsumerWidget {
     final session = ref.watch(sessionProvider);
     final held = session.policy.slugs;
     final scheme = Theme.of(context).colorScheme;
+    final dark = Theme.of(context).brightness == Brightness.dark;
 
     // Nền xám; thẻ đầu là nhóm tóm tắt (tên, vai trò, số quyền), rồi mỗi
-    // module một nhóm lồng. Tick một tông, quyền không có: vòng gạch xám.
+    // module một nhóm lồng cách nhau 12px. Ô icon 28×28 một tông chuẩn 54px.
     return Scaffold(
       appBar: const OmniAppBar(title: 'Quyền của tôi'),
       body: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 12, 16, OmniSpacing.xxl),
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, OmniSpacing.bottomSafe),
         children: [
           OmniGroupSection(
             dividerIndent: 14,
@@ -40,23 +41,24 @@ class MyPermissionsPage extends ConsumerWidget {
           ),
           for (final entry in declared.entries)
             if (entry.value.isNotEmpty) ...[
-              const SizedBox(height: OmniSpacing.lg),
+              const SizedBox(height: OmniGroupSection.gap),
               OmniGroupSection(
                 title: entry.key,
-                dividerIndent: 42,
                 children: [
                   for (final slug in entry.value)
                     OmniGroupRow(
                       title: permissionLabel(entry.key, slug),
                       maxTitleLines: 2,
-                      leading: Icon(
+                      leading: OmniIconTile(
                         held.contains(slug)
                             ? Icons.check_circle_rounded
                             : Icons.remove_circle_outline_rounded,
-                        size: OmniIconSize.md,
                         color: held.contains(slug)
                             ? scheme.primary
                             : scheme.onSurfaceVariant,
+                        background: held.contains(slug)
+                            ? scheme.primary.withValues(alpha: dark ? .16 : .10)
+                            : null,
                       ),
                     ),
                 ],

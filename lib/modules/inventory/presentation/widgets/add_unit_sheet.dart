@@ -195,24 +195,26 @@ class _AddUnitSheetState extends ConsumerState<AddUnitSheet> {
           if (_added > 0) 'vừa thêm $_added',
         ].join(' · '),
       ),
-      footer: Row(
-        children: [
-          Expanded(
-            child: OutlinedButton(
-              key: const ValueKey('inv-add-more'),
-              onPressed: ok ? () => _save(more: true) : null,
-              child: const Text('Thêm & nhập tiếp'),
+      footer: OmniTintedButtons(
+        child: Row(
+          children: [
+            Expanded(
+              child: OutlinedButton(
+                key: const ValueKey('inv-add-more'),
+                onPressed: ok ? () => _save(more: true) : null,
+                child: const Text('Thêm & nhập tiếp'),
+              ),
             ),
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: FilledButton(
-              key: const ValueKey('inv-add-one'),
-              onPressed: ok ? () => _save(more: false) : null,
-              child: const Text('Thêm'),
+            const SizedBox(width: 10),
+            Expanded(
+              child: FilledButton(
+                key: const ValueKey('inv-add-one'),
+                onPressed: ok ? () => _save(more: false) : null,
+                child: const Text('Thêm'),
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
       children: [
         OmniGroupSection(

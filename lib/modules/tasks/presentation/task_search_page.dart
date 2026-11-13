@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 import '../../../design/components/components.dart';
 import '../../../design/tokens/tokens.dart';
 import '../application/tasks_providers.dart';
+import '../domain/task.dart';
 import '../routes.dart';
 import 'widgets/task_card.dart';
 
@@ -77,17 +78,18 @@ class _TaskSearchPageState extends ConsumerState<TaskSearchPage> {
       // tiêu đề giữa; ô tìm trong viên kính ngay dưới.
       appBar: OmniAppBar(
         title: 'Tìm cây đàn',
+        fallbackBack: () => context.go('/tasks'),
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(44),
           child: OmniGlass(
             radius: 22,
-            child: Padding(
-              padding: const EdgeInsets.only(left: 6),
+            child: Center(
               child: TextField(
                 key: const Key('task-search-flat'),
                 controller: _controller,
                 autofocus: true,
                 textInputAction: TextInputAction.search,
+                textAlignVertical: TextAlignVertical.center,
                 onChanged: _onChanged,
                 // Enter là "tìm NGAY", không phải chờ hết quãng lặng: người đã bấm
                 // xong thì không có gì để chờ nữa.
@@ -104,7 +106,7 @@ class _TaskSearchPageState extends ConsumerState<TaskSearchPage> {
                   filled: false,
                   contentPadding: const EdgeInsets.symmetric(
                     horizontal: 4,
-                    vertical: 12,
+                    vertical: 10,
                   ),
                   border: InputBorder.none,
                   enabledBorder: InputBorder.none,
@@ -160,44 +162,74 @@ class _TaskSearchPageState extends ConsumerState<TaskSearchPage> {
                     'Thử một phần của số máy thay vì cả chuỗi — tìm theo đoạn '
                     'khớp, nên "4713" cũng ra.',
               ),
-              data: (list) => ListView.separated(
-                keyboardDismissBehavior:
-                    ScrollViewKeyboardDismissBehavior.onDrag,
-                padding: const EdgeInsets.fromLTRB(
-                  OmniSpacing.lg,
-                  OmniSpacing.xs,
-                  OmniSpacing.lg,
-                  OmniSpacing.bottomSafe,
-                ),
-                itemCount: list.length + 1,
-                separatorBuilder: (_, index) => SizedBox(
-                  height: index == 0 ? OmniSpacing.sm : OmniSpacing.md,
-                ),
-                itemBuilder: (context, i) {
-                  if (i == 0) {
-                    return Padding(
-                      padding: const EdgeInsets.fromLTRB(4, 10, 4, 0),
-                      child: Text(
-                        '${list.length} kết quả · tìm cả việc đã xong',
+              data: (list) {
+                final groups = _groupByPlan(list);
+                return ListView.separated(
+                  keyboardDismissBehavior:
+                      ScrollViewKeyboardDismissBehavior.onDrag,
+                  padding: const EdgeInsets.fromLTRB(
+                    OmniSpacing.lg,
+                    OmniSpacing.xs,
+                    OmniSpacing.lg,
+                    OmniSpacing.bottomSafe,
+                  ),
+                  itemCount: groups.length + 1,
+                  separatorBuilder: (_, index) => SizedBox(
+                    height: index == 0 ? OmniSpacing.sm : OmniGroupSection.gap,
+                  ),
+                  itemBuilder: (context, i) {
+                    if (i == 0) {
+                      return Padding(
+                        padding: const EdgeInsets.fromLTRB(4, 10, 4, 0),
+                        child: Text(
+                          '${list.length} kết quả · tìm cả việc đã xong',
+                          style: OmniType.caption.copyWith(
+                            fontWeight: FontWeight.w400,
+                            color: scheme.onSurfaceVariant,
+                          ),
+                        ),
+                      );
+                    }
+                    final group = groups[i - 1];
+                    return OmniGroupSection(
+                      title: group.title,
+                      trailingTitle: Text(
+                        '${group.tasks.length} việc',
                         style: OmniType.caption.copyWith(
-                          fontWeight: FontWeight.w400,
                           color: scheme.onSurfaceVariant,
+                          fontFeatures: OmniType.tabular,
                         ),
                       ),
+                      dividerIndent: 14,
+                      children: [
+                        for (final task in group.tasks)
+                          TaskCard(
+                            task: task,
+                            showPlanName: false,
+                            highlight: query,
+                            onTap: () => context.pushNamed(
+                              TaskRoutes.detail,
+                              pathParameters: {'id': task.id},
+                            ),
+                          ),
+                      ],
                     );
-                  }
-                  final task = list[i - 1];
-                  return TaskCard(
-                    task: task,
-                    highlight: query,
-                    onTap: () => context.pushNamed(
-                      TaskRoutes.detail,
-                      pathParameters: {'id': task.id},
-                    ),
-                  );
-                },
-              ),
+                  },
+                );
+              },
             ),
     );
+  }
+
+  List<({String title, List<Task> tasks})> _groupByPlan(List<Task> items) {
+    final map = <String, List<Task>>{};
+    for (final task in items) {
+      final raw = task.projectName?.trim();
+      final key = (raw != null && raw.isNotEmpty) ? raw : 'Việc chung';
+      map.putIfAbsent(key, () => []).add(task);
+    }
+    return [
+      for (final entry in map.entries) (title: entry.key, tasks: entry.value),
+    ];
   }
 }

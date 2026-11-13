@@ -99,6 +99,7 @@ class _Tile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    const radius = BorderRadius.all(Radius.circular(18));
 
     return Semantics(
       button: true,
@@ -107,7 +108,7 @@ class _Tile extends StatelessWidget {
       excludeSemantics: true,
       child: InkWell(
         onTap: onTap,
-        borderRadius: OmniRadius.lgAll,
+        borderRadius: radius,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -116,16 +117,16 @@ class _Tile extends StatelessWidget {
                 clipBehavior: Clip.antiAlias,
                 margin: const EdgeInsets.all(4),
                 decoration: BoxDecoration(
-                  borderRadius: OmniRadius.lgAll,
-                  border: selected
-                      ? null
-                      : Border.all(color: scheme.outlineVariant),
-                  // Vành trắng mờ (kính chọn), không khối màu đặc.
+                  borderRadius: radius,
+                  border: Border.all(
+                    color: selected ? scheme.primary : scheme.outlineVariant,
+                    width: selected ? 2 : 1,
+                  ),
                   boxShadow: selected
                       ? [
                           BoxShadow(
                             color: OmniGlass.selectionOf(context),
-                            spreadRadius: 4,
+                            spreadRadius: 3,
                           ),
                         ]
                       : null,
@@ -143,12 +144,12 @@ class _Tile extends StatelessWidget {
                           height: 24,
                           decoration: BoxDecoration(
                             shape: BoxShape.circle,
-                            color: Colors.white.withValues(alpha: .85),
+                            color: scheme.primary,
                           ),
                           child: Icon(
                             Icons.check_rounded,
-                            size: 16,
-                            color: scheme.primary,
+                            size: 15,
+                            color: scheme.onPrimary,
                           ),
                         ),
                       ),

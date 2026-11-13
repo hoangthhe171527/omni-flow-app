@@ -8,6 +8,7 @@ import 'dart:math' as math;
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 
+import '../../../../design/components/components.dart';
 import '../../../../design/tokens/tokens.dart';
 import '../../../../core/utils/media_url.dart';
 import '../../application/media_url_resolver.dart';
@@ -459,6 +460,9 @@ class _NetworkMediaImageState extends State<_NetworkMediaImage> {
       // ký mới. Nút "tải lại ảnh" bên dưới vẫn còn cho lỗi mạng thường.
       errorListener: _onLoadError,
       memCacheWidth: decodeWidth,
+      memCacheHeight: (MediaQuery.sizeOf(context).height * pixelRatio)
+          .round()
+          .clamp(480, 1440),
       maxWidthDiskCache: 1440,
       progressIndicatorBuilder: (_, _, progress) => ColoredBox(
         color: placeholder,
@@ -524,6 +528,7 @@ class _ImageViewerState extends State<_ImageViewer> {
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
     return Scaffold(
       key: const ValueKey('message-image-viewer'),
       backgroundColor: Colors.black,
@@ -557,36 +562,46 @@ class _ImageViewerState extends State<_ImageViewer> {
           ),
           SafeArea(
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(8, 6, 8, 0),
-              child: Row(
-                children: [
-                  IconButton(
-                    tooltip: 'Đóng',
-                    onPressed: () => Navigator.of(context).pop(),
-                    icon: const Icon(Icons.close_rounded),
-                    color: Colors.white,
-                    style: IconButton.styleFrom(
-                      backgroundColor: Colors.black.withValues(alpha: 0.34),
+              padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
+              child: SizedBox(
+                height: 44,
+                child: Row(
+                  children: [
+                    OmniGlassCircle(
+                      child: IconButton(
+                        tooltip: 'Đóng',
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints.tightFor(
+                          width: 44,
+                          height: 44,
+                        ),
+                        onPressed: () => Navigator.of(context).pop(),
+                        icon: Icon(
+                          Icons.close_rounded,
+                          size: OmniIconSize.md,
+                          color: scheme.onSurface,
+                        ),
+                      ),
                     ),
-                  ),
-                  const Spacer(),
-                  DecoratedBox(
-                    decoration: BoxDecoration(
-                      color: Colors.black.withValues(alpha: 0.42),
-                      borderRadius: BorderRadius.circular(999),
-                    ),
-                    child: Padding(
+                    const Spacer(),
+                    OmniGlass(
+                      blur: false,
+                      radius: 22,
                       padding: const EdgeInsets.symmetric(
-                        horizontal: 11,
-                        vertical: 7,
+                        horizontal: 14,
+                        vertical: 8,
                       ),
                       child: Text(
                         '${_index + 1} / ${widget.images.length}',
-                        style: OmniType.caption.copyWith(color: Colors.white),
+                        style: OmniType.caption.copyWith(
+                          fontWeight: FontWeight.w600,
+                          color: scheme.onSurface,
+                          fontFeatures: OmniType.tabular,
+                        ),
                       ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),

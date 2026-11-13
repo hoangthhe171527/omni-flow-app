@@ -256,7 +256,13 @@ void main() {
     await openMenu(t);
     await t.tap(find.text('Nhãn màu'));
     await t.pumpAndSettle();
-    expect(find.text('Xong'), findsOneWidget);
+    expect(
+      find.descendant(
+        of: find.bySemanticsLabel('Nhãn màu'),
+        matching: find.byTooltip('Đóng'),
+      ),
+      findsOneWidget,
+    );
   });
 }
 

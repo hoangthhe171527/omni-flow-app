@@ -105,7 +105,7 @@ class _FilesCardState extends ConsumerState<FilesCard> {
                         key: ValueKey('file-${file.id}'),
                         attachment: file,
                         size: FilesCard.tile,
-                        radius: 6,
+                        radius: 12,
                         onLongPress: widget.canAttach
                             ? () => _fileOptions(file)
                             : null,

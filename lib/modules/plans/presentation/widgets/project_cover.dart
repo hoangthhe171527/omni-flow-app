@@ -72,6 +72,11 @@ class ProjectCoverSurface extends StatelessWidget {
                           MediaQuery.devicePixelRatioOf(context))
                       .round()
                       .clamp(360, 1600),
+              memCacheHeight:
+                  (MediaQuery.sizeOf(context).height *
+                          MediaQuery.devicePixelRatioOf(context))
+                      .round()
+                      .clamp(240, 1200),
               fadeInDuration: const Duration(milliseconds: 180),
               errorWidget: (_, _, _) => const SizedBox.shrink(),
             ),
@@ -105,7 +110,13 @@ class ProjectCoverMarker extends StatelessWidget {
     final image = isProjectCoverImage(cover);
     return ClipRRect(
       key: markerKey,
-      borderRadius: BorderRadius.circular(size >= 24 ? 8 : 3),
+      borderRadius: BorderRadius.circular(
+        size >= 32
+            ? 12
+            : size >= 24
+            ? 10
+            : 4,
+      ),
       child: SizedBox.square(
         dimension: size,
         child: image
@@ -113,6 +124,9 @@ class ProjectCoverMarker extends StatelessWidget {
                 imageUrl: resolveMediaUrl(cover!),
                 fit: BoxFit.cover,
                 memCacheWidth: (size * MediaQuery.devicePixelRatioOf(context))
+                    .round()
+                    .clamp(24, 192),
+                memCacheHeight: (size * MediaQuery.devicePixelRatioOf(context))
                     .round()
                     .clamp(24, 192),
                 errorWidget: (_, _, _) => _fallback(),

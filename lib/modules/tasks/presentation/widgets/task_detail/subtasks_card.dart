@@ -77,12 +77,12 @@ class SubtasksCard extends ConsumerWidget {
           ],
         ),
         Padding(
-          padding: const EdgeInsets.fromLTRB(12, 0, 12, 4),
+          padding: const EdgeInsets.fromLTRB(12, 0, 12, 6),
           child: ClipRRect(
-            borderRadius: BorderRadius.circular(2),
+            borderRadius: BorderRadius.circular(999),
             child: Container(
               key: const ValueKey('subtask-progress-track'),
-              height: 4,
+              height: 5,
               color: OmniColors.trackOf(context),
               alignment: Alignment.centerLeft,
               child: TweenAnimationBuilder<double>(
@@ -98,7 +98,7 @@ class SubtasksCard extends ConsumerWidget {
                   child: DecoratedBox(
                     decoration: BoxDecoration(
                       color: scheme.primary,
-                      borderRadius: BorderRadius.circular(2),
+                      borderRadius: BorderRadius.circular(999),
                     ),
                   ),
                 ),

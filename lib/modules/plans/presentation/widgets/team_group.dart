@@ -78,7 +78,8 @@ class TeamGroup extends StatelessWidget {
   /// Thả dự án vào team này. null = team tổng hợp không nhận thả.
   final ValueChanged<Plan>? onMovePlan;
 
-  Widget _tile(Plan plan) {
+  Widget _tile(BuildContext context, Plan plan) {
+    final scheme = Theme.of(context).colorScheme;
     final canOpenActions =
         onLongPressPlan != null && (canLongPressPlan?.call(plan) ?? true);
     final tile = PlanTile(
@@ -101,23 +102,20 @@ class TeamGroup extends StatelessWidget {
       delay: const Duration(milliseconds: 400),
       onDragStarted: () => HapticFeedback.mediumImpact(),
       feedback: Material(
-        elevation: 8,
-        borderRadius: OmniRadius.mdAll,
+        elevation: 0,
+        borderRadius: BorderRadius.circular(18),
         color: Colors.transparent,
         child: Container(
           width: 240,
           height: 48,
           padding: const EdgeInsets.symmetric(horizontal: 12),
           decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: OmniRadius.mdAll,
-            boxShadow: const [
-              BoxShadow(
-                color: Color(0x29000000),
-                blurRadius: 18,
-                offset: Offset(0, 6),
-              ),
-            ],
+            color: scheme.surface,
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(
+              color: scheme.outlineVariant.withValues(alpha: .45),
+            ),
+            boxShadow: OmniShadows.dragging,
           ),
           child: Row(
             children: [
@@ -130,7 +128,7 @@ class TeamGroup extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                   style: OmniType.bodySm.copyWith(
                     fontWeight: FontWeight.w600,
-                    color: OmniColors.ink,
+                    color: scheme.onSurface,
                   ),
                 ),
               ),
@@ -158,7 +156,7 @@ class TeamGroup extends StatelessWidget {
         ? Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              for (final plan in plans) _tile(plan),
+              for (final plan in plans) _tile(context, plan),
               if (group.closedPlans.isNotEmpty)
                 _ClosedToggle(
                   count: group.closedPlans.length,
@@ -171,7 +169,7 @@ class TeamGroup extends StatelessWidget {
                         },
                 ),
               if (closedOpen)
-                for (final plan in closed) _tile(plan),
+                for (final plan in closed) _tile(context, plan),
               if (group.plans.isEmpty && group.closedPlans.isEmpty)
                 // Nói rõ là rỗng: một đầu nhóm không có gì bên dưới đọc như
                 // lỗi tải. Cũng là chỗ duy nhất team rỗng còn hiện để xoá.
@@ -245,6 +243,7 @@ class TeamGroup extends StatelessWidget {
                           '${group.plans.length} kế hoạch',
                           style: OmniType.micro.copyWith(
                             color: scheme.onSurfaceVariant,
+                            fontFeatures: OmniType.tabular,
                           ),
                         ),
                         const SizedBox(width: 10),

@@ -35,7 +35,9 @@ class FinancePalette {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
     final isDark = theme.brightness == Brightness.dark;
-    final status = isDark ? dark : light;
+    final (warnFg, warnBg) = OmniTone.warning.of(context);
+    final (okFg, okBg) = OmniTone.success.of(context);
+    final (errFg, errBg) = OmniTone.danger.of(context);
 
     return FinancePalette(
       isDark: isDark,
@@ -46,65 +48,69 @@ class FinancePalette {
       muted: scheme.onSurfaceVariant,
       line: scheme.outlineVariant,
       divider: scheme.outlineVariant.withValues(alpha: .7),
-      track: scheme.onSurface.withValues(alpha: isDark ? .12 : .07),
+      track: OmniColors.trackOf(context),
       control: scheme.onSurface.withValues(alpha: isDark ? .10 : .05),
-      selLine: scheme.primary.withValues(alpha: .35),
+      selLine: scheme.primary.withValues(alpha: .32),
       primary: scheme.primary,
       primarySoft: scheme.primary.withValues(alpha: isDark ? .18 : .10),
-      primaryInk: scheme.primary,
-      amber: status.amber,
-      amberSoft: status.amberSoft,
-      ok: status.ok,
-      okSoft: status.okSoft,
-      danger: status.danger,
-      dangerSoft: status.dangerSoft,
+      primaryInk: OmniColors.byBrightness(
+        context,
+        OmniColors.accentForeground,
+        OmniColors.darkAccentForeground,
+      ),
+      amber: warnFg,
+      amberSoft: warnBg,
+      ok: okFg,
+      okSoft: okBg,
+      danger: errFg,
+      dangerSoft: errBg,
     );
   }
 
   static const FinancePalette light = FinancePalette(
     isDark: false,
-    bg: Color(0xFFF2F3F7),
-    card: Color(0xFFFFFFFF),
-    ink: Color(0xFF0F172A),
-    ink2: Color(0xFF475569),
-    muted: Color(0xFF64748B),
-    line: Color(0xFFE5E7EB),
-    divider: Color(0xFFF1F5F9),
-    track: Color(0xFFEBEEF3),
-    control: Color(0xFFF1F5F9),
-    selLine: Color(0xFF94E2D8),
-    primary: Color(0xFF0A7D76),
-    primarySoft: Color(0xFFE6F4F2),
-    primaryInk: Color(0xFF065F5B),
-    amber: Color(0xFFB45309),
-    amberSoft: Color(0xFFFEF3C7),
-    ok: Color(0xFF15803D),
-    okSoft: Color(0xFFDCFCE7),
-    danger: Color(0xFFB91C1C),
-    dangerSoft: Color(0xFFFEE2E2),
+    bg: OmniColors.background,
+    card: OmniColors.card,
+    ink: OmniColors.ink,
+    ink2: OmniColors.secondaryForeground,
+    muted: OmniColors.mutedForeground,
+    line: OmniColors.border,
+    divider: OmniColors.divider,
+    track: OmniColors.muted,
+    control: OmniColors.muted,
+    selLine: OmniColors.controlBorder,
+    primary: OmniColors.primary,
+    primarySoft: OmniColors.accent,
+    primaryInk: OmniColors.accentForeground,
+    amber: OmniColors.warningText,
+    amberSoft: OmniColors.warningSoft,
+    ok: OmniColors.primary,
+    okSoft: OmniColors.accent,
+    danger: OmniColors.dangerText,
+    dangerSoft: OmniColors.dangerSoft,
   );
 
   static const FinancePalette dark = FinancePalette(
     isDark: true,
-    bg: Color(0xFF0B1120),
-    card: Color(0xFF131C2E),
-    ink: Color(0xFFF8FAFC),
-    ink2: Color(0xFFCBD5E1),
-    muted: Color(0xFF94A3B8),
-    line: Color(0xFF1E293B),
-    divider: Color(0xFF1A2438),
-    track: Color(0xFF1E293B),
-    control: Color(0xFF1E293B),
-    selLine: Color(0xFF134E4A),
-    primary: Color(0xFF14B8A6),
-    primarySoft: Color(0xFF0F2E2D),
-    primaryInk: Color(0xFF5EEAD4),
-    amber: Color(0xFFF59E0B),
-    amberSoft: Color(0xFF33240C),
-    ok: Color(0xFF22C55E),
-    okSoft: Color(0xFF0F2E1E),
-    danger: Color(0xFFF87171),
-    dangerSoft: Color(0xFF351519),
+    bg: OmniColors.darkBackground,
+    card: OmniColors.darkCard,
+    ink: OmniColors.darkForeground,
+    ink2: OmniColors.darkForeground,
+    muted: OmniColors.darkMutedForeground,
+    line: OmniColors.darkBorder,
+    divider: OmniColors.darkBorder,
+    track: OmniColors.darkMuted,
+    control: OmniColors.darkMuted,
+    selLine: OmniColors.darkBorderInteractive,
+    primary: OmniColors.darkPrimary,
+    primarySoft: OmniColors.darkAccent,
+    primaryInk: OmniColors.darkAccentForeground,
+    amber: OmniColors.warningTextDark,
+    amberSoft: OmniColors.darkWarningSoft,
+    ok: OmniColors.darkPrimary,
+    okSoft: OmniColors.darkAccent,
+    danger: OmniColors.dangerTextDark,
+    dangerSoft: OmniColors.darkMuted,
   );
 
   final bool isDark;
@@ -215,26 +221,23 @@ class _FinanceMenuRow<T> extends StatelessWidget {
       child: InkWell(
         onTap: () => Navigator.of(context).pop(item.value),
         child: Container(
-          constraints: const BoxConstraints(minHeight: 46),
+          constraints: const BoxConstraints(minHeight: 48),
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-          // Mục đang chọn: nền mờ nhẹ (trắng mờ trên kính) + ✓, không chữ màu.
+          // Mục đang chọn: nền mờ nhẹ (trắng mờ trên kính) + ✓, không chữ màu,
+          // một tông biểu tượng (không chấm màu cầu vồng).
           color: item.selected
               ? scheme.onSurface.withValues(alpha: p.isDark ? .10 : .05)
               : null,
           child: Row(
             children: [
-              if (item.dotColor != null) ...[
-                Container(
-                  width: 9,
-                  height: 9,
-                  decoration: BoxDecoration(
-                    color: item.dotColor,
-                    shape: BoxShape.circle,
-                  ),
+              if (item.icon != null) ...[
+                Icon(
+                  item.icon,
+                  size: OmniIconSize.md,
+                  color: item.destructive
+                      ? p.danger
+                      : scheme.onSurface.withValues(alpha: .78),
                 ),
-                const SizedBox(width: 10),
-              ] else if (item.icon != null) ...[
-                Icon(item.icon, size: 18, color: textColor),
                 const SizedBox(width: 10),
               ],
               Expanded(

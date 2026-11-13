@@ -73,6 +73,20 @@ class _DeleteAccountDialogState extends State<DeleteAccountDialog> {
             autofocus: true,
             decoration: InputDecoration(
               labelText: 'Mật khẩu hiện tại',
+              filled: true,
+              fillColor: scheme.surfaceContainerHighest.withValues(alpha: 0.55),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(14),
+                borderSide: BorderSide(color: scheme.outlineVariant),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(14),
+                borderSide: BorderSide(color: scheme.outlineVariant),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(14),
+                borderSide: BorderSide(color: scheme.primary, width: 1.5),
+              ),
               suffixIcon: IconButton(
                 // Nhãn nói cả trạng thái — xem login_page.dart.
                 tooltip: _obscure ? 'Hiện mật khẩu' : 'Ẩn mật khẩu',
@@ -92,7 +106,7 @@ class _DeleteAccountDialogState extends State<DeleteAccountDialog> {
             inMutuallyExclusiveGroup: false,
             child: InkWell(
               key: const Key('delete-account-confirm'),
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(14),
               onTap: () {
                 HapticFeedback.selectionClick();
                 setState(() => _confirmed = !_confirmed);

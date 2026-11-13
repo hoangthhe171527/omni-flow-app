@@ -1,3 +1,4 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -191,7 +192,7 @@ class _UnitPhotosSectionState extends ConsumerState<UnitPhotosSection> {
                         label: 'Thêm ảnh',
                         child: InkWell(
                           key: const ValueKey('inv-photo-add'),
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius: BorderRadius.circular(14),
                           onTap: _busy
                               ? null
                               : () {
@@ -207,7 +208,7 @@ class _UnitPhotosSectionState extends ConsumerState<UnitPhotosSection> {
                             width: side,
                             height: side,
                             child: OmniDashedBox(
-                              radius: 12,
+                              radius: 14,
                               strokeWidth: 1.2,
                               child: Center(
                                 child: _busy
@@ -269,7 +270,7 @@ class _PhotoTile extends StatelessWidget {
           ? 'Ảnh thợ chụp'
           : 'Ảnh kho',
       child: InkWell(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(14),
         onTap: onTap,
         child: SizedBox(
           width: side,
@@ -278,7 +279,7 @@ class _PhotoTile extends StatelessWidget {
             fit: StackFit.expand,
             children: [
               ClipRRect(
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(14),
                 child: InvPhoto(url: photo.url),
               ),
               if (badge != null)
@@ -305,10 +306,18 @@ class _PhotoTile extends StatelessWidget {
 
 /// Ảnh mạng có nền chờ và ô lỗi (không ném lỗi ra ngoài).
 class InvPhoto extends StatelessWidget {
-  const InvPhoto({super.key, required this.url, this.fit = BoxFit.cover});
+  const InvPhoto({
+    super.key,
+    required this.url,
+    this.fit = BoxFit.cover,
+    this.cacheWidth,
+    this.cacheHeight,
+  });
 
   final String url;
   final BoxFit fit;
+  final int? cacheWidth;
+  final int? cacheHeight;
 
   @override
   Widget build(BuildContext context) {
@@ -323,13 +332,32 @@ class InvPhoto extends StatelessWidget {
         ),
       ),
     );
-    if (url.isEmpty) return empty;
-    return Image.network(
-      url,
-      fit: fit,
-      gaplessPlayback: true,
-      errorBuilder: (_, _, _) => empty,
-      loadingBuilder: (_, child, progress) => progress == null ? child : empty,
+    if (url.trim().isEmpty) return empty;
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final dpr = MediaQuery.devicePixelRatioOf(context);
+        final screen = MediaQuery.sizeOf(context);
+        final rawW = constraints.hasBoundedWidth && constraints.maxWidth.isFinite
+            ? constraints.maxWidth
+            : screen.width;
+        final rawH =
+            constraints.hasBoundedHeight && constraints.maxHeight.isFinite
+                ? constraints.maxHeight
+                : screen.height;
+        final memW = cacheWidth ?? (rawW * dpr).round().clamp(48, 1440);
+        final memH = cacheHeight ?? (rawH * dpr).round().clamp(48, 1440);
+        return CachedNetworkImage(
+          imageUrl: url,
+          fit: fit,
+          memCacheWidth: memW,
+          memCacheHeight: memH,
+          fadeInDuration: OmniDuration.fast,
+          fadeOutDuration: Duration.zero,
+          placeholderFadeInDuration: Duration.zero,
+          placeholder: (_, _) => empty,
+          errorWidget: (_, _, _) => empty,
+        );
+      },
     );
   }
 }
@@ -342,13 +370,22 @@ class InvUnitThumb extends StatelessWidget {
   final double size;
 
   @override
-  Widget build(BuildContext context) => SizedBox.square(
-    dimension: size,
-    child: ClipRRect(
-      borderRadius: BorderRadius.circular(10),
-      child: InvPhoto(url: unit.coverUrl ?? ''),
-    ),
-  );
+  Widget build(BuildContext context) {
+    final px = (size * MediaQuery.devicePixelRatioOf(context))
+        .round()
+        .clamp(40, 256);
+    return SizedBox.square(
+      dimension: size,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(14),
+        child: InvPhoto(
+          url: unit.coverUrl ?? '',
+          cacheWidth: px,
+          cacheHeight: px,
+        ),
+      ),
+    );
+  }
 }
 
 /// Xem ảnh toàn màn: vuốt ngang, chụm để phóng; ảnh kho đặt đại diện / xoá
@@ -448,6 +485,7 @@ class _UnitPhotoViewerState extends ConsumerState<UnitPhotoViewer> {
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
     final p = _photos[_i.clamp(0, _photos.length - 1)];
     final edit = widget.canEdit && !p.fromTask;
     final caption = [
@@ -456,7 +494,6 @@ class _UnitPhotoViewerState extends ConsumerState<UnitPhotoViewer> {
       if (p.fromTask && p.taskTitle != null) p.taskTitle!,
       if (!p.fromTask && !p.isCover && p.at != null) InventoryFormat.dmy(p.at),
     ].join(' · ');
-    const fg = Colors.white;
     return Scaffold(
       key: const ValueKey('inv-photo-viewer'),
       backgroundColor: Colors.black,
@@ -475,61 +512,130 @@ class _UnitPhotoViewerState extends ConsumerState<UnitPhotoViewer> {
               ),
             ),
           ),
-          SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(8, 6, 8, 0),
-              child: Row(
-                children: [
-                  IconButton(
-                    tooltip: 'Đóng',
-                    color: fg,
-                    onPressed: () => Navigator.of(context).pop(),
-                    icon: const Icon(Icons.close_rounded),
+          Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            child: SafeArea(
+              bottom: false,
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
+                child: SizedBox(
+                  height: 44,
+                  child: Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: OmniGlassCircle(
+                          child: IconButton(
+                            tooltip: 'Đóng',
+                            padding: EdgeInsets.zero,
+                            constraints: const BoxConstraints.tightFor(
+                              width: 44,
+                              height: 44,
+                            ),
+                            onPressed: () => Navigator.of(context).pop(),
+                            icon: Icon(
+                              Icons.close_rounded,
+                              size: OmniIconSize.md,
+                              color: scheme.onSurface,
+                            ),
+                          ),
+                        ),
+                      ),
+                      OmniGlass(
+                        blur: false,
+                        radius: 22,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 14,
+                          vertical: 8,
+                        ),
+                        child: Text(
+                          '${_i + 1} / ${_photos.length}',
+                          style: OmniType.caption.copyWith(
+                            fontWeight: FontWeight.w600,
+                            color: scheme.onSurface,
+                            fontFeatures: OmniType.tabular,
+                          ),
+                        ),
+                      ),
+                      if (edit)
+                        Align(
+                          alignment: Alignment.centerRight,
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              if (!p.isCover) ...[
+                                OmniGlassCircle(
+                                  child: IconButton(
+                                    key: const ValueKey('inv-photo-set-cover'),
+                                    tooltip: 'Đặt làm ảnh đại diện',
+                                    padding: EdgeInsets.zero,
+                                    constraints: const BoxConstraints.tightFor(
+                                      width: 44,
+                                      height: 44,
+                                    ),
+                                    onPressed: _busy ? null : () => _cover(p),
+                                    icon: Icon(
+                                      Icons.star_outline_rounded,
+                                      size: OmniIconSize.md,
+                                      color: scheme.onSurface,
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                              ],
+                              OmniGlassCircle(
+                                child: IconButton(
+                                  key: const ValueKey('inv-photo-delete'),
+                                  tooltip: 'Xoá ảnh',
+                                  padding: EdgeInsets.zero,
+                                  constraints: const BoxConstraints.tightFor(
+                                    width: 44,
+                                    height: 44,
+                                  ),
+                                  onPressed: _busy ? null : () => _delete(p),
+                                  icon: Icon(
+                                    Icons.delete_outline_rounded,
+                                    size: OmniIconSize.md,
+                                    color: OmniColors.dangerTextOf(context),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                    ],
                   ),
-                  const Spacer(),
-                  if (edit && !p.isCover)
-                    IconButton(
-                      key: const ValueKey('inv-photo-set-cover'),
-                      tooltip: 'Đặt làm ảnh đại diện',
-                      color: fg,
-                      onPressed: _busy ? null : () => _cover(p),
-                      icon: const Icon(Icons.star_outline_rounded),
-                    ),
-                  if (edit)
-                    IconButton(
-                      key: const ValueKey('inv-photo-delete'),
-                      tooltip: 'Xoá ảnh',
-                      color: fg,
-                      onPressed: _busy ? null : () => _delete(p),
-                      icon: const Icon(Icons.delete_outline_rounded),
-                    ),
-                ],
+                ),
               ),
             ),
           ),
-          Positioned(
-            left: 16,
-            right: 16,
-            bottom: MediaQuery.viewPaddingOf(context).bottom + 20,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                if (caption.isNotEmpty)
-                  Text(
+          if (caption.isNotEmpty)
+            Positioned(
+              left: 16,
+              right: 16,
+              bottom: MediaQuery.viewPaddingOf(context).bottom + 20,
+              child: Center(
+                child: OmniGlass(
+                  blur: false,
+                  radius: 22,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 8,
+                  ),
+                  child: Text(
                     caption,
                     textAlign: TextAlign.center,
-                    style: OmniType.caption.copyWith(color: fg),
-                  ),
-                Text(
-                  '${_i + 1} / ${_photos.length}',
-                  style: OmniType.caption.copyWith(
-                    color: fg.withValues(alpha: .7),
-                    fontFeatures: OmniType.tabular,
+                    style: OmniType.caption.copyWith(
+                      fontWeight: FontWeight.w500,
+                      color: scheme.onSurface,
+                    ),
                   ),
                 ),
-              ],
+              ),
             ),
-          ),
         ],
       ),
     );

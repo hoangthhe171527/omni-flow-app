@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/config/app_config.dart';
+import '../../../core/network/active_tenant.dart';
 import '../../../core/realtime/realtime_client.dart';
 import '../../../security/session/session_controller.dart';
 import '../../tasks/application/tasks_providers.dart';
@@ -279,6 +280,7 @@ final planKpiProvider = FutureProvider.autoDispose
 /// quay lại — và tháng phải còn nguyên. Dọn nó đi là đưa họ về tháng này mà
 /// không nói gì.
 final kpiMonthProvider = StateProvider<DateTime>((ref) {
+  ref.watch(activeTenantIdProvider);
   final now = DateTime.now();
 
   return DateTime(now.year, now.month);

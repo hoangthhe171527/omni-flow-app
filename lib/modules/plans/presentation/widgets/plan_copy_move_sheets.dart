@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../../../../design/components/components.dart';
+import '../../../../design/tokens/tokens.dart';
 import '../../domain/plan.dart';
 import '../../domain/team.dart';
 
@@ -48,26 +49,73 @@ class _CopyPlanSheetState extends State<_CopyPlanSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final nameLen = _name.text.characters.length;
     return OmniSheetBody(
-      header: const OmniSheetHeader(title: 'Sao chép kế hoạch'),
+      header: OmniSheetHeader(
+        title: 'Sao chép kế hoạch',
+        trailing: OmniGlassCircle(
+          child: IconButton(
+            tooltip: 'Đóng',
+            onPressed: () => Navigator.of(context).maybePop(),
+            icon: const Icon(Icons.close_rounded),
+          ),
+        ),
+      ),
       footer: FilledButton(
         onPressed: _name.text.trim().isEmpty ? null : _submit,
         child: const Text('Sao chép'),
       ),
       children: [
-        OmniField(
-          label: 'Tên kế hoạch mới',
-          child: TextField(
-            controller: _name,
-            maxLength: 255,
-            textCapitalization: TextCapitalization.sentences,
-            onChanged: (_) => setState(() {}),
-            onSubmitted: (_) => _submit(),
-          ),
-        ),
         OmniGroupSection(
           dividerIndent: 14,
           children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(14, 10, 14, 10),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          'Tên kế hoạch mới *',
+                          style: OmniType.micro.copyWith(
+                            color: scheme.onSurfaceVariant,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                      if (nameLen >= 204)
+                        Text(
+                          '$nameLen/255',
+                          style: OmniType.micro.copyWith(
+                            color: scheme.onSurfaceVariant,
+                            fontFeatures: OmniType.tabular,
+                          ),
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: 2),
+                  TextField(
+                    controller: _name,
+                    maxLength: 255,
+                    textCapitalization: TextCapitalization.sentences,
+                    decoration: const InputDecoration(
+                      counterText: '',
+                      filled: false,
+                      isDense: true,
+                      contentPadding: EdgeInsets.symmetric(vertical: 4),
+                      border: InputBorder.none,
+                      enabledBorder: InputBorder.none,
+                      focusedBorder: InputBorder.none,
+                    ),
+                    onChanged: (_) => setState(() {}),
+                    onSubmitted: (_) => _submit(),
+                  ),
+                ],
+              ),
+            ),
             OmniGroupRow(
               title: 'Chép cả công việc',
               chevron: false,
@@ -137,12 +185,22 @@ Future<PlanTeamTarget?> showMoveTeamSheet(
         OmniGroupRow(
           title: label,
           selected: selected,
+          chevron: false,
           semanticsLabel: selected ? '$label, đang chọn' : label,
           onTap: () => Navigator.of(ctx).pop(selected ? null : target),
         );
 
     return OmniSheetBody(
-      header: const OmniSheetHeader(title: 'Chuyển sang team khác'),
+      header: OmniSheetHeader(
+        title: 'Chuyển sang team khác',
+        trailing: OmniGlassCircle(
+          child: IconButton(
+            tooltip: 'Đóng',
+            onPressed: () => Navigator.of(ctx).maybePop(),
+            icon: const Icon(Icons.close_rounded),
+          ),
+        ),
+      ),
       children: [
         OmniGroupSection(
           dividerIndent: 14,

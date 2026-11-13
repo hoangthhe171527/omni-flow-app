@@ -372,12 +372,11 @@ class _PlanBoardPageState extends ConsumerState<PlanBoardPage>
     final visible = board == null || result == null
         ? board
         : board.only(result.ids);
-    final scheme = Theme.of(context).colorScheme;
     return AnnotatedRegion<SystemUiOverlayStyle>(
       // Header luôn là lớp kính tối, kể cả khi phần thân dùng surface sáng.
       value: SystemUiOverlayStyle.light,
       child: Scaffold(
-        backgroundColor: scheme.surface,
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         body: ProjectCoverSurface(
           key: const Key('board-background'),
           cover: loaded?.cover,
@@ -1770,32 +1769,58 @@ class _HeaderSearch extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return TextField(
-      controller: controller,
-      autofocus: true,
-      onChanged: onChanged,
-      textInputAction: TextInputAction.search,
-      cursorColor: Colors.white,
-      style: OmniType.search.copyWith(
-        color: Colors.white,
-        fontStyle: FontStyle.normal,
-      ),
-      decoration: InputDecoration(
-        isDense: true,
-        filled: false,
-        border: InputBorder.none,
-        enabledBorder: InputBorder.none,
-        focusedBorder: InputBorder.none,
-        hintText: 'Tìm trong kế hoạch',
-        hintStyle: OmniType.searchHint.copyWith(
-          color: Colors.white.withValues(alpha: .7),
+    final solid = MediaQuery.highContrastOf(context);
+    return Center(
+      child: Container(
+        height: 38,
+        padding: const EdgeInsets.symmetric(horizontal: 13),
+        decoration: BoxDecoration(
+          borderRadius: OmniRadius.pillAll,
+          color: solid ? OmniCovers.glass : Colors.white.withValues(alpha: .20),
+          border: Border.all(color: Colors.white.withValues(alpha: .36)),
+        ),
+        child: Row(
+          children: [
+            Icon(
+              Icons.search_rounded,
+              size: OmniIconSize.md,
+              color: Colors.white.withValues(alpha: .9),
+            ),
+            const SizedBox(width: 7),
+            Expanded(
+              child: TextField(
+                controller: controller,
+                autofocus: true,
+                onChanged: onChanged,
+                textInputAction: TextInputAction.search,
+                textAlignVertical: TextAlignVertical.center,
+                cursorColor: Colors.white,
+                style: OmniType.search.copyWith(
+                  color: Colors.white,
+                  fontStyle: FontStyle.normal,
+                ),
+                decoration: InputDecoration(
+                  isDense: true,
+                  contentPadding: EdgeInsets.zero,
+                  filled: false,
+                  border: InputBorder.none,
+                  enabledBorder: InputBorder.none,
+                  focusedBorder: InputBorder.none,
+                  hintText: 'Tìm trong kế hoạch',
+                  hintStyle: OmniType.searchHint.copyWith(
+                    color: Colors.white.withValues(alpha: .78),
+                  ),
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );
   }
 }
 
-/// `.hb`: 44×44, bo 6, biểu tượng trắng. [dot] = đang lọc.
+/// `.hb`: 44×44, tròn khớp viên kính, biểu tượng trắng. [dot] = đang lọc.
 class _HeaderButton extends StatelessWidget {
   const _HeaderButton({
     required this.tooltip,
@@ -1823,9 +1848,7 @@ class _HeaderButton extends StatelessWidget {
           constraints: const BoxConstraints.tightFor(width: 44, height: 44),
           style: IconButton.styleFrom(
             foregroundColor: Colors.white,
-            shape: const RoundedRectangleBorder(
-              borderRadius: BorderRadius.all(Radius.circular(6)),
-            ),
+            shape: const CircleBorder(),
           ),
           icon: Stack(
             clipBehavior: Clip.none,
@@ -1879,7 +1902,7 @@ class _CoverGlass extends StatelessWidget {
   }
 }
 
-/// Sheet nhập tên nhóm việc: một ô, nút "Lưu". Tên rỗng thì không lưu.
+/// Sheet nhập tên nhóm việc: một ô trong nhóm bo 18, nút "Lưu".
 class _NameSheet extends StatefulWidget {
   const _NameSheet({required this.title, required this.initial});
 
@@ -1909,49 +1932,82 @@ class _NameSheetState extends State<_NameSheet> {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
 
-    return SafeArea(
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
+    return OmniSheetBody(
+      header: OmniSheetHeader(
+        title: widget.title,
+        subtitle: 'Áp dụng ngay trên bảng kế hoạch',
+        trailing: OmniGlassCircle(
+          child: IconButton(
+            tooltip: 'Đóng',
+            onPressed: () => Navigator.of(context).maybePop(),
+            icon: const Icon(Icons.close_rounded),
+          ),
+        ),
+      ),
+      footer: ValueListenableBuilder<TextEditingValue>(
+        valueListenable: _controller,
+        builder: (context, value, _) => FilledButton(
+          onPressed: value.text.trim().isEmpty ? null : _submit,
+          child: const Text('Lưu'),
+        ),
+      ),
+      children: [
+        OmniGroupSection(
+          dividerIndent: 14,
           children: [
-            Text(
-              widget.title,
-              style: OmniType.bodyStrong.copyWith(color: scheme.onSurface),
-            ),
-            const SizedBox(height: 12),
-            // Màn nhỏ + bàn phím: ô nhập co lại và cuộn, nút "Lưu" luôn trong
-            // tầm chạm (như `showTextEditSheet`).
-            Flexible(
-              child: SingleChildScrollView(
-                child: TextField(
-                  controller: _controller,
-                  autofocus: true,
-                  maxLength: 128,
-                  textInputAction: TextInputAction.done,
-                  onSubmitted: (_) => _submit(),
-                  decoration: const InputDecoration(
-                    hintText: 'Tên nhóm việc',
-                    counterText: '',
+            Padding(
+              padding: const EdgeInsets.fromLTRB(14, 10, 14, 12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Flexible(
+                        child: Text(
+                          'Tên nhóm việc',
+                          style: OmniType.caption.copyWith(
+                            color: scheme.onSurfaceVariant,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                      Text(
+                        ' *',
+                        style: OmniType.caption.copyWith(color: scheme.error),
+                      ),
+                    ],
                   ),
-                ),
-              ),
-            ),
-            const SizedBox(height: 12),
-            ValueListenableBuilder<TextEditingValue>(
-              valueListenable: _controller,
-              builder: (context, value, _) => FilledButton(
-                style: FilledButton.styleFrom(
-                  minimumSize: const Size.fromHeight(48),
-                ),
-                onPressed: value.text.trim().isEmpty ? null : _submit,
-                child: const Text('Lưu'),
+                  const SizedBox(height: 4),
+                  TextField(
+                    controller: _controller,
+                    autofocus: true,
+                    maxLength: 128,
+                    textCapitalization: TextCapitalization.sentences,
+                    textInputAction: TextInputAction.done,
+                    onSubmitted: (_) => _submit(),
+                    style: OmniType.bodyStrong.copyWith(
+                      color: scheme.onSurface,
+                    ),
+                    decoration: InputDecoration(
+                      hintText: 'Nhập tên nhóm việc…',
+                      hintStyle: OmniType.body.copyWith(
+                        color: scheme.onSurfaceVariant,
+                      ),
+                      counterText: '',
+                      isDense: true,
+                      contentPadding: EdgeInsets.zero,
+                      filled: false,
+                      border: InputBorder.none,
+                      enabledBorder: InputBorder.none,
+                      focusedBorder: InputBorder.none,
+                    ),
+                  ),
+                ],
               ),
             ),
           ],
         ),
-      ),
+      ],
     );
   }
 }
@@ -2032,6 +2088,8 @@ class _TruncatedNotice extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    final solid = MediaQuery.highContrastOf(context);
     final warning = OmniColors.warningTextOf(context);
 
     return Padding(
@@ -2043,8 +2101,13 @@ class _TruncatedNotice extends StatelessWidget {
       ),
       child: DecoratedBox(
         decoration: BoxDecoration(
-          color: scheme.surface,
+          color: solid
+              ? scheme.surface
+              : scheme.surface.withValues(alpha: dark ? .84 : .86),
           borderRadius: const BorderRadius.all(Radius.circular(14)),
+          border: Border.all(
+            color: Colors.white.withValues(alpha: dark ? .12 : .65),
+          ),
         ),
         child: Padding(
           padding: const EdgeInsets.all(OmniSpacing.md),
@@ -2085,6 +2148,8 @@ class _ClosedBanner extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    final solid = MediaQuery.highContrastOf(context);
     final label = status == PlanStatus.archived
         ? 'Kế hoạch đã lưu trữ'
         : 'Kế hoạch đã đóng';
@@ -2095,8 +2160,13 @@ class _ClosedBanner extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(12, 0, 4, 0),
       constraints: const BoxConstraints(minHeight: 44),
       decoration: BoxDecoration(
-        color: scheme.surface,
+        color: solid
+            ? scheme.surface
+            : scheme.surface.withValues(alpha: dark ? .84 : .86),
         borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: Colors.white.withValues(alpha: dark ? .12 : .65),
+        ),
       ),
       child: Row(
         children: [

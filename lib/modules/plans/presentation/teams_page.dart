@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -9,6 +10,7 @@ import '../../../core/nav/search_mode.dart';
 import '../../../core/nav/shell_bar_inset.dart';
 import '../../../core/utils/text_search.dart';
 import '../../../design/components/components.dart';
+import '../../../design/platform/omni_motion_scope.dart';
 import '../../../design/tokens/tokens.dart';
 import '../../../security/session/api_capabilities.dart';
 import '../../../security/session/session_controller.dart';
@@ -21,7 +23,8 @@ import '../plans_module.dart';
 import 'edit_plan_page.dart';
 import 'widgets/create_choice_sheet.dart';
 import 'widgets/quick_create_sheets.dart';
-import 'widgets/favorites_group.dart';
+import 'widgets/favorites_group.dart' show FavoritePlan;
+import 'widgets/plan_tile.dart';
 import 'widgets/project_cover.dart';
 import 'widgets/team_group.dart';
 import 'widgets/teams_search_row.dart';
@@ -319,6 +322,8 @@ class _TeamsPageState extends ConsumerState<TeamsPage> {
     if (!_introDone) {
       WidgetsBinding.instance.addPostFrameCallback((_) => _introDone = true);
     }
+    final isPlaceholder =
+        list.isEmpty || (visible.isEmpty && favorites.isEmpty);
     final children = <Widget Function()>[
       if (list.isEmpty)
         () => SizedBox(
@@ -334,7 +339,7 @@ class _TeamsPageState extends ConsumerState<TeamsPage> {
       else if (visible.isEmpty && favorites.isEmpty)
         () => _NoMatch(query: _query.trim()),
       if (favorites.isNotEmpty)
-        () => FavoritesGroup(
+        () => _FavoritesSection(
           key: const ValueKey('favorites'),
           rise: !_introDone,
           favorites: favorites,
@@ -450,15 +455,18 @@ class _TeamsPageState extends ConsumerState<TeamsPage> {
       itemCount: children.length,
       // Nhóm lồng (viomni-apple-uiux.html "Việc" `.group`): mỗi team (và
       // Yêu thích) là một thẻ bo 18 cách mép 16 trên nền xám, cách nhau 12.
-      separatorBuilder: (context, _) => const SizedBox(height: 12),
+      separatorBuilder: (context, _) =>
+          const SizedBox(height: OmniGroupSection.gap),
       itemBuilder: (context, i) => Padding(
         padding: const EdgeInsets.symmetric(horizontal: 16),
-        child: Material(
-          color: Theme.of(context).colorScheme.surface,
-          borderRadius: BorderRadius.circular(18),
-          clipBehavior: Clip.antiAlias,
-          child: children[i](),
-        ),
+        child: isPlaceholder
+            ? children[i]()
+            : Material(
+                color: Theme.of(context).colorScheme.surface,
+                borderRadius: BorderRadius.circular(18),
+                clipBehavior: Clip.antiAlias,
+                child: children[i](),
+              ),
       ),
     );
   }
@@ -709,6 +717,136 @@ class _NoMatch extends StatelessWidget {
             style: OmniType.caption.copyWith(color: scheme.onSurfaceVariant),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// Mục "Yêu thích" đồng bộ ô icon một tông màu chính trong [OmniGroupSection].
+class _FavoritesSection extends StatelessWidget {
+  const _FavoritesSection({
+    super.key,
+    required this.favorites,
+    required this.open,
+    required this.onToggle,
+    required this.onOpenPlan,
+    this.onLongPressPlan,
+    this.canLongPressPlan,
+    this.rise = true,
+  });
+
+  final List<FavoritePlan> favorites;
+  final bool open;
+  final VoidCallback onToggle;
+  final ValueChanged<Plan> onOpenPlan;
+  final ValueChanged<Plan>? onLongPressPlan;
+  final bool Function(Plan plan)? canLongPressPlan;
+  final bool rise;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final motion = OmniMotion.enabled(context);
+
+    final Widget body = open
+        ? Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              for (final f in favorites)
+                PlanTile(
+                  key: ValueKey('favorite-${f.plan.id}'),
+                  plan: f.plan,
+                  subtitle:
+                      '${f.teamName} · '
+                      '${(f.plan.taskCount - f.plan.doneCount).clamp(0, 1 << 30)}'
+                      ' việc',
+                  onTap: () => onOpenPlan(f.plan),
+                  onLongPress:
+                      onLongPressPlan != null &&
+                          (canLongPressPlan?.call(f.plan) ?? true)
+                      ? () => onLongPressPlan!(f.plan)
+                      : null,
+                ),
+            ],
+          )
+        : const SizedBox(width: double.infinity);
+
+    return OmniRise(
+      animate: rise,
+      child: Material(
+        color: scheme.surface,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Semantics(
+              button: true,
+              expanded: open,
+              child: OmniPressScale(
+                child: InkWell(
+                  key: const Key('favorites-header'),
+                  onTap: () {
+                    HapticFeedback.selectionClick();
+                    onToggle();
+                  },
+                  child: Container(
+                    constraints: const BoxConstraints(minHeight: 48),
+                    padding: const EdgeInsets.fromLTRB(14, 0, 10, 0),
+                    child: Row(
+                      children: [
+                        OmniIconTile(
+                          Icons.star_border_rounded,
+                          color: scheme.primary,
+                          background: scheme.primary.withValues(alpha: .10),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            'Yêu thích',
+                            style: OmniType.bodyStrong.copyWith(
+                              color: scheme.onSurface,
+                            ),
+                          ),
+                        ),
+                        Text(
+                          '${favorites.length}',
+                          style: OmniType.micro.copyWith(
+                            color: scheme.onSurfaceVariant,
+                            fontFeatures: OmniType.tabular,
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        SizedBox.square(
+                          dimension: 44,
+                          child: AnimatedRotation(
+                            turns: open ? 0.5 : 0,
+                            duration: motion
+                                ? const Duration(milliseconds: 300)
+                                : Duration.zero,
+                            curve: OmniCurves.standard,
+                            child: Icon(
+                              Icons.keyboard_arrow_down_rounded,
+                              size: OmniIconSize.md,
+                              color: scheme.onSurfaceVariant,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            if (motion)
+              AnimatedSize(
+                duration: OmniMotion.of(context).base,
+                curve: Curves.easeOutCubic,
+                alignment: Alignment.topCenter,
+                child: body,
+              )
+            else
+              body,
+          ],
+        ),
       ),
     );
   }

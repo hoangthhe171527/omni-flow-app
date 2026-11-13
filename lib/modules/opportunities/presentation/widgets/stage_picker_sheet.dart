@@ -5,6 +5,7 @@ import '../../../../design/components/components.dart';
 import '../../application/opportunities_providers.dart';
 import '../../domain/opportunity.dart';
 import '../../domain/pipeline_catalog.dart';
+import 'stage_strip.dart';
 
 /// Mở [StagePickerSheet] với quy trình CỦA cơ hội. Trả về giai đoạn mới, hoặc
 /// null khi người dùng đóng sheet hay chọn lại giai đoạn đang đứng.
@@ -43,6 +44,7 @@ class StagePickerSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
     final working = [
       for (final stage in pipeline.stages)
         if (!stage.isClosed) stage,
@@ -54,9 +56,29 @@ class StagePickerSheet extends StatelessWidget {
 
     OmniGroupRow row(PipelineStageDef stage) {
       final won = stage.outcome == StageOutcome.won;
+      final dotColor = readableStageColor(
+        stageColorOf(stage, scheme),
+        scheme.surface,
+        minRatio: 3,
+      );
       return OmniGroupRow(
+        leading: !stage.isClosed
+            ? SizedBox(
+                width: 28,
+                height: 28,
+                child: Center(
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      color: dotColor,
+                      shape: BoxShape.circle,
+                    ),
+                    child: const SizedBox(width: 10, height: 10),
+                  ),
+                ),
+              )
+            : null,
         icon: !stage.isClosed
-            ? Icons.radio_button_unchecked_rounded
+            ? null
             : won
             ? Icons.emoji_events_outlined
             : Icons.cancel_outlined,
@@ -65,12 +87,22 @@ class StagePickerSheet extends StatelessWidget {
             ? null
             : 'Xác suất mặc định ${stage.probability}%',
         selected: stage.code == currentCode,
+        chevron: false,
         onTap: () => Navigator.pop(context, stage.code),
       );
     }
 
     return OmniSheetBody(
-      header: const OmniSheetHeader(title: 'Chuyển giai đoạn'),
+      header: OmniSheetHeader(
+        title: 'Chuyển giai đoạn',
+        trailing: OmniGlassCircle(
+          child: IconButton(
+            tooltip: 'Đóng',
+            onPressed: () => Navigator.of(context).pop(),
+            icon: const Icon(Icons.close_rounded),
+          ),
+        ),
+      ),
       children: [
         OmniGroupSection(children: [for (final stage in working) row(stage)]),
         OmniGroupSection(children: [for (final stage in outcomes) row(stage)]),

@@ -797,7 +797,6 @@ class _PanelBody extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final scheme = Theme.of(context).colorScheme;
     final pipeline = ref.watch(boardPipelineProvider);
     final pipelines =
         ref.watch(pipelineCatalogProvider).valueOrNull?.pipelines ??
@@ -806,43 +805,46 @@ class _PanelBody extends ConsumerWidget {
     final closed = ref.watch(segmentClosedProvider);
     final hasClosedStage = pipeline?.stages.any((s) => s.isClosed) ?? false;
 
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.fromLTRB(16, 4, 16, 10),
-      decoration: BoxDecoration(
-        color: scheme.surface,
-        border: Border(bottom: BorderSide(color: scheme.outlineVariant)),
-      ),
-      child: Wrap(
-        spacing: 6,
-        runSpacing: 6,
-        children: [
-          if (pipelines.length > 1 && pipeline != null)
-            OmniFilterPill(
-              label: pipeline.label,
-              selected: false,
-              onTap: () =>
-                  _pickPipeline(context, ref, pipelines, pipeline.code),
-            ),
-          OmniFilterPill(
-            label: 'Của tôi',
-            selected: mine,
-            onTap: () {
-              HapticFeedback.selectionClick();
-              ref.read(pipelineMineProvider.notifier).state = !mine;
-            },
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
+      child: OmniGlass(
+        radius: 20,
+        blur: false,
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        child: SizedBox(
+          width: double.infinity,
+          child: Wrap(
+            spacing: 6,
+            runSpacing: 6,
+            children: [
+              if (pipelines.length > 1 && pipeline != null)
+                OmniFilterPill(
+                  label: pipeline.label,
+                  selected: false,
+                  onTap: () =>
+                      _pickPipeline(context, ref, pipelines, pipeline.code),
+                ),
+              OmniFilterPill(
+                label: 'Của tôi',
+                selected: mine,
+                onTap: () {
+                  HapticFeedback.selectionClick();
+                  ref.read(pipelineMineProvider.notifier).state = !mine;
+                },
+              ),
+              // Xem cơ hội đã thắng/thua thay vì đang mở.
+              if (hasClosedStage)
+                OmniFilterPill(
+                  label: 'Đã đóng',
+                  selected: closed,
+                  onTap: () {
+                    HapticFeedback.selectionClick();
+                    ref.read(segmentClosedProvider.notifier).state = !closed;
+                  },
+                ),
+            ],
           ),
-          // Xem cơ hội đã thắng/thua thay vì đang mở.
-          if (hasClosedStage)
-            OmniFilterPill(
-              label: 'Đã đóng',
-              selected: closed,
-              onTap: () {
-                HapticFeedback.selectionClick();
-                ref.read(segmentClosedProvider.notifier).state = !closed;
-              },
-            ),
-        ],
+        ),
       ),
     );
   }
@@ -878,7 +880,16 @@ class PipelinePickerSheet extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return OmniSheetBody(
-      header: const OmniSheetHeader(title: 'Quy trình bán hàng'),
+      header: OmniSheetHeader(
+        title: 'Quy trình bán hàng',
+        trailing: OmniGlassCircle(
+          child: IconButton(
+            tooltip: 'Đóng',
+            onPressed: () => Navigator.of(context).pop(),
+            icon: const Icon(Icons.close_rounded),
+          ),
+        ),
+      ),
       children: [
         OmniGroupSection(
           dividerIndent: 14,
@@ -887,6 +898,7 @@ class PipelinePickerSheet extends StatelessWidget {
               OmniGroupRow(
                 title: pipeline.label,
                 selected: pipeline.code == current,
+                chevron: false,
                 onTap: () => Navigator.pop(context, pipeline.code),
               ),
           ],

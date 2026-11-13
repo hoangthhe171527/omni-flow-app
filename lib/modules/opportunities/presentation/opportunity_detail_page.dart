@@ -35,6 +35,7 @@ class OpportunityDetailPage extends ConsumerWidget {
     return Scaffold(
       appBar: OmniAppBar(
         title: 'Chi tiết cơ hội',
+        fallbackBack: () => context.go('/opportunities'),
         actions: [
           if (access.canUpdate)
             TextButton(
@@ -108,9 +109,10 @@ class OpportunityDetailPage extends ConsumerWidget {
               const SizedBox(height: OmniGroupSection.gap),
               OmniGroupSection(
                 title: 'Thông tin',
-                dividerIndent: 14,
+                dividerIndent: 54,
                 children: [
                   OmniGroupRow(
+                    icon: Icons.person_outline_rounded,
                     title: 'Khách hàng',
                     value: data.customerName ?? '—',
                     onTap: data.customerId == null
@@ -120,13 +122,19 @@ class OpportunityDetailPage extends ConsumerWidget {
                             pathParameters: {'id': data.customerId!},
                           ),
                   ),
-                  OmniGroupRow(title: 'Sản phẩm', value: data.product ?? '—'),
                   OmniGroupRow(
+                    icon: Icons.inventory_2_outlined,
+                    title: 'Sản phẩm',
+                    value: data.product ?? '—',
+                  ),
+                  OmniGroupRow(
+                    icon: Icons.donut_large_rounded,
                     title: 'Xác suất',
                     value:
                         '${data.displayPercent(catalog?.pipelineOf(data.pipelineCode))}%',
                   ),
                   OmniGroupRow(
+                    icon: Icons.calendar_today_outlined,
                     title: 'Dự kiến chốt',
                     trailing: Text(
                       Formatters.date(data.expectedCloseAt),
@@ -138,10 +146,12 @@ class OpportunityDetailPage extends ConsumerWidget {
                     ),
                   ),
                   OmniGroupRow(
+                    icon: Icons.badge_outlined,
                     title: 'Phụ trách',
                     value: _ownerLabel(ref, data),
                   ),
                   OmniGroupRow(
+                    icon: Icons.payments_outlined,
                     title: 'Giá trị kỳ vọng',
                     trailing: Text(
                       Formatters.vnd(
@@ -152,6 +162,7 @@ class OpportunityDetailPage extends ConsumerWidget {
                       style: OmniType.body.copyWith(
                         fontWeight: FontWeight.w600,
                         color: scheme.onSurface,
+                        fontFeatures: OmniType.tabular,
                       ),
                     ),
                   ),
@@ -161,13 +172,21 @@ class OpportunityDetailPage extends ConsumerWidget {
                 const SizedBox(height: OmniGroupSection.gap),
                 OmniGroupSection(
                   title: 'Ghi chú',
+                  trailingTitle: Text(
+                    '${data.notes.length}',
+                    style: OmniType.caption.copyWith(
+                      fontWeight: FontWeight.w600,
+                      color: scheme.onSurfaceVariant,
+                      fontFeatures: OmniType.tabular,
+                    ),
+                  ),
                   dividerIndent: 14,
                   children: [
                     for (final note in data.notes)
                       Padding(
                         padding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 14,
+                          horizontal: 14,
+                          vertical: 12,
                         ),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -396,7 +415,7 @@ class _StageStepper extends StatelessWidget {
                           ? FontWeight.w500
                           : FontWeight.w400,
                       color: i == currentIndex
-                          ? scheme.onPrimaryContainer
+                          ? scheme.primary
                           : i < currentIndex
                           ? scheme.onSurface
                           : scheme.onSurfaceVariant,

@@ -174,6 +174,16 @@ final dioProvider = Provider<Dio>((ref) {
           final generation = tokenStore.generation;
           try {
             await refreshAccessToken();
+            final data = error.requestOptions.data;
+            if (data is FormData) {
+              final factory = error.requestOptions.extra['formDataFactory'];
+              if (factory is Future<FormData> Function()) {
+                error.requestOptions.data = await factory();
+              } else if (data.isFinalized) {
+                handler.next(error);
+                return;
+              }
+            }
             error.requestOptions.extra['sessionRetried'] = true;
             final response = await dio.fetch<Map<String, dynamic>>(
               error.requestOptions,

@@ -50,11 +50,12 @@ class CustomerRow extends ConsumerWidget {
         children: [
           // Vạch chia thụt sau avatar (18 + 36 + 10), không chạy full ngang.
           if (divider)
-            Divider(
-              height: 1,
-              thickness: 1,
-              indent: 64,
-              color: scheme.outlineVariant.withValues(alpha: .7),
+            Padding(
+              padding: const EdgeInsets.only(left: 64),
+              child: ColoredBox(
+                color: scheme.outlineVariant.withValues(alpha: .55),
+                child: const SizedBox(height: 0.5, width: double.infinity),
+              ),
             ),
           InkWell(
             onTap: () {
@@ -195,7 +196,14 @@ class _QuickActions extends StatelessWidget {
 
     return Container(
       width: double.infinity,
-      color: scheme.surfaceContainerLowest,
+      decoration: BoxDecoration(
+        border: Border(
+          top: BorderSide(
+            color: scheme.outlineVariant.withValues(alpha: .35),
+            width: 0.5,
+          ),
+        ),
+      ),
       padding: const EdgeInsets.fromLTRB(10, 6, 10, 10),
       child: Row(
         children: [
@@ -317,7 +325,7 @@ class _Action extends StatelessWidget {
 
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(12),
+      borderRadius: BorderRadius.circular(14),
       child: ConstrainedBox(
         constraints: const BoxConstraints(minHeight: 56),
         child: Column(

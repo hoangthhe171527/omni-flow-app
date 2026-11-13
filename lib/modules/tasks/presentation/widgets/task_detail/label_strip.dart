@@ -53,11 +53,10 @@ class _Chip extends StatelessWidget {
     return Container(
       key: ValueKey('label-chip-$code'),
       height: 28,
-      padding: const EdgeInsets.symmetric(horizontal: 10),
-
+      padding: const EdgeInsets.symmetric(horizontal: 11),
       decoration: BoxDecoration(
         color: color,
-        borderRadius: BorderRadius.circular(4),
+        borderRadius: BorderRadius.circular(999),
       ),
       // widthFactor 1: chip ôm chữ (Container có alignment thì giãn hết dòng).
       child: Align(
@@ -90,7 +89,7 @@ class _AddButton extends StatelessWidget {
       excludeSemantics: true,
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(6),
+        customBorder: const CircleBorder(),
         child: SizedBox.square(
           dimension: 44,
           child: Center(
@@ -99,7 +98,7 @@ class _AddButton extends StatelessWidget {
               height: 28,
               decoration: BoxDecoration(
                 color: OmniColors.trackOf(context),
-                borderRadius: BorderRadius.circular(4),
+                borderRadius: BorderRadius.circular(999),
               ),
               child: Icon(
                 Icons.add_rounded,

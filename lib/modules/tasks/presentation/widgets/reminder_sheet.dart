@@ -147,7 +147,16 @@ class _ReminderSheetState extends ConsumerState<ReminderSheet> {
       explicitChildNodes: true,
       label: 'Nhắc việc',
       child: OmniSheetBody(
-        header: const OmniSheetHeader(title: 'Nhắc việc'),
+        header: OmniSheetHeader(
+          title: 'Nhắc việc',
+          trailing: OmniGlassCircle(
+            child: IconButton(
+              tooltip: 'Đóng',
+              onPressed: () => Navigator.of(context).maybePop(),
+              icon: const Icon(Icons.close_rounded, size: OmniIconSize.lg),
+            ),
+          ),
+        ),
         children: [
           if (widget.canEveryone)
             Wrap(
@@ -173,45 +182,41 @@ class _ReminderSheetState extends ConsumerState<ReminderSheet> {
                 icon: Icons.add_alarm_rounded,
                 onTap: _busy ? null : _add,
               ),
-              ...list.when(
-                loading: () => [
-                  const Padding(
-                    padding: EdgeInsets.all(16),
-                    child: Center(child: CircularProgressIndicator.adaptive()),
-                  ),
-                ],
-                error: (e, _) => [
-                  Padding(
+            ],
+          ),
+          list.when(
+            loading: () => const Padding(
+              padding: EdgeInsets.all(16),
+              child: Center(child: CircularProgressIndicator.adaptive()),
+            ),
+            error: (e, _) => Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 16),
+              child: Text(
+                e is AppException
+                    ? e.message
+                    : 'Chưa tải được lời nhắc. Thử lại khi có mạng.',
+                textAlign: TextAlign.center,
+                style: OmniType.bodySm.copyWith(color: secondary),
+              ),
+            ),
+            data: (items) => items.isEmpty
+                ? Padding(
                     padding: const EdgeInsets.symmetric(
                       horizontal: 14,
                       vertical: 16,
                     ),
                     child: Text(
-                      e is AppException
-                          ? e.message
-                          : 'Chưa tải được lời nhắc. Thử lại khi có mạng.',
+                      'Chưa có lời nhắc nào.',
                       textAlign: TextAlign.center,
                       style: OmniType.bodySm.copyWith(color: secondary),
                     ),
+                  )
+                : OmniGroupSection(
+                    dividerIndent: 46,
+                    children: [
+                      for (final r in items) _row(r, scheme, secondary),
+                    ],
                   ),
-                ],
-                data: (items) => items.isEmpty
-                    ? [
-                        Padding(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 14,
-                            vertical: 16,
-                          ),
-                          child: Text(
-                            'Chưa có lời nhắc nào.',
-                            textAlign: TextAlign.center,
-                            style: OmniType.bodySm.copyWith(color: secondary),
-                          ),
-                        ),
-                      ]
-                    : [for (final r in items) _row(r, scheme, secondary)],
-              ),
-            ],
           ),
         ],
       ),
@@ -238,6 +243,7 @@ class _ReminderSheetState extends ConsumerState<ReminderSheet> {
       icon: r.isPending ? Icons.alarm_rounded : Icons.alarm_off_rounded,
       title: at == null ? 'Không rõ giờ' : _stamp(at),
       subtitle: '$who$by$state',
+      chevron: false,
       trailing: _canDelete(r)
           ? IconButton(
               tooltip: 'Xoá lời nhắc',

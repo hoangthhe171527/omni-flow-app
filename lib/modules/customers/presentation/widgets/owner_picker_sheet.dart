@@ -53,24 +53,37 @@ class _OwnerPickerSheetState extends ConsumerState<_OwnerPickerSheet> {
     );
 
     return OmniSheetBody(
-      header: Padding(
-        padding: const EdgeInsets.fromLTRB(10, 4, 10, 10),
-        child: TextField(
-          style: OmniType.search.copyWith(
-            color: scheme.onSurface,
-            fontStyle: FontStyle.normal,
-          ),
-          decoration: InputDecoration(
-            prefixIcon: const Icon(Icons.search_rounded),
-            hintText: 'Tìm người',
-            hintStyle: OmniType.searchHint.copyWith(
-              color: scheme.onSurfaceVariant,
+      header: OmniSheetHeader(
+        title: 'Chọn người phụ trách',
+        trailing: OmniGlassCircle(
+          child: IconButton(
+            tooltip: 'Đóng',
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints.tightFor(width: 44, height: 44),
+            onPressed: () => Navigator.of(context).pop(),
+            icon: Icon(
+              Icons.close_rounded,
+              size: OmniIconSize.md,
+              color: scheme.onSurface,
             ),
           ),
-          onChanged: (v) => setState(() => _query = v.trim().toLowerCase()),
         ),
       ),
       children: [
+        OmniGlass(
+          blur: false,
+          radius: 22,
+          child: SizedBox(
+            height: 44,
+            child: OmniSearchField(
+              hint: 'Tìm người',
+              flat: true,
+              dense: true,
+              debounce: Duration.zero,
+              onChanged: (v) => setState(() => _query = v.trim().toLowerCase()),
+            ),
+          ),
+        ),
         members.when(
           data: (all) {
             final shown = [
@@ -84,6 +97,7 @@ class _OwnerPickerSheetState extends ConsumerState<_OwnerPickerSheet> {
                   OmniGroupRow(
                     icon: Icons.person_off_outlined,
                     title: 'Bỏ gán',
+                    chevron: false,
                     onTap: () =>
                         Navigator.of(context).pop((id: null, name: null)),
                   ),
@@ -95,6 +109,7 @@ class _OwnerPickerSheetState extends ConsumerState<_OwnerPickerSheet> {
                       size: 36,
                     ),
                     title: member.name,
+                    chevron: false,
                     selected: member.userId == widget.currentId,
                     onTap: () => Navigator.of(
                       context,

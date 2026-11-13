@@ -173,6 +173,13 @@ class _SheetState extends ConsumerState<_Sheet> {
           OmniSheetHeader(
             title: 'Ai làm việc này',
             subtitle: 'Việc con: ${widget.subtask.title}',
+            trailing: OmniGlassCircle(
+              child: IconButton(
+                tooltip: 'Đóng chọn người làm',
+                onPressed: () => Navigator.of(context).pop(),
+                icon: const Icon(Icons.close_rounded, size: OmniIconSize.lg),
+              ),
+            ),
           ),
         Padding(
           padding: EdgeInsets.fromLTRB(
@@ -191,12 +198,27 @@ class _SheetState extends ConsumerState<_Sheet> {
         ),
         const SizedBox(height: OmniSpacing.sm),
         if (showSelf)
-          _MemberRow(
-            member: self,
-            subtitle: 'Tôi',
-            selected: self.userId == currentId,
-            onTap: () => _pick(self),
-          ),
+          widget.inMenu
+              ? _MemberRow(
+                  member: self,
+                  subtitle: 'Tôi',
+                  selected: self.userId == currentId,
+                  onTap: () => _pick(self),
+                )
+              : Padding(
+                  padding: const EdgeInsets.fromLTRB(10, 0, 10, 8),
+                  child: OmniGroupSection(
+                    dividerIndent: 58,
+                    children: [
+                      _MemberRow(
+                        member: self,
+                        subtitle: 'Tôi',
+                        selected: self.userId == currentId,
+                        onTap: () => _pick(self),
+                      ),
+                    ],
+                  ),
+                ),
         Flexible(
           child: widget.inMenu
               ? _CompactMemberResults(
@@ -381,6 +403,7 @@ class _MemberRow extends StatelessWidget {
     title: member.name,
     subtitle: subtitle,
     selected: selected,
+    chevron: false,
     onTap: onTap,
   );
 }

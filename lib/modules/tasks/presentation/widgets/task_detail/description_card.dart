@@ -40,9 +40,7 @@ class DescriptionCard extends StatelessWidget {
             maximumSize: const Size(44, 44),
             padding: EdgeInsets.zero,
             foregroundColor: scheme.primary,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(6),
-            ),
+            shape: const CircleBorder(),
           ),
           icon: Icon(icon, size: OmniIconSize.md),
         );

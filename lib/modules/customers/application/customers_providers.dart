@@ -151,24 +151,34 @@ class CustomerListState {
   const CustomerListState({
     this.items = const [],
     this.pagination = const ApiPagination.empty(),
+    this.loadingMore = false,
   });
 
   final List<Customer> items;
   final ApiPagination pagination;
+  final bool loadingMore;
 
   bool get hasMore => pagination.hasMore;
 }
 
 class CustomerListController
     extends AutoDisposeAsyncNotifier<CustomerListState> {
+  int _generation = 0;
+  bool _loadingMore = false;
+
   @override
   Future<CustomerListState> build() async {
+    final gen = ++_generation;
+    _loadingMore = false;
     ref.watch(customerRealtimeSignalProvider);
     final filter = ref.watch(customerFilterProvider);
     final userId = ref.watch(sessionProvider).user?.id;
     final page = await ref
         .watch(customersApiProvider)
         .list(query: filter.toQuery(currentUserId: userId));
+    if (gen != _generation) {
+      return state.valueOrNull ?? const CustomerListState();
+    }
     return CustomerListState(items: page.items, pagination: page.pagination);
   }
 
@@ -177,8 +187,19 @@ class CustomerListController
   }
 
   Future<void> loadMore() async {
+    if (_loadingMore) return;
     final current = state.valueOrNull;
-    if (current == null || !current.hasMore) return;
+    if (current == null || !current.hasMore || current.loadingMore) return;
+
+    _loadingMore = true;
+    final gen = _generation;
+    state = AsyncData(
+      CustomerListState(
+        items: current.items,
+        pagination: current.pagination,
+        loadingMore: true,
+      ),
+    );
 
     final filter = ref.read(customerFilterProvider);
     final userId = ref.read(sessionProvider).user?.id;
@@ -189,14 +210,30 @@ class CustomerListController
             query: filter.toQuery(currentUserId: userId),
             page: current.pagination.nextPage,
           );
+      if (gen != _generation) return;
+      final seen = {for (final item in current.items) item.id};
+      final merged = [
+        ...current.items,
+        for (final item in next.items)
+          if (seen.add(item.id)) item,
+      ];
       state = AsyncData(
         CustomerListState(
-          items: [...current.items, ...next.items],
+          items: merged,
           pagination: next.pagination,
         ),
       );
     } catch (_) {
-      // Keep the visible page; the next scroll retries.
+      if (gen == _generation) {
+        state = AsyncData(
+          CustomerListState(
+            items: current.items,
+            pagination: current.pagination,
+          ),
+        );
+      }
+    } finally {
+      _loadingMore = false;
     }
   }
 }

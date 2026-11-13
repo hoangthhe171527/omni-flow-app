@@ -3,6 +3,7 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../core/error/app_exception.dart';
 import '../../../design/components/components.dart';
@@ -163,9 +164,16 @@ class _SectionOrderPageState extends ConsumerState<SectionOrderPage> {
       appBar: OmniAppBar(
         title: 'Sắp xếp nhóm việc',
         showAccount: false,
+        fallbackBack: () => context.go('/plans/${widget.planId}'),
         actions: [
           TextButton(
             onPressed: _dirty && !_saving ? _save : null,
+            style: TextButton.styleFrom(
+              minimumSize: const Size(44, 44),
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              shape: const StadiumBorder(),
+              textStyle: OmniType.body.copyWith(fontWeight: FontWeight.w600),
+            ),
             child: _saving
                 ? const SizedBox(
                     width: 18,
@@ -229,7 +237,6 @@ class _SectionRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final tones = OmniTaskTones.of(context);
 
     Widget arrow(
       String tooltip,
@@ -262,17 +269,21 @@ class _SectionRow extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           if (!first)
-            Divider(
-              height: 1,
-              thickness: 1,
-              indent: 44,
-              color: scheme.outlineVariant.withValues(alpha: .7),
+            Padding(
+              padding: EdgeInsets.only(left: showGrip ? 54 : 14),
+              child: SizedBox(
+                height: 1,
+                width: double.infinity,
+                child: ColoredBox(
+                  color: scheme.outlineVariant.withValues(alpha: .7),
+                ),
+              ),
             ),
           ConstrainedBox(
             constraints: const BoxConstraints(minHeight: 56),
             child: Row(
               children: [
-                if (showGrip)
+                if (showGrip) ...[
                   _InstantDragStartListener(
                     index: index,
                     child: Semantics(
@@ -285,18 +296,17 @@ class _SectionRow extends StatelessWidget {
                           child: SizedBox(
                             width: 44,
                             height: 44,
-                            child: Icon(
-                              Icons.drag_indicator_rounded,
-                              size: 16,
-                              color: tones.faint,
+                            child: Center(
+                              child: OmniIconTile(Icons.drag_indicator_rounded),
                             ),
                           ),
                         ),
                       ),
                     ),
-                  )
-                else
-                  const SizedBox(width: 12),
+                  ),
+                  const SizedBox(width: 10),
+                ] else
+                  const SizedBox(width: 14),
                 Expanded(
                   child: Padding(
                     padding: const EdgeInsets.symmetric(vertical: 8),
@@ -318,6 +328,7 @@ class _SectionRow extends StatelessWidget {
                             style: OmniType.micro.copyWith(
                               fontWeight: FontWeight.w400,
                               color: scheme.onSurfaceVariant,
+                              fontFeatures: OmniType.tabular,
                             ),
                           ),
                       ],
@@ -334,12 +345,12 @@ class _SectionRow extends StatelessWidget {
                           OmniColors.warningSoft,
                           OmniColors.darkWarningSoft,
                         ),
-                        borderRadius: OmniRadius.xsAll,
+                        borderRadius: OmniRadius.pillAll,
                       ),
                       child: Padding(
                         padding: const EdgeInsets.symmetric(
-                          horizontal: 6,
-                          vertical: 2,
+                          horizontal: 8,
+                          vertical: 3,
                         ),
                         child: Text(
                           'QC',

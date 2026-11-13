@@ -108,7 +108,7 @@ class _MediaGrid extends StatelessWidget {
           mainAxisSpacing: 4,
         ),
         itemBuilder: (_, index) => ClipRRect(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(14),
           child: GestureDetector(
             onTap: () => Navigator.of(context).push(
               MaterialPageRoute<void>(
@@ -193,36 +193,93 @@ class _MediaViewerPageState extends State<_MediaViewerPage> {
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+
     return Scaffold(
       backgroundColor: Colors.black,
-      appBar: AppBar(
-        backgroundColor: Colors.black,
-        foregroundColor: Colors.white,
-        title: Text('${_index + 1} / ${widget.items.length}'),
-      ),
-      body: PageView.builder(
-        controller: _controller,
-        itemCount: widget.items.length,
-        onPageChanged: (index) => setState(() => _index = index),
-        itemBuilder: (_, index) => Center(
-          child: InteractiveViewer(
-            minScale: 1,
-            maxScale: 4,
-            child: widget.items[index].isVideo
-                ? _PlayableVideo(url: widget.items[index].url)
-                : CachedNetworkImage(
-                    imageUrl: widget.items[index].url,
-                    fit: BoxFit.contain,
-                    width: double.infinity,
-                    memCacheWidth: 1440,
-                    errorWidget: (_, _, _) => const Icon(
-                      Icons.broken_image_outlined,
-                      color: Colors.white54,
-                      size: OmniIconSize.hero,
-                    ),
-                  ),
+      body: Stack(
+        fit: StackFit.expand,
+        children: [
+          PageView.builder(
+            controller: _controller,
+            itemCount: widget.items.length,
+            onPageChanged: (index) => setState(() => _index = index),
+            itemBuilder: (_, index) => Center(
+              child: InteractiveViewer(
+                minScale: 1,
+                maxScale: 4,
+                child: widget.items[index].isVideo
+                    ? _PlayableVideo(url: widget.items[index].url)
+                    : CachedNetworkImage(
+                        imageUrl: widget.items[index].url,
+                        fit: BoxFit.contain,
+                        width: double.infinity,
+                        memCacheWidth: 1440,
+                        memCacheHeight: 1440,
+                        errorWidget: (_, _, _) => const Icon(
+                          Icons.broken_image_outlined,
+                          color: Colors.white54,
+                          size: OmniIconSize.hero,
+                        ),
+                      ),
+              ),
+            ),
           ),
-        ),
+          Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            child: SafeArea(
+              bottom: false,
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
+                child: SizedBox(
+                  height: 44,
+                  child: Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: OmniGlassCircle(
+                          child: IconButton(
+                            tooltip: 'Đóng',
+                            padding: EdgeInsets.zero,
+                            constraints: const BoxConstraints.tightFor(
+                              width: 44,
+                              height: 44,
+                            ),
+                            onPressed: () => Navigator.of(context).pop(),
+                            icon: Icon(
+                              Icons.close_rounded,
+                              size: OmniIconSize.md,
+                              color: scheme.onSurface,
+                            ),
+                          ),
+                        ),
+                      ),
+                      OmniGlass(
+                        blur: false,
+                        radius: 22,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 14,
+                          vertical: 8,
+                        ),
+                        child: Text(
+                          '${_index + 1} / ${widget.items.length}',
+                          style: OmniType.caption.copyWith(
+                            fontWeight: FontWeight.w600,
+                            color: scheme.onSurface,
+                            fontFeatures: OmniType.tabular,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -240,6 +297,7 @@ class _AssetTile extends StatelessWidget {
         imageUrl: item.url,
         fit: BoxFit.cover,
         memCacheWidth: 420,
+        memCacheHeight: 420,
         errorWidget: (_, _, _) => const ColoredBox(
           color: Colors.black12,
           child: Icon(Icons.broken_image_outlined),

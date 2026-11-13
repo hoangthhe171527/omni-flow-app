@@ -172,17 +172,25 @@ class _PeekCard extends ConsumerWidget {
 
     return DecoratedBox(
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: OmniColors.byBrightness(
+            context,
+            OmniColors.border,
+            OmniColors.darkBorder,
+          ),
+          width: 0.5,
+        ),
         boxShadow: [
           BoxShadow(
-            color: OmniColors.ink.withValues(alpha: 0.35),
-            offset: Offset(0, 24),
-            blurRadius: 60,
+            color: OmniColors.ink.withValues(alpha: 0.24),
+            offset: const Offset(0, 20),
+            blurRadius: 44,
           ),
         ],
       ),
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(20),
         child: Material(
           color: OmniColors.byBrightness(
             context,
@@ -213,7 +221,12 @@ class _PeekCard extends ConsumerWidget {
                       ),
                       border: Border(
                         bottom: BorderSide(
-                          color: Theme.of(context).colorScheme.outlineVariant,
+                          color: OmniColors.byBrightness(
+                            context,
+                            OmniColors.border,
+                            OmniColors.darkBorder,
+                          ),
+                          width: 0.5,
                         ),
                       ),
                     ),
@@ -222,8 +235,7 @@ class _PeekCard extends ConsumerWidget {
                         OmniAvatar(
                           name: conversation.title,
                           imageUrl: conversation.customerAvatar,
-                          size: 34,
-                          borderRadius: 6,
+                          size: 36,
                         ),
                         const SizedBox(width: 10),
                         Expanded(
@@ -368,10 +380,10 @@ class _PeekBubble extends StatelessWidget {
                     Theme.of(context).colorScheme.surfaceContainerHighest,
                   ),
             borderRadius: BorderRadius.only(
-              topLeft: const Radius.circular(14),
-              topRight: const Radius.circular(14),
-              bottomLeft: Radius.circular(out ? 14 : 4),
-              bottomRight: Radius.circular(out ? 4 : 14),
+              topLeft: const Radius.circular(16),
+              topRight: const Radius.circular(16),
+              bottomLeft: Radius.circular(out ? 16 : 5),
+              bottomRight: Radius.circular(out ? 5 : 16),
             ),
           ),
           child: Text(
@@ -421,7 +433,7 @@ class _PeekSkeleton extends StatelessWidget {
   }
 }
 
-/// Menu kính mờ 230 rộng, mục cao 44: chữ bên trái, biểu tượng bên phải.
+/// Menu kính mờ 236 rộng, mục cao 44: chữ bên trái, biểu tượng bên phải.
 class _PeekMenu extends StatelessWidget {
   const _PeekMenu({required this.items, required this.onAction});
 
@@ -430,48 +442,35 @@ class _PeekMenu extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: OmniColors.ink.withValues(alpha: 0.25),
-            offset: Offset(0, 16),
-            blurRadius: 40,
-          ),
-        ],
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(12),
-        child: OmniBackdropBlur(
-          sigma: 24,
-          child: Container(
-            width: 230,
-            color: OmniColors.byBrightness(
-              context,
-              Colors.white,
-              Theme.of(context).colorScheme.surfaceContainerHigh,
-            ).withValues(alpha: .88),
-            // Material trong suốt nằm TRÊN nền kính: vệt chạm của InkWell
-            // vẽ lên nó thì mới thấy được.
-            child: Material(
-              type: MaterialType.transparency,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  for (var i = 0; i < items.length; i++) ...[
-                    if (i > 0)
-                      Divider(
-                        height: 1,
-                        thickness: 1,
-                        indent: 16,
-                        color: Theme.of(context).colorScheme.outlineVariant,
+    return SizedBox(
+      width: 236,
+      child: OmniGlass(
+        radius: 18,
+        padding: const EdgeInsets.symmetric(vertical: 4),
+        child: Material(
+          type: MaterialType.transparency,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              for (var i = 0; i < items.length; i++) ...[
+                if (i > 0)
+                  Padding(
+                    padding: const EdgeInsets.only(left: 16),
+                    child: ColoredBox(
+                      color: OmniColors.byBrightness(
+                        context,
+                        OmniColors.border,
+                        OmniColors.darkBorder,
                       ),
-                    _PeekMenuRow(item: items[i], onTap: onAction),
-                  ],
-                ],
-              ),
-            ),
+                      child: const SizedBox(
+                        height: 0.5,
+                        width: double.infinity,
+                      ),
+                    ),
+                  ),
+                _PeekMenuRow(item: items[i], onTap: onAction),
+              ],
+            ],
           ),
         ),
       ),

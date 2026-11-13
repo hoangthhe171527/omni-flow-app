@@ -761,7 +761,7 @@ void main() {
     );
     expect(
       (groove.decoration as BoxDecoration).color,
-      const Color(0xFF1C283C).withValues(alpha: .62),
+      OmniColors.darkMuted.withValues(alpha: .62),
       reason: 'khung kính tối theo theme (${Theme.of(ctx).brightness})',
     );
   });

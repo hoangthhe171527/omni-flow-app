@@ -119,13 +119,13 @@ void main() {
     expect(result, ['khách cũ', 'Báo giá']);
   });
 
-  testWidgets('Huỷ → null', (tester) async {
+  testWidgets('Đóng → null', (tester) async {
     List<String>? result = ['x'];
     await _open(
       tester,
       (c) async => result = await showTagPicker(c, current: const []),
     );
-    await tester.tap(find.text('Huỷ'));
+    await tester.tap(find.byTooltip('Đóng'));
     await tester.pumpAndSettle();
     expect(result, isNull);
   });

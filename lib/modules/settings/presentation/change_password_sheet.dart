@@ -96,93 +96,178 @@ class _ChangePasswordSheetState extends ConsumerState<ChangePasswordSheet> {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
 
-    Widget field(TextEditingController c, {List<String>? hints}) => TextField(
-      controller: c,
-      obscureText: !_show,
-      autocorrect: false,
-      enableSuggestions: false,
-      autofillHints: hints,
-    );
-
-    return SafeArea(
-      top: false,
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+    Widget rowField({
+      required String label,
+      required TextEditingController controller,
+      required String hintText,
+      List<String>? autofillHints,
+      bool required = false,
+      String? error,
+    }) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Row(
               children: [
-                Expanded(
-                  child: Semantics(
-                    header: true,
-                    child: Text(
-                      'Đổi mật khẩu',
-                      style: OmniType.title.copyWith(color: scheme.onSurface),
+                Flexible(
+                  child: Text(
+                    label,
+                    style: OmniType.caption.copyWith(
+                      fontWeight: FontWeight.w600,
+                      color: scheme.onSurfaceVariant,
                     ),
                   ),
                 ),
-                IconButton(
-                  tooltip: _show ? 'Ẩn mật khẩu' : 'Hiện mật khẩu',
-                  icon: Icon(
-                    _show
-                        ? Icons.visibility_off_outlined
-                        : Icons.visibility_outlined,
+                if (required)
+                  Text(
+                    ' *',
+                    style: OmniType.caption.copyWith(color: scheme.error),
                   ),
-                  onPressed: () => setState(() => _show = !_show),
-                ),
               ],
             ),
-            const SizedBox(height: OmniSpacing.md),
-            OmniField(
-              label: 'Mật khẩu hiện tại',
-              hint: 'Bỏ trống nếu bạn chỉ đăng nhập bằng Google.',
-              error: _currentError,
-              child: field(_current, hints: const [AutofillHints.password]),
+            const SizedBox(height: 2),
+            TextField(
+              controller: controller,
+              obscureText: !_show,
+              autocorrect: false,
+              enableSuggestions: false,
+              autofillHints: autofillHints,
+              style: OmniType.body.copyWith(color: scheme.onSurface),
+              decoration: InputDecoration(
+                hintText: hintText,
+                isDense: true,
+                filled: false,
+                contentPadding: const EdgeInsets.symmetric(vertical: 4),
+                border: InputBorder.none,
+                enabledBorder: InputBorder.none,
+                focusedBorder: InputBorder.none,
+                errorBorder: InputBorder.none,
+                focusedErrorBorder: InputBorder.none,
+              ),
             ),
-            const SizedBox(height: OmniSpacing.lg),
-            OmniField(
-              label: 'Mật khẩu mới',
-              required: true,
-              child: field(_next, hints: const [AutofillHints.newPassword]),
-            ),
-            const SizedBox(height: OmniSpacing.lg),
-            OmniField(
-              label: 'Nhập lại mật khẩu mới',
-              required: true,
-              error: _nextError,
-              child: field(_again, hints: const [AutofillHints.newPassword]),
-            ),
-            if (_formError != null) ...[
-              const SizedBox(height: OmniSpacing.md),
-              Text(
-                _formError!,
-                style: OmniType.caption.copyWith(color: scheme.error),
+            if (error != null) ...[
+              const SizedBox(height: 4),
+              Row(
+                children: [
+                  Icon(
+                    Icons.error_outline_rounded,
+                    size: OmniIconSize.xs,
+                    color: scheme.error,
+                  ),
+                  const SizedBox(width: 4),
+                  Expanded(
+                    child: Text(
+                      error,
+                      style: OmniType.micro.copyWith(color: scheme.error),
+                    ),
+                  ),
+                ],
               ),
             ],
-            const SizedBox(height: OmniSpacing.lg),
-            OutlinedButton(
-              onPressed: _ready && !_busy ? _save : null,
-              style: OutlinedButton.styleFrom(
-                foregroundColor: scheme.primary,
-                minimumSize: const Size.fromHeight(48),
-                shape: const StadiumBorder(),
-                textStyle: OmniType.bodyStrong,
+          ],
+        ),
+      );
+    }
+
+    return OmniSheetBody(
+      header: OmniSheetHeader(
+        title: 'Đổi mật khẩu',
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            OmniGlassCircle(
+              child: IconButton(
+                tooltip: _show ? 'Ẩn mật khẩu' : 'Hiện mật khẩu',
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints.tightFor(
+                  width: 44,
+                  height: 44,
+                ),
+                icon: Icon(
+                  _show
+                      ? Icons.visibility_off_outlined
+                      : Icons.visibility_outlined,
+                  size: OmniIconSize.md,
+                  color: scheme.onSurface,
+                ),
+                onPressed: () => setState(() => _show = !_show),
               ),
-              child: _busy
-                  ? SizedBox.square(
-                      dimension: 20,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: scheme.primary,
-                      ),
-                    )
-                  : const Text('Lưu mật khẩu mới'),
+            ),
+            const SizedBox(width: 8),
+            OmniGlassCircle(
+              child: IconButton(
+                tooltip: 'Đóng',
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints.tightFor(
+                  width: 44,
+                  height: 44,
+                ),
+                icon: Icon(
+                  Icons.close_rounded,
+                  size: OmniIconSize.md,
+                  color: scheme.onSurface,
+                ),
+                onPressed: () => Navigator.of(context).maybePop(),
+              ),
             ),
           ],
         ),
       ),
+      footer: OutlinedButton(
+        onPressed: _ready && !_busy ? _save : null,
+        child: _busy
+            ? SizedBox.square(
+                dimension: 20,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: scheme.primary,
+                ),
+              )
+            : const Text('Lưu mật khẩu mới'),
+      ),
+      children: [
+        OmniGroupSection(
+          title: 'Bảo mật đăng nhập',
+          dividerIndent: 14,
+          footer:
+              'Bỏ trống mật khẩu hiện tại nếu bạn chỉ đăng nhập bằng Google.',
+          children: [
+            rowField(
+              label: 'Mật khẩu hiện tại',
+              controller: _current,
+              hintText: 'Nhập mật khẩu hiện tại',
+              autofillHints: const [AutofillHints.password],
+              error: _currentError,
+            ),
+            rowField(
+              label: 'Mật khẩu mới',
+              controller: _next,
+              hintText: 'Ít nhất 8 ký tự',
+              required: true,
+              autofillHints: const [AutofillHints.newPassword],
+            ),
+            rowField(
+              label: 'Nhập lại mật khẩu mới',
+              controller: _again,
+              hintText: 'Nhập khớp mật khẩu mới',
+              required: true,
+              autofillHints: const [AutofillHints.newPassword],
+              error: _nextError,
+            ),
+          ],
+        ),
+        if (_formError != null)
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8),
+            child: Text(
+              _formError!,
+              style: OmniType.caption.copyWith(color: scheme.error),
+            ),
+          ),
+      ],
     );
   }
 }

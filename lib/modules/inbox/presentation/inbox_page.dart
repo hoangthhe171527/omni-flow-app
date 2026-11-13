@@ -49,6 +49,9 @@ class _InboxPageState extends ConsumerState<InboxPage>
     super.initState();
     _scrollController.addListener(_onScroll);
     WidgetsBinding.instance.addObserver(this);
+    _realtime.setState(
+      ref.read(realtimeStatusProvider).valueOrNull ?? RealtimeStatus.disabled,
+    );
     _startRealtimeFallback();
   }
 
@@ -185,14 +188,12 @@ class _InboxPageState extends ConsumerState<InboxPage>
 
     // A socket that drops has to put the poll back on its tight interval, and a
     // socket that comes up has to stop it again.
-    final status =
-        ref.watch(realtimeStatusProvider).valueOrNull ??
-        RealtimeStatus.disabled;
-    if (_realtime.setState(status)) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) _startRealtimeFallback();
-      });
-    }
+    ref.listen<AsyncValue<RealtimeStatus>>(realtimeStatusProvider, (_, next) {
+      final status = next.valueOrNull ?? RealtimeStatus.disabled;
+      if (_realtime.setState(status) && mounted) {
+        _startRealtimeFallback();
+      }
+    });
     final access = ref.watch(inboxAccessProvider);
     final list = ref.watch(inboxListProvider);
     // Mục ghim lỗi hay đang tải thì ẩn — danh sách chính vẫn hiện.

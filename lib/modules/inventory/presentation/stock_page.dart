@@ -40,9 +40,6 @@ class _StockPageState extends ConsumerState<StockPage> {
   /// Đang đưa cây vào xưởng (chờ danh sách kế hoạch / API) — chặn bấm lặp.
   bool _sending = false;
 
-  /// Lần tự tải thêm (khi lọc tuổi tồn) vừa lỗi — không thử lại liên tục.
-  bool _autoLoadFailed = false;
-
   StateController<StockFilter> get _filter =>
       ref.read(stockFilterProvider.notifier);
 
@@ -445,7 +442,6 @@ class _StockPageState extends ConsumerState<StockPage> {
     }
     // Bộ lọc đổi thì danh sách đổi: bỏ các cây đã chọn ở danh sách cũ.
     ref.listen(stockFilterProvider, (_, _) {
-      _autoLoadFailed = false;
       if (_picked.isNotEmpty) setState(_picked.clear);
     });
     final f = ref.watch(stockFilterProvider);
@@ -493,20 +489,6 @@ class _StockPageState extends ConsumerState<StockPage> {
               if (f.age!.matches(InventoryFormat.ageDays(u.receivedAt, today)))
                 u,
           ];
-    // Tuổi tồn lọc trên máy: phải tải hết các trang, không thì cây khớp ở
-    // trang chưa tải bị coi như không có.
-    if (f.age != null &&
-        state != null &&
-        state.hasMore &&
-        !state.loadingMore &&
-        !_autoLoadFailed) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (!mounted) return;
-        ref.read(stockProvider.notifier).loadMore().catchError((Object _) {
-          _autoLoadFailed = true;
-        });
-      });
-    }
     final pickedLoaded = loaded.where((u) => _picked.contains(u.id)).length;
     // Cây đã chọn chưa có việc tân trang đang mở — số cây sẽ vào xưởng.
     final pickedForWorkshop = loaded
@@ -566,10 +548,10 @@ class _StockPageState extends ConsumerState<StockPage> {
             key: const ValueKey('inv-stock-dock'),
             // Không dòng tóm tắt: nhãn nút đã mang số cây ("Bán / Đặt trước ·
             // 2 cây") — nút trải hết khay, chữ không gãy dòng (soát 12/11).
-            action: dockButtons.last.filled(),
+            action: OmniTintedButtons(child: dockButtons.last.filled()),
             extra: [
               for (final b in dockButtons.take(dockButtons.length - 1))
-                b.outlined(),
+                OmniTintedButtons(child: b.outlined()),
             ],
           );
 
@@ -617,25 +599,22 @@ class _StockPageState extends ConsumerState<StockPage> {
       onSerial: (s) => _saveSerial(u, s),
     );
 
-    final list = <Widget>[
-      _StatStrip(
+    final scheme = Theme.of(context).colorScheme;
+    final builders = <Widget Function()>[
+      () => _StatStrip(
         key: const ValueKey('inv-stock-summary'),
-        cells: [
-          (segments[segIndex].$1, '${InventoryFormat.number(count)} cây', null),
-          // Tổng tiền chỉ khi đã tải hết — cộng một trang là số sai.
-          ('Niêm yết', allLoaded ? InvUi.vnd(sumPrice) : '—', null),
-          (
-            // Nhãn một dòng ở 1/3 bề ngang 390: "Tồn > 90 ngày" gãy dòng.
-            'Tồn lâu',
-            allLoaded ? '${InventoryFormat.number(old)} cây' : '—',
-            _pickAge,
-          ),
-        ],
-        activeLast: f.age != null,
+        countLabel: segments[segIndex].$1,
+        countValue: '${InventoryFormat.number(count)} cây',
+        // Tổng tiền chỉ khi đã tải hết — cộng một trang là số sai.
+        priceValue: allLoaded ? InvUi.vnd(sumPrice) : '—',
+        oldValue: allLoaded ? '${InventoryFormat.number(old)} cây' : '—',
+        oldWarning: allLoaded && old > 0,
+        activeAge: f.age != null,
+        onPickAge: _pickAge,
         cost: perms.cost && allLoaded ? InvUi.vnd(sumCost) : null,
       ),
-      const SizedBox(height: OmniGroupSection.gap),
-      OmniSegmented(
+      () => const SizedBox(height: OmniGroupSection.gap),
+      () => OmniSegmented(
         labels: [
           for (final (label, _, n) in segments)
             n == null ? label : '$label ${InventoryFormat.number(n)}',
@@ -643,36 +622,84 @@ class _StockPageState extends ConsumerState<StockPage> {
         index: segIndex,
         onChanged: (i) => _setSegment(segments[i].$2),
       ),
-      const SizedBox(height: OmniGroupSection.gap),
+      () => const SizedBox(height: OmniGroupSection.gap),
       ...switch (stock) {
         AsyncValue(:final error?) when state == null => [
-          OmniErrorView(
+          () => OmniErrorView(
             error: InvUi.error(error),
             onRetry: () => ref.invalidate(stockProvider),
           ),
         ],
-        _ when state == null => [const InvSkeleton(count: 6, height: 64)],
+        _ when state == null => [() => const InvSkeleton(count: 6, height: 64)],
         _ when items.isEmpty => [
-          OmniGroupSection(
+          () => OmniGroupSection(
             trailingTitle: _multi ? pickToggle : null,
             children: const [OmniGroupRow(title: 'Không có cây khớp')],
           ),
         ],
         _ => [
-          for (final (i, e) in groups.entries.indexed) ...[
-            if (i > 0) const SizedBox(height: OmniGroupSection.gap),
-            OmniGroupSection(
-              key: i == 0 ? const ValueKey('inv-stock-list') : null,
-              title: e.key == null
-                  ? null
-                  : '${e.key} · ${InventoryFormat.number(e.value.length)} cây',
-              // "Chọn" ở đầu danh sách, như ứng dụng Ảnh.
-              trailingTitle: i == 0 ? pickToggle : null,
-              children: [for (final u in e.value) row(u)],
-            ),
+          for (final (groupIdx, e) in groups.entries.indexed) ...[
+            if (groupIdx > 0) () => const SizedBox(height: OmniGroupSection.gap),
+            if (e.key != null || (groupIdx == 0 && pickToggle != null))
+              () => Padding(
+                padding: const EdgeInsets.fromLTRB(8, 0, 8, 6),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Semantics(
+                        header: true,
+                        child: Text(
+                          e.key == null
+                              ? ''
+                              : '${e.key} · ${InventoryFormat.number(e.value.length)} cây',
+                          style: OmniType.caption.copyWith(
+                            fontWeight: FontWeight.w600,
+                            color: scheme.onSurfaceVariant,
+                          ),
+                        ),
+                      ),
+                    ),
+                    if (groupIdx == 0) ?pickToggle,
+                  ],
+                ),
+              ),
+            for (var idx = 0; idx < e.value.length; idx++)
+              () {
+                final u = e.value[idx];
+                final len = e.value.length;
+                return Material(
+                  key: groupIdx == 0 && idx == 0
+                      ? const ValueKey('inv-stock-list')
+                      : null,
+                  color: scheme.surface,
+                  borderRadius: BorderRadius.vertical(
+                    top: idx == 0 ? const Radius.circular(18) : Radius.zero,
+                    bottom: idx == len - 1
+                        ? const Radius.circular(18)
+                        : Radius.zero,
+                  ),
+                  clipBehavior: Clip.antiAlias,
+                  child: OmniTintedButtons(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        if (idx > 0)
+                          Divider(
+                            height: 1,
+                            thickness: 1,
+                            indent: 54,
+                            color: scheme.outlineVariant.withValues(alpha: .7),
+                          ),
+                        row(u),
+                      ],
+                    ),
+                  ),
+                );
+              },
           ],
           if (state.loadingMore)
-            const Padding(
+            () => const Padding(
               padding: EdgeInsets.all(16),
               child: Center(child: CircularProgressIndicator.adaptive()),
             ),
@@ -723,7 +750,7 @@ class _StockPageState extends ConsumerState<StockPage> {
           },
           child: RefreshIndicator(
             onRefresh: () => ref.read(stockProvider.notifier).refresh(),
-            child: ListView(
+            child: ListView.builder(
               key: const ValueKey('inv-stock-scroll'),
               physics: const AlwaysScrollableScrollPhysics(),
               keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
@@ -738,7 +765,8 @@ class _StockPageState extends ConsumerState<StockPage> {
                         rows: dockButtons.length,
                       ),
               ),
-              children: list,
+              itemCount: builders.length,
+              itemBuilder: (_, index) => builders[index](),
             ),
           ),
         ),
@@ -766,80 +794,57 @@ class _DockButton {
       OutlinedButton(key: key, onPressed: onPressed, child: Text(label));
 }
 
-/// Dải 3 số đầu trang (kiểu Sortly): số cây · giá trị niêm yết · tồn lâu.
-/// Số luôn đủ chữ số; ô dài thì chữ thu nhỏ, không cắt. Giá vốn (quyền cost)
-/// là dòng phụ dưới dải.
+/// Thẻ tóm tắt tồn kho phẳng kiểu Hero dòng nhãn — số: hiển thị trọn chữ số
+/// (`tabularFigures`, không `FittedBox`), giá vốn (khi có quyền) và dòng lọc
+/// nhanh tồn lâu.
 class _StatStrip extends StatelessWidget {
   const _StatStrip({
     super.key,
-    required this.cells,
-    required this.activeLast,
+    required this.countLabel,
+    required this.countValue,
+    required this.priceValue,
+    required this.oldValue,
+    required this.oldWarning,
+    required this.activeAge,
+    required this.onPickAge,
     this.cost,
   });
 
-  final List<(String, String, VoidCallback?)> cells;
-  final bool activeLast;
+  final String countLabel;
+  final String countValue;
+  final String priceValue;
+  final String oldValue;
+  final bool oldWarning;
+  final bool activeAge;
+  final VoidCallback onPickAge;
   final String? cost;
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final oldColor = activeAge
+        ? scheme.primary
+        : oldWarning
+        ? OmniColors.warningTextOf(context)
+        : scheme.onSurface;
     return OmniGroupSection(
       dividerIndent: 14,
       children: [
-        IntrinsicHeight(
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              for (final (i, (label, value, onTap)) in cells.indexed) ...[
-                if (i > 0)
-                  VerticalDivider(
-                    width: 1,
-                    thickness: 1,
-                    indent: 10,
-                    endIndent: 10,
-                    color: scheme.outlineVariant.withValues(alpha: .7),
-                  ),
-                Expanded(
-                  // Ô giữa (tiền) rộng hơn: số tỷ đủ chữ số vẫn vừa.
-                  flex: i == 1 ? 5 : 4,
-                  child: InkWell(
-                    onTap: onTap,
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 10,
-                        vertical: 10,
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          FittedBox(
-                            fit: BoxFit.scaleDown,
-                            alignment: Alignment.centerLeft,
-                            child: Text(
-                              value,
-                              maxLines: 1,
-                              style: OmniType.bodyStrong.copyWith(
-                                color: i == cells.length - 1 && activeLast
-                                    ? scheme.primary
-                                    : scheme.onSurface,
-                                fontFeatures: OmniType.tabular,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 2),
-                          Text(label, maxLines: 2, style: invMuted(context)),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ],
+        OmniGroupRow(title: countLabel, trailing: InvValue(countValue)),
+        OmniGroupRow(title: 'Niêm yết', trailing: InvValue(priceValue)),
+        if (cost != null) OmniGroupRow(title: 'Vốn', trailing: InvValue(cost!)),
+        OmniGroupRow(
+          title: 'Tồn lâu (> ${StockUnitRow.oldDays} ngày)',
+          chevron: true,
+          onTap: onPickAge,
+          trailing: Text(
+            oldValue,
+            style: OmniType.bodyStrong.copyWith(
+              color: oldColor,
+              fontFeatures: OmniType.tabular,
+            ),
           ),
         ),
-        if (cost != null) OmniGroupRow(title: 'Vốn', trailing: InvValue(cost!)),
       ],
     );
   }
@@ -847,7 +852,8 @@ class _StatStrip extends StatelessWidget {
 
 /// Một cây trong danh sách tồn: tên model, dòng phụ serial · lô · tuổi tồn
 /// (cam khi quá [oldDays] ngày), khách (phân đoạn Đã có khách); bên phải giá
-/// niêm yết đủ số, tình trạng và vị trí.
+/// niêm yết đủ số, tình trạng và vị trí. Chế độ chọn nhiều tô nền chọn mềm
+/// kèm dấu ✓ cuối dòng thay vì vòng tròn radio ở đầu.
 class StockUnitRow extends StatelessWidget {
   const StockUnitRow({
     super.key,
@@ -899,118 +905,116 @@ class StockUnitRow extends StatelessWidget {
     final work = showWorkshop ? u.workshopLabel : null;
     final category = showCategory ? InvUi.shortCategory(u.category) : '';
     final muted = invMuted(context);
+    final selected = picking && picked;
     return Semantics(
       button: true,
-      selected: picking && picked,
-      child: InkWell(
-        onTap: onTap,
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(minHeight: 56),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-            child: Row(
-              children: [
-                if (picking) ...[
-                  Icon(
-                    picked
-                        ? Icons.check_circle_rounded
-                        : Icons.radio_button_unchecked_rounded,
-                    size: 22,
-                    color: picked ? scheme.primary : scheme.onSurfaceVariant,
-                  ),
-                  const SizedBox(width: 12),
-                ],
-                if (thumb) ...[
-                  InvUnitThumb(unit: u),
-                  const SizedBox(width: 12),
-                ],
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        u.name,
-                        maxLines: 2,
-                        style: OmniType.body.copyWith(
-                          fontWeight: FontWeight.w600,
-                          color: scheme.onSurface,
-                        ),
-                      ),
-                      // Wrap, không Row: serial dài + lô + loại + tuổi tồn
-                      // không vừa một dòng ở 390 thì xuống dòng, không tràn.
-                      Wrap(
-                        crossAxisAlignment: WrapCrossAlignment.center,
-                        children: [
-                          SerialField(
-                            serial: u.serial,
-                            editable: canEditSerial,
-                            semanticsName: u.name,
-                            onSave: onSerial,
+      selected: selected,
+      child: ColoredBox(
+        color: selected ? OmniGlass.selectionOf(context) : Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(minHeight: 56),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+              child: Row(
+                children: [
+                  if (thumb) ...[
+                    InvUnitThumb(unit: u),
+                    const SizedBox(width: 12),
+                  ],
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          u.name,
+                          maxLines: 2,
+                          style: OmniType.body.copyWith(
+                            fontWeight: FontWeight.w600,
+                            color: scheme.onSurface,
                           ),
-                          Text(' · ', style: muted),
-                          ConstrainedBox(
-                            constraints: const BoxConstraints(minWidth: 0),
-                            child: Text.rich(
-                              TextSpan(
-                                children: [
-                                  TextSpan(
-                                    text: [
-                                      if (work != null)
-                                        UnitCondition.labelOf(u.condition),
-                                      if (u.lotCode != null) u.lotCode!,
-                                      if (category.isNotEmpty) category,
-                                      '',
-                                    ].join(' · '),
-                                  ),
-                                  TextSpan(
-                                    text: age == null
-                                        ? 'chưa có ngày'
-                                        : '$age ngày',
-                                    style: age != null && age > oldDays
-                                        ? TextStyle(
-                                            color: OmniColors.warningTextOf(
-                                              context,
-                                            ),
-                                          )
-                                        : null,
-                                  ),
-                                ],
+                        ),
+                        // Wrap, không Row: serial dài + lô + loại + tuổi tồn
+                        // không vừa một dòng ở 390 thì xuống dòng, không tràn.
+                        Wrap(
+                          crossAxisAlignment: WrapCrossAlignment.center,
+                          children: [
+                            SerialField(
+                              serial: u.serial,
+                              editable: canEditSerial,
+                              semanticsName: u.name,
+                              onSave: onSerial,
+                            ),
+                            Text(' · ', style: muted),
+                            ConstrainedBox(
+                              constraints: const BoxConstraints(minWidth: 0),
+                              child: Text.rich(
+                                TextSpan(
+                                  children: [
+                                    TextSpan(
+                                      text: [
+                                        if (work != null)
+                                          UnitCondition.labelOf(u.condition),
+                                        if (u.lotCode != null) u.lotCode!,
+                                        if (category.isNotEmpty) category,
+                                        '',
+                                      ].join(' · '),
+                                    ),
+                                    TextSpan(
+                                      text: age == null
+                                          ? 'chưa có ngày'
+                                          : '$age ngày',
+                                      style: age != null && age > oldDays
+                                          ? TextStyle(
+                                              color: OmniColors.warningTextOf(
+                                                context,
+                                              ),
+                                            )
+                                          : null,
+                                    ),
+                                  ],
+                                ),
+                                maxLines: 2,
+                                style: muted,
                               ),
-                              maxLines: 2,
-                              style: muted,
+                            ),
+                          ],
+                        ),
+                        if (hold != null)
+                          Text(
+                            hold,
+                            style: OmniType.caption.copyWith(
+                              color: scheme.primary,
+                              fontWeight: FontWeight.w600,
                             ),
                           ),
-                        ],
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      InvValue(
+                        InvUi.vnd(u.listPrice),
+                        sub: work ?? UnitCondition.labelOf(u.condition),
+                        subColor: work != null
+                            ? null
+                            : InvUi.conditionColor(context, u.condition),
                       ),
-                      if (hold != null)
-                        Text(
-                          hold,
-                          style: OmniType.caption.copyWith(
-                            color: scheme.primary,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
+                      if (location != null)
+                        Text(location!, maxLines: 1, style: muted),
                     ],
                   ),
-                ),
-                const SizedBox(width: 10),
-                Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    InvValue(
-                      InvUi.vnd(u.listPrice),
-                      sub: work ?? UnitCondition.labelOf(u.condition),
-                      subColor: work != null
-                          ? null
-                          : InvUi.conditionColor(context, u.condition),
-                    ),
-                    if (location != null)
-                      Text(location!, maxLines: 1, style: muted),
+                  if (selected) ...[
+                    const SizedBox(width: 8),
+                    Icon(Icons.check_rounded, size: 20, color: scheme.primary),
                   ],
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ),
@@ -1019,7 +1023,7 @@ class StockUnitRow extends StatelessWidget {
   }
 }
 
-/// Ô tìm trên thanh + nút lọc (chấm số bộ lọc đang bật).
+/// Ô tìm viên kính trên thanh + nút lọc mặt kính tròn (chấm số bộ lọc đang bật).
 class _SearchBottom extends StatelessWidget implements PreferredSizeWidget {
   const _SearchBottom({
     required this.hint,
@@ -1040,38 +1044,51 @@ class _SearchBottom extends StatelessWidget implements PreferredSizeWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 6),
+      padding: const EdgeInsets.only(right: 4),
       child: SizedBox(
         height: 44,
         child: Row(
           children: [
             Expanded(
-              child: OmniSearchField(
-                key: const ValueKey('inv-search'),
-                hint: hint,
-                flat: true,
-                dense: true,
-                onChanged: onChanged,
+              child: OmniGlass(
+                radius: 22,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 6),
+                  child: OmniSearchField(
+                    key: const ValueKey('inv-search'),
+                    hint: hint,
+                    flat: true,
+                    dense: true,
+                    onChanged: onChanged,
+                  ),
+                ),
               ),
             ),
-            const SizedBox(width: 4),
-            IconButton(
-              key: const ValueKey('inv-filter'),
-              tooltip: activeFilters > 0
-                  ? 'Lọc · đang bật $activeFilters'
-                  : 'Lọc',
-              padding: EdgeInsets.zero,
-              constraints: const BoxConstraints.tightFor(width: 44, height: 44),
-              onPressed: onFilter,
-              icon: Badge(
-                isLabelVisible: activeFilters > 0,
-                label: Text('$activeFilters'),
-                backgroundColor: scheme.primary,
-                textColor: scheme.onPrimary,
-                child: Icon(
-                  Icons.tune_rounded,
-                  size: OmniIconSize.md,
-                  color: activeFilters > 0 ? scheme.primary : scheme.onSurface,
+            const SizedBox(width: 8),
+            OmniGlassCircle(
+              child: IconButton(
+                key: const ValueKey('inv-filter'),
+                tooltip: activeFilters > 0
+                    ? 'Lọc · đang bật $activeFilters'
+                    : 'Lọc',
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints.tightFor(
+                  width: 44,
+                  height: 44,
+                ),
+                onPressed: onFilter,
+                icon: Badge(
+                  isLabelVisible: activeFilters > 0,
+                  label: Text('$activeFilters'),
+                  backgroundColor: scheme.primary,
+                  textColor: scheme.onPrimary,
+                  child: Icon(
+                    Icons.tune_rounded,
+                    size: OmniIconSize.md,
+                    color: activeFilters > 0
+                        ? scheme.primary
+                        : scheme.onSurface,
+                  ),
                 ),
               ),
             ),

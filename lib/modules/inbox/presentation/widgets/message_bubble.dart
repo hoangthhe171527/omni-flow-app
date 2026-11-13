@@ -217,14 +217,14 @@ class MessageBubble extends StatelessWidget {
       decoration: BoxDecoration(
         color: bubbleColor,
         borderRadius: bubbleRadius,
-        // Chỉ tin vào (sáng) có bóng nhẹ `0 1 2 rgba(11,26,51,.08)` để nổi
-        // khỏi nền; tin ra đã đủ tương phản bằng màu.
+        // Chỉ tin vào (sáng) có bóng nhẹ để nổi khỏi nền; tin ra đã đủ tương
+        // phản bằng màu.
         boxShadow: !outbound && !dark && !failed
-            ? const [
+            ? [
                 BoxShadow(
-                  color: Color(0x140B1A33),
+                  color: OmniColors.ink.withValues(alpha: 0.08),
                   blurRadius: 2,
-                  offset: Offset(0, 1),
+                  offset: const Offset(0, 1),
                 ),
               ]
             : null,
@@ -235,19 +235,10 @@ class MessageBubble extends StatelessWidget {
           if (message.replyToMessageId != null)
             _QuotedMessage(message: message, onPrimary: onPrimaryBubble),
           if (files.isNotEmpty) ...[
-            if (onPrimaryBubble)
-              // Tệp trên nền primary: đảo sang chữ trắng.
-              Theme(
-                data: Theme.of(context).copyWith(
-                  colorScheme: scheme.copyWith(
-                    onSurface: Colors.white,
-                    onSurfaceVariant: Colors.white.withValues(alpha: 0.8),
-                  ),
-                ),
-                child: MessageFileAttachments(attachments: files),
-              )
-            else
-              MessageFileAttachments(attachments: files),
+            MessageFileAttachments(
+              attachments: files,
+              onPrimary: onPrimaryBubble,
+            ),
             if (message.text.isNotEmpty) const SizedBox(height: OmniSpacing.sm),
           ],
           if (message.recalled)
@@ -267,6 +258,7 @@ class MessageBubble extends StatelessWidget {
           if (message.text.isNotEmpty && _urlPattern.hasMatch(message.text))
             MessageLinkPreview(
               url: _urlPattern.firstMatch(message.text)!.group(0)!,
+              onPrimary: onPrimaryBubble,
             ),
         ],
       ),
@@ -890,12 +882,12 @@ class _QuotedMessage extends StatelessWidget {
     return Container(
       width: double.infinity,
       margin: const EdgeInsets.only(bottom: 7),
-      padding: const EdgeInsets.fromLTRB(8, 5, 8, 5),
+      padding: const EdgeInsets.fromLTRB(10, 6, 10, 6),
       decoration: BoxDecoration(
         color: onPrimary
             ? Colors.white.withValues(alpha: 0.16)
             : scheme.onSurface.withValues(alpha: 0.06),
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(14),
         border: Border(
           left: BorderSide(color: accent.withValues(alpha: 0.85), width: 3),
         ),

@@ -456,7 +456,6 @@ class _MessageComposerState extends State<MessageComposer> {
   Future<void> _openEmoji() async {
     final picked = await showOmniSheet<String>(
       context: context,
-      showDragHandle: true,
       builder: (_) => const _EmojiSheet(),
     );
     if (picked != null && mounted) _insert(picked);
@@ -478,7 +477,6 @@ class _MessageComposerState extends State<MessageComposer> {
 
     final picked = await showOmniSheet<String>(
       context: context,
-      showDragHandle: true,
       builder: (_) => _TemplateSheet(templates: templates),
     );
     if (picked == null || !mounted) return;
@@ -851,10 +849,16 @@ class _ReplyPreview extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.fromLTRB(14, 8, 8, 8),
       decoration: BoxDecoration(
-        color: scheme.surfaceContainerLowest,
         border: Border(
           left: BorderSide(color: OmniColors.chatPrimary, width: 3),
-          bottom: BorderSide(color: scheme.outline.withValues(alpha: 0.4)),
+          bottom: BorderSide(
+            color: OmniColors.byBrightness(
+              context,
+              OmniColors.border,
+              OmniColors.darkBorder,
+            ),
+            width: 0.5,
+          ),
         ),
       ),
       child: Row(
@@ -948,9 +952,15 @@ class _ImageTray extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.fromLTRB(10, 8, 10, 6),
       decoration: BoxDecoration(
-        color: scheme.surfaceContainerLowest,
         border: Border(
-          bottom: BorderSide(color: scheme.outline.withValues(alpha: 0.42)),
+          bottom: BorderSide(
+            color: OmniColors.byBrightness(
+              context,
+              OmniColors.border,
+              OmniColors.darkBorder,
+            ),
+            width: 0.5,
+          ),
         ),
       ),
       child: ListView.separated(
@@ -966,7 +976,7 @@ class _ImageTray extends StatelessWidget {
             clipBehavior: Clip.none,
             children: [
               ClipRRect(
-                borderRadius: OmniRadius.smAll,
+                borderRadius: BorderRadius.circular(12),
                 child: Image.file(
                   File(image.path),
                   width: 68,
@@ -1031,8 +1041,15 @@ class _FileTile extends StatelessWidget {
       padding: const EdgeInsets.only(left: 6),
       decoration: BoxDecoration(
         color: scheme.surface,
-        borderRadius: OmniRadius.smAll,
-        border: Border.all(color: scheme.outlineVariant),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: OmniColors.byBrightness(
+            context,
+            OmniColors.border,
+            OmniColors.darkBorder,
+          ),
+          width: 0.5,
+        ),
       ),
       child: Row(
         children: [
@@ -1368,31 +1385,44 @@ class _EmojiSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SafeArea(
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(
-          OmniSpacing.md,
-          0,
-          OmniSpacing.md,
-          OmniSpacing.md,
-        ),
-        child: GridView.builder(
-          shrinkWrap: true,
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 8,
-          ),
-          itemCount: _emojis.length,
-          itemBuilder: (context, index) => InkWell(
-            onTap: () {
-              HapticFeedback.selectionClick();
-              Navigator.pop(context, _emojis[index]);
-            },
-            borderRadius: OmniRadius.smAll,
-            child: Center(
-              child: Text(_emojis[index], style: OmniChatType.emoji),
+    return ConstrainedBox(
+      constraints: BoxConstraints(
+        maxHeight: MediaQuery.sizeOf(context).height * 0.56,
+      ),
+      child: OmniSheetBody(
+        header: OmniSheetHeader(
+          title: 'Biểu tượng cảm xúc',
+          trailing: OmniGlassCircle(
+            child: IconButton(
+              tooltip: 'Đóng',
+              onPressed: () => Navigator.of(context).pop(),
+              icon: const Icon(Icons.close_rounded),
             ),
           ),
         ),
+        children: [
+          GridView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 8,
+            ),
+            itemCount: _emojis.length,
+            itemBuilder: (context, index) => Material(
+              type: MaterialType.transparency,
+              child: InkWell(
+                onTap: () {
+                  HapticFeedback.selectionClick();
+                  Navigator.pop(context, _emojis[index]);
+                },
+                borderRadius: BorderRadius.circular(12),
+                child: Center(
+                  child: Text(_emojis[index], style: OmniChatType.emoji),
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

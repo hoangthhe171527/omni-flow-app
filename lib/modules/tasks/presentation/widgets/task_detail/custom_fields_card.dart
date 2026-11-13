@@ -67,7 +67,7 @@ class CustomFieldsCard extends ConsumerWidget {
     final iconColor = OmniTaskTones.of(context).fieldIcon;
 
     return Padding(
-      padding: const EdgeInsets.only(top: 10),
+      padding: const EdgeInsets.only(top: 12),
       child: DetailCard(
         flat: true,
         children: [
@@ -143,34 +143,47 @@ class _Empty extends StatelessWidget {
   Widget build(BuildContext context) {
     final style = OmniType.bodySm.copyWith(color: detailSecondary(context));
 
-    return Container(
-      padding: const EdgeInsets.fromLTRB(12, 14, 12, 14),
-      decoration: BoxDecoration(
-        border: Border(top: BorderSide(color: OmniColors.trackOf(context))),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            onAdd == null
-                ? 'Kế hoạch này chưa có trường nào. Chủ hoặc quản lý kế hoạch '
-                      'thêm được trong menu của kế hoạch.'
-                : 'Kế hoạch này chưa có trường nào. Thêm trường như Hãng, '
-                      'Model, Serial để mọi việc trong kế hoạch cùng ghi một '
-                      'kiểu.',
-            style: style,
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 14),
+          child: SizedBox(
+            height: 0.5,
+            child: ColoredBox(color: OmniColors.trackOf(context)),
           ),
-          if (onAdd != null) ...[
-            const SizedBox(height: 10),
-            OutlinedButton.icon(
-              onPressed: onAdd,
-              style: OutlinedButton.styleFrom(minimumSize: const Size(0, 44)),
-              icon: const Icon(Icons.add_rounded, size: OmniIconSize.md),
-              label: const Text('Thêm trường'),
-            ),
-          ],
-        ],
-      ),
+        ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(12, 14, 12, 14),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                onAdd == null
+                    ? 'Kế hoạch này chưa có trường nào. Chủ hoặc quản lý kế hoạch '
+                          'thêm được trong menu của kế hoạch.'
+                    : 'Kế hoạch này chưa có trường nào. Thêm trường như Hãng, '
+                          'Model, Serial để mọi việc trong kế hoạch cùng ghi một '
+                          'kiểu.',
+                style: style,
+              ),
+              if (onAdd != null) ...[
+                const SizedBox(height: 10),
+                OutlinedButton.icon(
+                  onPressed: onAdd,
+                  style: OutlinedButton.styleFrom(
+                    minimumSize: const Size(0, 44),
+                    shape: const StadiumBorder(),
+                  ),
+                  icon: const Icon(Icons.add_rounded, size: OmniIconSize.md),
+                  label: const Text('Thêm trường'),
+                ),
+              ],
+            ],
+          ),
+        ),
+      ],
     );
   }
 }

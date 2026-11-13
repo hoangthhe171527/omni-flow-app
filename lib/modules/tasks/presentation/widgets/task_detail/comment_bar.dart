@@ -352,11 +352,13 @@ class _CommentBarState extends ConsumerState<CommentBar> {
           color: scheme.surface.withValues(alpha: 0.92),
           borderRadius: BorderRadius.circular(27),
           border: Border.all(
-            color: Colors.white.withValues(alpha: dark ? .10 : .70),
+            color: dark
+                ? scheme.outlineVariant.withValues(alpha: 0.45)
+                : scheme.surface.withValues(alpha: 0.85),
           ),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: dark ? .35 : .10),
+              color: OmniColors.ink.withValues(alpha: dark ? .32 : .09),
               blurRadius: 24,
               offset: const Offset(0, 6),
             ),
@@ -586,7 +588,7 @@ class _Preview extends StatelessWidget {
                 height: 56,
                 decoration: BoxDecoration(
                   color: scheme.surface,
-                  borderRadius: BorderRadius.circular(6),
+                  borderRadius: BorderRadius.circular(12),
                   border: Border.all(color: scheme.outlineVariant),
                 ),
                 clipBehavior: Clip.antiAlias,

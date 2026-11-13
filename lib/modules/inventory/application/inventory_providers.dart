@@ -487,22 +487,68 @@ final customerSearchProvider = FutureProvider.autoDispose
 /// Bộ lọc Hàng đã giao: chữ tìm (serial, model, khách) + số cây đã tải.
 typedef DeliveredQuery = ({String q, int limit});
 
-/// Cây đã giao cho khách, mới giao trước (`GET /units?place=delivered`).
-final deliveredProvider = FutureProvider.autoDispose
-    .family<UnitPage, DeliveredQuery>((ref, f) async {
-      _watchUnits(ref);
-      if (!ref.watch(inventoryPermsProvider).delivered) {
-        return const UnitPage(items: [], total: 0);
+/// Cây đã giao cho khách, mới giao trước (`GET /units?place=delivered`),
+/// phân trang theo `offset` thật thay vì tăng `limit` tải lại từ đầu.
+class DeliveredController
+    extends AutoDisposeFamilyAsyncNotifier<StockState, String> {
+  static const pageSize = 50;
+  int _generation = 0;
+
+  Future<UnitPage> _fetch(String q, int offset) {
+    final trimmed = q.trim();
+    return ref
+        .read(inventoryApiProvider)
+        .listUnits(
+          place: UnitPlace.delivered.wire,
+          q: trimmed.isEmpty ? null : trimmed,
+          limit: pageSize,
+          offset: offset,
+        );
+  }
+
+  @override
+  Future<StockState> build(String arg) async {
+    final gen = ++_generation;
+    _watchUnits(ref);
+    if (!ref.watch(inventoryPermsProvider).delivered) {
+      return const StockState(items: [], total: 0);
+    }
+    final page = await _fetch(arg, 0);
+    if (gen != _generation) {
+      return state.valueOrNull ?? const StockState(items: [], total: 0);
+    }
+    return StockState(items: page.items, total: page.total);
+  }
+
+  Future<void> loadMore() async {
+    final cur = state.valueOrNull;
+    if (cur == null || cur.loadingMore || !cur.hasMore) return;
+    final gen = _generation;
+    state = AsyncData(cur.copyWith(loadingMore: true));
+    try {
+      final page = await _fetch(arg, cur.items.length);
+      if (gen != _generation) return;
+      final seen = {for (final u in cur.items) u.id};
+      state = AsyncData(
+        cur.copyWith(
+          items: [
+            ...cur.items,
+            ...page.items.where((u) => !seen.contains(u.id)),
+          ],
+          total: page.total,
+          loadingMore: false,
+        ),
+      );
+    } catch (_) {
+      if (gen == _generation) {
+        state = AsyncData(cur.copyWith(loadingMore: false));
       }
-      final q = f.q.trim();
-      return ref
-          .watch(inventoryApiProvider)
-          .listUnits(
-            place: UnitPlace.delivered.wire,
-            q: q.isEmpty ? null : q,
-            limit: f.limit,
-          );
-    });
+    }
+  }
+}
+
+final deliveredProvider = AsyncNotifierProvider.autoDispose
+    .family<DeliveredController, StockState, String>(DeliveredController.new);
 
 /// Phiên kiểm kê của một vị trí, mới nhất trước.
 final countsProvider = FutureProvider.autoDispose

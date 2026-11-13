@@ -51,6 +51,16 @@ class _ReportIssueSheetState extends State<_ReportIssueSheet> {
     final source = await showOmniSheet<CommentFileSource>(
       context: context,
       builder: (sheet) => OmniSheetBody(
+        header: OmniSheetHeader(
+          title: 'Đính kèm ảnh',
+          trailing: OmniGlassCircle(
+            child: IconButton(
+              tooltip: 'Đóng',
+              onPressed: () => Navigator.of(sheet).maybePop(),
+              icon: const Icon(Icons.close_rounded, size: OmniIconSize.lg),
+            ),
+          ),
+        ),
         children: [
           OmniGroupSection(
             children: [
@@ -90,7 +100,16 @@ class _ReportIssueSheetState extends State<_ReportIssueSheet> {
     final scheme = Theme.of(context).colorScheme;
 
     return OmniSheetBody(
-      header: const OmniSheetHeader(title: 'Báo vấn đề'),
+      header: OmniSheetHeader(
+        title: 'Báo vấn đề',
+        trailing: OmniGlassCircle(
+          child: IconButton(
+            tooltip: 'Đóng',
+            onPressed: () => Navigator.of(context).maybePop(),
+            icon: const Icon(Icons.close_rounded, size: OmniIconSize.lg),
+          ),
+        ),
+      ),
       footer: FilledButton(
         key: const Key('issue-send'),
         onPressed: note.isEmpty
@@ -98,22 +117,41 @@ class _ReportIssueSheetState extends State<_ReportIssueSheet> {
             : () => Navigator.of(
                 context,
               ).pop((note: note, photos: List.of(_photos))),
+        style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(48)),
         child: const Text('Gửi'),
       ),
       children: [
-        TextField(
-          key: const Key('issue-note'),
-          controller: _note,
-          autofocus: true,
-          minLines: 3,
-          maxLines: 6,
-          maxLength: kIssueMaxNote,
-          textCapitalization: TextCapitalization.sentences,
-          decoration: const InputDecoration(
-            hintText: 'Thấy gì, cần ai xem',
-            counterText: '',
-          ),
-          onChanged: (_) => setState(() {}),
+        OmniGroupSection(
+          children: [
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              child: TextField(
+                key: const Key('issue-note'),
+                controller: _note,
+                autofocus: true,
+                minLines: 3,
+                maxLines: 6,
+                maxLength: kIssueMaxNote,
+                textCapitalization: TextCapitalization.sentences,
+                style: OmniType.body.copyWith(color: scheme.onSurface),
+                decoration: InputDecoration(
+                  hintText: 'Thấy gì, cần ai xem',
+                  hintStyle: OmniType.body.copyWith(
+                    color: scheme.onSurfaceVariant,
+                  ),
+                  counterText: '',
+                  isDense: true,
+                  filled: false,
+                  border: InputBorder.none,
+                  enabledBorder: InputBorder.none,
+                  focusedBorder: InputBorder.none,
+                  disabledBorder: InputBorder.none,
+                  contentPadding: EdgeInsets.zero,
+                ),
+                onChanged: (_) => setState(() {}),
+              ),
+            ),
+          ],
         ),
         Wrap(
           spacing: 8,
@@ -124,7 +162,7 @@ class _ReportIssueSheetState extends State<_ReportIssueSheet> {
                 clipBehavior: Clip.none,
                 children: [
                   ClipRRect(
-                    borderRadius: BorderRadius.circular(10),
+                    borderRadius: BorderRadius.circular(12),
                     child: SizedBox.square(
                       dimension: 64,
                       child: kIsWeb
@@ -144,13 +182,17 @@ class _ReportIssueSheetState extends State<_ReportIssueSheet> {
                       label: 'Bỏ ảnh',
                       child: GestureDetector(
                         onTap: () => setState(() => _photos.removeAt(i)),
-                        child: CircleAvatar(
-                          radius: 12,
-                          backgroundColor: scheme.inverseSurface,
-                          child: Icon(
+                        child: Container(
+                          width: 24,
+                          height: 24,
+                          decoration: BoxDecoration(
+                            color: OmniColors.ink.withValues(alpha: 0.74),
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(
                             Icons.close_rounded,
                             size: 14,
-                            color: scheme.onInverseSurface,
+                            color: Colors.white,
                           ),
                         ),
                       ),
@@ -164,14 +206,14 @@ class _ReportIssueSheetState extends State<_ReportIssueSheet> {
                 label: 'Thêm ảnh',
                 child: InkWell(
                   key: const Key('issue-add-photo'),
-                  borderRadius: BorderRadius.circular(10),
+                  borderRadius: BorderRadius.circular(12),
                   onTap: _add,
                   child: Container(
                     width: 64,
                     height: 64,
                     decoration: BoxDecoration(
                       color: scheme.surface,
-                      borderRadius: BorderRadius.circular(10),
+                      borderRadius: BorderRadius.circular(12),
                       border: Border.all(color: scheme.outlineVariant),
                     ),
                     child: Icon(
@@ -195,6 +237,7 @@ class IssueCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
     final red = OmniColors.dangerTextOf(context);
     final who = [
       ?issue.byName,
@@ -202,26 +245,50 @@ class IssueCard extends StatelessWidget {
         '${Formatters.dayMonth(at)} ${Formatters.time(at)}',
     ].join(' · ');
 
-    return OmniCard(
+    return Container(
       key: const Key('task-issue-card'),
-      flat: true,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: scheme.surface,
+        borderRadius: BorderRadius.circular(18),
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              Icon(Icons.report_outlined, size: 18, color: red),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  who.isEmpty ? 'Vấn đề' : who,
-                  style: OmniType.caption.copyWith(color: red),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
+                decoration: BoxDecoration(
+                  color: red.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(999),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.report_outlined, size: 15, color: red),
+                    const SizedBox(width: 5),
+                    Flexible(
+                      child: Text(
+                        who.isEmpty ? 'Vấn đề' : who,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: OmniType.micro.copyWith(
+                          fontWeight: FontWeight.w600,
+                          color: red,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 6),
-          Text(issue.note, style: OmniType.body.copyWith(color: red)),
+          const SizedBox(height: 8),
+          Text(
+            issue.note,
+            style: OmniType.body.copyWith(color: scheme.onSurface),
+          ),
           if (issue.photoUrls.isNotEmpty) ...[
             const SizedBox(height: 10),
             Wrap(
@@ -237,7 +304,7 @@ class IssueCard extends StatelessWidget {
                       type: 'image',
                     ),
                     size: 56,
-                    radius: 10,
+                    radius: 12,
                   ),
               ],
             ),

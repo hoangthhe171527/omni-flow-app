@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../core/error/app_exception.dart';
 import '../../../design/components/components.dart';
@@ -34,10 +35,15 @@ class _CreateTeamPageState extends ConsumerState<CreateTeamPage> {
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
     final text = Theme.of(context).textTheme;
 
     return Scaffold(
-      appBar: OmniAppBar(title: 'Team mới', close: true),
+      appBar: OmniAppBar(
+        title: 'Team mới',
+        close: true,
+        fallbackBack: () => context.go('/teams'),
+      ),
       bottomNavigationBar: OmniActionBar(
         children: [
           FilledButton(
@@ -65,29 +71,78 @@ class _CreateTeamPageState extends ConsumerState<CreateTeamPage> {
             dividerIndent: 14,
             children: [
               Padding(
-                padding: const EdgeInsets.fromLTRB(14, 6, 14, 6),
-                child: TextField(
-                  controller: _name,
-                  autofocus: true,
-                  textCapitalization: TextCapitalization.sentences,
-                  decoration: const InputDecoration(
-                    labelText: 'Tên team',
-                    hintText: 'Tổ sản xuất, Nhóm kinh doanh…',
-                  ),
-                  onChanged: (_) => setState(() {}),
+                padding: const EdgeInsets.fromLTRB(14, 10, 14, 10),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Row(
+                      children: [
+                        Text(
+                          'Tên team',
+                          style: OmniType.caption.copyWith(
+                            fontWeight: FontWeight.w600,
+                            color: scheme.onSurfaceVariant,
+                          ),
+                        ),
+                        Text(
+                          ' *',
+                          style: OmniType.caption.copyWith(
+                            fontWeight: FontWeight.w600,
+                            color: OmniColors.dangerTextOf(context),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    TextField(
+                      controller: _name,
+                      autofocus: true,
+                      textCapitalization: TextCapitalization.sentences,
+                      decoration: const InputDecoration(
+                        hintText: 'Tổ sản xuất, Nhóm kinh doanh…',
+                        isDense: true,
+                        filled: false,
+                        contentPadding: EdgeInsets.symmetric(vertical: 4),
+                        border: InputBorder.none,
+                        enabledBorder: InputBorder.none,
+                        focusedBorder: InputBorder.none,
+                      ),
+                      onChanged: (_) => setState(() {}),
+                    ),
+                  ],
                 ),
               ),
               Padding(
-                padding: const EdgeInsets.fromLTRB(14, 6, 14, 6),
-                child: TextField(
-                  controller: _description,
-                  textCapitalization: TextCapitalization.sentences,
-                  maxLines: 3,
-                  minLines: 1,
-                  decoration: const InputDecoration(
-                    labelText: 'Mô tả',
-                    hintText: 'Tổ phục chế đàn cơ và đàn điện',
-                  ),
+                padding: const EdgeInsets.fromLTRB(14, 10, 14, 10),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      'Mô tả',
+                      style: OmniType.caption.copyWith(
+                        fontWeight: FontWeight.w600,
+                        color: scheme.onSurfaceVariant,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    TextField(
+                      controller: _description,
+                      textCapitalization: TextCapitalization.sentences,
+                      maxLines: 3,
+                      minLines: 1,
+                      decoration: const InputDecoration(
+                        hintText: 'Tổ phục chế đàn cơ và đàn điện',
+                        isDense: true,
+                        filled: false,
+                        contentPadding: EdgeInsets.symmetric(vertical: 4),
+                        border: InputBorder.none,
+                        enabledBorder: InputBorder.none,
+                        focusedBorder: InputBorder.none,
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ],

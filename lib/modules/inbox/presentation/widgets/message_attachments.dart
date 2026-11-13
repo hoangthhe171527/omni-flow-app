@@ -11,6 +11,7 @@ import 'package:video_player/video_player.dart';
 
 import '../../../../core/utils/media_url.dart';
 import '../../../../core/utils/web_url.dart';
+import '../../../../design/components/components.dart';
 import '../../../../design/tokens/tokens.dart';
 import '../../domain/message.dart';
 import 'message_images.dart';
@@ -30,9 +31,14 @@ Future<bool> Function(Uri url, {LaunchMode mode}) attachmentLauncher =
     launchUrl;
 
 class MessageFileAttachments extends StatelessWidget {
-  const MessageFileAttachments({super.key, required this.attachments});
+  const MessageFileAttachments({
+    super.key,
+    required this.attachments,
+    this.onPrimary = false,
+  });
 
   final List<MessageAttachment> attachments;
+  final bool onPrimary;
 
   Future<void> _open(String url) async {
     // URL đính kèm đến từ tin của khách: chỉ trao cho hệ điều hành trang
@@ -45,6 +51,14 @@ class MessageFileAttachments extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final tileBg = onPrimary
+        ? Colors.white.withValues(alpha: 0.16)
+        : scheme.onSurface.withValues(alpha: 0.06);
+    final iconColor = onPrimary ? Colors.white : OmniColors.chatPrimary;
+    final textColor = onPrimary ? Colors.white : scheme.onSurface;
+    final trailingColor = onPrimary
+        ? Colors.white.withValues(alpha: 0.85)
+        : scheme.onSurfaceVariant;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -53,15 +67,15 @@ class MessageFileAttachments extends StatelessWidget {
           Padding(
             padding: const EdgeInsets.only(bottom: 4),
             child: Material(
-              color: scheme.onSurface.withValues(alpha: 0.06),
-              borderRadius: BorderRadius.circular(9),
+              color: tileBg,
+              borderRadius: BorderRadius.circular(14),
               child: InkWell(
                 onTap: () => _open(attachment.url),
-                borderRadius: BorderRadius.circular(9),
+                borderRadius: BorderRadius.circular(14),
                 child: Padding(
                   padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 7,
+                    horizontal: 10,
+                    vertical: 8,
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
@@ -69,7 +83,7 @@ class MessageFileAttachments extends StatelessWidget {
                       Icon(
                         Icons.insert_drive_file_outlined,
                         size: OmniIconSize.md,
-                        color: OmniColors.chatPrimary,
+                        color: iconColor,
                       ),
                       const SizedBox(width: 6),
                       Flexible(
@@ -79,6 +93,7 @@ class MessageFileAttachments extends StatelessWidget {
                           overflow: TextOverflow.ellipsis,
                           style: OmniType.caption.copyWith(
                             fontWeight: FontWeight.w600,
+                            color: textColor,
                           ),
                         ),
                       ),
@@ -86,7 +101,7 @@ class MessageFileAttachments extends StatelessWidget {
                       Icon(
                         Icons.download_rounded,
                         size: OmniIconSize.md,
-                        color: scheme.onSurfaceVariant,
+                        color: trailingColor,
                       ),
                     ],
                   ),
@@ -284,10 +299,15 @@ class _InlineVideoState extends State<_InlineVideo>
               child: Stack(
                 alignment: Alignment.center,
                 children: [
-                  IconButton.filled(
-                    tooltip: 'Phát video',
-                    onPressed: _activate,
-                    icon: const Icon(Icons.play_arrow_rounded),
+                  OmniGlassCircle(
+                    child: IconButton(
+                      tooltip: 'Phát video',
+                      onPressed: _activate,
+                      icon: Icon(
+                        Icons.play_arrow_rounded,
+                        color: scheme.onSurface,
+                      ),
+                    ),
                   ),
                   Positioned(
                     left: 10,
@@ -326,26 +346,37 @@ class _InlineVideoState extends State<_InlineVideo>
 
     final controller = _controller;
     if (_failed || controller == null) {
-      return AspectRatio(
-        aspectRatio: 16 / 9,
-        child: ColoredBox(
-          color: scheme.onSurface.withValues(alpha: 0.08),
-          child: Center(
-            child: IconButton(
-              tooltip: 'Tải lại video',
-              onPressed: _retry,
-              icon: Icon(Icons.refresh_rounded, color: scheme.onSurfaceVariant),
+      return ClipRRect(
+        borderRadius: BorderRadius.circular(14),
+        child: AspectRatio(
+          aspectRatio: 16 / 9,
+          child: ColoredBox(
+            color: scheme.onSurface.withValues(alpha: 0.08),
+            child: Center(
+              child: IconButton(
+                tooltip: 'Tải lại video',
+                onPressed: _retry,
+                icon: Icon(
+                  Icons.refresh_rounded,
+                  color: scheme.onSurfaceVariant,
+                ),
+              ),
             ),
           ),
         ),
       );
     }
     if (!controller.value.isInitialized) {
-      return AspectRatio(
-        aspectRatio: 16 / 9,
-        child: ColoredBox(
-          color: scheme.onSurface.withValues(alpha: 0.08),
-          child: const Center(child: CircularProgressIndicator(strokeWidth: 2)),
+      return ClipRRect(
+        borderRadius: BorderRadius.circular(14),
+        child: AspectRatio(
+          aspectRatio: 16 / 9,
+          child: ColoredBox(
+            color: scheme.onSurface.withValues(alpha: 0.08),
+            child: const Center(
+              child: CircularProgressIndicator.adaptive(strokeWidth: 2),
+            ),
+          ),
         ),
       );
     }
@@ -368,17 +399,20 @@ class _InlineVideoState extends State<_InlineVideo>
             ),
           ),
           Center(
-            child: IconButton.filled(
-              tooltip: controller.value.isPlaying ? 'Tạm dừng' : 'Phát video',
-              onPressed: () => setState(() {
-                controller.value.isPlaying
-                    ? controller.pause()
-                    : controller.play();
-              }),
-              icon: Icon(
-                controller.value.isPlaying
-                    ? Icons.pause_rounded
-                    : Icons.play_arrow_rounded,
+            child: OmniGlassCircle(
+              child: IconButton(
+                tooltip: controller.value.isPlaying ? 'Tạm dừng' : 'Phát video',
+                onPressed: () => setState(() {
+                  controller.value.isPlaying
+                      ? controller.pause()
+                      : controller.play();
+                }),
+                icon: Icon(
+                  controller.value.isPlaying
+                      ? Icons.pause_rounded
+                      : Icons.play_arrow_rounded,
+                  color: scheme.onSurface,
+                ),
               ),
             ),
           ),

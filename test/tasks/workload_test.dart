@@ -118,13 +118,8 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    // Màn đứng gốc trong bài kiểm: logo thay chữ, tên chỉ để đọc.
-    expect(
-      find.byWidgetPredicate(
-        (w) => w is Semantics && w.properties.label == 'Hằng Ni',
-      ),
-      findsOneWidget,
-    );
+    // Màn con có fallbackBack: tiêu đề hiện rõ tên người phụ trách.
+    expect(find.text('Hằng Ni'), findsOneWidget);
     expect(find.text('Thợ máy'), findsOneWidget);
     expect(find.textContaining('u-hang-ni'), findsNothing);
   });

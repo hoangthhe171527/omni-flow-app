@@ -102,6 +102,7 @@ class _FollowersSheetState extends ConsumerState<FollowersSheet> {
               ? Icons.visibility_off_outlined
               : Icons.visibility_outlined,
           title: following ? 'Bỏ theo dõi' : 'Theo dõi việc này',
+          chevron: false,
           onTap: _busy
               ? null
               : () => _run(() => _controller.setFollowing(!following)),
@@ -119,29 +120,30 @@ class _FollowersSheetState extends ConsumerState<FollowersSheet> {
       explicitChildNodes: true,
       label: 'Người theo dõi',
       child: OmniSheetBody(
-        header: OmniSheetHeader(title: 'Người theo dõi (${followers.length})'),
-        children: [
-          OmniGroupSection(
-            children: [
-              ...actions,
-              if (followers.isEmpty)
-                Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 14,
-                    vertical: 16,
-                  ),
-                  child: Text(
-                    'Chưa ai theo dõi việc này.',
-                    textAlign: TextAlign.center,
-                    style: OmniType.bodySm.copyWith(
-                      color: scheme.onSurfaceVariant,
-                    ),
-                  ),
-                ),
-            ],
+        header: OmniSheetHeader(
+          title: 'Người theo dõi (${followers.length})',
+          trailing: OmniGlassCircle(
+            child: IconButton(
+              tooltip: 'Đóng',
+              onPressed: () => Navigator.of(context).maybePop(),
+              icon: const Icon(Icons.close_rounded, size: OmniIconSize.lg),
+            ),
           ),
-          if (followers.isNotEmpty)
+        ),
+        children: [
+          if (actions.isNotEmpty) OmniGroupSection(children: actions),
+          if (followers.isEmpty)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 16),
+              child: Text(
+                'Chưa ai theo dõi việc này.',
+                textAlign: TextAlign.center,
+                style: OmniType.bodySm.copyWith(color: scheme.onSurfaceVariant),
+              ),
+            )
+          else
             OmniGroupSection(
+              dividerIndent: 56,
               children: [
                 for (final f in followers)
                   OmniGroupRow(
@@ -155,6 +157,7 @@ class _FollowersSheetState extends ConsumerState<FollowersSheet> {
                         ? '${f.name ?? 'Bạn'} (bạn)'
                         : (f.name ?? 'Người đã rời'),
                     maxTitleLines: 1,
+                    chevron: false,
                     trailing: widget.canEditOthers
                         ? IconButton(
                             tooltip:

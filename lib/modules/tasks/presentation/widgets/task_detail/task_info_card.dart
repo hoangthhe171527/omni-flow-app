@@ -104,14 +104,14 @@ class TaskInfoCard extends StatelessWidget {
     final label = priorityLabel(priority);
 
     return switch (priority) {
-      'high' => OmniTaskChip.high(label),
-      'low' => OmniTaskChip.none(label),
-      _ => OmniTaskChip.upcoming(label),
+      'high' => TaskPillChip.high(label),
+      'low' => TaskPillChip.none(label),
+      _ => TaskPillChip.upcoming(label),
     };
   }
 }
 
-/// `.row`: cao ≥48, đệm 0 6 0 12, cách 10; vạch `#EEF1F5` giữa các dòng.
+/// `.row`: cao ≥48, đệm 0 6 0 12, cách 10; vạch chia thụt lề 14px giữa các dòng.
 class _Row extends StatelessWidget {
   const _Row({
     required this.label,
@@ -128,39 +128,52 @@ class _Row extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final row = Container(
+    final content = ConstrainedBox(
       constraints: const BoxConstraints(minHeight: 48),
-      padding: const EdgeInsets.fromLTRB(12, 0, 6, 0),
-      decoration: BoxDecoration(
-        border: divider
-            ? Border(top: BorderSide(color: OmniColors.trackOf(context)))
-            : null,
-      ),
-      child: Row(
-        children: [
-          SizedBox(
-            width: 104,
-            child: Text(
-              label,
-              style: OmniType.bodySm.copyWith(
-                color: OmniColors.byBrightness(
-                  context,
-                  OmniColors.mutedForeground,
-                  scheme.onSurfaceVariant,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(12, 0, 6, 0),
+        child: Row(
+          children: [
+            SizedBox(
+              width: 104,
+              child: Text(
+                label,
+                style: OmniType.bodySm.copyWith(
+                  color: OmniColors.byBrightness(
+                    context,
+                    OmniColors.mutedForeground,
+                    scheme.onSurfaceVariant,
+                  ),
                 ),
               ),
             ),
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Align(alignment: Alignment.centerRight, child: child),
-          ),
-        ],
+            const SizedBox(width: 10),
+            Expanded(
+              child: Align(alignment: Alignment.centerRight, child: child),
+            ),
+          ],
+        ),
       ),
     );
-    if (onTap == null) return row;
+    final tapped = onTap == null
+        ? content
+        : InkWell(onTap: onTap, child: content);
+    if (!divider) return tapped;
 
-    return InkWell(onTap: onTap, child: row);
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 14),
+          child: SizedBox(
+            height: 0.5,
+            child: ColoredBox(color: OmniColors.trackOf(context)),
+          ),
+        ),
+        tapped,
+      ],
+    );
   }
 }
 
@@ -260,7 +273,7 @@ class _People extends StatelessWidget {
                   if (box == null || !box.hasSize) return;
                   onAdd!(box.localToGlobal(Offset.zero) & box.size);
                 },
-                borderRadius: BorderRadius.circular(6),
+                customBorder: const CircleBorder(),
                 child: SizedBox.square(
                   dimension: 44,
                   child: Center(
@@ -304,30 +317,25 @@ class _Time extends StatelessWidget {
     }
 
     return Padding(
-      padding: const EdgeInsets.only(right: 8),
-      child: FittedBox(
-        fit: BoxFit.scaleDown,
-        alignment: Alignment.centerRight,
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            if (start != null)
-              OmniTaskChip.upcoming(Formatters.dayMonth(start)),
-            if (start != null && due != null)
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 6),
-                child: Container(
-                  width: 9,
-                  height: 2,
-                  decoration: BoxDecoration(
-                    color: OmniTaskTones.of(context).faint,
-                    borderRadius: BorderRadius.circular(1),
-                  ),
-                ),
+      padding: const EdgeInsets.fromLTRB(0, 6, 8, 6),
+      child: Wrap(
+        spacing: 6,
+        runSpacing: 4,
+        alignment: WrapAlignment.end,
+        crossAxisAlignment: WrapCrossAlignment.center,
+        children: [
+          if (start != null) TaskPillChip.upcoming(Formatters.dayMonth(start)),
+          if (start != null && due != null)
+            Container(
+              width: 9,
+              height: 2,
+              decoration: BoxDecoration(
+                color: OmniTaskTones.of(context).faint,
+                borderRadius: BorderRadius.circular(1),
               ),
-            if (due != null) DueChip(task: task),
-          ],
-        ),
+            ),
+          if (due != null) DueChip(task: task),
+        ],
       ),
     );
   }
@@ -495,7 +503,6 @@ class _TimeSheetState extends State<_TimeSheet> {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
     final today = _day(DateTime.now());
     final quick = [
       ('Hôm nay', today),
@@ -510,17 +517,20 @@ class _TimeSheetState extends State<_TimeSheet> {
       child: OmniSheetBody(
         header: OmniSheetHeader(
           title: 'Thời gian',
-          trailing: TextButton(
-            onPressed: () => Navigator.of(
-              context,
-            ).pop(TaskTimeChoice(start: _start, due: _due)),
-            style: TextButton.styleFrom(
-              minimumSize: const Size(44, 44),
-              foregroundColor: scheme.primary,
-              textStyle: OmniType.bodyStrong,
+          trailing: OmniGlassCircle(
+            child: IconButton(
+              tooltip: 'Đóng',
+              onPressed: () => Navigator.of(context).maybePop(),
+              icon: const Icon(Icons.close_rounded, size: OmniIconSize.lg),
             ),
-            child: const Text('Lưu'),
           ),
+        ),
+        footer: FilledButton(
+          onPressed: () => Navigator.of(
+            context,
+          ).pop(TaskTimeChoice(start: _start, due: _due)),
+          style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(48)),
+          child: const Text('Lưu'),
         ),
         children: [
           Row(

@@ -63,12 +63,11 @@ class _Crumb extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     final chip = Container(
       constraints: const BoxConstraints(minHeight: 32),
-      padding: const EdgeInsets.symmetric(horizontal: 10),
-
+      padding: const EdgeInsets.symmetric(horizontal: 12),
       decoration: BoxDecoration(
         color: scheme.surface,
-        borderRadius: BorderRadius.circular(6),
-        border: Border.all(color: scheme.outlineVariant),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: scheme.outlineVariant.withValues(alpha: 0.7)),
       ),
       // Ôm chữ, căn giữa theo chiều cao 32.
       child: Align(

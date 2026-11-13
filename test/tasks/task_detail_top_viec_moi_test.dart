@@ -164,7 +164,7 @@ void main() {
       final box = t.widget<Container>(chip);
       final deco = box.decoration! as BoxDecoration;
       expect(deco.color, const Color(0xFFB42318));
-      expect(deco.borderRadius, BorderRadius.circular(4));
+      expect(deco.borderRadius, BorderRadius.circular(999));
       expect(t.getSize(chip).height, 28);
       final text = t.widget<Text>(
         find.descendant(of: chip, matching: find.text('Ưu tiên')),
@@ -221,7 +221,7 @@ void main() {
       final box = find.byKey(const ValueKey('title-tick-box'));
       expect(t.getSize(box), const Size(26, 26));
       final deco = t.widget<Container>(box).decoration! as BoxDecoration;
-      expect(deco.borderRadius, BorderRadius.circular(6));
+      expect(deco.borderRadius, BorderRadius.circular(8.5));
       expect(deco.border!.top.width, 2);
       expect(deco.border!.top.color, const Color(0xFF9AA5B8));
 

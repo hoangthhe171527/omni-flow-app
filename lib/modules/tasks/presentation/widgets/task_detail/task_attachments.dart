@@ -14,7 +14,7 @@ class AttachmentThumb extends StatelessWidget {
     required this.attachment,
     required this.size,
     this.onLongPress,
-    this.radius = 4,
+    this.radius = 12,
   });
 
   final TaskAttachment attachment;
@@ -76,6 +76,8 @@ class AttachmentThumb extends StatelessWidget {
                     imageUrl: attachment.url,
                     fit: BoxFit.cover,
                     memCacheWidth:
+                        (size * MediaQuery.devicePixelRatioOf(context)).round(),
+                    memCacheHeight:
                         (size * MediaQuery.devicePixelRatioOf(context)).round(),
                     fadeInDuration: OmniMotion.of(context).fast,
                     // Mất mạng hay ảnh hỏng thì rơi về cái tên, chứ không để

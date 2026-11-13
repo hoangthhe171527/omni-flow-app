@@ -110,88 +110,81 @@ class _InventoryIntroState extends State<_InventoryIntro> {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final last = _page == _pages.length - 1;
-    return Semantics(
-      label: 'Giới thiệu Kho',
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(20, 8, 20, 20),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Align(
-              alignment: Alignment.centerRight,
-              child: TextButton(
-                key: const ValueKey('inv-intro-skip'),
-                onPressed: () => Navigator.of(context).pop(),
-                child: const Text('Bỏ qua'),
-              ),
-            ),
-            SizedBox(
-              height: 260,
-              child: PageView(
-                controller: _pager,
-                onPageChanged: (i) => setState(() => _page = i),
-                children: [
-                  for (final p in _pages)
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        p.art,
-                        const SizedBox(height: 24),
-                        Text(
-                          p.title,
-                          textAlign: TextAlign.center,
-                          style: OmniType.title.copyWith(
-                            color: scheme.onSurface,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          p.body,
-                          textAlign: TextAlign.center,
-                          maxLines: 3,
-                          style: OmniType.body.copyWith(
-                            color: scheme.onSurfaceVariant,
-                          ),
-                        ),
-                      ],
-                    ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 12),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                for (var i = 0; i < _pages.length; i++)
-                  AnimatedContainer(
-                    duration: const Duration(milliseconds: 200),
-                    margin: const EdgeInsets.symmetric(horizontal: 3),
-                    width: i == _page ? 18 : 6,
-                    height: 6,
-                    decoration: BoxDecoration(
-                      color: i == _page
-                          ? scheme.primary
-                          : scheme.outlineVariant,
-                      borderRadius: BorderRadius.circular(3),
-                    ),
-                  ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            FilledButton(
-              key: const ValueKey('inv-intro-next'),
-              onPressed: _next,
-              child: Text(last ? 'Bắt đầu' : 'Tiếp'),
-            ),
-          ],
+    return OmniSheetBody(
+      semanticsLabel: 'Giới thiệu Kho',
+      header: OmniSheetHeader(
+        title: 'Giới thiệu Kho',
+        subtitle: 'Hàng về · Nhận · Bán',
+        trailing: TextButton(
+          key: const ValueKey('inv-intro-skip'),
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Bỏ qua'),
         ),
       ),
+      footer: OmniTintedButtons(
+        child: FilledButton(
+          key: const ValueKey('inv-intro-next'),
+          onPressed: _next,
+          child: Text(last ? 'Bắt đầu' : 'Tiếp'),
+        ),
+      ),
+      children: [
+        SizedBox(
+          height: 230,
+          child: PageView(
+            controller: _pager,
+            onPageChanged: (i) => setState(() => _page = i),
+            children: [
+              for (final p in _pages)
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 4),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      p.art,
+                      const SizedBox(height: 20),
+                      Text(
+                        p.title,
+                        textAlign: TextAlign.center,
+                        style: OmniType.title.copyWith(color: scheme.onSurface),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        p.body,
+                        textAlign: TextAlign.center,
+                        maxLines: 3,
+                        style: OmniType.body.copyWith(
+                          color: scheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+            ],
+          ),
+        ),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            for (var i = 0; i < _pages.length; i++)
+              AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                margin: const EdgeInsets.symmetric(horizontal: 3),
+                width: i == _page ? 18 : 6,
+                height: 6,
+                decoration: BoxDecoration(
+                  color: i == _page ? scheme.primary : scheme.outlineVariant,
+                  borderRadius: BorderRadius.circular(3),
+                ),
+              ),
+          ],
+        ),
+      ],
     );
   }
 }
 
-/// Hình minh hoạ: một thẻ giống dòng của app (ô icon, tên, dòng phụ, nhãn).
+/// Hình minh hoạ: thẻ nhóm chuẩn `OmniGroupSection` (bo 18) như dòng thật của app.
 class _ArtCard extends StatelessWidget {
   const _ArtCard({
     required this.icon,
@@ -207,45 +200,16 @@ class _ArtCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
     return ExcludeSemantics(
-      child: Container(
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(
-          color: scheme.surfaceContainerHighest.withValues(alpha: .5),
-          borderRadius: BorderRadius.circular(18),
-        ),
-        child: Row(
-          children: [
-            OmniIconTile(icon),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    title,
-                    maxLines: 2,
-                    style: OmniType.body.copyWith(
-                      fontWeight: FontWeight.w600,
-                      color: scheme.onSurface,
-                    ),
-                  ),
-                  Text(
-                    sub,
-                    maxLines: 2,
-                    style: OmniType.caption.copyWith(
-                      color: scheme.onSurfaceVariant,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(width: 8),
-            OmniBadge(label: badge, tone: OmniTone.info),
-          ],
-        ),
+      child: OmniGroupSection(
+        children: [
+          OmniGroupRow(
+            icon: icon,
+            title: title,
+            subtitle: sub,
+            trailing: OmniBadge(label: badge, tone: OmniTone.info),
+          ),
+        ],
       ),
     );
   }

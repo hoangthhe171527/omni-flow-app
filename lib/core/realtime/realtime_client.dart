@@ -63,7 +63,7 @@ class RealtimeEvent {
   final Map<String, dynamic> data;
 }
 
-enum RealtimeStatus { disabled, disconnected, connecting, connected }
+enum RealtimeStatus { disabled, disconnected, connecting, connected, degraded }
 
 /// Opens the WebSocket. Injected so a test can drive a fake socket.
 typedef RealtimeSocketFactory = WebSocketChannel Function(Uri url);
@@ -165,6 +165,26 @@ class RealtimeClient {
 
   /// Channels confirmed on the wire.
   final Set<String> _subscribed = {};
+
+  /// Channels whose `/broadcasting/auth` failed and are awaiting retry.
+  final Set<String> _degradedChannels = {};
+  final Map<String, Timer> _subscribeRetryTimers = {};
+
+  void _clearSubscribeRetries() {
+    for (final timer in _subscribeRetryTimers.values) {
+      timer.cancel();
+    }
+    _subscribeRetryTimers.clear();
+    _degradedChannels.clear();
+  }
+
+  void _restoreConnectedIfHealthy() {
+    if (_degradedChannels.isEmpty &&
+        _status.value == RealtimeStatus.degraded &&
+        _socketId != null) {
+      _status.value = RealtimeStatus.connected;
+    }
+  }
 
   ValueListenable<RealtimeStatus> get status => _status;
 
@@ -274,7 +294,10 @@ class RealtimeClient {
   void _startWatchdog() {
     if (!_enableWatchdog || (_watchdog?.isActive ?? false)) return;
     _watchdog = Timer.periodic(_watchdogPeriod, (_) {
-      if (_status.value != RealtimeStatus.connected) return;
+      if (_status.value != RealtimeStatus.connected &&
+          _status.value != RealtimeStatus.degraded) {
+        return;
+      }
       final last = _lastFrameAt;
       if (last == null || _now().difference(last) <= _silenceLimit) {
         return;
@@ -308,6 +331,7 @@ class RealtimeClient {
     _socket = null;
     _socketId = null;
     _subscribed.clear();
+    _clearSubscribeRetries();
     _status.value = _config.isEnabled
         ? RealtimeStatus.disconnected
         : RealtimeStatus.disabled;
@@ -345,7 +369,7 @@ class RealtimeClient {
     }
   }
 
-  Future<void> _subscribe(String channel) async {
+  Future<void> _subscribe(String channel, {int attempt = 0}) async {
     final socketId = _socketId;
     if (socketId == null || _socket == null) return;
 
@@ -355,14 +379,46 @@ class RealtimeClient {
       // round trip. Subscribing now would leak a subscription nobody reads, on a
       // signature that no longer matches the connection.
       if (_socketId != socketId || !_listeners.containsKey(channel)) return;
+      _subscribeRetryTimers.remove(channel)?.cancel();
+      _degradedChannels.remove(channel);
+      _restoreConnectedIfHealthy();
       _send(PusherProtocol.subscribe(channel: channel, auth: auth));
     } catch (error) {
-      // A refused subscription is not fatal: that screen falls back to polling,
-      // which is why polling still exists.
       if (kDebugMode) {
         debugPrint('Realtime subscribe to $channel failed: $error');
       }
+      if (_socketId != socketId ||
+          _paused ||
+          _closedDeliberately ||
+          !_listeners.containsKey(channel)) {
+        return;
+      }
+      _degradedChannels.add(channel);
+      if (_status.value == RealtimeStatus.connected) {
+        _status.value = RealtimeStatus.degraded;
+      }
+      _scheduleSubscribeRetry(channel, socketId, attempt + 1);
     }
+  }
+
+  void _scheduleSubscribeRetry(String channel, String socketId, int nextAttempt) {
+    _subscribeRetryTimers.remove(channel)?.cancel();
+    final raw = _initialBackoff * (1 << nextAttempt.clamp(0, 4));
+    final capped = raw > _maxBackoff ? _maxBackoff : raw;
+    final delay = Duration(
+      milliseconds: (capped.inMilliseconds * (0.8 + _random.nextDouble() * 0.4))
+          .round(),
+    );
+    _subscribeRetryTimers[channel] = Timer(delay, () {
+      _subscribeRetryTimers.remove(channel);
+      if (_paused ||
+          _closedDeliberately ||
+          _socketId != socketId ||
+          !_listeners.containsKey(channel)) {
+        return;
+      }
+      unawaited(_subscribe(channel, attempt: nextAttempt));
+    });
   }
 
   /// Listens to a PRIVATE channel by its server-side name.
@@ -409,6 +465,9 @@ class RealtimeClient {
 
       _listeners.remove(channel);
       _subscribed.remove(channel);
+      _subscribeRetryTimers.remove(channel)?.cancel();
+      _degradedChannels.remove(channel);
+      _restoreConnectedIfHealthy();
       _send(PusherProtocol.unsubscribe(channel));
     };
   }
@@ -424,6 +483,7 @@ class RealtimeClient {
     _reconnectTimer = null;
     _reconnectBackoff = _initialBackoff;
     _subscribed.clear();
+    _clearSubscribeRetries();
 
     final socket = _socket;
     _socket = null;
@@ -456,6 +516,7 @@ class RealtimeClient {
     _reconnectBackoff = _initialBackoff;
     _listeners.clear();
     _subscribed.clear();
+    _clearSubscribeRetries();
 
     final socket = _socket;
     _socket = null;

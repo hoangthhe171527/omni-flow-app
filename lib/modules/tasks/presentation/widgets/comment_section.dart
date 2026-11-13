@@ -350,7 +350,7 @@ class _Comment extends StatelessWidget {
                     key: ValueKey('comment-file-${file.id}'),
                     attachment: file,
                     size: 72,
-                    radius: 6,
+                    radius: 12,
                     onLongPress: onFileLongPress?.call(file),
                   ),
               ],

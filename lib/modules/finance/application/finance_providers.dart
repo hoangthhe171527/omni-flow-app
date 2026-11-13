@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/error/app_exception.dart';
+import '../../../core/network/active_tenant.dart';
 import '../../../core/utils/formatters.dart';
 import '../../../core/utils/text_search.dart';
 import '../data/finance_api.dart';
@@ -948,8 +949,9 @@ class FinanceLedgerNotifier extends Notifier<FinanceLedgerState> {
   @override
   FinanceLedgerState build() {
     _disposed = false;
-    // Bắt buộc watch `financeApiProvider` để khi đổi workspace/tenant (APP-I14 / multi-tenant),
-    // provider tự huỷ bộ nhớ đệm cũ và tải lại dữ liệu của công ty mới.
+    // Bắt buộc watch `activeTenantIdProvider` + `financeApiProvider` để khi đổi
+    // workspace/tenant hoặc logout, provider tự huỷ bộ nhớ đệm cũ.
+    ref.watch(activeTenantIdProvider);
     ref.watch(financeApiProvider);
     final clock = ref.watch(financeClockProvider);
 
@@ -1144,13 +1146,22 @@ class FinanceLedgerNotifier extends Notifier<FinanceLedgerState> {
         state.activeMonth,
     };
 
-    final results = await Future.wait<MonthLedger?>([
-      for (final m in toFetch)
-        _api
-            .fetchMonthLedger(month: m)
-            .then<MonthLedger?>((v) => v)
-            .catchError((_) => null),
-    ]);
+    final monthList = toFetch.toList();
+    final results = <MonthLedger?>[];
+    const batchSize = 3;
+    for (var i = 0; i < monthList.length; i += batchSize) {
+      if (_disposed) return;
+      final end = math.min(i + batchSize, monthList.length);
+      final batch = monthList.sublist(i, end);
+      final batchResults = await Future.wait<MonthLedger?>([
+        for (final m in batch)
+          _api
+              .fetchMonthLedger(month: m)
+              .then<MonthLedger?>((v) => v)
+              .catchError((_) => null),
+      ]);
+      results.addAll(batchResults);
+    }
     if (_disposed) return;
 
     final nextItems = Map<String, List<ExpenseItem>>.from(state.itemsByMonth);

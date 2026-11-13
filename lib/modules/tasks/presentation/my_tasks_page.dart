@@ -108,50 +108,68 @@ class _MyTasksPageState extends ConsumerState<MyTasksPage> {
                 title: _emptyTitle(bucket),
                 message: _emptyMessage(bucket),
               ),
-              data: (state) => ListView.separated(
-                controller: _scrollController,
-                padding: EdgeInsets.fromLTRB(
-                  OmniSpacing.lg,
-                  OmniSpacing.lg + OmniTopBarOverlap.of(context),
-                  OmniSpacing.lg,
-                  OmniSpacing.bottomSafe,
-                ),
-                itemCount: state.items.length + (state.hasMore ? 1 : 0),
-                separatorBuilder: (_, _) =>
-                    const SizedBox(height: OmniSpacing.md),
-                itemBuilder: (context, index) {
-                  if (index >= state.items.length) {
-                    return const Padding(
-                      padding: EdgeInsets.all(OmniSpacing.lg),
-                      child: Center(
-                        child: SizedBox(
-                          width: 18,
-                          height: 18,
-                          child: CircularProgressIndicator.adaptive(
-                            strokeWidth: 2,
+              data: (state) {
+                final groups = _groupByPlan(state.items);
+                final scheme = Theme.of(context).colorScheme;
+                return ListView.separated(
+                  controller: _scrollController,
+                  padding: EdgeInsets.fromLTRB(
+                    OmniSpacing.lg,
+                    OmniSpacing.lg + OmniTopBarOverlap.of(context),
+                    OmniSpacing.lg,
+                    OmniSpacing.bottomSafe,
+                  ),
+                  itemCount: groups.length + (state.hasMore ? 1 : 0),
+                  separatorBuilder: (_, _) =>
+                      const SizedBox(height: OmniGroupSection.gap),
+                  itemBuilder: (context, index) {
+                    if (index >= groups.length) {
+                      return const Padding(
+                        padding: EdgeInsets.all(OmniSpacing.lg),
+                        child: Center(
+                          child: SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator.adaptive(
+                              strokeWidth: 2,
+                            ),
                           ),
                         ),
+                      );
+                    }
+
+                    final group = groups[index];
+                    return OmniGroupSection(
+                      title: group.title,
+                      trailingTitle: Text(
+                        '${group.tasks.length} việc',
+                        style: OmniType.caption.copyWith(
+                          color: scheme.onSurfaceVariant,
+                          fontFeatures: OmniType.tabular,
+                        ),
                       ),
+                      dividerIndent: 14,
+                      children: [
+                        for (final task in group.tasks)
+                          _TickOnSwipe(
+                            task: task,
+                            currentUserId: currentUserId,
+                            canManage: canManageAll,
+                            onTick: (next) => _tick(task, next, done: true),
+                            child: TaskCard(
+                              task: task,
+                              showPlanName: false,
+                              onTap: () => context.pushNamed(
+                                TasksModule.detail,
+                                pathParameters: {'id': task.id},
+                              ),
+                            ),
+                          ),
+                      ],
                     );
-                  }
-
-                  final task = state.items[index];
-
-                  return _TickOnSwipe(
-                    task: task,
-                    currentUserId: currentUserId,
-                    canManage: canManageAll,
-                    onTick: (next) => _tick(task, next, done: true),
-                    child: TaskCard(
-                      task: task,
-                      onTap: () => context.pushNamed(
-                        TasksModule.detail,
-                        pathParameters: {'id': task.id},
-                      ),
-                    ),
-                  );
-                },
-              ),
+                  },
+                );
+              },
             ),
           ),
         ),
@@ -242,6 +260,18 @@ class _MyTasksPageState extends ConsumerState<MyTasksPage> {
     TaskBucket.all => 'Việc được giao cho bạn sẽ hiện ở đây.',
     _ => 'Kéo xuống để làm mới.',
   };
+
+  List<({String title, List<Task> tasks})> _groupByPlan(List<Task> items) {
+    final map = <String, List<Task>>{};
+    for (final task in items) {
+      final raw = task.projectName?.trim();
+      final key = (raw != null && raw.isNotEmpty) ? raw : 'Việc chung';
+      map.putIfAbsent(key, () => []).add(task);
+    }
+    return [
+      for (final entry in map.entries) (title: entry.key, tasks: entry.value),
+    ];
+  }
 }
 
 /// Vuốt phải để tick công đoạn ĐANG MỞ đầu tiên của cây đàn.

@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:omni_app/core/error/app_exception.dart';
 import 'package:omni_app/core/storage/preferences_store.dart';
+import 'package:omni_app/design/components/components.dart';
 import 'package:omni_app/design/theme/omni_theme.dart';
 import 'package:omni_app/modules/auth/application/login_controller.dart';
 import 'package:omni_app/modules/channels/application/channels_providers.dart';
@@ -248,10 +249,10 @@ void main() {
   testWidgets('Đăng xuất hỏi xác nhận rồi mới đăng xuất', (t) async {
     final s = await pump(t);
     await t.scrollUntilVisible(
-      find.widgetWithText(OutlinedButton, 'Đăng xuất'),
+      find.widgetWithText(OmniGroupRow, 'Đăng xuất'),
       200,
     );
-    await t.tap(find.widgetWithText(OutlinedButton, 'Đăng xuất'));
+    await t.tap(find.widgetWithText(OmniGroupRow, 'Đăng xuất'));
     await t.pumpAndSettle();
     expect(s.logoutCalls, 0);
     await t.tap(
@@ -267,10 +268,10 @@ void main() {
   testWidgets('Đăng xuất: huỷ thì không đăng xuất', (t) async {
     final s = await pump(t);
     await t.scrollUntilVisible(
-      find.widgetWithText(OutlinedButton, 'Đăng xuất'),
+      find.widgetWithText(OmniGroupRow, 'Đăng xuất'),
       200,
     );
-    await t.tap(find.widgetWithText(OutlinedButton, 'Đăng xuất'));
+    await t.tap(find.widgetWithText(OmniGroupRow, 'Đăng xuất'));
     await t.pumpAndSettle();
     await t.tap(find.widgetWithText(TextButton, 'Huỷ'));
     await t.pumpAndSettle();

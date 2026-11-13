@@ -28,6 +28,7 @@ import '../routes.dart';
 import 'widgets/activity_log.dart';
 import 'widgets/assign_task_sheet.dart';
 import 'widgets/comment_section.dart';
+import 'widgets/due_chip.dart';
 import 'widgets/edit_sheets.dart';
 import 'widgets/followers_sheet.dart';
 import 'widgets/labels_sheet.dart';
@@ -119,7 +120,9 @@ class _TaskDetailPageState extends ConsumerState<TaskDetailPage> {
     final loadedTask = detail.valueOrNull?.visible;
     final canWrite = access.canUpdate || access.canComplete;
     final me = ref.watch(sessionProvider.select((s) => s.user?.id));
-    final catalog = ref.watch(taskLabelsProvider).valueOrNull ?? const [];
+    final hasLabels = ref.watch(
+      taskLabelsProvider.select((v) => v.valueOrNull?.isNotEmpty ?? false),
+    );
     final viewer = loadedTask != null && _isPlanViewer(ref, loadedTask, me);
     bool api(String name) => ref.watch(apiSupportsProvider(name));
     final canRemind = api(ApiCapability.taskReminders) && access.canRead;
@@ -135,7 +138,7 @@ class _TaskDetailPageState extends ConsumerState<TaskDetailPage> {
         : taskMenuGroups(
             // Thợ có danh mục qua `/system-options/task-labels` (Nhóm 2)
             // cũng bật/tắt nhãn được; sửa danh mục vẫn cần system_options.
-            canLabels: canWrite && (access.canReadLabels || catalog.isNotEmpty),
+            canLabels: canWrite && (access.canReadLabels || hasLabels),
             isAssigner: access.isAssigner,
             archived: loadedTask.archived,
             canFollow: api(ApiCapability.taskFollow) && access.canRead,
@@ -536,7 +539,7 @@ class _Loaded extends ConsumerWidget {
   final ScrollController scroll;
   final GlobalKey titleKey;
 
-  static const _gap = SizedBox(height: 10);
+  static const _gap = SizedBox(height: OmniGroupSection.gap);
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -599,7 +602,7 @@ class _Loaded extends ConsumerWidget {
         if (locked) ...[
           const Align(
             alignment: Alignment.centerLeft,
-            child: OmniTaskChip.upcoming(
+            child: TaskPillChip.upcoming(
               'Đã khoá',
               key: Key('task-locked-chip'),
               icon: Icons.lock_outline_rounded,
@@ -694,28 +697,31 @@ class _Loaded extends ConsumerWidget {
     final bottom = [
       if (task.issue case final issue?)
         Padding(
-          padding: const EdgeInsets.only(top: 10),
+          padding: const EdgeInsets.only(top: OmniGroupSection.gap),
           child: IssueCard(issue: issue),
         ),
       if (canReportIssue)
         Padding(
-          padding: const EdgeInsets.only(top: 10),
-          child: OutlinedButton.icon(
-            key: const Key('task-report-issue'),
-            onPressed: () => _reportIssue(context, controller),
-            icon: Icon(
-              Icons.report_outlined,
-              color: OmniColors.dangerTextOf(context),
-            ),
-            label: Text(
-              task.issue == null ? 'Báo vấn đề' : 'Báo lại vấn đề',
-              style: TextStyle(color: OmniColors.dangerTextOf(context)),
-            ),
+          padding: const EdgeInsets.only(top: OmniGroupSection.gap),
+          child: OmniGroupSection(
+            children: [
+              OmniGroupRow(
+                key: const Key('task-report-issue'),
+                leading: const Icon(
+                  Icons.report_outlined,
+                  size: OmniIconSize.lg,
+                ),
+                title: task.issue == null ? 'Báo vấn đề' : 'Báo lại vấn đề',
+                destructive: true,
+                chevron: false,
+                onTap: () => _reportIssue(context, controller),
+              ),
+            ],
           ),
         ),
       if (unit != null)
         Padding(
-          padding: const EdgeInsets.only(top: 10),
+          padding: const EdgeInsets.only(top: OmniGroupSection.gap),
           child: OmniGroupSection(
             key: const Key('task-unit-group'),
             children: [
@@ -813,7 +819,7 @@ class _Loaded extends ConsumerWidget {
                   sliver: SliverToBoxAdapter(child: _Rise(child: top)),
                 ),
                 SliverPadding(
-                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 28),
                   sliver: SliverToBoxAdapter(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,

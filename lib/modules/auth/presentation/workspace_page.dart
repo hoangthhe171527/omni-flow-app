@@ -1,6 +1,4 @@
 import 'package:flutter/material.dart';
-
-import 'widgets/auth_widgets.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -10,13 +8,12 @@ import '../../../design/tokens/tokens.dart';
 import '../../../security/session/auth_gateway.dart';
 import '../../../security/session/session_controller.dart';
 import '../application/login_controller.dart';
+import 'widgets/auth_widgets.dart';
 
-/// Workspace (tenant) picker. Reached when the signed-in account belongs to
-/// more than one — a single-workspace user is entered automatically — and from
-/// the "Đổi" button in "Tất cả".
-///
-/// Bố cục theo `MWorkspace.dc.html`: logo và "Đăng xuất" trên cùng, tiêu đề
-/// lớn, mỗi không gian một thẻ với ô chữ viết tắt.
+/// Màn chọn không gian làm việc (`#s-auth-workspace`): biểu tượng V-Orbit 64×64,
+/// viên thuốc hiển thị email tài khoản đang đăng nhập, danh sách tổ chức trong
+/// `OmniGroupSection` (bo 18) với ô chữ tắt 40×40 một tông thương hiệu và nút
+/// `Đăng xuất` ở vùng ngón cái dưới màn.
 class WorkspacePage extends ConsumerStatefulWidget {
   const WorkspacePage({super.key});
 
@@ -43,62 +40,40 @@ class _WorkspacePageState extends ConsumerState<WorkspacePage> {
     }
   }
 
+  void _logout() {
+    ref.read(authSignedInEmailProvider.notifier).state = null;
+    ref.read(sessionControllerProvider.notifier).logout();
+  }
+
   @override
   Widget build(BuildContext context) {
     final tenants = ref.watch(tenantOptionsProvider);
-    final scheme = Theme.of(context).colorScheme;
+    final email =
+        ref.watch(sessionProvider.select((s) => s.user?.email)) ??
+        ref.watch(authSignedInEmailProvider);
 
     return Scaffold(
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: AuthBackdrop(
         child: SafeArea(
           child: Center(
             child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 640),
+              constraints: const BoxConstraints(maxWidth: 420),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   Padding(
-                    padding: const EdgeInsets.fromLTRB(
-                      OmniSpacing.xl,
-                      OmniSpacing.sm,
-                      OmniSpacing.sm,
-                      OmniSpacing.sm,
-                    ),
-                    child: Row(
-                      children: [
-                        const OmniBrandMark(semanticLabel: 'Viomni'),
-                        const Spacer(),
-                        OutlinedButton(
-                          onPressed: () => ref
-                              .read(sessionControllerProvider.notifier)
-                              .logout(),
-                          style: OutlinedButton.styleFrom(
-                            minimumSize: const Size(0, 44),
-                          ),
-                          child: const Text('Đăng xuất'),
-                        ),
-                      ],
-                    ),
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(
-                      OmniSpacing.xl,
-                      OmniSpacing.md,
-                      OmniSpacing.xl,
-                      OmniSpacing.xl,
-                    ),
+                    padding: const EdgeInsets.fromLTRB(20, 20, 20, 12),
                     child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Semantics(
-                          header: true,
-                          child: Text(
-                            'Chọn không gian làm việc',
-                            style: OmniType.largeTitle.copyWith(
-                              color: scheme.onSurface,
-                            ),
-                          ),
+                        const AuthBrandHeader(
+                          title: 'Chọn không gian làm việc',
+                          showWordmark: false,
+                          brandSemanticLabel: 'Viomni',
+                          headerSemantics: true,
                         ),
+                        const SizedBox(height: 10),
+                        _AccountIdentityPill(email: email),
                       ],
                     ),
                   ),
@@ -115,30 +90,35 @@ class _WorkspacePageState extends ConsumerState<WorkspacePage> {
                             'bạn.',
                       ),
                       data: (list) => ListView(
-                        padding: const EdgeInsets.fromLTRB(
-                          OmniSpacing.xl,
-                          0,
-                          OmniSpacing.xl,
-                          OmniSpacing.section,
-                        ),
+                        padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
                         children: [
-                          // Mỗi workspace một dòng trong nhóm bo 18, không viền.
                           OmniGroupSection(
-                            dividerIndent: 76,
+                            title: 'Công ty của bạn (${list.length})',
+                            dividerIndent: 68,
                             children: [
-                              for (var i = 0; i < list.length; i++)
+                              for (final tenant in list)
                                 _WorkspaceCard(
-                                  tenant: list[i],
-                                  tone: _WorkspaceTone.at(context, i),
-                                  busy: _entering == list[i].id,
+                                  tenant: tenant,
+                                  busy: _entering == tenant.id,
                                   onTap: _entering == null
-                                      ? () => _enter(list[i])
+                                      ? () => _enter(tenant)
                                       : null,
                                 ),
                             ],
                           ),
                         ],
                       ),
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 8, 20, 20),
+                    child: OutlinedButton(
+                      onPressed: _logout,
+                      style: OutlinedButton.styleFrom(
+                        minimumSize: const Size.fromHeight(50),
+                        shape: const StadiumBorder(),
+                      ),
+                      child: const Text('Đăng xuất'),
                     ),
                   ),
                 ],
@@ -151,41 +131,59 @@ class _WorkspacePageState extends ConsumerState<WorkspacePage> {
   }
 }
 
-/// Màu ô chữ viết tắt, xoay vòng theo thứ tự — chỉ để các thẻ khác nhau
-/// liếc là phân biệt, không mang nghĩa gì.
-class _WorkspaceTone {
-  const _WorkspaceTone(this.background, this.foreground);
+class _AccountIdentityPill extends StatelessWidget {
+  const _AccountIdentityPill({required this.email});
 
-  final Color background;
-  final Color foreground;
+  final String? email;
 
-  /// Ô đầu là khối mực chữ quỹ đạo sáng; các ô sau theo giọng Orbit, có bản
-  /// tối riêng (mực trên nền tối thì nâng lên một bậc).
-  static _WorkspaceTone at(BuildContext context, int index) {
-    final dark = Theme.of(context).brightness == Brightness.dark;
-    const tones = [OmniTone.success, OmniTone.warning, OmniTone.info];
-    if (index % 4 == 0) {
-      return _WorkspaceTone(
-        dark ? OmniColors.darkMuted : OmniColors.ink,
-        OmniColors.orbit,
-      );
-    }
-    final (foreground, background) = tones[index % 4 - 1].of(context);
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final hasEmail = email != null && email!.trim().isNotEmpty;
 
-    return _WorkspaceTone(background, foreground);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+      decoration: BoxDecoration(
+        color: scheme.primaryContainer,
+        borderRadius: OmniRadius.pillAll,
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 7,
+            height: 7,
+            decoration: BoxDecoration(
+              color: scheme.primary,
+              shape: BoxShape.circle,
+            ),
+          ),
+          const SizedBox(width: 7),
+          Flexible(
+            child: Text(
+              hasEmail ? email!.trim() : 'Phiên đăng nhập đã xác thực',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: OmniType.micro.copyWith(
+                color: scheme.onPrimaryContainer,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
 
 class _WorkspaceCard extends StatelessWidget {
   const _WorkspaceCard({
     required this.tenant,
-    required this.tone,
     required this.busy,
     required this.onTap,
   });
 
   final TenantOption tenant;
-  final _WorkspaceTone tone;
   final bool busy;
   final VoidCallback? onTap;
 
@@ -197,23 +195,23 @@ class _WorkspaceCard extends StatelessWidget {
       if (tenant.planLabel != null) tenant.planLabel!,
     ].join(' · ');
 
-    // Dòng đang vào = nền trắng mờ + vòng xoay (không viền primary dày).
     return Material(
       color: busy
-          ? scheme.onSurface.withValues(alpha: .06)
+          ? scheme.onSurface.withValues(alpha: 0.06)
           : Colors.transparent,
       child: InkWell(
         onTap: onTap,
         child: Padding(
-          padding: const EdgeInsets.all(OmniSpacing.md),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
           child: Row(
             children: [
+              // Ô chữ tắt 40×40 bo 12 đồng bộ một tông màu thương hiệu.
               Container(
-                width: 48,
-                height: 48,
+                width: 40,
+                height: 40,
                 decoration: BoxDecoration(
-                  color: tone.background,
-                  borderRadius: OmniRadius.lgAll,
+                  color: scheme.primaryContainer,
+                  borderRadius: BorderRadius.circular(12),
                 ),
                 alignment: Alignment.center,
                 child: Text(
@@ -221,10 +219,10 @@ class _WorkspaceCard extends StatelessWidget {
                       .take(3)
                       .toString()
                       .toUpperCase(),
-                  style: OmniType.body.copyWith(
+                  style: OmniType.caption.copyWith(
                     fontWeight: FontWeight.w600,
                     letterSpacing: 0.28,
-                    color: tone.foreground,
+                    color: scheme.primary,
                   ),
                 ),
               ),
@@ -247,6 +245,7 @@ class _WorkspaceCard extends StatelessWidget {
                         style: OmniType.caption.copyWith(
                           fontWeight: FontWeight.w400,
                           color: scheme.onSurfaceVariant,
+                          fontFeatures: OmniType.tabular,
                         ),
                       ),
                     ],
@@ -268,7 +267,7 @@ class _WorkspaceCard extends StatelessWidget {
               else
                 Icon(
                   Icons.chevron_right_rounded,
-                  color: scheme.outline,
+                  color: scheme.onSurfaceVariant,
                   size: OmniIconSize.lg,
                 ),
             ],
