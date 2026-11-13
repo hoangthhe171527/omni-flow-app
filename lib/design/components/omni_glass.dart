@@ -19,6 +19,7 @@ class OmniGlass extends StatelessWidget {
     required this.radius,
     this.padding = EdgeInsets.zero,
     this.blur = true,
+    this.shadow = true,
   });
 
   final Widget child;
@@ -29,6 +30,10 @@ class OmniGlass extends StatelessWidget {
   /// không nhìn ra khác biệt mà vẫn tốn một lớp BackdropFilter đè nội dung
   /// cuộn. Vẽ nền mờ đặc, giữ vệt sáng / mép sáng.
   final bool blur;
+
+  /// false: bỏ bóng đổ ngoài (vd nút tròn trong thanh trên có chiều cao cố
+  /// định 48, bóng blur 16 dễ bị cắt thành khung mờ chữ nhật).
+  final bool shadow;
 
   /// Màu viên chọn bên trong kính (mục đang chọn của thanh tab): trắng mờ.
   static Color selectionOf(BuildContext context) =>
@@ -144,37 +149,41 @@ class OmniGlass extends StatelessWidget {
     );
 
     final sigma = OmniPerformance.glassSigma(context);
+    final glass = noBlur || solid
+        // Không làm mờ thì không cần ClipRRect (cắt bo góc tốn một lớp).
+        ? body
+        : ClipRRect(
+            borderRadius: shape,
+            child: BackdropFilter(
+              filter: OmniPerformance.saturate(context)
+                  ? ImageFilter.compose(
+                      outer: ImageFilter.blur(sigmaX: sigma, sigmaY: sigma),
+                      inner: const ColorFilter.matrix(_saturate180),
+                    )
+                  : ImageFilter.blur(sigmaX: sigma, sigmaY: sigma),
+              child: body,
+            ),
+          );
+
     // RepaintBoundary: đổi nội dung viên (huy hiệu, gõ chữ) không kéo vẽ lại
     // vùng chứa, và cuộn bên dưới không vẽ lại nội dung viên.
     return RepaintBoundary(
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          borderRadius: shape,
-          // Bóng nhẹ: nền kính trong suốt nên bóng đậm lộ qua và làm kính xám.
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: dark ? 0.28 : 0.07),
-              blurRadius: 16,
-              offset: const Offset(0, 4),
-            ),
-          ],
-        ),
-        child: noBlur || solid
-            // Không làm mờ thì không cần ClipRRect (cắt bo góc tốn một lớp).
-            ? body
-            : ClipRRect(
+      child: shadow
+          ? DecoratedBox(
+              decoration: BoxDecoration(
                 borderRadius: shape,
-                child: BackdropFilter(
-                  filter: OmniPerformance.saturate(context)
-                      ? ImageFilter.compose(
-                          outer: ImageFilter.blur(sigmaX: sigma, sigmaY: sigma),
-                          inner: const ColorFilter.matrix(_saturate180),
-                        )
-                      : ImageFilter.blur(sigmaX: sigma, sigmaY: sigma),
-                  child: body,
-                ),
+                // Bóng nhẹ: nền kính trong suốt nên bóng đậm lộ qua và làm kính xám.
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: dark ? 0.28 : 0.07),
+                    blurRadius: 16,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
               ),
-      ),
+              child: glass,
+            )
+          : glass,
     );
   }
 }

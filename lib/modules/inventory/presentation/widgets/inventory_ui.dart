@@ -27,6 +27,8 @@ abstract final class InvUi {
   /// Màu chữ tình trạng: lỗi vàng cảnh báo, không thấy đỏ.
   static Color? conditionColor(BuildContext context, UnitCondition? c) =>
       switch (c) {
+        UnitCondition.ready => OmniColors.successTextOf(context),
+        UnitCondition.refurbishing => Theme.of(context).colorScheme.primary,
         UnitCondition.defective => OmniColors.warningTextOf(context),
         UnitCondition.missing => OmniColors.dangerTextOf(context),
         _ => null,
@@ -69,9 +71,16 @@ TextStyle invMuted(BuildContext context) => OmniType.caption.copyWith(
 
 /// Giá trị bên phải của dòng: số tiền (không bao giờ cắt) + dòng nhỏ dưới.
 class InvValue extends StatelessWidget {
-  const InvValue(this.value, {super.key, this.sub, this.subColor});
+  const InvValue(
+    this.value, {
+    super.key,
+    this.valueColor,
+    this.sub,
+    this.subColor,
+  });
 
   final String value;
+  final Color? valueColor;
   final String? sub;
   final Color? subColor;
 
@@ -85,7 +94,7 @@ class InvValue extends StatelessWidget {
         Text(
           value,
           style: OmniType.bodyStrong.copyWith(
-            color: scheme.onSurface,
+            color: valueColor ?? scheme.onSurface,
             fontFeatures: OmniType.tabular,
           ),
         ),
@@ -97,6 +106,32 @@ class InvValue extends StatelessWidget {
             ),
           ),
       ],
+    );
+  }
+}
+
+/// Nhãn trạng thái dạng viên thuốc nhạt màu, dễ phân biệt mà không gắt mắt.
+class InvStatusPill extends StatelessWidget {
+  const InvStatusPill({super.key, required this.label, required this.tone});
+
+  final String label;
+  final Color tone;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+      decoration: BoxDecoration(
+        color: tone.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Text(
+        label,
+        style: OmniType.caption.copyWith(
+          color: tone,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
     );
   }
 }

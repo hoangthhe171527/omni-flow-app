@@ -64,7 +64,7 @@ class StageStrip extends StatelessWidget {
   Widget build(BuildContext context) {
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+      padding: const EdgeInsets.fromLTRB(16, 4, 16, 4),
       child: Row(
         children: [
           if (showAll)
@@ -123,55 +123,65 @@ class _StageChip extends StatelessWidget {
 
     return Padding(
       padding: const EdgeInsets.only(right: 8),
-      child: Semantics(
-        button: true,
-        selected: selected,
-        label: semanticsLabel,
-        onTap: onTap,
-        excludeSemantics: true,
-        child: Material(
-          type: MaterialType.transparency,
-          child: InkWell(
-            customBorder: const StadiumBorder(),
+      child: SizedBox(
+        height: 44,
+        child: Center(
+          widthFactor: 1,
+          child: Semantics(
+            button: true,
+            selected: selected,
+            label: semanticsLabel,
             onTap: onTap,
-            child: AnimatedContainer(
-              duration: motion
-                  ? const Duration(milliseconds: 160)
-                  : Duration.zero,
-              constraints: const BoxConstraints(minHeight: 36),
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
-              decoration: selected
-                  ? OmniGlass.buttonDecoration(
-                      context,
-                    ).copyWith(color: OmniGlass.selectionOf(context))
-                  : BoxDecoration(
-                      color: base,
-                      borderRadius: BorderRadius.circular(999),
-                    ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    label,
-                    style: OmniType.chip.copyWith(
-                      fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
-                      color: selected
-                          ? scheme.onSurface
-                          : scheme.onSurfaceVariant,
-                    ),
+            excludeSemantics: true,
+            child: Material(
+              type: MaterialType.transparency,
+              child: InkWell(
+                customBorder: const StadiumBorder(),
+                onTap: onTap,
+                child: AnimatedContainer(
+                  duration: motion
+                      ? const Duration(milliseconds: 160)
+                      : Duration.zero,
+                  constraints: const BoxConstraints(minHeight: 36),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 7,
                   ),
-                  if (count != null) ...[
-                    const SizedBox(width: 6),
-                    Text(
-                      '$count',
-                      style: OmniType.chip.copyWith(
-                        fontWeight: FontWeight.w500,
-                        color: scheme.onSurfaceVariant,
-                        fontFeatures: OmniType.tabular,
+                  decoration: selected
+                      ? OmniGlass.buttonDecoration(
+                          context,
+                        ).copyWith(color: OmniGlass.selectionOf(context))
+                      : BoxDecoration(
+                          color: base,
+                          borderRadius: BorderRadius.circular(999),
+                        ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        label,
+                        style: OmniType.chip.copyWith(
+                          fontWeight:
+                              selected ? FontWeight.w600 : FontWeight.w500,
+                          color: selected
+                              ? scheme.onSurface
+                              : scheme.onSurfaceVariant,
+                        ),
                       ),
-                    ),
-                  ],
-                ],
+                      if (count != null) ...[
+                        const SizedBox(width: 6),
+                        Text(
+                          '$count',
+                          style: OmniType.chip.copyWith(
+                            fontWeight: FontWeight.w500,
+                            color: scheme.onSurfaceVariant,
+                            fontFeatures: OmniType.tabular,
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
               ),
             ),
           ),

@@ -8,7 +8,6 @@ import '../../../design/tokens/tokens.dart';
 import '../application/inventory_providers.dart';
 import '../domain/order_list.dart';
 import '../routes.dart';
-import 'delivered_page.dart' show InvSearchBottom;
 import 'widgets/inventory_ui.dart';
 import 'widgets/pick_order_units_sheet.dart';
 import 'widgets/sell_sheet.dart';
@@ -66,7 +65,13 @@ class _OrdersPageState extends ConsumerState<OrdersPage> {
           children: [
             OmniGroupRow(
               title: 'Còn phải thu',
-              value: Formatters.vnd(due.outstanding),
+              trailing: Text(
+                Formatters.vnd(due.outstanding),
+                style: OmniType.bodyStrong.copyWith(
+                  color: OmniColors.warningTextOf(context),
+                  fontFeatures: OmniType.tabular,
+                ),
+              ),
             ),
           ],
         ),
@@ -113,10 +118,11 @@ class _OrdersPageState extends ConsumerState<OrdersPage> {
     ];
 
     return Scaffold(
+      extendBodyBehindAppBar: true,
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: OmniAppBar(
         title: 'Đơn hàng',
-        bottom: InvSearchBottom(
+        bottom: OmniSearchBottom(
           fieldKey: const ValueKey('orders-search'),
           hint: 'Tìm khách, mã đơn',
           onChanged: (v) => setState(() => _q = v),
@@ -134,29 +140,38 @@ class _OrdersPageState extends ConsumerState<OrdersPage> {
                 onPressed: (_) => _create(),
               )
             : null,
-        body: RefreshIndicator(
-          onRefresh: () async {
-            bumpOrders(ref);
-            await ref
-                .read(ordersListProvider(query).future)
-                .catchError((_) => const <OrderRow>[]);
-          },
-          child: ListView(
-            key: const ValueKey('orders-scroll'),
-            physics: const AlwaysScrollableScrollPhysics(),
-            keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-            padding: EdgeInsets.fromLTRB(
-              16,
-              12,
-              16,
-              OmniFabLayer.listBottom(context, hasFab: perms.sell),
-            ),
-            children: [
-              for (var i = 0; i < list.length; i++) ...[
-                if (i > 0) const SizedBox(height: OmniGroupSection.gap),
-                list[i],
-              ],
-            ],
+        body: OmniTopBarOverlap.wrap(
+          child: Builder(
+            builder: (context) {
+              final topInset = OmniTopBarOverlap.of(context);
+              return RefreshIndicator(
+                edgeOffset: topInset,
+                onRefresh: () async {
+                  bumpOrders(ref);
+                  await ref
+                      .read(ordersListProvider(query).future)
+                      .catchError((_) => const <OrderRow>[]);
+                },
+                child: ListView(
+                  key: const ValueKey('orders-scroll'),
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  keyboardDismissBehavior:
+                      ScrollViewKeyboardDismissBehavior.onDrag,
+                  padding: EdgeInsets.fromLTRB(
+                    16,
+                    topInset + 4,
+                    16,
+                    OmniFabLayer.listBottom(context, hasFab: perms.sell),
+                  ),
+                  children: [
+                    for (var i = 0; i < list.length; i++) ...[
+                      if (i > 0) const SizedBox(height: OmniGroupSection.gap),
+                      list[i],
+                    ],
+                  ],
+                ),
+              );
+            },
           ),
         ),
       ),
@@ -177,7 +192,7 @@ class _OrderRowTile extends StatelessWidget {
     final payColor = switch (o.payStatus) {
       OrderPayStatus.unpaid => OmniColors.warningTextOf(context),
       OrderPayStatus.partial => scheme.primary,
-      OrderPayStatus.paid => scheme.onSurfaceVariant,
+      OrderPayStatus.paid => OmniColors.successTextOf(context),
     };
 
     return OmniGroupRow(
@@ -194,16 +209,13 @@ class _OrderRowTile extends StatelessWidget {
         children: [
           Text(
             Formatters.vnd(money),
-            style: OmniType.body.copyWith(
+            style: OmniType.bodyStrong.copyWith(
               color: scheme.onSurface,
               fontFeatures: OmniType.tabular,
             ),
           ),
-          const SizedBox(height: 2),
-          Text(
-            o.payStatus.label,
-            style: OmniType.caption.copyWith(color: payColor),
-          ),
+          const SizedBox(height: 3),
+          InvStatusPill(label: o.payStatus.label, tone: payColor),
         ],
       ),
       onTap: router == null

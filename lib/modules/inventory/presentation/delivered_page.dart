@@ -110,11 +110,12 @@ class _DeliveredPageState extends ConsumerState<DeliveredPage> {
     ];
 
     return Scaffold(
+      extendBodyBehindAppBar: true,
       appBar: OmniAppBar(
         title: 'Hàng đã giao',
         showAccount: !subPage,
         fallbackBack: subPage ? back : null,
-        bottom: InvSearchBottom(
+        bottom: OmniSearchBottom(
           fieldKey: const ValueKey('inv-delivered-search'),
           hint: 'Serial, model',
           onChanged: (v) => setState(() {
@@ -122,19 +123,28 @@ class _DeliveredPageState extends ConsumerState<DeliveredPage> {
           }),
         ),
       ),
-      body: RefreshIndicator(
-        onRefresh: () async {
-          ref.invalidate(deliveredProvider(_q));
-          await ref
-              .read(deliveredProvider(_q).future)
-              .catchError((_) => const StockState(items: [], total: 0));
-        },
-        child: ListView(
-          key: const ValueKey('inv-delivered-scroll'),
-          physics: const AlwaysScrollableScrollPhysics(),
-          keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-          padding: EdgeInsets.fromLTRB(16, 12, 16, bottom + 24),
-          children: list,
+      body: OmniTopBarOverlap.wrap(
+        child: Builder(
+          builder: (context) {
+            final topInset = OmniTopBarOverlap.of(context);
+            return RefreshIndicator(
+              edgeOffset: topInset,
+              onRefresh: () async {
+                ref.invalidate(deliveredProvider(_q));
+                await ref
+                    .read(deliveredProvider(_q).future)
+                    .catchError((_) => const StockState(items: [], total: 0));
+              },
+              child: ListView(
+                key: const ValueKey('inv-delivered-scroll'),
+                physics: const AlwaysScrollableScrollPhysics(),
+                keyboardDismissBehavior:
+                    ScrollViewKeyboardDismissBehavior.onDrag,
+                padding: EdgeInsets.fromLTRB(16, topInset + 4, 16, bottom + 24),
+                children: list,
+              ),
+            );
+          },
         ),
       ),
     );
@@ -222,43 +232,4 @@ class DeliveredUnitRow extends StatelessWidget {
   }
 }
 
-/// Ô tìm viên kính 44 dưới thanh tiêu đề (như Tồn kho).
-class InvSearchBottom extends StatelessWidget implements PreferredSizeWidget {
-  const InvSearchBottom({
-    super.key,
-    required this.hint,
-    required this.onChanged,
-    this.fieldKey,
-    this.debounce = const Duration(milliseconds: 350),
-  });
 
-  final String hint;
-  final ValueChanged<String> onChanged;
-  final Key? fieldKey;
-  final Duration debounce;
-
-  @override
-  Size get preferredSize => const Size.fromHeight(44);
-
-  @override
-  Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.only(right: 4),
-    child: OmniGlass(
-      radius: 22,
-      child: SizedBox(
-        height: 44,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 6),
-          child: OmniSearchField(
-            key: fieldKey,
-            hint: hint,
-            debounce: debounce,
-            flat: true,
-            dense: true,
-            onChanged: onChanged,
-          ),
-        ),
-      ),
-    ),
-  );
-}

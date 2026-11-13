@@ -11,7 +11,6 @@ import '../application/inventory_providers.dart';
 import '../domain/inventory_format.dart';
 import '../domain/inventory_models.dart';
 import '../routes.dart';
-import 'delivered_page.dart' show InvSearchBottom;
 import 'widgets/inventory_ui.dart';
 import 'widgets/money_keypad_sheet.dart';
 
@@ -451,12 +450,13 @@ class _CountsPageState extends ConsumerState<CountsPage> {
     }
 
     return Scaffold(
+      extendBodyBehindAppBar: true,
       appBar: OmniAppBar(
         title: 'Kiểm kê',
         showAccount: !subPage,
         fallbackBack: subPage ? back : null,
         bottom: open != null && perms.doCounts
-            ? InvSearchBottom(
+            ? OmniSearchBottom(
                 key: ValueKey('inv-count-serial-$_fieldGen'),
                 fieldKey: const ValueKey('inv-count-serial'),
                 hint: 'Gõ serial để tick',
@@ -467,27 +467,36 @@ class _CountsPageState extends ConsumerState<CountsPage> {
       // Nút chính (Bắt đầu / Chốt / Duyệt) trong khay kính đáy.
       body: OmniDockLayer(
         dock: action == null ? null : OmniBottomDock(action: action),
-        body: RefreshIndicator(
-          onRefresh: () async {
-            ref.invalidate(countsProvider(locationId));
-            ref.invalidate(countUnitsProvider(locationId));
-            await ref
-                .read(countsProvider(locationId).future)
-                .catchError((_) => const <StockCount>[]);
-          },
-          child: ListView(
-            key: const ValueKey('inv-count-scroll'),
-            physics: const AlwaysScrollableScrollPhysics(),
-            keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-            padding: EdgeInsets.fromLTRB(
-              16,
-              12,
-              16,
-              action == null
-                  ? OmniFabLayer.listBottom(context, hasFab: false)
-                  : OmniDockLayer.listBottom(context),
-            ),
-            children: children,
+        body: OmniTopBarOverlap.wrap(
+          child: Builder(
+            builder: (context) {
+              final topInset = OmniTopBarOverlap.of(context);
+              return RefreshIndicator(
+                edgeOffset: topInset,
+                onRefresh: () async {
+                  ref.invalidate(countsProvider(locationId));
+                  ref.invalidate(countUnitsProvider(locationId));
+                  await ref
+                      .read(countsProvider(locationId).future)
+                      .catchError((_) => const <StockCount>[]);
+                },
+                child: ListView(
+                  key: const ValueKey('inv-count-scroll'),
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  keyboardDismissBehavior:
+                      ScrollViewKeyboardDismissBehavior.onDrag,
+                  padding: EdgeInsets.fromLTRB(
+                    16,
+                    topInset + 4,
+                    16,
+                    action == null
+                        ? OmniFabLayer.listBottom(context, hasFab: false)
+                        : OmniDockLayer.listBottom(context),
+                  ),
+                  children: children,
+                ),
+              );
+            },
           ),
         ),
       ),

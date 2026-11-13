@@ -28,11 +28,25 @@ class OmniTintedButtons extends StatelessWidget {
     return Theme(
       data: theme.copyWith(
         filledButtonTheme: FilledButtonThemeData(
-          style: tintedStyle(
-            context,
-            foreground: scheme.primary,
-            tint: scheme.primary,
-            amount: theme.brightness == Brightness.dark ? .22 : .12,
+          style: ButtonStyle(
+            minimumSize: const WidgetStatePropertyAll(Size.fromHeight(48)),
+            textStyle: const WidgetStatePropertyAll(OmniType.bodyStrong),
+            shape: const WidgetStatePropertyAll(StadiumBorder()),
+            elevation: const WidgetStatePropertyAll(0),
+            surfaceTintColor: const WidgetStatePropertyAll(Colors.transparent),
+            backgroundColor: WidgetStateProperty.resolveWith(
+              (s) => s.contains(WidgetState.disabled)
+                  ? scheme.onSurface.withValues(alpha: .10)
+                  : scheme.primary,
+            ),
+            foregroundColor: WidgetStateProperty.resolveWith(
+              (s) => s.contains(WidgetState.disabled)
+                  ? scheme.onSurface.withValues(alpha: .38)
+                  : scheme.onPrimary,
+            ),
+            overlayColor: WidgetStatePropertyAll(
+              scheme.onPrimary.withValues(alpha: .12),
+            ),
           ),
         ),
         outlinedButtonTheme: OutlinedButtonThemeData(

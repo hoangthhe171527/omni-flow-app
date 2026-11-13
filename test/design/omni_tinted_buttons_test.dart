@@ -32,11 +32,11 @@ void main() {
     ],
   );
 
-  testWidgets('nền xám: giữ kính trắng của theme', (t) async {
+  testWidgets('nền xám: nút chính đặc primary, nút phụ nền đặc nhẹ', (t) async {
     await t.pumpWidget(host(buttons()));
-    final white = Colors.white.withValues(alpha: .82);
-    expect(bg(t, 'Lưu', FilledButton), white);
-    expect(bg(t, 'Huỷ', OutlinedButton), white);
+    final scheme = OmniTheme.light().colorScheme;
+    expect(bg(t, 'Lưu', FilledButton), scheme.primary);
+    expect(bg(t, 'Huỷ', OutlinedButton)!.a, 1.0);
   });
 
   testWidgets('trong thẻ nhóm trắng: nút chính xanh nhạt, nút phụ xám nhạt', (

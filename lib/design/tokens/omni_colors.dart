@@ -44,13 +44,13 @@ abstract final class OmniColors {
   // ---- Màu chính ----------------------------------------------------------
   /// Quỹ đạo. Nút chính, liên kết, tab đang chọn.
   ///
-  /// 4.99:1 trên thẻ, 4.65:1 trên nền trang — xem `contrast_test.dart`.
-  static const primary = Color(0xFF0159DB);
+  /// 4.94:1 trên thẻ, 4.61:1 trên nền trang — xem `contrast_test.dart`.
+  static const primary = Color(0xFF0F6AE8);
   static const primaryForeground = Color(0xFFFFFFFF);
 
   /// Nút chính khi đang nhấn, và màu chữ/icon của tab đang chọn (đặt trên
   /// [accent] thì cần tối hơn [primary] một bậc mới đọc rõ).
-  static const primaryPressed = Color(0xFF0147B3);
+  static const primaryPressed = Color(0xFF0A58CA);
 
   /// Nền nhạt sau bề mặt được chọn: viên tab đang chọn, ô icon khu Công việc,
   /// chip xem trước trên màn chọn tab.
@@ -146,9 +146,10 @@ abstract final class OmniColors {
   /// Cặp nền nhạt / chữ đậm cho khu Bán hàng và nhãn cảnh báo.
   static const warningSoft = Color(0xFFFFF4D6);
 
-  // Bản đậm của cảnh báo/nguy, dành riêng cho CHỮ.
+  // Bản đậm của cảnh báo/nguy/tốt, dành riêng cho CHỮ.
   static const warningText = Color(0xFF7A4F00);
   static const dangerText = Color(0xFFA32720);
+  static const successText = Color(0xFF047857);
 
   /// Nền nhạt của hộp báo lỗi (chữ [dangerText] trên nó đạt 6.40:1).
   static const dangerSoft = Color(0xFFFDECEA);
@@ -163,6 +164,7 @@ abstract final class OmniColors {
   /// Bản dùng ở nền tối. Nền tối làm mọi màu phải SÁNG lên chứ không tối đi.
   static const warningTextDark = Color(0xFFE8A33D);
   static const dangerTextDark = Color(0xFFFF6B60);
+  static const successTextDark = Color(0xFF34D399);
 
   /// NỀN đỏ mang chữ trắng: huy hiệu việc trễ hạn, badge số cảnh báo.
   ///
@@ -182,6 +184,10 @@ abstract final class OmniColors {
   /// Chữ nguy hiểm, đã chọn theo chế độ sáng/tối đang bật.
   static Color dangerTextOf(BuildContext context) =>
       _byBrightness(context, dangerText, dangerTextDark);
+
+  /// Chữ thành công / hoàn tất, đã chọn theo chế độ sáng/tối đang bật.
+  static Color successTextOf(BuildContext context) =>
+      _byBrightness(context, successText, successTextDark);
 
   static Color _byBrightness(BuildContext context, Color light, Color dark) =>
       Theme.of(context).brightness == Brightness.dark ? dark : light;

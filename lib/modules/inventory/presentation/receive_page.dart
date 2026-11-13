@@ -8,7 +8,6 @@ import '../application/inventory_providers.dart';
 import '../domain/inventory_format.dart';
 import '../domain/inventory_models.dart';
 import '../domain/receive.dart';
-import 'delivered_page.dart' show InvSearchBottom;
 import 'widgets/inventory_ui.dart';
 import 'widgets/money_keypad_sheet.dart';
 import 'widgets/serial_field.dart';
@@ -229,7 +228,7 @@ class _ReceivePageState extends ConsumerState<ReceivePage> {
         close: true,
         showAccount: false,
         fallbackBack: backToLot,
-        bottom: InvSearchBottom(
+        bottom: OmniSearchBottom(
           fieldKey: const ValueKey('inv-receive-search'),
           hint: 'Gõ serial hoặc model',
           debounce: const Duration(milliseconds: 150),

@@ -243,6 +243,7 @@ class _ChannelsPageState extends ConsumerState<ChannelsPage>
     final canPick =
         canConnectCompany || (canWrite && ConnectableChannels.pair.isNotEmpty);
     return Scaffold(
+      extendBodyBehindAppBar: true,
       appBar: const OmniAppBar(title: 'Kết nối kênh'),
       // Nút + kính góc phải dưới (rà soát 12/11). `OmniFabLayer` đặt nút trên
       // thanh kính VÀ vùng an toàn — bản cũ chỉ cộng thanh (78) nên trên
@@ -259,65 +260,75 @@ class _ChannelsPageState extends ConsumerState<ChannelsPage>
                 },
               )
             : null,
-        body: RefreshIndicator.adaptive(
-          onRefresh: () async => ref.invalidate(channelsProvider),
-          child: OmniAsyncView(
-            value: channels,
-            onRetry: () => ref.invalidate(channelsProvider),
-            isEmpty: (list) => list.isEmpty,
-            empty: const OmniEmptyState(
-              icon: Icons.hub_outlined,
-              title: 'Chưa nối kênh nào',
-              message:
-                  'Nối Zalo, Facebook hoặc TikTok để tin nhắn khách đổ về hộp thư.',
-            ),
-            data: (list) {
-              final official = list
-                  .where((connection) => !connection.isPersonal)
-                  .toList();
-              final personal = list
-                  .where((connection) => connection.isPersonal)
-                  .toList();
-              return ListView(
-                physics: const AlwaysScrollableScrollPhysics(),
-                // Chừa thanh tab kính + vùng an toàn + nút nổi phía trên nó.
-                padding: EdgeInsets.fromLTRB(
-                  16,
-                  12,
-                  16,
-                  OmniFabLayer.listBottom(context, hasFab: canPick),
+        body: OmniTopBarOverlap.wrap(
+          child: Builder(
+            builder: (context) {
+              final topInset = OmniTopBarOverlap.of(context);
+              return RefreshIndicator.adaptive(
+                edgeOffset: topInset,
+                onRefresh: () async => ref.invalidate(channelsProvider),
+                child: OmniAsyncView(
+                  value: channels,
+                  onRetry: () => ref.invalidate(channelsProvider),
+                  isEmpty: (list) => list.isEmpty,
+                  empty: const OmniEmptyState(
+                    icon: Icons.hub_outlined,
+                    title: 'Chưa nối kênh nào',
+                    message:
+                        'Nối Zalo, Facebook hoặc TikTok để tin nhắn khách đổ về hộp thư.',
+                  ),
+                  data: (list) {
+                    final official = list
+                        .where((connection) => !connection.isPersonal)
+                        .toList();
+                    final personal = list
+                        .where((connection) => connection.isPersonal)
+                        .toList();
+                    return ListView(
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      // Chừa thanh tab kính + vùng an toàn + nút nổi phía trên nó.
+                      padding: EdgeInsets.fromLTRB(
+                        16,
+                        topInset,
+                        16,
+                        OmniFabLayer.listBottom(context, hasFab: canPick),
+                      ),
+                      children: [
+                        if (official.isNotEmpty)
+                          OmniGroupSection(
+                            title: 'Kênh chính thức',
+                            children: [
+                              for (final connection in official)
+                                ChannelTile(
+                                  connection: connection,
+                                  canWrite: canWrite,
+                                  canReconnect: canConnectCompany,
+                                  onReconnect: () =>
+                                      _startOauth(connection.channel),
+                                  onDisconnect: () => _disconnect(connection),
+                                ),
+                            ],
+                          ),
+                        if (official.isNotEmpty && personal.isNotEmpty)
+                          const SizedBox(height: OmniGroupSection.gap),
+                        if (personal.isNotEmpty)
+                          OmniGroupSection(
+                            title: 'Tài khoản cá nhân',
+                            children: [
+                              for (final connection in personal)
+                                ChannelTile(
+                                  connection: connection,
+                                  canWrite: canWrite,
+                                  onReconnect: () =>
+                                      _openPair(connection.channel),
+                                  onDisconnect: () => _disconnect(connection),
+                                ),
+                            ],
+                          ),
+                      ],
+                    );
+                  },
                 ),
-                children: [
-                  if (official.isNotEmpty)
-                    OmniGroupSection(
-                      title: 'Kênh chính thức',
-                      children: [
-                        for (final connection in official)
-                          ChannelTile(
-                            connection: connection,
-                            canWrite: canWrite,
-                            canReconnect: canConnectCompany,
-                            onReconnect: () => _startOauth(connection.channel),
-                            onDisconnect: () => _disconnect(connection),
-                          ),
-                      ],
-                    ),
-                  if (official.isNotEmpty && personal.isNotEmpty)
-                    const SizedBox(height: OmniGroupSection.gap),
-                  if (personal.isNotEmpty)
-                    OmniGroupSection(
-                      title: 'Tài khoản cá nhân',
-                      children: [
-                        for (final connection in personal)
-                          ChannelTile(
-                            connection: connection,
-                            canWrite: canWrite,
-                            onReconnect: () => _openPair(connection.channel),
-                            onDisconnect: () => _disconnect(connection),
-                          ),
-                      ],
-                    ),
-                ],
               );
             },
           ),

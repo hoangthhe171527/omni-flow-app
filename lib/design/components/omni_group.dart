@@ -236,66 +236,71 @@ class OmniGroupRow extends StatelessWidget {
       constraints: const BoxConstraints(minHeight: 48),
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-        child: Row(
-          children: [
-            if (lead != null) ...[lead, const SizedBox(width: 12)],
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    title,
-                    maxLines: maxTitleLines,
-                    overflow: TextOverflow.ellipsis,
-                    style: OmniType.body.copyWith(
-                      fontWeight: selected || accent
-                          ? FontWeight.w600
-                          : FontWeight.w500,
-                      color: fg,
-                    ),
-                  ),
-                  if (subtitle case final sub? when sub.isNotEmpty)
-                    Padding(
-                      padding: const EdgeInsets.only(top: 1),
-                      child: Text(
-                        sub,
-                        style: OmniType.caption.copyWith(
-                          color: scheme.onSurfaceVariant,
-                        ),
+        child: LayoutBuilder(
+          builder: (context, box) => Row(
+            children: [
+              if (lead != null) ...[lead, const SizedBox(width: 12)],
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      title,
+                      maxLines: maxTitleLines,
+                      overflow: TextOverflow.ellipsis,
+                      style: OmniType.body.copyWith(
+                        fontWeight: selected || accent
+                            ? FontWeight.w600
+                            : FontWeight.w500,
+                        color: fg,
                       ),
                     ),
-                ],
-              ),
-            ),
-            if (value case final v?) ...[
-              const SizedBox(width: 10),
-              Flexible(
-                child: Text(
-                  v,
-                  textAlign: TextAlign.right,
-                  style: OmniType.body.copyWith(
-                    fontSize: 14,
-                    color: scheme.onSurfaceVariant,
-                    fontFeatures: const [FontFeature.tabularFigures()],
-                  ),
+                    if (subtitle case final sub? when sub.isNotEmpty)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 1),
+                        child: Text(
+                          sub,
+                          style: OmniType.caption.copyWith(
+                            color: scheme.onSurfaceVariant,
+                          ),
+                        ),
+                      ),
+                  ],
                 ),
               ),
+              if (value case final v?) ...[
+                const SizedBox(width: 10),
+                ConstrainedBox(
+                  constraints: BoxConstraints(maxWidth: box.maxWidth * 0.56),
+                  child: Text(
+                    v,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    textAlign: TextAlign.right,
+                    style: OmniType.body.copyWith(
+                      fontSize: 14,
+                      color: scheme.onSurfaceVariant,
+                      fontFeatures: const [FontFeature.tabularFigures()],
+                    ),
+                  ),
+                ),
+              ],
+              if (trailing case final t?) ...[const SizedBox(width: 10), t],
+              if (selected) ...[
+                const SizedBox(width: 10),
+                Icon(Icons.check_rounded, size: 20, color: scheme.primary),
+              ],
+              if (showChevron) ...[
+                const SizedBox(width: 6),
+                Icon(
+                  Icons.chevron_right_rounded,
+                  size: 18,
+                  color: OmniTaskTones.of(context).chevron,
+                ),
+              ],
             ],
-            if (trailing case final t?) ...[const SizedBox(width: 10), t],
-            if (selected) ...[
-              const SizedBox(width: 10),
-              Icon(Icons.check_rounded, size: 20, color: scheme.primary),
-            ],
-            if (showChevron) ...[
-              const SizedBox(width: 6),
-              Icon(
-                Icons.chevron_right_rounded,
-                size: 18,
-                color: OmniTaskTones.of(context).chevron,
-              ),
-            ],
-          ],
+          ),
         ),
       ),
     );

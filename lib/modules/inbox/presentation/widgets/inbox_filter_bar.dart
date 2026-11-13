@@ -143,58 +143,54 @@ class _SearchFieldState extends ConsumerState<_SearchField> {
     ref.listen<int>(inboxFilterResetsProvider, (_, _) => _external(''));
 
     final scheme = Theme.of(context).colorScheme;
-    return SizedBox(
+    final meta = scheme.onSurfaceVariant;
+    return Center(
       key: const Key('inbox-search-flat'),
-      height: 44,
-      child: Padding(
-        padding: const EdgeInsets.only(left: 4),
-        child: Row(
-          children: [
-            Icon(
-              Icons.search_rounded,
-              size: OmniIconSize.md,
-              color: scheme.onSurfaceVariant,
-            ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: TextField(
-                controller: _controller,
-                onChanged: _changed,
-                textInputAction: TextInputAction.search,
-                style: OmniType.search.copyWith(
-                  color: scheme.onSurface,
-                  fontStyle: FontStyle.normal,
-                ),
-                decoration: InputDecoration(
-                  isDense: true,
-                  filled: false,
-                  border: InputBorder.none,
-                  enabledBorder: InputBorder.none,
-                  focusedBorder: InputBorder.none,
-                  contentPadding: EdgeInsets.zero,
-                  hintText: 'Tìm khách, tin nhắn…',
-                  hintStyle: OmniType.searchHint.copyWith(
-                    color: scheme.onSurfaceVariant,
+      child: TextField(
+        controller: _controller,
+        onChanged: _changed,
+        textInputAction: TextInputAction.search,
+        textAlignVertical: TextAlignVertical.center,
+        style: OmniType.search.copyWith(
+          color: scheme.onSurface,
+          fontStyle: FontStyle.normal,
+        ),
+        decoration: InputDecoration(
+          isDense: true,
+          filled: false,
+          border: InputBorder.none,
+          enabledBorder: InputBorder.none,
+          focusedBorder: InputBorder.none,
+          contentPadding: const EdgeInsets.symmetric(vertical: 12),
+          prefixIcon: Icon(
+            Icons.search_rounded,
+            size: OmniIconSize.lg,
+            color: meta,
+          ),
+          prefixIconConstraints: const BoxConstraints(
+            minWidth: 36,
+            minHeight: 36,
+          ),
+          suffixIconConstraints: const BoxConstraints(
+            minWidth: 36,
+            minHeight: 36,
+          ),
+          hintText: 'Tìm khách, tin nhắn…',
+          hintStyle: OmniType.searchHint.copyWith(color: meta),
+          suffixIcon: _isEmpty
+              ? null
+              : IconButton(
+                  tooltip: 'Xoá tìm kiếm',
+                  onPressed: _clear,
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(
+                    minWidth: 36,
+                    minHeight: 36,
                   ),
+                  iconSize: OmniIconSize.md,
+                  color: meta,
+                  icon: const Icon(Icons.close_rounded),
                 ),
-              ),
-            ),
-            if (!_isEmpty)
-              IconButton(
-                tooltip: 'Xoá tìm kiếm',
-                onPressed: _clear,
-                padding: EdgeInsets.zero,
-                constraints: const BoxConstraints.tightFor(
-                  width: 44,
-                  height: 44,
-                ),
-                iconSize: OmniIconSize.md,
-                color: scheme.onSurfaceVariant,
-                icon: const Icon(Icons.close_rounded),
-              )
-            else
-              const SizedBox(width: 10),
-          ],
         ),
       ),
     );
@@ -454,6 +450,7 @@ class _PanelBody extends ConsumerWidget {
               label: 'Kênh',
               child: Wrap(
                 spacing: 8,
+                runSpacing: 4,
                 children: [
                   for (final channel in channels)
                     _ChoiceChip(
@@ -472,6 +469,7 @@ class _PanelBody extends ConsumerWidget {
             label: 'Tình trạng',
             child: Wrap(
               spacing: 8,
+              runSpacing: 4,
               children: [
                 _ChoiceChip(
                   label: 'Khẩn',
@@ -568,6 +566,7 @@ class _QuickFilterGrid extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Wrap(
     spacing: 8,
+    runSpacing: 4,
     children: [
       for (final (filter, label) in items)
         KeyedSubtree(

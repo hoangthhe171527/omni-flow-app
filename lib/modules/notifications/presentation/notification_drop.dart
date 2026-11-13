@@ -36,7 +36,7 @@ Future<void> showNotificationDrop(
     barrierDismissible: true,
     barrierLabel: 'Đóng thông báo',
     barrierColor: Colors.transparent,
-    transitionDuration: Duration(milliseconds: reduce ? 160 : 520),
+    transitionDuration: Duration(milliseconds: reduce ? 150 : 300),
     pageBuilder: (dialogContext, _, _) => _NotificationDrop(
       anchor: anchor,
       onOpenTask: onOpenTask,
@@ -45,19 +45,22 @@ Future<void> showNotificationDrop(
     ),
     transitionBuilder: (context, animation, _, child) {
       final fade = CurvedAnimation(parent: animation, curve: Curves.easeOut);
-      // Nền: nhoè vừa (6) + phủ rất nhạt — không tối hẳn như hộp thoại.
-      final scrim = AnimatedBuilder(
-        animation: fade,
-        builder: (context, _) => BackdropFilter(
-          filter: ImageFilter.blur(
-            sigmaX: 6 * fade.value,
-            sigmaY: 6 * fade.value,
-          ),
-          child: ColoredBox(
-            color: Colors.black.withValues(alpha: 0.08 * fade.value),
-            child: const SizedBox.expand(),
-          ),
-        ),
+      // Nền: blur cố định σ6 bọc FadeTransition (không thay đổi sigma mỗi khung
+      // hình để tránh compile lại shader blur); bậc thấp chỉ phủ scrim nhẹ.
+      final scrim = FadeTransition(
+        opacity: fade,
+        child: !OmniPerformance.scrimBlur(context)
+            ? ColoredBox(
+                color: Colors.black.withValues(alpha: 0.14),
+                child: const SizedBox.expand(),
+              )
+            : BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: 6, sigmaY: 6),
+                child: ColoredBox(
+                  color: Colors.black.withValues(alpha: 0.08),
+                  child: const SizedBox.expand(),
+                ),
+              ),
       );
       final Widget panel = reduce
           ? FadeTransition(opacity: fade, child: child)
@@ -126,9 +129,6 @@ class _NotificationDrop extends ConsumerStatefulWidget {
 }
 
 class _NotificationDropState extends ConsumerState<_NotificationDrop> {
-  /// Mở sẵn ở "Chưa đọc" khi còn tin chưa đọc — lý do người ta bấm chuông.
-  bool? _unreadOnly;
-
   void _open(AppNotification n) {
     HapticFeedback.selectionClick();
     ref.read(notificationsProvider.notifier).markRead(n.id);
@@ -144,12 +144,14 @@ class _NotificationDropState extends ConsumerState<_NotificationDrop> {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final dark = theme.brightness == Brightness.dark;
     ref.watch(notificationRealtimeProvider);
     final notifications = ref.watch(notificationsProvider);
     final unreadCount = ref.watch(unreadNotificationCountProvider).valueOrNull;
-    final unreadOnly = _unreadOnly ?? (unreadCount ?? 0) > 0;
     final top = widget.anchor.bottom + 8;
+    final hairline = scheme.outline.withValues(alpha: dark ? 0.35 : 0.22);
 
     final list = notifications.when(
       loading: () => const Padding(
@@ -165,40 +167,56 @@ class _NotificationDropState extends ConsumerState<_NotificationDrop> {
         ),
       ),
       data: (state) {
-        final items = state.items
-            .where((n) => !unreadOnly || n.isUnread)
-            .take(_NotificationDrop.maxRows)
-            .toList();
+        final items = state.items.take(_NotificationDrop.maxRows).toList();
         if (items.isEmpty) {
           return Padding(
-            padding: const EdgeInsets.symmetric(vertical: 22, horizontal: 16),
-            child: Text(
-              unreadOnly ? 'Đã đọc hết' : 'Chưa có thông báo',
-              textAlign: TextAlign.center,
-              style: OmniType.body.copyWith(color: scheme.onSurfaceVariant),
+            padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  Icons.notifications_none_rounded,
+                  size: 26,
+                  color: scheme.onSurfaceVariant.withValues(alpha: 0.65),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  'Chưa có thông báo',
+                  textAlign: TextAlign.center,
+                  style: OmniType.bodySm.copyWith(
+                    color: scheme.onSurfaceVariant,
+                  ),
+                ),
+              ],
             ),
           );
         }
-        return OmniGroupSection(
-          dividerIndent: 60,
+        return Column(
+          mainAxisSize: MainAxisSize.min,
           children: [
-            for (final n in items)
+            for (var i = 0; i < items.length; i++) ...[
+              if (i > 0) Divider(height: 1, indent: 54, color: hairline),
               NotificationRow(
-                key: ValueKey('notification-drop-${n.id}'),
-                notification: n,
-                onTap: () => _open(n),
+                key: ValueKey('notification-drop-${items[i].id}'),
+                notification: items[i],
+                onTap: () => _open(items[i]),
               ),
+            ],
           ],
         );
       },
     );
 
+    final screenWidth = MediaQuery.sizeOf(context).width;
+    final horizontalPad = screenWidth >= 500 ? 16.0 : 12.0;
+
     return Stack(
       children: [
         Positioned(
           top: top,
-          left: 10,
-          right: 10,
+          left: screenWidth >= 500 ? null : horizontalPad,
+          right: horizontalPad,
+          width: screenWidth >= 500 ? 390 : null,
           child: ConstrainedBox(
             constraints: BoxConstraints(
               maxHeight: MediaQuery.sizeOf(context).height - top - 24,
@@ -210,65 +228,117 @@ class _NotificationDropState extends ConsumerState<_NotificationDrop> {
               label: 'Thông báo',
               child: OmniGlass(
                 key: const ValueKey('notification-drop'),
-                radius: 30,
-                padding: const EdgeInsets.fromLTRB(10, 12, 10, 6),
-                child: Material(
-                  type: MaterialType.transparency,
-                  child: SingleChildScrollView(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        Padding(
-                          padding: const EdgeInsets.fromLTRB(8, 0, 4, 8),
-                          child: Row(
-                            children: [
-                              Expanded(
-                                child: Text(
+                radius: 24,
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    color: scheme.surface.withValues(alpha: dark ? 0.88 : 0.92),
+                  ),
+                  child: Material(
+                    type: MaterialType.transparency,
+                    child: SingleChildScrollView(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          Padding(
+                            padding: const EdgeInsets.fromLTRB(16, 13, 10, 10),
+                            child: Row(
+                              children: [
+                                Text(
                                   'Thông báo',
                                   style: OmniType.navTitle.copyWith(
                                     color: scheme.onSurface,
                                   ),
                                 ),
-                              ),
-                              if ((unreadCount ?? 0) > 0)
-                                TextButton(
-                                  key: const ValueKey(
-                                    'notification-drop-read-all',
+                                if ((unreadCount ?? 0) > 0) ...[
+                                  const SizedBox(width: 8),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 7,
+                                      vertical: 2,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: scheme.primary.withValues(
+                                        alpha: 0.12,
+                                      ),
+                                      borderRadius: BorderRadius.circular(999),
+                                    ),
+                                    child: Text(
+                                      '$unreadCount mới',
+                                      style: OmniType.caption.copyWith(
+                                        color: scheme.primary,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
                                   ),
-                                  onPressed: () {
-                                    HapticFeedback.selectionClick();
-                                    ref
-                                        .read(notificationsProvider.notifier)
-                                        .markAllRead();
-                                  },
-                                  child: const Text('Đọc hết'),
-                                ),
-                            ],
+                                ],
+                                const Spacer(),
+                                if ((unreadCount ?? 0) > 0)
+                                  TextButton(
+                                    key: const ValueKey(
+                                      'notification-drop-read-all',
+                                    ),
+                                    style: TextButton.styleFrom(
+                                      minimumSize: const Size(0, 30),
+                                      tapTargetSize:
+                                          MaterialTapTargetSize.shrinkWrap,
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 10,
+                                      ),
+                                    ),
+                                    onPressed: () {
+                                      HapticFeedback.selectionClick();
+                                      ref
+                                          .read(notificationsProvider.notifier)
+                                          .markAllRead();
+                                    },
+                                    child: Text(
+                                      'Đọc hết',
+                                      style: OmniType.bodySm.copyWith(
+                                        color: scheme.primary,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ),
+                              ],
+                            ),
                           ),
-                        ),
-                        OmniSegmented(
-                          labels: [
-                            unreadCount == null
-                                ? 'Chưa đọc'
-                                : 'Chưa đọc · $unreadCount',
-                            'Tất cả',
-                          ],
-                          index: unreadOnly ? 0 : 1,
-                          onChanged: (i) =>
-                              setState(() => _unreadOnly = i == 0),
-                        ),
-                        const SizedBox(height: 10),
-                        list,
-                        TextButton(
-                          key: const ValueKey('notification-drop-see-all'),
-                          onPressed: () {
-                            Navigator.of(context).pop();
-                            widget.onSeeAll();
-                          },
-                          child: const Text('Xem tất cả thông báo'),
-                        ),
-                      ],
+                          Divider(height: 1, color: hairline),
+                          list,
+                          Divider(height: 1, color: hairline),
+                          InkWell(
+                            key: const ValueKey('notification-drop-see-all'),
+                            onTap: () {
+                              Navigator.of(context).pop();
+                              widget.onSeeAll();
+                            },
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 11,
+                              ),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Text(
+                                    'Xem tất cả thông báo',
+                                    style: OmniType.bodySm.copyWith(
+                                      color: scheme.primary,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 2),
+                                  Icon(
+                                    Icons.chevron_right_rounded,
+                                    size: 18,
+                                    color: scheme.primary,
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 ),

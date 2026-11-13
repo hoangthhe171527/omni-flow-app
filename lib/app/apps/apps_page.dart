@@ -81,16 +81,23 @@ class _AppsPageState extends ConsumerState<AppsPage> {
               child: Builder(
                 builder: (context) => ListView(
                   padding: EdgeInsets.fromLTRB(
-                    OmniSpacing.xl,
-                    OmniTopBarOverlap.of(context) + 24,
-                    OmniSpacing.xl,
+                    OmniSpacing.lg,
+                    OmniTopBarOverlap.of(context) + 8,
+                    OmniSpacing.lg,
                     MediaQuery.viewPaddingOf(context).bottom + 32,
                   ),
                   children: [
                     Center(
                       child: ConstrainedBox(
-                        constraints: const BoxConstraints(maxWidth: 520),
-                        child: _AppGrid(apps: entries, onOpen: _open),
+                        constraints: const BoxConstraints(maxWidth: 560),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            const _AppsGreeting(),
+                            const SizedBox(height: 16),
+                            _AppGrid(apps: entries, onOpen: _open),
+                          ],
+                        ),
                       ),
                     ),
                   ],
@@ -140,56 +147,102 @@ class _CompanyButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final row = Row(
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final dark = theme.brightness == Brightness.dark;
+
+    final badge = BrandAnchor(
+      child: Container(
+        width: 34,
+        height: 34,
+        decoration: BoxDecoration(
+          color: dark
+              ? Colors.white.withValues(alpha: 0.12)
+              : Colors.white.withValues(alpha: 0.88),
+          borderRadius: BorderRadius.circular(11),
+          border: Border.all(
+            color: dark
+                ? Colors.white.withValues(alpha: 0.14)
+                : scheme.outline.withValues(alpha: 0.18),
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: dark ? 0.28 : 0.05),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: const Center(child: OmniBrandMark(size: 21, framed: false)),
+      ),
+    );
+
+    final label = Column(
       mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Flexible(
-          child: Text(
-            name,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: OmniType.navTitle.copyWith(color: scheme.onSurface),
+        Text(
+          'Viomni',
+          maxLines: 1,
+          style: OmniType.caption.copyWith(
+            height: 1.15,
+            fontWeight: FontWeight.w600,
+            color: scheme.primary,
+            letterSpacing: 0.15,
           ),
         ),
+        const SizedBox(height: 1),
+        Text(
+          name,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: OmniType.body.copyWith(
+            height: 1.2,
+            fontWeight: FontWeight.w600,
+            color: scheme.onSurface,
+          ),
+        ),
+      ],
+    );
+
+    final content = Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        badge,
+        const SizedBox(width: 10),
+        Flexible(child: label),
         if (onTap != null) ...[
           const SizedBox(width: 4),
           Icon(
-            Icons.expand_more_rounded,
-            size: OmniIconSize.md,
+            Icons.unfold_more_rounded,
+            size: 16,
             color: scheme.onSurfaceVariant,
           ),
         ],
       ],
     );
+
     return Align(
       alignment: Alignment.centerLeft,
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const SizedBox(width: 4),
-          const BrandAnchor(child: OmniBrandMark(size: 30, framed: false)),
-          const SizedBox(width: 10),
-          Flexible(
-            child: Semantics(
-              button: onTap != null,
-              label: onTap != null ? 'Đổi công ty, $name' : name,
-              excludeSemantics: true,
-              child: GestureDetector(
-                behavior: HitTestBehavior.opaque,
-                onTap: onTap,
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(minHeight: 44),
-                  child: Align(
-                    alignment: Alignment.centerLeft,
-                    widthFactor: 1,
-                    child: row,
-                  ),
-                ),
+      child: Padding(
+        padding: const EdgeInsets.only(right: 12),
+        child: Semantics(
+          button: onTap != null,
+          label: onTap != null ? 'Đổi công ty, $name' : name,
+          excludeSemantics: true,
+          child: GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: onTap,
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(minHeight: 44),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                widthFactor: 1,
+                child: content,
               ),
             ),
           ),
-        ],
+        ),
       ),
     );
   }
@@ -197,6 +250,41 @@ class _CompanyButton extends StatelessWidget {
 
 /// Lưới 3 cột (màn hẹp / chữ phóng to thì 2): mỗi ô một biểu tượng lớn bo
 /// tròn kiểu logo ứng dụng và tên dưới.
+class _AppsGreeting extends ConsumerWidget {
+  const _AppsGreeting();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final scheme = Theme.of(context).colorScheme;
+    final userName = ref.watch(sessionProvider.select((s) => s.user?.fullName));
+    final firstName = userName?.trim().split(RegExp(r'\s+')).last;
+    final greeting = firstName != null && firstName.isNotEmpty
+        ? 'Xin chào, $firstName'
+        : 'Ứng dụng của bạn';
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 2),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            greeting,
+            style: OmniType.title.copyWith(
+              color: scheme.onSurface,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            'Chọn không gian làm việc để bắt đầu',
+            style: OmniType.bodySm.copyWith(color: scheme.onSurfaceVariant),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _AppGrid extends StatelessWidget {
   const _AppGrid({required this.apps, required this.onOpen});
 
@@ -208,12 +296,16 @@ class _AppGrid extends StatelessWidget {
     return LayoutBuilder(
       builder: (context, box) {
         final scale = MediaQuery.textScalerOf(context).scale(1);
-        final columns = box.maxWidth < 300 || scale > 1.2 ? 2 : 3;
-        const gap = 10.0;
+        final columns = box.maxWidth < 260 || scale > 1.35
+            ? 1
+            : box.maxWidth >= 520
+            ? 3
+            : 2;
+        const gap = 12.0;
         final width = (box.maxWidth - gap * (columns - 1)) / columns;
         return Wrap(
           spacing: gap,
-          runSpacing: 22,
+          runSpacing: gap,
           children: [
             for (final (i, app) in apps.indexed)
               SizedBox(
@@ -231,6 +323,16 @@ class _AppGrid extends StatelessWidget {
     );
   }
 }
+
+(Color, Color) _appPalette(String key) => switch (key) {
+  homeAppKey => (const Color(0xFF38BDF8), const Color(0xFF2563EB)),
+  'sales' => (const Color(0xFF34D399), const Color(0xFF059669)),
+  'stock' => (const Color(0xFFFBBF24), const Color(0xFFEA580C)),
+  'work' => (const Color(0xFF818CF8), const Color(0xFF4F46E5)),
+  'finance' => (const Color(0xFF2DD4BF), const Color(0xFF0D9488)),
+  'system' => (const Color(0xFF94A3B8), const Color(0xFF475569)),
+  _ => (const Color(0xFF60A5FA), const Color(0xFF2563EB)),
+};
 
 class _AppTile extends ConsumerStatefulWidget {
   const _AppTile({
@@ -256,6 +358,7 @@ class _AppTileState extends ConsumerState<_AppTile> {
     final scheme = Theme.of(context).colorScheme;
     final dark = Theme.of(context).brightness == Brightness.dark;
     final app = widget.app;
+    final (cLight, cDark) = _appPalette(app.key);
 
     // Huy hiệu của ô: tổng việc CẦN XỬ LÝ (đỏ); không có thì chấm vàng nếu có
     // cái mới chưa xem.
@@ -278,76 +381,56 @@ class _AppTileState extends ConsumerState<_AppTile> {
         ? '${app.name}, có mục mới'
         : app.name;
 
-    final borderColor = Color.alphaBlend(
-      Colors.white.withValues(alpha: dark ? 0.08 : 0.72),
-      OmniColors.byBrightness(
-        context,
-        OmniColors.border,
-        OmniColors.darkBorder,
-      ),
+    final subtitle = app.all.take(3).map((i) => i.entry.label).join(' · ');
+
+    final iconBox = Stack(
+      clipBehavior: Clip.none,
+      children: [
+        Container(
+          width: 52,
+          height: 52,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(15),
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [cLight, cDark],
+            ),
+            border: Border.all(
+              color: Colors.white.withValues(alpha: dark ? 0.18 : 0.35),
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: cDark.withValues(alpha: dark ? 0.38 : 0.28),
+                blurRadius: 12,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Icon(app.icon, size: 26, color: Colors.white),
+        ),
+        if (alert > 0)
+          Positioned(
+            top: -5,
+            right: -6,
+            child: OmniCountBadge.alert(
+              count: alert,
+              ringColor: scheme.surface,
+            ),
+          )
+        else if (unread)
+          const Positioned(
+            top: -2,
+            right: -2,
+            child: OmniUnreadDot(excludeSemantics: true),
+          ),
+      ],
     );
 
-    final icon = AnimatedScale(
-      scale: _down ? 0.94 : 1,
-      duration: const Duration(milliseconds: 120),
-      child: Stack(
-        clipBehavior: Clip.none,
-        children: [
-          Container(
-            width: 76,
-            height: 76,
-            decoration: BoxDecoration(
-              color: scheme.surface,
-              borderRadius: BorderRadius.circular(22),
-              border: Border.all(color: borderColor),
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                stops: const [0, 0.72],
-                colors: [
-                  Color.alphaBlend(
-                    Colors.white.withValues(alpha: dark ? 0.05 : 0.65),
-                    scheme.surface,
-                  ),
-                  Color.alphaBlend(
-                    scheme.primary.withValues(alpha: dark ? 0.18 : 0.09),
-                    scheme.surface,
-                  ),
-                ],
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: OmniColors.ink.withValues(alpha: dark ? 0.35 : 0.08),
-                  blurRadius: 18,
-                  offset: const Offset(0, 6),
-                ),
-                if (!dark)
-                  BoxShadow(
-                    color: OmniColors.ink.withValues(alpha: 0.04),
-                    blurRadius: 2,
-                    offset: const Offset(0, 1),
-                  ),
-              ],
-            ),
-            child: Icon(app.icon, size: 32, color: scheme.primary),
-          ),
-          if (alert > 0)
-            Positioned(
-              top: -5,
-              right: -7,
-              child: OmniCountBadge.alert(
-                count: alert,
-                ringColor: scheme.surface,
-              ),
-            )
-          else if (unread)
-            const Positioned(
-              top: -2,
-              right: -2,
-              child: OmniUnreadDot(excludeSemantics: true),
-            ),
-        ],
-      ),
+    final borderColor = OmniColors.byBrightness(
+      context,
+      OmniColors.border,
+      OmniColors.darkBorder,
     );
 
     final tile = Semantics(
@@ -361,21 +444,65 @@ class _AppTileState extends ConsumerState<_AppTile> {
         onTapCancel: () => setState(() => _down = false),
         onTapUp: (_) => setState(() => _down = false),
         onTap: widget.onTap,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            icon,
-            const SizedBox(height: 8),
-            Text(
-              app.name,
-              textAlign: TextAlign.center,
-              maxLines: 2,
-              style: OmniType.bodySm.copyWith(
-                fontWeight: FontWeight.w500,
-                color: scheme.onSurface,
+        child: AnimatedScale(
+          scale: _down ? 0.96 : 1,
+          duration: const Duration(milliseconds: 120),
+          child: Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: scheme.surface,
+              borderRadius: BorderRadius.circular(22),
+              border: Border.all(color: borderColor),
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  scheme.surface,
+                  Color.alphaBlend(
+                    cDark.withValues(alpha: dark ? 0.10 : 0.04),
+                    scheme.surface,
+                  ),
+                ],
               ),
+              boxShadow: [
+                BoxShadow(
+                  color: OmniColors.ink.withValues(alpha: dark ? 0.28 : 0.05),
+                  blurRadius: 14,
+                  offset: const Offset(0, 4),
+                ),
+              ],
             ),
-          ],
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                iconBox,
+                const SizedBox(height: 14),
+                Text(
+                  app.name,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: OmniType.body.copyWith(
+                    fontWeight: FontWeight.w600,
+                    color: scheme.onSurface,
+                  ),
+                ),
+                const SizedBox(height: 3),
+                SizedBox(
+                  height: 32,
+                  child: Text(
+                    subtitle,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: OmniType.micro.copyWith(
+                      color: scheme.onSurfaceVariant,
+                      height: 1.3,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
         ),
       ),
     );

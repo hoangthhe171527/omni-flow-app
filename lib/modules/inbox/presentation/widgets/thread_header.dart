@@ -53,12 +53,9 @@ class ThreadHeader extends StatelessWidget implements PreferredSizeWidget {
     // Kiểu nút kính rời (viomni-apple-uiux.html "Hội thoại"): không dải nền;
     // quay lại và ⓘ là viên kính tròn, danh tính khách là một viên kính dạng
     // viên thuốc ở giữa. Nội dung dưới thanh nhoè dần (OmniScrollEdge).
-    return Stack(
-      children: [
-        const Positioned.fill(child: OmniScrollEdge(atTop: true)),
-        SafeArea(
-          bottom: false,
-          child: Padding(
+    return SafeArea(
+      bottom: false,
+      child: Padding(
             padding: const EdgeInsets.fromLTRB(12, 4, 12, 0),
             child: Column(
               children: [
@@ -76,9 +73,7 @@ class ThreadHeader extends StatelessWidget implements PreferredSizeWidget {
               ],
             ),
           ),
-        ),
-      ],
-    );
+        );
   }
 
   Widget _buildRow(BuildContext context) {

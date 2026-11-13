@@ -450,7 +450,7 @@ void main() {
             ),
           )
           .color,
-      scheme.primary,
+      scheme.onPrimary,
     );
 
     await t.tap(plus());

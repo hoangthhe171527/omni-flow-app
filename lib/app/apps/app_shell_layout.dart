@@ -174,13 +174,19 @@ class ShellApp {
   /// Mục `group: reports` — chỉ trong "Thêm", dưới nhãn "Báo cáo".
   final List<ShellItem> reports;
 
-  /// Thanh dưới: 4 mục chính đầu.
-  List<ShellItem> get tabs => items.take(appTabCount).toList();
+  /// Thanh dưới có tối đa [appTabCount] + 1 chỗ (4 mục + nút "Thêm"). Nếu
+  /// tổng số mục ≤ [appTabCount] + 1 (tức phần tràn chỉ có 0 hoặc 1 mục) thì
+  /// hiện thẳng tất cả lên thanh, không sinh nút "Thêm" chỉ để chứa 1 mục.
+  bool get _fitsInBar => all.length <= appTabCount + 1;
 
-  /// "Thêm": mục chính còn lại.
-  List<ShellItem> get more => items.skip(appTabCount).toList();
+  List<ShellItem> get tabs =>
+      _fitsInBar ? all : items.take(appTabCount).toList();
 
-  bool get hasMore => more.isNotEmpty || reports.isNotEmpty;
+  /// "Thêm": mục chính còn lại (chỉ có khi menu dài hơn [appTabCount]).
+  List<ShellItem> get more =>
+      _fitsInBar ? const [] : items.skip(appTabCount).toList();
+
+  bool get hasMore => !_fitsInBar && (more.isNotEmpty || reports.isNotEmpty);
 
   List<ShellItem> get all => [...items, ...reports];
 
@@ -237,12 +243,12 @@ class AppShellLayout {
 ShellApp? _firstOrNull(List<ShellApp> list) => list.isEmpty ? null : list.first;
 
 IconData appIconOf(String key) => switch (key) {
-  homeAppKey => Icons.desktop_windows_outlined,
-  'sales' => Icons.shopping_bag_outlined,
-  'stock' => Icons.inventory_2_outlined,
-  'work' => Icons.view_kanban_outlined,
-  'finance' => Icons.account_balance_wallet_outlined,
-  'system' => Icons.settings_outlined,
+  homeAppKey => Icons.desktop_windows_rounded,
+  'sales' => Icons.shopping_bag_rounded,
+  'stock' => Icons.inventory_2_rounded,
+  'work' => Icons.view_kanban_rounded,
+  'finance' => Icons.account_balance_wallet_rounded,
+  'system' => Icons.settings_rounded,
   _ => Icons.apps_rounded,
 };
 

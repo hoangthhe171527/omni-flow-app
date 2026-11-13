@@ -477,8 +477,8 @@ void main() {
         await tester.pumpAndSettle();
         expect(find.byTooltip('Xoá tìm kiếm'), findsNothing);
 
-        // Ô tìm còn focus mà trống thì thân màn bị phủ mờ: "Huỷ" để thoát tìm.
-        await tester.tap(find.text('Huỷ'));
+        // Ô tìm còn focus mà trống thì thân màn bị phủ mờ: chạm ngoài để thoát tìm.
+        await tester.tap(find.bySemanticsLabel('Thoát tìm kiếm'));
         await tester.pumpAndSettle();
 
         await tester.tap(find.byKey(const ValueKey('finance-sort-btn')));
