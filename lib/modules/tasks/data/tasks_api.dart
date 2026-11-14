@@ -779,6 +779,30 @@ class TasksApi {
     );
   }
 
+  /// Việc đã lưu trữ trên toàn bộ các kế hoạch đọc được (hoặc một kế hoạch
+  /// cụ thể khi truyền [projectId]).
+  Future<Paged<Task>> archived({
+    String? projectId,
+    int page = 1,
+    int perPage = AppConfig.maxPerPage,
+  }) async {
+    final project = projectId?.trim() ?? '';
+    final response = await _client.get(
+      _base,
+      query: {
+        if (project.isNotEmpty) 'project_id': project,
+        'archived': TaskArchiveScope.archived.name,
+        'page': page,
+        'per_page': perPage,
+      },
+    );
+
+    return Paged(
+      items: response.list.map(Task.fromJson).toList(),
+      pagination: response.pagination ?? const ApiPagination.empty(),
+    );
+  }
+
   /// Kế hoạch chứa việc: chủ, thành viên, vai, trường tuỳ chỉnh — một lượt
   /// `GET /projects/{id}`. Đọc thẳng ở đây: tasks không import plans.
   Future<TaskProject> project(String projectId) async {

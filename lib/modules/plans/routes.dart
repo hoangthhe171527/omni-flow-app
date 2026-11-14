@@ -10,4 +10,7 @@ abstract final class PlanRoutes {
   /// Khai báo trường tuỳ chỉnh của một kế hoạch. Chi tiết việc mở trang này
   /// từ thẻ Trường tuỳ chỉnh mà không import module plans.
   static const fields = 'plans.fields';
+
+  /// Việc đã lưu trữ (mở từ menu Vận hành, hoặc lọc theo một kế hoạch).
+  static const archived = 'plans.archived';
 }

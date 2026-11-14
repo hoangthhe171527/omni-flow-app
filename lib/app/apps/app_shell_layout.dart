@@ -101,6 +101,7 @@ const appItemSpecs = <String, AppItemSpec>{
   // Công việc
   'projects': AppItemSpec('plans.teams'),
   'work_reports': AppItemSpec('plans.timeline'),
+  'archived_tasks': AppItemSpec('plans.archived'),
   // Tài chính
   'finance_expenses': AppItemSpec('finance.expenses'),
   'finance_summary': AppItemSpec('finance.summary'),
@@ -124,6 +125,7 @@ const tabLabels = <String, String>{
   'finance.catalog': 'Danh mục',
   'channels.list': 'Kênh',
   'tasks.list': 'Việc',
+  'plans.archived': 'Lưu trữ',
   'settings.notifications': 'Thông báo',
   'settings.permissions': 'Quyền',
 };

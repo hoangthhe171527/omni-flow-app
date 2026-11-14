@@ -5,6 +5,7 @@ import '../../core/module/nav_destination.dart';
 import '../../core/module/omni_module.dart';
 import '../../security/guard/access_requirement.dart';
 import '../tasks/domain/task_permissions.dart';
+import 'presentation/archived_tasks_page.dart';
 import 'presentation/plan_board_page.dart';
 import 'presentation/plan_fields_page.dart';
 import 'presentation/teams_page.dart';
@@ -26,6 +27,7 @@ class PlansModule extends OmniModule {
   static const teams = PlanRoutes.teams;
   static const board = PlanRoutes.board;
   static const timeline = PlanRoutes.timeline;
+  static const archived = PlanRoutes.archived;
 
   @override
   String get id => 'plans';
@@ -49,6 +51,14 @@ class PlansModule extends OmniModule {
       name: teams,
       access: const AccessRequirement.any(TaskPermissions.anyRead),
       builder: (_, _) => const TeamsPage(),
+    ),
+    ModuleRoute(
+      path: '/plans/archived',
+      name: archived,
+      access: const AccessRequirement.any(TaskPermissions.anyRead),
+      builder: (_, state) => ArchivedTasksPage(
+        planId: state.uri.queryParameters['plan_id'],
+      ),
     ),
     ModuleRoute(
       path: '/plans/:id',
@@ -97,6 +107,19 @@ class PlansModule extends OmniModule {
       // `order`; `order` chỉ còn quyết định thứ tự trong "Tất cả". Sau "Việc của
       // tôi" (10): thợ mở hàng đợi của mình trước, toàn cảnh sau.
       order: 20,
+      access: AccessRequirement.any(TaskPermissions.anyRead),
+      feature: 'tasks',
+    ),
+    ModuleNavEntry(
+      moduleId: 'plans',
+      label: 'Việc đã lưu trữ',
+      subtitle: 'Xem lại và khôi phục công việc đã lưu trữ',
+      icon: Icons.inventory_2_outlined,
+      selectedIcon: Icons.inventory_2_rounded,
+      routeName: archived,
+      area: NavArea.work,
+      weight: NavWeight.secondary,
+      order: 40,
       access: AccessRequirement.any(TaskPermissions.anyRead),
       feature: 'tasks',
     ),
