@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:omni_app/core/module/nav_destination.dart';
 import 'package:omni_app/modules/plans/plans_module.dart';
 import 'package:omni_app/modules/plans/routes.dart';
 import 'package:omni_app/modules/tasks/routes.dart';
@@ -14,7 +15,18 @@ void main() {
     };
     expect(routes[PlanRoutes.teams], '/teams');
     expect(routes[PlanRoutes.timeline], '/timeline');
+    expect(routes[PlanRoutes.archived], '/plans/archived');
     expect(routes[PlanRoutes.board], '/plans/:id');
+  });
+
+  test('navEntries có mục Việc đã lưu trữ trong nhóm Vận hành', () {
+    final entries = const PlansModule().navEntries();
+    final archived = entries
+        .where((e) => e.routeName == PlanRoutes.archived)
+        .toList();
+    expect(archived, hasLength(1));
+    expect(archived.single.area, NavArea.work);
+    expect(archived.single.label, 'Việc đã lưu trữ');
   });
 
   test('tasks: Việc của tôi, tìm, theo người, chi tiết vẫn khai báo', () {

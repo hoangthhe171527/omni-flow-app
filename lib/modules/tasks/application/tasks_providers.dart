@@ -346,30 +346,45 @@ final archivedTasksProvider = FutureProvider.autoDispose
     .family<ArchivedTasks, String>((ref, projectId) async {
       ref.watch(taskRealtimeSignalProvider);
       final api = ref.watch(tasksApiProvider);
-      final all = <Task>[];
-      for (var page = 1; page <= _archivedMaxPages; page++) {
-        final result = await api.list(
+      return _collectArchived(
+        (page, perPage) => api.list(
           projectId: projectId,
           archived: TaskArchiveScope.archived,
           page: page,
-        );
-        all.addAll(result.items);
-        if (result.items.length < AppConfig.maxPerPage) {
-          return (tasks: all, truncated: false);
-        }
-      }
-      final probe = await api.list(
-        projectId: projectId,
-        archived: TaskArchiveScope.archived,
-        page: kMaxArchivedTasks + 1,
-        perPage: 1,
-      );
-
-      return (
-        tasks: all.take(kMaxArchivedTasks).toList(),
-        truncated: probe.items.isNotEmpty,
+          perPage: perPage,
+        ),
       );
     });
+
+/// Việc đã lưu trữ trên toàn bộ các kế hoạch (`GET /tasks?archived=archived`).
+final allArchivedTasksProvider = FutureProvider.autoDispose<ArchivedTasks>((
+  ref,
+) async {
+  ref.watch(taskRealtimeSignalProvider);
+  final api = ref.watch(tasksApiProvider);
+  return _collectArchived(
+    (page, perPage) => api.archived(page: page, perPage: perPage),
+  );
+});
+
+Future<ArchivedTasks> _collectArchived(
+  Future<Paged<Task>> Function(int page, int perPage) fetchPage,
+) async {
+  final all = <Task>[];
+  for (var page = 1; page <= _archivedMaxPages; page++) {
+    final result = await fetchPage(page, AppConfig.maxPerPage);
+    all.addAll(result.items);
+    if (result.items.length < AppConfig.maxPerPage) {
+      return (tasks: all, truncated: false);
+    }
+  }
+  final probe = await fetchPage(kMaxArchivedTasks + 1, 1);
+
+  return (
+    tasks: all.take(kMaxArchivedTasks).toList(),
+    truncated: probe.items.isNotEmpty,
+  );
+}
 
 /// Trần số việc đã lưu trữ app nạp cho một kế hoạch.
 const kMaxArchivedTasks = _archivedMaxPages * AppConfig.maxPerPage;

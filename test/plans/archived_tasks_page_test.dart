@@ -7,11 +7,15 @@ import 'package:omni_app/core/network/api_envelope.dart';
 import 'package:omni_app/design/components/components.dart';
 import 'package:omni_app/design/theme/omni_theme.dart';
 import 'package:omni_app/modules/plans/application/plans_providers.dart';
+import 'package:omni_app/modules/plans/domain/plan.dart';
+import 'package:omni_app/modules/plans/domain/team.dart';
 import 'package:omni_app/modules/plans/presentation/archived_tasks_page.dart';
 import 'package:omni_app/modules/tasks/application/tasks_providers.dart';
 import 'package:omni_app/modules/tasks/data/tasks_api.dart';
 import 'package:omni_app/modules/tasks/domain/task.dart';
+import 'package:omni_app/modules/tasks/domain/task_permissions.dart';
 import 'package:omni_app/modules/tasks/tasks_module.dart';
+import 'package:omni_app/security/permissions/access_policy.dart';
 
 /// Việc đã lưu trữ của một kế hoạch (Task 7): danh sách `archived=archived`,
 /// "Khôi phục" gửi `archived:false` rồi dòng biến mất, chạm mở chi tiết.
@@ -189,6 +193,86 @@ void main() {
       findsOneWidget,
     );
   });
+
+  testWidgets('mở từ menu Vận hành (không planId): xem tất cả và lọc theo kế hoạch', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+
+    final allArchived = [
+      Task.fromJson({
+        'id': 't1',
+        'title': 'Đàn A',
+        'project_id': 'p1',
+        'section_name': 'Sơn',
+        'archived': true,
+      }),
+      Task.fromJson({
+        'id': 't2',
+        'title': 'Đàn B',
+        'project_id': 'p2',
+        'archived': true,
+      }),
+    ];
+    final fakeApi = _ArchiveApi(allArchived);
+    final p1 = Plan.fromJson({'id': 'p1', 'name': 'Kế hoạch 1'});
+    final p2 = Plan.fromJson({'id': 'p2', 'name': 'Kế hoạch 2'});
+
+    final router = GoRouter(
+      routes: [
+        GoRoute(
+          path: '/',
+          builder: (_, _) => const ArchivedTasksPage(),
+        ),
+        GoRoute(
+          path: '/tasks/:id',
+          name: TasksModule.detail,
+          builder: (_, state) =>
+              Scaffold(body: Text('chi tiet ${state.pathParameters['id']}')),
+        ),
+      ],
+    );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          tasksApiProvider.overrideWithValue(fakeApi),
+          taskAccessProvider.overrideWithValue(
+            TaskAccess.of(
+              const AccessPolicy({'tasks.read', 'tasks.write'}),
+            ),
+          ),
+          teamsWithPlansProvider.overrideWith(
+            (ref) async => [
+              TeamWithPlans(
+                team: Team.fromJson({'id': 'tm1', 'name': 'Xưởng'}),
+                plans: [p1, p2],
+              ),
+            ],
+          ),
+        ],
+        child: MaterialApp.router(
+          theme: OmniTheme.light(TargetPlatform.android),
+          routerConfig: router,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Tất cả kế hoạch'), findsOneWidget);
+    expect(find.text('Đàn A'), findsOneWidget);
+    expect(find.text('Kế hoạch 1 · Sơn'), findsOneWidget);
+    expect(find.text('Đàn B'), findsOneWidget);
+
+    await tester.tap(find.text('Kế hoạch'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Kế hoạch 1').last);
+    await tester.pumpAndSettle();
+
+    expect(fakeApi.lists.any((c) => c.$1 == 'p1'), isTrue);
+  });
 }
 
 class _ArchiveApi implements TasksApi {
@@ -217,6 +301,27 @@ class _ArchiveApi implements TasksApi {
       items: start >= live.length
           ? const []
           : live.sublist(start, (start + perPage).clamp(0, live.length)),
+      pagination: const ApiPagination.empty(),
+    );
+  }
+
+  @override
+  Future<Paged<Task>> archived({
+    String? projectId,
+    int page = 1,
+    int perPage = 100,
+  }) async {
+    final filtered = [
+      for (final t in _archived)
+        if (!archives.any((a) => a.$1 == t.id) &&
+            (projectId == null || projectId.isEmpty || t.projectId == projectId))
+          t,
+    ];
+    final start = (page - 1) * perPage;
+    return Paged(
+      items: start >= filtered.length
+          ? const []
+          : filtered.sublist(start, (start + perPage).clamp(0, filtered.length)),
       pagination: const ApiPagination.empty(),
     );
   }
