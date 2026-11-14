@@ -44,7 +44,11 @@ class _SuppliersPageState extends ConsumerState<SuppliersPage> {
             ? () => GoRouter.maybeOf(context)?.go(InventoryRoutes.lotsPath)
             : null,
         bottom: perms.suppliers
-            ? _SearchBottom(onChanged: (v) => setState(() => _q = v))
+            ? OmniSearchBottom(
+                fieldKey: const ValueKey('inv-sup-search'),
+                hint: 'Tìm mã, tên',
+                onChanged: (v) => setState(() => _q = v),
+              )
             : null,
       ),
       body: !perms.suppliers
@@ -77,7 +81,7 @@ class _SuppliersPageState extends ConsumerState<SuppliersPage> {
                     physics: const AlwaysScrollableScrollPhysics(),
                     keyboardDismissBehavior:
                         ScrollViewKeyboardDismissBehavior.onDrag,
-                    padding: EdgeInsets.fromLTRB(16, 12, 16, bottom),
+                    padding: EdgeInsets.fromLTRB(16, 4, 16, bottom),
                     children: [
                       if (debt) ...[
                         OmniGroupSection(
@@ -162,12 +166,19 @@ class _SupplierRow extends StatelessWidget {
       trailing: debt
           ? InvValue(
               InventoryFormat.yen(s.debtJpy ?? 0),
+              valueColor: (s.debtJpy ?? 0) > 0
+                  ? OmniColors.warningTextOf(context)
+                  : null,
               sub: late > 0
                   ? 'quá hạn ${InventoryFormat.yen(late)}'
                   : pre > 0
                   ? 'trả dư ${InventoryFormat.yen(pre)}'
                   : null,
-              subColor: late > 0 ? OmniColors.dangerTextOf(context) : null,
+              subColor: late > 0
+                  ? OmniColors.dangerTextOf(context)
+                  : pre > 0
+                  ? OmniColors.successTextOf(context)
+                  : null,
             )
           : null,
       chevron: true,
@@ -277,7 +288,15 @@ class SupplierDetailPage extends ConsumerWidget {
           children: [
             OmniGroupRow(
               title: 'Còn nợ',
-              trailing: _Money(InventoryFormat.yen(s.debtJpy)),
+              trailing: Text(
+                InventoryFormat.yen(s.debtJpy),
+                style: OmniType.bodyStrong.copyWith(
+                  color: (s.debtJpy ?? 0) > 0
+                      ? OmniColors.warningTextOf(context)
+                      : Theme.of(context).colorScheme.onSurface,
+                  fontFeatures: OmniType.tabular,
+                ),
+              ),
             ),
             if (late > 0)
               OmniGroupRow(
@@ -287,7 +306,13 @@ class SupplierDetailPage extends ConsumerWidget {
             if (pre > 0)
               OmniGroupRow(
                 title: 'Trả dư',
-                trailing: _Money(InventoryFormat.yen(pre)),
+                trailing: Text(
+                  InventoryFormat.yen(pre),
+                  style: OmniType.bodyStrong.copyWith(
+                    color: OmniColors.successTextOf(context),
+                    fontFeatures: OmniType.tabular,
+                  ),
+                ),
               ),
             OmniGroupRow(title: 'Hạn trả', value: s.termLabel),
           ],
@@ -383,32 +408,4 @@ class _Money extends StatelessWidget {
   );
 }
 
-class _SearchBottom extends StatelessWidget implements PreferredSizeWidget {
-  const _SearchBottom({required this.onChanged});
 
-  final ValueChanged<String> onChanged;
-
-  @override
-  Size get preferredSize => const Size.fromHeight(44);
-
-  @override
-  Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.only(right: 4),
-    child: OmniGlass(
-      radius: 22,
-      child: SizedBox(
-        height: 44,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 6),
-          child: OmniSearchField(
-            key: const ValueKey('inv-sup-search'),
-            hint: 'Tìm mã, tên',
-            flat: true,
-            dense: true,
-            onChanged: onChanged,
-          ),
-        ),
-      ),
-    ),
-  );
-}

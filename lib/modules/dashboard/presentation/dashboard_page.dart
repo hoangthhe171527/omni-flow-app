@@ -57,7 +57,7 @@ class DashboardPage extends ConsumerWidget {
               child: ListView(
                 physics: const AlwaysScrollableScrollPhysics(),
                 padding: EdgeInsets.only(
-                  top: topInset + 12,
+                  top: topInset,
                   left: 16,
                   right: 16,
                   bottom: OmniSpacing.bottomSafe,

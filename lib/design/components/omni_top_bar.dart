@@ -343,112 +343,80 @@ class _OmniTopBarState extends State<OmniTopBar> {
       ),
     );
 
-    final cancel = _focused
-        ? Padding(
-            padding: const EdgeInsets.only(left: 4),
-            child: TextButton(
-              onPressed: _cancel,
-              style: TextButton.styleFrom(
-                foregroundColor: scheme.primary,
-                minimumSize: const Size(48, 44),
-                // Dải tìm cao 44: vùng chạm 48 mặc định sẽ
-                // đẩy thanh cao hơn preferredSize.
-                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                padding: const EdgeInsets.symmetric(horizontal: 10),
-                textStyle: OmniType.body.copyWith(fontWeight: FontWeight.w500),
-              ),
-              child: const Text('Huỷ'),
-            ),
-          )
-        : const SizedBox(height: 44);
-
     final searchStrip = bottom == null
         ? null
         : !widget.searchBottom
         ? SizedBox(height: bottom.preferredSize.height, child: bottom)
-        : Focus(
-            canRequestFocus: false,
-            skipTraversal: true,
-            onFocusChange: _onFocus,
-            child: SizedBox(
-              height: bottom.preferredSize.height,
-              child: Row(
-                children: [
-                  Expanded(
-                    child: OmniGlass(
-                      radius: bottom.preferredSize.height / 2,
-                      child: SizedBox(
-                        height: bottom.preferredSize.height,
-                        child: bottom,
-                      ),
-                    ),
-                  ),
-                  // Giảm chuyển động (thời lượng 0): AnimatedSize tự xong ngay
-                  // giữa lúc layout và báo lỗi — dựng thẳng.
-                  if (motion == Duration.zero)
-                    cancel
-                  else
-                    AnimatedSize(
-                      duration: motion,
-                      curve: OmniCurves.standard,
-                      child: cancel,
-                    ),
-                ],
+        : TapRegion(
+            onTapOutside: (_) {
+              if (!_focused) return;
+              if (!_hasQuery) {
+                _cancel();
+              } else {
+                FocusManager.instance.primaryFocus?.unfocus();
+              }
+            },
+            child: Focus(
+              canRequestFocus: false,
+              skipTraversal: true,
+              onFocusChange: _onFocus,
+              child: OmniGlass(
+                radius: bottom.preferredSize.height / 2,
+                child: SizedBox(
+                  height: bottom.preferredSize.height,
+                  child: bottom,
+                ),
               ),
             ),
           );
 
     // Dải mờ dần phủ vùng thanh: nội dung cuộn dưới thanh nhoè dần.
-    return OverlayPortal(
-      controller: _portal,
-      overlayChildBuilder: (overlayContext) => _SearchVeil(
-        barKey: _barKey,
-        visible: _focused && !_hasQuery,
-        onTap: _cancel,
-      ),
-      child: Stack(
-        key: _barKey,
-        clipBehavior: Clip.none,
-        children: [
-          const Positioned.fill(child: OmniScrollEdge(atTop: true)),
-          Padding(
-            padding: EdgeInsets.fromLTRB(
-              16,
-              MediaQuery.paddingOf(context).top + OmniTopBar._topPad,
-              12,
-              OmniTopBar._bottomPad,
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                if (motion == Duration.zero)
-                  _focused
-                      ? const SizedBox(
-                          height: OmniTopBar._rowHeight,
-                          width: double.infinity,
-                        )
-                      : row
-                else
-                  AnimatedCrossFade(
-                    duration: motion,
-                    crossFadeState: _focused
-                        ? CrossFadeState.showSecond
-                        : CrossFadeState.showFirst,
-                    firstChild: row,
-                    // Đang tìm: hàng tiêu đề lùi đi, ô tìm lên sát trên.
-                    secondChild: const SizedBox(
-                      height: OmniTopBar._rowHeight,
-                      width: double.infinity,
-                    ),
-                  ),
-                if (searchStrip != null) ...[
-                  const SizedBox(height: OmniTopBar._bottomPad),
-                  searchStrip,
-                ],
-              ],
-            ),
+    final overlayStyle = Theme.of(context).brightness == Brightness.dark
+        ? SystemUiOverlayStyle.light
+        : SystemUiOverlayStyle.dark;
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: overlayStyle,
+      child: OverlayPortal(
+        controller: _portal,
+        overlayChildBuilder: (overlayContext) => _SearchVeil(
+          barKey: _barKey,
+          visible: _focused && !_hasQuery,
+          onTap: _cancel,
+        ),
+        child: Padding(
+          key: _barKey,
+          padding: EdgeInsets.fromLTRB(
+            16,
+            MediaQuery.paddingOf(context).top + OmniTopBar._topPad,
+            16,
+            OmniTopBar._bottomPad,
           ),
-        ],
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (motion == Duration.zero)
+                _focused
+                    ? const SizedBox(
+                        height: OmniTopBar._rowHeight,
+                        width: double.infinity,
+                      )
+                    : row
+              else
+                IgnorePointer(
+                  ignoring: _focused,
+                  child: AnimatedOpacity(
+                    duration: motion,
+                    opacity: _focused ? 0 : 1,
+                    child: row,
+                  ),
+                ),
+              if (searchStrip != null) ...[
+                const SizedBox(height: OmniTopBar._bottomPad),
+                searchStrip,
+              ],
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -495,10 +463,10 @@ class _SearchVeil extends StatelessWidget {
                     // Làm mờ toàn màn là lớp đắt nhất: bậc hiệu năng thấp chỉ
                     // phủ màu nền gần đặc.
                     : !OmniPerformance.scrimBlur(context)
-                    ? ColoredBox(color: base.withValues(alpha: 0.92))
+                    ? ColoredBox(color: base.withValues(alpha: 0.45))
                     : BackdropFilter(
-                        filter: ImageFilter.blur(sigmaX: 24, sigmaY: 24),
-                        child: ColoredBox(color: base.withValues(alpha: 0.5)),
+                        filter: ImageFilter.blur(sigmaX: 6, sigmaY: 6),
+                        child: ColoredBox(color: base.withValues(alpha: 0.22)),
                       ),
               ),
             ),
@@ -552,9 +520,11 @@ class OmniGlassCircle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Viên 44: làm mờ không nhìn ra, chỉ tốn một lớp đè nội dung cuộn.
+    // Viên 44: làm mờ không nhìn ra, chỉ tốn một lớp đè nội dung cuộn; bỏ
+    // bóng ngoài để không bị cắt thành khung mờ vuông ở hàng đầu.
     return OmniGlass(
       blur: false,
+      shadow: false,
       radius: 22,
       child: SizedBox.square(dimension: 44, child: Center(child: child)),
     );

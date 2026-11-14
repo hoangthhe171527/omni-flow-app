@@ -119,7 +119,9 @@ class CatalogPage extends ConsumerWidget {
         title: 'Danh mục hàng',
         showAccount: !subPage,
         fallbackBack: subPage ? back : null,
-        bottom: _SearchBottom(
+        bottom: OmniSearchBottom(
+          fieldKey: const ValueKey('inv-catalog-search'),
+          hint: 'Mã, tên hàng',
           onChanged: (v) => ref.read(catalogFilterProvider.notifier).state = (
             categoryId: ref.read(catalogFilterProvider).categoryId,
             query: v,
@@ -137,7 +139,7 @@ class CatalogPage extends ConsumerWidget {
           key: const ValueKey('inv-catalog-scroll'),
           physics: const AlwaysScrollableScrollPhysics(),
           keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-          padding: EdgeInsets.fromLTRB(16, 12, 16, bottom + 24),
+          padding: EdgeInsets.fromLTRB(16, 4, 16, bottom + 24),
           children: list,
         ),
       ),
@@ -223,34 +225,4 @@ class ProductRow extends StatelessWidget {
   }
 }
 
-class _SearchBottom extends StatelessWidget implements PreferredSizeWidget {
-  const _SearchBottom({required this.onChanged});
 
-  final ValueChanged<String> onChanged;
-
-  @override
-  Size get preferredSize => const Size.fromHeight(44);
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(right: 4),
-      child: OmniGlass(
-        radius: 22,
-        child: SizedBox(
-          height: 44,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 6),
-            child: OmniSearchField(
-              key: const ValueKey('inv-catalog-search'),
-              hint: 'Mã, tên hàng',
-              flat: true,
-              dense: true,
-              onChanged: onChanged,
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}

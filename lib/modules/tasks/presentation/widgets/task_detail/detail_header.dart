@@ -59,7 +59,6 @@ class DetailHeader extends StatelessWidget implements PreferredSizeWidget {
     return Stack(
       clipBehavior: Clip.none,
       children: [
-        const Positioned.fill(child: OmniScrollEdge(atTop: true)),
         Positioned.fill(
           child: IgnorePointer(
             child: ValueListenableBuilder<bool>(

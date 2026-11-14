@@ -48,6 +48,13 @@ class _LotsPageState extends ConsumerState<LotsPage> {
     return Scaffold(
       appBar: OmniAppBar(
         title: 'Hàng sắp về',
+        bottom: perms.read
+            ? OmniSearchBottom(
+                fieldKey: const ValueKey('inv-lot-search'),
+                hint: 'Tìm mã lô, nhà cung cấp',
+                onChanged: (v) => setState(() => _q = v),
+              )
+            : null,
         actions: [
           // Đợt A: Nhà cung cấp — hồ sơ và công nợ theo lô.
           // Khung ứng dụng có tab NCC → không lặp lối vào trên header.
@@ -114,19 +121,8 @@ class _LotsPageState extends ConsumerState<LotsPage> {
                     physics: const AlwaysScrollableScrollPhysics(),
                     keyboardDismissBehavior:
                         ScrollViewKeyboardDismissBehavior.onDrag,
-                    padding: EdgeInsets.fromLTRB(16, 12, 16, bottom),
+                    padding: EdgeInsets.fromLTRB(16, 4, 16, bottom),
                     children: [
-                      SizedBox(
-                        height: 44,
-                        child: OmniSearchField(
-                          key: const ValueKey('inv-lot-search'),
-                          hint: 'Tìm mã lô, nhà cung cấp',
-                          flat: true,
-                          dense: true,
-                          onChanged: (v) => setState(() => _q = v),
-                        ),
-                      ),
-                      const SizedBox(height: 10),
                       OmniGroupSection(
                         children: [
                           OmniGroupRow(
@@ -136,12 +132,28 @@ class _LotsPageState extends ConsumerState<LotsPage> {
                           ),
                           OmniGroupRow(
                             title: 'Đặt trước',
-                            value: '${InventoryFormat.number(resv)} cây',
+                            trailing: Text(
+                              '${InventoryFormat.number(resv)} cây',
+                              style: OmniType.bodyStrong.copyWith(
+                                color: Theme.of(context).colorScheme.primary,
+                                fontFeatures: OmniType.tabular,
+                              ),
+                            ),
                           ),
                           if (perms.pay)
                             OmniGroupRow(
                               title: 'Còn nợ NCC',
-                              value: InventoryFormat.yen(dueJpy),
+                              trailing: Text(
+                                InventoryFormat.yen(dueJpy),
+                                style: OmniType.bodyStrong.copyWith(
+                                  color: dueJpy > 0
+                                      ? OmniColors.warningTextOf(context)
+                                      : Theme.of(
+                                          context,
+                                        ).colorScheme.onSurfaceVariant,
+                                  fontFeatures: OmniType.tabular,
+                                ),
+                              ),
                             ),
                         ],
                       ),
@@ -247,6 +259,18 @@ class LotRow extends StatelessWidget {
               l.status == LotStatus.inTransit
                   ? Icons.local_shipping_outlined
                   : Icons.inventory_2_outlined,
+              color: switch (l.status) {
+                LotStatus.inTransit => scheme.primary,
+                LotStatus.ordered => OmniColors.warningTextOf(context),
+                LotStatus.received => OmniColors.success,
+              },
+              background: switch (l.status) {
+                LotStatus.inTransit => scheme.primary.withValues(alpha: .10),
+                LotStatus.ordered => OmniColors.warningTextOf(
+                  context,
+                ).withValues(alpha: .10),
+                LotStatus.received => OmniColors.success.withValues(alpha: .10),
+              },
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -282,14 +306,42 @@ class LotRow extends StatelessWidget {
                               ),
                               FractionallySizedBox(
                                 widthFactor: ratio,
-                                child: ColoredBox(color: scheme.primary),
+                                child: ColoredBox(
+                                  color: ratio >= 1.0
+                                      ? OmniColors.success
+                                      : scheme.primary,
+                                ),
                               ),
                             ],
                           ),
                         ),
                       ),
                     ),
-                  for (final s in lines) Text(s, style: muted),
+                  for (final s in lines)
+                    if (s.startsWith('Còn nợ') ||
+                        s.startsWith('Thuế phí chưa trả'))
+                      Padding(
+                        padding: const EdgeInsets.only(top: 4),
+                        child: InvStatusPill(
+                          label: s,
+                          tone: OmniColors.warningTextOf(context),
+                        ),
+                      )
+                    else if (s.startsWith('Đã cọc'))
+                      Padding(
+                        padding: const EdgeInsets.only(top: 4),
+                        child: InvStatusPill(label: s, tone: scheme.primary),
+                      )
+                    else if (s == 'Đã trả đủ')
+                      Padding(
+                        padding: const EdgeInsets.only(top: 4),
+                        child: InvStatusPill(
+                          label: s,
+                          tone: OmniColors.successTextOf(context),
+                        ),
+                      )
+                    else
+                      Text(s, style: muted),
                 ],
               ),
             ),

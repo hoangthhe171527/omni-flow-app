@@ -23,6 +23,8 @@ class OmniSearchField extends StatefulWidget {
     this.outlined = false,
     this.flat = false,
     this.dense = false,
+    this.autofocus = false,
+    this.onSubmitted,
   });
 
   final ValueChanged<String> onChanged;
@@ -42,6 +44,8 @@ class OmniSearchField extends StatefulWidget {
   final String? initialValue;
   final Duration debounce;
   final Widget? trailing;
+  final bool autofocus;
+  final ValueChanged<String>? onSubmitted;
 
   @override
   State<OmniSearchField> createState() => _OmniSearchFieldState();
@@ -87,7 +91,14 @@ class _OmniSearchFieldState extends State<OmniSearchField> {
     return Center(
       child: TextField(
         controller: _controller,
+        autofocus: widget.autofocus,
         onChanged: _onChanged,
+        onSubmitted: widget.onSubmitted == null
+            ? null
+            : (value) {
+                _timer?.cancel();
+                widget.onSubmitted!(value.trim());
+              },
         textInputAction: TextInputAction.search,
         style: OmniType.search.copyWith(
           color: scheme.onSurface,
@@ -124,8 +135,10 @@ class _OmniSearchFieldState extends State<OmniSearchField> {
                     color: scheme.onSurfaceVariant,
                   ),
                   onPressed: () {
+                    _timer?.cancel();
                     _controller.clear();
-                    _onChanged('');
+                    widget.onChanged('');
+                    setState(() {});
                   },
                 ),
           isDense: true,
@@ -156,6 +169,53 @@ class _OmniSearchFieldState extends State<OmniSearchField> {
       ),
     );
   }
+}
+
+/// Thanh tìm kiếm viên kính cao 44 dùng thống nhất làm `bottom` của [OmniAppBar].
+class OmniSearchBottom extends StatelessWidget implements PreferredSizeWidget {
+  const OmniSearchBottom({
+    super.key,
+    required this.hint,
+    required this.onChanged,
+    this.fieldKey,
+    this.initialValue,
+    this.debounce = const Duration(milliseconds: 350),
+    this.autofocus = false,
+    this.onSubmitted,
+  });
+
+  final String hint;
+  final ValueChanged<String> onChanged;
+  final Key? fieldKey;
+  final String? initialValue;
+  final Duration debounce;
+  final bool autofocus;
+  final ValueChanged<String>? onSubmitted;
+
+  @override
+  Size get preferredSize => const Size.fromHeight(44);
+
+  @override
+  Widget build(BuildContext context) => OmniGlass(
+    radius: 22,
+    child: SizedBox(
+      height: 44,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 6),
+        child: OmniSearchField(
+          key: fieldKey,
+          hint: hint,
+          initialValue: initialValue,
+          debounce: debounce,
+          flat: true,
+          dense: true,
+          autofocus: autofocus,
+          onChanged: onChanged,
+          onSubmitted: onSubmitted,
+        ),
+      ),
+    ),
+  );
 }
 
 /// Labelled form field wrapper — one place for the label, hint, error and
@@ -262,23 +322,27 @@ class OmniActionBar extends StatelessWidget {
       shape: const WidgetStatePropertyAll(StadiumBorder()),
       elevation: const WidgetStatePropertyAll(0),
       textStyle: WidgetStatePropertyAll(label),
-      backgroundColor: const WidgetStatePropertyAll(Colors.transparent),
+      backgroundColor: WidgetStateProperty.resolveWith(
+        (s) => s.contains(WidgetState.disabled)
+            ? scheme.onSurface.withValues(alpha: .10)
+            : scheme.primary,
+      ),
       foregroundColor: WidgetStateProperty.resolveWith(
-        (s) => tone(s, scheme.primary),
+        (s) => tone(s, scheme.onPrimary),
       ),
       overlayColor: WidgetStatePropertyAll(
-        scheme.primary.withValues(alpha: .08),
-      ),
-      side: WidgetStateProperty.resolveWith(
-        (s) => BorderSide(
-          width: 1.5,
-          color: s.contains(WidgetState.disabled)
-              ? scheme.onSurface.withValues(alpha: .14)
-              : scheme.primary,
-        ),
+        scheme.onPrimary.withValues(alpha: .12),
       ),
     );
-    final secondary = primary.copyWith(
+    final secondary = ButtonStyle(
+      minimumSize: const WidgetStatePropertyAll(Size(0, height)),
+      padding: const WidgetStatePropertyAll(
+        EdgeInsets.symmetric(horizontal: 18),
+      ),
+      shape: const WidgetStatePropertyAll(StadiumBorder()),
+      elevation: const WidgetStatePropertyAll(0),
+      textStyle: WidgetStatePropertyAll(label),
+      backgroundColor: const WidgetStatePropertyAll(Colors.transparent),
       foregroundColor: WidgetStateProperty.resolveWith(
         (s) => tone(s, scheme.onSurfaceVariant),
       ),
@@ -286,7 +350,7 @@ class OmniActionBar extends StatelessWidget {
         scheme.onSurface.withValues(alpha: .06),
       ),
       side: WidgetStatePropertyAll(
-        BorderSide(width: 1.5, color: scheme.outlineVariant),
+        BorderSide(width: 1, color: scheme.outlineVariant),
       ),
     );
 
@@ -406,7 +470,7 @@ class OmniGlassSheet extends StatelessWidget {
       key: const Key('omni-glass-sheet'),
       color: solid
           ? fill
-          : fill.withValues(alpha: noBlur ? .97 : (dark ? .80 : .86)),
+          : fill.withValues(alpha: noBlur ? .98 : (dark ? .92 : .95)),
       shape: RoundedRectangleBorder(
         borderRadius: shape,
         side: BorderSide(

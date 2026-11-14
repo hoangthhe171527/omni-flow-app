@@ -170,7 +170,7 @@ class _ExpensesPageState extends ConsumerState<ExpensesPage> {
                           // Chừa thanh tab kính + vùng an toàn + nút + kính.
                           padding: EdgeInsets.fromLTRB(
                             16,
-                            top + 8,
+                            top + 4,
                             16,
                             OmniFabLayer.listBottom(context),
                           ),

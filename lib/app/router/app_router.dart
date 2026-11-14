@@ -1,3 +1,4 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -5,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import '../../core/module/module_registry.dart';
 import '../../core/module/module_route.dart';
 import '../../core/nav/tab_order.dart';
+import '../../design/platform/omni_platform.dart';
 import '../../modules/auth/auth_module.dart';
 import '../../security/session/session.dart';
 import '../../security/session/session_controller.dart';
@@ -55,11 +57,20 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: ShellRoutes.splashPath,
         name: ShellRoutes.splash,
-        builder: (_, _) => const SplashPage(),
+        pageBuilder: (_, state) => CustomTransitionPage<void>(
+          key: state.pageKey,
+          transitionDuration: const Duration(milliseconds: 220),
+          reverseTransitionDuration: const Duration(milliseconds: 220),
+          transitionsBuilder: (_, animation, _, child) =>
+              FadeTransition(opacity: animation, child: child),
+          child: const SplashPage(),
+        ),
       ),
       StatefulShellRoute.indexedStack(
-        builder: (context, state, navigationShell) =>
-            AppShell(navigationShell: navigationShell),
+        pageBuilder: (context, state, navigationShell) => _appLaunchPage(
+          state,
+          AppShell(navigationShell: navigationShell),
+        ),
         branches: [
           for (final entry in branchEntries)
             StatefulShellBranch(
@@ -85,9 +96,13 @@ final routerProvider = Provider<GoRouter>((ref) {
                 GoRoute(
                   path: '$appTabPathPrefix${route.path}',
                   name: appTabCloneName(route.name),
-                  builder: (context, state) => AccessBoundary(
-                    requirement: route.access,
-                    child: route.builder(context, state),
+                  pageBuilder: (context, state) => _adaptivePage(
+                    context,
+                    state,
+                    AccessBoundary(
+                      requirement: route.access,
+                      child: route.builder(context, state),
+                    ),
                   ),
                 ),
               ],
@@ -97,12 +112,48 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: ShellRoutes.appsPath,
         name: ShellRoutes.apps,
-        builder: (_, _) => const AppsPage(),
+        pageBuilder: (_, state) => _appLaunchPage(state, const AppsPage()),
       ),
       for (final route in overlayRoutes) _toGoRoute(route, rootKey),
     ],
   );
 });
+
+/// Hiệu ứng mở/thoát ứng dụng kiểu iOS: hiện mượt + phóng nhẹ thay vì trượt
+/// ngang từ phải sang.
+Page<void> _appLaunchPage(GoRouterState state, Widget child) {
+  return CustomTransitionPage<void>(
+    key: state.pageKey,
+    transitionDuration: const Duration(milliseconds: 300),
+    reverseTransitionDuration: const Duration(milliseconds: 260),
+    transitionsBuilder: (_, animation, _, child) {
+      final curved = CurvedAnimation(
+        parent: animation,
+        curve: const Cubic(0.22, 1, 0.36, 1),
+        reverseCurve: Curves.easeInCubic,
+      );
+      return FadeTransition(
+        opacity: curved,
+        child: ScaleTransition(
+          scale: Tween<double>(begin: 0.95, end: 1.0).animate(curved),
+          child: child,
+        ),
+      );
+    },
+    child: child,
+  );
+}
+
+Page<void> _adaptivePage(
+  BuildContext context,
+  GoRouterState state,
+  Widget child,
+) {
+  if (isApple(context)) {
+    return CupertinoPage<void>(key: state.pageKey, child: child);
+  }
+  return MaterialPage<void>(key: state.pageKey, child: child);
+}
 
 /// [tabRoot]: gốc của một branch nằm TRONG shell, nên bỏ qua
 /// `rootNavigator` (Sổ chi phí, Thông báo… khai báo mở toàn màn khi còn là
@@ -116,9 +167,13 @@ GoRoute _toGoRoute(
     path: route.path,
     name: route.name,
     parentNavigatorKey: route.rootNavigator && !tabRoot ? rootKey : null,
-    builder: (context, state) => AccessBoundary(
-      requirement: route.access,
-      child: route.builder(context, state),
+    pageBuilder: (context, state) => _adaptivePage(
+      context,
+      state,
+      AccessBoundary(
+        requirement: route.access,
+        child: route.builder(context, state),
+      ),
     ),
     routes: [for (final child in route.children) _toGoRoute(child, rootKey)],
   );

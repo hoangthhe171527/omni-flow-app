@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:omni_app/design/components/components.dart';
@@ -185,7 +186,7 @@ void main() {
     expect(back, 1);
   });
 
-  testWidgets('chạm ô tìm: bật chế độ tìm, Huỷ xoá chữ rồi thoát', (
+  testWidgets('chạm ô tìm: bật chế độ tìm, không hiện Huỷ, chạm ngoài thì thoát', (
     tester,
   ) async {
     final c = ProviderContainer();
@@ -207,14 +208,36 @@ void main() {
     await tester.tap(find.byType(TextField));
     await tester.pumpAndSettle();
     expect(c.read(searchModeProvider), isTrue);
-    expect(find.text('Huỷ'), findsOneWidget);
-
-    await tester.enterText(find.byType(TextField), 'lan');
-    await tester.tap(find.text('Huỷ'));
-    await tester.pumpAndSettle();
-    expect(ctrl.text, '');
-    expect(c.read(searchModeProvider), isFalse);
     expect(find.text('Huỷ'), findsNothing);
+
+    // Chạm ra ngoài vùng tìm kiếm (lớp mờ) -> thoát chế độ tìm.
+    await tester.tap(find.bySemanticsLabel('Thoát tìm kiếm'));
+    await tester.pumpAndSettle();
+    expect(c.read(searchModeProvider), isFalse);
     expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('AnnotatedRegion<SystemUiOverlayStyle> theo brightness của theme', (
+    tester,
+  ) async {
+    Future<SystemUiOverlayStyle> styleFor(ThemeData theme) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: theme,
+          home: const Scaffold(appBar: OmniTopBar()),
+        ),
+      );
+      await tester.pumpAndSettle();
+      final region = tester.widget<AnnotatedRegion<SystemUiOverlayStyle>>(
+        find.descendant(
+          of: find.byType(OmniTopBar),
+          matching: find.byType(AnnotatedRegion<SystemUiOverlayStyle>),
+        ),
+      );
+      return region.value;
+    }
+
+    expect(await styleFor(ThemeData.light()), SystemUiOverlayStyle.dark);
+    expect(await styleFor(ThemeData.dark()), SystemUiOverlayStyle.light);
   });
 }

@@ -153,7 +153,7 @@ class _NotificationsPageState extends ConsumerState<NotificationsPage> {
                   controller: _scrollController,
                   padding: EdgeInsets.fromLTRB(
                     16,
-                    14 + OmniTopBarOverlap.of(context),
+                    OmniTopBarOverlap.of(context) + 4,
                     16,
                     OmniSpacing.bottomSafe,
                   ),

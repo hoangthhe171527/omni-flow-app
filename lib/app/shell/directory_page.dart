@@ -885,6 +885,7 @@ class _ThemeRow extends ConsumerWidget {
       trailing: SizedBox(
         width: 168,
         child: OmniSegmented(
+          compact: true,
           labels: const ['Máy', 'Sáng', 'Tối'],
           index: _modes.indexOf(mode).clamp(0, 2),
           onChanged: (i) {

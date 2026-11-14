@@ -285,7 +285,7 @@ class _CustomerDetailPageState extends ConsumerState<CustomerDetailPage> {
                               : null,
                         ),
                       Padding(
-                        padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+                        padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
                         child: OmniSegmented(
                           labels: [
                             'Tổng quan',

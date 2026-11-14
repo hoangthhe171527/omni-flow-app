@@ -36,23 +36,35 @@ class FinanceCatalogPage extends ConsumerWidget {
     ];
     final empty = state.groups.isEmpty && state.accounts.isEmpty;
 
-    Widget body;
-    if (state.isLoading && empty) {
-      body = const OmniSkeletonList(count: 6, height: 52);
-    } else if (state.errorMessage != null && empty) {
-      body = OmniErrorView(
-        error: state.errorMessage!,
-        onRetry: () => ref.read(financeLedgerProvider.notifier).refresh(),
-      );
-    } else if (empty) {
-      body = OmniEmptyState(
-        icon: Icons.sell_outlined,
-        title: 'Chưa có danh mục',
-        actionLabel: 'Thêm',
-        onAction: () => _add(context, ref),
-      );
-    } else {
-      body = RefreshIndicator.adaptive(
+    Widget buildBody(BuildContext context, double topInset) {
+      if (state.isLoading && empty) {
+        return Padding(
+          padding: EdgeInsets.only(top: topInset),
+          child: const OmniSkeletonList(count: 6, height: 52),
+        );
+      }
+      if (state.errorMessage != null && empty) {
+        return Padding(
+          padding: EdgeInsets.only(top: topInset),
+          child: OmniErrorView(
+            error: state.errorMessage!,
+            onRetry: () => ref.read(financeLedgerProvider.notifier).refresh(),
+          ),
+        );
+      }
+      if (empty) {
+        return Padding(
+          padding: EdgeInsets.only(top: topInset),
+          child: OmniEmptyState(
+            icon: Icons.sell_outlined,
+            title: 'Chưa có danh mục',
+            actionLabel: 'Thêm',
+            onAction: () => _add(context, ref),
+          ),
+        );
+      }
+      return RefreshIndicator.adaptive(
+        edgeOffset: topInset,
         onRefresh: () => ref.read(financeLedgerProvider.notifier).refresh(),
         child: ListView(
           key: const ValueKey('finance-catalog-list'),
@@ -60,7 +72,7 @@ class FinanceCatalogPage extends ConsumerWidget {
           // Chừa phần đáy bị che + nút + kính.
           padding: EdgeInsets.fromLTRB(
             16,
-            12,
+            topInset,
             16,
             OmniFabLayer.listBottom(context),
           ),
@@ -115,6 +127,7 @@ class FinanceCatalogPage extends ConsumerWidget {
     }
 
     return Scaffold(
+      extendBodyBehindAppBar: true,
       appBar: const OmniAppBar(title: 'Danh mục chi'),
       // Thêm nhóm chi / nguồn tiền: nút + kính góc phải dưới (rà soát 12/11),
       // mở sheet hai dòng như dấu + ở header trước đây.
@@ -124,7 +137,12 @@ class FinanceCatalogPage extends ConsumerWidget {
           tooltip: 'Thêm',
           onPressed: (_) => _add(context, ref),
         ),
-        body: body,
+        body: OmniTopBarOverlap.wrap(
+          child: Builder(
+            builder: (context) =>
+                buildBody(context, OmniTopBarOverlap.of(context)),
+          ),
+        ),
       ),
     );
   }

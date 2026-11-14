@@ -2,46 +2,39 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:omni_app/design/theme/omni_theme.dart';
 
-/// Nút kính (liquid-buttons-uiux.html B): vệt sáng của theme phải theo dáng
-/// THẬT của nút. Trước đây nó luôn vẽ viên thuốc, nút sổ chi phí bo 10 lòi
-/// hai góc trên.
+/// Nút hành động chính (`FilledButton`) dùng nền đặc màu chính + chữ onPrimary;
+/// nút phụ (`OutlinedButton`) dùng nền nhẹ + viền mảnh trung tính, dáng viên thuốc.
 void main() {
-  Future<ShapeBorder?> highlightShape(WidgetTester t, Widget button) async {
+  testWidgets('nút chính dùng nền đặc primary và chữ onPrimary', (t) async {
+    final theme = OmniTheme.light(TargetPlatform.android);
+    final scheme = theme.colorScheme;
+    final style = theme.filledButtonTheme.style!;
+    expect(style.backgroundColor!.resolve({}), scheme.primary);
+    expect(style.foregroundColor!.resolve({}), scheme.onPrimary);
+    expect(style.shape!.resolve({}), isA<StadiumBorder>());
+  });
+
+  testWidgets('nút tự bo 10 vẫn giữ được bo 10 riêng của nút', (t) async {
     await t.pumpWidget(
       MaterialApp(
         theme: OmniTheme.light(TargetPlatform.android),
-        home: Scaffold(body: Center(child: button)),
-      ),
-    );
-    final box = t.widget<DecoratedBox>(
-      find
-          .descendant(
-            of: find.byType(button.runtimeType),
-            matching: find.byWidgetPredicate(
-              (w) =>
-                  w is DecoratedBox &&
-                  w.decoration is ShapeDecoration &&
-                  (w.decoration as ShapeDecoration).gradient != null,
+        home: Scaffold(
+          body: Center(
+            child: FilledButton(
+              onPressed: () {},
+              style: FilledButton.styleFrom(
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+              ),
+              child: const Text('Ghi 4 khoản'),
             ),
-          )
-          .first,
-    );
-    return (box.decoration as ShapeDecoration).shape;
-  }
-
-  testWidgets('nút tự bo 10: vệt sáng cùng bo 10, không viên thuốc', (t) async {
-    final shape = await highlightShape(
-      t,
-      FilledButton(
-        onPressed: () {},
-        style: FilledButton.styleFrom(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(10),
           ),
         ),
-        child: const Text('Ghi 4 khoản'),
       ),
     );
+    final btn = t.widget<FilledButton>(find.byType(FilledButton));
+    final shape = btn.style!.shape!.resolve({});
     expect(shape, isA<RoundedRectangleBorder>());
     expect(
       (shape! as RoundedRectangleBorder).borderRadius,
@@ -49,18 +42,10 @@ void main() {
     );
   });
 
-  testWidgets('nút mặc định: vệt sáng dáng viên thuốc', (t) async {
-    final shape = await highlightShape(
-      t,
-      OutlinedButton(onPressed: () {}, child: const Text('Huỷ')),
-    );
-    expect(shape, isA<StadiumBorder>());
-  });
-
-  testWidgets('nút kính không có viền màu chủ đạo', (t) async {
+  testWidgets('nút phụ dùng viền trung tính, không dùng viền primary', (t) async {
     final theme = OmniTheme.light(TargetPlatform.android);
-    final side = theme.filledButtonTheme.style!.side!.resolve({})!;
+    final side = theme.outlinedButtonTheme.style!.side!.resolve({})!;
     expect(side.color, isNot(theme.colorScheme.primary));
-    expect(side.color.r, closeTo(1, 0.01), reason: 'mép sáng trắng');
+    expect(theme.outlinedButtonTheme.style!.shape!.resolve({}), isA<StadiumBorder>());
   });
 }

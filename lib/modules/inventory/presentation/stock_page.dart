@@ -708,6 +708,7 @@ class _StockPageState extends ConsumerState<StockPage> {
     ];
 
     return Scaffold(
+      extendBodyBehindAppBar: true,
       appBar: OmniAppBar(
         title: 'Tồn kho',
         actions: [
@@ -741,33 +742,42 @@ class _StockPageState extends ConsumerState<StockPage> {
       ),
       body: OmniDockLayer(
         dock: dock,
-        body: NotificationListener<ScrollNotification>(
-          onNotification: (n) {
-            if (n.metrics.extentAfter < 400) {
-              ref.read(stockProvider.notifier).loadMore().ignore();
-            }
-            return false;
-          },
-          child: RefreshIndicator(
-            onRefresh: () => ref.read(stockProvider.notifier).refresh(),
-            child: ListView.builder(
-              key: const ValueKey('inv-stock-scroll'),
-              physics: const AlwaysScrollableScrollPhysics(),
-              keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-              padding: EdgeInsets.fromLTRB(
-                16,
-                12,
-                16,
-                dock == null
-                    ? OmniFabLayer.listBottom(context, hasFab: false)
-                    : OmniDockLayer.listBottom(
-                        context,
-                        rows: dockButtons.length,
-                      ),
-              ),
-              itemCount: builders.length,
-              itemBuilder: (_, index) => builders[index](),
-            ),
+        body: OmniTopBarOverlap.wrap(
+          child: Builder(
+            builder: (context) {
+              final topInset = OmniTopBarOverlap.of(context);
+              return NotificationListener<ScrollNotification>(
+                onNotification: (n) {
+                  if (n.metrics.extentAfter < 400) {
+                    ref.read(stockProvider.notifier).loadMore().ignore();
+                  }
+                  return false;
+                },
+                child: RefreshIndicator(
+                  edgeOffset: topInset,
+                  onRefresh: () => ref.read(stockProvider.notifier).refresh(),
+                  child: ListView.builder(
+                    key: const ValueKey('inv-stock-scroll'),
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    keyboardDismissBehavior:
+                        ScrollViewKeyboardDismissBehavior.onDrag,
+                    padding: EdgeInsets.fromLTRB(
+                      16,
+                      topInset + 4,
+                      16,
+                      dock == null
+                          ? OmniFabLayer.listBottom(context, hasFab: false)
+                          : OmniDockLayer.listBottom(
+                              context,
+                              rows: dockButtons.length,
+                            ),
+                    ),
+                    itemCount: builders.length,
+                    itemBuilder: (_, index) => builders[index](),
+                  ),
+                ),
+              );
+            },
           ),
         ),
       ),
@@ -1043,11 +1053,9 @@ class _SearchBottom extends StatelessWidget implements PreferredSizeWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    return Padding(
-      padding: const EdgeInsets.only(right: 4),
-      child: SizedBox(
-        height: 44,
-        child: Row(
+    return SizedBox(
+      height: 44,
+      child: Row(
           children: [
             Expanded(
               child: OmniGlass(
@@ -1094,7 +1102,6 @@ class _SearchBottom extends StatelessWidget implements PreferredSizeWidget {
             ),
           ],
         ),
-      ),
-    );
+      );
   }
 }

@@ -278,7 +278,7 @@ class _FieldSheetState extends State<_FieldSheet> {
             ),
             // Kiểu trường: bốn lựa chọn loại trừ.
             Padding(
-              padding: const EdgeInsets.fromLTRB(14, 10, 14, 10),
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
               child: OmniSegmented(
                 labels: [for (final type in types) customFieldTypeLabel(type)],
                 index: types.indexOf(_type),

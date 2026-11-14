@@ -9,18 +9,21 @@ import 'omni_glass.dart';
 /// viên thuốc, thấu kính trắng mờ ([OmniGlassLens]) trượt tới đoạn đang chọn,
 /// chữ đoạn chọn màu chủ đạo w600.
 ///
-/// Cao tổng 44: mỗi đoạn có vùng chạm cao đủ 44, thấu kính cao 36 ở giữa.
+/// Cao tổng 44 (hoặc 36 khi [compact] = true): mỗi đoạn có vùng chạm cao đủ
+/// 44 ở chế độ chuẩn, thấu kính cao 36 ở giữa (28 khi [compact]).
 class OmniSegmented extends StatelessWidget {
   const OmniSegmented({
     super.key,
     required this.labels,
     required this.index,
     required this.onChanged,
+    this.compact = false,
   });
 
   final List<String> labels;
   final int index;
   final ValueChanged<int> onChanged;
+  final bool compact;
 
   @override
   Widget build(BuildContext context) {
@@ -31,6 +34,9 @@ class OmniSegmented extends StatelessWidget {
     final sel = index.clamp(0, n - 1);
     final align = n == 1 ? 0.0 : -1 + 2 * sel / (n - 1);
     final motion = OmniMotion.enabled(context);
+    final double height = compact ? 36 : 44;
+    final double radius = compact ? 18 : 22;
+    final double lensHeight = compact ? 28 : 36;
 
     void pick(int i) {
       if (i != sel) HapticFeedback.selectionClick();
@@ -38,13 +44,13 @@ class OmniSegmented extends StatelessWidget {
     }
 
     return ConstrainedBox(
-      constraints: const BoxConstraints(minHeight: 44),
+      constraints: BoxConstraints(minHeight: height),
       child: OmniGlass(
-        radius: 22,
+        radius: radius,
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 4),
           child: SizedBox(
-            height: 44,
+            height: height,
             child: Stack(
               children: [
                 Positioned.fill(
@@ -57,7 +63,7 @@ class OmniSegmented extends StatelessWidget {
                     curve: const Cubic(0.34, 1.36, 0.64, 1),
                     child: FractionallySizedBox(
                       widthFactor: 1 / n,
-                      heightFactor: 36 / 44,
+                      heightFactor: lensHeight / height,
                       child: const OmniGlassLens(),
                     ),
                   ),

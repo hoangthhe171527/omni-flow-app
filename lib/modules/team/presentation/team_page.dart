@@ -36,6 +36,7 @@ class TeamPage extends ConsumerWidget {
     final canAdd = ref.watch(accessProvider).can(TeamPermissions.membersCreate);
 
     return Scaffold(
+      extendBodyBehindAppBar: true,
       appBar: const OmniAppBar(title: 'Nhân viên'),
       // Thêm người: nút + kính góc phải dưới (rà soát 12/11) — không đẩy một
       // viên "Thêm" lên header.
@@ -48,59 +49,70 @@ class TeamPage extends ConsumerWidget {
                 onPressed: (_) => showAddMemberSheet(context),
               )
             : null,
-        body: RefreshIndicator.adaptive(
-          onRefresh: () {
-            ref.invalidate(teamMembersProvider);
-            return ref.refresh(teamDirectoryProvider.future);
-          },
-          child: OmniAsyncView(
-            // Danh bạ nạp cả người đã nghỉ (để tra tên trong lịch sử); màn này giữ
-            // như trước: người đang làm, kể cả lời mời chưa nhận ("Đang chờ").
-            value: members.whenData(
-              (all) => all.where((m) => m.isActive).toList(),
-            ),
-            onRetry: () => ref.invalidate(teamDirectoryProvider),
-            isEmpty: (list) => list.isEmpty,
-            empty: const OmniEmptyState(
-              icon: Icons.group_outlined,
-              title: 'Chưa có nhân viên',
-              message: 'Mời đồng nghiệp vào workspace để bắt đầu phân công.',
-            ),
-            // Nền xám; cả danh sách là MỘT nhóm lồng, vạch chia thụt sau avatar.
-            data: (list) => ListView(
-              physics: const AlwaysScrollableScrollPhysics(),
-              padding: EdgeInsets.fromLTRB(
-                16,
-                OmniGroupSection.gap,
-                16,
-                OmniFabLayer.listBottom(context, hasFab: canAdd),
-              ),
-              children: [
-                OmniGroupSection(
-                  dividerIndent: 70,
-                  children: [
-                    for (final member in list)
-                      _MemberTile(
-                        member: member,
-                        canLink: canLink,
-                        // Chạm vào một người là mở TẢI VIỆC của họ — câu hỏi
-                        // quản đốc hỏi nhiều nhất khi đứng giữa xưởng. Liên kết
-                        // Zalo lùi về một nút riêng bên phải.
-                        onTap: canSeeLoad
-                            ? () {
-                                HapticFeedback.selectionClick();
-                                context.pushNamed(
-                                  TaskRoutes.workload,
-                                  pathParameters: {'userId': member.userId},
-                                );
-                              }
-                            : null,
-                        onLinkZalo: () => _linkZalo(context, ref, member),
+        body: OmniTopBarOverlap.wrap(
+          child: Builder(
+            builder: (context) {
+              final topInset = OmniTopBarOverlap.of(context);
+              return RefreshIndicator.adaptive(
+                edgeOffset: topInset,
+                onRefresh: () {
+                  ref.invalidate(teamMembersProvider);
+                  return ref.refresh(teamDirectoryProvider.future);
+                },
+                child: OmniAsyncView(
+                  // Danh bạ nạp cả người đã nghỉ (để tra tên trong lịch sử); màn này giữ
+                  // như trước: người đang làm, kể cả lời mời chưa nhận ("Đang chờ").
+                  value: members.whenData(
+                    (all) => all.where((m) => m.isActive).toList(),
+                  ),
+                  onRetry: () => ref.invalidate(teamDirectoryProvider),
+                  isEmpty: (list) => list.isEmpty,
+                  empty: const OmniEmptyState(
+                    icon: Icons.group_outlined,
+                    title: 'Chưa có nhân viên',
+                    message:
+                        'Mời đồng nghiệp vào workspace để bắt đầu phân công.',
+                  ),
+                  // Nền xám; cả danh sách là MỘT nhóm lồng, vạch chia thụt sau avatar.
+                  data: (list) => ListView(
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    padding: EdgeInsets.fromLTRB(
+                      16,
+                      topInset,
+                      16,
+                      OmniFabLayer.listBottom(context, hasFab: canAdd),
+                    ),
+                    children: [
+                      OmniGroupSection(
+                        dividerIndent: 70,
+                        children: [
+                          for (final member in list)
+                            _MemberTile(
+                              member: member,
+                              canLink: canLink,
+                              // Chạm vào một người là mở TẢI VIỆC của họ — câu hỏi
+                              // quản đốc hỏi nhiều nhất khi đứng giữa xưởng. Liên kết
+                              // Zalo lùi về một nút riêng bên phải.
+                              onTap: canSeeLoad
+                                  ? () {
+                                      HapticFeedback.selectionClick();
+                                      context.pushNamed(
+                                        TaskRoutes.workload,
+                                        pathParameters: {
+                                          'userId': member.userId,
+                                        },
+                                      );
+                                    }
+                                  : null,
+                              onLinkZalo: () => _linkZalo(context, ref, member),
+                            ),
+                        ],
                       ),
-                  ],
+                    ],
+                  ),
                 ),
-              ],
-            ),
+              );
+            },
           ),
         ),
       ),

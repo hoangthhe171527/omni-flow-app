@@ -77,37 +77,19 @@ class _OmniLiquidFabState extends State<OmniLiquidFab>
     final glass = Stack(
       fit: StackFit.expand,
       children: [
-        // Thân kính: sáng ở góc trên-trái, gần trong suốt ở dưới.
+        // Nút tạo mới nổi: nền đặc màu chính để icon + luôn rõ nét trên
+        // mọi danh sách có ảnh/chữ; giữ ánh sáng nhẹ nửa trên cho đồng bộ.
         DecoratedBox(
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            color: solid ? scheme.surface : null,
-            gradient: solid
-                ? null
-                : RadialGradient(
-                    center: const Alignment(-0.4, -0.7),
-                    radius: 1.1,
-                    stops: const [0, 0.55, 1],
-                    colors: dark
-                        ? [
-                            Colors.white.withValues(alpha: 0.22),
-                            Colors.white.withValues(alpha: 0.05),
-                            Colors.white.withValues(alpha: 0.02),
-                          ]
-                        : [
-                            Colors.white.withValues(alpha: 0.6),
-                            Colors.white.withValues(alpha: 0.14),
-                            Colors.white.withValues(alpha: 0.06),
-                          ],
-                  ),
+            color: solid ? scheme.surface : scheme.primary,
           ),
         ),
-        if (!solid) ...[
-          // Vệt sáng cong nửa trên.
+        if (!solid)
           Positioned(
-            top: 3,
-            left: 9,
-            right: 9,
+            top: 2,
+            left: 8,
+            right: 8,
             height: size * 0.42,
             child: DecoratedBox(
               decoration: BoxDecoration(
@@ -119,46 +101,20 @@ class _OmniLiquidFabState extends State<OmniLiquidFab>
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
                   colors: [
-                    Colors.white.withValues(alpha: dark ? 0.32 : 0.75),
+                    Colors.white.withValues(alpha: dark ? 0.16 : 0.22),
                     Colors.white.withValues(alpha: 0),
                   ],
                 ),
               ),
             ),
           ),
-          // Ánh "khúc xạ" màu chính ở đáy.
-          Positioned(
-            left: 10,
-            right: 10,
-            bottom: 3,
-            height: size * 0.3,
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(size),
-                gradient: RadialGradient(
-                  center: Alignment.bottomCenter,
-                  radius: 0.9,
-                  colors: [
-                    scheme.primary.withValues(alpha: dark ? 0.35 : 0.22),
-                    scheme.primary.withValues(alpha: 0),
-                  ],
-                ),
-              ),
+        if (solid)
+          DecoratedBox(
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              border: Border.all(color: scheme.primary, width: 1.5),
             ),
           ),
-        ],
-        // Viền mảnh: sáng (kính) hoặc màu chính (tương phản cao).
-        DecoratedBox(
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            border: Border.all(
-              color: solid
-                  ? scheme.primary
-                  : Colors.white.withValues(alpha: dark ? 0.16 : 0.7),
-              width: solid ? 1.5 : 1,
-            ),
-          ),
-        ),
         Center(
           child: AnimatedRotation(
             key: const Key('liquid-fab-icon'),
@@ -167,7 +123,11 @@ class _OmniLiquidFabState extends State<OmniLiquidFab>
                 ? Duration.zero
                 : const Duration(milliseconds: 420),
             curve: Curves.easeOutBack,
-            child: Icon(widget.icon, size: 28, color: scheme.primary),
+            child: Icon(
+              widget.icon,
+              size: 28,
+              color: solid ? scheme.primary : scheme.onPrimary,
+            ),
           ),
         ),
       ],

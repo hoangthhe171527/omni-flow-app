@@ -131,15 +131,24 @@ abstract final class OmniTheme {
         ),
       ),
       dividerTheme: DividerThemeData(color: border, thickness: 1, space: 1),
-      // Nút kính lỏng (liquid-buttons-uiux.html phương án B, duyệt
-      // 2026-11-08): viên kính sáng, vệt sáng nửa trên, mép sáng mảnh, bóng
-      // mềm — KHÔNG viền màu, không tô đặc. Nút chính chữ màu chủ đạo, nút
-      // phụ (Outlined) chữ mực. Cao 48, dạng viên thuốc, chữ 15/600.
+      // Nút hành động chính dùng nền đặc màu chủ đạo + chữ onPrimary để
+      // CTA (Tạo, Lưu, Xác nhận, Hoàn tất) nổi bật rõ ràng; nút phụ
+      // (Outlined) dùng nền nhẹ + viền mảnh trung tính.
       filledButtonTheme: FilledButtonThemeData(
-        style: _glassButtonStyle(brightness, foreground: primary),
+        style: _solidPrimaryButtonStyle(
+          brightness,
+          primary: primary,
+          onPrimary: onPrimary,
+          onSurface: onSurface,
+        ),
       ),
       outlinedButtonTheme: OutlinedButtonThemeData(
-        style: _glassButtonStyle(brightness, foreground: onSurface),
+        style: _outlinedButtonStyle(
+          brightness,
+          surface: surface,
+          border: borderInteractive,
+          foreground: onSurface,
+        ),
       ),
       textButtonTheme: TextButtonThemeData(
         style: TextButton.styleFrom(
@@ -329,81 +338,67 @@ abstract final class OmniTheme {
 
 const _fieldRadius = BorderRadius.all(Radius.circular(14));
 
-/// Nút kính lỏng dùng chung cho nút chính và nút phụ (phương án B).
-///
-/// Nền trắng mờ + vệt sáng nửa trên (vẽ bằng [ButtonStyle.backgroundBuilder]),
-/// mép sáng 1px, bóng mềm trung tính. Tương phản cao: nền đặc, viền màu chữ.
-ButtonStyle _glassButtonStyle(
+/// Nút hành động chính: nền đặc [primary], chữ [onPrimary], cao 48, viên thuốc.
+ButtonStyle _solidPrimaryButtonStyle(
   Brightness brightness, {
-  required Color foreground,
+  required Color primary,
+  required Color onPrimary,
+  required Color onSurface,
 }) {
-  final dark = brightness == Brightness.dark;
-  final ink = dark ? OmniColors.darkForeground : OmniColors.foreground;
   return ButtonStyle(
     minimumSize: const WidgetStatePropertyAll(Size.fromHeight(48)),
     textStyle: const WidgetStatePropertyAll(OmniType.bodyStrong),
     shape: const WidgetStatePropertyAll(StadiumBorder()),
-    elevation: WidgetStateProperty.resolveWith(
-      (s) => s.contains(WidgetState.disabled) ? 0 : 2,
-    ),
-    shadowColor: WidgetStatePropertyAll(
-      Colors.black.withValues(alpha: dark ? .5 : .16),
-    ),
+    elevation: const WidgetStatePropertyAll(0),
     surfaceTintColor: const WidgetStatePropertyAll(Colors.transparent),
     backgroundColor: WidgetStateProperty.resolveWith(
       (s) => s.contains(WidgetState.disabled)
-          ? Colors.white.withValues(alpha: dark ? .04 : .45)
-          : Colors.white.withValues(alpha: dark ? .12 : .82),
+          ? onSurface.withValues(alpha: .10)
+          : primary,
     ),
     foregroundColor: WidgetStateProperty.resolveWith(
       (s) => s.contains(WidgetState.disabled)
-          ? ink.withValues(alpha: .38)
+          ? onSurface.withValues(alpha: .38)
+          : onPrimary,
+    ),
+    overlayColor: WidgetStatePropertyAll(onPrimary.withValues(alpha: .12)),
+  );
+}
+
+/// Nút phụ: nền nhẹ + viền mảnh trung tính, cao 48, viên thuốc.
+ButtonStyle _outlinedButtonStyle(
+  Brightness brightness, {
+  required Color surface,
+  required Color border,
+  required Color foreground,
+}) {
+  final dark = brightness == Brightness.dark;
+  return ButtonStyle(
+    minimumSize: const WidgetStatePropertyAll(Size.fromHeight(48)),
+    textStyle: const WidgetStatePropertyAll(OmniType.bodyStrong),
+    shape: const WidgetStatePropertyAll(StadiumBorder()),
+    elevation: const WidgetStatePropertyAll(0),
+    surfaceTintColor: const WidgetStatePropertyAll(Colors.transparent),
+    backgroundColor: WidgetStateProperty.resolveWith(
+      (s) => s.contains(WidgetState.disabled)
+          ? foreground.withValues(alpha: .04)
+          : Color.alphaBlend(
+              foreground.withValues(alpha: dark ? .08 : .04),
+              surface,
+            ),
+    ),
+    foregroundColor: WidgetStateProperty.resolveWith(
+      (s) => s.contains(WidgetState.disabled)
+          ? foreground.withValues(alpha: .38)
           : foreground,
     ),
-    overlayColor: WidgetStatePropertyAll(foreground.withValues(alpha: .08)),
-    side: WidgetStatePropertyAll(
-      BorderSide(color: Colors.white.withValues(alpha: dark ? .16 : .9)),
+    overlayColor: WidgetStatePropertyAll(foreground.withValues(alpha: .06)),
+    side: WidgetStateProperty.resolveWith(
+      (s) => BorderSide(
+        color: s.contains(WidgetState.disabled)
+            ? foreground.withValues(alpha: .12)
+            : border,
+      ),
     ),
-    backgroundBuilder: (context, states, child) {
-      // Dáng THẬT của nút (nút tự đặt bo góc riêng thì vệt sáng theo đúng
-      // dáng đó, không lòi hai góc): `context` là của chính nút, đọc dáng
-      // từ style riêng của nó; không đặt thì dáng viên thuốc của theme.
-      final own = context.widget;
-      final ShapeBorder shape = switch (own is ButtonStyleButton
-          ? own.style?.shape?.resolve(states)
-          : null) {
-        final OutlinedBorder s => s.copyWith(side: BorderSide.none),
-        null => const StadiumBorder(),
-      };
-      if (MediaQuery.highContrastOf(context)) {
-        return DecoratedBox(
-          decoration: ShapeDecoration(
-            color: Theme.of(context).colorScheme.surface,
-            shape: shape is OutlinedBorder
-                ? shape.copyWith(side: BorderSide(color: foreground))
-                : shape,
-          ),
-          child: child,
-        );
-      }
-      if (states.contains(WidgetState.disabled)) return child!;
-      // Vệt sáng nửa trên — "mép kính bắt sáng".
-      return DecoratedBox(
-        decoration: ShapeDecoration(
-          shape: shape,
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            stops: const [0, .5, 1],
-            colors: [
-              Colors.white.withValues(alpha: dark ? .14 : .7),
-              Colors.white.withValues(alpha: 0),
-              Colors.black.withValues(alpha: dark ? .10 : .03),
-            ],
-          ),
-        ),
-        child: child,
-      );
-    },
   );
 }

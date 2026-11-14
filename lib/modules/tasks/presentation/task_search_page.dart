@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -40,33 +38,6 @@ class TaskSearchPage extends ConsumerStatefulWidget {
 }
 
 class _TaskSearchPageState extends ConsumerState<TaskSearchPage> {
-  final _controller = TextEditingController();
-  Timer? _timer;
-  bool _isEmpty = true;
-
-  @override
-  void dispose() {
-    _timer?.cancel();
-    _controller.dispose();
-    super.dispose();
-  }
-
-  void _onChanged(String value) {
-    // Nút xoá xuất hiện ngay từ ký tự đầu, không chờ hết quãng lặng: nó nói
-    // về ô nhập, không nói về kết quả. Chỉ dựng lại khi trạng thái rỗng đổi.
-    final nextEmpty = value.isEmpty;
-    if (nextEmpty != _isEmpty) {
-      setState(() => _isEmpty = nextEmpty);
-    }
-    _timer?.cancel();
-    _timer = Timer(kTaskSearchDebounce, () {
-      // Widget có thể đã rời cây trong lúc chờ — người dùng bấm quay lại ngay
-      // sau khi gõ chữ cuối là chuyện thường.
-      if (!mounted) return;
-      ref.read(taskSearchQueryProvider.notifier).state = value;
-    });
-  }
-
   @override
   Widget build(BuildContext context) {
     final query = ref.watch(taskSearchQueryProvider).trim();
@@ -79,68 +50,19 @@ class _TaskSearchPageState extends ConsumerState<TaskSearchPage> {
       appBar: OmniAppBar(
         title: 'Tìm cây đàn',
         fallbackBack: () => context.go('/tasks'),
-        bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(44),
-          child: OmniGlass(
-            radius: 22,
-            child: Center(
-              child: TextField(
-                key: const Key('task-search-flat'),
-                controller: _controller,
-                autofocus: true,
-                textInputAction: TextInputAction.search,
-                textAlignVertical: TextAlignVertical.center,
-                onChanged: _onChanged,
-                // Enter là "tìm NGAY", không phải chờ hết quãng lặng: người đã bấm
-                // xong thì không có gì để chờ nữa.
-                onSubmitted: (value) {
-                  _timer?.cancel();
-                  ref.read(taskSearchQueryProvider.notifier).state = value;
-                },
-                style: OmniType.search.copyWith(
-                  color: scheme.onSurface,
-                  fontStyle: FontStyle.normal,
-                ),
-                decoration: InputDecoration(
-                  isDense: true,
-                  filled: false,
-                  contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 4,
-                    vertical: 10,
-                  ),
-                  border: InputBorder.none,
-                  enabledBorder: InputBorder.none,
-                  focusedBorder: InputBorder.none,
-                  prefixIcon: Icon(
-                    Icons.search_rounded,
-                    color: scheme.onSurfaceVariant,
-                    size: OmniIconSize.lg,
-                  ),
-                  hintText: 'Tên cây đàn, số máy, tên khách',
-                  hintStyle: OmniType.searchHint.copyWith(
-                    color: scheme.onSurfaceVariant,
-                  ),
-                  suffixIcon: _isEmpty
-                      ? null
-                      : IconButton(
-                          tooltip: 'Xoá',
-                          onPressed: () {
-                            _timer?.cancel();
-                            _controller.clear();
-                            ref.read(taskSearchQueryProvider.notifier).state =
-                                '';
-                            setState(() => _isEmpty = true);
-                          },
-                          icon: Icon(
-                            Icons.close_rounded,
-                            size: OmniIconSize.md,
-                            color: scheme.onSurface,
-                          ),
-                        ),
-                ),
-              ),
-            ),
-          ),
+        bottom: OmniSearchBottom(
+          fieldKey: const Key('task-search-flat'),
+          hint: 'Tên cây đàn, số máy, tên khách',
+          debounce: kTaskSearchDebounce,
+          autofocus: true,
+          onChanged: (value) {
+            if (!mounted) return;
+            ref.read(taskSearchQueryProvider.notifier).state = value;
+          },
+          onSubmitted: (value) {
+            if (!mounted) return;
+            ref.read(taskSearchQueryProvider.notifier).state = value;
+          },
         ),
       ),
       body: query.isEmpty

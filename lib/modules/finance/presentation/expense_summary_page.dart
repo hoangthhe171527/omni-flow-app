@@ -325,7 +325,7 @@ class _ExpenseSummaryPageState extends ConsumerState<ExpenseSummaryPage> {
               // KHỐI 1: Bộ chuyển Tháng / Quý / Năm + Thanh chọn kỳ
               // Hai hàng: Tháng / Quý / Năm, rồi ‹ kỳ › (chạm giữa mở sheet).
               Padding(
-                padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
                 child: Column(
                   children: [
                     OmniSegmented(
@@ -889,14 +889,20 @@ class _ExpenseSummaryPageState extends ConsumerState<ExpenseSummaryPage> {
               children: [
                 for (var i = 0; i < YearTrendBreakdown.values.length; i++) ...[
                   if (i > 0) const SizedBox(width: 8),
-                  OmniChoicePill(
-                    key: ValueKey(
-                      'finance-summary-year-by-${YearTrendBreakdown.values[i].name}',
-                    ),
-                    label: YearTrendBreakdown.values[i].label,
-                    selected: _yearTrend == YearTrendBreakdown.values[i],
-                    onTap: () => setState(
-                      () => _yearTrend = YearTrendBreakdown.values[i],
+                  SizedBox(
+                    height: 44,
+                    child: Center(
+                      widthFactor: 1,
+                      child: OmniChoicePill(
+                        key: ValueKey(
+                          'finance-summary-year-by-${YearTrendBreakdown.values[i].name}',
+                        ),
+                        label: YearTrendBreakdown.values[i].label,
+                        selected: _yearTrend == YearTrendBreakdown.values[i],
+                        onTap: () => setState(
+                          () => _yearTrend = YearTrendBreakdown.values[i],
+                        ),
+                      ),
                     ),
                   ),
                 ],
@@ -1011,7 +1017,7 @@ class _ExpenseSummaryPageState extends ConsumerState<ExpenseSummaryPage> {
           onChanged: (i) =>
               setState(() => _dimension = SummaryDimension.values[i]),
         ),
-        const SizedBox(height: 10),
+        const SizedBox(height: OmniGroupSection.gap),
         OmniGroupSection(
           dividerIndent: 54,
           children: [
