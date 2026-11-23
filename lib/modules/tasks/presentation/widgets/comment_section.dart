@@ -349,6 +349,8 @@ class _Comment extends StatelessWidget {
                   AttachmentThumb(
                     key: ValueKey('comment-file-${file.id}'),
                     attachment: file,
+                    gallery: comment.attachments,
+                    caption: comment.author,
                     size: 72,
                     radius: 12,
                     onLongPress: onFileLongPress?.call(file),

@@ -15,6 +15,7 @@ export 'omni_dashed_box.dart';
 export 'omni_dashed_circle.dart';
 export 'omni_glass.dart';
 export 'omni_group.dart';
+export 'omni_image_viewer.dart';
 export 'omni_liquid_fab.dart';
 export 'omni_inline_rename.dart';
 export 'omni_inputs.dart';

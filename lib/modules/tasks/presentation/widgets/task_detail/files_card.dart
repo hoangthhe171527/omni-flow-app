@@ -104,6 +104,8 @@ class _FilesCardState extends ConsumerState<FilesCard> {
                       AttachmentThumb(
                         key: ValueKey('file-${file.id}'),
                         attachment: file,
+                        gallery: files,
+                        caption: task.title,
                         size: FilesCard.tile,
                         radius: 12,
                         onLongPress: widget.canAttach
