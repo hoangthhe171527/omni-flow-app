@@ -99,7 +99,7 @@ class CompletionRow extends StatelessWidget {
                     ),
                     if (entry.photos.isNotEmpty) ...[
                       const SizedBox(height: OmniSpacing.sm),
-                      _Photos(urls: entry.photos),
+                      _Photos(urls: entry.photos, caption: '$who · $done'),
                     ],
                   ],
                 ),
@@ -117,11 +117,14 @@ class CompletionRow extends StatelessWidget {
 /// §B2: ảnh CHÍNH LÀ bằng chứng của công đoạn, nên bắt mở từng cây đàn ra để
 /// xem là bỏ mất lý do người ta lướt màn này.
 class _Photos extends StatelessWidget {
-  const _Photos({required this.urls});
+  const _Photos({required this.urls, this.caption});
 
   static const double _size = 88;
 
   final List<String> urls;
+
+  /// Dòng phụ trong khung xem ảnh ("Minh · Thay búa La 4").
+  final String? caption;
 
   @override
   Widget build(BuildContext context) {
@@ -157,24 +160,42 @@ class _Photos extends StatelessWidget {
           ),
           child: ClipRRect(
             borderRadius: thumbRadius,
-            // Bộ nhớ đệm ĐĨA: quản đốc mở dòng việc mỗi sáng, và cùng những tấm
-            // ảnh đó không việc gì phải tải lại mỗi lần cuộn.
-            child: CachedNetworkImage(
-              imageUrl: resolveMediaUrl(urls[index]),
-              width: _size,
-              height: _size,
-              fit: BoxFit.cover,
-              memCacheWidth: decodeWidth,
-              fadeInDuration: fade,
-              fadeOutDuration: fade,
-              placeholderFadeInDuration: Duration.zero,
-              // Ô GIỮ CHỖ cùng cỡ trong lúc tải và khi hỏng, không phải ô 0dp.
-              // Bản đầu trả `SizedBox.shrink()` cho ảnh hỏng: dải ảnh co lại rồi
-              // giãn ra khi ảnh tới, và ngoài xưởng sóng yếu thì người đọc
-              // không biết là CÓ ảnh đang chờ. Kích thước cố định là thứ giữ cho
-              // bố cục không nhảy (CLS) — ảnh tới hay không, ô vẫn ở đó.
-              placeholder: (_, _) => const _PhotoPlaceholder(),
-              errorWidget: (_, _, _) => const _PhotoPlaceholder(broken: true),
+            // Chạm ảnh: khung xem ảnh tại chỗ, vuốt qua cả dải (chạm chỗ khác của dòng
+            // vẫn mở việc).
+            child: GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: () => openOmniImageViewer(
+                context,
+                images: [
+                  for (final u in urls)
+                    OmniViewerImage(url: resolveMediaUrl(u), caption: caption),
+                ],
+                initialIndex: index,
+              ),
+              child: Semantics(
+                button: true,
+                label: 'Xem ảnh ${index + 1}',
+                // Bộ nhớ đệm ĐĨA: quản đốc mở dòng việc mỗi sáng, và cùng những tấm
+                // ảnh đó không việc gì phải tải lại mỗi lần cuộn.
+                child: CachedNetworkImage(
+                  imageUrl: resolveMediaUrl(urls[index]),
+                  width: _size,
+                  height: _size,
+                  fit: BoxFit.cover,
+                  memCacheWidth: decodeWidth,
+                  fadeInDuration: fade,
+                  fadeOutDuration: fade,
+                  placeholderFadeInDuration: Duration.zero,
+                  // Ô GIỮ CHỖ cùng cỡ trong lúc tải và khi hỏng, không phải ô 0dp.
+                  // Bản đầu trả `SizedBox.shrink()` cho ảnh hỏng: dải ảnh co lại rồi
+                  // giãn ra khi ảnh tới, và ngoài xưởng sóng yếu thì người đọc
+                  // không biết là CÓ ảnh đang chờ. Kích thước cố định là thứ giữ cho
+                  // bố cục không nhảy (CLS) — ảnh tới hay không, ô vẫn ở đó.
+                  placeholder: (_, _) => const _PhotoPlaceholder(),
+                  errorWidget: (_, _, _) =>
+                      const _PhotoPlaceholder(broken: true),
+                ),
+              ),
             ),
           ),
         ),

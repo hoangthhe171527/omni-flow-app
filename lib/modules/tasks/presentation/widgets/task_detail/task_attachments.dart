@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../../../../core/utils/web_url.dart';
+import '../../../../../design/components/omni_image_viewer.dart';
 import '../../../../../design/platform/omni_motion_scope.dart';
 import '../../../../../design/tokens/tokens.dart';
 import '../../../domain/task.dart';
@@ -15,9 +16,18 @@ class AttachmentThumb extends StatelessWidget {
     required this.size,
     this.onLongPress,
     this.radius = 12,
+    this.gallery,
+    this.caption,
   });
 
   final TaskAttachment attachment;
+
+  /// Các tệp cùng chỗ (thẻ Tệp của việc, một bình luận, màn Tệp kế hoạch): bấm một ảnh thì
+  /// khung xem vuốt qua được mọi ảnh trong đó. null: chỉ ảnh này.
+  final List<TaskAttachment>? gallery;
+
+  /// Dòng phụ trong khung xem (vd tên việc, người gửi · giờ).
+  final String? caption;
 
   /// Cạnh ô, dp. Cũng là cỡ giải mã (nhân tỉ lệ điểm ảnh).
   final double size;
@@ -28,9 +38,22 @@ class AttachmentThumb extends StatelessWidget {
   /// Bo góc ô (thẻ Tệp của chi tiết việc: 6).
   final double radius;
 
-  /// Mở bản đầy đủ ra ngoài app, như module hộp thư vẫn làm với tệp đính kèm.
-  /// Ô nhỏ đủ để nhận ra là tấm nào, không đủ để soi một vết xước.
-  Future<void> _open() async {
+  /// Ảnh: mở khung xem ảnh ngay trong app (vuốt qua các ảnh cùng chỗ, chụm phóng to — ô nhỏ
+  /// đủ nhận ra tấm nào, không đủ soi một vết xước). Tệp khác: mở ra ngoài app như cũ.
+  Future<void> _open(BuildContext context) async {
+    if (attachment.isImage) {
+      final images = (gallery ?? [attachment]).where((a) => a.isImage).toList();
+      final index = images.indexWhere((a) => a.id == attachment.id);
+      await openOmniImageViewer(
+        context,
+        images: [
+          for (final a in images)
+            OmniViewerImage(url: a.url, name: a.name, caption: caption),
+        ],
+        initialIndex: index < 0 ? 0 : index,
+      );
+      return;
+    }
     // Chỉ http/https: URL từ API không bao giờ được thành `file:`/`intent:`.
     final uri = webUriOrNull(attachment.url);
     if (uri == null) return;
@@ -61,7 +84,7 @@ class AttachmentThumb extends StatelessWidget {
           ),
           clipBehavior: Clip.antiAlias,
           child: InkWell(
-            onTap: _open,
+            onTap: () => _open(context),
             onLongPress: onLongPress,
             child: Stack(
               fit: StackFit.expand,

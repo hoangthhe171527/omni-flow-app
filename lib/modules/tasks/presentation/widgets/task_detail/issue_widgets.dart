@@ -244,6 +244,16 @@ class IssueCard extends StatelessWidget {
       if (issue.at case final at?)
         '${Formatters.dayMonth(at)} ${Formatters.time(at)}',
     ].join(' · ');
+    // Ảnh báo vấn đề: bấm một ảnh thì khung xem vuốt qua được cả loạt.
+    final issuePhotos = [
+      for (var i = 0; i < issue.photoUrls.length; i++)
+        TaskAttachment(
+          id: 'issue-$i',
+          url: issue.photoUrls[i],
+          name: 'Ảnh vấn đề ${i + 1}',
+          type: 'image',
+        ),
+    ];
 
     return Container(
       key: const Key('task-issue-card'),
@@ -289,20 +299,16 @@ class IssueCard extends StatelessWidget {
             issue.note,
             style: OmniType.body.copyWith(color: scheme.onSurface),
           ),
-          if (issue.photoUrls.isNotEmpty) ...[
+          if (issuePhotos.isNotEmpty) ...[
             const SizedBox(height: 10),
             Wrap(
               spacing: 6,
               runSpacing: 6,
               children: [
-                for (var i = 0; i < issue.photoUrls.length; i++)
+                for (final photo in issuePhotos)
                   AttachmentThumb(
-                    attachment: TaskAttachment(
-                      id: 'issue-$i',
-                      url: issue.photoUrls[i],
-                      name: 'Ảnh vấn đề ${i + 1}',
-                      type: 'image',
-                    ),
+                    attachment: photo,
+                    gallery: issuePhotos,
                     size: 56,
                     radius: 12,
                   ),

@@ -117,6 +117,9 @@ class PlanFilesPage extends ConsumerWidget {
                                   AttachmentThumb(
                                     attachment: entry.file,
                                     size: tile,
+                                    // Vuốt qua mọi ảnh của kế hoạch; dòng phụ là tên việc.
+                                    gallery: [for (final e in files) e.file],
+                                    caption: entry.task.title,
                                     onLongPress: canDelete
                                         ? () => _fileOptions(
                                             context,
