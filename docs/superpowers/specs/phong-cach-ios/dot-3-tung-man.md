@@ -292,3 +292,184 @@ Tổng: **121 file** có màn hoặc sheet; **63 file** phải sửa tay (có m�
 |---|---|---|
 | `presentation/dashboard_page.dart` | DashboardPage | — |
 
+
+## 6. Rà toàn bộ và đã làm (25/11/2026, nhánh `feat/phong-cach-ios-dot3`)
+
+Bảng §5 chỉ quét file có lớp `…Page`/`…Sheet`, nên bỏ sót widget nằm ở file riêng (thẻ, dòng, nhãn). Lần rà này dùng `tools/audit-lines.mjs`: quét **từng dòng của mọi file** trong `lib/` theo mã ở §1, thêm ba mã mới:
+- **R:** bo góc ngoài thang 6/10/16/32/tròn.
+- **G:** gradient.
+- **H:** bóng đổ.
+
+Chạy: `node tools/audit-lines.mjs <lib> <out.csv>`.
+
+| | Trước | Sau |
+|---|---|---|
+| Số chỗ quét bắt được | 425 / 141 file | 260 / 110 file |
+| Bo góc ngoài thang (R) | 134 | 8 (đều giữ có lý do) |
+| Kính / mờ tự vẽ (K) | 74 | 55 (đều là chỗ được giữ, xem dưới) |
+
+Mỗi chỗ còn lại đã được rà bằng mắt và có lý do giữ.
+
+### 6.1 Gốc (`lib/design`) — đổi một chỗ, cả app theo
+
+| Thứ | Đổi |
+|---|---|
+| `OmniRadius` | Thang mới: nhãn 6 · ô nhập/nút 10 · thẻ 16 · sheet 32 · chip 10 · nút nổi tròn (cũ: 4/8/10/16/12). |
+| Theme | Ô nhập bo 10 (cũ 14). Hộp thoại bo 16. |
+| `OmniFilterPill` | Viên đang chọn: nền xanh nhạt, chữ xanh, viền xanh 1.5, bo 10. Cũ là khối mực đen, sai luật "một màu nhấn". |
+| `OmniGlassAction` | Nút trên thanh trên là ô chạm 44 trơn, không còn viên kính. |
+| `OmniGlassAlert` | Hộp thoại nền đặc bo 16, bỏ nền mờ và viền trắng. |
+| `OmniCard` | Bo 16. |
+| `OmniGroupSection` | Bo 16. |
+| Bộ chọn ngày | Bo 16. |
+| Menu neo | Bo 16 (vẫn kính vì là menu). |
+| `OmniSheetHeader` | Tiêu đề 20/700. Không có nút phải thì tự hiện ✕ tròn 32 (chỉ trong sheet/popup thật). |
+| `OmniSheetCloseButton` | Mới: ✕ tròn 32 nền xám, vùng chạm 44, tooltip "Đóng". |
+| `OmniStatusLabel` | Mới: nhãn cao 22, bo 6, 12/600. Chữ dài thì xuống dòng, không cắt vì có thể là tiền. |
+| `OmniTotalCard` / `OmniTotalStat` / `OmniMoneyRow` | Mới (`omni_summary.dart`): khối tổng 30/800 + số phụ dưới đường kẻ; dòng tên + tiền / phụ + nhãn. |
+| `OmniSegmented` | Thêm `counts`: số đếm 12 cạnh nhãn. Trình đọc màn hình nghe "Nhãn N". |
+| `OmniSearchBottom` | Nền xám bo 10 thay viên kính; thêm `trailing` (nút lọc trong ô). |
+| `OmniTopBar` / `OmniAppBar` | Thêm `subtitle` cho màn con. |
+
+### 6.2 Từng mô-đun
+
+**Kho / Đơn hàng (inventory)**
+- **Bốn màn mẫu §3:** đã làm (PR #96).
+- **Nhà cung cấp:**
+  - Khối công nợ → `OmniTotalCard` (số lớn = Tổng nợ).
+  - Dòng có nợ → `OmniMoneyRow`; "quá hạn" là nhãn đỏ, "trả dư" là nhãn xanh.
+  - Lô quá hạn có nhãn đỏ.
+- **Chi tiết lô:**
+  - Thanh chọn dùng `counts`.
+  - "dự kiến"/"đã trả" thành nhãn (qua `InvValue.subTone`).
+  - Tên dòng 16/600.
+- **Hàng sắp về:** nhãn trạng thái thành `OmniStatusLabel`; "Đặt trước", "Còn nợ NCC" về màu mực.
+- **Kiểm kê:** tình trạng cây là nhãn; "Không thấy n cây" là nhãn đỏ.
+- **Phiếu giữ:** "quá hạn" là nhãn.
+- **Đã giao:** trạng thái hoá đơn là nhãn.
+- **Dán packing list:** cảnh báo/lỗi dòng thành nhãn vàng/đỏ.
+- **Sheet Bán:** ô tìm nền xám bo 10.
+- **Bàn phím số tiền:** phím xám đặc bo 10.
+- **Bộ lọc `InvDropPill`:** đang lọc = xanh nhạt + chữ xanh.
+- **Ảnh nhỏ:** bo 10.
+
+**Chi phí (finance)**
+- **Sổ chi phí:**
+  - Khối tổng chi 30/800.
+  - Đã trả / Phải trả thành số phụ dưới đường kẻ; chạm vẫn lọc.
+  - Biến động thành nhãn.
+  - Bỏ chữ "Chạm nhóm để lọc".
+  - "Ghi tất cả" thành nút phụ xanh nhạt.
+  - Toast bo 16.
+- **Dòng khoản chi** → `OmniMoneyRow`: Chưa trả vàng · Trả một phần xanh · Hoàn/giảm xám · trả đủ = ✓.
+- **Tổng hợp chi phí:** thẻ Tổng chi → `OmniTotalCard`; dòng cơ cấu → `OmniMoneyRow`; nút chọn kỳ xám đặc.
+- **Chi tiết khoản:** nhãn trạng thái trả; nút "Trả đủ ngay" xanh nhạt; ✕ chung; sheet xoá dùng nhãn đỏ.
+- **Thêm khoản:** nút đính kèm xanh nhạt.
+- **Bàn phím chi phí:** "Xong" xanh đặc; phím bo 10.
+- **Danh mục chi:** ✕ chung.
+- **Chọn ảnh:** bỏ bóng; ảnh nhỏ bo 10, ảnh lớn bo 16.
+
+**Nhân sự (hr)**
+- `HrPill` → `OmniStatusLabel`.
+- `HrHero` số 30/800.
+- Duyệt đơn và Đơn từ dùng `counts`.
+- Nút tháng xám đặc.
+- Tiền trừ (phiếu lương) và thưởng (thưởng đội) về màu mực.
+- Bảng công: ô bo 10.
+
+**Tổng quan (dashboard)**
+- Thẻ doanh thu: số 30/800, biến động thành nhãn (giữ ▲▼).
+- Đầu thẻ 13/600.
+- Bo 16/10.
+
+**Việc / Dòng việc (plans, tasks)**
+- **Thẻ bảng:**
+  - Ô x/y việc con → nhãn 4 mức (đỏ · vàng · xanh · xanh + ✓).
+  - Bỏ bóng; bo 10 (lồng trong cột bo 16).
+  - Chip hạn / ưu tiên thành dáng nhãn bo 6, 12/600.
+- **Cột bảng:** bo 16, vẫn mờ vì nằm trên ảnh bìa.
+- **Dải trên bảng:** Đang lọc / Vượt trần / Đã đóng bo 16.
+- **Thành viên kế hoạch:** vai "Chủ" thành nhãn xanh.
+- **Thứ tự nhóm:** "QC" thành nhãn vàng.
+- **Việc đã lưu trữ:** "Khôi phục" thành nút phụ xanh nhạt.
+- **Chi tiết việc:** thẻ bo 16; ô ngày / ô tích / nhãn người báo theo thang; bình luận bo 16.
+- **Ảnh bìa:** tên đè trên ảnh dùng kính (lớp nổi trên ảnh).
+
+**Hộp thư (inbox)**
+- **Khung soạn tin:** nền đặc (giữ dáng viên thuốc bo 27).
+- **Bong bóng tin:** 16 + góc đuôi 6; bỏ bóng tin vào.
+- **Tệp, video, trích dẫn, xem trước liên kết:** bo 10/16.
+- **Thanh "không soạn được":** nền đặc.
+- **Thông tin hội thoại:** thanh chọn Ảnh / Tệp / Link dùng `counts`; giai đoạn thành nhãn.
+- **Giao việc:** ô tìm → `OmniSearchBottom`; ✕ chung.
+- **Sheet emoji:** ✕ chung.
+
+**Khách, Cơ hội, Kênh, Nhân viên, Thông báo**
+- **Chi tiết khách:**
+  - Thanh chọn "Cơ hội" dùng `counts`.
+  - "Nhắn" là nút phụ xanh nhạt.
+  - Viên tag nền xám đặc bo 6.
+- **Bộ lọc khách, menu Cơ hội:** dòng đang chọn chỉ còn ✓, không tô cả dòng.
+- **Tạo nhanh khách:** nền đặc, bỏ mờ; ô chọn người phụ trách dùng ô tìm chung.
+- **Thanh lọc Cơ hội:** thẻ đặc.
+- **Chip giai đoạn:** bo 10, chọn = xanh nhạt + viền xanh.
+- **Trạng thái cơ hội** (Huỷ / Thắng / Thua) thành nhãn.
+- **Thẻ kênh:** trạng thái thành nhãn; mã QR bo 16.
+- **Thêm thành viên:** "Tạo tài khoản" / "Gửi lời mời" / "Xong" thành nút chính.
+- **Nhân viên:** vai / "Đang chờ" / "Ngừng" thành nhãn.
+- **Thông báo:**
+  - "Đọc hết" là chữ xanh trơn.
+  - "Chưa đọc" dùng `counts`.
+  - Popover chuông bo 16, "n mới" thành nhãn.
+- **Chín sheet:** bỏ ✕ tự dựng, dùng ✕ chung.
+
+**Đăng nhập, Cài đặt, khung app**
+- **Rail máy tính bảng:** bỏ logo (Q4).
+- **Đăng nhập / đăng ký:** ô nhập bo 10; thẻ bo 16; ‹ màu xanh.
+- **Tài khoản:** nút "Ảnh"/"Đổi" là nút phụ xanh nhạt (bỏ `_GlassActionPill`).
+- **Đổi mật khẩu:** "Lưu mật khẩu mới" thành nút chính; ✕ chung.
+- **Chọn nền:** bỏ quầng bóng, chỉ viền xanh + ✓.
+- **Xoá tài khoản:** ô nhập bo 10.
+- **Sửa thanh tab:** bo 16.
+- **Màn Ứng dụng:** chữ theo `OmniType`.
+
+### 6.3 Giữ có chủ ý
+
+- **Kính:**
+  - Thanh tab, thanh trên khi cuộn, menu / popover (menu tin nhắn, menu neo, popover chuông).
+  - Thanh chọn nhiều (Hộp thư, Kho), khay đáy.
+  - Lớp phủ sau menu / sheet.
+  - Nút và bộ đếm trên trình xem ảnh, thanh nút trên ảnh bìa kế hoạch.
+  - Thanh trên màn chat (chưa có dải nền dưới, xem §6.4).
+- **Chữ màu (T):**
+  - Liên kết và hành động (Đăng ký, Xem tất cả, Chép, Nhập…).
+  - Lỗi form, dấu `*`.
+  - Icon trong ô icon, viền focus, thanh tiến độ.
+  - Số ngày tồn quá hạn tô vàng trong dòng phụ.
+- **Logo:** ở đăng nhập, khởi động, chọn công ty lần đầu.
+- **Gradient:** màu bìa kế hoạch, lớp tối trên ảnh, nền thương hiệu sau logo đăng nhập.
+- **Bóng:** chỉ còn trên thứ nổi: nút +, menu, mục đang kéo, toast, khay, núm thanh chọn.
+
+### 6.4 Còn chờ người quyết
+
+1. **Thanh trên màn chat (`thread_header`):** vẫn kính, vì chưa có dải nền dưới — bỏ kính thì chữ đè lên tin đang cuộn. Cần chụp máy thật.
+2. **Đầu nhóm chữ HOA 13/600** (§3.4) chưa làm: đổi toàn app, nhiều test tìm theo chữ thường.
+3. **Nút "Xác nhận xoá"** ở sheet xoá khoản chi là nền đỏ đặc. Spec §3.2 ghi bậc Xóa là "trong, chữ đỏ"; giữ đỏ đặc vì là bước xác nhận cuối.
+4. **Tab Khách** ("Khách hàng · n", "Cơ hội · n" trong popover lọc) vẫn ghép số: phải đổi `ExtraSegment` (API giữa hai mô-đun).
+5. **Khung soạn tin bo 27, thanh chọn nhiều bo 24:** dáng viên thuốc, ngoài thang.
+6. **Tên giai đoạn cơ hội** tô màu theo tenant, chưa thành nhãn 5 giọng.
+7. **`TaskPillChip`** đã đổi dáng nhưng giữ màu `OmniTaskTones` ("sắp tới" vẫn xanh).
+8. **Khoảng 25 sheet** ở Việc / Dòng việc còn ✕ tự dựng (`IconButton` tooltip "Đóng"). Đổi sang ✕ chung ở đợt sau: ✕ chung đã có tooltip nên test không phải sửa.
+9. **Màn Hàng sắp về (khối tổng) và dòng phiếu giữ** chưa dùng `OmniTotalCard` / `OmniMoneyRow`: khối trộn số lô, số cây và tiền; test ghim chữ.
+
+### 6.5 Kiểm
+
+- `flutter analyze lib`: sạch.
+- `flutter test --concurrency=2` theo thư mục các mô-đun đã sửa (design, app, auth, settings, channels, team, inbox, notifications, customers, opportunities, plans, tasks, finance, inventory, hr, dashboard, core, demo, contract, security): xanh.
+- Hai test đỏ từ trước, không do đợt này:
+  - `tasks/attachment_view_test` (`memCacheHeight`);
+  - golden "viec co van de".
+- Test bảo vệ đã cập nhật theo spec:
+  - `type_scale_test`: trần 800, có kiểm font 700/800 đóng gói.
+  - `app_bar_coverage_test`: thêm "Việc đã lưu trữ".
+  - `omni_app_bar_test`, `orbit_nav_test`: màn gốc ghi tên thay logo.
