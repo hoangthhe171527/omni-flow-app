@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../core/nav/shell_bar_inset.dart';
 import '../../../core/utils/formatters.dart';
@@ -268,7 +269,7 @@ class _UnitRow extends StatelessWidget {
       status: status,
       // Cây có vấn đề: dấu ! đỏ đầu dòng, lời báo ở dòng phụ.
       leading: u.bucket == OrderUnitBucket.issue
-          ? Icon(Icons.error_outline_rounded, size: 20, color: danger)
+          ? Icon(LucideIcons.circleAlert, size: 20, color: danger)
           : null,
       onTap: onTap,
     );
@@ -287,7 +288,7 @@ class _ProgressLabel extends StatelessWidget {
     final level = progressLevelOf(done, total);
     return OmniStatusLabel(
       label: '$done/$total',
-      icon: level == ProgressLevel.done ? Icons.check_rounded : null,
+      icon: level == ProgressLevel.done ? LucideIcons.check : null,
       tone: switch (level) {
         ProgressLevel.low => OmniTone.danger,
         ProgressLevel.mid => OmniTone.warning,

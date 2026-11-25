@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../../design/components/components.dart';
 import '../../../../design/tokens/tokens.dart';
@@ -75,14 +76,14 @@ class _PersonFilterSheetState extends ConsumerState<_PersonFilterSheet> {
               OmniGroupSection(
                 children: [
                   _row(
-                    icon: Icons.groups_outlined,
+                    icon: LucideIcons.users,
                     label: 'Tất cả mọi người',
                     selected: current.isEveryone,
                     onTap: () =>
                         Navigator.of(context).pop(BoardPerson.everyone),
                   ),
                   _row(
-                    icon: Icons.person_add_alt_outlined,
+                    icon: LucideIcons.userPlus,
                     label: 'Chưa giao ai',
                     selected: current.isUnassigned,
                     onTap: () =>

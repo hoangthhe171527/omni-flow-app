@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../../design/components/omni_dashed_box.dart';
 import '../../../../design/components/omni_inline_rename.dart';
@@ -975,7 +976,7 @@ class _Header extends StatelessWidget {
                     ),
                     style: IconButton.styleFrom(shape: const CircleBorder()),
                     icon: Icon(
-                      Icons.more_horiz_rounded,
+                      LucideIcons.ellipsis,
                       size: OmniIconSize.md,
                       color: scheme.onSurfaceVariant,
                     ),
@@ -1011,7 +1012,7 @@ class _AddTaskButton extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 10),
             child: Row(
               children: [
-                Icon(Icons.add_rounded, size: OmniIconSize.md, color: color),
+                Icon(LucideIcons.plus, size: OmniIconSize.md, color: color),
                 const SizedBox(width: 6),
                 Text(
                   'Thêm công việc',
@@ -1051,7 +1052,7 @@ class BoardAddSectionTile extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               const Icon(
-                Icons.add_rounded,
+                LucideIcons.plus,
                 size: OmniIconSize.md,
                 color: Colors.white,
               ),

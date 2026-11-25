@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../../core/error/app_exception.dart';
 import '../../../../design/components/components.dart';
@@ -94,8 +95,8 @@ class _DeleteAccountDialogState extends State<DeleteAccountDialog> {
                 onPressed: () => setState(() => _obscure = !_obscure),
                 icon: Icon(
                   _obscure
-                      ? Icons.visibility_outlined
-                      : Icons.visibility_off_outlined,
+                      ? LucideIcons.eye
+                      : LucideIcons.eyeOff,
                 ),
               ),
             ),
@@ -134,7 +135,7 @@ class _DeleteAccountDialogState extends State<DeleteAccountDialog> {
                         ),
                         child: _confirmed
                             ? Icon(
-                                Icons.check_rounded,
+                                LucideIcons.check,
                                 size: 14,
                                 color: scheme.primary,
                               )

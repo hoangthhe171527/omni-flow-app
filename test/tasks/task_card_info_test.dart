@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:omni_app/design/theme/omni_theme.dart';
 import 'package:omni_app/modules/tasks/domain/task.dart';
 import 'package:omni_app/modules/tasks/presentation/widgets/task_card.dart';
@@ -45,7 +46,7 @@ void main() {
       );
 
       expect(find.text('Nắp phím · Hằng Ni'), findsOneWidget);
-      expect(find.byIcon(Icons.arrow_forward_rounded), findsOneWidget);
+      expect(find.byIcon(LucideIcons.arrowRight), findsOneWidget);
       expect(find.textContaining('Lên dây'), findsNothing);
     });
 
@@ -100,9 +101,9 @@ void main() {
         ),
       );
 
-      expect(find.byIcon(Icons.attachment_outlined), findsOneWidget);
+      expect(find.byIcon(LucideIcons.paperclip), findsOneWidget);
       expect(find.text('2'), findsOneWidget);
-      expect(find.byIcon(Icons.forum_outlined), findsOneWidget);
+      expect(find.byIcon(LucideIcons.messagesSquare), findsOneWidget);
       expect(find.text('3'), findsOneWidget);
       expect(find.byIcon(Icons.star_rounded), findsOneWidget);
       expect(find.text('4'), findsOneWidget);
@@ -146,8 +147,8 @@ void main() {
       // trông rối mà không nói gì.
       await tester.pumpWidget(host(Task.fromJson({'id': 't', 'title': 'x'})));
 
-      expect(find.byIcon(Icons.attachment_outlined), findsNothing);
-      expect(find.byIcon(Icons.forum_outlined), findsNothing);
+      expect(find.byIcon(LucideIcons.paperclip), findsNothing);
+      expect(find.byIcon(LucideIcons.messagesSquare), findsNothing);
       expect(find.byIcon(Icons.star_rounded), findsNothing);
       expect(find.text('0'), findsNothing);
     });

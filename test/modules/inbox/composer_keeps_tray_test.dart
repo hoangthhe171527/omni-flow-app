@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:omni_app/modules/inbox/domain/pending_attachment.dart';
 import 'package:omni_app/core/error/app_exception.dart';
 import 'package:omni_app/design/theme/omni_theme.dart';
@@ -48,22 +49,22 @@ void main() {
     await tester.enterText(find.byType(TextField), 'Ảnh đây');
     await tester.pump();
 
-    await tester.tap(find.byIcon(Icons.send_rounded));
+    await tester.tap(find.byIcon(LucideIcons.send));
     await tester.pump();
     await tester.pump();
 
     expect(sends, [1]);
-    expect(find.byIcon(Icons.close_rounded), findsOneWidget);
+    expect(find.byIcon(LucideIcons.x), findsOneWidget);
     expect(find.text('Ảnh đây'), findsOneWidget);
 
     // Thử lại: gửi đủ ảnh, xong thì khay và ô trống.
     fail = false;
-    await tester.tap(find.byIcon(Icons.send_rounded));
+    await tester.tap(find.byIcon(LucideIcons.send));
     await tester.pump();
     await tester.pump();
 
     expect(sends, [1, 1]);
-    expect(find.byIcon(Icons.close_rounded), findsNothing);
+    expect(find.byIcon(LucideIcons.x), findsNothing);
     expect(find.text('Ảnh đây'), findsNothing);
   });
 }

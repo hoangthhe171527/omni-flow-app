@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../../design/components/components.dart';
 import '../../../../design/platform/omni_motion_scope.dart';
@@ -116,7 +117,7 @@ class FavoritesGroup extends StatelessWidget {
                                 : Duration.zero,
                             curve: OmniCurves.standard,
                             child: Icon(
-                              Icons.keyboard_arrow_down_rounded,
+                              LucideIcons.chevronDown,
                               size: OmniIconSize.md,
                               color: scheme.onSurfaceVariant,
                             ),

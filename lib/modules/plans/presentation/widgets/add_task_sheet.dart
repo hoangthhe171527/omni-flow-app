@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../../design/components/components.dart';
 import '../../../../design/tokens/tokens.dart';
@@ -154,7 +155,7 @@ class _AddTaskSheetState extends ConsumerState<_AddTaskSheet> {
               key: const Key('add-task-full'),
               title: 'Thêm chi tiết',
               subtitle: 'Người làm, hạn chót, nhãn màu, tệp đính kèm',
-              icon: Icons.tune_rounded,
+              icon: LucideIcons.slidersHorizontal,
               chevron: true,
               onTap: () => Navigator.of(context).pop(const OpenFullCreate()),
             ),

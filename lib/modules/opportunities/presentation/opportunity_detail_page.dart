@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../core/error/app_exception.dart';
 import '../../../core/utils/formatters.dart';
@@ -112,7 +113,7 @@ class OpportunityDetailPage extends ConsumerWidget {
                 dividerIndent: 54,
                 children: [
                   OmniGroupRow(
-                    icon: Icons.person_outline_rounded,
+                    icon: LucideIcons.user,
                     title: 'Khách hàng',
                     value: data.customerName ?? '—',
                     onTap: data.customerId == null
@@ -123,18 +124,18 @@ class OpportunityDetailPage extends ConsumerWidget {
                           ),
                   ),
                   OmniGroupRow(
-                    icon: Icons.inventory_2_outlined,
+                    icon: LucideIcons.package,
                     title: 'Sản phẩm',
                     value: data.product ?? '—',
                   ),
                   OmniGroupRow(
-                    icon: Icons.donut_large_rounded,
+                    icon: LucideIcons.chartPie,
                     title: 'Xác suất',
                     value:
                         '${data.displayPercent(catalog?.pipelineOf(data.pipelineCode))}%',
                   ),
                   OmniGroupRow(
-                    icon: Icons.calendar_today_outlined,
+                    icon: LucideIcons.calendar,
                     title: 'Dự kiến chốt',
                     trailing: Text(
                       Formatters.date(data.expectedCloseAt),
@@ -146,12 +147,12 @@ class OpportunityDetailPage extends ConsumerWidget {
                     ),
                   ),
                   OmniGroupRow(
-                    icon: Icons.badge_outlined,
+                    icon: LucideIcons.idCard,
                     title: 'Phụ trách',
                     value: _ownerLabel(ref, data),
                   ),
                   OmniGroupRow(
-                    icon: Icons.payments_outlined,
+                    icon: LucideIcons.banknote,
                     title: 'Giá trị kỳ vọng',
                     trailing: Text(
                       Formatters.vnd(
@@ -360,7 +361,7 @@ class _StageStepper extends StatelessWidget {
         child: OmniStatusLabel(
           label: 'Đã huỷ',
           tone: OmniTone.neutral,
-          icon: Icons.block_rounded,
+          icon: LucideIcons.ban,
         ),
       );
     }
@@ -371,7 +372,7 @@ class _StageStepper extends StatelessWidget {
         child: OmniStatusLabel(
           label: won ? 'Đã thắng' : 'Đã thua',
           tone: won ? OmniTone.success : OmniTone.danger,
-          icon: won ? Icons.emoji_events_outlined : Icons.cancel_outlined,
+          icon: won ? LucideIcons.trophy : LucideIcons.circleX,
         ),
       );
     }
@@ -468,7 +469,7 @@ class _Dot extends StatelessWidget {
       ),
       child: state < 0
           ? Icon(
-              Icons.check_rounded,
+              LucideIcons.check,
               size: OmniIconSize.sm,
               color: scheme.onPrimary,
             )

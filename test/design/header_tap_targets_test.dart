@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:intl/date_symbol_data_local.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:omni_app/core/config/app_config.dart';
 import 'package:omni_app/core/network/api_client.dart';
 import 'package:omni_app/core/network/api_envelope.dart';
@@ -124,7 +125,7 @@ void main() {
       final filterFace = t.widget<Material>(
         find
             .ancestor(
-              of: find.byIcon(Icons.tune_rounded),
+              of: find.byIcon(LucideIcons.slidersHorizontal),
               matching: find.byType(Material),
             )
             .first,

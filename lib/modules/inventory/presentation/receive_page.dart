@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../design/components/components.dart';
 import '../../../design/tokens/tokens.dart';
@@ -216,7 +217,7 @@ class _ReceivePageState extends ConsumerState<ReceivePage> {
           fallbackBack: backToLot,
         ),
         body: const OmniEmptyState(
-          icon: Icons.lock_outline_rounded,
+          icon: LucideIcons.lock,
           title: 'Cần quyền tạo lô, nhận hàng',
         ),
       );

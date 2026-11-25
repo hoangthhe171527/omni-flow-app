@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../../design/components/components.dart';
 import '../../../../design/tokens/tokens.dart';
@@ -287,7 +288,7 @@ class _FinanceMenuRow<T> extends StatelessWidget {
               SizedBox(
                 width: 18,
                 child: item.selected
-                    ? Icon(Icons.check_rounded, size: 18, color: p.primary)
+                    ? Icon(LucideIcons.check, size: 18, color: p.primary)
                     : null,
               ),
             ],

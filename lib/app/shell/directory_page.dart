@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/config/app_config.dart';
@@ -70,7 +71,7 @@ class AppSettingsSections extends ConsumerWidget {
             OmniGroupRow(
               leading: _directoryIconTile(
                 context,
-                Icons.notifications_none_rounded,
+                LucideIcons.bell,
               ),
               title: 'Thông báo',
               onTap: () => context.pushNamed(SettingsModule.notifications),
@@ -78,7 +79,7 @@ class AppSettingsSections extends ConsumerWidget {
             const _ThemeRow(),
             const _PerfRow(),
             OmniGroupRow(
-              leading: _directoryIconTile(context, Icons.wallpaper_outlined),
+              leading: _directoryIconTile(context, LucideIcons.wallpaper),
               title: 'Nền',
               onTap: () => context.pushNamed(SettingsModule.background),
             ),
@@ -89,10 +90,10 @@ class AppSettingsSections extends ConsumerWidget {
           title: 'Trợ giúp',
           children: [
             OmniGroupRow(
-              leading: _directoryIconTile(context, Icons.help_outline_rounded),
+              leading: _directoryIconTile(context, LucideIcons.circleQuestionMark),
               title: 'Trung tâm hỗ trợ',
               trailing: Icon(
-                Icons.open_in_new_rounded,
+                LucideIcons.externalLink,
                 size: 18,
                 color: chevronColor,
               ),
@@ -100,10 +101,10 @@ class AppSettingsSections extends ConsumerWidget {
               onTap: () => _openExternal(context, AppConfig.supportUrl),
             ),
             OmniGroupRow(
-              leading: _directoryIconTile(context, Icons.policy_outlined),
+              leading: _directoryIconTile(context, LucideIcons.fileSearch),
               title: 'Chính sách quyền riêng tư',
               trailing: Icon(
-                Icons.open_in_new_rounded,
+                LucideIcons.externalLink,
                 size: 18,
                 color: chevronColor,
               ),
@@ -111,7 +112,7 @@ class AppSettingsSections extends ConsumerWidget {
               onTap: () => _openExternal(context, AppConfig.privacyPolicyUrl),
             ),
             OmniGroupRow(
-              leading: _directoryIconTile(context, Icons.info_outline_rounded),
+              leading: _directoryIconTile(context, LucideIcons.info),
               title: 'Phiên bản',
               value: AppConfig.appVersion,
             ),
@@ -300,7 +301,7 @@ class _DirectoryPageState extends ConsumerState<DirectoryPage> {
         OmniGroupRow(
           leading: _directoryIconTile(
             context,
-            Icons.notifications_none_rounded,
+            LucideIcons.bell,
           ),
           title: 'Thông báo',
           onTap: () => context.pushNamed(SettingsModule.notifications),
@@ -309,7 +310,7 @@ class _DirectoryPageState extends ConsumerState<DirectoryPage> {
       if (shows('Hiệu ứng mượt pin')) const _PerfRow(),
       if (shows('Nền'))
         OmniGroupRow(
-          leading: _directoryIconTile(context, Icons.wallpaper_outlined),
+          leading: _directoryIconTile(context, LucideIcons.wallpaper),
           title: 'Nền',
           onTap: () => context.pushNamed(SettingsModule.background),
         ),
@@ -317,10 +318,10 @@ class _DirectoryPageState extends ConsumerState<DirectoryPage> {
     final helpRows = <Widget>[
       if (shows('Trung tâm hỗ trợ'))
         OmniGroupRow(
-          leading: _directoryIconTile(context, Icons.help_outline_rounded),
+          leading: _directoryIconTile(context, LucideIcons.circleQuestionMark),
           title: 'Trung tâm hỗ trợ',
           trailing: Icon(
-            Icons.open_in_new_rounded,
+            LucideIcons.externalLink,
             size: 18,
             color: chevronColor,
           ),
@@ -329,10 +330,10 @@ class _DirectoryPageState extends ConsumerState<DirectoryPage> {
         ),
       if (shows('Chính sách quyền riêng tư'))
         OmniGroupRow(
-          leading: _directoryIconTile(context, Icons.policy_outlined),
+          leading: _directoryIconTile(context, LucideIcons.fileSearch),
           title: 'Chính sách quyền riêng tư',
           trailing: Icon(
-            Icons.open_in_new_rounded,
+            LucideIcons.externalLink,
             size: 18,
             color: chevronColor,
           ),
@@ -341,7 +342,7 @@ class _DirectoryPageState extends ConsumerState<DirectoryPage> {
         ),
       if (shows('Phiên bản'))
         OmniGroupRow(
-          leading: _directoryIconTile(context, Icons.info_outline_rounded),
+          leading: _directoryIconTile(context, LucideIcons.info),
           title: 'Phiên bản',
           value: AppConfig.appVersion,
         ),
@@ -371,7 +372,7 @@ class _DirectoryPageState extends ConsumerState<DirectoryPage> {
         semanticsTitle: 'Tất cả',
         actions: [
           OmniTopBarAction(
-            icon: Icons.tune_rounded,
+            icon: LucideIcons.slidersHorizontal,
             tooltip: 'Sửa menu',
             onPressed: () => showTabBarEditor(context),
           ),
@@ -840,7 +841,7 @@ class _PerfRow extends ConsumerWidget {
 
     return OmniGroupRow(
       key: const Key('directory-perf-row'),
-      leading: _directoryIconTile(context, Icons.auto_awesome_outlined),
+      leading: _directoryIconTile(context, LucideIcons.sparkles),
       title: 'Hiệu ứng',
       subtitle: value,
       semanticsLabel: 'Hiệu ứng: $value',
@@ -899,7 +900,7 @@ class _ThemeRow extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final mode = ref.watch(themeModeProvider);
     return OmniGroupRow(
-      leading: _directoryIconTile(context, Icons.contrast_rounded),
+      leading: _directoryIconTile(context, LucideIcons.contrast),
       title: 'Giao diện',
       trailing: SizedBox(
         width: 168,

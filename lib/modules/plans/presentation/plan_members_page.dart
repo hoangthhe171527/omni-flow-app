@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../design/components/components.dart';
 import '../../../design/tokens/tokens.dart';
@@ -158,7 +159,7 @@ class _PlanMembersPageState extends ConsumerState<PlanMembersPage> {
                   children: [
                     OmniGroupRow.add(
                       title: 'Thêm thành viên',
-                      icon: Icons.person_add_alt_outlined,
+                      icon: LucideIcons.userPlus,
                       onTap: _add,
                     ),
                     // Chủ luôn đứng đầu, kể cả khi không nằm trong
@@ -272,7 +273,7 @@ class _RoleSheet extends StatelessWidget {
         OmniGroupSection(
           children: [
             OmniGroupRow(
-              icon: Icons.person_remove_outlined,
+              icon: LucideIcons.userMinus,
               title: 'Gỡ khỏi kế hoạch',
               destructive: true,
               chevron: false,

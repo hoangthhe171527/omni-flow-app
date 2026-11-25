@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../core/nav/shell_tab_routes.dart';
 import '../../../design/components/components.dart';
@@ -226,7 +227,7 @@ class _CountsPageState extends ConsumerState<CountsPage> {
           fallbackBack: subPage ? back : null,
         ),
         body: const OmniEmptyState(
-          icon: Icons.lock_outline_rounded,
+          icon: LucideIcons.lock,
           title: 'Chưa có kiểm kê',
         ),
       );
@@ -251,7 +252,7 @@ class _CountsPageState extends ConsumerState<CountsPage> {
             onRetry: () => ref.invalidate(locationsProvider),
           ),
           AsyncValue(hasValue: true) => const OmniEmptyState(
-            icon: Icons.warehouse_outlined,
+            icon: LucideIcons.warehouse,
             title: 'Chưa có vị trí kho',
           ),
           _ => const Padding(
@@ -300,7 +301,7 @@ class _CountsPageState extends ConsumerState<CountsPage> {
     final locationRow = locations.length > 1
         ? OmniGroupRow(
             key: const ValueKey('inv-count-location'),
-            icon: Icons.place_outlined,
+            icon: LucideIcons.mapPin,
             title: 'Vị trí',
             value: locations.where((l) => l.id == locationId).firstOrNull?.name,
             onTap: _busy ? null : () => _pickLocation(locations, locationId),
@@ -339,7 +340,7 @@ class _CountsPageState extends ConsumerState<CountsPage> {
               if (canEdit && unitList.isNotEmpty && seenHere < unitList.length)
                 OmniGroupRow(
                   key: const ValueKey('inv-count-tick-all'),
-                  icon: Icons.done_all_rounded,
+                  icon: LucideIcons.checkCheck,
                   accent: true,
                   title: 'Tick tất cả',
                   chevron: false,
@@ -566,7 +567,7 @@ class CountUnitRow extends StatelessWidget {
                   ),
                   if (seen) ...[
                     const SizedBox(width: 8),
-                    Icon(Icons.check_rounded, size: 20, color: scheme.primary),
+                    Icon(LucideIcons.check, size: 20, color: scheme.primary),
                   ],
                 ],
               ),

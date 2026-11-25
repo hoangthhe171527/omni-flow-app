@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../core/domain/channel.dart';
 import '../../../design/components/components.dart';
@@ -393,7 +394,7 @@ class _InboxPageState extends ConsumerState<InboxPage>
         filter.label != null;
 
     return OmniEmptyState(
-      icon: filtered ? Icons.filter_alt_off_rounded : Icons.forum_outlined,
+      icon: filtered ? LucideIcons.funnelX : LucideIcons.messagesSquare,
       title: filtered ? 'Không có hội thoại khớp bộ lọc' : 'Hộp thư trống',
       message: filtered
           ? 'Thử bỏ bớt bộ lọc để xem thêm hội thoại.'

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../design/components/components.dart';
 import '../../../design/tokens/tokens.dart';
@@ -45,7 +46,7 @@ class TeamPage extends ConsumerWidget {
             ? OmniLiquidFab(
                 key: const Key('team-add-member'),
                 tooltip: 'Thêm nhân viên',
-                icon: Icons.person_add_alt_1_rounded,
+                icon: LucideIcons.userPlus,
                 onPressed: (_) => showAddMemberSheet(context),
               )
             : null,
@@ -68,7 +69,7 @@ class TeamPage extends ConsumerWidget {
                   onRetry: () => ref.invalidate(teamDirectoryProvider),
                   isEmpty: (list) => list.isEmpty,
                   empty: const OmniEmptyState(
-                    icon: Icons.group_outlined,
+                    icon: LucideIcons.users,
                     title: 'Chưa có nhân viên',
                     message:
                         'Mời đồng nghiệp vào workspace để bắt đầu phân công.',
@@ -223,8 +224,8 @@ class _MemberTile extends StatelessWidget {
                         : 'Sửa liên kết Zalo — ${member.name}',
                     icon: Icon(
                       member.zaloUserId == null
-                          ? Icons.link_off_rounded
-                          : Icons.link_rounded,
+                          ? LucideIcons.unlink
+                          : LucideIcons.link,
                       color: scheme.onSurfaceVariant,
                     ),
                   ),

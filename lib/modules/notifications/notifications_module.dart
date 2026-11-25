@@ -1,6 +1,6 @@
 import 'routes.dart';
-import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../core/module/module_route.dart';
 import '../../core/module/nav_destination.dart';
@@ -56,8 +56,8 @@ class NotificationsModule extends OmniModule {
       moduleId: 'notifications',
       label: 'Thông báo',
       subtitle: 'Việc được giao, việc đã xong',
-      icon: Icons.notifications_none_rounded,
-      selectedIcon: Icons.notifications_rounded,
+      icon: LucideIcons.bell,
+      selectedIcon: LucideIcons.bell,
       routeName: centre,
       area: NavArea.communication,
       // Chỗ để ghé sau khi có gì đó gọi mình tới, không phải chỗ để sống. Đến

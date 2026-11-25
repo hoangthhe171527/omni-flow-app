@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/error/app_exception.dart';
@@ -186,7 +187,7 @@ class _ForgotPasswordPageState extends ConsumerState<ForgotPasswordPage>
               ),
               alignment: Alignment.center,
               child: Icon(
-                Icons.lock_reset_rounded,
+                LucideIcons.rotateCcwKey,
                 size: OmniIconSize.xl,
                 color: scheme.primary,
               ),
@@ -212,7 +213,7 @@ class _ForgotPasswordPageState extends ConsumerState<ForgotPasswordPage>
                 controller: _email,
                 label: 'Email làm việc',
                 hint: 'ten@congty.vn',
-                icon: Icons.mail_outline_rounded,
+                icon: LucideIcons.mail,
                 shake: _shake,
                 serverError: _fieldError,
                 keyboardType: TextInputType.emailAddress,
@@ -259,7 +260,7 @@ class _ForgotPasswordPageState extends ConsumerState<ForgotPasswordPage>
             ),
             alignment: Alignment.center,
             child: Icon(
-              Icons.mark_email_read_outlined,
+              LucideIcons.mailCheck,
               size: OmniIconSize.xl,
               color: scheme.primary,
             ),
@@ -303,7 +304,7 @@ class _ForgotPasswordPageState extends ConsumerState<ForgotPasswordPage>
                   ),
                   alignment: Alignment.center,
                   child: Icon(
-                    Icons.mail_outline_rounded,
+                    LucideIcons.mail,
                     size: OmniIconSize.md,
                     color: scheme.primary,
                   ),

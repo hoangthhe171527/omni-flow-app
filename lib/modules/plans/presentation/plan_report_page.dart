@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../design/components/components.dart';
 import '../../../design/tokens/tokens.dart';
@@ -164,21 +165,21 @@ class _StatsBlock extends StatelessWidget {
     final cells = [
       (
         'plan-report-total',
-        Icons.assignment_outlined,
+        LucideIcons.clipboardList,
         'Tổng việc',
         '${plan.taskCount}',
         null,
       ),
       (
         'plan-report-done',
-        Icons.task_alt_rounded,
+        LucideIcons.circleCheckBig,
         'Xong',
         '${plan.doneCount}',
         null,
       ),
       (
         'plan-report-overdue',
-        Icons.schedule_rounded,
+        LucideIcons.clock,
         'Trễ hạn',
         '${plan.overdueCount}',
         plan.overdueCount > 0 ? danger : null,
@@ -203,7 +204,7 @@ class _StatsBlock extends StatelessWidget {
           ),
         OmniGroupRow(
           key: const Key('plan-report-progress'),
-          icon: Icons.donut_large_rounded,
+          icon: LucideIcons.chartPie,
           title: 'Tiến độ',
           semanticsLabel: 'Tiến độ: $pct%',
           trailing: Row(

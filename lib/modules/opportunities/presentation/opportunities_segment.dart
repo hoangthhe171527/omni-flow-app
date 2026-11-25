@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../core/module/extra_segment.dart';
 import '../../../core/utils/formatters.dart';
@@ -88,7 +89,7 @@ class _OpportunitiesSegmentState extends ConsumerState<OpportunitiesSegment> {
                     value: catalog,
                     onRetry: () => ref.invalidate(pipelineCatalogProvider),
                     data: (_) => const OmniEmptyState(
-                      icon: Icons.trending_up_rounded,
+                      icon: LucideIcons.trendingUp,
                       title: 'Quy trình chưa có giai đoạn',
                       message:
                           'Thêm giai đoạn cho quy trình bán hàng trên web.',
@@ -157,7 +158,7 @@ class _Body extends ConsumerWidget {
             );
     } else if (data.items.isEmpty) {
       status = OmniEmptyState(
-        icon: Icons.trending_up_rounded,
+        icon: LucideIcons.trendingUp,
         title: stage == null
             ? 'Chưa có cơ hội đang mở'
             : 'Chưa có cơ hội ở "${stage.label}"',
@@ -429,7 +430,7 @@ class _SearchFieldState extends ConsumerState<_SearchField> {
           focusedBorder: InputBorder.none,
           contentPadding: const EdgeInsets.symmetric(vertical: 12),
           prefixIcon: Icon(
-            Icons.search_rounded,
+            LucideIcons.search,
             size: OmniIconSize.lg,
             color: meta,
           ),
@@ -455,7 +456,7 @@ class _SearchFieldState extends ConsumerState<_SearchField> {
                   ),
                   iconSize: OmniIconSize.md,
                   color: meta,
-                  icon: const Icon(Icons.close_rounded),
+                  icon: const Icon(LucideIcons.x),
                 ),
         ),
       ),
@@ -501,7 +502,7 @@ class _FilterButton extends StatelessWidget {
                 clipBehavior: Clip.none,
                 children: [
                   Icon(
-                    Icons.tune_rounded,
+                    LucideIcons.slidersHorizontal,
                     size: OmniIconSize.md,
                     color: open ? scheme.primary : scheme.onSurface,
                   ),
@@ -594,7 +595,7 @@ Future<void> showOpportunityFilterMenu({
         child: Row(
           children: [
             Icon(
-              Icons.tune_rounded,
+              LucideIcons.slidersHorizontal,
               size: OmniIconSize.md,
               color: Theme.of(menuContext).colorScheme.onSurface,
             ),
@@ -605,7 +606,7 @@ Future<void> showOpportunityFilterMenu({
               child: IconButton(
                 tooltip: 'Đóng bộ lọc',
                 onPressed: () => Navigator.of(menuContext).pop(),
-                icon: const Icon(Icons.close_rounded),
+                icon: const Icon(LucideIcons.x),
               ),
             ),
           ],
@@ -638,7 +639,7 @@ class OpportunityFilterMenuContent extends ConsumerWidget {
         children: [
           if (pipelines.length > 1 && pipeline != null)
             _OpportunityMenuRow(
-              icon: Icons.account_tree_outlined,
+              icon: LucideIcons.network,
               label: 'Quy trình',
               value: pipeline.label,
               onTap: () {
@@ -652,7 +653,7 @@ class OpportunityFilterMenuContent extends ConsumerWidget {
               },
             ),
           _OpportunityMenuRow(
-            icon: Icons.person_outline_rounded,
+            icon: LucideIcons.user,
             label: 'Chỉ cơ hội của tôi',
             selected: mine,
             onTap: () {
@@ -662,7 +663,7 @@ class OpportunityFilterMenuContent extends ConsumerWidget {
           ),
           if (hasClosedStage)
             _OpportunityMenuRow(
-              icon: Icons.inventory_2_outlined,
+              icon: LucideIcons.package,
               label: 'Cơ hội đã đóng',
               selected: closed,
               onTap: () {
@@ -748,13 +749,13 @@ class _OpportunityMenuRow extends StatelessWidget {
                       ),
                       const SizedBox(width: 4),
                       Icon(
-                        Icons.chevron_right_rounded,
+                        LucideIcons.chevronRight,
                         size: OmniIconSize.md,
                         color: scheme.onSurfaceVariant,
                       ),
                     ] else
                       Icon(
-                        active ? Icons.check_rounded : Icons.circle_outlined,
+                        active ? LucideIcons.check : LucideIcons.circle,
                         size: OmniIconSize.md,
                         color: active
                             ? scheme.primary

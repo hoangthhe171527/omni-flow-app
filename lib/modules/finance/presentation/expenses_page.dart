@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../core/nav/shell_bar_inset.dart';
 import '../../../design/components/components.dart';
@@ -320,7 +321,7 @@ class _ExpensesPageState extends ConsumerState<ExpensesPage> {
       ),
       child: Column(
         children: [
-          Icon(Icons.cloud_off_rounded, size: 32, color: p.danger),
+          Icon(LucideIcons.cloudOff, size: 32, color: p.danger),
           const SizedBox(height: 10),
           Text(
             message,
@@ -332,7 +333,7 @@ class _ExpensesPageState extends ConsumerState<ExpensesPage> {
             height: 36,
             child: FilledButton.icon(
               onPressed: notifier.refresh,
-              icon: const Icon(Icons.refresh_rounded, size: 16),
+              icon: const Icon(LucideIcons.refreshCw, size: 16),
               label: const Text('Thử lại'),
             ),
           ),
@@ -354,7 +355,7 @@ class _ExpensesPageState extends ConsumerState<ExpensesPage> {
       ),
       child: Row(
         children: [
-          Icon(Icons.error_outline_rounded, size: 16, color: p.danger),
+          Icon(LucideIcons.circleAlert, size: 16, color: p.danger),
           const SizedBox(width: 8),
           Expanded(
             child: Text(
@@ -400,7 +401,7 @@ class _ExpensesPageState extends ConsumerState<ExpensesPage> {
           padding: const EdgeInsets.fromLTRB(10, 0, 2, 0),
           child: Row(
             children: [
-              Icon(Icons.search_rounded, size: OmniIconSize.md, color: p.muted),
+              Icon(LucideIcons.search, size: OmniIconSize.md, color: p.muted),
               const SizedBox(width: 8),
               Expanded(
                 child: TextField(
@@ -437,13 +438,13 @@ class _ExpensesPageState extends ConsumerState<ExpensesPage> {
                     width: 40,
                     height: 44,
                   ),
-                  icon: Icon(Icons.close_rounded, size: 18, color: p.muted),
+                  icon: Icon(LucideIcons.x, size: 18, color: p.muted),
                 ),
               _buildBarIcon(
                 key: const ValueKey('finance-sort-btn'),
                 anchorKey: _sortBtnKey,
                 tooltip: 'Sắp xếp danh sách',
-                icon: Icons.swap_vert_rounded,
+                icon: LucideIcons.arrowUpDown,
                 color: sortActive ? p.primaryInk : p.ink,
                 onTap: _openSortMenu,
               ),
@@ -541,7 +542,7 @@ class _ExpensesPageState extends ConsumerState<ExpensesPage> {
                               p,
                               key: const ValueKey('finance-prev-month-btn'),
                               tooltip: 'Tháng trước',
-                              icon: Icons.chevron_left_rounded,
+                              icon: LucideIcons.chevronLeft,
                               onTap: () => notifier.selectMonth(prevYm),
                             ),
                             Flexible(
@@ -577,7 +578,7 @@ class _ExpensesPageState extends ConsumerState<ExpensesPage> {
                                         ),
                                         const SizedBox(width: 2),
                                         Icon(
-                                          Icons.expand_more_rounded,
+                                          LucideIcons.chevronDown,
                                           size: 18,
                                           color: p.muted,
                                         ),
@@ -591,7 +592,7 @@ class _ExpensesPageState extends ConsumerState<ExpensesPage> {
                               p,
                               key: const ValueKey('finance-next-month-btn'),
                               tooltip: 'Tháng sau',
-                              icon: Icons.chevron_right_rounded,
+                              icon: LucideIcons.chevronRight,
                               onTap: () => notifier.selectMonth(nextYm),
                             ),
                           ],
@@ -614,7 +615,7 @@ class _ExpensesPageState extends ConsumerState<ExpensesPage> {
                         ),
                         alignment: Alignment.center,
                         child: Icon(
-                          Icons.pie_chart_outline_rounded,
+                          LucideIcons.chartPie,
                           size: 15,
                           color: grpBtnActive ? p.primaryInk : p.ink2,
                         ),
@@ -801,7 +802,7 @@ class _ExpensesPageState extends ConsumerState<ExpensesPage> {
             Row(
               children: [
                 OmniIconTile(
-                  Icons.category_outlined,
+                  LucideIcons.shapes,
                   color: p.primary,
                   background: p.primarySoft,
                 ),
@@ -877,7 +878,7 @@ class _ExpensesPageState extends ConsumerState<ExpensesPage> {
             child: Row(
               children: [
                 OmniIconTile(
-                  Icons.autorenew_rounded,
+                  LucideIcons.refreshCw,
                   color: p.primary,
                   background: p.primarySoft,
                 ),
@@ -937,7 +938,7 @@ class _ExpensesPageState extends ConsumerState<ExpensesPage> {
                   turns: state.recurOpen ? 0.25 : 0.0,
                   duration: const Duration(milliseconds: 180),
                   child: Icon(
-                    Icons.chevron_right_rounded,
+                    LucideIcons.chevronRight,
                     size: 17,
                     color: p.muted,
                   ),
@@ -986,7 +987,7 @@ class _ExpensesPageState extends ConsumerState<ExpensesPage> {
                           alignment: Alignment.center,
                           child: state.recurSel[i]
                               ? const Icon(
-                                  Icons.check_rounded,
+                                  LucideIcons.check,
                                   size: 13,
                                   color: Colors.white,
                                 )
@@ -1044,7 +1045,7 @@ class _ExpensesPageState extends ConsumerState<ExpensesPage> {
                               ),
                               const SizedBox(width: 4),
                               Icon(
-                                Icons.edit_outlined,
+                                LucideIcons.pencil,
                                 size: 12,
                                 color: p.muted,
                               ),

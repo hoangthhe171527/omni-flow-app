@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../../design/platform/omni_motion_scope.dart';
 import '../../../../design/tokens/tokens.dart';
@@ -57,7 +58,7 @@ class VoiceRecordBar extends StatelessWidget {
             tapTargetSize: MaterialTapTargetSize.shrinkWrap,
           ),
           icon: Icon(
-            Icons.delete_outline_rounded,
+            LucideIcons.trash2,
             size: OmniIconSize.xl,
             color: onCancel == null
                 ? Theme.of(context).disabledColor

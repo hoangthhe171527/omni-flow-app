@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../core/error/app_exception.dart';
 import '../../../design/components/components.dart';
@@ -180,7 +181,7 @@ class _AddMemberSheetState extends ConsumerState<AddMemberSheet> {
             Row(
               children: [
                 Icon(
-                  Icons.error_outline_rounded,
+                  LucideIcons.circleAlert,
                   size: OmniIconSize.xs,
                   color: scheme.error,
                 ),
@@ -311,7 +312,7 @@ class _AddMemberSheetState extends ConsumerState<AddMemberSheet> {
                         height: 44,
                       ),
                       icon: Icon(
-                        Icons.refresh_rounded,
+                        LucideIcons.refreshCw,
                         size: OmniIconSize.sm,
                         color: scheme.onSurface,
                       ),
@@ -369,7 +370,7 @@ class _AddMemberSheetState extends ConsumerState<AddMemberSheet> {
           Expanded(
             child: _SheetButton(
               label: 'Sao chép',
-              icon: Icons.content_copy_rounded,
+              icon: LucideIcons.copy,
               onPressed: () async {
                 await Clipboard.setData(ClipboardData(text: credentials));
                 if (!mounted) return;
@@ -442,8 +443,8 @@ class _AddMemberSheetState extends ConsumerState<AddMemberSheet> {
                   ),
                   child: Icon(
                     done.invited
-                        ? Icons.mark_email_read_outlined
-                        : Icons.check_circle_rounded,
+                        ? LucideIcons.mailCheck
+                        : LucideIcons.circleCheck,
                     size: OmniIconSize.lg,
                     color: scheme.primary,
                   ),

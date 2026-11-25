@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../core/domain/channel.dart';
 import '../../core/module/module_route.dart';
@@ -63,8 +64,8 @@ class ChannelsModule extends OmniModule {
       moduleId: 'channels',
       label: 'Kênh kết nối',
       subtitle: 'Nối Zalo, Facebook, TikTok vào hộp thư',
-      icon: Icons.hub_outlined,
-      selectedIcon: Icons.hub_rounded,
+      icon: LucideIcons.network,
+      selectedIcon: LucideIcons.network,
       routeName: list,
       area: NavArea.communication,
       // Cài một lần rồi cả năm không mở. Nó không tranh tab với "Khách hàng" —

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../core/nav/shell_tab_routes.dart';
 import '../../../design/components/components.dart';
@@ -284,7 +285,7 @@ class _StockPageState extends ConsumerState<StockPage> {
         children: [
           OmniAnchoredMenuItem(
             key: const ValueKey('inv-open-lots'),
-            icon: Icons.local_shipping_outlined,
+            icon: LucideIcons.truck,
             label: 'Hàng sắp về',
             onTap: () => Navigator.of(menu).pop(InventoryRoutes.lots),
           ),
@@ -292,7 +293,7 @@ class _StockPageState extends ConsumerState<StockPage> {
           if (perms.reservations)
             OmniAnchoredMenuItem(
               key: const ValueKey('inv-open-reservations'),
-              icon: Icons.bookmark_border_rounded,
+              icon: LucideIcons.bookmark,
               label: 'Đang giữ',
               divider: true,
               onTap: () => Navigator.of(menu).pop(InventoryRoutes.reservations),
@@ -300,7 +301,7 @@ class _StockPageState extends ConsumerState<StockPage> {
           if (perms.products)
             OmniAnchoredMenuItem(
               key: const ValueKey('inv-open-catalog'),
-              icon: Icons.category_outlined,
+              icon: LucideIcons.shapes,
               label: 'Danh mục hàng',
               divider: true,
               onTap: () => Navigator.of(menu).pop(InventoryRoutes.catalog),
@@ -309,7 +310,7 @@ class _StockPageState extends ConsumerState<StockPage> {
           if (perms.counts)
             OmniAnchoredMenuItem(
               key: const ValueKey('inv-open-counts'),
-              icon: Icons.fact_check_outlined,
+              icon: LucideIcons.clipboardCheck,
               label: 'Kiểm kê',
               divider: true,
               onTap: () => Navigator.of(menu).pop(InventoryRoutes.counts),
@@ -317,14 +318,14 @@ class _StockPageState extends ConsumerState<StockPage> {
           if (perms.delivered)
             OmniAnchoredMenuItem(
               key: const ValueKey('inv-open-delivered'),
-              icon: Icons.assignment_turned_in_outlined,
+              icon: LucideIcons.clipboardCheck,
               label: 'Hàng đã giao',
               divider: true,
               onTap: () => Navigator.of(menu).pop(InventoryRoutes.delivered),
             ),
           OmniAnchoredMenuItem(
             key: const ValueKey('inv-open-intro'),
-            icon: Icons.lightbulb_outline_rounded,
+            icon: LucideIcons.lightbulb,
             label: 'Giới thiệu Kho',
             divider: true,
             onTap: () => Navigator.of(menu).pop(_introRoute),
@@ -435,7 +436,7 @@ class _StockPageState extends ConsumerState<StockPage> {
       return const Scaffold(
         appBar: OmniAppBar(title: 'Tồn kho'),
         body: OmniEmptyState(
-          icon: Icons.lock_outline_rounded,
+          icon: LucideIcons.lock,
           title: 'Chưa có quyền xem kho',
         ),
       );
@@ -711,7 +712,7 @@ class _StockPageState extends ConsumerState<StockPage> {
                 ),
                 onPressed: () => _openMore(btn, perms),
                 icon: Icon(
-                  Icons.more_horiz_rounded,
+                  LucideIcons.ellipsis,
                   size: OmniIconSize.md,
                   color: Theme.of(context).colorScheme.onSurface,
                 ),
@@ -1008,7 +1009,7 @@ class StockUnitRow extends StatelessWidget {
                   ),
                   if (selected) ...[
                     const SizedBox(width: 8),
-                    Icon(Icons.check_rounded, size: 20, color: scheme.primary),
+                    Icon(LucideIcons.check, size: 20, color: scheme.primary),
                   ],
                 ],
               ),
@@ -1057,7 +1058,7 @@ class _SearchBottom extends StatelessWidget implements PreferredSizeWidget {
           backgroundColor: scheme.primary,
           textColor: scheme.onPrimary,
           child: Icon(
-            Icons.tune_rounded,
+            LucideIcons.slidersHorizontal,
             size: OmniIconSize.md,
             color: scheme.primary,
           ),

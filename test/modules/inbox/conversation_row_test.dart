@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:intl/date_symbol_data_local.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:omni_app/core/domain/channel.dart';
 import 'package:omni_app/design/components/components.dart';
 import 'package:omni_app/design/tokens/omni_colors.dart';
@@ -100,11 +101,11 @@ void main() {
   ) async {
     await pump(tester, c: lan.copyWith(isMuted: true));
     expect(find.bySemanticsLabel('Đã tắt thông báo'), findsOneWidget);
-    expect(find.byIcon(Icons.notifications_off_outlined), findsOneWidget);
+    expect(find.byIcon(LucideIcons.bellOff), findsOneWidget);
 
     await pump(tester);
     expect(find.bySemanticsLabel('Đã tắt thông báo'), findsNothing);
-    expect(find.byIcon(Icons.notifications_off_outlined), findsNothing);
+    expect(find.byIcon(LucideIcons.bellOff), findsNothing);
   });
 
   testWidgets('chuông gạch ở 360 rộng không tràn', (tester) async {

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../core/error/app_exception.dart';
 import '../../../design/components/components.dart';
@@ -12,10 +13,10 @@ import '../routes.dart';
 import 'widgets/hr_ui.dart';
 
 IconData hrRequestIcon(HrRequestType type) => switch (type) {
-  HrRequestType.phep => Icons.beach_access_outlined,
-  HrRequestType.tangca => Icons.more_time_rounded,
-  HrRequestType.giaitrinh => Icons.edit_note_rounded,
-  HrRequestType.tamung => Icons.payments_outlined,
+  HrRequestType.phep => LucideIcons.umbrella,
+  HrRequestType.tangca => LucideIcons.clockPlus,
+  HrRequestType.giaitrinh => LucideIcons.notebookPen,
+  HrRequestType.tamung => LucideIcons.banknote,
 };
 
 /// Viên trạng thái đơn.

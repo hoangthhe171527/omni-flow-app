@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:omni_app/design/components/components.dart';
 import 'package:omni_app/core/nav/search_mode.dart';
 
@@ -81,7 +82,7 @@ void main() {
     await tester.pump();
 
     expect(find.byKey(const ValueKey('omni-top-bar-bell-dot')), findsNothing);
-    await tester.tap(find.byIcon(Icons.notifications_none_rounded));
+    await tester.tap(find.byIcon(LucideIcons.bell));
     expect(taps, 1);
     expect(anchor?.size, const Size(44, 44));
   });
@@ -172,7 +173,7 @@ void main() {
                 onBack: () => back++,
                 actions: [
                   OmniTopBarAction(
-                    icon: Icons.edit_note_rounded,
+                    icon: LucideIcons.notebookPen,
                     tooltip: 'Sửa',
                     onPressed: () {},
                   ),
@@ -184,7 +185,7 @@ void main() {
       ),
     );
     await tester.pump();
-    expect(find.byIcon(Icons.notifications_none_rounded), findsNothing);
+    expect(find.byIcon(LucideIcons.bell), findsNothing);
     expect(find.byTooltip('Sửa'), findsOneWidget);
     expect(tester.widget<Text>(find.text('Khách hàng')).style!.fontSize, 17);
     await tester.tap(find.byTooltip('Quay lại'));

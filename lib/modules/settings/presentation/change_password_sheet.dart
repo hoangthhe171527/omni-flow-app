@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../core/error/app_exception.dart';
 import '../../../design/components/components.dart';
@@ -153,7 +154,7 @@ class _ChangePasswordSheetState extends ConsumerState<ChangePasswordSheet> {
               Row(
                 children: [
                   Icon(
-                    Icons.error_outline_rounded,
+                    LucideIcons.circleAlert,
                     size: OmniIconSize.xs,
                     color: scheme.error,
                   ),
@@ -188,8 +189,8 @@ class _ChangePasswordSheetState extends ConsumerState<ChangePasswordSheet> {
                 ),
                 icon: Icon(
                   _show
-                      ? Icons.visibility_off_outlined
-                      : Icons.visibility_outlined,
+                      ? LucideIcons.eyeOff
+                      : LucideIcons.eye,
                   size: OmniIconSize.md,
                   color: scheme.onSurface,
                 ),

@@ -4,6 +4,7 @@ import 'dart:math' as math;
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../../core/utils/formatters.dart';
 import '../../../../design/components/components.dart';
@@ -118,7 +119,7 @@ class _ConversationRowState extends State<ConversationRow> {
                     children: [
                       if (widget.selectionMode && !widget.selected) ...[
                         Icon(
-                          Icons.radio_button_unchecked_rounded,
+                          LucideIcons.circle,
                           color: scheme.outline,
                         ),
                         const SizedBox(width: OmniSpacing.md),
@@ -131,7 +132,7 @@ class _ConversationRowState extends State<ConversationRow> {
                           label: 'Đã chọn',
                           child: OmniGlassCircle(
                             child: Icon(
-                              Icons.check_rounded,
+                              LucideIcons.check,
                               color: scheme.primary,
                             ),
                           ),
@@ -220,7 +221,7 @@ class _ConversationRowState extends State<ConversationRow> {
                   container: true,
                   excludeSemantics: true,
                   child: Icon(
-                    Icons.notifications_off_outlined,
+                    LucideIcons.bellOff,
                     size: 14,
                     color: muted,
                   ),
@@ -351,7 +352,7 @@ class _AssigneeBox extends StatelessWidget {
           child: SizedBox.square(
             dimension: _size,
             child: Icon(
-              Icons.add_rounded,
+              LucideIcons.plus,
               size: 13,
               color: scheme.onSurfaceVariant,
             ),

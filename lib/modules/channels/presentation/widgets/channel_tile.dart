@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../../design/components/components.dart';
 import '../../../../design/tokens/tokens.dart';
@@ -35,22 +36,22 @@ class ChannelTile extends StatelessWidget {
   static const _statusLabels = {
     ChannelStatus.connected: (
       'Đang hoạt động',
-      Icons.check_circle_rounded,
+      LucideIcons.circleCheck,
       OmniTone.success,
     ),
     ChannelStatus.error: (
       'Lỗi kết nối',
-      Icons.error_outline_rounded,
+      LucideIcons.circleAlert,
       OmniTone.danger,
     ),
     ChannelStatus.pending: (
       'Đang chờ ghép nối',
-      Icons.hourglass_top_rounded,
+      LucideIcons.hourglass,
       OmniTone.warning,
     ),
     ChannelStatus.disconnected: (
       'Chưa kết nối',
-      Icons.link_off_rounded,
+      LucideIcons.unlink,
       OmniTone.neutral,
     ),
   };
@@ -65,7 +66,7 @@ class ChannelTile extends StatelessWidget {
     final meta = connection.channel.meta;
     final (statusLabel, statusIcon, tone) =
         _statusLabels[connection.status] ??
-        ('Chưa kết nối', Icons.link_off_rounded, OmniTone.neutral);
+        ('Chưa kết nối', LucideIcons.unlink, OmniTone.neutral);
 
     // Một dòng của nhóm lồng (vạch thụt 54 do nhóm vẽ): icon kênh MỘT TÔNG,
     // tên, viên trạng thái + số tin, nút "Kết nối lại" kính nhỏ khi lỗi, và
@@ -118,7 +119,7 @@ class ChannelTile extends StatelessWidget {
                   const SizedBox(height: OmniSpacing.sm),
                   OutlinedButton.icon(
                     onPressed: (canReconnect ?? canWrite) ? onReconnect : null,
-                    icon: const Icon(Icons.refresh_rounded, size: 16),
+                    icon: const Icon(LucideIcons.refreshCw, size: 16),
                     label: const Text('Kết nối lại'),
                     style: OutlinedButton.styleFrom(
                       minimumSize: const Size(0, 36),
@@ -150,7 +151,7 @@ class _MoreButton extends StatelessWidget {
       builder: (buttonContext) => IconButton(
         tooltip: 'Tuỳ chọn kênh',
         constraints: const BoxConstraints.tightFor(width: 44, height: 44),
-        icon: const Icon(Icons.more_horiz_rounded),
+        icon: const Icon(LucideIcons.ellipsis),
         onPressed: () async {
           final box = buttonContext.findRenderObject() as RenderBox?;
           if (box == null || !box.hasSize) return;
@@ -162,7 +163,7 @@ class _MoreButton extends StatelessWidget {
             semanticsLabel: 'Tuỳ chọn kênh',
             scrollable: false,
             builder: (menuContext) => OmniAnchoredMenuItem(
-              icon: Icons.link_off_rounded,
+              icon: LucideIcons.unlink,
               label: 'Ngắt kết nối',
               destructive: true,
               onTap: () => Navigator.of(menuContext).pop(true),

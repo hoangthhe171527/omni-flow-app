@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../design/platform/omni_motion_scope.dart';
 import '../../../design/tokens/tokens.dart';
@@ -164,7 +165,7 @@ class _RegisterPageState extends ConsumerState<RegisterPage>
                     controller: _name,
                     label: 'Họ và tên',
                     hint: 'Nguyễn Hoàng Nam',
-                    icon: Icons.person_outline_rounded,
+                    icon: LucideIcons.user,
                     shake: _shake,
                     serverError: state.errorFor('full_name'),
                     textInputAction: TextInputAction.next,
@@ -177,7 +178,7 @@ class _RegisterPageState extends ConsumerState<RegisterPage>
                     controller: _email,
                     label: 'Email làm việc',
                     hint: 'ten@congty.vn',
-                    icon: Icons.mail_outline_rounded,
+                    icon: LucideIcons.mail,
                     shake: _shake,
                     serverError: state.errorFor('email'),
                     keyboardType: TextInputType.emailAddress,
@@ -196,7 +197,7 @@ class _RegisterPageState extends ConsumerState<RegisterPage>
                     controller: _company,
                     label: 'Tên công ty / tổ chức',
                     hint: 'Cửa hàng hoặc doanh nghiệp',
-                    icon: Icons.business_outlined,
+                    icon: LucideIcons.building2,
                     shake: _shake,
                     serverError: state.errorFor('company_name'),
                     textInputAction: TextInputAction.next,
@@ -222,7 +223,7 @@ class _RegisterPageState extends ConsumerState<RegisterPage>
                     controller: _password,
                     label: 'Mật khẩu',
                     hint: 'Nhập ít nhất 8 ký tự',
-                    icon: Icons.lock_outline_rounded,
+                    icon: LucideIcons.lock,
                     shake: _shake,
                     serverError: state.errorFor('password'),
                     obscure: _obscure,
@@ -428,7 +429,7 @@ class _TermsRow extends StatelessWidget {
                     ),
                     child: agreed
                         ? Icon(
-                            Icons.check_rounded,
+                            LucideIcons.check,
                             size: OmniIconSize.xs,
                             color: scheme.onPrimary,
                           )

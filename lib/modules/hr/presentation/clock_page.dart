@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../core/utils/formatters.dart';
 import '../../../design/components/components.dart';
@@ -176,7 +177,7 @@ class _ClockPageState extends ConsumerState<ClockPage> {
         OmniGroupSection(
           children: [
             OmniGroupRow(
-              icon: Icons.edit_note_rounded,
+              icon: LucideIcons.notebookPen,
               title: 'Đang làm ngoài xưởng?',
               subtitle: 'Gửi giải trình để quản đốc xác nhận',
               onTap: () => context.pushNamed(
@@ -192,7 +193,7 @@ class _ClockPageState extends ConsumerState<ClockPage> {
         const OmniGroupSection(
           children: [
             OmniGroupRow(
-              icon: Icons.phonelink_lock_outlined,
+              icon: LucideIcons.smartphone,
               title: 'Vừa đổi điện thoại?',
               subtitle: 'Nhờ quản đốc gỡ máy cũ, rồi chấm lại',
             ),

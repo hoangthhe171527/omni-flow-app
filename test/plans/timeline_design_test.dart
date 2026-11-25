@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/date_symbol_data_local.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:omni_app/design/theme/omni_theme.dart';
 import 'package:omni_app/modules/plans/application/plans_providers.dart';
 import 'package:omni_app/modules/plans/domain/feed_entry.dart';
@@ -138,16 +139,16 @@ void main() {
     await host(t, kpiValue: kpi(delivered: 1));
     await t.pumpAndSettle();
     final next = t.widget<IconButton>(
-      find.widgetWithIcon(IconButton, Icons.chevron_right_rounded),
+      find.widgetWithIcon(IconButton, LucideIcons.chevronRight),
     );
     expect(next.onPressed, isNull);
     final prev = t.widget<IconButton>(
-      find.widgetWithIcon(IconButton, Icons.chevron_left_rounded),
+      find.widgetWithIcon(IconButton, LucideIcons.chevronLeft),
     );
     expect(prev.onPressed, isNotNull);
     // Vùng chạm 44x44.
     expect(
-      t.getSize(find.widgetWithIcon(IconButton, Icons.chevron_left_rounded)),
+      t.getSize(find.widgetWithIcon(IconButton, LucideIcons.chevronLeft)),
       const Size(44, 44),
     );
   });

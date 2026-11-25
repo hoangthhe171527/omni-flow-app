@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:omni_app/design/components/components.dart';
 
 /// Bậc hiệu năng (rà soát 08/11/2026): đo trên web CPU ×4, tắt làm mờ đưa
@@ -38,7 +39,7 @@ void main() {
 
   testWidgets('nút tròn 44 của thanh trên không làm mờ ở mọi bậc', (t) async {
     await t.pumpWidget(
-      host(OmniPerfTier.full, const OmniGlassCircle(child: Icon(Icons.add))),
+      host(OmniPerfTier.full, const OmniGlassCircle(child: Icon(LucideIcons.plus))),
     );
     expect(blurs(t), 0);
   });

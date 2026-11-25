@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../design/components/components.dart';
 import '../../design/tokens/tokens.dart';
@@ -65,7 +66,7 @@ class AppTitleLeading extends StatelessWidget {
               constraints: const BoxConstraints.tightFor(width: 44, height: 44),
               onPressed: tap,
               icon: Icon(
-                Icons.grid_view_rounded,
+                LucideIcons.layoutGrid,
                 size: OmniIconSize.md,
                 color: scheme.onSurface,
               ),

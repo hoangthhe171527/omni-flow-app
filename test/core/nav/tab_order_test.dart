@@ -1,6 +1,6 @@
-import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:omni_app/core/module/module_registry.dart';
 import 'package:omni_app/core/module/nav_destination.dart';
 import 'package:omni_app/core/nav/tab_order.dart';
@@ -11,8 +11,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 ModuleNavEntry e(String route) => ModuleNavEntry(
   moduleId: route,
   label: route,
-  icon: Icons.circle,
-  selectedIcon: Icons.circle,
+  icon: LucideIcons.circle,
+  selectedIcon: LucideIcons.circle,
   routeName: route,
   area: NavArea.work,
   weight: NavWeight.primary,

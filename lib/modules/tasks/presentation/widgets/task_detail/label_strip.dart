@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../../../design/tokens/tokens.dart';
 import '../../../domain/task_label.dart';
@@ -101,7 +102,7 @@ class _AddButton extends StatelessWidget {
                 borderRadius: BorderRadius.circular(999),
               ),
               child: Icon(
-                Icons.add_rounded,
+                LucideIcons.plus,
                 size: OmniIconSize.sm,
                 color: OmniColors.byBrightness(
                   context,

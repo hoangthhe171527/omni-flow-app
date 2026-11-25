@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/date_symbol_data_local.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:omni_app/core/config/app_config.dart';
 import 'package:omni_app/core/domain/channel.dart';
 import 'package:omni_app/core/error/app_exception.dart';
@@ -108,7 +109,7 @@ void main() {
   Future<void> typeAndSend(WidgetTester tester, String text) async {
     await tester.enterText(find.byType(TextField), text);
     await tester.pump();
-    await tester.tap(find.byIcon(Icons.send_rounded));
+    await tester.tap(find.byIcon(LucideIcons.send));
     await tester.pump();
   }
 

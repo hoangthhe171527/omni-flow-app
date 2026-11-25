@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../core/module/module_route.dart';
 import '../../core/module/nav_destination.dart';
@@ -58,8 +58,8 @@ class SettingsModule extends OmniModule {
       moduleId: 'settings',
       label: 'Quyền của tôi',
       subtitle: 'Xem những gì bạn được phép làm',
-      icon: Icons.shield_outlined,
-      selectedIcon: Icons.shield_rounded,
+      icon: LucideIcons.shield,
+      selectedIcon: LucideIcons.shield,
       routeName: myPermissions,
       area: NavArea.account,
       weight: NavWeight.secondary,
@@ -69,8 +69,8 @@ class SettingsModule extends OmniModule {
       moduleId: 'settings',
       label: 'Nền',
       subtitle: 'Nền cho chat và bảng kế hoạch',
-      icon: Icons.wallpaper_outlined,
-      selectedIcon: Icons.wallpaper_rounded,
+      icon: LucideIcons.wallpaper,
+      selectedIcon: LucideIcons.wallpaper,
       routeName: background,
       area: NavArea.account,
       weight: NavWeight.secondary,
@@ -82,8 +82,8 @@ class SettingsModule extends OmniModule {
       // Trao đổi, hai mục cùng tên trên một màn là hai mục không phân biệt được.
       label: 'Cài đặt thông báo',
       subtitle: 'Chọn khi nào máy được rung',
-      icon: Icons.notifications_outlined,
-      selectedIcon: Icons.notifications_rounded,
+      icon: LucideIcons.bell,
+      selectedIcon: LucideIcons.bell,
       routeName: notifications,
       area: NavArea.account,
       weight: NavWeight.secondary,

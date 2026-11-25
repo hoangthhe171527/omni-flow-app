@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../core/error/app_exception.dart';
 import '../../../design/components/components.dart';
@@ -51,7 +52,7 @@ class PlanFilesPage extends ConsumerWidget {
           ];
           if (files.isEmpty) {
             return const OmniEmptyState(
-              icon: Icons.attach_file_rounded,
+              icon: LucideIcons.paperclip,
               title: 'Chưa có tệp nào',
               message: 'Tệp đính kèm trên các việc của kế hoạch sẽ hiện ở đây.',
             );
@@ -173,7 +174,7 @@ class PlanFilesPage extends ConsumerWidget {
           OmniGroupSection(
             children: [
               OmniGroupRow(
-                icon: Icons.delete_outline,
+                icon: LucideIcons.trash2,
                 title: 'Xoá tệp',
                 destructive: true,
                 chevron: false,

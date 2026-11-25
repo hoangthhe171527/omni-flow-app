@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../../design/components/components.dart';
 import '../../../../design/platform/omni_platform.dart';
@@ -89,8 +90,8 @@ class ThreadHeader extends StatelessWidget implements PreferredSizeWidget {
       children: [
         OmniTopBarAction(
           icon: isApple(context)
-              ? Icons.arrow_back_ios_new_rounded
-              : Icons.arrow_back_rounded,
+              ? LucideIcons.chevronLeft
+              : LucideIcons.arrowLeft,
           tooltip: 'Quay lại',
           onPressed: () {
             final nav = Navigator.of(context);
@@ -168,7 +169,7 @@ class ThreadHeader extends StatelessWidget implements PreferredSizeWidget {
           const Spacer(),
         const SizedBox(width: 8),
         OmniTopBarAction(
-          icon: Icons.info_outline_rounded,
+          icon: LucideIcons.info,
           tooltip: 'Thông tin khách',
           onPressed: onInfo,
         ),
@@ -217,7 +218,7 @@ class ThreadHeader extends StatelessWidget implements PreferredSizeWidget {
                     HapticFeedback.selectionClick();
                     onSearchPrevious();
                   },
-            icon: const Icon(Icons.keyboard_arrow_up_rounded, size: 22),
+            icon: const Icon(LucideIcons.chevronUp, size: 22),
           ),
           IconButton(
             tooltip: 'Kết quả sau',
@@ -227,7 +228,7 @@ class ThreadHeader extends StatelessWidget implements PreferredSizeWidget {
                     HapticFeedback.selectionClick();
                     onSearchNext();
                   },
-            icon: const Icon(Icons.keyboard_arrow_down_rounded, size: 22),
+            icon: const Icon(LucideIcons.chevronDown, size: 22),
           ),
           IconButton(
             tooltip: 'Đóng tìm kiếm',
@@ -235,7 +236,7 @@ class ThreadHeader extends StatelessWidget implements PreferredSizeWidget {
               HapticFeedback.selectionClick();
               onCloseSearch();
             },
-            icon: const Icon(Icons.close_rounded, size: 21),
+            icon: const Icon(LucideIcons.x, size: 21),
           ),
         ],
       ),

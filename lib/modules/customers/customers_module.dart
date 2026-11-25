@@ -1,5 +1,6 @@
+import 'package:lucide_icons_flutter/lucide_icons.dart';
+
 import 'routes.dart';
-import 'package:flutter/material.dart';
 
 import '../../core/module/module_route.dart';
 import '../../core/module/nav_destination.dart';
@@ -70,8 +71,8 @@ class CustomersModule extends OmniModule {
       moduleId: 'customers',
       label: 'Khách',
       subtitle: 'Danh bạ và lịch sử liên hệ',
-      icon: Icons.people_outline_rounded,
-      selectedIcon: Icons.people_rounded,
+      icon: LucideIcons.users,
+      selectedIcon: LucideIcons.users,
       routeName: list,
       area: NavArea.sales,
       weight: NavWeight.primary,

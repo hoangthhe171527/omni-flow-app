@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../core/error/app_exception.dart';
 import '../../../design/components/components.dart';
@@ -297,7 +298,7 @@ class _SectionRow extends StatelessWidget {
                             width: 44,
                             height: 44,
                             child: Center(
-                              child: OmniIconTile(Icons.drag_indicator_rounded),
+                              child: OmniIconTile(LucideIcons.gripVertical),
                             ),
                           ),
                         ),
@@ -343,13 +344,13 @@ class _SectionRow extends StatelessWidget {
                   ),
                 arrow(
                   'Lên trên',
-                  Icons.keyboard_arrow_up_rounded,
+                  LucideIcons.chevronUp,
                   !first,
                   onUp,
                 ),
                 arrow(
                   'Xuống dưới',
-                  Icons.keyboard_arrow_down_rounded,
+                  LucideIcons.chevronDown,
                   !last,
                   onDown,
                 ),

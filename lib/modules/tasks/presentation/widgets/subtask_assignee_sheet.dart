@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../../core/utils/text_search.dart';
 import '../../../../design/components/components.dart';
@@ -134,7 +135,7 @@ class _SheetState extends ConsumerState<_Sheet> {
             child: Row(
               children: [
                 Icon(
-                  Icons.person_add_alt_outlined,
+                  LucideIcons.userPlus,
                   size: OmniIconSize.md,
                   color: scheme.primary,
                 ),
@@ -164,7 +165,7 @@ class _SheetState extends ConsumerState<_Sheet> {
                 IconButton(
                   tooltip: 'Đóng chọn người làm',
                   onPressed: () => Navigator.of(context).pop(),
-                  icon: const Icon(Icons.close_rounded),
+                  icon: const Icon(LucideIcons.x),
                 ),
               ],
             ),
@@ -177,7 +178,7 @@ class _SheetState extends ConsumerState<_Sheet> {
               child: IconButton(
                 tooltip: 'Đóng chọn người làm',
                 onPressed: () => Navigator.of(context).pop(),
-                icon: const Icon(Icons.close_rounded, size: OmniIconSize.lg),
+                icon: const Icon(LucideIcons.x, size: OmniIconSize.lg),
               ),
             ),
           ),
@@ -238,7 +239,7 @@ class _SheetState extends ConsumerState<_Sheet> {
                   empty: showSelf
                       ? const SizedBox.shrink()
                       : const OmniEmptyState(
-                          icon: Icons.person_search_outlined,
+                          icon: LucideIcons.userSearch,
                           title: 'Không tìm thấy ai',
                           message: 'Thử tên khác, hoặc xoá ô tìm kiếm.',
                         ),
@@ -320,7 +321,7 @@ class _CompactMemberResults extends StatelessWidget {
           Row(
             children: [
               Icon(
-                Icons.wifi_off_rounded,
+                LucideIcons.wifiOff,
                 size: OmniIconSize.md,
                 color: scheme.onSurfaceVariant,
               ),
@@ -347,7 +348,7 @@ class _CompactMemberResults extends StatelessWidget {
           Row(
             children: [
               Icon(
-                Icons.person_search_outlined,
+                LucideIcons.userSearch,
                 size: OmniIconSize.md,
                 color: scheme.onSurfaceVariant,
               ),

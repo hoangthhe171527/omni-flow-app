@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../tokens/tokens.dart';
 import 'omni_top_bar.dart';
@@ -142,7 +143,7 @@ class _OmniInlineRenameState extends State<OmniInlineRename> {
         const SizedBox(width: 6),
         _CircleAction(
           key: const ValueKey('inline-rename-cancel'),
-          icon: Icons.close_rounded,
+          icon: LucideIcons.x,
           tooltip: 'Bỏ sửa',
           color: scheme.onSurfaceVariant,
           onTap: _saving ? null : _cancel,
@@ -150,7 +151,7 @@ class _OmniInlineRenameState extends State<OmniInlineRename> {
         const SizedBox(width: 4),
         _CircleAction(
           key: const ValueKey('inline-rename-save'),
-          icon: Icons.check_rounded,
+          icon: LucideIcons.check,
           tooltip: 'Lưu tên',
           color: scheme.primary,
           onTap: _saving ? null : _save,

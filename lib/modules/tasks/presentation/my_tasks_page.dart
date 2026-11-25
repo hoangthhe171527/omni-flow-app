@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../core/error/app_exception.dart';
 import '../../../core/error/crash_reporting.dart';
@@ -72,7 +73,7 @@ class _MyTasksPageState extends ConsumerState<MyTasksPage> {
           // câu "cây SN 471302 ở đâu" hỏi giữa lúc làm chứ không hỏi lúc
           // ngồi duyệt menu.
           OmniTopBarAction(
-            icon: Icons.search_rounded,
+            icon: LucideIcons.search,
             tooltip: 'Tìm cây đàn',
             onPressed: () => context.pushNamed(TaskRoutes.search),
           ),
@@ -104,7 +105,7 @@ class _MyTasksPageState extends ConsumerState<MyTasksPage> {
               onRetry: () => ref.invalidate(myTasksProvider),
               isEmpty: (state) => state.items.isEmpty,
               empty: OmniEmptyState(
-                icon: Icons.checklist_rounded,
+                icon: LucideIcons.listChecks,
                 title: _emptyTitle(bucket),
                 message: _emptyMessage(bucket),
               ),
@@ -333,7 +334,7 @@ class _TickOnSwipe extends StatelessWidget {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.check_circle_rounded, color: scheme.onPrimary),
+            Icon(LucideIcons.circleCheck, color: scheme.onPrimary),
             const SizedBox(width: OmniSpacing.sm),
             Flexible(
               child: Text(

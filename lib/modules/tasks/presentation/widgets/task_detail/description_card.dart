@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../../../design/tokens/tokens.dart';
 
@@ -62,7 +63,7 @@ class DescriptionCard extends StatelessWidget {
               child: Row(
                 children: [
                   Icon(
-                    Icons.notes_rounded,
+                    LucideIcons.notebookText,
                     size: OmniIconSize.lg,
                     color: secondary,
                   ),
@@ -77,9 +78,9 @@ class DescriptionCard extends StatelessWidget {
                     ),
                   ),
                   if (onCopy != null)
-                    action('Sao chép mô tả', Icons.copy_rounded, onCopy!),
+                    action('Sao chép mô tả', LucideIcons.copy, onCopy!),
                   if (onEdit != null)
-                    action('Sửa mô tả', Icons.edit_outlined, onEdit!),
+                    action('Sửa mô tả', LucideIcons.pencil, onEdit!),
                 ],
               ),
             ),

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../tokens/tokens.dart';
 
@@ -326,7 +327,7 @@ class OmniMoneyRow extends StatelessWidget {
             Expanded(child: content),
             if (selected) ...[
               const SizedBox(width: 10),
-              Icon(Icons.check_rounded, size: 20, color: scheme.primary),
+              Icon(LucideIcons.check, size: 20, color: scheme.primary),
             ],
           ],
         ),

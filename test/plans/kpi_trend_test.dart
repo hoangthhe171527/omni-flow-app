@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:omni_app/design/theme/omni_theme.dart';
 import 'package:omni_app/design/tokens/tokens.dart';
 import 'package:omni_app/modules/plans/application/plans_providers.dart';
@@ -51,21 +52,21 @@ void main() {
       await show(tester, kpi(delivered: 28), previousDelivered: 22);
 
       expect(find.text('+6 so với tháng 8'), findsOneWidget);
-      expect(find.byIcon(Icons.trending_up_rounded), findsOneWidget);
+      expect(find.byIcon(LucideIcons.trendingUp), findsOneWidget);
     });
 
     testWidgets('ít hơn: dấu trừ và mũi tên xuống', (tester) async {
       await show(tester, kpi(delivered: 20), previousDelivered: 23);
 
       expect(find.text('−3 so với tháng 8'), findsOneWidget);
-      expect(find.byIcon(Icons.trending_down_rounded), findsOneWidget);
+      expect(find.byIcon(LucideIcons.trendingDown), findsOneWidget);
     });
 
     testWidgets('bằng nhau: nói "bằng", không phải "+0"', (tester) async {
       await show(tester, kpi(delivered: 22), previousDelivered: 22);
 
       expect(find.text('Bằng tháng 8'), findsOneWidget);
-      expect(find.byIcon(Icons.trending_flat_rounded), findsOneWidget);
+      expect(find.byIcon(LucideIcons.moveRight), findsOneWidget);
     });
 
     testWidgets('tháng 1 so với tháng 12, không phải "tháng 0"', (

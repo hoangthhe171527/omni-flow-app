@@ -8,6 +8,7 @@ import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../core/config/web_links.dart';
 import '../../../core/error/app_exception.dart';
@@ -1313,10 +1314,10 @@ class _PlanBoardPageState extends ConsumerState<PlanBoardPage>
     required bool canRemove,
   }) async {
     final choice = await _optionsMenu<_SectionAction>(anchor, section.name, [
-      (_SectionAction.rename, Icons.edit_outlined, 'Đổi tên nhóm'),
-      (_SectionAction.reorder, Icons.swap_vert_rounded, 'Sắp xếp nhóm việc'),
-      (_SectionAction.edit, Icons.tune_rounded, 'Sửa nhóm việc'),
-      if (canRemove) (_SectionAction.remove, Icons.delete_outline, 'Xoá nhóm'),
+      (_SectionAction.rename, LucideIcons.pencil, 'Đổi tên nhóm'),
+      (_SectionAction.reorder, LucideIcons.arrowUpDown, 'Sắp xếp nhóm việc'),
+      (_SectionAction.edit, LucideIcons.slidersHorizontal, 'Sửa nhóm việc'),
+      if (canRemove) (_SectionAction.remove, LucideIcons.trash2, 'Xoá nhóm'),
     ], danger: _SectionAction.remove);
     if (!mounted) return;
     switch (choice) {
@@ -1663,7 +1664,7 @@ class _GlassHeader extends StatelessWidget {
             children: [
               _HeaderButton(
                 tooltip: 'Quay lại',
-                icon: Icons.arrow_back_ios_new_rounded,
+                icon: LucideIcons.chevronLeft,
                 onTap: onBack,
               ),
               const SizedBox(width: 10),
@@ -1679,20 +1680,20 @@ class _GlassHeader extends StatelessWidget {
               if (searching)
                 _HeaderButton(
                   tooltip: 'Đóng tìm kiếm',
-                  icon: Icons.close_rounded,
+                  icon: LucideIcons.x,
                   onTap: onCloseSearch,
                 )
               else
                 _HeaderButton(
                   tooltip: 'Tìm trong kế hoạch',
-                  icon: Icons.search_rounded,
+                  icon: LucideIcons.search,
                   onTap: onOpenSearch,
                 ),
               const SizedBox(width: 8),
               Builder(
                 builder: (buttonContext) => _HeaderButton(
                   tooltip: 'Lọc theo người',
-                  icon: Icons.person_outline_rounded,
+                  icon: LucideIcons.user,
                   onTap: () {
                     if (_anchorOf(buttonContext) case final anchor?) {
                       onFilter(anchor);
@@ -1707,7 +1708,7 @@ class _GlassHeader extends StatelessWidget {
                 Builder(
                   builder: (buttonContext) => _HeaderButton(
                     tooltip: 'Tuỳ chọn kế hoạch',
-                    icon: Icons.more_horiz_rounded,
+                    icon: LucideIcons.ellipsis,
                     onTap: () {
                       if (_anchorOf(buttonContext) case final anchor?) {
                         menu(anchor);
@@ -1782,7 +1783,7 @@ class _HeaderSearch extends StatelessWidget {
         child: Row(
           children: [
             Icon(
-              Icons.search_rounded,
+              LucideIcons.search,
               size: OmniIconSize.md,
               color: Colors.white.withValues(alpha: .9),
             ),
@@ -2110,7 +2111,7 @@ class _TruncatedNotice extends StatelessWidget {
           child: Row(
             children: [
               Icon(
-                Icons.info_outline_rounded,
+                LucideIcons.info,
                 size: OmniIconSize.sm,
                 color: warning,
               ),
@@ -2167,7 +2168,7 @@ class _ClosedBanner extends StatelessWidget {
       child: Row(
         children: [
           Icon(
-            Icons.lock_outline_rounded,
+            LucideIcons.lock,
             size: OmniIconSize.sm,
             color: scheme.onSurfaceVariant,
           ),

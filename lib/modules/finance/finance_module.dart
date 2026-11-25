@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../core/module/module_route.dart';
 import '../../core/module/nav_destination.dart';
@@ -56,8 +56,8 @@ class FinanceModule extends OmniModule {
       moduleId: 'finance',
       label: 'Sổ chi phí',
       subtitle: 'Ghi chép và theo dõi chi phí theo tháng',
-      icon: Icons.account_balance_wallet_outlined,
-      selectedIcon: Icons.account_balance_wallet_rounded,
+      icon: LucideIcons.wallet,
+      selectedIcon: LucideIcons.wallet,
       routeName: FinanceRoutes.expenses,
       area: NavArea.finance,
       weight: NavWeight.secondary,
@@ -68,8 +68,8 @@ class FinanceModule extends OmniModule {
       moduleId: 'finance',
       label: 'Tổng hợp chi phí',
       subtitle: 'Tổng hợp và phân tích chi phí theo tháng, quý, năm',
-      icon: Icons.pie_chart_outline_rounded,
-      selectedIcon: Icons.pie_chart_rounded,
+      icon: LucideIcons.chartPie,
+      selectedIcon: LucideIcons.chartPie,
       routeName: FinanceRoutes.expenseSummary,
       area: NavArea.finance,
       weight: NavWeight.secondary,
@@ -80,8 +80,8 @@ class FinanceModule extends OmniModule {
       moduleId: 'finance',
       label: 'Danh mục chi',
       subtitle: 'Nhóm chi và nguồn tiền',
-      icon: Icons.sell_outlined,
-      selectedIcon: Icons.sell_rounded,
+      icon: LucideIcons.tag,
+      selectedIcon: LucideIcons.tag,
       routeName: FinanceRoutes.catalog,
       area: NavArea.finance,
       weight: NavWeight.secondary,

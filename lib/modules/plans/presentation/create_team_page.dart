@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../core/error/app_exception.dart';
 import '../../../design/components/components.dart';
@@ -155,7 +156,7 @@ class _CreateTeamPageState extends ConsumerState<CreateTeamPage> {
           OmniGroupSection(
             children: [
               OmniGroupRow(
-                icon: Icons.person_add_alt_outlined,
+                icon: LucideIcons.userPlus,
                 title: 'Thành viên',
                 value: _memberIds.isEmpty ? null : '${_memberIds.length} người',
                 onTap: () async {

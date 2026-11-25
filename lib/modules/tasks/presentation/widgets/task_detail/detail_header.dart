@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../../../design/components/components.dart';
 import '../../../../../design/platform/omni_motion_scope.dart';
@@ -93,7 +94,7 @@ class DetailHeader extends StatelessWidget implements PreferredSizeWidget {
               child: Row(
                 children: [
                   OmniTopBarAction(
-                    icon: Icons.close_rounded,
+                    icon: LucideIcons.x,
                     tooltip: 'Đóng',
                     onPressed: () => _handleClose(context),
                   ),

@@ -1,5 +1,6 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../../core/utils/formatters.dart';
 import '../../../../core/utils/media_url.dart';
@@ -220,7 +221,7 @@ class _PhotoPlaceholder extends StatelessWidget {
       color: scheme.surfaceContainerHighest,
       alignment: Alignment.center,
       child: Icon(
-        broken ? Icons.broken_image_outlined : Icons.image_outlined,
+        broken ? LucideIcons.imageOff : LucideIcons.image,
         size: OmniIconSize.md,
         color: scheme.onSurfaceVariant,
       ),

@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../../design/components/components.dart';
 import '../../../../design/platform/omni_motion_scope.dart';
@@ -497,7 +498,7 @@ class _MessageComposerState extends State<MessageComposer> {
       children: [
         if (_showFiles)
           OmniAnchoredMenuItem(
-            icon: Icons.attach_file_rounded,
+            icon: LucideIcons.paperclip,
             label: 'Tệp',
             trailing: _full
                 ? Text(
@@ -516,7 +517,7 @@ class _MessageComposerState extends State<MessageComposer> {
           ),
         if (widget.onCreateTask != null)
           OmniAnchoredMenuItem(
-            icon: Icons.task_alt_rounded,
+            icon: LucideIcons.circleCheckBig,
             label: 'Tạo việc',
             onTap: () {
               Navigator.of(menuContext).pop();
@@ -525,7 +526,7 @@ class _MessageComposerState extends State<MessageComposer> {
           ),
         if (widget.loadTemplates != null)
           OmniAnchoredMenuItem(
-            icon: Icons.bolt_rounded,
+            icon: LucideIcons.zap,
             label: 'Mẫu trả lời',
             onTap: () {
               Navigator.of(menuContext).pop();
@@ -539,7 +540,7 @@ class _MessageComposerState extends State<MessageComposer> {
   List<Widget> _tools() => [
     Builder(
       builder: (buttonContext) => _ComposerIcon(
-        icon: Icons.add_circle_rounded,
+        icon: LucideIcons.circlePlus,
         tooltip: 'Thêm',
         onTap: widget.enabled && _hasExtraTools
             ? () {
@@ -555,19 +556,19 @@ class _MessageComposerState extends State<MessageComposer> {
     // Đủ 10 tệp: nút vẫn hiện nhưng khoá, nói rõ vì sao.
     if (_showImages && widget.onTakePhoto != null)
       _ComposerIcon(
-        icon: Icons.photo_camera_rounded,
+        icon: LucideIcons.camera,
         tooltip: _full ? _fullLabel : 'Chụp ảnh',
         onTap: widget.enabled && !_sending && !_full ? _takePhoto : null,
       ),
     if (_showImages)
       _ComposerIcon(
-        icon: Icons.image_rounded,
+        icon: LucideIcons.image,
         tooltip: _full ? _fullLabel : 'Ảnh',
         onTap: widget.enabled && !_sending && !_full ? _pickImages : null,
       ),
     if (_showVoice)
       _ComposerIcon(
-        icon: Icons.mic_none_rounded,
+        icon: LucideIcons.mic,
         tooltip: 'Ghi âm',
         onTap: widget.enabled && !_sending ? _startVoice : null,
       ),
@@ -684,7 +685,7 @@ class _MessageComposerState extends State<MessageComposer> {
                                       ),
                                       if (collapsed)
                                         _ComposerIcon(
-                                          icon: Icons.chevron_right_rounded,
+                                          icon: LucideIcons.chevronRight,
                                           tooltip: 'Hiện công cụ',
                                           onTap: () => setState(
                                             () => _toolsForced = true,
@@ -747,7 +748,7 @@ class _MessageComposerState extends State<MessageComposer> {
                                               MaterialTapTargetSize.shrinkWrap,
                                         ),
                                         icon: Icon(
-                                          Icons.emoji_emotions_outlined,
+                                          LucideIcons.smile,
                                           size: OmniIconSize.xl,
                                           color: scheme.onSurfaceVariant,
                                         ),
@@ -894,7 +895,7 @@ class _ReplyPreview extends StatelessWidget {
           IconButton(
             tooltip: 'Huỷ trả lời',
             onPressed: onClose,
-            icon: const Icon(Icons.close_rounded, size: 20),
+            icon: const Icon(LucideIcons.x, size: 20),
             visualDensity: VisualDensity.compact,
           ),
         ],
@@ -991,7 +992,7 @@ class _ImageTray extends StatelessWidget {
                     color: scheme.surfaceContainerHighest,
                     alignment: Alignment.center,
                     child: Icon(
-                      Icons.broken_image_outlined,
+                      LucideIcons.imageOff,
                       color: scheme.onSurfaceVariant,
                     ),
                   ),
@@ -1010,7 +1011,7 @@ class _ImageTray extends StatelessWidget {
                       width: 24,
                       height: 24,
                       child: Icon(
-                        Icons.close_rounded,
+                        LucideIcons.x,
                         size: OmniIconSize.sm,
                         color: scheme.onInverseSurface,
                       ),
@@ -1066,7 +1067,7 @@ class _FileTile extends StatelessWidget {
             ),
             child: ext.isEmpty
                 ? Icon(
-                    Icons.insert_drive_file_outlined,
+                    LucideIcons.file,
                     color: scheme.onSurfaceVariant,
                   )
                 : Text(
@@ -1098,7 +1099,7 @@ class _FileTile extends StatelessWidget {
               tapTargetSize: MaterialTapTargetSize.shrinkWrap,
             ),
             icon: Icon(
-              Icons.close_rounded,
+              LucideIcons.x,
               size: OmniIconSize.md,
               color: scheme.onSurfaceVariant,
             ),
@@ -1126,7 +1127,7 @@ class _ComposerError extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Icon(
-              Icons.error_outline_rounded,
+              LucideIcons.circleAlert,
               size: OmniIconSize.sm,
               color: scheme.error,
             ),
@@ -1298,7 +1299,7 @@ class _SendButton extends StatelessWidget {
                         ),
                       )
                     : Icon(
-                        Icons.send_rounded,
+                        LucideIcons.send,
                         size: OmniIconSize.md,
                         color: scheme.onPrimary,
                       ),

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:omni_app/design/components/components.dart';
 
 /// Nút tài khoản phải là MẶC ĐỊNH, không phải một thứ mỗi màn tự nhớ chèn.
@@ -18,7 +19,7 @@ void main() {
 
     return MaterialApp(
       home: OmniAccountSlot(
-        builder: (_) => const Icon(Icons.person, key: marker),
+        builder: (_) => const Icon(LucideIcons.user, key: marker),
         child: Scaffold(appBar: bar),
       ),
     );
@@ -51,7 +52,7 @@ void main() {
       wrap(
         const OmniAppBar(
           title: 'Việc của tôi',
-          actions: [Icon(Icons.search_rounded)],
+          actions: [Icon(LucideIcons.search)],
         ),
       ),
     );
@@ -60,7 +61,7 @@ void main() {
     final title = tester
         .getTopLeft(find.byKey(const ValueKey('omni-top-bar-title')))
         .dx;
-    final search = tester.getTopLeft(find.byIcon(Icons.search_rounded)).dx;
+    final search = tester.getTopLeft(find.byIcon(LucideIcons.search)).dx;
 
     expect(title, lessThan(search));
     expect(search, lessThan(account));
@@ -76,7 +77,7 @@ void main() {
     await tester.pumpWidget(
       MaterialApp(
         home: OmniAccountSlot(
-          builder: (_) => const Icon(Icons.person, key: marker),
+          builder: (_) => const Icon(LucideIcons.user, key: marker),
           child: Builder(
             builder: (context) => Scaffold(
               appBar: const OmniAppBar(title: 'Gốc'),
@@ -152,7 +153,7 @@ void main() {
     );
     await tester.tap(find.text('mở'));
     await tester.pumpAndSettle();
-    expect(find.byIcon(Icons.close_rounded), findsOneWidget);
+    expect(find.byIcon(LucideIcons.x), findsOneWidget);
   });
 
   testWidgets('có bottom thì chiều cao cộng thêm', (tester) async {

@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/date_symbol_data_local.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:omni_app/core/error/app_exception.dart';
 import 'package:omni_app/core/network/api_client.dart';
 import 'package:omni_app/core/network/api_envelope.dart';
@@ -553,7 +554,7 @@ void main() {
       await tester.tap(find.text('cũ'));
       await tester.pumpAndSettle();
       await tester.enterText(find.byType(TextField), 'mới');
-      await tester.tap(find.byIcon(Icons.check));
+      await tester.tap(find.byIcon(LucideIcons.check));
       await settle(tester);
 
       expect(server.puts.single.body, {
@@ -675,7 +676,7 @@ void main() {
 
       expect(find.text('Email không hợp lệ.'), findsOneWidget);
       expect(server.customer['primary_contact_email'], 'a@b.vn');
-      await tester.tap(find.byIcon(Icons.close));
+      await tester.tap(find.byIcon(LucideIcons.x));
       await tester.pumpAndSettle();
       expect(find.text('a@b.vn'), findsOneWidget);
     });
@@ -697,7 +698,7 @@ void main() {
       tester,
     ) async {
       await open(tester, permissions: {_read, _logs, _oppRead});
-      expect(find.byIcon(Icons.edit_outlined), findsNothing);
+      expect(find.byIcon(LucideIcons.pencil), findsNothing);
 
       await tester.tap(find.text('12 Lê Thánh Tôn'));
       await tester.pumpAndSettle();
@@ -717,7 +718,7 @@ void main() {
       tester,
     ) async {
       await open(tester);
-      expect(find.byIcon(Icons.edit_outlined), findsNothing);
+      expect(find.byIcon(LucideIcons.pencil), findsNothing);
       await tester.tap(find.text('12 Lê Thánh Tôn'));
       await tester.pumpAndSettle();
       expect(find.byType(TextField), findsOneWidget);

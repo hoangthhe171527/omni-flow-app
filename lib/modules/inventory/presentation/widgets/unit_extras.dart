@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../../design/components/components.dart';
 import '../../../../design/tokens/tokens.dart';
@@ -100,14 +101,14 @@ class _UnitPhotosSectionState extends ConsumerState<UnitPhotosSection> {
           children: [
             OmniGroupRow(
               key: const ValueKey('inv-photo-camera'),
-              icon: Icons.photo_camera_outlined,
+              icon: LucideIcons.camera,
               title: 'Chụp ảnh',
               chevron: false,
               onTap: () => Navigator.of(menu).pop(true),
             ),
             OmniGroupRow(
               key: const ValueKey('inv-photo-gallery'),
-              icon: Icons.photo_library_outlined,
+              icon: LucideIcons.images,
               title: 'Chọn từ thư viện',
               chevron: false,
               onTap: () => Navigator.of(menu).pop(false),
@@ -220,7 +221,7 @@ class _UnitPhotosSectionState extends ConsumerState<UnitPhotosSection> {
                                             ),
                                       )
                                     : Icon(
-                                        Icons.add_rounded,
+                                        LucideIcons.plus,
                                         size: 22,
                                         color: scheme.primary,
                                       ),
@@ -260,7 +261,7 @@ class _PhotoTile extends StatelessWidget {
     final badge = photo.isCover
         ? Icons.star_rounded
         : photo.fromTask
-        ? Icons.construction_rounded
+        ? LucideIcons.construction
         : null;
     return Semantics(
       button: true,
@@ -326,7 +327,7 @@ class InvPhoto extends StatelessWidget {
       color: scheme.surfaceContainerHighest,
       child: Center(
         child: Icon(
-          Icons.image_outlined,
+          LucideIcons.image,
           size: 18,
           color: scheme.onSurfaceVariant,
         ),
@@ -539,7 +540,7 @@ class _UnitPhotoViewerState extends ConsumerState<UnitPhotoViewer> {
                             ),
                             onPressed: () => Navigator.of(context).pop(),
                             icon: Icon(
-                              Icons.close_rounded,
+                              LucideIcons.x,
                               size: OmniIconSize.md,
                               color: scheme.onSurface,
                             ),
@@ -580,7 +581,7 @@ class _UnitPhotoViewerState extends ConsumerState<UnitPhotoViewer> {
                                     ),
                                     onPressed: _busy ? null : () => _cover(p),
                                     icon: Icon(
-                                      Icons.star_outline_rounded,
+                                      LucideIcons.star,
                                       size: OmniIconSize.md,
                                       color: scheme.onSurface,
                                     ),
@@ -599,7 +600,7 @@ class _UnitPhotoViewerState extends ConsumerState<UnitPhotoViewer> {
                                   ),
                                   onPressed: _busy ? null : () => _delete(p),
                                   icon: Icon(
-                                    Icons.delete_outline_rounded,
+                                    LucideIcons.trash2,
                                     size: OmniIconSize.md,
                                     color: OmniColors.dangerTextOf(context),
                                   ),

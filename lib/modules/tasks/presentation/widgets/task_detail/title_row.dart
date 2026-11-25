@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../../../core/error/app_exception.dart';
 import '../../../../../design/components/components.dart';
@@ -165,7 +166,7 @@ class _TaskTitleRowState extends ConsumerState<TaskTitleRow>
         ),
         child: done
             ? Icon(
-                Icons.check_rounded,
+                LucideIcons.check,
                 size: OmniIconSize.sm,
                 color: scheme.onPrimary,
               )

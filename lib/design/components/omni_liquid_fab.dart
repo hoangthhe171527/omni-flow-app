@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 /// Nút + tròn nổi ở góc dưới phải, phía trên thanh tab.
 ///
@@ -12,7 +13,7 @@ class OmniLiquidFab extends StatefulWidget {
     required this.onPressed,
     required this.tooltip,
     this.open = false,
-    this.icon = Icons.add_rounded,
+    this.icon = LucideIcons.plus,
   });
 
   /// Nhận khung của nút (toạ độ màn) để neo menu bật ra từ chính nút.

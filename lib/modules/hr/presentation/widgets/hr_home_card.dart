@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../../core/error/app_exception.dart';
 import '../../../../design/components/components.dart';
@@ -227,7 +228,7 @@ class _WorkshopCardState extends ConsumerState<_WorkshopCard> {
               ),
               if (access.approve)
                 OmniGroupRow(
-                  icon: Icons.fact_check_outlined,
+                  icon: LucideIcons.clipboardCheck,
                   title: 'Đơn chờ duyệt',
                   trailing: HrValue(
                     '$pending đơn',

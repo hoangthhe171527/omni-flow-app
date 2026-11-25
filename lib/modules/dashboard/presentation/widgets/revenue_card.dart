@@ -6,6 +6,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:omni_app/design/components/omni_group.dart';
 import 'package:omni_app/design/components/omni_segmented.dart';
 import 'package:omni_app/design/components/omni_states.dart';
@@ -206,7 +207,7 @@ class _Delta extends StatelessWidget {
     } else {
       final up = r >= 0;
       tone = up ? OmniTone.info : OmniTone.danger;
-      icon = up ? Icons.arrow_drop_up_rounded : Icons.arrow_drop_down_rounded;
+      icon = up ? LucideIcons.chevronUp : LucideIcons.chevronDown;
       text = '${(r.abs() * 100).round()}%';
       label = '${up ? 'tăng' : 'giảm'} $text so với cùng kỳ';
     }

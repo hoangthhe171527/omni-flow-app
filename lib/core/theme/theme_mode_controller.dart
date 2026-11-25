@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../storage/preferences_store.dart';
 import '../storage/storage_keys.dart';
@@ -60,8 +61,8 @@ final themeModeProvider = NotifierProvider<ThemeModeController, ThemeMode>(
     switch (mode) {
       ThemeMode.system => (
         label: 'Theo hệ thống',
-        icon: Icons.brightness_auto_rounded,
+        icon: LucideIcons.sunMoon,
       ),
-      ThemeMode.light => (label: 'Sáng', icon: Icons.light_mode_rounded),
-      ThemeMode.dark => (label: 'Tối', icon: Icons.dark_mode_rounded),
+      ThemeMode.light => (label: 'Sáng', icon: LucideIcons.sun),
+      ThemeMode.dark => (label: 'Tối', icon: LucideIcons.moon),
     };

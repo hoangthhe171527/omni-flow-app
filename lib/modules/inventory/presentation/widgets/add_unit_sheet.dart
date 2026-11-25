@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../../design/components/components.dart';
 import '../../application/inventory_providers.dart';
@@ -240,7 +241,7 @@ class _AddUnitSheetState extends ConsumerState<AddUnitSheet> {
             for (final s in sugg)
               OmniGroupRow(
                 key: ValueKey('inv-add-sugg-${s.key}'),
-                icon: Icons.search_rounded,
+                icon: LucideIcons.search,
                 title: '${s.maker} ${s.model}',
                 subtitle: [
                   if (s.category != null) InvUi.shortCategory(s.category),

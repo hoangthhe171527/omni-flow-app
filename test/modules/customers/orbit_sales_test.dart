@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:omni_app/design/components/components.dart';
 import 'package:omni_app/design/theme/omni_theme.dart';
 import 'package:omni_app/design/tokens/tokens.dart';
@@ -65,8 +66,8 @@ void main() {
       for (final stage in PipelineCatalog.legacy.defaultPipeline.stages) {
         expect(find.text(stage.label), findsOneWidget);
       }
-      expect(find.byIcon(Icons.check_rounded), findsOneWidget);
-      expect(find.byIcon(Icons.emoji_events_outlined), findsOneWidget);
+      expect(find.byIcon(LucideIcons.check), findsOneWidget);
+      expect(find.byIcon(LucideIcons.trophy), findsOneWidget);
     });
 
     testWidgets('quy trình tuỳ biến: giai đoạn Thắng mã riêng vẫn là cúp, '
@@ -117,8 +118,8 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('Đã mua'), findsOneWidget);
-      expect(find.byIcon(Icons.emoji_events_outlined), findsOneWidget);
-      expect(find.byIcon(Icons.cancel_outlined), findsOneWidget);
+      expect(find.byIcon(LucideIcons.trophy), findsOneWidget);
+      expect(find.byIcon(LucideIcons.circleX), findsOneWidget);
       expect(find.text('Mới'), findsNothing);
 
       await tester.tap(find.text('Đã mua'));

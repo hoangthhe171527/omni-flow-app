@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../../core/utils/formatters.dart';
 import '../../../../design/components/components.dart';
@@ -34,7 +35,7 @@ class ActivityCard extends StatelessWidget {
       flat: true,
       children: [
         DetailCardHeader(
-          icon: Icons.schedule_rounded,
+          icon: LucideIcons.clock,
           title: 'Nhật ký hoạt động',
           actions: [
             if (entries.isNotEmpty)
@@ -201,15 +202,15 @@ class _Line extends StatelessWidget {
   }
 
   IconData get _icon => switch (entry.kind) {
-    TaskActivityKind.created => Icons.add_circle_outline_rounded,
-    TaskActivityKind.section => Icons.swap_horiz_rounded,
-    TaskActivityKind.status => Icons.check_circle_outline_rounded,
-    TaskActivityKind.dueDate => Icons.event_outlined,
-    TaskActivityKind.assignees => Icons.person_outline_rounded,
-    TaskActivityKind.subtaskCompleted => Icons.task_alt_rounded,
-    TaskActivityKind.subtaskAssigned => Icons.how_to_reg_outlined,
-    TaskActivityKind.attachmentAdded => Icons.image_outlined,
-    TaskActivityKind.attachmentRemoved => Icons.hide_image_outlined,
-    TaskActivityKind.other => Icons.circle_outlined,
+    TaskActivityKind.created => LucideIcons.circlePlus,
+    TaskActivityKind.section => LucideIcons.arrowLeftRight,
+    TaskActivityKind.status => LucideIcons.circleCheck,
+    TaskActivityKind.dueDate => LucideIcons.calendarDays,
+    TaskActivityKind.assignees => LucideIcons.user,
+    TaskActivityKind.subtaskCompleted => LucideIcons.circleCheckBig,
+    TaskActivityKind.subtaskAssigned => LucideIcons.userCheck,
+    TaskActivityKind.attachmentAdded => LucideIcons.image,
+    TaskActivityKind.attachmentRemoved => LucideIcons.imageOff,
+    TaskActivityKind.other => LucideIcons.circle,
   };
 }

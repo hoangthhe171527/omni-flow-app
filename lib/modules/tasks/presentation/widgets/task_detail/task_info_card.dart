@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../../../core/utils/formatters.dart';
 import '../../../../../design/components/components.dart';
@@ -227,7 +228,7 @@ class _People extends StatelessWidget {
               ),
               const SizedBox(width: 6),
               Icon(
-                Icons.arrow_forward_rounded,
+                LucideIcons.arrowRight,
                 size: 14,
                 color: OmniTaskTones.of(context).faint,
               ),
@@ -654,7 +655,7 @@ class _DateField extends StatelessWidget {
                     padding: EdgeInsets.zero,
                   ),
                   icon: Icon(
-                    Icons.close_rounded,
+                    LucideIcons.x,
                     size: OmniIconSize.sm,
                     color: scheme.onSurfaceVariant,
                   ),

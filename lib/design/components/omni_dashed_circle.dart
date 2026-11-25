@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 /// Vòng tròn nét đứt có dấu + ở giữa: chỗ "chưa có ai" — chạm vào để giao.
 ///
@@ -26,7 +27,7 @@ class OmniDashedCircle extends StatelessWidget {
       child: CustomPaint(
         painter: _DashedCirclePainter(color),
         child: Center(
-          child: Icon(Icons.add_rounded, size: size * 0.55, color: color),
+          child: Icon(LucideIcons.plus, size: size * 0.55, color: color),
         ),
       ),
     );

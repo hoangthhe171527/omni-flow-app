@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../../../design/components/components.dart';
 import '../../../../../design/tokens/tokens.dart';
@@ -62,7 +63,7 @@ class _MoveTaskSheetState extends ConsumerState<MoveTaskSheet> {
                     tooltip: 'Chọn kế hoạch khác',
                     onPressed: () => setState(() => _plan = null),
                     icon: const Icon(
-                      Icons.arrow_back_rounded,
+                      LucideIcons.arrowLeft,
                       size: OmniIconSize.lg,
                     ),
                   ),

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../../core/error/app_exception.dart';
 import '../../../../design/components/components.dart';
@@ -198,7 +199,7 @@ class _LabelRow extends StatelessWidget {
                 width: 44,
                 height: 48,
                 child: Icon(
-                  Icons.edit_outlined,
+                  LucideIcons.pencil,
                   size: OmniIconSize.md,
                   color: scheme.onSurfaceVariant,
                 ),
@@ -326,7 +327,7 @@ class _EditLabelPaneState extends State<_EditLabelPane> {
               constraints: const BoxConstraints.tightFor(width: 44, height: 44),
               onPressed: widget.onBack,
               icon: Icon(
-                Icons.chevron_left_rounded,
+                LucideIcons.chevronLeft,
                 color: scheme.onSurface,
                 size: 24,
               ),

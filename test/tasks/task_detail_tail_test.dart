@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:intl/date_symbol_data_local.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:omni_app/design/theme/omni_theme.dart';
 import 'package:omni_app/modules/tasks/application/task_controller.dart';
 import 'package:omni_app/modules/tasks/application/tasks_providers.dart';
@@ -152,7 +153,7 @@ void main() {
 
   tw('nút Gửi bình luận vô hiệu khi trống, gửi khi có chữ', (t) async {
     await pump(t, host(task: task(), perms: worker));
-    final send = find.widgetWithIcon(IconButton, Icons.send_rounded);
+    final send = find.widgetWithIcon(IconButton, LucideIcons.send);
     expect(t.widget<IconButton>(send).onPressed, isNull);
     await t.enterText(
       find.widgetWithText(TextField, 'Bình luận, @ để nhắc tên'),

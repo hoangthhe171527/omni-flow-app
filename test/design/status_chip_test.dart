@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:omni_app/design/components/omni_status_chip.dart';
 import 'package:omni_app/design/theme/omni_theme.dart';
 import 'package:omni_app/design/tokens/contrast.dart';
@@ -35,14 +36,14 @@ void main() {
     await tester.pumpWidget(
       _wrap(
         const OmniStatusChip(
-          icon: Icons.schedule_rounded,
+          icon: LucideIcons.clock,
           label: 'Quá hạn 3 ngày',
           tone: OmniTone.danger,
         ),
       ),
     );
 
-    expect(find.byIcon(Icons.schedule_rounded), findsOneWidget);
+    expect(find.byIcon(LucideIcons.clock), findsOneWidget);
     expect(find.text('Quá hạn 3 ngày'), findsOneWidget);
   });
 
@@ -52,14 +53,14 @@ void main() {
     await tester.pumpWidget(
       _wrap(
         const OmniStatusChip(
-          icon: Icons.check_rounded,
+          icon: LucideIcons.check,
           label: 'Đã xong',
           tone: OmniTone.success,
         ),
       ),
     );
 
-    final icon = tester.widget<Icon>(find.byIcon(Icons.check_rounded));
+    final icon = tester.widget<Icon>(find.byIcon(LucideIcons.check));
     final text = tester.widget<Text>(find.text('Đã xong'));
 
     expect(icon.color, isNotNull);
@@ -74,7 +75,7 @@ void main() {
         await tester.pumpWidget(
           _wrap(
             OmniStatusChip(
-              icon: Icons.circle_outlined,
+              icon: LucideIcons.circle,
               label: 'Nhãn thử',
               tone: tone,
             ),
@@ -100,7 +101,7 @@ void main() {
     await tester.pumpWidget(
       _wrap(
         const OmniStatusChip(
-          icon: Icons.circle_outlined,
+          icon: LucideIcons.circle,
           label: 'Nhãn thử',
           tone: OmniTone.danger,
         ),
@@ -125,7 +126,7 @@ void main() {
         const SizedBox(
           width: 120,
           child: OmniStatusChip(
-            icon: Icons.schedule_rounded,
+            icon: LucideIcons.clock,
             label: 'Quá hạn 128 ngày kể từ mốc bàn giao',
             tone: OmniTone.danger,
           ),
@@ -147,7 +148,7 @@ void main() {
               child: SizedBox(
                 width: 200,
                 child: OmniStatusChip(
-                  icon: Icons.schedule_rounded,
+                  icon: LucideIcons.clock,
                   label: 'Quá hạn 3 ngày',
                   tone: OmniTone.danger,
                 ),

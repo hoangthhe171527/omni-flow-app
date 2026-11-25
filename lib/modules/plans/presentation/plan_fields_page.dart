@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../core/utils/client_id.dart';
 import '../../../design/components/components.dart';
@@ -21,10 +22,10 @@ String customFieldTypeLabel(CustomFieldType type) => switch (type) {
 
 /// Icon một tông theo kiểu trường: Aa chữ, # số, ◷ ngày, ☰ chọn.
 IconData customFieldTypeIcon(CustomFieldType type) => switch (type) {
-  CustomFieldType.text => Icons.text_fields_rounded,
-  CustomFieldType.number => Icons.tag_rounded,
-  CustomFieldType.date => Icons.schedule_rounded,
-  CustomFieldType.select => Icons.view_list_rounded,
+  CustomFieldType.text => LucideIcons.type,
+  CustomFieldType.number => LucideIcons.hash,
+  CustomFieldType.date => LucideIcons.clock,
+  CustomFieldType.select => LucideIcons.list,
 };
 
 /// Kết quả của sheet sửa trường: lưu [field], hoặc xoá trường đang sửa.
@@ -326,7 +327,7 @@ class _FieldSheetState extends State<_FieldSheet> {
           OmniGroupSection(
             children: [
               OmniGroupRow(
-                icon: Icons.delete_outline_rounded,
+                icon: LucideIcons.trash2,
                 title: 'Xoá trường',
                 destructive: true,
                 chevron: false,

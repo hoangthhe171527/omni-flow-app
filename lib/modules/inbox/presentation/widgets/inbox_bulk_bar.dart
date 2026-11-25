@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../../core/error/app_exception.dart';
 import '../../../../core/nav/shell_bar_inset.dart';
@@ -84,7 +85,7 @@ class InboxBulkBar extends ConsumerWidget {
                   child: IconButton(
                     tooltip: 'Bỏ chọn',
                     onPressed: onDone,
-                    icon: const Icon(Icons.close_rounded),
+                    icon: const Icon(LucideIcons.x),
                   ),
                 ),
               ],
@@ -97,7 +98,7 @@ class InboxBulkBar extends ConsumerWidget {
                     onPressed: () => _assign(context, ref),
                     style: pill,
                     icon: Icon(
-                      Icons.person_add_alt_rounded,
+                      LucideIcons.userPlus,
                       size: OmniIconSize.md,
                       color: scheme.onSurface,
                     ),
@@ -110,7 +111,7 @@ class InboxBulkBar extends ConsumerWidget {
                     onPressed: () => _label(context, ref),
                     style: pill,
                     icon: Icon(
-                      Icons.sell_outlined,
+                      LucideIcons.tag,
                       size: OmniIconSize.md,
                       color: scheme.onSurface,
                     ),

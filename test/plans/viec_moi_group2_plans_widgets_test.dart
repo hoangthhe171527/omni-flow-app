@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:omni_app/core/error/app_exception.dart';
 import 'package:omni_app/core/network/api_envelope.dart';
 import 'package:omni_app/design/theme/omni_theme.dart';
@@ -124,7 +125,7 @@ void main() {
       expect(find.bySemanticsLabel('Bỏ khỏi yêu thích'), findsNothing);
       expect(find.text('Yêu thích'), findsNothing);
       // Chỉ hai kế hoạch có mũi tên; tab Việc không còn lặp Dòng việc.
-      expect(find.byIcon(Icons.chevron_right_rounded), findsNWidgets(2));
+      expect(find.byIcon(LucideIcons.chevronRight), findsNWidgets(2));
     });
 
     testWidgets('API lùi bản: JSON còn is_favorite nhưng phiên không khai '
@@ -153,8 +154,12 @@ void main() {
       final on = t.widget<Icon>(find.byIcon(Icons.star_rounded).last);
       expect(on.size, 19);
       expect(on.color, const Color(0xFFE8890C));
-      final off = t.widget<Icon>(find.byIcon(Icons.star_outline_rounded));
-      expect(off.color, const Color(0xFF9AA5B8));
+      // Sao tắt là Lucide viền (cùng glyph với sao đầu mục Yêu thích) → tìm
+      // theo màu `faint` thay vì đòi đúng một icon.
+      final off = t
+          .widgetList<Icon>(find.byIcon(LucideIcons.star))
+          .where((i) => i.color == const Color(0xFF9AA5B8));
+      expect(off, hasLength(1));
       // Vùng chạm 44.
       expect(
         t.getSize(find.byKey(const Key('plan-favorite-id-Sửa'))),

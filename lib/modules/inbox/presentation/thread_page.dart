@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../core/error/app_exception.dart';
 import '../../../core/utils/formatters.dart';
@@ -383,7 +384,7 @@ class _ThreadPageState extends ConsumerState<ThreadPage>
                       ref.invalidate(threadProvider(widget.conversationId)),
                   isEmpty: (state) => state.isEmpty,
                   empty: const OmniEmptyState(
-                    icon: Icons.chat_bubble_outline_rounded,
+                    icon: LucideIcons.messageCircle,
                     title: 'Chưa có tin nhắn',
                     message: 'Gửi tin đầu tiên để bắt đầu cuộc trò chuyện.',
                   ),
@@ -1017,7 +1018,7 @@ class _ChannelCannotSendBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => const _NoComposerBar(
-    icon: Icons.block_rounded,
+    icon: LucideIcons.ban,
     text:
         'Kênh này chưa gửi tin được từ Hộp thư — hãy trả lời trên ứng dụng '
         'của kênh.',
@@ -1027,7 +1028,7 @@ class _ChannelCannotSendBar extends StatelessWidget {
 class _ReadOnlyBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) => const _NoComposerBar(
-    icon: Icons.lock_outline_rounded,
+    icon: LucideIcons.lock,
     text: 'Bạn chỉ có quyền xem hội thoại này.',
   );
 }

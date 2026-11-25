@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../../design/components/components.dart';
 import '../../../../design/tokens/tokens.dart';
@@ -492,7 +493,7 @@ class _ExpenseAddSheetState extends ConsumerState<_ExpenseAddSheet> {
                               ),
                               const SizedBox(width: 4),
                               Icon(
-                                Icons.chevron_right_rounded,
+                                LucideIcons.chevronRight,
                                 size: 16,
                                 color: p.muted,
                               ),
@@ -537,7 +538,7 @@ class _ExpenseAddSheetState extends ConsumerState<_ExpenseAddSheet> {
                               ),
                               const SizedBox(width: 4),
                               Icon(
-                                Icons.unfold_more_rounded,
+                                LucideIcons.chevronsUpDown,
                                 size: 15,
                                 color: p.muted,
                               ),
@@ -584,7 +585,7 @@ class _ExpenseAddSheetState extends ConsumerState<_ExpenseAddSheet> {
                             ),
                             const SizedBox(width: 4),
                             Icon(
-                              Icons.unfold_more_rounded,
+                              LucideIcons.chevronsUpDown,
                               size: 15,
                               color: p.muted,
                             ),
@@ -667,7 +668,7 @@ class _ExpenseAddSheetState extends ConsumerState<_ExpenseAddSheet> {
                               ),
                               const SizedBox(width: 4),
                               Icon(
-                                Icons.unfold_more_rounded,
+                                LucideIcons.chevronsUpDown,
                                 size: 15,
                                 color: p.muted,
                               ),
@@ -713,7 +714,7 @@ class _ExpenseAddSheetState extends ConsumerState<_ExpenseAddSheet> {
                               ),
                               const SizedBox(width: 4),
                               Icon(
-                                Icons.unfold_more_rounded,
+                                LucideIcons.chevronsUpDown,
                                 size: 15,
                                 color: p.muted,
                               ),
@@ -802,7 +803,7 @@ class _ExpenseAddSheetState extends ConsumerState<_ExpenseAddSheet> {
                                       )
                                     else
                                       Icon(
-                                        Icons.add_photo_alternate_outlined,
+                                        LucideIcons.imagePlus,
                                         size: 15,
                                         color: p.primary,
                                       ),

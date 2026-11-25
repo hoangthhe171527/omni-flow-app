@@ -1,5 +1,6 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../../../../core/utils/web_url.dart';
@@ -140,8 +141,8 @@ class _AttachmentName extends StatelessWidget {
           children: [
             Icon(
               pdf
-                  ? Icons.picture_as_pdf_outlined
-                  : Icons.insert_drive_file_outlined,
+                  ? LucideIcons.fileText
+                  : LucideIcons.file,
               size: OmniIconSize.lg,
               color: pdf
                   ? OmniTaskTones.of(context).highPriority.foreground

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../core/error/app_exception.dart';
 import '../../../design/components/components.dart';
@@ -141,7 +142,7 @@ class _Tile extends StatelessWidget {
                             color: scheme.primary,
                           ),
                           child: Icon(
-                            Icons.check_rounded,
+                            LucideIcons.check,
                             size: 15,
                             color: scheme.onPrimary,
                           ),

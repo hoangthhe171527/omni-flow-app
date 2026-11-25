@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../core/module/module_registry.dart';
 import '../../../design/components/components.dart';
@@ -51,8 +52,8 @@ class MyPermissionsPage extends ConsumerWidget {
                       maxTitleLines: 2,
                       leading: OmniIconTile(
                         held.contains(slug)
-                            ? Icons.check_circle_rounded
-                            : Icons.remove_circle_outline_rounded,
+                            ? LucideIcons.circleCheck
+                            : LucideIcons.circleMinus,
                         color: held.contains(slug)
                             ? scheme.primary
                             : scheme.onSurfaceVariant,

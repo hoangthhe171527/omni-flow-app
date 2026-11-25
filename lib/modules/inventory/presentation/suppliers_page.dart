@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../core/nav/shell_bar_inset.dart';
 import '../../../core/nav/shell_tab_routes.dart';
@@ -53,7 +54,7 @@ class _SuppliersPageState extends ConsumerState<SuppliersPage> {
       ),
       body: !perms.suppliers
           ? const OmniEmptyState(
-              icon: Icons.lock_outline_rounded,
+              icon: LucideIcons.lock,
               title: 'Chưa có màn nhà cung cấp',
             )
           : OmniAsyncView<List<SupplierDetail>>(
@@ -227,7 +228,7 @@ class SupplierDetailPage extends ConsumerWidget {
               constraints: const BoxConstraints.tightFor(width: 44, height: 44),
               onPressed: () => _edit(context, s),
               icon: Icon(
-                Icons.edit_outlined,
+                LucideIcons.pencil,
                 size: OmniIconSize.md,
                 color: Theme.of(context).colorScheme.onSurface,
               ),
@@ -236,7 +237,7 @@ class SupplierDetailPage extends ConsumerWidget {
       ),
       body: !perms.suppliers
           ? const OmniEmptyState(
-              icon: Icons.lock_outline_rounded,
+              icon: LucideIcons.lock,
               title: 'Chưa có màn nhà cung cấp',
             )
           : s == null

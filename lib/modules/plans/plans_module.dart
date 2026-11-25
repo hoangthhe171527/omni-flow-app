@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../core/module/module_route.dart';
 import '../../core/module/nav_destination.dart';
@@ -83,8 +83,8 @@ class PlansModule extends OmniModule {
       moduleId: 'plans',
       label: 'Dòng việc',
       subtitle: 'Hoạt động gần đây của cả nhóm, và KPI tháng',
-      icon: Icons.timeline_outlined,
-      selectedIcon: Icons.timeline_rounded,
+      icon: LucideIcons.activity,
+      selectedIcon: LucideIcons.activity,
       routeName: timeline,
       area: NavArea.work,
       weight: NavWeight.primary,
@@ -98,8 +98,8 @@ class PlansModule extends OmniModule {
       moduleId: 'plans',
       label: 'Việc',
       subtitle: 'Mọi kế hoạch của xưởng, xếp theo tổ',
-      icon: Icons.workspaces_outline,
-      selectedIcon: Icons.workspaces_rounded,
+      icon: LucideIcons.boxes,
+      selectedIcon: LucideIcons.boxes,
       routeName: teams,
       area: NavArea.work,
       weight: NavWeight.primary,
@@ -114,8 +114,8 @@ class PlansModule extends OmniModule {
       moduleId: 'plans',
       label: 'Việc đã lưu trữ',
       subtitle: 'Xem lại và khôi phục công việc đã lưu trữ',
-      icon: Icons.inventory_2_outlined,
-      selectedIcon: Icons.inventory_2_rounded,
+      icon: LucideIcons.package,
+      selectedIcon: LucideIcons.package,
       routeName: archived,
       area: NavArea.work,
       weight: NavWeight.secondary,

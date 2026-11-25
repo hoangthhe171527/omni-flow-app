@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../../design/components/components.dart';
 import '../../application/inventory_providers.dart';
@@ -609,7 +610,7 @@ class _SellSheetState extends ConsumerState<SellSheet> {
           children: [
             OmniGroupRow(
               key: const ValueKey('inv-sell-customer'),
-              icon: Icons.person_outline_rounded,
+              icon: LucideIcons.user,
               title: c.name,
               subtitle: c.phone.isEmpty ? 'chưa có SĐT' : c.phone,
               value: 'Đổi',
@@ -652,7 +653,7 @@ class _SellSheetState extends ConsumerState<SellSheet> {
                 chevron: false,
               ),
               OmniGroupRow(
-                icon: Icons.person_outline_rounded,
+                icon: LucideIcons.user,
                 title: 'Chọn khách này',
                 onTap: () => setState(() {
                   _customer = dup;
@@ -703,7 +704,7 @@ class _SellSheetState extends ConsumerState<SellSheet> {
               for (final c in value.take(4))
                 OmniGroupRow(
                   key: ValueKey('inv-cust-${c.id}'),
-                  icon: Icons.person_outline_rounded,
+                  icon: LucideIcons.user,
                   title: c.name,
                   subtitle: c.phone.isEmpty ? null : c.phone,
                   chevron: false,

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../../design/components/components.dart';
 import '../../../../design/tokens/tokens.dart';
@@ -82,7 +83,7 @@ class _MemberPickerSheetState extends ConsumerState<_MemberPickerSheet> {
 
             if (shown.isEmpty) {
               return OmniEmptyState(
-                icon: Icons.person_search_rounded,
+                icon: LucideIcons.userSearch,
                 title: _query.isEmpty
                     ? 'Chưa có ai trong workspace'
                     : 'Không tìm thấy ai',

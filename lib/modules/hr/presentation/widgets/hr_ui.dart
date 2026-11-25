@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../../core/nav/shell_bar_inset.dart';
 import '../../../../design/components/components.dart';
@@ -279,7 +280,7 @@ class HrMonthSwitcher extends StatelessWidget {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        arrow(Icons.chevron_left_rounded, 'Tháng trước', onPrev),
+        arrow(LucideIcons.chevronLeft, 'Tháng trước', onPrev),
         const SizedBox(width: 10),
         // Nút chọn tháng: nền xám đặc dáng viên thuốc, không kính (spec §3.1).
         Flexible(
@@ -314,7 +315,7 @@ class HrMonthSwitcher extends StatelessWidget {
                     if (onTapLabel != null) ...[
                       const SizedBox(width: 4),
                       Icon(
-                        Icons.expand_more_rounded,
+                        LucideIcons.chevronDown,
                         size: 18,
                         color: scheme.onSurfaceVariant,
                       ),
@@ -326,20 +327,20 @@ class HrMonthSwitcher extends StatelessWidget {
           ),
         ),
         const SizedBox(width: 10),
-        arrow(Icons.chevron_right_rounded, 'Tháng sau', onNext),
+        arrow(LucideIcons.chevronRight, 'Tháng sau', onNext),
       ],
     );
   }
 }
 
 IconData locationIconData(LocationIcon icon) => switch (icon) {
-  LocationIcon.wifi => Icons.wifi_rounded,
-  LocationIcon.gps => Icons.location_on_outlined,
-  LocationIcon.gpsOff => Icons.location_off_outlined,
-  LocationIcon.device => Icons.phonelink_lock_outlined,
-  LocationIcon.offline => Icons.cloud_off_outlined,
-  LocationIcon.lock => Icons.lock_outline_rounded,
-  LocationIcon.unknown => Icons.my_location_rounded,
+  LocationIcon.wifi => LucideIcons.wifi,
+  LocationIcon.gps => LucideIcons.mapPin,
+  LocationIcon.gpsOff => LucideIcons.mapPinOff,
+  LocationIcon.device => LucideIcons.smartphone,
+  LocationIcon.offline => LucideIcons.cloudOff,
+  LocationIcon.lock => LucideIcons.lock,
+  LocationIcon.unknown => LucideIcons.locateFixed,
 };
 
 OmniTone locationTone(LocationTone tone) => switch (tone) {
@@ -400,10 +401,10 @@ class HrClockButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final (icon, label) = switch (action) {
-      ClockAction.clockIn => (Icons.login_rounded, 'Chấm vào'),
-      ClockAction.clockOut => (Icons.logout_rounded, 'Chấm ra'),
-      ClockAction.done => (Icons.check_circle_rounded, 'Đã xong ca'),
-      ClockAction.blocked => (Icons.block_rounded, 'Không chấm được'),
+      ClockAction.clockIn => (LucideIcons.logIn, 'Chấm vào'),
+      ClockAction.clockOut => (LucideIcons.logOut, 'Chấm ra'),
+      ClockAction.done => (LucideIcons.circleCheck, 'Đã xong ca'),
+      ClockAction.blocked => (LucideIcons.ban, 'Không chấm được'),
     };
     final off = action == ClockAction.done || action == ClockAction.blocked;
     final child = busy

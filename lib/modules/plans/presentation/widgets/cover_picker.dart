@@ -4,6 +4,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../../design/components/components.dart';
 import '../../../../design/tokens/tokens.dart';
@@ -180,8 +181,8 @@ class _CoverPickerState extends State<CoverPicker> {
               OmniGroupRow(
                 key: const Key('cover-pick'),
                 icon: _hasImage
-                    ? Icons.wallpaper_outlined
-                    : Icons.add_photo_alternate_outlined,
+                    ? LucideIcons.wallpaper
+                    : LucideIcons.imagePlus,
                 title: _hasImage ? 'Thay ảnh' : 'Chọn ảnh',
                 chevron: false,
                 onTap: busy ? null : _pick,
@@ -189,7 +190,7 @@ class _CoverPickerState extends State<CoverPicker> {
               if (_hasImage && widget.onRemove != null)
                 OmniGroupRow(
                   key: const Key('cover-remove'),
-                  icon: Icons.delete_outline_rounded,
+                  icon: LucideIcons.trash2,
                   title: 'Bỏ ảnh nền',
                   destructive: true,
                   chevron: false,
@@ -245,7 +246,7 @@ class _CoverPickerState extends State<CoverPicker> {
     child: Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(Icons.image_outlined, size: 30, color: scheme.onSurfaceVariant),
+        Icon(LucideIcons.image, size: 30, color: scheme.onSurfaceVariant),
         const SizedBox(height: 6),
         Text(
           'Nền hệ thống',

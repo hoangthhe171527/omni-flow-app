@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:intl/date_symbol_data_local.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:omni_app/core/network/api_client.dart';
 import 'package:omni_app/design/components/components.dart';
 import 'package:omni_app/design/theme/omni_theme.dart';
@@ -247,8 +248,8 @@ void main() {
       // Thợ VẪN thấy khối ĐIỀU PHỐI ở dạng chỉ đọc, vì đó là thứ họ
       // cần biết để làm việc. Thứ họ không có là cách đổi nó.
       expect(find.text('Thêm mô tả'), findsNothing);
-      expect(find.byIcon(Icons.edit_outlined), findsNothing);
-      expect(find.byIcon(Icons.chevron_right_rounded), findsNothing);
+      expect(find.byIcon(LucideIcons.pencil), findsNothing);
+      expect(find.byIcon(LucideIcons.chevronRight), findsNothing);
       // ⋯ vẫn có "Sao chép liên kết" (chỉ đọc), không có mục sửa nào.
       await tester.tap(find.byTooltip('Tuỳ chọn công việc'));
       await tester.pumpAndSettle();

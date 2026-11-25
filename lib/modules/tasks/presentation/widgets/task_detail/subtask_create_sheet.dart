@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../../../core/error/app_exception.dart';
 import '../../../../../core/utils/formatters.dart';
@@ -201,7 +202,7 @@ class _SubtaskCreateSheetState extends ConsumerState<SubtaskCreateSheet> {
             child: IconButton(
               tooltip: 'Huỷ',
               onPressed: () => Navigator.of(context).pop(),
-              icon: const Icon(Icons.close_rounded, size: OmniIconSize.lg),
+              icon: const Icon(LucideIcons.x, size: OmniIconSize.lg),
             ),
           ),
         ),
@@ -454,7 +455,7 @@ class _DateBox extends StatelessWidget {
                     padding: EdgeInsets.zero,
                   ),
                   icon: Icon(
-                    Icons.close_rounded,
+                    LucideIcons.x,
                     size: 18,
                     color: detailSecondary(context),
                   ),

@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:omni_app/design/components/components.dart';
 import 'package:omni_app/design/theme/omni_theme.dart';
 
@@ -57,7 +58,7 @@ void main() {
     ) async {
       await pump(t, dense: dense);
       final box = t.getRect(find.byType(OmniSearchField));
-      final icon = t.getRect(find.byIcon(Icons.search_rounded));
+      final icon = t.getRect(find.byIcon(LucideIcons.search));
       final hint = t.getRect(find.text('Tìm tính năng…'));
 
       expect(box.height, 44);

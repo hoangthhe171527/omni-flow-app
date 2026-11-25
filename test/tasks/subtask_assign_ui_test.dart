@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:intl/date_symbol_data_local.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:omni_app/core/error/app_exception.dart';
 import 'package:omni_app/design/theme/omni_theme.dart';
 import 'package:omni_app/modules/tasks/application/task_controller.dart';
@@ -192,7 +193,7 @@ void main() {
     await t.pumpAndSettle();
     await t.tap(find.bySemanticsLabel('Đổi người làm: Hoàng'));
     await t.pumpAndSettle();
-    expect(find.byIcon(Icons.check_rounded), findsWidgets);
+    expect(find.byIcon(LucideIcons.check), findsWidgets);
     await t.tap(find.text('Hoàng').last);
     await t.pumpAndSettle();
     expect(recorded, isEmpty);

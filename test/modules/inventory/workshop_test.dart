@@ -2,6 +2,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:omni_app/core/network/api_client.dart';
 import 'package:omni_app/design/components/components.dart';
 import 'package:omni_app/modules/inventory/application/inventory_providers.dart';
@@ -249,7 +250,7 @@ void main() {
       await t.tap(find.byKey(const ValueKey('inv-unit-work-t1')));
       await t.pump();
       expect(opened, isEmpty);
-      expect(find.byIcon(Icons.chevron_right_rounded), findsNothing);
+      expect(find.byIcon(LucideIcons.chevronRight), findsNothing);
     });
   });
 }

@@ -3,6 +3,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../design/components/components.dart';
 import '../../../design/tokens/tokens.dart';
@@ -394,7 +395,7 @@ class _ExpenseSummaryPageState extends ConsumerState<ExpenseSummaryPage> {
             key: const ValueKey('finance-summary-prev-btn'),
             tooltip: '$unit trước',
             onPressed: () => _shiftPeriod(-1),
-            icon: const Icon(Icons.chevron_left_rounded),
+            icon: const Icon(LucideIcons.chevronLeft),
           ),
         ),
         const SizedBox(width: 8),
@@ -435,7 +436,7 @@ class _ExpenseSummaryPageState extends ConsumerState<ExpenseSummaryPage> {
                         ),
                         const SizedBox(width: 4),
                         Icon(
-                          Icons.keyboard_arrow_down_rounded,
+                          LucideIcons.chevronDown,
                           size: 18,
                           color: scheme.onSurfaceVariant,
                         ),
@@ -453,7 +454,7 @@ class _ExpenseSummaryPageState extends ConsumerState<ExpenseSummaryPage> {
             key: const ValueKey('finance-summary-next-btn'),
             tooltip: '$unit sau',
             onPressed: () => _shiftPeriod(1),
-            icon: const Icon(Icons.chevron_right_rounded),
+            icon: const Icon(LucideIcons.chevronRight),
           ),
         ),
       ],
@@ -1068,8 +1069,8 @@ class _ExpenseSummaryPageState extends ConsumerState<ExpenseSummaryPage> {
     final ratio = (row.sharePct / 100).clamp(0.0, 1.0);
     final barAlpha = rank == 0 ? 1.0 : (rank == 1 ? 0.72 : 0.48);
     final icon = _dimension == SummaryDimension.group
-        ? Icons.category_outlined
-        : Icons.account_balance_wallet_outlined;
+        ? LucideIcons.shapes
+        : LucideIcons.wallet;
     // Dòng tiền (spec §3.4): tên 16/600 + tiền 16/700 / dòng phụ 14 + vạch.
     return OmniMoneyRow(
       key: ValueKey('finance-summary-row-${row.id}'),
@@ -1109,8 +1110,8 @@ class _ExpenseSummaryPageState extends ConsumerState<ExpenseSummaryPage> {
     final sorted = List<ExpenseItem>.from(row.items)
       ..sort((a, b) => b.spentOn.compareTo(a.spentOn));
     final icon = _dimension == SummaryDimension.group
-        ? Icons.category_outlined
-        : Icons.account_balance_wallet_outlined;
+        ? LucideIcons.shapes
+        : LucideIcons.wallet;
 
     await showOmniSheet<void>(
       context: context,

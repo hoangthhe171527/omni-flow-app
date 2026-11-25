@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../../design/components/omni_avatar.dart';
 import '../../../../design/components/omni_tabs.dart';
@@ -52,13 +53,13 @@ class TaskCard extends StatelessWidget {
     final counts = <Widget>[
       if (task.attachmentCount > 0)
         _Count(
-          icon: Icons.attachment_outlined,
+          icon: LucideIcons.paperclip,
           value: task.attachmentCount,
           what: 'ảnh đính kèm',
         ),
       if (task.commentCount > 0)
         _Count(
-          icon: Icons.forum_outlined,
+          icon: LucideIcons.messagesSquare,
           value: task.commentCount,
           what: 'trao đổi',
         ),
@@ -102,7 +103,7 @@ class TaskCard extends StatelessWidget {
                       Padding(
                         padding: const EdgeInsets.only(top: 4, right: 6),
                         child: Icon(
-                          Icons.push_pin_rounded,
+                          LucideIcons.pin,
                           size: 13,
                           color: scheme.onSurfaceVariant,
                         ),
@@ -139,7 +140,7 @@ class TaskCard extends StatelessWidget {
                   Row(
                     children: [
                       Icon(
-                        Icons.arrow_forward_rounded,
+                        LucideIcons.arrowRight,
                         size: 14,
                         color: scheme.primary,
                       ),

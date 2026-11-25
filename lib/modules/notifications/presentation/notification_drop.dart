@@ -3,6 +3,7 @@ import 'dart:ui' show ImageFilter;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../design/components/components.dart';
 import '../../../design/tokens/tokens.dart';
@@ -184,7 +185,7 @@ class _NotificationDropState extends ConsumerState<_NotificationDrop> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 Icon(
-                  Icons.notifications_none_rounded,
+                  LucideIcons.bell,
                   size: 26,
                   color: scheme.onSurfaceVariant.withValues(alpha: 0.65),
                 ),
@@ -327,7 +328,7 @@ class _NotificationDropState extends ConsumerState<_NotificationDrop> {
                                   ),
                                   const SizedBox(width: 2),
                                   Icon(
-                                    Icons.chevron_right_rounded,
+                                    LucideIcons.chevronRight,
                                     size: 18,
                                     color: scheme.primary,
                                   ),

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../../design/components/components.dart';
 
@@ -79,7 +80,7 @@ class WorkListActionsSheet extends StatelessWidget {
             children: [
               OmniGroupRow(
                 key: const Key('work-list-action-edit'),
-                icon: Icons.edit_outlined,
+                icon: LucideIcons.pencil,
                 title: editLabel,
                 chevron: false,
                 onTap: () => Navigator.of(context).pop(WorkListAction.edit),
@@ -91,7 +92,7 @@ class WorkListActionsSheet extends StatelessWidget {
             children: [
               OmniGroupRow(
                 key: const Key('work-list-action-delete'),
-                icon: Icons.delete_outline_rounded,
+                icon: LucideIcons.trash2,
                 title: deleteLabel,
                 destructive: true,
                 chevron: false,

@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../../../core/utils/formatters.dart';
 import '../../../../../design/components/components.dart';
@@ -62,13 +63,13 @@ class _ReportIssueSheetState extends State<_ReportIssueSheet> {
             children: [
               OmniGroupRow(
                 title: 'Chụp ảnh',
-                icon: Icons.photo_camera_outlined,
+                icon: LucideIcons.camera,
                 chevron: false,
                 onTap: () => Navigator.of(sheet).pop(CommentFileSource.camera),
               ),
               OmniGroupRow(
                 title: 'Chọn từ thư viện',
-                icon: Icons.photo_library_outlined,
+                icon: LucideIcons.images,
                 chevron: false,
                 onTap: () => Navigator.of(sheet).pop(CommentFileSource.gallery),
               ),
@@ -182,7 +183,7 @@ class _ReportIssueSheetState extends State<_ReportIssueSheet> {
                             shape: BoxShape.circle,
                           ),
                           child: const Icon(
-                            Icons.close_rounded,
+                            LucideIcons.x,
                             size: 14,
                             color: Colors.white,
                           ),
@@ -209,7 +210,7 @@ class _ReportIssueSheetState extends State<_ReportIssueSheet> {
                       border: Border.all(color: scheme.outlineVariant),
                     ),
                     child: Icon(
-                      Icons.add_a_photo_outlined,
+                      LucideIcons.imagePlus,
                       color: scheme.onSurfaceVariant,
                     ),
                   ),
@@ -274,7 +275,7 @@ class IssueCard extends StatelessWidget {
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(Icons.report_outlined, size: 13, color: red),
+                      Icon(LucideIcons.octagonAlert, size: 13, color: red),
                       const SizedBox(width: 3),
                       Flexible(
                         child: Text(

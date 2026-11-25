@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../../../core/error/app_exception.dart';
 import '../../../../../design/components/components.dart';
@@ -64,14 +65,14 @@ class SubtasksCard extends ConsumerWidget {
       flat: true,
       children: [
         DetailCardHeader(
-          icon: Icons.checklist_rounded,
+          icon: LucideIcons.listChecks,
           title: 'Việc con',
           count: '$done/${subtasks.length}',
           actions: [
             if (canEdit)
               DetailHeaderButton(
                 tooltip: 'Thêm việc con',
-                icon: Icons.add_rounded,
+                icon: LucideIcons.plus,
                 onPressed: () => _create(context),
               ),
           ],
@@ -420,13 +421,13 @@ class SubtasksCard extends ConsumerWidget {
           if (canEdit)
             const DetailMenuItem(
               value: _SubAction.rename,
-              icon: Icons.edit_outlined,
+              icon: LucideIcons.pencil,
               label: 'Đổi tên',
             ),
           if (canAssign)
             const DetailMenuItem(
               value: _SubAction.assign,
-              icon: Icons.person_add_alt_outlined,
+              icon: LucideIcons.userPlus,
               label: 'Giao người làm',
             ),
         ],
@@ -434,13 +435,13 @@ class SubtasksCard extends ConsumerWidget {
           if (canToggle)
             DetailMenuItem(
               value: _SubAction.toggle,
-              icon: s.done ? Icons.undo_rounded : Icons.check_circle_outline,
+              icon: s.done ? LucideIcons.undo2 : LucideIcons.circleCheck,
               label: s.done ? 'Bỏ đánh dấu xong' : 'Đánh dấu xong',
             ),
           if (details && canEdit)
             DetailMenuItem(
               value: _SubAction.due,
-              icon: Icons.event_rounded,
+              icon: LucideIcons.calendarDays,
               label: s.dueDate == null ? 'Đặt hạn' : 'Đổi hạn',
             ),
         ],
@@ -448,13 +449,13 @@ class SubtasksCard extends ConsumerWidget {
           if (canUp)
             const DetailMenuItem(
               value: _SubAction.up,
-              icon: Icons.arrow_upward_rounded,
+              icon: LucideIcons.arrowUp,
               label: 'Chuyển lên',
             ),
           if (canDown)
             const DetailMenuItem(
               value: _SubAction.down,
-              icon: Icons.arrow_downward_rounded,
+              icon: LucideIcons.arrowDown,
               label: 'Chuyển xuống',
             ),
         ],
@@ -462,12 +463,12 @@ class SubtasksCard extends ConsumerWidget {
           if (details && canEdit) ...[
             DetailMenuItem(
               value: _SubAction.describe,
-              icon: Icons.notes_rounded,
+              icon: LucideIcons.notebookText,
               label: s.description == null ? 'Thêm mô tả' : 'Sửa mô tả',
             ),
             DetailMenuItem(
               value: _SubAction.start,
-              icon: Icons.event_outlined,
+              icon: LucideIcons.calendarDays,
               label: s.startDate == null
                   ? 'Đặt ngày bắt đầu'
                   : 'Đổi ngày bắt đầu',
@@ -475,7 +476,7 @@ class SubtasksCard extends ConsumerWidget {
             if (s.startDate != null)
               const DetailMenuItem(
                 value: _SubAction.clearStart,
-                icon: Icons.event_busy_outlined,
+                icon: LucideIcons.calendarX,
                 label: 'Xoá ngày bắt đầu',
               ),
           ],
@@ -484,7 +485,7 @@ class SubtasksCard extends ConsumerWidget {
           if (canEdit)
             const DetailMenuItem(
               value: _SubAction.remove,
-              icon: Icons.delete_outline,
+              icon: LucideIcons.trash2,
               label: 'Xoá việc con',
               danger: true,
             ),
@@ -575,7 +576,7 @@ class _DragHandle extends StatelessWidget {
       width: 24,
       height: 44,
       child: Icon(
-        Icons.drag_indicator_rounded,
+        LucideIcons.gripVertical,
         size: 14,
         color: OmniTaskTones.of(context).faint,
       ),

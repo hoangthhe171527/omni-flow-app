@@ -6,6 +6,7 @@ library;
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:video_player/video_player.dart';
 
@@ -81,7 +82,7 @@ class MessageFileAttachments extends StatelessWidget {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Icon(
-                        Icons.insert_drive_file_outlined,
+                        LucideIcons.file,
                         size: OmniIconSize.md,
                         color: iconColor,
                       ),
@@ -99,7 +100,7 @@ class MessageFileAttachments extends StatelessWidget {
                       ),
                       const SizedBox(width: 7),
                       Icon(
-                        Icons.download_rounded,
+                        LucideIcons.download,
                         size: OmniIconSize.md,
                         color: trailingColor,
                       ),
@@ -304,7 +305,7 @@ class _InlineVideoState extends State<_InlineVideo>
                       tooltip: 'Phát video',
                       onPressed: _activate,
                       icon: Icon(
-                        Icons.play_arrow_rounded,
+                        LucideIcons.play,
                         color: scheme.onSurface,
                       ),
                     ),
@@ -317,7 +318,7 @@ class _InlineVideoState extends State<_InlineVideo>
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Icon(
-                          Icons.videocam_outlined,
+                          LucideIcons.video,
                           size: OmniIconSize.md,
                           color: scheme.onSurfaceVariant,
                         ),
@@ -357,7 +358,7 @@ class _InlineVideoState extends State<_InlineVideo>
                 tooltip: 'Tải lại video',
                 onPressed: _retry,
                 icon: Icon(
-                  Icons.refresh_rounded,
+                  LucideIcons.refreshCw,
                   color: scheme.onSurfaceVariant,
                 ),
               ),
@@ -409,8 +410,8 @@ class _InlineVideoState extends State<_InlineVideo>
                 }),
                 icon: Icon(
                   controller.value.isPlaying
-                      ? Icons.pause_rounded
-                      : Icons.play_arrow_rounded,
+                      ? LucideIcons.pause
+                      : LucideIcons.play,
                   color: scheme.onSurface,
                 ),
               ),

@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../../design/components/components.dart';
 import '../../../../design/tokens/tokens.dart';
@@ -260,7 +261,7 @@ class _ExpenseKeypadSheetState extends State<_ExpenseKeypadSheet> {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Icon(
-                        Icons.account_balance_wallet_outlined,
+                        LucideIcons.wallet,
                         size: 15,
                         color: p.primary,
                       ),
@@ -274,7 +275,7 @@ class _ExpenseKeypadSheetState extends State<_ExpenseKeypadSheet> {
                       ),
                       const SizedBox(width: 3),
                       Icon(
-                        Icons.keyboard_arrow_down_rounded,
+                        LucideIcons.chevronDown,
                         size: 16,
                         color: p.muted,
                       ),

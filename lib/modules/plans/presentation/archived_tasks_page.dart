@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../core/error/app_exception.dart';
 import '../../../core/nav/shell_bar_inset.dart';
@@ -216,7 +217,7 @@ class _ArchivedTasksPageState extends ConsumerState<ArchivedTasksPage> {
             if (tasks.isEmpty) {
               if (!showPlanFilter) {
                 return const OmniEmptyState(
-                  icon: Icons.inventory_2_outlined,
+                  icon: LucideIcons.package,
                   title: 'Chưa có việc nào được lưu trữ',
                   message: 'Việc lưu trữ từ menu của việc sẽ nằm ở đây.',
                 );
@@ -233,7 +234,7 @@ class _ArchivedTasksPageState extends ConsumerState<ArchivedTasksPage> {
                   filterSection!,
                   const SizedBox(height: OmniSpacing.xl),
                   const OmniEmptyState(
-                    icon: Icons.inventory_2_outlined,
+                    icon: LucideIcons.package,
                     title: 'Chưa có việc nào được lưu trữ',
                     message: 'Việc lưu trữ từ menu của việc sẽ nằm ở đây.',
                   ),

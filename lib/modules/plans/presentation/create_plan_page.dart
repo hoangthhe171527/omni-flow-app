@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../core/error/app_exception.dart';
 import '../../../design/components/components.dart';
@@ -180,7 +181,7 @@ class _CreatePlanPageState extends ConsumerState<CreatePlanPage> {
               // không hỏi: dự án không thuộc team vẫn chạy được.
               if (widget.teamId == null && realTeams.isNotEmpty)
                 OmniGroupRow(
-                  icon: Icons.groups_2_outlined,
+                  icon: LucideIcons.users,
                   title: 'Thuộc team',
                   value: teamName ?? 'Chưa thuộc team nào',
                   onTap: () => _pickTeam(realTeams),
@@ -385,7 +386,7 @@ class _SectionRowState extends State<_SectionRow> {
         padding: const EdgeInsets.only(right: 16),
         color: OmniColors.dangerTextOf(context).withValues(alpha: .12),
         child: Icon(
-          Icons.delete_outline_rounded,
+          LucideIcons.trash2,
           color: OmniColors.dangerTextOf(context),
         ),
       ),

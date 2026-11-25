@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../core/module/module_route.dart';
 import '../../core/module/nav_destination.dart';
@@ -140,8 +140,8 @@ class InventoryModule extends OmniModule {
       moduleId: moduleId,
       label: 'Đơn hàng',
       subtitle: 'Cần thu, tạo đơn, ghi thu',
-      icon: Icons.receipt_long_outlined,
-      selectedIcon: Icons.receipt_long_rounded,
+      icon: LucideIcons.receiptText,
+      selectedIcon: LucideIcons.receiptText,
       routeName: InventoryRoutes.orders,
       area: NavArea.sales,
       weight: NavWeight.secondary,
@@ -152,8 +152,8 @@ class InventoryModule extends OmniModule {
       moduleId: moduleId,
       label: 'Tồn kho',
       subtitle: 'Tìm serial, giữ hàng, bán từ kho',
-      icon: Icons.inventory_2_outlined,
-      selectedIcon: Icons.inventory_2_rounded,
+      icon: LucideIcons.package,
+      selectedIcon: LucideIcons.package,
       routeName: InventoryRoutes.stock,
       area: NavArea.sales,
       weight: NavWeight.secondary,
@@ -164,8 +164,8 @@ class InventoryModule extends OmniModule {
       moduleId: moduleId,
       label: 'Hàng sắp về',
       subtitle: 'Lô đang về, đặt trước, nhận hàng',
-      icon: Icons.local_shipping_outlined,
-      selectedIcon: Icons.local_shipping_rounded,
+      icon: LucideIcons.truck,
+      selectedIcon: LucideIcons.truck,
       routeName: InventoryRoutes.lots,
       area: NavArea.sales,
       weight: NavWeight.secondary,

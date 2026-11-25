@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../../../core/utils/formatters.dart';
 import '../../../../../design/components/components.dart';
@@ -654,7 +655,7 @@ class _CopyTaskSheetState extends ConsumerState<CopyTaskSheet> {
                 padding: EdgeInsets.zero,
               ),
               icon: Icon(
-                Icons.close_rounded,
+                LucideIcons.x,
                 size: 18,
                 color: scheme.onSurfaceVariant,
               ),
@@ -875,7 +876,7 @@ class _PersonChip extends StatelessWidget {
                       height: 44,
                       child: Center(
                         child: Icon(
-                          Icons.close_rounded,
+                          LucideIcons.x,
                           size: 14,
                           color: scheme.onSurfaceVariant,
                         ),

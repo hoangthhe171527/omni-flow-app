@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../../core/utils/formatters.dart';
 import '../../../../design/components/components.dart';
@@ -65,7 +66,7 @@ class KpiCard extends StatelessWidget {
       return OmniGroupSection(
         children: [
           OmniGroupRow(
-            icon: Icons.flag_outlined,
+            icon: LucideIcons.flag,
             title: 'Đánh dấu nhóm việc đích',
             onTap: onConfigure,
           ),
@@ -81,7 +82,7 @@ class KpiCard extends StatelessWidget {
 
     final rows = <Widget>[
       OmniGroupRow(
-        icon: Icons.task_alt_rounded,
+        icon: LucideIcons.circleCheckBig,
         // "trong tháng", không phải "tháng này": thanh ngay trên đã nói là
         // tháng nào, và từ khi lùi được về tháng trước thì "tháng này" là
         // một khẳng định sai.
@@ -102,7 +103,7 @@ class KpiCard extends StatelessWidget {
         ),
       if (hasTiers) ...[
         OmniGroupRow(
-          icon: Icons.speed_rounded,
+          icon: LucideIcons.gauge,
           title: 'Nhịp cần thiết',
           value: !_isCurrentMonth || kpi.daysLeft <= 0
               ? 'Đã hết tháng'
@@ -115,7 +116,7 @@ class KpiCard extends StatelessWidget {
         ),
         OmniGroupRow(
           key: const Key('kpi-tier-mark'),
-          icon: Icons.flag_outlined,
+          icon: LucideIcons.flag,
           title: 'Mốc kế tiếp',
           value: next == null
               ? 'Đã đạt mốc cao nhất'
@@ -124,7 +125,7 @@ class KpiCard extends StatelessWidget {
       ],
       if (kpi.reachedBonus > 0)
         OmniGroupRow(
-          icon: Icons.emoji_events_outlined,
+          icon: LucideIcons.trophy,
           title: 'Đã đạt thưởng',
           trailing: Text(
             _bonusMoney(kpi.reachedBonus),
@@ -137,7 +138,7 @@ class KpiCard extends StatelessWidget {
       if (hasTiers && next == null)
         // Vượt mốc cao nhất là tin tốt. Một ô trống ở đây đọc như lỗi tải.
         const OmniGroupRow(
-          icon: Icons.celebration_outlined,
+          icon: LucideIcons.partyPopper,
           title: 'Đã đạt mốc cao nhất của tháng.',
           accent: true,
         )
@@ -145,7 +146,7 @@ class KpiCard extends StatelessWidget {
         // Tháng đã khép thì không còn gì để "chạy tới": "còn 5 việc tới mốc
         // 35" đọc như một lời động viên cho một tháng đã hết.
         OmniGroupRow(
-          icon: Icons.card_giftcard_rounded,
+          icon: LucideIcons.gift,
           title: _isCurrentMonth
               ? 'Còn ${next.remaining} việc tới mốc ${next.count}'
               : 'Thiếu ${next.remaining} việc so với mốc ${next.count}',
@@ -160,7 +161,7 @@ class KpiCard extends StatelessWidget {
       // Số lần làm lại (§B3): cam khi > 1, phụ khi ≤ 1. Không kèm tên ai — nó
       // là thông tin để cải thiện chứ không phải một lời buộc tội.
       OmniGroupRow(
-        icon: Icons.replay_rounded,
+        icon: LucideIcons.rotateCcw,
         title: 'Làm lại',
         trailing: Text(
           '${kpi.rework} lần làm lại',
@@ -225,10 +226,10 @@ class KpiCard extends StatelessWidget {
   }) {
     final label = 'tháng ${previousMonth.month}';
     final (icon, text) = switch (delta) {
-      > 0 => (Icons.trending_up_rounded, '+$delta so với $label'),
+      > 0 => (LucideIcons.trendingUp, '+$delta so với $label'),
       // Dấu trừ thật (U+2212), cùng bề rộng với dấu cộng.
-      < 0 => (Icons.trending_down_rounded, '−${-delta} so với $label'),
-      _ => (Icons.trending_flat_rounded, 'Bằng $label'),
+      < 0 => (LucideIcons.trendingDown, '−${-delta} so với $label'),
+      _ => (LucideIcons.moveRight, 'Bằng $label'),
     };
 
     // Dòng riêng (không dùng OmniGroupRow) vì chữ mang màu của tông; ô biểu
@@ -281,7 +282,7 @@ class _MonthBar extends StatelessWidget {
       children: [
         _MonthButton(
           tooltip: 'Tháng trước',
-          icon: Icons.chevron_left_rounded,
+          icon: LucideIcons.chevronLeft,
           onPressed: onPrev,
         ),
         Expanded(
@@ -297,7 +298,7 @@ class _MonthBar extends StatelessWidget {
         ),
         _MonthButton(
           tooltip: 'Tháng sau',
-          icon: Icons.chevron_right_rounded,
+          icon: LucideIcons.chevronRight,
           onPressed: onNext,
         ),
       ],

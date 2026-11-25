@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/date_symbol_data_local.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:omni_app/design/theme/omni_theme.dart';
 import 'package:omni_app/modules/customers/domain/customer_permissions.dart';
 import 'package:omni_app/modules/customers/routes.dart';
@@ -831,7 +832,7 @@ void main() {
     tw('Nhóm 2: không có nút ảnh, không mặt cười', (t) async {
       await pump(t, host(data: json(), perms: worker));
       expect(find.byTooltip('Đính kèm ảnh hoặc tệp'), findsNothing);
-      expect(find.byIcon(Icons.sentiment_satisfied_alt_rounded), findsNothing);
+      expect(find.byIcon(LucideIcons.smile), findsNothing);
     });
   });
 

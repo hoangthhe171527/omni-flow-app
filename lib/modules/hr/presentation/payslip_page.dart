@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../core/error/app_exception.dart';
 import '../../../design/components/components.dart';
@@ -70,7 +71,7 @@ class _PayslipPageState extends ConsumerState<PayslipPage> {
                     const OmniSkeletonBox(height: 320, radius: 18)
                   else if (period == null)
                     const OmniEmptyState(
-                      icon: Icons.receipt_long_outlined,
+                      icon: LucideIcons.receiptText,
                       title: 'Chưa có phiếu lương',
                     )
                   else ...[
@@ -182,7 +183,7 @@ class _PayslipPageState extends ConsumerState<PayslipPage> {
         OmniGroupSection(
           children: [
             for (final s in p.issues)
-              OmniGroupRow(icon: Icons.info_outline_rounded, title: s),
+              OmniGroupRow(icon: LucideIcons.info, title: s),
           ],
         ),
       ],
@@ -192,7 +193,7 @@ class _PayslipPageState extends ConsumerState<PayslipPage> {
           title: 'Nhận lương',
           children: [
             OmniGroupRow(
-              icon: Icons.account_balance_outlined,
+              icon: LucideIcons.landmark,
               title: p.bankName ?? 'Tài khoản',
               trailing: HrValue(p.accountMasked ?? '—'),
               chevron: true,
@@ -206,7 +207,7 @@ class _PayslipPageState extends ConsumerState<PayslipPage> {
         const OmniGroupSection(
           children: [
             OmniGroupRow(
-              icon: Icons.check_circle_outline_rounded,
+              icon: LucideIcons.circleCheck,
               title: 'Đã xác nhận phiếu lương',
             ),
           ],
@@ -218,7 +219,7 @@ class _PayslipPageState extends ConsumerState<PayslipPage> {
             child: OmniGroupSection(
               children: [
                 OmniGroupRow(
-                  icon: Icons.forum_outlined,
+                  icon: LucideIcons.messagesSquare,
                   title: 'Đã hỏi lại kế toán',
                   subtitle: p.ackNote,
                 ),

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../tokens/tokens.dart';
 import 'omni_tinted_buttons.dart';
@@ -133,7 +134,7 @@ class OmniSectionHeader extends StatelessWidget {
                       child: Row(
                         children: [
                           Icon(
-                            Icons.add_rounded,
+                            LucideIcons.plus,
                             size: OmniIconSize.sm,
                             color: scheme.primary,
                           ),

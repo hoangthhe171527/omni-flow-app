@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../core/utils/formatters.dart';
 import '../../../design/components/components.dart';
@@ -138,7 +139,7 @@ class _NotificationsPageState extends ConsumerState<NotificationsPage> {
               empty: unreadOnly
                   ? const _AllReadEmpty()
                   : const OmniEmptyState(
-                      icon: Icons.notifications_none_rounded,
+                      icon: LucideIcons.bell,
                       title: 'Chưa có thông báo',
                       message:
                           'Khi có việc được giao hoặc hoàn thành, bạn sẽ thấy ở đây.',
@@ -368,17 +369,17 @@ class NotificationRow extends StatelessWidget {
 }
 
 IconData _iconForKind(NotificationKind kind) => switch (kind) {
-  NotificationKind.inboxMessage => Icons.chat_bubble_outline_rounded,
-  NotificationKind.taskAssigned => Icons.assignment_ind_outlined,
-  NotificationKind.taskCreated => Icons.add_task_rounded,
-  NotificationKind.taskStageOpen => Icons.pan_tool_alt_outlined,
-  NotificationKind.taskIssue => Icons.report_problem_outlined,
-  NotificationKind.taskProgress => Icons.timeline_rounded,
-  NotificationKind.taskCompleted => Icons.check_circle_outline_rounded,
+  NotificationKind.inboxMessage => LucideIcons.messageCircle,
+  NotificationKind.taskAssigned => LucideIcons.contact,
+  NotificationKind.taskCreated => LucideIcons.listPlus,
+  NotificationKind.taskStageOpen => LucideIcons.pointer,
+  NotificationKind.taskIssue => LucideIcons.triangleAlert,
+  NotificationKind.taskProgress => LucideIcons.activity,
+  NotificationKind.taskCompleted => LucideIcons.circleCheck,
   NotificationKind.taskCommented ||
-  NotificationKind.taskMentioned => Icons.chat_bubble_outline_rounded,
-  NotificationKind.taskDueSoon => Icons.schedule_rounded,
-  NotificationKind.taskReminder => Icons.alarm_rounded,
-  NotificationKind.taskOverdue => Icons.warning_amber_rounded,
-  NotificationKind.other => Icons.notifications_none_rounded,
+  NotificationKind.taskMentioned => LucideIcons.messageCircle,
+  NotificationKind.taskDueSoon => LucideIcons.clock,
+  NotificationKind.taskReminder => LucideIcons.alarmClock,
+  NotificationKind.taskOverdue => LucideIcons.triangleAlert,
+  NotificationKind.other => LucideIcons.bell,
 };

@@ -4,6 +4,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../../core/error/app_exception.dart';
 import '../../../../design/components/omni_avatar.dart';
@@ -178,7 +179,7 @@ class _BoardTaskCardState extends ConsumerState<BoardTaskCard>
         const OmniTaskChip.late(
           'Vấn đề',
           key: ValueKey('card-issue'),
-          icon: Icons.report_outlined,
+          icon: LucideIcons.octagonAlert,
         ),
       // Theo trạng thái lạc quan: vừa tích xong thì thôi báo quá hạn ngay,
       // không đợi server.
@@ -187,7 +188,7 @@ class _BoardTaskCardState extends ConsumerState<BoardTaskCard>
           task: done == task.isDone
               ? task
               : task.copyWith(status: done ? 'done' : 'doing'),
-          icon: Icons.calendar_today_outlined,
+          icon: LucideIcons.calendar,
         ),
       if (task.priority == 'high') const OmniTaskChip.high('Ưu tiên cao'),
       // Việc có cây: tiến độ là vạch + `8/10` ngay dưới tên, không lặp ở đây.
@@ -201,20 +202,20 @@ class _BoardTaskCardState extends ConsumerState<BoardTaskCard>
           child: OmniStatusLabel(
             label: '${task.doneCount}/${task.totalCount}',
             icon: _isAllDone(task)
-                ? Icons.check_circle_rounded
-                : Icons.checklist_rounded,
+                ? LucideIcons.circleCheck
+                : LucideIcons.listChecks,
             tone: progressTone(task),
           ),
         ),
       if (task.attachmentCount > 0)
         _Meta(
-          icon: Icons.attach_file_rounded,
+          icon: LucideIcons.paperclip,
           text: '${task.attachmentCount}',
           semantics: '${task.attachmentCount} tệp đính kèm',
         ),
       if (task.commentCount > 0)
         _Meta(
-          icon: Icons.chat_bubble_outline_rounded,
+          icon: LucideIcons.messageCircle,
           text: '${task.commentCount}',
           semantics: '${task.commentCount} bình luận',
         ),
@@ -291,7 +292,7 @@ class _BoardTaskCardState extends ConsumerState<BoardTaskCard>
                   label: 'Đã ghim',
                   child: ExcludeSemantics(
                     child: Icon(
-                      Icons.push_pin_rounded,
+                      LucideIcons.pin,
                       size: 16,
                       color: scheme.primary,
                     ),
@@ -339,7 +340,7 @@ class _BoardTaskCardState extends ConsumerState<BoardTaskCard>
                           OmniStatusLabel(
                             key: const ValueKey('card-unit-count'),
                             label: '${task.doneCount}/${task.totalCount}',
-                            icon: _isAllDone(task) ? Icons.check_rounded : null,
+                            icon: _isAllDone(task) ? LucideIcons.check : null,
                             tone: progressTone(task),
                           ),
                         ],
@@ -504,7 +505,7 @@ class _TickBox extends StatelessWidget {
                   ),
                   child: done
                       ? Icon(
-                          Icons.check_rounded,
+                          LucideIcons.check,
                           size: 14,
                           color: scheme.onPrimary,
                         )

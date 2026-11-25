@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:omni_app/design/theme/omni_theme.dart';
 import 'package:omni_app/modules/inbox/domain/outbound_capabilities.dart';
 import 'package:omni_app/modules/inbox/domain/pending_attachment.dart';
@@ -127,7 +128,7 @@ void main() {
   }
 
   Future<void> sendNow(WidgetTester tester) async {
-    await tester.tap(find.byIcon(Icons.send_rounded));
+    await tester.tap(find.byIcon(LucideIcons.send));
     await tester.pumpAndSettle();
   }
 
@@ -232,8 +233,8 @@ void main() {
     expect(find.text('1.pdf'), findsOneWidget);
     expect(find.text('2.pdf'), findsNothing);
 
-    expect(toolButton(tester, Icons.image_rounded).onPressed, isNull);
-    expect(toolButton(tester, Icons.photo_camera_rounded).onPressed, isNull);
+    expect(toolButton(tester, LucideIcons.image).onPressed, isNull);
+    expect(toolButton(tester, LucideIcons.camera).onPressed, isNull);
     expect(find.byTooltip('Đã đủ 10 tệp'), findsNWidgets(2));
     await clearSnack(tester);
 
@@ -376,7 +377,7 @@ void main() {
       await tester.tap(find.byTooltip('Ảnh'));
       await tester.pumpAndSettle();
       expect(find.byType(AlertDialog), findsNothing);
-      expect(find.byIcon(Icons.close_rounded), findsOneWidget);
+      expect(find.byIcon(LucideIcons.x), findsOneWidget);
     });
 
     testWidgets('ảnh WebP → hỏi (ngoài native_extensions)', (tester) async {
@@ -431,7 +432,7 @@ void main() {
       expect(find.textContaining('không nhận'), findsOneWidget);
       await tester.tap(find.text('Huỷ'));
       await tester.pumpAndSettle();
-      expect(find.byIcon(Icons.close_rounded), findsNothing);
+      expect(find.byIcon(LucideIcons.x), findsNothing);
     });
   });
 
