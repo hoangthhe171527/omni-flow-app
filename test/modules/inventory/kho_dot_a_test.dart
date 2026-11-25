@@ -200,7 +200,8 @@ void main() {
           app(FakeInventoryApi(units: seed()), allOld, const StockPage()),
         );
         await t.pumpAndSettle();
-        expect(find.byType(InvUnitThumb), findsNothing);
+        // Không quyền ảnh: ô đầu dòng là icon đàn (lớp premium), không ảnh.
+        expect(find.byType(InvPhoto), findsNothing);
         await t.tap(find.byKey(const ValueKey('inv-stock-multi')));
         await t.pumpAndSettle();
         await t.tap(find.byKey(const ValueKey('inv-unit-u1')));

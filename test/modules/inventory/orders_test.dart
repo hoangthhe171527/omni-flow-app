@@ -166,7 +166,8 @@ void main() {
     expect(find.text('Lê Thu Hà'), findsNothing);
 
     expect(find.text('Phạm Minh Đức'), findsOneWidget);
-    expect(find.text('203.500.000đ'), findsOneWidget);
+    // Dòng duy nhất của nhóm: tiền ở dòng = tổng đầu nhóm (lớp premium).
+    expect(find.text('203.500.000đ'), findsNWidgets(2));
     expect(find.text('Thu một phần'), findsOneWidget);
     expect(find.text('TUẦN NÀY'), findsOneWidget);
     expect(find.text('TRƯỚC ĐÓ'), findsOneWidget);

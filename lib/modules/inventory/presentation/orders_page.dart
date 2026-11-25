@@ -5,6 +5,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../core/utils/formatters.dart';
 import '../../../design/components/components.dart';
+import '../../../design/tokens/tokens.dart';
 import '../application/inventory_providers.dart';
 import '../domain/order_list.dart';
 import '../routes.dart';
@@ -65,6 +66,11 @@ class _OrdersPageState extends ConsumerState<OrdersPage> {
           label: 'Còn phải thu',
           trailingLabel: due.awaiting > 0 ? '${due.awaiting} đơn' : null,
           amount: Formatters.vnd(due.outstanding),
+          // Lớp premium (duyệt 25/11): vòng tỉ lệ cạnh số — thu một phần /
+          // chưa thu, màu khớp nhãn trạng thái của dòng, không chú thích.
+          aside: _filter == OrderListFilter.due && rows != null
+              ? _DueRing(rows: rows)
+              : null,
         ),
       ...switch (res) {
         AsyncValue(:final error?) when rows == null => [
@@ -104,6 +110,15 @@ class _OrdersPageState extends ConsumerState<OrdersPage> {
               OmniGroupSection(
                 key: ValueKey('orders-group-$title'),
                 title: title,
+                // Tổng tiền đầu nhóm (lớp premium): liếc là biết nhóm bao nhiêu.
+                trailingTitle: _GroupSum(
+                  Formatters.vnd(
+                    group.fold<double>(
+                      0,
+                      (s, o) => s + (o.remaining > 0 ? o.remaining : o.value),
+                    ),
+                  ),
+                ),
                 dividerIndent: 16,
                 children: [for (final o in group) _OrderRowTile(order: o)],
               ),
@@ -171,6 +186,45 @@ class _OrdersPageState extends ConsumerState<OrdersPage> {
       ),
     );
   }
+}
+
+class _DueRing extends StatelessWidget {
+  const _DueRing({required this.rows});
+  final List<OrderRow> rows;
+
+  @override
+  Widget build(BuildContext context) {
+    double sum(OrderPayStatus st) => rows.fold<double>(
+      0,
+      (s, o) => s + (!o.cancelled && o.payStatus == st ? o.remaining : 0),
+    );
+    final partial = sum(OrderPayStatus.partial);
+    final unpaid = sum(OrderPayStatus.unpaid);
+    if (partial + unpaid <= 0) return const SizedBox.shrink();
+    return OmniSplitRing(
+      key: const ValueKey('orders-due-ring'),
+      parts: [
+        (partial, OmniTone.info.of(context).$1),
+        (unpaid, OmniTone.warning.of(context).$1),
+      ],
+      semanticsLabel:
+          'Thu một phần ${Formatters.vnd(partial)}, chưa thu ${Formatters.vnd(unpaid)}',
+    );
+  }
+}
+
+class _GroupSum extends StatelessWidget {
+  const _GroupSum(this.text);
+  final String text;
+
+  @override
+  Widget build(BuildContext context) => Text(
+    text,
+    style: OmniType.overline.copyWith(
+      color: Theme.of(context).colorScheme.onSurfaceVariant,
+      fontFeatures: OmniType.tabular,
+    ),
+  );
 }
 
 class _OrderRowTile extends StatelessWidget {

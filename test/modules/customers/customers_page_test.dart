@@ -23,6 +23,7 @@ import 'package:omni_app/modules/opportunities/domain/opportunity.dart';
 import 'package:omni_app/modules/opportunities/domain/pipeline_catalog.dart';
 import 'package:omni_app/modules/opportunities/presentation/opportunities_segment.dart';
 import 'package:omni_app/modules/settings/application/appearance_providers.dart';
+import 'package:omni_app/modules/opportunities/presentation/widgets/stage_strip.dart';
 import 'package:omni_app/security/permissions/access_policy.dart';
 import 'package:omni_app/security/permissions/access_scope.dart';
 import 'package:omni_app/security/permissions/resource_access.dart';
@@ -149,8 +150,15 @@ void main() {
 
       await t.tap(find.text('Cơ hội · 7'));
       await t.pumpAndSettle();
-      expect(find.text('Báo giá'), findsOneWidget);
-      expect(find.textContaining('Đang mở · 7'), findsOneWidget);
+      expect(
+        find.descendant(
+          of: find.byType(StageStrip),
+          matching: find.text('Báo giá'),
+        ),
+        findsOneWidget,
+      );
+      // Khối tổng (Đợt B) thay dòng "Đang mở · 7 · …".
+      expect(find.text('7 cơ hội'), findsOneWidget);
       expect(find.text('An Nguyễn'), findsNothing);
       // Hàng tìm đổi theo đoạn.
       expect(find.byTooltip('Thêm khách'), findsNothing);
@@ -167,7 +175,13 @@ void main() {
   testWidgets('initialSegment=1 (?seg=co-hoi) mở thẳng đoạn Cơ hội', (t) async {
     await t.pumpWidget(host(oppAccess: readAll, initialSegment: 1));
     await t.pumpAndSettle();
-    expect(find.text('Báo giá'), findsOneWidget);
+    expect(
+      find.descendant(
+        of: find.byType(StageStrip),
+        matching: find.text('Báo giá'),
+      ),
+      findsOneWidget,
+    );
   });
 
   // Route thật của module: `?seg=co-hoi` phải tới đoạn Cơ hội.
@@ -188,7 +202,13 @@ void main() {
       addTearDown(router.dispose);
       await t.pumpWidget(host(oppAccess: readAll, router: router));
       await t.pumpAndSettle();
-      expect(find.text('Báo giá'), expectOpp ? findsOneWidget : findsNothing);
+      expect(
+        find.descendant(
+          of: find.byType(StageStrip),
+          matching: find.text('Báo giá'),
+        ),
+        expectOpp ? findsOneWidget : findsNothing,
+      );
       await t.pumpWidget(const SizedBox());
     }
   });

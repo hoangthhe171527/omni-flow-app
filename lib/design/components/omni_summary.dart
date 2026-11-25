@@ -38,6 +38,7 @@ class OmniTotalCard extends StatelessWidget {
     required this.amount,
     this.trailingLabel,
     this.child,
+    this.aside,
     this.stats = const [],
     this.amountKey,
     this.onTap,
@@ -58,6 +59,10 @@ class OmniTotalCard extends StatelessWidget {
 
   /// Thứ nằm ngay dưới số tiền (vd vạch tiến độ).
   final Widget? child;
+
+  /// Hình nhỏ đặt CẠNH số chính (vd [OmniSplitRing] 44) — không thêm chiều
+  /// cao thẻ; dùng khi màn có nút + (khối tổng thấp thì không đè dòng cuối).
+  final Widget? aside;
   final List<OmniTotalStat> stats;
 
   @override
@@ -117,13 +122,20 @@ class OmniTotalCard extends StatelessWidget {
             // `money-hero` 32/700, KHÔNG thu nhỏ (Chuẩn Mobile UI: số đủ, không
             // cắt, không FittedBox). Vừa một dòng thì một dòng; không vừa (chữ
             // hệ thống phóng to) thì xuống dòng ở dấu ngăn nghìn — số vẫn đủ.
-            _HeroAmount(
-              amount: amount,
-              amountKey: amountKey,
-              style: OmniType.moneyHero.copyWith(
-                height: 1.25,
-                color: scheme.onSurface,
-              ),
+            Row(
+              children: [
+                Expanded(
+                  child: _HeroAmount(
+                    amount: amount,
+                    amountKey: amountKey,
+                    style: OmniType.moneyHero.copyWith(
+                      height: 1.25,
+                      color: scheme.onSurface,
+                    ),
+                  ),
+                ),
+                if (aside case final a?) ...[const SizedBox(width: 12), a],
+              ],
             ),
             if (child case final c?) ...[const SizedBox(height: 12), c],
             if (stats.isNotEmpty) ...[
@@ -168,9 +180,12 @@ class _HeroAmount extends StatelessWidget {
   final Key? amountKey;
 
   @override
-  Widget build(BuildContext context) {
-    return Text(amount, key: amountKey, style: style);
-  }
+  Widget build(BuildContext context) => omniMoneyText(
+    amount,
+    style: style,
+    key: amountKey,
+    unitColor: Theme.of(context).colorScheme.onSurfaceVariant,
+  );
 }
 
 class _Stat extends StatelessWidget {
@@ -278,8 +293,9 @@ class OmniMoneyRow extends StatelessWidget {
         Expanded(child: titleText),
         if (amount case final a?) ...[
           const SizedBox(width: 12),
-          Text(
+          omniMoneyText(
             a,
+            unitColor: scheme.onSurfaceVariant,
             maxLines: 1,
             softWrap: false,
             // `row-money` 15/600 — không cắt, không thu nhỏ.
@@ -358,4 +374,46 @@ class OmniMoneyRow extends StatelessWidget {
       ),
     );
   }
+}
+
+/// Số tiền có ký hiệu "đ" NHỎ và NHẠT (lớp premium, Chuẩn Mobile UI): số giữ
+/// nguyên cỡ và đủ, chỉ ký hiệu đơn vị thu 0.7em màu phụ. Vẫn là MỘT Text
+/// (Text.rich) — tìm kiếm, test, trình đọc màn hình đọc nguyên chuỗi.
+Widget omniMoneyText(
+  String amount, {
+  required TextStyle style,
+  required Color unitColor,
+  Key? key,
+  int? maxLines,
+  bool? softWrap,
+}) {
+  final i = amount.endsWith('đ') ? amount.length - 1 : -1;
+  if (i <= 0) {
+    return Text(
+      amount,
+      key: key,
+      style: style,
+      maxLines: maxLines,
+      softWrap: softWrap,
+    );
+  }
+  return Text.rich(
+    TextSpan(
+      children: [
+        TextSpan(text: amount.substring(0, i)),
+        TextSpan(
+          text: 'đ',
+          style: TextStyle(
+            fontSize: (style.fontSize ?? 15) * .7,
+            fontWeight: FontWeight.w600,
+            color: unitColor,
+          ),
+        ),
+      ],
+    ),
+    key: key,
+    style: style,
+    maxLines: maxLines,
+    softWrap: softWrap,
+  );
 }

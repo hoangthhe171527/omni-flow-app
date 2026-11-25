@@ -98,6 +98,10 @@ class _ReservationsPageState extends ConsumerState<ReservationsPage> {
           OmniEmptyState.filtered(title: 'Không có phiếu khớp "$_q"'),
         ],
         AsyncValue(:final value?) => [
+          // Khối tổng chuẩn (Chuẩn Mobile UI — TotalCard, Đợt B), theo tab
+          // đang chọn: tiền cọc là số chính; cây, giá trị, quá hạn là số phụ.
+          _ReservationTotal(list: value.where(_matches).toList(), today: today),
+          const SizedBox(height: OmniGroupSection.gap),
           OmniGroupSection(
             key: const ValueKey('inv-res-list'),
             children: [
@@ -151,6 +155,40 @@ class _ReservationsPageState extends ConsumerState<ReservationsPage> {
           },
         ),
       ),
+    );
+  }
+}
+
+class _ReservationTotal extends StatelessWidget {
+  const _ReservationTotal({required this.list, required this.today});
+
+  final List<Reservation> list;
+  final DateTime today;
+
+  @override
+  Widget build(BuildContext context) {
+    final deposit = list.fold<double>(
+      0,
+      (s, r) => s + ((r.deposit?.amount ?? 0) > 0 ? r.deposit!.amount : 0),
+    );
+    final units = list.fold<int>(0, (s, r) => s + r.lines.length);
+    final value = list.fold<double>(0, (s, r) => s + r.total);
+    final expired = list.where((r) => r.expiredOn(today)).length;
+    return OmniTotalCard(
+      key: const ValueKey('inv-res-total'),
+      label: 'Tiền cọc',
+      trailingLabel: '${list.length} phiếu',
+      amount: InvUi.vnd(deposit),
+      stats: [
+        OmniTotalStat(value: '$units cây', label: 'Hàng giữ'),
+        OmniTotalStat(value: InvUi.vnd(value), label: 'Giá trị', flex: 2),
+        if (expired > 0)
+          OmniTotalStat(
+            value: '$expired phiếu',
+            label: 'Quá hạn',
+            warning: true,
+          ),
+      ],
     );
   }
 }
