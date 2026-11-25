@@ -42,6 +42,25 @@ abstract final class OmniTheme {
     onAccent: OmniColors.darkAccentForeground,
   );
 
+  /// Giao diện Tương phản cao (Chuẩn Mobile UI `hc`): `MaterialApp` tự chọn
+  /// khi hệ điều hành bật tăng tương phản ở chế độ sáng. Nền trang và thẻ cùng
+  /// trắng, ranh giới là viền [OmniColors.hcBorder]; chữ ≥ 7:1.
+  static ThemeData highContrast([TargetPlatform? platform]) => _build(
+    brightness: Brightness.light,
+    platform: platform ?? defaultTargetPlatform,
+    background: OmniColors.card,
+    surface: OmniColors.card,
+    surfaceMuted: OmniColors.hcMuted,
+    border: OmniColors.hcBorder,
+    borderInteractive: OmniColors.ink,
+    onSurface: Colors.black,
+    onSurfaceMuted: OmniColors.hcMutedForeground,
+    primary: OmniColors.hcPrimary,
+    onPrimary: OmniColors.primaryForeground,
+    accent: OmniColors.hcAccent,
+    onAccent: OmniColors.hcAccentForeground,
+  );
+
   static ThemeData _build({
     required Brightness brightness,
     required TargetPlatform platform,

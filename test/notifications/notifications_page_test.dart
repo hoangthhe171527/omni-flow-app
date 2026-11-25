@@ -168,7 +168,9 @@ void main() {
       final material = t.widget<Material>(
         find.descendant(of: group, matching: find.byType(Material)).first,
       );
-      final radius = material.borderRadius! as BorderRadius;
+      // Bo góc khai qua `shape` (tương phản cao thêm viền vào chính shape đó).
+      final shape = material.shape! as RoundedRectangleBorder;
+      final radius = shape.borderRadius as BorderRadius;
       expect(radius.topLeft, const Radius.circular(16), reason: label);
       expect(material.clipBehavior, Clip.antiAlias, reason: label);
     }

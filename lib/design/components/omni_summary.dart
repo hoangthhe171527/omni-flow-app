@@ -68,11 +68,23 @@ class OmniTotalCard extends StatelessWidget {
       fontWeight: FontWeight.w500,
       color: scheme.onSurfaceVariant,
     );
-    final card = Material(
-      color: scheme.surface,
-      borderRadius: BorderRadius.circular(16),
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(onTap: onTap, child: _body(context, scheme, muted)),
+    final card = DecoratedBox(
+      // `shadow-card` — cùng bóng với `OmniGroupSection`.
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: OmniShadows.groupOf(context),
+      ),
+      child: Material(
+        color: scheme.surface,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+          side: MediaQuery.highContrastOf(context)
+              ? BorderSide(color: scheme.outlineVariant)
+              : BorderSide.none,
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(onTap: onTap, child: _body(context, scheme, muted)),
+      ),
     );
     if (onTap == null && semanticsLabel == null) return card;
     return Semantics(button: onTap != null, label: semanticsLabel, child: card);
@@ -109,13 +121,10 @@ class OmniTotalCard extends StatelessWidget {
                 key: amountKey,
                 maxLines: 1,
                 softWrap: false,
-                style: TextStyle(
-                  fontSize: 30,
+                // `money-hero` 32/700 (Chuẩn Mobile UI, Đợt 0).
+                style: OmniType.moneyHero.copyWith(
                   height: 1.25,
-                  fontWeight: FontWeight.w800,
-                  letterSpacing: -0.6,
                   color: scheme.onSurface,
-                  fontFeatures: OmniType.tabular,
                 ),
               ),
             ),
@@ -169,13 +178,8 @@ class _Stat extends StatelessWidget {
             stat.value,
             maxLines: 1,
             softWrap: false,
-            style: TextStyle(
-              fontSize: 15,
-              height: 1.4,
-              fontWeight: FontWeight.w700,
-              color: color,
-              fontFeatures: OmniType.tabular,
-            ),
+            // `stat` 15/600.
+            style: OmniType.money.copyWith(height: 1.4, color: color),
           ),
         ),
         Text(
@@ -217,8 +221,8 @@ class _Stat extends StatelessWidget {
   }
 }
 
-/// Dòng có số tiền (spec §3.4 "Danh sách"): hai hàng — tên 16/600 (tối đa 2
-/// dòng) + số tiền 16/700 (không cắt) / dòng phụ 14 xám + nhãn trạng thái.
+/// Dòng có số tiền (spec §3.4 "Danh sách"): hai hàng — tên 15/600 (tối đa 2
+/// dòng) + số tiền 15/600 (không cắt) / dòng phụ 14 xám + nhãn trạng thái.
 /// Đặt trong [OmniGroupSection] với `dividerIndent: 16` (hoặc 16 + đầu dòng).
 class OmniMoneyRow extends StatelessWidget {
   const OmniMoneyRow({
@@ -253,12 +257,8 @@ class OmniMoneyRow extends StatelessWidget {
       title,
       maxLines: 2,
       overflow: TextOverflow.ellipsis,
-      style: TextStyle(
-        fontSize: 16,
-        height: 1.4,
-        fontWeight: FontWeight.w600,
-        color: scheme.onSurface,
-      ),
+      // `row-title` 15/600.
+      style: OmniType.listTitle.copyWith(color: scheme.onSurface),
     );
     final top = Row(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -270,12 +270,10 @@ class OmniMoneyRow extends StatelessWidget {
             a,
             maxLines: 1,
             softWrap: false,
-            style: TextStyle(
-              fontSize: 16,
+            // `row-money` 15/600 — không cắt, không thu nhỏ.
+            style: OmniType.money.copyWith(
               height: 1.4,
-              fontWeight: FontWeight.w700,
               color: scheme.onSurface,
-              fontFeatures: OmniType.tabular,
             ),
           ),
         ] else if (status case final s?) ...[

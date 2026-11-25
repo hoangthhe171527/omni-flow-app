@@ -169,27 +169,42 @@ abstract final class OmniType {
   /// Dòng chính của một hàng danh sách (tên hội thoại, tên khách hàng): 16,
   /// to hơn thân một bậc để mắt quét cột tên trước, nhưng không phải tiêu đề.
   /// Trạng thái đọc/chưa đọc đổi độ đậm qua copyWith.
+  ///
+  /// Chuẩn Mobile UI `row-title`: 15/600 (Đợt 0, thay 16/500).
   static const TextStyle listTitle = TextStyle(
     fontFamily: family,
-    fontSize: 16,
-    fontWeight: FontWeight.w500,
+    fontSize: 15,
+    fontWeight: FontWeight.w600,
     height: 1.4,
   );
 
+  /// Tiền cuối dòng (`row-money` 15/600). Không bao giờ cắt, rút gọn hay thu
+  /// nhỏ cho vừa — hẹp thì xếp hai dòng.
   static const TextStyle money = TextStyle(
     fontFamily: family,
-    fontSize: 17,
+    fontSize: 15,
     fontWeight: FontWeight.w600,
-    height: 24 / 17,
+    height: 22 / 15,
     fontFeatures: tabular,
   );
 
+  /// Số chính của khối tổng (`money-hero` 32/700).
   static const TextStyle moneyHero = TextStyle(
     fontFamily: family,
-    fontSize: 28,
-    fontWeight: FontWeight.w600,
+    fontSize: 32,
+    fontWeight: FontWeight.w700,
     height: 1.4,
-    letterSpacing: -0.42,
+    letterSpacing: -0.96,
+    fontFeatures: tabular,
+  );
+
+  /// Số tiền lớn giữa sheet tiền — Ghi thu, bàn phím số (`money-sheet` 40/700).
+  static const TextStyle moneySheet = TextStyle(
+    fontFamily: family,
+    fontSize: 40,
+    fontWeight: FontWeight.w700,
+    height: 1.4,
+    letterSpacing: -1.2,
     fontFeatures: tabular,
   );
 

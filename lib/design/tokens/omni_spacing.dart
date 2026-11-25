@@ -1,4 +1,4 @@
-import 'package:flutter/widgets.dart';
+import 'package:flutter/material.dart';
 
 abstract final class OmniSpacing {
   static const double xxs = 2;
@@ -60,11 +60,38 @@ abstract final class OmniRadius {
   );
 }
 
-/// Viền thay bóng: thẻ, bảng, cột chỉ có viền #E3E8EF. Bóng chỉ dành cho thứ
-/// đang NỔI trên màn — menu, popover, sheet, hộp thoại, nút nổi.
+/// Bóng theo Chuẩn Mobile UI: thẻ nhóm / khối tổng có `shadow-card` rất nhẹ
+/// (lớp premium 25/11); thẻ viền thường vẫn chỉ viền #E3E8EF. Bóng đậm chỉ
+/// dành cho thứ đang NỔI — menu, popover, sheet, hộp thoại, nút nổi.
 abstract final class OmniShadows {
-  /// Thẻ không có bóng. Giữ tên để chỗ gọi cũ không phải đoán.
+  /// Thẻ viền thường không có bóng. Giữ tên để chỗ gọi cũ không phải đoán.
   static const List<BoxShadow> card = [];
+
+  /// `shadow-card` sáng: vòng 0.5 + bóng gần 1/2 + bóng xa 8/24 (−12).
+  static const List<BoxShadow> groupLight = [
+    BoxShadow(color: Color(0x120B1A33), spreadRadius: 0.5),
+    BoxShadow(color: Color(0x0A0B1A33), blurRadius: 2, offset: Offset(0, 1)),
+    BoxShadow(
+      color: Color(0x1A0B1A33),
+      blurRadius: 24,
+      spreadRadius: -12,
+      offset: Offset(0, 8),
+    ),
+  ];
+
+  /// `shadow-card` tối: chỉ vòng sáng 0.5 — bóng đen không thấy trên nền tối.
+  static const List<BoxShadow> groupDark = [
+    BoxShadow(color: Color(0x12FFFFFF), spreadRadius: 0.5),
+  ];
+
+  /// Bóng của thẻ nhóm (`OmniGroupSection`, `OmniTotalCard`) theo chế độ.
+  /// Tương phản cao: không bóng — thẻ đã có viền rõ từ theme.
+  static List<BoxShadow> groupOf(BuildContext context) {
+    if (MediaQuery.highContrastOf(context)) return const [];
+    return Theme.of(context).brightness == Brightness.dark
+        ? groupDark
+        : groupLight;
+  }
 
   /// Thứ đang nổi: menu, popover, ô QR nổi trên nền mực. Màu trung tính —
   /// không bao giờ là bóng màu thương hiệu.

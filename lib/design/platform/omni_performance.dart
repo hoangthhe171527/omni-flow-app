@@ -8,8 +8,8 @@ import 'package:flutter/widgets.dart';
 /// khung/giây, Tổng quan từ 12 lên 39 — làm mờ (BackdropFilter) là gánh nặng
 /// lớn nhất trên máy yếu, nhất là Android đời thấp chạy Skia/OpenGL.
 ///
-/// - [full]: kính làm mờ đầy đủ (σ 22, tăng bão hoà màu).
-/// - [reduced]: làm mờ nhẹ (σ 12), không tăng bão hoà, lớp phủ toàn màn
+/// - [full]: kính làm mờ đầy đủ (σ 8 từ Đợt 0, tăng bão hoà màu).
+/// - [reduced]: làm mờ nhẹ (σ 4), không tăng bão hoà, lớp phủ toàn màn
 ///   không làm mờ, tắt hiệu ứng chữ hiện dần khi cuộn.
 /// - [minimal]: không làm mờ ở đâu cả — kính là nền mờ đặc, vẫn giữ viền sáng
 ///   và vệt sáng nên vẫn ra dáng kính.
@@ -46,7 +46,10 @@ abstract final class OmniPerformance {
       tierOf(context) == OmniPerfTier.minimal;
 
   /// Độ mờ của viên kính / sheet / menu. Chỉ có nghĩa khi ![solidGlass].
-  static double glassSigma(BuildContext context, {double full = 22}) =>
+  ///
+  /// Mặc định 8 (token `glass` của Chuẩn Mobile UI, đã hạ từ 22 ở Đợt 0):
+  /// nền kính đã đặc .86 nên mờ nhẹ là đủ, và rẻ hơn nhiều trên máy yếu.
+  static double glassSigma(BuildContext context, {double full = 8}) =>
       tierOf(context) == OmniPerfTier.full
       ? full
       : (full * .55).roundToDouble();
