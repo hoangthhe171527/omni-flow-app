@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -367,101 +365,20 @@ class OpportunitySearchRow extends ConsumerWidget
   }
 }
 
-class _SearchField extends ConsumerStatefulWidget {
+/// Ô tìm chuẩn (Chuẩn Mobile UI — SearchBar) theo `pipelineSearchProvider`.
+class _SearchField extends ConsumerWidget {
   const _SearchField();
 
   @override
-  ConsumerState<_SearchField> createState() => _SearchFieldState();
-}
-
-class _SearchFieldState extends ConsumerState<_SearchField> {
-  late final TextEditingController _controller;
-  Timer? _debounce;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = TextEditingController(text: ref.read(pipelineSearchProvider));
-  }
-
-  @override
-  void dispose() {
-    _debounce?.cancel();
-    _controller.dispose();
-    super.dispose();
-  }
-
-  void _changed(String value) {
-    setState(() {});
-    _debounce?.cancel();
-    _debounce = Timer(const Duration(milliseconds: 300), () {
-      if (mounted) ref.read(pipelineSearchProvider.notifier).state = value;
-    });
-  }
-
-  void _clear() {
-    _debounce?.cancel();
-    _controller.clear();
-    setState(() {});
-    ref.read(pipelineSearchProvider.notifier).state = '';
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final meta = scheme.onSurfaceVariant;
-
-    return Center(
-      key: const Key('opportunity-search-flat'),
-      child: TextField(
-        controller: _controller,
-        onChanged: _changed,
-        textInputAction: TextInputAction.search,
-        textAlignVertical: TextAlignVertical.center,
-        style: OmniType.search.copyWith(
-          color: scheme.onSurface,
-          fontStyle: FontStyle.normal,
-        ),
-        decoration: InputDecoration(
-          isDense: true,
-          filled: false,
-          border: InputBorder.none,
-          enabledBorder: InputBorder.none,
-          focusedBorder: InputBorder.none,
-          contentPadding: const EdgeInsets.symmetric(vertical: 12),
-          prefixIcon: Icon(
-            LucideIcons.search,
-            size: OmniIconSize.lg,
-            color: meta,
-          ),
-          prefixIconConstraints: const BoxConstraints(
-            minWidth: 36,
-            minHeight: 36,
-          ),
-          suffixIconConstraints: const BoxConstraints(
-            minWidth: 36,
-            minHeight: 36,
-          ),
-          hintText: 'Tìm cơ hội, khách hàng',
-          hintStyle: OmniType.searchHint.copyWith(color: meta),
-          suffixIcon: _controller.text.isEmpty
-              ? null
-              : IconButton(
-                  tooltip: 'Xoá tìm kiếm',
-                  onPressed: _clear,
-                  padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(
-                    minWidth: 36,
-                    minHeight: 36,
-                  ),
-                  iconSize: OmniIconSize.md,
-                  color: meta,
-                  icon: const Icon(LucideIcons.x),
-                ),
-        ),
-      ),
-    );
-  }
+  Widget build(BuildContext context, WidgetRef ref) => OmniSearchField(
+    key: const Key('opportunity-search-flat'),
+    hint: 'Tìm cơ hội, khách hàng',
+    flat: true,
+    dense: true,
+    debounce: const Duration(milliseconds: 300),
+    value: ref.watch(pipelineSearchProvider),
+    onChanged: (v) => ref.read(pipelineSearchProvider.notifier).state = v,
+  );
 }
 
 class _FilterButton extends StatelessWidget {

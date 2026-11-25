@@ -5,6 +5,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../core/nav/shell_bar_inset.dart';
 import '../../../core/nav/shell_tab_routes.dart';
+import '../../../core/utils/text_search.dart';
 import '../../../design/components/components.dart';
 import '../../../design/tokens/tokens.dart';
 import '../application/inventory_providers.dart';
@@ -34,6 +35,17 @@ const _filters = <(ReservationStatus?, String)>[
 
 class _ReservationsPageState extends ConsumerState<ReservationsPage> {
   int _filter = 0;
+
+  /// Từ khoá tìm tại chỗ: khách, tên hàng, serial (bỏ dấu).
+  String _q = '';
+
+  bool _matches(Reservation r) => matchesQuery(
+    label: r.customerName ?? '',
+    subtitle: [
+      for (final l in r.lines) [?l.label, ?l.serial].join(' '),
+    ].join(' '),
+    query: _q,
+  );
 
   @override
   Widget build(BuildContext context) {
@@ -76,15 +88,20 @@ class _ReservationsPageState extends ConsumerState<ReservationsPage> {
           ),
         ],
         AsyncValue(:final value?) when value.isEmpty => [
-          const OmniGroupSection(
-            children: [OmniGroupRow(title: 'Không có phiếu')],
+          const OmniEmptyState(
+            compact: true,
+            icon: LucideIcons.package,
+            title: 'Không có phiếu',
           ),
+        ],
+        AsyncValue(:final value?) when !value.any(_matches) => [
+          OmniEmptyState.filtered(title: 'Không có phiếu khớp "$_q"'),
         ],
         AsyncValue(:final value?) => [
           OmniGroupSection(
             key: const ValueKey('inv-res-list'),
             children: [
-              for (final r in value)
+              for (final r in value.where(_matches))
                 ReservationRow(
                   key: ValueKey('inv-res-${r.id}'),
                   reservation: r,
@@ -105,6 +122,12 @@ class _ReservationsPageState extends ConsumerState<ReservationsPage> {
         title: 'Đang giữ',
         showAccount: !subPage,
         fallbackBack: subPage ? back : null,
+        bottom: OmniSearchBottom(
+          fieldKey: const ValueKey('inv-res-search'),
+          hint: 'Tìm khách, serial, model',
+          debounce: const Duration(milliseconds: 200),
+          onChanged: (v) => setState(() => _q = v),
+        ),
       ),
       body: OmniTopBarOverlap.wrap(
         child: Builder(

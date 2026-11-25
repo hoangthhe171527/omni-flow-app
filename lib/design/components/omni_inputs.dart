@@ -24,9 +24,16 @@ class OmniSearchField extends StatefulWidget {
     this.dense = false,
     this.autofocus = false,
     this.onSubmitted,
+    this.value,
   });
 
   final ValueChanged<String> onChanged;
+
+  /// Giá trị từ nơi giữ trạng thái (provider bộ lọc). Có thì ô là ô "có điều
+  /// khiển": khi [value] đổi thành thứ khác chữ ô vừa gửi đi (bộ lọc bị đặt
+  /// lại, quyền đổi) thì ô theo [value] và huỷ lượt gõ đang chờ. `null` = ô tự
+  /// giữ chữ, khởi đầu bằng [initialValue].
+  final String? value;
 
   /// Kiểu có đường biên dùng trong biểu mẫu khi ranh giới nhập liệu phải rõ.
   /// Thanh tìm của màn danh sách dùng [flat] thay vì kiểu này.
@@ -62,9 +69,34 @@ class _OmniSearchFieldState extends State<OmniSearchField> {
         );
 
   late final TextEditingController _controller = TextEditingController(
-    text: widget.initialValue,
+    text: widget.value ?? widget.initialValue,
   );
   Timer? _timer;
+
+  /// Chữ ô đã gửi lên gần nhất (chế độ có điều khiển). Gán trong [initState]
+  /// — KHÔNG dùng `late` có biểu thức khởi tạo: lần đọc đầu tiên rơi vào
+  /// [didUpdateWidget], lúc `widget` đã là widget MỚI, và giá trị mới bị coi
+  /// là "đã gửi" nên ô không theo.
+  late String _sent;
+
+  @override
+  void initState() {
+    super.initState();
+    _sent = (widget.value ?? widget.initialValue ?? '').trim();
+  }
+
+  @override
+  void didUpdateWidget(OmniSearchField old) {
+    super.didUpdateWidget(old);
+    final v = widget.value;
+    if (v != null && v != old.value && v != _sent) {
+      // Bị đặt từ nơi khác: huỷ lượt gõ đang chờ (không thì hẹn giờ cũ đặt
+      // lại chữ vừa bị xoá) và cho ô theo giá trị mới.
+      _timer?.cancel();
+      _sent = v;
+      if (_controller.text != v) _controller.text = v;
+    }
+  }
 
   @override
   void dispose() {
@@ -73,9 +105,16 @@ class _OmniSearchFieldState extends State<OmniSearchField> {
     super.dispose();
   }
 
+  void _emit(String value) {
+    _sent = value;
+    widget.onChanged(value);
+  }
+
   void _onChanged(String value) {
     _timer?.cancel();
-    _timer = Timer(widget.debounce, () => widget.onChanged(value.trim()));
+    _timer = Timer(widget.debounce, () {
+      if (mounted) _emit(value.trim());
+    });
     setState(() {});
   }
 
@@ -96,6 +135,7 @@ class _OmniSearchFieldState extends State<OmniSearchField> {
             ? null
             : (value) {
                 _timer?.cancel();
+                _sent = value.trim();
                 widget.onSubmitted!(value.trim());
               },
         textInputAction: TextInputAction.search,
@@ -127,7 +167,7 @@ class _OmniSearchFieldState extends State<OmniSearchField> {
                   constraints: widget.dense
                       ? const BoxConstraints(minWidth: 36, minHeight: 36)
                       : null,
-                  tooltip: 'Xoá nội dung tìm',
+                  tooltip: 'Xoá tìm kiếm',
                   icon: Icon(
                     LucideIcons.x,
                     size: OmniIconSize.md,
@@ -136,7 +176,7 @@ class _OmniSearchFieldState extends State<OmniSearchField> {
                   onPressed: () {
                     _timer?.cancel();
                     _controller.clear();
-                    widget.onChanged('');
+                    _emit('');
                     setState(() {});
                   },
                 ),

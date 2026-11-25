@@ -7,6 +7,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../../design/components/components.dart';
 import '../../../design/tokens/tokens.dart';
 import '../../../core/error/app_exception.dart';
+import '../../../core/utils/text_search.dart';
 import '../../../security/session/session_controller.dart';
 // CHỈ tên route, không phải cả module công việc: `tasks` đã import `team`
 // (sheet giao việc), nên một import ngược lại đóng vòng. `routes.dart` không
@@ -17,6 +18,9 @@ import '../data/team_api.dart';
 import '../domain/team_member.dart';
 import '../domain/team_permissions.dart';
 import 'add_member_sheet.dart';
+
+/// Từ khoá tìm tại chỗ của màn Nhân viên (tên, email, chức danh — bỏ dấu).
+final _teamQueryProvider = StateProvider.autoDispose<String>((_) => '');
 
 class TeamPage extends ConsumerWidget {
   const TeamPage({super.key});
@@ -35,10 +39,24 @@ class TeamPage extends ConsumerWidget {
         .can('tasks.projects.manage.all');
     // Thêm người là việc của quản lý / admin; thợ không thấy nút.
     final canAdd = ref.watch(accessProvider).can(TeamPermissions.membersCreate);
+    final q = ref.watch(_teamQueryProvider);
+    bool matches(TeamMember m) => matchesQuery(
+      label: m.name,
+      subtitle: [?m.email, ?m.jobTitle].join(' '),
+      query: q,
+    );
 
     return Scaffold(
       extendBodyBehindAppBar: true,
-      appBar: const OmniAppBar(title: 'Nhân viên'),
+      appBar: OmniAppBar(
+        title: 'Nhân viên',
+        bottom: OmniSearchBottom(
+          fieldKey: const ValueKey('team-search'),
+          hint: 'Tìm tên, email',
+          debounce: const Duration(milliseconds: 200),
+          onChanged: (v) => ref.read(_teamQueryProvider.notifier).state = v,
+        ),
+      ),
       // Thêm người: nút + kính góc phải dưới (rà soát 12/11) — không đẩy một
       // viên "Thêm" lên header.
       body: OmniFabLayer(
@@ -71,8 +89,6 @@ class TeamPage extends ConsumerWidget {
                   empty: const OmniEmptyState(
                     icon: LucideIcons.users,
                     title: 'Chưa có nhân viên',
-                    message:
-                        'Mời đồng nghiệp vào workspace để bắt đầu phân công.',
                   ),
                   // Nền xám; cả danh sách là MỘT nhóm lồng, vạch chia thụt sau avatar.
                   data: (list) => ListView(
@@ -84,31 +100,37 @@ class TeamPage extends ConsumerWidget {
                       OmniFabLayer.listBottom(context, hasFab: canAdd),
                     ),
                     children: [
-                      OmniGroupSection(
-                        dividerIndent: 70,
-                        children: [
-                          for (final member in list)
-                            _MemberTile(
-                              member: member,
-                              canLink: canLink,
-                              // Chạm vào một người là mở TẢI VIỆC của họ — câu hỏi
-                              // quản đốc hỏi nhiều nhất khi đứng giữa xưởng. Liên kết
-                              // Zalo lùi về một nút riêng bên phải.
-                              onTap: canSeeLoad
-                                  ? () {
-                                      HapticFeedback.selectionClick();
-                                      context.pushNamed(
-                                        TaskRoutes.workload,
-                                        pathParameters: {
-                                          'userId': member.userId,
-                                        },
-                                      );
-                                    }
-                                  : null,
-                              onLinkZalo: () => _linkZalo(context, ref, member),
-                            ),
-                        ],
-                      ),
+                      if (!list.any(matches))
+                        OmniEmptyState.filtered(
+                          title: 'Không có nhân viên khớp "$q"',
+                        )
+                      else
+                        OmniGroupSection(
+                          dividerIndent: 70,
+                          children: [
+                            for (final member in list.where(matches))
+                              _MemberTile(
+                                member: member,
+                                canLink: canLink,
+                                // Chạm vào một người là mở TẢI VIỆC của họ — câu hỏi
+                                // quản đốc hỏi nhiều nhất khi đứng giữa xưởng. Liên kết
+                                // Zalo lùi về một nút riêng bên phải.
+                                onTap: canSeeLoad
+                                    ? () {
+                                        HapticFeedback.selectionClick();
+                                        context.pushNamed(
+                                          TaskRoutes.workload,
+                                          pathParameters: {
+                                            'userId': member.userId,
+                                          },
+                                        );
+                                      }
+                                    : null,
+                                onLinkZalo: () =>
+                                    _linkZalo(context, ref, member),
+                              ),
+                          ],
+                        ),
                     ],
                   ),
                 ),

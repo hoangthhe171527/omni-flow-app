@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -69,133 +67,25 @@ class InboxSearchRow extends ConsumerWidget implements PreferredSizeWidget {
   }
 }
 
-class _SearchField extends ConsumerStatefulWidget {
+/// Ô tìm chuẩn (Chuẩn Mobile UI — SearchBar) theo bộ lọc hộp thư. "Xoá bộ
+/// lọc" đặt lại cả khi `search` vốn rỗng (còn lượt gõ đang chờ) — ô được dựng
+/// lại theo mỗi lần đặt lại để không giữ chữ cũ.
+class _SearchField extends ConsumerWidget {
   const _SearchField();
 
   @override
-  ConsumerState<_SearchField> createState() => _SearchFieldState();
-}
-
-class _SearchFieldState extends ConsumerState<_SearchField> {
-  late final TextEditingController _controller;
-  Timer? _debounce;
-
-  /// Giá trị ô này đã đẩy lên bộ lọc gần nhất. `search` đổi thành giá trị khác
-  /// nghĩa là bị đặt từ nơi khác.
-  late String _sent;
-  bool _isEmpty = true;
-
-  @override
-  void initState() {
-    super.initState();
-    _sent = ref.read(inboxFilterProvider).search;
-    _controller = TextEditingController(text: _sent);
-    _isEmpty = _sent.isEmpty;
-  }
-
-  @override
-  void dispose() {
-    _debounce?.cancel();
-    _controller.dispose();
-    super.dispose();
-  }
-
-  void _changed(String value) {
-    final isEmpty = value.isEmpty;
-    if (isEmpty != _isEmpty) {
-      setState(() => _isEmpty = isEmpty);
-    }
-    _debounce?.cancel();
-    _debounce = Timer(const Duration(milliseconds: 300), () {
-      if (!mounted) return;
-      _sent = value;
-      ref.read(inboxFilterProvider.notifier).setSearch(value);
-    });
-  }
-
-  void _clear() {
-    _debounce?.cancel();
-    _controller.clear();
-    if (!_isEmpty) {
-      setState(() => _isEmpty = true);
-    }
-    _sent = '';
-    ref.read(inboxFilterProvider.notifier).setSearch('');
-  }
-
-  /// Bộ lọc bị đặt từ nơi khác: huỷ lượt gõ đang chờ (không thì hẹn giờ cũ
-  /// đặt lại chữ vừa bị xoá) và cho ô theo giá trị mới.
-  void _external(String search) {
-    _debounce?.cancel();
-    _sent = search;
-    if (_controller.text != search) {
-      _controller.text = search;
-      setState(() => _isEmpty = search.isEmpty);
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    ref.listen<String>(inboxFilterProvider.select((f) => f.search), (_, next) {
-      if (next != _sent) _external(next);
-    });
-    // "Xoá bộ lọc" đặt lại cả khi `search` vốn rỗng — lúc đó listener trên
-    // không chạy mà vẫn có thể còn lượt gõ đang chờ.
-    ref.listen<int>(inboxFilterResetsProvider, (_, _) => _external(''));
-
-    final scheme = Theme.of(context).colorScheme;
-    final meta = scheme.onSurfaceVariant;
-    return Center(
+  Widget build(BuildContext context, WidgetRef ref) => KeyedSubtree(
+    key: ValueKey(ref.watch(inboxFilterResetsProvider)),
+    child: OmniSearchField(
       key: const Key('inbox-search-flat'),
-      child: TextField(
-        controller: _controller,
-        onChanged: _changed,
-        textInputAction: TextInputAction.search,
-        textAlignVertical: TextAlignVertical.center,
-        style: OmniType.search.copyWith(
-          color: scheme.onSurface,
-          fontStyle: FontStyle.normal,
-        ),
-        decoration: InputDecoration(
-          isDense: true,
-          filled: false,
-          border: InputBorder.none,
-          enabledBorder: InputBorder.none,
-          focusedBorder: InputBorder.none,
-          contentPadding: const EdgeInsets.symmetric(vertical: 12),
-          prefixIcon: Icon(
-            LucideIcons.search,
-            size: OmniIconSize.lg,
-            color: meta,
-          ),
-          prefixIconConstraints: const BoxConstraints(
-            minWidth: 36,
-            minHeight: 36,
-          ),
-          suffixIconConstraints: const BoxConstraints(
-            minWidth: 36,
-            minHeight: 36,
-          ),
-          hintText: 'Tìm khách, tin nhắn…',
-          hintStyle: OmniType.searchHint.copyWith(color: meta),
-          suffixIcon: _isEmpty
-              ? null
-              : IconButton(
-                  tooltip: 'Xoá tìm kiếm',
-                  onPressed: _clear,
-                  padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(
-                    minWidth: 36,
-                    minHeight: 36,
-                  ),
-                  iconSize: OmniIconSize.md,
-                  color: meta,
-                  icon: const Icon(LucideIcons.x),
-                ),
-        ),
-      ),
-    );
-  }
+      hint: 'Tìm khách, tin nhắn…',
+      flat: true,
+      dense: true,
+      debounce: const Duration(milliseconds: 300),
+      value: ref.watch(inboxFilterProvider.select((f) => f.search)),
+      onChanged: ref.read(inboxFilterProvider.notifier).setSearch,
+    ),
+  );
 }
 
 /// Nút lọc phẳng 44×44, huy hiệu đỏ đếm số bộ lọc đang bật.

@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -72,126 +70,21 @@ class CustomerSearchRow extends ConsumerWidget implements PreferredSizeWidget {
   }
 }
 
-class _SearchField extends ConsumerStatefulWidget {
+/// Ô tìm chuẩn (Chuẩn Mobile UI — SearchBar) theo bộ lọc khách: bộ lọc bị đặt
+/// lại / quyền đổi thì ô theo giá trị mới, huỷ lượt gõ đang chờ.
+class _SearchField extends ConsumerWidget {
   const _SearchField();
 
   @override
-  ConsumerState<_SearchField> createState() => _SearchFieldState();
-}
-
-class _SearchFieldState extends ConsumerState<_SearchField> {
-  late final TextEditingController _controller;
-  Timer? _debounce;
-
-  /// Giá trị ô này đã đẩy lên bộ lọc gần nhất. `search` đổi thành giá trị khác
-  /// nghĩa là bị đặt từ nơi khác (bộ lọc dựng lại khi quyền đổi).
-  late String _sent;
-
-  @override
-  void initState() {
-    super.initState();
-    _sent = ref.read(customerFilterProvider).search;
-    _controller = TextEditingController(text: _sent);
-  }
-
-  /// Huỷ lượt gõ đang chờ (không thì hẹn giờ cũ đặt lại chữ vừa bị xoá) và
-  /// cho ô theo giá trị mới.
-  void _external(String search) {
-    _debounce?.cancel();
-    _sent = search;
-    if (_controller.text != search) {
-      _controller.text = search;
-      setState(() {});
-    }
-  }
-
-  @override
-  void dispose() {
-    _debounce?.cancel();
-    _controller.dispose();
-    super.dispose();
-  }
-
-  void _changed(String value) {
-    setState(() {});
-    _debounce?.cancel();
-    _debounce = Timer(const Duration(milliseconds: 300), () {
-      if (!mounted) return;
-      _sent = value;
-      ref.read(customerFilterProvider.notifier).setSearch(value);
-    });
-  }
-
-  void _clear() {
-    _debounce?.cancel();
-    _controller.clear();
-    setState(() {});
-    _sent = '';
-    ref.read(customerFilterProvider.notifier).setSearch('');
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    ref.listen<String>(customerFilterProvider.select((f) => f.search), (
-      _,
-      next,
-    ) {
-      if (next != _sent) _external(next);
-    });
-    final scheme = Theme.of(context).colorScheme;
-    final meta = scheme.onSurfaceVariant;
-
-    return Center(
-      key: const Key('customer-search-flat'),
-      child: TextField(
-        controller: _controller,
-        onChanged: _changed,
-        textInputAction: TextInputAction.search,
-        textAlignVertical: TextAlignVertical.center,
-        style: OmniType.search.copyWith(
-          color: scheme.onSurface,
-          fontStyle: FontStyle.normal,
-        ),
-        decoration: InputDecoration(
-          isDense: true,
-          filled: false,
-          border: InputBorder.none,
-          enabledBorder: InputBorder.none,
-          focusedBorder: InputBorder.none,
-          contentPadding: const EdgeInsets.symmetric(vertical: 12),
-          prefixIcon: Icon(
-            LucideIcons.search,
-            size: OmniIconSize.lg,
-            color: meta,
-          ),
-          prefixIconConstraints: const BoxConstraints(
-            minWidth: 36,
-            minHeight: 36,
-          ),
-          suffixIconConstraints: const BoxConstraints(
-            minWidth: 36,
-            minHeight: 36,
-          ),
-          hintText: 'Tìm tên, số điện thoại',
-          hintStyle: OmniType.searchHint.copyWith(color: meta),
-          suffixIcon: _controller.text.isEmpty
-              ? null
-              : IconButton(
-                  tooltip: 'Xoá tìm kiếm',
-                  onPressed: _clear,
-                  padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(
-                    minWidth: 36,
-                    minHeight: 36,
-                  ),
-                  iconSize: OmniIconSize.md,
-                  color: meta,
-                  icon: const Icon(LucideIcons.x),
-                ),
-        ),
-      ),
-    );
-  }
+  Widget build(BuildContext context, WidgetRef ref) => OmniSearchField(
+    key: const Key('customer-search-flat'),
+    hint: 'Tìm tên, số điện thoại',
+    flat: true,
+    dense: true,
+    debounce: const Duration(milliseconds: 300),
+    value: ref.watch(customerFilterProvider.select((f) => f.search)),
+    onChanged: ref.read(customerFilterProvider.notifier).setSearch,
+  );
 }
 
 class _FilterButton extends StatelessWidget {
