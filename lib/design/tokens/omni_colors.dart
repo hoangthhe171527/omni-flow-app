@@ -42,19 +42,21 @@ abstract final class OmniColors {
   static const sunForeground = ink;
 
   // ---- Màu chính ----------------------------------------------------------
-  /// Quỹ đạo. Nút chính, liên kết, tab đang chọn.
+  /// Xanh Viomni — MÀU NHẤN DUY NHẤT (token `accent` của Chuẩn Mobile UI, gói
+  /// Viomni): nút chính, nút +, liên kết, tab đang chọn, ‹ quay lại.
   ///
-  /// 4.94:1 trên thẻ, 4.61:1 trên nền trang — xem `contrast_test.dart`.
-  static const primary = Color(0xFF0F6AE8);
+  /// 6.08:1 trên thẻ, 5.67:1 trên nền trang, chữ trắng trên nó 6.08:1 — xem
+  /// `contrast_test.dart`. Đổi từ #0F6AE8 theo spec 25/11 (Đợt 0).
+  static const primary = Color(0xFF0159DB);
   static const primaryForeground = Color(0xFFFFFFFF);
 
-  /// Nút chính khi đang nhấn, và màu chữ/icon của tab đang chọn (đặt trên
-  /// [accent] thì cần tối hơn [primary] một bậc mới đọc rõ).
-  static const primaryPressed = Color(0xFF0A58CA);
+  /// Nút chính khi đang nhấn, và chữ/icon trên nền nhạt [accent] (token
+  /// `accent-ink`: 7.16:1 trên [accent]).
+  static const primaryPressed = Color(0xFF0147B3);
 
-  /// Nền nhạt sau bề mặt được chọn: viên tab đang chọn, ô icon khu Công việc,
-  /// chip xem trước trên màn chọn tab.
-  static const accent = Color(0xFFEBF3FF);
+  /// Nền nhạt sau bề mặt được chọn (token `accent-tint`): viên tab đang chọn,
+  /// nút phụ, chip đang chọn, nhãn trạng thái xanh.
+  static const accent = Color(0xFFE6F0FF);
   static const accentForeground = primaryPressed;
 
   /// Bản nhạt hơn nữa của [accent] — vầng sáng quanh ô nhập đang focus.
@@ -237,6 +239,18 @@ abstract final class OmniColors {
   /// (9.30:1) — đây là chỗ hai chế độ buộc phải khác nhau, không phải chỗ đảo
   /// màu là xong.
   static const darkPrimaryForeground = Color(0xFF051833);
+
+  // ---- Tương phản cao ------------------------------------------------------
+  //
+  // Giao diện `hc` của Chuẩn Mobile UI: bật khi hệ điều hành bật "Tăng tương
+  // phản" (MediaQuery.highContrast). Chữ ≥ 7:1, viền thay bóng, không kính.
+  static const hcPrimary = Color(0xFF0040A8); // 9.14:1 trên trắng
+  static const hcAccent = Color(0xFFDBE7FF);
+  static const hcAccentForeground = Color(0xFF002F7A); // 10.0:1 trên hcAccent
+  static const hcMuted = Color(0xFFEBEBEB);
+  static const hcMutedForeground = Color(0xFF3B4250); // 10.1:1 trên trắng
+  /// Viền thẻ / vạch ngăn: phải thấy được vì nền trang và thẻ cùng trắng.
+  static const hcBorder = Color(0xFF737373);
 
   // ---- Chat ---------------------------------------------------------------
   /// Messaging surfaces follow Zalo's visual language rather than the CRM

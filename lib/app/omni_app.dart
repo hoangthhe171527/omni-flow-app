@@ -136,6 +136,8 @@ class _OmniAppState extends ConsumerState<OmniApp> with WidgetsBindingObserver {
       title: AppConfig.appName,
       theme: OmniTheme.light(),
       darkTheme: OmniTheme.dark(),
+      // Hệ điều hành bật "Tăng tương phản": giao diện `hc` của Chuẩn Mobile UI.
+      highContrastTheme: OmniTheme.highContrast(),
       // Was pinned to light, so a phone in dark mode got one glaring white app
       // — worst of all on the messaging screens, which sit next to Zalo.
       themeMode: ref.watch(themeModeProvider),

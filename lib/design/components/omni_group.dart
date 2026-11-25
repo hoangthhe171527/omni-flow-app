@@ -57,28 +57,42 @@ class OmniGroupSection extends StatelessWidget {
       children: [
         if (title != null || trailingTitle != null)
           OmniGroupHeader(title: title ?? '', trailing: trailingTitle),
-        Material(
-          color: background ?? scheme.surface,
-          // Nhóm bo 16 (spec phong cách iOS §3.5).
-          borderRadius: BorderRadius.circular(16),
-          clipBehavior: Clip.antiAlias,
-          // Thẻ trắng: nút bên trong là kính nhuộm tông, không chìm.
-          child: OmniTintedButtons(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                for (var i = 0; i < children.length; i++) ...[
-                  if (i > 0)
-                    Divider(
-                      height: 1,
-                      thickness: 1,
-                      indent: indent,
-                      color: scheme.outlineVariant.withValues(alpha: .7),
-                    ),
-                  children[i],
+        DecoratedBox(
+          // `shadow-card` của Chuẩn Mobile UI (lớp premium): thẻ nổi nhẹ khỏi
+          // nền, tối chỉ còn vòng sáng 0.5, tương phản cao không bóng.
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: OmniShadows.groupOf(context),
+          ),
+          child: Material(
+            color: background ?? scheme.surface,
+            // Nhóm bo 16 (spec phong cách iOS §3.5). Tương phản cao: nền trang và
+            // thẻ cùng trắng nên ranh giới là viền, thay cho bóng.
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+              side: MediaQuery.highContrastOf(context)
+                  ? BorderSide(color: scheme.outlineVariant)
+                  : BorderSide.none,
+            ),
+            clipBehavior: Clip.antiAlias,
+            // Thẻ trắng: nút bên trong là kính nhuộm tông, không chìm.
+            child: OmniTintedButtons(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  for (var i = 0; i < children.length; i++) ...[
+                    if (i > 0)
+                      Divider(
+                        height: 1,
+                        thickness: 1,
+                        indent: indent,
+                        color: scheme.outlineVariant.withValues(alpha: .7),
+                      ),
+                    children[i],
+                  ],
                 ],
-              ],
+              ),
             ),
           ),
         ),

@@ -86,9 +86,11 @@ class OmniGlass extends StatelessWidget {
         ? (dark
               ? const Color(0xFF1C2A42).withValues(alpha: 0.86)
               : Colors.white.withValues(alpha: 0.84))
+        // Token `glass` (Chuẩn Mobile UI, gói Viomni): nền .86 / .88 + mờ 8 —
+        // kính chỉ ở lớp nổi, phải đọc rõ chữ dưới nó mà không cần mờ đậm.
         : dark
-        ? const Color(0xFF182438).withValues(alpha: 0.42)
-        : Colors.white.withValues(alpha: 0.52);
+        ? const Color(0xFF132033).withValues(alpha: 0.88)
+        : Colors.white.withValues(alpha: 0.86);
     final edge = dark
         ? Colors.white.withValues(alpha: 0.14)
         : Colors.white.withValues(alpha: 0.85);
