@@ -296,19 +296,11 @@ void main() {
       scale: 2,
     );
     expect(find.byType(FittedBox), findsNothing);
-    // Không vừa một dòng ở chữ 2× → các cụm ngăn nghìn trong Wrap, cỡ giữ 32.
-    final chunks = t
-        .widgetList<Text>(
-          find.descendant(of: find.byType(Wrap), matching: find.byType(Text)),
-        )
-        .toList();
-    expect(chunks.map((c) => c.data).join(), '128.450.000.000đ');
-    expect(chunks.every((c) => c.style!.fontSize == 32), isTrue);
-    // Trình đọc màn hình đọc số gốc (gộp chung node với nhãn của thẻ).
-    expect(
-      find.bySemanticsLabel(RegExp(r'128\.450\.000\.000đ')),
-      findsOneWidget,
-    );
+    // Chữ 2×: số giữ cỡ 32, vẫn là MỘT chuỗi đủ số (xuống dòng nếu cần),
+    // không thu nhỏ, không tràn.
+    final text = t.widget<Text>(find.text('128.450.000.000đ'));
+    expect(text.style!.fontSize, 32);
+    expect(text.maxLines, isNull);
     expect(t.takeException(), isNull);
   });
 }

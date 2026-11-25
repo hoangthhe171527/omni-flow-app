@@ -509,9 +509,7 @@ class _LotDetailPageState extends ConsumerState<LotDetailPage> {
               title: 'Khoản trả',
               subtitle: '$paid đã trả · ${costs.length - paid} dự kiến',
               trailing: Icon(
-                _payOpen
-                    ? LucideIcons.chevronUp
-                    : LucideIcons.chevronDown,
+                _payOpen ? LucideIcons.chevronUp : LucideIcons.chevronDown,
                 size: 20,
               ),
               onTap: () => setState(() {
@@ -618,8 +616,10 @@ class _LotDetailPageState extends ConsumerState<LotDetailPage> {
             onRetry: () => ref.invalidate(lotUnitsProvider(widget.lotId)),
           )
         else
-          const OmniGroupSection(
-            children: [OmniGroupRow(title: 'Chưa có cây')],
+          const OmniEmptyState(
+            compact: true,
+            icon: LucideIcons.package,
+            title: 'Lô chưa có cây',
           ),
       ];
     }
@@ -700,7 +700,14 @@ class _LotDetailPageState extends ConsumerState<LotDetailPage> {
       OmniGroupSection(
         key: const ValueKey('inv-lot-units'),
         children: rows.isEmpty
-            ? const [OmniGroupRow(title: 'Không có cây')]
+            ? [
+                // Trống do thanh chọn: một câu + về "Tất cả" (Chuẩn Mobile UI).
+                OmniEmptyState.filtered(
+                  title: 'Không có cây ở mục này',
+                  actionLabel: 'Xem tất cả',
+                  onAction: () => setState(() => _seg = _Seg.values.first),
+                ),
+              ]
             : rows,
       ),
     ];

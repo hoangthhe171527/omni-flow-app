@@ -953,16 +953,10 @@ class _ExpenseSummaryPageState extends ConsumerState<ExpenseSummaryPage> {
           dividerIndent: 56,
           children: [
             if (rows.isEmpty)
-              Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 14,
-                  vertical: 20,
-                ),
-                child: Text(
-                  'Chưa có khoản chi phát sinh trong kỳ này.',
-                  textAlign: TextAlign.center,
-                  style: OmniType.caption.copyWith(color: p.muted),
-                ),
+              const OmniEmptyState(
+                compact: true,
+                icon: LucideIcons.chartPie,
+                title: 'Chưa có số liệu kỳ này',
               )
             else
               for (var i = 0; i < rows.length; i++)

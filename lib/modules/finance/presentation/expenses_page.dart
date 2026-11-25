@@ -750,12 +750,10 @@ class _ExpensesPageState extends ConsumerState<ExpensesPage> {
                   ),
                 ),
                 if (summary.byGroup.isEmpty)
-                  Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 8),
-                    child: Text(
-                      'Chưa có phát sinh theo nhóm trong kỳ này.',
-                      style: OmniType.caption.copyWith(color: p.muted),
-                    ),
+                  const OmniEmptyState(
+                    compact: true,
+                    icon: LucideIcons.chartPie,
+                    title: 'Chưa có số liệu kỳ này',
                   ),
                 for (final g in summary.byGroup)
                   _buildGroupBreakdownRow(
@@ -1142,23 +1140,26 @@ class _ExpensesPageState extends ConsumerState<ExpensesPage> {
     if (sections.isEmpty) {
       final isMonthEmpty =
           state.activeMonthItems.isEmpty && !state.hasActiveFilter;
+      // Chuẩn Mobile UI: trống thật mời tạo khoản đầu tiên; trống do lọc /
+      // tìm chỉ một câu + "Bỏ lọc".
+      final notifier = ref.read(financeLedgerProvider.notifier);
       return [
-        () => Container(
-          margin: const EdgeInsets.only(top: 12),
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 28),
-          decoration: BoxDecoration(
-            color: p.card,
-            borderRadius: BorderRadius.circular(16),
-          ),
-          alignment: Alignment.center,
-          child: Text(
-            isMonthEmpty
-                ? 'Chưa có khoản chi nào trong ${FinanceMonthUtils.formatMonthFull(state.activeMonth)}.'
-                : 'Không có khoản chi phù hợp bộ lọc.',
-            textAlign: TextAlign.center,
-            style: OmniType.bodySm.copyWith(color: p.muted),
-          ),
-        ),
+        () => isMonthEmpty
+            ? OmniEmptyState(
+                compact: true,
+                icon: LucideIcons.banknote,
+                title:
+                    'Chưa có khoản chi nào trong ${FinanceMonthUtils.formatMonthFull(state.activeMonth)}',
+                actionLabel: 'Thêm khoản chi',
+                onAction: () => showExpenseAddSheet(context: context),
+              )
+            : OmniEmptyState.filtered(
+                title: 'Không có khoản chi khớp bộ lọc',
+                onAction: () {
+                  notifier.clearFilters();
+                  notifier.clearSearch();
+                },
+              ),
       ];
     }
 

@@ -166,7 +166,13 @@ class _WorkshopTodayPageState extends ConsumerState<WorkshopTodayPage> {
               )
             : null,
         children: w.contLoads.isEmpty
-            ? const [OmniGroupRow(title: 'Chưa có lượt nào')]
+            ? const [
+                OmniEmptyState(
+                  compact: true,
+                  icon: LucideIcons.truck,
+                  title: 'Chưa có lượt nào',
+                ),
+              ]
             : [
                 for (final c in w.contLoads)
                   OmniGroupRow(

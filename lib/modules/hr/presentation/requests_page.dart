@@ -93,8 +93,10 @@ class _RequestsPageState extends ConsumerState<RequestsPage> {
                     else if (!data.hasValue)
                       const OmniSkeletonBox(height: 180, radius: 18)
                     else if (list.isEmpty)
-                      const OmniGroupSection(
-                        children: [OmniGroupRow(title: 'Không có đơn')],
+                      const OmniEmptyState(
+                        compact: true,
+                        icon: LucideIcons.fileText,
+                        title: 'Chưa có đơn nào',
                       )
                     else
                       OmniGroupSection(

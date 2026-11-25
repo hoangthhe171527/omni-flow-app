@@ -152,10 +152,10 @@ class OmniTotalCard extends StatelessWidget {
       );
 }
 
-/// Số của [OmniTotalCard] (số chính và số phụ): giữ nguyên cỡ; chỉ khi một
-/// dòng không đủ chỗ mới xuống dòng giữa các cụm ngăn nghìn ("128." "450."
-/// "000đ" là các ô của một [Wrap]) — thay `FittedBox` từng thu số nhỏ lại.
-/// Trình đọc màn hình đọc số gốc.
+/// Số của [OmniTotalCard] (số chính và số phụ): giữ nguyên cỡ, không giới hạn
+/// dòng — thay `FittedBox` từng thu số nhỏ lại. Thường vừa một dòng; chỉ khi
+/// không vừa (chữ hệ thống phóng to) Flutter tự ngắt số dài sang dòng sau —
+/// số vẫn đủ, vẫn là MỘT chuỗi (trình đọc màn hình, tìm kiếm, test đọc nguyên).
 class _HeroAmount extends StatelessWidget {
   const _HeroAmount({
     required this.amount,
@@ -169,36 +169,7 @@ class _HeroAmount extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (context, box) {
-        final painter = TextPainter(
-          text: TextSpan(text: amount, style: style),
-          textDirection: Directionality.of(context),
-          textScaler: MediaQuery.textScalerOf(context),
-          maxLines: 1,
-        )..layout();
-        final fits = painter.width <= box.maxWidth;
-        painter.dispose();
-        if (fits) {
-          return Text(
-            amount,
-            key: amountKey,
-            maxLines: 1,
-            softWrap: false,
-            style: style,
-          );
-        }
-        final chunks = RegExp(r'[^.]+\.?').allMatches(amount).map((m) => m[0]!);
-        return Semantics(
-          key: amountKey,
-          label: amount,
-          excludeSemantics: true,
-          child: Wrap(
-            children: [for (final c in chunks) Text(c, style: style)],
-          ),
-        );
-      },
-    );
+    return Text(amount, key: amountKey, style: style);
   }
 }
 

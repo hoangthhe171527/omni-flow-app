@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../core/utils/formatters.dart';
 import '../../../design/components/components.dart';
@@ -74,8 +75,10 @@ class _OrdersPageState extends ConsumerState<OrdersPage> {
         ],
         _ when rows == null => [const InvSkeleton(count: 5, height: 64)],
         _ when rows.isEmpty => [
-          const OmniGroupSection(
-            children: [OmniGroupRow(title: 'Không có đơn nào')],
+          const OmniEmptyState(
+            compact: true,
+            icon: LucideIcons.fileText,
+            title: 'Không có đơn nào',
           ),
         ],
         _ => [
