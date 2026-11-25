@@ -45,6 +45,7 @@ AppException mapDioException(DioException error) {
       message ?? 'Dữ liệu chưa hợp lệ.',
       errors: _fieldErrors(map['errors']),
       reason: _reason(map),
+      data: map['data'],
     ),
     429 => _rateLimited(message, error.response?.headers.value('retry-after')),
     _ when status != null && status >= 500 => ServerException(

@@ -7,11 +7,13 @@ import '../core/network/dio_provider.dart';
 import '../core/realtime/realtime_client.dart';
 import '../core/storage/storage_keys.dart';
 import '../core/storage/token_store.dart';
+import '../modules/hr/data/punch_sensors.dart';
 import 'demo_backend.dart';
 import 'demo_seed.dart';
 import 'modules/auth_demo.dart';
 import 'modules/crm_demo.dart';
 import 'modules/finance_demo.dart';
+import 'modules/hr_demo.dart';
 import 'modules/inbox_demo.dart';
 import 'modules/work_demo.dart';
 
@@ -22,6 +24,8 @@ DemoRoutes buildDemoRoutes() {
   registerAuthDemo(routes);
   registerFinanceDemo(routes);
   registerInboxDemo(routes, links);
+  // Nhân sự trước crm (spec nhan-su-kpi/03 §5.3).
+  registerHrDemo(routes);
   // work trước crm: `/system-options/task-labels` (work) phải khớp trước
   // `/system-options/{id}` (crm).
   registerWorkDemo(routes);
@@ -46,6 +50,8 @@ Future<List<Override>> demoOverrides(SharedPreferences preferences) async {
       }),
     ),
     realtimeConfigProvider.overrideWithValue(const RealtimeConfig.disabled()),
+    // Web không có WiFi/GPS: demo giả như đang bắt WiFi xưởng.
+    punchSensorsProvider.overrideWithValue(const DemoPunchSensors()),
   ];
 }
 

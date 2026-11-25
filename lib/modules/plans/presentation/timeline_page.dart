@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 import '../../../design/components/components.dart';
 import '../../../design/platform/omni_motion_scope.dart';
 import '../../../design/tokens/tokens.dart';
+import '../../hr/hr.dart';
 import '../../tasks/application/tasks_providers.dart';
 import '../../tasks/routes.dart';
 import '../application/plans_providers.dart';
@@ -301,6 +302,14 @@ class _Kpi extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    // KPI đội (nhan-su-kpi/02 §6): người xem thuộc một đội có KPI đội thì
+    // thẻ đọc `/kpi/me` — tiến độ đội, mốc, thưởng; chi tiết ở "Thưởng đội".
+    final team = ref
+        .watch(hrKpiMeProvider(ref.watch(hrThisMonthProvider)))
+        .valueOrNull;
+    if (team != null) {
+      return TeamKpiCard(kpi: team, onTap: () => context.goNamed(HrRoutes.kpi));
+    }
     final kpi = ref.watch(workshopKpiProvider);
     final month = ref.watch(kpiMonthProvider);
     final now = DateTime.now();

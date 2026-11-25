@@ -124,7 +124,24 @@ bool shouldShowLocalForegroundNotification({
 }) => platform == 'android' || !hasRemoteNotification;
 
 /// The kind of screen a push wants opened.
-enum PushTarget { conversation, task }
+enum PushTarget {
+  conversation,
+  task,
+  // Nhân sự (nhan-su-kpi/00 §9). [PushIntent.id] là ngày (`hrDay`), mã đơn
+  // (`hrRequest`), kỳ lương (`hrPayslip`); các loại khác không cần id.
+  hrClock,
+  hrDay,
+  hrRequest,
+  // Đơn CỦA TÔI vừa được duyệt / từ chối (chỉ phân biệt được trong chuông,
+  // nhờ `notification_type`; push `hr_request` không phân biệt).
+  hrMyRequest,
+  hrWorkshopToday,
+  hrPayslip,
+  hrKpi;
+
+  /// Đích thuộc Nhân sự: không bắt buộc id, đi kênh "Công việc".
+  bool get isHr => index >= PushTarget.hrClock.index;
+}
 
 /// A deliberately small, routing-only payload. Notification text is for the
 /// lock screen; navigation always uses an id and reloads the data.
@@ -169,16 +186,56 @@ class PushIntent {
       // Nhắc việc theo giờ tự chọn (`SendTaskRemindersCommand`).
       'task_reminder' ||
       'task_mentioned' => PushTarget.task,
+      // Nhân sự (nhan-su-kpi/00 §9): nhắc chấm, thiếu chấm, đơn, tăng ca chưa
+      // đăng ký, phiếu lương, chốt KPI đội.
+      'hr_clock' => PushTarget.hrClock,
+      'hr_day' => PushTarget.hrDay,
+      'hr_request' => PushTarget.hrRequest,
+      'hr_workshop_today' => PushTarget.hrWorkshopToday,
+      'hr_payslip' => PushTarget.hrPayslip,
+      'hr_kpi' => PushTarget.hrKpi,
       _ => null,
     };
     if (target == null) return null;
 
-    final key = target == PushTarget.conversation
-        ? 'conversation_id'
-        : 'task_id';
-    final id = data[key]?.toString() ?? '';
+    final key = switch (target) {
+      PushTarget.conversation => 'conversation_id',
+      PushTarget.task => 'task_id',
+      PushTarget.hrDay => 'date',
+      PushTarget.hrRequest => 'request_id',
+      PushTarget.hrPayslip => 'period',
+      _ => null,
+    };
+    final id = key == null ? '' : data[key]?.toString() ?? '';
 
+    // Màn Nhân sự mở được cả khi thiếu id (mở danh sách thay vì chi tiết).
+    if (target.isHr) return PushIntent(target: target, id: id);
     return id.isEmpty ? null : PushIntent(target: target, id: id);
+  }
+
+  /// Dòng Nhân sự trong chuông / trang Thông báo → màn cần mở. Đọc
+  /// `notification_type` (API `NotificationType`) và `related_entity_id`.
+  static PushIntent? hrFromInApp({String? wireType, String? entityId}) {
+    final target = switch (wireType) {
+      'ATTENDANCE_REMIND_IN' || 'ATTENDANCE_REMIND_OUT' => PushTarget.hrClock,
+      'ATTENDANCE_MISSING' => PushTarget.hrDay,
+      'REQUEST_SUBMITTED' => PushTarget.hrRequest,
+      'REQUEST_DECIDED' => PushTarget.hrMyRequest,
+      'OT_UNREGISTERED' => PushTarget.hrWorkshopToday,
+      'PAYSLIP_PUBLISHED' => PushTarget.hrPayslip,
+      'KPI_CLOSED' => PushTarget.hrKpi,
+      _ => null,
+    };
+    if (target == null) return null;
+    final withId = const {
+      PushTarget.hrDay,
+      PushTarget.hrRequest,
+      PushTarget.hrPayslip,
+    };
+    return PushIntent(
+      target: target,
+      id: withId.contains(target) ? (entityId ?? '') : '',
+    );
   }
 }
 
@@ -535,7 +592,8 @@ class PushNotifications {
       final signal = _ref.read(inboxRealtimeSignalProvider.notifier);
       signal.state = signal.state + 1;
     }
-    if (intent?.target == PushTarget.task) {
+    // Việc và Nhân sự cùng làm mới chuông trong app và đi kênh "Công việc".
+    if (intent?.target == PushTarget.task || (intent?.target.isHr ?? false)) {
       final signal = _ref.read(notificationSignalProvider.notifier);
       signal.state = signal.state + 1;
     }
@@ -549,7 +607,8 @@ class PushNotifications {
       // the same customer message. Data-only messages still need a local alert.
       return;
     }
-    final isTask = intent?.target == PushTarget.task;
+    final isTask =
+        intent?.target == PushTarget.task || (intent?.target.isHr ?? false);
     final title =
         notification?.title ?? (isTask ? 'Công việc' : 'Tin nhắn mới');
     final body =
@@ -634,6 +693,9 @@ class PushNotifications {
   /// first instead of stacking. Six rows about one piano is how a worker learns
   /// to swipe the whole shade away without reading it.
   int _notificationId(PushIntent? intent, RemoteMessage message) {
+    if (intent != null && intent.target.isHr) {
+      return '${intent.target.name}:${intent.id}'.hashCode & 0x7fffffff;
+    }
     if (intent != null) return intent.id.hashCode & 0x7fffffff;
 
     return message.messageId?.hashCode ?? DateTime.now().microsecondsSinceEpoch;

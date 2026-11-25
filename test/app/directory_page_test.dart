@@ -152,40 +152,97 @@ class _FakeSession extends SessionController {
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  test('4 nhóm nghiệp vụ: Vận hành gộp công việc, dòng việc và thông báo', () {
-    final sections = buildDirectorySections(
-      {
-        NavArea.work: [
-          _entry('Việc', NavArea.work),
-          _entry('Dòng việc', NavArea.work),
-        ],
-        NavArea.communication: [
-          _entry('Hộp thư', NavArea.communication),
+  test(
+    'nhóm theo ứng dụng như web: Thông báo ở Bàn làm việc, việc ở Công việc',
+    () {
+      final sections = buildDirectorySections(
+        {
+          NavArea.work: [
+            _entry('Việc', NavArea.work),
+            _entry('Dòng việc', NavArea.work),
+          ],
+          NavArea.communication: [
+            _entry('Hộp thư', NavArea.communication),
+            ModuleNavEntry(
+              moduleId: 'notifications',
+              label: 'Thông báo',
+              routeName: 'notifications.centre',
+              icon: Icons.circle_outlined,
+              selectedIcon: Icons.circle,
+              area: NavArea.communication,
+            ),
+          ],
+          NavArea.account: [_entry('Quyền của tôi', NavArea.account)],
+        },
+        open: (_) {},
+        query: '',
+      );
+
+      expect(sections.map((section) => section.label), [
+        'Bàn làm việc',
+        'Bán hàng',
+        'Công việc',
+      ]);
+      expect(sections[0].tiles.map((tile) => tile.label), ['Thông báo']);
+      expect(sections[1].tiles.map((tile) => tile.label), ['Hộp thư']);
+      expect(sections[2].tiles.map((tile) => tile.label), [
+        'Việc',
+        'Dòng việc',
+      ]);
+    },
+  );
+
+  test(
+    'Bàn làm việc: Tổng quan, Việc của tôi, Thông báo; cấu hình chỉ ở web',
+    () {
+      ModuleNavEntry routed(String label, String route, NavArea area) =>
           ModuleNavEntry(
-            moduleId: 'notifications',
-            label: 'Thông báo',
-            routeName: 'notifications.centre',
+            moduleId: label,
+            label: label,
+            routeName: route,
             icon: Icons.circle_outlined,
             selectedIcon: Icons.circle,
-            area: NavArea.communication,
-          ),
-        ],
-        NavArea.account: [_entry('Quyền của tôi', NavArea.account)],
-      },
-      open: (_) {},
-      query: '',
-    );
+            area: area,
+          );
+      final sections = buildDirectorySections(
+        {
+          NavArea.work: [
+            routed('Dòng việc', 'plans.timeline', NavArea.work),
+            routed('Việc của tôi', 'tasks.list', NavArea.work),
+            routed('Tổng quan', 'dashboard.home', NavArea.work),
+          ],
+          NavArea.communication: [
+            routed('Thông báo', 'notifications.centre', NavArea.communication),
+            routed('Kênh kết nối', 'channels.list', NavArea.communication),
+          ],
+          NavArea.finance: [
+            routed('Sổ chi phí', 'finance.expenses', NavArea.finance),
+            routed('Danh mục chi', 'finance.catalog', NavArea.finance),
+          ],
+        },
+        open: (_) {},
+        query: '',
+      );
+      expect(sections.map((section) => section.label), [
+        'Bàn làm việc',
+        'Công việc',
+        'Tài chính',
+      ]);
+      expect(sections.first.tiles.map((tile) => tile.label), [
+        'Tổng quan',
+        'Việc của tôi',
+        'Thông báo',
+      ]);
+      final all = [
+        for (final section in sections)
+          for (final tile in section.tiles) tile.label,
+      ];
+      expect(all, isNot(contains('Kênh kết nối')));
+      expect(all, isNot(contains('Danh mục chi')));
+    },
+  );
 
-    expect(sections.map((section) => section.label), ['Bán hàng', 'Vận hành']);
-    expect(sections.first.tiles.map((tile) => tile.label), ['Hộp thư']);
-    expect(sections.last.tiles.map((tile) => tile.label), [
-      'Việc',
-      'Dòng việc',
-      'Thông báo',
-    ]);
-  });
-
-  test('Sổ chi phí, Tổng hợp chi phí nằm nhóm Tài chính riêng như web', () {
+  test('Tài chính riêng như web; Nhân viên về Nhân sự', () {
     final sections = buildDirectorySections(
       {
         NavArea.admin: [_entry('Nhân viên', NavArea.admin)],
@@ -198,10 +255,7 @@ void main() {
       query: '',
     );
 
-    expect(sections.map((section) => section.label), [
-      'Tài chính',
-      'Đội & quản trị',
-    ]);
+    expect(sections.map((section) => section.label), ['Tài chính', 'Nhân sự']);
     expect(sections.first.tiles.map((tile) => tile.label), [
       'Sổ chi phí',
       'Tổng hợp chi phí',
@@ -278,8 +332,8 @@ void main() {
         .toList();
     expect(labels, [
       'Bán hàng',
-      'Vận hành',
-      'Đội & quản trị',
+      'Công việc',
+      'Nhân sự',
       'Cài đặt ứng dụng',
       'Trợ giúp',
     ]);
@@ -479,12 +533,13 @@ void main() {
     handle.dispose();
   });
 
-  testWidgets('module không khai mục nào cho khu Quản trị → không có nhóm đó', (
-    t,
-  ) async {
-    await pump(t, module: const _NoAdminModule());
-    expect(find.text('Đội & quản trị'), findsNothing);
-  });
+  testWidgets(
+    'không có Nhân viên, không có mục nhân sự → không có nhóm Nhân sự',
+    (t) async {
+      await pump(t, module: const _NoAdminModule());
+      expect(find.text('Nhân sự'), findsNothing);
+    },
+  );
 
   testWidgets('giảm chuyển động: không còn khung hoạt ảnh sau một pump', (
     t,

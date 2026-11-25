@@ -30,6 +30,7 @@ String _groupOf(NavArea area) => switch (area) {
   NavArea.work => 'Công việc',
   NavArea.admin => 'Đội & quản trị',
   NavArea.finance => 'Tài chính',
+  NavArea.hr => 'Nhân sự',
   NavArea.account => 'Cá nhân',
 };
 

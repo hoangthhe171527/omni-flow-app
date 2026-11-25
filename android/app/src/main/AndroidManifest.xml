@@ -12,6 +12,13 @@
     <!-- Required on Android 9 and older; Android 10+ uses MediaStore. -->
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"
         android:maxSdkVersion="28" />
+    <!-- Chấm công (nhan-su-kpi/03 §5.3): GPS khi không có WiFi xưởng; đọc
+         SSID/BSSID của WiFi đang kết nối (Android 8.1+ cần quyền vị trí).
+         Chỉ xin lúc bấm Chấm lần đầu. -->
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 
     <application
         android:label="Viomni"

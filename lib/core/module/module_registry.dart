@@ -63,7 +63,8 @@ final visibleNavEntriesProvider = Provider<List<ModuleNavEntry>>((ref) {
       .where(
         (entry) =>
             entry.access.isSatisfiedBy(policy) &&
-            session.featureEnabled(entry.feature),
+            session.featureEnabled(entry.feature) &&
+            entry.capabilities.every(session.apiSupports),
       )
       .toList();
 });

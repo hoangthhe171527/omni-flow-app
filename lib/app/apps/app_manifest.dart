@@ -18,10 +18,13 @@ class ManifestItem {
 
   final String key;
 
-  /// `reports` = mục báo cáo (vẽ dưới nhãn nhỏ trong "Thêm").
+  /// `reports` = mục báo cáo (vẽ dưới nhãn nhỏ trong "Thêm"); `settings` = cài
+  /// đặt của ứng dụng — chỉ làm trên web (đề xuất bố cục 24/11), app bỏ qua.
   final String? group;
 
   bool get isReport => group == 'reports';
+
+  bool get isSettings => group == 'settings';
 }
 
 class ManifestApp {
