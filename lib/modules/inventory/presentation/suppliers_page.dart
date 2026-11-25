@@ -29,6 +29,27 @@ class SuppliersPage extends ConsumerStatefulWidget {
 class _SuppliersPageState extends ConsumerState<SuppliersPage> {
   String _q = '';
 
+  /// Nút + (Chuẩn Mobile UI — Fab, Đợt B): hỏi tên → tạo → toast.
+  Future<void> _create() async {
+    final name = await showOmniPrompt(
+      context: context,
+      title: 'Thêm nhà cung cấp',
+      confirmLabel: 'Lưu',
+      hintText: 'Tên nhà cung cấp',
+      fieldKey: const ValueKey('inv-sup-new-name'),
+    );
+    if (name == null || name.isEmpty || !mounted) return;
+    try {
+      await ref.read(inventoryApiProvider).createSupplier(name);
+      ref.invalidate(supplierDetailsProvider);
+      if (mounted) showOmniToast(context, 'Đã thêm nhà cung cấp $name');
+    } catch (e) {
+      if (mounted) {
+        showOmniToast(context, 'Chưa thêm được nhà cung cấp. Thử lại sau.');
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final perms = ref.watch(inventoryPermsProvider);
@@ -76,57 +97,74 @@ class _SuppliersPageState extends ConsumerState<SuppliersPage> {
                 final late = sum((s) => s.overdueJpy);
                 final prepaid = sum((s) => s.prepaidJpy);
                 final open = all.fold<int>(0, (a, s) => a + (s.openLots ?? 0));
-                return RefreshIndicator(
-                  onRefresh: () => ref.refresh(supplierDetailsProvider.future),
-                  child: ListView(
-                    physics: const AlwaysScrollableScrollPhysics(),
-                    keyboardDismissBehavior:
-                        ScrollViewKeyboardDismissBehavior.onDrag,
-                    padding: EdgeInsets.fromLTRB(16, 4, 16, bottom),
-                    children: [
-                      if (debt) ...[
-                        // Khối tổng (spec §3.4): tổng nợ là số lớn, quá hạn /
-                        // trả dư là số phụ dưới đường kẻ.
-                        OmniTotalCard(
-                          key: const ValueKey('inv-sup-summary'),
-                          label: 'Tổng nợ',
-                          trailingLabel: open > 0 ? '$open lô còn nợ' : null,
-                          amount: InventoryFormat.yen(sum((s) => s.debtJpy)),
-                          stats: [
-                            OmniTotalStat(
-                              value: InventoryFormat.yen(late),
-                              label: 'Nợ quá hạn',
-                              warning: late > 0,
-                            ),
-                            if (prepaid > 0)
+                return OmniFabLayer(
+                  fab: perms.editSuppliers
+                      ? OmniLiquidFab(
+                          key: const ValueKey('inv-sup-create'),
+                          tooltip: 'Thêm nhà cung cấp',
+                          onPressed: (_) => _create(),
+                        )
+                      : null,
+                  body: RefreshIndicator(
+                    onRefresh: () =>
+                        ref.refresh(supplierDetailsProvider.future),
+                    child: ListView(
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      keyboardDismissBehavior:
+                          ScrollViewKeyboardDismissBehavior.onDrag,
+                      padding: EdgeInsets.fromLTRB(
+                        16,
+                        4,
+                        16,
+                        perms.editSuppliers
+                            ? OmniFabLayer.listBottom(context, hasFab: true)
+                            : bottom,
+                      ),
+                      children: [
+                        if (debt) ...[
+                          // Khối tổng (spec §3.4): tổng nợ là số lớn, quá hạn /
+                          // trả dư là số phụ dưới đường kẻ.
+                          OmniTotalCard(
+                            key: const ValueKey('inv-sup-summary'),
+                            label: 'Tổng nợ',
+                            trailingLabel: open > 0 ? '$open lô còn nợ' : null,
+                            amount: InventoryFormat.yen(sum((s) => s.debtJpy)),
+                            stats: [
                               OmniTotalStat(
-                                value: InventoryFormat.yen(prepaid),
-                                label: 'Trả dư',
+                                value: InventoryFormat.yen(late),
+                                label: 'Nợ quá hạn',
+                                warning: late > 0,
                               ),
+                              if (prepaid > 0)
+                                OmniTotalStat(
+                                  value: InventoryFormat.yen(prepaid),
+                                  label: 'Trả dư',
+                                ),
+                            ],
+                          ),
+                          const SizedBox(height: OmniGroupSection.gap),
+                        ],
+                        OmniGroupSection(
+                          key: const ValueKey('inv-sup-list'),
+                          dividerIndent: 16,
+                          children: [
+                            if (rows.isEmpty)
+                              const InvMutedRow('Chưa có nhà cung cấp')
+                            else
+                              for (final s in rows)
+                                _SupplierRow(
+                                  key: ValueKey('inv-sup-${s.id}'),
+                                  supplier: s,
+                                  debt: debt,
+                                  onTap: () => context.pushNamed(
+                                    InventoryRoutes.supplier,
+                                    pathParameters: {'supplierId': s.id},
+                                  ),
+                                ),
                           ],
                         ),
-                        const SizedBox(height: OmniGroupSection.gap),
                       ],
-                      OmniGroupSection(
-                        key: const ValueKey('inv-sup-list'),
-                        dividerIndent: 16,
-                        children: [
-                          if (rows.isEmpty)
-                            const InvMutedRow('Chưa có nhà cung cấp')
-                          else
-                            for (final s in rows)
-                              _SupplierRow(
-                                key: ValueKey('inv-sup-${s.id}'),
-                                supplier: s,
-                                debt: debt,
-                                onTap: () => context.pushNamed(
-                                  InventoryRoutes.supplier,
-                                  pathParameters: {'supplierId': s.id},
-                                ),
-                              ),
-                        ],
-                      ),
-                    ],
+                    ),
                   ),
                 );
               },

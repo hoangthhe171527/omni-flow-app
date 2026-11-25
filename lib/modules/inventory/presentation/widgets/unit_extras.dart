@@ -366,13 +366,38 @@ class InvPhoto extends StatelessWidget {
 
 /// Ảnh đại diện nhỏ của cây trong danh sách (40×40); chưa có ảnh thì ô trống.
 class InvUnitThumb extends StatelessWidget {
-  const InvUnitThumb({super.key, required this.unit, this.size = 40});
+  const InvUnitThumb({
+    super.key,
+    required this.unit,
+    this.size = 40,
+    this.photo = true,
+  });
 
   final InventoryUnit unit;
   final double size;
 
+  /// `false` (không quyền xem ảnh) hoặc cây chưa có ảnh → ô icon đàn chung
+  /// (lớp premium, Chuẩn Mobile UI — ô đầu dòng cho vật).
+  final bool photo;
+
   @override
   Widget build(BuildContext context) {
+    if (!photo || (unit.coverUrl ?? '').trim().isEmpty) {
+      final scheme = Theme.of(context).colorScheme;
+      return Container(
+        width: size,
+        height: size,
+        decoration: BoxDecoration(
+          color: scheme.surfaceContainerHighest,
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: Icon(
+          LucideIcons.piano,
+          size: size * .5,
+          color: scheme.onSurfaceVariant,
+        ),
+      );
+    }
     final px = (size * MediaQuery.devicePixelRatioOf(context)).round().clamp(
       40,
       256,

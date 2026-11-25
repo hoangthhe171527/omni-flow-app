@@ -106,7 +106,8 @@ void main() {
     expect(find.text('53.000.000đ'), findsOneWidget);
     expect(find.text('Vốn'), findsOneWidget);
     expect(find.text('36.177.607đ'), findsOneWidget);
-    expect(find.text('35.500.000đ'), findsOneWidget);
+    // Nhóm một cây: giá ở dòng = tổng đầu nhóm (lớp premium).
+    expect(find.text('35.500.000đ'), findsNWidgets(2));
     // Nhóm theo loại: loại ở tiêu đề nhóm, dòng phụ còn lô · tuổi tồn.
     expect(find.text('PIANO UPRIGHT CŨ · 1 CÂY'), findsOneWidget);
     expect(find.text('Ep 61 · 84 ngày'), findsOneWidget);

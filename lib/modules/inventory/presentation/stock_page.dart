@@ -589,7 +589,10 @@ class _StockPageState extends ConsumerState<StockPage> {
       picking: _multi,
       showWorkshop: _multi && canSend,
       // Lúc chọn nhiều thì bỏ ảnh: chừa chỗ cho ô chọn và chữ.
-      thumb: perms.photos && !_multi,
+      // Ô đầu dòng luôn có (lớp premium): ảnh khi có quyền + có ảnh, không
+      // thì icon đàn. Lúc chọn nhiều thì bỏ: chừa chỗ cho ô chọn và chữ.
+      thumb: !_multi,
+      thumbPhoto: perms.photos,
       // Cây ở nơi khác vị trí mặc định thì ghi nơi đó; lúc chọn để chuyển thì
       // ghi cho mọi cây.
       location: multi && (_multi && canMove || u.locationId != defaultLocation)
@@ -646,7 +649,19 @@ class _StockPageState extends ConsumerState<StockPage> {
                 title: e.key == null
                     ? ''
                     : '${e.key} · ${InventoryFormat.number(e.value.length)} cây',
-                trailing: groupIdx == 0 ? pickToggle : null,
+                // Tổng giá đầu nhóm (lớp premium) — chỉ khi đã tải hết, cộng
+                // một trang là số sai.
+                trailing: _GroupTrailing(
+                  sum: allLoaded && e.key != null
+                      ? InvUi.vnd(
+                          e.value.fold<double>(
+                            0,
+                            (s, u) => s + (u.listPrice ?? 0),
+                          ),
+                        )
+                      : null,
+                  action: groupIdx == 0 ? pickToggle : null,
+                ),
               ),
             for (var idx = 0; idx < e.value.length; idx++)
               () {
@@ -855,6 +870,7 @@ class StockUnitRow extends StatelessWidget {
     this.picked = false,
     this.showWorkshop = false,
     this.thumb = false,
+    this.thumbPhoto = true,
     this.location,
   });
 
@@ -879,6 +895,7 @@ class StockUnitRow extends StatelessWidget {
 
   /// Ảnh đại diện nhỏ đầu dòng (API có ảnh — Đợt A).
   final bool thumb;
+  final bool thumbPhoto;
 
   /// Tên vị trí ghi bên phải dưới giá (chỉ khi có từ hai vị trí).
   final String? location;
@@ -907,7 +924,7 @@ class StockUnitRow extends StatelessWidget {
               child: Row(
                 children: [
                   if (thumb) ...[
-                    InvUnitThumb(unit: u),
+                    InvUnitThumb(unit: u, photo: thumbPhoto),
                     const SizedBox(width: 12),
                   ],
                   Expanded(
@@ -1066,4 +1083,28 @@ class _SearchBottom extends StatelessWidget implements PreferredSizeWidget {
       ),
     );
   }
+}
+
+class _GroupTrailing extends StatelessWidget {
+  const _GroupTrailing({this.sum, this.action});
+
+  final String? sum;
+  final Widget? action;
+
+  @override
+  Widget build(BuildContext context) => Row(
+    mainAxisSize: MainAxisSize.min,
+    children: [
+      if (sum case final s?)
+        Text(
+          s,
+          style: OmniType.overline.copyWith(
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
+            fontFeatures: OmniType.tabular,
+          ),
+        ),
+      if (sum != null && action != null) const SizedBox(width: 8),
+      ?action,
+    ],
+  );
 }

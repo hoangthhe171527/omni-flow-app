@@ -12,6 +12,7 @@ import '../../../design/tokens/tokens.dart';
 import '../../../security/permissions/access_scope.dart';
 import '../../../security/session/session_controller.dart';
 import '../application/opportunities_providers.dart';
+import '../domain/opportunity.dart';
 import '../domain/pipeline_catalog.dart';
 import '../opportunities_module.dart';
 import 'widgets/opportunity_row.dart';
@@ -196,6 +197,38 @@ class _Body extends ConsumerWidget {
               },
             );
           }
+          if (index == 1 && !closed && stage == null && summary != null) {
+            // Khối tổng chuẩn (Chuẩn Mobile UI — TotalCard, Đợt B): một số
+            // chính + thanh tỉ lệ theo TIỀN của từng giai đoạn mở; số phụ là
+            // hai giai đoạn cuối, chạm để lọc đúng giai đoạn đó.
+            final open = pipeline.openStages;
+            final tail2 = open.length <= 2
+                ? open
+                : open.sublist(open.length - 2);
+            return Padding(
+              padding: const EdgeInsets.fromLTRB(16, 6, 16, 12),
+              child: OmniTotalCard(
+                key: const ValueKey('opp-total'),
+                label: 'Đang mở',
+                trailingLabel: '$total cơ hội',
+                amount: Formatters.vnd(value),
+                stats: [
+                  for (final s in tail2.reversed)
+                    OmniTotalStat(
+                      value: Formatters.vnd(summary.totalFor(s.code).value),
+                      label: s.label,
+                      onTap: () {
+                        HapticFeedback.selectionClick();
+                        ref.read(segmentStageProvider.notifier).state = s.code;
+                      },
+                    ),
+                ],
+                child: value > 0
+                    ? _StageBar(stages: open, summary: summary)
+                    : null,
+              ),
+            );
+          }
           if (index == 1) {
             return _SectionLine(
               title: [
@@ -245,6 +278,55 @@ class _Body extends ConsumerWidget {
             ),
           );
         },
+      ),
+    );
+  }
+}
+
+/// Thanh tỉ lệ theo tiền của các giai đoạn mở: nhạt → đậm dần về giai đoạn
+/// cuối (gần chốt). Trình đọc màn hình đọc tiền từng giai đoạn.
+class _StageBar extends StatelessWidget {
+  const _StageBar({required this.stages, required this.summary});
+
+  final List<PipelineStageDef> stages;
+  final PipelineSummary summary;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final parts = [
+      for (final s in stages)
+        if (summary.totalFor(s.code).value > 0)
+          (s, summary.totalFor(s.code).value),
+    ];
+    final n = parts.length;
+    return Semantics(
+      label: [
+        for (final (s, v) in parts) '${s.label} ${Formatters.vnd(v)}',
+      ].join(', '),
+      excludeSemantics: true,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(4),
+        child: SizedBox(
+          height: 8,
+          child: Row(
+            children: [
+              for (var i = 0; i < n; i++) ...[
+                if (i > 0) const SizedBox(width: 2),
+                Expanded(
+                  flex: (parts[i].$2 / 1000).round().clamp(1, 1 << 30),
+                  child: ColoredBox(
+                    color: Color.lerp(
+                      scheme.primaryContainer,
+                      scheme.primary,
+                      n == 1 ? 1 : i / (n - 1),
+                    )!,
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
       ),
     );
   }

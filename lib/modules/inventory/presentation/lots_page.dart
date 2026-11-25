@@ -124,40 +124,28 @@ class _LotsPageState extends ConsumerState<LotsPage> {
                         ScrollViewKeyboardDismissBehavior.onDrag,
                     padding: EdgeInsets.fromLTRB(16, 4, 16, bottom),
                     children: [
-                      OmniGroupSection(
-                        children: [
-                          OmniGroupRow(
-                            title: 'Đang về',
-                            value:
-                                '${inTransitAll.length} lô · ${InventoryFormat.number(units)} cây',
-                          ),
-                          OmniGroupRow(
-                            title: 'Đặt trước',
-                            trailing: Text(
-                              '${InventoryFormat.number(resv)} cây',
-                              // Số đếm màu mực: màu chỉ dành cho trạng thái.
-                              style: OmniType.bodyStrong.copyWith(
-                                color: Theme.of(context).colorScheme.onSurface,
-                                fontFeatures: OmniType.tabular,
-                              ),
-                            ),
-                          ),
+                      // Khối tổng chuẩn (Chuẩn Mobile UI — TotalCard, Đợt B):
+                      // số chính là tiền còn nợ nhà cung cấp; người không có
+                      // quyền tiền thấy số cây đang về làm số chính.
+                      OmniTotalCard(
+                        key: const ValueKey('inv-lots-total'),
+                        label: perms.pay ? 'Còn nợ nhà cung cấp' : 'Đang về',
+                        trailingLabel: '${inTransitAll.length} lô',
+                        amount: perms.pay
+                            ? InventoryFormat.yen(dueJpy)
+                            : '${InventoryFormat.number(units)} cây',
+                        stats: [
                           if (perms.pay)
-                            OmniGroupRow(
-                              title: 'Còn nợ NCC',
-                              trailing: Text(
-                                InventoryFormat.yen(dueJpy),
-                                // Số tiền màu mực (spec §3.5).
-                                style: OmniType.bodyStrong.copyWith(
-                                  color: dueJpy > 0
-                                      ? Theme.of(context).colorScheme.onSurface
-                                      : Theme.of(
-                                          context,
-                                        ).colorScheme.onSurfaceVariant,
-                                  fontFeatures: OmniType.tabular,
-                                ),
-                              ),
+                            OmniTotalStat(
+                              value:
+                                  '${inTransitAll.length} lô · ${InventoryFormat.number(units)} cây',
+                              label: 'Đang về',
+                              flex: 2,
                             ),
+                          OmniTotalStat(
+                            value: '${InventoryFormat.number(resv)} cây',
+                            label: 'Đặt trước',
+                          ),
                         ],
                       ),
                       for (final (title, group) in [
@@ -187,12 +175,15 @@ class _LotsPageState extends ConsumerState<LotsPage> {
                           ),
                         ],
                       if (coming.isEmpty && received.isEmpty)
-                        const Padding(
-                          padding: EdgeInsets.only(top: 12),
-                          child: OmniGroupSection(
-                            children: [OmniGroupRow(title: 'Không có lô khớp')],
-                          ),
-                        ),
+                        q.isEmpty
+                            ? const OmniEmptyState(
+                                compact: true,
+                                icon: LucideIcons.truck,
+                                title: 'Chưa có lô hàng',
+                              )
+                            : OmniEmptyState.filtered(
+                                title: 'Không có lô khớp "$_q"',
+                              ),
                     ],
                   ),
                 );

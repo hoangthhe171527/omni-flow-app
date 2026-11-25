@@ -318,7 +318,9 @@ void main() {
       expect(find.text('Anh Dũng Hoàng'), findsOneWidget);
       expect(find.text('Chị Lan'), findsNothing);
       expect(find.text('YAMAHA U3H B62-2'), findsOneWidget);
-      expect(find.text('47.500.000đ'), findsOneWidget);
+      // Một phiếu: giá trị ở dòng = số "Giá trị" của khối tổng.
+      expect(find.text('47.500.000đ'), findsNWidgets(2));
+      expect(find.byKey(const ValueKey('inv-res-total')), findsOneWidget);
       expect(find.text('cọc 5.000.000đ'), findsOneWidget);
       expect(find.text('hạn 08/11/2026'), findsOneWidget);
 

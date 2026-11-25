@@ -16,6 +16,7 @@ import 'package:omni_app/modules/opportunities/domain/pipeline_catalog.dart';
 import 'package:omni_app/modules/opportunities/opportunities_module.dart';
 import 'package:omni_app/modules/opportunities/presentation/opportunity_form_page.dart';
 import 'package:omni_app/modules/opportunities/presentation/pipeline_page.dart';
+import 'package:omni_app/modules/opportunities/presentation/widgets/stage_strip.dart';
 import 'package:omni_app/security/permissions/access_scope.dart';
 import 'package:omni_app/security/permissions/resource_access.dart';
 
@@ -46,7 +47,13 @@ void main() {
     await tester.pumpWidget(host());
     await tester.pumpAndSettle();
 
-    expect(find.text('Liên hệ'), findsOneWidget);
+    expect(
+      find.descendant(
+        of: find.byType(StageStrip),
+        matching: find.text('Liên hệ'),
+      ),
+      findsOneWidget,
+    );
     // Dải chỉ có giai đoạn mở: "Đã mua" (Thắng) không phải ô.
     expect(find.text('Đã mua'), findsNothing);
     expect(find.text('Đàm phán'), findsNothing);
@@ -99,7 +106,10 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Liên hệ'), findsNothing);
-    expect(find.text('Mới'), findsOneWidget);
+    expect(
+      find.descendant(of: find.byType(StageStrip), matching: find.text('Mới')),
+      findsOneWidget,
+    );
     expect(api.calls.last.pipeline, 'standard');
     expect(api.calls.last.stageCode, isNull);
   });
@@ -191,7 +201,13 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(api.pipelineCalls, 2);
-    expect(find.textContaining('Liên hệ'), findsOneWidget);
+    expect(
+      find.descendant(
+        of: find.byType(StageStrip),
+        matching: find.textContaining('Liên hệ'),
+      ),
+      findsOneWidget,
+    );
   });
 
   test('đổi giai đoạn bị 422 opportunity_stage → đọc lại danh mục', () async {

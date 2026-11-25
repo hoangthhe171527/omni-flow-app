@@ -79,9 +79,17 @@ void main() {
     expect(api.calls.last.stageCode, isNull);
     // Không có stage thì máy chủ trả cả cơ hội đã đóng: phải gửi status=OPEN.
     expect(api.calls.last.status, 'OPEN');
-    expect(find.textContaining('Đang mở ·'), findsOneWidget);
+    // Khối tổng (Đợt B): "Đang mở" + số cơ hội + tổng tiền giai đoạn mở.
+    expect(find.byKey(const ValueKey('opp-total')), findsOneWidget);
     // Tổng tiền các giai đoạn mở (chỉ Báo giá có 3 triệu).
-    expect(find.text('Đang mở · 7 · 3.000.000đ'), findsOneWidget);
+    expect(find.text('7 cơ hội'), findsOneWidget);
+    expect(
+      find.descendant(
+        of: find.byKey(const ValueKey('opp-total')),
+        matching: find.text('3.000.000đ'),
+      ),
+      findsWidgets,
+    );
   });
 
   testWidgets('chạm ô "Báo giá" → lọc stage=bao_gia; chạm lại → bỏ lọc', (
