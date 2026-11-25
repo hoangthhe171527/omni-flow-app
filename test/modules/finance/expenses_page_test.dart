@@ -169,7 +169,7 @@ void main() {
         expect(find.text('Tháng 11/2026'), findsOneWidget);
         expect(find.text('0'), findsOneWidget);
         expect(
-          find.text('Chưa có khoản chi nào trong Tháng 11/2026.'),
+          find.text('Chưa có khoản chi nào trong Tháng 11/2026'),
           findsOneWidget,
         );
         // Không còn số liệu giả cũ 26.650.000 hay 41.350.000

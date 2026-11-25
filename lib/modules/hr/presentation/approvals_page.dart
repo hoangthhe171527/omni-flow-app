@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../core/error/app_exception.dart';
 import '../../../design/components/components.dart';
@@ -83,14 +84,12 @@ class _ApprovalsPageState extends ConsumerState<ApprovalsPage> {
                   else if (!data.hasValue)
                     const OmniSkeletonBox(height: 220, radius: 18)
                   else if (list.isEmpty)
-                    OmniGroupSection(
-                      children: [
-                        OmniGroupRow(
-                          title: _tab == 0
-                              ? 'Không còn đơn chờ'
-                              : 'Chưa có đơn đã xử lý',
-                        ),
-                      ],
+                    OmniEmptyState(
+                      compact: true,
+                      icon: LucideIcons.clipboardCheck,
+                      title: _tab == 0
+                          ? 'Không còn đơn chờ duyệt'
+                          : 'Chưa có đơn đã xử lý',
                     )
                   else
                     OmniGroupSection(
